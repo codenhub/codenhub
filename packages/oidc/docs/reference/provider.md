@@ -246,11 +246,30 @@ export interface AuthorizationInteraction {
     readonly maxAge?: number;
     readonly loginHint?: string;
     readonly uiLocales?: readonly string[];
+    readonly acrValues?: readonly string[];
+    readonly claimsLocales?: readonly string[];
+    readonly display?: Display;
     readonly createdAt: number;
 }
 ```
 
 An authorization request the app now handles: who the client is, and what it asked for. Frozen and JSON-serializable. Keep the whole value for the login and consent pages; the provider has no lookup by `id`.
+
+#### AuthorizationInteraction › acrValues
+
+```ts
+readonly acrValues?: readonly string[];
+```
+
+The `acr_values` the client asked for, as authentication context class references in its order of preference, with empty entries dropped. A voluntary request (OpenID Connect Core §3.1.2.1): the provider does not check the login against it. The app chooses whether to satisfy one of them, and reports the class it actually used as the `acr` of its [`AuthorizationGrant`](#authorizationgrant), which may be none of these.
+
+#### AuthorizationInteraction › claimsLocales
+
+```ts
+readonly claimsLocales?: readonly string[];
+```
+
+The `claims_locales` the client asked for: BCP 47 tags in order of preference, with empty entries dropped, for the language of the claims the app returns from the `claims` callback. The provider does not use it itself. The `claims` request parameter is still not supported, and is ignored.
 
 #### AuthorizationInteraction › clientId
 
@@ -265,6 +284,14 @@ readonly createdAt: number;
 ```
 
 When the request was validated, in seconds since the Unix epoch. A `prompt=login` login must happen at or after it.
+
+#### AuthorizationInteraction › display
+
+```ts
+readonly display?: Display;
+```
+
+How the client asks the app to show its pages. A hint: a `display` other than `page`, `popup`, `touch` or `wap` is ignored, so it is absent here, and the app may ignore this one as well.
 
 #### AuthorizationInteraction › id
 
@@ -652,12 +679,29 @@ export interface InteractionRecord {
     readonly maxAge?: number;
     readonly loginHint?: string;
     readonly uiLocales?: readonly string[];
+    readonly acrValues?: readonly string[];
+    readonly claimsLocales?: readonly string[];
+    readonly display?: Display;
     readonly createdAt: number;
     readonly expiresAt: number;
 }
 ```
 
 A validated authorization request, saved between `Provider.beginAuthorization` and its completion.
+
+#### InteractionRecord › acrValues
+
+```ts
+readonly acrValues?: readonly string[];
+```
+
+Requested `acr_values`, in the order the client preferred them.
+
+#### InteractionRecord › claimsLocales
+
+```ts
+readonly claimsLocales?: readonly string[];
+```
 
 #### InteractionRecord › clientId
 
@@ -680,6 +724,12 @@ readonly createdAt: number;
 ```
 
 When the request was validated, in seconds since the Unix epoch.
+
+#### InteractionRecord › display
+
+```ts
+readonly display?: Display;
+```
 
 #### InteractionRecord › expiresAt
 
@@ -1626,6 +1676,14 @@ export type Consumption<TRecord> =
 ```
 
 The outcome of consuming a single-use value.
+
+### Display
+
+```ts
+export type Display = "page" | "popup" | "touch" | "wap";
+```
+
+How the client asks the app to show its pages (OpenID Connect Core §3.1.2.1).
 
 ### GrantType
 

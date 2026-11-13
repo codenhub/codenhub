@@ -18,6 +18,7 @@ export type {
   ClientTtl,
   CodeRecord,
   Consumption,
+  Display,
   EndSession,
   GrantType,
   InteractionRecord,

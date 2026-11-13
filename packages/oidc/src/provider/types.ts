@@ -68,6 +68,9 @@ export interface ClientRecord {
   readonly ttl?: ClientTtl;
 }
 
+/** How the client asks the app to show its pages (OpenID Connect Core §3.1.2.1). */
+export type Display = "page" | "popup" | "touch" | "wap";
+
 /** A validated authorization request, saved between {@link Provider.beginAuthorization} and its completion. */
 export interface InteractionRecord {
   readonly clientId: string;
@@ -82,6 +85,10 @@ export interface InteractionRecord {
   readonly maxAge?: number;
   readonly loginHint?: string;
   readonly uiLocales?: readonly string[];
+  /** Requested `acr_values`, in the order the client preferred them. */
+  readonly acrValues?: readonly string[];
+  readonly claimsLocales?: readonly string[];
+  readonly display?: Display;
   /** When the request was validated, in seconds since the Unix epoch. */
   readonly createdAt: number;
   /** When the interaction expires, in seconds since the Unix epoch. */
@@ -451,6 +458,24 @@ export interface AuthorizationInteraction {
   readonly maxAge?: number;
   readonly loginHint?: string;
   readonly uiLocales?: readonly string[];
+  /**
+   * The `acr_values` the client asked for, as authentication context class references in its order of preference,
+   * with empty entries dropped. A voluntary request (OpenID Connect Core §3.1.2.1): the provider does not check the
+   * login against it. The app chooses whether to satisfy one of them, and reports the class it actually used as
+   * the `acr` of its {@link AuthorizationGrant}, which may be none of these.
+   */
+  readonly acrValues?: readonly string[];
+  /**
+   * The `claims_locales` the client asked for: BCP 47 tags in order of preference, with empty entries dropped, for
+   * the language of the claims the app returns from the `claims` callback. The provider does not use it itself. The
+   * `claims` request parameter is still not supported, and is ignored.
+   */
+  readonly claimsLocales?: readonly string[];
+  /**
+   * How the client asks the app to show its pages. A hint: a `display` other than `page`, `popup`, `touch` or `wap`
+   * is ignored, so it is absent here, and the app may ignore this one as well.
+   */
+  readonly display?: Display;
   /** When the request was validated, in seconds since the Unix epoch. A `prompt=login` login must happen at or after it. */
   readonly createdAt: number;
 }

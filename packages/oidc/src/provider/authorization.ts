@@ -21,6 +21,7 @@ import type {
   AuthorizationInteraction,
   ClientRecord,
   CodeRecord,
+  Display,
   InteractionRecord,
 } from "./types";
 
@@ -50,6 +51,9 @@ interface ValidatedRequest {
   readonly nonce: string | undefined;
   readonly loginHint: string | undefined;
   readonly uiLocales: readonly string[] | undefined;
+  readonly acrValues: readonly string[] | undefined;
+  readonly claimsLocales: readonly string[] | undefined;
+  readonly display: Display | undefined;
 }
 
 /** What the checks after client verification read from. */
@@ -64,6 +68,8 @@ const MAX_AGE_PATTERN = /^\d{1,9}$/;
 /** A non-empty run of visible ASCII: no space, control character or non-ASCII character. */
 const VISIBLE_ASCII = /^[!-~]+$/;
 const PROMPTS: readonly Prompt[] = ["none", "login", "consent", "select_account"];
+/** The `display` values of OpenID Connect Core §3.1.2.1. */
+const DISPLAYS: readonly Display[] = ["page", "popup", "touch", "wap"];
 /** The OAuth codes a validation failure redirects with, which are also its issue codes. */
 type RedirectErrorCode = Extract<OAuthErrorCode, OidcIssueCode>;
 
@@ -268,7 +274,10 @@ function checkRequest(context: RequestContext): Checked<ValidatedRequest> {
       maxAge: maxAge.value,
       nonce: parameters.get("nonce"),
       loginHint: parameters.get("login_hint"),
-      uiLocales: readUiLocales(parameters),
+      uiLocales: readList(parameters, "ui_locales"),
+      acrValues: readList(parameters, "acr_values"),
+      claimsLocales: readList(parameters, "claims_locales"),
+      display: readDisplay(parameters),
     },
   };
 }
@@ -351,14 +360,26 @@ function readMaxAge({ parameters, target }: RequestContext): Checked<number | un
   return { ok: true, value: Number(requested) };
 }
 
-function readUiLocales(parameters: ParameterMap): readonly string[] | undefined {
-  const requested = parameters.get("ui_locales");
+/**
+ * A space-separated list the request gives as a hint, such as `ui_locales`, `claims_locales` or `acr_values`: empty
+ * entries from repeated or trailing spaces are dropped, order is kept, and no entries means absent.
+ */
+function readList(parameters: ParameterMap, name: string): readonly string[] | undefined {
+  const requested = parameters.get(name);
   if (requested === undefined) {
     return undefined;
   }
-  // A hint: empty entries from repeated or trailing spaces are dropped, and no entries means absent.
-  const locales = requested.split(" ").filter((locale) => locale !== "");
-  return locales.length === 0 ? undefined : locales;
+  const entries = requested.split(" ").filter((entry) => entry !== "");
+  return entries.length === 0 ? undefined : entries;
+}
+
+/**
+ * `display` is a hint for how the app shows its pages, and the provider may ignore a value it does not know
+ * (OpenID Connect Core §3.1.2.1), so an unknown one is absent rather than a failure.
+ */
+function readDisplay(parameters: ParameterMap): Display | undefined {
+  const requested = parameters.get("display");
+  return DISPLAYS.find((display) => display === requested);
 }
 
 /** Saves the validated request under the digest of a new interaction id, and returns the id to the app. */
@@ -380,6 +401,9 @@ async function saveInteraction(
     ...optionalMember("maxAge", request.maxAge),
     ...optionalMember("loginHint", request.loginHint),
     ...optionalMember("uiLocales", request.uiLocales),
+    ...optionalMember("acrValues", request.acrValues),
+    ...optionalMember("claimsLocales", request.claimsLocales),
+    ...optionalMember("display", request.display),
   };
   // The id is a bearer secret for the app's session, so the store only ever sees its digest.
   const id = randomToken();
@@ -394,6 +418,9 @@ async function saveInteraction(
     ...optionalMember("maxAge", request.maxAge),
     ...optionalMember("loginHint", request.loginHint),
     ...optionalMember("uiLocales", request.uiLocales),
+    ...optionalMember("acrValues", request.acrValues),
+    ...optionalMember("claimsLocales", request.claimsLocales),
+    ...optionalMember("display", request.display),
   });
 }
 

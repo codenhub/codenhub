@@ -745,9 +745,20 @@ On success the result carries the interaction:
 - `id`, the identifier to pass to `completeAuthorization`. A random 256-bit value, and the store holds only its digest.
 - `clientId`, `redirectUri`, `scopes` and `prompt`, as validated.
 - `maxAge`, `loginHint` and `uiLocales`, when the request carried them. `loginHint` is passed through as sent. `uiLocales` has its empty entries, from repeated or trailing spaces, dropped; no entries left means absent. Both are within the length limit.
+- `acrValues`, `claimsLocales` and `display`, when the request carried them. See [Hints for the login pages](#hints-for-the-login-pages).
 - `createdAt`, in seconds since the Unix epoch.
 
 Keep the whole interaction in the user's server-side session. It is a frozen plain object, so it serializes as JSON. The pages between the two calls need it: the consent page shows `clientId` and `scopes`, the login page follows `prompt`, `maxAge` and `loginHint`, and the scopes the user grants must be among `scopes`. The provider offers no lookup by `id`, because the store's only read of an interaction is the atomic `consumeInteraction` that completes it. Do not put `id` in a URL the user can edit, because whoever holds it can complete the interaction. The interaction lasts `ttl.interaction` seconds, 1800 by default, and it can be completed once.
+
+### Hints for the login pages
+
+Three more parameters reach the app so it can shape its pages and its login. None of them can fail the request, and the provider checks nothing against them.
+
+- `acr_values`, as `acrValues`: the authentication context classes the client would like, in its order of preference. The value is a space-separated list, and empty entries from repeated or trailing spaces are dropped. This is a **voluntary request** (OpenID Connect Core §3.1.2.1). The app chooses whether to satisfy one of the values, such as by asking for a second factor, and reports the class it actually used as the `acr` of the grant it passes to `completeAuthorization`. That class may be none of the requested ones, and the client decides whether to accept the ID token. The provider does not compare the two.
+- `claims_locales`, as `claimsLocales`: the languages the client prefers for the claims, as a space-separated list under the same rules. It is a hint for the app's `claims` callback, and the provider does not use it.
+- `display`, as `display`: one of `page`, `popup`, `touch` or `wap`, which asks the app to show its pages as a full page, a popup window, for a touch device or for a small-screen device. A value the provider does not know is ignored, as Core allows, so the interaction has no `display`, and the request is not refused.
+
+A list is absent when it has no entries, as for `uiLocales`. Each parameter is within the usual limits, at most 4096 characters, and every list is a frozen array of strings on the interaction, saved in the store with the rest of the request. The `claims` parameter, which would ask for individual claims, remains unsupported: the provider ignores it, and claims are released by scope.
 
 ### Prompt and max_age
 

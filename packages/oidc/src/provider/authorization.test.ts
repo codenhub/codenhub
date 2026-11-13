@@ -2,7 +2,7 @@ import { generateKeyPair, type KeyPair } from "@codenhub/jwt";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { digestKey } from "../shared/encoding";
-import { MAX_BODY_BYTES, MAX_URL_LENGTH } from "../shared/limits";
+import { MAX_BODY_BYTES, MAX_PARAMETER_LENGTH, MAX_URL_LENGTH } from "../shared/limits";
 import { computeCodeChallenge } from "../shared/pkce";
 import type { OidcResult } from "../shared/types";
 import { createMemoryStore, type MemoryStore } from "../testing/memory-store";
@@ -226,10 +226,83 @@ describe("beginAuthorization", () => {
       expect(interaction.uiLocales).toBeUndefined();
     });
 
+    it("shouldReturnAcrValuesClaimsLocalesAndDisplayWhenRequested", async () => {
+      const interaction = await beginOk(
+        query({ acr_values: "urn:loa:2 urn:loa:1", claims_locales: "pt-BR en", display: "popup" }),
+      );
+      expect(interaction).toMatchObject({
+        acrValues: ["urn:loa:2", "urn:loa:1"],
+        claimsLocales: ["pt-BR", "en"],
+        display: "popup",
+      });
+    });
+
+    it("shouldSaveAcrValuesClaimsLocalesAndDisplayInTheInteractionRecord", async () => {
+      const saveSpy = vi.spyOn(store, "saveInteraction");
+      await beginOk(query({ acr_values: "urn:loa:2", claims_locales: "en", display: "wap" }));
+      expect(saveSpy.mock.calls[0]?.[1]).toMatchObject({
+        acrValues: ["urn:loa:2"],
+        claimsLocales: ["en"],
+        display: "wap",
+      });
+    });
+
+    it("shouldKeepAcrValuesInTheOrderTheClientPreferred", async () => {
+      const interaction = await beginOk(query({ acr_values: "c a b" }));
+      expect(interaction.acrValues).toEqual(["c", "a", "b"]);
+    });
+
+    it.each(["acr_values", "claims_locales"] as const)("shouldDropEmptyEntriesOf%s", async (name) => {
+      const interaction = await beginOk(query({ [name]: " a  b " }));
+      expect(interaction[name === "acr_values" ? "acrValues" : "claimsLocales"]).toEqual(["a", "b"]);
+    });
+
+    it.each(["acr_values", "claims_locales"] as const)("shouldTreat%sWithNoEntriesAsAbsent", async (name) => {
+      const interaction = await beginOk(query({ [name]: "  " }));
+      expect("acrValues" in interaction).toBe(false);
+      expect("claimsLocales" in interaction).toBe(false);
+    });
+
+    it.each(["page", "popup", "touch", "wap"] as const)("shouldReturnDisplay_%s", async (display) => {
+      const interaction = await beginOk(query({ display }));
+      expect(interaction.display).toBe(display);
+    });
+
+    it.each(["Page", "tablet", "", "page popup", " page"])("shouldIgnoreTheUnknownDisplayValue_%j", async (display) => {
+      const saveSpy = vi.spyOn(store, "saveInteraction");
+      const interaction = await beginOk(query({ display }));
+      expect("display" in interaction).toBe(false);
+      expect("display" in (saveSpy.mock.calls[0]?.[1] ?? {})).toBe(false);
+    });
+
+    it("shouldOmitAcrValuesClaimsLocalesAndDisplayWhenAbsent", async () => {
+      const saveSpy = vi.spyOn(store, "saveInteraction");
+      const interaction = await beginOk();
+      const keys = [...Object.keys(interaction), ...Object.keys(saveSpy.mock.calls[0]?.[1] ?? {})];
+      expect(keys).not.toContain("acrValues");
+      expect(keys).not.toContain("claimsLocales");
+      expect(keys).not.toContain("display");
+    });
+
+    it("shouldReturnAFrozenJsonSerializableInteractionWithTheNewHints", async () => {
+      const interaction = await beginOk(query({ acr_values: "a b", claims_locales: "en", display: "touch" }));
+      expect(Object.isFrozen(interaction)).toBe(true);
+      expect(Object.isFrozen(interaction.acrValues)).toBe(true);
+      expect(Object.isFrozen(interaction.claimsLocales)).toBe(true);
+      expect(JSON.parse(JSON.stringify(interaction))).toEqual(interaction);
+    });
+
+    it("shouldRenderInvalidRequestForAcrValuesLongerThanTheParameterLimit", async () => {
+      const failure = failureOf(
+        await beginAuthorization(options, getRequest(query({ acr_values: "a".repeat(MAX_PARAMETER_LENGTH + 1) }))),
+      );
+      expect(failure.redirect).toBeNull();
+    });
+
     it("shouldIgnoreUnknownParameters", async () => {
       const result = await beginAuthorization(
         options,
-        getRequest(query({ claims: "{}", id_token_hint: "x", acr_values: "1", display: "page" })),
+        getRequest(query({ claims: "{}", id_token_hint: "x", request_foo: "1" })),
       );
       expect(result.ok).toBe(true);
     });

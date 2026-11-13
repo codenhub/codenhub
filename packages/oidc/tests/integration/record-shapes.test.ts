@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import type { MemoryStore } from "../../src/testing";
 import {
   answer,
+  authorizationUrl,
   codeForm,
   issueCode,
   PUBLIC_CLIENT,
@@ -99,5 +100,38 @@ describe("token lifetimes per client", () => {
 
     expect(response.status).toBe(200);
     expect(((await response.json()) as TokenBody).expires_in).toBe(600);
+  });
+});
+
+describe("request hints that reach the app", () => {
+  it("hands acr_values, claims_locales and display to the app, which reports the acr it used", async () => {
+    const setup = await setUpProvider();
+    const begun = await setup.provider.beginAuthorization(
+      new Request(
+        authorizationUrl({ acr_values: "urn:loa:2 urn:loa:1", claims_locales: "pt-BR en", display: "popup" }),
+      ),
+    );
+
+    expect(begun.ok && begun.value).toMatchObject({
+      acrValues: ["urn:loa:2", "urn:loa:1"],
+      claimsLocales: ["pt-BR", "en"],
+      display: "popup",
+    });
+    // The app satisfies neither class and says so; the provider issues the code and carries what the app reported.
+    const issued = await issueCode(setup, {
+      params: { acr_values: "urn:loa:2" },
+      grant: { acr: "urn:loa:1" },
+    });
+    const tokens = (await (await redeem(setup, codeForm(issued, PUBLIC_CLIENT))).json()) as TokenBody;
+    expect(payloadOf(tokens.id_token).acr).toBe("urn:loa:1");
+  });
+
+  it("answers an unknown display as if the request had none", async () => {
+    const setup = await setUpProvider();
+
+    const begun = await setup.provider.beginAuthorization(new Request(authorizationUrl({ display: "hologram" })));
+
+    expect(begun.ok).toBe(true);
+    expect(begun.ok && "display" in begun.value).toBe(false);
   });
 });

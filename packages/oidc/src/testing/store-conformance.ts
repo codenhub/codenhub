@@ -107,6 +107,10 @@ function interactionFixture(): InteractionRecord {
     nonce: "conformance-nonce",
     codeChallenge: "conformance-challenge",
     prompt: [],
+    uiLocales: ["en", "pt-BR"],
+    acrValues: ["conformance-acr"],
+    claimsLocales: ["en"],
+    display: "popup",
     createdAt: now,
     expiresAt: now + LIFETIME_SECONDS,
   };
