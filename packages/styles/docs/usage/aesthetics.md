@@ -241,7 +241,7 @@ Hand-drawn outlines: controls take long, uneven elliptical corners, and cards, p
 
 The 1px ink line is solid; checkboxes, dividers, and table rules are dashed. `--ui-line-style: dashed` dashes any other component, and `--ui-rule-style: solid` puts a divider or table back to solid. The 2px hard shadow is a small neutral depth cue.
 
-`--sketch-radius`, `--sketch-radius-surface`, and `--sketch-radius-pill` replace the control, surface, and pill-button outlines. Set one on the region or on any element inside it, and every position below takes that one outline. To shape a single component instead, set `--ui-radius` (`--ui-radius-surface` on a surface) on it.
+`--sketch-radius`, `--sketch-radius-surface`, and `--sketch-radius-pill` replace the control, surface, and pill-button outlines. Set one on the region or on any element inside it, and every position below takes that one outline, on the components that rotate: `.btn`, `.ipt`, `.textarea`, `.select`, `.input-group`, `.pre`, and `.tooltip-bubble` for the control outline, and `.card`, `.panel`, `.alert`, and `.data-table` for the surface one. Any other element that takes a control or surface outline, such as a `.skeleton` or a bare control under `/native`, takes the outline the region itself resolved, so a knob set between the region and that element does not reach it; set the knob on the region instead. Chips, such as `.badge` and `.checkbox`, take small outlines of their own that no knob changes. To shape a single component instead, set `--ui-radius` (`--ui-radius-surface` on a surface) on it.
 
 ```html
 <section class="sketch" style='--font-sketch: "Comic Sans MS", cursive'>

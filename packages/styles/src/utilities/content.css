@@ -218,9 +218,10 @@
      Both ends are leaves, and the step lands on `transparent` rather than on
      `--_bg`, for the reason `--_table-rule-plated` above gives. */
   --_table-hover-tone: color-mix(in oklab, currentColor var(--ui-fill, var(--_d-fill)), var(--intent-hover));
-  /* `--table-hover` is public and read, not declared, so a value on any
-     ancestor reaches the rows; `transparent` turns the hover off. */
-  --_table-row-hover: var(--table-hover, color-mix(in oklab, var(--_table-hover-tone) 12%, transparent));
+  /* The default hover. `--table-hover` is public and read where the row
+     paints, not here, so a value on any ancestor of the cells reaches them,
+     a `tbody` or row included; `transparent` turns the hover off. */
+  --_table-row-hover: color-mix(in oklab, var(--_table-hover-tone) 12%, transparent);
 
   border-spacing: 0;
 
@@ -371,7 +372,7 @@
     );
     --_table-rule: color-mix(in oklab, var(--_table-rule-tone) var(--_table-rule-amount), transparent);
     --_table-hover-tone: color-mix(in oklab, currentColor var(--ui-fill, var(--_d-fill)), var(--intent-hover));
-    --_table-row-hover: var(--table-hover, color-mix(in oklab, var(--_table-hover-tone) 12%, transparent));
+    --_table-row-hover: color-mix(in oklab, var(--_table-hover-tone) 12%, transparent);
 
     /* A neutral solid table caps its fill at 20%, so its plate is a light grey
        and the ramp keeps `--_on-fill` low: the row's ink is then mostly the
@@ -399,7 +400,7 @@
      row does not stay tinted. */
   @media (hover: hover) {
     & tbody tr:hover > * {
-      background-color: var(--_table-row-hover);
+      background-color: var(--table-hover, var(--_table-row-hover));
     }
   }
 

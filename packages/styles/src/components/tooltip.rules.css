@@ -16,8 +16,10 @@
      defaults rather than declared, so a value set on any ancestor reaches the
      tooltip. The linger is how long the bubble stays after the pointer leaves
      the trigger: long enough to cross the gap onto the bubble, which keeps it
-     open (WCAG 1.4.13). Resolved here, so a bubble outside a tooltip keeps no
-     delay. */
+     open (WCAG 1.4.13). The default is resolved here, so a bubble outside a
+     tooltip keeps no delay unless a linger is set above it. The bubble reads
+     the public one first, so a value set on the bubble itself, as 0.8
+     allowed, still wins. */
   --_tooltip-gap: var(--tooltip-gap, 0.5rem);
   --_tooltip-linger: var(--tooltip-linger, 300ms);
   --_tooltip-top: calc(var(--_tooltip-gap) * -1);
@@ -68,7 +70,7 @@
   transition-property: opacity, transform, visibility;
   transition-duration: var(--motion-duration-normal);
   transition-timing-function: var(--motion-ease);
-  transition-delay: var(--_tooltip-linger, 0s);
+  transition-delay: var(--tooltip-linger, var(--_tooltip-linger, 0s));
 
   /* Filled, over a ground of its own. An intent floods the fill
      (`.tooltip-bubble.primary` is the primary colour); with no intent

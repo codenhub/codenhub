@@ -161,7 +161,7 @@ test("takes each public component token from an ancestor", async ({ page }) => {
   await page.setContent(
     '<!doctype html><html data-theme="light"><body><div style="' +
       "--switch-width: 3rem; --switch-height: 2rem; --field-gap: 1rem; --tooltip-gap: 1rem; " +
-      "--tooltip-linger: 700ms; --input-group-gap: 3px; --input-group-pad: 2rem; " +
+      "--tooltip-linger: 700ms; --input-group-gap: 3px; --input-group-padding: 2rem; " +
       "--divider-color: rgb(255, 0, 0); --divider-width: 5px; --skeleton-base: rgb(255, 0, 0); " +
       '--skeleton-sheen: rgb(0, 0, 255); --quote-width: 7px">' +
       '<input type="checkbox" class="switch" id="switch">' +
@@ -185,7 +185,7 @@ test("takes each public component token from an ancestor", async ({ page }) => {
       "--tooltip-gap": style("bubble").top,
       "--tooltip-linger": style("bubble").transitionDelay.split(",")[0],
       "--input-group-gap": style("group").columnGap,
-      "--input-group-pad": style("group").paddingLeft,
+      "--input-group-padding": style("group").paddingLeft,
       "--divider-color": style("divider").borderTopColor,
       "--divider-width": style("divider").borderTopWidth,
       "--skeleton-base": style("skeleton").backgroundImage.includes("rgb(255, 0, 0)"),
@@ -201,7 +201,7 @@ test("takes each public component token from an ancestor", async ({ page }) => {
     "--tooltip-gap": "-16px",
     "--tooltip-linger": "0.7s",
     "--input-group-gap": "3px",
-    "--input-group-pad": "32px",
+    "--input-group-padding": "32px",
     "--divider-color": "rgb(255, 0, 0)",
     "--divider-width": "5px",
     "--skeleton-base": true,
@@ -219,6 +219,7 @@ test("takes the table's padding and row hover from an ancestor", async ({ page }
     '<!doctype html><html data-theme="light"><body><div style="--table-cell-padding: 2px 5px; --table-hover: rgb(0, 128, 0)">' +
       '<table class="data-table"><tbody>' +
       '<tr><td id="cell">Plain</td></tr><tr class="success"><td id="intent-cell">Success</td></tr>' +
+      '</tbody><tbody style="--table-hover: transparent"><tr><td id="section-cell">Section</td></tr>' +
       "</tbody></table></div></body></html>",
   );
   await page.addStyleTag({ url: "http://localhost:5184/shared/entry-vanilla.css" });
@@ -235,4 +236,23 @@ test("takes the table's padding and row hover from an ancestor", async ({ page }
   expect(padding).toEqual(["2px", "5px"]);
   expect(await hoverColor("cell")).toBe("rgb(0, 128, 0)");
   expect(await hoverColor("intent-cell")).toBe("rgb(0, 128, 0)");
+  // Read where the row paints, so a section of the table can set its own.
+  expect(await hoverColor("section-cell")).toBe("rgba(0, 0, 0, 0)");
+});
+
+/* 0.8 read the linger on the bubble, so a value set there worked; it still
+   does, and wins over the tooltip's. */
+test("takes the tooltip's linger from the bubble itself", async ({ page }) => {
+  await page.setContent(
+    '<!doctype html><html data-theme="light"><body><span class="tooltip" style="--tooltip-linger: 200ms">' +
+      '<button>Trigger</button><span class="tooltip-bubble" id="bubble" style="--tooltip-linger: 800ms">Tip</span>' +
+      "</span></body></html>",
+  );
+  await page.addStyleTag({ url: "http://localhost:5184/shared/entry-vanilla.css" });
+
+  const delay = await page
+    .locator("#bubble")
+    .evaluate((element) => getComputedStyle(element).transitionDelay.split(",")[0]);
+
+  expect(delay).toBe("0.8s");
 });

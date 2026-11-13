@@ -2,7 +2,7 @@
 title: Estéticas
 description: Os seis visuais opcionais, o que cada um muda num componente, os seus ajustes e os seus limites.
 order: 6
-source: f5743a0c576ce5cdb4f75073fbac958901ffdbb0
+source: 52678f7a4588460f836ce64909526d77e73aa4c6
 ---
 
 # Estéticas
@@ -242,7 +242,7 @@ Contornos desenhados à mão: os controles recebem cantos elípticos longos e ir
 
 A linha de tinta de 1px é sólida; checkboxes, divisores e linhas divisórias de tabela são tracejados. `--ui-line-style: dashed` deixa tracejado qualquer outro componente, e `--ui-rule-style: solid` volta um divisor ou uma tabela para sólido. A sombra dura de 2px é uma indicação de profundidade pequena e neutra.
 
-`--sketch-radius`, `--sketch-radius-surface` e `--sketch-radius-pill` substituem os contornos de controle, de superfície e de botão pill. Defina um deles na região ou em qualquer elemento dentro dela, e todas as posições abaixo recebem aquele contorno. Para dar forma a um único componente, defina `--ui-radius` (`--ui-radius-surface` numa superfície) nele.
+`--sketch-radius`, `--sketch-radius-surface` e `--sketch-radius-pill` substituem os contornos de controle, de superfície e de botão pill. Defina um deles na região ou em qualquer elemento dentro dela, e todas as posições abaixo recebem aquele contorno, nos componentes que rotacionam: `.btn`, `.ipt`, `.textarea`, `.select`, `.input-group`, `.pre` e `.tooltip-bubble` para o contorno de controle, e `.card`, `.panel`, `.alert` e `.data-table` para o de superfície. Qualquer outro elemento que recebe um contorno de controle ou de superfície, como um `.skeleton` ou um controle sem classe sob `/native`, recebe o contorno que a própria região resolveu, então um ajuste definido entre a região e esse elemento não o alcança; defina-o na região. Os chips, como `.badge` e `.checkbox`, recebem contornos pequenos próprios que nenhum ajuste muda. Para dar forma a um único componente, defina `--ui-radius` (`--ui-radius-surface` numa superfície) nele.
 
 ```html
 <section class="sketch" style='--font-sketch: "Comic Sans MS", cursive'>
