@@ -2,7 +2,7 @@
 title: Estéticas
 description: Los seis aspectos opcionales, lo que cada uno cambia en un componente, sus controles y sus límites.
 order: 6
-source: 27201e14aabccfed59986c30156cac005d1cf0bb
+source: 52678f7a4588460f836ce64909526d77e73aa4c6
 ---
 
 # Estéticas
@@ -242,7 +242,7 @@ Contornos dibujados a mano: los controles toman esquinas elípticas largas e irr
 
 La línea de tinta de 1px es continua; los checkboxes, los divisores y las líneas divisorias de las tablas son discontinuos. `--ui-line-style: dashed` hace discontinuo cualquier otro componente, y `--ui-rule-style: solid` devuelve un divisor o una tabla a continuo. La sombra dura de 2px es una pequeña señal neutra de profundidad.
 
-`--sketch-radius`, `--sketch-radius-surface` y `--sketch-radius-pill` reemplazan los contornos de control, de superficie y de botón pill. Define uno en la región o en cualquier elemento dentro de ella, y todas las posiciones por debajo toman ese único contorno, en los componentes que rotan: `.btn`, `.ipt`, `.textarea`, `.select`, `.input-group`, `.pre` y `.tooltip-bubble` para el contorno de control, y `.card`, `.panel`, `.alert` y `.data-table` para el de superficie. Cualquier otro elemento, como un `.skeleton` o un control sin clase bajo `/native`, toma el contorno que resolvió la propia región, así que un control definido entre la región y ese elemento no lo alcanza; defínelo en la región. Para dar forma a un solo componente, define en él `--ui-radius` (`--ui-radius-surface` en una superficie).
+`--sketch-radius`, `--sketch-radius-surface` y `--sketch-radius-pill` reemplazan los contornos de control, de superficie y de botón pill. Define uno en la región o en cualquier elemento dentro de ella, y todas las posiciones por debajo toman ese único contorno, en los componentes que rotan: `.btn`, `.ipt`, `.textarea`, `.select`, `.input-group`, `.pre` y `.tooltip-bubble` para el contorno de control, y `.card`, `.panel`, `.alert` y `.data-table` para el de superficie. Cualquier otro elemento que toma un contorno de control o de superficie, como un `.skeleton` o un control sin clase bajo `/native`, toma el contorno que resolvió la propia región, así que un control definido entre la región y ese elemento no lo alcanza; defínelo en la región. Los chips, como `.badge` y `.checkbox`, toman contornos pequeños propios que ningún control cambia. Para dar forma a un solo componente, define en él `--ui-radius` (`--ui-radius-surface` en una superficie).
 
 ```html
 <section class="sketch" style='--font-sketch: "Comic Sans MS", cursive'>
