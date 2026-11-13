@@ -71,6 +71,7 @@ describe("backchannelLogout", () => {
     expect(request?.method).toBe("POST");
     expect(request?.url).toBe(LOGOUT_URI);
     expect(request?.headers.get("content-type")).toBe("application/x-www-form-urlencoded");
+    expect(request?.redirect).toBe("manual");
     expect(await tokenOf(request)).toMatch(/^[\w-]+\.[\w-]+\.[\w-]+$/);
   });
 

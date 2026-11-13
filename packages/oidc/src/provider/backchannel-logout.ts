@@ -95,5 +95,7 @@ export async function backchannelLogout(options: ResolvedOptions, request: unkno
     method: "POST",
     headers: { "content-type": FORM_MEDIA_TYPE },
     body: new URLSearchParams({ logout_token: logoutToken }).toString(),
+    // A redirect would carry the token somewhere the client did not register.
+    redirect: "manual",
   });
 }
