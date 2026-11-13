@@ -241,6 +241,8 @@ export interface ProviderMetadata {
     readonly revocation_endpoint_auth_methods_supported?: readonly string[];
     readonly revocation_endpoint_auth_signing_alg_values_supported?: readonly string[];
     readonly authorization_response_iss_parameter_supported?: boolean;
+    readonly backchannel_logout_supported?: boolean;
+    readonly backchannel_logout_session_supported?: boolean;
     readonly claims_parameter_supported?: boolean;
     readonly request_parameter_supported?: boolean;
     readonly request_uri_parameter_supported?: boolean;
@@ -263,6 +265,22 @@ readonly authorization_response_iss_parameter_supported?: boolean;
 ```
 
 Whether the provider sends `iss` in authorization responses (RFC 9207).
+
+#### ProviderMetadata › backchannel\_logout\_session\_supported
+
+```ts
+readonly backchannel_logout_session_supported?: boolean;
+```
+
+Whether the logout token can carry `sid` (OpenID Connect Back-Channel Logout 1.0 §2.1).
+
+#### ProviderMetadata › backchannel\_logout\_supported
+
+```ts
+readonly backchannel_logout_supported?: boolean;
+```
+
+Whether the provider can send back-channel logout requests (OpenID Connect Back-Channel Logout 1.0 §2.1).
 
 #### ProviderMetadata › claims\_parameter\_supported
 

@@ -102,6 +102,21 @@ The end-session endpoint never redirects a failed request, so the app renders ea
 | A refresh token already spent, presented again                                   | `200`, and its grant is revoked, as a replay.                                                                                       |
 | A token issued to another client                                                 | `400`, `invalid_request`. An access token is left alone. A refresh token is spent and its grant is revoked.                         |
 
+## Provider: back-channel logout
+
+`provider.backchannelLogout` is a method the app calls, not an endpoint, so none of its input is hostile: a wrong call is the app's bug and throws `TypeError`. What it handles is the client's record, and what it produces is a request the app's server sends to the client.
+
+| Input                                                                                                                  | Outcome                                                                                                                 |
+| ---------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| A client the store does not know, or one with no `backchannelLogout`                                                   | `null`. Nothing is built, so nothing is sent.                                                                           |
+| Neither `subject` nor `sessionId`, an empty or non-string one, or no `sessionId` for a client with `sessionRequired`   | `TypeError`, before any token is signed. The message names the member, never its value.                                 |
+| A record whose `backchannelLogout.uri` is not an absolute `https` URL of visible ASCII without fragment or credentials | `TypeError`, as for any malformed record. A plain `http` URI is refused, since the token would cross the network clear. |
+| The logout token presented where an ID token is expected                                                               | Refused: its `typ` is `logout+jwt`, and an ID token check requires `JWT`.                                               |
+| An ID token presented where a logout token is expected                                                                 | Refused for the same reason, in the other direction.                                                                    |
+| A logout token for a client other than the one it names in `aud`                                                       | Refused by the audience check of whoever verifies it. The token names only the client it was built for.                 |
+
+The token lives for 120 seconds and carries a random `jti`, so a captured one is useless soon, and a client that remembers `jti` values refuses a replay within that time. The provider remembers nothing, and each call signs a new token.
+
 ## Client: the callback
 
 Each row is checked before any token request is sent, unless it says otherwise.
@@ -203,6 +218,7 @@ These are outside its scope. Each one is either the app's job or a known gap.
 - **JWT access tokens and revocation.** With `accessToken: { format: "jwt" }`, the provider revokes a token at once, but a resource server that verifies it offline sees a revocation only when the token expires. Keep `ttl.accessToken` short, as [JWT access tokens](provider.md#jwt-access-tokens) advises.
 - **Sender-constrained tokens.** Access tokens are bearer tokens. DPoP and mutual TLS are not supported.
 - **How the user authenticates.** The package records what the app says about the login in `authTime`, `amr` and `acr`. It does not verify them, and an `amr` of `["pwd"]` is what the app claims, not a check. The same holds for `sessionId`: the provider copies it into the `sid` claim without interpreting it, so a client sees whatever the app chose, and it should not be a secret.
+- **Where a logout request goes.** `backchannelLogout` builds a request to the `uri` in a client's record, and the app's own server sends it. The package requires `https` and refuses credentials and fragments, but not an address on a private network: a client registered with `https://169.254.169.254/` or an internal host makes the app call it. When anyone but you registers clients, apply your own egress rules when you send, such as refusing private, loopback and link-local addresses after DNS resolution, and pass `redirect: "manual"` so a redirect cannot reach one either. Timeouts, retries and logging of the outcome are the app's too.
 - **Key management.** The package signs with the keys it is given. Storage of the private keys, the timing of rotation, and a compromised signing key are the app's. A key that leaks lets anyone forge ID tokens for that provider.
 - **Redirect URI registration.** The app registers each client's URIs. The package matches them exactly and does not decide which are safe.
 - **The provider's identity on the client side.** The client trusts discovery over `https`, the issuer match and the signatures from the provider's keys. It does not pin the keys or the endpoints beyond that.

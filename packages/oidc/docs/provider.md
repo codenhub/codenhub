@@ -1,6 +1,6 @@
 ---
 title: Provider
-description: Creating an OpenID Provider and its diagnostics, routing its endpoints, the authorization step, the token endpoint and its grants, userinfo, token revocation, the published metadata, and the CORS and error-response rules.
+description: Creating an OpenID Provider and its diagnostics, routing its endpoints, the authorization step, ending sessions with RP-initiated and back-channel logout, the token endpoint and its grants, userinfo, token revocation, the published metadata, and the CORS and error-response rules.
 order: 2
 ---
 
@@ -163,6 +163,7 @@ Each value is an absolute `https` URL of visible ASCII (no spaces, control or no
 - `token_endpoint_auth_methods_supported`: `client_secret_basic`, `client_secret_post`, `client_secret_jwt`, `private_key_jwt` and `none`. `token_endpoint_auth_signing_alg_values_supported`: `ES256`, `EdDSA`, `Ed25519`, `RS256`, `PS256` and `HS256`. The revocation endpoint publishes the same two lists as `revocation_endpoint_auth_methods_supported` and `revocation_endpoint_auth_signing_alg_values_supported`, and `revocation_endpoint` holds its URL.
 - `claims_supported`: the ID token's claims and every claim the scopes release.
 - `code_challenge_methods_supported`: `["S256"]`. `authorization_response_iss_parameter_supported`: `true`.
+- `backchannel_logout_supported` and `backchannel_logout_session_supported`: `true`. See [Back-channel logout](#back-channel-logout).
 - `claims_parameter_supported`, `request_parameter_supported` and `request_uri_parameter_supported`: `false`, because the package does not implement them.
 
 ## Routing requests with handle
@@ -391,6 +392,109 @@ if (result.value.subject === undefined || result.value.subject !== (await sessio
 await endAppSession(request); // the app's own session
 return result.value.redirect ?? renderSignedOutPage();
 ```
+
+## Back-channel logout
+
+RP-initiated logout ends the session at the provider when a client asks. Back-channel logout is the other direction: when the user signs out of the app, the app tells each client it signed the user into, server to server, so those clients can end their own sessions (OpenID Connect Back-Channel Logout 1.0). Discovery advertises it as `backchannel_logout_supported` and `backchannel_logout_session_supported`.
+
+The provider keeps no sessions and makes no outbound request, so the app does the work around it. `provider.backchannelLogout(request)` builds the logout request for one client, and the app sends it with `fetch`:
+
+```ts
+const request = await provider.backchannelLogout({
+  clientId: "billing", // required
+  subject: "user-1", // the `sub` of the user who signed out
+  sessionId: "9f2c41d0a7", // the `sessionId` the app gave completeAuthorization, which the client saw as `sid`
+});
+```
+
+A client takes part by registering a [`backchannelLogout`](store.md#client-records) entry in its record: its `uri`, which must be an absolute `https` URL, and whether it needs the session (`sessionRequired`, `false` by default).
+
+### What the method returns
+
+- `null` when the client is unknown, or its record has no `backchannelLogout`. There is nothing to send, so the app skips it.
+- Otherwise a `POST` `Request` to the client's `uri`, with `Content-Type: application/x-www-form-urlencoded` and the body `logout_token=<token>`.
+- A `TypeError` when the call itself is wrong, which is a bug in the app: `clientId` is not a non-empty string, `subject` and `sessionId` are both absent, either is present and is not a non-empty string, or the client's `sessionRequired` is `true` and there is no `sessionId`. The call is checked before the store is read, so these throw whether or not the client exists, except `sessionRequired`, which needs the record. A store that returns a malformed record makes it reject with `TypeError`, like every other method.
+
+Give `subject`, `sessionId` or both. A client that registered `sessionRequired: true` needs the `sessionId`, since it finds the session to end by `sid`. Giving both is the most useful when the client keeps sessions by either.
+
+### The logout token
+
+The logout token is a JWT signed like that client's ID tokens, with the key its `idTokenSigningAlg` selects (see [Signing keys](#signing-keys)), so the client verifies it against the same JWKS. Its header has `typ: "logout+jwt"`, and the `alg` and `kid` of the key. Its claims are:
+
+| Claim    | Value                                                           |
+| -------- | --------------------------------------------------------------- |
+| `iss`    | The issuer.                                                     |
+| `aud`    | The client identifier.                                          |
+| `iat`    | Now, from the provider's clock.                                 |
+| `exp`    | `iat` plus 120 seconds. This is not configurable.               |
+| `jti`    | A random value of 256 bits, new for every token.                |
+| `events` | `{ "http://schemas.openid.net/event/backchannel-logout": {} }`. |
+| `sub`    | The `subject` you gave, when you gave one.                      |
+| `sid`    | The `sessionId` you gave, when you gave one.                    |
+
+It never has a `nonce`, which the specification forbids. Because its `typ` is `logout+jwt`, a verifier that expects an ID token (`typ: "JWT"`), such as this package's own, refuses it, and a verifier of logout tokens refuses an ID token. That is the same type separation that keeps an access token from passing as an ID token.
+
+### Sending it
+
+The app owns delivery: the provider sets no timeout, retries nothing and reads no answer.
+
+- Send it with `fetch`. A client answers `200` when it ended the session, or `400` with an error (Back-Channel Logout 1.0 §2.8). Treat any `2xx` as success and anything else as a failure, and do not read the body, which is not part of the contract.
+- Use a short timeout, a few seconds. A client that is down or slow must not hold up the user's sign-out, so send to all clients at once and do not make the user wait for the slowest.
+- Do not follow redirects. The token is a bearer credential for that client, and the client's registered `uri` is the only place it should go. A `3xx` answer is a failure. Pass `redirect: "manual"` to `fetch`; the request the provider builds leaves the choice to you.
+- A `Request` body can be read once, so to retry, call `backchannelLogout` again. The new token has a new `jti` and a fresh `exp`, and a client that remembers `jti` values, as the specification asks it to, accepts it.
+- The logout token is not a secret you log. Keep it out of logs and error reports, and log the client and the status.
+
+### Worked example
+
+The app ends its session, and then, for each client it signed the user into during that session, builds the request and sends it:
+
+```ts
+import type { Provider } from "@codenhub/oidc/provider";
+
+declare const provider: Provider;
+declare function clientsSignedInDuring(sessionId: string): Promise<readonly string[]>; // the app's own record
+declare function endAppSession(sessionId: string): Promise<void>;
+declare function logFailure(clientId: string, outcome: number | "timeout" | "error"): void;
+
+/** Ends the user's session in the app and tells every client that took part in it. */
+async function signOut(session: { readonly id: string; readonly subject: string }): Promise<void> {
+  const clientIds = await clientsSignedInDuring(session.id);
+  await endAppSession(session.id);
+
+  await Promise.allSettled(
+    clientIds.map(async (clientId) => {
+      const request = await provider.backchannelLogout({
+        clientId,
+        subject: session.subject,
+        sessionId: session.id,
+      });
+      if (request === null) {
+        return; // unknown client, or one that did not register a back-channel logout URI
+      }
+      try {
+        const response = await fetch(request, { redirect: "manual", signal: AbortSignal.timeout(5000) });
+        if (!response.ok) {
+          logFailure(clientId, response.status); // 400, 3xx or a server error: any non-2xx is a failure
+        }
+      } catch (error) {
+        logFailure(clientId, error instanceof DOMException && error.name === "TimeoutError" ? "timeout" : "error");
+      }
+    }),
+  );
+}
+```
+
+`Promise.allSettled` keeps one failing client from stopping the others. The `TypeError` cases above are not caught here, since they are bugs to fix and not failures to log, but `allSettled` still lets the remaining clients go.
+
+### What the app must track
+
+The provider cannot tell which clients a user is signed into, because it keeps no sessions. The app must record, for each session, the clients it completed an authorization for with that `sessionId`: at the moment it calls `completeAuthorization` with a grant, add the interaction's `clientId` to that session's list. That list is what `clientsSignedInDuring` reads above. Without a `sessionId` on the grant, the client's ID tokens have no `sid`, and a client with `sessionRequired: true` cannot be told about the logout.
+
+A client signed in during several sessions of the same user is told once per session you end. To end all of a user's sessions, call the method for each session, or give only the `subject` for a client that does not need the session.
+
+### Not supported
+
+Front-channel logout (a page in the browser that loads each client's logout URL) and session management (an iframe that polls the provider for the session's state) are not supported. Both need the provider to know the browser's session, which it does not. Back-channel logout and [RP-initiated logout](#ending-sessions) are the two ways to end a session.
 
 ## The token endpoint
 
