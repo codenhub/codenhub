@@ -111,6 +111,7 @@ fetches; // 1
 - [Keys](docs/keys.md)
 - [Key sets](docs/key-sets.md)
 - [Issues](docs/errors.md)
+- [API reference](docs/reference/index.md)
 
 ## Requirements
 

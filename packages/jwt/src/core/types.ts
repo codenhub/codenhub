@@ -243,7 +243,7 @@ export interface VerifierOptions<TSchema extends StandardSchemaV1 | undefined = 
    */
   readonly type?: string;
   /**
-   * Seconds of clock skew allowed on `exp`, `nbf` and `iat`. An integer from 0 through 300.
+   * Seconds of clock skew allowed on `exp`, `nbf`, `iat` and `maxAge`. An integer from 0 through 300.
    *
    * @defaultValue 0
    */

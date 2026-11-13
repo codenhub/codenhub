@@ -113,6 +113,7 @@ fetches; // 1
 - [Keys](docs/keys.md)
 - [Key sets](docs/key-sets.md)
 - [Issues](docs/errors.md)
+- [API reference](docs/reference/index.md)
 
 ## Requirements
 
@@ -252,6 +253,7 @@ There is no function that decodes a payload without verifying it. When you need 
 - [Keys](docs/keys.md): public, private and secret keys, importing JWKs and raw secrets, generating keys, and exporting them.
 - [Key sets](docs/key-sets.md): how a key is selected, local sets, importing a JWKS, and fetching an issuer's JWKS with caching, cooldown and stale keys.
 - [Issues](docs/errors.md): the result shape, every issue code and its `params`, and what throws instead.
+- [API reference](docs/reference/index.md): every export with its signature, generated from the TSDoc.
 
 <!-- Source: docs/verifying.md -->
 

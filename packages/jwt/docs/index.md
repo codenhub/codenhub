@@ -123,3 +123,4 @@ There is no function that decodes a payload without verifying it. When you need 
 - [Keys](keys.md): public, private and secret keys, importing JWKs and raw secrets, generating keys, and exporting them.
 - [Key sets](key-sets.md): how a key is selected, local sets, importing a JWKS, and fetching an issuer's JWKS with caching, cooldown and stale keys.
 - [Issues](errors.md): the result shape, every issue code and its `params`, and what throws instead.
+- [API reference](reference/index.md): every export with its signature, generated from the TSDoc.
