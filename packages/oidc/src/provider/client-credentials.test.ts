@@ -129,6 +129,33 @@ describe("client_credentials", () => {
     expect(await response.text()).toBe(JSON.stringify({ error: "invalid_scope" }));
   });
 
+  it("gives a token the client's own access token lifetime, and the provider's when it sets none", async () => {
+    const { op, store, secret } = await setup();
+    store.addClient({
+      clientId: "short-machine",
+      redirectUris: [],
+      scopes: ["orders:read"],
+      auth: { method: "client_secret_basic", secretHash: await hashClientSecret(secret) },
+      grantTypes: ["client_credentials"],
+      ttl: { accessToken: 120 },
+    });
+
+    const own = (await (await handled(op, tokenRequest("short-machine", secret, {}))).json()) as Record<
+      string,
+      unknown
+    >;
+    const inherited = (await (await handled(op, tokenRequest("machine", secret, {}))).json()) as Record<
+      string,
+      unknown
+    >;
+
+    expect(own.expires_in).toBe(120);
+    expect(await store.findAccessToken(await digestKey(own.access_token as string))).toMatchObject({
+      expiresAt: NOW_SECONDS + 120,
+    });
+    expect(inherited.expires_in).toBe(600);
+  });
+
   it("refuses a client without the grant with unauthorized_client, and says why to the operator", async () => {
     const { op, secret, diagnostics } = await setup();
 

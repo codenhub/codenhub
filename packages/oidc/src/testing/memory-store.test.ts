@@ -88,6 +88,15 @@ describe("findClient", () => {
     expect(await store.findClient("client-unknown")).toBeUndefined();
   });
 
+  it("should return a client's ttl without sharing the object the caller registered", async () => {
+    const client = makeClient({ ttl: { accessToken: 120 } });
+    const store = createMemoryStore({ clients: [client] });
+
+    (client.ttl as { accessToken: number }).accessToken = 999;
+
+    expect((await store.findClient("client-a"))?.ttl).toEqual({ accessToken: 120 });
+  });
+
   it("should replace a client when addClient is called with the same id", async () => {
     const store = createMemoryStore({ clients: [makeClient()] });
 

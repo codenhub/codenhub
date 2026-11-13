@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { checkClientRecord } from "./client-record";
+import { checkClientRecord, lifetimesOf } from "./client-record";
 import type { ClientRecord } from "./types";
 
 const valid = (overrides: Record<string, unknown> = {}): Record<string, unknown> => ({
@@ -143,5 +143,75 @@ describe("checkClientRecord", () => {
     expect(() => checkClientRecord(valid({ auth: { method: "private_key_jwt", keys: {} } }), "client-a")).toThrow(
       TypeError,
     );
+  });
+
+  describe("ttl", () => {
+    it("shouldAcceptEveryLifetimeAtItsBounds", () => {
+      const low = { code: 1, accessToken: 60, idToken: 60, refreshToken: 60 };
+      const high = { code: 600, accessToken: 86_400, idToken: 86_400, refreshToken: 31_536_000 };
+
+      expect(() => checkClientRecord(valid({ ttl: low }), "client-a")).not.toThrow();
+      expect(() => checkClientRecord(valid({ ttl: high }), "client-a")).not.toThrow();
+    });
+
+    it("shouldAcceptAnEmptyTtlAndKeepIt", () => {
+      expect(checkClientRecord(valid({ ttl: {} }), "client-a").ttl).toEqual({});
+    });
+
+    it.each([
+      ["code", 0],
+      ["code", 601],
+      ["accessToken", 59],
+      ["accessToken", 86_401],
+      ["idToken", 59],
+      ["idToken", 86_401],
+      ["refreshToken", 59],
+      ["refreshToken", 31_536_001],
+      ["code", 1.5],
+      ["accessToken", Number.NaN],
+      ["idToken", "600"],
+      ["refreshToken", null],
+    ])("shouldRejectTtl_%s_of_%s", (name, value) => {
+      const attempt = () => checkClientRecord(valid({ ttl: { [name as string]: value } }), "client-a");
+
+      expect(attempt).toThrow(TypeError);
+      expect(attempt).toThrow(`ttl.${name}`);
+    });
+
+    it.each([
+      ["a string", "600"],
+      ["null", null],
+      ["an array", [60]],
+      ["a number", 60],
+    ])("shouldRejectTtlThatIs%s", (_name, ttl) => {
+      expect(() => checkClientRecord(valid({ ttl }), "client-a")).toThrow(TypeError);
+    });
+
+    it("shouldNotNameTheRejectedValue", () => {
+      expect(() => checkClientRecord(valid({ ttl: { accessToken: 12_345_678 } }), "client-a")).toThrow(
+        /^(?!.*12345678)/,
+      );
+    });
+  });
+});
+
+describe("lifetimesOf", () => {
+  const provider = { code: 60, interaction: 1800, accessToken: 600, idToken: 600, refreshToken: 2_592_000 };
+  const client = (ttl?: Record<string, number>) => checkClientRecord(valid({ ttl }), "client-a");
+
+  it("shouldReturnTheProviderLifetimesForAClientWithoutTtl", () => {
+    expect(lifetimesOf(provider, client())).toEqual(provider);
+  });
+
+  it("shouldReplaceOnlyTheLifetimesTheClientSets", () => {
+    expect(lifetimesOf(provider, client({ accessToken: 120, refreshToken: 3600 }))).toEqual({
+      ...provider,
+      accessToken: 120,
+      refreshToken: 3600,
+    });
+  });
+
+  it("shouldKeepTheProviderInteractionLifetime", () => {
+    expect(lifetimesOf(provider, client({ code: 5 })).interaction).toBe(1800);
   });
 });

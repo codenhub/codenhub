@@ -9,9 +9,9 @@ import { computeCodeChallenge, isCodeVerifier } from "../shared/pkce";
 import { computeTokenHash } from "../shared/token-hash";
 import type { OAuthErrorCode } from "../shared/types";
 import { authenticateClient } from "./client-auth";
-import type { CheckedClient } from "./client-record";
+import { type CheckedClient, lifetimesOf } from "./client-record";
 import { refuse } from "./diagnostics";
-import { PROTOCOL_SCOPES, type ResolvedOptions } from "./options";
+import { PROTOCOL_SCOPES, type ResolvedOptions, type ResolvedTtl } from "./options";
 import { jsonResponse, methodNotAllowed, preflightResponse, tokenErrorResponse } from "./responses";
 import type { ClientRecord, CodeRecord, ProviderDiagnosticReason, RefreshTokenRecord } from "./types";
 
@@ -170,6 +170,7 @@ async function whyUnredeemable(
 /** Issues the first tokens of a grant from a redeemed code, with a refresh token only under `offline_access`. */
 async function issueFromCode(options: ResolvedOptions, client: ClientRecord, record: CodeRecord): Promise<Response> {
   const now = options.now();
+  const ttl = lifetimesOf(options.ttl, client);
   const grant: Grant = {
     grantId: record.grantId,
     clientId: client.clientId,
@@ -178,7 +179,7 @@ async function issueFromCode(options: ResolvedOptions, client: ClientRecord, rec
     ...optionalAuthContext(record),
     ...optionalSessionId(record),
   };
-  const accessToken = await issueAccessToken(options, grant, record.scopes, now);
+  const accessToken = await issueAccessToken(options, ttl, grant, record.scopes, now);
   let refreshToken: string | undefined;
   if (record.scopes.includes("offline_access")) {
     refreshToken = randomToken();
@@ -186,17 +187,18 @@ async function issueFromCode(options: ResolvedOptions, client: ClientRecord, rec
       ...grantRecord(grant),
       scopes: record.scopes,
       // Counted from this exchange, and never extended by rotation.
-      expiresAt: now + options.ttl.refreshToken,
+      expiresAt: now + ttl.refreshToken,
     });
   }
   const idToken = await issueIdToken(
     options,
+    ttl,
     grant,
     accessToken,
     now,
     record.nonce === undefined ? {} : { nonce: record.nonce },
   );
-  return tokenResponse(options, { accessToken, scopes: record.scopes, idToken, refreshToken });
+  return tokenResponse(ttl, { accessToken, scopes: record.scopes, idToken, refreshToken });
 }
 
 /**
@@ -240,8 +242,9 @@ async function refreshTokens(
     return refused("invalid_scope", "scope_not_granted");
   }
   const now = options.now();
+  const ttl = lifetimesOf(options.ttl, client);
   const grant: Grant = { ...grantRecord(record) };
-  const accessToken = await issueAccessToken(options, grant, scopes, now);
+  const accessToken = await issueAccessToken(options, ttl, grant, scopes, now);
   const nextRefreshToken = randomToken();
   await options.store.saveRefreshToken(await digestKey(nextRefreshToken), {
     ...grantRecord(record),
@@ -249,8 +252,8 @@ async function refreshTokens(
     scopes: record.scopes,
     expiresAt: record.expiresAt,
   });
-  const idToken = await issueIdToken(options, grant, accessToken, now, {});
-  return tokenResponse(options, { accessToken, scopes, idToken, refreshToken: nextRefreshToken });
+  const idToken = await issueIdToken(options, ttl, grant, accessToken, now, {});
+  return tokenResponse(ttl, { accessToken, scopes, idToken, refreshToken: nextRefreshToken });
 }
 
 /**
@@ -287,8 +290,10 @@ async function issueForClient(
     return refuse(tokenErrorResponse("invalid_scope"), "scope_invalid", client.clientId);
   }
   const now = options.now();
+  const ttl = lifetimesOf(options.ttl, client);
   const accessToken = await issueAccessToken(
     options,
+    ttl,
     { grantId: randomToken(), clientId: client.clientId, subject: client.clientId },
     scopes,
     now,
@@ -297,7 +302,7 @@ async function issueForClient(
     {
       access_token: accessToken,
       token_type: "Bearer",
-      expires_in: options.ttl.accessToken,
+      expires_in: ttl.accessToken,
       scope: scopes.join(" "),
     },
     { caching: "no-store" },
@@ -333,13 +338,14 @@ type AccessTokenGrant = Pick<Grant, "grantId" | "clientId" | "subject"> &
  */
 async function issueAccessToken(
   options: ResolvedOptions,
+  ttl: ResolvedTtl,
   grant: AccessTokenGrant,
   scopes: readonly string[],
   now: number,
 ): Promise<string> {
   const accessToken =
     options.accessToken.format === "jwt"
-      ? await signAccessToken(options, options.accessToken.audience, grant, scopes, now)
+      ? await signAccessToken(options, ttl, options.accessToken.audience, grant, scopes, now)
       : randomToken();
   await options.store.saveAccessToken(await digestKey(accessToken), {
     grantId: grant.grantId,
@@ -347,7 +353,7 @@ async function issueAccessToken(
     subject: grant.subject,
     scopes,
     ...optionalSessionId(grant),
-    expiresAt: now + options.ttl.accessToken,
+    expiresAt: now + ttl.accessToken,
   });
   return accessToken;
 }
@@ -358,6 +364,7 @@ async function issueAccessToken(
  */
 function signAccessToken(
   options: ResolvedOptions,
+  ttl: ResolvedTtl,
   audience: string,
   grant: AccessTokenGrant,
   scopes: readonly string[],
@@ -366,7 +373,7 @@ function signAccessToken(
   return sign({
     payload: {
       iss: options.issuer,
-      exp: now + options.ttl.accessToken,
+      exp: now + ttl.accessToken,
       aud: audience,
       sub: grant.subject,
       client_id: grant.clientId,
@@ -387,6 +394,7 @@ function signAccessToken(
  */
 async function issueIdToken(
   options: ResolvedOptions,
+  ttl: ResolvedTtl,
   grant: Grant,
   accessToken: string,
   now: number,
@@ -399,7 +407,7 @@ async function issueIdToken(
       sub: grant.subject,
       aud: grant.clientId,
       iat: now,
-      exp: now + options.ttl.idToken,
+      exp: now + ttl.idToken,
       auth_time: grant.authTime,
       ...optionalAuthContext(grant),
       ...(grant.sessionId !== undefined ? { sid: grant.sessionId } : {}),
@@ -416,7 +424,7 @@ async function issueIdToken(
  * the access token's scopes, which may be narrower than the family's.
  */
 function tokenResponse(
-  options: ResolvedOptions,
+  ttl: ResolvedTtl,
   tokens: {
     readonly accessToken: string;
     readonly scopes: readonly string[];
@@ -428,7 +436,7 @@ function tokenResponse(
     {
       access_token: tokens.accessToken,
       token_type: "Bearer",
-      expires_in: options.ttl.accessToken,
+      expires_in: ttl.accessToken,
       id_token: tokens.idToken,
       ...(tokens.refreshToken !== undefined ? { refresh_token: tokens.refreshToken } : {}),
       scope: tokens.scopes.join(" "),

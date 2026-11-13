@@ -38,6 +38,20 @@ const CLIENTS: readonly ClientRecord[] = [
     auth: { method: "none" },
   },
   { clientId: "other", redirectUris: [REDIRECT_URI], scopes: ["openid"], auth: { method: "none" } },
+  {
+    clientId: "short",
+    redirectUris: [REDIRECT_URI],
+    scopes: ["openid", "profile", "offline_access"],
+    auth: { method: "none" },
+    ttl: { accessToken: 120, idToken: 90, refreshToken: 3600 },
+  },
+  {
+    clientId: "partial",
+    redirectUris: [REDIRECT_URI],
+    scopes: ["openid", "offline_access"],
+    auth: { method: "none" },
+    ttl: { idToken: 300 },
+  },
 ];
 
 /** Options over a memory store, with a clock the test moves forward by setting `setClock`. */
@@ -623,5 +637,84 @@ describe("handleToken: refresh_token grant", () => {
     const response = await handleToken(options, tokenRequest("grant_type=refresh_token&client_id=public"));
 
     expect(await errorOf(response)).toEqual({ status: 400, body: JSON.stringify({ error: "invalid_request" }) });
+  });
+});
+
+describe("handleToken: lifetimes of a client", () => {
+  /** Redeems a fresh code issued to `clientId`, and returns the parsed body. */
+  async function redeemFor(clientId: string, options: ResolvedOptions, store: MemoryStore): Promise<TokenBody> {
+    const code = await saveCode(store, { clientId });
+    const response = await handleToken(options, tokenRequest(codeBody(code, { client_id: clientId })));
+    expect(response.status).toBe(200);
+    return (await response.json()) as TokenBody;
+  }
+
+  it("applies the client's own lifetimes to the code exchange", async () => {
+    const { options, store } = await setup();
+
+    const body = await redeemFor("short", options, store);
+
+    expect(body.expires_in).toBe(120);
+    expect(payloadOf(body.id_token)).toMatchObject({ iat: NOW_SECONDS, exp: NOW_SECONDS + 90 });
+    expect(await store.findAccessToken(await digestKey(body.access_token))).toMatchObject({
+      expiresAt: NOW_SECONDS + 120,
+    });
+    expect(await store.consumeRefreshToken(await digestKey(body.refresh_token ?? ""))).toMatchObject({
+      record: { expiresAt: NOW_SECONDS + 3600 },
+    });
+  });
+
+  it("falls back to the provider's lifetime for each one the client leaves out", async () => {
+    const { options, store } = await setup();
+
+    const body = await redeemFor("partial", options, store);
+
+    expect(body.expires_in).toBe(options.ttl.accessToken);
+    expect(payloadOf(body.id_token).exp).toBe(NOW_SECONDS + 300);
+    expect(await store.consumeRefreshToken(await digestKey(body.refresh_token ?? ""))).toMatchObject({
+      record: { expiresAt: NOW_SECONDS + options.ttl.refreshToken },
+    });
+  });
+
+  it("leaves a client without ttl on the provider's lifetimes", async () => {
+    const { options, store } = await setup();
+
+    const body = await redeemFor("public", options, store);
+
+    expect(body.expires_in).toBe(options.ttl.accessToken);
+    expect(payloadOf(body.id_token).exp).toBe(NOW_SECONDS + options.ttl.idToken);
+  });
+
+  it("applies the client's lifetimes to a refresh and keeps the family's expiry through rotation", async () => {
+    const { options, store, setClock } = await setup();
+    const issued = await redeemFor("short", options, store);
+    setClock(NOW_MS + 1000 * 1000);
+
+    const refreshed = (await (
+      await handleToken(options, tokenRequest(refreshBody(issued.refresh_token ?? "", { client_id: "short" })))
+    ).json()) as TokenBody;
+
+    const now = NOW_SECONDS + 1000;
+    expect(refreshed.expires_in).toBe(120);
+    expect(payloadOf(refreshed.id_token).exp).toBe(now + 90);
+    expect(await store.findAccessToken(await digestKey(refreshed.access_token))).toMatchObject({
+      expiresAt: now + 120,
+    });
+    expect(await store.consumeRefreshToken(await digestKey(refreshed.refresh_token ?? ""))).toMatchObject({
+      record: { expiresAt: NOW_SECONDS + 3600 },
+    });
+  });
+
+  it("refuses a refresh token after the client's shorter family lifetime", async () => {
+    const { options, store, setClock } = await setup();
+    const issued = await redeemFor("short", options, store);
+    setClock(NOW_MS + 3600 * 1000);
+
+    const response = await handleToken(
+      options,
+      tokenRequest(refreshBody(issued.refresh_token ?? "", { client_id: "short" })),
+    );
+
+    expect(await errorOf(response)).toEqual({ status: 400, body: JSON.stringify({ error: "invalid_grant" }) });
   });
 });

@@ -476,6 +476,41 @@ describe("completeAuthorization", () => {
     expect(retry.ok).toBe(true);
   });
 
+  it("shouldGiveTheCodeTheClientsOwnLifetime", async () => {
+    store.addClient({ ...client, ttl: { code: 300 } });
+    const saveSpy = vi.spyOn(store, "saveCode");
+    const interaction = await beginOk();
+    await completeAuthorization(options, interaction.id, GRANT);
+    expect(saveSpy.mock.calls[0]?.[1]).toMatchObject({ expiresAt: NOW_SECONDS + 300 });
+  });
+
+  it("shouldKeepTheProviderInteractionLifetimeWhateverTheClientSets", async () => {
+    store.addClient({ ...client, ttl: { code: 300, accessToken: 120 } });
+    const saveSpy = vi.spyOn(store, "saveInteraction");
+    await beginOk();
+    expect(saveSpy.mock.calls[0]?.[1]).toMatchObject({ expiresAt: NOW_SECONDS + DEFAULT_INTERACTION_TTL });
+  });
+
+  it("shouldReturnNotFoundWhenTheClientWasRemovedDuringTheInteraction", async () => {
+    const interaction = await beginOk();
+    vi.spyOn(store, "findClient").mockResolvedValue(undefined);
+    const result = await completeAuthorization(options, interaction.id, GRANT);
+    expect(!result.ok && result.error.issues).toEqual([{ code: "interaction_not_found" }]);
+  });
+
+  it("shouldThrowTypeErrorWhenTheClientRecordHasAMalformedTtlAtCompletion", async () => {
+    const interaction = await beginOk();
+    store.addClient({ ...client, ttl: { code: 0 } });
+    await expect(completeAuthorization(options, interaction.id, GRANT)).rejects.toThrow(TypeError);
+  });
+
+  it("shouldNotReadTheClientToSendADenial", async () => {
+    const interaction = await beginOk();
+    const findSpy = vi.spyOn(store, "findClient");
+    await completeAuthorization(options, interaction.id, { error: "access_denied" });
+    expect(findSpy).not.toHaveBeenCalled();
+  });
+
   it("shouldSetMaxAgeRequestedWhenMaxAgeWasSent", async () => {
     const saveSpy = vi.spyOn(store, "saveCode");
     const interaction = await beginOk(query({ max_age: "300" }));

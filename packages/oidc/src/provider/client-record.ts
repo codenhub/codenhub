@@ -1,4 +1,5 @@
 import { isRedirectUri } from "../shared/urls";
+import { CLIENT_TTL_NAMES, describeTtlRange, isTtlInRange, type ResolvedTtl } from "./options";
 import type { ClientRecord, GrantType } from "./types";
 
 const AUTH_METHODS = new Set([
@@ -73,8 +74,41 @@ export function checkClientRecord(record: unknown, clientId: string): CheckedCli
   if (auth.method === "none" && grantTypes.includes("client_credentials")) {
     return invalid("must not allow client_credentials to a client whose auth.method is none");
   }
+  checkTtl(record.ttl);
   // Resolved here, so every endpoint reads the list without repeating the default.
   return { ...(record as unknown as ClientRecord), grantTypes };
+}
+
+/**
+ * Checks a client's own lifetimes, each held to the bounds of the provider's option of the same name. Only
+ * `undefined` leaves a lifetime to the provider, so an explicit `null` is refused like any other non-integer.
+ */
+function checkTtl(ttl: unknown): void {
+  if (ttl === undefined) {
+    return;
+  }
+  if (!isRecord(ttl) || Array.isArray(ttl)) {
+    invalid("must give ttl, when present, as an object");
+  }
+  const lifetimes = ttl as Record<string, unknown>;
+  for (const name of CLIENT_TTL_NAMES) {
+    if (lifetimes[name] !== undefined && !isTtlInRange(name, lifetimes[name])) {
+      invalid(`must give ttl.${name}, when present, as ${describeTtlRange(name)}`);
+    }
+  }
+}
+
+/** The lifetimes for tokens of `client`: its own where its record sets them, the provider's otherwise. */
+export function lifetimesOf(provider: ResolvedTtl, client: ClientRecord): ResolvedTtl {
+  const own = client.ttl;
+  return own === undefined
+    ? provider
+    : {
+        ...provider,
+        ...Object.fromEntries(
+          CLIENT_TTL_NAMES.filter((name) => own[name] !== undefined).map((name) => [name, own[name]]),
+        ),
+      };
 }
 
 /** The client's grants, or the default when the record has none. */

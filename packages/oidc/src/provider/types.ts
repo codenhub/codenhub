@@ -60,6 +60,12 @@ export interface ClientRecord {
    * of this client redirects.
    */
   readonly postLogoutRedirectUris?: readonly string[];
+  /**
+   * Token lifetimes for this client, each replacing the provider's {@link ProviderOptions.ttl} of the same name for
+   * the tokens issued to it. A lifetime left out is the provider's. The provider checks each value when it reads
+   * the record, by the bounds of the option it replaces, and throws `TypeError` if one fails.
+   */
+  readonly ttl?: ClientTtl;
 }
 
 /** A validated authorization request, saved between {@link Provider.beginAuthorization} and its completion. */
@@ -164,7 +170,10 @@ export type Consumption<TRecord> =
  * Expiry is the provider's to check: a method returns a record whatever its `expiresAt`. No method purges,
  * so the adapter deletes expired rows itself, such as with a scheduled job, keeping a used code or refresh
  * token at least until its `expiresAt`, so a replay is still recognized, and a revoked grant's marker until
- * the last token of that grant expires: `ttl.refreshToken` after the code exchange plus one `ttl.accessToken`, since an access token issued by the last refresh outlives its family.
+ * the last token of that grant expires: a refresh token lifetime after the code exchange plus one access token
+ * lifetime, since an access token issued by the last refresh outlives its family. Lifetimes can differ by client
+ * ({@link ClientRecord.ttl}), so keep the marker for the longest refresh token lifetime of any client plus the
+ * longest access token lifetime of any client, the provider's own `ttl` counting for a client that sets none.
  */
 export interface OidcStore {
   /** Looks up a registered client. `undefined` when none has this identifier. */
@@ -244,6 +253,25 @@ export interface ProviderTtl {
    * 60 through 31536000.
    *
    * @defaultValue 2592000 (30 days)
+   */
+  readonly refreshToken?: number;
+}
+
+/**
+ * The token lifetimes a client's record may set for itself, in seconds. Each has the type, range and meaning of the
+ * {@link ProviderTtl} member of the same name, and a lifetime left out falls back to the provider's. The
+ * `interaction` lifetime is not here: an interaction exists before the app completes it, and stays provider-wide.
+ */
+export interface ClientTtl {
+  /** Authorization codes issued to the client. An integer from 1 through 600. */
+  readonly code?: number;
+  /** Access tokens issued to the client, and the `expires_in` it is told. An integer from 60 through 86400. */
+  readonly accessToken?: number;
+  /** ID tokens issued to the client. An integer from 60 through 86400. */
+  readonly idToken?: number;
+  /**
+   * A refresh token family of the client, counted from the code exchange; rotation does not extend it. An integer
+   * from 60 through 31536000.
    */
   readonly refreshToken?: number;
 }
@@ -497,7 +525,9 @@ export interface Provider {
    * Finishes an interaction: issues a code, or sends the denial, as a `302` to the client's redirect URI.
    *
    * @returns The response, or `interaction_not_found` when the interaction does not exist, was already
-   * completed, or expired.
+   * completed, or expired, or, for a grant, when its client is no longer in the store: the code's lifetime can be
+   * the client's own ({@link ClientRecord.ttl}), so a grant reads the client's record. Rejects when the store does,
+   * or with a `TypeError` when it returns a malformed client record.
    * @throws {TypeError} When `outcome` is malformed, such as an empty `subject`, `scopes` that is not an array of
    * strings, or a denial with other members; the interaction is left in place, so a corrected retry works. Also
    * when a well-formed grant does not fit the request: scopes outside the request or without `openid`, an

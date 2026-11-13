@@ -140,6 +140,26 @@ describe("JWT access tokens", () => {
     expect(idPayload.at_hash).toBe(await computeTokenHash(body.access_token as string, "ES256"));
   });
 
+  it("gives the JWT the client's own access token lifetime as exp and in the store", async () => {
+    const context = await setup();
+    context.store.addClient({
+      clientId: "web",
+      redirectUris: [REDIRECT_URI],
+      scopes: ["openid", "profile", "offline_access"],
+      auth: { method: "none" },
+      ttl: { accessToken: 120 },
+    });
+
+    const body = await signIn(context);
+    const verified = await resourceServer(context.pair)(body.access_token as string);
+
+    expect(body.expires_in).toBe(120);
+    expect(verified.ok && verified.value.payload.exp).toBe(NOW_SECONDS + 120);
+    expect(await context.store.findAccessToken(await digestKey(body.access_token as string))).toMatchObject({
+      expiresAt: NOW_SECONDS + 120,
+    });
+  });
+
   it("is not an ID token: the ID token fails a resource server's at+jwt check", async () => {
     const context = await setup();
     const body = await signIn(context);

@@ -10,7 +10,7 @@ import type {
   OidcResult,
   Prompt,
 } from "../shared/types";
-import { type CheckedClient, checkClientRecord } from "./client-record";
+import { type CheckedClient, checkClientRecord, lifetimesOf } from "./client-record";
 import { readFrontChannelParameters } from "./front-channel";
 import type { ResolvedOptions } from "./options";
 import { redirectResponse } from "./responses";
@@ -139,7 +139,14 @@ export async function completeAuthorization(
     return ok(respond(target, { error: outcome.error }));
   }
   assertGrantFits(interaction.value, outcome, options.now());
-  const code = await issueCode(options, interaction.value, outcome);
+  // The code's lifetime may be the client's own, and the interaction does not carry the client's record.
+  const record = await options.store.findClient(interaction.value.clientId);
+  if (record === undefined) {
+    // The client was removed while the user signed in, so there is nobody to issue a code to.
+    return fail({ code: "interaction_not_found" });
+  }
+  const { code: codeTtl } = lifetimesOf(options.ttl, checkClientRecord(record, interaction.value.clientId));
+  const code = await issueCode(options, interaction.value, outcome, codeTtl);
   return ok(respond(target, { code }));
 }
 
@@ -470,6 +477,7 @@ async function issueCode(
   options: ResolvedOptions,
   interaction: InteractionRecord,
   grant: AuthorizationGrant,
+  ttl: number,
 ): Promise<string> {
   const code = randomToken();
   const record: CodeRecord = {
@@ -485,7 +493,7 @@ async function issueCode(
     ...optionalMember("acr", grant.acr),
     ...optionalMember("sessionId", grant.sessionId),
     maxAgeRequested: interaction.maxAge !== undefined,
-    expiresAt: options.now() + options.ttl.code,
+    expiresAt: options.now() + ttl,
   };
   await options.store.saveCode(await digestKey(code), record);
   return code;

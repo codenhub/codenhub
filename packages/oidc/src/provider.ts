@@ -15,6 +15,7 @@ export type {
   ClaimsRequest,
   ClientAuthentication,
   ClientRecord,
+  ClientTtl,
   CodeRecord,
   Consumption,
   EndSession,

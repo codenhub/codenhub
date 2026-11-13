@@ -163,6 +163,7 @@ function copyClient(client: ClientRecord): ClientRecord {
     ...(client.postLogoutRedirectUris === undefined
       ? {}
       : { postLogoutRedirectUris: copyList(client.postLogoutRedirectUris) }),
+    ...(client.ttl === undefined ? {} : { ttl: { ...client.ttl } }),
     auth: typeof client.auth === "object" && client.auth !== null ? { ...client.auth } : client.auth,
   };
 }

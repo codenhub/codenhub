@@ -127,6 +127,8 @@ All values are seconds.
 | `idToken`      | `600`               | 60 through 86400    | An ID token's `exp`, counted from when it is issued.                                                 |
 | `refreshToken` | `2592000` (30 days) | 60 through 31536000 | A refresh token family, counted from the code exchange that started it. Rotation does not extend it. |
 
+A client can set its own `code`, `accessToken`, `idToken` and `refreshToken` in the `ttl` of its [client record](store.md#client-records), within the same ranges, and a lifetime it leaves out is the table's. The `interaction` lifetime is provider-wide. A client's lifetimes apply wherever the provider uses these for that client: the code, `expires_in`, the access token's `exp` and stored expiry, the ID token's `exp`, the refresh token family, and the `client_credentials` grant. A value out of range is a `TypeError` when the provider reads the record, not when the provider is created, since the store is the app's own code.
+
 ### Endpoints
 
 The five endpoints the provider answers, and the authorization and end-session endpoints the app serves, default to paths under the issuer. The discovery document is always at `{issuer}/.well-known/openid-configuration`, and it cannot be moved. The authorization, token, userinfo, JWKS, revocation and end-session endpoints are all configurable.
@@ -291,7 +293,7 @@ A denial's `error` is one of `access_denied`, `login_required`, `consent_require
 
 The result is an `OidcResult<Response>`. A grant or denial answers with a `302` to the interaction's redirect URI. A grant adds a `code`, which the client exchanges at the token endpoint, and a denial adds `error`. Both carry the `state` the client sent, when it sent one, and `iss`, the issuer, for RFC 9207. The registered redirect URI is kept byte for byte, and the parameters are appended to its existing query. `completeAuthorization` returns `interaction_not_found` as a failed result, with no redirect, when the identifier is empty or unknown, was already completed, or has expired. The app renders its own error for that case.
 
-A code lasts `ttl.code` seconds, 60 by default, and the client can redeem it once.
+A code lasts `ttl.code` seconds, 60 by default, or the client's own `ttl.code`, and the client can redeem it once. Because the code's lifetime can be the client's, `completeAuthorization` reads the client's record from the store when it issues a code. A client removed since `beginAuthorization` gets no code: the result is `interaction_not_found`.
 
 The method throws `TypeError` in two cases, and they are different:
 
