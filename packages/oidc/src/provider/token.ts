@@ -11,7 +11,7 @@ import type { OAuthErrorCode } from "../shared/types";
 import { authenticateClient } from "./client-auth";
 import { type CheckedClient, lifetimesOf } from "./client-record";
 import { refuse } from "./diagnostics";
-import { PROTOCOL_SCOPES, type ResolvedOptions, type ResolvedTtl } from "./options";
+import { PROTOCOL_SCOPES, type ResolvedOptions, type ResolvedTtl, selectIdTokenKey } from "./options";
 import { jsonResponse, methodNotAllowed, preflightResponse, tokenErrorResponse } from "./responses";
 import type { ClientRecord, CodeRecord, ProviderDiagnosticReason, RefreshTokenRecord } from "./types";
 
@@ -192,6 +192,7 @@ async function issueFromCode(options: ResolvedOptions, client: ClientRecord, rec
   }
   const idToken = await issueIdToken(
     options,
+    client,
     ttl,
     grant,
     accessToken,
@@ -252,7 +253,7 @@ async function refreshTokens(
     scopes: record.scopes,
     expiresAt: record.expiresAt,
   });
-  const idToken = await issueIdToken(options, ttl, grant, accessToken, now, {});
+  const idToken = await issueIdToken(options, client, ttl, grant, accessToken, now, {});
   return tokenResponse(ttl, { accessToken, scopes, idToken, refreshToken: nextRefreshToken });
 }
 
@@ -389,18 +390,20 @@ function signAccessToken(
 }
 
 /**
- * Signs an ID token (OpenID Connect Core §2). `at_hash` binds it to the access token issued with it, and
- * `nonce` appears only in the code flow, where the request carried one.
+ * Signs an ID token (OpenID Connect Core §2) with the client's key. `at_hash` binds it to the access token issued
+ * with it, and `nonce` appears only in the code flow, where the request carried one.
  */
 async function issueIdToken(
   options: ResolvedOptions,
+  client: ClientRecord,
   ttl: ResolvedTtl,
   grant: Grant,
   accessToken: string,
   now: number,
   extra: { readonly nonce?: string },
 ): Promise<string> {
-  const atHash = await computeTokenHash(accessToken, options.signingKey.privateKey.alg);
+  const { privateKey } = selectIdTokenKey(options, client);
+  const atHash = await computeTokenHash(accessToken, privateKey.alg);
   return sign({
     payload: {
       iss: options.issuer,
@@ -414,7 +417,7 @@ async function issueIdToken(
       ...(extra.nonce !== undefined ? { nonce: extra.nonce } : {}),
       ...(atHash !== undefined ? { at_hash: atHash } : {}),
     },
-    key: options.signingKey.privateKey,
+    key: privateKey,
     header: { typ: "JWT" },
   });
 }

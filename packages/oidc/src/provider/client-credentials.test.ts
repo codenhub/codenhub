@@ -135,7 +135,7 @@ describe("client_credentials", () => {
       clientId: "short-machine",
       redirectUris: [],
       scopes: ["orders:read"],
-      auth: { method: "client_secret_basic", secretHash: await hashClientSecret(secret) },
+      auth: { method: "client_secret_basic", secretHashes: [await hashClientSecret(secret)] },
       grantTypes: ["client_credentials"],
       ttl: { accessToken: 120 },
     });

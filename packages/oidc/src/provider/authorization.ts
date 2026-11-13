@@ -151,7 +151,10 @@ export async function completeAuthorization(
     // The client was removed while the user signed in, so there is nobody to issue a code to.
     return fail({ code: "interaction_not_found" });
   }
-  const { code: codeTtl } = lifetimesOf(options.ttl, checkClientRecord(record, interaction.value.clientId));
+  const { code: codeTtl } = lifetimesOf(
+    options.ttl,
+    checkClientRecord(record, interaction.value.clientId, options.publicKeys),
+  );
   const code = await issueCode(options, interaction.value, outcome, codeTtl);
   return ok(respond(target, { code }));
 }
@@ -224,7 +227,7 @@ async function lookupClient(options: ResolvedOptions, parameters: ParameterMap):
   if (record === undefined) {
     return renderError(issueOf("unknown_client"));
   }
-  return { ok: true, value: checkClientRecord(record, clientId) };
+  return { ok: true, value: checkClientRecord(record, clientId, options.publicKeys) };
 }
 
 /** The redirect URI must match a registered one byte for byte: normalizing it would let a near miss through. */

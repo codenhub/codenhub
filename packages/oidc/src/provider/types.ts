@@ -1,4 +1,4 @@
-import type { KeyPair, KeySet, SecretKey } from "@codenhub/jwt";
+import type { AsymmetricAlgorithm, KeyPair, KeySet, SecretKey } from "@codenhub/jwt";
 
 import type { OidcFailure, OidcResult, Prompt, ProviderMetadata } from "../shared/types";
 
@@ -71,6 +71,17 @@ export interface ClientRecord {
    * the record, by the bounds of the option it replaces, and throws `TypeError` if one fails.
    */
   readonly ttl?: ClientTtl;
+  /**
+   * The algorithm of the signing key that signs this client's ID tokens: the provider uses the first of
+   * {@link ProviderOptions.signingKeys} with that algorithm. A value that is not a supported asymmetric algorithm,
+   * or that none of the signing keys has, throws `TypeError` when the record is read.
+   *
+   * Without it, ID tokens are signed with the first `RS256` key when there is one, and otherwise the first key,
+   * since OpenID Connect Core §15.1 requires every provider to support `RS256` and OpenID Connect Registration
+   * makes it the default for a client that registers no algorithm. JWT access tokens are signed with the first
+   * key whatever this says.
+   */
+  readonly idTokenSigningAlg?: AsymmetricAlgorithm;
 }
 
 /** How the client asks the app to show its pages (OpenID Connect Core §3.1.2.1). */
@@ -387,7 +398,9 @@ export interface ProviderOptions {
   readonly issuer: string;
   /**
    * Key pairs from `generateKeyPair` or `importPrivateKey`/`importPublicKey`, each with a unique `kid`.
-   * The first signs ID tokens; every public key is published, so a retiring key stays verifiable.
+   * A client's ID tokens are signed with the first key of the algorithm its `idTokenSigningAlg` names, or without
+   * one with the first `RS256` key when there is one and otherwise the first key. The first key signs JWT access
+   * tokens. Every public key is published, so a retiring key stays verifiable.
    *
    * Each pair's private and public keys must be the two halves of one key pair. Only their algorithm and
    * `kid` are checked, so a mismatched pair issues ID tokens nobody can verify. The keys must come from the

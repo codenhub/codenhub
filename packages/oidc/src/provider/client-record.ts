@@ -1,6 +1,17 @@
+import type { AsymmetricAlgorithm } from "@codenhub/jwt";
+
 import { isRedirectUri } from "../shared/urls";
 import { CLIENT_TTL_NAMES, describeTtlRange, isTtlInRange, type ResolvedTtl } from "./options";
 import type { ClientRecord, GrantType } from "./types";
+
+/** Every algorithm a signing key may have; a `Record`, so a new `@codenhub/jwt` algorithm fails to compile here. */
+const ID_TOKEN_ALGORITHMS: Readonly<Record<AsymmetricAlgorithm, true>> = {
+  ES256: true,
+  EdDSA: true,
+  Ed25519: true,
+  RS256: true,
+  PS256: true,
+};
 
 const AUTH_METHODS = new Set([
   "none",
@@ -29,9 +40,16 @@ const invalid = (requirement: string): never => {
  * Checks a client record the store returned for the client it was asked for. The store is the app's own
  * code, so a malformed record is a programmer error and throws rather than failing the request.
  *
+ * @param record - What the store returned.
+ * @param clientId - The client that was looked up.
+ * @param signingKeys - The provider's signing keys, one of which the record's `idTokenSigningAlg` must name.
  * @throws {TypeError} When the record is malformed or names another client.
  */
-export function checkClientRecord(record: unknown, clientId: string): CheckedClient {
+export function checkClientRecord(
+  record: unknown,
+  clientId: string,
+  signingKeys: readonly { readonly alg: string }[],
+): CheckedClient {
   if (!isRecord(record) || record.clientId !== clientId) {
     return invalid("must be an object whose clientId is the one looked up");
   }
@@ -75,6 +93,15 @@ export function checkClientRecord(record: unknown, clientId: string): CheckedCli
     return invalid("must not allow client_credentials to a client whose auth.method is none");
   }
   checkTtl(record.ttl);
+  const { idTokenSigningAlg } = record;
+  if (
+    idTokenSigningAlg !== undefined &&
+    (typeof idTokenSigningAlg !== "string" ||
+      !Object.hasOwn(ID_TOKEN_ALGORITHMS, idTokenSigningAlg) ||
+      !signingKeys.some((key) => key.alg === idTokenSigningAlg))
+  ) {
+    return invalid("must name, as idTokenSigningAlg, the algorithm of one of the provider's signing keys");
+  }
   // Resolved here, so every endpoint reads the list without repeating the default.
   return { ...(record as unknown as ClientRecord), grantTypes };
 }

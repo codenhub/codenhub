@@ -1,4 +1,4 @@
-import { createKeySet, createVerifier, generateKeyPair } from "@codenhub/jwt";
+import { type KeyPair, createKeySet, createVerifier, generateKeyPair } from "@codenhub/jwt";
 import { describe, expect, it } from "vitest";
 
 import { digestKey, randomToken } from "../shared/encoding";
@@ -25,6 +25,10 @@ interface TokenBody {
   readonly refresh_token?: string;
   readonly scope: string;
 }
+
+/** Decodes a token's header without verifying it, to see which key signed it. */
+const headerOf = (token: string): Record<string, unknown> =>
+  JSON.parse(Buffer.from(token.split(".")[0] ?? "", "base64url").toString("utf8")) as Record<string, unknown>;
 
 /** Decodes a token's payload without verifying it. Tests use it only to read claims that other assertions already vouch for. */
 const payloadOf = (token: string): Record<string, unknown> =>
@@ -55,13 +59,15 @@ const CLIENTS: readonly ClientRecord[] = [
 ];
 
 /** Options over a memory store, with a clock the test moves forward by setting `setClock`. */
-async function setup(): Promise<{ options: ResolvedOptions; store: MemoryStore; setClock: (ms: number) => void }> {
+async function setup(
+  extra: { readonly keys?: readonly KeyPair[]; readonly clients?: readonly ClientRecord[] } = {},
+): Promise<{ options: ResolvedOptions; store: MemoryStore; setClock: (ms: number) => void }> {
   let clock = NOW_MS;
-  const store = createMemoryStore({ clients: CLIENTS });
+  const store = createMemoryStore({ clients: extra.clients ?? CLIENTS });
   const pair = await generateKeyPair({ alg: "ES256", kid: "k1" });
   const options = resolveOptions({
     issuer: ISSUER,
-    signingKeys: [pair],
+    signingKeys: extra.keys ?? [pair],
     store,
     claims: () => ({}),
     now: () => clock,
@@ -716,5 +722,75 @@ describe("handleToken: lifetimes of a client", () => {
     );
 
     expect(await errorOf(response)).toEqual({ status: 400, body: JSON.stringify({ error: "invalid_grant" }) });
+  });
+});
+
+describe("handleToken: the ID token's signing key", () => {
+  const withClient = (overrides: Partial<ClientRecord> = {}): readonly ClientRecord[] => [
+    { ...CLIENTS[0], ...overrides } as ClientRecord,
+  ];
+  const keysOf = async (...algs: readonly ("ES256" | "RS256" | "EdDSA")[]): Promise<readonly KeyPair[]> =>
+    Promise.all(algs.map((alg, index) => generateKeyPair({ alg, kid: `${alg}-${index}` })));
+
+  it("signs with the first RS256 key by default, even when another algorithm comes first", async () => {
+    const keys = await keysOf("ES256", "RS256", "RS256");
+    const { options, store } = await setup({ keys });
+
+    const body = await redeemCode(options, store);
+
+    expect(headerOf(body.id_token)).toMatchObject({ alg: "RS256", kid: "RS256-1" });
+    expect(payloadOf(body.id_token).at_hash).toBe(await computeTokenHash(body.access_token, "RS256"));
+  });
+
+  it("signs with the first key when no key is RS256", async () => {
+    const keys = await keysOf("EdDSA", "ES256");
+    const { options, store } = await setup({ keys });
+
+    const body = await redeemCode(options, store);
+
+    expect(headerOf(body.id_token)).toMatchObject({ alg: "EdDSA", kid: "EdDSA-0" });
+  });
+
+  it("signs with the first key of the algorithm the client names", async () => {
+    const keys = await keysOf("RS256", "ES256", "ES256");
+    const { options, store } = await setup({ keys, clients: withClient({ idTokenSigningAlg: "ES256" }) });
+
+    const body = await redeemCode(options, store);
+
+    expect(headerOf(body.id_token)).toMatchObject({ alg: "ES256", kid: "ES256-1" });
+    expect(payloadOf(body.id_token).at_hash).toBe(await computeTokenHash(body.access_token, "ES256"));
+  });
+
+  it("signs the ID token of a refresh with the same key", async () => {
+    const keys = await keysOf("ES256", "RS256");
+    const { options, store } = await setup({ keys });
+    const issued = await redeemCode(options, store);
+
+    const response = await handleToken(options, tokenRequest(refreshBody(issued.refresh_token ?? "")));
+    const refreshed = (await response.json()) as TokenBody;
+
+    expect(headerOf(refreshed.id_token)).toMatchObject({ alg: "RS256", kid: "RS256-1" });
+  });
+
+  it("verifies against the published key of that algorithm", async () => {
+    const keys = await keysOf("ES256", "RS256");
+    const { options, store } = await setup({ keys });
+
+    const body = await redeemCode(options, store);
+    const verified = await createVerifier({
+      keys: createKeySet(options.publicKeys),
+      issuer: ISSUER,
+      audience: "public",
+      now: () => NOW_MS,
+    })(body.id_token);
+
+    expect(verified.ok).toBe(true);
+  });
+
+  it("rejects, with TypeError, a client naming an algorithm no signing key has", async () => {
+    const keys = await keysOf("ES256");
+    const { options } = await setup({ keys, clients: withClient({ idTokenSigningAlg: "RS256" }) });
+
+    await expect(handleToken(options, tokenRequest(codeBody("any-code")))).rejects.toThrow(TypeError);
   });
 });

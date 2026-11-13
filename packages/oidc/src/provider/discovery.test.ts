@@ -51,7 +51,8 @@ const resolve = (overrides: Partial<ProviderOptions>, keys: readonly KeyPair[]):
     ...overrides,
   });
 
-const keyPair = (kid: string, alg: "ES256" | "EdDSA" = "ES256"): Promise<KeyPair> => generateKeyPair({ alg, kid });
+const keyPair = (kid: string, alg: "ES256" | "EdDSA" | "RS256" = "ES256"): Promise<KeyPair> =>
+  generateKeyPair({ alg, kid });
 
 describe("buildMetadata", () => {
   it("shouldPublishTheExpectedMetadataForDefaultOptions", async () => {
@@ -130,6 +131,14 @@ describe("buildMetadata", () => {
     ]);
 
     expect(buildMetadata(options).id_token_signing_alg_values_supported).toEqual(["EdDSA", "ES256"]);
+  });
+});
+
+describe("buildMetadata and per-client ID token algorithms", () => {
+  it("shouldAdvertiseEveryKeysAlgorithmWhicheverOneAClientIsSignedWith", async () => {
+    const options = resolve({}, [await keyPair("a"), await keyPair("b", "RS256")]);
+
+    expect(buildMetadata(options).id_token_signing_alg_values_supported).toEqual(["ES256", "RS256"]);
   });
 });
 

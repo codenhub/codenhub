@@ -124,6 +124,7 @@ A store failure is never turned into an OAuth answer. Answering `invalid_grant` 
 `findClient` returns a `ClientRecord`:
 
 ```ts
+import type { AsymmetricAlgorithm } from "@codenhub/jwt";
 import type { ClientAuthentication, ClientTtl, GrantType } from "@codenhub/oidc/provider";
 
 interface ClientRecord {
@@ -133,6 +134,7 @@ interface ClientRecord {
   grantTypes?: readonly GrantType[]; // "authorization_code" (the default) or "client_credentials"
   postLogoutRedirectUris?: readonly string[]; // each compared byte for byte at logout
   ttl?: ClientTtl; // this client's own code, access token, ID token and refresh token lifetimes
+  idTokenSigningAlg?: AsymmetricAlgorithm; // the algorithm of the signing key for this client's ID tokens
   auth: ClientAuthentication;
 }
 ```
@@ -151,6 +153,8 @@ A record that breaks these rules is a bug in the store, and the provider throws 
 `postLogoutRedirectUris` lists where [logout](provider.md#ending-sessions) may send the browser. Each entry is held to the redirect URI rules: an absolute URL of visible ASCII, without fragment or credentials, and not `javascript:`, `data:`, `vbscript:` or `file:`. Absent or empty, no logout of that client redirects.
 
 `ttl` sets this client's token lifetimes, in seconds. It may hold `code`, `accessToken`, `idToken` and `refreshToken`, each held to the range of the [provider option](provider.md#lifetimes) of the same name, and a lifetime it leaves out is the provider's. `interaction` is not one of them, since an interaction exists before the app completes it and stays provider-wide. The provider checks the values when it reads the record, and throws `TypeError` for a value out of range, a value that is not an integer, or a `ttl` that is not an object. A lifetime applies to every token issued to that client from then on, including `expires_in`, the `exp` of a JWT access token and of an ID token, and the `client_credentials` grant, and a record read at the next request is the one that counts. The code's lifetime is read when the app completes the interaction, so `completeAuthorization` reads the client's record, and answers `interaction_not_found` when the client was removed in the meantime. A refresh token family keeps the expiry it got at the code exchange, whatever the record says later.
+
+`idTokenSigningAlg` picks which of the provider's signing keys signs this client's ID tokens: the first one with that algorithm. Without it, the provider uses the first `RS256` key when it has one, and otherwise its first key; [Signing keys](provider.md#signing-keys) gives the reason. A record that names an algorithm no signing key has is a bug, and the provider throws `TypeError` for it.
 
 The `key` and `keys` values are `@codenhub/jwt` objects, not JSON. A plain object is not one of them, and `@codenhub/jwt` refuses it with `TypeError` when the provider uses it. A store that persists these records therefore keeps the key as a JWK and rebuilds the object on each read: `exportSecretJwk` or `exportPublicJwk` writes the key, and `importSecretKey` or `importKeySet` reads it back. A secret can be exported only when it was created or imported as extractable. A store may also keep the key objects in memory, as the in-memory store does.
 

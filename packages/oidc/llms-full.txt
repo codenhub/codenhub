@@ -551,7 +551,15 @@ export async function createSsoProvider() {
 
 ### Signing keys
 
-The first pair signs every ID token. Every public key in the list is published at the JWKS endpoint, so a key that is no longer used to sign stays verifiable while tokens it signed are still in circulation. To rotate, put the new pair first and keep the old pair after it until the ID tokens it signed have expired, which is `ttl.idToken` seconds after they were issued. Both keys of a pair carry the same `kid`, and the `kid` appears in each ID token's header, so a relying party can find the right key.
+Every public key in the list is published at the JWKS endpoint, so a key that is no longer used to sign stays verifiable while tokens it signed are still in circulation. To rotate, put the new pair before the old pair of the same algorithm, and keep the old pair after it until the ID tokens it signed have expired, which is `ttl.idToken` seconds after they were issued. Both keys of a pair carry the same `kid`, and the `kid` appears in each ID token's header, so a relying party can find the right key.
+
+Which pair signs a client's ID tokens depends on the client:
+
+- A client record with `idTokenSigningAlg` gets the first pair of that algorithm. A record that names an algorithm none of the pairs has, or a value that is not one of `ES256`, `EdDSA`, `Ed25519`, `RS256` or `PS256`, makes the provider throw `TypeError` when it reads the record.
+- A client without it gets the first `RS256` pair when there is one, and otherwise the first pair. The reason is that [OpenID Connect Core §15.1](https://openid.net/specs/openid-connect-core-1_0.html#Signing) requires every provider to support `RS256`, and [OpenID Connect Registration](https://openid.net/specs/openid-connect-registration-1_0.html#ClientMetadata) makes it the default for a client that registers no algorithm, so a relying party library that never asked for an algorithm expects it. Listing an `RS256` pair therefore changes the algorithm of every ID token of the clients that name none, even when another algorithm comes first in the list.
+- JWT access tokens are signed with the first pair, whatever the client says, and the first pair is the one a resource server verifies them with.
+
+Signing ID tokens with a key other than the first changes nothing for `id_token_hint` at [logout](#ending-sessions), which accepts a token signed by any published key.
 
 `importPrivateKey` and `importPublicKey` do not return keys. They return results, `{ ok, value }`, so unwrap each one and pair the two values yourself:
 
@@ -571,7 +579,7 @@ const signingKeys = [{ privateKey: privateKey.value, publicKey: publicKey.value 
 
 The provider checks each pair's algorithm and `kid`, not that the two halves match. A pair built from the halves of two different key pairs issues ID tokens that nobody can verify, so pair only the two halves of one key pair.
 
-Use one algorithm per pair. The provider publishes the algorithms of its keys as `id_token_signing_alg_values_supported`, and a relying party accepts only the asymmetric algorithms this package supports.
+Use one algorithm per pair. The provider publishes the algorithms of all its keys as `id_token_signing_alg_values_supported`, and a relying party accepts only the asymmetric algorithms this package supports.
 
 ### Claims
 
@@ -617,8 +625,6 @@ All values are seconds.
 | `accessToken`  | `600`               | 60 through 86400    | An access token, opaque or JWT. It is also the `expires_in` the token endpoint returns.              |
 | `idToken`      | `600`               | 60 through 86400    | An ID token's `exp`, counted from when it is issued.                                                 |
 | `refreshToken` | `2592000` (30 days) | 60 through 31536000 | A refresh token family, counted from the code exchange that started it. Rotation does not extend it. |
-
-A client can set its own `code`, `accessToken`, `idToken` and `refreshToken` in the `ttl` of its [client record](docs/store.md#client-records), within the same ranges, and a lifetime it leaves out is the table's. The `interaction` lifetime is provider-wide. A client's lifetimes apply wherever the provider uses these for that client: the code, `expires_in`, the access token's `exp` and stored expiry, the ID token's `exp`, the refresh token family, and the `client_credentials` grant. A value out of range is a `TypeError` when the provider reads the record, not when the provider is created, since the store is the app's own code.
 
 ### Endpoints
 
@@ -745,20 +751,9 @@ On success the result carries the interaction:
 - `id`, the identifier to pass to `completeAuthorization`. A random 256-bit value, and the store holds only its digest.
 - `clientId`, `redirectUri`, `scopes` and `prompt`, as validated.
 - `maxAge`, `loginHint` and `uiLocales`, when the request carried them. `loginHint` is passed through as sent. `uiLocales` has its empty entries, from repeated or trailing spaces, dropped; no entries left means absent. Both are within the length limit.
-- `acrValues`, `claimsLocales` and `display`, when the request carried them. See [Hints for the login pages](#hints-for-the-login-pages).
 - `createdAt`, in seconds since the Unix epoch.
 
 Keep the whole interaction in the user's server-side session. It is a frozen plain object, so it serializes as JSON. The pages between the two calls need it: the consent page shows `clientId` and `scopes`, the login page follows `prompt`, `maxAge` and `loginHint`, and the scopes the user grants must be among `scopes`. The provider offers no lookup by `id`, because the store's only read of an interaction is the atomic `consumeInteraction` that completes it. Do not put `id` in a URL the user can edit, because whoever holds it can complete the interaction. The interaction lasts `ttl.interaction` seconds, 1800 by default, and it can be completed once.
-
-### Hints for the login pages
-
-Three more parameters reach the app so it can shape its pages and its login. None of them can fail the request, and the provider checks nothing against them.
-
-- `acr_values`, as `acrValues`: the authentication context classes the client would like, in its order of preference. The value is a space-separated list, and empty entries from repeated or trailing spaces are dropped. This is a **voluntary request** (OpenID Connect Core §3.1.2.1). The app chooses whether to satisfy one of the values, such as by asking for a second factor, and reports the class it actually used as the `acr` of the grant it passes to `completeAuthorization`. That class may be none of the requested ones, and the client decides whether to accept the ID token. The provider does not compare the two.
-- `claims_locales`, as `claimsLocales`: the languages the client prefers for the claims, as a space-separated list under the same rules. It is a hint for the app's `claims` callback, and the provider does not use it.
-- `display`, as `display`: one of `page`, `popup`, `touch` or `wap`, which asks the app to show its pages as a full page, a popup window, for a touch device or for a small-screen device. A value the provider does not know is ignored, as Core allows, so the interaction has no `display`, and the request is not refused.
-
-A list is absent when it has no entries, as for `uiLocales`. Each parameter is within the usual limits, at most 4096 characters, and every list is a frozen array of strings on the interaction, saved in the store with the rest of the request. The `claims` parameter, which would ask for individual claims, remains unsupported: the provider ignores it, and claims are released by scope.
 
 ### Prompt and max_age
 
@@ -782,24 +777,21 @@ await provider.completeAuthorization(id, {
   scopes: ["openid", "profile"], // a subset of the requested scopes, including openid
   amr: ["pwd"], // optional: authentication methods, such as ["pwd", "otp"]
   acr: "urn:example:loa:2", // optional: an authentication context class
-  sessionId: "9f2c41d0a7", // optional: the app's identifier for this session, which becomes `sid`
 });
 
 // The user refused, or cannot be given the access the client asked for.
 await provider.completeAuthorization(id, { error: "access_denied" });
 ```
 
-`sessionId` identifies the app's own session for the sign-in. It is a non-empty string of visible ASCII, with no space, control character or non-ASCII character, and the provider never interprets it. The provider saves it with the code and with every access and refresh token of the grant, and every ID token of that grant, from the code exchange and from each refresh, carries it as the `sid` claim. That lets the app find the grants that belong to one session, such as to revoke them when the session ends, and it lets back-channel logout name the session it ends. Use a random identifier that is stable for the session, and not the session cookie itself, since the client receives it in the ID token. A grant without a `sessionId` has no `sid`, and a session id is never added later: a refresh carries the one the code exchange started with.
-
 A denial's `error` is one of `access_denied`, `login_required`, `consent_required`, `interaction_required` or `account_selection_required`, and it is the only other member the object may hold.
 
 The result is an `OidcResult<Response>`. A grant or denial answers with a `302` to the interaction's redirect URI. A grant adds a `code`, which the client exchanges at the token endpoint, and a denial adds `error`. Both carry the `state` the client sent, when it sent one, and `iss`, the issuer, for RFC 9207. The registered redirect URI is kept byte for byte, and the parameters are appended to its existing query. `completeAuthorization` returns `interaction_not_found` as a failed result, with no redirect, when the identifier is empty or unknown, was already completed, or has expired. The app renders its own error for that case.
 
-A code lasts `ttl.code` seconds, 60 by default, or the client's own `ttl.code`, and the client can redeem it once. Because the code's lifetime can be the client's, `completeAuthorization` reads the client's record from the store when it issues a code. A client removed since `beginAuthorization` gets no code: the result is `interaction_not_found`.
+A code lasts `ttl.code` seconds, 60 by default, and the client can redeem it once.
 
 The method throws `TypeError` in two cases, and they are different:
 
-- **The outcome is the wrong shape**, such as a non-empty `subject` missing, an `authTime` that is not a non-negative integer, a `sessionId` that is empty or not visible ASCII, or a denial with extra members. This is checked before the interaction is taken, so the interaction is still usable and the app can fix the call and retry.
+- **The outcome is the wrong shape**, such as a non-empty `subject` missing, an `authTime` that is not a non-negative integer, or a denial with extra members. This is checked before the interaction is taken, so the interaction is still usable and the app can fix the call and retry.
 - **The outcome contradicts the request**: scopes the client did not request or no `openid`, an `authTime` in the future, an `authTime` before the interaction under `prompt=login`, or an `authTime` more than the requested `max_age` seconds before the request. The interaction has already been taken at this point, so it is gone. The app must restart the sign-in. These are bugs in the login flow, and the package refuses them rather than issue a code that would skip the step the client asked for.
 
 ## Ending sessions
@@ -892,7 +884,7 @@ On success the provider starts a grant, and issues:
 
 - An access token: by default an opaque random value that only its digest is stored under, or a JWT under [`accessToken`](#jwt-access-tokens). It lasts `ttl.accessToken` seconds.
 - A refresh token, only when the granted scopes include `offline_access`. Its family lasts `ttl.refreshToken` seconds from this exchange.
-- An ID token, signed with the first signing key. Its claims are `iss`, `sub`, `aud` (the client identifier), `iat`, `exp` (`ttl.idToken` after `iat`), `auth_time`, and `amr` and `acr` when the grant had them, `nonce` when the authorization request had one, and `at_hash` for the access token. It also carries `sid` when the grant has a `sessionId`, and refreshes repeat it. Its header is `typ: JWT` and the key's `alg` and `kid`. An ID token carries no scope claims, which are released at userinfo.
+- An ID token, signed with the signing key chosen for the client (see [Signing keys](#signing-keys)). Its claims are `iss`, `sub`, `aud` (the client identifier), `iat`, `exp` (`ttl.idToken` after `iat`), `auth_time`, and `amr` and `acr` when the grant had them, `nonce` when the authorization request had one, and `at_hash` for the access token. Its header is `typ: JWT` and the key's `alg` and `kid`. An ID token carries no scope claims, which are released at userinfo.
 
 ### Refresh tokens
 
@@ -903,7 +895,7 @@ A request for `refresh_token` must carry `refresh_token`, or it is `invalid_requ
 3. A token that was already spent is a **reuse**. The provider revokes the family, so the access tokens and refresh tokens issued from that sign-in stop working, and returns `invalid_grant`.
 4. Otherwise the token is spent, and it must be unexpired and issued to this client. Otherwise `invalid_grant`.
 5. The `scope` parameter, when given, must be a subset of the family's scopes. Otherwise `invalid_scope`. When it is omitted, the access token has every scope the family holds.
-6. A new access token is issued, and a new refresh token that replaces the spent one. The new refresh token keeps the family's original scopes and its original expiry, so rotation neither widens the family nor extends it. An ID token is issued too, without a nonce, and with the `sid` the family carries.
+6. A new access token is issued, and a new refresh token that replaces the spent one. The new refresh token keeps the family's original scopes and its original expiry, so rotation neither widens the family nor extends it. An ID token is issued too, without a nonce.
 
 The response has the same shape as the code exchange, with `scope` set to the scopes of the new access token.
 
@@ -954,7 +946,7 @@ export const provider = createProvider({
 });
 ```
 
-A JWT access token is signed with the first signing key. Its header has `typ: "at+jwt"`. Its payload has `iss`, `exp` (`ttl.accessToken` after issue), `aud`, `sub`, `client_id`, `iat`, a random `jti`, and `scope` (space-separated). A user's token also has `auth_time`, `amr` and `acr` when the grant had them. A client credentials token has none of these three, and its `sub` is the client identifier.
+A JWT access token is signed with the first signing key, whatever `idTokenSigningAlg` the client has. Its header has `typ: "at+jwt"`. Its payload has `iss`, `exp` (`ttl.accessToken` after issue), `aud`, `sub`, `client_id`, `iat`, a random `jti`, and `scope` (space-separated). A user's token also has `auth_time`, `amr` and `acr` when the grant had them. A client credentials token has none of these three, and its `sub` is the client identifier.
 
 A resource server must therefore not take `sub` alone for a user: a token whose `sub` equals its `client_id` belongs to the client itself (RFC 9068 §5). Tell the two apart by that comparison, and assign client identifiers that can never equal a user's subject, such as by giving them a prefix no subject has.
 
@@ -1139,7 +1131,7 @@ Each method below is required. A store that lacks one is refused by `createProvi
 Five rules hold across the table.
 
 - **Saves never overwrite.** A `save*` method for a key that already exists must reject, and it must never reset a used entry, which would make a spent code or refresh token consumable again. The provider's keys are random digests, so this happens only through an adapter bug.
-- **Expiry is checked by the provider, and purging is the adapter's job.** No method purges. The provider checks `expiresAt` itself, so an adapter deletes expired rows itself, such as with a scheduled job. It keeps a used code or refresh token until at least its `expiresAt`, so a replay is still recognized. It keeps a revoked-grant marker until the grant's last token expires. That is at most a refresh token lifetime plus an access token lifetime after the code exchange. Clients can set their own lifetimes in their record's `ttl`, so keep the marker for the longest refresh token lifetime of any client plus the longest access token lifetime of any client, with the provider's `ttl` counting for a client that sets none: with the defaults and no client `ttl`, 30 days and 10 minutes.
+- **Expiry is checked by the provider, and purging is the adapter's job.** No method purges. The provider checks `expiresAt` itself, so an adapter deletes expired rows itself, such as with a scheduled job. It keeps a used code or refresh token until at least its `expiresAt`, so a replay is still recognized. It keeps a revoked-grant marker until the grant's last token expires. That is at most `ttl.refreshToken + ttl.accessToken` after the code exchange: with the defaults, 30 days and 10 minutes.
 - **Codes and refresh tokens stay after use.** A used code or refresh token is kept until at least its `expiresAt`, so a replay inside that window is recognized, and the grant it belongs to can be revoked. Deleting it on use would turn every replay into `undefined`.
 - **Interactions are deleted on use.** An interaction is completed once, and nothing ever asks for it again, so there is no replay to recognize.
 - **Revocation outlives the call.** A replay can arrive while the first exchange is still saving its tokens. The store must therefore hide any token saved for a revoked grant afterwards, not only the ones present when `revokeGrant` ran.
@@ -1221,7 +1213,8 @@ A store failure is never turned into an OAuth answer. Answering `invalid_grant` 
 `findClient` returns a `ClientRecord`:
 
 ```ts
-import type { ClientAuthentication, ClientTtl, GrantType } from "@codenhub/oidc/provider";
+import type { AsymmetricAlgorithm } from "@codenhub/jwt";
+import type { ClientAuthentication, GrantType } from "@codenhub/oidc/provider";
 
 interface ClientRecord {
   clientId: string;
@@ -1229,7 +1222,7 @@ interface ClientRecord {
   scopes: readonly string[]; // must include "openid" with authorization_code
   grantTypes?: readonly GrantType[]; // "authorization_code" (the default) or "client_credentials"
   postLogoutRedirectUris?: readonly string[]; // each compared byte for byte at logout
-  ttl?: ClientTtl; // this client's own code, access token, ID token and refresh token lifetimes
+  idTokenSigningAlg?: AsymmetricAlgorithm; // the algorithm of the signing key for this client's ID tokens
   auth: ClientAuthentication;
 }
 ```
@@ -1247,7 +1240,7 @@ A record that breaks these rules is a bug in the store, and the provider throws 
 
 `postLogoutRedirectUris` lists where [logout](docs/provider.md#ending-sessions) may send the browser. Each entry is held to the redirect URI rules: an absolute URL of visible ASCII, without fragment or credentials, and not `javascript:`, `data:`, `vbscript:` or `file:`. Absent or empty, no logout of that client redirects.
 
-`ttl` sets this client's token lifetimes, in seconds. It may hold `code`, `accessToken`, `idToken` and `refreshToken`, each held to the range of the [provider option](docs/provider.md#lifetimes) of the same name, and a lifetime it leaves out is the provider's. `interaction` is not one of them, since an interaction exists before the app completes it and stays provider-wide. The provider checks the values when it reads the record, and throws `TypeError` for a value out of range, a value that is not an integer, or a `ttl` that is not an object. A lifetime applies to every token issued to that client from then on, including `expires_in`, the `exp` of a JWT access token and of an ID token, and the `client_credentials` grant, and a record read at the next request is the one that counts. The code's lifetime is read when the app completes the interaction, so `completeAuthorization` reads the client's record, and answers `interaction_not_found` when the client was removed in the meantime. A refresh token family keeps the expiry it got at the code exchange, whatever the record says later.
+`idTokenSigningAlg` picks which of the provider's signing keys signs this client's ID tokens: the first one with that algorithm. Without it, the provider uses the first `RS256` key when it has one, and otherwise its first key; [Signing keys](docs/provider.md#signing-keys) gives the reason. A record that names an algorithm no signing key has is a bug, and the provider throws `TypeError` for it.
 
 The `key` and `keys` values are `@codenhub/jwt` objects, not JSON. A plain object is not one of them, and `@codenhub/jwt` refuses it with `TypeError` when the provider uses it. A store that persists these records therefore keeps the key as a JWK and rebuilds the object on each read: `exportSecretJwk` or `exportPublicJwk` writes the key, and `importSecretKey` or `importKeySet` reads it back. A secret can be exported only when it was created or imported as extractable. A store may also keep the key objects in memory, as the in-memory store does.
 
@@ -1487,10 +1480,10 @@ Every limit the package enforces, with its value. Where a limit applies to one p
 | `max_age` in a request                          | At most nine digits                                                                   | The authorization request.                                                                                                                                                                                                                                                                                                                                                                                             |
 | Entries in a client option list                 | 100                                                                                   | `scope`, `prompt` and `uiLocales` of `authorize`, `scope` of `refresh` and `clientCredentials`, and `uiLocales` of `endSessionUrl`; a longer list is a `TypeError`.                                                                                                                                                                                                                                                    |
 | Length of a client option value                 | 4096 characters                                                                       | `loginHint` of `authorize`, and the space-joined `scope` and `uiLocales` of `authorize`, `scope` of `refresh` and `clientCredentials`, and `postLogoutRedirectUri`, `logoutHint`, `state` and the space-joined `uiLocales` of `endSessionUrl`, as the provider accepts per parameter; a longer value is a `TypeError`. `idTokenHint` has no cap of its own, since the provider issued it; only the URL length applies. |
-| Authorization code lifetime                     | 60 seconds by default, 1 to 600                                                       | `ttl.code`, or the client record's own `ttl.code`.                                                                                                                                                                                                                                                                                                                                                                     |
+| Authorization code lifetime                     | 60 seconds by default, 1 to 600                                                       | `ttl.code`.                                                                                                                                                                                                                                                                                                                                                                                                            |
 | Interaction lifetime                            | 1800 seconds by default, 60 to 86400                                                  | `ttl.interaction`.                                                                                                                                                                                                                                                                                                                                                                                                     |
-| Access token and ID token lifetime              | 600 seconds by default, 60 to 86400                                                   | `ttl.accessToken` and `ttl.idToken`, or the client record's own.                                                                                                                                                                                                                                                                                                                                                       |
-| Refresh token family lifetime                   | 30 days by default, 60 seconds to 365 days                                            | `ttl.refreshToken`, or the client record's own.                                                                                                                                                                                                                                                                                                                                                                        |
+| Access token and ID token lifetime              | 600 seconds by default, 60 to 86400                                                   | `ttl.accessToken` and `ttl.idToken`.                                                                                                                                                                                                                                                                                                                                                                                   |
+| Refresh token family lifetime                   | 30 days by default, 60 seconds to 365 days                                            | `ttl.refreshToken`.                                                                                                                                                                                                                                                                                                                                                                                                    |
 | Client assertion lifetime created by the client | 60 seconds                                                                            | The assertion this package's client signs.                                                                                                                                                                                                                                                                                                                                                                             |
 | Client assertion `exp` accepted by the provider | At most 300 seconds ahead of the provider's clock, plus 60 seconds of clock tolerance | `client_secret_jwt` and `private_key_jwt` at the token and revocation endpoints. An `exp` 360 seconds ahead is accepted; 361 seconds is refused.                                                                                                                                                                                                                                                                       |
 | URL form                                        | Visible ASCII, no backslash                                                           | The issuer, endpoint URLs and registered redirect URIs, on the provider and the client. A backslash is read as a slash by the URL parser, so it is refused.                                                                                                                                                                                                                                                            |
@@ -1522,7 +1515,7 @@ These are outside its scope. Each one is either the app's job or a known gap.
 - **Revocation reaches only what the provider sees.** The revocation endpoint ends a grant, but the package has no introspection endpoint. A resource server sees a revocation only by calling userinfo. An access token it accepts without calling userinfo keeps working until `ttl.accessToken` seconds have passed.
 - **JWT access tokens and revocation.** With `accessToken: { format: "jwt" }`, the provider revokes a token at once, but a resource server that verifies it offline sees a revocation only when the token expires. Keep `ttl.accessToken` short, as [JWT access tokens](docs/provider.md#jwt-access-tokens) advises.
 - **Sender-constrained tokens.** Access tokens are bearer tokens. DPoP and mutual TLS are not supported.
-- **How the user authenticates.** The package records what the app says about the login in `authTime`, `amr` and `acr`. It does not verify them, and an `amr` of `["pwd"]` is what the app claims, not a check. The same holds for `sessionId`: the provider copies it into the `sid` claim without interpreting it, so a client sees whatever the app chose, and it should not be a secret.
+- **How the user authenticates.** The package records what the app says about the login in `authTime`, `amr` and `acr`. It does not verify them, and an `amr` of `["pwd"]` is what the app claims, not a check.
 - **Key management.** The package signs with the keys it is given. Storage of the private keys, the timing of rotation, and a compromised signing key are the app's. A key that leaks lets anyone forge ID tokens for that provider.
 - **Redirect URI registration.** The app registers each client's URIs. The package matches them exactly and does not decide which are safe.
 - **The provider's identity on the client side.** The client trusts discovery over `https`, the issuer match and the signatures from the provider's keys. It does not pin the keys or the endpoints beyond that.
@@ -1626,7 +1619,7 @@ Seven of the OAuth codes are issue codes, and only in this table: `invalid_reque
 | `unsupported_response_type`                                                        | `beginAuthorization`, when `response_type` is not `code`. Redirected.                                                                                                                           | None.                                                                                                                                                 | None.                                                                                                                                             |
 | `invalid_scope`                                                                    | `beginAuthorization`, when `scope` lacks `openid`, or names a scope the provider or the client does not have. Redirected.                                                                       | None.                                                                                                                                                 | None.                                                                                                                                             |
 | `request_not_supported`, `request_uri_not_supported`, `registration_not_supported` | `beginAuthorization`, for a `request`, `request_uri` or `registration` parameter. Redirected.                                                                                                   | None.                                                                                                                                                 | None.                                                                                                                                             |
-| `interaction_not_found`                                                            | `completeAuthorization`, when the id is empty or unknown, was completed, or has expired, or when a grant's client was removed in the meantime. Not redirected.                                  | None.                                                                                                                                                 | None.                                                                                                                                             |
+| `interaction_not_found`                                                            | `completeAuthorization`, when the id is empty or unknown, was completed, or has expired. Not redirected.                                                                                        | None.                                                                                                                                                 | None.                                                                                                                                             |
 | `invalid_request`                                                                  | `endSession`, for a malformed request: a method or media type the endpoint does not accept, an oversized URL or request body, an unreadable body, or a parameter that does not parse. Rendered. | `["id_token_hint"]` when a verified hint was issued to another client than `client_id`; otherwise none.                                               | `reason` for a parameter that does not parse: `duplicate`, `too_many`, `too_long` or `malformed`.                                                 |
 | `unknown_client`                                                                   | `endSession`, when `client_id` names no client. Rendered.                                                                                                                                       | None.                                                                                                                                                 | None.                                                                                                                                             |
 | `invalid_redirect_uri`                                                             | `endSession`, when `post_logout_redirect_uri` is not one of the client's `postLogoutRedirectUris`, or no client is known to check it against. Rendered.                                         | `["post_logout_redirect_uri"]`.                                                                                                                       | None.                                                                                                                                             |

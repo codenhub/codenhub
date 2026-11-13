@@ -94,7 +94,7 @@ export async function authenticateClient(
   if (record === undefined) {
     return rejectClient(presented, "client_unknown");
   }
-  const client = checkClientRecord(record, presented.clientId);
+  const client = checkClientRecord(record, presented.clientId, options.publicKeys);
   const proof = await proves(options, client, presented);
   return proof === "proven" ? { ok: true, client } : rejectClient(presented, proof, client.clientId);
 }
