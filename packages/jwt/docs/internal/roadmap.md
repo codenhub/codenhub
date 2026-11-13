@@ -27,7 +27,7 @@ Nothing the SSO application plans needs a change here. Its needs found so far la
 
 - **JWE**, if encrypted ID tokens turn out to be needed (scope.md section 2).
 - **More algorithms**, such as `ES384`, `ES512` or `RS512`, if `@codenhub/oidc` must verify tokens from an issuer that signs with one, or the SSO application must accept `private_key_jwt` assertions from a client that signs with one. Each is one row in the algorithm table plus vectors.
-- **Serving stale keys while a refetch is in flight**: today, requests that arrive while a refetch hangs wait up to `timeout` even when stale keys within `maxStale` are usable, once per cooldown window; the maintainer chose to keep this for 0.1 (2026-11-13).
+- **Serving stale keys while a refetch is in flight**: today, requests that arrive while a refetch hangs wait up to `timeout` even when stale keys within `maxStale` are usable, once per cooldown window (with `cooldown: 0`, after every failed fetch); the maintainer chose to keep this for 0.1 (2026-11-13).
 
 ## Not Planned
 

@@ -276,7 +276,7 @@ export async function authenticate(authorization: string | null) {
 }
 ```
 
-The verifier accepts any value, including `undefined` or a number, and reports a value that is not a token as `malformed` rather than throwing. It never throws for a token, whatever the token holds; the exceptions are code of your own: a [`claims` schema](#checking-your-own-claims) that throws or rejects, and a `now` that returns something other than a finite number, such as `NaN` from `Date.parse` of an unset variable. The verifier's promise rejects with a `TypeError` in both cases, when it reads the clock after the signature checked out, because a `NaN` clock would make every time comparison false and accept expired tokens.
+The verifier accepts any value, including `undefined` or a number, and reports a value that is not a token as `malformed` rather than throwing. It never throws for a token, whatever the token holds; the exceptions are code of your own: a [`claims` schema](#checking-your-own-claims) that throws or rejects, and a `now` that returns something other than a finite number, such as `NaN` from `Date.parse` of an unset variable. The schema's own error propagates unchanged. A non-finite `now` makes the promise reject with a `TypeError` when the verifier reads the clock, which it does only for a token whose signature checked out, because a `NaN` clock would make every time comparison false and accept expired tokens.
 
 ## Options
 
@@ -426,7 +426,7 @@ The payload, key and header are your own data, not input from outside, so a mist
 
 `sign` adds no claim. It does not set `iat`, `exp` or `jti`, and does not check that `exp` is in the future. Every claim the token should carry is one you write, which keeps what a token says visible at the call that signs it. Write times as whole seconds since the Unix epoch, `Math.floor(Date.now() / 1000)`, since that is what verifiers, this one included, read them as.
 
-The payload must be a plain object whose values JSON represents exactly: strings, finite numbers, booleans, `null`, arrays and plain objects, nested at most 32 levels deep. `undefined`, functions, symbols, bigints, `NaN` and `Infinity`, `Date`s and other class instances, getters, sparse arrays and cycles all throw. `JSON.stringify` would drop or rewrite most of these silently, so the token would not say what your code meant.
+The payload must be a plain object whose values JSON represents exactly: strings, finite numbers, booleans, `null`, arrays and plain objects, nested at most 32 levels deep. `undefined`, functions, symbols, bigints, `NaN`, `Infinity` and `-0`, `Date`s and other class instances, getters, sparse arrays and cycles all throw. `JSON.stringify` would drop or rewrite most of these silently, so the token would not say what your code meant.
 
 The registered claims are checked for the types RFC 7519 gives them: `exp`, `nbf` and `iat` must be finite numbers, `iss`, `sub` and `jti` strings, and `aud` a string or an array of strings. A token this package signs therefore never fails a verifier's `invalid_claim` check.
 
@@ -551,7 +551,7 @@ The JWK is untrusted input, so the import never throws for it, whatever it is: a
 
 Issue paths name the JWK member at fault, such as `["kty"]` or `["n"]`.
 
-Import ignores a JWK's `ext` and any member it does not know. Only the `extractable` option decides whether the imported key can be exported again, so a JWK that says `ext: true` still gives a non-extractable key unless you pass `extractable: true`.
+Import ignores a JWK's `ext` and any member it does not know. A public key is always exportable. For a private or secret key, only the `extractable` option decides whether it can be exported again, so a JWK that says `ext: true` still gives a non-extractable key unless you pass `extractable: true`.
 
 ## Importing a private key
 
@@ -859,4 +859,4 @@ A `TypeError` means a mistake in the calling code, not in the input, and is thro
 
 A `TypeError` message names the option or member and the rule it broke, never its value.
 
-Three things propagate rather than becoming a result: an exception thrown by your own `claims` schema, a `now` option that returns something other than a finite number (the verifier's promise, or a remote key set's `select`, rejects with a `TypeError`; a verifier reports a remote key set's rejection as `key_fetch_failed` with `{ reason: "key_set_error" }`), and a failure of Web Crypto itself while signing or generating a key, which means the runtime lacks the algorithm.
+Three things propagate rather than becoming a result: an exception thrown by your own `claims` schema, a `now` option that returns something other than a finite number, and a failure of Web Crypto itself while signing or generating a key, which means the runtime lacks the algorithm. A verifier's `now` makes its promise reject with a `TypeError`, for a token whose signature checked out. A remote key set's `now` makes its `select` reject with a `TypeError`; a verifier using that key set catches the rejection like any other key-set error and reports `key_fetch_failed` with `{ reason: "key_set_error" }`.

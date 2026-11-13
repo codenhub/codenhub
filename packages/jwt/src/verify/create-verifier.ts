@@ -52,7 +52,8 @@ const KEY_SET_ERROR = fail({ code: "key_fetch_failed", params: { reason: "key_se
  * @returns A {@link Verifier}. It resolves to the frozen `{ header, payload, key }`, or to a failure and
  * never throws for any token. A key set whose `select` throws or rejects, or returns something other than
  * a result holding a public or secret key this package created, makes the verifier fail with
- * `key_fetch_failed` and `{ reason: "key_set_error" }`. Caller code is not caught: a rejection from
+ * `key_fetch_failed` and `{ reason: "key_set_error" }`, except that a failed result whose issues each have
+ * a string `code` is passed through. Caller code is not caught: a rejection from
  * `options.claims` propagates, and so does a `TypeError` when `options.now` returns something other than a
  * finite number, checked once per verification when the claims are checked, after the signature.
  * @throws TypeError when `options` is not an object; `options` has a member that is not an option, such as
@@ -125,9 +126,9 @@ async function selectKey(keys: KeySet, header: JwtHeader): Promise<JwtResult<Ver
       return isRegisteredKey(value) && value.kind !== "private" ? ok(value) : KEY_SET_ERROR;
     }
     const issues = isOk === false ? error?.issues : undefined;
-    return Array.isArray(issues) && issues.length > 0 && issues.every(hasStringCode)
-      ? fail(...(issues as [JwtIssue, ...JwtIssue[]]))
-      : KEY_SET_ERROR;
+    // Copied by index, so a hole becomes `undefined` and fails the check; `every` would skip it.
+    const list = Array.isArray(issues) ? Array.from({ length: issues.length }, (_, index) => issues[index]) : [];
+    return list.length > 0 && list.every(hasStringCode) ? fail(...(list as [JwtIssue, ...JwtIssue[]])) : KEY_SET_ERROR;
   } catch {
     return KEY_SET_ERROR;
   }

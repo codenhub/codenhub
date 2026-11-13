@@ -87,7 +87,7 @@ The JWK is untrusted input, so the import never throws for it, whatever it is: a
 
 Issue paths name the JWK member at fault, such as `["kty"]` or `["n"]`.
 
-Import ignores a JWK's `ext` and any member it does not know. Only the `extractable` option decides whether the imported key can be exported again, so a JWK that says `ext: true` still gives a non-extractable key unless you pass `extractable: true`.
+Import ignores a JWK's `ext` and any member it does not know. A public key is always exportable. For a private or secret key, only the `extractable` option decides whether it can be exported again, so a JWK that says `ext: true` still gives a non-extractable key unless you pass `extractable: true`.
 
 ## Importing a private key
 

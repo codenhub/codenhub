@@ -267,7 +267,8 @@ export interface VerifierOptions<TSchema extends StandardSchemaV1 | undefined = 
   /**
    * Current time in milliseconds since the Unix epoch, for tests. It must return a finite number: any
    * other result is a bug in the clock, so the verifier's promise rejects with a `TypeError` instead of
-   * skipping the time checks.
+   * skipping the time checks. The clock is read only for a token whose signature checked out, so a token
+   * that fails earlier still gets its failure result.
    *
    * @defaultValue `Date.now`
    */
@@ -281,7 +282,8 @@ export type VerifiedPayload<TSchema extends StandardSchemaV1 | undefined> = TSch
 
 /**
  * A configured verifier. Call it with any value; it never throws for a token, whatever its content.
- * Only a `claims` schema that throws or rejects makes its promise reject.
+ * Only caller code makes its promise reject: a `claims` schema that throws or rejects, or an
+ * `options.now` that returns something other than a finite number.
  *
  * @returns The verified token, or every issue found. Structural, key, and signature failures stop at
  * the first issue; claim checks report every failing claim.
