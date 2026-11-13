@@ -477,7 +477,7 @@ const cases: StoreConformanceCase[] = [
       clientId: `conformance-${newKey()}`,
       redirectUris: ["https://app.example/callback", "https://app.example/callback?tenant=a"],
       scopes: ["openid", "profile", "offline_access"],
-      auth: { method: "client_secret_basic", secretHash: newKey() },
+      auth: { method: "client_secret_basic", secretHashes: [newKey()] },
       grantTypes: ["authorization_code"],
       postLogoutRedirectUris: ["https://app.example/signed-out"],
     };

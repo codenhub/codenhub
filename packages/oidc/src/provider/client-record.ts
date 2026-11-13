@@ -55,9 +55,9 @@ export function checkClientRecord(record: unknown, clientId: string): CheckedCli
   }
   if (
     (auth.method === "client_secret_basic" || auth.method === "client_secret_post") &&
-    (typeof auth.secretHash !== "string" || auth.secretHash === "")
+    (!isStringArray(auth.secretHashes) || auth.secretHashes.length === 0)
   ) {
-    return invalid("must carry a non-empty auth.secretHash for a client secret method");
+    return invalid("must carry a non-empty auth.secretHashes list of non-empty strings for a client secret method");
   }
   if (auth.method === "client_secret_jwt" && !isRecord(auth.key)) {
     return invalid("must carry auth.key for client_secret_jwt");

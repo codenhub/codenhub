@@ -116,7 +116,7 @@ export async function setUpProvider(overrides: SetUpOverrides = {}): Promise<Pro
         clientId: CONFIDENTIAL_CLIENT,
         redirectUris: [REDIRECT_URI],
         scopes: CLIENT_SCOPES,
-        auth: { method: "client_secret_basic", secretHash: await hashClientSecret(secret) },
+        auth: { method: "client_secret_basic", secretHashes: [await hashClientSecret(secret)] },
       },
     ],
   });

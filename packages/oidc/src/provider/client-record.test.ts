@@ -59,7 +59,7 @@ describe("checkClientRecord", () => {
       valid({
         redirectUris: [],
         scopes: ["orders:read"],
-        auth: { method: "client_secret_basic", secretHash: "hash" },
+        auth: { method: "client_secret_basic", secretHashes: ["hash"] },
         grantTypes: ["client_credentials"],
         ...overrides,
       });
@@ -70,7 +70,7 @@ describe("checkClientRecord", () => {
 
     it("shouldAcceptBothGrants", () => {
       const record = valid({
-        auth: { method: "client_secret_basic", secretHash: "hash" },
+        auth: { method: "client_secret_basic", secretHashes: ["hash"] },
         grantTypes: ["authorization_code", "client_credentials"],
       });
 
@@ -119,19 +119,33 @@ describe("checkClientRecord", () => {
     expect(() => checkClientRecord(valid({ auth: { method: "tls_client_auth" } }), "client-a")).toThrow(TypeError);
   });
 
+  it.each([
+    ["missing", undefined],
+    ["an empty list", []],
+    ["an empty entry", ["hash", ""]],
+    ["a non-string entry", ["hash", 42]],
+    ["a single string, as the old secretHash member held", "hash"],
+  ])("shouldRejectClientSecretBasicWithSecretHashes%s", (_name, secretHashes) => {
+    const attempt = () =>
+      checkClientRecord(valid({ auth: { method: "client_secret_basic", secretHashes } }), "client-a");
+
+    expect(attempt).toThrow(TypeError);
+    expect(attempt).toThrow("auth.secretHashes");
+  });
+
+  it("shouldAcceptSeveralSecretHashes", () => {
+    expect(() =>
+      checkClientRecord(valid({ auth: { method: "client_secret_basic", secretHashes: ["old", "new"] } }), "client-a"),
+    ).not.toThrow();
+  });
+
   it("shouldRejectClientSecretPostWithoutSecretHash", () => {
     expect(() => checkClientRecord(valid({ auth: { method: "client_secret_post" } }), "client-a")).toThrow(TypeError);
   });
 
-  it("shouldRejectClientSecretBasicWithAnEmptySecretHash", () => {
-    expect(() =>
-      checkClientRecord(valid({ auth: { method: "client_secret_basic", secretHash: "" } }), "client-a"),
-    ).toThrow(TypeError);
-  });
-
   it("shouldAcceptClientSecretPostWithASecretHash", () => {
     expect(() =>
-      checkClientRecord(valid({ auth: { method: "client_secret_post", secretHash: "hash" } }), "client-a"),
+      checkClientRecord(valid({ auth: { method: "client_secret_post", secretHashes: ["hash"] } }), "client-a"),
     ).not.toThrow();
   });
 

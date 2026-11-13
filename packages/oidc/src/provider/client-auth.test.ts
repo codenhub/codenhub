@@ -46,12 +46,12 @@ async function fixtures(): Promise<Fixtures> {
     {
       clientId: "basic",
       ...base,
-      auth: { method: "client_secret_basic", secretHash: await hashClientSecret(basicSecret) },
+      auth: { method: "client_secret_basic", secretHashes: [await hashClientSecret(basicSecret)] },
     },
     {
       clientId: "post",
       ...base,
-      auth: { method: "client_secret_post", secretHash: await hashClientSecret(postSecret) },
+      auth: { method: "client_secret_post", secretHashes: [await hashClientSecret(postSecret)] },
     },
     { clientId: "hmac", ...base, auth: { method: "client_secret_jwt", key: hmacKey } },
     { clientId: "keyed", ...base, auth: { method: "private_key_jwt", keys: createKeySet([clientKey.publicKey]) } },
@@ -134,7 +134,10 @@ describe("authenticateClient: successful methods", () => {
     const withSecret = await Promise.all(
       clients.map(async (client) =>
         client.clientId === "basic"
-          ? { ...client, auth: { method: "client_secret_basic" as const, secretHash: await hashClientSecret(secret) } }
+          ? {
+              ...client,
+              auth: { method: "client_secret_basic" as const, secretHashes: [await hashClientSecret(secret)] },
+            }
           : client,
       ),
     );
@@ -145,12 +148,43 @@ describe("authenticateClient: successful methods", () => {
     expect(result.ok && result.client.clientId).toBe("basic");
   });
 
+  it("authenticates with either secret while a client is being rotated, and with neither once one is removed", async () => {
+    const [oldSecret, newSecret] = [generateClientSecret(), generateClientSecret()];
+    const { clients } = await fixtures();
+    const rotating = async (secrets: readonly string[]): Promise<ResolvedOptions> =>
+      setup(
+        await Promise.all(
+          clients.map(async (client) =>
+            client.clientId === "basic"
+              ? {
+                  ...client,
+                  auth: {
+                    method: "client_secret_basic" as const,
+                    secretHashes: await Promise.all(secrets.map(hashClientSecret)),
+                  },
+                }
+              : client,
+          ),
+        ),
+      );
+    const both = await rotating([oldSecret, newSecret]);
+    const retired = await rotating([newSecret]);
+
+    expect((await authenticate(both, {}, basicHeader("basic", oldSecret))).ok).toBe(true);
+    expect((await authenticate(both, {}, basicHeader("basic", newSecret))).ok).toBe(true);
+    expect((await authenticate(retired, {}, basicHeader("basic", newSecret))).ok).toBe(true);
+    expect((await authenticate(retired, {}, basicHeader("basic", oldSecret))).ok).toBe(false);
+  });
+
   it("decodes a plus sign in a Basic credential as a space", async () => {
     const { clients } = await fixtures();
     const withSecret = await Promise.all(
       clients.map(async (client) =>
         client.clientId === "basic"
-          ? { ...client, auth: { method: "client_secret_basic" as const, secretHash: await hashClientSecret("a b") } }
+          ? {
+              ...client,
+              auth: { method: "client_secret_basic" as const, secretHashes: [await hashClientSecret("a b")] },
+            }
           : client,
       ),
     );
@@ -343,7 +377,10 @@ describe("authenticateClient: invalid_client failures", () => {
     const withSecret = await Promise.all(
       clients.map(async (client) =>
         client.clientId === "basic"
-          ? { ...client, auth: { method: "client_secret_basic" as const, secretHash: await hashClientSecret(secret) } }
+          ? {
+              ...client,
+              auth: { method: "client_secret_basic" as const, secretHashes: [await hashClientSecret(secret)] },
+            }
           : client,
       ),
     );
@@ -360,7 +397,10 @@ describe("authenticateClient: invalid_client failures", () => {
     const withSecret = await Promise.all(
       clients.map(async (client) =>
         client.clientId === "basic"
-          ? { ...client, auth: { method: "client_secret_basic" as const, secretHash: await hashClientSecret(secret) } }
+          ? {
+              ...client,
+              auth: { method: "client_secret_basic" as const, secretHashes: [await hashClientSecret(secret)] },
+            }
           : client,
       ),
     );

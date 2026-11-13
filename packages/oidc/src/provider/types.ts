@@ -5,9 +5,14 @@ import type { OidcFailure, OidcResult, Prompt, ProviderMetadata } from "../share
 /**
  * How a registered client authenticates to the token endpoint, and what the provider checks it against.
  *
- * Secrets are never stored in plaintext: `secretHash` is what {@link hashClientSecret} returns for the
- * secret {@link generateClientSecret} created. `client_secret_jwt` is the exception, because an HMAC
+ * Secrets are never stored in plaintext: each entry of `secretHashes` is what {@link hashClientSecret} returns
+ * for a secret {@link generateClientSecret} created. `client_secret_jwt` is the exception, because an HMAC
  * can only be checked with the secret itself.
+ *
+ * `secretHashes` lists every secret the client may use, and a presented secret authenticates when it matches any
+ * of them, so a secret can be rotated without downtime: add the new hash, roll the new secret out to the
+ * client, then remove the old hash. The list must be non-empty and each entry a non-empty string, or the
+ * provider throws `TypeError` when it reads the record.
  *
  * A remote key set given as `keys` must be one object per client, reused across `findClient` calls: its cache and
  * its limit on fetches live in the object, so a new one for each read lets every token request that presents an
@@ -15,8 +20,8 @@ import type { OidcFailure, OidcResult, Prompt, ProviderMetadata } from "../share
  */
 export type ClientAuthentication =
   | { readonly method: "none" }
-  | { readonly method: "client_secret_basic"; readonly secretHash: string }
-  | { readonly method: "client_secret_post"; readonly secretHash: string }
+  | { readonly method: "client_secret_basic"; readonly secretHashes: readonly string[] }
+  | { readonly method: "client_secret_post"; readonly secretHashes: readonly string[] }
   /** The client's HS256 secret, from `importSecretKey`. */
   | { readonly method: "client_secret_jwt"; readonly key: SecretKey }
   /** The client's public keys, from `createKeySet`, `importKeySet`, or `createRemoteKeySet`. */

@@ -21,7 +21,7 @@ interface Setup {
 /** A provider with a machine client (`client_credentials` only), a client with both grants, and a sign-in client. */
 async function setup(): Promise<Setup> {
   const secret = generateClientSecret();
-  const auth = { method: "client_secret_basic", secretHash: await hashClientSecret(secret) } as const;
+  const auth = { method: "client_secret_basic", secretHashes: [await hashClientSecret(secret)] } as const;
   const store = createMemoryStore({
     clients: [
       {
@@ -240,7 +240,7 @@ describe("authorization requests from a client_credentials client", () => {
             clientId: "machine",
             redirectUris: ["https://app.example/cb"],
             scopes: ["orders:read"],
-            auth: { method: "client_secret_basic", secretHash: await hashClientSecret(secret) },
+            auth: { method: "client_secret_basic", secretHashes: [await hashClientSecret(secret)] },
             grantTypes: ["client_credentials"],
           },
         ],

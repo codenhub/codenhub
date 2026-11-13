@@ -48,7 +48,7 @@ async function setUp(method: Method): Promise<Setup> {
     auth = { method };
     clientAuth = oc.None();
   } else {
-    auth = { method, secretHash: await hashClientSecret(secret) };
+    auth = { method, secretHashes: [await hashClientSecret(secret)] };
     clientAuth = method === "client_secret_basic" ? oc.ClientSecretBasic(secret) : oc.ClientSecretPost(secret);
   }
 

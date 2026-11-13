@@ -546,7 +546,17 @@ The authorization endpoint never receives CORS headers. The app serves it, so th
 A confidential client's secret is generated and stored by the provider in a form that cannot be used if the store leaks.
 
 - `generateClientSecret()` returns a new secret: 256 bits from the Web Crypto random number generator, base64url-encoded into 43 characters. Give it to the client once.
-- `hashClientSecret(secret)` returns a promise of the base64url SHA-256 digest of the secret. Store that as the record's `auth.secretHash`, and never the secret itself.
+- `hashClientSecret(secret)` returns a promise of the base64url SHA-256 digest of the secret. Store it in the record's `auth.secretHashes`, a list, and never the secret itself.
+
+### Rotating a secret
+
+`auth.secretHashes` lists every secret the client may use, and a presented secret authenticates when it matches any entry. That lets a secret change without downtime:
+
+1. Generate the new secret and add its hash to `secretHashes`, next to the old one.
+2. Roll the new secret out to the client.
+3. Remove the old hash once the client no longer sends the old secret.
+
+The list must be non-empty and every entry a non-empty string, or the provider throws `TypeError` when it reads the record. The provider compares the presented secret with every entry, and does not stop at the first match, so the time a request takes does not show which entry matched or how many there are.
 
 A single SHA-256 is enough here because the secret is 256 bits of randomness and cannot be guessed. It is not enough for a password a person chose, so never use one as a client secret: the hash would then be cheap to attack offline. `client_secret_jwt` is the exception. Its HMAC key must be the secret itself, so the record holds the `SecretKey` instead of a digest, and the store must keep that key protected.
 

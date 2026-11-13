@@ -66,7 +66,7 @@ The secret is 256 bits from the Web Crypto random number generator, base64url-en
 export declare function hashClientSecret(secret: string): Promise<string>;
 ```
 
-Hashes a client secret for storage in [`ClientAuthentication`](#clientauthentication)'s `secretHash`.
+Hashes a client secret for storage in [`ClientAuthentication`](#clientauthentication)'s `secretHashes`.
 
 A single SHA-256 is enough here, and not a password hash such as bcrypt or scrypt, because the input is a 256-bit random value that cannot be guessed or brute-forced; a slow hash would add cost and buy nothing. That holds only for secrets from [`generateClientSecret`](#generateclientsecret). A human-chosen password must never be used as a client secret, because this hash would then be cheap to attack offline.
 
@@ -1635,11 +1635,11 @@ export type ClientAuthentication =
     }
     | {
         readonly method: "client_secret_basic";
-        readonly secretHash: string;
+        readonly secretHashes: readonly string[];
     }
     | {
         readonly method: "client_secret_post";
-        readonly secretHash: string;
+        readonly secretHashes: readonly string[];
     }
     /** The client's HS256 secret, from `importSecretKey`. */
     | {
@@ -1655,7 +1655,9 @@ export type ClientAuthentication =
 
 How a registered client authenticates to the token endpoint, and what the provider checks it against.
 
-Secrets are never stored in plaintext: `secretHash` is what [`hashClientSecret`](#hashclientsecret) returns for the secret [`generateClientSecret`](#generateclientsecret) created. `client_secret_jwt` is the exception, because an HMAC can only be checked with the secret itself.
+Secrets are never stored in plaintext: each entry of `secretHashes` is what [`hashClientSecret`](#hashclientsecret) returns for a secret [`generateClientSecret`](#generateclientsecret) created. `client_secret_jwt` is the exception, because an HMAC can only be checked with the secret itself.
+
+`secretHashes` lists every secret the client may use, and a presented secret authenticates when it matches any of them, so a secret can be rotated without downtime: add the new hash, roll the new secret out to the client, then remove the old hash. The list must be non-empty and each entry a non-empty string, or the provider throws `TypeError` when it reads the record.
 
 A remote key set given as `keys` must be one object per client, reused across `findClient` calls: its cache and its limit on fetches live in the object, so a new one for each read lets every token request that presents an assertion for that client make the provider fetch the client's JWKS.
 

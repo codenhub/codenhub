@@ -140,7 +140,7 @@ interface ClientRecord {
 `auth` is one of these:
 
 - `{ method: "none" }`, for a public client that relies on PKCE alone.
-- `{ method: "client_secret_basic", secretHash }` and `{ method: "client_secret_post", secretHash }`, where `secretHash` comes from `hashClientSecret`.
+- `{ method: "client_secret_basic", secretHashes }` and `{ method: "client_secret_post", secretHashes }`, where `secretHashes` is a non-empty list of digests from `hashClientSecret`. A presented secret authenticates when it matches any entry, so a client has two secrets while one is being [rotated](provider.md#rotating-a-secret).
 - `{ method: "client_secret_jwt", key }`, where `key` is the client's HS256 `SecretKey`, from `generateSecretKey({ alg: "HS256" })` or `importSecretKey`.
 - `{ method: "private_key_jwt", keys }`, where `keys` is the client's public `KeySet`, from `createKeySet`, `importKeySet` or `createRemoteKeySet`. A remote key set must be created once per client and reused, as described below.
 

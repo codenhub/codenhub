@@ -14,7 +14,7 @@ export function generateClientSecret(): string {
 }
 
 /**
- * Hashes a client secret for storage in {@link ClientAuthentication}'s `secretHash`.
+ * Hashes a client secret for storage in {@link ClientAuthentication}'s `secretHashes`.
  *
  * @remarks
  * A single SHA-256 is enough here, and not a password hash such as bcrypt or scrypt, because the input is
@@ -33,7 +33,15 @@ export async function hashClientSecret(secret: string): Promise<string> {
   return digestKey(secret);
 }
 
-/** Tests a presented secret against a stored {@link hashClientSecret} digest, in time independent of the match. */
-export async function verifyClientSecret(secret: string, secretHash: string): Promise<boolean> {
-  return timingSafeEqual(await digestKey(secret), secretHash);
+/**
+ * Tests a presented secret against every stored {@link hashClientSecret} digest of a client. It compares with
+ * all of them and never stops at the first match, so the time taken does not show which entry matched.
+ */
+export async function verifyClientSecret(secret: string, secretHashes: readonly string[]): Promise<boolean> {
+  const digest = await digestKey(secret);
+  let matched = false;
+  for (const secretHash of secretHashes) {
+    matched = timingSafeEqual(digest, secretHash) || matched;
+  }
+  return matched;
 }

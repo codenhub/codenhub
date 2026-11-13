@@ -38,7 +38,7 @@ async function setup(accessToken: AccessTokenFormat = { format: "jwt", audience:
         clientId: "service",
         redirectUris: [],
         scopes: ["orders:read"],
-        auth: { method: "client_secret_post", secretHash: await hashClientSecret(secret) },
+        auth: { method: "client_secret_post", secretHashes: [await hashClientSecret(secret)] },
         grantTypes: ["client_credentials"],
       },
     ],

@@ -179,14 +179,14 @@ A result, a response and a `TypeError` message reveal no input value, by constru
 - Every issue's `path` names a place, such as a claim or a header member. Its `params` hold fixed vocabulary, numbers such as a limit or an HTTP status, and facts from the configuration. Never a token, code, verifier, secret, claim value or response body.
 - The token endpoint's error responses hold only the OAuth code. They carry no `error_description`, so no input is echoed.
 - A provider error that reaches the client is narrowed to a known OAuth code, or `unknown`, so the provider's text never becomes an issue.
-- The store sees digests of every code, token and interaction id. A client secret is stored only as its SHA-256 digest, with one exception: a `client_secret_jwt` client's record holds its HMAC key itself, because the provider needs that key to verify assertions. The store must protect it as a credential. See [Store](store.md#client-records). The PKCE verifier is never stored, only the challenge.
+- The store sees digests of every code, token and interaction id. A client secret is stored only as its SHA-256 digest, one per secret the client may use, with one exception: a `client_secret_jwt` client's record holds its HMAC key itself, because the provider needs that key to verify assertions. The store must protect it as a credential. See [Store](store.md#client-records). The PKCE verifier is never stored, only the challenge.
 - `onDiagnostic` never receives a request value. Its `clientId` comes from the store, never from a request alone, and the other members are an endpoint, a reason from a fixed list and a status. See [Provider](provider.md#diagnostics).
 - The userinfo response holds only the claims the granted scopes release, taken from the callback's own data properties, and the `sub` the token was issued to.
 - `TypeError` messages name the option or the record member that is wrong, and never its value.
 
 ### Constant-time comparisons
 
-The package compares the `state` and the client secret's digest, the PKCE challenge, and the ID token's `nonce` and `at_hash`, in constant time. Equal-length values are compared without leaking, through timing, where they first differ. A value of another length is refused at once, so the length of a secret is not hidden. Lengths are not treated as secret.
+The package compares the `state` and the client secret's digest (against every digest the client has, without stopping at the first match), the PKCE challenge, and the ID token's `nonce` and `at_hash`, in constant time. Equal-length values are compared without leaking, through timing, where they first differ. A value of another length is refused at once, so the length of a secret is not hidden. Lengths are not treated as secret.
 
 ## What the package does not defend
 
