@@ -106,6 +106,9 @@ export function checkClientRecord(
   if (requirePkce !== undefined && typeof requirePkce !== "boolean") {
     return invalid("must give requirePkce, when present, as a boolean");
   }
+  if (record.idTokenClaims !== undefined && typeof record.idTokenClaims !== "boolean") {
+    return invalid("must give idTokenClaims, when present, as a boolean");
+  }
   if (requirePkce === false && auth.method === "none") {
     return invalid("must not turn requirePkce off for a client whose auth.method is none");
   }

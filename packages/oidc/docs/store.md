@@ -137,6 +137,7 @@ interface ClientRecord {
   idTokenSigningAlg?: AsymmetricAlgorithm; // the algorithm of the signing key for this client's ID tokens
   requirePkce?: boolean; // true (the default) requires a PKCE challenge; false only for a confidential client
   backchannelLogout?: { uri: string; sessionRequired?: boolean }; // where the app sends this client's logout token
+  idTokenClaims?: boolean; // true puts the claims the granted scopes release in this client's ID tokens; false is the default
   auth: ClientAuthentication;
 }
 ```
@@ -161,6 +162,8 @@ A record that breaks these rules is a bug in the store, and the provider throws 
 `idTokenSigningAlg` picks which of the provider's signing keys signs this client's ID tokens: the first one with that algorithm. Without it, the provider uses the first `RS256` key when it has one, and otherwise its first key; [Signing keys](provider.md#signing-keys) gives the reason. A record that names an algorithm no signing key has is a bug, and the provider throws `TypeError` for it.
 
 `backchannelLogout` registers the client for [back-channel logout](provider.md#back-channel-logout). Its `uri` is the client's `backchannel_logout_uri`, and the app's server calls it, so it must be an absolute `https` URL of visible ASCII, without a fragment or credentials: unlike a redirect URI, a custom scheme or plain `http` is refused. `sessionRequired` is the client's `backchannel_logout_session_required` and defaults to `false`; when it is `true`, the app must give a `sessionId` when it asks for a logout request for the client. A record whose `backchannelLogout` is not an object of that shape, or whose `sessionRequired` is not a boolean, is a bug in the store, and the provider throws `TypeError` for it. Absent, the client has no back-channel logout and the provider has nothing to send it.
+
+`idTokenClaims` defaults to `false`: an ID token carries only protocol claims, and the scope claims are released at userinfo. With `true`, every ID token issued to this client also carries the claims its granted scopes release, from the same `claims` callback, for a relying party that reads only the ID token. A value that is not a boolean is a bug in the store, and the provider throws `TypeError`. [Scope claims in the ID token](provider.md#scope-claims-in-the-id-token) has the rules and the warning about where those claims travel.
 
 The `key` and `keys` values are `@codenhub/jwt` objects, not JSON. A plain object is not one of them, and `@codenhub/jwt` refuses it with `TypeError` when the provider uses it. A store that persists these records therefore keeps the key as a JWK and rebuilds the object on each read: `exportSecretJwk` or `exportPublicJwk` writes the key, and `importSecretKey` or `importKeySet` reads it back. A secret can be exported only when it was created or imported as extractable. A store may also keep the key objects in memory, as the in-memory store does.
 

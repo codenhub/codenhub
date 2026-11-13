@@ -117,6 +117,25 @@ export interface ClientRecord {
      */
     readonly sessionRequired?: boolean;
   };
+  /**
+   * Whether every ID token issued to this client also carries the claims its granted scopes release, as userinfo
+   * returns them, for relying parties that read only the ID token and never call userinfo: Kubernetes' API server
+   * OIDC authenticator, and many "Sign in with" integrations that expect `email` there. It covers the code
+   * exchange and every refresh, for the scopes that token response grants. The claims come from the same
+   * {@link ProviderOptions.claims} callback and are filtered the same way; userinfo itself is unchanged. The
+   * `client_credentials` grant issues no ID token.
+   *
+   * A claim named `iss`, `sub`, `aud`, `exp`, `iat`, `auth_time`, `nonce`, `acr`, `amr`, `azp`, `at_hash`, `c_hash`,
+   * `sid` or `jti` is dropped from what the callback returns, so the protocol claims are always the provider's.
+   * The provider checks the value when it reads the record, and throws `TypeError` if it is not a boolean.
+   *
+   * Turning it on puts personal data in a token that the client may log, store in a cookie, or pass to other
+   * services, where userinfo would have held it behind an access token. Enable it only for a client that needs it,
+   * and keep the scopes of that client to the ones it uses.
+   *
+   * @defaultValue `false`
+   */
+  readonly idTokenClaims?: boolean;
 }
 
 /** How the client asks the app to show its pages (OpenID Connect Core §3.1.2.1). */

@@ -59,14 +59,31 @@ async function answerWithAccessToken(options: ResolvedOptions, request: Request)
     return refuse(bearerErrorResponse("insufficient_scope"), "access_token_without_openid", record.clientId);
   }
 
-  const claimNames = claimNamesFor(options, record.scopes);
+  return jsonResponse(await releaseClaims(options, record), { caching: "no-store" });
+}
+
+/**
+ * The claims the granted scopes release about a user, from the app's `claims` callback: only the names those scopes
+ * release, and `sub`, which is always the subject. A scope the provider does not define releases none. Userinfo
+ * answers with this, and an ID token for a client with `idTokenClaims` carries it.
+ *
+ * @param options - Validated provider options.
+ * @param grant - Who the claims are about, for which client and scopes.
+ * @returns The released claims, with `sub` set.
+ * @throws {TypeError} When the callback resolves to something that is not an object. Its own errors propagate.
+ */
+export async function releaseClaims(
+  options: ResolvedOptions,
+  grant: { readonly subject: string; readonly clientId: string; readonly scopes: readonly string[] },
+): Promise<Record<string, unknown>> {
+  const claimNames = claimNamesFor(options, grant.scopes);
   const released = await options.claims({
-    subject: record.subject,
-    clientId: record.clientId,
-    scopes: record.scopes,
+    subject: grant.subject,
+    clientId: grant.clientId,
+    scopes: grant.scopes,
     claims: claimNames,
   });
-  return jsonResponse(releasedClaims(released, claimNames, record.subject), { caching: "no-store" });
+  return releasedClaims(released, claimNames, grant.subject);
 }
 
 /** The union of the claim names the granted scopes release, each named once. */

@@ -18,7 +18,7 @@ export declare function createProvider(options: ProviderOptions): Provider;
 
 Creates an OpenID Provider from its options, ready to answer requests on the Fetch API.
 
-The provider answers the discovery, JWKS, token, userinfo, and revocation endpoints through `Provider.handle`, and runs the authorization flow through `Provider.beginAuthorization` and `Provider.completeAuthorization`. The authorization and end-session endpoints are not routed, so the app serves them and calls `beginAuthorization` and `Provider.endSession` from its own handlers. The provider makes no outbound request: `Provider.backchannelLogout` builds a client's logout request for the app to send. Options are validated here, once, so a misconfiguration fails at startup instead of on the first request. Key pairs are checked for shape, algorithm and `kid` only: not that the two halves match, nor that the keys come from this package's `@codenhub/jwt` copy.
+The provider answers the discovery, JWKS, token, userinfo, and revocation endpoints through `Provider.handle`, and runs the authorization flow through `Provider.beginAuthorization` and `Provider.completeAuthorization`. The authorization and end-session endpoints are not routed, so the app serves them and calls `beginAuthorization` and `Provider.endSession` from its own handlers. Options are validated here, once, so a misconfiguration fails at startup instead of on the first request. Key pairs are checked for shape, algorithm and `kid` only: not that the two halves match, nor that the keys come from this package's `@codenhub/jwt` copy.
 
 **Parameters**
 
@@ -395,21 +395,7 @@ export interface ClientRecord {
     readonly ttl?: ClientTtl;
     readonly idTokenSigningAlg?: AsymmetricAlgorithm;
     readonly requirePkce?: boolean;
-    readonly backchannelLogout?: {
-        /**
-         * The client's `backchannel_logout_uri`: an absolute `https` URL of visible ASCII, without a fragment or
-         * credentials. It is called by the app's server, not by a browser, so it is held to the rule of every
-         * server-to-server URL, which is `https`.
-         */
-        readonly uri: string;
-        /**
-         * Whether the client needs `sid` in the logout token (`backchannel_logout_session_required`). When `true`,
-         * {@link Provider.backchannelLogout} throws `TypeError` for a request without a `sessionId`.
-         *
-         * @defaultValue `false`
-         */
-        readonly sessionRequired?: boolean;
-    };
+    readonly idTokenClaims?: boolean;
 }
 ```
 
@@ -422,28 +408,6 @@ readonly auth: ClientAuthentication;
 ```
 
 How this client authenticates to the token endpoint.
-
-#### ClientRecord › backchannelLogout
-
-```ts
-readonly backchannelLogout?: {
-    /**
-     * The client's `backchannel_logout_uri`: an absolute `https` URL of visible ASCII, without a fragment or
-     * credentials. It is called by the app's server, not by a browser, so it is held to the rule of every
-     * server-to-server URL, which is `https`.
-     */
-    readonly uri: string;
-    /**
-     * Whether the client needs `sid` in the logout token (`backchannel_logout_session_required`). When `true`,
-     * {@link Provider.backchannelLogout} throws `TypeError` for a request without a `sessionId`.
-     *
-     * @defaultValue `false`
-     */
-    readonly sessionRequired?: boolean;
-};
-```
-
-Where `Provider.backchannelLogout` sends this client its logout token (OpenID Connect Back-Channel Logout 1.0 §2.2), and whether it needs the session. Absent, the client has no back-channel logout and the method has nothing to send. The provider checks it when it reads the record and throws `TypeError` if it is malformed.
 
 #### ClientRecord › clientId
 
@@ -460,6 +424,20 @@ readonly grantTypes?: readonly GrantType[];
 Grants this client may use, without repeats, naming at least one: an empty list throws a `TypeError` when the record is read. `client_credentials` needs a client that authenticates, so not one whose `auth.method` is `none`.
 
 **Default** — `["authorization_code"]`
+
+#### ClientRecord › idTokenClaims
+
+```ts
+readonly idTokenClaims?: boolean;
+```
+
+Whether every ID token issued to this client also carries the claims its granted scopes release, as userinfo returns them, for relying parties that read only the ID token and never call userinfo: Kubernetes' API server OIDC authenticator, and many "Sign in with" integrations that expect `email` there. It covers the code exchange and every refresh, for the scopes that token response grants. The claims come from the same `ProviderOptions.claims` callback and are filtered the same way; userinfo itself is unchanged. The `client_credentials` grant issues no ID token.
+
+A claim named `iss`, `sub`, `aud`, `exp`, `iat`, `auth_time`, `nonce`, `acr`, `amr`, `azp`, `at_hash`, `c_hash`, `sid` or `jti` is dropped from what the callback returns, so the protocol claims are always the provider's. The provider checks the value when it reads the record, and throws `TypeError` if it is not a boolean.
+
+Turning it on puts personal data in a token that the client may log, store in a cookie, or pass to other services, where userinfo would have held it behind an access token. Enable it only for a client that needs it, and keep the scopes of that client to the ones it uses.
+
+**Default** — `false`
 
 #### ClientRecord › idTokenSigningAlg
 
@@ -1074,11 +1052,6 @@ export interface Provider {
     beginAuthorization(request: Request): Promise<OidcResult<AuthorizationInteraction, AuthorizationFailure>>;
     completeAuthorization(interactionId: string, outcome: AuthorizationGrant | AuthorizationDenial): Promise<OidcResult<Response>>;
     endSession(request: Request): Promise<OidcResult<EndSession>>;
-    backchannelLogout(request: {
-        readonly clientId: string;
-        readonly subject?: string;
-        readonly sessionId?: string;
-    }): Promise<Request | null>;
 }
 ```
 
@@ -1091,30 +1064,6 @@ readonly metadata: ProviderMetadata;
 ```
 
 The discovery document this provider publishes.
-
-#### Provider › backchannelLogout
-
-```ts
-backchannelLogout(request: {
-    readonly clientId: string;
-    readonly subject?: string;
-    readonly sessionId?: string;
-}): Promise<Request | null>;
-```
-
-Builds the back-channel logout request (OpenID Connect Back-Channel Logout 1.0) that tells one client its user signed out, for the app to send with `fetch`. The provider keeps no sessions and makes no outbound request: the app ends its own session, knows which clients it signed the user into during it (the `sessionId` it gave `Provider.completeAuthorization`, which became `sid`), and calls this for each of them.
-
-The request is a `POST` to the client's `ClientRecord.backchannelLogout` `uri`, with the form body `logout_token=<token>`. The token is a JWT signed like the client's ID tokens, with `typ: "logout+jwt"`, the claims `iss`, `aud` (the client), `iat`, `exp` (120 seconds after `iat`), a random `jti`, `events`, and the `sub` and `sid` given here, and never a `nonce`.
-
-The app owns the delivery. The client answers `200` on success, or `400` with an error (§2.8), so treat any `2xx` as success and anything else as a failure. Use a short timeout, since a slow client must not hold the user's sign-out, and decide whether to retry. The request has `redirect: "manual"`, so `fetch` returns a `3xx` as it is rather than forwarding the token; treat it as a failure.
-
-**Parameters**
-
-- `request` — The client, and who or what ended. At least one of `subject` and `sessionId` is required.
-
-**Returns** — The request to send, or `null` when the client is unknown or has no `backchannelLogout`, so there is nothing to send. Rejects when the store does, or with a `TypeError` when it returns a malformed client record.
-
-**Throws** — `TypeError` — When `clientId` is not a non-empty string, when neither `subject` nor `sessionId` is given, when either is given and is not a non-empty string, or when the client's `sessionRequired` is `true` and `sessionId` is absent. The check of the arguments comes before the store is read.
 
 #### Provider › beginAuthorization
 
@@ -1290,8 +1239,6 @@ export interface ProviderMetadata {
     readonly revocation_endpoint_auth_methods_supported?: readonly string[];
     readonly revocation_endpoint_auth_signing_alg_values_supported?: readonly string[];
     readonly authorization_response_iss_parameter_supported?: boolean;
-    readonly backchannel_logout_supported?: boolean;
-    readonly backchannel_logout_session_supported?: boolean;
     readonly claims_parameter_supported?: boolean;
     readonly request_parameter_supported?: boolean;
     readonly request_uri_parameter_supported?: boolean;
@@ -1314,22 +1261,6 @@ readonly authorization_response_iss_parameter_supported?: boolean;
 ```
 
 Whether the provider sends `iss` in authorization responses (RFC 9207).
-
-#### ProviderMetadata › backchannel\_logout\_session\_supported
-
-```ts
-readonly backchannel_logout_session_supported?: boolean;
-```
-
-Whether the logout token can carry `sid` (OpenID Connect Back-Channel Logout 1.0 §2.1).
-
-#### ProviderMetadata › backchannel\_logout\_supported
-
-```ts
-readonly backchannel_logout_supported?: boolean;
-```
-
-Whether the provider can send back-channel logout requests (OpenID Connect Back-Channel Logout 1.0 §2.1).
 
 #### ProviderMetadata › claims\_parameter\_supported
 

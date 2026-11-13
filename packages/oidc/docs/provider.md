@@ -93,7 +93,7 @@ Use one algorithm per pair. The provider publishes the algorithms of all its key
 
 ### Claims
 
-`claims` is called by the userinfo endpoint, once per request, with what the access token grants:
+`claims` is called by the userinfo endpoint, once per request, and for a client with [`idTokenClaims`](#scope-claims-in-the-id-token), once per ID token, with what the access token grants:
 
 ```ts
 // The argument is a ClaimsRequest.
@@ -108,6 +108,28 @@ Use one algorithm per pair. The provider publishes the algorithms of all its key
 It returns an object, or a promise of one, with the claims about the user. The package keeps only the names in `claims`, reading each as an own, enumerable data property, so a getter is never run. It then sets `sub` to `subject` last, so the callback cannot change which user the response is about. Claims for a scope the token does not hold are never returned, even when the callback has them.
 
 If `claims` throws or rejects, the userinfo request rejects with the same error, so `handle` rejects too. The app's request handler must catch it, since the package does not turn a store or callback failure into a response. See [Store](store.md#errors).
+
+### Scope claims in the ID token
+
+By default an ID token carries only protocol claims, and the scope claims are released at userinfo, which is where OpenID Connect Core §5.4 puts them when the response also yields an access token. Some relying parties never call userinfo and read only the ID token: the Kubernetes API server's OIDC authenticator, and many "Sign in with" integrations that expect `email` there. A client's record opts in with `idTokenClaims: true`:
+
+```ts
+import type { ClientRecord } from "@codenhub/oidc/provider";
+
+export const kubernetes: ClientRecord = {
+  clientId: "kubernetes",
+  redirectUris: ["http://localhost:8000"],
+  scopes: ["openid", "email", "profile"],
+  auth: { method: "none" },
+  idTokenClaims: true,
+};
+```
+
+Every ID token issued to that client then also carries the claims its granted scopes release: the code exchange, and every refresh for the scopes that refresh issues. They come from the same [`claims`](#claims) callback, once per ID token, with the same filtering as userinfo, so the callback receives the same `ClaimsRequest`, a claim outside the scopes' names is dropped, and a scope the provider does not define releases nothing. The callback's errors behave as at userinfo: a throw or rejection makes `handle` reject, and a result that is not an object is a `TypeError`. The `client_credentials` grant issues no ID token. Userinfo is unchanged.
+
+The provider's own claims always win. A returned claim named `iss`, `sub`, `aud`, `exp`, `iat`, `auth_time`, `nonce`, `acr`, `amr`, `azp`, `at_hash`, `c_hash`, `sid` or `jti` is dropped, whether or not the token carries that claim, so a callback cannot forge a `nonce` or `sid` that the grant did not have.
+
+Think before turning it on. The claims then travel in a token the client may log, keep in a cookie, or pass to other services, where at userinfo they sit behind an access token. A refresh adds one `claims` call, and an ID token for a user with many claims grows with them. Set it only for a client that needs it, and give that client only the scopes it uses. `idTokenClaims` must be a boolean when given; the provider throws `TypeError` when it reads a record that has anything else. See [Store](store.md#client-records).
 
 ### Scopes
 
@@ -543,7 +565,7 @@ On success the provider starts a grant, and issues:
 
 - An access token: by default an opaque random value that only its digest is stored under, or a JWT under [`accessToken`](#jwt-access-tokens). It lasts `ttl.accessToken` seconds.
 - A refresh token, only when the granted scopes include `offline_access`. Its family lasts `ttl.refreshToken` seconds from this exchange.
-- An ID token, signed with the signing key chosen for the client (see [Signing keys](#signing-keys)). Its claims are `iss`, `sub`, `aud` (the client identifier), `iat`, `exp` (`ttl.idToken` after `iat`), `auth_time`, and `amr` and `acr` when the grant had them, `nonce` when the authorization request had one, and `at_hash` for the access token. It also carries `sid` when the grant has a `sessionId`, and refreshes repeat it. Its header is `typ: JWT` and the key's `alg` and `kid`. An ID token carries no scope claims, which are released at userinfo.
+- An ID token, signed with the signing key chosen for the client (see [Signing keys](#signing-keys)). Its claims are `iss`, `sub`, `aud` (the client identifier), `iat`, `exp` (`ttl.idToken` after `iat`), `auth_time`, and `amr` and `acr` when the grant had them, `nonce` when the authorization request had one, and `at_hash` for the access token. It also carries `sid` when the grant has a `sessionId`, and refreshes repeat it. Its header is `typ: JWT` and the key's `alg` and `kid`. An ID token carries no scope claims, which are released at userinfo, unless the client's record sets [`idTokenClaims`](#scope-claims-in-the-id-token).
 
 ### Refresh tokens
 

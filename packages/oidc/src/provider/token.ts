@@ -14,6 +14,25 @@ import { refuse } from "./diagnostics";
 import { PROTOCOL_SCOPES, type ResolvedOptions, type ResolvedTtl, selectIdTokenKey } from "./options";
 import { jsonResponse, methodNotAllowed, preflightResponse, tokenErrorResponse } from "./responses";
 import type { ClientRecord, CodeRecord, ProviderDiagnosticReason, RefreshTokenRecord } from "./types";
+import { releaseClaims } from "./userinfo";
+
+/** Claims the provider sets in every ID token it signs, which a scope's claims may never replace or add. */
+const PROTOCOL_CLAIMS: ReadonlySet<string> = new Set([
+  "iss",
+  "sub",
+  "aud",
+  "exp",
+  "iat",
+  "auth_time",
+  "nonce",
+  "acr",
+  "amr",
+  "azp",
+  "at_hash",
+  "c_hash",
+  "sid",
+  "jti",
+]);
 
 /** A token grant's identity and what it carries: enough to issue tokens for it again. */
 interface Grant {
@@ -205,6 +224,7 @@ async function issueFromCode(options: ResolvedOptions, client: ClientRecord, rec
     ttl,
     grant,
     accessToken,
+    record.scopes,
     now,
     record.nonce === undefined ? {} : { nonce: record.nonce },
   );
@@ -268,7 +288,7 @@ async function refreshTokens(
     scopes: record.scopes,
     expiresAt: record.expiresAt,
   });
-  const idToken = await issueIdToken(options, client, ttl, grant, accessToken, now, {});
+  const idToken = await issueIdToken(options, client, ttl, grant, accessToken, scopes, now, {});
   return tokenResponse(ttl, { accessToken, scopes, idToken, refreshToken: nextRefreshToken });
 }
 
@@ -430,8 +450,23 @@ function signAccessToken(
 }
 
 /**
+ * The claims of a client that wants its scope claims in the ID token, as userinfo would release them for the same
+ * scopes, minus every claim a protocol claim of the token could be confused with. They are dropped by name, not
+ * only replaced, so an `acr`, `nonce` or `sid` the token does not carry cannot be supplied by the callback either.
+ */
+async function releasedForIdToken(
+  options: ResolvedOptions,
+  grant: Grant,
+  scopes: readonly string[],
+): Promise<Record<string, unknown>> {
+  const released = await releaseClaims(options, { subject: grant.subject, clientId: grant.clientId, scopes });
+  return Object.fromEntries(Object.entries(released).filter(([name]) => !PROTOCOL_CLAIMS.has(name)));
+}
+
+/**
  * Signs an ID token (OpenID Connect Core §2) with the client's key. `at_hash` binds it to the access token issued
- * with it, and `nonce` appears only in the code flow, where the request carried one.
+ * with it, and `nonce` appears only in the code flow, where the request carried one. For a client with
+ * `idTokenClaims`, the claims the `scopes` release come with it.
  */
 async function issueIdToken(
   options: ResolvedOptions,
@@ -439,13 +474,17 @@ async function issueIdToken(
   ttl: ResolvedTtl,
   grant: Grant,
   accessToken: string,
+  scopes: readonly string[],
   now: number,
   extra: { readonly nonce?: string },
 ): Promise<string> {
   const { privateKey } = selectIdTokenKey(options, client);
   const atHash = await computeTokenHash(accessToken, privateKey.alg);
+  const scopeClaims = client.idTokenClaims === true ? await releasedForIdToken(options, grant, scopes) : {};
   return sign({
     payload: {
+      // First, so a protocol claim below wins even if `releasedForIdToken` ever let one through.
+      ...scopeClaims,
       iss: options.issuer,
       sub: grant.subject,
       aud: grant.clientId,

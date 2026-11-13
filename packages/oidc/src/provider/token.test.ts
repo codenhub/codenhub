@@ -11,6 +11,7 @@ import { type ResolvedOptions, resolveOptions } from "./options";
 import { hashClientSecret } from "./secrets";
 import { handleToken } from "./token";
 import type { ClientRecord, CodeRecord, ProviderDiagnostic, ProviderOptions } from "./types";
+import { handleUserinfo } from "./userinfo";
 
 const ISSUER = "https://op.example";
 const TOKEN_ENDPOINT = `${ISSUER}/token`;
@@ -66,6 +67,8 @@ async function setup(
     readonly keys?: readonly KeyPair[];
     readonly clients?: readonly ClientRecord[];
     readonly onRefresh?: ProviderOptions["onRefresh"];
+    readonly claims?: ProviderOptions["claims"];
+    readonly scopes?: ProviderOptions["scopes"];
   } = {},
 ): Promise<{ options: ResolvedOptions; store: MemoryStore; setClock: (ms: number) => void }> {
   let clock = NOW_MS;
@@ -75,7 +78,8 @@ async function setup(
     issuer: ISSUER,
     signingKeys: extra.keys ?? [pair],
     store,
-    claims: () => ({}),
+    claims: extra.claims ?? (() => ({})),
+    ...(extra.scopes === undefined ? {} : { scopes: extra.scopes }),
     now: () => clock,
     ...(extra.onRefresh === undefined ? {} : { onRefresh: extra.onRefresh }),
   });
@@ -798,6 +802,208 @@ describe("handleToken: the onRefresh re-check", () => {
       "directory down",
     );
     expect(await store.findAccessToken(await digestKey(issued.access_token))).toBeDefined();
+  });
+});
+
+describe("handleToken: scope claims in the ID token", () => {
+  const WITH_CLAIMS: readonly ClientRecord[] = [
+    {
+      clientId: "public",
+      redirectUris: [REDIRECT_URI],
+      scopes: ["openid", "profile", "email", "offline_access"],
+      auth: { method: "none" },
+      idTokenClaims: true,
+    },
+    {
+      clientId: "plain",
+      redirectUris: [REDIRECT_URI],
+      scopes: ["openid", "profile", "email", "offline_access"],
+      auth: { method: "none" },
+    },
+  ];
+  const profileClaims = (): Record<string, unknown> => ({
+    name: "Ada Lovelace",
+    email: "ada@example.com",
+    email_verified: true,
+    picture: "https://app.example/ada.png",
+  });
+
+  it("leaves the claims out, and never asks for them, when the client has not opted in", async () => {
+    let calls = 0;
+    const claims = (): Record<string, unknown> => {
+      calls += 1;
+      return profileClaims();
+    };
+    const { options, store } = await setup({ clients: WITH_CLAIMS, claims });
+
+    const code = await saveCode(store, { clientId: "plain", scopes: ["openid", "profile", "email"] });
+    const response = await handleToken(options, tokenRequest(codeBody(code, { client_id: "plain" })));
+    const body = (await response.json()) as TokenBody;
+
+    expect(response.status).toBe(200);
+    expect(payloadOf(body.id_token)).not.toHaveProperty("name");
+    expect(payloadOf(body.id_token)).not.toHaveProperty("email");
+    expect(calls).toBe(0);
+  });
+
+  it("carries the claims the granted scopes release, and only those, in the ID token of the code exchange", async () => {
+    const seen: unknown[] = [];
+    const { options, store } = await setup({
+      clients: WITH_CLAIMS,
+      claims: (request) => {
+        seen.push(request);
+        return profileClaims();
+      },
+    });
+
+    const body = await redeemCode(options, store, { scopes: ["openid", "email"] });
+
+    expect(payloadOf(body.id_token)).toMatchObject({ sub: "user-1", email: "ada@example.com", email_verified: true });
+    expect(payloadOf(body.id_token)).not.toHaveProperty("name");
+    expect(payloadOf(body.id_token)).not.toHaveProperty("picture");
+    expect(seen).toEqual([
+      { subject: "user-1", clientId: "public", scopes: ["openid", "email"], claims: ["email", "email_verified"] },
+    ]);
+  });
+
+  it("still verifies, with the protocol claims intact", async () => {
+    const { options, store } = await setup({ clients: WITH_CLAIMS, claims: profileClaims });
+
+    const body = await redeemCode(options, store, { scopes: ["openid", "profile"], sessionId: "session-1" });
+    const verified = await createVerifier({
+      keys: createKeySet([options.signingKey.publicKey]),
+      issuer: ISSUER,
+      audience: "public",
+      now: () => NOW_MS,
+    })(body.id_token);
+
+    expect(verified.ok && verified.value.payload).toMatchObject({
+      iss: ISSUER,
+      sub: "user-1",
+      aud: "public",
+      nonce: "nonce-1",
+      sid: "session-1",
+      name: "Ada Lovelace",
+      at_hash: await computeTokenHash(body.access_token, "ES256"),
+    });
+  });
+
+  it("carries them in the ID token of every refresh, for the scopes that refresh issues", async () => {
+    const { options, store } = await setup({ clients: WITH_CLAIMS, claims: profileClaims });
+    const issued = await redeemCode(options, store, { scopes: ["openid", "profile", "email", "offline_access"] });
+
+    const full = (await (
+      await handleToken(options, tokenRequest(refreshBody(issued.refresh_token ?? "")))
+    ).json()) as TokenBody;
+    const narrowed = (await (
+      await handleToken(options, tokenRequest(refreshBody(full.refresh_token ?? "", { scope: "openid email" })))
+    ).json()) as TokenBody;
+
+    expect(payloadOf(full.id_token)).toMatchObject({ name: "Ada Lovelace", email: "ada@example.com" });
+    expect(payloadOf(narrowed.id_token)).toMatchObject({ email: "ada@example.com" });
+    expect(payloadOf(narrowed.id_token)).not.toHaveProperty("name");
+  });
+
+  it("drops a claim named like a protocol claim, whatever the callback returns", async () => {
+    const hostile = {
+      iss: "https://evil.example",
+      sub: "someone-else",
+      aud: "another-client",
+      exp: 1,
+      iat: 1,
+      auth_time: 1,
+      nonce: "forged",
+      acr: "forged",
+      amr: ["forged"],
+      azp: "forged",
+      at_hash: "forged",
+      c_hash: "forged",
+      sid: "forged",
+      jti: "forged",
+      name: "Ada Lovelace",
+    };
+    // A scope that names every one of them, so only the protocol rule can be what drops them.
+    const { options, store } = await setup({
+      clients: [{ ...(WITH_CLAIMS[0] as ClientRecord), scopes: ["openid", "offline_access", "hostile"] }],
+      // A scope cannot name `sub`, so the callback's `sub` is the one the provider never reads.
+      scopes: { hostile: Object.keys(hostile).filter((name) => name !== "sub") },
+      claims: () => hostile,
+    });
+    const issued = await redeemCode(options, store, {
+      scopes: ["openid", "offline_access", "hostile"],
+      nonce: undefined,
+    });
+    const refreshed = (await (
+      await handleToken(options, tokenRequest(refreshBody(issued.refresh_token ?? "")))
+    ).json()) as TokenBody;
+
+    const atHashes = await Promise.all([issued, refreshed].map((body) => computeTokenHash(body.access_token, "ES256")));
+
+    for (const [index, body] of [issued, refreshed].entries()) {
+      const payload = payloadOf(body.id_token);
+      expect(payload).toMatchObject({ iss: ISSUER, sub: "user-1", aud: "public", name: "Ada Lovelace" });
+      expect(payload.exp).toBe(NOW_SECONDS + options.ttl.idToken);
+      expect(payload.iat).toBe(NOW_SECONDS);
+      expect(payload.auth_time).toBe(NOW_SECONDS - 30);
+      expect(payload.amr).toEqual(["pwd"]);
+      expect(payload.acr).toBe("urn:loa:1");
+      expect(payload.at_hash).toBe(atHashes[index]);
+      for (const name of ["nonce", "azp", "c_hash", "sid", "jti"]) {
+        expect(payload).not.toHaveProperty(name);
+      }
+    }
+  });
+
+  it("releases no claims for a scope the provider does not define", async () => {
+    let asked: readonly string[] = ["unset"];
+    const { options, store } = await setup({
+      clients: [{ ...(WITH_CLAIMS[0] as ClientRecord), scopes: ["openid", "data:ns:read"] }],
+      claims: (request) => {
+        asked = request.claims;
+        return profileClaims();
+      },
+    });
+
+    const body = await redeemCode(options, store, { scopes: ["openid", "data:ns:read"] });
+
+    expect(asked).toEqual([]);
+    expect(Object.keys(payloadOf(body.id_token)).sort()).toEqual(
+      ["acr", "amr", "at_hash", "aud", "auth_time", "exp", "iat", "iss", "nonce", "sub"].sort(),
+    );
+  });
+
+  it("rejects with TypeError when the callback resolves to something that is not an object", async () => {
+    const { options, store } = await setup({
+      clients: WITH_CLAIMS,
+      claims: (() => "not an object") as unknown as () => Record<string, unknown>,
+    });
+    const code = await saveCode(store);
+
+    await expect(handleToken(options, tokenRequest(codeBody(code)))).rejects.toThrow(TypeError);
+  });
+
+  it("propagates an error of the callback, as userinfo does", async () => {
+    const { options, store } = await setup({
+      clients: WITH_CLAIMS,
+      claims: () => {
+        throw new Error("directory down");
+      },
+    });
+    const code = await saveCode(store);
+
+    await expect(handleToken(options, tokenRequest(codeBody(code)))).rejects.toThrow("directory down");
+  });
+
+  it("leaves userinfo as it was", async () => {
+    const { options, store } = await setup({ clients: WITH_CLAIMS, claims: profileClaims });
+
+    const body = await redeemCode(options, store, { scopes: ["openid", "email"] });
+    const userinfo = await handleUserinfo(
+      options,
+      new Request(`${ISSUER}/userinfo`, { headers: { authorization: `Bearer ${body.access_token}` } }),
+    );
+
+    expect(await userinfo.json()).toEqual({ sub: "user-1", email: "ada@example.com", email_verified: true });
   });
 });
 
