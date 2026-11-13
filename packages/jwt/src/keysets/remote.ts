@@ -124,7 +124,8 @@ interface CachedKeys {
  * - **Cooldown.** A refetch for an unknown `kid`, or a retry after a failed fetch, starts only when
  *   `cooldown` seconds have passed since the last fetch started. Inside that window an unknown `kid`
  *   fails with `unknown_kid` at once, so a flood of tokens with invented `kid`s causes at most one
- *   fetch per window.
+ *   fetch per window. `cooldown: 0` gives up that limit: each such `select` may start a fetch, though
+ *   never while another is running.
  * - **Stale keys.** When fetching fails, or a retry waits for the cooldown, after `cacheTtl` ran out,
  *   the last fetched JWKS is still used for up to `maxStale` more seconds; past that, `select` fails
  *   with `key_fetch_failed`. Using stale keys does not extend them: every `select` after the cooldown

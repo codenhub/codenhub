@@ -74,7 +74,7 @@ These are the commitments that should hold.
 3. **No unverified payload access.** There is no `decode()` that returns claims. The only unverified read is the header, for key selection.
 4. **Untrusted input never throws.** Verification and import of untrusted data return results. Programmer errors, such as invalid options or signing with a verify-only key, throw `TypeError`, ideally when the verifier or key is created rather than when it's used. Exceptions from the caller's own code, such as a `claims` schema that throws or rejects, propagate rather than becoming results (decision 10).
 5. **Bounded cost.** Token length is capped before any decoding happens. JSON depth and size are bounded. Remote JWKS responses are size-capped and time-bounded. Failing input must be cheap.
-6. **Issues never contain input values.** No token content, claim values, or key material appears in issues, error messages, or logs. Issues can name _which_ check failed (`wrong_audience`); they don't echo what the token said. The one exception is a `claims` schema's issue paths, which are kept (decision 11) and may name keys chosen by the signed payload.
+6. **Issues never contain input values.** No token content, claim values, or key material appears in issues, error messages, or logs. Issues can name _which_ check failed (`wrong_audience`); they don't echo what the token said. The one exception the package makes is a `claims` schema's issue paths, which are kept (decision 11) and may name keys chosen by the signed payload. A custom key set's failure issues are passed through as the caller's key set wrote them (decision 16).
 7. **Strict parsing.**
    - Base64url only: no padding, no `+`/`/`, no non-canonical trailing bits.
    - Exactly three segments.

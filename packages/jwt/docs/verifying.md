@@ -25,7 +25,7 @@ export async function authenticate(authorization: string | null) {
 }
 ```
 
-The verifier accepts any value, including `undefined` or a number, and reports a value that is not a token as `malformed` rather than throwing. It never throws for a token, whatever the token holds; the exceptions are code of your own: a [`claims` schema](#checking-your-own-claims) that throws or rejects, and a `now` that returns something other than a finite number, such as `NaN` from `Date.parse` of an unset variable. The verifier's promise rejects with a `TypeError` in both cases, when it reads the clock after the signature checked out, because a `NaN` clock would make every time comparison false and accept expired tokens.
+The verifier accepts any value, including `undefined` or a number, and reports a value that is not a token as `malformed` rather than throwing. It never throws for a token, whatever the token holds; the exceptions are code of your own: a [`claims` schema](#checking-your-own-claims) that throws or rejects, and a `now` that returns something other than a finite number, such as `NaN` from `Date.parse` of an unset variable. The schema's own error propagates unchanged. A non-finite `now` makes the promise reject with a `TypeError` when the verifier reads the clock, which it does only for a token whose signature checked out, because a `NaN` clock would make every time comparison false and accept expired tokens.
 
 ## Options
 

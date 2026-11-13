@@ -289,7 +289,7 @@ describe("programmer errors carry no values", () => {
     ["a marker clockTolerance", { clockTolerance: MARKER }],
     ["a marker maxAge", { maxAge: MARKER }],
     ["a marker maxLength", { maxLength: MARKER }],
-    ["a marker type that is empty after its prefix", { type: 1 }],
+    ["an invalid type beside a marker issuer", { type: 1, issuer: MARKER }],
     ["a marker value under an unknown option name", { audiance: MARKER }],
     ["marker requiredClaims that are not text", { requiredClaims: [MARKER, 1] }],
     ["a marker claims schema", { claims: { "~standard": MARKER } }],

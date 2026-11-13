@@ -337,6 +337,15 @@ describe("createVerifier key set", () => {
       }),
     ],
     [
+      "returns a failure whose issues have a hole",
+      // eslint-disable-next-line no-sparse-arrays -- the hole is the case under test.
+      async () => ({ ok: false, error: { issues: [{ code: "unknown_kid" }, , { code: "unknown_kid" }] } }),
+    ],
+    [
+      "returns a failure whose issues are only holes",
+      async () => ({ ok: false, error: { issues: Object.assign([], { length: 1 }) } }),
+    ],
+    [
       "returns a result whose ok getter throws",
       async () => ({
         get ok() {

@@ -200,6 +200,19 @@ describe("sign TypeError", () => {
     await expect(sign({ payload, key: secretKey })).rejects.toThrow(message);
   });
 
+  it.each([
+    ["Array.prototype", Array.prototype, { aud: ["a"] }],
+    ["Object.prototype", Object.prototype, { claims: { a: 1 } }],
+  ])("should throw when %s has a polluting toJSON", async (_, prototype, payload) => {
+    Object.defineProperty(prototype, "toJSON", { value: () => 5, configurable: true, writable: true });
+    try {
+      // The header is checked first, and it inherits the polluted prototype too.
+      await expect(sign({ payload, key: secretKey })).rejects.toThrow("must not hold toJSON methods.");
+    } finally {
+      delete (prototype as { toJSON?: unknown }).toJSON;
+    }
+  });
+
   it("should throw when the header holds negative zero", async () => {
     await expect(sign({ payload: {}, key: secretKey, header: { extra: -0 } as SignHeader })).rejects.toThrow(
       "sign: input.header must not hold negative zero.",
