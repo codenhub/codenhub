@@ -97,6 +97,26 @@ export interface ClientRecord {
    * @defaultValue `true`
    */
   readonly requirePkce?: boolean;
+  /**
+   * Where {@link Provider.backchannelLogout} sends this client its logout token (OpenID Connect Back-Channel Logout
+   * 1.0 §2.2), and whether it needs the session. Absent, the client has no back-channel logout and the method has
+   * nothing to send. The provider checks it when it reads the record and throws `TypeError` if it is malformed.
+   */
+  readonly backchannelLogout?: {
+    /**
+     * The client's `backchannel_logout_uri`: an absolute `https` URL of visible ASCII, without a fragment or
+     * credentials. It is called by the app's server, not by a browser, so it is held to the rule of every
+     * server-to-server URL, which is `https`.
+     */
+    readonly uri: string;
+    /**
+     * Whether the client needs `sid` in the logout token (`backchannel_logout_session_required`). When `true`,
+     * {@link Provider.backchannelLogout} throws `TypeError` for a request without a `sessionId`.
+     *
+     * @defaultValue `false`
+     */
+    readonly sessionRequired?: boolean;
+  };
 }
 
 /** How the client asks the app to show its pages (OpenID Connect Core §3.1.2.1). */

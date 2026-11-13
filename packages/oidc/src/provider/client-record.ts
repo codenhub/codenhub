@@ -1,6 +1,6 @@
 import type { AsymmetricAlgorithm } from "@codenhub/jwt";
 
-import { isRedirectUri } from "../shared/urls";
+import { isHttpsUrl, isRedirectUri } from "../shared/urls";
 import { CLIENT_TTL_NAMES, describeTtlRange, isTtlInRange, type ResolvedTtl } from "./options";
 import type { ClientRecord, GrantType } from "./types";
 
@@ -109,8 +109,29 @@ export function checkClientRecord(
   if (requirePkce === false && auth.method === "none") {
     return invalid("must not turn requirePkce off for a client whose auth.method is none");
   }
+  checkBackchannelLogout(record.backchannelLogout);
   // Resolved here, so every endpoint reads the list and the flag without repeating the default.
   return { ...(record as unknown as ClientRecord), grantTypes, requirePkce: requirePkce ?? true };
+}
+
+/**
+ * Checks a client's back-channel logout registration. Its URI is called by the app's server, so it must be `https`
+ * (scope.md decision 7), unlike a redirect URI, which a browser follows and a native app may register by custom scheme.
+ */
+function checkBackchannelLogout(backchannelLogout: unknown): void {
+  if (backchannelLogout === undefined) {
+    return;
+  }
+  if (
+    !isRecord(backchannelLogout) ||
+    Array.isArray(backchannelLogout) ||
+    !isHttpsUrl(backchannelLogout.uri) ||
+    (backchannelLogout.sessionRequired !== undefined && typeof backchannelLogout.sessionRequired !== "boolean")
+  ) {
+    invalid(
+      "must give backchannelLogout, when present, as an object with a uri that is an absolute https URL of visible ASCII without fragment or credentials, and a boolean sessionRequired when given",
+    );
+  }
 }
 
 /**
