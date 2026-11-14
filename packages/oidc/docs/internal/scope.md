@@ -90,7 +90,7 @@ These are left out to keep the surface small, not because they're bad:
   - DPoP and mTLS.
   - Dynamic client registration.
   - Request objects (JAR) and JWE-encrypted tokens.
-  - Front-channel and back-channel logout, and session management. RP-initiated logout is in (decision 37).
+  - Front-channel logout and session management. RP-initiated logout is in (decision 37), and so is back-channel logout (decision 53).
   - Token introspection.
   - Pairwise subject identifiers, which the app can already compute itself (decision 38).
 
