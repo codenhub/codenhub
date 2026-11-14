@@ -1,6 +1,6 @@
 ---
 status: APPROVED
-last_updated: 2026-11-08
+last_updated: 2026-11-14
 scope: How code keeps the project's security commitments, for anyone writing or reviewing a change.
 ---
 
@@ -33,10 +33,20 @@ When the project stores or issues secrets:
 ## Untrusted input
 
 - Every input crossing a trust boundary is validated at that boundary, before any other code sees it, and parsed into a typed value. What does not parse is rejected, not passed along.
-- Every input has a size bound: a body is read with a byte limit before parsing, and every string and collection in a schema has a maximum.
-- Files a user can edit by hand, such as settings, sessions, and caches, are untrusted input too. A file that does not parse is set aside and replaced with defaults, and every value read from one is checked as if it came from a request.
+- Every input has a size bound, such as a request body, an uploaded file, or a file read from disk, and every string and collection in a schema has a maximum. The read itself enforces the bound: an input of exactly the limit is accepted, and once the read finds more than the limit, it stops and the input is rejected, never truncated and parsed as if it were whole. Reading at most `limit + 1` bytes and rejecting when the extra byte exists is enough; a reader that works in chunks of a fixed maximum size can stop at the first chunk that crosses the limit, but not one that takes chunks of any size a stream hands it. Checking the size after reading the whole input is too late, because the memory is already used. A size check before the read can reject an input early, but it is not the bound, because another program can grow a file between the check and the read.
+- Files a user can edit by hand are untrusted input too. [Files a user can edit](#files-a-user-can-edit) says how they are read and written.
 - Do not build URLs, paths, or redirects from values a client controls, such as the `Host` or `X-Forwarded-*` headers. A redirect target comes from an allowlist and is compared exactly.
 - Do not build a query, command, or HTML by concatenating input. Use parameters, argument arrays, and escaping by default.
+
+## Files a user can edit
+
+Files a user can edit by hand, such as settings, sessions, and caches, are untrusted input, and every value read from one is checked as if it came from a request. A bad edit never stops the program from starting, and never costs the user what they wrote:
+
+- **A file that does not parse** is set aside, and the program starts with defaults. A file over its size bound counts as one that does not parse: the read stops at the bound as it does for any input, and the file is set aside rather than stopping the program.
+- **Setting a file aside** never overwrites it. A file holding what the user wrote, such as settings, is renamed next to the original, under a name no earlier set-aside file has, such as one carrying the time, so the user can find their edits and repair them. Writing defaults over it would destroy those edits on the next save, and reusing one name, such as `settings.json.bak`, would destroy the earlier copy on the next failure. A file the program can rebuild, such as a cache or a session, is deleted instead: keeping it saves nothing the user wrote, and a kept session file leaves a token on disk.
+- **A value that fails its check**, in a file that parses, is replaced by its default, and the rest of the file is kept. Setting aside the whole file would never mix edited values with defaults, but it would reset every setting over one bad value, such as a theme an older version does not know. Where one check covers several values, such as a minimum that must not exceed a maximum, all of them return to their defaults together, so no check passes on a mix of the user's values and defaults. Before the program first writes the file back, it sets the original aside as above, so the rejected value is not lost.
+- **The user is told** when a file holding what they wrote is set aside or one of its values is replaced, somewhere they will see it, such as the interface or the program's output, not only a log file. The notice names the file, and the field when one value was replaced, and says where the original was kept once it has been set aside. It never shows a value, as [Never in logs, errors, or responses](#never-in-logs-errors-or-responses) requires: a hand-edited file can hold anything.
+- **The program writes the file** to a temporary file in the same directory and renames it over the original. A crash or a full disk during the write then leaves the old file whole, instead of a truncated one the next start would set aside. The temporary file shares the directory because only a rename within one file system replaces a file in a single step; across file systems a rename fails, and copying instead is not a single step. The temporary file is created exclusively, under a name no other file has, with the original's permissions, so it never writes through a file that was already there and never makes a private file readable to others.
 
 ## Web responses and sessions
 
@@ -78,7 +88,7 @@ A change that touches any of the above names it in its pull request and adds or 
 - Does a secret, token, user's data, or full URL now reach a log, error, or response, other than the one that shows a new secret to its creator?
 - Does it store a secret, and is it stored as a digest or encrypted as above?
 - Does it add a permission, capability, endpoint, or outbound call? Is that named in the pull request and tested?
-- Does it read a file a user can edit, and check what it reads?
+- Does it read or write a file a user can edit? Does it follow every rule in [Files a user can edit](#files-a-user-can-edit), from checking each value to writing through a temporary file?
 
 - Does a package now read a token claim or header before the token is verified, or let one choose how it is verified?
 - Does a new validator or collection keep the issue and depth bounds, with a test past each?
