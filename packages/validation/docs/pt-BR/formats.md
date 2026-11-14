@@ -1,7 +1,7 @@
 ---
 title: Formatos
 description: Endereços de e-mail, URLs, nomes de domínio, endereços IP, datas, horários e os outros formatos de string, o que cada um aceita e o valor que produz.
-source: 28b9f1a8ebff0f0bd9f8bb9e06a292533001eac6
+source: c7ac3a6cc026acb51abe10d97ea9a7bef0955734
 order: 7
 ---
 
@@ -89,7 +89,7 @@ O domínio é escrito com letras ASCII, dígitos, hífens e pontos, e é produzi
 O domínio precisa ser um nome de domínio público. Estes são rejeitados:
 
 - `localhost`, hosts de um único rótulo e endereços IP.
-- Nomes de uso especial que nunca chegam a um host público: os que terminam em `localhost`, `localdomain`, `local`, `internal`, `home`, `corp`, `mail`, `arpa`, `test`, `example`, `invalid`, `alt` ou `onion`.
+- Nomes de uso especial que nunca chegam a um host público: os que terminam em `localhost`, `localdomain`, `local`, `internal`, `home`, `corp`, `mail`, `arpa`, `test`, `example`, `invalid`, `alt` ou `onion`, e o `svc` e o `cluster` do Kubernetes.
 - Um domínio que termina em ponto, `ada@example.com.`.
 - Um escape percentual como `ex%61mple.com`, que é sintaxe de URL e não faz parte de um domínio de e-mail.
 - Um domínio com mais de 253 caracteres.
@@ -184,13 +184,13 @@ url({ protocols: ["urn"] })("urn:isbn:0451450523"); // ok
 Uma URL `mailto` é aceita quando:
 
 - Ela indica pelo menos um destinatário.
-- Todo destinatário, no caminho e em `to`, `cc` ou `bcc`, é um endereço que `email()` aceita, num domínio público, seja qual for `host`. `host` verifica o host de uma URL, e um mailto não tem host.
+- Todo destinatário, no caminho e em `to`, `cc` ou `bcc`, é um endereço que `internationalEmail()` aceita, num domínio público, seja qual for `host`. `host` verifica o host de uma URL, e um mailto não tem host.
 - A query contém só `to`, `cc`, `bcc`, `subject` e `body`, cada um como `name=value`. Qualquer outro campo, como `from` ou `reply-to`, falha.
 - `subject` e `body` contêm o que a RFC 6068 permite: letras, dígitos, `-._~!$'()*+,;:@` e escapes `%`, então uma quebra de linha é `%0D%0A`. Eles também permitem `/` e `?`, que uma query de URL permite, então `body=https://example.com/a?b` passa. `&`, `=`, `#` e um escape malformado como `%zz` falham.
 - Uma quebra de linha, `%0D` ou `%0A`, só aparece em `body`. Em `subject` ela terminaria a linha do header, então um programa de e-mail que a escrevesse na mensagem sem escape leria o que vem depois, como `Bcc: …`, como outro header. `subject` também recusa qualquer outro caractere de controle codificado, como `%00` ou um tab, e os separadores de linha e de parágrafo, `%E2%80%A8` e `%E2%80%A9`, já que um assunto é uma única linha de texto.
 - `subject` e `body` aparecem no máximo uma vez cada. `to`, `cc` e `bcc` podem se repetir, já que cada um acrescenta destinatários.
 
-Cada destinatário é produzido como `email()` o produz, com a parte local escapada onde um mailto precisa. Assim, `mailto:Ada@EXAMPLE.com` produz `mailto:Ada@example.com`, e `mailto:ada@exa%6dple.com` produz `mailto:ada@example.com`. Os nomes dos campos são produzidos em minúsculas, e `subject` e `body`, como foram escritos.
+Cada destinatário é produzido como `internationalEmail()` o produz, com a parte local escapada onde um mailto precisa. Assim, `mailto:Ada@EXAMPLE.com` produz `mailto:Ada@example.com`, `mailto:ada@exa%6dple.com` produz `mailto:ada@example.com`, e `mailto:ada@münchen.de` produz `mailto:ada@xn--mnchen-3ya.de`. Os nomes dos campos são produzidos em minúsculas, e `subject` e `body`, como foram escritos.
 
 Uma URL `tel` é aceita quando é um número global: `+`, dígitos com `-`, `.`, `(` ou `)` entre eles, e depois parâmetros `;name=value` opcionais. Um valor contém só os caracteres que a RFC 3966 permite: letras, dígitos, `-_.!~*'()[]/:&+$` e escapes `%`, então nunca `"` ou `<`. Um número local com `phone-context` é rejeitado.
 
@@ -263,7 +263,7 @@ Uma `precision` que não é número lança um `TypeError` quando o validador é 
 
 ## Partes de um e-mail ou de uma URL
 
-`url` e `email` são formados por partes, e cada parte pode ser verificada com um validador seu. O validador de uma parte recebe o que o parser leu, não o texto. Ele substitui a regra padrão do formato para aquela parte, e nunca a sintaxe dela:
+`url`, `email` e `internationalEmail` são formados por partes, e cada parte pode ser verificada com um validador seu. O validador de uma parte recebe o que o formato leu, não o texto, que para `url` e `internationalEmail` é o que o parser de URL leu. Ele substitui a regra padrão do formato para aquela parte, e nunca a sintaxe dela:
 
 | Opção                  | Recebe                                                                                                                                                                                                                                                                                                     | Regra padrão                 |
 | ---------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------- |

@@ -88,7 +88,7 @@ The domain is written with ASCII letters, digits, hyphens and dots, and is produ
 The domain must be a public domain name. These are rejected:
 
 - `localhost`, single-label hosts and IP addresses.
-- Special-use names that never reach a public host: those ending in `localhost`, `localdomain`, `local`, `internal`, `home`, `corp`, `mail`, `arpa`, `test`, `example`, `invalid`, `alt` or `onion`.
+- Special-use names that never reach a public host: those ending in `localhost`, `localdomain`, `local`, `internal`, `home`, `corp`, `mail`, `arpa`, `test`, `example`, `invalid`, `alt` or `onion`, and the `svc` and `cluster` of Kubernetes.
 - A domain that ends in a dot, `ada@example.com.`.
 - A percent escape such as `ex%61mple.com`, which is URL syntax and no part of an email domain.
 - A domain longer than 253 characters.
@@ -183,13 +183,13 @@ url({ protocols: ["urn"] })("urn:isbn:0451450523"); // ok
 A `mailto` URL is accepted when:
 
 - It names at least one recipient.
-- Every recipient, in the path and in `to`, `cc` or `bcc`, is an address `email()` accepts, on a public domain whatever `host` is. `host` checks the host of a URL, and a mailto has none.
+- Every recipient, in the path and in `to`, `cc` or `bcc`, is an address `internationalEmail()` accepts, on a public domain whatever `host` is. `host` checks the host of a URL, and a mailto has none.
 - The query holds only `to`, `cc`, `bcc`, `subject` and `body`, each as `name=value`. Any other field, such as `from` or `reply-to`, fails.
 - `subject` and `body` hold what RFC 6068 allows: letters, digits, `-._~!$'()*+,;:@` and `%` escapes, so a line break is `%0D%0A`. They also allow `/` and `?`, which a URL query allows, so `body=https://example.com/a?b` passes. `&`, `=`, `#` and a malformed escape such as `%zz` fail.
 - A line break, `%0D` or `%0A`, is only in `body`. In `subject` it would end the header line, so a mail program that writes it into the message unescaped would read what follows, such as `Bcc: …`, as another header. `subject` also refuses every other encoded control character, such as `%00` or a tab, and the line and paragraph separators, `%E2%80%A8` and `%E2%80%A9`, since a subject is one line of text.
 - `subject` and `body` appear at most once each. `to`, `cc` and `bcc` may repeat, since each adds recipients.
 
-Each recipient is produced as `email()` produces it, with its local part escaped where a mailto needs it. So `mailto:Ada@EXAMPLE.com` produces `mailto:Ada@example.com`, and `mailto:ada@exa%6dple.com` produces `mailto:ada@example.com`. Field names are produced in lowercase, and `subject` and `body` as written.
+Each recipient is produced as `internationalEmail()` produces it, with its local part escaped where a mailto needs it. So `mailto:Ada@EXAMPLE.com` produces `mailto:Ada@example.com`, `mailto:ada@exa%6dple.com` produces `mailto:ada@example.com`, and `mailto:ada@münchen.de` produces `mailto:ada@xn--mnchen-3ya.de`. Field names are produced in lowercase, and `subject` and `body` as written.
 
 A `tel` URL is accepted when it is a global number: `+`, digits with `-`, `.`, `(` or `)` between them, then optional `;name=value` parameters. A value holds only the characters RFC 3966 allows: letters, digits, `-_.!~*'()[]/:&+$` and `%` escapes, so never `"` or `<`. A local number with `phone-context` is rejected.
 
@@ -262,7 +262,7 @@ A `precision` that is not a number throws a `TypeError` when the validator is cr
 
 ## Parts of an email or a URL
 
-`url` and `email` are built from parts, and each part can be checked with a validator of your own. A part validator receives what the parser read, not the text. It replaces the format's default rule for that part, and never its syntax:
+`url`, `email` and `internationalEmail` are built from parts, and each part can be checked with a validator of your own. A part validator receives what the format read, not the text, which for `url` and `internationalEmail` is what the URL parser read. It replaces the format's default rule for that part, and never its syntax:
 
 | Option                 | Receives                                                                                                                                                                                                                                                                                                  | Default rule               |
 | ---------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------- |

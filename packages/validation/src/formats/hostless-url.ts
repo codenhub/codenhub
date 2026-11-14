@@ -74,7 +74,7 @@ const CONTROL_PATTERN = /%(?:[01][\da-f]|7f|c2%[89][\da-f]|e2%80%a[89])/i;
 const MAILTO_ESCAPED_PATTERN = /[^\w.~!$'*+@-]/g;
 
 /**
- * Reads the part of a mailto URL after the colon, returning it with every recipient as `email` returns
+ * Reads the part of a mailto URL after the colon, returning it with every recipient as `internationalEmail` returns
  * it and every field name in lowercase, or undefined when it is not a mailto. Every field of the query
  * must be `name=value` with a name from an allowlist: `to`, `cc` and `bcc`, whose recipients must pass
  * as addresses like those in the path, and `subject` and `body`, each at most once, whose text must be
