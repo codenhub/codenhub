@@ -250,10 +250,12 @@ describe("toJsonSchema", () => {
     });
   });
 
-  it("should write no format for the input of an email with a domain option, which may accept a host without a dot", () => {
+  it("should write no format for an email with a domain option, which may accept and produce a host without a dot", () => {
     const local = email({ domain: hostname() });
-    expect(local("ada@localhost").ok).toBe(true);
+    expect(local("ada@localhost")).toEqual({ ok: true, value: "ada@localhost" });
     expect(schemaOf(local)).toEqual({ type: "string" });
+    expect(schemaOf(local, { io: "output" })).toEqual({ type: "string" });
+    expect(schemaOf(internationalEmail({ domain: hostname() }), { io: "output" })).toEqual({ type: "string" });
     expect(schemaOf(email({ domain: domain() }))).toEqual({ type: "string" });
   });
 

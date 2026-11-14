@@ -57,9 +57,9 @@ export interface JsonSchemaOptions {
  * 3339's `time` needs an offset and its `duration` has no fraction and no weeks beside days, a URL may
  * hold `|`, which a URI may not, and an IPv6 address a zone, `fe80::1%eth0`, which `ipv6` refuses. An
  * `internationalEmail` and a `domain` read Unicode and produce ASCII, so only their output is `email` or
- * `hostname`: `idn-email` and `idn-hostname` would fit their input, but ajv-formats has neither. So does
- * an `email` with a `domain` option, which may accept a host of one label, as `hostname()` does, where
- * ajv-formats' `email` wants a dot.
+ * `hostname`: `idn-email` and `idn-hostname` would fit their input, but ajv-formats has neither. An email
+ * with a `domain` option is written with none on either side, since it may accept and produce a host of
+ * one label, as `hostname()` does, where ajv-formats' `email` wants a dot.
  */
 const FORMAT_NAMES: Readonly<Record<string, readonly [input: string, output: string]>> = {
   uuid: ["uuid", "uuid"],
@@ -482,11 +482,11 @@ export function toJsonSchema(validator: AnyValidator, options?: JsonSchemaOption
             ? "ipv4"
             : name === "datetime" && given["local"] === true
               ? ""
-              : !isInput
-                ? output
-                : name === "email" && (record["international"] === true || given["domain"] !== undefined)
-                  ? ""
-                  : input;
+              : name === "email" && (given["domain"] !== undefined || (isInput && record["international"] === true))
+                ? ""
+                : isInput
+                  ? input
+                  : output;
         return checked(written === "" ? { type: "string" } : { type: "string", format: written });
       }
       case "coerce": {

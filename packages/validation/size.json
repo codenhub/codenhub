@@ -5114,9 +5114,9 @@
         "standardJsonSchema": {
           "files": {
             "dist/index.js": {
-              "bytes": 15852,
+              "bytes": 15853,
               "declarations": {
-                "toJsonSchema": 6622,
+                "toJsonSchema": 6623,
                 "describeLimit$2": 759,
                 "FORMAT_NAMES": 529,
                 "describeFormat$2": 523,
@@ -5187,8 +5187,8 @@
               "bytes": 32
             }
           },
-          "gzip": 6103,
-          "minified": 15884
+          "gzip": 6110,
+          "minified": 15885
         },
         "startsWith": {
           "files": {
@@ -5515,9 +5515,9 @@
         "toJsonSchema": {
           "files": {
             "dist/index.js": {
-              "bytes": 9231,
+              "bytes": 9232,
               "declarations": {
-                "toJsonSchema": 6622,
+                "toJsonSchema": 6623,
                 "producesPrimitive": 333,
                 "holdsPrimitives": 320,
                 "addGetters": 236,
@@ -5547,8 +5547,8 @@
               "bytes": 26
             }
           },
-          "gzip": 3728,
-          "minified": 9257
+          "gzip": 3734,
+          "minified": 9258
         },
         "tooBigMessage": {
           "files": {
@@ -6245,9 +6245,9 @@
       },
       "files": {
         "dist/index.js": {
-          "bytes": 95218,
+          "bytes": 95219,
           "declarations": {
-            "toJsonSchema": 6642,
+            "toJsonSchema": 6643,
             "encode": 2598,
             "audit": 1939,
             "url": 1930,
@@ -6768,9 +6768,9 @@
           "bytes": 1750
         }
       },
-      "gzip": 32426,
-      "minified": 96968,
-      "sha256": "9ff1290bd06062d179db090bfd9b4234d1b11af2dfb0d3afcdbf258464e40179"
+      "gzip": 32428,
+      "minified": 96969,
+      "sha256": "2dd414659ffef4ea59ecc926616308171242f9e7875094e1b808a4f73921e4e9"
     }
   }
 }

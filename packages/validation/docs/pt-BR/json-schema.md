@@ -1,7 +1,7 @@
 ---
 title: JSON Schema
 description: Escreva um validador como um JSON Schema, para o corpo de uma API HTTP, os argumentos de uma ferramenta que um modelo de linguagem chama ou um gerador de formulários.
-source: dd422220e31021881a4485f1d3deb61854004207
+source: 5e99a548a18e1e08d11dafe2dbbaedd78c0b0959
 order: 10
 ---
 
@@ -106,20 +106,20 @@ O lado da saída considera que um valor padrão e o valor de um `fallback` passa
 
 Um formato é escrito com o nome que o JSON Schema dá a ele, e sem `format` onde as regras desse nome recusam um texto que o validador aceita, o que quebraria a promessa acima:
 
-| Formato                                                                | Entrada                                               | Saída      |
-| ---------------------------------------------------------------------- | ----------------------------------------------------- | ---------- |
-| `email`                                                                | `email`, e nenhum com uma opção `domain`              | `email`    |
-| `internationalEmail`                                                   | Nenhum, já que o domínio pode ser internacionalizado  | `email`    |
-| `domain`                                                               | Nenhum, pelo mesmo motivo                             | `hostname` |
-| `hostname`, `uuid`                                                     | O próprio nome                                        | O mesmo    |
-| `datetime`                                                             | `date-time`, e nenhum com `local`, que não tem offset | O mesmo    |
-| `isoDate`                                                              | `date`                                                | O mesmo    |
-| `ip`                                                                   | `ipv4` com `version: "v4"`, e nenhum nos outros casos | O mesmo    |
-| `time`, `duration`, `url`                                              | Nenhum                                                | Nenhum     |
-| `port`, `base64`                                                       | Como a tabela acima os escreve                        | O mesmo    |
-| Qualquer outro, e qualquer um feito com `format`, seja qual for o nome | Nenhum                                                | Nenhum     |
+| Formato                                                                | Entrada                                               | Saída                                    |
+| ---------------------------------------------------------------------- | ----------------------------------------------------- | ---------------------------------------- |
+| `email`                                                                | `email`, e nenhum com uma opção `domain`              | O mesmo                                  |
+| `internationalEmail`                                                   | Nenhum, já que o domínio pode ser internacionalizado  | `email`, e nenhum com uma opção `domain` |
+| `domain`                                                               | Nenhum, pelo mesmo motivo                             | `hostname`                               |
+| `hostname`, `uuid`                                                     | O próprio nome                                        | O mesmo                                  |
+| `datetime`                                                             | `date-time`, e nenhum com `local`, que não tem offset | O mesmo                                  |
+| `isoDate`                                                              | `date`                                                | O mesmo                                  |
+| `ip`                                                                   | `ipv4` com `version: "v4"`, e nenhum nos outros casos | O mesmo                                  |
+| `time`, `duration`, `url`                                              | Nenhum                                                | Nenhum                                   |
+| `port`, `base64`                                                       | Como a tabela acima os escreve                        | O mesmo                                  |
+| Qualquer outro, e qualquer um feito com `format`, seja qual for o nome | Nenhum                                                | Nenhum                                   |
 
-Um formato fica de fora onde o do JSON Schema tem regras mais rígidas: `time` exige um offset, que uma hora do dia como `12:00` nunca tem; `duration` não permite fração, como em `PT0.5S`, nem semanas ao lado de dias, como em `P1W1D`; um endereço IPv6 pode ter uma zona, como em `fe80::1%eth0`, que `ipv6` não permite; e uma URL pode conter `|` ou `^`, que uma URI não pode. A entrada de `internationalEmail` e `domain` pode ser internacionalizada, como em `user@bücher.example`, o que `email` e `hostname` recusam; `idn-email` e `idn-hostname` serviriam, mas o [ajv-formats](https://github.com/ajv-validator/ajv-formats) não os conhece, e o Ajv, no modo strict padrão, se recusa a compilar um schema com um formato que não conhece. Um `email` com uma opção `domain` pode aceitar um host de um só rótulo, como `email({ domain: hostname() })` aceita `ada@localhost`, que o `email` do ajv-formats recusa por falta de um ponto. É também por isso que um formato para o qual o JSON Schema não tem nome, como `phone`, `slug` ou um feito com `format`, é escrito sem nenhum.
+Um formato fica de fora onde o do JSON Schema tem regras mais rígidas: `time` exige um offset, que uma hora do dia como `12:00` nunca tem; `duration` não permite fração, como em `PT0.5S`, nem semanas ao lado de dias, como em `P1W1D`; um endereço IPv6 pode ter uma zona, como em `fe80::1%eth0`, que `ipv6` não permite; e uma URL pode conter `|` ou `^`, que uma URI não pode. A entrada de `internationalEmail` e `domain` pode ser internacionalizada, como em `user@bücher.example`, o que `email` e `hostname` recusam; `idn-email` e `idn-hostname` serviriam, mas o [ajv-formats](https://github.com/ajv-validator/ajv-formats) não os conhece, e o Ajv, no modo strict padrão, se recusa a compilar um schema com um formato que não conhece. Um email com uma opção `domain` é escrito sem nenhum dos dois lados: pode aceitar e produzir um host de um só rótulo, como `email({ domain: hostname() })` aceita e produz `ada@localhost`, que o `email` do ajv-formats recusa por falta de um ponto. É também por isso que um formato para o qual o JSON Schema não tem nome, como `phone`, `slug` ou um feito com `format`, é escrito sem nenhum.
 
 Um `strictObject` escreve `additionalProperties: false`, e um `objectWithRest` o schema do validador ao qual passa as chaves desconhecidas, como um `record` escreve o schema dos valores dele. Um `object` e um `looseObject` não escrevem nenhum, já que qualquer outra chave passa. O schema não diz nada de `__proto__`, que um `looseObject`, um `objectWithRest` e um `record` rejeitam, então um validador de schemas aceita essa chave ali.
 
