@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
 import { build } from "esbuild";
@@ -13,6 +14,13 @@ import { ALIAS, codeFlow, get, ISSUER, SECRETS } from "./support";
  */
 
 const entry = fileURLToPath(new URL("../src/worker.ts", import.meta.url));
+// Read from the file `wrangler deploy` reads, so the test runs the Worker under the date it ships with.
+const compatibilityDate = /"compatibility_date":\s*"([^"]+)"/.exec(
+  readFileSync(new URL("../wrangler.jsonc", import.meta.url), "utf8"),
+)?.[1];
+if (compatibilityDate === undefined) {
+  throw new Error("wrangler.jsonc names no compatibility_date.");
+}
 let script = "";
 let worker: Miniflare | undefined;
 let incomplete: Miniflare | undefined;
@@ -28,7 +36,7 @@ const send = async (request: Request): Promise<Response> =>
 function start(bindings: Record<string, string>): Miniflare {
   return new Miniflare(
     convertV4MiniflareOptions({
-      compatibilityDate: "2026-07-01",
+      compatibilityDate,
       modules: true,
       script,
       scriptPath: entry,
@@ -58,7 +66,7 @@ beforeAll(async () => {
     CLIENT_SECRET_POST: SECRETS.post,
     CLIENT_SECRET_CONTROL: SECRETS.control,
   });
-  incomplete = start({ ISSUER, SUITE_ALIAS: ALIAS });
+  incomplete = start({ ISSUER, SUITE_ALIAS: ALIAS, CLIENT_SECRET_1: SECRETS.first });
   await Promise.all([worker.ready, incomplete.ready]);
 }, 120_000);
 
@@ -86,9 +94,10 @@ describe("the Worker in workerd", () => {
   it("names the missing secrets and no value when it is not configured", async () => {
     const response = await (incomplete as Miniflare).dispatchFetch(`${ISSUER}/`);
 
+    const text = await response.text();
+
     expect(response.status).toBe(500);
-    expect(await response.text()).toContain(
-      "CLIENT_SECRET_1, CLIENT_SECRET_2, CLIENT_SECRET_POST, CLIENT_SECRET_CONTROL",
-    );
+    expect(text).toContain("Missing configuration: CLIENT_SECRET_2, CLIENT_SECRET_POST, CLIENT_SECRET_CONTROL.");
+    expect(text).not.toContain(SECRETS.first);
   });
 });
