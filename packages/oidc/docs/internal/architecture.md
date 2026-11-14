@@ -85,7 +85,7 @@ A token issued to another client is refused with `invalid_request` and left alon
 
 ### Diagnostics
 
-A refusal at the token, userinfo or revocation endpoint is built with `refuse(response, reason, clientId?)` (`diagnostics.ts`), which records the reason in a `WeakMap` keyed by the response. `handle` passes the recorded refusal to `onDiagnostic` after the endpoint answers (decision 28). The reason never travels through return types, and a response the code did not mark is never reported. `clientId` is passed only where it comes from the store.
+A refusal at the token, userinfo or revocation endpoint is built with `refuse(response, reason, clientId?)` (`diagnostics.ts`), which records the reason in a `WeakMap` keyed by the response. `handle` passes the recorded refusal to `onDiagnostic` after the endpoint answers, with the request it was given (decisions 28 and 61). The reason never travels through return types, and a response the code did not mark is never reported. `clientId` is passed only where it comes from the store.
 
 ### Userinfo
 

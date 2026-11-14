@@ -120,6 +120,35 @@ describe("onDiagnostic", () => {
     ]);
   });
 
+  it("passes each endpoint's refusal the request handle was given", async () => {
+    const requests: Request[] = [];
+    const reporting = await setUpProvider({
+      onDiagnostic: (_diagnostic, request) => {
+        requests.push(request);
+      },
+    });
+    const token = tokenRequest("grant_type=authorization_code", { contentType: "text/plain" });
+    const userinfo = userinfoRequest("unknown-token");
+    const revocation = new Request(`${ISSUER}/revoke`, {
+      method: "POST",
+      headers: { "content-type": "application/x-www-form-urlencoded", "user-agent": "audit-test" },
+      body: `client_id=${PUBLIC_CLIENT}`,
+    });
+
+    await answer(reporting.provider, token);
+    await answer(reporting.provider, userinfo);
+    await answer(reporting.provider, revocation);
+
+    expect(requests).toHaveLength(3);
+    expect(requests[0]).toBe(token);
+    // A content-type refusal comes before the body is read.
+    expect(requests[0]?.bodyUsed).toBe(false);
+    expect(requests[1]).toBe(userinfo);
+    expect(requests[2]).toBe(revocation);
+    expect(requests[2]?.headers.get("user-agent")).toBe("audit-test");
+    expect(requests[2]?.bodyUsed).toBe(true);
+  });
+
   it("is frozen and holds no value the request carried", async () => {
     const issued = await issueTokens(setup);
     await redeem(setup, codeForm(issued.code, PUBLIC_CLIENT));

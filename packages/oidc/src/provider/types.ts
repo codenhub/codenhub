@@ -543,8 +543,14 @@ export interface ProviderOptions {
    *
    * A returned promise is awaited before the response is returned, so an async callback that rejects makes
    * `handle` reject with its error, as a synchronous throw does.
+   *
+   * The second argument is the same `Request` object `handle` was given, for the details an audit log records,
+   * such as the client's address or user agent from its headers. A token or revocation request refused after its
+   * body was read rejects a second read; one refused for its content type still has its body unread, and userinfo
+   * reads none, so do not rely on the body. Its `authorization` header and its body carry the client's secret and
+   * tokens, so never log either, nor the URL's query, which the client wrote; log chosen headers and the path.
    */
-  readonly onDiagnostic?: (diagnostic: ProviderDiagnostic) => void;
+  readonly onDiagnostic?: (diagnostic: ProviderDiagnostic, request: Request) => void;
   /**
    * Asked before each refresh issues tokens, so the app can end a family whose user is no longer entitled to it: a
    * user who is disabled, loses a role, or revokes consent otherwise keeps refreshing until the family expires
