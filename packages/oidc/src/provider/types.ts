@@ -255,6 +255,8 @@ export type Consumption<TRecord> =
  * lifetime, since an access token issued by the last refresh outlives its family. Lifetimes can differ by client
  * ({@link ClientRecord.ttl}), so keep the marker for the longest refresh token lifetime of any client plus the
  * longest access token lifetime of any client, the provider's own `ttl` counting for a client that sets none.
+ * Count a lifetime since lowered too, until the tokens issued under it have expired: a family keeps the expiry
+ * it got at the code exchange, and an access token keeps its own.
  */
 export interface OidcStore {
   /** Looks up a registered client. `undefined` when none has this identifier. */
@@ -699,8 +701,9 @@ export interface Provider {
    *
    * The app owns the delivery. The client answers `200` on success, or `400` with an error (§2.8), so treat any
    * `2xx` as success and anything else as a failure. Use a short timeout, since a slow client must not hold the
-   * user's sign-out, and decide whether to retry. The request has `redirect: "manual"`, so `fetch` returns a `3xx`
-   * as it is rather than forwarding the token; treat it as a failure.
+   * user's sign-out, and decide whether to retry. The request has `redirect: "manual"`, so `fetch` never forwards
+   * the token to a redirect's target: Node.js and workerd return the `3xx` response itself, and a browser's `fetch`
+   * an opaque-redirect response with status `0`. Either way `response.ok` is `false`; treat it as a failure.
    *
    * @param request - The client, and who or what ended. At least one of `subject` and `sessionId` is required.
    * @returns The request to send, or `null` when the client is unknown or has no `backchannelLogout`, so there

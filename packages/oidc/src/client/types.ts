@@ -70,6 +70,20 @@ export interface ClientOptions {
    */
   readonly clockTolerance?: number;
   /**
+   * How this client receives back-channel logout (OpenID Connect Back-Channel Logout 1.0), as it registered it at
+   * the provider. Only {@link Client.verifyLogoutToken} and {@link Client.readBackchannelLogout} read it.
+   */
+  readonly backchannelLogout?: {
+    /**
+     * Whether a logout token must carry `sid`, as a client registered with `backchannel_logout_session_required`
+     * expects. When `true`, a token with only `sub` fails, so the app never ends every session of a user when it
+     * asked to be told which one ended.
+     *
+     * @defaultValue false
+     */
+    readonly sessionRequired?: boolean;
+  };
+  /**
    * Current time in milliseconds since the Unix epoch, for tests.
    *
    * @defaultValue `Date.now`
@@ -200,6 +214,30 @@ export interface RevokeOptions {
   readonly tokenTypeHint?: "access_token" | "refresh_token";
 }
 
+/**
+ * A verified back-channel logout: the provider says a session of the user ended. Frozen. At least one of `subject`
+ * and `sessionId` is present, and `sessionId` always is when the client set `backchannelLogout.sessionRequired`.
+ *
+ * End every session the app holds that matches: with `sessionId`, the session it signed in with that `sid`; with
+ * only `subject`, every session of that user from this provider.
+ */
+export interface BackchannelLogout {
+  /** The token's `sub`: the user, as the ID tokens of this provider name them. */
+  readonly subject?: string;
+  /** The token's `sid`: the provider's session, as the `sid` claim of the ID tokens issued during it. */
+  readonly sessionId?: string;
+  /**
+   * The token's `jti`. The client stores nothing, so it accepts the same token again until it expires. To refuse a
+   * replay, as §2.6 suggests, remember each `jti` until `expiresAt` plus the client's `clockTolerance`, and refuse
+   * one seen before.
+   */
+  readonly jti: string;
+  /** The token's `iat`, in seconds since the Unix epoch. */
+  readonly issuedAt: number;
+  /** The token's `exp`, in seconds since the Unix epoch. The client accepts it until `clockTolerance` after. */
+  readonly expiresAt: number;
+}
+
 /** What to ask the userinfo endpoint. */
 export interface UserinfoOptions {
   readonly accessToken: string;
@@ -284,4 +322,44 @@ export interface Client {
    * would be longer than 8192 characters.
    */
   endSessionUrl(options?: EndSessionOptions): string;
+  /**
+   * Verifies a logout token the provider sent to this client's back-channel logout URI (OpenID Connect Back-Channel
+   * Logout 1.0 §2.6), for an app that has already read the request's form body itself. Prefer
+   * {@link Client.readBackchannelLogout}, which also checks the request.
+   *
+   * @remarks
+   * The signature must verify against the provider's JWKS with an algorithm accepted for ID tokens, and the header
+   * must have `typ: "logout+jwt"`, so an ID token or an access token never passes. `iss` must be the issuer, `aud`
+   * must include the client (with `azp` checked as for ID tokens), `iat`, `exp` and `jti` must be present, and `exp`
+   * and `iat` are checked with the client's `clockTolerance`. `events` must hold the back-channel logout event with
+   * an object value, the token must name `sub`, `sid` or both, `sid` is required when
+   * {@link ClientOptions.backchannelLogout} says so, and a `nonce` fails it. Every problem found is returned.
+   *
+   * The client stores nothing, so it does not refuse a replayed token; see {@link BackchannelLogout.jti}.
+   *
+   * @param logoutToken - The compact logout token, the `logout_token` form parameter.
+   * @returns Who signed out, or every issue found, as `invalid_logout_token` (or `azp_mismatch`) issues whose
+   * `params.jwtCode` names the check. Never throws for any token.
+   * @throws {TypeError} When `logoutToken` is not a string.
+   */
+  verifyLogoutToken(logoutToken: string): Promise<OidcResult<BackchannelLogout>>;
+  /**
+   * Reads a back-channel logout request the provider sent to this client (OpenID Connect Back-Channel Logout 1.0
+   * §2.5) and verifies its logout token as {@link Client.verifyLogoutToken} does.
+   *
+   * @remarks
+   * The request must be a `POST` with `Content-Type: application/x-www-form-urlencoded` (a `charset` other than
+   * UTF-8 is refused), a body of at most 16384 bytes, and exactly one non-empty `logout_token`. Other parameters
+   * are ignored. A request that fails any of these is an `invalid_logout_request` issue whose path names the part
+   * at fault; the token is not verified.
+   *
+   * Answer `200` on success and `400` on failure, both with `Cache-Control: no-store` (§2.8). A `400` may carry
+   * a JSON body `{ "error": "invalid_request" }`; never echo the token or the issues' details to the sender.
+   *
+   * @param request - The incoming request, before anything has read its body.
+   * @returns Who signed out, or every issue found. Never throws for any request a sender can make.
+   * @throws {TypeError} When the request's body was already read, which is a bug in the calling code, such as
+   * middleware that parsed the form first.
+   */
+  readBackchannelLogout(request: Request): Promise<OidcResult<BackchannelLogout>>;
 }

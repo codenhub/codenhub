@@ -262,6 +262,44 @@ export const scenarios: Readonly<Record<string, Scenario>> = {
     check(revoked.ok, "revoke failed");
   },
 
+  "tells the client a session ended over the back channel": async (modules) => {
+    const { jwt, testing, client, provider } = modules;
+    const store = testing.createMemoryStore({
+      clients: [
+        {
+          clientId: "app",
+          redirectUris: [REDIRECT_URI],
+          scopes: ["openid"],
+          auth: { method: "none" },
+          backchannelLogout: { uri: "https://app.example/backchannel-logout", sessionRequired: true },
+        },
+      ],
+    });
+    const op = provider.createProvider({
+      issuer: ISSUER,
+      signingKeys: [await jwt.generateKeyPair({ alg: "ES256", kid: "op-1" })],
+      store,
+      claims: () => ({}),
+    });
+    const fetchFromProvider: typeof fetch = async (input, init) =>
+      (await op.handle(new Request(input, init))) ?? new Response(null, { status: 404 });
+    const rp = client.createClient({
+      metadata: op.metadata,
+      clientId: "app",
+      redirectUri: REDIRECT_URI,
+      auth: { method: "none" },
+      fetch: fetchFromProvider,
+      backchannelLogout: { sessionRequired: true },
+    });
+    const request = await op.backchannelLogout({ clientId: "app", subject: "user-1", sessionId: "session-1" });
+    check(request !== null, "no logout request built");
+    const received = await rp.readBackchannelLogout(request as Request);
+    check(
+      received.ok && received.value.subject === "user-1" && received.value.sessionId === "session-1",
+      `logout request refused: ${JSON.stringify(received)}`,
+    );
+  },
+
   // Run here as well as on Node.js because a bundler once dropped the check as dead code.
   "refuses invalid UTF-8 escapes": async (modules) => {
     const { op } = await setUp(modules, "none");

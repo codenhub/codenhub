@@ -513,6 +513,10 @@ describe("handleToken: refresh_token grant", () => {
     expect(await store.findAccessToken(await digestKey(second.access_token))).toMatchObject({
       sessionId: "session-42",
     });
+    expect(await store.consumeRefreshToken(await digestKey(second.refresh_token ?? ""))).toMatchObject({
+      status: "consumed",
+      record: { sessionId: "session-42" },
+    });
   });
 
   it("keeps sid out of the ID token of a refresh when the family has no session id", async () => {
@@ -1174,6 +1178,18 @@ describe("handleToken: the ID token's signing key", () => {
     const refreshed = (await response.json()) as TokenBody;
 
     expect(headerOf(refreshed.id_token)).toMatchObject({ alg: "RS256", kid: "RS256-1" });
+  });
+
+  it("signs the ID token of a refresh with the key of the algorithm the client names", async () => {
+    const keys = await keysOf("RS256", "ES256", "ES256");
+    const { options, store } = await setup({ keys, clients: withClient({ idTokenSigningAlg: "ES256" }) });
+    const issued = await redeemCode(options, store);
+
+    const response = await handleToken(options, tokenRequest(refreshBody(issued.refresh_token ?? "")));
+    const refreshed = (await response.json()) as TokenBody;
+
+    expect(headerOf(refreshed.id_token)).toMatchObject({ alg: "ES256", kid: "ES256-1" });
+    expect(payloadOf(refreshed.id_token).at_hash).toBe(await computeTokenHash(refreshed.access_token, "ES256"));
   });
 
   it("verifies against the published key of that algorithm", async () => {

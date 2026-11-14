@@ -12,8 +12,10 @@ import {
   redeem,
   refreshForm,
   setUpProvider,
+  SUBJECT,
   type TokenBody,
   userinfoRequest,
+  VERIFIER,
 } from "./provider-support";
 
 /** Decodes a token's payload without verifying it; the provider's own tests cover the signature. */
@@ -112,18 +114,29 @@ describe("request hints that reach the app", () => {
       ),
     );
 
-    expect(begun.ok && begun.value).toMatchObject({
+    if (!begun.ok) {
+      throw new Error(`beginAuthorization failed: ${JSON.stringify(begun.error.issues)}`);
+    }
+    expect(begun.value).toMatchObject({
       acrValues: ["urn:loa:2", "urn:loa:1"],
       claimsLocales: ["pt-BR", "en"],
       display: "popup",
     });
     // The app satisfies neither class and says so; the provider issues the code and carries what the app reported.
-    const issued = await issueCode(setup, {
-      params: { acr_values: "urn:loa:2" },
-      grant: { acr: "urn:loa:1" },
+    const completed = await setup.provider.completeAuthorization(begun.value.id, {
+      subject: SUBJECT,
+      authTime: Math.floor(setup.now.ms / 1000),
+      scopes: begun.value.scopes,
+      acr: "urn:loa:0",
     });
+    if (!completed.ok) {
+      throw new Error(`completeAuthorization failed: ${JSON.stringify(completed.error.issues)}`);
+    }
+    const location = completed.value.headers.get("location") ?? "";
+    const code = new URL(location).searchParams.get("code") ?? "";
+    const issued = { code, verifier: VERIFIER, interactionId: begun.value.id, location };
     const tokens = (await (await redeem(setup, codeForm(issued, PUBLIC_CLIENT))).json()) as TokenBody;
-    expect(payloadOf(tokens.id_token).acr).toBe("urn:loa:1");
+    expect(payloadOf(tokens.id_token).acr).toBe("urn:loa:0");
   });
 
   it("answers an unknown display as if the request had none", async () => {
