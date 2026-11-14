@@ -176,7 +176,10 @@ function copyObject<T>(value: T): T {
 /** Copies a client's authentication, and its list of secret digests, which the caller may otherwise mutate. */
 function copyAuth(auth: ClientRecord["auth"]): ClientRecord["auth"] {
   const copy = copyObject(auth);
-  return copy !== auth && "secretHashes" in copy ? { ...copy, secretHashes: copyList(copy.secretHashes) } : copy;
+  // Tested by type, not by `copy !== auth`: a malformed `NaN` is unequal to itself, and `in` throws on a primitive.
+  return typeof copy === "object" && copy !== null && "secretHashes" in copy
+    ? { ...copy, secretHashes: copyList(copy.secretHashes) }
+    : copy;
 }
 
 /** Copies an array; any other value is returned unchanged. */
