@@ -46,7 +46,7 @@ export async function createSsoProvider() {
 | `ttl`          | Token and interaction lifetimes in seconds. See [Lifetimes](#lifetimes).                                                                                               | See [Lifetimes](#lifetimes) |
 | `accessToken`  | How access tokens are issued: opaque, the default, or a signed JWT. See [JWT access tokens](#jwt-access-tokens).                                                       | `{ format: "opaque" }`      |
 | `endpoints`    | The URLs of the authorization, end-session, token, userinfo, JWKS and revocation endpoints. See [Endpoints](#endpoints).                                               | Paths under the issuer      |
-| `onDiagnostic` | Called with the reason each token, userinfo or revocation request is refused with an OAuth error response. See [Diagnostics](#diagnostics).                            | None                        |
+| `onDiagnostic` | Called with the reason, and the request, each time a token, userinfo or revocation request is refused with an OAuth error response. See [Diagnostics](#diagnostics).   | None                        |
 | `onRefresh`    | Asked before each refresh issues tokens, so the app can end a family whose user is no longer entitled to it. See [Re-checking a refresh](#re-checking-a-refresh).      | Every refresh is issued     |
 | `subjectTypes` | The subject identifier types discovery advertises, `public`, `pairwise` or both. The app derives the subjects. See [Pairwise subjects](#pairwise-subjects).            | `["public"]`                |
 | `now`          | The current time in milliseconds since the Unix epoch. For tests.                                                                                                      | `Date.now`                  |
@@ -919,8 +919,9 @@ declare const options: ProviderOptions; // the options shown above
 
 export const provider = createProvider({
   ...options,
-  onDiagnostic: (diagnostic) => {
-    console.warn(`OIDC ${diagnostic.endpoint} refused: ${diagnostic.reason}`, diagnostic.clientId ?? "");
+  onDiagnostic: (diagnostic, request) => {
+    const agent = request.headers.get("user-agent") ?? "";
+    console.warn(`OIDC ${diagnostic.endpoint} refused: ${diagnostic.reason}`, diagnostic.clientId ?? "", agent);
   },
 });
 ```
@@ -943,5 +944,7 @@ The reasons, grouped as in the provider's types:
 | Revocation                              | `token_missing`, `token_of_another_client`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
 
 The callback is called once for each refusal that is answered with an OAuth error response, after the response is built and before `handle` resolves. A `405` for a method the endpoint does not accept, and an `OPTIONS` preflight, are not reported. Authorization failures are not reported either, since `beginAuthorization` and `completeAuthorization` return their issues. The diagnostic never holds a value the request carried: no token, code, verifier, secret or redirect URI.
+
+The second argument is the same `Request` object `handle` was given, for what an audit log records beside the reason: the user agent, the client address a proxy or the platform puts in a header such as `x-forwarded-for` or `cf-connecting-ip`, or the URL. A callback that takes only the diagnostic keeps working. The token and revocation endpoints have read the body by then, so `request.bodyUsed` is `true` and reading the body again rejects; the userinfo endpoint reads none. Use the headers and the URL. Never log the `authorization` header or the body: they carry the client's secret or assertion, the code, the verifier and the tokens, which the diagnostic itself never holds.
 
 The callback may return a promise. `handle` awaits it, so a slow callback delays the response. If it throws or its promise rejects, `handle` rejects, the same as for a store failure, so keep it from throwing. A value that is not a function makes `createProvider` throw `TypeError`.

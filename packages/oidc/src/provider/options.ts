@@ -108,7 +108,7 @@ export interface ResolvedOptions {
   readonly accessToken: AccessTokenFormat;
   /** Current time in seconds since the Unix epoch, truncated to whole seconds. */
   readonly now: () => number;
-  readonly onDiagnostic: ((diagnostic: ProviderDiagnostic) => void) | undefined;
+  readonly onDiagnostic: ((diagnostic: ProviderDiagnostic, request: Request) => void) | undefined;
   readonly onRefresh: ((request: RefreshCheck) => boolean | Promise<boolean>) | undefined;
   readonly subjectTypes: readonly string[];
   readonly accessTokenClaims:

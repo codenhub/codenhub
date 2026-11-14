@@ -71,13 +71,19 @@ async function answerRequest(context: ProviderContext, request: Request): Promis
     case "jwks":
       return answerDocument(request, context.loadJwks);
     case "token":
-      return reportRefusal(context.options.onDiagnostic, "token", await handleToken(context.options, request));
+      return reportRefusal(context.options.onDiagnostic, "token", request, await handleToken(context.options, request));
     case "userinfo":
-      return reportRefusal(context.options.onDiagnostic, "userinfo", await handleUserinfo(context.options, request));
+      return reportRefusal(
+        context.options.onDiagnostic,
+        "userinfo",
+        request,
+        await handleUserinfo(context.options, request),
+      );
     case "revocation":
       return reportRefusal(
         context.options.onDiagnostic,
         "revocation",
+        request,
         await handleRevocation(context.options, request),
       );
     default:

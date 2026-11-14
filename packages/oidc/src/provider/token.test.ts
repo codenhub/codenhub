@@ -862,8 +862,9 @@ describe("handleToken: the onRefresh re-check", () => {
     const { options, store } = await setup({ onRefresh: () => false });
     const issued = await redeemCode(options, store);
 
-    const response = await handleToken(options, tokenRequest(refreshBody(issued.refresh_token ?? "")));
-    await reportRefusal((diagnostic) => void seen.push(diagnostic), "token", response);
+    const request = tokenRequest(refreshBody(issued.refresh_token ?? ""));
+    const response = await handleToken(options, request);
+    await reportRefusal((diagnostic) => void seen.push(diagnostic), "token", request, response);
 
     expect(seen).toEqual([{ endpoint: "token", status: 400, reason: "refresh_refused", clientId: "public" }]);
   });
