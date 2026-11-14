@@ -10,7 +10,7 @@ import type {
   OidcResult,
   Prompt,
 } from "../shared/types";
-import { type CheckedClient, checkClientRecord, lifetimesOf } from "./client-record";
+import { type CheckedClient, checkClientRecord, isScopeOfClient, lifetimesOf } from "./client-record";
 import { readFrontChannelParameters } from "./front-channel";
 import type { ResolvedOptions } from "./options";
 import { redirectResponse } from "./responses";
@@ -311,12 +311,13 @@ function findResponseModeFailure({ parameters, target }: RequestContext): Failur
     : redirectFailure(target, "invalid_request", ["response_mode"]);
 }
 
-/** Scopes split on single spaces, each one allowed by the provider and the client, with `openid` required. */
-function readScopes({ options, client, parameters, target }: RequestContext): Checked<readonly string[]> {
+/**
+ * Scopes split on single spaces, each one the client's record allows, with `openid` required. A scope the provider's
+ * `scopes` option does not define is accepted when the record lists it, and releases no claims.
+ */
+function readScopes({ client, parameters, target }: RequestContext): Checked<readonly string[]> {
   const requested = parameters.get("scope")?.split(" ") ?? [];
-  const isAllowed = (scope: string): boolean =>
-    scope !== "" && options.scopeClaims.has(scope) && client.scopes.includes(scope);
-  if (!requested.includes("openid") || !requested.every(isAllowed)) {
+  if (!requested.includes("openid") || !requested.every((scope) => isScopeOfClient(client, scope))) {
     return redirectFailure(target, "invalid_scope");
   }
   return { ok: true, value: [...new Set(requested)] };

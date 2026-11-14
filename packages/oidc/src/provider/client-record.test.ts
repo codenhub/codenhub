@@ -211,6 +211,27 @@ describe("checkClientRecord", () => {
     });
   });
 
+  describe("idTokenClaims", () => {
+    it.each([true, false])("shouldAcceptABoolean_%s", (idTokenClaims) => {
+      expect(checkClientRecord(valid({ idTokenClaims }), "client-a", KEYS).idTokenClaims).toBe(idTokenClaims);
+    });
+
+    it("shouldLeaveItAbsentWhenTheRecordHasNone", () => {
+      expect(checkClientRecord(valid(), "client-a", KEYS)).not.toHaveProperty("idTokenClaims");
+    });
+
+    it.each([
+      ["a string", "true"],
+      ["a number", 1],
+      ["null", null],
+    ])("shouldRejectIdTokenClaimsAs%s", (_name, idTokenClaims) => {
+      const attempt = () => checkClientRecord(valid({ idTokenClaims }), "client-a", KEYS);
+
+      expect(attempt).toThrow(TypeError);
+      expect(attempt).toThrow("idTokenClaims");
+    });
+  });
+
   describe("idTokenSigningAlg", () => {
     it.each(["ES256", "RS256"])("shouldAcceptAnAlgorithmASigningKeyHas_%s", (idTokenSigningAlg) => {
       expect(checkClientRecord(valid({ idTokenSigningAlg }), "client-a", KEYS).idTokenSigningAlg).toBe(

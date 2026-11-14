@@ -410,6 +410,7 @@ export interface ClientRecord {
          */
         readonly sessionRequired?: boolean;
     };
+    readonly idTokenClaims?: boolean;
 }
 ```
 
@@ -461,6 +462,20 @@ Grants this client may use, without repeats, naming at least one: an empty list 
 
 **Default** — `["authorization_code"]`
 
+#### ClientRecord › idTokenClaims
+
+```ts
+readonly idTokenClaims?: boolean;
+```
+
+Whether every ID token issued to this client also carries the claims its granted scopes release, as userinfo returns them, for relying parties that read only the ID token and never call userinfo: Kubernetes' API server OIDC authenticator, and many "Sign in with" integrations that expect `email` there. It covers the code exchange and every refresh, for the scopes that token response grants. The claims come from the same `ProviderOptions.claims` callback and are filtered the same way; userinfo itself is unchanged. The `client_credentials` grant issues no ID token.
+
+A claim named `iss`, `sub`, `aud`, `exp`, `iat`, `auth_time`, `nonce`, `acr`, `amr`, `azp`, `at_hash`, `c_hash`, `sid`, `jti`, `nbf`, `events` or `cnf` is dropped from what the callback returns, so the protocol claims are always the provider's. The provider checks the value when it reads the record, and throws `TypeError` if it is not a boolean.
+
+Turning it on puts personal data in a token that the client may log, store in a cookie, or pass to other services, where userinfo would have held it behind an access token. Enable it only for a client that needs it, and keep the scopes of that client to the ones it uses.
+
+**Default** — `false`
+
 #### ClientRecord › idTokenSigningAlg
 
 ```ts
@@ -506,6 +521,10 @@ readonly scopes: readonly string[];
 ```
 
 Scopes this client may request. Must include `openid` when the client may use `authorization_code`. A `client_credentials` token never carries `openid` or `offline_access`, since no user is involved.
+
+A scope listed here need not be defined in `ProviderOptions.scopes`: one that is not is accepted at authorization, in a refresh `scope` and by `client_credentials`, and releases no claims.
+
+A refresh issues only the family's scopes this list still holds, so removing a scope from it takes effect on the client's next refresh, and listing it again restores it on the one after; the family itself keeps its scopes.
 
 #### ClientRecord › ttl
 
@@ -1485,6 +1504,7 @@ export interface ProviderOptions {
     readonly endpoints?: ProviderEndpoints;
     readonly now?: () => number;
     readonly onDiagnostic?: (diagnostic: ProviderDiagnostic) => void;
+    readonly onRefresh?: (request: RefreshCheck) => boolean | Promise<boolean>;
 }
 ```
 
@@ -1544,13 +1564,25 @@ Called with the reason each time the token, userinfo, or revocation endpoint ref
 
 A returned promise is awaited before the response is returned, so an async callback that rejects makes `handle` reject with its error, as a synchronous throw does.
 
+#### ProviderOptions › onRefresh
+
+```ts
+readonly onRefresh?: (request: RefreshCheck) => boolean | Promise<boolean>;
+```
+
+Asked before each refresh issues tokens, so the app can end a family whose user is no longer entitled to it: a user who is disabled, loses a role, or revokes consent otherwise keeps refreshing until the family expires (`ttl.refreshToken`, 30 days by default). It also covers the app's session revocation, since the grant's `sessionId` is passed.
+
+It runs after the refresh token is consumed and every check on it passes, just before tokens are issued. `true` issues as it would without this option. `false` answers `invalid_grant`, revokes the whole family with `store.revokeGrant`, and is reported to `ProviderOptions.onDiagnostic` as `refresh_refused`. Anything else than a boolean makes `handle` reject with `TypeError`, and, as with the store and the `claims` callback, an exception it throws or a promise it rejects makes `handle` reject with that error and revokes nothing. The refresh token is spent by then, so the client's retry with it is a reuse and revokes the family: an app whose check fails on a transient outage signs its users out, so keep the check from throwing, or answer `false`.
+
+It is not called for a code exchange, which is the sign-in itself.
+
 #### ProviderOptions › scopes
 
 ```ts
 readonly scopes?: Readonly<Record<string, readonly string[]>>;
 ```
 
-Extra scopes and the claim names each releases, merged over the standard `profile`, `email`, `address`, and `phone` scopes. Every scope a client requests must be here, standard, `openid`, or `offline_access`.
+Extra scopes and the claim names each releases, merged over the standard `profile`, `email`, `address`, and `phone` scopes. What a client may request is what its `ClientRecord.scopes` lists: a scope the record lists and this option does not define is accepted, and releases no claims, so an app-defined scope such as `data:<namespace>:read` can live only in the database. A scope must still be a scope token (RFC 6749 §3.3). Discovery's `scopes_supported` lists only the scopes this option and the standard ones define.
 
 #### ProviderOptions › signingKeys
 
@@ -1641,6 +1673,58 @@ readonly refreshToken?: number;
 A refresh token family, counted from the code exchange; rotation does not extend it. An integer from 60 through 31536000.
 
 **Default** — 2592000 (30 days)
+
+### RefreshCheck
+
+```ts
+export interface RefreshCheck {
+    readonly subject: string;
+    readonly clientId: string;
+    readonly scopes: readonly string[];
+    readonly grantId: string;
+    readonly sessionId?: string;
+}
+```
+
+What `ProviderOptions.onRefresh` is asked about: the refresh that is about to issue tokens.
+
+#### RefreshCheck › clientId
+
+```ts
+readonly clientId: string;
+```
+
+#### RefreshCheck › grantId
+
+```ts
+readonly grantId: string;
+```
+
+The grant the family belongs to; the provider revokes it when the answer is `false`.
+
+#### RefreshCheck › scopes
+
+```ts
+readonly scopes: readonly string[];
+```
+
+The scopes this refresh will issue: the request's `scope`, or, when it sent none, the family's scopes that the client's record still lists.
+
+#### RefreshCheck › sessionId
+
+```ts
+readonly sessionId?: string;
+```
+
+The app's session the grant was issued during, when `completeAuthorization` was given one.
+
+#### RefreshCheck › subject
+
+```ts
+readonly subject: string;
+```
+
+The user the family was issued to.
 
 ### RefreshTokenRecord
 
@@ -1850,7 +1934,7 @@ A `prompt` value (OpenID Connect Core §3.1.2.1).
 ### ProviderDiagnosticReason
 
 ```ts
-export type ProviderDiagnosticReason = "content_type" | "body" | "parameters" | "client_credentials_missing" | "client_credentials_ambiguous" | "client_credentials_malformed" | "client_unknown" | "client_method_mismatch" | "client_credentials_wrong" | "grant_type_missing" | "grant_type_unsupported" | "grant_type_unauthorized" | "parameter_missing" | "code_verifier_malformed" | "code_verifier_missing" | "code_verifier_unexpected" | "code_unknown" | "code_replayed" | "code_expired" | "code_client_mismatch" | "redirect_uri_mismatch" | "code_verifier_mismatch" | "scope_invalid" | "refresh_token_unknown" | "refresh_token_replayed" | "refresh_token_expired" | "refresh_token_client_mismatch" | "scope_not_granted" | "access_token_missing" | "access_token_malformed" | "access_token_unknown" | "access_token_expired" | "access_token_without_openid" | "token_missing" | "token_of_another_client";
+export type ProviderDiagnosticReason = "content_type" | "body" | "parameters" | "client_credentials_missing" | "client_credentials_ambiguous" | "client_credentials_malformed" | "client_unknown" | "client_method_mismatch" | "client_credentials_wrong" | "grant_type_missing" | "grant_type_unsupported" | "grant_type_unauthorized" | "parameter_missing" | "code_verifier_malformed" | "code_verifier_missing" | "code_verifier_unexpected" | "code_unknown" | "code_replayed" | "code_expired" | "code_client_mismatch" | "redirect_uri_mismatch" | "code_verifier_mismatch" | "scope_invalid" | "refresh_token_unknown" | "refresh_token_replayed" | "refresh_token_expired" | "refresh_token_client_mismatch" | "scope_not_granted" | "refresh_refused" | "access_token_missing" | "access_token_malformed" | "access_token_unknown" | "access_token_expired" | "access_token_without_openid" | "token_missing" | "token_of_another_client";
 ```
 
 Why the provider refused a request at the token, userinfo, or revocation endpoint. The client is sent only the OAuth error code, so this is what an operator debugs with.

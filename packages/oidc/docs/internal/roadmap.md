@@ -17,23 +17,9 @@ Many items below change a contract: a record the store persists, a client record
 The SSO application is the package's first real consumer, and a review of its scope (2026-11-12) against this package found what it needs and the package lacks. The order follows the SSO application's own roadmap.
 
 - **Release what `main` already holds.** The fixes after 0.0.1, the 60-second client clock tolerance (decision 44) and the expired `id_token_hint` at logout (decision 45), are not on npm. The SSO application installs from npm, so it needs a release that carries them.
-- **Settle the persisted shapes before the SSO application writes its `OidcStore` adapters.** That is the second step of its roadmap. The items marked "record shape" under Planned add fields to `ClientRecord`, `InteractionRecord`, `CodeRecord` or `RefreshTokenRecord`. Adding them after the SSO application persists those records costs it a migration on three databases, so each is decided, even if as "no", before that step.
+- **Run the OpenID conformance plans.** Every change the review found is built, and scope.md decisions 47 to 56 record them; the record shapes are settled before the SSO application writes its `OidcStore` adapters. What is left before 0.1 is the conformance run below and the release.
 
 ## Planned
-
-### Changes the SSO application needs
-
-Grouped by the step of the SSO application's roadmap that first needs them.
-
-**Before the store adapters:** done. The session identifier on a grant, several secrets per client, token lifetimes per client and `acr_values`, `claims_locales` and `display` on the interaction are scope.md decisions 47 to 50.
-
-**Before the OIDC endpoints:** the ID token signing algorithm per client is done (scope.md decision 51).
-
-- **Scope claims in the ID token, as an option** (record shape, for the per-client opt-in). Decision 12 releases scope claims only at userinfo, following OpenID Connect Core §5.4. What it did not weigh: relying parties that read only the ID token and never call userinfo, such as Kubernetes' API server OIDC authenticator and many "Sign in with" integrations that expect `email` there. A general identity provider serves them too, and the SSO application's question of roles in tokens lands here. Proposal: an opt-in, per client or provider-wide, that puts the claims the granted scopes release into the ID token, through the existing `claims` callback. Userinfo stays the default. Reverses part of decision 12.
-- **A re-check before a refresh.** The refresh grant never consults the app. A user who is disabled, loses the role an app requires, or revokes consent keeps refreshing until the family expires, 30 days by default, unless the app revokes every matching grant itself. Proposal: an optional callback the provider calls before it issues tokens from a refresh, which can refuse with `invalid_grant`, given the subject, the client and the scopes. The alternative is a rule in the SSO application that every action ending access revokes the matching grants; the hook is preferred because one forgotten code path there leaves access open.
-- **Configuration that changes at runtime.** `signingKeys`, `scopes` and `ttl` are fixed when the provider is created, while the SSO application edits keys, apps and scopes from its dashboard. `createProvider` keeps no state between requests, so rebuilding it when the configuration changes works, and key rotation already works by key order: a new key is published second, then moved first once relying parties have fetched it. Proposal: document and test that rebuilding the provider is cheap and safe, since rotation on Node.js and across Worker isolates depends on it; and accept a scope a client's record allows that is missing from `scopes` as releasing no claims, so an app-defined scope such as `data:<namespace>:read` lives only in the database and adding one does not need a rebuild.
-
-**For 0.1:** back-channel logout is done (scope.md decision 53).
 
 ### The OpenID conformance suite
 
@@ -43,7 +29,7 @@ The provider passes the Basic OP and Config OP plans; the client runs the RP tes
 
 ### Release
 
-- **What the SSO application finds next.** 0.0.1 aimed to be the last release before a breaking change (`docs/specs/packages-lifecycle.md`, "Versioning"). The items above are what the first look at the consumer found; a change building it shows the public API needs ships in the release that makes it, as a breaking change if it is one. 0.1.0 is the judgment that the SSO application builds on the package without such changes.
+- **What the SSO application finds next.** 0.0.1 aimed to be the last release before a breaking change (`docs/specs/packages-lifecycle.md`, "Versioning"). What the first look at the consumer found is built, as scope.md decisions 47 to 56 record; a change building it shows the public API needs ships in the release that makes it, as a breaking change if it is one. 0.1.0 is the judgment that the SSO application builds on the package without such changes.
 - **A changelog from 0.1.0**, opened by `hub release --cut` with the release, per `docs/specs/packages-changelog.md`.
 
 ## Later / Possible

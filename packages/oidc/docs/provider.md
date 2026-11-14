@@ -47,6 +47,7 @@ export async function createSsoProvider() {
 | `accessToken`  | How access tokens are issued: opaque, the default, or a signed JWT. See [JWT access tokens](#jwt-access-tokens).                                                       | `{ format: "opaque" }`      |
 | `endpoints`    | The URLs of the authorization, end-session, token, userinfo, JWKS and revocation endpoints. See [Endpoints](#endpoints).                                               | Paths under the issuer      |
 | `onDiagnostic` | Called with the reason each token, userinfo or revocation request is refused with an OAuth error response. See [Diagnostics](#diagnostics).                            | None                        |
+| `onRefresh`    | Asked before each refresh issues tokens, so the app can end a family whose user is no longer entitled to it. See [Re-checking a refresh](#re-checking-a-refresh).      | Every refresh is issued     |
 | `now`          | The current time in milliseconds since the Unix epoch. For tests.                                                                                                      | `Date.now`                  |
 
 `createProvider` throws `TypeError` when:
@@ -54,13 +55,13 @@ export async function createSsoProvider() {
 - The issuer is not an `https` URL of visible ASCII with no query, fragment or credentials.
 - `signingKeys` is empty, is not an array of `{ privateKey, publicKey }` pairs, pairs a private and a public key of different algorithms, gives a pair's two keys different `kid`s, or repeats a `kid`.
 - `store` is not an object, or one of its methods is not a function. The message names the first missing method, such as `store.findClient`.
-- `claims` is not a function, or `now` or `onDiagnostic` is given and is not a function.
+- `claims` is not a function, or `now`, `onDiagnostic` or `onRefresh` is given and is not a function.
 - `accessToken` is not `{ format: "opaque" }` or `{ format: "jwt", audience }`, or its `audience` is missing, empty or not well-formed Unicode. The message names `accessToken.format` or `accessToken.audience`.
 - A lifetime is outside its range, an endpoint is not an `https` URL, two endpoints share an origin and path, or `scopes` breaks the rules under [Scopes](#scopes).
 
 ### Signing keys
 
-Every public key in the list is published at the JWKS endpoint, so a key that is no longer used to sign stays verifiable while tokens it signed are still in circulation. To rotate, put the new pair before the old pair of the same algorithm, and keep the old pair after it until the ID tokens it signed have expired. That is the longest ID token lifetime in force while it signed, the provider's `ttl.idToken` or one a client sets in its own `ttl`, including one since lowered, after the last of them was issued. Both keys of a pair carry the same `kid`, and the `kid` appears in each ID token's header, so a relying party can find the right key.
+Every public key in the list is published at the JWKS endpoint, so a key that is no longer used to sign stays verifiable while tokens it signed are still in circulation. To rotate, put the new pair before the old pair of the same algorithm, and keep the old pair after it until the ID tokens it signed have expired. That is the longest ID token lifetime in force while it signed, the provider's `ttl.idToken` or one a client sets in its own `ttl`, including one since lowered, after the last of them was issued. Both keys of a pair carry the same `kid`, and the `kid` appears in each ID token's header, so a relying party can find the right key. [Changing configuration](#changing-configuration) has the order of the rebuilds and how long to keep the old pair.
 
 Which pair signs a client's ID tokens depends on the client:
 
@@ -92,7 +93,7 @@ Use one algorithm per pair. The provider publishes the algorithms of all its key
 
 ### Claims
 
-`claims` is called by the userinfo endpoint, once per request, with what the access token grants:
+`claims` is called by the userinfo endpoint, once per request, and for a client with [`idTokenClaims`](#scope-claims-in-the-id-token), once per ID token, with what the access token grants:
 
 ```ts
 // The argument is a ClaimsRequest.
@@ -108,6 +109,28 @@ It returns an object, or a promise of one, with the claims about the user. The p
 
 If `claims` throws or rejects, the userinfo request rejects with the same error, so `handle` rejects too. The app's request handler must catch it, since the package does not turn a store or callback failure into a response. See [Store](store.md#errors).
 
+### Scope claims in the ID token
+
+By default an ID token carries only protocol claims, and the scope claims are released at userinfo, which is where OpenID Connect Core §5.4 puts them when the response also yields an access token. Some relying parties never call userinfo and read only the ID token: the Kubernetes API server's OIDC authenticator, and many "Sign in with" integrations that expect `email` there. A client's record opts in with `idTokenClaims: true`:
+
+```ts
+import type { ClientRecord } from "@codenhub/oidc/provider";
+
+export const kubernetes: ClientRecord = {
+  clientId: "kubernetes",
+  redirectUris: ["http://localhost:8000"],
+  scopes: ["openid", "email", "profile"],
+  auth: { method: "none" },
+  idTokenClaims: true,
+};
+```
+
+Every ID token issued to that client then also carries the claims its granted scopes release: the code exchange, and every refresh for the scopes that refresh issues. They come from the same [`claims`](#claims) callback, once per ID token, with the same filtering as userinfo, so the callback receives the same `ClaimsRequest`, a claim outside the scopes' names is dropped, and a scope the provider does not define releases nothing. The callback's errors behave as at userinfo: a throw or rejection makes `handle` reject, and a result that is not an object is a `TypeError`. The `client_credentials` grant issues no ID token. Userinfo is unchanged.
+
+The provider's own claims always win. A returned claim named `iss`, `sub`, `aud`, `exp`, `iat`, `auth_time`, `nonce`, `acr`, `amr`, `azp`, `at_hash`, `c_hash`, `sid`, `jti`, `nbf`, `events` or `cnf` is dropped, whether or not the token carries that claim, so a callback cannot forge a `nonce` or `sid` that the grant did not have.
+
+Think before turning it on. The claims then travel in a token the client may log, keep in a cookie, or pass to other services, where at userinfo they sit behind an access token. A refresh adds one `claims` call, and an ID token for a user with many claims grows with them. Set it only for a client that needs it, and give that client only the scopes it uses. `idTokenClaims` must be a boolean when given; the provider throws `TypeError` when it reads a record that has anything else. See [Store](store.md#client-records).
+
 ### Scopes
 
 The standard scopes release these claims, and a client may request them when its record lists them:
@@ -121,7 +144,7 @@ The standard scopes release these claims, and a client may request them when its
 
 `openid` and `offline_access` are protocol scopes. They release no claims and cannot be given claims of their own. `openid` is required for every sign-in, and `offline_access` is what makes the provider issue a refresh token.
 
-The `scopes` option adds scopes, each mapped to the claim names it releases. A scope with the same name as a standard one replaces it. Each key must be a scope token, and not `openid` or `offline_access`, and each claim name must be a non-empty string other than `sub`. A request for a scope the provider does not define, or one the client's record does not list, is refused. See [Authorization](#the-authorization-step).
+The `scopes` option adds scopes, each mapped to the claim names it releases. A scope with the same name as a standard one replaces it. Each key must be a scope token, and not `openid` or `offline_access`, and each claim name must be a non-empty string other than `sub`. What a client may request is what its record lists: a scope that the record lists and this option does not define is accepted and releases no claims, so an app-defined scope such as `data:<namespace>:read` can live only in the database, with no change to the provider's options and no rebuild. It still must be a scope token (RFC 6749 §3.3), and `openid` is still required for a sign-in. A request for a scope the client's record does not list is refused. This holds at authorization, for a refresh `scope`, and for `client_credentials`. Discovery's `scopes_supported` lists only the scopes this option and the standard ones define, so a scope that only a client record holds is not advertised. See [Authorization](#the-authorization-step).
 
 ### Lifetimes
 
@@ -156,7 +179,7 @@ Each value is an absolute `https` URL of visible ASCII (no spaces, control or no
 
 `provider.metadata` is the discovery document, frozen. Every value comes from the options, so it cannot drift from what the endpoints enforce:
 
-- `issuer`, the endpoint URLs (`end_session_endpoint` among them), and `scopes_supported`, which lists every scope the provider knows.
+- `issuer`, the endpoint URLs (`end_session_endpoint` among them), and `scopes_supported`, which lists the scopes the provider defines: the standard ones and those of the `scopes` option, not a scope that only a client record lists.
 - `response_types_supported`: `["code"]`. `response_modes_supported`: `["query"]`.
 - `grant_types_supported`: `["authorization_code", "refresh_token", "client_credentials"]`. `subject_types_supported`: `["public"]`.
 - `id_token_signing_alg_values_supported`: the algorithms of every published key.
@@ -165,6 +188,25 @@ Each value is an absolute `https` URL of visible ASCII (no spaces, control or no
 - `code_challenge_methods_supported`: `["S256"]`. `authorization_response_iss_parameter_supported`: `true`.
 - `backchannel_logout_supported` and `backchannel_logout_session_supported`: `true`. See [Back-channel logout](#back-channel-logout).
 - `claims_parameter_supported`, `request_parameter_supported` and `request_uri_parameter_supported`: `false`, because the package does not implement them.
+
+### Changing configuration
+
+A provider's options are fixed when it is created. To change one, such as adding a signing key, a scope, a lifetime or `onRefresh`, create a new provider with the new options and route requests to it. Rebuilding is cheap and safe:
+
+- `createProvider` is synchronous. It validates the options and does no I/O: it makes no store call, no `fetch`, and does not call `claims`. Keys are exported to JWK on the first JWKS request, not at creation.
+- The provider keeps no state of its own. Codes, interactions, access tokens, refresh tokens and revocations all live in the store, and the signing keys and issuer come from the options. A provider built anew over the same store and keys accepts the codes, refresh tokens and access tokens the previous instance issued, completes an interaction it began, and still sees a code that instance spent as a replay.
+
+So a long-running server can rebuild when its configuration changes and swap the new provider in, and a Cloudflare Workers app can build one per request from its bindings. Each Worker isolate holds its own instance, so a change is visible only once every isolate has rebuilt: until then, requests may be answered by a provider with the old options. Plan a rotation, below, with that gap in mind. Options that are read from the client's record, rather than from the options, take effect at once with no rebuild: a client's `scopes`, `ttl`, `idTokenClaims` and `grantTypes` among them. That includes an app-defined scope that appears in no `scopes` option, as [Scopes](#scopes) explains.
+
+#### Rotating a signing key
+
+The order of `signingKeys` is the rotation. Do it in three rebuilds, each live in every instance before the next starts:
+
+1. Add the new pair second: `[old, new]`. The JWKS now publishes both, and `old` still signs. Relying parties and resource servers that cache the JWKS can learn the new key before any token carries it. Wait at least as long as they may cache it: the provider's JWKS response allows five minutes, and a library may keep it longer, but it also refetches on an unknown `kid`.
+2. Put the new pair first: `[new, old]`. New tokens are signed with `new`, and a token that `old` signed still verifies, since `old` is still published.
+3. Drop the old pair: `[new]`, once nothing signed by `old` can still be in use.
+
+Keep the retired key until the longest-lived token it signed has expired. That is the longest ID token lifetime and, with `accessToken: { format: "jwt" }`, the longest JWT access token lifetime, counted from step 2. Read the longest from the provider's `ttl.idToken` and `ttl.accessToken` and from the `ttl` of every client record, since a client's own lifetime may exceed the provider's. A relying party that verifies an ID token on arrival needs less, but one that keeps it and verifies it later, or a logout `id_token_hint` (which accepts an expired token signed by a published key), needs the key for as long as it holds the token. Removing the key early makes those tokens fail verification.
 
 ## Routing requests with handle
 
@@ -252,7 +294,7 @@ The checks run in this order, and the first failure is the one reported. Failure
 | No `request`, `request_uri` or `registration` parameter is present.                                                                                    | `request_not_supported`, `request_uri_not_supported` or `registration_not_supported`           | Redirect   |
 | `response_type` is present and is `code`.                                                                                                              | `invalid_request` with path `["response_type"]` when missing, else `unsupported_response_type` | Redirect   |
 | `response_mode`, when present, is `query`.                                                                                                             | `invalid_request`, path `["response_mode"]`                                                    | Redirect   |
-| `scope` contains `openid`, and every scope is one the provider defines and the client may request.                                                     | `invalid_scope`                                                                                | Redirect   |
+| `scope` contains `openid`, and every scope is a scope token that the client's record lists.                                                            | `invalid_scope`                                                                                | Redirect   |
 | `code_challenge` is present and has the shape of an S256 challenge. A client with [`requirePkce: false`](#clients-that-send-no-pkce) may leave it out. | `invalid_request`, path `["code_challenge"]`                                                   | Redirect   |
 | `code_challenge_method` is `S256`. `plain` is refused.                                                                                                 | `invalid_request`, path `["code_challenge_method"]`                                            | Redirect   |
 | A client with `requirePkce: false` that sent no `code_challenge` sent a non-empty `nonce`.                                                             | `invalid_request`, path `["nonce"]`                                                            | Redirect   |
@@ -548,22 +590,56 @@ On success the provider starts a grant, and issues:
 
 - An access token: by default an opaque random value that only its digest is stored under, or a JWT under [`accessToken`](#jwt-access-tokens). It lasts `ttl.accessToken` seconds.
 - A refresh token, only when the granted scopes include `offline_access`. Its family lasts `ttl.refreshToken` seconds from this exchange.
-- An ID token, signed with the signing key chosen for the client (see [Signing keys](#signing-keys)). Its claims are `iss`, `sub`, `aud` (the client identifier), `iat`, `exp` (`ttl.idToken` after `iat`), `auth_time`, and `amr` and `acr` when the grant had them, `nonce` when the authorization request had one, and `at_hash` for the access token. It also carries `sid` when the grant has a `sessionId`, and refreshes repeat it. Its header is `typ: JWT` and the key's `alg` and `kid`. An ID token carries no scope claims, which are released at userinfo.
+- An ID token, signed with the signing key chosen for the client (see [Signing keys](#signing-keys)). Its claims are `iss`, `sub`, `aud` (the client identifier), `iat`, `exp` (`ttl.idToken` after `iat`), `auth_time`, and `amr` and `acr` when the grant had them, `nonce` when the authorization request had one, and `at_hash` for the access token. It also carries `sid` when the grant has a `sessionId`, and refreshes repeat it. Its header is `typ: JWT` and the key's `alg` and `kid`. An ID token carries no scope claims, which are released at userinfo, unless the client's record sets [`idTokenClaims`](#scope-claims-in-the-id-token).
 
 ### Refresh tokens
 
 A request for `refresh_token` must carry `refresh_token`, or it is `invalid_request`. Each refresh token is single-use, and rotation replaces it:
 
-1. The `scope` parameter, when given, must name only scopes the provider defines and the client may request, and it must include `openid`. Otherwise `invalid_scope`, and the token is not spent.
+1. The `scope` parameter, when given, must name only scopes the client's record lists, and it must include `openid`. Otherwise `invalid_scope`, and the token is not spent.
 2. The token is spent atomically with `consumeRefreshToken`. An unknown or revoked token is `invalid_grant`, and it is not spent.
 3. A token that was already spent is a **reuse**. The provider revokes the family, so the access tokens and refresh tokens issued from that sign-in stop working, and returns `invalid_grant`.
 4. Otherwise the token is spent, and it must be unexpired and issued to this client. Otherwise `invalid_grant`.
-5. The `scope` parameter, when given, must be a subset of the family's scopes. Otherwise `invalid_scope`. When it is omitted, the access token has every scope the family holds.
-6. A new access token is issued, and a new refresh token that replaces the spent one. The new refresh token keeps the family's original scopes and its original expiry, so rotation neither widens the family nor extends it. An ID token is issued too, without a nonce, and with the `sid` the family carries.
+5. The `scope` parameter, when given, must be a subset of the family's scopes. Otherwise `invalid_scope`. When it is omitted, the access token has every scope the family holds that the client's record still lists. A scope removed from the record stops being issued on the client's next refresh, and listing it again restores it on the one after, since the family keeps its scopes. The record of a client that refreshes must list `openid`, and one that does not is a `TypeError` read before the token is spent, so narrowing never drops `openid`. Removing `offline_access` from the record drops it from the issued `scope` but still rotates the refresh token, as a request that leaves it out does; to stop the family, revoke its grant or refuse it in `onRefresh`.
+6. When the app set [`onRefresh`](#re-checking-a-refresh), it is asked. A `false` answer is `invalid_grant`, and it revokes the family.
+7. A new access token is issued, and a new refresh token that replaces the spent one. The new refresh token keeps the family's original scopes and its original expiry, so rotation neither widens the family nor extends it. An ID token is issued too, without a nonce, and with the `sid` the family carries.
 
-The response has the same shape as the code exchange, with `scope` set to the scopes of the new access token.
+The response has the same shape as the code exchange, with `scope` set to the scopes of the new access token, so a client sees a narrowed scope (RFC 6749 §5.1).
 
-A refresh token that is spent by a request for a scope its family does not hold is gone: the provider does not issue a new one, and the client must sign the user in again. The same is true of a refresh token that a different client presents, which is refused after it has been spent. Both checks need the token's record, and the store reads it only by spending it. A scope the provider or the client does not know is refused before the token is spent.
+### Re-checking a refresh
+
+A refresh token stays valid until its family expires, 30 days by default, so a user who is disabled, loses a role, or revokes consent keeps refreshing until then. The `onRefresh` option closes that gap. The provider calls it on every refresh, after the token is spent and every check on its record passes, just before it issues tokens:
+
+```ts
+import { createProvider, type ProviderOptions } from "@codenhub/oidc/provider";
+
+declare const options: ProviderOptions; // the options shown above
+declare function isEntitled(subject: string, clientId: string, scopes: readonly string[]): Promise<boolean>;
+declare function isSessionLive(sessionId: string): Promise<boolean>;
+
+export const provider = createProvider({
+  ...options,
+  onRefresh: async ({ subject, clientId, scopes, sessionId }) => (await isEntitled(subject, clientId, scopes)) && (sessionId === undefined || (await isSessionLive(sessionId))),
+});
+```
+
+The argument is a frozen `RefreshCheck`:
+
+- `subject` and `clientId`: the user the family was issued to, and the client that is refreshing.
+- `scopes`: what this refresh will issue, the request's `scope` or, when it sent none, the family's scopes that the client's record still lists.
+- `grantId`: the family's grant.
+- `sessionId`: the app's session the grant was issued during, absent when `completeAuthorization` was given none. Checking it also covers the app's session revocation.
+
+The answer decides what happens:
+
+- `true` issues tokens as it would without the option.
+- `false` answers `invalid_grant`, calls `store.revokeGrant(grantId)` so the whole family ends, and reports `refresh_refused` to [`onDiagnostic`](#diagnostics). The client signs the user in again.
+- Anything other than a boolean makes `handle` reject with `TypeError`.
+- An exception, or a rejected promise, makes `handle` reject with that error, as a store failure does, and revokes nothing. The refresh token was already spent, so the client's next attempt with it is a reuse and revokes the family anyway: keep the check from failing on a transient outage, or answer `false` on purpose.
+
+The callback is not called for a code exchange, which is the sign-in itself, nor for a request refused before this step. An access token already issued stays usable until it expires when it is a JWT, as [JWT access tokens](#jwt-access-tokens) says.
+
+A refresh token that is spent by a request for a scope its family does not hold is gone: the provider does not issue a new one, and the client must sign the user in again. The same is true of a refresh token that a different client presents, which is refused after it has been spent. Both checks need the token's record, and the store reads it only by spending it. A `scope` that names a scope the client's record does not list or that is not a scope token, or that leaves out `openid`, is refused before the token is spent, whether or not the provider's `scopes` option defines it.
 
 ### Client credentials
 
@@ -571,8 +647,10 @@ A client may ask for a token for itself with `grant_type=client_credentials` (RF
 
 The client authenticates as at any token request, and its `scope` parameter is read as follows:
 
-- Absent: every scope in the client's record that the provider defines, except `openid` and `offline_access`.
-- Present: each scope must be defined by the provider and listed in the client's record, and must not be `openid` or `offline_access`.
+- Absent: every scope in the client's record, except `openid` and `offline_access`.
+- Present: each scope must be listed in the client's record, and must not be `openid` or `offline_access`.
+
+Whether the provider's [`scopes`](#scopes) option defines a scope does not matter here: a scope that only the record lists is issued, and it releases no claims.
 
 A scope that breaks these rules, or an empty result, is `invalid_scope` with status `400`.
 
@@ -743,13 +821,13 @@ Each diagnostic is a frozen object with these members:
 
 The reasons, grouped as in the provider's types:
 
-| Group                                   | Reasons                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
-| --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| The request, before the client is known | `content_type`, `body`, `parameters`                                                                                                                                                                                                                                                                                                                                                                                                                          |
-| Client authentication                   | `client_credentials_missing`, `client_credentials_ambiguous`, `client_credentials_malformed`, `client_unknown`, `client_method_mismatch`, `client_credentials_wrong`                                                                                                                                                                                                                                                                                          |
-| The token request                       | `grant_type_missing`, `grant_type_unsupported`, `grant_type_unauthorized`, `parameter_missing`, `code_verifier_malformed`, `code_verifier_missing`, `code_verifier_unexpected`, `code_unknown`, `code_replayed`, `code_expired`, `code_client_mismatch`, `redirect_uri_mismatch`, `code_verifier_mismatch`, `scope_invalid`, `refresh_token_unknown`, `refresh_token_replayed`, `refresh_token_expired`, `refresh_token_client_mismatch`, `scope_not_granted` |
-| Userinfo                                | `access_token_missing`, `access_token_malformed`, `access_token_unknown`, `access_token_expired`, `access_token_without_openid`                                                                                                                                                                                                                                                                                                                               |
-| Revocation                              | `token_missing`, `token_of_another_client`                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| Group                                   | Reasons                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| --------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| The request, before the client is known | `content_type`, `body`, `parameters`                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| Client authentication                   | `client_credentials_missing`, `client_credentials_ambiguous`, `client_credentials_malformed`, `client_unknown`, `client_method_mismatch`, `client_credentials_wrong`                                                                                                                                                                                                                                                                                                             |
+| The token request                       | `grant_type_missing`, `grant_type_unsupported`, `grant_type_unauthorized`, `parameter_missing`, `code_verifier_malformed`, `code_verifier_missing`, `code_verifier_unexpected`, `code_unknown`, `code_replayed`, `code_expired`, `code_client_mismatch`, `redirect_uri_mismatch`, `code_verifier_mismatch`, `scope_invalid`, `refresh_token_unknown`, `refresh_token_replayed`, `refresh_token_expired`, `refresh_token_client_mismatch`, `scope_not_granted`, `refresh_refused` |
+| Userinfo                                | `access_token_missing`, `access_token_malformed`, `access_token_unknown`, `access_token_expired`, `access_token_without_openid`                                                                                                                                                                                                                                                                                                                                                  |
+| Revocation                              | `token_missing`, `token_of_another_client`                                                                                                                                                                                                                                                                                                                                                                                                                                       |
 
 The callback is called once for each refusal that is answered with an OAuth error response, after the response is built and before `handle` resolves. A `405` for a method the endpoint does not accept, and an `OPTIONS` preflight, are not reported. Authorization failures are not reported either, since `beginAuthorization` and `completeAuthorization` return their issues. The diagnostic never holds a value the request carried: no token, code, verifier, secret or redirect URI.
 

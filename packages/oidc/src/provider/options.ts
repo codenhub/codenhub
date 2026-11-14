@@ -1,7 +1,14 @@
 import type { KeyPair, PublicKey } from "@codenhub/jwt";
 
 import { isHttpsUrl } from "../shared/urls";
-import type { AccessTokenFormat, ClaimsRequest, OidcStore, ProviderDiagnostic, ProviderOptions } from "./types";
+import type {
+  AccessTokenFormat,
+  ClaimsRequest,
+  OidcStore,
+  ProviderDiagnostic,
+  ProviderOptions,
+  RefreshCheck,
+} from "./types";
 
 /** Claims each standard scope releases (OpenID Connect Core §5.4). */
 const STANDARD_SCOPE_CLAIMS: Readonly<Record<string, readonly string[]>> = {
@@ -30,7 +37,7 @@ const STANDARD_SCOPE_CLAIMS: Readonly<Record<string, readonly string[]>> = {
 export const PROTOCOL_SCOPES: readonly string[] = ["openid", "offline_access"];
 
 /** A scope token (RFC 6749 §3.3): printable ASCII except space, `"` and `\`. */
-const SCOPE_TOKEN = /^[\x21\x23-\x5B\x5D-\x7E]+$/;
+export const SCOPE_TOKEN = /^[\x21\x23-\x5B\x5D-\x7E]+$/;
 
 const SECONDS_PER_DAY = 86_400;
 
@@ -101,6 +108,7 @@ export interface ResolvedOptions {
   /** Current time in seconds since the Unix epoch, truncated to whole seconds. */
   readonly now: () => number;
   readonly onDiagnostic: ((diagnostic: ProviderDiagnostic) => void) | undefined;
+  readonly onRefresh: ((request: RefreshCheck) => boolean | Promise<boolean>) | undefined;
 }
 
 const STORE_METHODS = [
@@ -300,6 +308,9 @@ export function resolveOptions(options: ProviderOptions): ResolvedOptions {
   if (options.onDiagnostic !== undefined && typeof options.onDiagnostic !== "function") {
     fail("onDiagnostic", "must be a function");
   }
+  if (options.onRefresh !== undefined && typeof options.onRefresh !== "function") {
+    fail("onRefresh", "must be a function");
+  }
   const clock = options.now ?? Date.now;
   return Object.freeze({
     issuer,
@@ -314,5 +325,6 @@ export function resolveOptions(options: ProviderOptions): ResolvedOptions {
     accessToken: readAccessTokenFormat(options.accessToken),
     now: () => Math.floor(clock() / 1000),
     onDiagnostic: options.onDiagnostic,
+    onRefresh: options.onRefresh,
   });
 }

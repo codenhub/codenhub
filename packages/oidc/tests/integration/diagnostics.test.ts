@@ -72,6 +72,24 @@ describe("onDiagnostic", () => {
     expect(seen.every((diagnostic) => diagnostic.clientId === PUBLIC_CLIENT && diagnostic.status === 400)).toBe(true);
   });
 
+  it("reports a refresh the app's onRefresh refused, and the family stops working", async () => {
+    const refusing = await setUpProvider({
+      onRefresh: () => false,
+      onDiagnostic: (diagnostic) => {
+        seen.push(diagnostic);
+      },
+    });
+    const issued = await issueTokens(refusing);
+
+    const response = await redeem(refusing, refreshForm(issued.tokens.refresh_token ?? "", PUBLIC_CLIENT));
+
+    expect(response.status).toBe(400);
+    expect(await response.json()).toEqual({ error: "invalid_grant" });
+    expect(seen).toEqual([{ endpoint: "token", reason: "refresh_refused", status: 400, clientId: PUBLIC_CLIENT }]);
+    const userinfo = await answer(refusing.provider, userinfoRequest(issued.tokens.access_token));
+    expect(userinfo.status).toBe(401);
+  });
+
   it("reports a refresh token replay", async () => {
     const issued = await issueTokens(setup);
     const refreshToken = issued.tokens.refresh_token ?? "";

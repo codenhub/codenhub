@@ -1,7 +1,7 @@
 import type { AsymmetricAlgorithm } from "@codenhub/jwt";
 
 import { isHttpsUrl, isRedirectUri } from "../shared/urls";
-import { CLIENT_TTL_NAMES, describeTtlRange, isTtlInRange, type ResolvedTtl } from "./options";
+import { CLIENT_TTL_NAMES, describeTtlRange, isTtlInRange, type ResolvedTtl, SCOPE_TOKEN } from "./options";
 import type { ClientRecord, GrantType } from "./types";
 
 /** Every algorithm a signing key may have; a `Record`, so a new `@codenhub/jwt` algorithm fails to compile here. */
@@ -106,6 +106,9 @@ export function checkClientRecord(
   if (requirePkce !== undefined && typeof requirePkce !== "boolean") {
     return invalid("must give requirePkce, when present, as a boolean");
   }
+  if (record.idTokenClaims !== undefined && typeof record.idTokenClaims !== "boolean") {
+    return invalid("must give idTokenClaims, when present, as a boolean");
+  }
   if (requirePkce === false && auth.method === "none") {
     return invalid("must not turn requirePkce off for a client whose auth.method is none");
   }
@@ -152,6 +155,14 @@ function checkTtl(ttl: unknown): void {
     }
   }
 }
+
+/**
+ * Whether a request may ask `client` for `scope`: it is a scope token (RFC 6749 §3.3) the client's record lists.
+ * What the provider's `scopes` option defines does not matter here: a scope the record allows and the option lacks
+ * is accepted and releases no claims, so an app-defined scope can live only in the database.
+ */
+export const isScopeOfClient = (client: Pick<ClientRecord, "scopes">, scope: string): boolean =>
+  SCOPE_TOKEN.test(scope) && client.scopes.includes(scope);
 
 /** The lifetimes for tokens of `client`: its own where its record sets them, the provider's otherwise. */
 export function lifetimesOf(provider: ResolvedTtl, client: ClientRecord): ResolvedTtl {
