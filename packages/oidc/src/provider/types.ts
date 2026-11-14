@@ -545,9 +545,10 @@ export interface ProviderOptions {
    * `handle` reject with its error, as a synchronous throw does.
    *
    * The second argument is the same `Request` object `handle` was given, for the details an audit log records,
-   * such as the client's address or user agent from its headers. The token and revocation endpoints have read
-   * its body by then, so reading it again rejects; userinfo reads none. Its `authorization` header and its body
-   * carry the client's secret and tokens, so never log either.
+   * such as the client's address or user agent from its headers. A token or revocation request refused after its
+   * body was read rejects a second read; one refused for its content type still has its body unread, and userinfo
+   * reads none, so do not rely on the body. Its `authorization` header and its body carry the client's secret and
+   * tokens, so never log either, nor the URL's query, which the client wrote; log chosen headers and the path.
    */
   readonly onDiagnostic?: (diagnostic: ProviderDiagnostic, request: Request) => void;
   /**

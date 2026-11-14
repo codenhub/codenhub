@@ -141,6 +141,8 @@ describe("onDiagnostic", () => {
 
     expect(requests).toHaveLength(3);
     expect(requests[0]).toBe(token);
+    // A content-type refusal comes before the body is read.
+    expect(requests[0]?.bodyUsed).toBe(false);
     expect(requests[1]).toBe(userinfo);
     expect(requests[2]).toBe(revocation);
     expect(requests[2]?.headers.get("user-agent")).toBe("audit-test");
