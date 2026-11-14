@@ -116,11 +116,15 @@ jobs:
         run: |
           packages="$(pnpm --silent hub list --json | node -e '
             const { readFileSync } = require("node:fs");
-            const floor = Number(readFileSync(".node-floor", "utf8").trim().split(".")[0]);
             const listed = JSON.parse(readFileSync(0, "utf8"));
+            // Parsed as hub check parses it (engines-rules.ts): a "v" prefix and surrounding space are allowed.
+            const floor = Number(/^v?(\d+)/.exec(readFileSync(".node-floor", "utf8").trim())?.[1]);
+            if (!Number.isInteger(floor)) {
+              throw new Error(".node-floor must hold one Node.js version.");
+            }
             const onFloor = listed.filter(({ isPrivate, location }) => {
               const range = JSON.parse(readFileSync(`${location}/package.json`, "utf8")).engines?.node;
-              return !isPrivate && Number(/^>=\s*(\d+)/.exec(range ?? "")?.[1]) === floor;
+              return !isPrivate && Number(/^>=\s*(\d+)/.exec(String(range ?? "").trim())?.[1]) === floor;
             });
             console.log(onFloor.map(({ location }) => location).join(" "));
           ')"
