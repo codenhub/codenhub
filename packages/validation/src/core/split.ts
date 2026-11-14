@@ -28,7 +28,9 @@ export function split<TOptions extends MessageOptions, T>(
   ) {
     // A mistake in the schema, reported now rather than on the first input. One condition and one text,
     // since every validator carries them.
-    throw new TypeError("Options must be an object whose message is text or a function, and checks made with check()");
+    throw new TypeError(
+      "Options must be an object whose message is text or a function, and checks made with check() by this copy of the package",
+    );
   }
   // Splitting no names gives one empty name, which no option is.
   const names = `message ${known}`.split(" ");

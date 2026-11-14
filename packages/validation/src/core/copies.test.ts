@@ -41,17 +41,19 @@ suite("a validator another copy of the package made", () => {
     expect(() => later(1)).toThrow(REFUSED);
   });
 
-  it("should have its checks refused too", async () => {
+  it("should have its checks refused too, with an error naming the copy", async () => {
     const other = await otherCopy();
 
-    expect(() => here.string(other.startsWith("a"))).toThrow("checks made with check()");
-    expect(() => here.string(other.check((value: string) => value === "a"))).toThrow("checks made with check()");
+    expect(() => here.string(other.startsWith("a"))).toThrow("checks made with check() by this copy of the package");
+    expect(() => here.string(other.check((value: string) => value === "a"))).toThrow(
+      "checks made with check() by this copy of the package",
+    );
     expect(() =>
       here.object(
         { a: here.string() },
         other.checkFields<{ a: string }, "a">(["a"], () => true),
       ),
-    ).toThrow("checks made with check()");
+    ).toThrow("checks made with check() by this copy of the package");
   });
 
   it("should not be reshaped or written back, whose parts would run in the other copy", async () => {
