@@ -1,6 +1,6 @@
 ---
 status: IMPLEMENTED
-last_updated: 2026-10-17
+last_updated: 2026-11-14
 scope: How `@codenhub/oidc` is built and why, for whoever changes it next.
 ---
 
@@ -61,7 +61,7 @@ The validated request is saved through `saveInteraction` under the digest of a r
 
 Order of checks, cheapest and least trusting first: method, content type, body size, parameter parsing (duplicates refused, except `resource`), client authentication, grant type, then the grant. Client authentication finds exactly one presented method (Basic header, `client_secret` in the body, a client assertion, or nothing) and requires it to be the registered one; the presented credential is then checked against the record: a secret by comparing SHA-256 digests in constant time, an assertion with `@codenhub/jwt`'s verifier with the client as issuer and the issuer or token endpoint as audience.
 
-Resource indicators (decision 59) follow the scope's path. `parseParameters` collects a repeatable name into a list of its own, which only `resource` is, at authorization and at the token endpoint. The client's `resources` is checked before a code or refresh token is consumed, and the grant's after, as decision 20 orders the scope checks. The resources travel from the interaction to the code and refresh token records, and the access token record keeps the audience it was issued for, so a check of the audience never parses a token.
+Resource indicators (decision 59) follow the scope's path. `parseParameters` collects a repeatable name into a list of its own, which only `resource` is, at authorization and at the token endpoint. The client's `resources` is checked before a code or refresh token is consumed, and the grant's after, as decision 20 orders the scope checks. A refresh that names none is for the family's resources the client's record still lists, as for scopes. The resources travel from the interaction to the code and refresh token records, and the access token record keeps the audience it was issued for, so a check of the audience never parses a token.
 
 The client credentials grant consumes nothing: it checks the requested scopes, then issues an access token whose subject is the client, under a new grant of its own, with no ID token or refresh token.
 
