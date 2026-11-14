@@ -638,7 +638,7 @@ The answer decides what happens:
 
 The callback is not called for a code exchange, which is the sign-in itself, nor for a request refused before this step. An access token already issued stays usable until it expires when it is a JWT, as [JWT access tokens](#jwt-access-tokens) says.
 
-A refresh token that is spent by a request for a scope its family does not hold is gone: the provider does not issue a new one, and the client must sign the user in again. The same is true of a refresh token that a different client presents, which is refused after it has been spent. Both checks need the token's record, and the store reads it only by spending it. A scope the provider or the client does not know is refused before the token is spent.
+A refresh token that is spent by a request for a scope its family does not hold is gone: the provider does not issue a new one, and the client must sign the user in again. The same is true of a refresh token that a different client presents, which is refused after it has been spent. Both checks need the token's record, and the store reads it only by spending it. A `scope` that names a scope the client's record does not list or that is not a scope token, or that leaves out `openid`, is refused before the token is spent, whether or not the provider's `scopes` option defines it.
 
 ### Client credentials
 
