@@ -182,8 +182,24 @@ describe("authenticate", () => {
   });
 
   it.each([
-    ["another scheme", `Basic ${TOKEN}`],
+    ["Basic", `Basic ${TOKEN}`],
+    ["a scheme alone", "Digest"],
+    ["an empty header", ""],
+  ])("answers another authentication scheme, %s, as a request without a token", async (_, authorization) => {
+    const { op, store } = await setup();
+    await seed(store);
+
+    const failure = failureOf(await op.authenticate(apiRequest(authorization)));
+
+    expect(failure.reason).toBe("access_token_missing");
+    expect(failure.issues).toEqual([{ code: "invalid_token" }]);
+    expect(failure.response.status).toBe(401);
+    expect(failure.response.headers.get("www-authenticate")).toBe("Bearer");
+  });
+
+  it.each([
     ["the scheme alone", "Bearer"],
+    ["the scheme in another case with no token", "bEaReR "],
     ["two tokens", `Bearer ${TOKEN} ${TOKEN}`],
     ["a character outside b64token", `Bearer ${TOKEN}"`],
     ["padding before the end", "Bearer ab=c"],
