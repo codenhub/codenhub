@@ -395,7 +395,7 @@ return result.value.redirect ?? renderSignedOutPage();
 
 ## Back-channel logout
 
-RP-initiated logout ends the session at the provider when a client asks. Back-channel logout is the other direction: when the user signs out of the app, the app tells each client it signed the user into, server to server, so those clients can end their own sessions (OpenID Connect Back-Channel Logout 1.0). Discovery advertises it as `backchannel_logout_supported` and `backchannel_logout_session_supported`.
+With RP-initiated logout, a client asks the app to end the user's session: the provider validates the request, and the app ends its own session. Back-channel logout is the other direction: when the user signs out of the app, the app tells each client it signed the user into, server to server, so those clients can end their own sessions (OpenID Connect Back-Channel Logout 1.0). Discovery advertises it as `backchannel_logout_supported` and `backchannel_logout_session_supported`.
 
 The provider keeps no sessions and makes no outbound request, so the app does the work around it. `provider.backchannelLogout(request)` builds the logout request for one client, and the app sends it with `fetch`:
 
