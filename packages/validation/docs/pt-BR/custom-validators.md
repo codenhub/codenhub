@@ -38,7 +38,7 @@ O segundo argumento é o problema a reportar quando o teste retorna `false`:
 
 - Uma string é a mensagem dele.
 - Uma função do problema escreve o texto quando ele é reportado, como faz a mensagem de uma verificação nativa. Ela precisa retornar texto, ou o validador lança um `TypeError` ao reportar o problema.
-- Um objeto pode definir `code`, `path`, `params` e `message`. Um `path` é uma lista de chaves e índices. Qualquer outra coisa, como um texto ou um symbol, lança um `TypeError` quando a verificação é criada, assim como uma lista passada como o problema.
+- Um objeto pode definir `code`, `path`, `params` e `message`. Um `path` é uma lista de chaves e índices, e um `path` de texto ou que contém um symbol lança um `TypeError` quando a verificação é criada. O mesmo vale para uma lista passada como o problema.
 
 Sem código, o problema tem o código `custom`, no próprio local do valor. Um problema sem mensagem própria é descrito pela opção `message` do validador que recebe a verificação, quando ele tem uma. Caso contrário, só resta o código, e `formatIssue` diz "Invalid value". Então dê uma mensagem à verificação sempre que pessoas forem ler o que ela reporta.
 

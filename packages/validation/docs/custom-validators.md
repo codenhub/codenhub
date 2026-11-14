@@ -37,7 +37,7 @@ The second argument is the issue to report when the test returns `false`:
 
 - A string is its message.
 - A function of the issue words it when it is reported, as the message of a built-in check does. It must return text, or the validator throws a `TypeError` when it reports the issue.
-- An object can set a `code`, `path`, `params` and `message`. A `path` is a list of keys and indexes. Anything else, such as text or a symbol, throws a `TypeError` when the check is made, and so does a list given as the issue.
+- An object can set a `code`, `path`, `params` and `message`. A `path` is a list of keys and indexes, and a path of text or one holding a symbol throws a `TypeError` when the check is made. So does a list given as the issue.
 
 Without a code, the issue has code `custom`, at the value's own location. An issue without a message of its own is worded by the `message` option of the validator the check is given to, when it has one. Otherwise only its code is left, and `formatIssue` says "Invalid value". So give a check a message wherever people read what it reports.
 

@@ -38,7 +38,7 @@ El segundo argumento es el problema que se reporta cuando la prueba devuelve `fa
 
 - Una cadena es su mensaje.
 - Una función del problema lo redacta en el momento en que se reporta, como hace el mensaje de una verificación integrada. Debe devolver texto; si no, el validador lanza un `TypeError` al reportar el problema.
-- Un objeto puede definir `code`, `path`, `params` y `message`. Un `path` es una lista de claves e índices. Cualquier otra cosa, como texto o un símbolo, lanza un `TypeError` cuando se crea la verificación, y también una lista pasada como el problema.
+- Un objeto puede definir `code`, `path`, `params` y `message`. Un `path` es una lista de claves e índices, y un `path` de texto o que contiene un símbolo lanza un `TypeError` cuando se crea la verificación. También lo lanza una lista pasada como el problema.
 
 Sin código, el problema tiene el código `custom`, en la ubicación del propio valor. Un problema sin mensaje propio lo redacta la opción `message` del validador al que se pasa la verificación, si la tiene. Si no, solo queda su código, y `formatIssue` dice "Invalid value". Así que dale un mensaje a una verificación siempre que haya personas que lean lo que reporta.
 
