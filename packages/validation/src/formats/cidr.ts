@@ -1,8 +1,7 @@
-import { split } from "../core/checks";
-import { described } from "../core/describe";
+import { split } from "../core/split";
 import type { Factory } from "../core/types";
 import { toIpAddress, type IpOptions } from "./ip";
-import { stringFormat } from "./text-format";
+import { formatted, stringFormat } from "./text-format";
 
 /** A prefix length in decimal without leading zeros. */
 const PREFIX_PATTERN = /^(?:0|[1-9]\d{0,2})$/;
@@ -42,7 +41,7 @@ export const cidr = ((...args: unknown[]) => {
   if (version !== undefined && version !== "v4" && version !== "v6") {
     throw new TypeError(`version must be "v4" or "v6", received "${String(version)}"`);
   }
-  return described(
+  return formatted(
     stringFormat(version === undefined ? "cidr" : `cidr${version}`, (text) => toCidr(text, version), message, checks),
     { kind: "format", format: "cidr", options, checks },
   );

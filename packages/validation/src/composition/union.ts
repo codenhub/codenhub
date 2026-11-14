@@ -1,8 +1,9 @@
-import { chain, isThenable, type Maybe } from "../core/async";
-import { tail } from "../core/checks";
-import { described } from "../core/describe";
-import { composed, fastOf, MISS, type Fast } from "../core/nesting";
-import { assertFunction, assertList, isResult, issue, nested, notResult } from "../core/result";
+import { runOf, toolsOf } from "../core/child";
+import { accepter, waitsOf } from "../core/finish";
+import { toValidator } from "../core/make";
+import { assertList, nested } from "../core/result";
+import { count, cut, FAIL, report, straighten, type Draft, type Run } from "../core/run";
+import { split } from "../core/split";
 import type {
   AnyValidator,
   AsyncRest,
@@ -12,9 +13,8 @@ import type {
   InferInput,
   MessageOptions,
   Rest,
-  ValidationIssue,
-  ValidationResult,
 } from "../core/types";
+import { wordUnion } from "../core/words";
 
 /**
  * Creates a validator that accepts a value passing any one of several validators.
@@ -40,7 +40,7 @@ import type {
  * @typeParam TOptions - The validators to try, at least one.
  * @param options - The validators to try, in order.
  * @returns A validator that produces what the first accepting option produces.
- * @throws {TypeError} When `options` is not a list, is empty, or holds an option that is not a function.
+ * @throws {TypeError} When `options` is not a list, is empty, or holds an option that is not a validator of this copy of the package.
  */
 export function union<const TOptions extends readonly [AnyValidator, ...AnyValidator[]]>(
   options: TOptions,
@@ -58,60 +58,50 @@ export function union(options: readonly AnyValidator[], ...rest: unknown[]): Any
     // The types forbid it, but a union of nothing would reject every value without saying why.
     throw new TypeError("union() needs at least one option");
   }
-  tried.forEach((option, index) => assertFunction(`options[${index}]`, option));
-  const [settings, reject, accept, checks] = tail<MessageOptions, unknown>(rest);
-
-  // Valid input is answered by the first option whose fast test passes it, when every option has one. A
-  // fast test misses only where its validator fails, so that option is the first the full work accepts.
-  const fastOptions = tried.map(fastOf);
-  const fast: Fast | undefined =
-    checks.length > 0 || fastOptions.includes(undefined)
-      ? undefined
-      : (input) => {
-          for (const option of fastOptions) {
-            const value = (option as Fast)(input);
-            if (value !== MISS) {
-              return value;
-            }
+  const runs = tried.map((option, index) => runOf(option, `options[${index}]`));
+  const [settings, checks] = split<MessageOptions, unknown>(rest);
+  const { message } = settings;
+  const accept = accepter(checks, message);
+  const tools = toolsOf(runs, waitsOf(checks));
+  // Tried in a loop while the values are ready, and not by one call inside another: every option that
+  // failed would stay on the stack while the next ran, so a recursive union of twenty options overflowed
+  // it inside the default depth of `lazy`. What an option found is taken out of the validation as it
+  // fails, relative to the value, as `params.issues` holds it. `from` is where the issues of this union
+  // begin, and `found` what each option before `start` reported.
+  const attempt = (input: unknown, start: number, from: number, before?: (Draft[] | undefined)[]): unknown => {
+    // Made by the first option that fails: the first one passes most values.
+    let found = before;
+    for (let index = start; index < runs.length; index += 1) {
+      const value = (runs[index] as Run)(input);
+      if (tools !== undefined && tools.is(value)) {
+        return tools.after(from, value, (later, begin) => {
+          if (later !== FAIL) {
+            return accept(later);
           }
-          return MISS;
-        };
-
-  return described(
-    composed((input, place): Maybe<ValidationResult<unknown>> => {
-      const found: (readonly ValidationIssue[])[] = [];
-      // Tried in a loop while the results are ready, and not by one call inside another: every option that
-      // failed would stay on the stack while the next ran, so a recursive union of twenty options overflowed
-      // it inside the default depth of `lazy`. Each option is called on its own, so what it found is relative
-      // to the value, as `params.issues` holds it.
-      const attempt = (start: number): Maybe<ValidationResult<unknown>> => {
-        for (let index = start; index < tried.length; index += 1) {
-          const result = (tried[index] as AnyValidator)(input);
-          if (isThenable(result)) {
-            return chain(result, (settled) => {
-              if (!isResult(settled)) {
-                throw notResult(`options[${index}]`);
-              }
-              if (settled.ok) {
-                return accept(settled.value, place);
-              }
-              found.push(settled.error.issues.map(nested));
-              return attempt(index + 1);
-            });
-          }
-          // A mistake in the schema, such as `string` for `string()`, named by its option.
-          if (!isResult(result)) {
-            throw notResult(`options[${index}]`);
-          }
-          if (result.ok) {
-            return accept(result.value, place);
-          }
-          found.push(result.error.issues.map(nested));
-        }
-        return reject([issue("invalid_union", { issues: found })], place);
-      };
-      return attempt(0);
-    }, fast),
-    { kind: "union", options: settings, checks, members: Object.freeze(tried) },
-  );
+          const lists = (found ??= []);
+          lists.push(cut(begin));
+          return attempt(input, index + 1, begin, lists);
+        });
+      }
+      if (value !== FAIL) {
+        return accept(value);
+      }
+      const list = cut(from);
+      if (found === undefined) {
+        found = [list];
+      } else {
+        found.push(list);
+      }
+    }
+    // Written out only now, since an option that passes leaves nothing to say about the ones before it.
+    return report(
+      "invalid_union",
+      { issues: (found ?? []).map((list) => straighten(list ?? []).map(nested)) },
+      message,
+    );
+  };
+  const run: Run = (input) => attempt(input, 0, count());
+  run.w = tools;
+  // What an option found is held behind the issue of the union, so only that issue is worded.
+  return toValidator(run, { kind: "union", options: settings, checks, members: Object.freeze(tried) }, [wordUnion]);
 }

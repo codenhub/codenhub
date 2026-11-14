@@ -4,6 +4,7 @@ import type { Validator } from "../core/types";
 import { unknown } from "../primitives/unknown";
 import { domain } from "./domain";
 import { email } from "./email";
+import { internationalEmail } from "./international-email";
 import { ip } from "./ip";
 import { toAsciiHost } from "./patterns";
 import { url } from "./url";
@@ -132,8 +133,11 @@ describe("agreement with the URL parser", () => {
     expect(values.filter(unnormalized)).toEqual([]);
   });
 
-  it("email should only ever return a domain the parser writes back unchanged", () => {
-    const validate = email();
+  it.each([
+    ["email", email],
+    ["internationalEmail", internationalEmail],
+  ])("%s should only ever return a domain the parser writes back unchanged", (_name, make) => {
+    const validate = make();
     const values = accepted(
       validate,
       [...strings(11, 4000, 5)].map((noise) => `ada@ex${noise}ample.com`),
@@ -230,7 +234,7 @@ describe("agreement with the URL parser, without a host", () => {
     expect(values.filter(([, value]) => /["<>`]/.test(value))).toEqual([]);
   });
 
-  it("should only ever return mailto recipients as email() returns them", () => {
+  it("should only ever return mailto recipients as internationalEmail() returns them", () => {
     const recipients = values
       .map(([, value]) => value)
       .filter((value) => value.startsWith("mailto:"))
@@ -243,7 +247,7 @@ describe("agreement with the URL parser, without a host", () => {
         return [path, ...listed].filter((list) => list !== "").flatMap((list) => list.split(","));
       });
     expect(recipients.length).toBeGreaterThan(100);
-    const address = email();
+    const address = internationalEmail();
     expect(
       recipients.filter(
         (recipient) => valueOf(address(decodeURIComponent(recipient))) !== decodeURIComponent(recipient),

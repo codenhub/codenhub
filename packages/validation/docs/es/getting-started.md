@@ -2,7 +2,7 @@
 title: Primeros pasos
 description: Qué es un validador, cómo leer su resultado, y los validadores de cadenas, números, fechas, valores fijos y objetos.
 order: 1
-source: 00992dea16dfbcb706c35d248f777a563f7119f5
+source: 4c6087b77f6c350743d49222fbf038894b989049
 ---
 
 # Primeros pasos
@@ -324,25 +324,25 @@ Una forma solo admite claves de texto enumerables. `object` lanza un `TypeError`
 
 ### Claves que la forma no incluye
 
-La opción `unknownKeys` decide qué pasa con las propiedades de la entrada que la forma no incluye:
+`object` descarta las propiedades de la entrada que la forma no incluye. Otras tres fábricas leen un objeto plano de la misma manera y se diferencian en lo que hacen con esas propiedades:
 
-| `unknownKeys`   | Efecto                                                                                           |
-| --------------- | ------------------------------------------------------------------------------------------------ |
-| `"strip"`       | Las descarta de la salida. Es el valor predeterminado.                                           |
-| `"strict"`      | Rechaza cada una con un problema `unrecognized_key` en la ruta de la clave, y `params: { key }`. |
-| `"passthrough"` | Las copia a la salida sin cambios y sin verificar, excepto `__proto__`, que se rechaza.          |
-| Un validador    | Valida cada una con él, y conserva lo que produce.                                               |
+| Fábrica                       | Propiedades que la forma no incluye                                                                   |
+| ----------------------------- | ----------------------------------------------------------------------------------------------------- |
+| `object(shape)`               | Se descartan de la salida.                                                                            |
+| `strictObject(shape)`         | Se rechazan, cada una con un problema `unrecognized_key` en la ruta de la clave, y `params: { key }`. |
+| `looseObject(shape)`          | Se copian a la salida sin cambios y sin verificar, excepto `__proto__`, que se rechaza.               |
+| `objectWithRest(shape, rest)` | Se validan con `rest`, y se conserva lo que este produce.                                             |
 
-Cualquier otro valor, como un `"Strict"` mal escrito, lanza un `TypeError` cuando se crea el validador, en lugar de recurrir a `"strip"`.
+Cada una recibe una opción `message` y verificaciones después de sus argumentos, como `object`. Son fábricas y no una opción de `object`, así que un programa carga el código de las que usa y de ninguna otra.
 
-Un objeto passthrough rechaza `__proto__` porque una clave `__proto__` conservada se convertiría en el prototipo de cualquier copia de la salida hecha por asignación, como `Object.assign({}, output)`. El problema es `invalid_key` con un problema dentro, `invalid_value` con `{ reserved: true }`.
+Un objeto laxo rechaza `__proto__` porque una clave `__proto__` conservada se convertiría en el prototipo de cualquier copia de la salida hecha por asignación, como `Object.assign({}, output)`. El problema es `invalid_key` con un problema dentro, `invalid_value` con `{ reserved: true }`.
 
-Un validador pasado como `unknownKeys` verifica cada clave que la forma no incluye, como `record` verifica sus valores:
+`objectWithRest` verifica cada clave que la forma no incluye con el validador que recibe, como `record` verifica sus valores:
 
 ```ts
-import { boolean, object, string } from "@codenhub/validation";
+import { boolean, objectWithRest, string } from "@codenhub/validation";
 
-const settings = object({ name: string() }, { unknownKeys: boolean() });
+const settings = objectWithRest({ name: string() }, boolean());
 
 settings({ name: "Ada", beta: true }); // { ok: true, value: { name: "Ada", beta: true } }
 settings({ name: "Ada", beta: "yes" }); // { ok: false, ... }, code "invalid_type" at ["beta"]
@@ -370,7 +370,7 @@ feedback({ message: "" }); // { ok: false, ... }, código "too_small"
 - Acepta cualquier objeto que no sea un array: un objeto plano, una instancia de clase, un `Map`, un `Date`. Cualquier otra cosa, incluida una función, falla con `invalid_type` y `{ expected: "object", received }`.
 - Lee cada propiedad indicada como `input[key]`, así que cuenta una propiedad heredada, no enumerable o calculada por un getter.
 - Una propiedad que lanza una excepción al leerse, como puede hacerlo un getter o un trap de `Proxy`, se reporta como `invalid_value` con `params: { unreadable: true }` en la ruta de la propiedad, y las demás propiedades se siguen validando.
-- La salida es un objeto plano nuevo que contiene solo las propiedades indicadas, sin las que tienen el valor `undefined`. No hay una opción `unknownKeys`.
+- La salida es un objeto plano nuevo que contiene solo las propiedades indicadas, sin las que tienen el valor `undefined`. No hay un `objectLike` estricto ni laxo.
 - Sus verificaciones se ejecutan cuando todas las propiedades pasaron, y ven la salida.
 
 Para elegir entre instancias según una propiedad, pon los validadores `objectLike` en una `union`. `tagged` lee la etiqueta solo de un objeto plano, como explica [Cuerpos de solicitud](./request-bodies.md#tagged).

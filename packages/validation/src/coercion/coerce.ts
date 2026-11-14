@@ -1,8 +1,9 @@
-import type { Maybe } from "../core/async";
-import { word } from "../core/checks";
-import { described } from "../core/describe";
-import { describeType, failWith, issue } from "../core/result";
-import type { AnyValidator, Message, ValidationResult } from "../core/types";
+import { runOf } from "../core/child";
+import { toValidator } from "../core/make";
+import { describeType } from "../core/result";
+import { report, type Run } from "../core/run";
+import type { AnyValidator, Message } from "../core/types";
+import { TYPE_WORDS } from "../core/words";
 
 /**
  * Builds a coercing validator: `convert` returns the converted input in a one-item list, or undefined
@@ -17,18 +18,23 @@ export function coercing<T>(
   args: readonly unknown[],
   convert: (input: unknown) => [unknown] | undefined,
   own?: object,
-): (input: unknown) => Maybe<ValidationResult<T>> {
+): AnyValidator<T> {
   const [first] = args;
   const message = typeof first === "object" ? (first as { message?: Message } | null)?.message : undefined;
-  return described(
-    (input: unknown) => {
-      const converted = convert(input);
-      return converted === undefined
-        ? failWith(word([issue("invalid_type", { expected, received: describeType(input), coerced: true })], message))
-        : strict(converted[0]);
-    },
+  const runStrict = runOf(strict, "strict");
+  const run: Run = (input) => {
+    const converted = convert(input);
+    return converted === undefined
+      ? report("invalid_type", { expected, received: describeType(input), coerced: true }, message)
+      : runStrict(converted[0]);
+  };
+  run.w = runStrict.w;
+  return toValidator(
+    run,
     own === undefined
       ? { kind: "coerce", inner: strict }
       : { kind: "coerce", inner: strict, options: Object.freeze(own) },
+    TYPE_WORDS,
+    [strict],
   );
 }

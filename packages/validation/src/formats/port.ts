@@ -1,7 +1,6 @@
-import { split } from "../core/checks";
-import { described } from "../core/describe";
+import { split } from "../core/split";
 import type { Factory, MessageOptions } from "../core/types";
-import { formatLeaf } from "./text-format";
+import { formatted, formatLeaf } from "./text-format";
 
 const isNumber = (input: unknown): boolean => typeof input === "number" && Number.isFinite(input);
 
@@ -24,7 +23,7 @@ const MAX_PORT = 65_535;
 export const port = ((...args: unknown[]) => {
   const [options, checks] = split<MessageOptions, number>(args);
   const { message } = options;
-  return described(
+  return formatted(
     formatLeaf<number>(
       "number",
       isNumber,

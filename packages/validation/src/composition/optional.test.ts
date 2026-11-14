@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { validator } from "../builders/validator";
 import { fail, pass } from "../core/result";
 import type { AsyncValidator } from "../core/types";
 import { string } from "../primitives/string";
@@ -23,10 +24,11 @@ describe("optional", () => {
   });
 
   it("should keep an asynchronous validator asynchronous, and answer at once for undefined", async () => {
-    const taken: AsyncValidator<string> = async (input) =>
-      input === "admin" ? fail({ code: "taken" }) : pass(input as string);
-    const validator = optional(taken);
-    expect(valueOf(await validator(undefined))).toBeUndefined();
-    expect(codesOf(await validator("admin"))).toEqual(["taken"]);
+    const taken: AsyncValidator<string> = validator(async (input) =>
+      input === "admin" ? fail({ code: "taken" }) : pass(input as string),
+    );
+    const username = optional(taken);
+    expect(valueOf(await username(undefined))).toBeUndefined();
+    expect(codesOf(await username("admin"))).toEqual(["taken"]);
   });
 });

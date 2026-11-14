@@ -1,8 +1,11 @@
-import { leaf, split } from "../core/checks";
-import { described } from "../core/describe";
+import { leaf } from "../core/leaf";
+import { toValidator } from "../core/make";
 import { fileOf } from "../core/objects";
-import { assertList, assertOrder, assertSize, issue } from "../core/result";
+import { assertList, assertOrder, assertSize } from "../core/result";
+import { report } from "../core/run";
+import { split } from "../core/split";
 import type { Factory, MessageOptions } from "../core/types";
+import { SIZE_WORDS } from "../core/words";
 
 /**
  * The members of a `File` that are the same in every runtime, which is what `file` produces for a program
@@ -100,24 +103,24 @@ export const file = ((...args: unknown[]) => {
   }
   assertOrder("minSize", minSize, "maxSize", maxSize);
   const types = readTypes(options.types);
-  const validator = leaf<GlobalFile>(
+  const run = leaf<GlobalFile>(
     "file",
     (input) => fileOf(input) !== undefined,
     message,
     checks,
-    (value, issues) => {
+    (value) => {
       const { size, type } = fileOf(value) as { size: number; type: string };
       if (minSize !== undefined && size < minSize) {
-        issues.push(issue("too_small", { minimum: minSize, type: "file" }));
+        report("too_small", { minimum: minSize, type: "file" }, message);
       }
       if (maxSize !== undefined && size > maxSize) {
-        issues.push(issue("too_big", { maximum: maxSize, type: "file" }));
+        report("too_big", { maximum: maxSize, type: "file" }, message);
       }
       if (types !== undefined && !types.includes(essenceOf(type))) {
-        issues.push(issue("invalid_value", { options: types, type: "file" }));
+        report("invalid_value", { options: types, type: "file" }, message);
       }
       return value;
     },
   );
-  return described(validator, { kind: "file", options, checks });
+  return toValidator(run, { kind: "file", options, checks }, SIZE_WORDS);
 }) as Factory<GlobalFile, FileOptions>;

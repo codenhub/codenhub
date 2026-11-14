@@ -1,6 +1,8 @@
-import { leaf, split } from "../core/checks";
-import { described } from "../core/describe";
+import { leaf } from "../core/leaf";
+import { toValidator } from "../core/make";
+import { split } from "../core/split";
 import type { Factory, MessageOptions } from "../core/types";
+import { TYPE_WORDS } from "../core/words";
 
 const isBoolean = (input: unknown): input is boolean => typeof input === "boolean";
 
@@ -17,5 +19,9 @@ const isBoolean = (input: unknown): input is boolean => typeof input === "boolea
  */
 export const boolean = ((...args: unknown[]) => {
   const [options, checks] = split<MessageOptions, boolean>(args);
-  return described(leaf("boolean", isBoolean, options.message, checks), { kind: "boolean", options, checks });
+  return toValidator(
+    leaf("boolean", isBoolean, options.message, checks),
+    { kind: "boolean", options, checks },
+    TYPE_WORDS,
+  );
 }) as Factory<boolean, MessageOptions>;

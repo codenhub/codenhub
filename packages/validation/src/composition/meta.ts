@@ -1,5 +1,6 @@
-import { describe, described } from "../core/describe";
-import { sameAs } from "../core/nesting";
+import { runOf } from "../core/child";
+import { describe } from "../core/describe";
+import { sameAs, standardOf } from "../core/make";
 import { isPlainObject } from "../core/objects";
 import { assertFunction } from "../core/result";
 import type { AnyValidator } from "../core/types";
@@ -121,14 +122,11 @@ export function meta<TValidator extends AnyValidator>(validator: TValidator, giv
   }
   const record = describe(validator);
   const merged = Object.freeze({ ...(record?.["meta"] as object | undefined), ...own });
-  const wrapper = sameAs(validator) as AnyValidator & Record<string, unknown>;
-  // What `standard` added is kept, so a Standard Schema stays one.
-  const exposed = (validator as unknown as Record<string, unknown>)["~standard"];
-  if (exposed !== undefined) {
-    wrapper["~standard"] = exposed;
-  }
-  return described(
-    wrapper,
+  const wrapper = sameAs(validator);
+  wrapper["~description"] = Object.freeze(
     record === undefined ? { kind: "meta", inner: validator, meta: merged } : { ...record, meta: merged },
-  ) as unknown as TValidator;
+  );
+  // Every validator a factory or `validator()` made has a Standard Schema already; one that has none gets one here.
+  wrapper["~standard"] ??= standardOf(runOf(validator, "validator"), []);
+  return wrapper as unknown as TValidator;
 }

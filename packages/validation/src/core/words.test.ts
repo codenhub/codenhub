@@ -1,7 +1,32 @@
 import { describe, expect, it } from "vitest";
 
-import type { ValidationIssue } from "../core/types";
-import { brief } from "./brief";
+import type { ValidationIssue } from "./types";
+import {
+  wordFormat,
+  wordInteger,
+  wordKey,
+  wordMultiple,
+  wordSize,
+  wordType,
+  wordUnion,
+  wordUnknownKey,
+  type Word,
+} from "./words";
+
+const ALL: readonly Word[] = [
+  wordType,
+  wordSize,
+  wordFormat,
+  wordInteger,
+  wordMultiple,
+  wordKey,
+  wordUnknownKey,
+  wordUnion,
+];
+
+/** What a validator that carries every word gives as a Standard Schema: the first word that has one. */
+const brief = (issue: ValidationIssue): string =>
+  issue.message ?? ALL.map((word) => word(issue)).find((worded) => worded !== undefined) ?? "Invalid value";
 
 const at = (code: string, params?: Record<string, unknown>, message?: string): ValidationIssue => ({
   code,
@@ -10,7 +35,7 @@ const at = (code: string, params?: Record<string, unknown>, message?: string): V
   ...(message !== undefined && { message }),
 });
 
-describe("brief", () => {
+describe("the default messages of a Standard Schema", () => {
   it("should give an issue's own message first", () => {
     expect(brief(at("too_small", { minimum: 2, type: "string" }, "Too short"))).toBe("Too short");
   });
@@ -66,5 +91,21 @@ describe("brief", () => {
     [at("a code of its own"), "Invalid value"],
   ])("should word %j as %j", (issue, worded) => {
     expect(brief(issue)).toBe(worded);
+  });
+
+  it("should have each issue worded by one word alone, so the order a validator carries them in is no matter", () => {
+    const issues = [
+      at("invalid_type", { expected: "number", received: "string" }),
+      at("too_small", { minimum: 2, type: "string" }),
+      at("invalid_format", { format: "email" }),
+      at("invalid_value", { type: "number", format: "int" }),
+      at("invalid_value", { type: "number", format: "multipleOf", value: 5 }),
+      at("invalid_key"),
+      at("unrecognized_key"),
+      at("invalid_union"),
+    ];
+    for (const issue of issues) {
+      expect(ALL.filter((word) => word(issue) !== undefined)).toHaveLength(1);
+    }
   });
 });

@@ -1,8 +1,8 @@
-import { chain, type Maybe } from "../core/async";
-import { described } from "../core/describe";
-import { call, composed } from "../core/nesting";
-import { assertFunction, pass } from "../core/result";
-import type { AnyValidator, Composed, Infer, ValidationResult, InferInput } from "../core/types";
+import { runOf, toolsOf } from "../core/child";
+import { toValidator } from "../core/make";
+import { count, FAIL, type Run } from "../core/run";
+import type { AnyValidator, Composed, Infer, InferInput } from "../core/types";
+import { NO_WORDS } from "../core/words";
 
 /** The type produced by the last validator of a list. */
 type Output<TValidators extends readonly AnyValidator[]> = TValidators extends readonly [
@@ -28,7 +28,7 @@ type Output<TValidators extends readonly AnyValidator[]> = TValidators extends r
  * @typeParam TValidators - The validators to run, in order. At least one.
  * @param validators - The validators to run, in order.
  * @returns A validator that produces what the last one produces.
- * @throws {TypeError} When no validator is given or one is not a function.
+ * @throws {TypeError} When no validator is given or one is not a validator of this copy of the package.
  */
 export function pipe<const TValidators extends readonly [AnyValidator, ...AnyValidator[]]>(
   ...validators: TValidators
@@ -37,16 +37,24 @@ export function pipe<const TValidators extends readonly [AnyValidator, ...AnyVal
     // The types forbid it, but a pipe of nothing would accept every value unchecked.
     throw new TypeError("pipe() needs at least one validator");
   }
-  validators.forEach((validator, index) => assertFunction(`validators[${index}]`, validator));
-  const validate = composed((input, place): Maybe<ValidationResult<unknown>> =>
-    validators.reduce<Maybe<ValidationResult<unknown>>>(
-      (previous, next) => chain(previous, (result) => (result.ok ? call(next, result.value, place) : result)),
-      pass(input),
-    ),
-  );
-  return described(validate, { kind: "pipe", steps: Object.freeze([...validators]) }) as unknown as Composed<
-    TValidators[number],
-    Output<TValidators>,
-    InferInput<TValidators[0]>
-  >;
+  const runs = validators.map((validator, index) => runOf(validator, `validators[${index}]`));
+  const tools = toolsOf(runs);
+  const last = runs.length - 1;
+  // Run in a loop while the values are ready, each step given what the one before it produced.
+  const from = (input: unknown, start: number): unknown => {
+    let value = input;
+    for (let index = start; index <= last; index += 1) {
+      value = (runs[index] as Run)(value);
+      if (value === FAIL) {
+        return FAIL;
+      }
+      if (index < last && tools !== undefined && tools.is(value)) {
+        return tools.after(count(), value, (later) => (later === FAIL ? FAIL : from(later, index + 1)));
+      }
+    }
+    return value;
+  };
+  const run: Run = (input) => from(input, 0);
+  run.w = tools;
+  return toValidator(run, { kind: "pipe", steps: Object.freeze([...validators]) }, NO_WORDS, validators);
 }

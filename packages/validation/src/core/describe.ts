@@ -1,4 +1,3 @@
-import { ownStandard } from "../interop/own-standard";
 import type { AnyValidator, AsyncCheck } from "./types";
 
 /**
@@ -22,7 +21,11 @@ export interface Description {
   readonly [part: string]: unknown;
 }
 
-/** The property a validator or check made by this package keeps its description under. */
+/**
+ * The property a validator or check made by this package keeps its description under. It is kept on the
+ * function itself and not in a registry, so one copy of this package reads what another made, and it is
+ * set when the function is made, never when a module loads.
+ */
 const DESCRIPTION = "~description";
 
 /**
@@ -33,36 +36,13 @@ const DESCRIPTION = "~description";
 export const customFormats = new WeakSet<object>();
 
 /**
- * Records on a validator or a check what a factory made. The record is kept on the function itself and
- * not in a registry, so one copy of this package reads what another made, and it is set when the function
- * is made, never when a module loads.
- */
-export const described = <TTarget extends object>(
-  target: TTarget,
-  // Options are an interface of their own for each factory, which has no index signature to read as a record.
-  record: Omit<Description, "options"> & { readonly options?: object },
-): TTarget => {
-  // The list of checks is the one the validator runs, so a reader that changed it would change the validator.
-  if (Array.isArray(record.checks)) {
-    Object.freeze(record.checks);
-  }
-  (target as Record<string, unknown>)[DESCRIPTION] = Object.freeze(record);
-  // A validator is a Standard Schema as it is; a check is not one, since it is given a value already validated.
-  // One it already carries, such as the one `meta` keeps from a validator `standard` made, is left as it is.
-  if (record.kind !== "check" && !Object.hasOwn(target, "~standard")) {
-    (target as Record<string, unknown>)["~standard"] = ownStandard(target as (input: unknown) => unknown);
-  }
-  return target;
-};
-
-/**
  * Reads what a validator or a check is made of, so a program can walk a schema: to write it in another
  * notation, build a form from it, or derive another validator.
  *
  * @remarks
- * Only what a factory of this package made is described. A validator or check written by hand, and a
- * check made by `check`, is a function like any other and gives `undefined`, as does anything that is
- * not a function: to a reader of the schema it is a rule that cannot be read.
+ * Only what a factory of this package made is described. A validator made by `validator` and a check
+ * made by `check` hold a function written by hand and give `undefined`, as does anything that is not a
+ * function: to a reader of the schema it is a rule that cannot be read.
  *
  * @example
  * ```ts

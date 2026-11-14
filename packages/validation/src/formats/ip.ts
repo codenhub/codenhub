@@ -1,8 +1,7 @@
-import { split } from "../core/checks";
-import { described } from "../core/describe";
+import { split } from "../core/split";
 import type { Factory, MessageOptions } from "../core/types";
 import { IPV4_PATTERN } from "./patterns";
-import { stringFormat } from "./text-format";
+import { formatted, stringFormat } from "./text-format";
 
 const IPV6_GROUP_PATTERN = /^[0-9a-f]{1,4}$/i;
 /** A zone names a network interface, such as `eth0`. */
@@ -131,7 +130,7 @@ export const ip = ((...args: unknown[]) => {
   if (version !== undefined && version !== "v4" && version !== "v6") {
     throw new TypeError(`version must be "v4" or "v6", received "${String(version)}"`);
   }
-  return described(
+  return formatted(
     stringFormat(version === undefined ? "ip" : `ip${version}`, (text) => toIpAddress(text, version), message, checks),
     { kind: "format", format: "ip", options, checks },
   );

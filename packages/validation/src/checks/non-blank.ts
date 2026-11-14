@@ -1,4 +1,4 @@
-import { rule } from "../core/checks";
+import { rule } from "../core/rule";
 import type { Check, Message } from "../core/types";
 
 /** A character that is not blank, as {@link nonBlank} defines blank. Linear in the length of the text. */

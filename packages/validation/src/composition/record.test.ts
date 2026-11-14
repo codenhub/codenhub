@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { validator } from "../builders/validator";
 import { pass } from "../core/result";
 import type { Validator } from "../core/types";
 import { number } from "../primitives/number";
@@ -12,8 +13,8 @@ describe("record", () => {
   const scores = record(string({ min: 1 }), number({ int: true }));
 
   it("should throw for a key validator that produces anything but text, a mistake in the schema", () => {
-    const numbered = record((() => pass(1)) as unknown as Validator<string>, number());
-    const symbolic = record((() => pass(Symbol("a"))) as unknown as Validator<string>, number());
+    const numbered = record(validator(() => pass(1)) as unknown as Validator<string>, number());
+    const symbolic = record(validator(() => pass(Symbol("a"))) as unknown as Validator<string>, number());
     expect(() => numbered({ a: 1 })).toThrow(
       new TypeError("A record's key validator must produce text, received number"),
     );
@@ -40,10 +41,10 @@ describe("record", () => {
     let calls = 0;
     const counted = record(
       string(),
-      (input) => {
+      validator((input) => {
         calls += 1;
         return number()(input);
-      },
+      }),
       { max: 1 },
     );
     expect(codesOf(counted({ a: "x", b: "y" }))).toEqual(["too_big"]);
@@ -133,10 +134,10 @@ describe("record", () => {
 
   it("should read the input before a key's validator can change it, or while one waits", async () => {
     const input: Record<string, unknown> = { a: 1, b: 2 };
-    const changing: Validator<string> = (key) => {
+    const changing: Validator<string> = validator((key) => {
       input["b"] = "changed";
       return pass(key as string);
-    };
+    });
     expect(valueOf(record(changing, number())(input))).toEqual({ a: 1, b: 2 });
     const later: Record<string, unknown> = { ok: 1 };
     const pending = record(isFree, number())(later);

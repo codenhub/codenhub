@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 
 import { check } from "../builders/check";
+import { validator } from "../builders/validator";
 import { describe as describeValidator } from "../core/describe";
+import { pass } from "../core/result";
 import type { Validator } from "../core/types";
 import { email } from "../formats/email";
 import { boolean } from "../primitives/boolean";
@@ -9,16 +11,19 @@ import { number } from "../primitives/number";
 import { string } from "../primitives/string";
 import { codesOf, isFree, isPending, issuesOf, valueOf } from "../test-utils";
 import { extend } from "./extend";
+import { looseObject } from "./loose-object";
 import { meta } from "./meta";
 import { nullable } from "./nullable";
 import { nullish } from "./nullish";
 import { object } from "./object";
 import { objectLike } from "./object-like";
+import { objectWithRest } from "./object-with-rest";
 import { omit } from "./omit";
 import { optional } from "./optional";
 import { partial } from "./partial";
 import { pick } from "./pick";
 import { required } from "./required";
+import { strictObject } from "./strict-object";
 
 const user = object({ id: number(), name: string({ min: 2 }), email: email() });
 const ada = { id: 1, name: "Ada", email: "ada@example.com" };
@@ -36,15 +41,14 @@ describe("pick", () => {
     ]);
   });
 
-  it("should keep the options of the object, each one given here replacing its own", () => {
-    const strict = object({ a: string(), b: string() }, { unknownKeys: "strict", message: "Not that" });
+  it("should keep the options of the object, and treat unlisted keys as it does", () => {
+    const strict = strictObject({ a: string(), b: string() }, { message: "Not that" });
     expect(codesOf(pick(strict, ["a"])({ a: "x", b: "y" }))).toEqual(["unrecognized_key"]);
     expect(issuesOf(pick(strict, ["a"])(1))[0]?.message).toBe("Not that");
-    expect(valueOf(pick(strict, ["a"], { unknownKeys: "strip" })({ a: "x", b: "y" }))).toEqual({ a: "x" });
   });
 
-  it("should keep the options of the object that those given here do not name", () => {
-    const strict = object({ a: string(), b: string() }, { unknownKeys: "strict", message: "Not that" });
+  it("should treat unlisted keys as the object does when given options of its own, each replacing the one of its name", () => {
+    const strict = strictObject({ a: string(), b: string() }, { message: "Not that" });
     for (const made of [
       pick(strict, ["a"], { message: "Bad" }),
       omit(strict, ["b"], { message: "Bad" }),
@@ -54,38 +58,77 @@ describe("pick", () => {
     ]) {
       expect(codesOf(made({ a: "x", zzz: 1 }))).toContain("unrecognized_key");
       expect(issuesOf(made(1))[0]?.message).toBe("Bad");
-      expect(describeValidator(made)?.options).toEqual({ unknownKeys: "strict", message: "Bad" });
+      expect(describeValidator(made)?.options).toEqual({ message: "Bad" });
+      expect(describeValidator(made)?.["unknownKeys"]).toBe("strict");
     }
-    const loose = pick(strict, ["a"], { unknownKeys: "strip" });
-    expect(describeValidator(loose)?.options).toEqual({ unknownKeys: "strip", message: "Not that" });
-    expect(issuesOf(loose(1))[0]?.message).toBe("Not that");
+    const bare = pick(strict, ["a"], {});
+    expect(describeValidator(bare)?.options).toEqual({ message: "Not that" });
+    expect(issuesOf(bare(1))[0]?.message).toBe("Not that");
+  });
+
+  it("should keep the unlisted keys of a loose object, which then holds every key the new shape does not list", () => {
+    const loose = looseObject({ a: string(), b: optional(string()) });
+    for (const made of [
+      pick(loose, ["a"]),
+      omit(loose, ["b"]),
+      partial(loose),
+      extend(loose, { c: optional(string()) }),
+    ] as Validator<object>[]) {
+      expect(describeValidator(made)?.["unknownKeys"]).toBe("passthrough");
+      expect(valueOf(made({ a: "x", z: 1 }))).toEqual({ a: "x", z: 1 });
+    }
+    expect(describeValidator(required(loose))?.["unknownKeys"]).toBe("passthrough");
+    expect(valueOf(required(loose)({ a: "x", b: "y", z: 1 }))).toEqual({ a: "x", b: "y", z: 1 });
+    // A key the new shape no longer lists is kept as it is, unchecked.
+    expect(valueOf(omit(loose, ["b"])({ a: "x", b: 1 }))).toEqual({ a: "x", b: 1 });
+    expect(codesOf(pick(loose, ["a"])(JSON.parse('{"a":"x","__proto__":{}}')))).toEqual(["invalid_key"]);
+  });
+
+  it("should keep dropping the unlisted keys of an object that drops them", () => {
+    const plain = object({ a: string(), b: optional(string()) });
+    for (const made of [
+      pick(plain, ["a"]),
+      omit(plain, ["b"]),
+      partial(plain),
+      extend(plain, { c: optional(string()) }),
+    ] as Validator<object>[]) {
+      expect(describeValidator(made)?.["unknownKeys"]).toBeUndefined();
+      expect(valueOf(made({ a: "x", z: 1 }))).toEqual({ a: "x" });
+    }
+    expect(valueOf(required(plain)({ a: "x", b: "y", z: 1 }))).toEqual({ a: "x", b: "y" });
   });
 
   it("should keep a validator of unknown keys as it is, which then sees every key the new shape does not list", () => {
     const counts = number();
-    const scored = object({ a: string(), b: optional(string()) }, { unknownKeys: counts });
+    const scored = objectWithRest({ a: string(), b: optional(string()) }, counts);
     for (const made of [
       pick(scored, ["a"]),
       omit(scored, ["b"]),
       partial(scored),
       extend(scored, { c: optional(string()) }),
     ] as Validator<object>[]) {
-      expect(describeValidator(made)?.options?.["unknownKeys"]).toBe(counts);
+      expect(describeValidator(made)?.["unknownKeys"]).toBe(counts);
       expect(valueOf(made({ a: "x", z: 1 }))).toEqual({ a: "x", z: 1 });
       expect(issuesOf(made({ a: "x", z: "1" })).map((issue) => issue.path)).toEqual([["z"]]);
     }
-    expect(describeValidator(required(scored))?.options?.["unknownKeys"]).toBe(counts);
+    expect(describeValidator(required(scored))?.["unknownKeys"]).toBe(counts);
     expect(valueOf(required(scored)({ a: "x", b: "y", z: 1 }))).toEqual({ a: "x", b: "y", z: 1 });
     // A key the new shape no longer lists is one of the unknown keys.
     expect(issuesOf(omit(scored, ["b"])({ a: "x", b: "y" })).map((issue) => issue.path)).toEqual([["b"]]);
-    expect(valueOf(pick(scored, ["a"], { unknownKeys: "strip" })({ a: "x", z: "1" }))).toEqual({ a: "x" });
+  });
+
+  it("should wait for an asynchronous validator of unknown keys it keeps", async () => {
+    const handles = objectWithRest({ a: string(), b: string() }, isFree);
+    const result = pick(handles, ["a"])({ a: "x", b: "taken", c: "free" });
+    expect(isPending(result)).toBe(true);
+    expect(issuesOf(await result).map((issue) => [issue.path, issue.code])).toEqual([[["b"], "taken"]]);
   });
 
   it.each([undefined, null])(
     "should keep the options of the object when its own are given as %s, which is no options",
     (none) => {
-      const strict = object({ a: string(), b: string() }, { unknownKeys: "strict", message: "Bad" });
-      const inherit = none as { unknownKeys?: "strict" } | undefined;
+      const strict = strictObject({ a: string(), b: string() }, { message: "Bad" });
+      const inherit = none as { message?: string } | undefined;
       for (const made of [
         pick(strict, ["a"], inherit),
         omit(strict, ["b"], inherit),
@@ -93,46 +136,60 @@ describe("pick", () => {
         extend(strict, {}, inherit),
       ]) {
         expect(issuesOf(made({ a: "x", b: "y", c: 1 })).map((issue) => issue.message)).toContain("Bad");
-        expect(describeValidator(made)?.options).toEqual({ unknownKeys: "strict", message: "Bad" });
+        expect(describeValidator(made)?.options).toEqual({ message: "Bad" });
+        expect(describeValidator(made)?.["unknownKeys"]).toBe("strict");
       }
-      expect(describeValidator(partial(strict))?.options).toEqual({ unknownKeys: "strict", message: "Bad" });
+      expect(describeValidator(partial(strict))?.options).toEqual({ message: "Bad" });
+      expect(describeValidator(partial(strict))?.["unknownKeys"]).toBe("strict");
     },
   );
 
-  it.each(["unknownKeys", "message"])(
-    "should keep the option %s of the object when it is given as undefined, which is no option",
-    (name) => {
-      const strict = object({ a: string(), b: string() }, { unknownKeys: "strict", message: "Not that" });
-      // As options built from a configuration that does not set this one: `{ unknownKeys: config.mode }`.
-      const given = { [name]: undefined } as { unknownKeys?: "strict" };
-      for (const made of [
-        pick(strict, ["a"], given),
-        omit(strict, ["b"], given),
-        partial(strict, given),
-        required(strict, given),
-        extend(strict, {}, given),
-      ]) {
-        expect(describeValidator(made)?.options).toEqual({ unknownKeys: "strict", message: "Not that" });
-        expect(codesOf(made({ a: "x", zzz: 1 }))).toContain("unrecognized_key");
-        expect(issuesOf(made(1))[0]?.message).toBe("Not that");
-      }
-    },
-  );
+  it("should keep the option message of the object when it is given as undefined, which is no option", () => {
+    const strict = strictObject({ a: string(), b: string() }, { message: "Not that" });
+    // As options built from a configuration that does not set this one: `{ message: config.message }`.
+    const given: { message?: string } = { message: undefined };
+    for (const made of [
+      pick(strict, ["a"], given),
+      omit(strict, ["b"], given),
+      partial(strict, given),
+      required(strict, given),
+      extend(strict, {}, given),
+    ]) {
+      expect(describeValidator(made)?.options).toEqual({ message: "Not that" });
+      expect(codesOf(made({ a: "x", zzz: 1 }))).toContain("unrecognized_key");
+      expect(issuesOf(made(1))[0]?.message).toBe("Not that");
+    }
+  });
 
   it("should refuse an option the object does not know, even given as undefined, as object does", () => {
-    const strict = object({ a: string(), b: string() }, { unknownKeys: "strict" });
-    // A misspelled name, as `{ unknownkeys: config.mode }` with no mode set.
-    const given = { unknownkeys: undefined } as { unknownKeys?: "strict" };
-    expect(() => object({ a: string() }, given)).toThrow("Unknown option unknownkeys");
-    expect(() => pick(strict, ["a"], given)).toThrow("Unknown option unknownkeys");
-    expect(() => omit(strict, ["b"], given)).toThrow("Unknown option unknownkeys");
-    expect(() => partial(strict, given)).toThrow("Unknown option unknownkeys");
-    expect(() => required(strict, given)).toThrow("Unknown option unknownkeys");
-    expect(() => extend(strict, {}, given)).toThrow("Unknown option unknownkeys");
+    const strict = strictObject({ a: string(), b: string() });
+    // A misspelled name, as `{ mesage: config.message }` with no message set.
+    const given = { mesage: undefined } as { message?: string };
+    expect(() => object({ a: string() }, given)).toThrow("Unknown option mesage");
+    expect(() => pick(strict, ["a"], given)).toThrow("Unknown option mesage");
+    expect(() => omit(strict, ["b"], given)).toThrow("Unknown option mesage");
+    expect(() => partial(strict, given)).toThrow("Unknown option mesage");
+    expect(() => required(strict, given)).toThrow("Unknown option mesage");
+    expect(() => extend(strict, {}, given)).toThrow("Unknown option mesage");
+  });
+
+  describe("the unknownKeys option", () => {
+    const strict = strictObject({ a: string(), b: string() });
+
+    it.each<[name: string, make: (options: never) => unknown]>([
+      ["pick", (options) => pick(strict, ["a"], options)],
+      ["omit", (options) => omit(strict, ["b"], options)],
+      ["partial", (options) => partial(strict, options)],
+      ["required", (options) => required(strict, options)],
+      ["extend", (options) => extend(strict, {}, options)],
+    ])("should be refused by %s, which treats unlisted keys as the object it was given does", (_name, make) => {
+      expect(() => make({ unknownKeys: "strip" } as never)).toThrow(new TypeError("Unknown option unknownKeys"));
+      expect(() => make({ unknownKeys: undefined } as never)).toThrow("Unknown option unknownKeys");
+    });
   });
 
   it("should take checks on the new object, with its options kept", () => {
-    const strict = object({ a: string(), b: string() }, { unknownKeys: "strict" });
+    const strict = strictObject({ a: string(), b: string() });
     const picked = pick(
       strict,
       ["a"],
@@ -164,7 +221,7 @@ describe("pick", () => {
     expect(() => pick(objectLike({ a: string() }), ["a" as never])).toThrow(
       "pick() needs a validator made by object()",
     );
-    const byHand: Validator<{ a: string }> = (input) => ({ ok: true, value: input as { a: string } });
+    const byHand = validator((input) => pass(input as { a: string }));
     expect(() => pick(byHand, ["a"])).toThrow("pick() needs a validator made by object()");
     const checked = object(
       { a: string(), b: string() },
@@ -182,10 +239,9 @@ describe("omit", () => {
     expect(codesOf(profile({ id: 1 }))).toEqual(["invalid_type"]);
   });
 
-  it("should keep the options of the object, each one given replacing its own, and take checks", () => {
-    const strict = object({ a: string(), b: string() }, { unknownKeys: "strict" });
+  it("should treat unlisted keys as the object does, and take checks", () => {
+    const strict = strictObject({ a: string(), b: string() });
     expect(codesOf(omit(strict, ["b"])({ a: "x", c: 1 }))).toEqual(["unrecognized_key"]);
-    expect(valueOf(omit(strict, ["b"], { unknownKeys: "strip" })({ a: "x", c: 1 }))).toEqual({ a: "x" });
     const checked = omit(
       strict,
       ["b"],
@@ -209,8 +265,8 @@ describe("omit", () => {
 });
 
 describe("partial", () => {
-  it("should make every property of an object validator optional, and keep its options", () => {
-    const patch = partial(object({ name: string({ min: 2 }), email: email() }, { unknownKeys: "strict" }));
+  it("should make every property of an object validator optional, and treat unlisted keys as it does", () => {
+    const patch = partial(strictObject({ name: string({ min: 2 }), email: email() }));
     expect(valueOf(patch({}))).toEqual({});
     expect(valueOf(patch({ name: "Ada" }))).toEqual({ name: "Ada" });
     expect(codesOf(patch({ name: "A" }))).toEqual(["too_small"]);
@@ -255,10 +311,9 @@ describe("required", () => {
     expect(issuesOf(published({ id: 1 })).map((issue) => issue.path)).toEqual([["title"], ["views"], ["note"]]);
   });
 
-  it("should keep the options of the object, each one given replacing its own, and take checks", () => {
-    const strict = object({ a: optional(string()) }, { unknownKeys: "strict" });
+  it("should treat unlisted keys as the object does, and take checks", () => {
+    const strict = strictObject({ a: optional(string()) });
     expect(codesOf(required(strict)({ a: "x", c: 1 }))).toEqual(["unrecognized_key"]);
-    expect(valueOf(required(strict, { unknownKeys: "strip" })({ a: "x", c: 1 }))).toEqual({ a: "x" });
     const checked = required(
       strict,
       check((value) => value.a !== "", "Empty"),
@@ -312,16 +367,11 @@ describe("extend", () => {
     expect(Object.keys(describeValidator(named)?.["shape"] as object)).toEqual(["id", "name", "email"]);
   });
 
-  it("should keep the options of the object, each one given replacing its own, and take checks", () => {
-    const strict = object({ a: string() }, { unknownKeys: "strict", message: "Bad" });
-    expect(describeValidator(extend(strict, { b: string() }))?.options).toEqual({
-      unknownKeys: "strict",
-      message: "Bad",
-    });
-    expect(valueOf(extend(strict, { b: string() }, { unknownKeys: "strip" })({ a: "x", b: "y", c: 1 }))).toEqual({
-      a: "x",
-      b: "y",
-    });
+  it("should keep the options of the object, treat unlisted keys as it does, and take checks", () => {
+    const strict = strictObject({ a: string() }, { message: "Bad" });
+    expect(describeValidator(extend(strict, { b: string() }))?.options).toEqual({ message: "Bad" });
+    expect(describeValidator(extend(strict, { b: string() }))?.["unknownKeys"]).toBe("strict");
+    expect(codesOf(extend(strict, { b: string() })({ a: "x", b: "y", c: 1 }))).toEqual(["unrecognized_key"]);
     const confirmed = extend(
       object({ password: string() }),
       { confirm: string() },

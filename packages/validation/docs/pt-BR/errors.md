@@ -1,7 +1,7 @@
 ---
 title: Problemas e mensagens
 description: O que um resultado com falha contém, os códigos de problema nativos e seus params, e como transformar problemas em texto em inglês, em português ou com as suas próprias palavras.
-source: 5f3c50beff8b77b5b46b7079817190f714e06411
+source: 5da83294b0f60324e53776d55f44c827778f8084
 order: 5
 ---
 
@@ -28,7 +28,7 @@ const result = {
 
 `error.issues` lista todos os problemas que o validador encontrou, em uma ordem fixa, e nunca está vazio. O tipo também diz isso, então `result.error.issues[0]` é um problema e não `undefined`, mesmo com `noUncheckedIndexedAccess`.
 
-- A ordem segue o schema, não o tempo que cada regra levou. Um `object` estrito reporta primeiro as chaves não reconhecidas, depois os problemas das propriedades, na ordem em que a estrutura as lista.
+- A ordem segue o schema, não o tempo que cada regra levou. Um `strictObject` reporta primeiro as chaves não reconhecidas, depois os problemas das propriedades, na ordem em que a estrutura as lista.
 - Uma coleção para em 1.000 problemas, como [Limites](limits.md#uma-entrada-inválida-tem-custo-limitado) explica.
 
 ## O problema
@@ -45,7 +45,7 @@ const result = {
 Chaves não são valores, e elas aparecem nos problemas:
 
 - Um caminho passa pelas chaves da entrada, então um problema de `record` ou de `map` nomeia a chave a que pertence.
-- Um `object` estrito reporta cada chave que não reconhece, no caminho e em `params.key`.
+- Um `strictObject` reporta cada chave que não reconhece, no caminho e em `params.key`.
 
 Então não coloque segredos em nomes de chaves que você valida. Uma chave também é um texto que o remetente escolheu. `englishMessages` a coloca dentro da mensagem como uma string entre aspas, como em `Unrecognized key "…"`, com aspas e quebras de linha escapadas. `formatPath` a coloca entre aspas do mesmo jeito nos nomes de campo de `flatten`. Assim, uma chave não consegue quebrar uma linha de log. Escape os dois quando for colocá-los em HTML.
 
@@ -76,7 +76,7 @@ O conjunto de códigos é aberto: um validador personalizado reporta o código q
 | `invalid_value`        | O valor tem o tipo certo, mas é um valor que não é permitido.                                                                                                                                                                             | Depende da regra, como diz a lista abaixo desta tabela.                                                                                                                                                                                     |
 | `too_small`            | Abaixo de um mínimo: curto demais, com itens de menos, ou um número ou uma data pequenos demais.                                                                                                                                          | `minimum`, `type`, e `inclusive` ou `exact` quando se aplicam.                                                                                                                                                                              |
 | `too_big`              | Acima de um máximo; aninhado mais fundo, ou com mais recursão, do que `lazy` permite; ou uma coleção que parou em 1.000 problemas.                                                                                                        | `maximum`, `type` (`"depth"` ou `"calls"` para `lazy`, `"issues"` para uma coleção que parou), e `inclusive` ou `exact` quando se aplicam.                                                                                                  |
-| `unrecognized_key`     | Um objeto tem uma propriedade que a estrutura não lista, no modo estrito.                                                                                                                                                                 | `key`. O caminho do problema termina na chave.                                                                                                                                                                                              |
+| `unrecognized_key`     | Um `strictObject` tem uma propriedade que a estrutura não lista.                                                                                                                                                                          | `key`. O caminho do problema termina na chave.                                                                                                                                                                                              |
 | `invalid_key`          | Uma chave de um `record` ou de um `map` falhou no validador de chave; o validador de chave a transformou em uma chave que uma entrada anterior já tem; uma chave foi informada duas vezes; ou uma chave é `__proto__` onde seria copiada. | `issues`: o que o validador de chave encontrou, com caminhos relativos à chave; para uma chave repetida, um problema `invalid_value` com `unique: true`; para `__proto__`, um com `reserved: true`. O caminho do problema termina na chave. |
 | `invalid_intersection` | Os dois validadores de um `intersection` passaram, mas produziram valores que não podem ser mesclados em um só.                                                                                                                           | Nenhum. O caminho do problema é onde as duas saídas diferem.                                                                                                                                                                                |
 | `invalid_union`        | Um valor não correspondeu a nenhuma das opções de um `union`, ou uma união `tagged` recebeu uma tag ausente ou desconhecida.                                                                                                              | Para `union`, `issues`: os problemas que cada opção encontrou, em ordem, com caminhos relativos ao valor da união. Para `tagged`, `discriminator` e `options`, e o caminho do problema é o da tag.                                          |
@@ -92,7 +92,7 @@ Os `params` de `invalid_value`:
 - `content: true` ao lado de `options` para um arquivo cujos primeiros bytes não são de nenhum dos tipos que `contentType` lista.
 - `encodedSeparator: true` e `dotSegment: true` para os caminhos de URL descritos em [Formatos](formats.md#caminhos-que-um-servidor-lê-de-outro-jeito).
 
-Uma chave `__proto__` é reportada onde seria copiada para um novo objeto: em um `record`, entre as chaves não listadas de um `object` em modo passthrough, e em um `intersection` cujos lados a repassaram sem verificar.
+Uma chave `__proto__` é reportada onde seria copiada para um novo objeto: em um `record`, entre as chaves não listadas de um `looseObject` ou de um `objectWithRest`, e em um `intersection` cujos lados a repassaram sem verificar.
 
 `englishMessages` não tem texto para `custom`, já que uma verificação que falhou não traz nada para descrever, então `formatIssue` diz "Invalid value". Dê uma mensagem à verificação onde pessoas leem o que ela reporta.
 

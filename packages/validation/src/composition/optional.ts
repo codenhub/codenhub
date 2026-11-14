@@ -1,8 +1,9 @@
-import { detached } from "../core/async";
-import { described } from "../core/describe";
-import { call, composed, fastOf } from "../core/nesting";
-import { assertFunction, assertUnshared, pass } from "../core/result";
+import { runOf } from "../core/child";
+import { toValidator } from "../core/make";
+import { assertUnshared } from "../core/result";
+import { detached, type Run } from "../core/run";
 import type { AnyValidator, Composed, Infer, InferInput } from "../core/types";
+import { NO_WORDS } from "../core/words";
 import type { AnyFunction } from "../primitives/func";
 import type { LiteralValue } from "../primitives/literal";
 
@@ -42,7 +43,7 @@ type Fallback<T> = [Extract<T, AnyFunction>] extends [never] ? (T & LiteralValue
  * @param validator - The validator for values that are present.
  * @param value - The default, or a function that returns it.
  * @returns A validator that produces the wrapped type, and `undefined` or the default for `undefined`.
- * @throws {TypeError} When `validator` is not a function, or `value` is an object or an array.
+ * @throws {TypeError} When `validator` is not a validator of this copy of the package, or `value` is an object or an array.
  */
 export function optional<TValidator extends AnyValidator>(
   validator: TValidator,
@@ -52,20 +53,13 @@ export function optional<TValidator extends AnyValidator>(
   value: Fallback<Exclude<Infer<TValidator>, undefined>>,
 ): Composed<TValidator, Exclude<Infer<TValidator>, undefined>, InferInput<TValidator> | undefined>;
 export function optional(validator: AnyValidator, value?: Fallback<unknown>): AnyValidator {
-  assertFunction("validator", validator);
+  const runInner = runOf(validator, "validator");
   assertUnshared("A default object", value);
-  const inner = fastOf(validator);
-  const optionalValidator = composed(
-    (input, place) =>
-      input === undefined
-        ? // Called with no argument, as its type says, so a function that reads one, such as `Array` or
-          // `String`, produces its default and not one made from `undefined`.
-          pass(typeof value === "function" ? detached(() => (value as () => unknown)(), undefined) : value)
-        : call(validator, input, place),
-    // A default made by a function is the consumer's code, which a miss would run a second time.
-    inner === undefined || typeof value === "function"
-      ? undefined
-      : (input) => (input === undefined ? value : inner(input)),
-  );
-  return described(optionalValidator, { kind: "optional", inner: validator, default: value });
+  // Called with no argument, as its type says, so a function that reads one, such as `Array` or
+  // `String`, produces its default and not one made from `undefined`.
+  const make = typeof value === "function" ? () => (value as () => unknown)() : undefined;
+  const run: Run = (input) =>
+    input === undefined ? (make === undefined ? value : detached(make, undefined)) : runInner(input);
+  run.w = runInner.w;
+  return toValidator(run, { kind: "optional", inner: validator, default: value }, NO_WORDS, [validator]);
 }

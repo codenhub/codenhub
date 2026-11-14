@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { check } from "../builders/check";
 import { accepts, issuesOf } from "../test-utils";
 import { boolean } from "./boolean";
 
@@ -23,7 +24,7 @@ describe("boolean options and checks", () => {
   });
 
   it("should run checks after the type", () => {
-    const mustAgree = (value: boolean) => (value ? undefined : [{ code: "must_agree", path: [] }]);
+    const mustAgree = check((value: boolean) => (value ? [] : [{ code: "must_agree", path: [] }]));
     expect(accepts(boolean(mustAgree), true, false, "true")).toEqual([true, false, false]);
   });
 });

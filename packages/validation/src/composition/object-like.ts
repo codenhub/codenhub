@@ -1,20 +1,13 @@
-import { chain, collect, runEach, type Maybe } from "../core/async";
-import { report, tail } from "../core/checks";
-import { described } from "../core/describe";
+import { runOf, toolsOf } from "../core/child";
 import { fieldFailureOf } from "../core/field-hook";
-import { append, childOf, composed, type Child } from "../core/nesting";
+import { accepter, waitsOf } from "../core/finish";
+import { toValidator } from "../core/make";
 import { assertShape, isArray, setOwn } from "../core/objects";
-import { assertFunction, failWith, issue, typeIssue } from "../core/result";
-import type {
-  AnyValidator,
-  AsyncRest,
-  AsyncSchema,
-  Composed,
-  MessageOptions,
-  Rest,
-  ValidationIssue,
-  ValidationResult,
-} from "../core/types";
+import { count, FAIL, refuse, report, under, type Pending, type Run } from "../core/run";
+import { split } from "../core/split";
+import type { AnyValidator, AsyncRest, AsyncSchema, Composed, MessageOptions, Rest } from "../core/types";
+import { TYPE_WORDS } from "../core/words";
+import { waitFor, type Ending } from "./fields";
 import type { InferShape, InferShapeInput, Shape } from "./object";
 
 /**
@@ -44,7 +37,7 @@ import type { InferShape, InferShapeInput, Shape } from "./object";
  * @param shape - Validator of each property.
  * @param rest - Options, then checks, which run once every property has passed and see the output.
  * @returns A validator that produces a plain object.
- * @throws {TypeError} When `shape` is not a plain object or a property validator is not a function.
+ * @throws {TypeError} When `shape` is not a plain object or a property validator is not a validator of this copy of the package.
  */
 export function objectLike<TShape extends Shape>(
   shape: TShape,
@@ -61,49 +54,78 @@ export function objectLike(shape: Shape, ...rest: unknown[]): AnyValidator {
   // The validators as they were read, which is what the description gives: reading the shape again would
   // read a getter twice, and could describe another validator than the one that runs.
   const read: Shape = {};
-  const children = keys.map((key) => {
-    const validator: unknown = shape[key];
-    assertFunction(`shape.${key}`, validator);
+  const runs = keys.map((key) => {
+    const validator = shape[key] as AnyValidator;
+    const run = runOf(validator, `shape.${key}`);
     setOwn(read, key, validator);
-    return childOf(validator as AnyValidator);
+    return run;
   });
-  const [options, reject, accept, checks] = tail<MessageOptions, Record<string, unknown>>(rest);
+  const [options, checks] = split<MessageOptions, Record<string, unknown>>(rest);
+  const { message } = options;
+  const tools = toolsOf(runs, waitsOf(checks));
+  const accept = accepter(checks, message);
   const failFields = fieldFailureOf(checks, keys);
+  const end: Ending = (from, output, failed) =>
+    count() === from ? accept(output) : failFields === undefined ? FAIL : failFields(failed, output, message, from);
+  const size = keys.length;
 
-  return described(
-    composed((input, place): Maybe<ValidationResult<unknown>> => {
-      if (typeof input !== "object" || input === null || isArray(input)) {
-        return reject([typeIssue("object", input)], place);
+  const run: Run = (input) => {
+    if (typeof input !== "object" || input === null || isArray(input)) {
+      return refuse("object", input, message);
+    }
+    const start = count();
+    const output: Record<string, unknown> = {};
+    let mark = start;
+    let failed: string[] | undefined;
+    let waited: Pending[] | undefined;
+    let waitedKeys: string[] | undefined;
+    let marks: number[] | undefined;
+    for (let index = 0; index < size; index += 1) {
+      const key = keys[index] as string;
+      let value: unknown = FAIL;
+      let isRead = true;
+      try {
+        value = (input as Record<string, unknown>)[key];
+      } catch {
+        // Reported in the property's turn, as a property that failed, so the issues keep the order of the shape.
+        isRead = false;
+        report("invalid_value", { unreadable: true }, message);
       }
-
-      const results = runEach(keys.length, (index) => {
-        const key = keys[index] as string;
-        let value: unknown;
-        try {
-          value = (input as Record<string, unknown>)[key];
-        } catch {
-          // Reported in the property's turn, as a property that failed, so the issues keep the order of the shape.
-          return failWith(report([issue("invalid_value", { unreadable: true }, [key])], place, options.message));
-        }
-        return (children[index] as Child)(value, place, key);
-      });
-      return chain(collect(results), (settled) => {
-        const issues: ValidationIssue[] = [];
-        const output: Record<string, unknown> = {};
-        settled.forEach((result, index) => {
-          if (!result.ok) {
-            append(issues, result.error.issues);
-          } else if (result.value !== undefined) {
-            setOwn(output, keys[index] as string, result.value);
-          }
-        });
-        return issues.length > 0
-          ? failFields === undefined
-            ? failWith(issues)
-            : failFields(issues, settled, output, options.message, place)
-          : accept(output, place);
-      });
-    }),
+      if (isRead) {
+        value = (runs[index] as Run)(value);
+      }
+      if (value === FAIL) {
+        mark = under(mark, key);
+        (failed ??= []).push(key);
+      } else if (tools !== undefined && tools.is(value)) {
+        (waited ??= []).push(value);
+        (waitedKeys ??= []).push(key);
+        (marks ??= []).push(mark - start);
+        // Holds the place of the key, so the output keeps the order of the shape.
+        setOwn(output, key, undefined);
+      } else if (value !== undefined) {
+        setOwn(output, key, value);
+      }
+    }
+    return waited === undefined
+      ? end(start, output, failed)
+      : waitFor(
+          tools as NonNullable<typeof tools>,
+          start,
+          waited,
+          waitedKeys as string[],
+          marks as number[],
+          undefined,
+          output,
+          failed,
+          end,
+        );
+  };
+  run.w = tools;
+  return toValidator(
+    run,
     { kind: "objectLike", options, checks, shape: Object.freeze(read) },
+    TYPE_WORDS,
+    Object.values(read),
   );
 }

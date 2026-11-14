@@ -1,9 +1,8 @@
-import { split } from "../core/checks";
-import { described } from "../core/describe";
 import { assertOption, assertSize } from "../core/result";
+import { split } from "../core/split";
 import type { Factory, MessageOptions } from "../core/types";
 import { isCalendarDate } from "./calendar";
-import { stringFormat } from "./text-format";
+import { formatted, stringFormat } from "./text-format";
 
 /** Nanoseconds, the finest a timestamp is written in; more digits would build a pattern nobody meant. */
 const MAX_PRECISION = 9;
@@ -74,7 +73,7 @@ export const datetime = ((...args: unknown[]) => {
   // precision asks for a fraction of them. A time with a zone keeps the rules it has without `local`.
   const times = local === true && precision === undefined ? `(?:${clock}|(?:[01]\\d|2[0-3]):[0-5]\\d)` : clock;
   const pattern = new RegExp(`^(\\d{4}-\\d{2}-\\d{2})T${times}$`);
-  return described(
+  return formatted(
     stringFormat(
       "datetime",
       (text) => {

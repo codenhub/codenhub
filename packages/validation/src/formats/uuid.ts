@@ -1,8 +1,7 @@
-import { split } from "../core/checks";
-import { described } from "../core/describe";
 import { assertOption } from "../core/result";
+import { split } from "../core/split";
 import type { Factory, MessageOptions } from "../core/types";
-import { stringFormat } from "./text-format";
+import { formatted, stringFormat } from "./text-format";
 
 /** The nil and max UUIDs, which RFC 9562 defines apart from the versions, as all zeros and all ones. */
 const SPECIAL_UUID_PATTERN = /^(?:0{8}-0{4}-0{4}-0{4}-0{12}|f{8}-f{4}-f{4}-f{4}-f{12})$/i;
@@ -40,7 +39,7 @@ export const uuid = ((...args: unknown[]) => {
     `^[0-9a-f]{8}-[0-9a-f]{4}-${version ?? "[1-8]"}[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$`,
     "i",
   );
-  return described(
+  return formatted(
     stringFormat(
       "uuid",
       (text) =>

@@ -1,4 +1,4 @@
-import { decided } from "../core/async";
+import { decided } from "../core/decide";
 import { customFormats, describe } from "../core/describe";
 import { assertFunction, assertText } from "../core/result";
 import type { AnyValidator, Factory, MessageOptions } from "../core/types";
@@ -29,8 +29,7 @@ import { formatFactory } from "../formats/text-format";
 export function format(name: string, test: (text: string) => boolean): Factory<string, MessageOptions> {
   assertText("format(name)", name);
   assertFunction("test", test);
-  // The test is the consumer's code, so it has no fast test that would run it a second time.
-  const factory = formatFactory(name, (text) => (decided("format", test, text) ? text : undefined), false) as (
+  const factory = formatFactory(name, (text) => (decided("format", test, text) ? text : undefined)) as (
     ...args: unknown[]
   ) => AnyValidator;
   return ((...args: unknown[]) => {

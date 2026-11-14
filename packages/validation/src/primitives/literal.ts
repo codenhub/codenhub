@@ -1,4 +1,4 @@
-import { member } from "../core/checks";
+import { member } from "../core/leaf";
 import type { AnyValidator, AsyncRest, AsyncSchema, MessageOptions, Rest, Schema } from "../core/types";
 
 /** A value a validator can require exactly: any primitive, including `null` and `undefined`. */

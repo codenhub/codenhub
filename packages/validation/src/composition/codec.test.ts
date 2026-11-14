@@ -1,9 +1,11 @@
 import { describe, expect, expectTypeOf, it } from "vitest";
 
 import { check } from "../builders/check";
+import { validator } from "../builders/validator";
 import { coerceBigint } from "../coercion/coerce-bigint";
 import { coerceNumber } from "../coercion/coerce-number";
 import { describe as describeValidator } from "../core/describe";
+import { fail, pass } from "../core/result";
 import type { Validator } from "../core/types";
 import { datetime } from "../formats/datetime";
 import { email } from "../formats/email";
@@ -25,6 +27,7 @@ import { map } from "./map";
 import { meta } from "./meta";
 import { nullable } from "./nullable";
 import { object } from "./object";
+import { objectWithRest } from "./object-with-rest";
 import { optional } from "./optional";
 import { pipe } from "./pipe";
 import { readonly } from "./readonly";
@@ -91,7 +94,7 @@ describe("encode", () => {
   });
 
   it("should write back the keys an object gives its validator of unknown keys through that validator", () => {
-    const schedule = object({ name: string() }, { unknownKeys: isoDate });
+    const schedule = objectWithRest({ name: string() }, isoDate);
     expect(valueOf(encode(schedule, { name: "launch", start: moment }))).toEqual({
       name: "launch",
       start: "2026-10-07T12:00:00.000Z",
@@ -111,10 +114,9 @@ describe("encode", () => {
   });
 
   it("should write back a codec whose output is written by hand, checking the value with it", () => {
-    const byHand: Validator<number> = (input) =>
-      typeof input === "number"
-        ? { ok: true, value: input }
-        : { ok: false, error: { issues: [{ code: "invalid_type", path: [], params: { expected: "number" } }] } };
+    const byHand = validator((input) =>
+      typeof input === "number" ? pass(input) : fail({ code: "invalid_type", params: { expected: "number" } }),
+    );
     const counted = codec(string(), byHand, { decode: Number, encode: String });
     expect(valueOf(encode(counted, 5))).toBe("5");
     expect(codesOf(encode(counted, "5" as never))).toEqual(["invalid_type"]);
@@ -122,10 +124,9 @@ describe("encode", () => {
 
   it("should give encode the value given, not what an output written by hand produces from it", () => {
     // Run forward, this output would double the value, which then decodes to twice what was given.
-    const doubling: Validator<number> = (input) =>
-      typeof input === "number"
-        ? { ok: true, value: input * 2 }
-        : { ok: false, error: { issues: [{ code: "invalid_type", path: [], params: { expected: "number" } }] } };
+    const doubling = validator((input) =>
+      typeof input === "number" ? pass(input * 2) : fail({ code: "invalid_type", params: { expected: "number" } }),
+    );
     const counted = codec(string(), doubling, { decode: Number, encode: String });
     expect(valueOf(encode(counted, 21))).toBe("21");
   });
@@ -305,7 +306,7 @@ describe("encode", () => {
   });
 
   it("should throw for a part that cannot be written back, naming its place", () => {
-    const byHand: Validator<string> = (input) => ({ ok: true, value: String(input) });
+    const byHand = validator((input) => pass(String(input)));
     expect(() => encode(object({ size: transform(string(), (text) => text.length) }), { size: 1 })).toThrow(
       new TypeError("encode cannot write back a transform at size. Use a codec there"),
     );

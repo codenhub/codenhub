@@ -229,15 +229,15 @@ const admin = extend(user, { admin: boolean() }); // every property of user, and
 - `extend(validator, shape)` adds the properties of `shape`, as spreading one shape into another does. A property the object has is replaced by the one given, in its place.
 - `required(validator)` makes every property required. A property made with `optional` becomes the validator it wrapped, so its default is removed too, and a missing property fails. One made with `nullish` becomes `nullable`, which still accepts `null`. A property that accepts `undefined` some other way, such as `unknown()`, is kept unchanged.
 
-The new object keeps the options of the one it came from, `unknownKeys` and `message`. It takes options and checks of its own after its arguments, as `object` does: `pick(user, ["name"], { unknownKeys: "strict" }, check(...))`.
+The new object is of the kind the one it came from is, and keeps its `message`. It takes a `message` and checks of its own after its arguments, as `object` does: `pick(user, ["name"], { message: "Not a name" }, check(...))`.
 
-- Each option given replaces the one of its name, and leaves the others. So a strict object picked from with only a `message` stays strict.
-- An option given as `undefined` counts as not given, and keeps the one of the original. So `pick(strictUser, ["name"], { unknownKeys: undefined })` stays strict.
-- A validator given as `unknownKeys` is kept too. So a property that `pick` or `omit` leaves out goes to it when the input has it, as any other key the new shape does not list does.
+- What it does with the keys its shape does not list stays as it was, and no option changes it. So a `strictObject` picked from stays strict. For another kind, give its factory the shape, reused as [Spreading a shape](#spreading-a-shape) shows.
+- A `message` given replaces the one of the original, and one given as `undefined` counts as not given.
+- The validator of an `objectWithRest` is kept too. So a property that `pick` or `omit` leaves out goes to it when the input has it, as any other key the new shape does not list does.
 
 An object with checks is refused with a `TypeError`. A check reads the whole object, so it may read a property the new object lacks. Kept, it could fail every value. Dropped without a word, the new object would accept what the first was written to refuse. Make the object without its checks, derive from that, and give each result the checks it needs.
 
-They need a validator `object` made, since that is how they know its shape. `objectLike`, a `pipe` or a `transform` around an object, and a validator written by hand are a `TypeError`. They read the shape through [`describe`](json-schema.md#reading-a-schema), which is how you would write one of your own.
+They need a validator `object`, `strictObject`, `looseObject` or `objectWithRest` made, since that is how they know its shape. `objectLike`, a `pipe` or a `transform` around an object, and a validator written by hand are a `TypeError`. They read the shape through [`describe`](json-schema.md#reading-a-schema), which is how you would write one of your own.
 
 The types they return have names, for a library that exports what it derives:
 

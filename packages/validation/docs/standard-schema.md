@@ -41,7 +41,6 @@ Some issues get less than a sentence:
 
 - **The full English**, such as "Invalid email address" and "Must contain at most 3 items", which is the default.
 - **Another language**, with `portugueseMessages`, `spanishMessages` or a map of your own.
-- **A validator you wrote by hand**, which has no `~standard` of its own, since this package did not make it.
 
 ```ts
 import { email, number, object, portugueseMessages, standard } from "@codenhub/validation";
@@ -51,7 +50,7 @@ const signup = standard(object({ email: email(), age: number({ int: true }) }), 
 
 ## The types
 
-A factory returns a `Schema<T, TInput>`, or an `AsyncSchema<T, TInput>` when one of its rules waits: a `Validator` or `AsyncValidator` that is also a `StandardSchemaV1<TInput, T>`. It is accepted wherever a `Validator` is, so code that takes a validator, such as `assert` or a function of your own, takes it as before. A validator you write by hand is typed `Validator`, which asks for no `~standard`, and `brand` of one stays a `Validator`, since `brand` returns the validator it is given.
+A factory returns a `Schema<T, TInput>`, or an `AsyncSchema<T, TInput>` when one of its rules waits: a `Validator` or `AsyncValidator` that is also a `StandardSchemaV1<TInput, T>`. It is accepted wherever a `Validator` is, so code that takes a validator, such as `assert` or a function of your own, takes it as before. What [`validator`](custom-validators.md#by-hand) makes of a function you wrote is a `Schema` too, or an `AsyncSchema` when the function may return a promise. A value you typed `Validator` yourself, as a recursive schema is typed, asks for no `~standard`, and `brand` of one stays a `Validator`, since `brand` returns the validator it is given.
 
 ## What `standard` returns
 

@@ -1,6 +1,6 @@
-import { assertMessage, word } from "../core/checks";
-import { described } from "../core/describe";
+import { CHECKS } from "../core/check-run";
 import { assertList, issue } from "../core/result";
+import { assertMessage, carry, toCheck, word } from "../core/rule";
 import type { AsyncCheck, Message, ValidationIssue } from "../core/types";
 import type { GlobalFile } from "../primitives/file";
 
@@ -73,8 +73,8 @@ export function contentType(types: readonly string[], message?: Message): AsyncC
   const signatures = allowed.flatMap((type) => SIGNATURES[type] ?? []);
   const fail = (params: Readonly<Record<string, unknown>>): ValidationIssue[] =>
     word([issue("invalid_value", params)], message);
-  return described<AsyncCheck<GlobalFile>>(
-    async (value) => {
+  return toCheck<AsyncCheck<GlobalFile>>(
+    carry(async (value) => {
       let bytes: Uint8Array;
       try {
         // The built-in methods, so the file read is the one `file` checked and not a method it was given.
@@ -86,7 +86,7 @@ export function contentType(types: readonly string[], message?: Message): AsyncC
       return signatures.some((signature) => matches(bytes, signature))
         ? undefined
         : fail({ options: allowed, content: true });
-    },
+    }, CHECKS),
     { kind: "check", code: "invalid_value", params: Object.freeze({ options: allowed, content: true }) },
   );
 }

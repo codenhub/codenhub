@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import { check } from "../builders/check";
 import { format } from "../builders/format";
 import { guard } from "../builders/guard";
+import { validator } from "../builders/validator";
 import { endsWith } from "../checks/ends-with";
 import { includes } from "../checks/includes";
 import { pattern } from "../checks/pattern";
@@ -13,13 +14,16 @@ import { array } from "../composition/array";
 import { fallback } from "../composition/fallback";
 import { intersection } from "../composition/intersection";
 import { lazy } from "../composition/lazy";
+import { looseObject } from "../composition/loose-object";
 import { map } from "../composition/map";
 import { object } from "../composition/object";
 import { objectLike } from "../composition/object-like";
+import { objectWithRest } from "../composition/object-with-rest";
 import { optional } from "../composition/optional";
 import { pipe } from "../composition/pipe";
 import { record } from "../composition/record";
 import { set } from "../composition/set";
+import { strictObject } from "../composition/strict-object";
 import { tagged } from "../composition/tagged";
 import { tuple } from "../composition/tuple";
 import { union } from "../composition/union";
@@ -41,7 +45,7 @@ import { oneOf } from "../primitives/one-of";
 import { string } from "../primitives/string";
 import { unknown } from "../primitives/unknown";
 import { issuesOf, valueOf } from "../test-utils";
-import type { ValidationIssue, Validator } from "./types";
+import type { AsyncValidator, ValidationIssue, Validator } from "./types";
 
 describe("an option the factory does not read", () => {
   it.each([
@@ -205,14 +209,19 @@ describe("a message function", () => {
     ).toThrow(new TypeError("message must be text, received undefined"));
   });
 
-  it("should throw when a check written by hand returns something that is not an issue", () => {
-    expect(() => number((() => [null]) as never)(1)).toThrow(
-      new TypeError("A check must return undefined or a list of issues"),
+  it("should throw when the test of a check lists something that is not an issue", () => {
+    expect(() => number(check((() => [null]) as never))(1)).toThrow(
+      new TypeError("An issue must be an object, received null"),
     );
-    expect(() => number((() => [[]]) as never)(1)).toThrow(
-      new TypeError("A check must return undefined or a list of issues"),
+    expect(() => number(check((() => [[]]) as never))(1)).toThrow(
+      new TypeError("An issue must be an object, received a list"),
     );
-    expect(issuesOf(number((() => [{}]) as never)(1))).toEqual([{ code: "custom", path: [] }]);
+    // A hole, as in `[, ]`, is read as `undefined`, not skipped past the check of each issue.
+    // oxlint-disable-next-line no-sparse-arrays
+    expect(() => number(check((() => [,]) as never))(1)).toThrow(
+      new TypeError("An issue must be an object, received undefined"),
+    );
+    expect(issuesOf(number(check((() => [{}]) as never))(1))).toEqual([{ code: "custom", path: [] }]);
   });
 
   it("should be given the issue as its validator reports it, with a path relative to that validator", () => {
@@ -243,7 +252,7 @@ describe("a message function", () => {
     };
     const nested = object({
       list: array(string(), { max: 1, message }),
-      strict: object({}, { unknownKeys: "strict", message }),
+      strict: strictObject({}, { message }),
       dictionary: record(string({ min: 2 }), number(), { message }),
       renamed: record(string({ case: "lower" }), number(), { message }),
       either: union([number()], { message }),
@@ -286,130 +295,141 @@ describe("a message function", () => {
 
 describe("a validator written by hand", () => {
   it("should have an issue without a path placed at the child it came from", () => {
-    const pathless = (() => ({ ok: false, error: { issues: [{ code: "x" }] } })) as unknown as Validator<string>;
+    const pathless = validator((() => ({
+      ok: false,
+      error: { issues: [{ code: "x" }] },
+    })) as unknown as Validator<string>);
     expect(issuesOf(object({ a: pathless })({ a: 1 }))).toEqual([{ code: "x", path: ["a"] }]);
   });
 });
 
-describe("a factory given where its validator belongs", () => {
-  // `string` for `string()`: called with the input as its options, it returns a validator, not a result.
+describe("a function given where a validator belongs", () => {
+  // `string` for `string()`: a function, and not one a factory made.
   const factory = string as unknown as Validator<string>;
-
-  it("should name the child that returned no result, and say to call the factory", () => {
-    expect(() => object({ name: factory })({})).toThrow(
-      new TypeError('The validator at ["name"] returned no result. A factory is called first, as in string()'),
+  const byHand = ((input: unknown) => ({ ok: true, value: input })) as Validator<unknown>;
+  const refused = (name: string): TypeError =>
+    new TypeError(
+      `${name} is not a validator of this copy of the package. A factory is called first, as in string(), and any other function is given to validator()`,
     );
-    expect(() => object({ list: array(object({ name: factory })) })({ list: [{}, { name: {} }] })).toThrow(
-      'The validator at ["list",0,"name"] returned no result',
+
+  it("should refuse a factory when the composer is created, naming the child and saying to call it", () => {
+    expect(() => object({ name: factory })).toThrow(refused("shape.name"));
+    expect(() => object({ list: array(object({ "a.b": factory })) })).toThrow(refused("shape.a.b"));
+    expect(() => array(factory)).toThrow(refused("item"));
+    expect(() => tuple([number(), factory])).toThrow(refused("items[1]"));
+    expect(() => union([number(), factory])).toThrow(refused("options[1]"));
+    expect(() => pipe(unknown(), factory)).toThrow(refused("validators[1]"));
+    expect(() => record(factory, number())).toThrow(refused("key"));
+    expect(() => map(string(), factory)).toThrow(refused("value"));
+  });
+
+  it.each([
+    ["optional", "validator", () => optional(factory)],
+    ["fallback", "validator", () => fallback(factory, "x")],
+    ["intersection", "left", () => intersection(factory, unknown())],
+    ["set", "item", () => set(factory)],
+    ["objectLike", "shape.a", () => objectLike({ a: factory })],
+    ["tagged", "variants.a", () => tagged("type", { a: factory as never })],
+    ["strictObject", "shape.a", () => strictObject({ a: factory })],
+    ["looseObject", "shape.a", () => looseObject({ a: factory })],
+    ["objectWithRest, as a property", "shape.a", () => objectWithRest({ a: factory }, string())],
+    ["objectWithRest, as the rest", "rest", () => objectWithRest({}, factory)],
+    ["email, as a part", "domain", () => email({ domain: factory })],
+  ])("should refuse a factory given to %s when it is created, naming it", (_, name, make) => {
+    expect(make).toThrow(refused(name));
+  });
+
+  it("should refuse the validator a lazy getter gives when it is first read, since it is not called before", () => {
+    const later = lazy(() => factory);
+    expect(() => later("a")).toThrow(
+      "is not a validator of this copy of the package. A factory is called first, as in string()",
     );
   });
 
-  it("should name the validator of a fallback, which substitutes for a failure and not for no result", async () => {
-    expect(() => fallback(factory, "x")({})).toThrow(
-      new TypeError("The validator given to fallback returned no result. A factory is called first, as in string()"),
-    );
-    const forgetful = (() => undefined) as unknown as Validator<number>;
-    expect(() => fallback(forgetful, 1)(5)).toThrow("The validator given to fallback returned no result");
-    const later = (async () => undefined) as unknown as Validator<number>;
-    await expect(fallback(later, 1)(5) as unknown as Promise<unknown>).rejects.toThrow(
-      "The validator given to fallback returned no result",
-    );
+  it("should refuse a function written by hand that validator() did not make, and take it once it did", () => {
+    expect(() => object({ a: byHand })).toThrow(refused("shape.a"));
+    expect(() => union([byHand])).toThrow(refused("options[0]"));
+    expect(valueOf(object({ a: validator(byHand) })({ a: 2 }))).toEqual({ a: 2 });
+    expect(valueOf(union([validator(byHand)])(2))).toBe(2);
+  });
+});
+
+describe("a validator written by hand that returns no result", () => {
+  const none = "A validator written by hand must return pass(value) or fail(issue)";
+  const returning = (returned: unknown): Validator<string> =>
+    validator((() => returned) as unknown as Validator<string>);
+
+  it.each([
+    ["nothing", undefined],
+    ["null", null],
+    ["a value given back as it is", { a: 1 }],
+    ["a factory", string],
+    ["a failure without an error", { ok: false }],
+    ["a failure without a list of issues", { ok: false, error: {} }],
+  ])("should throw for %s, on its own and under a composer", (_, returned) => {
+    const forgetful = returning(returned);
+    expect(() => forgetful("a")).toThrow(new TypeError(none));
+    expect(() => object({ a: forgetful })({ a: "a" })).toThrow(none);
+    expect(() => union([forgetful])("a")).toThrow(none);
+    expect(() => optional(forgetful)("a")).toThrow(none);
+    expect(() => fallback(forgetful, "x")("a")).toThrow(none);
+    expect(() => record(forgetful, number())({ a: 1 })).toThrow(none);
   });
 
-  it("should name the key validator of a record or a map", () => {
-    const forgetful = (() => undefined) as unknown as Validator<string>;
-    expect(() => record(forgetful, number())({ a: 1 })).toThrow(
-      new TypeError("The key validator of record returned no result. A factory is called first, as in string()"),
-    );
-    const objectFactory = object as unknown as Validator<object>;
-    expect(() => map(objectFactory, number())(new Map([[{}, 1]]))).toThrow(
-      new TypeError("The key validator of map returned no result. A factory is called first, as in string()"),
-    );
-  });
-
-  it("should name the option of a union", () => {
-    expect(() => union([number(), factory])(undefined)).toThrow(
-      new TypeError("options[1] returned no result. A factory is called first, as in string()"),
-    );
-  });
-
-  it("should name a validator written by hand that returns nothing, at the root too", () => {
-    const forgetful = (() => undefined) as unknown as Validator<string>;
-    expect(() => optional(forgetful)("a")).toThrow("The validator at the root returned no result");
-    expect(() => object({ a: (() => null) as unknown as Validator<string> })({})).toThrow(
-      'The validator at ["a"] returned no result',
-    );
-  });
-
-  it("should name a result that is an object and still none: a value given back as it is, or a failure without issues", () => {
-    const echo = ((input: unknown) => input) as unknown as Validator<object>;
-    expect(() => object({ a: echo })({ a: {} })).toThrow('The validator at ["a"] returned no result');
-    expect(() => union([echo])({})).toThrow("options[0] returned no result");
-    const empty = (() => ({ ok: false })) as unknown as Validator<string>;
-    expect(() => object({ a: empty })({})).toThrow('The validator at ["a"] returned no result');
-    const listless = (() => ({ ok: false, error: {} })) as unknown as Validator<string>;
-    expect(() => array(listless)([1])).toThrow("The validator at [0] returned no result");
-  });
-
-  it("should name a failure whose list of issues is empty, which would otherwise pass the value it held", async () => {
-    const silent = (() => ({ ok: false, error: { issues: [] } })) as unknown as Validator<string>;
-    const named = 'The validator at ["a"] returned no result';
-    expect(() => object({ a: silent })({ a: "secret" })).toThrow(named);
-    expect(() => objectLike({ a: silent })({ a: "secret" })).toThrow(named);
-    expect(() => record(string(), silent)({ a: "secret" })).toThrow(named);
-    expect(() => map(string(), silent)(new Map([["a", "secret"]]))).toThrow("returned no result");
-    expect(() => array(silent)(["secret"])).toThrow("The validator at [0] returned no result");
-    expect(() => tuple([silent])(["secret"])).toThrow("The validator at [0] returned no result");
-    expect(() => set(silent)(new Set(["secret"]))).toThrow("returned no result");
-    expect(() => tagged("type", { a: object({ b: silent }) })({ type: "a", b: "x" })).toThrow(
-      'The validator at ["b"] returned no result',
-    );
+  it("should throw for a failure whose list of issues is empty, which would otherwise pass the value it held", async () => {
+    const silent = returning({ ok: false, error: { issues: [] } });
+    const keyed = { type: "a", a: "secret" };
+    for (const composed of [
+      object({ a: silent }),
+      objectLike({ a: silent }),
+      record(string(), silent),
+      tagged("type", { a: object({ a: silent }) }),
+    ]) {
+      expect(() => composed(keyed)).toThrow(none);
+    }
+    expect(() => array(silent)(["secret"])).toThrow(none);
+    expect(() => tuple([silent])(["secret"])).toThrow(none);
+    expect(() => map(string(), silent)(new Map([["a", "secret"]]))).toThrow(none);
+    expect(() => set(silent)(new Set(["secret"]))).toThrow(none);
     for (const composed of [
       optional(silent),
       intersection(silent, unknown()),
       pipe(unknown(), silent),
       lazy(() => silent),
       fallback(silent, "x"),
+      union([silent]),
     ]) {
-      expect(() => composed("secret")).toThrow("returned no result");
+      expect(() => composed("secret")).toThrow(none);
     }
-    expect(() => union([silent])("secret")).toThrow("options[0] returned no result");
-    expect(() => record(silent, number())({ a: 1 })).toThrow("The key validator of record returned no result");
-    expect(() => map(silent, number())(new Map([["a", 1]]))).toThrow("The key validator of map returned no result");
-    const later = (async () => ({ ok: false, error: { issues: [] } })) as unknown as Validator<string>;
-    await expect(object({ a: later })({ a: "secret" })).rejects.toThrow(named);
-    await expect(union([later])("secret")).rejects.toThrow("options[0] returned no result");
+    const later = validator((async () => ({ ok: false, error: { issues: [] } })) as unknown as AsyncValidator<string>);
+    await expect(object({ a: later })({ a: "secret" })).rejects.toThrow(none);
+    await expect(union([later])("secret")).rejects.toThrow(none);
   });
 
-  it("should write the place so that no key is mistaken for a path or for the root", () => {
-    expect(() => object({ "a.b": factory })({})).toThrow('The validator at ["a.b"] returned no result');
-    expect(() => object({ a: object({ b: factory }) })({ a: {} })).toThrow('The validator at ["a","b"] returned');
-    expect(() => object({ "": factory })({})).toThrow('The validator at [""] returned no result');
+  it("should reject, not throw, when the result that is none was awaited", async () => {
+    const pending = validator((async () => string) as unknown as AsyncValidator<string>);
+    await expect(pending("a")).rejects.toThrow(none);
+    await expect(object({ a: pending })({})).rejects.toThrow(none);
+    await expect(union([pending])(1)).rejects.toThrow(none);
   });
 
   it("should take a passing result written by hand without reading its error", () => {
     // A result class whose error is a getter that throws when nothing failed.
-    const passing = ((input: unknown) => ({
+    const passing = validator(((input: unknown) => ({
       ok: true,
       value: input,
       get error(): never {
         throw new Error("passed, so no error");
       },
-    })) as unknown as Validator<unknown>;
+    })) as unknown as Validator<unknown>);
     expect(valueOf(object({ a: passing })({ a: 2 }))).toEqual({ a: 2 });
     expect(valueOf(union([passing])(2))).toBe(2);
   });
 
   it("should still take a result written by hand whose ok is not a boolean", () => {
-    const loose = ((input: unknown) => ({ ok: 1, value: input })) as unknown as Validator<unknown>;
+    const loose = validator(((input: unknown) => ({ ok: 1, value: input })) as unknown as Validator<unknown>);
     expect(object({ a: loose })({ a: 2 })).toEqual({ ok: true, value: { a: 2 } });
     expect(union([loose])(2)).toEqual({ ok: true, value: 2 });
-  });
-
-  it("should reject, not throw, when the result that is none was awaited", async () => {
-    const pending = (async () => factory) as unknown as Validator<string>;
-    await expect(object({ a: pending })({})).rejects.toThrow('The validator at ["a"] returned no result');
-    await expect(union([pending])(1)).rejects.toThrow("options[0] returned no result");
   });
 });
 

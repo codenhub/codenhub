@@ -43,34 +43,38 @@ Without a code, the issue has code `custom`, at the value's own location. An iss
 
 A check runs once the value has its type and has passed the validator's own options. So `username` above never tests a name longer than 30 characters. For an object, that means once every property has passed, so a check can compare them. [Forms](forms.md#fields-that-must-agree) shows two passwords that must match, and [`checkFields`](forms.md#a-rule-that-does-not-wait-for-the-other-fields), a check that runs before the other fields have passed.
 
-### A check written by hand
+### A check that reports several issues
 
-A check can also be a function that returns nothing for a value it accepts, or the issues it found. Type it as `Check<T>`. That is how a check reports several issues at once, or chooses a path for each failure:
+A test can also return the issues it found, and an empty list for a value it accepts. That is how a check reports several issues at once, or chooses a path for each failure:
 
 ```ts
-import { string, type Check } from "@codenhub/validation";
+import { check, string, type IssueInput } from "@codenhub/validation";
 
-const strongPassword: Check<string> = (password) => {
-  const issues = [];
+const strongPassword = check((password: string) => {
+  const issues: IssueInput[] = [];
   if (!/\d/.test(password)) {
-    issues.push({ code: "missing_digit", path: [] });
+    issues.push({ code: "missing_digit" });
   }
   if (!/[A-Z]/.test(password)) {
-    issues.push({ code: "missing_uppercase", path: [] });
+    issues.push({ code: "missing_uppercase" });
   }
-  return issues.length > 0 ? issues : undefined;
-};
+  return issues;
+});
 
 const password = string({ min: 12, max: 200 }, strongPassword);
+
+password("correct horse battery"); // { ok: false, ... }, code "missing_digit"
 ```
 
-Each issue it returns is an object, as `fail()` makes one, and its type is `ValidationIssue`:
+Each issue in the list is an object, as `fail()` takes one:
 
-- Anything else in the list, such as `null`, throws a `TypeError` when the check reports it.
-- An issue without a `code` has code `custom`.
-- Its `code` and `message` are text, and its `path` is a list of keys and indexes. A `path` that is not a list, such as `"confirm"`, throws a `TypeError` too.
+- An issue without a `code` has code `custom`, and one without a `path` is at the value's own location.
+- An issue without a `message` is worded by the second argument of `check`, when that is a message or an issue with one.
+- Anything else in the list, such as `null` or text, throws a `TypeError` when the check reports it. So does a `path` that is not a list, such as `"confirm"`.
 
-Building issues with `fail()` checks the rest when they are made.
+A test that returns anything but a boolean or a list throws a `TypeError` when the check runs. That includes the `undefined` of a test that forgot to return: read as a pass, it would accept every value.
+
+A validator takes as a check only what `check`, [`checkFields`](forms.md#a-rule-that-does-not-wait-for-the-other-fields) or a built-in check such as `nonBlank()` made. A function given in the place of a check throws a `TypeError` when the validator is created. The code that runs a test and reads its answer comes with `check`, so a schema without one carries none of it.
 
 ## Making a validator
 
@@ -126,19 +130,25 @@ export function sku(prefix: string): Validator<string> {
 
 ### By hand
 
-A validator is any function that takes an input and returns a result. Return `pass(value)` when the input is acceptable, and `fail(...)` when it is not:
+`validator(validate)` makes a validator from a function that takes an input and returns a result. Return `pass(value)` when the input is acceptable, and `fail(...)` when it is not:
 
 ```ts
-import { fail, pass, type Validator } from "@codenhub/validation";
+import { fail, pass, validator } from "@codenhub/validation";
 
-const even: Validator<number> = (input) => (typeof input === "number" && input % 2 === 0 ? pass(input) : fail({ code: "not_even" }));
+const even = validator((input) => (typeof input === "number" && input % 2 === 0 ? pass(input) : fail({ code: "not_even" })));
+
+even(4); // { ok: true, value: 4 }
+even(3); // { ok: false, ... }, code "not_even"
 ```
 
-The parameter is `unknown`, because a validator exists to check data you do not trust yet. The `Validator<number>` annotation makes the compiler check your function against the contract, and tells `Infer` what it produces.
+The parameter is `unknown`, because a validator exists to check data you do not trust yet. The type the validator produces is read from what the function returns, so `even` is a validator of `number`, and `Infer` says so.
 
-A second type says what it accepts, for [`InferInput`](forms.md#the-types-of-a-form): `Validator<number, string>` is a validator that reads a number from text. Without it, the input type is `unknown`.
+- To name a type the body does not show, type what the function returns: `validator((input): ValidationResult<User> => ...)`.
+- To say what it accepts, for [`InferInput`](forms.md#the-types-of-a-form), type the function as a validator before giving it: one typed `Validator<number, string>` reads a number from text. Without that, the input type is `unknown`.
 
-A validator written by hand works everywhere a built-in one does, such as inside `object`, `optional` and `pipe`. It has no `message` option or checks unless you write them, which is what the builders are for.
+What `validator` returns works everywhere a built-in one does, such as inside `object`, `optional` and `pipe`, and is a [Standard Schema](standard-schema.md) as they are. It has no `message` option or checks unless you write them, which is what the builders are for.
+
+A composer takes a function written by hand only through `validator`. The code that calls such a function, checks what it returned and waits for it comes with `validator`, so a schema without one carries none of it.
 
 `fail` takes one or more issues. Each can set:
 
@@ -151,33 +161,35 @@ A validator written by hand works everywhere a built-in one does, such as inside
 
 `fail` throws a `TypeError` for no issue, since a failure with no issue says nothing. It also throws for a `path` that is not a list, such as `"confirm"` where `["confirm"]` was meant, which would be split into one segment per letter.
 
-### A validator that returns no result
+### A function that is no validator
 
-A validator that returns anything other than a result is a bug, and the package throws a `TypeError` that names where it is:
+A function this package did not make is refused where a validator belongs, with a `TypeError` that names the argument when the composer is created:
 
 ```ts
 import { object, string, type Validator } from "@codenhub/validation";
 
-const profile = object({ name: string as unknown as Validator<string> });
-
-profile({ name: { min: 2 } }); // TypeError: The validator at ["name"] returned no result. A factory is called first, as in string()
+object({ name: string as unknown as Validator<string> }); // TypeError: shape.name is not a validator of this copy of the package. A factory is called first, as in string(), and any other function is given to validator()
 ```
 
-The common cause is a factory given where its validator belongs, as `string` instead of `string()`. Called with the input, a factory returns a validator, or throws for input that is no options object. The types reject that, so it happens in JavaScript, or past a cast. A validator written by hand that returns nothing, the input itself, or a failure without issues is reported the same way. Where there is no path, the message names the place instead: "The validator given to fallback", "The key validator of record", or `options[1]` of a `union`.
+The common cause is a factory given where its validator belongs, as `string` instead of `string()`. The types reject that, so it happens in JavaScript, or past a cast. The other is a function written by hand that was not given to `validator`, which the types accept when it is typed as a `Validator`. The name is the argument's: `shape.name`, `item`, `options[1]` of a `union`, `key` of a `record`. A `lazy` reads its validator when it first runs, so it throws then.
+
+A validator made by another installed copy of this package is refused the same way, and so is one of its checks: it happens when two packages depend on versions of `@codenhub/validation` that do not overlap, and one is given a schema of the other. Each copy reports issues to itself, so one cannot run the validators of the other as its own. Install one version for both, or give the validator to `validator`, which runs it as any function written by hand and keeps its issues, though no longer what `describe` and `toJsonSchema` read of it.
+
+A function given to `validator` that returns anything other than a result is a bug too: nothing, the input itself, or a failure without issues. The validator throws a `TypeError` when it runs, "A validator written by hand must return pass(value) or fail(issue)". A failure it built by hand rather than with `fail` is checked as `fail` checks its issues, so a `path` such as `"confirm"` throws there too.
 
 ### A conversion that can fail
 
 [`transform`](shaping-values.md#transform) changes the value a validator produced into another, and cannot reject it. A conversion that can fail, such as reading a day as a `Date`, is a validator of its own, placed after the first with `pipe`:
 
 ```ts
-import { fail, isoDate, pass, pipe, type Validator } from "@codenhub/validation";
+import { fail, isoDate, pass, pipe, validator } from "@codenhub/validation";
 
 // isoDate has already checked the text is a day such as 2026-09-28, so this reads it as UTC midnight
 // the same way on every runtime. `new Date(text)` on free-form text would not.
-const startOfDay: Validator<Date> = (input) => {
+const startOfDay = validator((input) => {
   const date = new Date(`${String(input)}T00:00:00Z`);
   return Number.isNaN(date.getTime()) ? fail({ code: "invalid_date" }) : pass(date);
-};
+});
 
 const birthday = pipe(isoDate(), startOfDay);
 ```
@@ -203,17 +215,17 @@ const result = await signup(input);
 
 Nothing else changes. A validator given an asynchronous check becomes an `AsyncValidator`, and so does everything that contains it: `signup` above is one because `username` is.
 
-The type tells the compiler the result must be awaited. So reading `signup(input).ok` without `await` is an error you find while writing, not a bug you find in production, where a promise has no `ok`: `!result.ok` would turn every sign-up away, and `result.ok === false` would let every one through. A check written by hand that may wait is typed `AsyncCheck<T>`. Typing it `Check<T>` keeps its validators synchronous, and the compiler holds you to it.
+The type tells the compiler the result must be awaited. So reading `signup(input).ok` without `await` is an error you find while writing, not a bug you find in production, where a promise has no `ok`: `!result.ok` would turn every sign-up away, and `result.ok === false` would let every one through. A check whose test may wait is an `AsyncCheck<T>`, and one whose test answers at once is a `Check<T>`, which keeps its validators synchronous.
 
 You can also write an asynchronous validator directly:
 
 ```ts
-import { fail, pass, type AsyncValidator } from "@codenhub/validation";
+import { fail, pass, validator } from "@codenhub/validation";
 
-const existingUser: AsyncValidator<User> = async (input) => {
+const existingUser = validator(async (input) => {
   const user = typeof input === "string" ? await findUser(input) : undefined;
   return user ? pass(user) : fail({ code: "unknown_user" });
-};
+});
 ```
 
 What such a validator calls after its own `await` is a separate validation, since the package cannot follow an `await` it did not make. A `lazy` it reaches counts its `maxCalls` again from zero, so recursion through it is not bounded. Keep the `await` in a check, whose awaits the package makes, when the validator leads back to a recursive schema.
@@ -229,7 +241,7 @@ Things to know about asynchronous validation:
 ## What you must not do
 
 - **Do not put the input in an issue.** No `params` value, and no `message` built from the input. Issues are logged, and inputs are passwords and tokens.
-- **Do not throw for bad input.** Return `false` from a test, issues from a check, or `fail` from a validator. Throw only for a mistake in how a validator was set up, and do it when it is created, not when it runs.
+- **Do not throw for bad input.** Return `false` or a list of issues from a test, or `fail` from a validator. Throw only for a mistake in how a validator was set up, and do it when it is created, not when it runs.
 - **Do not modify the input.** Return a new value from `pass` when a validator changes it.
 - **Do not make a validator when a module loads unless the call is marked pure.** `export const postcode = format(...)` runs when the module loads, so a bundler keeps it even in a program that never uses it. That is harmless in an app. A library of validators that wants each one dropped when unused writes `export const postcode = /* @__PURE__ */ format(...)`.
 
@@ -255,15 +267,16 @@ A library that exports validators of its own names them in its declarations. The
 The types you write most:
 
 - `Validator<T, TInput?>` and `AsyncValidator<T, TInput?>`: a validator, synchronous or not. `AnyValidator` is either one.
-- `Schema<T, TInput?>` and `AsyncSchema<T, TInput?>`: a validator a factory of this package made, which is also a [Standard Schema](standard-schema.md). A validator written by hand is a `Validator` and not a `Schema`, since it has no `~standard`.
+- `Schema<T, TInput?>` and `AsyncSchema<T, TInput?>`: a validator a factory of this package made, which is also a [Standard Schema](standard-schema.md). What `validator` returns is one too. A function only typed as a `Validator` is not, and no composer takes it.
 - `Check<T>` and `AsyncCheck<T>`: a check.
 - `Infer` and `InferInput`: the type a validator produces, and the type that can pass it.
 - `ValidationResult<T>`, which is `ValidationOk<T>` or `ValidationErr`. A `ValidationErr` holds a `ValidationFailure`, whose `issues` are `ValidationIssue`s.
 - `ValidationIssueCode`, the built-in codes, open to any other string, and `ValidationPathSegment`, a key or an index of a `path`.
-- `IssueInput`, an issue as `fail` takes it.
+- `IssueInput`, an issue as `fail` takes it, and `CheckAnswer`, what the test of a `check` returns.
+- `Validated`, what a function given to `validator` returns, and `ValidatedValue`, the type of the value in it.
 - `Message`, the text or function of a `message` option, and `MessageOptions`, the options every validator takes.
 
-The options of each validator are named after it: `StringOptions`, `NumberOptions`, `BigintOptions`, `DateOptions`, `FileOptions`, `ArrayOptions`, `TupleOptions`, `ObjectOptions`, `LazyOptions`, `FormDataOptions`, `SearchParamsOptions`, `CoerceDateOptions`, `EmailOptions`, `UrlOptions`, `IpOptions`, `UuidOptions`, `DatetimeOptions`, `TimeOptions` and `Base64Options`. `SizeOptions` holds the `min`, `max` and `length` that `set`, `map` and `record` take. `AssertOptions`, `JsonSchemaOptions` and the rest belong to the pages of their functions.
+The options of each validator are named after it: `StringOptions`, `NumberOptions`, `BigintOptions`, `DateOptions`, `FileOptions`, `ArrayOptions`, `TupleOptions`, `LazyOptions`, `FormDataOptions`, `SearchParamsOptions`, `CoerceDateOptions`, `EmailOptions`, `UrlOptions`, `IpOptions`, `UuidOptions`, `DatetimeOptions`, `TimeOptions` and `Base64Options`. `SizeOptions` holds the `min`, `max` and `length` that `set`, `map` and `record` take. `AssertOptions`, `JsonSchemaOptions` and the rest belong to the pages of their functions.
 
 The types of shapes, which name what a composer produces and accepts:
 

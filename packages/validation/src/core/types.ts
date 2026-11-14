@@ -110,8 +110,8 @@ export interface AsyncValidator<T, TInput = unknown> {
  * that takes one, such as a form library or a router, takes it without a `standard` call, and words its
  * issues in short English. `standard(validator, messages)` gives the full wording or another language.
  *
- * Accepted wherever a {@link Validator} is. A validator written by hand is a {@link Validator} and not a
- * Schema, since it has no `~standard` of its own.
+ * Accepted wherever a {@link Validator} is. A function written by hand is a {@link Validator} and not a
+ * Schema until `validator()` is given it, since it has no `~standard` of its own.
  *
  * @typeParam T - The type of the value on success.
  * @typeParam TInput - The type of input that can pass.

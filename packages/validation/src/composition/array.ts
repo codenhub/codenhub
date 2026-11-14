@@ -1,9 +1,9 @@
-import type { Maybe } from "../core/async";
-import { tail } from "../core/checks";
-import { described } from "../core/describe";
-import { childOf, composed, fastOf, MISS, type Fast } from "../core/nesting";
+import { runOf, toolsOf } from "../core/child";
+import { accepter, waitsOf } from "../core/finish";
+import { toValidator } from "../core/make";
 import { isArray } from "../core/objects";
-import { assertFunction, typeIssue } from "../core/result";
+import { FAIL, refuse, type Run } from "../core/run";
+import { split } from "../core/split";
 import type {
   AnyValidator,
   AsyncRest,
@@ -13,10 +13,10 @@ import type {
   InferInput,
   MessageOptions,
   Rest,
-  ValidationResult,
 } from "../core/types";
-import { settle } from "./settle";
-import { assertSizeOptions, sizeIssues, type SizeOptions } from "./size";
+import { SIZE_WORDS } from "../core/words";
+import { settle } from "./items";
+import { assertSizeOptions, reportSize, type SizeOptions } from "./size";
 
 /** Constraints for {@link array}. Every option is optional. Duplicates are rejected with the `unique()` check. */
 export interface ArrayOptions extends SizeOptions, MessageOptions {}
@@ -44,7 +44,7 @@ export interface ArrayOptions extends SizeOptions, MessageOptions {}
  * @param item - Validator applied to every item.
  * @param rest - Size limits, then checks.
  * @returns A validator that produces an array of what `item` produces.
- * @throws {TypeError} When `item` or a check is not a function, or `min`, `max` or `length` is not a number.
+ * @throws {TypeError} When `item` is not a validator of this copy of the package, a check was not made by `check`, `checkFields` or a built-in check, or `min`, `max` or `length` is not a number.
  * @throws {RangeError} When `min`, `max` or `length` is not a non-negative integer, or no size satisfies them together.
  */
 export function array<TItem extends AnyValidator>(
@@ -56,59 +56,28 @@ export function array<TItem extends AnyValidator>(
   ...rest: AsyncRest<Infer<TItem>[], ArrayOptions>
 ): AsyncSchema<Infer<TItem>[], InferInput<TItem>[]>;
 export function array(item: AnyValidator, ...rest: unknown[]): AnyValidator {
-  assertFunction("item", item);
-  const [options, reject, accept, checks] = tail<ArrayOptions, unknown[]>(rest, "min max length");
+  const runItem = runOf(item, "item");
+  const [options, checks] = split<ArrayOptions, unknown[]>(rest, "min max length");
   assertSizeOptions(options);
-  const child = childOf(item);
-  const fastItem = fastOf(item);
-  const { min, max, length: exact } = options;
-  // Valid input is answered without a result for each item, as `object` does, and any miss runs the full work.
-  const fast: Fast | undefined =
-    checks.length > 0 || fastItem === undefined
-      ? undefined
-      : (input) => {
-          if (!isArray(input)) {
-            return MISS;
-          }
-          const { length } = input;
-          if (
-            (min !== undefined && length < min) ||
-            (max !== undefined && length > max) ||
-            (exact !== undefined && length !== exact)
-          ) {
-            return MISS;
-          }
-          const values: unknown[] = [];
-          for (let index = 0; index < length; index += 1) {
-            const value = fastItem(input[index]);
-            if (value === MISS) {
-              return MISS;
-            }
-            values.push(value);
-          }
-          return values;
-        };
-
-  return described(
-    composed((input, place): Maybe<ValidationResult<unknown>> => {
-      if (!isArray(input)) {
-        return reject([typeIssue("array", input)], place);
-      }
-      const { length } = input;
-      const oversize = sizeIssues(length, "array", options);
-      if (oversize.length > 0) {
-        return reject(oversize, place);
-      }
-      return settle(
-        length,
-        // Read by index up to the length that was checked, never through the array's own iterator, which
-        // the input can replace to yield other items or never stop.
-        (index) => child(input[index], place, index),
-        place,
-        options.message,
-        (values) => accept(values, place),
-      );
-    }, fast),
-    { kind: "array", options, checks, item },
-  );
+  const { min, max, length: exact, message } = options;
+  const isSized = min !== undefined || max !== undefined || exact !== undefined;
+  const accept = accepter(checks, message);
+  const tools = toolsOf([runItem], waitsOf(checks));
+  // Made once, and given the input by `settle`, so validating a list makes no function.
+  const runAt = (index: number, input: readonly unknown[]): unknown => runItem(input[index]);
+  const run: Run = (input) => {
+    if (!isArray(input)) {
+      return refuse("array", input, message);
+    }
+    const { length } = input;
+    // The size is checked before any item, so `max` bounds the work as well as the value.
+    if (isSized && reportSize(length, "array", options, message)) {
+      return FAIL;
+    }
+    // Read by index up to the length that was checked, never through the array's own iterator, which
+    // the input can replace to yield other items or never stop.
+    return settle(length, runAt, message, tools, accept, undefined, undefined, input);
+  };
+  run.w = tools;
+  return toValidator(run, { kind: "array", options, checks, item }, SIZE_WORDS, [item]);
 }

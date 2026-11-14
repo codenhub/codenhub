@@ -1,6 +1,8 @@
-import { leaf, split } from "../core/checks";
-import { described } from "../core/describe";
+import { leaf } from "../core/leaf";
+import { toValidator } from "../core/make";
+import { split } from "../core/split";
 import type { Factory, MessageOptions } from "../core/types";
+import { TYPE_WORDS } from "../core/words";
 
 const nothing = (): boolean => false;
 
@@ -16,5 +18,5 @@ const nothing = (): boolean => false;
 export const never = ((...args: unknown[]) => {
   const [options, checks] = split<MessageOptions, never>(args);
   const { message } = options;
-  return described(leaf("never", nothing, message, checks), { kind: "never", options, checks });
+  return toValidator(leaf("never", nothing, message, checks), { kind: "never", options, checks }, TYPE_WORDS);
 }) as Factory<never, MessageOptions>;

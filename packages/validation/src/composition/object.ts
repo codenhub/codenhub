@@ -1,12 +1,10 @@
-import { chain, collect, isThenable, runEach, type Maybe } from "../core/async";
-import { report, tail } from "../core/checks";
-import { described } from "../core/describe";
+import { runOf, toolsOf } from "../core/child";
 import { fieldFailureOf } from "../core/field-hook";
-import { cap, MAX_ISSUES, weigh } from "../core/limit";
-import { mixedRunOf } from "../core/mixed";
-import { append, childOf, composed, fastOf, MISS, type Child, type Fast } from "../core/nesting";
-import { assertShape, isPlainObject, objectIssue, setOwn } from "../core/objects";
-import { assertFunction, failWith, issue, RESERVED_KEY, reservedKey } from "../core/result";
+import { accepter, waitsOf } from "../core/finish";
+import { toValidator } from "../core/make";
+import { assertShape, isPlainObject, refuseObject, setOwn } from "../core/objects";
+import { count, FAIL, under, type Pending, type Run, type Tools } from "../core/run";
+import { split } from "../core/split";
 import type {
   AnyValidator,
   AsyncRest,
@@ -16,9 +14,10 @@ import type {
   InferInput,
   MessageOptions,
   Rest,
-  ValidationIssue,
-  ValidationResult,
 } from "../core/types";
+import { TYPE_WORDS } from "../core/words";
+import { waitFor, type Ending } from "./fields";
+import type { Unknowns } from "./unknown-keys";
 
 /** Maps property names to the validators of their values. */
 export type Shape = Record<string, AnyValidator>;
@@ -69,12 +68,6 @@ export type InferShapeInput<TShape extends Shape> = Simplify<
  */
 export type WithRest<T, TValue> = [TValue] extends [never] ? T : Simplify<T & { [key: string]: TValue | T[keyof T] }>;
 
-/** What `unknownKeys` may be given. */
-export type UnknownKeys = "strip" | "strict" | "passthrough" | AnyValidator;
-
-/** The validator `unknownKeys` was given, or `never` when it was given a mode. */
-export type RestIn<TUnknownKeys> = Extract<TUnknownKeys, AnyValidator>;
-
 /** What a validator of unknown keys produces, or `never` when there is none. */
 export type RestOf<TRest extends AnyValidator> = [TRest] extends [never] ? never : Infer<TRest>;
 
@@ -82,9 +75,9 @@ export type RestOf<TRest extends AnyValidator> = [TRest] extends [never] ? never
 export type RestInputOf<TRest extends AnyValidator> = [TRest] extends [never] ? never : InferInput<TRest>;
 
 /**
- * The object type {@link object} produces: that of the shape and, with a validator of unknown keys, an
- * index signature for the keys the shape does not list, which holds what that validator produces or any
- * listed property's type, so the type can be written as an object literal.
+ * The object type an object validator produces: that of the shape and, with a validator of unknown keys,
+ * as `objectWithRest` takes, an index signature for the keys the shape does not list, which holds what
+ * that validator produces or any listed property's type, so the type can be written as an object literal.
  *
  * @typeParam TShape - Property validators.
  * @typeParam TRest - The validator of unknown keys, or `never` when there is none.
@@ -95,9 +88,10 @@ export type InferObject<TShape extends Shape, TRest extends AnyValidator = never
 >;
 
 /**
- * The object type that can pass {@link object}: that of the shape and, with a validator of unknown keys,
- * an index signature for the keys the shape does not list, which holds what that validator accepts or any
- * listed property's input type, so the type can be written as an object literal.
+ * The object type that can pass an object validator: that of the shape and, with a validator of unknown
+ * keys, as `objectWithRest` takes, an index signature for the keys the shape does not list, which holds
+ * what that validator accepts or any listed property's input type, so the type can be written as an
+ * object literal.
  *
  * @typeParam TShape - Property validators.
  * @typeParam TRest - The validator of unknown keys, or `never` when there is none.
@@ -108,41 +102,134 @@ export type InferObjectInput<TShape extends Shape, TRest extends AnyValidator = 
 >;
 
 /**
- * Options for {@link object}.
- *
- * @typeParam TUnknownKeys - What `unknownKeys` is given, a mode or a validator.
+ * How an object treats the keys its shape does not list, as its description says it: `"strict"`,
+ * `"passthrough"`, the validator of each, or undefined when it drops them.
  */
-export interface ObjectOptions<TUnknownKeys extends UnknownKeys = UnknownKeys> extends MessageOptions {
-  /**
-   * What to do with input properties the shape does not list. `"strip"` drops them from the output,
-   * `"strict"` rejects each with an `unrecognized_key` issue, up to the 1,000 issues a collection
-   * reports, and `"passthrough"` copies them to the output unchecked, except `__proto__`, which it rejects with an `invalid_key` issue: copied, it would
-   * become the prototype of any copy of the output made by assignment. A shape that lists `__proto__`
-   * keeps it, as data.
-   *
-   * A validator validates each of them, and the output keeps what it produces, after the listed properties
-   * and in the order of the input. Its issues are at the key's path, after those of the listed properties,
-   * and stop at the 1,000 issues a collection reports. An unlisted `__proto__` is rejected with an
-   * `invalid_key` issue, as a `record` rejects it, and its value is still validated. The object is
-   * asynchronous when this validator is. Its type gains an index signature that holds what the
-   * validator produces and what the listed properties hold, so that an object literal can be written
-   * with both.
-   *
-   * @defaultValue "strip"
-   */
-  unknownKeys?: TUnknownKeys | undefined;
+export type UnknownKeys = "strict" | "passthrough" | AnyValidator | undefined;
+
+/** A way to treat unlisted keys, or what makes one of the validator of each and the helpers to wait for it. */
+export type Way = Unknowns | ((runRest: Run, tools: Tools | undefined) => Unknowns);
+
+/**
+ * Makes an object validator: `object`, and each of the validators that treat unlisted keys another way,
+ * which give theirs as `way` and say which it is as `unknownKeys`. So `object` carries no code for the
+ * keys it drops. `pick` and the rest make the object they return with the way the one they were given
+ * describes itself with.
+ */
+export function objectOf(shape: Shape, args: readonly unknown[], unknownKeys?: UnknownKeys, way?: Way): AnyValidator {
+  assertShape(shape);
+  // The shape is read once, so changing it after the validator is made changes nothing.
+  const keys = Object.keys(shape);
+  // The validators as they were read, which is what the description gives: reading the shape again would
+  // read a getter twice, and could describe another validator than the one that runs.
+  const read: Shape = {};
+  const runs = keys.map((key) => {
+    const validator = shape[key] as AnyValidator;
+    const run = runOf(validator, `shape.${key}`);
+    setOwn(read, key, validator);
+    return run;
+  });
+  const [options, checks] = split<MessageOptions, Record<string, unknown>>(args);
+  const { message } = options;
+  // A validator of the unknown keys, which keeps them as passthrough does once each has passed it.
+  const runRest = typeof unknownKeys === "function" ? runOf(unknownKeys, "rest") : undefined;
+  const tools = toolsOf([...runs, runRest], waitsOf(checks));
+  const unknowns = typeof way === "function" ? way(runRest as Run, tools) : way;
+  const known = unknowns && new Set(keys);
+  const accept = accepter(checks, message);
+  const failFields = fieldFailureOf(checks, keys);
+  const end: Ending = (from, output, failed) =>
+    count() === from ? accept(output) : failFields === undefined ? FAIL : failFields(failed, output, message, from);
+  const size = keys.length;
+
+  const run: Run = (input) => {
+    if (!isPlainObject(input)) {
+      return refuseObject(input, message);
+    }
+    const start = count();
+    // What is refused is reported, and what is kept is read, before any property is validated.
+    const extra = unknowns?.[0](input, known as ReadonlySet<string>, message);
+    const output: Record<string, unknown> = {};
+    let mark = count();
+    let failed: string[] | undefined;
+    let waited: Pending[] | undefined;
+    let waitedKeys: (string | undefined)[] | undefined;
+    let marks: number[] | undefined;
+    let present: boolean[] | undefined;
+    // Each property is read as its validator runs, and every one of them before anything waits, so a
+    // change made to the input while a validator waits reaches neither a validator nor the output.
+    for (let index = 0; index < size; index += 1) {
+      const key = keys[index] as string;
+      const isPresent = Object.hasOwn(input, key);
+      const value = (runs[index] as Run)(isPresent ? input[key] : undefined);
+      if (value === FAIL) {
+        mark = under(mark, key);
+        (failed ??= []).push(key);
+      } else if (tools !== undefined && tools.is(value)) {
+        (waited ??= []).push(value);
+        (waitedKeys ??= []).push(key);
+        (marks ??= []).push(mark - start);
+        (present ??= []).push(isPresent);
+        // Holds the place of the key, so the output keeps the order of the shape.
+        setOwn(output, key, undefined);
+      } else if (value !== undefined || isPresent) {
+        setOwn(output, key, value);
+      }
+    }
+    if (extra !== undefined && unknowns?.[1] !== undefined) {
+      const placed = unknowns[1](extra, output, message);
+      if (tools !== undefined && tools.is(placed)) {
+        (waited ??= []).push(placed);
+        (waitedKeys ??= []).push(undefined);
+        (marks ??= []).push(count() - start);
+      }
+    }
+    return waited === undefined
+      ? end(start, output, failed)
+      : waitFor(
+          tools as NonNullable<typeof tools>,
+          start,
+          waited,
+          waitedKeys as (string | undefined)[],
+          marks as number[],
+          present,
+          output,
+          failed,
+          end,
+        );
+  };
+  run.w = tools;
+  return toValidator(
+    run,
+    {
+      kind: "object",
+      options,
+      checks,
+      shape: Object.freeze(read),
+      // How it treats unlisted keys, for a reader of the schema, and the code that does it, for `pick` and
+      // the rest to make an object of the same kind.
+      unknownKeys,
+      way,
+    },
+    unknowns === undefined ? TYPE_WORDS : unknowns[2],
+    [...Object.values(read), unknownKeys],
+  );
 }
 
 /**
  * Creates a validator for plain objects with the given properties.
  *
  * @remarks
- * Only own properties are read, a listed one whether or not it is enumerable and an unlisted one only when it
- * is, and class instances and arrays are not objects here. Every
- * property is validated even when an earlier one failed, so the result lists every problem. Issue
- * paths lead from the object down to the property. The output is a new object; the input is never
- * modified. It is synchronous when every property validator, and a validator given as `unknownKeys`,
- * is, and asynchronous otherwise.
+ * Only own properties are read, whether or not they are enumerable, and class instances and arrays are
+ * not objects here. Every property is validated even when an earlier one failed, so the result lists
+ * every problem. Issue paths lead from the object down to the property. The output is a new object; the
+ * input is never modified. It is synchronous when every property validator is, and asynchronous
+ * otherwise.
+ *
+ * A property the shape does not list is dropped from the output. `strictObject` refuses it,
+ * `looseObject` keeps it as it is, and `objectWithRest` validates it.
+ *
+ * Each property is read as its validator runs, and every one of them before anything waits.
  * A getter or `Proxy` trap in the input that throws while it is read propagates, as a callback's
  * exception does; data parsed from JSON has none.
  *
@@ -156,206 +243,22 @@ export interface ObjectOptions<TUnknownKeys extends UnknownKeys = UnknownKeys> e
  *   { password: string({ min: 8 }), confirm: string() },
  *   check((data) => data.password === data.confirm, { path: ["confirm"], message: "Passwords must match" }),
  * );
- *
- * const flags = object({ name: string() }, { unknownKeys: boolean() });
- * flags({ name: "Ada", beta: true }); // { ok: true, value: { name: "Ada", beta: true } }
  * ```
  *
  * @typeParam TShape - Property validators.
- * @typeParam TUnknownKeys - What `unknownKeys` is given, a mode or a validator.
  * @param shape - Validator of each property.
- * @param rest - Options, including how to treat properties the shape does not list, then checks,
- * which run once every property has passed and see the whole object.
+ * @param rest - Options, then checks, which run once every property has passed and see the whole object.
  * @returns A validator that produces an object.
- * @throws {TypeError} When `shape` is not a plain object, a property validator is not a function, or
- * `unknownKeys` is not `"strip"`, `"strict"`, `"passthrough"` or a validator.
+ * @throws {TypeError} When `shape` is not a plain object, or a property validator is not a validator.
  */
-export function object<TShape extends Shape, TUnknownKeys extends UnknownKeys = "strip">(
+export function object<TShape extends Shape>(
   shape: TShape,
-  ...rest: Rest<InferObject<TShape, RestIn<TUnknownKeys>>, ObjectOptions<TUnknownKeys>>
-): Composed<
-  TShape[keyof TShape] | RestIn<TUnknownKeys>,
-  InferObject<TShape, RestIn<TUnknownKeys>>,
-  InferObjectInput<TShape, RestIn<TUnknownKeys>>
->;
-export function object<TShape extends Shape, TUnknownKeys extends UnknownKeys = "strip">(
+  ...rest: Rest<InferObject<TShape>, MessageOptions>
+): Composed<TShape[keyof TShape], InferObject<TShape>, InferObjectInput<TShape>>;
+export function object<TShape extends Shape>(
   shape: TShape,
-  ...rest: AsyncRest<InferObject<TShape, RestIn<TUnknownKeys>>, ObjectOptions<TUnknownKeys>>
-): AsyncSchema<InferObject<TShape, RestIn<TUnknownKeys>>, InferObjectInput<TShape, RestIn<TUnknownKeys>>>;
+  ...rest: AsyncRest<InferObject<TShape>, MessageOptions>
+): AsyncSchema<InferObject<TShape>, InferObjectInput<TShape>>;
 export function object(shape: Shape, ...rest: unknown[]): AnyValidator {
-  assertShape(shape);
-  // The shape is read once, so changing it after the validator is made changes nothing.
-  const keys = Object.keys(shape);
-  // The validators as they were read, which is what the description gives: reading the shape again would
-  // read a getter twice, and could describe another validator than the one that runs.
-  const read: Shape = {};
-  const children = keys.map((key) => {
-    const validator: unknown = shape[key];
-    assertFunction(`shape.${key}`, validator);
-    setOwn(read, key, validator);
-    return childOf(validator as AnyValidator);
-  });
-  const known = new Set(keys);
-  const [options, reject, accept, checks] = tail<ObjectOptions, Record<string, unknown>>(rest, "unknownKeys");
-  const failFields = fieldFailureOf(checks, keys);
-  const unknownKeys = options.unknownKeys ?? "strip";
-  // A validator of the unknown keys, which keeps them as passthrough does once each has passed it.
-  const restChild = typeof unknownKeys === "function" ? childOf(unknownKeys) : undefined;
-  if (restChild === undefined && unknownKeys !== "strip" && unknownKeys !== "strict" && unknownKeys !== "passthrough") {
-    throw new TypeError(
-      `unknownKeys must be "strip", "strict", "passthrough" or a validator, received "${String(unknownKeys)}"`,
-    );
-  }
-  const isKept = restChild !== undefined || unknownKeys === "passthrough";
-
-  // Valid input is answered without a list or a result for each property, when every property, and the
-  // validator of the unknown keys, has a fast test; any miss runs the full work below, which says why.
-  const fastChildren = keys.map((key) => fastOf(read[key]));
-  // Passthrough keeps each unknown key as it is.
-  const fastRest = restChild === undefined ? (value: unknown) => value : fastOf(unknownKeys);
-  const childrenFast: Fast | undefined =
-    fastChildren.includes(undefined) || fastRest === undefined
-      ? undefined
-      : (input) => {
-          if (!isPlainObject(input)) {
-            return MISS;
-          }
-          if (unknownKeys === "strict" && Object.keys(input).some((key) => !known.has(key))) {
-            return MISS;
-          }
-          const output: Record<string, unknown> = {};
-          for (let index = 0; index < keys.length; index += 1) {
-            const key = keys[index] as string;
-            const isPresent = Object.hasOwn(input, key);
-            const value = (fastChildren[index] as Fast)(isPresent ? input[key] : undefined);
-            if (value === MISS) {
-              return MISS;
-            }
-            if (value !== undefined || isPresent) {
-              setOwn(output, key, value);
-            }
-          }
-          if (isKept) {
-            for (const key of Object.keys(input)) {
-              if (!known.has(key)) {
-                const value = key === RESERVED_KEY ? MISS : fastRest(input[key]);
-                if (value === MISS) {
-                  return MISS;
-                }
-                setOwn(output, key, value);
-              }
-            }
-          }
-          return output;
-        };
-  // An object with checks has no fast test of its own, since a parent that missed would run them again.
-  // Its work still asks its properties' fast tests first, and runs the checks once on what they produced.
-  const fast = checks.length > 0 ? undefined : childrenFast;
-  const fastChecked = checks.length > 0 ? childrenFast : undefined;
-  // A shape some of whose properties have no fast test, such as one with a `transform` property, asks the
-  // others' first and runs each of these once, when a validator that leaves one without has turned it on. It
-  // copies the unknown keys it is given, so an object with a validator of them does its full work.
-  const mixedRun = childrenFast === undefined && restChild === undefined ? mixedRunOf() : undefined;
-
-  const validator = composed((input, place): Maybe<ValidationResult<unknown>> => {
-    if (fastChecked !== undefined) {
-      const value = fastChecked(input);
-      if (value !== MISS) {
-        return accept(value as Record<string, unknown>, place);
-      }
-    }
-    if (!isPlainObject(input)) {
-      return reject([objectIssue(input)], place);
-    }
-
-    const issues: ValidationIssue[] = [];
-    // Kept or copied, `__proto__` would be the prototype of whatever the output is next assigned to.
-    const refuse = (list: ValidationIssue[]) =>
-      append(list, report([reservedKey(RESERVED_KEY)], place, options.message));
-    if (unknownKeys === "strict") {
-      const unrecognized = Object.keys(input).filter((key) => !known.has(key));
-      // The sender adds as many keys as it likes, so they are listed up to the limit of a collection.
-      const listed = unrecognized.slice(0, MAX_ISSUES).map((key) => issue("unrecognized_key", { key }, [key]));
-      append(
-        issues,
-        cap(report(listed, place, options.message), place, options.message, unrecognized.length > MAX_ISSUES),
-      );
-    }
-
-    // Everything the output takes from the input is read before any child runs, so neither a child that
-    // changes the input nor a change made while one waits can reach the output.
-    const present: boolean[] = [];
-    const values: unknown[] = [];
-    for (const key of keys) {
-      const isPresent = Object.hasOwn(input, key);
-      present.push(isPresent);
-      values.push(isPresent ? input[key] : undefined);
-    }
-    const extra = isKept
-      ? Object.keys(input)
-          .filter((key) => !known.has(key))
-          .map((key) => [key, input[key]] as const)
-      : [];
-    if (restChild === undefined && extra.some(([key]) => key === RESERVED_KEY)) {
-      refuse(issues);
-    }
-    // The unknown keys follow the properties in one list, and stop at the limit of a collection, since the
-    // sender adds as many as it likes: past it, an unknown key is not run and its place in the list is empty.
-    let weight = 0;
-    const results: Maybe<ValidationResult<unknown> | undefined>[] | Record<string, unknown> =
-      mixedRun === undefined || issues.length > 0
-        ? runEach(keys.length + (restChild === undefined ? 0 : extra.length), (index) => {
-            if (index < keys.length) {
-              return (children[index] as Child)(values[index], place, keys[index] as string);
-            }
-            if (weight < MAX_ISSUES) {
-              const [key, value] = extra[index - keys.length] as readonly [string, unknown];
-              const result = (restChild as Child)(value, place, key);
-              weight += isThenable(result) || result.ok ? 0 : weigh(result.error.issues);
-              return result;
-            }
-            return undefined;
-          })
-        : mixedRun(keys, children, fastChildren, values, present, extra, place);
-    if (!Array.isArray(results)) {
-      return accept(results, place);
-    }
-    return chain(collect(results), (settled) => {
-      const output: Record<string, unknown> = {};
-      // What the validator of the unknown keys found, which follows the properties, is listed and cut as a
-      // record lists and cuts it. An empty place is one the limit left unrun.
-      const found: ValidationIssue[] = [];
-      for (let index = 0; index < settled.length && settled[index] !== undefined; index += 1) {
-        const result = settled[index] as ValidationResult<unknown>;
-        const isListed = index < keys.length;
-        const key = isListed ? (keys[index] as string) : (extra[index - keys.length] as readonly [string, unknown])[0];
-        if (!result.ok) {
-          append(isListed ? issues : found, result.error.issues);
-        }
-        if (!isListed && key === RESERVED_KEY) {
-          refuse(found);
-        } else if (result.ok && (result.value !== undefined || present[index] !== false)) {
-          setOwn(output, key, result.value);
-        }
-      }
-      append(issues, cap(found, place, options.message, settled.includes(undefined)));
-      if (issues.length > 0) {
-        return failFields === undefined
-          ? failWith(issues)
-          : failFields(issues, settled as ValidationResult<unknown>[], output, options.message, place);
-      }
-      if (restChild === undefined) {
-        for (const [key, value] of extra) {
-          setOwn(output, key, value);
-        }
-      }
-      return accept(output, place);
-    });
-  }, fast);
-  return described(validator, {
-    kind: "object",
-    options,
-    checks,
-    shape: Object.freeze(read),
-  });
+  return objectOf(shape, rest);
 }

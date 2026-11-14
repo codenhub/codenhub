@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { validator } from "../builders/validator";
 import { array } from "../composition/array";
 import { lazy } from "../composition/lazy";
 import { object } from "../composition/object";
@@ -18,7 +19,7 @@ import { oneOf } from "../primitives/one-of";
 import { string } from "../primitives/string";
 import { unknown } from "../primitives/unknown";
 import { issuesOf } from "../test-utils";
-import type { ValidationIssue, Validator } from "./types";
+import type { ValidationIssue, ValidationResult, Validator } from "./types";
 
 // The asynchronous recursion has to nest thousands of URLs deep to reach the depth that
 // once broke JSON.stringify, which takes 2 to 3 seconds alone and more beside the other
@@ -102,17 +103,20 @@ describe("issues held in params.issues", () => {
   });
 
   it("should keep a limit found behind a union written by hand without a path, at the root", () => {
-    const handWritten = (() => ({
-      ok: false,
-      error: {
-        issues: [
-          {
-            code: "invalid_union",
-            params: { issues: [[{ code: "too_big", path: [], params: { maximum: 1, type: "depth" } }]] },
+    const handWritten = validator(
+      () =>
+        ({
+          ok: false,
+          error: {
+            issues: [
+              {
+                code: "invalid_union",
+                params: { issues: [[{ code: "too_big", path: [], params: { maximum: 1, type: "depth" } }]] },
+              },
+            ],
           },
-        ],
-      },
-    })) as unknown as Validator<unknown>;
+        }) as unknown as ValidationResult<unknown>,
+    );
     expect(issuesOf(union([handWritten])("x"))[0]?.params?.["issues"]).toEqual([
       [{ code: "too_big", path: [], params: { maximum: 1, type: "depth" } }],
     ]);

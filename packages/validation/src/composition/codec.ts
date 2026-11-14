@@ -1,9 +1,11 @@
-import { chain, decided, type Maybe } from "../core/async";
-import { described } from "../core/describe";
-import { call, composed } from "../core/nesting";
+import { runOf, toolsOf } from "../core/child";
+import { decided } from "../core/decide";
+import { toValidator } from "../core/make";
 import { isPlainObject } from "../core/objects";
 import { assertFunction } from "../core/result";
-import type { AnyValidator, Composed, Infer, InferInput, ValidationResult } from "../core/types";
+import { after, count, FAIL, type Run } from "../core/run";
+import type { AnyValidator, Composed, Infer, InferInput } from "../core/types";
+import { NO_WORDS } from "../core/words";
 
 /**
  * The two functions of a {@link codec}: one that turns what `input` produced into what `output` reads,
@@ -57,7 +59,7 @@ export interface Conversions<TInput extends AnyValidator, TOutput extends AnyVal
  * @param output - Validates the value as a program uses it.
  * @param conversions - `decode` and `encode`, each a function of one direction.
  * @returns A validator that produces what `output` produces, from what `input` accepts.
- * @throws {TypeError} When `input` or `output` is not a function, `conversions` is not a plain object, or
+ * @throws {TypeError} When `input` or `output` is not a validator of this copy of the package, `conversions` is not a plain object, or
  * its `decode` or `encode` is not a function; and when validating, if `decode` returns a promise.
  */
 export function codec<TInput extends AnyValidator, TOutput extends AnyValidator>(
@@ -65,24 +67,19 @@ export function codec<TInput extends AnyValidator, TOutput extends AnyValidator>
   output: TOutput,
   conversions: Conversions<TInput, TOutput>,
 ): Composed<TInput | TOutput, Infer<TOutput>, InferInput<TInput>> {
-  assertFunction("input", input);
-  assertFunction("output", output);
+  const runInput = runOf(input, "input");
+  const runOutput = runOf(output, "output");
   if (!isPlainObject(conversions)) {
     throw new TypeError("conversions must be an object with decode and encode");
   }
   const { decode, encode } = conversions;
   assertFunction("decode", decode);
   assertFunction("encode", encode);
-  const validate = composed((given, place) =>
-    chain(call(input, given, place), (read): Maybe<ValidationResult<unknown>> =>
-      read.ok
-        ? call(output, decided("codec", decode as (value: unknown) => unknown, read.value, "decode"), place)
-        : read,
-    ),
-  );
-  return described(validate, { kind: "codec", input, output, decode, encode }) as unknown as Composed<
-    TInput | TOutput,
-    Infer<TOutput>,
-    InferInput<TInput>
-  >;
+  const tools = toolsOf([runInput, runOutput]);
+  const run: Run = (given) =>
+    after(tools, count(), runInput(given), (read) =>
+      read === FAIL ? FAIL : runOutput(decided("codec", decode as (value: unknown) => unknown, read, "decode")),
+    );
+  run.w = tools;
+  return toValidator(run, { kind: "codec", input, output, decode, encode }, NO_WORDS, [input, output]);
 }

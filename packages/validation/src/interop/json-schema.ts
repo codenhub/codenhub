@@ -56,8 +56,10 @@ export interface JsonSchemaOptions {
  * schema unusable there. An empty name is a format whose text the format of that name may refuse: RFC
  * 3339's `time` needs an offset and its `duration` has no fraction and no weeks beside days, a URL may
  * hold `|`, which a URI may not, and an IPv6 address a zone, `fe80::1%eth0`, which `ipv6` refuses. An
- * `email` and a `domain` read Unicode and produce ASCII, so only their output is `email` or `hostname`:
- * `idn-email` and `idn-hostname` would fit their input, but ajv-formats has neither.
+ * `internationalEmail` and a `domain` read Unicode and produce ASCII, so only their output is `email` or
+ * `hostname`: `idn-email` and `idn-hostname` would fit their input, but ajv-formats has neither. An email
+ * with a `domain` option is written with none on either side, since it may accept and produce a host of
+ * one label, as `hostname()` does, where ajv-formats' `email` wants a dot.
  */
 const FORMAT_NAMES: Readonly<Record<string, readonly [input: string, output: string]>> = {
   uuid: ["uuid", "uuid"],
@@ -65,7 +67,7 @@ const FORMAT_NAMES: Readonly<Record<string, readonly [input: string, output: str
   ip: ["", ""],
   datetime: ["date-time", "date-time"],
   isoDate: ["date", "date"],
-  email: ["", "email"],
+  email: ["email", "email"],
   domain: ["", "hostname"],
 };
 
@@ -188,8 +190,8 @@ const holdsPrimitives = (record: Description, seen = new Set<unknown>()): boolea
  * exceptions below, and it accepts some the validator refuses, since a validator checks more than a
  * schema can say: a format's exact rules, such as which hosts of an `email` are public, are written as
  * the nearest JSON Schema `format`, and with none where that format refuses text the validator accepts,
- * as `time` refuses `12:00`. A format that reads Unicode and produces ASCII, such as `email`, is written
- * with no format on the input side and as `email` on the output side. A format JSON Schema has no name
+ * as `time` refuses `12:00`. A format that reads Unicode and produces ASCII, such as `internationalEmail`,
+ * is written with no format on the input side and as `email` on the output side. A format JSON Schema has no name
  * for, such as `phone`, `slug` or one made with `format`, is written with none, since a reader in strict
  * mode, as Ajv is by default, refuses to compile a format it does not know.
  *
@@ -220,7 +222,7 @@ const holdsPrimitives = (record: Description, seen = new Set<unknown>()): boolea
  * //   type: "object",
  * //   properties: {
  * //     name: { type: "string", minLength: 2 },
- * //     email: { type: "string" },
+ * //     email: { type: "string", format: "email" },
  * //     age: { type: "integer" },
  * //   },
  * //   required: ["name", "email"],
@@ -480,9 +482,11 @@ export function toJsonSchema(validator: AnyValidator, options?: JsonSchemaOption
             ? "ipv4"
             : name === "datetime" && given["local"] === true
               ? ""
-              : isInput
-                ? input
-                : output;
+              : name === "email" && (given["domain"] !== undefined || (isInput && record["international"] === true))
+                ? ""
+                : isInput
+                  ? input
+                  : output;
         return checked(written === "" ? { type: "string" } : { type: "string", format: written });
       }
       case "coerce": {
@@ -510,7 +514,7 @@ export function toJsonSchema(validator: AnyValidator, options?: JsonSchemaOption
         if (required.length > 0) {
           schema["required"] = required;
         }
-        const unknownKeys = given["unknownKeys"];
+        const unknownKeys = record["unknownKeys"];
         if (unknownKeys === "strict") {
           schema["additionalProperties"] = false;
         } else if (typeof unknownKeys === "function") {

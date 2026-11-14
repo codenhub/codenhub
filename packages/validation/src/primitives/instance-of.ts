@@ -1,8 +1,10 @@
-import { leaf, split } from "../core/checks";
-import { described } from "../core/describe";
+import { leaf } from "../core/leaf";
+import { toValidator } from "../core/make";
 import { isInstance } from "../core/objects";
 import { assertFunction } from "../core/result";
+import { split } from "../core/split";
 import type { AnyValidator, AsyncRest, AsyncSchema, MessageOptions, Rest, Schema } from "../core/types";
+import { TYPE_WORDS } from "../core/words";
 
 /** A class a value can be checked against, including abstract ones. */
 export type Constructor<T = unknown> = abstract new (...args: never[]) => T;
@@ -50,17 +52,9 @@ export function instanceOf(target: Constructor, ...rest: unknown[]): AnyValidato
   }
   const [options, checks] = split<MessageOptions, unknown>(rest);
   const { message } = options;
-  return described(
-    leaf(
-      `instance of ${target.name || "anonymous class"}`,
-      (input) => isInstance(input, target),
-      message,
-      checks,
-      undefined,
-      // A class whose `Symbol.hasInstance`, own or inherited, is not the built-in one runs the consumer's code on `instanceof`, which a
-      // fast test would run a second time for an invalid value.
-      target[Symbol.hasInstance] === Function.prototype[Symbol.hasInstance],
-    ),
+  return toValidator(
+    leaf(`instance of ${target.name || "anonymous class"}`, (input) => isInstance(input, target), message, checks),
     { kind: "instance", options, checks, target },
+    TYPE_WORDS,
   );
 }

@@ -5,8 +5,10 @@ import { number } from "../primitives/number";
 import { string } from "../primitives/string";
 import { unknown } from "../primitives/unknown";
 import { accepts, codesOf, isFree, isPending, issuesOf, valueOf } from "../test-utils";
+import { looseObject } from "./loose-object";
 import { object } from "./object";
 import { record } from "./record";
+import { strictObject } from "./strict-object";
 import { tagged } from "./tagged";
 import { transform } from "./transform";
 
@@ -70,8 +72,8 @@ describe("tagged", () => {
 
   it("should keep the tag first in the output and not let the variant override it", () => {
     expect(Object.keys(valueOf(event({ type: "key", key: "a" })))).toEqual(["type", "key"]);
-    const passthrough = tagged("type", { a: object({}, { unknownKeys: "passthrough" }) });
-    expect(valueOf(passthrough({ type: "a", extra: 1 }))).toEqual({ type: "a", extra: 1 });
+    const loose = tagged("type", { a: looseObject({}) });
+    expect(valueOf(loose({ type: "a", extra: 1 }))).toEqual({ type: "a", extra: 1 });
     const retagged = tagged("type", {
       a: transform(object({}), () => ({ type: "b", extra: 1 })) as never,
     });
@@ -90,7 +92,7 @@ describe("tagged", () => {
   });
 
   it("should let a strict object be a variant, since the variant does not see the tag", () => {
-    const strict = tagged("type", { a: object({ x: number() }, { unknownKeys: "strict" }) });
+    const strict = tagged("type", { a: strictObject({ x: number() }) });
     expect(valueOf(strict({ type: "a", x: 1 }))).toEqual({ type: "a", x: 1 });
     expect(issuesOf(strict({ type: "a", x: 1, y: 2 })).map((issue) => [issue.code, issue.path])).toEqual([
       ["unrecognized_key", ["y"]],
@@ -110,9 +112,9 @@ describe("tagged", () => {
     expect((value as { admin?: boolean }).admin).toBeUndefined();
   });
 
-  it("should report the __proto__ key a passthrough variant refuses", () => {
-    const passthrough = tagged("type", { a: object({}, { unknownKeys: "passthrough" }) });
-    expect(codesOf(passthrough(JSON.parse('{"type":"a","__proto__":{"admin":true}}')))).toEqual(["invalid_key"]);
+  it("should report the __proto__ key a loose variant refuses", () => {
+    const loose = tagged("type", { a: looseObject({}) });
+    expect(codesOf(loose(JSON.parse('{"type":"a","__proto__":{"admin":true}}')))).toEqual(["invalid_key"]);
   });
 
   it("should never put the input in an issue", () => {

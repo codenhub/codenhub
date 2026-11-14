@@ -1,63 +1,46 @@
 import { describe, expect, it } from "vitest";
 
+import { validator } from "../builders/validator";
 import { lazy } from "../composition/lazy";
 import { object } from "../composition/object";
 import { optional } from "../composition/optional";
 import { number } from "../primitives/number";
 import { isFree, issuesOf } from "../test-utils";
-import { append, below, call, composed, pathAt } from "./nesting";
-import { pass, toIssue } from "./result";
-import type { ValidationIssue, Validator } from "./types";
+import type { ValidationResult, Validator } from "./types";
 
-describe("pathAt", () => {
-  it("should write the place's segments, root first, then the path below it", () => {
-    expect(pathAt(below(below(undefined, "a"), 0), ["b"])).toEqual(["a", 0, "b"]);
-  });
-
-  it("should give the path itself at the root", () => {
-    const path = ["b"];
-    expect(pathAt(undefined, path)).toBe(path);
-  });
-});
-
-describe("append", () => {
-  it("should take more issues than can be spread as arguments", () => {
-    const target: ValidationIssue[] = [];
-    append(
-      target,
-      Array.from({ length: 500_000 }, () => toIssue({ code: "x" })),
-    );
-    expect(target).toHaveLength(500_000);
-  });
-});
-
-describe("call", () => {
+describe("a validator written by hand, under a composer", () => {
   const handWritten: Validator<number> = () => ({ ok: false, error: { issues: [{ code: "x", path: ["b"] }] } });
 
-  it("should move the issues of a validator written by hand to the place, without changing them", () => {
+  it("should have its issues moved to its place, without changing them", () => {
     const result = handWritten(1);
     const original = result.ok ? undefined : result.error.issues[0];
-    expect(issuesOf(call(() => result, 1, below(undefined, "a")) as never)).toEqual([{ code: "x", path: ["a", "b"] }]);
+    const same = validator(() => result);
+    expect(issuesOf(object({ a: same })({ a: 1 }))).toEqual([{ code: "x", path: ["a", "b"] }]);
     expect(original?.path).toEqual(["b"]);
+    // The same result given again is placed again, from the path it was written with.
+    expect(issuesOf(object({ c: object({ a: same }) })({ c: { a: 1 } }))).toEqual([
+      { code: "x", path: ["c", "a", "b"] },
+    ]);
   });
 
-  it("should place an issue written by hand without a path at the value", () => {
-    const pathless = (() => ({ ok: false, error: { issues: [{ code: "x" }] } })) as unknown as Validator<number>;
-    expect(issuesOf(call(pathless, 1, below(undefined, "a")) as never)).toEqual([{ code: "x", path: ["a"] }]);
+  it("should have an issue written without a path placed at the value", () => {
+    const pathless = validator((() => ({
+      ok: false,
+      error: { issues: [{ code: "x" }] },
+    })) as unknown as Validator<number>);
+    expect(issuesOf(object({ a: pathless })({ a: 1 }))).toEqual([{ code: "x", path: ["a"] }]);
   });
 
-  it("should move the issues of an asynchronous validator once it settles", async () => {
-    expect(issuesOf(await call(isFree, "taken", below(undefined, "a")))).toEqual([{ code: "taken", path: ["a"] }]);
+  it("should have the issues of an asynchronous one moved once it settles", async () => {
+    expect(issuesOf(await object({ a: isFree })({ a: "taken" }))).toEqual([{ code: "taken", path: ["a"] }]);
   });
 
-  it("should reach a composer's work with the place, so it writes each path in full once", () => {
-    const seen: unknown[] = [];
-    const composer = composed((input, place) => {
-      seen.push(place);
-      return pass(input);
-    });
-    call(composer, 1, below(undefined, "a"));
-    expect(seen).toEqual([{ segment: "a", parent: undefined }]);
+  it("should give more issues than can be spread as arguments", () => {
+    const many = validator(() => ({
+      ok: false,
+      error: { issues: Array.from({ length: 500_000 }, () => ({ code: "x", path: [] })) as never },
+    }));
+    expect(issuesOf(object({ a: many })({ a: 1 }))).toHaveLength(500_000);
   });
 });
 
@@ -65,11 +48,11 @@ describe("a composer called on its own", () => {
   it("should report paths relative to its input, even when another composer called it from a hand-written one", () => {
     const inner = object({ b: number() });
     const relative: unknown[] = [];
-    const spy: Validator<unknown> = (input) => {
+    const spy = validator((input) => {
       const result = inner(input);
       relative.push(issuesOf(result)[0]?.path);
       return result;
-    };
+    });
     expect(issuesOf(object({ a: spy })({ a: { b: "x" } }))[0]?.path).toEqual(["a", "b"]);
     expect(relative).toEqual([["b"]]);
   });
@@ -81,10 +64,10 @@ describe("deep input with many issues", () => {
     items?: unknown[];
   }
   // Written by hand, since a collection of this package stops at its limit of issues.
-  const many: Validator<unknown[]> = (input) => ({
+  const many = validator((input): ValidationResult<unknown[]> => ({
     ok: false,
     error: { issues: (input as unknown[]).map((_, index) => ({ code: "invalid_type", path: [index] })) as never },
-  });
+  }));
   // Deeper than the default limit of 128, so the two depths compared can be far apart.
   const level: Validator<Level> = object({
     next: optional(lazy(() => level, { maxDepth: 200 })),

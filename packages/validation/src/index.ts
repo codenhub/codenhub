@@ -4,7 +4,7 @@
  * @packageDocumentation
  */
 
-export { check } from "./builders/check";
+export { check, type CheckAnswer } from "./builders/check";
 export { contentType } from "./checks/content-type";
 export { checkFields } from "./builders/check-fields";
 export { endsWith } from "./checks/ends-with";
@@ -19,6 +19,7 @@ export { unique } from "./checks/unique";
 export { uppercase } from "./checks/uppercase";
 export { format } from "./builders/format";
 export { guard } from "./builders/guard";
+export { validator, type Validated, type ValidatedValue } from "./builders/validator";
 export { coerceBigint } from "./coercion/coerce-bigint";
 export { coerceBoolean } from "./coercion/coerce-boolean";
 export { coerceDate, type CoerceDateOptions } from "./coercion/coerce-date";
@@ -44,11 +45,12 @@ export {
   type InferObjectInput,
   type InferShape,
   type InferShapeInput,
-  type ObjectOptions,
   type Shape,
-  type UnknownKeys,
 } from "./composition/object";
 export { objectLike } from "./composition/object-like";
+export { objectWithRest } from "./composition/object-with-rest";
+export { looseObject } from "./composition/loose-object";
+export { strictObject } from "./composition/strict-object";
 export { optional } from "./composition/optional";
 export { omit } from "./composition/omit";
 export { partial, type AllOptional, type PartialShape } from "./composition/partial";
@@ -102,6 +104,7 @@ export { domain } from "./formats/domain";
 export { duration } from "./formats/duration";
 export { email, type EmailOptions } from "./formats/email";
 export { hex } from "./formats/hex";
+export { internationalEmail } from "./formats/international-email";
 export { hostname } from "./formats/hostname";
 export { ip, type IpOptions } from "./formats/ip";
 export { isoDate } from "./formats/iso-date";

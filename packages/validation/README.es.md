@@ -1,10 +1,10 @@
-<!-- source: 8b6a2bc0d318fab0e498b4bcc66249a8ac563b48 -->
+<!-- source: d971bdbc7182d6599660edaa7158575ec5f9499b -->
 
 # @codenhub/validation
 
 Validación para datos que no controlas: el cuerpo de una solicitud, una query string, un formulario, un mensaje de otro origen. Un validador te da el valor tipado o las razones por las que no lo es, y está hecho para una entrada que puede ser hostil:
 
-- **Los formatos devuelven lo que leyó un parser.** `email()` y `url()` producen lo que ve el parser de URL de la plataforma, así que el valor que guardas es el que usará una solicitud o un servidor de correo.
+- **Los formatos devuelven lo que leyó un parser.** `url()` e `internationalEmail()` producen lo que ve el parser de URL de la plataforma, así que el valor que guardas es el que usará una solicitud o un servidor de correo.
 - **Lo que reporta una entrada que falla está acotado.** Cada colección deja de reportar en 1000 problemas, como explica [Límites](docs/es/limits.md#una-entrada-que-falla-tiene-un-costo-acotado), y una entrada anidada demasiado profundo es un solo problema, no un desbordamiento de pila, siempre que el límite de profundidad de un esquema recursivo, [`maxDepth`](docs/es/limits.md#maxdepth), quepa en la pila.
 - **Los problemas nunca contienen un valor de la entrada**, así que registrar una validación fallida no puede registrar una contraseña que se envió. Sí contienen aquello con lo que se configuró el esquema, como los valores que acepta un `oneOf` o el prefijo de un `startsWith`, y las claves de la entrada, en `path`, como explica [El problema](docs/es/errors.md#el-problema).
 
@@ -56,14 +56,14 @@ Una entrada inválida no lanza excepciones: el resultado dice por qué falló. `
 
 ## Requisitos
 
-- Node.js 24 o posterior, o un navegador, worker o runtime de edge actual. `url()`, `email()`, `domain()` y `hostname()` necesitan `URL.canParse`, que Safari anterior a la 17 no tiene, así que ahí lanzan una excepción. `ip()` y `cidr()` también usan el parser de `URL`.
+- Node.js 24 o posterior, o un navegador, worker o runtime de edge actual. `url()`, `internationalEmail()`, `domain()` y `hostname()` necesitan `URL.canParse`, que Safari anterior a la 17 no tiene, así que ahí lanzan una excepción. `ip()` y `cidr()` también usan el parser de `URL`.
 - Resolución de paquetes compatible con ESM. El paquete es solo ESM y está marcado con `sideEffects: false`. El código CommonJS puede cargarlo con `require()` en todas las versiones de Node.js compatibles.
 - TypeScript 5.0 o posterior, para los tipos, que usan parámetros de tipo `const`.
 
 ## Notas
 
 - **Una entrada inválida nunca lanza excepciones.** Una opción incorrecta, como `string({ min: -1 })`, lanza una excepción cuando se crea el validador. Las excepciones de tus propios callbacks se propagan, y también las de un getter o un trap de `Proxy` en la entrada, salvo con `objectLike`. [Leer el resultado](docs/es/getting-started.md#leer-el-resultado) tiene los detalles.
-- **Los valores cambian solo cuando lo pides**, con `trim`, `case` o `clamp`, o cuando un formato tiene varias formas de escribir un mismo valor. `email()` y `url()` producen lo que leyó el parser de URL, e `ip()`, `uuid()`, `phone()` y los demás producen una única escritura canónica. Consulta [Formatos](docs/es/formats.md).
+- **Los valores cambian solo cuando lo pides**, con `trim`, `case` o `clamp`, o cuando un formato tiene varias formas de escribir un mismo valor. `url()` e `internationalEmail()` producen lo que leyó el parser de URL, `email()` pasa el dominio a minúsculas, e `ip()`, `uuid()`, `phone()` y los demás producen una única escritura canónica. Consulta [Formatos](docs/es/formats.md).
 - **`email()` y `url()` aceptan solo nombres de host públicos**, no `localhost`, direcciones IP ni nombres como `db.internal`. `url({ host: hostname() })` acepta cualquier host. Ninguno de los dos resuelve el nombre. Consulta [`url`](docs/es/formats.md#url).
 - **La validación es síncrona hasta que una regla devuelve una promesa**, y entonces los tipos indican que hay que esperar el resultado con `await`. Consulta [Síncrono y asíncrono](docs/es/getting-started.md#síncrono-y-asíncrono).
 - **La entrada que pasa se revisa completa.** Limita el tamaño de la entrada no confiable, dale un `max` a cada colección y usa `audit(validator)` en una prueba para ver qué deja abierto un esquema. Un mensaje recibido por structured clone, como desde `postMessage`, puede contener millones de elementos en unos pocos bytes, y solo `max` lo acota. [Límites](docs/es/limits.md) tiene los detalles, y también [lo que logra una entrada hostil](docs/es/limits.md#lo-que-logra-una-entrada-hostil).

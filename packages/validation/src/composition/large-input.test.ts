@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { validator } from "../builders/validator";
 import type { Validator } from "../core/types";
 import { string } from "../primitives/string";
 import { issuesOf } from "../test-utils";
@@ -22,10 +23,10 @@ const numbers = (): number[] => Array.from({ length: COUNT }, () => 1);
 
 // Large on purpose, so a loaded machine may take a while over it; it checks what happens, not how fast.
 describe("a child with more issues than fit in a call", { timeout: 30_000 }, () => {
-  const items: Validator<unknown[]> = (input) => ({
+  const items: Validator<unknown[]> = validator((input) => ({
     ok: false,
     error: { issues: (input as unknown[]).map((_, index) => ({ code: "invalid_type", path: [index] })) as never },
-  });
+  }));
 
   it("should be reported by object", () => {
     const issues = issuesOf(object({ items })({ items: numbers() }));

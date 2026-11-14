@@ -13,6 +13,7 @@ import { map } from "./map";
 import { object } from "./object";
 import { record } from "./record";
 import { set } from "./set";
+import { strictObject } from "./strict-object";
 import { tagged } from "./tagged";
 import { tuple } from "./tuple";
 import { union } from "./union";
@@ -47,7 +48,7 @@ const composers: [name: string, make: Make, good: unknown, badChild: unknown, ba
   ["json", (...rest) => json(object({ n: number() }), ...(rest as [])), '{"n":1}', '{"n":"x"}', "{"],
 ];
 
-const refuse: Check<never> = () => [{ code: "refused", path: [] }];
+const refuse: Check<never> = check(() => [{ code: "refused", path: [] }]);
 
 describe.each(composers)("%s", (_name, make, good, badChild) => {
   it("should run checks once every child passed, with or without options", () => {
@@ -63,8 +64,9 @@ describe.each(composers)("%s", (_name, make, good, badChild) => {
     expect(isPending(make(refuse)(good))).toBe(false);
   });
 
-  it("should refuse a check that is not a function when it is created", () => {
+  it("should refuse a check that check() did not make when it is created", () => {
     expect(() => make({}, 1 as unknown as Check<never>)).toThrow(TypeError);
+    expect(() => make((() => true) as unknown as Check<never>)).toThrow(/checks made with check\(\)/);
   });
 
   it.skipIf(badChild === undefined)(
@@ -107,7 +109,7 @@ describe("checks on composers", () => {
   });
 
   it("should word an unrecognized key, which the object reports itself", () => {
-    const strict = object({}, { unknownKeys: "strict", message: "No extras" });
+    const strict = strictObject({}, { message: "No extras" });
     expect(issuesOf(strict({ extra: 1 }))).toEqual([
       { code: "unrecognized_key", path: ["extra"], params: { key: "extra" }, message: "No extras" },
     ]);

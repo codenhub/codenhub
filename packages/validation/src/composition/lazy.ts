@@ -1,21 +1,23 @@
-import {
-  chain,
-  closeLevel,
-  detached,
-  isThenable,
-  openLevel,
-  openLevels,
-  refundCall,
-  resultsOf,
-  spendCall,
-  type Maybe,
-} from "../core/async";
-import { tail } from "../core/checks";
-import { described } from "../core/describe";
+import { runOf } from "../core/child";
+import { accepter } from "../core/finish";
 import { keepResolved } from "../core/lazy";
-import { useMixedRun } from "../core/mixed";
-import { call, composed, type Place } from "../core/nesting";
-import { assertFunction, assertOption, issue } from "../core/result";
+import { toValidator, wordsIn } from "../core/make";
+import { assertFunction, assertOption } from "../core/result";
+import {
+  after,
+  count,
+  cut,
+  detached,
+  FAIL,
+  levels,
+  report,
+  restore,
+  scopeNow,
+  setLevels,
+  type Draft,
+  type Run,
+} from "../core/run";
+import { split } from "../core/split";
 import type {
   AnyValidator,
   AsyncRest,
@@ -26,8 +28,9 @@ import type {
   MessageOptions,
   Rest,
   ValidationPathSegment,
-  ValidationResult,
 } from "../core/types";
+import { tools } from "../core/wait";
+import { wordSize, type Word } from "../core/words";
 
 /** Options for {@link lazy}. */
 export interface LazyOptions extends MessageOptions {
@@ -45,7 +48,7 @@ export interface LazyOptions extends MessageOptions {
   maxDepth?: number | undefined;
   /**
    * The most calls this `lazy` may make in one validation, those made for the options a `union` tries
-   * and fails included; a result this `lazy` already found for an object at a path is not a call, and
+   * and fails included; a result this `lazy` already found for an object is not a call, and
    * neither is a primitive, such as a number in a list, that reaches no further `lazy` call and whose
    * result is not pending. Past
    * it, every further call fails with `too_big`, so a schema whose work grows faster than its input stops
@@ -86,97 +89,55 @@ let building: object | undefined;
 let started = 0;
 
 /**
- * A path met in one validation: the paths one segment below it, and what a `lazy` kept for each object
- * it found there. Every place at one path leads to the same one, so what was kept for an object at a
- * path is found by the object and the depth it was reached at. Kept by the last segment of the place instead, and compared with
- * each place the object was already found at, 80,000 rows that shared ten objects took 7.8 seconds.
+ * What a `lazy` found for an object at one depth of one validation: what its run gave, which is a result
+ * that waits until it settles, and the issues it reported. An issue is kept as it is, with the list its
+ * path is written in and how long that list was then, since such a list only ever grows: a copy of every
+ * issue at every level of a failure took time that grew with the square of the depth.
  */
-interface Spot {
-  below?: Map<ValidationPathSegment, Spot>;
-  results?: Map<number, Map<object, Maybe<ValidationResult<unknown>>>>;
-}
-
-/** Where an object was first found in one validation, and what was found for it there. */
-interface First {
-  readonly place: Place;
+interface Kept {
   readonly depth: number;
-  readonly result: Maybe<ValidationResult<unknown>>;
+  value: unknown;
+  issues?: Draft[];
+  paths?: ValidationPathSegment[][];
+  sizes?: number[];
+  /** What was found for the same object at another depth. */
+  readonly other: Kept | undefined;
 }
 
-/**
- * The paths a `lazy` has met in one validation: the root's, and the one each place it has seen leads to,
- * and each object found once, with where. Most objects are found once, so the paths are made only for
- * one found again, which is what they are for: making them for every object took a fifth of the time of
- * a recursive tree.
- */
-interface Paths {
-  readonly root: Spot;
-  readonly spots: Map<object, Spot>;
-  readonly firsts: Map<object, First | undefined>;
-}
-
-const newPaths = (): Paths => ({ root: {}, spots: new Map(), firsts: new Map() });
-
-/** What was kept at a path, for objects found at that depth, made the first time it is asked for. */
-function keptAt(spot: Spot, depth: number): Map<object, Maybe<ValidationResult<unknown>>> {
-  const byDepth = (spot.results ??= new Map());
-  let kept = byDepth.get(depth);
-  if (kept === undefined) {
-    kept = new Map();
-    byDepth.set(depth, kept);
-  }
-  return kept;
-}
-
-/**
- * Keeps the result found for an object at a place, as the first for that object or, once it has been
- * found before, at its path. An undefined entry in `firsts` marks an object whose results are kept at
- * their paths, the first one included.
- */
-function keep(paths: Paths, input: object, first: First): void {
-  if (!paths.firsts.has(input)) {
-    paths.firsts.set(input, first);
-    return;
-  }
-  moveFirst(paths, input);
-  keptAt(spotOf(first.place, paths), first.depth).set(input, first.result);
-}
-
-/** Moves the first result kept for an object to its path, so it is found as every later one is. */
-function moveFirst(paths: Paths, input: object): void {
-  const first = paths.firsts.get(input);
-  if (first !== undefined) {
-    paths.firsts.set(input, undefined);
-    keptAt(spotOf(first.place, paths), first.depth).set(input, first.result);
+/** Keeps for `kept` the issues reported since `from`, which stay where they are. */
+function keepIssues(kept: Kept, from: number): void {
+  const list = cut(from);
+  if (list !== undefined) {
+    kept.issues = list;
+    kept.paths = list.map((each) => each.path);
+    kept.sizes = list.map((each) => each.path.length);
+    restore(list);
   }
 }
 
 /**
- * The path a place is at. It walks up to the nearest place already seen, the parent's in a recursion, and
- * remembers each place it passed, so every place is walked once and a deep one costs no more than a shallow.
+ * Gives again what was kept: the value, once a copy of each issue is reported as it first was, at the
+ * object. A copy, since each place the object is reached at goes on to write its own path.
  */
-function spotOf(place: Place, { root, spots }: Paths): Spot {
-  const unseen: NonNullable<Place>[] = [];
-  let spot: Spot | undefined;
-  for (let node = place; node !== undefined && spot === undefined; node = node.parent) {
-    spot = spots.get(node);
-    if (spot === undefined) {
-      unseen.push(node);
-    }
+function again(kept: Kept): unknown {
+  const { value, issues } = kept;
+  if (tools.is(value)) {
+    // It has settled by the time this runs, so what it reported gives way to copies, as for any other.
+    return tools.after(count(), value, (_, from) => {
+      cut(from);
+      return again(kept);
+    });
   }
-  spot ??= root;
-  for (let index = unseen.length - 1; index >= 0; index -= 1) {
-    const each = unseen[index] as NonNullable<Place>;
-    spot.below ??= new Map();
-    let next = spot.below.get(each.segment);
-    if (next === undefined) {
-      next = {};
-      spot.below.set(each.segment, next);
-    }
-    spots.set(each, next);
-    spot = next;
+  if (issues !== undefined) {
+    const { paths, sizes } = kept as Required<Kept>;
+    restore(
+      issues.map((each, index) => ({
+        ...each,
+        path: (paths[index] as ValidationPathSegment[]).slice(0, sizes[index]),
+      })),
+    );
   }
-  return spot;
+  return value;
 }
 
 /**
@@ -198,10 +159,10 @@ function spotOf(place: Place, { root, spots }: Paths): Spot {
  *
  * Work can also grow faster than the input. A `union` tries every option, and an `object` checks every
  * property even after one fails, so in a recursive `union` of objects every option reaches the children.
- * A `lazy` keeps what it found for each object at each path in one validation, and gives it again when
- * the same object is reached at the same path, so those options share the children's result and the
- * work grows with the input. An asynchronous check under it runs once for each such object and path,
- * however many options reach it. Work that makes new objects at every level, such as a `transform` that
+ * A `lazy` keeps what it found for each object in one validation, and gives it again when the same
+ * object is reached again as many `lazy` levels down, wherever that is, so those options share the
+ * children's result and the work grows with the input. An asynchronous check under it runs once for each
+ * such object, however many options reach it. Work that makes new objects at every level, such as a `transform` that
  * copies its value, cannot be shared and doubles with each level. `maxCalls` stops that:
  * past that many calls of one `lazy` in one validation, every further one fails with `too_big` and
  * `{ maximum, type: "calls" }`. A validation is a call such as `schema(input)` and everything it reaches
@@ -236,7 +197,7 @@ function spotOf(place: Place, { root, spots }: Paths): Spot {
  * @param rest - The depth and call limits, then checks.
  * @returns A validator that behaves as the one the getter returns.
  * @throws {TypeError} When `getter` is not a function or `maxDepth` or `maxCalls` is not a number, and,
- * from the returned validator on its first use, when `getter` returns something that is not a function.
+ * from the returned validator on its first use, when `getter` returns something that is not a validator of this copy of the package.
  * @throws {RangeError} When `maxDepth` or `maxCalls` is not a positive integer.
  */
 export function lazy<TValidator extends AnyValidator>(
@@ -249,103 +210,141 @@ export function lazy<TValidator extends AnyValidator>(
 ): AsyncSchema<Infer<TValidator>, InferInput<TValidator>>;
 export function lazy(getter: () => AnyValidator, ...rest: unknown[]): AnyValidator {
   assertFunction("getter", getter);
-  const [options, reject, accept, checks] = tail<LazyOptions, unknown>(rest, "maxDepth maxCalls");
-  const { maxDepth = DEFAULT_MAX_DEPTH, maxCalls = DEFAULT_MAX_CALLS } = options;
+  const [options, checks] = split<LazyOptions, unknown>(rest, "maxDepth maxCalls");
+  const { maxDepth = DEFAULT_MAX_DEPTH, maxCalls = DEFAULT_MAX_CALLS, message } = options;
   assertLimit("maxDepth", maxDepth);
   assertLimit("maxCalls", maxCalls);
-  useMixedRun();
+  const accept = accepter(checks, message);
+  const finish = checks.length > 0 ? (value: unknown): unknown => (value === FAIL ? FAIL : accept(value)) : undefined;
   let resolved: AnyValidator | undefined;
+  let runInner: Run | undefined;
   // Names this `lazy` to the results it keeps, which are its own, since another `lazy` may validate
-  // the same object at the same path otherwise.
+  // the same object otherwise.
   const self = {};
   // Names this `lazy` to the count of calls: its own, or that of the `lazy` whose getter made it.
   const counted = building ?? self;
-  const validate = (input: unknown, place: Place, isPrimitive: boolean): Maybe<ValidationResult<unknown>> => {
-    const tooMany = (): ValidationResult<unknown> =>
-      reject([issue("too_big", { maximum: maxCalls, type: "calls" })], place);
+  const resolve = (): Run => {
+    const previous = building;
+    building = counted;
+    let found: unknown;
+    try {
+      found = detached(getter, undefined);
+    } finally {
+      building = previous;
+    }
+    if (typeof found !== "function") {
+      throw new TypeError(`getter() must return a function, received ${found === null ? "null" : typeof found}`);
+    }
+    resolved = found as AnyValidator;
+    keepResolved(validator, resolved);
+    return runOf(resolved, "getter()");
+  };
+  const validate = (input: unknown, isPrimitive: boolean): unknown => {
+    const tooMany = (): unknown => report("too_big", { maximum: maxCalls, type: "calls" }, message);
     // One primitive past the limit is let through to see whether it ends the recursion, in which case it
     // was never a call to count: refused here, the last value of a tree with exactly `maxCalls` objects
     // failed it. Its call is given back only if it does end it, so a second one finds the count two past
     // the limit and is refused, after an await too, and nothing runs on past the limit.
-    const spent = spendCall(counted);
+    const calls = (scopeNow().calls ??= new Map<object, number>());
+    const spent = (calls.get(counted) ?? 0) + 1;
+    calls.set(counted, spent);
     const isOver = spent > maxCalls;
     if (spent > maxCalls + (isPrimitive ? 1 : 0)) {
       return tooMany();
     }
-    if (openLevels() >= maxDepth) {
-      return reject([issue("too_big", { maximum: maxDepth, type: "depth" })], place);
+    const open = levels();
+    if (open >= maxDepth) {
+      return report("too_big", { maximum: maxDepth, type: "depth" }, message);
     }
-    openLevel();
+    setLevels(open + 1);
     started += 1;
     const mark = started;
+    const from = count();
     try {
-      if (resolved === undefined) {
-        const previous = building;
-        building = counted;
-        let found: unknown;
-        try {
-          found = detached(getter, undefined);
-        } finally {
-          building = previous;
-        }
-        if (typeof found !== "function") {
-          throw new TypeError(`getter() must return a function, received ${found === null ? "null" : typeof found}`);
-        }
-        resolved = found as AnyValidator;
-        keepResolved(validator, resolved);
-      }
-      const outcome = chain(call(resolved, input, place), (result: ValidationResult<unknown>) =>
-        result.ok ? accept(result.value, place) : result,
-      );
+      runInner ??= resolve();
+      const value = runInner(input);
+      const outcome = finish === undefined ? value : after(tools, from, value, finish);
       // A primitive that reached no further `lazy` call cannot multiply the work, so it is not held against
       // the limit: a long flat list of numbers under a recursive schema is no more work than its length. One
       // the recursion goes on through, as text a `json` or a `transform` reads the next level from, stays
       // counted, and so does one whose result is pending, since calls made meanwhile cannot be told apart.
-      if (isPrimitive && started === mark && !isThenable(outcome)) {
-        refundCall(counted);
+      if (isPrimitive && started === mark && !tools.is(outcome)) {
+        calls.set(counted, (calls.get(counted) as number) - 1);
         return outcome;
       }
       if (isOver) {
-        // Nothing waits for a result that is pending now, so a rejection of it is handled here.
-        // oxlint-disable-next-line promise/prefer-await-to-then, promise/catch-or-return
-        Promise.resolve(outcome).catch(() => undefined);
+        // What it reported goes with it. A result that waits has reported nothing here, and a rejection
+        // of it is handled where it was made, since nothing waits for it now.
+        cut(from);
         return tooMany();
       }
       return outcome;
     } finally {
-      closeLevel();
+      setLevels(open);
     }
   };
-  // An object reached again at the same path in one validation, as each option of a `union` reaches the
-  // children, is validated once. The path is part of the key, since the issues are written at it. A
-  // primitive is not kept: it has no children, so validating it again cannot multiply the work.
-  const validator = described(
-    composed((input, place) => {
-      const paths = resultsOf(self, newPaths);
-      const isPrimitive = (typeof input !== "object" && typeof input !== "function") || input === null;
-      if (isPrimitive || paths === undefined) {
-        return validate(input, place, isPrimitive);
+  // An object reached again in one validation, as each option of a `union` reaches the children, is
+  // validated once. What was found is relative to the object, so it holds wherever the object is reached.
+  // A primitive is not kept: it has no children, so validating it again cannot multiply the work.
+  const run: Run = (input) => {
+    if ((typeof input !== "object" && typeof input !== "function") || input === null) {
+      return validate(input, true);
+    }
+    const all = (scopeNow().results ??= new Map<object, unknown>());
+    let mine = all.get(self) as Map<object, Kept> | undefined;
+    if (mine === undefined) {
+      mine = new Map();
+      all.set(self, mine);
+    }
+    // Two options may reach the object through different numbers of levels, and a result found nearer
+    // `maxDepth` may have failed for that alone, so each is kept for the depth it was found at.
+    const depth = levels();
+    for (let found = mine.get(input); found !== undefined; found = found.other) {
+      if (found.depth === depth) {
+        return again(found);
       }
-      // Two options may reach the object here through different numbers of levels, and a result found
-      // nearer `maxDepth` may have failed for that alone, so each is kept for the depth it was found at.
-      const depth = openLevels();
-      const object = input as object;
-      if (paths.firsts.has(object)) {
-        const first = paths.firsts.get(object);
-        if (first !== undefined && first.place === place && first.depth === depth) {
-          return first.result;
+    }
+    const from = count();
+    const value = validate(input, false);
+    // Read now, and not before: an object that holds itself was kept, deeper, while it was validated.
+    const kept: Kept = { depth, value, other: mine.get(input) };
+    mine.set(input, kept);
+    if (tools.is(value)) {
+      kept.value = tools.after(from, value, (later, begin) => {
+        kept.value = later;
+        if (later === FAIL) {
+          keepIssues(kept, begin);
         }
-        moveFirst(paths, object);
-        const found = keptAt(spotOf(place, paths), depth).get(object);
-        if (found !== undefined) {
-          return found;
+        return later;
+      });
+      return kept.value;
+    }
+    if (value === FAIL) {
+      keepIssues(kept, from);
+    }
+    return value;
+  };
+  run.w = tools;
+  // What the validator the getter returns reports is worded by that validator's words, which are not
+  // known when this one is made. It may hold this one, so a word asked for while one is looked for is none.
+  let isWording = false;
+  const wordInner: Word = (found) => {
+    if (isWording) {
+      return undefined;
+    }
+    isWording = true;
+    try {
+      for (const word of wordsIn(resolved)) {
+        const text = word(found);
+        if (text !== undefined) {
+          return text;
         }
       }
-      const result = validate(input, place, false);
-      keep(paths, object, { place, depth, result });
-      return result;
-    }),
-    { kind: "lazy", options, checks, getter },
-  );
+      return undefined;
+    } finally {
+      isWording = false;
+    }
+  };
+  const validator: AnyValidator = toValidator(run, { kind: "lazy", options, checks, getter }, [wordSize, wordInner]);
   return validator;
 }

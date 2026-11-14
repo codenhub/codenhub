@@ -33,7 +33,7 @@ A wrong size is reported at once, without validating the items, so a huge array 
 
 **Throws**
 
-- `TypeError` — When `item` or a check is not a function, or `min`, `max` or `length` is not a number.
+- `TypeError` — When `item` is not a validator of this copy of the package, a check was not made by `check`, `checkFields` or a built-in check, or `min`, `max` or `length` is not a number.
 - `RangeError` — When `min`, `max` or `length` is not a non-negative integer, or no size satisfies them together.
 
 **Example**
@@ -110,7 +110,7 @@ An exception thrown by either function propagates, as a `transform`'s does: it i
 
 **Returns** — A validator that produces what `output` produces, from what `input` accepts.
 
-**Throws** — `TypeError` — When `input` or `output` is not a function, `conversions` is not a plain object, or its `decode` or `encode` is not a function; and when validating, if `decode` returns a promise.
+**Throws** — `TypeError` — When `input` or `output` is not a validator of this copy of the package, `conversions` is not a plain object, or its `decode` or `encode` is not a function; and when validating, if `decode` returns a promise.
 
 **Example**
 
@@ -168,17 +168,17 @@ encode(event, { name: "Launch", at: new Date(0) }); // { ok: true, value: { name
 ### extend
 
 ```ts
-export declare function extend<TValidator extends AnyValidator<object>, TShape extends Shape, TUnknownKeys extends UnknownKeys = never>(validator: TValidator, shape: TShape, ...rest: Rest<Remade<Extended<Infer<TValidator>, TShape>, TUnknownKeys>, ObjectOptions<TUnknownKeys>>): TValidator extends Validator<unknown> ? Composed<TShape[keyof TShape] | RestIn<TUnknownKeys>, Remade<Extended<Infer<TValidator>, TShape>, TUnknownKeys>, RemadeInput<ExtendedInput<InferInput<TValidator>, TShape>, TUnknownKeys>> : AsyncSchema<Remade<Extended<Infer<TValidator>, TShape>, TUnknownKeys>, RemadeInput<ExtendedInput<InferInput<TValidator>, TShape>, TUnknownKeys>>;
-export declare function extend<TValidator extends AnyValidator<object>, TShape extends Shape, TUnknownKeys extends UnknownKeys = never>(validator: TValidator, shape: TShape, ...rest: AsyncRest<Remade<Extended<Infer<TValidator>, TShape>, TUnknownKeys>, ObjectOptions<TUnknownKeys>>): AsyncSchema<Remade<Extended<Infer<TValidator>, TShape>, TUnknownKeys>, RemadeInput<ExtendedInput<InferInput<TValidator>, TShape>, TUnknownKeys>>;
+export declare function extend<TValidator extends AnyValidator<object>, TShape extends Shape>(validator: TValidator, shape: TShape, ...rest: Rest<Extended<Infer<TValidator>, TShape>, MessageOptions>): TValidator extends Validator<unknown> ? Composed<TShape[keyof TShape], Extended<Infer<TValidator>, TShape>, ExtendedInput<InferInput<TValidator>, TShape>> : AsyncSchema<Extended<Infer<TValidator>, TShape>, ExtendedInput<InferInput<TValidator>, TShape>>;
+export declare function extend<TValidator extends AnyValidator<object>, TShape extends Shape>(validator: TValidator, shape: TShape, ...rest: AsyncRest<Extended<Infer<TValidator>, TShape>, MessageOptions>): AsyncSchema<Extended<Infer<TValidator>, TShape>, ExtendedInput<InferInput<TValidator>, TShape>>;
 ```
 
 Creates an object validator with the properties of another and those given, as spreading the shape of one into another does for an object made from shapes.
 
-A module that exports an object validator, and not its shape, is extended with this. A property of the same name as one the object has replaces it, in its place. The validator must be one `object` made, since its shape is read from what it describes itself with. The new object keeps its options, `unknownKeys` and `message`, and each option given here replaces the one of its name, so a strict object stays strict given only a `message`, and a validator of unknown keys is kept. One with checks is refused: a check reads the whole object and may read a property that is replaced, so give the checks the new object needs here instead.
+A module that exports an object validator, and not its shape, is extended with this. A property of the same name as one the object has replaces it, in its place. The validator must be one `object`, `strictObject`, `looseObject` or `objectWithRest` made, since its shape is read from what it describes itself with. The new object treats the keys its shape does not list as that one does, so a strict object stays strict and a validator of unknown keys is kept, and it keeps its `message` unless one is given here. One with checks is refused: a check reads the whole object and may read a property that is replaced, so give the checks the new object needs here instead.
 
 **Parameters**
 
-- `validator` — A validator made by `object`, without checks.
+- `validator` — A validator made by `object`, `strictObject`, `looseObject` or `objectWithRest`, without checks.
 - `shape` — Validator of each property added or replaced.
 - `rest` — Options, each replacing the one of its name in the object, then checks on the new object.
 
@@ -187,9 +187,9 @@ A module that exports an object validator, and not its shape, is extended with t
 - `TValidator` — The object validator to extend.
 - `TShape` — The validators of the properties added.
 
-**Returns** — A validator made by `object`, of the properties of both.
+**Returns** — A validator made by the same factory, of the properties of both.
 
-**Throws** — `TypeError` — When the validator was not made by `object` or has checks, or `shape` is not a plain object of validators.
+**Throws** — `TypeError` — When the validator was not made by `object`, `strictObject`, `looseObject` or `objectWithRest`, or has checks, or `shape` is not a plain object of validators.
 
 **Example**
 
@@ -220,7 +220,7 @@ The fallback is trusted and is not validated. A function is called with the issu
 
 **Returns** — A validator that produces the wrapped type and never fails.
 
-**Throws** — `TypeError` — When `validator` is not a function, or `value` is an object or an array.
+**Throws** — `TypeError` — When `validator` is not a validator of this copy of the package, or `value` is an object or an array.
 
 **Example**
 
@@ -256,7 +256,7 @@ The form is read before it reaches the validator, by `request.formData()` or the
 
 **Returns** — A validator that produces what `validator` produces.
 
-**Throws** — `TypeError` — When `validator` or a check is not a function, or `repeated` is not a boolean.
+**Throws** — `TypeError` — When `validator` is not a validator of this copy of the package, a check was not made by `check`, `checkFields` or a built-in check, or `repeated` is not a boolean.
 
 **Example**
 
@@ -276,7 +276,7 @@ export declare function intersection<TLeft extends AnyValidator, TRight extends 
 
 Creates a validator that accepts a value only when it passes both validators, and produces the two results merged.
 
-Both validators receive the same input and both run, so the issues of each are reported together. The outputs are merged: plain objects key by key, arrays of the same length item by item, and maps and sets of the same size entry by entry in iteration order, which both validators keep from the input, recursively, so maps keyed by objects and sets of objects merge too. Any other pair must be the same value, `0` and `-0` merging as `0`, or two dates holding the same moment. Where the outputs differ otherwise, such as `"  ab "` trimmed on one side and uppercased on the other, no value satisfies both, so each such place fails with `invalid_intersection` at its path, rather than one side silently winning, up to the 1,000 issues a collection reports. Cyclic or shared objects in the outputs are merged once, and the merged output keeps their shape. The merged object is new, so an own `__proto__` key that a side passed on unchecked, as `unknown()` does, is reported as `invalid_key` with `{ reserved: true }`, as `record` reports it, unless a shape of either side that made the value there lists `__proto__`: not one a `transform` runs before its function, one in a `pipe` step followed by a step that makes a new object, or a `map` entry's key validator, for the entry's value. A value both sides passed on whole is the input's own object, and is kept as it is. Two `object`s with `unknownKeys: "strict"` pass together only when every key of the input is listed in both shapes, since each rejects the keys only the other lists; spread their shapes into one strict object instead. It is synchronous when both validators are, and asynchronous otherwise.
+Both validators receive the same input and both run, so the issues of each are reported together. The outputs are merged: plain objects key by key, arrays of the same length item by item, and maps and sets of the same size entry by entry in iteration order, which both validators keep from the input, recursively, so maps keyed by objects and sets of objects merge too. Any other pair must be the same value, `0` and `-0` merging as `0`, or two dates holding the same moment. Where the outputs differ otherwise, such as `"  ab "` trimmed on one side and uppercased on the other, no value satisfies both, so each such place fails with `invalid_intersection` at its path, rather than one side silently winning, up to the 1,000 issues a collection reports. Cyclic or shared objects in the outputs are merged once, and the merged output keeps their shape. The merged object is new, so an own `__proto__` key that a side passed on unchecked, as `unknown()` does, is reported as `invalid_key` with `{ reserved: true }`, as `record` reports it, unless a shape of either side that made the value there lists `__proto__`: not one a `transform` runs before its function, one in a `pipe` step followed by a step that makes a new object, or a `map` entry's key validator, for the entry's value. A value both sides passed on whole is the input's own object, and is kept as it is. Two `object`s made by `strictObject` pass together only when every key of the input is listed in both shapes, since each rejects the keys only the other lists; spread their shapes into one strict object instead. It is synchronous when both validators are, and asynchronous otherwise.
 
 **Parameters**
 
@@ -290,7 +290,7 @@ Both validators receive the same input and both run, so the issues of each are r
 
 **Returns** — A validator that produces the merged outputs, typed as an intersection.
 
-**Throws** — `TypeError` — When `left` or `right` is not a function.
+**Throws** — `TypeError` — When `left` or `right` is not a validator of this copy of the package.
 
 **Example**
 
@@ -312,7 +312,7 @@ A non-string fails with `invalid_type`, and text that is not valid JSON fails wi
 
 **Returns** — A validator that produces what `validator` produces, or `unknown` without one.
 
-**Throws** — `TypeError` — When `validator` is given and is not a function, `undefined` included.
+**Throws** — `TypeError` — When `validator` is given and is not a validator of this copy of the package, `undefined` included.
 
 **Example**
 
@@ -332,7 +332,7 @@ A non-string fails with `invalid_type`, and text that is not valid JSON fails wi
 
 **Returns** — A validator that produces what `validator` produces, or `unknown` without one.
 
-**Throws** — `TypeError` — When `validator` is given and is not a function, `undefined` included.
+**Throws** — `TypeError` — When `validator` is given and is not a validator of this copy of the package, `undefined` included.
 
 **Example**
 
@@ -360,7 +360,7 @@ A non-string fails with `invalid_type`, and text that is not valid JSON fails wi
 
 **Returns** — A validator that produces what `validator` produces, or `unknown` without one.
 
-**Throws** — `TypeError` — When `validator` is given and is not a function, `undefined` included.
+**Throws** — `TypeError` — When `validator` is given and is not a validator of this copy of the package, `undefined` included.
 
 **Example**
 
@@ -388,7 +388,7 @@ A non-string fails with `invalid_type`, and text that is not valid JSON fails wi
 
 **Returns** — A validator that produces what `validator` produces, or `unknown` without one.
 
-**Throws** — `TypeError` — When `validator` is given and is not a function, `undefined` included.
+**Throws** — `TypeError` — When `validator` is given and is not a validator of this copy of the package, `undefined` included.
 
 **Example**
 
@@ -411,7 +411,7 @@ TypeScript cannot infer a validator that refers to itself, so annotate the varia
 
 Every level of nesting is a level of recursion, and input nested past the stack, or a cyclic object, would throw. `maxDepth` stops that first: a value found more than that many levels down fails with `too_big` and `{ maximum, type: "depth" }` at its own path, so untrusted input can be checked without a size cap tuned to the stack. A level opened before an await is still open after it, so a rule that awaits between levels does not reset the count: an asynchronous recursive schema is held to `maxDepth` too, a cyclic object included, and its issues, each holding its full path, stay small. Asynchronous data nested deeper than the limit needs it raised, which costs no stack, since what runs after an await starts from a fresh one.
 
-Work can also grow faster than the input. A `union` tries every option, and an `object` checks every property even after one fails, so in a recursive `union` of objects every option reaches the children. A `lazy` keeps what it found for each object at each path in one validation, and gives it again when the same object is reached at the same path, so those options share the children's result and the work grows with the input. An asynchronous check under it runs once for each such object and path, however many options reach it. Work that makes new objects at every level, such as a `transform` that copies its value, cannot be shared and doubles with each level. `maxCalls` stops that: past that many calls of one `lazy` in one validation, every further one fails with `too_big` and `{ maximum, type: "calls" }`. A validation is a call such as `schema(input)` and everything it reaches before it settles, whatever validator its root is, so the items of an `array` share each `lazy`'s count. Unlike `maxDepth`, each `lazy` counts its own calls against its own limit, so a limit set on one is never overridden by another that the validation reaches. Like `maxDepth`, it lasts across awaits: what runs after an await counts toward the same validation, so an asynchronous recursive schema is held to it as well. That holds for the awaits of this package, such as an asynchronous check's: an await inside a validator you write yourself is not seen, so what that validator calls after it starts a validation of its own, with fresh counts, and neither limit bounds recursion through it. Put asynchronous work in a check, or bound such a validator yourself. The issues found on the way are kept, each with a path no deeper than `maxDepth` allows, about 1 to 2 KB per call, so the default holds a validation stopped by the limit to about 20 MB and a few tenths of a second for each `lazy`. Raise it for trusted recursive data with more nodes than that in one validation. For recursive objects told apart by a property, `tagged` reads that property first and validates only the matching variant.
+Work can also grow faster than the input. A `union` tries every option, and an `object` checks every property even after one fails, so in a recursive `union` of objects every option reaches the children. A `lazy` keeps what it found for each object in one validation, and gives it again when the same object is reached again as many `lazy` levels down, wherever that is, so those options share the children's result and the work grows with the input. An asynchronous check under it runs once for each such object, however many options reach it. Work that makes new objects at every level, such as a `transform` that copies its value, cannot be shared and doubles with each level. `maxCalls` stops that: past that many calls of one `lazy` in one validation, every further one fails with `too_big` and `{ maximum, type: "calls" }`. A validation is a call such as `schema(input)` and everything it reaches before it settles, whatever validator its root is, so the items of an `array` share each `lazy`'s count. Unlike `maxDepth`, each `lazy` counts its own calls against its own limit, so a limit set on one is never overridden by another that the validation reaches. Like `maxDepth`, it lasts across awaits: what runs after an await counts toward the same validation, so an asynchronous recursive schema is held to it as well. That holds for the awaits of this package, such as an asynchronous check's: an await inside a validator you write yourself is not seen, so what that validator calls after it starts a validation of its own, with fresh counts, and neither limit bounds recursion through it. Put asynchronous work in a check, or bound such a validator yourself. The issues found on the way are kept, each with a path no deeper than `maxDepth` allows, about 1 to 2 KB per call, so the default holds a validation stopped by the limit to about 20 MB and a few tenths of a second for each `lazy`. Raise it for trusted recursive data with more nodes than that in one validation. For recursive objects told apart by a property, `tagged` reads that property first and validates only the matching variant.
 
 **Parameters**
 
@@ -426,7 +426,7 @@ Work can also grow faster than the input. A `union` tries every option, and an `
 
 **Throws**
 
-- `TypeError` — When `getter` is not a function or `maxDepth` or `maxCalls` is not a number, and, from the returned validator on its first use, when `getter` returns something that is not a function.
+- `TypeError` — When `getter` is not a function or `maxDepth` or `maxCalls` is not a number, and, from the returned validator on its first use, when `getter` returns something that is not a validator of this copy of the package.
 - `RangeError` — When `maxDepth` or `maxCalls` is not a positive integer.
 
 **Example**
@@ -441,6 +441,39 @@ const category: Validator<Category> = object({
   name: string(),
   children: array(lazy(() => category)),
 });
+```
+
+### looseObject
+
+```ts
+export declare function looseObject<TShape extends Shape>(shape: TShape, ...rest: Rest<InferObject<TShape>, MessageOptions>): Composed<TShape[keyof TShape], InferObject<TShape>, InferObjectInput<TShape>>;
+export declare function looseObject<TShape extends Shape>(shape: TShape, ...rest: AsyncRest<InferObject<TShape>, MessageOptions>): AsyncSchema<InferObject<TShape>, InferObjectInput<TShape>>;
+```
+
+Creates a validator for plain objects with the given properties, which keeps every other one as it is.
+
+It validates as `object` does, and copies each enumerable property the shape does not list to the output, unchecked, after the listed properties and in the order of the input. They are read before any property is validated. Its type lists only the properties of the shape.
+
+An unlisted `__proto__` is refused with an `invalid_key` issue: copied, it would become the prototype of any copy of the output made by assignment. A shape that lists `__proto__` keeps it, as data.
+
+**Parameters**
+
+- `shape` — Validator of each property.
+- `rest` — Options, then checks, which run once every property has passed and see the whole object.
+
+**Type parameters**
+
+- `TShape` — Property validators.
+
+**Returns** — A validator that produces an object.
+
+**Throws** — `TypeError` — When `shape` is not a plain object, or a property validator is not a validator.
+
+**Example**
+
+```ts
+const user = looseObject({ name: string() });
+user({ name: "Ada", admin: true }); // { ok: true, value: { name: "Ada", admin: true } }
 ```
 
 ### map
@@ -469,7 +502,7 @@ A wrong size is reported at once, without validating the entries. An issue's pat
 
 **Throws**
 
-- `TypeError` — When `key` or `value` is not a function, or `min`, `max` or `length` is not a number.
+- `TypeError` — When `key` or `value` is not a validator of this copy of the package, or `min`, `max` or `length` is not a number.
 - `RangeError` — When `min`, `max` or `length` is not a non-negative integer, or no size satisfies them together.
 
 **Example**
@@ -530,7 +563,7 @@ Wraps a validator so `null` is accepted and passed through, and every other valu
 
 **Returns** — A validator that produces the wrapped type, or `null`.
 
-**Throws** — `TypeError` — When `validator` is not a function.
+**Throws** — `TypeError` — When `validator` is not a validator of this copy of the package.
 
 **Example**
 
@@ -559,7 +592,7 @@ Wraps a validator so `null` and `undefined` are accepted and passed through, and
 
 **Returns** — A validator that produces the wrapped type, `null` or `undefined`.
 
-**Throws** — `TypeError` — When `validator` is not a function.
+**Throws** — `TypeError` — When `validator` is not a validator of this copy of the package.
 
 **Example**
 
@@ -572,27 +605,30 @@ nickname(undefined); // { ok: true, value: undefined }
 ### object
 
 ```ts
-export declare function object<TShape extends Shape, TUnknownKeys extends UnknownKeys = "strip">(shape: TShape, ...rest: Rest<InferObject<TShape, RestIn<TUnknownKeys>>, ObjectOptions<TUnknownKeys>>): Composed<TShape[keyof TShape] | RestIn<TUnknownKeys>, InferObject<TShape, RestIn<TUnknownKeys>>, InferObjectInput<TShape, RestIn<TUnknownKeys>>>;
-export declare function object<TShape extends Shape, TUnknownKeys extends UnknownKeys = "strip">(shape: TShape, ...rest: AsyncRest<InferObject<TShape, RestIn<TUnknownKeys>>, ObjectOptions<TUnknownKeys>>): AsyncSchema<InferObject<TShape, RestIn<TUnknownKeys>>, InferObjectInput<TShape, RestIn<TUnknownKeys>>>;
+export declare function object<TShape extends Shape>(shape: TShape, ...rest: Rest<InferObject<TShape>, MessageOptions>): Composed<TShape[keyof TShape], InferObject<TShape>, InferObjectInput<TShape>>;
+export declare function object<TShape extends Shape>(shape: TShape, ...rest: AsyncRest<InferObject<TShape>, MessageOptions>): AsyncSchema<InferObject<TShape>, InferObjectInput<TShape>>;
 ```
 
 Creates a validator for plain objects with the given properties.
 
-Only own properties are read, a listed one whether or not it is enumerable and an unlisted one only when it is, and class instances and arrays are not objects here. Every property is validated even when an earlier one failed, so the result lists every problem. Issue paths lead from the object down to the property. The output is a new object; the input is never modified. It is synchronous when every property validator, and a validator given as `unknownKeys`, is, and asynchronous otherwise. A getter or `Proxy` trap in the input that throws while it is read propagates, as a callback's exception does; data parsed from JSON has none.
+Only own properties are read, whether or not they are enumerable, and class instances and arrays are not objects here. Every property is validated even when an earlier one failed, so the result lists every problem. Issue paths lead from the object down to the property. The output is a new object; the input is never modified. It is synchronous when every property validator is, and asynchronous otherwise.
+
+A property the shape does not list is dropped from the output. `strictObject` refuses it, `looseObject` keeps it as it is, and `objectWithRest` validates it.
+
+Each property is read as its validator runs, and every one of them before anything waits. A getter or `Proxy` trap in the input that throws while it is read propagates, as a callback's exception does; data parsed from JSON has none.
 
 **Parameters**
 
 - `shape` — Validator of each property.
-- `rest` — Options, including how to treat properties the shape does not list, then checks, which run once every property has passed and see the whole object.
+- `rest` — Options, then checks, which run once every property has passed and see the whole object.
 
 **Type parameters**
 
 - `TShape` — Property validators.
-- `TUnknownKeys` — What `unknownKeys` is given, a mode or a validator.
 
 **Returns** — A validator that produces an object.
 
-**Throws** — `TypeError` — When `shape` is not a plain object, a property validator is not a function, or `unknownKeys` is not `"strip"`, `"strict"`, `"passthrough"` or a validator.
+**Throws** — `TypeError` — When `shape` is not a plain object, or a property validator is not a validator.
 
 **Example**
 
@@ -605,9 +641,6 @@ const signup = object(
   { password: string({ min: 8 }), confirm: string() },
   check((data) => data.password === data.confirm, { path: ["confirm"], message: "Passwords must match" }),
 );
-
-const flags = object({ name: string() }, { unknownKeys: boolean() });
-flags({ name: "Ada", beta: true }); // { ok: true, value: { name: "Ada", beta: true } }
 ```
 
 ### objectLike
@@ -634,7 +667,7 @@ Every property is validated even when an earlier one failed. A property that thr
 
 **Returns** — A validator that produces a plain object.
 
-**Throws** — `TypeError` — When `shape` is not a plain object or a property validator is not a function.
+**Throws** — `TypeError` — When `shape` is not a plain object or a property validator is not a validator of this copy of the package.
 
 **Example**
 
@@ -644,20 +677,56 @@ feedback(new Error("Try again")); // { ok: true, value: { message: "Try again" }
 feedback({ message: "" }); // { ok: false, error: { issues: [{ code: "too_small", path: ["message"], ... }] } }
 ```
 
+### objectWithRest
+
+```ts
+export declare function objectWithRest<TShape extends Shape, TRest extends AnyValidator>(shape: TShape, rest: TRest, ...args: Rest<InferObject<TShape, TRest>, MessageOptions>): Composed<TShape[keyof TShape] | TRest, InferObject<TShape, TRest>, InferObjectInput<TShape, TRest>>;
+export declare function objectWithRest<TShape extends Shape, TRest extends AnyValidator>(shape: TShape, rest: TRest, ...args: AsyncRest<InferObject<TShape, TRest>, MessageOptions>): AsyncSchema<InferObject<TShape, TRest>, InferObjectInput<TShape, TRest>>;
+```
+
+Creates a validator for plain objects with the given properties, which validates every other one.
+
+It validates as `object` does, and gives each enumerable property the shape does not list to `rest`. The output keeps what `rest` produces, after the listed properties and in the order of the input. Its issues are at the key's path, after those of the listed properties, and stop at the 1,000 issues a collection reports. The unlisted values are read before any property is validated. It is asynchronous when a property validator or `rest` is.
+
+An unlisted `__proto__` is refused with an `invalid_key` issue, as a `record` refuses it, and its value is still validated. The type gains an index signature that holds what `rest` produces and what the listed properties hold, so that an object literal can be written with both.
+
+**Parameters**
+
+- `shape` — Validator of each property.
+- `rest` — Validator of each property the shape does not list.
+- `args` — Options, then checks, which run once every property has passed and see the whole object.
+
+**Type parameters**
+
+- `TShape` — Property validators.
+- `TRest` — The validator of the properties the shape does not list.
+
+**Returns** — A validator that produces an object.
+
+**Throws** — `TypeError` — When `shape` is not a plain object, or a property validator or `rest` is not a validator.
+
+**Example**
+
+```ts
+const flags = objectWithRest({ name: string() }, boolean());
+flags({ name: "Ada", beta: true }); // { ok: true, value: { name: "Ada", beta: true } }
+flags({ name: "Ada", beta: "yes" }); // { ok: false, ... }, code "invalid_type" at ["beta"]
+```
+
 ### omit
 
 ```ts
-export declare function omit<TValidator extends AnyValidator<object>, const TKey extends ListedKey<Infer<TValidator>>, TUnknownKeys extends UnknownKeys = never>(validator: TValidator, keys: readonly TKey[], ...rest: Rest<Remade<Omitted<Infer<TValidator>, TKey>, TUnknownKeys>, ObjectOptions<TUnknownKeys>>): ReshapedWith<TValidator, TUnknownKeys, Remade<Omitted<Infer<TValidator>, TKey>, TUnknownKeys>, RemadeInput<Omitted<InferInput<TValidator>, TKey>, TUnknownKeys>>;
-export declare function omit<TValidator extends AnyValidator<object>, const TKey extends ListedKey<Infer<TValidator>>, TUnknownKeys extends UnknownKeys = never>(validator: TValidator, keys: readonly TKey[], ...rest: AsyncRest<Remade<Omitted<Infer<TValidator>, TKey>, TUnknownKeys>, ObjectOptions<TUnknownKeys>>): AsyncSchema<Remade<Omitted<Infer<TValidator>, TKey>, TUnknownKeys>, RemadeInput<Omitted<InferInput<TValidator>, TKey>, TUnknownKeys>>;
+export declare function omit<TValidator extends AnyValidator<object>, const TKey extends ListedKey<Infer<TValidator>>>(validator: TValidator, keys: readonly TKey[], ...rest: Rest<Omitted<Infer<TValidator>, TKey>, MessageOptions>): Reshaped<TValidator, Omitted<Infer<TValidator>, TKey>, Omitted<InferInput<TValidator>, TKey>>;
+export declare function omit<TValidator extends AnyValidator<object>, const TKey extends ListedKey<Infer<TValidator>>>(validator: TValidator, keys: readonly TKey[], ...rest: AsyncRest<Omitted<Infer<TValidator>, TKey>, MessageOptions>): AsyncSchema<Omitted<Infer<TValidator>, TKey>, Omitted<InferInput<TValidator>, TKey>>;
 ```
 
 Creates an object validator without the named properties of another.
 
-The validator must be one `object` made, since its shape is read from what it describes itself with. The new object keeps its options, `unknownKeys` and `message`, and each option given here replaces the one of its name, so a strict object stays strict given only a `message`. A validator of unknown keys is kept too, and validates a property left out when the input has it. One with checks is refused: a check reads the whole object and may read a property that is left out, so give the checks the smaller object needs here instead.
+The validator must be one `object`, `strictObject`, `looseObject` or `objectWithRest` made, since its shape is read from what it describes itself with. The new object treats the keys its shape does not list as that one does, so a strict object stays strict, and keeps its `message` unless one is given here. A validator of unknown keys is kept too, and validates a property left out when the input has it. One with checks is refused: a check reads the whole object and may read a property that is left out, so give the checks the smaller object needs here instead.
 
 **Parameters**
 
-- `validator` — A validator made by `object`, without checks.
+- `validator` — A validator made by `object`, `strictObject`, `looseObject` or `objectWithRest`, without checks.
 - `keys` — The properties to leave out, each of which the object has.
 - `rest` — Options, each replacing the one of its name in the object, then checks on the new object.
 
@@ -666,9 +735,9 @@ The validator must be one `object` made, since its shape is read from what it de
 - `TValidator` — The object validator to omit from.
 - `TKey` — The properties left out.
 
-**Returns** — A validator made by `object`, of the other properties.
+**Returns** — A validator made by the same factory, of the other properties.
 
-**Throws** — `TypeError` — When the validator was not made by `object`, has checks, or lacks one of the keys.
+**Throws** — `TypeError` — When the validator was not made by `object`, `strictObject`, `looseObject` or `objectWithRest`, has checks, or lacks one of the keys.
 
 **Example**
 
@@ -698,7 +767,7 @@ Given a default, `undefined` is replaced by it instead, the output type no longe
 
 **Returns** — A validator that produces the wrapped type, and `undefined` or the default for `undefined`.
 
-**Throws** — `TypeError` — When `validator` is not a function, or `value` is an object or an array.
+**Throws** — `TypeError` — When `validator` is not a validator of this copy of the package, or `value` is an object or an array.
 
 **Example**
 
@@ -731,7 +800,7 @@ Given a default, `undefined` is replaced by it instead, the output type no longe
 
 **Returns** — A validator that produces the wrapped type, and `undefined` or the default for `undefined`.
 
-**Throws** — `TypeError` — When `validator` is not a function, or `value` is an object or an array.
+**Throws** — `TypeError` — When `validator` is not a validator of this copy of the package, or `value` is an object or an array.
 
 **Example**
 
@@ -751,13 +820,13 @@ const tags = optional(array(string()), () => []);
 export declare function partial<TShape extends Shape>(shape: TShape): PartialShape<TShape>;
 ```
 
-Makes every property optional, for a form or an update where any field may be left out. Given a shape, which is a plain object, it returns a new shape to pass to `object`. Given a validator `object` made, it returns a new object validator with the same options, each option given here replacing the one of its name.
+Makes every property optional, for a form or an update where any field may be left out. Given a shape, which is a plain object, it returns a new shape to pass to `object`. Given a validator `object`, `strictObject`, `looseObject` or `objectWithRest` made, it returns a new object validator that treats the keys its shape does not list as that one does, so a strict object stays strict, and keeps its `message` unless one is given here.
 
 An object validator with checks is refused, since a check may read a property that is now absent: give the checks the new object needs here instead. What was given is unchanged either way.
 
 **Parameters**
 
-- `shape` — Property validators, or a validator made by `object`, without checks.
+- `shape` — Property validators, or a validator made by `object`, `strictObject`, `looseObject` or `objectWithRest`, without checks.
 
 **Type parameters**
 
@@ -765,7 +834,7 @@ An object validator with checks is refused, since a check may read a property th
 
 **Returns** — A shape whose every validator also accepts `undefined`, or an object validator of one.
 
-**Throws** — `TypeError` — When `shape` is not a plain object or a property validator is not a function, or, for a validator, when it was not made by `object` or has checks.
+**Throws** — `TypeError` — When `shape` is not a plain object or a property validator is not a validator of this copy of the package, or, for a validator, when it was not made by `object`, `strictObject`, `looseObject` or `objectWithRest`, or has checks.
 
 **Example**
 
@@ -777,16 +846,16 @@ const patch = partial(create); // the same, from the validator
 ```
 
 ```ts
-export declare function partial<TValidator extends AnyValidator<object>, TUnknownKeys extends UnknownKeys = never>(validator: TValidator, ...rest: Rest<Remade<AllOptional<Infer<TValidator>>, TUnknownKeys>, ObjectOptions<TUnknownKeys>>): ReshapedWith<TValidator, TUnknownKeys, Remade<AllOptional<Infer<TValidator>>, TUnknownKeys>, RemadeInput<AllOptional<InferInput<TValidator>>, TUnknownKeys>>;
+export declare function partial<TValidator extends AnyValidator<object>>(validator: TValidator, ...rest: Rest<AllOptional<Infer<TValidator>>, MessageOptions>): Reshaped<TValidator, AllOptional<Infer<TValidator>>, AllOptional<InferInput<TValidator>>>;
 ```
 
-Makes every property optional, for a form or an update where any field may be left out. Given a shape, which is a plain object, it returns a new shape to pass to `object`. Given a validator `object` made, it returns a new object validator with the same options, each option given here replacing the one of its name.
+Makes every property optional, for a form or an update where any field may be left out. Given a shape, which is a plain object, it returns a new shape to pass to `object`. Given a validator `object`, `strictObject`, `looseObject` or `objectWithRest` made, it returns a new object validator that treats the keys its shape does not list as that one does, so a strict object stays strict, and keeps its `message` unless one is given here.
 
 An object validator with checks is refused, since a check may read a property that is now absent: give the checks the new object needs here instead. What was given is unchanged either way.
 
 **Parameters**
 
-- `rest` — For a validator only: options, each replacing the one of its name in the object, then checks on the new object.
+- `rest` — For a validator only: a `message` that replaces the object's, then checks on the new object.
 
 **Type parameters**
 
@@ -794,7 +863,7 @@ An object validator with checks is refused, since a check may read a property th
 
 **Returns** — A shape whose every validator also accepts `undefined`, or an object validator of one.
 
-**Throws** — `TypeError` — When `shape` is not a plain object or a property validator is not a function, or, for a validator, when it was not made by `object` or has checks.
+**Throws** — `TypeError` — When `shape` is not a plain object or a property validator is not a validator of this copy of the package, or, for a validator, when it was not made by `object`, `strictObject`, `looseObject` or `objectWithRest`, or has checks.
 
 **Example**
 
@@ -806,16 +875,16 @@ const patch = partial(create); // the same, from the validator
 ```
 
 ```ts
-export declare function partial<TValidator extends AnyValidator<object>, TUnknownKeys extends UnknownKeys = never>(validator: TValidator, ...rest: AsyncRest<Remade<AllOptional<Infer<TValidator>>, TUnknownKeys>, ObjectOptions<TUnknownKeys>>): AsyncSchema<Remade<AllOptional<Infer<TValidator>>, TUnknownKeys>, RemadeInput<AllOptional<InferInput<TValidator>>, TUnknownKeys>>;
+export declare function partial<TValidator extends AnyValidator<object>>(validator: TValidator, ...rest: AsyncRest<AllOptional<Infer<TValidator>>, MessageOptions>): AsyncSchema<AllOptional<Infer<TValidator>>, AllOptional<InferInput<TValidator>>>;
 ```
 
-Makes every property optional, for a form or an update where any field may be left out. Given a shape, which is a plain object, it returns a new shape to pass to `object`. Given a validator `object` made, it returns a new object validator with the same options, each option given here replacing the one of its name.
+Makes every property optional, for a form or an update where any field may be left out. Given a shape, which is a plain object, it returns a new shape to pass to `object`. Given a validator `object`, `strictObject`, `looseObject` or `objectWithRest` made, it returns a new object validator that treats the keys its shape does not list as that one does, so a strict object stays strict, and keeps its `message` unless one is given here.
 
 An object validator with checks is refused, since a check may read a property that is now absent: give the checks the new object needs here instead. What was given is unchanged either way.
 
 **Parameters**
 
-- `rest` — For a validator only: options, each replacing the one of its name in the object, then checks on the new object.
+- `rest` — For a validator only: a `message` that replaces the object's, then checks on the new object.
 
 **Type parameters**
 
@@ -823,7 +892,7 @@ An object validator with checks is refused, since a check may read a property th
 
 **Returns** — A shape whose every validator also accepts `undefined`, or an object validator of one.
 
-**Throws** — `TypeError` — When `shape` is not a plain object or a property validator is not a function, or, for a validator, when it was not made by `object` or has checks.
+**Throws** — `TypeError` — When `shape` is not a plain object or a property validator is not a validator of this copy of the package, or, for a validator, when it was not made by `object`, `strictObject`, `looseObject` or `objectWithRest`, or has checks.
 
 **Example**
 
@@ -837,17 +906,17 @@ const patch = partial(create); // the same, from the validator
 ### pick
 
 ```ts
-export declare function pick<TValidator extends AnyValidator<object>, const TKey extends ListedKey<Infer<TValidator>>, TUnknownKeys extends UnknownKeys = never>(validator: TValidator, keys: readonly TKey[], ...rest: Rest<Remade<Picked<Infer<TValidator>, TKey>, TUnknownKeys>, ObjectOptions<TUnknownKeys>>): ReshapedWith<TValidator, TUnknownKeys, Remade<Picked<Infer<TValidator>, TKey>, TUnknownKeys>, RemadeInput<Picked<InferInput<TValidator>, TKey & ListedKey<InferInput<TValidator>>>, TUnknownKeys>>;
-export declare function pick<TValidator extends AnyValidator<object>, const TKey extends ListedKey<Infer<TValidator>>, TUnknownKeys extends UnknownKeys = never>(validator: TValidator, keys: readonly TKey[], ...rest: AsyncRest<Remade<Picked<Infer<TValidator>, TKey>, TUnknownKeys>, ObjectOptions<TUnknownKeys>>): AsyncSchema<Remade<Picked<Infer<TValidator>, TKey>, TUnknownKeys>, RemadeInput<Picked<InferInput<TValidator>, TKey & ListedKey<InferInput<TValidator>>>, TUnknownKeys>>;
+export declare function pick<TValidator extends AnyValidator<object>, const TKey extends ListedKey<Infer<TValidator>>>(validator: TValidator, keys: readonly TKey[], ...rest: Rest<Picked<Infer<TValidator>, TKey>, MessageOptions>): Reshaped<TValidator, Picked<Infer<TValidator>, TKey>, Picked<InferInput<TValidator>, TKey & ListedKey<InferInput<TValidator>>>>;
+export declare function pick<TValidator extends AnyValidator<object>, const TKey extends ListedKey<Infer<TValidator>>>(validator: TValidator, keys: readonly TKey[], ...rest: AsyncRest<Picked<Infer<TValidator>, TKey>, MessageOptions>): AsyncSchema<Picked<Infer<TValidator>, TKey>, Picked<InferInput<TValidator>, TKey & ListedKey<InferInput<TValidator>>>>;
 ```
 
 Creates an object validator with only the named properties of another.
 
-The validator must be one `object` made, since its shape is read from what it describes itself with. The new object keeps its options, `unknownKeys` and `message`, and each option given here replaces the one of its name, so a strict object stays strict given only a `message`. A validator of unknown keys is kept too, and validates a property left out when the input has it. One with checks is refused: a check reads the whole object and may read a property that is left out, so give the checks the smaller object needs here instead.
+The validator must be one `object`, `strictObject`, `looseObject` or `objectWithRest` made, since its shape is read from what it describes itself with. The new object treats the keys its shape does not list as that one does, so a strict object stays strict, and keeps its `message` unless one is given here. A validator of unknown keys is kept too, and validates a property left out when the input has it. One with checks is refused: a check reads the whole object and may read a property that is left out, so give the checks the smaller object needs here instead.
 
 **Parameters**
 
-- `validator` — A validator made by `object`, without checks.
+- `validator` — A validator made by `object`, `strictObject`, `looseObject` or `objectWithRest`, without checks.
 - `keys` — The properties to keep, each of which the object has.
 - `rest` — Options, each replacing the one of its name in the object, then checks on the new object.
 
@@ -856,9 +925,9 @@ The validator must be one `object` made, since its shape is read from what it de
 - `TValidator` — The object validator to pick from.
 - `TKey` — The properties kept.
 
-**Returns** — A validator made by `object`, of the named properties.
+**Returns** — A validator made by the same factory, of the named properties.
 
-**Throws** — `TypeError` — When the validator was not made by `object`, has checks, or lacks one of the keys.
+**Throws** — `TypeError` — When the validator was not made by `object`, `strictObject`, `looseObject` or `objectWithRest`, has checks, or lacks one of the keys.
 
 **Example**
 
@@ -888,7 +957,7 @@ The first failure stops the pipe, because a later step has nothing valid to work
 
 **Returns** — A validator that produces what the last one produces.
 
-**Throws** — `TypeError` — When no validator is given or one is not a function.
+**Throws** — `TypeError` — When no validator is given or one is not a validator of this copy of the package.
 
 **Example**
 
@@ -925,7 +994,7 @@ A value is taken to be the caller's when it is the input itself. When a `transfo
 
 **Returns** — A validator that produces the same value, frozen, typed read-only.
 
-**Throws** — `TypeError` — When `validator` is not a function.
+**Throws** — `TypeError` — When `validator` is not a validator of this copy of the package.
 
 **Example**
 
@@ -965,7 +1034,7 @@ Each key passes `key` and each value passes `value`. An issue's path ends at the
 
 **Throws**
 
-- `TypeError` — When `key` or `value` is not a function, or `min`, `max` or `length` is not a number, and, from the returned validator, when `key` produces something other than text.
+- `TypeError` — When `key` or `value` is not a validator of this copy of the package, or `min`, `max` or `length` is not a number, and, from the returned validator, when `key` produces something other than text.
 - `RangeError` — When `min`, `max` or `length` is not a non-negative integer, or no size satisfies them together.
 
 **Example**
@@ -979,28 +1048,28 @@ scores({ ada: "3" }); // { ok: false, ... }, code "invalid_type" at path ["ada"]
 ### required
 
 ```ts
-export declare function required<TValidator extends AnyValidator<object>, TUnknownKeys extends UnknownKeys = never>(validator: TValidator, ...rest: Rest<Remade<AllRequired<Infer<TValidator>>, TUnknownKeys>, ObjectOptions<TUnknownKeys>>): ReshapedWith<TValidator, TUnknownKeys, Remade<AllRequired<Infer<TValidator>>, TUnknownKeys>, RemadeInput<AllRequired<InferInput<TValidator>>, TUnknownKeys>>;
-export declare function required<TValidator extends AnyValidator<object>, TUnknownKeys extends UnknownKeys = never>(validator: TValidator, ...rest: AsyncRest<Remade<AllRequired<Infer<TValidator>>, TUnknownKeys>, ObjectOptions<TUnknownKeys>>): AsyncSchema<Remade<AllRequired<Infer<TValidator>>, TUnknownKeys>, RemadeInput<AllRequired<InferInput<TValidator>>, TUnknownKeys>>;
+export declare function required<TValidator extends AnyValidator<object>>(validator: TValidator, ...rest: Rest<AllRequired<Infer<TValidator>>, MessageOptions>): Reshaped<TValidator, AllRequired<Infer<TValidator>>, AllRequired<InferInput<TValidator>>>;
+export declare function required<TValidator extends AnyValidator<object>>(validator: TValidator, ...rest: AsyncRest<AllRequired<Infer<TValidator>>, MessageOptions>): AsyncSchema<AllRequired<Infer<TValidator>>, AllRequired<InferInput<TValidator>>>;
 ```
 
 Creates an object validator whose properties are all required, from one where some are optional.
 
 A property made with `optional` becomes the validator it wrapped, so its default is gone with it, and one made with `nullish` becomes `nullable`, which still accepts `null`. Any other property is kept as it is: one that accepts `undefined` some other way, such as `unknown()` or a `union` with `literal(undefined)`, still does, though the type says otherwise.
 
-The validator must be one `object` made, and the new object keeps its options, each option given here replacing the one of its name. One with checks is refused, since a check may rely on a property being absent: give the checks the new object needs here instead.
+The validator must be one `object`, `strictObject`, `looseObject` or `objectWithRest` made. The new object treats the keys its shape does not list as that one does, so a strict object stays strict, and keeps its `message` unless one is given here. One with checks is refused, since a check may rely on a property being absent: give the checks the new object needs here instead.
 
 **Parameters**
 
-- `validator` — A validator made by `object`, without checks.
-- `rest` — Options, each replacing the one of its name in the object, then checks on the new object.
+- `validator` — A validator made by `object`, `strictObject`, `looseObject` or `objectWithRest`, without checks.
+- `rest` — A `message` that replaces the object's, then checks on the new object.
 
 **Type parameters**
 
 - `TValidator` — The object validator to make required.
 
-**Returns** — A validator made by `object`, with every property required.
+**Returns** — A validator made by the same factory, with every property required.
 
-**Throws** — `TypeError` — When the validator was not made by `object` or has checks.
+**Throws** — `TypeError` — When the validator was not made by `object`, `strictObject`, `looseObject` or `objectWithRest`, or has checks.
 
 **Example**
 
@@ -1034,7 +1103,7 @@ A wrong size is reported at once, without validating the values. Otherwise every
 
 **Throws**
 
-- `TypeError` — When `item` or a check is not a function, or `min`, `max` or `length` is not a number.
+- `TypeError` — When `item` is not a validator of this copy of the package, a check was not made by `check`, `checkFields` or a built-in check, or `min`, `max` or `length` is not a number.
 - `RangeError` — When `min`, `max` or `length` is not a non-negative integer, or no size satisfies them together.
 
 **Example**
@@ -1043,6 +1112,38 @@ A wrong size is reported at once, without validating the values. Otherwise every
 const ids = set(number({ int: true }), { min: 1 });
 ids(new Set([1, 2])); // { ok: true, value: Set { 1, 2 } }
 ids(new Set()); // { ok: false, ... }, code "too_small"
+```
+
+### strictObject
+
+```ts
+export declare function strictObject<TShape extends Shape>(shape: TShape, ...rest: Rest<InferObject<TShape>, MessageOptions>): Composed<TShape[keyof TShape], InferObject<TShape>, InferObjectInput<TShape>>;
+export declare function strictObject<TShape extends Shape>(shape: TShape, ...rest: AsyncRest<InferObject<TShape>, MessageOptions>): AsyncSchema<InferObject<TShape>, InferObjectInput<TShape>>;
+```
+
+Creates a validator for plain objects with the given properties and no other.
+
+It validates as `object` does, and refuses each enumerable property the shape does not list with an `unrecognized_key` issue at that key, before the listed properties are validated, up to the 1,000 issues a collection reports.
+
+**Parameters**
+
+- `shape` — Validator of each property.
+- `rest` — Options, then checks, which run once every property has passed and see the whole object.
+
+**Type parameters**
+
+- `TShape` — Property validators.
+
+**Returns** — A validator that produces an object.
+
+**Throws** — `TypeError` — When `shape` is not a plain object, or a property validator is not a validator.
+
+**Example**
+
+```ts
+const user = strictObject({ name: string() });
+user({ name: "Ada" }); // { ok: true, value: { name: "Ada" } }
+user({ name: "Ada", admin: true }); // { ok: false, ... }, code "unrecognized_key" at ["admin"]
 ```
 
 ### tagged
@@ -1107,7 +1208,7 @@ The function runs only when the wrapped validator succeeded, and receives the va
 
 **Returns** — A validator that produces what `convert` returns.
 
-**Throws** — `TypeError` — When `validator` or `convert` is not a function.
+**Throws** — `TypeError` — When `validator` is not a validator of this copy of the package, or `convert` is not a function.
 
 **Example**
 
@@ -1143,7 +1244,7 @@ A wrong length is reported at once, without validating the items. With `rest`, t
 
 **Throws**
 
-- `TypeError` — When `items` is not a list or is empty, an item or `rest` is not a function, `max` is not a number, or `max` is given without `rest`.
+- `TypeError` — When `items` is not a list or is empty, an item or `rest` is not a validator of this copy of the package, `max` is not a number, or `max` is given without `rest`.
 - `RangeError` — When `max` is not a non-negative integer, or is less than the number of fixed items.
 
 **Example**
@@ -1178,7 +1279,7 @@ The validators are tried in order and the first that accepts the value wins, so 
 
 **Returns** — A validator that produces what the first accepting option produces.
 
-**Throws** — `TypeError` — When `options` is not a list, is empty, or holds an option that is not a function.
+**Throws** — `TypeError` — When `options` is not a list, is empty, or holds an option that is not a validator of this copy of the package.
 
 **Example**
 
@@ -1289,7 +1390,7 @@ Options for [`lazy`](#lazy).
 maxCalls?: number | undefined;
 ```
 
-The most calls this `lazy` may make in one validation, those made for the options a `union` tries and fails included; a result this `lazy` already found for an object at a path is not a call, and neither is a primitive, such as a number in a list, that reaches no further `lazy` call and whose result is not pending. Past it, every further call fails with `too_big`, so a schema whose work grows faster than its input stops instead of running for hours on a few hundred bytes. A validation is a call such as `schema(input)` and everything it reaches before it settles, after any await included, so an `array` of recursive items shares this `lazy`'s count, and validations made one after another, or from a callback such as a check's test, or after an await inside a validator you write yourself, have counts of their own. Each `lazy` counts its own calls against its own limit, so no other `lazy` overrides it. Recursive data with more nodes than this in one validation needs it raised.
+The most calls this `lazy` may make in one validation, those made for the options a `union` tries and fails included; a result this `lazy` already found for an object is not a call, and neither is a primitive, such as a number in a list, that reaches no further `lazy` call and whose result is not pending. Past it, every further call fails with `too_big`, so a schema whose work grows faster than its input stops instead of running for hours on a few hundred bytes. A validation is a call such as `schema(input)` and everything it reaches before it settles, after any await included, so an `array` of recursive items shares this `lazy`'s count, and validations made one after another, or from a callback such as a check's test, or after an await inside a validator you write yourself, have counts of their own. Each `lazy` counts its own calls against its own limit, so no other `lazy` overrides it. Recursive data with more nodes than this in one validation needs it raised.
 
 **Default** — 10000
 
@@ -1351,36 +1452,6 @@ readonly title?: string | undefined;
 ```
 
 A short name for the value.
-
-### ObjectOptions
-
-```ts
-export interface ObjectOptions<TUnknownKeys extends UnknownKeys = UnknownKeys> extends MessageOptions {
-    unknownKeys?: TUnknownKeys | undefined;
-}
-```
-
-Options for [`object`](#object).
-
-**Type parameters**
-
-- `TUnknownKeys` — What `unknownKeys` is given, a mode or a validator.
-
-#### ObjectOptions › message
-
-Inherited from [`MessageOptions`](index.md#messageoptions--message).
-
-#### ObjectOptions › unknownKeys
-
-```ts
-unknownKeys?: TUnknownKeys | undefined;
-```
-
-What to do with input properties the shape does not list. `"strip"` drops them from the output, `"strict"` rejects each with an `unrecognized_key` issue, up to the 1,000 issues a collection reports, and `"passthrough"` copies them to the output unchecked, except `__proto__`, which it rejects with an `invalid_key` issue: copied, it would become the prototype of any copy of the output made by assignment. A shape that lists `__proto__` keeps it, as data.
-
-A validator validates each of them, and the output keeps what it produces, after the listed properties and in the order of the input. Its issues are at the key's path, after those of the listed properties, and stop at the 1,000 issues a collection reports. An unlisted `__proto__` is rejected with an `invalid_key` issue, as a `record` rejects it, and its value is still validated. The object is asynchronous when this validator is. Its type gains an index signature that holds what the validator produces and what the listed properties hold, so that an object literal can be written with both.
-
-**Default** — "strip"
 
 ### SizeOptions
 
@@ -1515,7 +1586,7 @@ The object type with the properties of `TShape` added, replacing any of the same
 export type InferObject<TShape extends Shape, TRest extends AnyValidator = never> = WithRest<InferShape<TShape>, RestOf<TRest>>;
 ```
 
-The object type [`object`](#object) produces: that of the shape and, with a validator of unknown keys, an index signature for the keys the shape does not list, which holds what that validator produces or any listed property's type, so the type can be written as an object literal.
+The object type an object validator produces: that of the shape and, with a validator of unknown keys, as `objectWithRest` takes, an index signature for the keys the shape does not list, which holds what that validator produces or any listed property's type, so the type can be written as an object literal.
 
 **Type parameters**
 
@@ -1528,7 +1599,7 @@ The object type [`object`](#object) produces: that of the shape and, with a vali
 export type InferObjectInput<TShape extends Shape, TRest extends AnyValidator = never> = WithRest<InferShapeInput<TShape>, RestInputOf<TRest>>;
 ```
 
-The object type that can pass [`object`](#object): that of the shape and, with a validator of unknown keys, an index signature for the keys the shape does not list, which holds what that validator accepts or any listed property's input type, so the type can be written as an object literal.
+The object type that can pass an object validator: that of the shape and, with a validator of unknown keys, as `objectWithRest` takes, an index signature for the keys the shape does not list, which holds what that validator accepts or any listed property's input type, so the type can be written as an object literal.
 
 **Type parameters**
 
@@ -1708,14 +1779,6 @@ export type Shape = Record<string, AnyValidator>;
 ```
 
 Maps property names to the validators of their values.
-
-### UnknownKeys
-
-```ts
-export type UnknownKeys = "strip" | "strict" | "passthrough" | AnyValidator;
-```
-
-What `unknownKeys` may be given.
 
 ### Variants
 
@@ -1914,36 +1977,6 @@ The type produced by the last validator of a list.
 
 Not exported; declared in `src/composition/pipe.ts`.
 
-### Reindexed
-
-```ts
-type Reindexed<T, TUnknownKeys, TValue> = [TUnknownKeys] extends [never] ? T : WithRest<Listed<T>, TValue>;
-```
-
-The object type with what its unlisted keys hold replaced by `TValue`, as an `unknownKeys` given to a reshaping function replaces the one the object had, or `T` as it is when none was given (`never`).
-
-Not exported; declared in `src/composition/reshape.ts`.
-
-### Remade
-
-```ts
-type Remade<T, TUnknownKeys> = Reindexed<T, TUnknownKeys, RestOf<RestIn<TUnknownKeys>>>;
-```
-
-`T` with its unlisted keys holding what the `unknownKeys` given, if any, produces.
-
-Not exported; declared in `src/composition/reshape.ts`.
-
-### RemadeInput
-
-```ts
-type RemadeInput<T, TUnknownKeys> = Reindexed<T, TUnknownKeys, RestInputOf<RestIn<TUnknownKeys>>>;
-```
-
-`T` with its unlisted keys holding what the `unknownKeys` given, if any, accepts.
-
-Not exported; declared in `src/composition/reshape.ts`.
-
 ### Replacement
 
 ```ts
@@ -1953,28 +1986,6 @@ type Replacement<T> = [Extract<T, AnyFunction>] extends [never] ? (T & LiteralVa
 A primitive fallback, or a function that receives the issues and returns the fallback. An object or a list would be shared by every result, so it is returned by a function. When a function is among the types of the fallback, only the function that returns it is accepted, since the fallback itself would be called.
 
 Not exported; declared in `src/composition/fallback.ts`.
-
-### ReshapedWith
-
-```ts
-type ReshapedWith<TValidator extends AnyValidator, TUnknownKeys, T, TInput> = [RestIn<TUnknownKeys>] extends [
-    never
-] ? Reshaped<TValidator, T, TInput> : Composed<TValidator | RestIn<TUnknownKeys>, T, TInput>;
-```
-
-A validator of `T` that is synchronous when the validator it was made from, and the validator of unknown keys in `TUnknownKeys` if it is one, are.
-
-Not exported; declared in `src/composition/reshape.ts`.
-
-### RestIn
-
-```ts
-type RestIn<TUnknownKeys> = Extract<TUnknownKeys, AnyValidator>;
-```
-
-The validator `unknownKeys` was given, or `never` when it was given a mode.
-
-Not exported; declared in `src/composition/object.ts`.
 
 ### RestInputOf
 

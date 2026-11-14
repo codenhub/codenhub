@@ -29,6 +29,7 @@ import {
   guard,
   hostname,
   ip,
+  internationalEmail,
   intersection,
   invalidIntersectionMessage,
   invalidKeyMessage,
@@ -36,6 +37,7 @@ import {
   is,
   json,
   lazy,
+  looseObject,
   literal,
   map,
   nonBlank,
@@ -43,6 +45,7 @@ import {
   number,
   object,
   objectLike,
+  objectWithRest,
   startsWith,
   symbol,
   tagged,
@@ -72,6 +75,7 @@ import {
   set,
   standard,
   toJsonSchema,
+  strictObject,
   string,
   transform,
   tuple,
@@ -80,14 +84,18 @@ import {
   unknown,
   url,
   uuid,
+  validator,
   type AsyncCheck,
+  type AsyncSchema,
   type AsyncValidator,
   type Check,
   type Infer,
   type InferInput,
   type Messages,
+  type Schema,
   type StandardSchemaV1,
   type ValidationIssue,
+  type ValidationResult,
   type Validator,
 } from "../../../dist/index";
 
@@ -161,10 +169,27 @@ export const notNarrowed: number = is(string({ min: 3 }), text) ? 0 : text;
 // @ts-expect-error a validator that may finish later cannot be used as a synchronous guard
 export const badGuard = is(username, raw);
 
-// Anything shaped like `(input: unknown) => result` is a validator, so custom ones need no helper.
-export const even: Validator<number> = (input) =>
-  typeof input === "number" && input % 2 === 0 ? pass(input) : fail({ code: "not_even" });
+// A function written by hand becomes a validator through validator(), which reads the type from what it returns.
+export const even = validator((input) =>
+  typeof input === "number" && input % 2 === 0 ? pass(input) : fail({ code: "not_even" }),
+);
+export const evenSchema: Schema<number> = even;
 export const evens = object({ count: even });
+// One that may wait makes an asynchronous validator, with a result written as a literal too.
+const looked = validator(async (input) => ({ ok: true as const, value: String(input) }));
+export const lookedSchema: AsyncSchema<string> = looked;
+// @ts-expect-error a validator that may wait is not a synchronous one
+export const lookedAtOnce: Validator<string> = looked;
+export const lookedInAnObject: AsyncValidator<{ name: string }> = object({ name: looked });
+// What it returns is said by typing the return, and a function that only fails produces nothing.
+const dated = validator((input): ValidationResult<Date> => (input instanceof Date ? pass(input) : fail({ code: "x" })));
+export const datedValue: Infer<typeof dated> = new Date(0);
+const refusing = validator(() => fail({ code: "never" }));
+export const refusingSchema: Schema<never> = refusing;
+// @ts-expect-error a function that gives back the input returns no result
+validator((input) => input);
+// @ts-expect-error nor does one that returns a boolean
+validator((input) => typeof input === "string");
 export const evenCount: number | undefined = (() => {
   const result = evens({ count: 2 });
   return result.ok ? result.value.count : undefined;
@@ -343,7 +368,7 @@ export const producesArray = tagged("type", {
   // @ts-expect-error a variant must produce an object that can carry the tag, not an array
   a: transform(object({}), () => [1]),
 });
-export const passthroughVariant = tagged("type", { a: object({}, { unknownKeys: "passthrough" }) });
+export const passthroughVariant = tagged("type", { a: looseObject({}) });
 // A record declares no tag, so it can be a variant, and the output still narrows on the tag.
 export const tallies = tagged("type", { totals: record(string(), number()), none: object({}) });
 export const talliesTag = (value: Infer<typeof tallies>): number | undefined =>
@@ -473,6 +498,14 @@ export const checkedCredentials: Validator<string> = url({ credentials: username
 export const remoteHostSync: Validator<string> = url({ host: username });
 export const companyEmail: Validator<string> = email({ domain: oneOf(["company.com"]), allowPlus: false });
 export const takenEmail: AsyncValidator<string> = email({ local: username });
+// The reader of internationalized domains takes what email takes and is typed as it is.
+export const worldEmail: Validator<string> = internationalEmail({
+  domain: oneOf(["münchen.example"]),
+  allowPlus: false,
+});
+export const takenWorldEmail: AsyncValidator<string> = internationalEmail({ local: username });
+// @ts-expect-error a part that may wait makes it asynchronous
+export const takenWorldEmailAtOnce: Validator<string> = internationalEmail({ local: username });
 export const query = searchParams(object({ page: coerceNumber({ int: true }), tags: array(string()) }), {
   repeated: true,
 });
@@ -512,6 +545,8 @@ export const badFeedback: Infer<typeof feedback> = { isRetryable: true };
 export const feedbackAsync: Validator<{ name: string }> = objectLike({ name: username });
 // @ts-expect-error objectLike has no unknownKeys
 export const strictFeedback = objectLike({ message: string() }, { unknownKeys: "strict" });
+// @ts-expect-error object has no unknownKeys either: strictObject, looseObject and objectWithRest are what it was
+export const strictByOption = object({ message: string() }, { unknownKeys: "strict" });
 
 // An option read from a value that may be undefined is passed as it is, and is no option, under
 // `exactOptionalPropertyTypes` too.
@@ -545,7 +580,6 @@ export const maybeOptions = [
   array(string(), { min: maybeLimit, max: maybeLimit, length: maybeLimit }),
   tuple([string()], { rest: undefined, max: undefined }),
   tuple([string()], { rest: string(), max: maybeLimit }),
-  object({}, { unknownKeys: maybeFlag ? "strict" : undefined }),
   lazy(() => string(), { maxDepth: maybeLimit, maxCalls: maybeLimit }),
   url({
     protocols: undefined,
@@ -596,7 +630,10 @@ export const withoutTheme: Infer<typeof preferences> = { page: 2, tags: [1], not
 export const lengthsAsInput: InferInput<typeof preferences> = { page: 1, tags: [1], note: null };
 // A validator written by hand accepts whatever it does not say, and may say.
 export const handInput: InferInput<typeof even> = Symbol("anything");
-const fromText: Validator<number, string> = (input) => ({ ok: true, value: Number(input) });
+const textToNumber: Validator<number, string> = (input) => ({ ok: true, value: Number(input) });
+export const typedInput: InferInput<typeof textToNumber> = "5";
+// validator() keeps the input a function typed as a validator declared.
+const fromText = validator(textToNumber);
 export const textInput: InferInput<typeof fromText> = "5";
 // @ts-expect-error it declared text as its input
 export const numberInput: InferInput<typeof fromText> = 5;
@@ -634,19 +671,21 @@ export const extended: Infer<typeof promoted> = { id: 1, role: "owner" };
 export const unknownRole: Infer<typeof promoted> = { id: 1, role: "guest" };
 export const extendedAtOnce: boolean = promoted({}).ok;
 // A validator given for unknown keys types what they hold, and still lets a literal list its properties.
-const flagged = object({ name: string(), age: optional(number()) }, { unknownKeys: boolean() });
+const flagged = objectWithRest({ name: string(), age: optional(number()) }, boolean());
 export const flaggedValue: Infer<typeof flagged> = { name: "Ada", beta: true, age: undefined };
 export const flaggedIndex: { [key: string]: string | number | boolean | undefined } = {} as Infer<typeof flagged>;
 export const flaggedName: string = ({} as Infer<typeof flagged>).name;
 export const flaggedAtOnce: Validator<Infer<typeof flagged>> = flagged;
 // @ts-expect-error an unknown key holds what the validator gives
 export const flaggedWrong: Infer<typeof flagged> = { name: "Ada", beta: [] };
-const counted = object({}, { unknownKeys: coerceNumber() });
+const counted = objectWithRest({}, coerceNumber());
 export const countedValue: Infer<typeof counted> = { a: 1 };
 export const countedInput: InferInput<typeof counted> = { a: "1" };
 // @ts-expect-error a validator that waits for unknown keys makes the object wait
-export const restNotSync: Validator<unknown> = object({ name: string() }, { unknownKeys: checkedLater });
-const strictName = object({ name: string() }, { unknownKeys: "strict" });
+export const restNotSync: Validator<unknown> = objectWithRest({ name: string() }, checkedLater);
+// @ts-expect-error the validator of unknown keys is not optional
+objectWithRest({ name: string() });
+const strictName = strictObject({ name: string() });
 // @ts-expect-error a strict object has no index signature
 export const strictExtra: Infer<typeof strictName> = { name: "Ada", other: 1 };
 // Reshaping keeps the index signature and checks keys against the listed properties.
@@ -658,21 +697,24 @@ const flaggedNoAge = omit(flagged, ["age"]);
 export const omittedFlag: Infer<typeof flaggedNoAge> = { name: "Ada", beta: false };
 const flaggedPatch = partial(flagged);
 export const partialFlag: Infer<typeof flaggedPatch> = { beta: true };
-const tagged2 = extend(account, { name: string() }, { unknownKeys: array(string()) });
-export const extendedRest: Infer<typeof tagged2> = { id: 1, name: "Ada", tags: ["a"] };
-export const extendedRestAtOnce: boolean = tagged2({}).ok;
-// @ts-expect-error a validator given to a reshaping function types the unknown keys
-export const extendedRestWrong: Infer<typeof tagged2> = { id: 1, name: "Ada", tags: true };
-// unknownKeys given to a reshaping function replaces the one the object had, in the types as it does when run.
-const renumbered = omit(flagged, ["age"], { unknownKeys: number() });
-export const renumberedValue: Infer<typeof renumbered> = { name: "Ada", count: 1 };
-// @ts-expect-error the replaced validator of unknown keys no longer types them
-export const renumberedOld: InferInput<typeof renumbered> = { name: "Ada", beta: true };
-const unflagged = partial(flagged, { unknownKeys: "strict" });
-// @ts-expect-error a mode given in place of a validator leaves no index signature
-export const unflaggedExtra: Infer<typeof unflagged> = { name: "Ada", beta: true };
-const kept = pick(flagged, ["name"], { unknownKeys: undefined });
-export const keptFlag: Infer<typeof kept> = { name: "Ada", beta: true };
+const flaggedMore = extend(flagged, { id: number() });
+export const extendedFlag: Infer<typeof flaggedMore> = { id: 1, name: "Ada", beta: true };
+export const extendedFlagAtOnce: boolean = flaggedMore({}).ok;
+// @ts-expect-error an object extended keeps what its unknown keys hold
+export const extendedFlagWrong: Infer<typeof flaggedMore> = { id: 1, name: "Ada", beta: [] };
+// A reshaping function keeps how the object treats unknown keys, and takes no option to change it.
+// @ts-expect-error unknownKeys is no option of a reshaping function
+omit(flagged, ["age"], { unknownKeys: number() });
+// @ts-expect-error nor a mode
+partial(flagged, { unknownKeys: "strict" });
+const strictPick = pick(strictName, ["name"], { message: "Not that" });
+// @ts-expect-error a strict object picked from has no index signature either
+export const strictPickExtra: Infer<typeof strictPick> = { name: "Ada", other: 1 };
+// The other two list only the properties of the shape, as object does.
+const looseName = looseObject({ name: string() });
+export const looseValue: { name: string } = {} as Infer<typeof looseName>;
+// @ts-expect-error a loose object keeps unknown keys without typing them
+export const looseExtra: Infer<typeof looseName> = { name: "Ada", other: 1 };
 // A codec produces its output type from its input type, and encode goes back.
 const isoStamp = codec(datetime(), date(), {
   decode: (text) => new Date(text),

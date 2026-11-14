@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { validator } from "../builders/validator";
 import type { Validator } from "../core/types";
 import { accepts, issuesOf, valueOf } from "../test-utils";
 import { base64 } from "./base64";
@@ -252,10 +253,10 @@ describe("ip", () => {
 
   it("should give url's host part the spelling ip() gives, and keep the parser's in the URL", () => {
     const seen: unknown[] = [];
-    const host: Validator<string> = (input) => {
+    const host: Validator<string> = validator((input) => {
       seen.push(input);
       return ip()(input);
-    };
+    });
     const mapped = valueOf(url({ host })("https://[::ffff:192.0.2.1]:8443/a?b=1"));
     expect(mapped).toBe("https://[::ffff:c000:201]:8443/a?b=1");
     // The value is what the parser writes, so it reads back as itself.

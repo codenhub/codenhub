@@ -1,4 +1,4 @@
-import { isThenable } from "./async";
+import { isThenable } from "./thenable";
 import type { ValidationErr, ValidationResult, Validator } from "./types";
 
 /**

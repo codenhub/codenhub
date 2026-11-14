@@ -1,7 +1,8 @@
-import { described } from "../core/describe";
-import { call, composed, fastOf } from "../core/nesting";
-import { assertFunction, pass } from "../core/result";
+import { runOf } from "../core/child";
+import { toValidator } from "../core/make";
+import type { Run } from "../core/run";
 import type { AnyValidator, Composed, Infer, InferInput } from "../core/types";
+import { NO_WORDS } from "../core/words";
 
 /**
  * Wraps a validator so `null` is accepted and passed through, and every other value goes to the
@@ -18,20 +19,18 @@ import type { AnyValidator, Composed, Infer, InferInput } from "../core/types";
  * @typeParam TValidator - The wrapped validator.
  * @param validator - The validator for values that are present.
  * @returns A validator that produces the wrapped type, or `null`.
- * @throws {TypeError} When `validator` is not a function.
+ * @throws {TypeError} When `validator` is not a validator of this copy of the package.
  */
 export function nullable<TValidator extends AnyValidator>(
   validator: TValidator,
 ): Composed<TValidator, Infer<TValidator> | null, InferInput<TValidator> | null> {
-  assertFunction("validator", validator);
-  const inner = fastOf(validator);
-  const validate = composed(
-    (input, place) => (input === null ? pass(null) : call(validator, input, place)),
-    inner === undefined ? undefined : (input) => (input === null ? null : inner(input)),
+  const runInner = runOf(validator, "validator");
+  const run: Run = (input) => (input === null ? input : runInner(input));
+  run.w = runInner.w;
+  return toValidator<Composed<TValidator, Infer<TValidator> | null, InferInput<TValidator> | null>>(
+    run,
+    { kind: "nullable", inner: validator },
+    NO_WORDS,
+    [validator],
   );
-  return described(validate, { kind: "nullable", inner: validator }) as Composed<
-    TValidator,
-    Infer<TValidator> | null,
-    InferInput<TValidator> | null
-  >;
 }

@@ -1,4 +1,4 @@
-import { member } from "../core/checks";
+import { member } from "../core/leaf";
 import type { AnyValidator, AsyncRest, AsyncSchema, MessageOptions, Rest, Schema } from "../core/types";
 import type { LiteralValue } from "./literal";
 

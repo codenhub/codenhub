@@ -204,7 +204,7 @@ The two types differ for:
 
 Clean-up is no difference: `string({ trim: true })` accepts and produces a `string`.
 
-A validator is still called with any value at all. The input type says what can pass, for the types of a form or of a caller, and never limits the argument. A validator you write by hand has the input type `unknown`, unless its type says otherwise, as `Validator<number, string>` does for one that reads a number from text.
+A validator is still called with any value at all. The input type says what can pass, for the types of a form or of a caller, and never limits the argument. What [`validator`](custom-validators.md#by-hand) makes of a function you wrote has the input type `unknown`, unless the function's type says otherwise, as `Validator<number, string>` does for one that reads a number from text.
 
 A form library that takes a [Standard Schema](standard-schema.md) reads both types from the validator. [Integrations](integrations.md#forms) shows react-hook-form and TanStack Form.
 

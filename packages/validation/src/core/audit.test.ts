@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { check } from "../builders/check";
 import { format } from "../builders/format";
 import { guard } from "../builders/guard";
+import { validator } from "../builders/validator";
 import { coerceBigint } from "../coercion/coerce-bigint";
 import { coerceNumber } from "../coercion/coerce-number";
 import { coerceString } from "../coercion/coerce-string";
@@ -13,6 +14,7 @@ import { lazy } from "../composition/lazy";
 import { map } from "../composition/map";
 import { meta } from "../composition/meta";
 import { object } from "../composition/object";
+import { objectWithRest } from "../composition/object-with-rest";
 import { optional } from "../composition/optional";
 import { pipe } from "../composition/pipe";
 import { record } from "../composition/record";
@@ -31,6 +33,7 @@ import { number } from "../primitives/number";
 import { string } from "../primitives/string";
 import { unknown } from "../primitives/unknown";
 import { audit } from "./audit";
+import { pass } from "./result";
 import type { AnyValidator, Validator } from "./types";
 
 const name = string({ max: 100 });
@@ -126,14 +129,12 @@ describe("audit", () => {
   });
 
   it("should walk the validator an object gives its unknown keys, at the path of a record's values", () => {
-    expect(audit(object({ name }, { unknownKeys: string() }))).toEqual([
-      { rule: "unbounded_text", path: "{}", kind: "string" },
-    ]);
-    expect(audit(object({ tags: object({}, { unknownKeys: array(name) }) }))).toEqual([
+    expect(audit(objectWithRest({ name }, string()))).toEqual([{ rule: "unbounded_text", path: "{}", kind: "string" }]);
+    expect(audit(object({ tags: objectWithRest({}, array(name)) }))).toEqual([
       { rule: "unbounded_size", path: "tags{}", kind: "array" },
     ]);
-    // How many keys there are is bounded by no option of an object, as for passthrough.
-    expect(audit(object({ name }, { unknownKeys: number() }))).toEqual([]);
+    // How many keys there are is bounded by no option of an object, as for a loose one.
+    expect(audit(objectWithRest({ name }, number()))).toEqual([]);
   });
 
   it("should take a collection's max before it as bounding the count of items after it, not what they hold", () => {
@@ -180,7 +181,7 @@ describe("audit", () => {
   });
 
   it("should name a part it cannot read rather than pass it in silence", () => {
-    const byHand: Validator<string> = (input) => ({ ok: true, value: String(input) });
+    const byHand = validator((input) => pass(String(input)));
     expect(audit(object({ code: byHand, items: array(name, { max: 2 }) }))).toEqual([
       { rule: "unreadable", path: "code", kind: "unknown" },
     ]);

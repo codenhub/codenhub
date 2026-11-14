@@ -1,8 +1,7 @@
-import { split } from "../core/checks";
-import { described } from "../core/describe";
 import { assertOption } from "../core/result";
+import { split } from "../core/split";
 import type { Factory, MessageOptions } from "../core/types";
-import { stringFormat } from "./text-format";
+import { formatted, stringFormat } from "./text-format";
 
 // The last character before padding holds only the bits the bytes need, so the rest are zero: `A`, `Q`,
 // `g` and `w` before `==`, and every fourth character before `=`. Anything else decodes to a value that
@@ -65,7 +64,7 @@ export const base64 = ((...args: unknown[]) => {
   const [options, checks] = split<Base64Options, string>(args, "url");
   const { url, message } = options;
   assertOption("url", url, "boolean");
-  return described(
+  return formatted(
     stringFormat(
       url === true ? "base64url" : "base64",
       (text) => ((url === true ? isBase64url(text) : isBase64(text, ALPHABET, false)) ? text : undefined),

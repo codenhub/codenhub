@@ -1,23 +1,21 @@
 /*
- * How `object` and `objectLike` reach the checks `checkFields` makes without bundling what runs them. Each
- * such check is registered here by `checkFields` with the function that builds its runner, so a program that
- * never calls `checkFields` carries only this lookup.
+ * How an object runs the checks of `checkFields` when a property failed, without carrying the code for it:
+ * the check brings what builds it, and an object given no such check reaches none of it.
  */
-import type { Maybe } from "./async";
-import type { Place } from "./nesting";
-import type { AsyncCheck, Message, ValidationErr, ValidationIssue, ValidationResult } from "./types";
+import type { FAIL, Pending } from "./run";
+import type { AsyncCheck, Message } from "./types";
 
 /**
- * Fails an object some of whose properties failed, with their `issues` and those of every field check that
- * can run on `output`, which holds the properties that passed.
+ * Ends an object that reported issues since `from`: runs the checks whose properties are not among
+ * `failed` on `output`, which holds the properties that passed and may hold a placeholder for one that
+ * waited and failed, which those checks do not read, and gives `FAIL`, or a result that waits for it.
  */
 export type FieldFailure = (
-  issues: ValidationIssue[],
-  settled: readonly ValidationResult<unknown>[],
+  failed: readonly string[] | undefined,
   output: Record<string, unknown>,
   message: Message | undefined,
-  place: Place,
-) => Maybe<ValidationErr>;
+  from: number,
+) => typeof FAIL | Pending;
 
 /** Builds the {@link FieldFailure} of an object from its checks and the keys of its shape. */
 export type FieldFailureOf = (
@@ -27,16 +25,13 @@ export type FieldFailureOf = (
 
 const builders = new WeakMap<object, FieldFailureOf>();
 
-/** Registers a check made by `checkFields` with what builds its runner, and returns the check. */
+/** Marks a check as one that needs `build` to run when a property failed. */
 export function withFieldFailure<T extends object>(check: T, build: FieldFailureOf): T {
   builders.set(check, build);
   return check;
 }
 
-/**
- * What an object fails with, for its checks and the keys of its shape: the runner of its field checks, when
- * it has one, which also refuses a check that names a property the shape lacks, or undefined.
- */
+/** The {@link FieldFailure} of an object with these checks, or undefined when none of them asked for one. */
 export function fieldFailureOf(
   checks: readonly AsyncCheck<Record<string, unknown>>[],
   keys: readonly string[],

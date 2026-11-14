@@ -1,8 +1,9 @@
 import { describe, expect, it } from "vitest";
 
+import { validator } from "../builders/validator";
 import { unique } from "../checks/unique";
 import { fail } from "../core/result";
-import type { AsyncValidator, Validator } from "../core/types";
+import type { Validator } from "../core/types";
 import { searchParams } from "../formats/search-params";
 import { englishMessages } from "../messages/english-messages";
 import { formatIssue } from "../messages/format-issue";
@@ -15,8 +16,10 @@ import { array } from "./array";
 import { intersection } from "./intersection";
 import { map } from "./map";
 import { object } from "./object";
+import { objectWithRest } from "./object-with-rest";
 import { record } from "./record";
 import { set } from "./set";
+import { strictObject } from "./strict-object";
 import { tuple } from "./tuple";
 import { union } from "./union";
 
@@ -37,10 +40,10 @@ const stopped = (path: readonly (string | number)[] = []): object => ({
 describe("the most issues a collection reports", () => {
   it("should stop an array at the limit, and call no item after it", () => {
     let calls = 0;
-    const counted: Validator<string> = (input) => {
+    const counted = validator((input) => {
       calls += 1;
       return string()(input);
-    };
+    });
     const issues = issuesOf(array(counted)(numbers()));
     expect(issues).toHaveLength(LIMIT + 1);
     expect(issues[LIMIT - 1]?.path).toEqual([LIMIT - 1]);
@@ -92,10 +95,10 @@ describe("the most issues a collection reports", () => {
 
   it("should cut by what the issues hold when the items waited", async () => {
     const held = Array.from({ length: 600 }, () => ({ code: "inner", path: [] }));
-    const heavy: AsyncValidator<string> = async () => {
+    const heavy = validator(async () => {
       await Promise.resolve();
       return fail({ code: "outer", params: { issues: held } });
-    };
+    });
     const issues = issuesOf(await array(heavy)([1, 2, 3, 4, 5]));
     expect(issues.map((issue) => issue.code)).toEqual(["outer", "outer", "too_big"]);
   });
@@ -122,7 +125,7 @@ describe("the most issues a collection reports", () => {
 
   it("should list the unknown keys of a strict object up to the limit", () => {
     const entries = Array.from({ length: COUNT }, (_, index) => [`k${index}`, index] as const);
-    const issues = issuesOf(object({ a: number() }, { unknownKeys: "strict" })(Object.fromEntries(entries)));
+    const issues = issuesOf(strictObject({ a: number() })(Object.fromEntries(entries)));
     // The unknown keys up to the limit, the limit, and then the property that is missing.
     expect(issues).toHaveLength(LIMIT + 2);
     expect(issues[LIMIT]).toEqual(stopped());
@@ -131,12 +134,12 @@ describe("the most issues a collection reports", () => {
 
   it("should stop the keys an object gives its validator of unknown keys at the limit, after the properties", () => {
     let calls = 0;
-    const counted: Validator<string> = (input) => {
+    const counted = validator((input) => {
       calls += 1;
       return string()(input);
-    };
+    });
     const entries = Array.from({ length: COUNT }, (_, index) => [`k${index}`, index] as const);
-    const issues = issuesOf(object({ a: number() }, { unknownKeys: counted })(Object.fromEntries(entries)));
+    const issues = issuesOf(objectWithRest({ a: number() }, counted)(Object.fromEntries(entries)));
     // The property that is missing, the unknown keys up to the limit, and then the limit.
     expect(issues).toHaveLength(LIMIT + 2);
     expect(issues[0]?.path).toEqual(["a"]);
@@ -147,13 +150,13 @@ describe("the most issues a collection reports", () => {
 
   it("should say an object stopped when its unknown keys reach the limit exactly and a key is left", () => {
     let calls = 0;
-    const counted: Validator<string> = (input) => {
+    const counted = validator((input) => {
       calls += 1;
       return string()(input);
-    };
+    });
     // The limit is reached by the last key that fails, and the key left would pass.
     const entries = [...Array.from({ length: LIMIT }, (_, index) => [`k${index}`, index] as const), ["last", "ok"]];
-    const issues = issuesOf(object({}, { unknownKeys: counted })(Object.fromEntries(entries)));
+    const issues = issuesOf(objectWithRest({}, counted)(Object.fromEntries(entries)));
     expect(issues).toHaveLength(LIMIT + 1);
     expect(issues[LIMIT]).toEqual(stopped());
     expect(calls).toBe(LIMIT);
@@ -177,11 +180,11 @@ describe("the most issues a collection reports", () => {
 
   it("should cut the issues of items that wait, every one of which has started", async () => {
     let calls = 0;
-    const taken: AsyncValidator<string> = async () => {
+    const taken = validator(async () => {
       calls += 1;
       await Promise.resolve();
       return fail({ code: "taken" });
-    };
+    });
     const issues = issuesOf(await array(taken)(numbers()));
     expect(calls).toBe(COUNT);
     expect(issues).toHaveLength(LIMIT + 1);

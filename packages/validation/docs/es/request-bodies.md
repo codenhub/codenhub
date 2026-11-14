@@ -2,7 +2,7 @@
 title: Cuerpos de solicitud
 description: Texto JSON, listas, tuplas, diccionarios, sets y maps, elegir entre formas, y datos recursivos.
 order: 3
-source: cafb386ee90fc6dd3ca6b8e33415a1a57425b76a
+source: 9e43ed15787b3aacc10281456197985061c55ddd
 ---
 
 # Cuerpos de solicitud
@@ -166,7 +166,7 @@ referral({ source: "ad" }); // { ok: false, ... }, código "invalid_union"
 
 Como una variante nunca ve la etiqueta:
 
-- Un `object` estricto funciona como variante, y también un `record`, que verifica todas las claves excepto la etiqueta.
+- Un `strictObject` funciona como variante, y también un `record`, que verifica todas las claves excepto la etiqueta.
 - Una salida que declara la etiqueta junto a una firma de índice se rechaza igual, porque la variante nunca la recibe.
 - El tipo de una variante `record` tiene una firma de índice junto a la etiqueta. Leerlo y acotar el tipo por la etiqueta funcionan, pero TypeScript rechaza escribir un objeto así a mano cuando la etiqueta no es del tipo de valor del record.
 
@@ -195,7 +195,7 @@ El objeto fusionado es nuevo. Así que una clave `__proto__` propia que un lado 
 
 Así, `intersection(object({ ["__proto__"]: unknown() }), unknown())` conserva una clave `__proto__`, ya que la forma de la izquierda la incluye y produjo el valor. Envuelve ese `object` en un `transform` y la clave se reporta en su lugar, salvo que el `transform` devuelva el propio objeto de la entrada. La clave computada importa: escrito como `{ __proto__: unknown() }`, el literal fija el prototipo de la forma y no incluye ninguna clave. Sí, en serio.
 
-Ambos validadores ven la entrada completa, así que dos `object` con `unknownKeys: "strict"` solo pasan juntos cuando cada clave de la entrada está incluida en ambas formas: cada uno rechaza las claves que solo incluye el otro. Para combinar formas estrictas, expándelas en una sola: `object({ ...named, ...aged }, { unknownKeys: "strict" })`.
+Ambos validadores ven la entrada completa, así que dos `strictObject` solo pasan juntos cuando cada clave de la entrada está incluida en ambas formas: cada uno rechaza las claves que solo incluye el otro. Para combinar formas estrictas, expándelas en una sola: `strictObject({ ...named, ...aged })`.
 
 ## Datos recursivos
 

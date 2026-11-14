@@ -1,6 +1,8 @@
-import { leaf, split } from "../core/checks";
-import { described } from "../core/describe";
+import { leaf } from "../core/leaf";
+import { toValidator } from "../core/make";
+import { split } from "../core/split";
 import type { AnyValidator, AsyncRest, AsyncSchema, MessageOptions, Rest, Schema } from "../core/types";
+import { TYPE_WORDS } from "../core/words";
 
 /** Any function, whatever it takes and returns. */
 export type AnyFunction = (...args: never[]) => unknown;
@@ -37,5 +39,5 @@ export function func<T extends AnyFunction = (...args: unknown[]) => unknown>(
 export function func(...rest: unknown[]): AnyValidator {
   const [options, checks] = split<MessageOptions, AnyFunction>(rest);
   const { message } = options;
-  return described(leaf("function", isFunction, message, checks), { kind: "function", options, checks });
+  return toValidator(leaf("function", isFunction, message, checks), { kind: "function", options, checks }, TYPE_WORDS);
 }
