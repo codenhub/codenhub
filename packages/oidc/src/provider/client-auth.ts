@@ -94,7 +94,7 @@ export async function authenticateClient(
   if (record === undefined) {
     return rejectClient(presented, "client_unknown");
   }
-  const client = checkClientRecord(record, presented.clientId);
+  const client = checkClientRecord(record, presented.clientId, options.publicKeys);
   const proof = await proves(options, client, presented);
   return proof === "proven" ? { ok: true, client } : rejectClient(presented, proof, client.clientId);
 }
@@ -208,7 +208,7 @@ async function proves(
       break;
     case "client_secret_basic":
     case "client_secret_post":
-      proven = "secret" in presented && (await verifyClientSecret(presented.secret, auth.secretHash));
+      proven = "secret" in presented && (await verifyClientSecret(presented.secret, auth.secretHashes));
       break;
     case "client_secret_jwt":
       proven =

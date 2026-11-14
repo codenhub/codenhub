@@ -6,7 +6,7 @@ import type { ResolvedOptions } from "./options";
 
 /**
  * Claims an ID token MAY carry, none released by any scope (OpenID Connect Core §2). `sub`, `iss`, `aud`,
- * `exp`, `iat`, `auth_time` and `at_hash` are always present; `nonce`, `acr` and `amr` are conditional.
+ * `exp`, `iat`, `auth_time` and `at_hash` are always present; `nonce`, `acr`, `amr` and `sid` are conditional.
  */
 const ID_TOKEN_CLAIMS: readonly string[] = [
   "sub",
@@ -19,6 +19,7 @@ const ID_TOKEN_CLAIMS: readonly string[] = [
   "acr",
   "amr",
   "at_hash",
+  "sid",
 ];
 
 const TOKEN_ENDPOINT_AUTH_METHODS: readonly string[] = [

@@ -51,6 +51,24 @@ const TTL_RULES = {
 /** Token lifetimes in seconds, every one resolved. */
 export type ResolvedTtl = { readonly [K in keyof typeof TTL_RULES]: number };
 
+/** The lifetimes a client's record may set for itself: every one except the interaction's, which is provider-wide. */
+export const CLIENT_TTL_NAMES = [
+  "code",
+  "accessToken",
+  "idToken",
+  "refreshToken",
+] as const satisfies readonly (keyof ResolvedTtl)[];
+
+/** Whether `value` is an allowed lifetime for `name`: an integer within the range the provider's own option has. */
+export const isTtlInRange = (name: keyof ResolvedTtl, value: unknown): value is number =>
+  Number.isInteger(value) &&
+  (value as number) >= TTL_RULES[name].minimum &&
+  (value as number) <= TTL_RULES[name].maximum;
+
+/** The requirement a lifetime's value must meet, as an error message names it. */
+export const describeTtlRange = (name: keyof ResolvedTtl): string =>
+  `an integer from ${TTL_RULES[name].minimum} through ${TTL_RULES[name].maximum}`;
+
 /** Absolute URLs of every endpoint the provider answers. */
 export interface ResolvedEndpoints {
   readonly discovery: string;
@@ -66,8 +84,10 @@ export interface ResolvedEndpoints {
 export interface ResolvedOptions {
   readonly issuer: string;
   readonly endpoints: ResolvedEndpoints;
-  /** The pair that signs ID tokens. */
+  /** The pair that signs JWT access tokens: the first one given. */
   readonly signingKey: KeyPair;
+  /** Every pair, in the order given, from which an ID token's signing key is chosen; see {@link selectIdTokenKey}. */
+  readonly signingKeys: readonly KeyPair[];
   /** Every public key, published in the JWKS. */
   readonly publicKeys: readonly PublicKey[];
   readonly store: OidcStore;
@@ -171,6 +191,24 @@ function readSigningKeys(signingKeys: unknown): readonly KeyPair[] {
   return signingKeys as readonly KeyPair[];
 }
 
+/**
+ * The pair that signs a client's ID tokens: the first of the algorithm the client names, or without one the first
+ * `RS256` pair (OpenID Connect Core §15.1 requires it, and Registration makes it the default), or else the first pair.
+ *
+ * @throws {TypeError} When the client names an algorithm no pair has.
+ */
+export function selectIdTokenKey(
+  options: Pick<ResolvedOptions, "signingKeys">,
+  client: { readonly idTokenSigningAlg?: string },
+): KeyPair {
+  const wanted = client.idTokenSigningAlg ?? "RS256";
+  const found = options.signingKeys.find((pair) => pair.privateKey.alg === wanted);
+  if (found === undefined && client.idTokenSigningAlg !== undefined) {
+    throw new TypeError("a client record names an idTokenSigningAlg that no signing key has");
+  }
+  return found ?? (options.signingKeys[0] as KeyPair);
+}
+
 function readStore(store: unknown): OidcStore {
   if (!isRecord(store)) {
     return fail("store", "must be an object");
@@ -234,8 +272,8 @@ function readTtl(ttl: unknown): ResolvedTtl {
     // Only `undefined` takes the fallback, so an explicit `null` is rejected below like any other non-integer.
     const given = isRecord(ttl) ? ttl[name] : undefined;
     const value = given === undefined ? rule.fallback : given;
-    if (!Number.isInteger(value) || (value as number) < rule.minimum || (value as number) > rule.maximum) {
-      fail(`ttl.${name}`, `must be an integer from ${rule.minimum} through ${rule.maximum}`);
+    if (!isTtlInRange(name, value)) {
+      fail(`ttl.${name}`, `must be ${describeTtlRange(name)}`);
     }
     resolved[name] = value as number;
   }
@@ -267,6 +305,7 @@ export function resolveOptions(options: ProviderOptions): ResolvedOptions {
     issuer,
     endpoints: Object.freeze(readEndpoints(issuer, options.endpoints)),
     signingKey: signingKeys[0] as KeyPair,
+    signingKeys: Object.freeze([...signingKeys]),
     publicKeys: Object.freeze(signingKeys.map((pair) => pair.publicKey)),
     store: readStore(options.store),
     claims: options.claims,

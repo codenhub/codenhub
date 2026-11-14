@@ -1,13 +1,18 @@
-import type { KeyPair, KeySet, SecretKey } from "@codenhub/jwt";
+import type { AsymmetricAlgorithm, KeyPair, KeySet, SecretKey } from "@codenhub/jwt";
 
 import type { OidcFailure, OidcResult, Prompt, ProviderMetadata } from "../shared/types";
 
 /**
  * How a registered client authenticates to the token endpoint, and what the provider checks it against.
  *
- * Secrets are never stored in plaintext: `secretHash` is what {@link hashClientSecret} returns for the
- * secret {@link generateClientSecret} created. `client_secret_jwt` is the exception, because an HMAC
+ * Secrets are never stored in plaintext: each entry of `secretHashes` is what {@link hashClientSecret} returns
+ * for a secret {@link generateClientSecret} created. `client_secret_jwt` is the exception, because an HMAC
  * can only be checked with the secret itself.
+ *
+ * `secretHashes` lists every secret the client may use, and a presented secret authenticates when it matches any
+ * of them, so a secret can be rotated without downtime: add the new hash, roll the new secret out to the
+ * client, then remove the old hash. The list must be non-empty and each entry a non-empty string, or the
+ * provider throws `TypeError` when it reads the record.
  *
  * A remote key set given as `keys` must be one object per client, reused across `findClient` calls: its cache and
  * its limit on fetches live in the object, so a new one for each read lets every token request that presents an
@@ -15,8 +20,8 @@ import type { OidcFailure, OidcResult, Prompt, ProviderMetadata } from "../share
  */
 export type ClientAuthentication =
   | { readonly method: "none" }
-  | { readonly method: "client_secret_basic"; readonly secretHash: string }
-  | { readonly method: "client_secret_post"; readonly secretHash: string }
+  | { readonly method: "client_secret_basic"; readonly secretHashes: readonly string[] }
+  | { readonly method: "client_secret_post"; readonly secretHashes: readonly string[] }
   /** The client's HS256 secret, from `importSecretKey`. */
   | { readonly method: "client_secret_jwt"; readonly key: SecretKey }
   /** The client's public keys, from `createKeySet`, `importKeySet`, or `createRemoteKeySet`. */
@@ -60,7 +65,42 @@ export interface ClientRecord {
    * of this client redirects.
    */
   readonly postLogoutRedirectUris?: readonly string[];
+  /**
+   * Token lifetimes for this client, each replacing the provider's {@link ProviderOptions.ttl} of the same name for
+   * the tokens issued to it. A lifetime left out is the provider's. The provider checks each value when it reads
+   * the record, by the bounds of the option it replaces, and throws `TypeError` if one fails.
+   */
+  readonly ttl?: ClientTtl;
+  /**
+   * The algorithm of the signing key that signs this client's ID tokens: the provider uses the first of
+   * {@link ProviderOptions.signingKeys} with that algorithm. A value that is not a supported asymmetric algorithm,
+   * or that none of the signing keys has, throws `TypeError` when the record is read.
+   *
+   * Without it, ID tokens are signed with the first `RS256` key when there is one, and otherwise the first key,
+   * since OpenID Connect Core §15.1 requires every provider to support `RS256` and OpenID Connect Registration
+   * makes it the default for a client that registers no algorithm. JWT access tokens are signed with the first
+   * key whatever this says.
+   */
+  readonly idTokenSigningAlg?: AsymmetricAlgorithm;
+  /**
+   * Whether an authorization request from this client must carry a PKCE `S256` challenge (RFC 7636). A challenge
+   * that is sent is always checked, whatever this says: only `S256` is accepted, and the token request must carry
+   * the matching `code_verifier`.
+   *
+   * `false` is for a confidential client of a relying-party library that sends no PKCE, and asserts that the client
+   * checks the `nonce` of the ID token (OAuth 2.1 §7.5.1.1, RFC 9700 §2.1.1). Such a client may leave the challenge
+   * out, but then must send a `nonce`, or the request fails with `invalid_request`. A code issued without a
+   * challenge refuses a token request that carries a `code_verifier`, so an attacker cannot downgrade a code that
+   * was bound to a challenge. A public client, whose `auth.method` is `none`, cannot turn this off: the record
+   * throws `TypeError` when read.
+   *
+   * @defaultValue `true`
+   */
+  readonly requirePkce?: boolean;
 }
+
+/** How the client asks the app to show its pages (OpenID Connect Core §3.1.2.1). */
+export type Display = "page" | "popup" | "touch" | "wap";
 
 /** A validated authorization request, saved between {@link Provider.beginAuthorization} and its completion. */
 export interface InteractionRecord {
@@ -69,13 +109,17 @@ export interface InteractionRecord {
   readonly scopes: readonly string[];
   readonly state?: string;
   readonly nonce?: string;
-  /** The PKCE `S256` challenge. */
-  readonly codeChallenge: string;
+  /** The PKCE `S256` challenge; absent only when the client has `requirePkce: false` and sent none. */
+  readonly codeChallenge?: string;
   readonly prompt: readonly Prompt[];
   /** Requested `max_age`, in seconds. */
   readonly maxAge?: number;
   readonly loginHint?: string;
   readonly uiLocales?: readonly string[];
+  /** Requested `acr_values`, in the order the client preferred them. */
+  readonly acrValues?: readonly string[];
+  readonly claimsLocales?: readonly string[];
+  readonly display?: Display;
   /** When the request was validated, in seconds since the Unix epoch. */
   readonly createdAt: number;
   /** When the interaction expires, in seconds since the Unix epoch. */
@@ -88,7 +132,8 @@ export interface CodeRecord {
   readonly grantId: string;
   readonly clientId: string;
   readonly redirectUri: string;
-  readonly codeChallenge: string;
+  /** The PKCE `S256` challenge the code is bound to; absent when the request sent none. */
+  readonly codeChallenge?: string;
   readonly nonce?: string;
   /** Granted scopes. */
   readonly scopes: readonly string[];
@@ -97,6 +142,8 @@ export interface CodeRecord {
   readonly authTime: number;
   readonly amr?: readonly string[];
   readonly acr?: string;
+  /** The app's session identifier from the grant, carried to every token of the grant. */
+  readonly sessionId?: string;
   /** Whether the request carried `max_age`, which makes `auth_time` required in the ID token. */
   readonly maxAgeRequested: boolean;
   /** In seconds since the Unix epoch. */
@@ -109,6 +156,8 @@ export interface AccessTokenRecord {
   readonly clientId: string;
   readonly subject: string;
   readonly scopes: readonly string[];
+  /** The app's session identifier from the grant. */
+  readonly sessionId?: string;
   /** In seconds since the Unix epoch. */
   readonly expiresAt: number;
 }
@@ -122,6 +171,8 @@ export interface RefreshTokenRecord {
   readonly authTime: number;
   readonly amr?: readonly string[];
   readonly acr?: string;
+  /** The app's session identifier from the grant. Rotation keeps it. */
+  readonly sessionId?: string;
   /** When the whole token family expires, in seconds since the Unix epoch. Rotation keeps it. */
   readonly expiresAt: number;
 }
@@ -158,7 +209,12 @@ export type Consumption<TRecord> =
  * Expiry is the provider's to check: a method returns a record whatever its `expiresAt`. No method purges,
  * so the adapter deletes expired rows itself, such as with a scheduled job, keeping a used code or refresh
  * token at least until its `expiresAt`, so a replay is still recognized, and a revoked grant's marker until
- * the last token of that grant expires: `ttl.refreshToken` after the code exchange plus one `ttl.accessToken`, since an access token issued by the last refresh outlives its family.
+ * the last token of that grant expires: a refresh token lifetime after the code exchange plus one access token
+ * lifetime, since an access token issued by the last refresh outlives its family. Lifetimes can differ by client
+ * ({@link ClientRecord.ttl}), so keep the marker for the longest refresh token lifetime of any client plus the
+ * longest access token lifetime of any client, the provider's own `ttl` counting for a client that sets none.
+ * Count a lifetime since lowered too, until the tokens issued under it have expired: a family keeps the expiry
+ * it got at the code exchange, and an access token keeps its own.
  */
 export interface OidcStore {
   /** Looks up a registered client. `undefined` when none has this identifier. */
@@ -242,6 +298,25 @@ export interface ProviderTtl {
   readonly refreshToken?: number;
 }
 
+/**
+ * The token lifetimes a client's record may set for itself, in seconds. Each has the type, range and meaning of the
+ * {@link ProviderTtl} member of the same name, and a lifetime left out falls back to the provider's. The
+ * `interaction` lifetime is not here: an interaction exists before the app completes it, and stays provider-wide.
+ */
+export interface ClientTtl {
+  /** Authorization codes issued to the client. An integer from 1 through 600. */
+  readonly code?: number;
+  /** Access tokens issued to the client, and the `expires_in` it is told. An integer from 60 through 86400. */
+  readonly accessToken?: number;
+  /** ID tokens issued to the client. An integer from 60 through 86400. */
+  readonly idToken?: number;
+  /**
+   * A refresh token family of the client, counted from the code exchange; rotation does not extend it. An integer
+   * from 60 through 31536000.
+   */
+  readonly refreshToken?: number;
+}
+
 /** How access tokens are issued. See {@link ProviderOptions.accessToken}. */
 export type AccessTokenFormat =
   | { readonly format: "opaque" }
@@ -293,6 +368,8 @@ export type ProviderDiagnosticReason =
   | "grant_type_unauthorized"
   | "parameter_missing"
   | "code_verifier_malformed"
+  | "code_verifier_missing"
+  | "code_verifier_unexpected"
   | "code_unknown"
   | "code_replayed"
   | "code_expired"
@@ -341,7 +418,9 @@ export interface ProviderOptions {
   readonly issuer: string;
   /**
    * Key pairs from `generateKeyPair` or `importPrivateKey`/`importPublicKey`, each with a unique `kid`.
-   * The first signs ID tokens; every public key is published, so a retiring key stays verifiable.
+   * A client's ID tokens are signed with the first key of the algorithm its `idTokenSigningAlg` names, or without
+   * one with the first `RS256` key when there is one and otherwise the first key. The first key signs JWT access
+   * tokens. Every public key is published, so a retiring key stays verifiable.
    *
    * Each pair's private and public keys must be the two halves of one key pair. Only their algorithm and
    * `kid` are checked, so a mismatched pair issues ID tokens nobody can verify. The keys must come from the
@@ -417,6 +496,24 @@ export interface AuthorizationInteraction {
   readonly maxAge?: number;
   readonly loginHint?: string;
   readonly uiLocales?: readonly string[];
+  /**
+   * The `acr_values` the client asked for, as authentication context class references in its order of preference,
+   * with empty entries dropped. A voluntary request (OpenID Connect Core §3.1.2.1): the provider does not check the
+   * login against it. The app chooses whether to satisfy one of them, and reports the class it actually used as
+   * the `acr` of its {@link AuthorizationGrant}, which may be none of these.
+   */
+  readonly acrValues?: readonly string[];
+  /**
+   * The `claims_locales` the client asked for: BCP 47 tags in order of preference, with empty entries dropped, for
+   * the language of the claims the app returns from the `claims` callback. The provider does not use it itself. The
+   * `claims` request parameter is still not supported, and is ignored.
+   */
+  readonly claimsLocales?: readonly string[];
+  /**
+   * How the client asks the app to show its pages. A hint: a `display` other than `page`, `popup`, `touch` or `wap`
+   * is ignored, so it is absent here, and the app may ignore this one as well.
+   */
+  readonly display?: Display;
   /** When the request was validated, in seconds since the Unix epoch. A `prompt=login` login must happen at or after it. */
   readonly createdAt: number;
 }
@@ -442,6 +539,16 @@ export interface AuthorizationGrant {
   readonly amr?: readonly string[];
   /** Authentication context class. */
   readonly acr?: string;
+  /**
+   * The app's identifier for the session this sign-in belongs to: a non-empty string of visible ASCII (no space,
+   * control character or non-ASCII character), opaque to the provider, which never interprets it. It is saved with
+   * the code and every access and refresh token of the grant, and each ID token of the grant carries it as the
+   * `sid` claim (OpenID Connect Front-Channel Logout 1.0 §3). The app can then tell which of its sessions a
+   * grant belongs to, such as to revoke the grants of one session, and back-channel logout can name the session.
+   * Use a value that is stable for the session and not guessable from outside, such as a random identifier, and not
+   * the session cookie itself, since an ID token is handed to the client. Absent, the grant has no `sid`.
+   */
+  readonly sessionId?: string;
 }
 
 /** Why the app is not granting the request. Sent to the client as the OAuth error. */
@@ -481,7 +588,9 @@ export interface Provider {
    * Finishes an interaction: issues a code, or sends the denial, as a `302` to the client's redirect URI.
    *
    * @returns The response, or `interaction_not_found` when the interaction does not exist, was already
-   * completed, or expired.
+   * completed, or expired, or, for a grant, when its client is no longer in the store: the code's lifetime can be
+   * the client's own ({@link ClientRecord.ttl}), so a grant reads the client's record. Rejects when the store does,
+   * or with a `TypeError` when it returns a malformed client record.
    * @throws {TypeError} When `outcome` is malformed, such as an empty `subject`, `scopes` that is not an array of
    * strings, or a denial with other members; the interaction is left in place, so a corrected retry works. Also
    * when a well-formed grant does not fit the request: scopes outside the request or without `openid`, an

@@ -9,9 +9,9 @@ import { computeCodeChallenge, isCodeVerifier } from "../shared/pkce";
 import { computeTokenHash } from "../shared/token-hash";
 import type { OAuthErrorCode } from "../shared/types";
 import { authenticateClient } from "./client-auth";
-import type { CheckedClient } from "./client-record";
+import { type CheckedClient, lifetimesOf } from "./client-record";
 import { refuse } from "./diagnostics";
-import { PROTOCOL_SCOPES, type ResolvedOptions } from "./options";
+import { PROTOCOL_SCOPES, type ResolvedOptions, type ResolvedTtl, selectIdTokenKey } from "./options";
 import { jsonResponse, methodNotAllowed, preflightResponse, tokenErrorResponse } from "./responses";
 import type { ClientRecord, CodeRecord, ProviderDiagnosticReason, RefreshTokenRecord } from "./types";
 
@@ -23,6 +23,7 @@ interface Grant {
   readonly authTime: number;
   readonly amr?: readonly string[];
   readonly acr?: string;
+  readonly sessionId?: string;
 }
 
 /**
@@ -110,7 +111,7 @@ export async function readClientRequest(options: ResolvedOptions, request: Reque
  */
 async function exchangeCode(
   options: ResolvedOptions,
-  client: ClientRecord,
+  client: CheckedClient,
   parameters: ReadonlyMap<string, string>,
 ): Promise<Response> {
   const code = parameters.get("code");
@@ -118,10 +119,12 @@ async function exchangeCode(
   const verifier = parameters.get("code_verifier");
   const refused = (error: OAuthErrorCode, reason: ProviderDiagnosticReason): Response =>
     refuse(tokenErrorResponse(error), reason, client.clientId);
-  if (code === undefined || redirectUri === undefined || verifier === undefined) {
+  // A client that may skip PKCE can hold a code issued without a challenge, and only the record says which, so for
+  // it the verifier's presence is checked after consumption, against the record.
+  if (code === undefined || redirectUri === undefined || (verifier === undefined && client.requirePkce)) {
     return refused("invalid_request", "parameter_missing");
   }
-  if (!isCodeVerifier(verifier)) {
+  if (verifier !== undefined && !isCodeVerifier(verifier)) {
     return refused("invalid_grant", "code_verifier_malformed");
   }
   const consumption = await options.store.consumeCode(await digestKey(code));
@@ -150,7 +153,7 @@ async function whyUnredeemable(
   client: ClientRecord,
   record: CodeRecord,
   redirectUri: string,
-  verifier: string,
+  verifier: string | undefined,
 ): Promise<ProviderDiagnosticReason | undefined> {
   if (record.expiresAt <= options.now()) {
     return "code_expired";
@@ -161,6 +164,13 @@ async function whyUnredeemable(
   if (record.redirectUri !== redirectUri) {
     return "redirect_uri_mismatch";
   }
+  if (record.codeChallenge === undefined) {
+    // Issued without a challenge, so no verifier can be right: one is a downgrade attempt (RFC 9700 §2.1.1).
+    return verifier === undefined ? undefined : "code_verifier_unexpected";
+  }
+  if (verifier === undefined) {
+    return "code_verifier_missing";
+  }
   return timingSafeEqual(await computeCodeChallenge(verifier), record.codeChallenge)
     ? undefined
     : "code_verifier_mismatch";
@@ -169,14 +179,16 @@ async function whyUnredeemable(
 /** Issues the first tokens of a grant from a redeemed code, with a refresh token only under `offline_access`. */
 async function issueFromCode(options: ResolvedOptions, client: ClientRecord, record: CodeRecord): Promise<Response> {
   const now = options.now();
+  const ttl = lifetimesOf(options.ttl, client);
   const grant: Grant = {
     grantId: record.grantId,
     clientId: client.clientId,
     subject: record.subject,
     authTime: record.authTime,
     ...optionalAuthContext(record),
+    ...optionalSessionId(record),
   };
-  const accessToken = await issueAccessToken(options, grant, record.scopes, now);
+  const accessToken = await issueAccessToken(options, ttl, grant, record.scopes, now);
   let refreshToken: string | undefined;
   if (record.scopes.includes("offline_access")) {
     refreshToken = randomToken();
@@ -184,17 +196,19 @@ async function issueFromCode(options: ResolvedOptions, client: ClientRecord, rec
       ...grantRecord(grant),
       scopes: record.scopes,
       // Counted from this exchange, and never extended by rotation.
-      expiresAt: now + options.ttl.refreshToken,
+      expiresAt: now + ttl.refreshToken,
     });
   }
   const idToken = await issueIdToken(
     options,
+    client,
+    ttl,
     grant,
     accessToken,
     now,
     record.nonce === undefined ? {} : { nonce: record.nonce },
   );
-  return tokenResponse(options, { accessToken, scopes: record.scopes, idToken, refreshToken });
+  return tokenResponse(ttl, { accessToken, scopes: record.scopes, idToken, refreshToken });
 }
 
 /**
@@ -238,8 +252,9 @@ async function refreshTokens(
     return refused("invalid_scope", "scope_not_granted");
   }
   const now = options.now();
+  const ttl = lifetimesOf(options.ttl, client);
   const grant: Grant = { ...grantRecord(record) };
-  const accessToken = await issueAccessToken(options, grant, scopes, now);
+  const accessToken = await issueAccessToken(options, ttl, grant, scopes, now);
   const nextRefreshToken = randomToken();
   await options.store.saveRefreshToken(await digestKey(nextRefreshToken), {
     ...grantRecord(record),
@@ -247,8 +262,8 @@ async function refreshTokens(
     scopes: record.scopes,
     expiresAt: record.expiresAt,
   });
-  const idToken = await issueIdToken(options, grant, accessToken, now, {});
-  return tokenResponse(options, { accessToken, scopes, idToken, refreshToken: nextRefreshToken });
+  const idToken = await issueIdToken(options, client, ttl, grant, accessToken, now, {});
+  return tokenResponse(ttl, { accessToken, scopes, idToken, refreshToken: nextRefreshToken });
 }
 
 /**
@@ -285,8 +300,10 @@ async function issueForClient(
     return refuse(tokenErrorResponse("invalid_scope"), "scope_invalid", client.clientId);
   }
   const now = options.now();
+  const ttl = lifetimesOf(options.ttl, client);
   const accessToken = await issueAccessToken(
     options,
+    ttl,
     { grantId: randomToken(), clientId: client.clientId, subject: client.clientId },
     scopes,
     now,
@@ -295,7 +312,7 @@ async function issueForClient(
     {
       access_token: accessToken,
       token_type: "Bearer",
-      expires_in: options.ttl.accessToken,
+      expires_in: ttl.accessToken,
       scope: scopes.join(" "),
     },
     { caching: "no-store" },
@@ -323,7 +340,7 @@ function readClientScopes(
  * a client credentials token has none.
  */
 type AccessTokenGrant = Pick<Grant, "grantId" | "clientId" | "subject"> &
-  Partial<Pick<Grant, "authTime" | "amr" | "acr">>;
+  Partial<Pick<Grant, "authTime" | "amr" | "acr" | "sessionId">>;
 
 /**
  * Saves a new access token for a grant and returns the token value; only its digest is stored, whatever its
@@ -331,20 +348,22 @@ type AccessTokenGrant = Pick<Grant, "grantId" | "clientId" | "subject"> &
  */
 async function issueAccessToken(
   options: ResolvedOptions,
+  ttl: ResolvedTtl,
   grant: AccessTokenGrant,
   scopes: readonly string[],
   now: number,
 ): Promise<string> {
   const accessToken =
     options.accessToken.format === "jwt"
-      ? await signAccessToken(options, options.accessToken.audience, grant, scopes, now)
+      ? await signAccessToken(options, ttl, options.accessToken.audience, grant, scopes, now)
       : randomToken();
   await options.store.saveAccessToken(await digestKey(accessToken), {
     grantId: grant.grantId,
     clientId: grant.clientId,
     subject: grant.subject,
     scopes,
-    expiresAt: now + options.ttl.accessToken,
+    ...optionalSessionId(grant),
+    expiresAt: now + ttl.accessToken,
   });
   return accessToken;
 }
@@ -355,6 +374,7 @@ async function issueAccessToken(
  */
 function signAccessToken(
   options: ResolvedOptions,
+  ttl: ResolvedTtl,
   audience: string,
   grant: AccessTokenGrant,
   scopes: readonly string[],
@@ -363,7 +383,7 @@ function signAccessToken(
   return sign({
     payload: {
       iss: options.issuer,
-      exp: now + options.ttl.accessToken,
+      exp: now + ttl.accessToken,
       aud: audience,
       sub: grant.subject,
       client_id: grant.clientId,
@@ -379,30 +399,34 @@ function signAccessToken(
 }
 
 /**
- * Signs an ID token (OpenID Connect Core §2). `at_hash` binds it to the access token issued with it, and
- * `nonce` appears only in the code flow, where the request carried one.
+ * Signs an ID token (OpenID Connect Core §2) with the client's key. `at_hash` binds it to the access token issued
+ * with it, and `nonce` appears only in the code flow, where the request carried one.
  */
 async function issueIdToken(
   options: ResolvedOptions,
+  client: ClientRecord,
+  ttl: ResolvedTtl,
   grant: Grant,
   accessToken: string,
   now: number,
   extra: { readonly nonce?: string },
 ): Promise<string> {
-  const atHash = await computeTokenHash(accessToken, options.signingKey.privateKey.alg);
+  const { privateKey } = selectIdTokenKey(options, client);
+  const atHash = await computeTokenHash(accessToken, privateKey.alg);
   return sign({
     payload: {
       iss: options.issuer,
       sub: grant.subject,
       aud: grant.clientId,
       iat: now,
-      exp: now + options.ttl.idToken,
+      exp: now + ttl.idToken,
       auth_time: grant.authTime,
       ...optionalAuthContext(grant),
+      ...(grant.sessionId !== undefined ? { sid: grant.sessionId } : {}),
       ...(extra.nonce !== undefined ? { nonce: extra.nonce } : {}),
       ...(atHash !== undefined ? { at_hash: atHash } : {}),
     },
-    key: options.signingKey.privateKey,
+    key: privateKey,
     header: { typ: "JWT" },
   });
 }
@@ -412,7 +436,7 @@ async function issueIdToken(
  * the access token's scopes, which may be narrower than the family's.
  */
 function tokenResponse(
-  options: ResolvedOptions,
+  ttl: ResolvedTtl,
   tokens: {
     readonly accessToken: string;
     readonly scopes: readonly string[];
@@ -424,7 +448,7 @@ function tokenResponse(
     {
       access_token: tokens.accessToken,
       token_type: "Bearer",
-      expires_in: options.ttl.accessToken,
+      expires_in: ttl.accessToken,
       id_token: tokens.idToken,
       ...(tokens.refreshToken !== undefined ? { refresh_token: tokens.refreshToken } : {}),
       scope: tokens.scopes.join(" "),
@@ -444,6 +468,11 @@ function optionalAuthContext(source: { readonly amr?: readonly string[]; readonl
   };
 }
 
+/** The session identifier a record or grant carries, omitting it when absent. */
+function optionalSessionId(source: { readonly sessionId?: string }): { readonly sessionId?: string } {
+  return source.sessionId !== undefined ? { sessionId: source.sessionId } : {};
+}
+
 /** The part of a refresh record that identifies its grant, without its scopes or lifetime. */
 function grantRecord(source: Grant): Omit<RefreshTokenRecord, "scopes" | "expiresAt"> {
   return {
@@ -452,5 +481,6 @@ function grantRecord(source: Grant): Omit<RefreshTokenRecord, "scopes" | "expire
     subject: source.subject,
     authTime: source.authTime,
     ...optionalAuthContext(source),
+    ...optionalSessionId(source),
   };
 }

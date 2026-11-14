@@ -107,6 +107,10 @@ function interactionFixture(): InteractionRecord {
     nonce: "conformance-nonce",
     codeChallenge: "conformance-challenge",
     prompt: [],
+    uiLocales: ["en", "pt-BR"],
+    acrValues: ["conformance-acr"],
+    claimsLocales: ["en"],
+    display: "popup",
     createdAt: now,
     expiresAt: now + LIFETIME_SECONDS,
   };
@@ -123,6 +127,7 @@ function codeFixture(grantId: string): CodeRecord {
     scopes: ["openid", "profile"],
     subject: "conformance-user",
     authTime: now,
+    sessionId: "conformance-session",
     maxAgeRequested: false,
     expiresAt: now + LIFETIME_SECONDS,
   };
@@ -134,6 +139,7 @@ function accessTokenFixture(grantId: string): AccessTokenRecord {
     clientId: "conformance-client",
     subject: "conformance-user",
     scopes: ["openid", "profile"],
+    sessionId: "conformance-session",
     expiresAt: nowSeconds() + LIFETIME_SECONDS,
   };
 }
@@ -146,6 +152,7 @@ function refreshTokenFixture(grantId: string): RefreshTokenRecord {
     subject: "conformance-user",
     scopes: ["openid", "profile"],
     authTime: now,
+    sessionId: "conformance-session",
     expiresAt: now + LIFETIME_SECONDS,
   };
 }
@@ -219,6 +226,29 @@ const cases: StoreConformanceCase[] = [
       );
     },
   ),
+
+  defineCase("a record saved without a codeChallenge comes back without one", async (createStore) => {
+    const store = await createStore(NO_CLIENTS);
+    const interactionKey = newKey();
+    const codeKey = newKey();
+    // A client with requirePkce: false sends none, so both records carry no challenge. A column that comes back
+    // as null, or as an empty string, is not the same record.
+    const withoutChallenge = <T extends object>(record: T): T =>
+      Object.fromEntries(Object.entries(record).filter(([name]) => name !== "codeChallenge")) as T;
+    const interaction = withoutChallenge(interactionFixture());
+    const code = withoutChallenge(codeFixture(newKey()));
+    await store.saveInteraction(interactionKey, interaction);
+    await store.saveCode(codeKey, code);
+    assert(
+      sameRecord(await store.consumeInteraction(interactionKey), interaction),
+      "consumeInteraction must return a record saved without codeChallenge as it was, with no codeChallenge",
+    );
+    const consumed = await store.consumeCode(codeKey);
+    assert(
+      consumed !== undefined && consumed.status === "consumed" && sameRecord(consumed.record, code),
+      "consumeCode must return a record saved without codeChallenge as it was, with no codeChallenge",
+    );
+  }),
 
   defineCase(
     "consumeCode reports consumed with the saved record once, then replayed with its grant",
@@ -470,7 +500,7 @@ const cases: StoreConformanceCase[] = [
       clientId: `conformance-${newKey()}`,
       redirectUris: ["https://app.example/callback", "https://app.example/callback?tenant=a"],
       scopes: ["openid", "profile", "offline_access"],
-      auth: { method: "client_secret_basic", secretHash: newKey() },
+      auth: { method: "client_secret_basic", secretHashes: [newKey()] },
       grantTypes: ["authorization_code"],
       postLogoutRedirectUris: ["https://app.example/signed-out"],
     };

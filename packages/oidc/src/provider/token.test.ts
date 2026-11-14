@@ -1,4 +1,4 @@
-import { createKeySet, createVerifier, generateKeyPair } from "@codenhub/jwt";
+import { type KeyPair, createKeySet, createVerifier, generateKeyPair } from "@codenhub/jwt";
 import { describe, expect, it } from "vitest";
 
 import { digestKey, randomToken } from "../shared/encoding";
@@ -7,6 +7,7 @@ import { computeCodeChallenge } from "../shared/pkce";
 import { computeTokenHash } from "../shared/token-hash";
 import { type MemoryStore, createMemoryStore } from "../testing/memory-store";
 import { type ResolvedOptions, resolveOptions } from "./options";
+import { hashClientSecret } from "./secrets";
 import { handleToken } from "./token";
 import type { ClientRecord, CodeRecord } from "./types";
 
@@ -26,6 +27,10 @@ interface TokenBody {
   readonly scope: string;
 }
 
+/** Decodes a token's header without verifying it, to see which key signed it. */
+const headerOf = (token: string): Record<string, unknown> =>
+  JSON.parse(Buffer.from(token.split(".")[0] ?? "", "base64url").toString("utf8")) as Record<string, unknown>;
+
 /** Decodes a token's payload without verifying it. Tests use it only to read claims that other assertions already vouch for. */
 const payloadOf = (token: string): Record<string, unknown> =>
   JSON.parse(Buffer.from(token.split(".")[1] ?? "", "base64url").toString("utf8")) as Record<string, unknown>;
@@ -38,16 +43,32 @@ const CLIENTS: readonly ClientRecord[] = [
     auth: { method: "none" },
   },
   { clientId: "other", redirectUris: [REDIRECT_URI], scopes: ["openid"], auth: { method: "none" } },
+  {
+    clientId: "short",
+    redirectUris: [REDIRECT_URI],
+    scopes: ["openid", "profile", "offline_access"],
+    auth: { method: "none" },
+    ttl: { accessToken: 120, idToken: 90, refreshToken: 3600 },
+  },
+  {
+    clientId: "partial",
+    redirectUris: [REDIRECT_URI],
+    scopes: ["openid", "offline_access"],
+    auth: { method: "none" },
+    ttl: { idToken: 300 },
+  },
 ];
 
 /** Options over a memory store, with a clock the test moves forward by setting `setClock`. */
-async function setup(): Promise<{ options: ResolvedOptions; store: MemoryStore; setClock: (ms: number) => void }> {
+async function setup(
+  extra: { readonly keys?: readonly KeyPair[]; readonly clients?: readonly ClientRecord[] } = {},
+): Promise<{ options: ResolvedOptions; store: MemoryStore; setClock: (ms: number) => void }> {
   let clock = NOW_MS;
-  const store = createMemoryStore({ clients: CLIENTS });
+  const store = createMemoryStore({ clients: extra.clients ?? CLIENTS });
   const pair = await generateKeyPair({ alg: "ES256", kid: "k1" });
   const options = resolveOptions({
     issuer: ISSUER,
-    signingKeys: [pair],
+    signingKeys: extra.keys ?? [pair],
     store,
     claims: () => ({}),
     now: () => clock,
@@ -73,6 +94,10 @@ async function saveCode(store: MemoryStore, overrides: Partial<CodeRecord> = {})
     expiresAt: NOW_SECONDS + 60,
     ...overrides,
   };
+  if ("codeChallenge" in overrides && overrides.codeChallenge === undefined) {
+    // A code issued without a challenge has no such member, rather than an undefined one.
+    delete (record as { codeChallenge?: string }).codeChallenge;
+  }
   await store.saveCode(await digestKey(code), record);
   return code;
 }
@@ -288,6 +313,27 @@ describe("handleToken: authorization_code grant", () => {
     });
   });
 
+  it("carries the session id of the code into the ID token as sid and into the stored records", async () => {
+    const { options, store } = await setup();
+
+    const body = await redeemCode(options, store, { sessionId: "session-42" });
+
+    expect(payloadOf(body.id_token).sid).toBe("session-42");
+    expect(await store.findAccessToken(await digestKey(body.access_token))).toMatchObject({ sessionId: "session-42" });
+    expect(await store.consumeRefreshToken(await digestKey(body.refresh_token ?? ""))).toMatchObject({
+      record: { sessionId: "session-42" },
+    });
+  });
+
+  it("omits sid and sessionId when the code has no session id", async () => {
+    const { options, store } = await setup();
+
+    const body = await redeemCode(options, store);
+
+    expect(payloadOf(body.id_token)).not.toHaveProperty("sid");
+    expect(await store.findAccessToken(await digestKey(body.access_token))).not.toHaveProperty("sessionId");
+  });
+
   it("binds the ID token to the access token with at_hash", async () => {
     const { options, store } = await setup();
 
@@ -441,6 +487,39 @@ describe("handleToken: refresh_token grant", () => {
     expect(payloadOf(body.id_token)).not.toHaveProperty("nonce");
   });
 
+  it("carries the session id through rotation into every ID token and record", async () => {
+    const { options, store } = await setup();
+    const issued = await redeemCode(options, store, { sessionId: "session-42" });
+
+    const first = (await (
+      await handleToken(options, tokenRequest(refreshBody(issued.refresh_token ?? "")))
+    ).json()) as TokenBody;
+    const second = (await (
+      await handleToken(options, tokenRequest(refreshBody(first.refresh_token ?? "")))
+    ).json()) as TokenBody;
+
+    expect(payloadOf(first.id_token).sid).toBe("session-42");
+    expect(payloadOf(second.id_token).sid).toBe("session-42");
+    expect(await store.findAccessToken(await digestKey(second.access_token))).toMatchObject({
+      sessionId: "session-42",
+    });
+    expect(await store.consumeRefreshToken(await digestKey(second.refresh_token ?? ""))).toMatchObject({
+      status: "consumed",
+      record: { sessionId: "session-42" },
+    });
+  });
+
+  it("keeps sid out of the ID token of a refresh when the family has no session id", async () => {
+    const { options, store } = await setup();
+    const issued = await redeemCode(options, store);
+
+    const refreshed = (await (
+      await handleToken(options, tokenRequest(refreshBody(issued.refresh_token ?? "")))
+    ).json()) as TokenBody;
+
+    expect(payloadOf(refreshed.id_token)).not.toHaveProperty("sid");
+  });
+
   it("revokes the whole family when a rotated refresh token is reused", async () => {
     const { options, store } = await setup();
     const issued = await redeemCode(options, store);
@@ -573,5 +652,266 @@ describe("handleToken: refresh_token grant", () => {
     const response = await handleToken(options, tokenRequest("grant_type=refresh_token&client_id=public"));
 
     expect(await errorOf(response)).toEqual({ status: 400, body: JSON.stringify({ error: "invalid_request" }) });
+  });
+});
+
+describe("handleToken: lifetimes of a client", () => {
+  /** Redeems a fresh code issued to `clientId`, and returns the parsed body. */
+  async function redeemFor(clientId: string, options: ResolvedOptions, store: MemoryStore): Promise<TokenBody> {
+    const code = await saveCode(store, { clientId });
+    const response = await handleToken(options, tokenRequest(codeBody(code, { client_id: clientId })));
+    expect(response.status).toBe(200);
+    return (await response.json()) as TokenBody;
+  }
+
+  it("applies the client's own lifetimes to the code exchange", async () => {
+    const { options, store } = await setup();
+
+    const body = await redeemFor("short", options, store);
+
+    expect(body.expires_in).toBe(120);
+    expect(payloadOf(body.id_token)).toMatchObject({ iat: NOW_SECONDS, exp: NOW_SECONDS + 90 });
+    expect(await store.findAccessToken(await digestKey(body.access_token))).toMatchObject({
+      expiresAt: NOW_SECONDS + 120,
+    });
+    expect(await store.consumeRefreshToken(await digestKey(body.refresh_token ?? ""))).toMatchObject({
+      record: { expiresAt: NOW_SECONDS + 3600 },
+    });
+  });
+
+  it("falls back to the provider's lifetime for each one the client leaves out", async () => {
+    const { options, store } = await setup();
+
+    const body = await redeemFor("partial", options, store);
+
+    expect(body.expires_in).toBe(options.ttl.accessToken);
+    expect(payloadOf(body.id_token).exp).toBe(NOW_SECONDS + 300);
+    expect(await store.consumeRefreshToken(await digestKey(body.refresh_token ?? ""))).toMatchObject({
+      record: { expiresAt: NOW_SECONDS + options.ttl.refreshToken },
+    });
+  });
+
+  it("leaves a client without ttl on the provider's lifetimes", async () => {
+    const { options, store } = await setup();
+
+    const body = await redeemFor("public", options, store);
+
+    expect(body.expires_in).toBe(options.ttl.accessToken);
+    expect(payloadOf(body.id_token).exp).toBe(NOW_SECONDS + options.ttl.idToken);
+  });
+
+  it("applies the client's lifetimes to a refresh and keeps the family's expiry through rotation", async () => {
+    const { options, store, setClock } = await setup();
+    const issued = await redeemFor("short", options, store);
+    setClock(NOW_MS + 1000 * 1000);
+
+    const refreshed = (await (
+      await handleToken(options, tokenRequest(refreshBody(issued.refresh_token ?? "", { client_id: "short" })))
+    ).json()) as TokenBody;
+
+    const now = NOW_SECONDS + 1000;
+    expect(refreshed.expires_in).toBe(120);
+    expect(payloadOf(refreshed.id_token).exp).toBe(now + 90);
+    expect(await store.findAccessToken(await digestKey(refreshed.access_token))).toMatchObject({
+      expiresAt: now + 120,
+    });
+    expect(await store.consumeRefreshToken(await digestKey(refreshed.refresh_token ?? ""))).toMatchObject({
+      record: { expiresAt: NOW_SECONDS + 3600 },
+    });
+  });
+
+  it("refuses a refresh token after the client's shorter family lifetime", async () => {
+    const { options, store, setClock } = await setup();
+    const issued = await redeemFor("short", options, store);
+    setClock(NOW_MS + 3600 * 1000);
+
+    const response = await handleToken(
+      options,
+      tokenRequest(refreshBody(issued.refresh_token ?? "", { client_id: "short" })),
+    );
+
+    expect(await errorOf(response)).toEqual({ status: 400, body: JSON.stringify({ error: "invalid_grant" }) });
+  });
+});
+
+describe("handleToken: the ID token's signing key", () => {
+  const withClient = (overrides: Partial<ClientRecord> = {}): readonly ClientRecord[] => [
+    { ...CLIENTS[0], ...overrides } as ClientRecord,
+  ];
+  const keysOf = async (...algs: readonly ("ES256" | "RS256" | "EdDSA")[]): Promise<readonly KeyPair[]> =>
+    Promise.all(algs.map((alg, index) => generateKeyPair({ alg, kid: `${alg}-${index}` })));
+
+  it("signs with the first RS256 key by default, even when another algorithm comes first", async () => {
+    const keys = await keysOf("ES256", "RS256", "RS256");
+    const { options, store } = await setup({ keys });
+
+    const body = await redeemCode(options, store);
+
+    expect(headerOf(body.id_token)).toMatchObject({ alg: "RS256", kid: "RS256-1" });
+    expect(payloadOf(body.id_token).at_hash).toBe(await computeTokenHash(body.access_token, "RS256"));
+  });
+
+  it("signs with the first key when no key is RS256", async () => {
+    const keys = await keysOf("EdDSA", "ES256");
+    const { options, store } = await setup({ keys });
+
+    const body = await redeemCode(options, store);
+
+    expect(headerOf(body.id_token)).toMatchObject({ alg: "EdDSA", kid: "EdDSA-0" });
+  });
+
+  it("signs with the first key of the algorithm the client names", async () => {
+    const keys = await keysOf("RS256", "ES256", "ES256");
+    const { options, store } = await setup({ keys, clients: withClient({ idTokenSigningAlg: "ES256" }) });
+
+    const body = await redeemCode(options, store);
+
+    expect(headerOf(body.id_token)).toMatchObject({ alg: "ES256", kid: "ES256-1" });
+    expect(payloadOf(body.id_token).at_hash).toBe(await computeTokenHash(body.access_token, "ES256"));
+  });
+
+  it("signs the ID token of a refresh with the same key", async () => {
+    const keys = await keysOf("ES256", "RS256");
+    const { options, store } = await setup({ keys });
+    const issued = await redeemCode(options, store);
+
+    const response = await handleToken(options, tokenRequest(refreshBody(issued.refresh_token ?? "")));
+    const refreshed = (await response.json()) as TokenBody;
+
+    expect(headerOf(refreshed.id_token)).toMatchObject({ alg: "RS256", kid: "RS256-1" });
+  });
+
+  it("signs the ID token of a refresh with the key of the algorithm the client names", async () => {
+    const keys = await keysOf("RS256", "ES256", "ES256");
+    const { options, store } = await setup({ keys, clients: withClient({ idTokenSigningAlg: "ES256" }) });
+    const issued = await redeemCode(options, store);
+
+    const response = await handleToken(options, tokenRequest(refreshBody(issued.refresh_token ?? "")));
+    const refreshed = (await response.json()) as TokenBody;
+
+    expect(headerOf(refreshed.id_token)).toMatchObject({ alg: "ES256", kid: "ES256-1" });
+    expect(payloadOf(refreshed.id_token).at_hash).toBe(await computeTokenHash(refreshed.access_token, "ES256"));
+  });
+
+  it("verifies against the published key of that algorithm", async () => {
+    const keys = await keysOf("ES256", "RS256");
+    const { options, store } = await setup({ keys });
+
+    const body = await redeemCode(options, store);
+    const verified = await createVerifier({
+      keys: createKeySet(options.publicKeys),
+      issuer: ISSUER,
+      audience: "public",
+      now: () => NOW_MS,
+    })(body.id_token);
+
+    expect(verified.ok).toBe(true);
+  });
+
+  it("rejects, with TypeError, a client naming an algorithm no signing key has", async () => {
+    const keys = await keysOf("ES256");
+    const { options } = await setup({ keys, clients: withClient({ idTokenSigningAlg: "RS256" }) });
+
+    await expect(handleToken(options, tokenRequest(codeBody("any-code")))).rejects.toThrow(TypeError);
+  });
+});
+
+describe("handleToken: PKCE for a client with requirePkce off", () => {
+  const SECRET = "s".repeat(43);
+  const INVALID_GRANT = { status: 400, body: JSON.stringify({ error: "invalid_grant" }) };
+  const INVALID_REQUEST = { status: 400, body: JSON.stringify({ error: "invalid_request" }) };
+
+  /** A confidential client that skips PKCE, and one that keeps the default. */
+  async function confidentialClients(): Promise<readonly ClientRecord[]> {
+    const base = {
+      redirectUris: [REDIRECT_URI],
+      scopes: ["openid", "profile", "offline_access"],
+      auth: { method: "client_secret_post", secretHashes: [await hashClientSecret(SECRET)] },
+    } as const;
+    return [
+      { clientId: "legacy", ...base, requirePkce: false },
+      { clientId: "strict", ...base },
+    ];
+  }
+
+  const form = (code: string, overrides: Record<string, string> = {}): string =>
+    codeBody(code, { client_id: "legacy", client_secret: SECRET, ...overrides });
+  const withoutVerifier = (code: string, clientId = "legacy"): string =>
+    new URLSearchParams({
+      grant_type: "authorization_code",
+      client_id: clientId,
+      client_secret: SECRET,
+      code,
+      redirect_uri: REDIRECT_URI,
+    }).toString();
+
+  it("redeems a code issued without a challenge when no verifier is sent", async () => {
+    const { options, store } = await setup({ clients: await confidentialClients() });
+    const code = await saveCode(store, { clientId: "legacy", codeChallenge: undefined });
+
+    const response = await handleToken(options, tokenRequest(withoutVerifier(code)));
+
+    expect(response.status).toBe(200);
+    expect(payloadOf(((await response.json()) as TokenBody).id_token).nonce).toBe("nonce-1");
+  });
+
+  it("refuses a verifier on a code issued without a challenge, and burns the code", async () => {
+    const { options, store } = await setup({ clients: await confidentialClients() });
+    const code = await saveCode(store, { clientId: "legacy", codeChallenge: undefined });
+
+    const downgrade = await handleToken(options, tokenRequest(form(code)));
+    const retry = await handleToken(options, tokenRequest(withoutVerifier(code)));
+
+    expect(await errorOf(downgrade)).toEqual(INVALID_GRANT);
+    // Consumed before the check that needs its record, so even the honest request now finds a replay.
+    expect(await errorOf(retry)).toEqual(INVALID_GRANT);
+  });
+
+  it("still requires the matching verifier for a code issued with a challenge", async () => {
+    const { options, store } = await setup({ clients: await confidentialClients() });
+    const right = await saveCode(store, { clientId: "legacy" });
+    const wrong = await saveCode(store, { clientId: "legacy" });
+    const missing = await saveCode(store, { clientId: "legacy" });
+
+    const responses = await Promise.all([
+      handleToken(options, tokenRequest(form(right))),
+      handleToken(options, tokenRequest(form(wrong, { code_verifier: "w".repeat(43) }))),
+      handleToken(options, tokenRequest(withoutVerifier(missing))),
+    ]);
+
+    expect(responses[0]?.status).toBe(200);
+    expect(await errorOf(responses[1] as Response)).toEqual(INVALID_GRANT);
+    expect(await errorOf(responses[2] as Response)).toEqual(INVALID_GRANT);
+  });
+
+  it("refuses a malformed verifier before consuming the code", async () => {
+    const { options, store } = await setup({ clients: await confidentialClients() });
+    const code = await saveCode(store, { clientId: "legacy", codeChallenge: undefined });
+
+    const malformed = await handleToken(options, tokenRequest(form(code, { code_verifier: "short" })));
+    const honest = await handleToken(options, tokenRequest(withoutVerifier(code)));
+
+    expect(await errorOf(malformed)).toEqual(INVALID_GRANT);
+    expect(honest.status).toBe(200);
+  });
+
+  it("keeps requiring a verifier from a client with the default, before consuming the code", async () => {
+    const { options, store } = await setup({ clients: await confidentialClients() });
+    const code = await saveCode(store, { clientId: "strict" });
+
+    const missing = await handleToken(options, tokenRequest(withoutVerifier(code, "strict")));
+    const redeemed = await handleToken(options, tokenRequest(form(code, { client_id: "strict" })));
+
+    expect(await errorOf(missing)).toEqual(INVALID_REQUEST);
+    expect(redeemed.status).toBe(200);
+  });
+
+  it("refuses a verifier on a code without a challenge even for a client with the default", async () => {
+    const { options, store } = await setup({ clients: await confidentialClients() });
+    const code = await saveCode(store, { clientId: "strict", codeChallenge: undefined });
+
+    const response = await handleToken(options, tokenRequest(form(code, { client_id: "strict" })));
+
+    expect(await errorOf(response)).toEqual(INVALID_GRANT);
   });
 });

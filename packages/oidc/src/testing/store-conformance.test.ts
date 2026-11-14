@@ -58,6 +58,23 @@ function expectNoKeyInMessage(error: Error, seen: readonly string[]): void {
 }
 
 describe("storeConformanceCases rejects broken stores", () => {
+  it("fails the no-challenge case when a store hands a missing codeChallenge back as null", async () => {
+    const memory = createMemoryStore();
+    const createBroken = (): OidcStore => ({
+      ...memory,
+      consumeCode: async (key) => {
+        const consumption = await memory.consumeCode(key);
+        return consumption?.status === "consumed"
+          ? { status: "consumed", record: { ...consumption.record, codeChallenge: null as unknown as string } }
+          : consumption;
+      },
+    });
+
+    const error = await failureOf("a record saved without a codeChallenge comes back without one", createBroken);
+
+    expect(error.message).toContain("without codeChallenge");
+  });
+
   it("fails the concurrent consumeInteraction case when the read and the delete straddle an await", async () => {
     const interactions = new Map<string, InteractionRecord>();
     const createBroken = (): OidcStore => ({

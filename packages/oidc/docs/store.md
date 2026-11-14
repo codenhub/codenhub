@@ -42,7 +42,7 @@ Each method below is required. A store that lacks one is refused by `createProvi
 Five rules hold across the table.
 
 - **Saves never overwrite.** A `save*` method for a key that already exists must reject, and it must never reset a used entry, which would make a spent code or refresh token consumable again. The provider's keys are random digests, so this happens only through an adapter bug.
-- **Expiry is checked by the provider, and purging is the adapter's job.** No method purges. The provider checks `expiresAt` itself, so an adapter deletes expired rows itself, such as with a scheduled job. It keeps a used code or refresh token until at least its `expiresAt`, so a replay is still recognized. It keeps a revoked-grant marker until the grant's last token expires. That is at most `ttl.refreshToken + ttl.accessToken` after the code exchange: with the defaults, 30 days and 10 minutes.
+- **Expiry is checked by the provider, and purging is the adapter's job.** No method purges. The provider checks `expiresAt` itself, so an adapter deletes expired rows itself, such as with a scheduled job. It keeps a used code or refresh token until at least its `expiresAt`, so a replay is still recognized. It keeps a revoked-grant marker until the grant's last token expires. That is at most a refresh token lifetime plus an access token lifetime after the code exchange. Clients can set their own lifetimes in their record's `ttl`, so keep the marker for the longest refresh token lifetime of any client plus the longest access token lifetime of any client, with the provider's `ttl` counting for a client that sets none: with the defaults and no client `ttl`, 30 days and 10 minutes. A lifetime since lowered still counts until the tokens issued under it have expired, since a refresh token family keeps the expiry it got at the code exchange and an access token keeps its own.
 - **Codes and refresh tokens stay after use.** A used code or refresh token is kept until at least its `expiresAt`, so a replay inside that window is recognized, and the grant it belongs to can be revoked. Deleting it on use would turn every replay into `undefined`.
 - **Interactions are deleted on use.** An interaction is completed once, and nothing ever asks for it again, so there is no replay to recognize.
 - **Revocation outlives the call.** A replay can arrive while the first exchange is still saving its tokens. The store must therefore hide any token saved for a revoked grant afterwards, not only the ones present when `revokeGrant` ran.
@@ -124,7 +124,8 @@ A store failure is never turned into an OAuth answer. Answering `invalid_grant` 
 `findClient` returns a `ClientRecord`:
 
 ```ts
-import type { ClientAuthentication, GrantType } from "@codenhub/oidc/provider";
+import type { AsymmetricAlgorithm } from "@codenhub/jwt";
+import type { ClientAuthentication, ClientTtl, GrantType } from "@codenhub/oidc/provider";
 
 interface ClientRecord {
   clientId: string;
@@ -132,6 +133,9 @@ interface ClientRecord {
   scopes: readonly string[]; // must include "openid" with authorization_code
   grantTypes?: readonly GrantType[]; // "authorization_code" (the default) or "client_credentials"
   postLogoutRedirectUris?: readonly string[]; // each compared byte for byte at logout
+  ttl?: ClientTtl; // this client's own code, access token, ID token and refresh token lifetimes
+  idTokenSigningAlg?: AsymmetricAlgorithm; // the algorithm of the signing key for this client's ID tokens
+  requirePkce?: boolean; // true (the default) requires a PKCE challenge; false only for a confidential client
   auth: ClientAuthentication;
 }
 ```
@@ -139,7 +143,7 @@ interface ClientRecord {
 `auth` is one of these:
 
 - `{ method: "none" }`, for a public client that relies on PKCE alone.
-- `{ method: "client_secret_basic", secretHash }` and `{ method: "client_secret_post", secretHash }`, where `secretHash` comes from `hashClientSecret`.
+- `{ method: "client_secret_basic", secretHashes }` and `{ method: "client_secret_post", secretHashes }`, where `secretHashes` is a non-empty list of digests from `hashClientSecret`. A presented secret authenticates when it matches any entry, so a client has two secrets while one is being [rotated](provider.md#rotating-a-secret).
 - `{ method: "client_secret_jwt", key }`, where `key` is the client's HS256 `SecretKey`, from `generateSecretKey({ alg: "HS256" })` or `importSecretKey`.
 - `{ method: "private_key_jwt", keys }`, where `keys` is the client's public `KeySet`, from `createKeySet`, `importKeySet` or `createRemoteKeySet`. A remote key set must be created once per client and reused, as described below.
 
@@ -148,6 +152,12 @@ A record that breaks these rules is a bug in the store, and the provider throws 
 `grantTypes` lists the grants the client may use. `authorization_code` signs users in and brings the refresh grant with it under `offline_access`. `client_credentials` issues an access token to the client itself. It defaults to `["authorization_code"]`, and when given it must be non-empty, without repeats, and hold only those two values. A client with `client_credentials` must authenticate, so its `auth.method` may not be `none`. A client without `authorization_code` may have no `redirectUris`, and its `scopes` need not include `openid`.
 
 `postLogoutRedirectUris` lists where [logout](provider.md#ending-sessions) may send the browser. Each entry is held to the redirect URI rules: an absolute URL of visible ASCII, without fragment or credentials, and not `javascript:`, `data:`, `vbscript:` or `file:`. Absent or empty, no logout of that client redirects.
+
+`ttl` sets this client's token lifetimes, in seconds. It may hold `code`, `accessToken`, `idToken` and `refreshToken`, each held to the range of the [provider option](provider.md#lifetimes) of the same name, and a lifetime it leaves out is the provider's. `interaction` is not one of them, since an interaction exists before the app completes it and stays provider-wide. The provider checks the values when it reads the record, and throws `TypeError` for a value out of range, a value that is not an integer, or a `ttl` that is not an object. A lifetime applies to every token issued to that client from then on, including `expires_in`, the `exp` of a JWT access token and of an ID token, and the `client_credentials` grant, and a record read at the next request is the one that counts. The code's lifetime is read when the app completes the interaction, so `completeAuthorization` reads the client's record, and answers `interaction_not_found` when the client was removed in the meantime. A refresh token family keeps the expiry it got at the code exchange, whatever the record says later.
+
+`requirePkce` defaults to `true`: the authorization request must carry an S256 challenge. A confidential client may set it to `false` to leave the challenge out, as long as it sends a `nonce` and checks it in the ID token; a record that sets it to `false` for `auth.method` `none` is a bug in the store, and the provider throws `TypeError` for it. A challenge that is sent is always enforced. [Clients that send no PKCE](provider.md#clients-that-send-no-pkce) has the rules, and what it means for the interaction and code records, whose `codeChallenge` is then absent. A store must keep a record without `codeChallenge` as one without it, and not return `null` or an empty string for it, which the conformance cases check.
+
+`idTokenSigningAlg` picks which of the provider's signing keys signs this client's ID tokens: the first one with that algorithm. Without it, the provider uses the first `RS256` key when it has one, and otherwise its first key; [Signing keys](provider.md#signing-keys) gives the reason. A record that names an algorithm no signing key has is a bug, and the provider throws `TypeError` for it.
 
 The `key` and `keys` values are `@codenhub/jwt` objects, not JSON. A plain object is not one of them, and `@codenhub/jwt` refuses it with `TypeError` when the provider uses it. A store that persists these records therefore keeps the key as a JWK and rebuilds the object on each read: `exportSecretJwk` or `exportPublicJwk` writes the key, and `importSecretKey` or `importKeySet` reads it back. A secret can be exported only when it was created or imported as extractable. A store may also keep the key objects in memory, as the in-memory store does.
 

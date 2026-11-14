@@ -10,7 +10,7 @@ import type {
   OidcResult,
   Prompt,
 } from "../shared/types";
-import { type CheckedClient, checkClientRecord } from "./client-record";
+import { type CheckedClient, checkClientRecord, lifetimesOf } from "./client-record";
 import { readFrontChannelParameters } from "./front-channel";
 import type { ResolvedOptions } from "./options";
 import { redirectResponse } from "./responses";
@@ -21,6 +21,7 @@ import type {
   AuthorizationInteraction,
   ClientRecord,
   CodeRecord,
+  Display,
   InteractionRecord,
 } from "./types";
 
@@ -44,12 +45,15 @@ interface ValidatedRequest {
   readonly clientId: string;
   readonly target: RedirectTarget;
   readonly scopes: readonly string[];
-  readonly codeChallenge: string;
+  readonly codeChallenge: string | undefined;
   readonly prompt: readonly Prompt[];
   readonly maxAge: number | undefined;
   readonly nonce: string | undefined;
   readonly loginHint: string | undefined;
   readonly uiLocales: readonly string[] | undefined;
+  readonly acrValues: readonly string[] | undefined;
+  readonly claimsLocales: readonly string[] | undefined;
+  readonly display: Display | undefined;
 }
 
 /** What the checks after client verification read from. */
@@ -61,7 +65,11 @@ interface RequestContext {
 }
 
 const MAX_AGE_PATTERN = /^\d{1,9}$/;
+/** A non-empty run of visible ASCII: no space, control character or non-ASCII character. */
+const VISIBLE_ASCII = /^[!-~]+$/;
 const PROMPTS: readonly Prompt[] = ["none", "login", "consent", "select_account"];
+/** The `display` values of OpenID Connect Core §3.1.2.1. */
+const DISPLAYS: readonly Display[] = ["page", "popup", "touch", "wap"];
 /** The OAuth codes a validation failure redirects with, which are also its issue codes. */
 type RedirectErrorCode = Extract<OAuthErrorCode, OidcIssueCode>;
 
@@ -137,7 +145,17 @@ export async function completeAuthorization(
     return ok(respond(target, { error: outcome.error }));
   }
   assertGrantFits(interaction.value, outcome, options.now());
-  const code = await issueCode(options, interaction.value, outcome);
+  // The code's lifetime may be the client's own, and the interaction does not carry the client's record.
+  const record = await options.store.findClient(interaction.value.clientId);
+  if (record === undefined) {
+    // The client was removed while the user signed in, so there is nobody to issue a code to.
+    return fail({ code: "interaction_not_found" });
+  }
+  const { code: codeTtl } = lifetimesOf(
+    options.ttl,
+    checkClientRecord(record, interaction.value.clientId, options.publicKeys),
+  );
+  const code = await issueCode(options, interaction.value, outcome, codeTtl);
   return ok(respond(target, { code }));
 }
 
@@ -209,7 +227,7 @@ async function lookupClient(options: ResolvedOptions, parameters: ParameterMap):
   if (record === undefined) {
     return renderError(issueOf("unknown_client"));
   }
-  return { ok: true, value: checkClientRecord(record, clientId) };
+  return { ok: true, value: checkClientRecord(record, clientId, options.publicKeys) };
 }
 
 /** The redirect URI must match a registered one byte for byte: normalizing it would let a near miss through. */
@@ -259,7 +277,10 @@ function checkRequest(context: RequestContext): Checked<ValidatedRequest> {
       maxAge: maxAge.value,
       nonce: parameters.get("nonce"),
       loginHint: parameters.get("login_hint"),
-      uiLocales: readUiLocales(parameters),
+      uiLocales: readList(parameters, "ui_locales"),
+      acrValues: readList(parameters, "acr_values"),
+      claimsLocales: readList(parameters, "claims_locales"),
+      display: readDisplay(parameters),
     },
   };
 }
@@ -304,9 +325,24 @@ function readScopes({ options, client, parameters, target }: RequestContext): Ch
 /**
  * The PKCE challenge, which must be S256. `plain` is refused because RFC 7636 makes it the default when the
  * method is missing, and an attacker who can read the challenge could then replay it.
+ *
+ * A challenge that is sent is checked for every client. One that is absent is accepted only from a client with
+ * `requirePkce: false`, which must then send a `nonce`: without PKCE, the ID token's `nonce` is what ties the
+ * response to the request (OAuth 2.1 §7.5.1.1, RFC 9700 §2.1.1). A method alone is still a malformed request.
  */
-function readCodeChallenge({ parameters, target }: RequestContext): Checked<string> {
+function readCodeChallenge({ client, parameters, target }: RequestContext): Checked<string | undefined> {
   const challenge = parameters.get("code_challenge");
+  if (challenge === undefined) {
+    if (client.requirePkce) {
+      return redirectFailure(target, "invalid_request", ["code_challenge"]);
+    }
+    if (parameters.has("code_challenge_method")) {
+      return redirectFailure(target, "invalid_request", ["code_challenge"]);
+    }
+    return (parameters.get("nonce") ?? "") === ""
+      ? redirectFailure(target, "invalid_request", ["nonce"])
+      : { ok: true, value: undefined };
+  }
   if (!isCodeChallenge(challenge)) {
     return redirectFailure(target, "invalid_request", ["code_challenge"]);
   }
@@ -342,14 +378,26 @@ function readMaxAge({ parameters, target }: RequestContext): Checked<number | un
   return { ok: true, value: Number(requested) };
 }
 
-function readUiLocales(parameters: ParameterMap): readonly string[] | undefined {
-  const requested = parameters.get("ui_locales");
+/**
+ * A space-separated list the request gives as a hint, such as `ui_locales`, `claims_locales` or `acr_values`: empty
+ * entries from repeated or trailing spaces are dropped, order is kept, and no entries means absent.
+ */
+function readList(parameters: ParameterMap, name: string): readonly string[] | undefined {
+  const requested = parameters.get(name);
   if (requested === undefined) {
     return undefined;
   }
-  // A hint: empty entries from repeated or trailing spaces are dropped, and no entries means absent.
-  const locales = requested.split(" ").filter((locale) => locale !== "");
-  return locales.length === 0 ? undefined : locales;
+  const entries = requested.split(" ").filter((entry) => entry !== "");
+  return entries.length === 0 ? undefined : entries;
+}
+
+/**
+ * `display` is a hint for how the app shows its pages, and the provider may ignore a value it does not know
+ * (OpenID Connect Core §3.1.2.1), so an unknown one is absent rather than a failure.
+ */
+function readDisplay(parameters: ParameterMap): Display | undefined {
+  const requested = parameters.get("display");
+  return DISPLAYS.find((display) => display === requested);
 }
 
 /** Saves the validated request under the digest of a new interaction id, and returns the id to the app. */
@@ -362,15 +410,18 @@ async function saveInteraction(
     clientId: request.clientId,
     redirectUri: request.target.uri,
     scopes: request.scopes,
-    codeChallenge: request.codeChallenge,
     prompt: request.prompt,
     createdAt,
     expiresAt: createdAt + options.ttl.interaction,
+    ...optionalMember("codeChallenge", request.codeChallenge),
     ...optionalMember("state", request.target.state),
     ...optionalMember("nonce", request.nonce),
     ...optionalMember("maxAge", request.maxAge),
     ...optionalMember("loginHint", request.loginHint),
     ...optionalMember("uiLocales", request.uiLocales),
+    ...optionalMember("acrValues", request.acrValues),
+    ...optionalMember("claimsLocales", request.claimsLocales),
+    ...optionalMember("display", request.display),
   };
   // The id is a bearer secret for the app's session, so the store only ever sees its digest.
   const id = randomToken();
@@ -385,6 +436,9 @@ async function saveInteraction(
     ...optionalMember("maxAge", request.maxAge),
     ...optionalMember("loginHint", request.loginHint),
     ...optionalMember("uiLocales", request.uiLocales),
+    ...optionalMember("acrValues", request.acrValues),
+    ...optionalMember("claimsLocales", request.claimsLocales),
+    ...optionalMember("display", request.display),
   });
 }
 
@@ -413,6 +467,12 @@ function assertOutcomeShape(outcome: unknown): asserts outcome is AuthorizationG
   }
   if (outcome.acr !== undefined && typeof outcome.acr !== "string") {
     throw new TypeError("completeAuthorization: outcome.acr must be a string");
+  }
+  if (
+    outcome.sessionId !== undefined &&
+    (typeof outcome.sessionId !== "string" || !VISIBLE_ASCII.test(outcome.sessionId))
+  ) {
+    throw new TypeError("completeAuthorization: outcome.sessionId must be a non-empty string of visible ASCII");
   }
 }
 
@@ -462,21 +522,23 @@ async function issueCode(
   options: ResolvedOptions,
   interaction: InteractionRecord,
   grant: AuthorizationGrant,
+  ttl: number,
 ): Promise<string> {
   const code = randomToken();
   const record: CodeRecord = {
     grantId: randomToken(),
     clientId: interaction.clientId,
     redirectUri: interaction.redirectUri,
-    codeChallenge: interaction.codeChallenge,
+    ...optionalMember("codeChallenge", interaction.codeChallenge),
     ...optionalMember("nonce", interaction.nonce),
     scopes: [...new Set(grant.scopes)],
     subject: grant.subject,
     authTime: grant.authTime,
     ...optionalMember("amr", grant.amr),
     ...optionalMember("acr", grant.acr),
+    ...optionalMember("sessionId", grant.sessionId),
     maxAgeRequested: interaction.maxAge !== undefined,
-    expiresAt: options.now() + options.ttl.code,
+    expiresAt: options.now() + ttl,
   };
   await options.store.saveCode(await digestKey(code), record);
   return code;

@@ -117,7 +117,7 @@ function issueTimeOf(token: string): number | undefined {
 
 async function findClient(options: ResolvedOptions, clientId: string): Promise<ClientRecord | undefined> {
   const record = await options.store.findClient(clientId);
-  return record === undefined ? undefined : checkClientRecord(record, clientId);
+  return record === undefined ? undefined : checkClientRecord(record, clientId, options.publicKeys);
 }
 
 /**

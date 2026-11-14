@@ -261,6 +261,26 @@ describe("endSession", () => {
     });
   });
 
+  it("accepts a hint signed by any published key, not only the one that signs a client's ID tokens", async () => {
+    const first = await generateKeyPair({ alg: "ES256", kid: "k1" });
+    const rsa = await generateKeyPair({ alg: "RS256", kid: "k2" });
+    const op = createProvider({
+      issuer: ISSUER,
+      signingKeys: [first, rsa],
+      store: createMemoryStore({ clients: CLIENTS }),
+      claims: () => ({}),
+      now: () => NOW_MS,
+    });
+
+    const results = await Promise.all(
+      [first, rsa].map(async (pair) => op.endSession(logout({ id_token_hint: await idToken(pair), client_id: "web" }))),
+    );
+
+    for (const result of results) {
+      expect(result.ok && result.value).toMatchObject({ clientId: "web", subject: "user-1" });
+    }
+  });
+
   it("is advertised in discovery and routed by the app, not by handle", async () => {
     const { op } = await setup();
 

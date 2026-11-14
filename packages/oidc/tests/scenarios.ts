@@ -43,9 +43,9 @@ async function setUp(modules: Modules, auth: AuthMethod, accessToken?: providerM
     auth === "none"
       ? ({ method: "none" } as const)
       : auth === "client_secret_basic"
-        ? ({ method: "client_secret_basic", secretHash: await provider.hashClientSecret(secret) } as const)
+        ? ({ method: "client_secret_basic", secretHashes: [await provider.hashClientSecret(secret)] } as const)
         : auth === "client_secret_post"
-          ? ({ method: "client_secret_post", secretHash: await provider.hashClientSecret(secret) } as const)
+          ? ({ method: "client_secret_post", secretHashes: [await provider.hashClientSecret(secret)] } as const)
           : auth === "client_secret_jwt"
             ? ({ method: "client_secret_jwt", key: hmacKey } as const)
             : ({ method: "private_key_jwt", keys: jwt.createKeySet([clientKey.publicKey]) } as const);
@@ -231,7 +231,7 @@ export const scenarios: Readonly<Record<string, Scenario>> = {
           clientId: "service",
           redirectUris: [],
           scopes: ["orders:read"],
-          auth: { method: "client_secret_post", secretHash: await provider.hashClientSecret(secret) },
+          auth: { method: "client_secret_post", secretHashes: [await provider.hashClientSecret(secret)] },
           grantTypes: ["client_credentials"],
         },
       ],

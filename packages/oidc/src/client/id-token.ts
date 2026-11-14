@@ -47,6 +47,7 @@ const OPTIONAL_CLAIM_TYPES: readonly (readonly [string, (value: unknown) => bool
   ["azp", isString],
   ["nonce", isString],
   ["at_hash", isString],
+  ["sid", isString],
 ];
 
 /** A `typ` names an access token when, lowercased and without an `application/` prefix, it is `at+jwt` (RFC 9068 §2.1). */

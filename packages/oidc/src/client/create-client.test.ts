@@ -964,7 +964,7 @@ describe("sign-in through the provider", () => {
       method === "none"
         ? { method: "none" }
         : method === "client_secret_basic" || method === "client_secret_post"
-          ? { method, secretHash: await hashClientSecret(secret) }
+          ? { method, secretHashes: [await hashClientSecret(secret)] }
           : method === "client_secret_jwt"
             ? { method, key: hmacKey }
             : { method, keys: createKeySet([clientKey.publicKey]) };

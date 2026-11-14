@@ -88,6 +88,46 @@ describe("findClient", () => {
     expect(await store.findClient("client-unknown")).toBeUndefined();
   });
 
+  it("should return a client's ttl without sharing the object the caller registered", async () => {
+    const client = makeClient({ ttl: { accessToken: 120 } });
+    const store = createMemoryStore({ clients: [client] });
+
+    (client.ttl as { accessToken: number }).accessToken = 999;
+
+    expect((await store.findClient("client-a"))?.ttl).toEqual({ accessToken: 120 });
+  });
+
+  it("should not change the stored client when the caller mutates the registered secretHashes", async () => {
+    const client = makeClient({ auth: { method: "client_secret_basic", secretHashes: ["hash-a"] } });
+    const store = createMemoryStore({ clients: [client] });
+
+    (client.auth as unknown as { secretHashes: string[] }).secretHashes.push("hash-b");
+
+    expect((await store.findClient("client-a"))?.auth).toEqual({
+      method: "client_secret_basic",
+      secretHashes: ["hash-a"],
+    });
+  });
+
+  it.each([
+    ["null", null],
+    ["an array", [120]],
+  ])("should return a malformed ttl (%s) as it was registered, for the provider to refuse", async (_name, ttl) => {
+    const store = createMemoryStore({ clients: [makeClient({ ttl } as unknown as Partial<ClientRecord>)] });
+
+    expect((await store.findClient("client-a"))?.ttl).toEqual(ttl);
+  });
+
+  it.each([
+    ["NaN", Number.NaN],
+    ["null", null],
+    ["a string", "client_secret_basic"],
+  ])("should return a malformed auth (%s) as it was registered, for the provider to refuse", async (_name, auth) => {
+    const store = createMemoryStore({ clients: [makeClient({ auth } as unknown as Partial<ClientRecord>)] });
+
+    expect((await store.findClient("client-a"))?.auth).toEqual(auth);
+  });
+
   it("should replace a client when addClient is called with the same id", async () => {
     const store = createMemoryStore({ clients: [makeClient()] });
 

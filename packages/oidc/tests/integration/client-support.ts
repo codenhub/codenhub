@@ -83,7 +83,7 @@ export async function setUp(options: SetUpOptions = {}): Promise<Harness> {
         redirectUris: [REDIRECT_URI],
         scopes: ["openid", "profile", "offline_access"],
         auth: confidential
-          ? { method: "client_secret_basic", secretHash: await hashClientSecret(clientSecret) }
+          ? { method: "client_secret_basic", secretHashes: [await hashClientSecret(clientSecret)] }
           : { method: "none" },
       },
     ],

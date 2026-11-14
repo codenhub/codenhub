@@ -2,7 +2,7 @@ import { generateKeyPair, type KeyPair } from "@codenhub/jwt";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { digestKey } from "../shared/encoding";
-import { MAX_BODY_BYTES, MAX_URL_LENGTH } from "../shared/limits";
+import { MAX_BODY_BYTES, MAX_PARAMETER_LENGTH, MAX_URL_LENGTH } from "../shared/limits";
 import { computeCodeChallenge } from "../shared/pkce";
 import type { OidcResult } from "../shared/types";
 import { createMemoryStore, type MemoryStore } from "../testing/memory-store";
@@ -226,10 +226,84 @@ describe("beginAuthorization", () => {
       expect(interaction.uiLocales).toBeUndefined();
     });
 
+    it("shouldReturnAcrValuesClaimsLocalesAndDisplayWhenRequested", async () => {
+      const interaction = await beginOk(
+        query({ acr_values: "urn:loa:2 urn:loa:1", claims_locales: "pt-BR en", display: "popup" }),
+      );
+      expect(interaction).toMatchObject({
+        acrValues: ["urn:loa:2", "urn:loa:1"],
+        claimsLocales: ["pt-BR", "en"],
+        display: "popup",
+      });
+    });
+
+    it("shouldSaveAcrValuesClaimsLocalesAndDisplayInTheInteractionRecord", async () => {
+      const saveSpy = vi.spyOn(store, "saveInteraction");
+      await beginOk(query({ acr_values: "urn:loa:2", claims_locales: "en", display: "wap" }));
+      expect(saveSpy.mock.calls[0]?.[1]).toMatchObject({
+        acrValues: ["urn:loa:2"],
+        claimsLocales: ["en"],
+        display: "wap",
+      });
+    });
+
+    it("shouldKeepAcrValuesInTheOrderTheClientPreferred", async () => {
+      const interaction = await beginOk(query({ acr_values: "c a b" }));
+      expect(interaction.acrValues).toEqual(["c", "a", "b"]);
+    });
+
+    it.each(["acr_values", "claims_locales"] as const)("shouldDropEmptyEntriesOf%s", async (name) => {
+      const interaction = await beginOk(query({ [name]: " a  b " }));
+      expect(interaction[name === "acr_values" ? "acrValues" : "claimsLocales"]).toEqual(["a", "b"]);
+    });
+
+    it.each(["acr_values", "claims_locales"] as const)("shouldTreat%sWithNoEntriesAsAbsent", async (name) => {
+      const interaction = await beginOk(query({ [name]: "  " }));
+      expect("acrValues" in interaction).toBe(false);
+      expect("claimsLocales" in interaction).toBe(false);
+    });
+
+    it.each(["page", "popup", "touch", "wap"] as const)("shouldReturnDisplay_%s", async (display) => {
+      const interaction = await beginOk(query({ display }));
+      expect(interaction.display).toBe(display);
+    });
+
+    it.each(["Page", "tablet", "", "page popup", " page"])("shouldIgnoreTheUnknownDisplayValue_%j", async (display) => {
+      const saveSpy = vi.spyOn(store, "saveInteraction");
+      const interaction = await beginOk(query({ display }));
+      expect("display" in interaction).toBe(false);
+      expect("display" in (saveSpy.mock.calls[0]?.[1] ?? {})).toBe(false);
+    });
+
+    it("shouldOmitAcrValuesClaimsLocalesAndDisplayWhenAbsent", async () => {
+      const saveSpy = vi.spyOn(store, "saveInteraction");
+      const interaction = await beginOk();
+      const keys = [...Object.keys(interaction), ...Object.keys(saveSpy.mock.calls[0]?.[1] ?? {})];
+      expect(keys).not.toContain("acrValues");
+      expect(keys).not.toContain("claimsLocales");
+      expect(keys).not.toContain("display");
+    });
+
+    it("shouldReturnAFrozenJsonSerializableInteractionWithTheNewHints", async () => {
+      const interaction = await beginOk(query({ acr_values: "a b", claims_locales: "en", display: "touch" }));
+      expect(Object.isFrozen(interaction)).toBe(true);
+      expect(Object.isFrozen(interaction.acrValues)).toBe(true);
+      expect(Object.isFrozen(interaction.claimsLocales)).toBe(true);
+      expect(JSON.parse(JSON.stringify(interaction))).toEqual(interaction);
+    });
+
+    it("shouldRenderInvalidRequestForAcrValuesLongerThanTheParameterLimit", async () => {
+      const failure = failureOf(
+        await beginAuthorization(options, getRequest(query({ acr_values: "a".repeat(MAX_PARAMETER_LENGTH + 1) }))),
+      );
+      expect(failure.redirect).toBeNull();
+      expect(failure.issues).toEqual([{ code: "invalid_request", params: { reason: "too_long" } }]);
+    });
+
     it("shouldIgnoreUnknownParameters", async () => {
       const result = await beginAuthorization(
         options,
-        getRequest(query({ claims: "{}", id_token_hint: "x", acr_values: "1", display: "page" })),
+        getRequest(query({ claims: "{}", id_token_hint: "x", request_foo: "1" })),
       );
       expect(result.ok).toBe(true);
     });
@@ -447,6 +521,70 @@ describe("completeAuthorization", () => {
     expect("nonce" in record).toBe(false);
   });
 
+  it("shouldCarrySessionIdIntoCodeRecord", async () => {
+    const saveSpy = vi.spyOn(store, "saveCode");
+    const interaction = await beginOk();
+    await completeAuthorization(options, interaction.id, { ...GRANT, sessionId: "session-42" });
+    expect(saveSpy.mock.calls[0]?.[1]).toMatchObject({ sessionId: "session-42" });
+  });
+
+  it("shouldOmitSessionIdFromCodeRecordWhenGrantOmitsIt", async () => {
+    const saveSpy = vi.spyOn(store, "saveCode");
+    const interaction = await beginOk();
+    await completeAuthorization(options, interaction.id, GRANT);
+    expect("sessionId" in (saveSpy.mock.calls[0]?.[1] ?? {})).toBe(false);
+  });
+
+  it.each([
+    ["an empty string", ""],
+    ["a number", 42],
+    ["a string with a space", "session 42"],
+    ["a string with a control character", `session${String.fromCharCode(7)}x`],
+    ["a string with a non-ASCII character", "sessão"],
+  ])("shouldThrowTypeErrorAndKeepInteractionForSessionIdThatIs%s", async (_name, sessionId) => {
+    const interaction = await beginOk();
+    const attempt = completeAuthorization(options, interaction.id, { ...GRANT, sessionId } as AuthorizationGrant);
+    await expect(attempt).rejects.toThrow(TypeError);
+    await expect(attempt).rejects.toThrow("outcome.sessionId");
+    const retry = await completeAuthorization(options, interaction.id, GRANT);
+    expect(retry.ok).toBe(true);
+  });
+
+  it("shouldGiveTheCodeTheClientsOwnLifetime", async () => {
+    store.addClient({ ...client, ttl: { code: 300 } });
+    const saveSpy = vi.spyOn(store, "saveCode");
+    const interaction = await beginOk();
+    await completeAuthorization(options, interaction.id, GRANT);
+    expect(saveSpy.mock.calls[0]?.[1]).toMatchObject({ expiresAt: NOW_SECONDS + 300 });
+  });
+
+  it("shouldKeepTheProviderInteractionLifetimeWhateverTheClientSets", async () => {
+    store.addClient({ ...client, ttl: { code: 300, accessToken: 120 } });
+    const saveSpy = vi.spyOn(store, "saveInteraction");
+    await beginOk();
+    expect(saveSpy.mock.calls[0]?.[1]).toMatchObject({ expiresAt: NOW_SECONDS + DEFAULT_INTERACTION_TTL });
+  });
+
+  it("shouldReturnNotFoundWhenTheClientWasRemovedDuringTheInteraction", async () => {
+    const interaction = await beginOk();
+    vi.spyOn(store, "findClient").mockResolvedValue(undefined);
+    const result = await completeAuthorization(options, interaction.id, GRANT);
+    expect(!result.ok && result.error.issues).toEqual([{ code: "interaction_not_found" }]);
+  });
+
+  it("shouldThrowTypeErrorWhenTheClientRecordHasAMalformedTtlAtCompletion", async () => {
+    const interaction = await beginOk();
+    store.addClient({ ...client, ttl: { code: 0 } });
+    await expect(completeAuthorization(options, interaction.id, GRANT)).rejects.toThrow(TypeError);
+  });
+
+  it("shouldNotReadTheClientToSendADenial", async () => {
+    const interaction = await beginOk();
+    const findSpy = vi.spyOn(store, "findClient");
+    await completeAuthorization(options, interaction.id, { error: "access_denied" });
+    expect(findSpy).not.toHaveBeenCalled();
+  });
+
   it("shouldSetMaxAgeRequestedWhenMaxAgeWasSent", async () => {
     const saveSpy = vi.spyOn(store, "saveCode");
     const interaction = await beginOk(query({ max_age: "300" }));
@@ -578,5 +716,104 @@ describe("completeAuthorization", () => {
     const error = await completeAuthorization(options, interaction.id, outcome).catch((caught: unknown) => caught);
     expect(error).toBeInstanceOf(TypeError);
     expect((error as Error).message).not.toContain("leak-me-authtime");
+  });
+});
+
+describe("requirePkce", () => {
+  const NONCE = "nonce-0S6_WzA2Mj";
+  // The S256 challenge of RFC 7636 Appendix B, valid in shape and fixed at collection time.
+  const RFC_CHALLENGE = "E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM";
+  const confidential = (requirePkce?: boolean): ClientRecord => ({
+    clientId: "confidential",
+    redirectUris: [REDIRECT_URI],
+    scopes: ["openid", "profile"],
+    auth: { method: "client_secret_basic", secretHashes: ["hash"] },
+    ...(requirePkce === undefined ? {} : { requirePkce }),
+  });
+  const withoutPkce = (overrides: Readonly<Record<string, string | null>> = {}): string =>
+    query({ client_id: "confidential", code_challenge: null, code_challenge_method: null, nonce: NONCE, ...overrides });
+
+  beforeEach(() => {
+    store = createMemoryStore({ clients: [client, confidential(false), { ...confidential(), clientId: "strict" }] });
+    options = resolveOptions({
+      issuer: ISSUER,
+      signingKeys: [keyPair],
+      store,
+      claims: () => ({}),
+      now: () => clockMs,
+    });
+  });
+
+  it("shouldAcceptARequestWithNoChallengeButANonceFromAClientThatTurnedPkceOff", async () => {
+    const saveSpy = vi.spyOn(store, "saveInteraction");
+
+    const interaction = await beginOk(withoutPkce());
+
+    const [, record] = saveSpy.mock.calls[0] ?? [];
+    expect(interaction.clientId).toBe("confidential");
+    expect(record).toMatchObject({ nonce: NONCE });
+    expect("codeChallenge" in (record ?? {})).toBe(false);
+  });
+
+  it("shouldCarryNoChallengeIntoTheCodeRecord", async () => {
+    const saveSpy = vi.spyOn(store, "saveCode");
+    const interaction = await beginOk(withoutPkce());
+
+    await completeAuthorization(options, interaction.id, GRANT);
+
+    const record = saveSpy.mock.calls[0]?.[1];
+    expect(record).toMatchObject({ clientId: "confidential", nonce: NONCE });
+    expect("codeChallenge" in (record ?? {})).toBe(false);
+  });
+
+  it.each([
+    ["no nonce", { nonce: null }],
+    ["an empty nonce", { nonce: "" }],
+  ])("shouldRedirectInvalidRequestForNoChallengeAnd%s", async (_name, overrides) => {
+    const failure = failureOf(await beginAuthorization(options, getRequest(withoutPkce(overrides))));
+
+    expect(failure.issues).toEqual([{ code: "invalid_request", path: ["nonce"] }]);
+    expectErrorRedirect(failure.redirect, "invalid_request");
+  });
+
+  it("shouldRefuseAChallengeMethodWithoutAChallenge", async () => {
+    const failure = failureOf(
+      await beginAuthorization(options, getRequest(withoutPkce({ code_challenge_method: "S256" }))),
+    );
+
+    expect(failure.issues).toEqual([{ code: "invalid_request", path: ["code_challenge"] }]);
+    expectErrorRedirect(failure.redirect, "invalid_request");
+  });
+
+  it.each([
+    ["a malformed challenge", { code_challenge: "too-short" }, "code_challenge"],
+    ["plain PKCE", { code_challenge: RFC_CHALLENGE, code_challenge_method: "plain" }, "code_challenge_method"],
+    [
+      "a challenge with no method",
+      { code_challenge: RFC_CHALLENGE, code_challenge_method: null },
+      "code_challenge_method",
+    ],
+  ])("shouldStillEnforceAChallengeThatIsSentWith%s", async (_name, overrides, path) => {
+    const failure = failureOf(await beginAuthorization(options, getRequest(withoutPkce(overrides))));
+
+    expect(failure.issues).toEqual([{ code: "invalid_request", path: [path] }]);
+  });
+
+  it("shouldAcceptAValidChallengeFromAClientThatTurnedPkceOffAndKeepIt", async () => {
+    const saveSpy = vi.spyOn(store, "saveInteraction");
+
+    await beginOk(withoutPkce({ code_challenge: RFC_CHALLENGE, code_challenge_method: "S256", nonce: null }));
+
+    expect(saveSpy.mock.calls[0]?.[1]).toMatchObject({ codeChallenge: RFC_CHALLENGE });
+  });
+
+  it.each([
+    ["a confidential client that left the default", "strict"],
+    ["a public client", CLIENT_ID],
+  ])("shouldStillRequireAChallengeFor%s", async (_name, clientId) => {
+    const failure = failureOf(await beginAuthorization(options, getRequest(withoutPkce({ client_id: clientId }))));
+
+    expect(failure.issues).toEqual([{ code: "invalid_request", path: ["code_challenge"] }]);
+    expectErrorRedirect(failure.redirect, "invalid_request");
   });
 });

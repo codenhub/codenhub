@@ -1,5 +1,17 @@
+import type { AsymmetricAlgorithm } from "@codenhub/jwt";
+
 import { isRedirectUri } from "../shared/urls";
+import { CLIENT_TTL_NAMES, describeTtlRange, isTtlInRange, type ResolvedTtl } from "./options";
 import type { ClientRecord, GrantType } from "./types";
+
+/** Every algorithm a signing key may have; a `Record`, so a new `@codenhub/jwt` algorithm fails to compile here. */
+const ID_TOKEN_ALGORITHMS: Readonly<Record<AsymmetricAlgorithm, true>> = {
+  ES256: true,
+  EdDSA: true,
+  Ed25519: true,
+  RS256: true,
+  PS256: true,
+};
 
 const AUTH_METHODS = new Set([
   "none",
@@ -12,8 +24,8 @@ const AUTH_METHODS = new Set([
 const GRANT_TYPES: ReadonlySet<unknown> = new Set<GrantType>(["authorization_code", "client_credentials"]);
 const DEFAULT_GRANT_TYPES: readonly GrantType[] = Object.freeze(["authorization_code"]);
 
-/** A client record that passed {@link checkClientRecord}, with its grants resolved. */
-export type CheckedClient = ClientRecord & { readonly grantTypes: readonly GrantType[] };
+/** A client record that passed {@link checkClientRecord}, with its grants and PKCE requirement resolved. */
+export type CheckedClient = ClientRecord & { readonly grantTypes: readonly GrantType[]; readonly requirePkce: boolean };
 
 const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === "object" && value !== null;
 
@@ -28,9 +40,16 @@ const invalid = (requirement: string): never => {
  * Checks a client record the store returned for the client it was asked for. The store is the app's own
  * code, so a malformed record is a programmer error and throws rather than failing the request.
  *
+ * @param record - What the store returned.
+ * @param clientId - The client that was looked up.
+ * @param signingKeys - The provider's signing keys, one of which the record's `idTokenSigningAlg` must name.
  * @throws {TypeError} When the record is malformed or names another client.
  */
-export function checkClientRecord(record: unknown, clientId: string): CheckedClient {
+export function checkClientRecord(
+  record: unknown,
+  clientId: string,
+  signingKeys: readonly { readonly alg: string }[],
+): CheckedClient {
   if (!isRecord(record) || record.clientId !== clientId) {
     return invalid("must be an object whose clientId is the one looked up");
   }
@@ -54,9 +73,9 @@ export function checkClientRecord(record: unknown, clientId: string): CheckedCli
   }
   if (
     (auth.method === "client_secret_basic" || auth.method === "client_secret_post") &&
-    (typeof auth.secretHash !== "string" || auth.secretHash === "")
+    (!isStringArray(auth.secretHashes) || auth.secretHashes.length === 0)
   ) {
-    return invalid("must carry a non-empty auth.secretHash for a client secret method");
+    return invalid("must carry a non-empty auth.secretHashes list of non-empty strings for a client secret method");
   }
   if (auth.method === "client_secret_jwt" && !isRecord(auth.key)) {
     return invalid("must carry auth.key for client_secret_jwt");
@@ -73,8 +92,57 @@ export function checkClientRecord(record: unknown, clientId: string): CheckedCli
   if (auth.method === "none" && grantTypes.includes("client_credentials")) {
     return invalid("must not allow client_credentials to a client whose auth.method is none");
   }
-  // Resolved here, so every endpoint reads the list without repeating the default.
-  return { ...(record as unknown as ClientRecord), grantTypes };
+  checkTtl(record.ttl);
+  const { idTokenSigningAlg } = record;
+  if (
+    idTokenSigningAlg !== undefined &&
+    (typeof idTokenSigningAlg !== "string" ||
+      !Object.hasOwn(ID_TOKEN_ALGORITHMS, idTokenSigningAlg) ||
+      !signingKeys.some((key) => key.alg === idTokenSigningAlg))
+  ) {
+    return invalid("must name, as idTokenSigningAlg, the algorithm of one of the provider's signing keys");
+  }
+  const { requirePkce } = record;
+  if (requirePkce !== undefined && typeof requirePkce !== "boolean") {
+    return invalid("must give requirePkce, when present, as a boolean");
+  }
+  if (requirePkce === false && auth.method === "none") {
+    return invalid("must not turn requirePkce off for a client whose auth.method is none");
+  }
+  // Resolved here, so every endpoint reads the list and the flag without repeating the default.
+  return { ...(record as unknown as ClientRecord), grantTypes, requirePkce: requirePkce ?? true };
+}
+
+/**
+ * Checks a client's own lifetimes, each held to the bounds of the provider's option of the same name. Only
+ * `undefined` leaves a lifetime to the provider, so an explicit `null` is refused like any other non-integer.
+ */
+function checkTtl(ttl: unknown): void {
+  if (ttl === undefined) {
+    return;
+  }
+  if (!isRecord(ttl) || Array.isArray(ttl)) {
+    invalid("must give ttl, when present, as an object");
+  }
+  const lifetimes = ttl as Record<string, unknown>;
+  for (const name of CLIENT_TTL_NAMES) {
+    if (lifetimes[name] !== undefined && !isTtlInRange(name, lifetimes[name])) {
+      invalid(`must give ttl.${name}, when present, as ${describeTtlRange(name)}`);
+    }
+  }
+}
+
+/** The lifetimes for tokens of `client`: its own where its record sets them, the provider's otherwise. */
+export function lifetimesOf(provider: ResolvedTtl, client: ClientRecord): ResolvedTtl {
+  const own = client.ttl;
+  return own === undefined
+    ? provider
+    : {
+        ...provider,
+        ...Object.fromEntries(
+          CLIENT_TTL_NAMES.filter((name) => own[name] !== undefined).map((name) => [name, own[name]]),
+        ),
+      };
 }
 
 /** The client's grants, or the default when the record has none. */
