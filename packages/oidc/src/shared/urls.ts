@@ -41,8 +41,8 @@ function hasDoubleSlashAfterScheme(value: string, url: URL): boolean {
 }
 
 /**
- * Tests whether a value is an absolute `https:` URL of visible ASCII, with exactly `//` after the scheme, no credentials
- * and no fragment. A backslash is refused too, since special schemes read it as a slash.
+ * Tests whether a value is an absolute `https:` URL of visible ASCII, with exactly `//` after the scheme, no
+ * credentials and no fragment. A backslash is refused too, since special schemes read it as a slash.
  *
  * A `#` anywhere in the string counts as a fragment, even an empty one, because the URL parser drops
  * an empty fragment and the caller should still see it as present.
@@ -62,8 +62,9 @@ export function isHttpsUrl(value: unknown): value is string {
  * no fragment.
  *
  * Any scheme is accepted except those a browser would execute, since native apps register custom schemes. A
- * special scheme must be followed by exactly `//`, as in `https://`; a custom scheme such as `com.example.app:/callback`
- * may have one slash. A backslash is refused too, since special schemes read it as a slash.
+ * special scheme must be followed by exactly `//`, as in `https://`; a custom scheme such as
+ * `com.example.app:/callback` may have one slash. A backslash is refused too, since special schemes read it as a
+ * slash.
  */
 export function isRedirectUri(value: unknown): value is string {
   if (typeof value !== "string" || value.includes("#") || hasDisallowedUrlCharacter(value) || !URL.canParse(value)) {

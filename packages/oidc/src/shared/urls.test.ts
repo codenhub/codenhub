@@ -115,12 +115,16 @@ describe("isRedirectUri", () => {
     },
   );
 
-  it.each(["https:///cb", "https:////cb/x", "http:///127.0.0.1/cb"])(
-    "refusesExtraSlashAfterScheme_%s, which the URL parser reads as a host the string does not hold",
-    (value) => {
-      expect(isRedirectUri(value)).toBe(false);
-    },
-  );
+  it.each([
+    "https:///cb",
+    "https:////cb/x",
+    "http:///127.0.0.1/cb",
+    "ws:///app.test/cb",
+    "wss:///app.test/cb",
+    "ftp:///app.test/cb",
+  ])("refusesExtraSlashAfterScheme_%s, which the URL parser reads as a host the string does not hold", (value) => {
+    expect(isRedirectUri(value)).toBe(false);
+  });
 
   it("refusesBackslashInRedirectUri", () => {
     expect(isRedirectUri("https://app.test\\evil.com/cb")).toBe(false);
