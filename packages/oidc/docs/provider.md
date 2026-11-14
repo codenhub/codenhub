@@ -48,6 +48,7 @@ export async function createSsoProvider() {
 | `endpoints`    | The URLs of the authorization, end-session, token, userinfo, JWKS and revocation endpoints. See [Endpoints](#endpoints).                                               | Paths under the issuer      |
 | `onDiagnostic` | Called with the reason each token, userinfo or revocation request is refused with an OAuth error response. See [Diagnostics](#diagnostics).                            | None                        |
 | `onRefresh`    | Asked before each refresh issues tokens, so the app can end a family whose user is no longer entitled to it. See [Re-checking a refresh](#re-checking-a-refresh).      | Every refresh is issued     |
+| `subjectTypes` | The subject identifier types discovery advertises, `public`, `pairwise` or both. The app derives the subjects. See [Pairwise subjects](#pairwise-subjects).            | `["public"]`                |
 | `now`          | The current time in milliseconds since the Unix epoch. For tests.                                                                                                      | `Date.now`                  |
 
 `createProvider` throws `TypeError` when:
@@ -57,6 +58,7 @@ export async function createSsoProvider() {
 - `store` is not an object, or one of its methods is not a function. The message names the first missing method, such as `store.findClient`.
 - `claims` is not a function, or `now`, `onDiagnostic` or `onRefresh` is given and is not a function.
 - `accessToken` is not `{ format: "opaque" }` or `{ format: "jwt", audience }`, or its `audience` is missing, empty or not well-formed Unicode. The message names `accessToken.format` or `accessToken.audience`.
+- `subjectTypes` is not a non-empty array of `public` and `pairwise`, or repeats one.
 - A lifetime is outside its range, an endpoint is not an `https` URL, two endpoints share an origin and path, or `scopes` breaks the rules under [Scopes](#scopes).
 
 ### Signing keys
@@ -181,7 +183,7 @@ Each value is an absolute `https` URL of visible ASCII (no spaces, control or no
 
 - `issuer`, the endpoint URLs (`end_session_endpoint` among them), and `scopes_supported`, which lists the scopes the provider defines: the standard ones and those of the `scopes` option, not a scope that only a client record lists.
 - `response_types_supported`: `["code"]`. `response_modes_supported`: `["query"]`.
-- `grant_types_supported`: `["authorization_code", "refresh_token", "client_credentials"]`. `subject_types_supported`: `["public"]`.
+- `grant_types_supported`: `["authorization_code", "refresh_token", "client_credentials"]`. `subject_types_supported`: the `subjectTypes` option, `["public"]` by default.
 - `id_token_signing_alg_values_supported`: the algorithms of every published key.
 - `token_endpoint_auth_methods_supported`: `client_secret_basic`, `client_secret_post`, `client_secret_jwt`, `private_key_jwt` and `none`. `token_endpoint_auth_signing_alg_values_supported`: `ES256`, `EdDSA`, `Ed25519`, `RS256`, `PS256` and `HS256`. The revocation endpoint publishes the same two lists as `revocation_endpoint_auth_methods_supported` and `revocation_endpoint_auth_signing_alg_values_supported`, and `revocation_endpoint` holds its URL.
 - `claims_supported`: the ID token's claims, `sid` among them, and every claim the scopes release.
@@ -392,6 +394,31 @@ The method throws `TypeError` in two cases, and they are different:
 
 - **The outcome is the wrong shape**, such as a non-empty `subject` missing, an `authTime` that is not a non-negative integer, a `sessionId` that is empty or not visible ASCII, or a denial with extra members. This is checked before the interaction is taken, so the interaction is still usable and the app can fix the call and retry.
 - **The outcome contradicts the request**: scopes the client did not request or no `openid`, an `authTime` in the future, an `authTime` before the interaction under `prompt=login`, or an `authTime` more than the requested `max_age` seconds before the request. The interaction has already been taken at this point, so it is gone. The app must restart the sign-in. These are bugs in the login flow, and the package refuses them rather than issue a code that would skip the step the client asked for.
+
+### Pairwise subjects
+
+A public subject is the same for every client, so two clients can tell they serve the same user by comparing `sub`. A pairwise subject is different for each client, or each group of clients the app treats as one (OpenID Connect Core §8). The provider never derives a subject: it issues whatever `subject` the app passes to `completeAuthorization`. Pairwise subjects are therefore the app's to derive, and `subjectTypes: ["public", "pairwise"]`, or `["pairwise"]` when every client gets one, only advertises them in discovery. The provider does not check that a subject is pairwise, or that the app derived it for the right client.
+
+OpenID Connect Core §8.1 derives a pairwise subject from a sector identifier, the user's local identifier and a secret salt, with a function that cannot be reversed without the salt. The sector identifier is the host of the client's redirect URIs; clients the app wants to share a subject, such as a web app and its API, share a sector identifier. A keyed hash fits:
+
+```ts
+declare const pairwiseKey: CryptoKey; // an HMAC SHA-256 key, from the app's secret store
+
+/** The subject a client in `sector` sees for the user `userId`. */
+async function pairwiseSubject(sector: string, userId: string): Promise<string> {
+  // The NUL separator keeps "a.example" + "b1" apart from "a.exampleb" + "1".
+  const data = new TextEncoder().encode(`${sector}\u0000${userId}`);
+  const mac = new Uint8Array(await crypto.subtle.sign("HMAC", pairwiseKey, data));
+  return btoa(String.fromCharCode(...mac))
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_")
+    .replace(/=+$/, "");
+}
+```
+
+Keep the key secret and never rotate it while subjects derived from it are in use: a new key gives every user a new subject, which each client sees as a new account. Use the same subject everywhere the provider expects the user of that client: `completeAuthorization`, and the `subject` of [`backchannelLogout`](#back-channel-logout). The provider hands the same value back wherever it names the user, to `claims`, `onRefresh`, `accessTokenClaims` and in the record `authenticate` returns, and a keyed hash cannot be reversed, so keep a table from each pairwise subject to the user it stands for. A `client_credentials` token's subject is the client identifier either way.
+
+Which clients get pairwise subjects is the app's choice, kept with its own client data: a client record has no subject type, since the provider never reads one.
 
 ## Ending sessions
 
