@@ -31,6 +31,15 @@ describe("check", () => {
     );
   });
 
+  it("should reject a path index that is not a whole number of zero or more, and params that are no object", () => {
+    expect(() => check(() => true, { path: [-1] })).toThrow(
+      new TypeError("issue.path must be a list of keys and indexes"),
+    );
+    expect(() => check(() => true, { params: "x" as never })).toThrow(
+      new TypeError("issue.params must be a plain object"),
+    );
+  });
+
   it("should reject a list given as its issue, which would be read as one that says nothing", () => {
     expect(() => check(() => false, [{ code: "x" }] as never)).toThrow(
       new TypeError("issue must be a message or an issue object"),

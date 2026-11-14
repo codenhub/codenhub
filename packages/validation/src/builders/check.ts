@@ -1,5 +1,13 @@
 import { CHECKS } from "../core/check-run";
-import { assertFunction, assertIssue, assertOption, isPath, toIssue, type IssueInput } from "../core/result";
+import {
+  assertFunction,
+  assertIssue,
+  assertOption,
+  assertParams,
+  isPath,
+  toIssue,
+  type IssueInput,
+} from "../core/result";
 import { carry, word } from "../core/rule";
 import { isThenable } from "../core/thenable";
 import type { AsyncCheck, Check, Message, ValidationIssue } from "../core/types";
@@ -79,8 +87,9 @@ const answered = (
  * location. Its message also words the issues of a list that have none.
  * @returns A check that reports the issue when `test` returns `false`, or the issues it returns.
  * @throws {TypeError} When `test` is not a function, or `issue` is neither a message nor an issue: an
- * object that is not a list, whose `code` and `message` are text when given, and whose `path` is a list. From the returned check,
- * when `test` returns neither a boolean nor a list of issues.
+ * object that is not a list, whose `code` and `message` are text when given, whose `path` is a list of keys
+ * and indexes, each index an integer of zero or more, when given, and whose `params` is a plain object when
+ * given. From the returned check, when `test` returns neither a boolean nor a list of issues.
  */
 export function check<T>(test: (value: T) => CheckAnswer, issue?: IssueInput | Message): Check<T>;
 export function check<T>(
@@ -106,6 +115,7 @@ export function check<T>(
   if (path !== undefined && !isPath(path)) {
     throw new TypeError("issue.path must be a list of keys and indexes");
   }
+  assertParams(params);
   // Copied and frozen once, so neither the caller nor a result can change what a later failure reports.
   // The freeze is shallow: an object nested in params is the caller's own.
   const reported: IssueInput = {

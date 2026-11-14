@@ -36,6 +36,24 @@ describe("fail", () => {
     );
   });
 
+  it("should reject a path holding an index that is negative or not an integer, which no list has", () => {
+    for (const index of [-1, 0.5, Number.NaN, Number.POSITIVE_INFINITY]) {
+      expect(() => fail({ path: ["items", index] })).toThrow(
+        new TypeError("issue.path must be a list of keys and indexes"),
+      );
+    }
+    expect(fail({ path: ["items", 0, 3] }).error.issues[0]?.path).toEqual(["items", 0, 3]);
+  });
+
+  it("should reject params that are not a plain object, which a message would read as undefined", () => {
+    for (const params of [null, "x", [1], 1]) {
+      expect(() => fail({ code: "too_small", params: params as never })).toThrow(
+        new TypeError("issue.params must be a plain object"),
+      );
+    }
+    expect(fail({ params: Object.create(null) as Record<string, unknown> }).ok).toBe(false);
+  });
+
   it("should reject a path with a hole, which holds no key or index", () => {
     // oxlint-disable-next-line unicorn/no-new-array -- a sparse list is the subject of the test
     expect(() => fail({ path: new Array(1) })).toThrow(new TypeError("issue.path must be a list of keys and indexes"));

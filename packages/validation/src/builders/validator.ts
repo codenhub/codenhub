@@ -45,8 +45,9 @@ export type ValidatedValue<TReturn> = Extract<Awaited<TReturn>, { ok: true; valu
  * promise.
  * @throws {TypeError} When `validate` is not a function. From the returned validator, when `validate`
  * returns something that is not a result, a failure without issues, or an issue `fail()` would refuse: one
- * that is not an object, with a `code` or `message` that is not text, or a `path` that is not a list of
- * keys and indexes.
+ * that is not an object or is a list, with a `code` or `message` that is not text, a `path` that is not a
+ * list of keys and indexes or holds an index that is negative or not an integer, or `params` that is not a
+ * plain object.
  */
 // One signature and not one for each of the two kinds, as the factories have: given two, the compiler reads
 // `{ ok: true, value }` returned by an asynchronous function as `{ ok: boolean }` and matches neither.
