@@ -12,10 +12,6 @@ export type CheckAnswer = boolean | readonly IssueInput[];
 
 /** An issue the test wrote, as the result holds it. */
 function written(each: unknown): ValidationIssue {
-  if (Array.isArray(each)) {
-    // The issues listed twice, as in `[issues]`, which would be read as one issue that says nothing.
-    throw new TypeError("An issue must be an object, received a list");
-  }
   assertIssue(each);
   return toIssue(each);
 }
@@ -82,8 +78,8 @@ const answered = (
  * function of the issue, as a built-in check takes. Defaults to code `"custom"` at the value's own
  * location. Its message also words the issues of a list that have none.
  * @returns A check that reports the issue when `test` returns `false`, or the issues it returns.
- * @throws {TypeError} When `test` is not a function, or `issue` is neither a message nor an issue: one
- * whose `code` and `message` are text when given, and whose `path` is a list. From the returned check,
+ * @throws {TypeError} When `test` is not a function, or `issue` is neither a message nor an issue: an
+ * object that is not a list, whose `code` and `message` are text when given, and whose `path` is a list. From the returned check,
  * when `test` returns neither a boolean nor a list of issues.
  */
 export function check<T>(test: (value: T) => CheckAnswer, issue?: IssueInput | Message): Check<T>;
@@ -100,7 +96,8 @@ export function check<T>(
     // Worded when it fails, from the issue, as a built-in check's message function is.
     return carry<AsyncCheck<T>>((value) => answered(test(value), () => word([toIssue({})], issue), issue), CHECKS);
   }
-  if (typeof issue !== "string" && (typeof issue !== "object" || issue === null)) {
+  // A list, as in `[{ code: "x" }]`, would be read as an issue that says nothing.
+  if (typeof issue !== "string" && (typeof issue !== "object" || issue === null || Array.isArray(issue))) {
     throw new TypeError("issue must be a message or an issue object");
   }
   const { path, params, ...rest } = typeof issue === "string" ? { message: issue } : issue;

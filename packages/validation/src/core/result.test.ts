@@ -22,6 +22,14 @@ describe("fail", () => {
     expect(() => fail(null as never)).toThrow(new TypeError("An issue must be an object, received null"));
   });
 
+  it("should reject a list given in place of its issues, which would be read as one that says nothing", () => {
+    const issues = [{ code: "too_short", path: ["name"] }];
+    expect(() => fail(issues as never)).toThrow(new TypeError("An issue must be an object, received a list"));
+    expect(() => fail({ code: "a" }, issues as never)).toThrow(
+      new TypeError("An issue must be an object, received a list"),
+    );
+  });
+
   it("should reject a path holding a symbol, which no path or field name can write", () => {
     expect(() => fail({ path: ["a", Symbol("b")] as never })).toThrow(
       new TypeError("issue.path must be a list of keys and indexes"),

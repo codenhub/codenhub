@@ -38,7 +38,7 @@ El segundo argumento es el problema que se reporta cuando la prueba devuelve `fa
 
 - Una cadena es su mensaje.
 - Una función del problema lo redacta en el momento en que se reporta, como hace el mensaje de una verificación integrada. Debe devolver texto; si no, el validador lanza un `TypeError` al reportar el problema.
-- Un objeto puede definir `code`, `path`, `params` y `message`. Un `path` es una lista de claves e índices. Cualquier otra cosa, como texto o un símbolo, lanza un `TypeError` cuando se crea la verificación.
+- Un objeto puede definir `code`, `path`, `params` y `message`. Un `path` es una lista de claves e índices, y un `path` de texto o que contiene un símbolo lanza un `TypeError` cuando se crea la verificación. También lo lanza una lista pasada como el problema.
 
 Sin código, el problema tiene el código `custom`, en la ubicación del propio valor. Un problema sin mensaje propio lo redacta la opción `message` del validador al que se pasa la verificación, si la tiene. Si no, solo queda su código, y `formatIssue` dice "Invalid value". Así que dale un mensaje a una verificación siempre que haya personas que lean lo que reporta.
 
@@ -160,7 +160,7 @@ Un compositor recibe una función escrita a mano solo a través de `validator`. 
 | `params`  | Datos sobre la falla, para construir un mensaje o para que quienes llaman los inspeccionen. Nunca pongas la entrada aquí: un problema es algo que quienes llaman registran en logs. |
 | `message` | Texto fijo del mensaje. Sin él, [`formatIssue`](./errors.md#convertir-un-problema-en-texto) construye el texto a partir de `code` y `params`.                                       |
 
-`fail` lanza un `TypeError` si no recibe ningún problema, ya que una falla sin problemas no dice nada. También lo lanza para un `path` que no es una lista, como `"confirm"` cuando se quería `["confirm"]`, que se dividiría en un segmento por letra.
+`fail` lanza un `TypeError` si no recibe ningún problema, ya que una falla sin problemas no dice nada. También lo lanza para un `path` que no es una lista, como `"confirm"` cuando se quería `["confirm"]`, que se dividiría en un segmento por letra, y para una lista pasada como problema, como `fail(issues)` cuando se quería `fail(...issues)`, que se leería como un solo problema que no dice nada.
 
 ### Una función que no es un validador
 

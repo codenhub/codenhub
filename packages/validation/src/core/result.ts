@@ -56,9 +56,10 @@ export const isPath = (path: unknown): boolean =>
  *
  * @param issues - What went wrong. Each defaults to code `"custom"` and to the value's own location.
  * @returns A failed result holding every issue, in order.
- * @throws {TypeError} When called without an issue, with a `path` that is not a list of keys and
- * indexes, such as `"confirm"`, which would be split into one segment per letter, or with a `code` or
- * `message` that is not text. The types forbid all of them.
+ * @throws {TypeError} When called without an issue, with an issue that is not an object or is a list,
+ * as in `fail(issues)` for `fail(...issues)`, with a `path` that is not a list of keys and indexes, such
+ * as `"confirm"`, which would be split into one segment per letter, or with a `code` or `message` that is
+ * not text. The types forbid all of them.
  */
 export function fail(...issues: [IssueInput, ...IssueInput[]]): ValidationErr {
   if (issues.length === 0) {
@@ -70,13 +71,18 @@ export function fail(...issues: [IssueInput, ...IssueInput[]]): ValidationErr {
 }
 
 /**
- * Rejects an issue written by hand that is not one: not an object, or with a `code` or `message` that is
- * not text, or a `path` that is not a list of keys and indexes. An issue is plain data a form or a log
- * shows, so a number as its message, or a symbol in its path, would surface as a bug far from its cause.
+ * Rejects an issue written by hand that is not one: not an object, a list, or with a `code` or `message`
+ * that is not text, or a `path` that is not a list of keys and indexes. An issue is plain data a form or a
+ * log shows, so a number as its message, or a symbol in its path, would surface as a bug far from its
+ * cause, and a list of issues given in place of them, as in `fail(issues)`, would be read as one issue
+ * that says nothing, losing every issue in it.
  */
 export function assertIssue(each: unknown): asserts each is IssueInput {
   if (typeof each !== "object" || each === null) {
     throw new TypeError(`An issue must be an object, received ${each === null ? "null" : typeof each}`);
+  }
+  if (Array.isArray(each)) {
+    throw new TypeError("An issue must be an object, received a list");
   }
   const { code, message, path } = each as IssueInput;
   assertOption("issue.code", code, "string");

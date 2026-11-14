@@ -35,7 +35,7 @@ A validator takes no other function as a check: what runs a check comes with `ch
 
 **Returns** — A check that reports the issue when `test` returns `false`, or the issues it returns.
 
-**Throws** — `TypeError` — When `test` is not a function, or `issue` is neither a message nor an issue: one whose `code` and `message` are text when given, and whose `path` is a list. From the returned check, when `test` returns neither a boolean nor a list of issues.
+**Throws** — `TypeError` — When `test` is not a function, or `issue` is neither a message nor an issue: an object that is not a list, whose `code` and `message` are text when given, and whose `path` is a list. From the returned check, when `test` returns neither a boolean nor a list of issues.
 
 **Example**
 

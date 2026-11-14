@@ -92,6 +92,7 @@ describe("validator", () => {
     );
     expect(() => failing([{ code: 1 }])(1)).toThrow(TypeError);
     expect(() => failing([{ message: ["no"] }])(1)).toThrow(TypeError);
+    expect(() => failing([[{ code: "a" }]])(1)).toThrow(new TypeError("An issue must be an object, received a list"));
     // oxlint-disable-next-line no-sparse-arrays
     expect(() => failing([, { code: "a" }])(1)).toThrow(
       new TypeError("An issue must be an object, received undefined"),
