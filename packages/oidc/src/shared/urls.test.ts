@@ -28,6 +28,13 @@ describe("isHttpsUrl", () => {
     },
   );
 
+  it.each(["https:///example.com/cb", "https:////example.com/cb", "HTTPS:///example.com"])(
+    "refusesExtraSlashAfterScheme_%s, which the URL parser reads as a host the string does not hold",
+    (value) => {
+      expect(isHttpsUrl(value)).toBe(false);
+    },
+  );
+
   it("shouldAcceptUppercaseSchemeWithDoubleSlash", () => {
     expect(isHttpsUrl("HTTPS://provider.test/authorize")).toBe(true);
   });
@@ -103,6 +110,13 @@ describe("isRedirectUri", () => {
 
   it.each(["JavaScript:alert(1)", "DATA:text/html,hi", "VbScript:msgbox", "FILE:///etc/passwd"])(
     "shouldRejectMixedCaseDangerousScheme_%s",
+    (value) => {
+      expect(isRedirectUri(value)).toBe(false);
+    },
+  );
+
+  it.each(["https:///cb", "https:////cb/x", "http:///127.0.0.1/cb"])(
+    "refusesExtraSlashAfterScheme_%s, which the URL parser reads as a host the string does not hold",
     (value) => {
       expect(isRedirectUri(value)).toBe(false);
     },
