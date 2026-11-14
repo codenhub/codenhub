@@ -1329,7 +1329,7 @@ Whether the logout token can carry `sid` (OpenID Connect Back-Channel Logout 1.0
 readonly backchannel_logout_supported?: boolean;
 ```
 
-Whether the provider can send back-channel logout requests (OpenID Connect Back-Channel Logout 1.0 §2.1).
+Whether the provider supports back-channel logout (OpenID Connect Back-Channel Logout 1.0 §2.1).
 
 #### ProviderMetadata › claims\_parameter\_supported
 
