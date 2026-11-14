@@ -333,12 +333,12 @@
         "check": {
           "files": {
             "dist/index.js": {
-              "bytes": 4260,
+              "bytes": 4265,
               "declarations": {
                 "check": 557,
                 "runChecks$1": 321,
                 "assertIssue": 298,
-                "answered": 254,
+                "answered": 259,
                 "adopt": 202,
                 "wait$1": 185,
                 "join": 183,
@@ -383,19 +383,19 @@
               "bytes": 19
             }
           },
-          "gzip": 1677,
-          "minified": 4279
+          "gzip": 1680,
+          "minified": 4284
         },
         "checkFields": {
           "files": {
             "dist/index.js": {
-              "bytes": 5623,
+              "bytes": 5628,
               "declarations": {
                 "check": 557,
                 "checkFields": 385,
                 "runChecks$1": 321,
                 "assertIssue": 298,
-                "answered": 254,
+                "answered": 259,
                 "fieldChecksOf": 226,
                 "adopt": 202,
                 "fieldFailure": 195,
@@ -449,8 +449,8 @@
               "bytes": 25
             }
           },
-          "gzip": 2152,
-          "minified": 5648
+          "gzip": 2155,
+          "minified": 5653
         },
         "cidr": {
           "files": {
@@ -1329,12 +1329,12 @@
               "declarations": {
                 "split": 474,
                 "emailOf": 447,
-                "partsFormat": 442,
+                "partsFormat": 443,
                 "describeType$2": 365,
                 "nested": 337,
-                "settle": 285,
+                "settle": 284,
                 "limitIn": 239,
-                "runOf": 220,
+                "runOf": 219,
                 "addressOf": 207,
                 "isPlainObject": 205,
                 "toValidator": 204,
@@ -1368,14 +1368,14 @@
                 "isLimit": 77,
                 "EMAIL_LOCAL_PATTERN": 72,
                 "assertParts": 66,
-                "weightSince": 66,
                 "issue": 65,
+                "weightSince": 65,
                 "accepter": 59,
                 "refuse": 58,
-                "after$1": 55,
+                "after$1": 56,
                 "notFormat": 49,
                 "wordsIn": 45,
-                "toolsOf": 40,
+                "toolsOf": 41,
                 "NUMERIC_HOST_PATTERN": 38,
                 "ownRun": 38,
                 "NUMERIC_LAST_LABEL_PATTERN": 35,
@@ -2455,10 +2455,10 @@
                 "fromPunycode": 527,
                 "split": 474,
                 "emailOf": 447,
-                "partsFormat": 443,
+                "partsFormat": 444,
                 "describeType$2": 365,
                 "nested": 337,
-                "settle": 285,
+                "settle": 284,
                 "keepsRule": 240,
                 "limitIn": 239,
                 "runOf": 219,
@@ -2507,10 +2507,10 @@
                 "EMAIL_LOCAL_PATTERN": 72,
                 "LEFT_TO_RIGHT_MARK_PATTERN": 66,
                 "assertParts": 66,
-                "weightSince": 66,
                 "issue": 65,
+                "weightSince": 65,
                 "isRightToLeft": 64,
-                "accepter": 61,
+                "accepter": 62,
                 "refuse": 58,
                 "after$1": 56,
                 "DOMAIN_TEXT_PATTERN": 54,
@@ -6001,7 +6001,7 @@
                 "partsFormat": 444,
                 "describeType$2": 365,
                 "nested": 337,
-                "settle": 285,
+                "settle": 286,
                 "keepsRule": 240,
                 "limitIn": 239,
                 "readEntries": 223,
@@ -6022,7 +6022,7 @@
                 "adapt": 147,
                 "toHostlessUrl": 146,
                 "TEST_NAME_PATTERN": 140,
-                "call": 132,
+                "call": 131,
                 "isPlainHost": 129,
                 "assertOption": 123,
                 "assertFunction": 121,
@@ -6060,9 +6060,9 @@
                 "EMBEDDED_PATTERN": 69,
                 "assertParts": 67,
                 "LEFT_TO_RIGHT_MARK_PATTERN": 66,
+                "weightSince": 66,
                 "issue": 65,
                 "partIssue": 65,
-                "weightSince": 65,
                 "isRightToLeft": 64,
                 "refuseKey": 64,
                 "accepter": 62,
@@ -6101,7 +6101,7 @@
                 "SCHEME_PATTERN": 26,
                 "BARE_HEX_PATTERN": 25,
                 "EUROPEAN_NUMBER_PATTERN": 24,
-                "passed": 24,
+                "passed": 23,
                 "MAILTO_ESCAPED_PATTERN": 21,
                 "MARK_PATTERN": 21,
                 "RECIPIENT_FIELD_PATTERN": 21,
@@ -6242,7 +6242,7 @@
       },
       "files": {
         "dist/index.js": {
-          "bytes": 95078,
+          "bytes": 95083,
           "declarations": {
             "toJsonSchema": 6584,
             "encode": 2598,
@@ -6341,8 +6341,8 @@
             "invalidValueMessage": 266,
             "coerceNumber": 264,
             "rebuild": 264,
+            "answered": 262,
             "time": 261,
-            "answered": 257,
             "readSegment": 254,
             "invalidKeyMessage": 251,
             "pattern": 248,
@@ -6765,9 +6765,9 @@
           "bytes": 1750
         }
       },
-      "gzip": 32379,
-      "minified": 96828,
-      "sha256": "02adf806c18ae0d7e44214b5bc12d91672a9238a8b229a7a49f2cd083c638a7a"
+      "gzip": 32383,
+      "minified": 96833,
+      "sha256": "6417021fb6ede603454569233762f3ed4ea6f7aedf1d5ff99aeaef5c4195779a"
     }
   }
 }
