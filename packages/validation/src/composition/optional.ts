@@ -43,7 +43,7 @@ type Fallback<T> = [Extract<T, AnyFunction>] extends [never] ? (T & LiteralValue
  * @param validator - The validator for values that are present.
  * @param value - The default, or a function that returns it.
  * @returns A validator that produces the wrapped type, and `undefined` or the default for `undefined`.
- * @throws {TypeError} When `validator` is not a function, or `value` is an object or an array.
+ * @throws {TypeError} When `validator` is not a validator of this copy of the package, or `value` is an object or an array.
  */
 export function optional<TValidator extends AnyValidator>(
   validator: TValidator,

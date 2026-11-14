@@ -61,7 +61,7 @@ type BrandOf<T> = T extends { readonly "~brand": infer TBrand } ? { readonly "~b
  * @typeParam TValidator - The wrapped validator.
  * @param validator - The validator whose value is made read-only.
  * @returns A validator that produces the same value, frozen, typed read-only.
- * @throws {TypeError} When `validator` is not a function.
+ * @throws {TypeError} When `validator` is not a validator of this copy of the package.
  */
 export function readonly<TValidator extends AnyValidator>(
   validator: TValidator,

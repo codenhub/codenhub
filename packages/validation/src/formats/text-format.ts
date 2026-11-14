@@ -9,7 +9,7 @@ import { FORMAT_WORDS } from "../core/words";
 const isString = (input: unknown): boolean => typeof input === "string";
 
 /**
- * Builds the validator of a format: an input that is not `expected` fails with `invalid_type`, and
+ * Builds the run of a format: an input that is not `expected` fails with `invalid_type`, and
  * `read` returns the value for an input of the format, its canonical spelling or the input itself, and
  * undefined for any other, which fails with `invalid_format` naming the format. The checks run only on a
  * value of the format, so a check can rely on it being one, as it can for `url` and `email`.
@@ -31,7 +31,7 @@ export const formatLeaf = <T>(
     return value;
   });
 
-/** Builds the validator for a string format, as {@link formatLeaf} does for a string. */
+/** Builds the run of a string format, as {@link formatLeaf} does for a string. */
 export const stringFormat = (
   format: string,
   read: (text: string) => string | undefined,

@@ -44,7 +44,7 @@ export interface ArrayOptions extends SizeOptions, MessageOptions {}
  * @param item - Validator applied to every item.
  * @param rest - Size limits, then checks.
  * @returns A validator that produces an array of what `item` produces.
- * @throws {TypeError} When `item` or a check is not a function, or `min`, `max` or `length` is not a number.
+ * @throws {TypeError} When `item` is not a validator of this copy of the package, a check was not made by `check`, `checkFields` or a built-in check, or `min`, `max` or `length` is not a number.
  * @throws {RangeError} When `min`, `max` or `length` is not a non-negative integer, or no size satisfies them together.
  */
 export function array<TItem extends AnyValidator>(

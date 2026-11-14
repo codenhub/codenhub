@@ -44,7 +44,7 @@ export function objectWithRest<TShape extends Shape, TRest extends AnyValidator>
   ...args: AsyncRest<InferObject<TShape, TRest>, MessageOptions>
 ): AsyncSchema<InferObject<TShape, TRest>, InferObjectInput<TShape, TRest>>;
 export function objectWithRest(shape: Shape, rest: AnyValidator, ...args: unknown[]): AnyValidator {
-  // Undefined would be read as an object that drops its unlisted keys.
+  // Undefined would pass here, then throw on the first unlisted key, since the rest is run only then.
   assertFunction("rest", rest);
   return objectOf(shape, args, rest, validated);
 }

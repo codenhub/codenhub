@@ -49,7 +49,7 @@ type Transformed<R, TInput> = 0 extends 1 & R
  * @param validator - The validator to run first.
  * @param convert - Turns the validated value into the result.
  * @returns A validator that produces what `convert` returns.
- * @throws {TypeError} When `validator` or `convert` is not a function.
+ * @throws {TypeError} When `validator` is not a validator of this copy of the package, or `convert` is not a function.
  */
 export function transform<T, R, TInput = unknown>(
   validator: AnyValidator<T, TInput>,

@@ -197,7 +197,7 @@ function again(kept: Kept): unknown {
  * @param rest - The depth and call limits, then checks.
  * @returns A validator that behaves as the one the getter returns.
  * @throws {TypeError} When `getter` is not a function or `maxDepth` or `maxCalls` is not a number, and,
- * from the returned validator on its first use, when `getter` returns something that is not a function.
+ * from the returned validator on its first use, when `getter` returns something that is not a validator of this copy of the package.
  * @throws {RangeError} When `maxDepth` or `maxCalls` is not a positive integer.
  */
 export function lazy<TValidator extends AnyValidator>(

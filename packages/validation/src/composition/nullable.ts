@@ -19,7 +19,7 @@ import { NO_WORDS } from "../core/words";
  * @typeParam TValidator - The wrapped validator.
  * @param validator - The validator for values that are present.
  * @returns A validator that produces the wrapped type, or `null`.
- * @throws {TypeError} When `validator` is not a function.
+ * @throws {TypeError} When `validator` is not a validator of this copy of the package.
  */
 export function nullable<TValidator extends AnyValidator>(
   validator: TValidator,

@@ -42,7 +42,7 @@ import { SIZE_OPTIONS, assertSizeOptions, reportSize, type SizeOptions } from ".
  * @param item - Validator applied to every value.
  * @param rest - Size limits, then checks.
  * @returns A validator that produces a `Set` of what `item` produces.
- * @throws {TypeError} When `item` or a check is not a function, or `min`, `max` or `length` is not a number.
+ * @throws {TypeError} When `item` is not a validator of this copy of the package, a check was not made by `check`, `checkFields` or a built-in check, or `min`, `max` or `length` is not a number.
  * @throws {RangeError} When `min`, `max` or `length` is not a non-negative integer, or no size satisfies them together.
  */
 export function set<TItem extends AnyValidator>(

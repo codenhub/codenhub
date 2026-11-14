@@ -35,7 +35,7 @@ import { FORMAT_WORDS } from "../core/words";
  * @typeParam TValidator - The validator for the parsed value.
  * @param validator - Validates the parsed value.
  * @returns A validator that produces what `validator` produces, or `unknown` without one.
- * @throws {TypeError} When `validator` is given and is not a function, `undefined` included.
+ * @throws {TypeError} When `validator` is given and is not a validator of this copy of the package, `undefined` included.
  */
 export function json(): Schema<unknown, string>;
 export function json(options: MessageOptions): Schema<unknown, string>;

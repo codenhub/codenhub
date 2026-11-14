@@ -126,7 +126,7 @@ export function meta<TValidator extends AnyValidator>(validator: TValidator, giv
   wrapper["~description"] = Object.freeze(
     record === undefined ? { kind: "meta", inner: validator, meta: merged } : { ...record, meta: merged },
   );
-  // A validator written by hand is a Standard Schema too once it says what it is.
+  // Every validator a factory or `validator()` made has a Standard Schema already; one that has none gets one here.
   wrapper["~standard"] ??= standardOf(runOf(validator, "validator"), []);
   return wrapper as unknown as TValidator;
 }

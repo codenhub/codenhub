@@ -165,7 +165,7 @@ referral({ source: "ad" }); // { ok: false, ... }, code "invalid_union"
 
 Because a variant never sees the tag:
 
-- A strict `object` works as a variant, and so does a `record`, which checks every key but the tag.
+- A `strictObject` works as a variant, and so does a `record`, which checks every key but the tag.
 - An output that declares the tag beside an index signature is still rejected, since the variant is never given it.
 - The type of a `record` variant has an index signature beside the tag. Reading it and narrowing on the tag work, but TypeScript rejects writing such an object by hand when the tag is not of the record's value type.
 

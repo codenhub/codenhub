@@ -40,7 +40,7 @@ import { wordUnion } from "../core/words";
  * @typeParam TOptions - The validators to try, at least one.
  * @param options - The validators to try, in order.
  * @returns A validator that produces what the first accepting option produces.
- * @throws {TypeError} When `options` is not a list, is empty, or holds an option that is not a function.
+ * @throws {TypeError} When `options` is not a list, is empty, or holds an option that is not a validator of this copy of the package.
  */
 export function union<const TOptions extends readonly [AnyValidator, ...AnyValidator[]]>(
   options: TOptions,

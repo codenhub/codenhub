@@ -23,10 +23,10 @@ import { mapping, unwrapped, type AllRequired, type Reshaped } from "./reshape";
  * ```
  *
  * @typeParam TValidator - The object validator to make required.
- * @param validator - A validator made by `object`, without checks.
+ * @param validator - A validator made by `object`, `strictObject`, `looseObject` or `objectWithRest`, without checks.
  * @param rest - A `message` that replaces the object's, then checks on the new object.
- * @returns A validator made by `object`, with every property required.
- * @throws {TypeError} When the validator was not made by `object` or has checks.
+ * @returns A validator made by the same factory, with every property required.
+ * @throws {TypeError} When the validator was not made by `object`, `strictObject`, `looseObject` or `objectWithRest`, or has checks.
  */
 export function required<TValidator extends AnyValidator<object>>(
   validator: TValidator,

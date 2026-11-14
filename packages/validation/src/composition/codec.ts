@@ -59,7 +59,7 @@ export interface Conversions<TInput extends AnyValidator, TOutput extends AnyVal
  * @param output - Validates the value as a program uses it.
  * @param conversions - `decode` and `encode`, each a function of one direction.
  * @returns A validator that produces what `output` produces, from what `input` accepts.
- * @throws {TypeError} When `input` or `output` is not a function, `conversions` is not a plain object, or
+ * @throws {TypeError} When `input` or `output` is not a validator of this copy of the package, `conversions` is not a plain object, or
  * its `decode` or `encode` is not a function; and when validating, if `decode` returns a promise.
  */
 export function codec<TInput extends AnyValidator, TOutput extends AnyValidator>(

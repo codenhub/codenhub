@@ -27,7 +27,7 @@ const result = {
 
 `error.issues` lists every problem the validator found, in a fixed order, and is never empty. Its type says so too, so `result.error.issues[0]` is an issue and not `undefined`, even under `noUncheckedIndexedAccess`.
 
-- The order follows the schema, not the time each rule took. A strict `object` reports its unrecognized keys first, then the issues of its properties in the order the shape lists them.
+- The order follows the schema, not the time each rule took. A `strictObject` reports its unrecognized keys first, then the issues of its properties in the order the shape lists them.
 - A collection stops at 1,000 issues, as [Limits](limits.md#a-failing-input-has-a-bounded-cost) explains.
 
 ## The issue
@@ -44,7 +44,7 @@ const result = {
 Keys are not values, and they do appear in issues:
 
 - A path leads through the keys of the input, so a `record` or `map` issue names the key it belongs to.
-- A strict `object` reports each key it does not recognize, in its path and in `params.key`.
+- A `strictObject` reports each key it does not recognize, in its path and in `params.key`.
 
 So do not put secrets in key names you validate. A key is also text the sender chose. `englishMessages` puts it inside the message as a quoted string, as in `Unrecognized key "…"`, with quotes and line breaks escaped. `formatPath` quotes it the same way in the field names of `flatten`. So a key cannot break a log line. Escape both when you put them into HTML.
 
@@ -75,7 +75,7 @@ The set of codes is open: a custom validator reports whatever code it likes. The
 | `invalid_value`        | The value has the right type, but a value that is not allowed.                                                                                                                                   | Depends on the rule, as the list below this table says.                                                                                                                                                                  |
 | `too_small`            | Below a minimum: too short, too few items, or too small a number or date.                                                                                                                        | `minimum`, `type`, and `inclusive` or `exact` where they apply.                                                                                                                                                          |
 | `too_big`              | Above a maximum; nested deeper, or recursing more often, than `lazy` allows; or a collection that stopped at 1,000 issues.                                                                       | `maximum`, `type` (`"depth"` or `"calls"` for `lazy`, `"issues"` for a collection that stopped), and `inclusive` or `exact` where they apply.                                                                            |
-| `unrecognized_key`     | An object has a property its shape does not list, in strict mode.                                                                                                                                | `key`. The issue's path ends at the key.                                                                                                                                                                                 |
+| `unrecognized_key`     | A `strictObject` has a property its shape does not list.                                                                                                                                         | `key`. The issue's path ends at the key.                                                                                                                                                                                 |
 | `invalid_key`          | A key of a `record` or `map` failed its key validator; its key validator turned it into a key an earlier entry has; a key is given twice; or a key is `__proto__` where it would be copied over. | `issues`: what the key validator found, with paths relative to the key; for a repeated key, one `invalid_value` issue with `unique: true`; for `__proto__`, one with `reserved: true`. The issue's path ends at the key. |
 | `invalid_intersection` | Both validators of an `intersection` passed, but produced values that cannot be merged into one.                                                                                                 | None. The issue's path is where the two outputs differ.                                                                                                                                                                  |
 | `invalid_union`        | A value matched none of the options of a `union`, or a `tagged` union got a missing or unknown tag.                                                                                              | For `union`, `issues`: the issues each option found, in order, with paths relative to the union's value. For `tagged`, `discriminator` and `options`, and the issue's path is the tag's.                                 |

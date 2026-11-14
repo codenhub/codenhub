@@ -28,7 +28,7 @@ type Output<TValidators extends readonly AnyValidator[]> = TValidators extends r
  * @typeParam TValidators - The validators to run, in order. At least one.
  * @param validators - The validators to run, in order.
  * @returns A validator that produces what the last one produces.
- * @throws {TypeError} When no validator is given or one is not a function.
+ * @throws {TypeError} When no validator is given or one is not a validator of this copy of the package.
  */
 export function pipe<const TValidators extends readonly [AnyValidator, ...AnyValidator[]]>(
   ...validators: TValidators

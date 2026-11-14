@@ -80,7 +80,7 @@ export type InferRecordInput<TKey extends AnyValidator, TValue extends AnyValida
  * @param value - Validator applied to every value.
  * @param rest - Limits on the number of keys, then checks.
  * @returns A validator that produces a dictionary object.
- * @throws {TypeError} When `key` or `value` is not a function, or `min`, `max` or `length` is not a number,
+ * @throws {TypeError} When `key` or `value` is not a validator of this copy of the package, or `min`, `max` or `length` is not a number,
  * and, from the returned validator, when `key` produces something other than text.
  * @throws {RangeError} When `min`, `max` or `length` is not a non-negative integer, or no size satisfies them together.
  */

@@ -22,11 +22,11 @@ import { picking, type ListedKey, type Picked, type Reshaped } from "./reshape";
  *
  * @typeParam TValidator - The object validator to pick from.
  * @typeParam TKey - The properties kept.
- * @param validator - A validator made by `object`, without checks.
+ * @param validator - A validator made by `object`, `strictObject`, `looseObject` or `objectWithRest`, without checks.
  * @param keys - The properties to keep, each of which the object has.
  * @param rest - Options, each replacing the one of its name in the object, then checks on the new object.
- * @returns A validator made by `object`, of the named properties.
- * @throws {TypeError} When the validator was not made by `object`, has checks, or lacks one of the keys.
+ * @returns A validator made by the same factory, of the named properties.
+ * @throws {TypeError} When the validator was not made by `object`, `strictObject`, `looseObject` or `objectWithRest`, has checks, or lacks one of the keys.
  */
 export function pick<TValidator extends AnyValidator<object>, const TKey extends ListedKey<Infer<TValidator>>>(
   validator: TValidator,

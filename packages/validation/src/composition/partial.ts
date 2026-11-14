@@ -42,11 +42,11 @@ export type AllOptional<T> = WithRest<{ [K in keyof Listed<T>]?: Listed<T>[K] | 
  *
  * @typeParam TShape - The shape.
  * @typeParam TValidator - The object validator, when one is given in place of a shape.
- * @param shape - Property validators, or a validator made by `object`, without checks.
+ * @param shape - Property validators, or a validator made by `object`, `strictObject`, `looseObject` or `objectWithRest`, without checks.
  * @param rest - For a validator only: a `message` that replaces the object's, then checks on the new object.
  * @returns A shape whose every validator also accepts `undefined`, or an object validator of one.
- * @throws {TypeError} When `shape` is not a plain object or a property validator is not a function, or,
- * for a validator, when it was not made by `object` or has checks.
+ * @throws {TypeError} When `shape` is not a plain object or a property validator is not a validator of this copy of the package, or,
+ * for a validator, when it was not made by `object`, `strictObject`, `looseObject` or `objectWithRest`, or has checks.
  */
 export function partial<TShape extends Shape>(shape: TShape): PartialShape<TShape>;
 export function partial<TValidator extends AnyValidator<object>>(

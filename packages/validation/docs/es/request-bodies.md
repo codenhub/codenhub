@@ -2,7 +2,7 @@
 title: Cuerpos de solicitud
 description: Texto JSON, listas, tuplas, diccionarios, sets y maps, elegir entre formas, y datos recursivos.
 order: 3
-source: 1709b13516555bea6f3b517e1282646ba97340c8
+source: 9e43ed15787b3aacc10281456197985061c55ddd
 ---
 
 # Cuerpos de solicitud
@@ -166,7 +166,7 @@ referral({ source: "ad" }); // { ok: false, ... }, código "invalid_union"
 
 Como una variante nunca ve la etiqueta:
 
-- Un `object` estricto funciona como variante, y también un `record`, que verifica todas las claves excepto la etiqueta.
+- Un `strictObject` funciona como variante, y también un `record`, que verifica todas las claves excepto la etiqueta.
 - Una salida que declara la etiqueta junto a una firma de índice se rechaza igual, porque la variante nunca la recibe.
 - El tipo de una variante `record` tiene una firma de índice junto a la etiqueta. Leerlo y acotar el tipo por la etiqueta funcionan, pero TypeScript rechaza escribir un objeto así a mano cuando la etiqueta no es del tipo de valor del record.
 

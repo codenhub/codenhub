@@ -83,7 +83,7 @@ export interface TupleOptions<TRest extends AnyValidator | undefined = undefined
  * @param items - One validator per position.
  * @param rest - The validator for extra positions and the most items in all, then checks.
  * @returns A validator that produces a tuple.
- * @throws {TypeError} When `items` is not a list or is empty, an item or `rest` is not a function, `max`
+ * @throws {TypeError} When `items` is not a list or is empty, an item or `rest` is not a validator of this copy of the package, `max`
  * is not a number, or `max` is given without `rest`.
  * @throws {RangeError} When `max` is not a non-negative integer, or is less than the number of fixed items.
  */

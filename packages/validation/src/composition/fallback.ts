@@ -44,13 +44,13 @@ type Replacement<T> = [Extract<T, AnyFunction>] extends [never]
  * @param validator - The validator to try first.
  * @param value - The fallback, or a function that receives the issues and returns it.
  * @returns A validator that produces the wrapped type and never fails.
- * @throws {TypeError} When `validator` is not a function, or `value` is an object or an array.
+ * @throws {TypeError} When `validator` is not a validator of this copy of the package, or `value` is an object or an array.
  */
 export function fallback<TValidator extends AnyValidator>(
   validator: TValidator,
   value: Replacement<Infer<TValidator>>,
 ): Composed<TValidator, Infer<TValidator>> {
-  // No result is a mistake in the schema, not a failure, so it is named and never replaced.
+  // A child that is not a validator of this copy of the package is a mistake in the schema, so it is named here.
   const runInner = runOf(validator, "validator");
   assertUnshared("A fallback object", value);
   const replace = (produced: unknown, from: number): unknown => {

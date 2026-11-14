@@ -376,7 +376,7 @@ function merge(left: unknown, right: unknown, walk: Walk): unknown {
  * @param left - The first validator.
  * @param right - The second validator.
  * @returns A validator that produces the merged outputs, typed as an intersection.
- * @throws {TypeError} When `left` or `right` is not a function.
+ * @throws {TypeError} When `left` or `right` is not a validator of this copy of the package.
  */
 export function intersection<TLeft extends AnyValidator, TRight extends AnyValidator>(
   left: TLeft,

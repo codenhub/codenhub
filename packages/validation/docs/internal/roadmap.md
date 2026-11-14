@@ -30,7 +30,7 @@ What a caller of 0.5.1 changes:
 - **`object` drops the keys its shape does not list, and nothing else.** `strictObject`, `looseObject` and `objectWithRest(shape, rest)` replace the `unknownKeys` option, which is refused, and the types `ObjectOptions` and `UnknownKeys` are gone.
 - **`email()` reads a domain written in ASCII**, and `internationalEmail()` is what `email()` was.
 - **An `object` reads each property as its validator runs**, and every property before anything waits.
-- **A validator of another installed copy of the package is refused as a child**, so packages that share schemas move to 0.6.0 together.
+- **A validator or check of another installed copy of the package is refused as a child**, since each copy reports issues to itself. Packages that share schemas or checks use one installed copy of 0.6.0, or wrap the validator with `validator()` and make the check again with `check()`.
 - **What `describe` gives for an object** says how it treats unlisted keys in a part, `unknownKeys`, and no longer among its options.
 
 What it costs in speed is named in [One pass](architecture.md#one-pass): a `union` that accepts its second option runs at half its earlier speed and a `record` at two thirds.

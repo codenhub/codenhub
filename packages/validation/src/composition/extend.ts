@@ -54,11 +54,11 @@ type ExtendedInput<T, TShape extends Shape> = WithRest<
  *
  * @typeParam TValidator - The object validator to extend.
  * @typeParam TShape - The validators of the properties added.
- * @param validator - A validator made by `object`, without checks.
+ * @param validator - A validator made by `object`, `strictObject`, `looseObject` or `objectWithRest`, without checks.
  * @param shape - Validator of each property added or replaced.
  * @param rest - Options, each replacing the one of its name in the object, then checks on the new object.
- * @returns A validator made by `object`, of the properties of both.
- * @throws {TypeError} When the validator was not made by `object` or has checks, or `shape` is not a plain
+ * @returns A validator made by the same factory, of the properties of both.
+ * @throws {TypeError} When the validator was not made by `object`, `strictObject`, `looseObject` or `objectWithRest`, or has checks, or `shape` is not a plain
  * object of validators.
  */
 export function extend<TValidator extends AnyValidator<object>, TShape extends Shape>(

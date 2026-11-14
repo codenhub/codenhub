@@ -2,7 +2,7 @@
 title: Problemas y mensajes
 description: Qué contiene un resultado fallido, los códigos de problema integrados y sus params, y cómo convertir los problemas en texto en inglés, en portugués o con tus propias palabras.
 order: 5
-source: 14c1370b9885c56194a30577e19aa0d7cd43dc22
+source: 5da83294b0f60324e53776d55f44c827778f8084
 ---
 
 # Problemas y mensajes
@@ -28,7 +28,7 @@ const result = {
 
 `error.issues` enumera todos los problemas que encontró el validador, en un orden fijo, y nunca está vacío. Su tipo también lo dice, así que `result.error.issues[0]` es un problema y no `undefined`, incluso con `noUncheckedIndexedAccess`.
 
-- El orden sigue al esquema, no al tiempo que tardó cada regla. Un `object` estricto reporta primero sus claves no reconocidas, y luego los problemas de sus propiedades en el orden en que las enumera la forma.
+- El orden sigue al esquema, no al tiempo que tardó cada regla. Un `strictObject` reporta primero sus claves no reconocidas, y luego los problemas de sus propiedades en el orden en que las enumera la forma.
 - Una colección se detiene en 1000 problemas, como explica [Límites](./limits.md#una-entrada-que-falla-tiene-un-costo-acotado).
 
 ## El problema
@@ -45,7 +45,7 @@ const result = {
 Las claves no son valores, y sí aparecen en los problemas:
 
 - Una ruta pasa por las claves de la entrada, así que un problema de un `record` o un `map` nombra la clave a la que pertenece.
-- Un `object` estricto reporta cada clave que no reconoce, en su ruta y en `params.key`.
+- Un `strictObject` reporta cada clave que no reconoce, en su ruta y en `params.key`.
 
 Así que no pongas secretos en nombres de claves que valides. Una clave también es texto que eligió quien la envió. `englishMessages` la pone dentro del mensaje como una cadena entre comillas, como en `Unrecognized key "…"`, con las comillas y los saltos de línea escapados. `formatPath` la pone entre comillas de la misma forma en los nombres de campo de `flatten`. Así, una clave no puede romper una línea de log. Escapa ambos cuando los pongas en HTML.
 
@@ -76,7 +76,7 @@ El conjunto de códigos es abierto: un validador personalizado reporta el códig
 | `invalid_value`        | El valor tiene el tipo correcto, pero un valor que no está permitido.                                                                                                                                                              | Depende de la regla, como indica la lista debajo de esta tabla.                                                                                                                                                                                  |
 | `too_small`            | Por debajo de un mínimo: demasiado corto, muy pocos elementos, o un número o una fecha demasiado pequeños.                                                                                                                         | `minimum`, `type`, e `inclusive` o `exact` cuando corresponda.                                                                                                                                                                                   |
 | `too_big`              | Por encima de un máximo; anidado a más profundidad, o con más recursión, de lo que permite `lazy`; o una colección que se detuvo en 1000 problemas.                                                                                | `maximum`, `type` (`"depth"` o `"calls"` para `lazy`, `"issues"` para una colección que se detuvo), e `inclusive` o `exact` cuando corresponda.                                                                                                  |
-| `unrecognized_key`     | Un objeto tiene una propiedad que su forma no incluye, en modo estricto.                                                                                                                                                           | `key`. La ruta del problema termina en la clave.                                                                                                                                                                                                 |
+| `unrecognized_key`     | Un `strictObject` tiene una propiedad que su forma no incluye.                                                                                                                                                                     | `key`. La ruta del problema termina en la clave.                                                                                                                                                                                                 |
 | `invalid_key`          | Una clave de un `record` o un `map` no pasó su validador de claves; su validador de claves la convirtió en una clave que ya tiene una entrada anterior; una clave aparece dos veces; o una clave es `__proto__` donde se copiaría. | `issues`: lo que encontró el validador de claves, con rutas relativas a la clave; para una clave repetida, un problema `invalid_value` con `unique: true`; para `__proto__`, uno con `reserved: true`. La ruta del problema termina en la clave. |
 | `invalid_intersection` | Ambos validadores de una `intersection` pasaron, pero produjeron valores que no se pueden fusionar en uno.                                                                                                                         | Ninguno. La ruta del problema es donde difieren las dos salidas.                                                                                                                                                                                 |
 | `invalid_union`        | Un valor no coincidió con ninguna de las opciones de una `union`, o una unión `tagged` recibió una etiqueta ausente o desconocida.                                                                                                 | Para `union`, `issues`: los problemas que encontró cada opción, en orden, con rutas relativas al valor de la unión. Para `tagged`, `discriminator` y `options`, y la ruta del problema es la de la etiqueta.                                     |

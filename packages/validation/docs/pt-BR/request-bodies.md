@@ -1,7 +1,7 @@
 ---
 title: Corpos de requisição
 description: Texto JSON, listas, tuplas, dicionários, sets e maps, uma escolha entre estruturas e dados recursivos.
-source: 1709b13516555bea6f3b517e1282646ba97340c8
+source: 9e43ed15787b3aacc10281456197985061c55ddd
 order: 3
 ---
 
@@ -166,7 +166,7 @@ referral({ source: "ad" }); // { ok: false, ... }, code "invalid_union"
 
 Como uma variante nunca vê a tag:
 
-- Um `object` estrito funciona como variante, e um `record` também, que verifica todas as chaves menos a tag.
+- Um `strictObject` funciona como variante, e um `record` também, que verifica todas as chaves menos a tag.
 - Uma saída que declara a tag ao lado de uma index signature continua sendo rejeitada, já que a variante nunca a recebe.
 - O tipo de uma variante `record` tem uma index signature ao lado da tag. Ler esse tipo e fazer narrowing pela tag funcionam, mas o TypeScript rejeita escrever um objeto assim à mão quando a tag não é do tipo de valor do registro.
 

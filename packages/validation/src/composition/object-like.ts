@@ -37,7 +37,7 @@ import type { InferShape, InferShapeInput, Shape } from "./object";
  * @param shape - Validator of each property.
  * @param rest - Options, then checks, which run once every property has passed and see the output.
  * @returns A validator that produces a plain object.
- * @throws {TypeError} When `shape` is not a plain object or a property validator is not a function.
+ * @throws {TypeError} When `shape` is not a plain object or a property validator is not a validator of this copy of the package.
  */
 export function objectLike<TShape extends Shape>(
   shape: TShape,

@@ -1,7 +1,7 @@
 ---
 title: Standard Schema
 description: Use um validador em qualquer biblioteca que aceite um Standard Schema, como bibliotecas de formulário, frameworks de API e roteadores.
-source: 70075416515af6450dc4a244fd80abe14ce80fa0
+source: 9c5e45415e178135af46fe5c9770673c25efe41b
 order: 9
 ---
 
@@ -51,7 +51,7 @@ const signup = standard(object({ email: email(), age: number({ int: true }) }), 
 
 ## Os tipos
 
-Uma factory retorna um `Schema<T, TInput>`, ou um `AsyncSchema<T, TInput>` quando uma das regras dele espera: um `Validator` ou `AsyncValidator` que também é um `StandardSchemaV1<TInput, T>`. Ele é aceito em qualquer lugar onde um `Validator` é, então um código que recebe um validador, como `assert` ou uma função sua, continua recebendo-o como antes. O que [`validator`](custom-validators.md#à-mão) cria a partir de uma função que você escreveu também é um `Schema`. Um valor que você mesmo tipou como `Validator`, como se tipa um schema recursivo, não exige `~standard`, e `brand` aplicado a ele continua sendo um `Validator`, já que `brand` retorna o validador que recebe.
+Uma factory retorna um `Schema<T, TInput>`, ou um `AsyncSchema<T, TInput>` quando uma das regras dele espera: um `Validator` ou `AsyncValidator` que também é um `StandardSchemaV1<TInput, T>`. Ele é aceito em qualquer lugar onde um `Validator` é, então um código que recebe um validador, como `assert` ou uma função sua, continua recebendo-o como antes. O que [`validator`](custom-validators.md#à-mão) cria a partir de uma função que você escreveu também é um `Schema`, ou um `AsyncSchema` quando a função pode retornar uma promise. Um valor que você mesmo tipou como `Validator`, como se tipa um schema recursivo, não exige `~standard`, e `brand` aplicado a ele continua sendo um `Validator`, já que `brand` retorna o validador que recebe.
 
 ## O que `standard` retorna
 

@@ -33,7 +33,7 @@ A wrong size is reported at once, without validating the items, so a huge array 
 
 **Throws**
 
-- `TypeError` — When `item` or a check is not a function, or `min`, `max` or `length` is not a number.
+- `TypeError` — When `item` is not a validator of this copy of the package, a check was not made by `check`, `checkFields` or a built-in check, or `min`, `max` or `length` is not a number.
 - `RangeError` — When `min`, `max` or `length` is not a non-negative integer, or no size satisfies them together.
 
 **Example**
@@ -110,7 +110,7 @@ An exception thrown by either function propagates, as a `transform`'s does: it i
 
 **Returns** — A validator that produces what `output` produces, from what `input` accepts.
 
-**Throws** — `TypeError` — When `input` or `output` is not a function, `conversions` is not a plain object, or its `decode` or `encode` is not a function; and when validating, if `decode` returns a promise.
+**Throws** — `TypeError` — When `input` or `output` is not a validator of this copy of the package, `conversions` is not a plain object, or its `decode` or `encode` is not a function; and when validating, if `decode` returns a promise.
 
 **Example**
 
@@ -178,7 +178,7 @@ A module that exports an object validator, and not its shape, is extended with t
 
 **Parameters**
 
-- `validator` — A validator made by `object`, without checks.
+- `validator` — A validator made by `object`, `strictObject`, `looseObject` or `objectWithRest`, without checks.
 - `shape` — Validator of each property added or replaced.
 - `rest` — Options, each replacing the one of its name in the object, then checks on the new object.
 
@@ -187,9 +187,9 @@ A module that exports an object validator, and not its shape, is extended with t
 - `TValidator` — The object validator to extend.
 - `TShape` — The validators of the properties added.
 
-**Returns** — A validator made by `object`, of the properties of both.
+**Returns** — A validator made by the same factory, of the properties of both.
 
-**Throws** — `TypeError` — When the validator was not made by `object` or has checks, or `shape` is not a plain object of validators.
+**Throws** — `TypeError` — When the validator was not made by `object`, `strictObject`, `looseObject` or `objectWithRest`, or has checks, or `shape` is not a plain object of validators.
 
 **Example**
 
@@ -220,7 +220,7 @@ The fallback is trusted and is not validated. A function is called with the issu
 
 **Returns** — A validator that produces the wrapped type and never fails.
 
-**Throws** — `TypeError` — When `validator` is not a function, or `value` is an object or an array.
+**Throws** — `TypeError` — When `validator` is not a validator of this copy of the package, or `value` is an object or an array.
 
 **Example**
 
@@ -256,7 +256,7 @@ The form is read before it reaches the validator, by `request.formData()` or the
 
 **Returns** — A validator that produces what `validator` produces.
 
-**Throws** — `TypeError` — When `validator` or a check is not a function, or `repeated` is not a boolean.
+**Throws** — `TypeError` — When `validator` is not a validator of this copy of the package, a check was not made by `check`, `checkFields` or a built-in check, or `repeated` is not a boolean.
 
 **Example**
 
@@ -290,7 +290,7 @@ Both validators receive the same input and both run, so the issues of each are r
 
 **Returns** — A validator that produces the merged outputs, typed as an intersection.
 
-**Throws** — `TypeError` — When `left` or `right` is not a function.
+**Throws** — `TypeError` — When `left` or `right` is not a validator of this copy of the package.
 
 **Example**
 
@@ -312,7 +312,7 @@ A non-string fails with `invalid_type`, and text that is not valid JSON fails wi
 
 **Returns** — A validator that produces what `validator` produces, or `unknown` without one.
 
-**Throws** — `TypeError` — When `validator` is given and is not a function, `undefined` included.
+**Throws** — `TypeError` — When `validator` is given and is not a validator of this copy of the package, `undefined` included.
 
 **Example**
 
@@ -332,7 +332,7 @@ A non-string fails with `invalid_type`, and text that is not valid JSON fails wi
 
 **Returns** — A validator that produces what `validator` produces, or `unknown` without one.
 
-**Throws** — `TypeError` — When `validator` is given and is not a function, `undefined` included.
+**Throws** — `TypeError` — When `validator` is given and is not a validator of this copy of the package, `undefined` included.
 
 **Example**
 
@@ -360,7 +360,7 @@ A non-string fails with `invalid_type`, and text that is not valid JSON fails wi
 
 **Returns** — A validator that produces what `validator` produces, or `unknown` without one.
 
-**Throws** — `TypeError` — When `validator` is given and is not a function, `undefined` included.
+**Throws** — `TypeError` — When `validator` is given and is not a validator of this copy of the package, `undefined` included.
 
 **Example**
 
@@ -388,7 +388,7 @@ A non-string fails with `invalid_type`, and text that is not valid JSON fails wi
 
 **Returns** — A validator that produces what `validator` produces, or `unknown` without one.
 
-**Throws** — `TypeError` — When `validator` is given and is not a function, `undefined` included.
+**Throws** — `TypeError` — When `validator` is given and is not a validator of this copy of the package, `undefined` included.
 
 **Example**
 
@@ -426,7 +426,7 @@ Work can also grow faster than the input. A `union` tries every option, and an `
 
 **Throws**
 
-- `TypeError` — When `getter` is not a function or `maxDepth` or `maxCalls` is not a number, and, from the returned validator on its first use, when `getter` returns something that is not a function.
+- `TypeError` — When `getter` is not a function or `maxDepth` or `maxCalls` is not a number, and, from the returned validator on its first use, when `getter` returns something that is not a validator of this copy of the package.
 - `RangeError` — When `maxDepth` or `maxCalls` is not a positive integer.
 
 **Example**
@@ -502,7 +502,7 @@ A wrong size is reported at once, without validating the entries. An issue's pat
 
 **Throws**
 
-- `TypeError` — When `key` or `value` is not a function, or `min`, `max` or `length` is not a number.
+- `TypeError` — When `key` or `value` is not a validator of this copy of the package, or `min`, `max` or `length` is not a number.
 - `RangeError` — When `min`, `max` or `length` is not a non-negative integer, or no size satisfies them together.
 
 **Example**
@@ -563,7 +563,7 @@ Wraps a validator so `null` is accepted and passed through, and every other valu
 
 **Returns** — A validator that produces the wrapped type, or `null`.
 
-**Throws** — `TypeError` — When `validator` is not a function.
+**Throws** — `TypeError` — When `validator` is not a validator of this copy of the package.
 
 **Example**
 
@@ -592,7 +592,7 @@ Wraps a validator so `null` and `undefined` are accepted and passed through, and
 
 **Returns** — A validator that produces the wrapped type, `null` or `undefined`.
 
-**Throws** — `TypeError` — When `validator` is not a function.
+**Throws** — `TypeError` — When `validator` is not a validator of this copy of the package.
 
 **Example**
 
@@ -667,7 +667,7 @@ Every property is validated even when an earlier one failed. A property that thr
 
 **Returns** — A validator that produces a plain object.
 
-**Throws** — `TypeError` — When `shape` is not a plain object or a property validator is not a function.
+**Throws** — `TypeError` — When `shape` is not a plain object or a property validator is not a validator of this copy of the package.
 
 **Example**
 
@@ -726,7 +726,7 @@ The validator must be one `object`, `strictObject`, `looseObject` or `objectWith
 
 **Parameters**
 
-- `validator` — A validator made by `object`, without checks.
+- `validator` — A validator made by `object`, `strictObject`, `looseObject` or `objectWithRest`, without checks.
 - `keys` — The properties to leave out, each of which the object has.
 - `rest` — Options, each replacing the one of its name in the object, then checks on the new object.
 
@@ -735,9 +735,9 @@ The validator must be one `object`, `strictObject`, `looseObject` or `objectWith
 - `TValidator` — The object validator to omit from.
 - `TKey` — The properties left out.
 
-**Returns** — A validator made by `object`, of the other properties.
+**Returns** — A validator made by the same factory, of the other properties.
 
-**Throws** — `TypeError` — When the validator was not made by `object`, has checks, or lacks one of the keys.
+**Throws** — `TypeError` — When the validator was not made by `object`, `strictObject`, `looseObject` or `objectWithRest`, has checks, or lacks one of the keys.
 
 **Example**
 
@@ -767,7 +767,7 @@ Given a default, `undefined` is replaced by it instead, the output type no longe
 
 **Returns** — A validator that produces the wrapped type, and `undefined` or the default for `undefined`.
 
-**Throws** — `TypeError` — When `validator` is not a function, or `value` is an object or an array.
+**Throws** — `TypeError` — When `validator` is not a validator of this copy of the package, or `value` is an object or an array.
 
 **Example**
 
@@ -800,7 +800,7 @@ Given a default, `undefined` is replaced by it instead, the output type no longe
 
 **Returns** — A validator that produces the wrapped type, and `undefined` or the default for `undefined`.
 
-**Throws** — `TypeError` — When `validator` is not a function, or `value` is an object or an array.
+**Throws** — `TypeError` — When `validator` is not a validator of this copy of the package, or `value` is an object or an array.
 
 **Example**
 
@@ -826,7 +826,7 @@ An object validator with checks is refused, since a check may read a property th
 
 **Parameters**
 
-- `shape` — Property validators, or a validator made by `object`, without checks.
+- `shape` — Property validators, or a validator made by `object`, `strictObject`, `looseObject` or `objectWithRest`, without checks.
 
 **Type parameters**
 
@@ -834,7 +834,7 @@ An object validator with checks is refused, since a check may read a property th
 
 **Returns** — A shape whose every validator also accepts `undefined`, or an object validator of one.
 
-**Throws** — `TypeError` — When `shape` is not a plain object or a property validator is not a function, or, for a validator, when it was not made by `object` or has checks.
+**Throws** — `TypeError` — When `shape` is not a plain object or a property validator is not a validator of this copy of the package, or, for a validator, when it was not made by `object`, `strictObject`, `looseObject` or `objectWithRest`, or has checks.
 
 **Example**
 
@@ -863,7 +863,7 @@ An object validator with checks is refused, since a check may read a property th
 
 **Returns** — A shape whose every validator also accepts `undefined`, or an object validator of one.
 
-**Throws** — `TypeError` — When `shape` is not a plain object or a property validator is not a function, or, for a validator, when it was not made by `object` or has checks.
+**Throws** — `TypeError` — When `shape` is not a plain object or a property validator is not a validator of this copy of the package, or, for a validator, when it was not made by `object`, `strictObject`, `looseObject` or `objectWithRest`, or has checks.
 
 **Example**
 
@@ -892,7 +892,7 @@ An object validator with checks is refused, since a check may read a property th
 
 **Returns** — A shape whose every validator also accepts `undefined`, or an object validator of one.
 
-**Throws** — `TypeError` — When `shape` is not a plain object or a property validator is not a function, or, for a validator, when it was not made by `object` or has checks.
+**Throws** — `TypeError` — When `shape` is not a plain object or a property validator is not a validator of this copy of the package, or, for a validator, when it was not made by `object`, `strictObject`, `looseObject` or `objectWithRest`, or has checks.
 
 **Example**
 
@@ -916,7 +916,7 @@ The validator must be one `object`, `strictObject`, `looseObject` or `objectWith
 
 **Parameters**
 
-- `validator` — A validator made by `object`, without checks.
+- `validator` — A validator made by `object`, `strictObject`, `looseObject` or `objectWithRest`, without checks.
 - `keys` — The properties to keep, each of which the object has.
 - `rest` — Options, each replacing the one of its name in the object, then checks on the new object.
 
@@ -925,9 +925,9 @@ The validator must be one `object`, `strictObject`, `looseObject` or `objectWith
 - `TValidator` — The object validator to pick from.
 - `TKey` — The properties kept.
 
-**Returns** — A validator made by `object`, of the named properties.
+**Returns** — A validator made by the same factory, of the named properties.
 
-**Throws** — `TypeError` — When the validator was not made by `object`, has checks, or lacks one of the keys.
+**Throws** — `TypeError` — When the validator was not made by `object`, `strictObject`, `looseObject` or `objectWithRest`, has checks, or lacks one of the keys.
 
 **Example**
 
@@ -957,7 +957,7 @@ The first failure stops the pipe, because a later step has nothing valid to work
 
 **Returns** — A validator that produces what the last one produces.
 
-**Throws** — `TypeError` — When no validator is given or one is not a function.
+**Throws** — `TypeError` — When no validator is given or one is not a validator of this copy of the package.
 
 **Example**
 
@@ -994,7 +994,7 @@ A value is taken to be the caller's when it is the input itself. When a `transfo
 
 **Returns** — A validator that produces the same value, frozen, typed read-only.
 
-**Throws** — `TypeError` — When `validator` is not a function.
+**Throws** — `TypeError` — When `validator` is not a validator of this copy of the package.
 
 **Example**
 
@@ -1034,7 +1034,7 @@ Each key passes `key` and each value passes `value`. An issue's path ends at the
 
 **Throws**
 
-- `TypeError` — When `key` or `value` is not a function, or `min`, `max` or `length` is not a number, and, from the returned validator, when `key` produces something other than text.
+- `TypeError` — When `key` or `value` is not a validator of this copy of the package, or `min`, `max` or `length` is not a number, and, from the returned validator, when `key` produces something other than text.
 - `RangeError` — When `min`, `max` or `length` is not a non-negative integer, or no size satisfies them together.
 
 **Example**
@@ -1060,16 +1060,16 @@ The validator must be one `object`, `strictObject`, `looseObject` or `objectWith
 
 **Parameters**
 
-- `validator` — A validator made by `object`, without checks.
+- `validator` — A validator made by `object`, `strictObject`, `looseObject` or `objectWithRest`, without checks.
 - `rest` — A `message` that replaces the object's, then checks on the new object.
 
 **Type parameters**
 
 - `TValidator` — The object validator to make required.
 
-**Returns** — A validator made by `object`, with every property required.
+**Returns** — A validator made by the same factory, with every property required.
 
-**Throws** — `TypeError` — When the validator was not made by `object` or has checks.
+**Throws** — `TypeError` — When the validator was not made by `object`, `strictObject`, `looseObject` or `objectWithRest`, or has checks.
 
 **Example**
 
@@ -1103,7 +1103,7 @@ A wrong size is reported at once, without validating the values. Otherwise every
 
 **Throws**
 
-- `TypeError` — When `item` or a check is not a function, or `min`, `max` or `length` is not a number.
+- `TypeError` — When `item` is not a validator of this copy of the package, a check was not made by `check`, `checkFields` or a built-in check, or `min`, `max` or `length` is not a number.
 - `RangeError` — When `min`, `max` or `length` is not a non-negative integer, or no size satisfies them together.
 
 **Example**
@@ -1208,7 +1208,7 @@ The function runs only when the wrapped validator succeeded, and receives the va
 
 **Returns** — A validator that produces what `convert` returns.
 
-**Throws** — `TypeError` — When `validator` or `convert` is not a function.
+**Throws** — `TypeError` — When `validator` is not a validator of this copy of the package, or `convert` is not a function.
 
 **Example**
 
@@ -1244,7 +1244,7 @@ A wrong length is reported at once, without validating the items. With `rest`, t
 
 **Throws**
 
-- `TypeError` — When `items` is not a list or is empty, an item or `rest` is not a function, `max` is not a number, or `max` is given without `rest`.
+- `TypeError` — When `items` is not a list or is empty, an item or `rest` is not a validator of this copy of the package, `max` is not a number, or `max` is given without `rest`.
 - `RangeError` — When `max` is not a non-negative integer, or is less than the number of fixed items.
 
 **Example**
@@ -1279,7 +1279,7 @@ The validators are tried in order and the first that accepts the value wins, so 
 
 **Returns** — A validator that produces what the first accepting option produces.
 
-**Throws** — `TypeError` — When `options` is not a list, is empty, or holds an option that is not a function.
+**Throws** — `TypeError` — When `options` is not a list, is empty, or holds an option that is not a validator of this copy of the package.
 
 **Example**
 

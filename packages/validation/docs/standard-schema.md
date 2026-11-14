@@ -50,7 +50,7 @@ const signup = standard(object({ email: email(), age: number({ int: true }) }), 
 
 ## The types
 
-A factory returns a `Schema<T, TInput>`, or an `AsyncSchema<T, TInput>` when one of its rules waits: a `Validator` or `AsyncValidator` that is also a `StandardSchemaV1<TInput, T>`. It is accepted wherever a `Validator` is, so code that takes a validator, such as `assert` or a function of your own, takes it as before. What [`validator`](custom-validators.md#by-hand) makes of a function you wrote is a `Schema` too. A value you typed `Validator` yourself, as a recursive schema is typed, asks for no `~standard`, and `brand` of one stays a `Validator`, since `brand` returns the validator it is given.
+A factory returns a `Schema<T, TInput>`, or an `AsyncSchema<T, TInput>` when one of its rules waits: a `Validator` or `AsyncValidator` that is also a `StandardSchemaV1<TInput, T>`. It is accepted wherever a `Validator` is, so code that takes a validator, such as `assert` or a function of your own, takes it as before. What [`validator`](custom-validators.md#by-hand) makes of a function you wrote is a `Schema` too, or an `AsyncSchema` when the function may return a promise. A value you typed `Validator` yourself, as a recursive schema is typed, asks for no `~standard`, and `brand` of one stays a `Validator`, since `brand` returns the validator it is given.
 
 ## What `standard` returns
 

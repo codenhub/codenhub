@@ -82,7 +82,7 @@ The parameters are read as `URLSearchParams` reads them, `+` as a space and esca
 
 **Returns** — A validator that produces what `validator` produces.
 
-**Throws** — `TypeError` — When `validator` or a check is not a function, or `repeated` is not a boolean.
+**Throws** — `TypeError` — When `validator` is not a validator of this copy of the package, a check was not made by `check`, `checkFields` or a built-in check, or `repeated` is not a boolean.
 
 **Example**
 

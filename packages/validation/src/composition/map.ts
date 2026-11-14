@@ -44,7 +44,7 @@ import { SIZE_OPTIONS, assertSizeOptions, reportSize, type SizeOptions } from ".
  * @param value - Validator applied to every value.
  * @param rest - Size limits, then checks.
  * @returns A validator that produces a `Map`.
- * @throws {TypeError} When `key` or `value` is not a function, or `min`, `max` or `length` is not a number.
+ * @throws {TypeError} When `key` or `value` is not a validator of this copy of the package, or `min`, `max` or `length` is not a number.
  * @throws {RangeError} When `min`, `max` or `length` is not a non-negative integer, or no size satisfies them together.
  */
 export function map<TKey extends AnyValidator, TValue extends AnyValidator>(
