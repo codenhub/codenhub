@@ -38,7 +38,7 @@ O segundo argumento é o problema a reportar quando o teste retorna `false`:
 
 - Uma string é a mensagem dele.
 - Uma função do problema escreve o texto quando ele é reportado, como faz a mensagem de uma verificação nativa. Ela precisa retornar texto, ou o validador lança um `TypeError` ao reportar o problema.
-- Um objeto pode definir `code`, `path`, `params` e `message`. Um `path` é uma lista de chaves e índices. Qualquer outra coisa, como um texto ou um symbol, lança um `TypeError` quando a verificação é criada.
+- Um objeto pode definir `code`, `path`, `params` e `message`. Um `path` é uma lista de chaves e índices. Qualquer outra coisa, como um texto ou um symbol, lança um `TypeError` quando a verificação é criada, assim como uma lista passada como o problema.
 
 Sem código, o problema tem o código `custom`, no próprio local do valor. Um problema sem mensagem própria é descrito pela opção `message` do validador que recebe a verificação, quando ele tem uma. Caso contrário, só resta o código, e `formatIssue` diz "Invalid value". Então dê uma mensagem à verificação sempre que pessoas forem ler o que ela reporta.
 
@@ -160,7 +160,7 @@ Um compositor só aceita uma função escrita à mão por meio de `validator`. O
 | `params`  | Fatos sobre a falha, para montar uma mensagem ou para quem chama inspecionar. Nunca coloque a entrada aqui: um problema é algo que quem chama registra em log. |
 | `message` | Texto fixo da mensagem. Sem ele, [`formatIssue`](errors.md#transformando-um-problema-em-texto) monta o texto a partir de `code` e `params`.                    |
 
-`fail` lança um `TypeError` quando não recebe nenhum problema, já que uma falha sem problema não diz nada. Ele também lança para um `path` que não é uma lista, como `"confirm"` onde se queria `["confirm"]`, que seria dividido em um segmento por letra.
+`fail` lança um `TypeError` quando não recebe nenhum problema, já que uma falha sem problema não diz nada. Ele também lança para um `path` que não é uma lista, como `"confirm"` onde se queria `["confirm"]`, que seria dividido em um segmento por letra, e para uma lista passada como problema, como `fail(issues)` onde se queria `fail(...issues)`, que seria lida como um único problema que não diz nada.
 
 ### Uma função que não é um validador
 

@@ -31,6 +31,12 @@ describe("check", () => {
     );
   });
 
+  it("should reject a list given as its issue, which would be read as one that says nothing", () => {
+    expect(() => check(() => false, [{ code: "x" }] as never)).toThrow(
+      new TypeError("issue must be a message or an issue object"),
+    );
+  });
+
   it("should take a string as the message", () => {
     expect(check((n: number) => n > 0, "Must be positive")(0)).toEqual([
       { code: "custom", path: [], message: "Must be positive" },

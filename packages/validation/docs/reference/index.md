@@ -119,7 +119,7 @@ Builds a failed result from one or more issues.
 
 **Returns** — A failed result holding every issue, in order.
 
-**Throws** — `TypeError` — When called without an issue, with a `path` that is not a list of keys and indexes, such as `"confirm"`, which would be split into one segment per letter, or with a `code` or `message` that is not text. The types forbid all of them.
+**Throws** — `TypeError` — When called without an issue, with an issue that is not an object or is a list, as in `fail(issues)` for `fail(...issues)`, with a `path` that is not a list of keys and indexes, such as `"confirm"`, which would be split into one segment per letter, or with a `code` or `message` that is not text. The types forbid all of them.
 
 ### is
 

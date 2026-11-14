@@ -333,11 +333,11 @@
         "check": {
           "files": {
             "dist/index.js": {
-              "bytes": 4265,
+              "bytes": 4283,
               "declarations": {
-                "check": 557,
+                "check": 575,
+                "assertIssue": 381,
                 "runChecks$1": 321,
-                "assertIssue": 298,
                 "answered": 259,
                 "adopt": 202,
                 "wait$1": 185,
@@ -347,7 +347,6 @@
                 "assertOption": 123,
                 "assertFunction": 121,
                 "say": 118,
-                "written": 114,
                 "assertText": 113,
                 "restore": 113,
                 "context": 111,
@@ -367,6 +366,7 @@
                 "finished": 35,
                 "CHECK": 34,
                 "FAIL": 33,
+                "written": 31,
                 "count": 28,
                 "ROOT_PATH": 20,
                 "RULES": 14,
@@ -383,18 +383,18 @@
               "bytes": 19
             }
           },
-          "gzip": 1680,
-          "minified": 4284
+          "gzip": 1686,
+          "minified": 4302
         },
         "checkFields": {
           "files": {
             "dist/index.js": {
-              "bytes": 5628,
+              "bytes": 5646,
               "declarations": {
-                "check": 557,
+                "check": 575,
                 "checkFields": 385,
+                "assertIssue": 381,
                 "runChecks$1": 321,
-                "assertIssue": 298,
                 "answered": 259,
                 "fieldChecksOf": 226,
                 "adopt": 202,
@@ -407,7 +407,6 @@
                 "assertOption": 123,
                 "assertFunction": 121,
                 "say": 118,
-                "written": 114,
                 "assertText": 113,
                 "restore": 113,
                 "context": 111,
@@ -432,6 +431,7 @@
                 "finished": 35,
                 "CHECK": 34,
                 "FAIL": 33,
+                "written": 31,
                 "builders": 30,
                 "count": 28,
                 "ROOT_PATH": 20,
@@ -449,8 +449,8 @@
               "bytes": 25
             }
           },
-          "gzip": 2155,
-          "minified": 5653
+          "gzip": 2161,
+          "minified": 5671
         },
         "cidr": {
           "files": {
@@ -1732,9 +1732,9 @@
         "fail": {
           "files": {
             "dist/index.js": {
-              "bytes": 939,
+              "bytes": 1022,
               "declarations": {
-                "assertIssue": 298,
+                "assertIssue": 381,
                 "toIssue": 140,
                 "assertOption": 123,
                 "fail": 116,
@@ -1751,8 +1751,8 @@
               "bytes": 18
             }
           },
-          "gzip": 514,
-          "minified": 957
+          "gzip": 528,
+          "minified": 1040
         },
         "fallback": {
           "files": {
@@ -6192,10 +6192,10 @@
         "validator": {
           "files": {
             "dist/index.js": {
-              "bytes": 3453,
+              "bytes": 3536,
               "declarations": {
+                "assertIssue": 381,
                 "validator": 348,
-                "assertIssue": 298,
                 "adopt": 202,
                 "wait$1": 185,
                 "join": 183,
@@ -6239,13 +6239,13 @@
               "bytes": 23
             }
           },
-          "gzip": 1493,
-          "minified": 3476
+          "gzip": 1506,
+          "minified": 3559
         }
       },
       "files": {
         "dist/index.js": {
-          "bytes": 95219,
+          "bytes": 95237,
           "declarations": {
             "toJsonSchema": 6643,
             "encode": 2598,
@@ -6270,10 +6270,10 @@
             "objectLike": 734,
             "union": 616,
             "intersection": 589,
+            "check": 583,
             "meta": 574,
             "toMailto": 574,
             "describeFormat$1": 566,
-            "check": 565,
             "describeFormat": 563,
             "FORMAT_NAMES": 530,
             "fromPunycode": 530,
@@ -6306,6 +6306,7 @@
             "partsAt": 391,
             "checkFields": 390,
             "date": 383,
+            "assertIssue": 381,
             "partsOf": 381,
             "pipe": 378,
             "producersOf": 377,
@@ -6329,7 +6330,6 @@
             "describeType": 309,
             "describeType$1": 308,
             "coercing": 299,
-            "assertIssue": 298,
             "invalidTypeMessage": 292,
             "settle": 289,
             "portugueseMessages": 288,
@@ -6467,7 +6467,6 @@
             "wordInteger": 116,
             "wordType": 116,
             "checkReserved": 115,
-            "written": 115,
             "endsWith": 114,
             "includes": 114,
             "restore": 114,
@@ -6663,6 +6662,7 @@
             "isIdnHost": 32,
             "isPublicHost": 32,
             "refuseReserved": 32,
+            "written": 32,
             "DEFAULT_LIMITS": 31,
             "builders": 31,
             "customFormats": 31,
@@ -6768,9 +6768,9 @@
           "bytes": 1750
         }
       },
-      "gzip": 32428,
-      "minified": 96969,
-      "sha256": "2dd414659ffef4ea59ecc926616308171242f9e7875094e1b808a4f73921e4e9"
+      "gzip": 32431,
+      "minified": 96987,
+      "sha256": "34954148c0f8694e28635bbe398ad465249fb617b627bd1e43945cdc1f2ba2fe"
     }
   }
 }
