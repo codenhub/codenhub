@@ -1,6 +1,6 @@
 ---
 status: IMPLEMENTED
-last_updated: 2026-11-12
+last_updated: 2026-11-13
 scope: Design decisions, limits, and failure modes of the `chs` build command that ships in `@codenhub/styles`.
 ---
 
@@ -39,11 +39,11 @@ Now the command imports nothing beyond Node.js built-ins, which `tests/integrati
 
 Cost accepted: every consumer installs `dist/purge/`, about 273 KB (22 KB gzipped) for `index.css` and 7 KB for `classes.json`, whether or not they run the command. That is far less than the 19 MB that `@tailwindcss/cli` and `tailwindcss` as regular `dependencies` cost every consumer, which made the bare `npx` work and was reverted before 0.8.0 for that size.
 
-Rejected: a fork of Tailwind's compiler or scanner inside the package. It would make this package maintain a CSS compiler to keep the old output, utilities included, for consumers who can run Tailwind themselves through `/tw`. Tailwind stays the authoring tool and the `/tw` integration, and nothing else.
+Rejected: a fork of Tailwind's compiler or scanner inside the package. It would make this package maintain a CSS compiler to keep the old output, utilities included, for consumers who can run Tailwind themselves through `/tw`. Tailwind stays the authoring tool and the `/tw` integration, and nothing else. [Roadmap](./roadmap.md#a-build-the-package-owns-with-tailwind-as-an-adapter) plans to end the first of those roles with a build of this package's own, which is not the fork rejected here: it compiles this package's source and no Tailwind utility.
 
 ## No Tailwind utilities, ten variants
 
-The command emits StyleKit classes only. A Tailwind utility such as `flex` or `mt-4` is not in `dist/purge/index.css`, so it is never found. Shipping utilities would mean shipping a fixed subset of Tailwind compiled in advance, and any subset is the wrong one for some project; a project that wants them runs Tailwind and imports `/tw`, which gives every utility and every variant.
+The command emits StyleKit classes only. A Tailwind utility such as `flex` or `mt-4` is not in `dist/purge/index.css`, so it is never found. Shipping utilities would mean shipping a fixed subset of Tailwind compiled in advance, and any subset is the wrong one for some project; a project that wants them runs Tailwind and imports `/tw`, which gives every utility and every variant. [Roadmap → Possible](./roadmap.md#possible) keeps open a command that generates a closed set of utilities instead of trimming a compiled one; this decision stands until that one is made.
 
 The variants are a fixed list in `scripts/build-purge.mjs`: `sm`, `md`, `lg`, `xl`, `2xl`, `hover`, `focus`, `focus-visible`, `active`, and `dark`, on the intent, presentation (fill and edge), and modifier classes from `registry.json`, except `disabled`, which the documentation tells consumers to write as the attribute or the class. Each variant costs its copy of every class it applies to, about 3 KB minified for the axis classes alone, and a page pays only for the ones it uses, but every install carries them all.
 
