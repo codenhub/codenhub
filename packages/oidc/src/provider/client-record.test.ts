@@ -206,6 +206,7 @@ describe("checkClientRecord", () => {
       const attempt = () =>
         checkClientRecord(valid({ backchannelLogout: { uri: "http://secret.example/logout" } }), "client-a", KEYS);
 
+      expect(attempt).toThrow(TypeError);
       expect(attempt).not.toThrow("secret.example");
     });
   });
