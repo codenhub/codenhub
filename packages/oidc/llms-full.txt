@@ -954,7 +954,7 @@ async function signOut(session: { readonly id: string; readonly subject: string 
   const clientIds = await clientsSignedInDuring(session.id);
   await endAppSession(session.id);
 
-  await Promise.allSettled(
+  const results = await Promise.allSettled(
     clientIds.map(async (clientId) => {
       const request = await provider.backchannelLogout({
         clientId,
@@ -974,10 +974,15 @@ async function signOut(session: { readonly id: string; readonly subject: string 
       }
     }),
   );
+  for (const result of results) {
+    if (result.status === "rejected") {
+      throw result.reason; // a TypeError from backchannelLogout, or the store's own error: a bug, not a failure to log
+    }
+  }
 }
 ```
 
-`Promise.allSettled` keeps one failing client from stopping the others. The `TypeError` cases above are not caught here, since they are bugs to fix and not failures to log, but `allSettled` still lets the remaining clients go.
+`Promise.allSettled` keeps one failing client from stopping the others. A client that is down, slow or answers with an error is a failure to log, so the `fetch` is caught. A rejection of `backchannelLogout` itself, such as the `TypeError` cases above or a store that fails, is not: it is rethrown once every other client has had its request, so it reaches the app's error handling instead of being dropped with the settled results.
 
 ### What the app must track
 
