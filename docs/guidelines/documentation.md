@@ -1,6 +1,6 @@
 ---
 status: IMPLEMENTED
-last_updated: 2026-11-09
+last_updated: 2026-11-14
 scope: Durable repository-level documentation under root `docs/`.
 ---
 
@@ -90,6 +90,16 @@ Exceptions to APPROVED or IMPLEMENTED documents MUST be explicit, scoped, and ju
 - Whether it is temporary or permanent.
 
 Record an exception next to the rule it bypasses, unless a dedicated register serves that scope better. Do not create broad exceptions for one-off cases. Repeated exceptions show the rule is wrong: change the rule.
+
+## Document roles
+
+Each document has one role, and its wording follows from it:
+
+- **Guidance** applies to every contributor, human or agent: `CONTRIBUTING.md` for the workflow, and `docs/guidelines/` for how code and documents are written. A rule that holds for everyone is written for everyone, not addressed to agents.
+- **Agent guidance** is what only an agent needs: the root `AGENTS.md` for how to work, and a scoped `AGENTS.md` for the traps of its directory. It does not restate guidance.
+- **Leaf documentation** is everything else: specifications, references such as `docs/workspace.md` and `docs/ci.md`, guides, `SECURITY.md`, and READMEs. A leaf describes; it does not route. It says what another document covers ("`docs/ci.md` explains the job split"), never when to read it ("read `docs/ci.md` before changing CI", "start here", "see X for details"). The reader judges from the task whether to open it. A [document that teaches](#documents-that-teach) is the one exception: its handoff to the next page is part of the order it teaches in, not a guess at the reader's task.
+
+Routing instructions go stale as documents move and multiply, and they presume the reader's task. A description stays true as long as the document it names still covers that subject.
 
 ## What belongs here
 
