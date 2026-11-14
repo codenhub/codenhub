@@ -66,18 +66,36 @@ export class ConformanceHost {
   ) {}
 
   async fetch(request: Request): Promise<Response> {
+    let host: Host;
     try {
       // A failed start is kept, so a broken host answers the same way every time instead of half starting.
       this.host ??= createHost(readConfig(this.env));
-      return await (await this.host).fetch(request);
+      host = await this.host;
     } catch (error) {
-      console.error("Conformance host failed:", error instanceof Error ? error.message : "unknown error");
-      return new Response(`Conformance host failed: ${error instanceof Error ? error.message : "unknown error"}\n`, {
-        status: 500,
-        headers: { "Content-Type": "text/plain; charset=utf-8" },
-      });
+      // A configuration or self-check failure names what to fix and never a value, so any caller may see it.
+      const message = `Conformance host failed to start: ${messageOf(error)}`;
+      console.error(message);
+      return failure(`${message}\n`);
+    }
+    try {
+      return await host.fetch(request);
+    } catch (error) {
+      // Anything else is internal: the caller gets a generic answer, and `wrangler tail` the message. The path is
+      // logged without its query, which can carry a code or a token.
+      console.error(
+        `Conformance host failed on ${request.method} ${new URL(request.url).pathname}: ${messageOf(error)}`,
+      );
+      return failure("Conformance host failed to answer the request.\n");
     }
   }
+}
+
+function messageOf(error: unknown): string {
+  return error instanceof Error ? error.message : "unknown error";
+}
+
+function failure(text: string): Response {
+  return new Response(text, { status: 500, headers: { "Content-Type": "text/plain; charset=utf-8" } });
 }
 
 export default {
