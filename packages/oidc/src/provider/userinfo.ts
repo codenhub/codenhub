@@ -1,13 +1,7 @@
-import { digestKey } from "../shared/encoding";
+import { findBearerAccessToken } from "./bearer";
 import { refuse } from "./diagnostics";
 import type { ResolvedOptions } from "./options";
 import { bearerErrorResponse, jsonResponse, methodNotAllowed, preflightResponse } from "./responses";
-
-/**
- * The `Authorization` header this endpoint accepts: the `Bearer` scheme in any letter case, one or more spaces
- * (RFC 6750 §2.1: `"Bearer" 1*SP`), then a token of the RFC 6750 §2.1 character set. Anything else is malformed.
- */
-const BEARER_AUTHORIZATION = /^Bearer +([A-Za-z0-9\-._~+/]+=*)$/i;
 
 const USERINFO_METHODS: readonly string[] = ["GET", "POST"];
 
@@ -33,33 +27,25 @@ export async function handleUserinfo(options: ResolvedOptions, request: Request)
   return answerWithAccessToken(options, request);
 }
 
-/** Reads the bearer token, looks up its record, and answers with the released claims. */
+/** Looks up the bearer token's record and answers with the released claims. */
 async function answerWithAccessToken(options: ResolvedOptions, request: Request): Promise<Response> {
-  const header = request.headers.get("authorization");
-  if (header === null) {
-    return refuse(bearerErrorResponse(), "access_token_missing");
+  const lookup = await findBearerAccessToken(options, request);
+  if (!lookup.ok) {
+    const response =
+      lookup.reason === "access_token_missing"
+        ? bearerErrorResponse()
+        : bearerErrorResponse(lookup.reason === "access_token_malformed" ? "invalid_request" : "invalid_token");
+    return refuse(response, lookup.reason, lookup.clientId);
   }
-  const match = BEARER_AUTHORIZATION.exec(header);
-  const token = match?.[1];
-  if (token === undefined) {
-    return refuse(bearerErrorResponse("invalid_request"), "access_token_malformed");
-  }
-
-  // Looked up by digest in the access-token table only. An ID token or refresh token presented here is
-  // never found, which is what stops one kind of token from being used as another.
-  const record = await options.store.findAccessToken(await digestKey(token));
-  if (record === undefined) {
-    return refuse(bearerErrorResponse("invalid_token"), "access_token_unknown");
-  }
-  if (record.expiresAt <= options.now()) {
-    return refuse(bearerErrorResponse("invalid_token"), "access_token_expired", record.clientId);
-  }
+  const { record } = lookup;
   // OpenID Connect Core §5.3: the endpoint serves only tokens obtained with `openid`.
   if (!record.scopes.includes("openid")) {
     return refuse(bearerErrorResponse("insufficient_scope"), "access_token_without_openid", record.clientId);
   }
 
-  return jsonResponse(await releaseClaims(options, record), { caching: "no-store" });
+  return jsonResponse(await releaseClaims(options, record), {
+    caching: "no-store",
+  });
 }
 
 /**
@@ -74,7 +60,11 @@ async function answerWithAccessToken(options: ResolvedOptions, request: Request)
  */
 export async function releaseClaims(
   options: ResolvedOptions,
-  grant: { readonly subject: string; readonly clientId: string; readonly scopes: readonly string[] },
+  grant: {
+    readonly subject: string;
+    readonly clientId: string;
+    readonly scopes: readonly string[];
+  },
 ): Promise<Record<string, unknown>> {
   const claimNames = claimNamesFor(options, grant.scopes);
   const released = await options.claims({
