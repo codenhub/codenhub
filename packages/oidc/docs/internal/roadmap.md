@@ -36,7 +36,6 @@ The provider passes the Basic OP and Config OP plans; the client runs the RP tes
 
 None of these breaks an existing contract, so each can wait for its consumer.
 
-- **More from JWT access tokens.** Extra claims, such as roles. An audience per resource shipped as resource indicators (scope.md decision 59).
 - **Pairwise subject identifiers in discovery.** The app already derives a subject per client (decision 38); an option for `subject_types_supported` is the remaining change, when the SSO application turns pairwise subjects on.
 
 ## Not Planned

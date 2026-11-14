@@ -13,8 +13,14 @@ import { areResourcesOfClient, type CheckedClient, isScopeOfClient, lifetimesOf 
 import { refuse } from "./diagnostics";
 import { PROTOCOL_SCOPES, type ResolvedOptions, type ResolvedTtl, selectIdTokenKey } from "./options";
 import { jsonResponse, methodNotAllowed, preflightResponse, tokenErrorResponse } from "./responses";
-import type { ClientRecord, CodeRecord, ProviderDiagnosticReason, RefreshTokenRecord } from "./types";
-import { releaseClaims } from "./userinfo";
+import type {
+  AccessTokenClaimsRequest,
+  ClientRecord,
+  CodeRecord,
+  ProviderDiagnosticReason,
+  RefreshTokenRecord,
+} from "./types";
+import { ownDataValue, releaseClaims } from "./userinfo";
 
 /** Claims the provider sets in every ID token it signs, which a scope's claims may never replace or add. */
 const PROTOCOL_CLAIMS: ReadonlySet<string> = new Set([
@@ -35,6 +41,28 @@ const PROTOCOL_CLAIMS: ReadonlySet<string> = new Set([
   "nbf",
   "events",
   "cnf",
+]);
+
+/**
+ * Claims a JWT access token may carry that the provider sets or could set, which the app's `accessTokenClaims` may
+ * never replace or add. Any other claim the token sets is dropped too, so this list need not keep up with the
+ * payload.
+ */
+const ACCESS_TOKEN_CLAIMS: ReadonlySet<string> = new Set([
+  "iss",
+  "exp",
+  "aud",
+  "sub",
+  "client_id",
+  "iat",
+  "jti",
+  "scope",
+  "auth_time",
+  "acr",
+  "amr",
+  "nbf",
+  "cnf",
+  "azp",
 ]);
 
 /** A token grant's identity and what it carries: enough to issue tokens for it again. */
@@ -485,7 +513,7 @@ async function issueAccessToken(
  * token for it, and `jti` makes every token distinct, so its digest is a unique store key. `aud` is a string for one
  * audience and an array for several (RFC 7519 §4.1.3).
  */
-function signAccessToken(
+async function signAccessToken(
   options: ResolvedOptions,
   ttl: ResolvedTtl,
   audience: readonly string[],
@@ -493,22 +521,61 @@ function signAccessToken(
   scopes: readonly string[],
   now: number,
 ): Promise<string> {
-  return sign({
-    payload: {
-      iss: options.issuer,
-      exp: now + ttl.accessToken,
-      aud: audience.length === 1 ? audience[0] : [...audience],
-      sub: grant.subject,
-      client_id: grant.clientId,
-      iat: now,
-      jti: randomToken(),
-      scope: scopes.join(" "),
-      ...(grant.authTime !== undefined ? { auth_time: grant.authTime } : {}),
-      ...optionalAuthContext(grant),
-    },
-    key: options.signingKey.privateKey,
-    header: { typ: "at+jwt" },
-  });
+  const payload: Record<string, unknown> = {
+    iss: options.issuer,
+    exp: now + ttl.accessToken,
+    aud: audience.length === 1 ? audience[0] : [...audience],
+    sub: grant.subject,
+    client_id: grant.clientId,
+    iat: now,
+    jti: randomToken(),
+    scope: scopes.join(" "),
+    ...(grant.authTime !== undefined ? { auth_time: grant.authTime } : {}),
+    ...optionalAuthContext(grant),
+  };
+  const extra =
+    options.accessTokenClaims === undefined
+      ? {}
+      : await appAccessTokenClaims(options.accessTokenClaims, payload, {
+          subject: grant.subject,
+          clientId: grant.clientId,
+          scopes,
+          audience,
+          grantId: grant.grantId,
+        });
+  return sign({ payload: { ...extra, ...payload }, key: options.signingKey.privateKey, header: { typ: "at+jwt" } });
+}
+
+/**
+ * The claims the app's `accessTokenClaims` adds, read as own enumerable data properties so a getter never runs,
+ * minus every claim the provider sets or could set (decision 55's rule, applied to access tokens).
+ *
+ * @throws {TypeError} When the callback resolves to something that is not a plain object.
+ */
+async function appAccessTokenClaims(
+  accessTokenClaims: NonNullable<ResolvedOptions["accessTokenClaims"]>,
+  payload: Readonly<Record<string, unknown>>,
+  request: AccessTokenClaimsRequest,
+): Promise<Record<string, unknown>> {
+  const returned: unknown = await accessTokenClaims(
+    Object.freeze({
+      ...request,
+      scopes: Object.freeze([...request.scopes]),
+      audience: Object.freeze([...request.audience]),
+    }),
+  );
+  if (typeof returned !== "object" || returned === null || Array.isArray(returned)) {
+    throw new TypeError("accessTokenClaims must return an object or a promise of one");
+  }
+  const entries: [string, unknown][] = [];
+  for (const name of Object.keys(returned)) {
+    const value = ownDataValue(returned, name);
+    if (value !== undefined && !ACCESS_TOKEN_CLAIMS.has(name) && !Object.hasOwn(payload, name)) {
+      entries.push([name, value]);
+    }
+  }
+  // `Object.fromEntries` defines each property, so a claim named `__proto__` stays an ordinary one.
+  return Object.fromEntries(entries);
 }
 
 /**

@@ -2,6 +2,7 @@ import type { KeyPair, PublicKey } from "@codenhub/jwt";
 
 import { isHttpsUrl } from "../shared/urls";
 import type {
+  AccessTokenClaimsRequest,
   AccessTokenFormat,
   ClaimsRequest,
   OidcStore,
@@ -109,6 +110,11 @@ export interface ResolvedOptions {
   readonly now: () => number;
   readonly onDiagnostic: ((diagnostic: ProviderDiagnostic) => void) | undefined;
   readonly onRefresh: ((request: RefreshCheck) => boolean | Promise<boolean>) | undefined;
+  readonly accessTokenClaims:
+    | ((
+        request: AccessTokenClaimsRequest,
+      ) => Readonly<Record<string, unknown>> | Promise<Readonly<Record<string, unknown>>>)
+    | undefined;
 }
 
 const STORE_METHODS = [
@@ -311,6 +317,15 @@ export function resolveOptions(options: ProviderOptions): ResolvedOptions {
   if (options.onRefresh !== undefined && typeof options.onRefresh !== "function") {
     fail("onRefresh", "must be a function");
   }
+  const accessToken = readAccessTokenFormat(options.accessToken);
+  if (options.accessTokenClaims !== undefined) {
+    if (typeof options.accessTokenClaims !== "function") {
+      fail("accessTokenClaims", "must be a function");
+    }
+    if (accessToken.format !== "jwt") {
+      fail("accessTokenClaims", 'requires accessToken.format "jwt", since an opaque token carries no claims');
+    }
+  }
   const clock = options.now ?? Date.now;
   return Object.freeze({
     issuer,
@@ -322,9 +337,10 @@ export function resolveOptions(options: ProviderOptions): ResolvedOptions {
     claims: options.claims,
     scopeClaims: readScopes(options.scopes),
     ttl: Object.freeze(readTtl(options.ttl)),
-    accessToken: readAccessTokenFormat(options.accessToken),
+    accessToken,
     now: () => Math.floor(clock() / 1000),
     onDiagnostic: options.onDiagnostic,
     onRefresh: options.onRefresh,
+    accessTokenClaims: options.accessTokenClaims,
   });
 }

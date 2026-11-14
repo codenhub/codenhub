@@ -115,7 +115,7 @@ function releasedClaims(
 }
 
 /** The value of an own, enumerable data property, or `undefined` for anything else, without running a getter. */
-function ownDataValue(source: object, name: string): unknown {
+export function ownDataValue(source: object, name: string): unknown {
   if (!Object.hasOwn(source, name)) {
     return undefined;
   }

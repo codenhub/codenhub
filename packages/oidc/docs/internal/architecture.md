@@ -69,6 +69,8 @@ Access tokens are opaque by default, or RFC 9068 JWTs signed with the ID token k
 
 `authenticate` (decision 57) is userinfo's lookup without the endpoint: `bearer.ts` reads the header and finds the access token record for both, and `authenticate.ts` adds the audience and scope checks and builds its own RFC 6750 responses, without CORS, since the app's API is not one of the provider's endpoints. It returns its reason instead of reporting a diagnostic.
 
+`accessTokenClaims` (decision 58) is read in `signAccessToken`, so every JWT access token gets it whichever grant issued it, and only JWTs do: the option is refused with opaque tokens at creation. The provider's payload is spread over the app's claims, after the app's are filtered by the names of `ACCESS_TOKEN_CLAIMS` and the payload's own keys, the rule decision 55 set for ID tokens. Signing happens inside `issueAccessToken`, which every grant calls before it saves the next refresh token, so the ordering decision 55 needs holds without a check of its own.
+
 A code or refresh token is consumed before it is checked, so a wrong verifier or redirect URI still burns it, and a second attempt is a replay. A replay revokes the grant. Because a replay can arrive while the first exchange is still saving its tokens, the store contract requires `revokeGrant` to cover tokens saved after it (decision 10); the memory store keeps a set of revoked grants and checks it on every read.
 
 ### Revocation endpoint

@@ -80,6 +80,58 @@ A single SHA-256 is enough here, and not a password hash such as bcrypt or scryp
 
 ## Interfaces
 
+### AccessTokenClaimsRequest
+
+```ts
+export interface AccessTokenClaimsRequest {
+    readonly subject: string;
+    readonly clientId: string;
+    readonly scopes: readonly string[];
+    readonly audience: readonly string[];
+    readonly grantId: string;
+}
+```
+
+What `ProviderOptions.accessTokenClaims` is asked about: the JWT access token about to be signed. Frozen.
+
+#### AccessTokenClaimsRequest › audience
+
+```ts
+readonly audience: readonly string[];
+```
+
+The token's audience, as its `aud` claim and `AccessTokenRecord.audience` hold it.
+
+#### AccessTokenClaimsRequest › clientId
+
+```ts
+readonly clientId: string;
+```
+
+#### AccessTokenClaimsRequest › grantId
+
+```ts
+readonly grantId: string;
+```
+
+The grant the token belongs to; for `client_credentials`, a new one per token.
+
+#### AccessTokenClaimsRequest › scopes
+
+```ts
+readonly scopes: readonly string[];
+```
+
+The scopes the token carries.
+
+#### AccessTokenClaimsRequest › subject
+
+```ts
+readonly subject: string;
+```
+
+The user the token is for, or the client identifier for `client_credentials`.
+
 ### AccessTokenRecord
 
 ```ts
@@ -1633,6 +1685,7 @@ export interface ProviderOptions {
     readonly now?: () => number;
     readonly onDiagnostic?: (diagnostic: ProviderDiagnostic) => void;
     readonly onRefresh?: (request: RefreshCheck) => boolean | Promise<boolean>;
+    readonly accessTokenClaims?: (request: AccessTokenClaimsRequest) => Readonly<Record<string, unknown>> | Promise<Readonly<Record<string, unknown>>>;
 }
 ```
 
@@ -1647,6 +1700,20 @@ readonly accessToken?: AccessTokenFormat;
 The format of access tokens. Opaque tokens are random values a resource server can check only through the provider's store. JWT access tokens (RFC 9068) are signed with the first signing key, with `typ: at+jwt` and this `audience`, so a resource server can verify them offline; such a server sees a revocation only when the token expires. Either format is stored by its digest, so the userinfo and revocation endpoints work alike.
 
 **Default** — `{ format: "opaque" }`
+
+#### ProviderOptions › accessTokenClaims
+
+```ts
+readonly accessTokenClaims?: (request: AccessTokenClaimsRequest) => Readonly<Record<string, unknown>> | Promise<Readonly<Record<string, unknown>>>;
+```
+
+Returns claims the app adds to each JWT access token, such as the user's roles for a resource server. Called for every JWT access token the provider issues: at the code exchange, at each refresh, and for `client_credentials`, whose `subject` is the client identifier.
+
+The provider's own claims always win: a returned `iss`, `exp`, `aud`, `sub`, `client_id`, `iat`, `jti`, `scope`, `auth_time`, `acr`, `amr`, `nbf`, `cnf` or `azp` is dropped, as is any other claim the token sets, even one this token happens not to carry. Only own enumerable data properties are read, so a getter never runs, and a property whose value is `undefined` is left out. Keep the claims small and free of anything the client must not read: a JWT access token is readable by whoever holds it.
+
+A result that is not a plain object, such as an array or `null`, makes `handle` reject with `TypeError`, and, as with the `claims` callback, a throw or a rejected promise makes `handle` reject with that error. At a refresh it runs before the next refresh token is saved, so a failure leaves no token the client never receives; the spent refresh token makes the client's retry a reuse, which revokes the family.
+
+Requires `accessToken: { format: "jwt" }`; given with opaque access tokens, `createProvider` throws `TypeError`, since an opaque token carries no claims.
 
 #### ProviderOptions › claims
 

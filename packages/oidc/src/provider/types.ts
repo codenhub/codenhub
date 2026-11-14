@@ -554,6 +554,41 @@ export interface ProviderOptions {
    * It is not called for a code exchange, which is the sign-in itself.
    */
   readonly onRefresh?: (request: RefreshCheck) => boolean | Promise<boolean>;
+  /**
+   * Returns claims the app adds to each JWT access token, such as the user's roles for a resource server. Called
+   * for every JWT access token the provider issues: at the code exchange, at each refresh, and for
+   * `client_credentials`, whose `subject` is the client identifier.
+   *
+   * The provider's own claims always win: a returned `iss`, `exp`, `aud`, `sub`, `client_id`, `iat`, `jti`,
+   * `scope`, `auth_time`, `acr`, `amr`, `nbf`, `cnf` or `azp` is dropped, as is any other claim the token sets, even
+   * one this token happens not to carry. Only own enumerable data properties are read, so a getter never runs, and
+   * a property whose value is `undefined` is left out. Keep the claims small and free of anything the client must
+   * not read: a JWT access token is readable by whoever holds it.
+   *
+   * A result that is not a plain object, such as an array or `null`, makes `handle` reject with `TypeError`, and,
+   * as with the `claims` callback, a throw or a rejected promise makes `handle` reject with that error. At a
+   * refresh it runs before the next refresh token is saved, so a failure leaves no token the client never
+   * receives; the spent refresh token makes the client's retry a reuse, which revokes the family.
+   *
+   * Requires `accessToken: { format: "jwt" }`; given with opaque access tokens, `createProvider` throws
+   * `TypeError`, since an opaque token carries no claims.
+   */
+  readonly accessTokenClaims?: (
+    request: AccessTokenClaimsRequest,
+  ) => Readonly<Record<string, unknown>> | Promise<Readonly<Record<string, unknown>>>;
+}
+
+/** What {@link ProviderOptions.accessTokenClaims} is asked about: the JWT access token about to be signed. Frozen. */
+export interface AccessTokenClaimsRequest {
+  /** The user the token is for, or the client identifier for `client_credentials`. */
+  readonly subject: string;
+  readonly clientId: string;
+  /** The scopes the token carries. */
+  readonly scopes: readonly string[];
+  /** The token's audience, as its `aud` claim and {@link AccessTokenRecord.audience} hold it. */
+  readonly audience: readonly string[];
+  /** The grant the token belongs to; for `client_credentials`, a new one per token. */
+  readonly grantId: string;
 }
 
 /** What {@link ProviderOptions.onRefresh} is asked about: the refresh that is about to issue tokens. */
