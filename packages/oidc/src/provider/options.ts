@@ -110,6 +110,7 @@ export interface ResolvedOptions {
   readonly now: () => number;
   readonly onDiagnostic: ((diagnostic: ProviderDiagnostic) => void) | undefined;
   readonly onRefresh: ((request: RefreshCheck) => boolean | Promise<boolean>) | undefined;
+  readonly subjectTypes: readonly string[];
   readonly accessTokenClaims:
     | ((
         request: AccessTokenClaimsRequest,
@@ -258,6 +259,30 @@ function readScopes(scopes: unknown): ReadonlyMap<string, readonly string[]> {
   return resolved;
 }
 
+const SUBJECT_TYPES: readonly string[] = ["public", "pairwise"];
+const PUBLIC_ONLY: readonly string[] = Object.freeze(["public"]);
+
+/** Reads the subject types to publish: a non-empty list of `public` and `pairwise`, each once. */
+function readSubjectTypes(subjectTypes: unknown): readonly string[] {
+  if (subjectTypes === undefined) {
+    return PUBLIC_ONLY;
+  }
+  // Bounded before the copy, since a list without repeats holds at most every type once. `Array.from` reads a hole
+  // as `undefined`, so a sparse list is refused rather than skipped.
+  const types =
+    Array.isArray(subjectTypes) && subjectTypes.length <= SUBJECT_TYPES.length
+      ? Array.from(subjectTypes as unknown[])
+      : [];
+  if (
+    types.length === 0 ||
+    !types.every((type) => SUBJECT_TYPES.includes(type as string)) ||
+    new Set(types).size !== types.length
+  ) {
+    return fail("subjectTypes", "must be a non-empty array of public and pairwise, without repeats");
+  }
+  return Object.freeze(types as string[]);
+}
+
 const OPAQUE: AccessTokenFormat = Object.freeze({ format: "opaque" });
 
 function readAccessTokenFormat(accessToken: unknown): AccessTokenFormat {
@@ -341,6 +366,7 @@ export function resolveOptions(options: ProviderOptions): ResolvedOptions {
     now: () => Math.floor(clock() / 1000),
     onDiagnostic: options.onDiagnostic,
     onRefresh: options.onRefresh,
+    subjectTypes: readSubjectTypes(options.subjectTypes),
     accessTokenClaims: options.accessTokenClaims,
   });
 }

@@ -107,6 +107,23 @@ describe("buildMetadata", () => {
     expect(Object.isFrozen(metadata.scopes_supported)).toBe(true);
   });
 
+  it.each([[["pairwise"]], [["pairwise", "public"]], [["public", "pairwise"]]] as const)(
+    "shouldPublishSubjectTypes %j As Given",
+    async (subjectTypes) => {
+      const options = resolve({ subjectTypes }, [await keyPair("2026-10")]);
+
+      expect(buildMetadata(options).subject_types_supported).toEqual(subjectTypes);
+    },
+  );
+
+  it("shouldNotSeeALaterChangeToTheSubjectTypesArray", async () => {
+    const subjectTypes: ("public" | "pairwise")[] = ["pairwise"];
+    const options = resolve({ subjectTypes }, [await keyPair("2026-10")]);
+    subjectTypes.push("public");
+
+    expect(buildMetadata(options).subject_types_supported).toEqual(["pairwise"]);
+  });
+
   it("shouldAddCustomScopeToScopesSupported", async () => {
     const options = resolve({ scopes: { "read:orders": ["order_count"] } }, [await keyPair("2026-10")]);
 
