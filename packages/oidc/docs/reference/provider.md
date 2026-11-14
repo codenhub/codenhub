@@ -80,6 +80,58 @@ A single SHA-256 is enough here, and not a password hash such as bcrypt or scryp
 
 ## Interfaces
 
+### AccessTokenClaimsRequest
+
+```ts
+export interface AccessTokenClaimsRequest {
+    readonly subject: string;
+    readonly clientId: string;
+    readonly scopes: readonly string[];
+    readonly audience: readonly string[];
+    readonly grantId: string;
+}
+```
+
+What `ProviderOptions.accessTokenClaims` is asked about: the JWT access token about to be signed. Frozen.
+
+#### AccessTokenClaimsRequest › audience
+
+```ts
+readonly audience: readonly string[];
+```
+
+The token's audience, as its `aud` claim and `AccessTokenRecord.audience` hold it.
+
+#### AccessTokenClaimsRequest › clientId
+
+```ts
+readonly clientId: string;
+```
+
+#### AccessTokenClaimsRequest › grantId
+
+```ts
+readonly grantId: string;
+```
+
+The grant the token belongs to; for `client_credentials`, a new one per token.
+
+#### AccessTokenClaimsRequest › scopes
+
+```ts
+readonly scopes: readonly string[];
+```
+
+The scopes the token carries.
+
+#### AccessTokenClaimsRequest › subject
+
+```ts
+readonly subject: string;
+```
+
+The user the token is for, or the client identifier for `client_credentials`.
+
 ### AccessTokenRecord
 
 ```ts
@@ -89,11 +141,20 @@ export interface AccessTokenRecord {
     readonly subject: string;
     readonly scopes: readonly string[];
     readonly sessionId?: string;
+    readonly audience?: readonly string[];
     readonly expiresAt: number;
 }
 ```
 
 What an access token stands for.
+
+#### AccessTokenRecord › audience
+
+```ts
+readonly audience?: readonly string[];
+```
+
+The resource servers the token is for: the token request's `resource` values, else the grant's (at a refresh, those the client's record still lists), else, for a JWT access token, the `accessToken.audience` option. Absent for an opaque token issued for no resource.
 
 #### AccessTokenRecord › clientId
 
@@ -134,6 +195,73 @@ The app's session identifier from the grant.
 ```ts
 readonly subject: string;
 ```
+
+### AuthenticateOptions
+
+```ts
+export interface AuthenticateOptions {
+    readonly scopes?: readonly string[];
+    readonly audience?: string;
+}
+```
+
+What `Provider.authenticate` requires of a token, beyond being a live access token.
+
+#### AuthenticateOptions › audience
+
+```ts
+readonly audience?: string;
+```
+
+The resource server the token must be for: one of the `AccessTokenRecord.audience` values, compared byte for byte. A token issued for another resource, or for none, is refused with `invalid_token`. Absent, the audience is not checked, which suits only an API that every token of the provider may call.
+
+#### AuthenticateOptions › scopes
+
+```ts
+readonly scopes?: readonly string[];
+```
+
+Scopes the token must carry, every one of them. A token missing one is refused with `insufficient_scope`, and the challenge names these scopes. Each must be a scope token (RFC 6749 §3.3).
+
+### AuthenticationFailure
+
+```ts
+export interface AuthenticationFailure extends OidcFailure {
+    readonly response: Response;
+    readonly reason: AuthenticationFailureReason;
+    readonly clientId?: string;
+}
+```
+
+Why a request to the app's API did not authenticate, and how to answer it. The issue's code is the RFC 6750 error: `invalid_request` for a malformed `Authorization` header, `insufficient_scope` for a token without a required scope, and `invalid_token` for everything else, including a request with no token, whose challenge has no error.
+
+#### AuthenticationFailure › clientId
+
+```ts
+readonly clientId?: string;
+```
+
+The client the token was issued to, when the store found the token.
+
+#### AuthenticationFailure › issues
+
+Inherited from [`OidcFailure`](#oidcfailure--issues).
+
+#### AuthenticationFailure › reason
+
+```ts
+readonly reason: AuthenticationFailureReason;
+```
+
+Which check failed. Never sent to the client.
+
+#### AuthenticationFailure › response
+
+```ts
+readonly response: Response;
+```
+
+The response to return as is: `401` with `WWW-Authenticate: Bearer` when no token was sent, `400` with `error="invalid_request"` for a malformed header, `403` with `error="insufficient_scope"` and the required scopes in `scope`, or `401` with `error="invalid_token"`. It is `no-store` and carries no CORS headers.
 
 ### AuthorizationDenial
 
@@ -249,6 +377,7 @@ export interface AuthorizationInteraction {
     readonly acrValues?: readonly string[];
     readonly claimsLocales?: readonly string[];
     readonly display?: Display;
+    readonly resources?: readonly string[];
     readonly createdAt: number;
 }
 ```
@@ -328,6 +457,14 @@ readonly prompt: readonly Prompt[];
 ```ts
 readonly redirectUri: string;
 ```
+
+#### AuthorizationInteraction › resources
+
+```ts
+readonly resources?: readonly string[];
+```
+
+The resource servers the client asked for tokens to (RFC 8707 `resource`), each one of the client's `resources`. Show them on the consent page: the grant covers every one, and the app cannot narrow it.
 
 #### AuthorizationInteraction › scopes
 
@@ -411,6 +548,7 @@ export interface ClientRecord {
         readonly sessionRequired?: boolean;
     };
     readonly idTokenClaims?: boolean;
+    readonly resources?: readonly string[];
 }
 ```
 
@@ -514,6 +652,14 @@ Whether an authorization request from this client must carry a PKCE `S256` chall
 
 **Default** — `true`
 
+#### ClientRecord › resources
+
+```ts
+readonly resources?: readonly string[];
+```
+
+The resource servers this client may ask for tokens to (RFC 8707): each an absolute URI without a fragment, of visible ASCII, such as `https://api.example.com`. A `resource` parameter at authorization or at the token endpoint must name one of them, or the request fails with `invalid_target`. An access token issued for one or more resources carries them as its audience, which `Provider.authenticate` checks and which a JWT access token puts in `aud`. Absent or empty, the client may name none, and its tokens keep the default audience. The provider checks the list when it reads the record, and throws `TypeError` if it is malformed.
+
 #### ClientRecord › scopes
 
 ```ts
@@ -595,6 +741,7 @@ export interface CodeRecord {
     readonly acr?: string;
     readonly sessionId?: string;
     readonly maxAgeRequested: boolean;
+    readonly resources?: readonly string[];
     readonly expiresAt: number;
 }
 ```
@@ -670,6 +817,14 @@ readonly nonce?: string;
 ```ts
 readonly redirectUri: string;
 ```
+
+#### CodeRecord › resources
+
+```ts
+readonly resources?: readonly string[];
+```
+
+The resource servers the grant covers (RFC 8707): the authorization request's `resource` values.
 
 #### CodeRecord › scopes
 
@@ -764,6 +919,7 @@ export interface InteractionRecord {
     readonly acrValues?: readonly string[];
     readonly claimsLocales?: readonly string[];
     readonly display?: Display;
+    readonly resources?: readonly string[];
     readonly createdAt: number;
     readonly expiresAt: number;
 }
@@ -852,6 +1008,14 @@ readonly prompt: readonly Prompt[];
 ```ts
 readonly redirectUri: string;
 ```
+
+#### InteractionRecord › resources
+
+```ts
+readonly resources?: readonly string[];
+```
+
+The `resource` values the client asked for (RFC 8707), each one of the client's `resources`.
 
 #### InteractionRecord › scopes
 
@@ -1098,6 +1262,7 @@ export interface Provider {
         readonly subject?: string;
         readonly sessionId?: string;
     }): Promise<Request | null>;
+    authenticate(request: Request, options?: AuthenticateOptions): Promise<OidcResult<AccessTokenRecord, AuthenticationFailure>>;
 }
 ```
 
@@ -1110,6 +1275,23 @@ readonly metadata: ProviderMetadata;
 ```
 
 The discovery document this provider publishes.
+
+#### Provider › authenticate
+
+```ts
+authenticate(request: Request, options?: AuthenticateOptions): Promise<OidcResult<AccessTokenRecord, AuthenticationFailure>>;
+```
+
+Checks the bearer token of a request to the app's own API, served beside the provider over the same store: the access token in the `Authorization` header, its expiry, then the `audience` and `scopes` the API requires.
+
+The token is read from the `Authorization: Bearer` header only, as userinfo reads it, and is looked up by its digest among access tokens, so an ID token, a refresh token or a code never authenticates. It works for opaque and JWT access tokens alike, and sees a revocation at once. The audience is checked before the scopes. Nothing is reported to `ProviderOptions.onDiagnostic`; the failure's `reason` is for the app's logs.
+
+**Parameters**
+
+- `request` — The request to the API. Only its headers are read.
+- `options` — What the token must carry.
+
+**Returns** — The token's record, a frozen copy, or a failure with the response to send. Never throws for any request; rejects only when the store does, or with a `TypeError` when `options` is malformed: not an object, `scopes` that is not an array of scope tokens, or an `audience` that is not a non-empty string. Options are checked before the store is read.
 
 #### Provider › backchannelLogout
 
@@ -1505,6 +1687,7 @@ export interface ProviderOptions {
     readonly now?: () => number;
     readonly onDiagnostic?: (diagnostic: ProviderDiagnostic) => void;
     readonly onRefresh?: (request: RefreshCheck) => boolean | Promise<boolean>;
+    readonly accessTokenClaims?: (request: AccessTokenClaimsRequest) => Readonly<Record<string, unknown>> | Promise<Readonly<Record<string, unknown>>>;
 }
 ```
 
@@ -1519,6 +1702,20 @@ readonly accessToken?: AccessTokenFormat;
 The format of access tokens. Opaque tokens are random values a resource server can check only through the provider's store. JWT access tokens (RFC 9068) are signed with the first signing key, with `typ: at+jwt` and this `audience`, so a resource server can verify them offline; such a server sees a revocation only when the token expires. Either format is stored by its digest, so the userinfo and revocation endpoints work alike.
 
 **Default** — `{ format: "opaque" }`
+
+#### ProviderOptions › accessTokenClaims
+
+```ts
+readonly accessTokenClaims?: (request: AccessTokenClaimsRequest) => Readonly<Record<string, unknown>> | Promise<Readonly<Record<string, unknown>>>;
+```
+
+Returns claims the app adds to each JWT access token, such as the user's roles for a resource server. Called for every JWT access token the provider issues: at the code exchange, at each refresh, and for `client_credentials`, whose `subject` is the client identifier.
+
+The provider's own claims always win: a returned `iss`, `exp`, `aud`, `sub`, `client_id`, `iat`, `jti`, `scope`, `auth_time`, `acr`, `amr`, `nbf`, `cnf` or `azp` is dropped, as is any other claim the token sets, even one this token happens not to carry. Only own enumerable data properties are read, so a getter never runs, and a property whose value is `undefined` is left out. Keep the claims small and free of anything the client must not read: a JWT access token is readable by whoever holds it.
+
+A result that is not a plain object, such as an array, `null`, a `Date`, a `Map` or a class instance, makes `handle` reject with `TypeError`, and, as with the `claims` callback, a throw or a rejected promise makes `handle` reject with that error. At a refresh it runs before the next refresh token is saved, so a failure leaves no token the client never receives; the spent refresh token makes the client's retry a reuse, which revokes the family.
+
+Requires `accessToken: { format: "jwt" }`; given with opaque access tokens, `createProvider` throws `TypeError`, since an opaque token carries no claims.
 
 #### ProviderOptions › claims
 
@@ -1738,6 +1935,7 @@ export interface RefreshTokenRecord {
     readonly amr?: readonly string[];
     readonly acr?: string;
     readonly sessionId?: string;
+    readonly resources?: readonly string[];
     readonly expiresAt: number;
 }
 ```
@@ -1782,6 +1980,14 @@ When the whole token family expires, in seconds since the Unix epoch. Rotation k
 readonly grantId: string;
 ```
 
+#### RefreshTokenRecord › resources
+
+```ts
+readonly resources?: readonly string[];
+```
+
+The resource servers the family covers (RFC 8707), from the authorization request. Rotation keeps it.
+
 #### RefreshTokenRecord › scopes
 
 ```ts
@@ -1819,6 +2025,14 @@ export type AccessTokenFormat =
 ```
 
 How access tokens are issued. See `ProviderOptions.accessToken`.
+
+### AuthenticationFailureReason
+
+```ts
+export type AuthenticationFailureReason = "access_token_missing" | "access_token_malformed" | "access_token_unknown" | "access_token_expired" | "access_token_audience_mismatch" | "access_token_scope_insufficient";
+```
+
+Why `Provider.authenticate` refused a request, for the app's logs.
 
 ### ClientAuthentication
 
@@ -1892,20 +2106,20 @@ A grant a client may use at the token endpoint. `authorization_code` signs users
 ### OAuthErrorCode
 
 ```ts
-export type OAuthErrorCode = "invalid_request" | "unauthorized_client" | "access_denied" | "unsupported_response_type" | "invalid_scope" | "server_error" | "temporarily_unavailable" | "invalid_client" | "invalid_grant" | "unsupported_grant_type" | "invalid_token" | "unsupported_token_type" | "insufficient_scope" | "interaction_required" | "login_required" | "account_selection_required" | "consent_required" | "invalid_request_uri" | "invalid_request_object" | "request_not_supported" | "request_uri_not_supported" | "registration_not_supported";
+export type OAuthErrorCode = "invalid_request" | "unauthorized_client" | "access_denied" | "unsupported_response_type" | "invalid_scope" | "server_error" | "temporarily_unavailable" | "invalid_client" | "invalid_grant" | "unsupported_grant_type" | "invalid_token" | "unsupported_token_type" | "insufficient_scope" | "interaction_required" | "login_required" | "account_selection_required" | "consent_required" | "invalid_request_uri" | "invalid_request_object" | "request_not_supported" | "request_uri_not_supported" | "registration_not_supported" | "invalid_target";
 ```
 
-OAuth 2.0 and OpenID Connect error codes a provider sends to a client, from RFC 6749 §4.1.2.1 and §5.2, RFC 6750 §3.1, RFC 7009 §2.2.1, and OpenID Connect Core §3.1.2.6.
+OAuth 2.0 and OpenID Connect error codes a provider sends to a client, from RFC 6749 §4.1.2.1 and §5.2, RFC 6750 §3.1, RFC 7009 §2.2.1, RFC 8707 §2, and OpenID Connect Core §3.1.2.6.
 
 ### OidcIssueCode
 
 ```ts
-export type OidcIssueCode = "request_failed" | "invalid_metadata" | "issuer_mismatch" | "invalid_token_response" | "invalid_userinfo" | "provider_error" | "invalid_callback" | "state_mismatch" | "iss_mismatch" | "invalid_id_token" | "nonce_mismatch" | "azp_mismatch" | "at_hash_mismatch" | "auth_time_missing" | "auth_too_old" | "subject_mismatch" | "invalid_logout_request" | "invalid_logout_token" | "unknown_client" | "invalid_redirect_uri" | "interaction_not_found" | "invalid_request" | "unauthorized_client" | "unsupported_response_type" | "invalid_scope" | "request_not_supported" | "request_uri_not_supported" | "registration_not_supported";
+export type OidcIssueCode = "request_failed" | "invalid_metadata" | "issuer_mismatch" | "invalid_token_response" | "invalid_userinfo" | "provider_error" | "invalid_callback" | "state_mismatch" | "iss_mismatch" | "invalid_id_token" | "nonce_mismatch" | "azp_mismatch" | "at_hash_mismatch" | "auth_time_missing" | "auth_too_old" | "subject_mismatch" | "invalid_logout_request" | "invalid_logout_token" | "unknown_client" | "invalid_redirect_uri" | "interaction_not_found" | "invalid_request" | "unauthorized_client" | "unsupported_response_type" | "invalid_scope" | "request_not_supported" | "request_uri_not_supported" | "registration_not_supported" | "invalid_target" | "invalid_token" | "insufficient_scope";
 ```
 
 Stable category of a failure that callers can branch on without parsing messages.
 
-Client codes come from `discover` and the client's methods; provider codes from `beginAuthorization`, `completeAuthorization` and `endSession`. A `beginAuthorization` failure that redirects reuses the OAuth error code the client is sent; only the codes it can send are listed, so an exhaustive `switch` has no dead branches. An OAuth code a provider sends to this client is reported as `provider_error` with the code in `params.error`.
+Client codes come from `discover` and the client's methods; provider codes from `beginAuthorization`, `completeAuthorization`, `endSession` and `authenticate`. A `beginAuthorization` failure that redirects reuses the OAuth error code the client is sent; only the codes it can send are listed, so an exhaustive `switch` has no dead branches. An OAuth code a provider sends to this client is reported as `provider_error` with the code in `params.error`.
 
 ### OidcPathSegment
 
@@ -1934,7 +2148,7 @@ A `prompt` value (OpenID Connect Core §3.1.2.1).
 ### ProviderDiagnosticReason
 
 ```ts
-export type ProviderDiagnosticReason = "content_type" | "body" | "parameters" | "client_credentials_missing" | "client_credentials_ambiguous" | "client_credentials_malformed" | "client_unknown" | "client_method_mismatch" | "client_credentials_wrong" | "grant_type_missing" | "grant_type_unsupported" | "grant_type_unauthorized" | "parameter_missing" | "code_verifier_malformed" | "code_verifier_missing" | "code_verifier_unexpected" | "code_unknown" | "code_replayed" | "code_expired" | "code_client_mismatch" | "redirect_uri_mismatch" | "code_verifier_mismatch" | "scope_invalid" | "refresh_token_unknown" | "refresh_token_replayed" | "refresh_token_expired" | "refresh_token_client_mismatch" | "scope_not_granted" | "refresh_refused" | "access_token_missing" | "access_token_malformed" | "access_token_unknown" | "access_token_expired" | "access_token_without_openid" | "token_missing" | "token_of_another_client";
+export type ProviderDiagnosticReason = "content_type" | "body" | "parameters" | "client_credentials_missing" | "client_credentials_ambiguous" | "client_credentials_malformed" | "client_unknown" | "client_method_mismatch" | "client_credentials_wrong" | "grant_type_missing" | "grant_type_unsupported" | "grant_type_unauthorized" | "parameter_missing" | "code_verifier_malformed" | "code_verifier_missing" | "code_verifier_unexpected" | "code_unknown" | "code_replayed" | "code_expired" | "code_client_mismatch" | "redirect_uri_mismatch" | "code_verifier_mismatch" | "scope_invalid" | "refresh_token_unknown" | "refresh_token_replayed" | "refresh_token_expired" | "refresh_token_client_mismatch" | "scope_not_granted" | "refresh_refused" | "resource_invalid" | "resource_not_granted" | "access_token_missing" | "access_token_malformed" | "access_token_unknown" | "access_token_expired" | "access_token_without_openid" | "token_missing" | "token_of_another_client";
 ```
 
 Why the provider refused a request at the token, userinfo, or revocation endpoint. The client is sent only the OAuth error code, so this is what an operator debugs with.

@@ -104,6 +104,7 @@ const { url, pending } = await client.authorize({
 | `maxAge`    | The most seconds that may pass since the user last authenticated, as an integer from 0 through 999999999. The age is measured from the request, not the callback, so time spent signing in does not count. When set, the ID token must carry `auth_time`, and the callback checks its age. `0` asks for a login after the request. | None sent    |
 | `loginHint` | A hint about the account to sign in with, such as an email address. A string of well-formed Unicode (no lone surrogates), at most 4096 characters.                                                                                                                                                                                 | None sent    |
 | `uiLocales` | Preferred languages for the provider's pages, as at most 100 BCP 47 tags, each non-empty, well-formed Unicode and without spaces. At most 4096 characters when joined with spaces.                                                                                                                                                 | None sent    |
+| `resource`  | The resource servers the tokens are for (RFC 8707), as a non-empty array of at most 20 absolute URIs of visible ASCII without a fragment, each at most 4096 characters. Duplicates are removed. See [Resource servers](#resource-servers).                                                                                         | None sent    |
 
 The URL is the provider's authorization endpoint with the request's parameters added to any query it already has: `response_type=code`, `client_id`, `redirect_uri`, `scope`, `state`, `nonce`, `code_challenge` with `code_challenge_method=S256`, and whichever optional parameters you set. The `state`, `nonce` and PKCE verifier are random values from `crypto.getRandomValues`, generated for each call.
 
@@ -191,11 +192,12 @@ if (refreshed.ok) {
 }
 ```
 
-| Option         | Meaning                                                                                                                                                                                                               |
-| -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `refreshToken` | The refresh token to exchange. A non-empty string.                                                                                                                                                                    |
-| `subject`      | The `sub` of the original ID token. When the provider sends a new ID token, its `sub` must equal this, or the result is `subject_mismatch`.                                                                           |
-| `scope`        | A narrower set of scopes to request, as a non-empty array of at most 100 scope tokens, at most 4096 characters when joined with spaces. It must be within the original grant; a wider set is refused by the provider. |
+| Option         | Meaning                                                                                                                                                                                                                |
+| -------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `refreshToken` | The refresh token to exchange. A non-empty string.                                                                                                                                                                     |
+| `subject`      | The `sub` of the original ID token. When the provider sends a new ID token, its `sub` must equal this, or the result is `subject_mismatch`.                                                                            |
+| `scope`        | A narrower set of scopes to request, as a non-empty array of at most 100 scope tokens, at most 4096 characters when joined with spaces. It must be within the original grant; a wider set is refused by the provider.  |
+| `resource`     | The resource servers the new access token is for, under the same rules as `authorize`. Each must be one the sign-in asked for. Without it, this package's provider issues the token for every resource of the sign-in. |
 
 The provider rotates refresh tokens. Each exchange spends the one you sent and returns a new one in `tokens.refreshToken`, so **store the new refresh token and discard the old one**. Presenting a spent refresh token again is treated as theft: the provider refuses it with `provider_error` and `invalid_grant`, and it revokes every token issued from that sign-in. [The token endpoint](provider.md#refresh-tokens) describes the rotation in detail.
 
@@ -362,11 +364,31 @@ if (granted.ok) {
 
 `scope` is optional. Without it, the provider grants every scope the client is registered for, except `openid` and `offline_access`, which need a user. With it, the scope list must be a non-empty array of at most 100 scope tokens. A scope the provider refuses is `provider_error` with `params.error` of `invalid_scope`.
 
+`resource` is optional too, under the same rules as `authorize`, and restricts the token to those resource servers; see [Resource servers](#resource-servers).
+
 The token set has no ID token and no refresh token. An ID token or a refresh token in the response is checked like any token response, then dropped: no user is signed in, and RFC 6749 §4.4.3 says a refresh token SHOULD NOT be included. Each token is its own grant, so `client.revoke` on one leaves the client's other tokens valid. Userinfo refuses such a token, because it has no `openid` scope: this package's provider answers `403` with `insufficient_scope`, which `client.userinfo` reports as `request_failed` with `params.reason` of `status` and `params.status` of `403`.
 
 The provider must have registered the client for this grant. Otherwise the result is `provider_error` with `params.error` of `unauthorized_client`.
 
-`clientCredentials` rejects with `TypeError` when `auth.method` is `none`, since only a client that authenticates may use the grant. It also rejects when the metadata lists `grant_types_supported` and does not include `client_credentials`, or when `options` or `scope` is invalid.
+`clientCredentials` rejects with `TypeError` when `auth.method` is `none`, since only a client that authenticates may use the grant. It also rejects when the metadata lists `grant_types_supported` and does not include `client_credentials`, or when `options`, `scope` or `resource` is invalid.
+
+## Resource servers
+
+A client that calls more than one API can ask for tokens restricted to the ones it will call, with the `resource` parameter (RFC 8707). Each value names a resource server by an absolute URI without a fragment, such as `https://api.example`, and the provider must have registered it for the client. A token for one API is then refused by another.
+
+```ts
+const { url, pending } = await client.authorize({
+  scope: ["openid", "offline_access", "data:notes:read"],
+  resource: ["https://api.example", "https://data.example"],
+});
+
+// Later, a token for one of them only.
+const refreshed = await client.refresh({ refreshToken, subject: claims.sub, resource: ["https://data.example"] });
+```
+
+`authorize`, `refresh` and `clientCredentials` take `resource`, and send each value as a parameter of its own. The values are checked as the provider checks a client's registered resources, so a malformed one rejects with `TypeError`, and the message never repeats it. At most 20 are sent, since the provider reads at most 32 parameters in a request.
+
+The sign-in's resources bound its refreshes: a refresh may ask for fewer of them, and this package's provider refuses one it did not grant with `invalid_target`. `callback` sends no `resource`, so the first access token is for every resource the sign-in asked for. A resource the provider refuses is `provider_error` with `params.error` of `invalid_target`, at the callback for `authorize` and in the result for the others. [Resource indicators](provider.md#resource-indicators) describes what the provider checks.
 
 ## Client authentication
 
@@ -388,7 +410,7 @@ The assertion methods sign a JWT with `iss` and `sub` set to the client identifi
 
 The client sends the token request for a sign-in, a refresh, a client credentials grant, and nothing else. The failures a token request can return are the same for every method:
 
-- `provider_error` with `params.endpoint` of `token` and `params.error` set to the OAuth code the provider sent, such as `invalid_grant` for a spent or expired code, `invalid_client` for rejected credentials, `invalid_scope` for a refresh or client credentials request that asked for more than the grant holds, or `unauthorized_client` for a grant the client is not registered for. Any other code is `unknown`.
+- `provider_error` with `params.endpoint` of `token` and `params.error` set to the OAuth code the provider sent, such as `invalid_grant` for a spent or expired code, `invalid_client` for rejected credentials, `invalid_scope` for a refresh or client credentials request that asked for more than the grant holds, `unauthorized_client` for a grant the client is not registered for, or `invalid_target` for a `resource` the provider refuses. Any other code is `unknown`.
 - `request_failed` with `params.endpoint` of `token` for a non-`200` response that carries no OAuth error, and for the network, timeout, size and content-type failures described under [Discovering the provider](#discovering-the-provider).
 - `invalid_token_response` with path `["response", <member>]` when a `200` response is not a valid token response. The members checked are `access_token` (a non-empty string of printable ASCII, as RFC 6749 §A.12 defines it), `token_type` (`Bearer`, in any letter case), `expires_in` (a non-negative number, when present), `refresh_token` and `id_token` (non-empty strings, when present), and `scope` (a string, when present). Every bad member is reported in one result.
 

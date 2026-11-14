@@ -6,7 +6,7 @@ export type OidcPathSegment = string | number;
 
 /**
  * OAuth 2.0 and OpenID Connect error codes a provider sends to a client, from RFC 6749 §4.1.2.1 and
- * §5.2, RFC 6750 §3.1, RFC 7009 §2.2.1, and OpenID Connect Core §3.1.2.6.
+ * §5.2, RFC 6750 §3.1, RFC 7009 §2.2.1, RFC 8707 §2, and OpenID Connect Core §3.1.2.6.
  */
 export type OAuthErrorCode =
   | "invalid_request"
@@ -30,13 +30,14 @@ export type OAuthErrorCode =
   | "invalid_request_object"
   | "request_not_supported"
   | "request_uri_not_supported"
-  | "registration_not_supported";
+  | "registration_not_supported"
+  | "invalid_target";
 
 /**
  * Stable category of a failure that callers can branch on without parsing messages.
  *
  * Client codes come from `discover` and the client's methods; provider codes from
- * `beginAuthorization`, `completeAuthorization` and `endSession`. A `beginAuthorization` failure that redirects
+ * `beginAuthorization`, `completeAuthorization`, `endSession` and `authenticate`. A `beginAuthorization` failure that redirects
  * reuses the OAuth error code the client is sent; only the codes it can send are listed, so an exhaustive `switch`
  * has no dead branches. An OAuth code a provider sends to this client is reported as `provider_error` with the
  * code in `params.error`.
@@ -75,7 +76,11 @@ export type OidcIssueCode =
   | "invalid_scope"
   | "request_not_supported"
   | "request_uri_not_supported"
-  | "registration_not_supported";
+  | "registration_not_supported"
+  | "invalid_target"
+  // Provider: bearer tokens at the app's own APIs
+  | "invalid_token"
+  | "insufficient_scope";
 
 /**
  * A single reason an operation failed.

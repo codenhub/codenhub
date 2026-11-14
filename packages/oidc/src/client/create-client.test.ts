@@ -382,6 +382,18 @@ describe("callback", () => {
     ]);
   });
 
+  it("reports an invalid_target from the provider as provider_error with its code (RFC 8707)", async () => {
+    const op = createFakeOp();
+    const rp = clientFor(op);
+    const { pending, code } = await begin(op, rp);
+
+    const result = await rp.callback(redirect({ code, state: pending.state, error: "invalid_target" }), pending);
+
+    expect(issuesOf(result)).toEqual([
+      { code: "provider_error", params: { endpoint: "authorization", error: "invalid_target" } },
+    ]);
+  });
+
   it("narrows an unknown provider error to unknown, and keeps its text out of the result", async () => {
     const op = createFakeOp();
     const rp = clientFor(op);
@@ -735,6 +747,41 @@ describe("refresh", () => {
     await rp.refresh({ refreshToken: "rt-seed", subject: "user-1", scope: ["openid", "profile", "openid", "email"] });
 
     expect(sent[0]?.get("scope")).toBe("openid profile email");
+  });
+
+  it("sends each requested resource once, as a parameter of its own", async () => {
+    const op = createFakeOp();
+    const sent: URLSearchParams[] = [];
+    const fetchSpy = vi.fn(async (input: string | URL | Request, init?: RequestInit) => {
+      if (init?.method === "POST") {
+        sent.push(new URLSearchParams(String(init.body)));
+      }
+      return op.fetch(input, init);
+    });
+    const rp = createClient(baseOptions(fetchSpy));
+
+    await rp.refresh({
+      refreshToken: "rt-seed",
+      subject: "user-1",
+      resource: ["https://api.example", "https://other.example", "https://api.example"],
+    });
+
+    expect(sent[0]?.getAll("resource")).toEqual(["https://api.example", "https://other.example"]);
+  });
+
+  it.each([
+    ["an empty list", []],
+    ["a URI with a fragment", ["https://api.example/#part"]],
+    ["a relative URI", ["api"]],
+    ["a non-array", "https://api.example"],
+  ])("throws a TypeError for a resource that is %s", async (_name, resource) => {
+    const rp = clientFor(createFakeOp());
+
+    await expect(
+      rp.refresh({ refreshToken: "rt-seed", subject: "user-1", resource: resource as readonly string[] }),
+    ).rejects.toThrow(
+      expect.objectContaining({ name: "TypeError", message: expect.stringContaining("refresh: resource") }),
+    );
   });
 });
 

@@ -138,6 +138,7 @@ interface ClientRecord {
   requirePkce?: boolean; // true (the default) requires a PKCE challenge; false only for a confidential client
   backchannelLogout?: { uri: string; sessionRequired?: boolean }; // where the app sends this client's logout token
   idTokenClaims?: boolean; // true puts the claims the granted scopes release in this client's ID tokens; false is the default
+  resources?: readonly string[]; // the resource servers this client may ask for tokens to (RFC 8707)
   auth: ClientAuthentication;
 }
 ```
@@ -164,6 +165,8 @@ A record that breaks these rules is a bug in the store, and the provider throws 
 `backchannelLogout` registers the client for [back-channel logout](provider.md#back-channel-logout). Its `uri` is the client's `backchannel_logout_uri`, and the app's server calls it, so it must be an absolute `https` URL of visible ASCII, without a fragment or credentials: unlike a redirect URI, a custom scheme or plain `http` is refused. `sessionRequired` is the client's `backchannel_logout_session_required` and defaults to `false`; when it is `true`, the app must give a `sessionId` when it asks for a logout request for the client. A record whose `backchannelLogout` is not an object of that shape, or whose `sessionRequired` is not a boolean, is a bug in the store, and the provider throws `TypeError` for it. Absent, the client has no back-channel logout and the provider has nothing to send it.
 
 `idTokenClaims` defaults to `false`: an ID token carries only protocol claims, and the scope claims are released at userinfo. With `true`, every ID token issued to this client also carries the claims its granted scopes release, from the same `claims` callback, for a relying party that reads only the ID token. A value that is not a boolean is a bug in the store, and the provider throws `TypeError`. [Scope claims in the ID token](provider.md#scope-claims-in-the-id-token) has the rules and the warning about where those claims travel.
+
+`resources` lists the resource servers the client may ask for tokens to, with the `resource` parameter of [RFC 8707](https://www.rfc-editor.org/rfc/rfc8707). Each entry is an absolute URI of visible ASCII without a fragment or a backslash, such as `https://api.example.com` or `urn:example:data`, and a special scheme such as `https` is followed by `//` and the host, so `https:api.example` and `https:///api.example` are refused. A request's `resource` must match one byte for byte. A list that is not an array of such strings is a bug in the store, and the provider throws `TypeError` for it. Absent or empty, the client may name no resource. [Resource indicators](provider.md#resource-indicators) has the rules. A request that names resources puts them on the interaction, code and refresh token records as `resources`, and on the access token record as `audience`; a request that names none leaves those fields absent, except that a JWT access token's record holds the `accessToken.audience` option. A store must keep a record without them as one without them, and not return `null` or an empty list, which the conformance cases check.
 
 The `key` and `keys` values are `@codenhub/jwt` objects, not JSON. A plain object is not one of them, and `@codenhub/jwt` refuses it with `TypeError` when the provider uses it. A store that persists these records therefore keeps the key as a JWK and rebuilds the object on each read: `exportSecretJwk` or `exportPublicJwk` writes the key, and `importSecretKey` or `importKeySet` reads it back. A secret can be exported only when it was created or imported as extractable. A store may also keep the key objects in memory, as the in-memory store does.
 
@@ -210,6 +213,7 @@ The cases cover:
 - `revokeGrant` hides the grant's access and refresh tokens, including tokens saved after the call, and leaves other grants alone. A refresh token consumed before the revocation then gives `undefined`, not `replayed`.
 - `findClient` gives `undefined` for unknown identifiers, including `__proto__`, `constructor` and `toString`.
 - `findClient` returns a registered client with the values it was registered with.
+- A record saved without `codeChallenge`, `resources` or `audience` comes back without it.
 - The records a store returns do not change when the caller changes what it saved.
 
 Records use an `expiresAt` one hour ahead, so an adapter that purges expired rows still passes. Keys are random per case, so the factory may return stores on one shared database. The factory is called once for each case.

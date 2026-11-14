@@ -7,7 +7,11 @@ export { createProvider } from "./provider/create-provider";
 export { generateClientSecret, hashClientSecret } from "./provider/secrets";
 export type {
   AccessTokenFormat,
+  AccessTokenClaimsRequest,
   AccessTokenRecord,
+  AuthenticateOptions,
+  AuthenticationFailure,
+  AuthenticationFailureReason,
   AuthorizationDenial,
   AuthorizationFailure,
   AuthorizationGrant,

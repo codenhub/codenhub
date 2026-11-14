@@ -68,6 +68,18 @@ describe("clientCredentials", () => {
     expect(await endpoint.requests[0]?.text()).toBe("grant_type=client_credentials");
   });
 
+  it("sends each requested resource once, as a parameter of its own", async () => {
+    const endpoint = tokenEndpoint();
+
+    await serviceClient(endpoint.fetch).clientCredentials({
+      resource: ["https://api.example", "urn:example:ledger", "https://api.example"],
+    });
+
+    expect(await endpoint.requests[0]?.text()).toBe(
+      "grant_type=client_credentials&resource=https%3A%2F%2Fapi.example&resource=urn%3Aexample%3Aledger",
+    );
+  });
+
   it("drops an id_token from the response, since nothing checks it", async () => {
     const endpoint = tokenEndpoint(() => json({ access_token: "at-1", token_type: "Bearer", id_token: "a.b.c" }));
 
@@ -127,6 +139,22 @@ describe("clientCredentials", () => {
 
     await expect(attempt).rejects.toThrow(TypeError);
     await expect(attempt).rejects.toThrow("clientCredentials: scope");
+  });
+
+  it.each([
+    ["an empty list", []],
+    ["a URI with a fragment", ["https://api.example/#part"]],
+    ["a relative URI", ["/api"]],
+    ["a non-array", "https://api.example"],
+  ])("throws a TypeError for a resource that is %s", async (_name, resource) => {
+    const endpoint = tokenEndpoint();
+    const client = serviceClient(endpoint.fetch);
+
+    const attempt = client.clientCredentials({ resource: resource as readonly string[] });
+
+    await expect(attempt).rejects.toThrow(TypeError);
+    await expect(attempt).rejects.toThrow("clientCredentials: resource");
+    expect(endpoint.requests).toHaveLength(0);
   });
 });
 

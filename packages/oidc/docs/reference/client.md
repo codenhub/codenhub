@@ -131,6 +131,7 @@ export interface AuthorizeOptions {
     readonly maxAge?: number;
     readonly loginHint?: string;
     readonly uiLocales?: readonly string[];
+    readonly resource?: readonly string[];
 }
 ```
 
@@ -159,6 +160,14 @@ readonly prompt?: readonly Prompt[];
 ```
 
 Whether the provider must, or must not, show its login and consent pages. `none` stands alone.
+
+#### AuthorizeOptions › resource
+
+```ts
+readonly resource?: readonly string[];
+```
+
+The resource servers the tokens are for (RFC 8707), as absolute URIs without a fragment, such as `https://api.example`. The provider must allow each for this client. A refresh may narrow them with `RefreshOptions.resource`, but never widen them.
 
 #### AuthorizeOptions › scope
 
@@ -291,7 +300,7 @@ Gets an access token for the client itself, with no user, through the `client_cr
 
 **Returns** — The tokens, or every issue found. An `id_token` or `refresh_token` in the response is dropped: nothing checks the one, and RFC 6749 §4.4.3 says the other SHOULD NOT be included. Never throws for any response; it rejects only for the caller errors listed below.
 
-**Throws** — `TypeError` — When the client authenticates with `none`, when the provider metadata lists grant_types_supported without client_credentials, or when `scope` is given but is not a non-empty array of at most 100 scope tokens.
+**Throws** — `TypeError` — When the client authenticates with `none`, when the provider metadata lists grant_types_supported without client_credentials, when `scope` is given but is not a non-empty array of at most 100 scope tokens, or when `resource` is given but is not a non-empty array of at most 20 absolute URIs without a fragment.
 
 #### Client › endSessionUrl
 
@@ -337,7 +346,7 @@ When the response carries an ID token that fails validation, the result is a fai
 
 **Returns** — The new tokens, or every issue found. Never throws for any response.
 
-**Throws** — `TypeError` — When `options` is invalid, such as an empty `refreshToken` or a scope list that is not a non-empty array of scope tokens. The message names the option and never its value.
+**Throws** — `TypeError` — When `options` is invalid, such as an empty `refreshToken`, a scope list that is not a non-empty array of scope tokens, or a `resource` that is not a non-empty array of at most 20 absolute URIs without a fragment. The message names the option and never its value.
 
 #### Client › revoke
 
@@ -388,10 +397,19 @@ The client stores nothing, so it does not refuse a replayed token; see `Backchan
 ```ts
 export interface ClientCredentialsOptions {
     readonly scope?: readonly string[];
+    readonly resource?: readonly string[];
 }
 ```
 
 What `Client.clientCredentials` asks for.
+
+#### ClientCredentialsOptions › resource
+
+```ts
+readonly resource?: readonly string[];
+```
+
+The resource servers the access token is for (RFC 8707), as absolute URIs without a fragment. The provider must allow each for this client. Without it, this package's provider gives a JWT access token its default audience.
 
 #### ClientCredentialsOptions › scope
 
@@ -1103,6 +1121,7 @@ export interface RefreshOptions {
     readonly refreshToken: string;
     readonly subject: string;
     readonly scope?: readonly string[];
+    readonly resource?: readonly string[];
 }
 ```
 
@@ -1115,6 +1134,14 @@ readonly refreshToken: string;
 ```
 
 The refresh token to exchange. A refresh response may omit `refresh_token`; then the old one stays valid and the app keeps using it (RFC 6749 §6), so only a new `tokens.refreshToken` replaces it.
+
+#### RefreshOptions › resource
+
+```ts
+readonly resource?: readonly string[];
+```
+
+The resource servers the new access token is for (RFC 8707), as absolute URIs without a fragment. Each must be one the sign-in asked for with `AuthorizeOptions.resource`. Without it, this package's provider issues the token for every resource of the sign-in that the client's registration still lists.
 
 #### RefreshOptions › scope
 
@@ -1335,20 +1362,20 @@ How the client authenticates to the token endpoint (OpenID Connect Core §9).
 ### OAuthErrorCode
 
 ```ts
-export type OAuthErrorCode = "invalid_request" | "unauthorized_client" | "access_denied" | "unsupported_response_type" | "invalid_scope" | "server_error" | "temporarily_unavailable" | "invalid_client" | "invalid_grant" | "unsupported_grant_type" | "invalid_token" | "unsupported_token_type" | "insufficient_scope" | "interaction_required" | "login_required" | "account_selection_required" | "consent_required" | "invalid_request_uri" | "invalid_request_object" | "request_not_supported" | "request_uri_not_supported" | "registration_not_supported";
+export type OAuthErrorCode = "invalid_request" | "unauthorized_client" | "access_denied" | "unsupported_response_type" | "invalid_scope" | "server_error" | "temporarily_unavailable" | "invalid_client" | "invalid_grant" | "unsupported_grant_type" | "invalid_token" | "unsupported_token_type" | "insufficient_scope" | "interaction_required" | "login_required" | "account_selection_required" | "consent_required" | "invalid_request_uri" | "invalid_request_object" | "request_not_supported" | "request_uri_not_supported" | "registration_not_supported" | "invalid_target";
 ```
 
-OAuth 2.0 and OpenID Connect error codes a provider sends to a client, from RFC 6749 §4.1.2.1 and §5.2, RFC 6750 §3.1, RFC 7009 §2.2.1, and OpenID Connect Core §3.1.2.6.
+OAuth 2.0 and OpenID Connect error codes a provider sends to a client, from RFC 6749 §4.1.2.1 and §5.2, RFC 6750 §3.1, RFC 7009 §2.2.1, RFC 8707 §2, and OpenID Connect Core §3.1.2.6.
 
 ### OidcIssueCode
 
 ```ts
-export type OidcIssueCode = "request_failed" | "invalid_metadata" | "issuer_mismatch" | "invalid_token_response" | "invalid_userinfo" | "provider_error" | "invalid_callback" | "state_mismatch" | "iss_mismatch" | "invalid_id_token" | "nonce_mismatch" | "azp_mismatch" | "at_hash_mismatch" | "auth_time_missing" | "auth_too_old" | "subject_mismatch" | "invalid_logout_request" | "invalid_logout_token" | "unknown_client" | "invalid_redirect_uri" | "interaction_not_found" | "invalid_request" | "unauthorized_client" | "unsupported_response_type" | "invalid_scope" | "request_not_supported" | "request_uri_not_supported" | "registration_not_supported";
+export type OidcIssueCode = "request_failed" | "invalid_metadata" | "issuer_mismatch" | "invalid_token_response" | "invalid_userinfo" | "provider_error" | "invalid_callback" | "state_mismatch" | "iss_mismatch" | "invalid_id_token" | "nonce_mismatch" | "azp_mismatch" | "at_hash_mismatch" | "auth_time_missing" | "auth_too_old" | "subject_mismatch" | "invalid_logout_request" | "invalid_logout_token" | "unknown_client" | "invalid_redirect_uri" | "interaction_not_found" | "invalid_request" | "unauthorized_client" | "unsupported_response_type" | "invalid_scope" | "request_not_supported" | "request_uri_not_supported" | "registration_not_supported" | "invalid_target" | "invalid_token" | "insufficient_scope";
 ```
 
 Stable category of a failure that callers can branch on without parsing messages.
 
-Client codes come from `discover` and the client's methods; provider codes from `beginAuthorization`, `completeAuthorization` and `endSession`. A `beginAuthorization` failure that redirects reuses the OAuth error code the client is sent; only the codes it can send are listed, so an exhaustive `switch` has no dead branches. An OAuth code a provider sends to this client is reported as `provider_error` with the code in `params.error`.
+Client codes come from `discover` and the client's methods; provider codes from `beginAuthorization`, `completeAuthorization`, `endSession` and `authenticate`. A `beginAuthorization` failure that redirects reuses the OAuth error code the client is sent; only the codes it can send are listed, so an exhaustive `switch` has no dead branches. An OAuth code a provider sends to this client is reported as `provider_error` with the code in `params.error`.
 
 ### OidcPathSegment
 

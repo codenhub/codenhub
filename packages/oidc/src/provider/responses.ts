@@ -18,7 +18,9 @@ const NO_STORE_HEADERS: Readonly<Record<string, string>> = {
 
 /**
  * `WWW-Authenticate` is not a CORS-safelisted response header, so a cross-origin page reads a challenge only when
- * the response names it here. Every response that carries a challenge also carries CORS_HEADERS, so both go together.
+ * the response names it here. Every response of the provider's own endpoints that carries a challenge also carries
+ * CORS_HEADERS, so both go together. {@link resourceChallengeResponse} carries neither, since it answers for the app's
+ * API, whose cross-origin policy is the app's.
  */
 const CHALLENGE_EXPOSURE: Readonly<Record<string, string>> = {
   "access-control-expose-headers": "WWW-Authenticate",
@@ -75,6 +77,25 @@ export function bearerErrorResponse(error?: "invalid_request" | "invalid_token" 
     status,
     headers: { ...CORS_HEADERS, ...CHALLENGE_EXPOSURE, ...NO_STORE_HEADERS, "www-authenticate": challenge },
   });
+}
+
+/**
+ * A bearer token challenge from the app's own API (RFC 6750 §3), for {@link Provider.authenticate}. Unlike
+ * {@link bearerErrorResponse} it carries no CORS headers, since the app owns its API's cross-origin policy. Without
+ * `error`, it answers a request that carried no token (§3.1). `scope` names the scopes the API requires; each is a
+ * scope token, which holds no quote or backslash, so it is written unescaped.
+ */
+export function resourceChallengeResponse(
+  error?: "invalid_request" | "invalid_token" | "insufficient_scope",
+  scopes?: readonly string[],
+): Response {
+  const status = error === "invalid_request" ? 400 : error === "insufficient_scope" ? 403 : 401;
+  const attributes = [
+    ...(error === undefined ? [] : [`error="${error}"`]),
+    ...(scopes === undefined || scopes.length === 0 ? [] : [`scope="${scopes.join(" ")}"`]),
+  ];
+  const challenge = attributes.length === 0 ? "Bearer" : `Bearer ${attributes.join(", ")}`;
+  return new Response(null, { status, headers: { ...NO_STORE_HEADERS, "www-authenticate": challenge } });
 }
 
 /** `405` for a method an endpoint does not accept. */
