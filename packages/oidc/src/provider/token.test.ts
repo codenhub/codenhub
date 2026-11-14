@@ -859,14 +859,25 @@ describe("handleToken: the onRefresh re-check", () => {
 
   it("reports refresh_refused with the client", async () => {
     const seen: ProviderDiagnostic[] = [];
+    const seenRequests: Request[] = [];
     const { options, store } = await setup({ onRefresh: () => false });
     const issued = await redeemCode(options, store);
 
     const request = tokenRequest(refreshBody(issued.refresh_token ?? ""));
     const response = await handleToken(options, request);
-    await reportRefusal((diagnostic) => void seen.push(diagnostic), "token", request, response);
+    await reportRefusal(
+      (diagnostic, seenRequest) => {
+        seen.push(diagnostic);
+        seenRequests.push(seenRequest);
+      },
+      "token",
+      request,
+      response,
+    );
 
     expect(seen).toEqual([{ endpoint: "token", status: 400, reason: "refresh_refused", clientId: "public" }]);
+    expect(seenRequests).toHaveLength(1);
+    expect(seenRequests[0]).toBe(request);
   });
 
   it("awaits an async check that answers true or false", async () => {
