@@ -4,6 +4,7 @@ import {
   type JwtHeader,
   type JwtIssue,
   type JwtPayload,
+  type KeySet,
   type VerifiedJwt,
 } from "@codenhub/jwt";
 
@@ -62,7 +63,7 @@ function invalidClaim(claim: string): OidcIssue {
 }
 
 /** Failed result from a non-empty issue list. The callers never pass an empty one. */
-function failAll(issues: readonly OidcIssue[]): OidcResult<never> {
+export function failAll(issues: readonly OidcIssue[]): OidcResult<never> {
   const [first, ...rest] = issues;
   if (first === undefined) {
     throw new Error("failAll: no issues");
@@ -71,14 +72,18 @@ function failAll(issues: readonly OidcIssue[]): OidcResult<never> {
 }
 
 /**
- * Maps every problem `@codenhub/jwt` found to an `invalid_id_token` issue. The JWT code moves into
- * `params`, so this package's own codes stay the only ones a caller branches on.
+ * Maps every problem `@codenhub/jwt` found to an issue of `code`, under the token's name in the path. The JWT
+ * code moves into `params`, so this package's own codes stay the only ones a caller branches on.
  */
-function fromJwtIssues(issues: readonly JwtIssue[]): OidcResult<never> {
+export function fromJwtIssues(
+  issues: readonly JwtIssue[],
+  code: "invalid_id_token" | "invalid_logout_token" = "invalid_id_token",
+  token: "id_token" | "logout_token" = "id_token",
+): OidcResult<never> {
   return failAll(
     issues.map((issue) => ({
-      code: "invalid_id_token",
-      path: ["id_token", ...(issue.path ?? [])],
+      code,
+      path: [token, ...(issue.path ?? [])],
       params: { ...issue.params, jwtCode: issue.code },
     })),
   );
@@ -88,11 +93,15 @@ function fromJwtIssues(issues: readonly JwtIssue[]): OidcResult<never> {
  * `azp` is required when the audience has more than one value, and when present it must be this client (OpenID Connect Core §3.1.3.7).
  * A non-string `azp` is reported as its claim type, so it is not reported again here.
  */
-function azpIssues(payload: JwtPayload, clientId: string): OidcIssue[] {
+export function azpIssues(
+  payload: JwtPayload,
+  clientId: string,
+  token: "id_token" | "logout_token" = "id_token",
+): OidcIssue[] {
   const multipleAudiences = Array.isArray(payload.aud) && payload.aud.length > 1;
   const azpMissing = payload.azp === undefined && multipleAudiences;
   const azpWrong = typeof payload.azp === "string" && payload.azp !== clientId;
-  return azpMissing || azpWrong ? [{ code: "azp_mismatch", path: claimPath("azp") }] : [];
+  return azpMissing || azpWrong ? [{ code: "azp_mismatch", path: [token, "payload", "azp"] }] : [];
 }
 
 /** `auth_time` is optional, but when present it must be a number, and `max_age` makes it required. */
@@ -186,6 +195,21 @@ async function claimIssues(
 }
 
 /**
+ * Creates the provider's remote key set for one client: its JWKS, fetched on first use and cached, limited to the
+ * asymmetric algorithms the client accepts for ID tokens.
+ */
+export function createProviderKeySet(options: ResolvedClientOptions): KeySet {
+  return createRemoteKeySet({
+    url: options.metadata.jwks_uri,
+    fetch: options.fetch,
+    algorithms: options.idTokenAlgorithms,
+    // The client's timeout is in milliseconds; the key set takes seconds.
+    timeout: options.timeoutMs / MILLISECONDS_PER_SECOND,
+    now: options.now,
+  });
+}
+
+/**
  * Creates the function that validates ID tokens for one client. The key set and verifier are built once
  * here, so the JWKS is cached across sign-ins.
  *
@@ -195,18 +219,14 @@ async function claimIssues(
  * the claims the expectations name must match. Every problem found is returned, not only the first.
  *
  * @param options - The resolved client options, supplying the issuer, client, clock, and JWKS endpoint.
+ * @param keys - The provider's key set, shared with the logout token validator so the JWKS is fetched once.
  * @returns A function from a compact ID token and its expectations to the validated claims, or every issue.
  * It never throws for any token.
  */
-export function createIdTokenValidator(options: ResolvedClientOptions): IdTokenValidator {
-  const keys = createRemoteKeySet({
-    url: options.metadata.jwks_uri,
-    fetch: options.fetch,
-    algorithms: options.idTokenAlgorithms,
-    // The client's timeout is in milliseconds; the key set takes seconds.
-    timeout: options.timeoutMs / MILLISECONDS_PER_SECOND,
-    now: options.now,
-  });
+export function createIdTokenValidator(
+  options: ResolvedClientOptions,
+  keys: KeySet = createProviderKeySet(options),
+): IdTokenValidator {
   const verify = createVerifier({
     keys,
     issuer: options.metadata.issuer,
