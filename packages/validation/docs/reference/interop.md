@@ -85,7 +85,7 @@ export declare function toJsonSchema(validator: AnyValidator, options?: JsonSche
 
 Writes a validator as a JSON Schema, draft 2020-12 unless `target` asks for draft-07, for whatever takes one: the body of an HTTP API, the arguments of a tool a language model calls, a form generator.
 
-The schema is read from what [`describe`](index.md#describe) gives, so only validators made by this package's factories can be written. It is written so that a value the validator accepts passes it, with the exceptions below, and it accepts some the validator refuses, since a validator checks more than a schema can say: a format's exact rules, such as which hosts of an `email` are public, are written as the nearest JSON Schema `format`, and with none where that format refuses text the validator accepts, as `time` refuses `12:00`. A format that reads Unicode and produces ASCII, such as `email`, is written with no format on the input side and as `email` on the output side. A format JSON Schema has no name for, such as `phone`, `slug` or one made with `format`, is written with none, since a reader in strict mode, as Ajv is by default, refuses to compile a format it does not know.
+The schema is read from what [`describe`](index.md#describe) gives, so only validators made by this package's factories can be written. It is written so that a value the validator accepts passes it, with the exceptions below, and it accepts some the validator refuses, since a validator checks more than a schema can say: a format's exact rules, such as which hosts of an `email` are public, are written as the nearest JSON Schema `format`, and with none where that format refuses text the validator accepts, as `time` refuses `12:00`. A format that reads Unicode and produces ASCII, such as `internationalEmail`, is written with no format on the input side and as `email` on the output side. A format JSON Schema has no name for, such as `phone`, `slug` or one made with `format`, is written with none, since a reader in strict mode, as Ajv is by default, refuses to compile a format it does not know.
 
 A schema reads a `pattern` in Unicode mode, the `u` flag, so one written without it is written as it is when it means the same there, where `.` and a negated class match a whole character rather than half of an emoji, and cannot be written otherwise, as `/^\@x$/`, which is an error in that mode, cannot.
 
@@ -114,7 +114,7 @@ toJsonSchema(user);
 //   type: "object",
 //   properties: {
 //     name: { type: "string", minLength: 2 },
-//     email: { type: "string" },
+//     email: { type: "string", format: "email" },
 //     age: { type: "integer" },
 //   },
 //   required: ["name", "email"],

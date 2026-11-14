@@ -1,5 +1,5 @@
 import { standardOf } from "../core/make";
-import { assertFunction, isResult } from "../core/result";
+import { assertFunction, assertIssue, isResult } from "../core/result";
 import { adopt, call, count, RUN, scopeNow, type Run } from "../core/run";
 import { isThenable } from "../core/thenable";
 import type { AsyncSchema, Schema, ValidationResult } from "../core/types";
@@ -44,7 +44,9 @@ export type ValidatedValue<TReturn> = Extract<Awaited<TReturn>, { ok: true; valu
  * @returns A validator that gives what `validate` returns, asynchronous when `validate` may return a
  * promise.
  * @throws {TypeError} When `validate` is not a function. From the returned validator, when `validate`
- * returns something that is not a result, or a failure without issues.
+ * returns something that is not a result, a failure without issues, or an issue `fail()` would refuse: one
+ * that is not an object, with a `code` or `message` that is not text, or a `path` that is not a list of
+ * keys and indexes.
  */
 // One signature and not one for each of the two kinds, as the factories have: given two, the compiler reads
 // `{ ok: true, value }` returned by an asynchronous function as `{ ok: boolean }` and matches neither.
@@ -61,7 +63,15 @@ export function validator(validate: (input: unknown) => unknown): unknown {
       // without issues was meant to refuse.
       throw new TypeError("A validator written by hand must return pass(value) or fail(issue)");
     }
-    return result.ok ? result.value : adopt(result.error.issues);
+    if (result.ok) {
+      return result.value;
+    }
+    // A failure built by hand, and not by `fail()`, is checked as `fail()` checks it: a `path` of text
+    // would be split into one segment per letter. Read with `for…of`, a hole is read as undefined.
+    for (const each of result.error.issues) {
+      assertIssue(each);
+    }
+    return adopt(result.error.issues);
   };
   const run: Run = (input) => {
     // A validator it calls in turn is part of this validation, so the validation is made before the call.

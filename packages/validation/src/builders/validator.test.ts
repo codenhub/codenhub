@@ -84,6 +84,22 @@ describe("validator", () => {
       })(1),
     ).toThrow(thrown);
   });
+
+  it("should throw when the function returns an issue fail() would refuse, as it waits too", async () => {
+    const failing = (issues: unknown[]) => validator(() => ({ ok: false, error: { issues } }) as never);
+    expect(() => failing([{ path: "confirm" }])(1)).toThrow(
+      new TypeError("issue.path must be a list of keys and indexes"),
+    );
+    expect(() => failing([{ code: 1 }])(1)).toThrow(TypeError);
+    expect(() => failing([{ message: ["no"] }])(1)).toThrow(TypeError);
+    // oxlint-disable-next-line no-sparse-arrays
+    expect(() => failing([, { code: "a" }])(1)).toThrow(
+      new TypeError("An issue must be an object, received undefined"),
+    );
+    const waiting = validator(async () => ({ ok: false, error: { issues: [{ path: "confirm" }] } }) as never);
+    await expect(waiting(1)).rejects.toThrow("issue.path must be a list of keys and indexes");
+    expect(issuesOf(failing([{ code: "a", path: ["b", 0] }])(1))).toEqual([{ code: "a", path: ["b", 0] }]);
+  });
 });
 
 describe("the type of what validator makes", () => {

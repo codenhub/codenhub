@@ -175,7 +175,7 @@ The common cause is a factory given where its validator belongs, as `string` ins
 
 A validator made by another installed copy of this package is refused the same way, and so is one of its checks: it happens when two packages depend on versions of `@codenhub/validation` that do not overlap, and one is given a schema of the other. Each copy reports issues to itself, so one cannot run the validators of the other as its own. Install one version for both, or give the validator to `validator`, which runs it as any function written by hand and keeps its issues, though no longer what `describe` and `toJsonSchema` read of it.
 
-A function given to `validator` that returns anything other than a result is a bug too: nothing, the input itself, or a failure without issues. The validator throws a `TypeError` when it runs, "A validator written by hand must return pass(value) or fail(issue)".
+A function given to `validator` that returns anything other than a result is a bug too: nothing, the input itself, or a failure without issues. The validator throws a `TypeError` when it runs, "A validator written by hand must return pass(value) or fail(issue)". A failure it built by hand rather than with `fail` is checked as `fail` checks its issues, so a `path` such as `"confirm"` throws there too.
 
 ### A conversion that can fail
 

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { describe as describeSchema } from "../core/describe";
 import { accepts, codesOf, issuesOf, valueOf } from "../test-utils";
 import { email } from "./email";
 import { hostname } from "./hostname";
@@ -149,6 +150,15 @@ describe("internationalEmail", () => {
     expect(internationalEmail({ allowPlus: false })("a+b@münchen.de").ok).toBe(false);
     expect(valueOf(internationalEmail({ domain: hostname() })("ada@localhost"))).toBe("ada@localhost");
     expect(issuesOf(internationalEmail({ message: "Not an address" })("nope"))[0]?.message).toBe("Not an address");
+  });
+
+  it("should describe itself as email does, and say that its domain may be internationalized", () => {
+    expect(describeSchema(internationalEmail())).toMatchObject({
+      kind: "format",
+      format: "email",
+      international: true,
+    });
+    expect(describeSchema(email())).not.toHaveProperty("international");
   });
 
   it("should reject non-strings as invalid_type and bad strings as invalid_format, as email does", () => {

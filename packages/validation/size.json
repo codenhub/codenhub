@@ -1325,10 +1325,10 @@
         "email": {
           "files": {
             "dist/index.js": {
-              "bytes": 7778,
+              "bytes": 7804,
               "declarations": {
                 "split": 474,
-                "emailOf": 447,
+                "emailOf": 473,
                 "partsFormat": 443,
                 "describeType$2": 365,
                 "nested": 337,
@@ -1408,8 +1408,8 @@
               "bytes": 20
             }
           },
-          "gzip": 3271,
-          "minified": 7798
+          "gzip": 3286,
+          "minified": 7824
         },
         "encode": {
           "files": {
@@ -2450,11 +2450,11 @@
         "internationalEmail": {
           "files": {
             "dist/index.js": {
-              "bytes": 10307,
+              "bytes": 10336,
               "declarations": {
                 "fromPunycode": 527,
                 "split": 474,
-                "emailOf": 447,
+                "emailOf": 473,
                 "partsFormat": 444,
                 "describeType$2": 365,
                 "nested": 337,
@@ -2519,10 +2519,10 @@
                 "toolsOf": 40,
                 "ownRun": 38,
                 "NUMERIC_HOST_PATTERN": 37,
+                "internationalEmail": 37,
                 "NUMERIC_LAST_LABEL_PATTERN": 35,
                 "finished": 35,
                 "CHECK": 34,
-                "internationalEmail": 34,
                 "FAIL": 33,
                 "RUN": 32,
                 "isPublicHost": 31,
@@ -2558,8 +2558,8 @@
               "bytes": 33
             }
           },
-          "gzip": 4485,
-          "minified": 10340
+          "gzip": 4498,
+          "minified": 10369
         },
         "intersection": {
           "files": {
@@ -5114,9 +5114,9 @@
         "standardJsonSchema": {
           "files": {
             "dist/index.js": {
-              "bytes": 15789,
+              "bytes": 15852,
               "declarations": {
-                "toJsonSchema": 6564,
+                "toJsonSchema": 6622,
                 "describeLimit$2": 759,
                 "FORMAT_NAMES": 529,
                 "describeFormat$2": 523,
@@ -5135,9 +5135,9 @@
                 "isOtherKind": 199,
                 "assertMessages": 196,
                 "makesNewLazy": 195,
+                "FORMAT_NAMES$1": 175,
                 "meantIssue": 175,
                 "formatPath": 174,
-                "FORMAT_NAMES$1": 170,
                 "englishMessages": 168,
                 "toDecimal": 134,
                 "COERCED_TYPES": 132,
@@ -5187,8 +5187,8 @@
               "bytes": 32
             }
           },
-          "gzip": 6078,
-          "minified": 15821
+          "gzip": 6103,
+          "minified": 15884
         },
         "startsWith": {
           "files": {
@@ -5515,15 +5515,15 @@
         "toJsonSchema": {
           "files": {
             "dist/index.js": {
-              "bytes": 9168,
+              "bytes": 9231,
               "declarations": {
-                "toJsonSchema": 6564,
+                "toJsonSchema": 6622,
                 "producesPrimitive": 333,
                 "holdsPrimitives": 320,
                 "addGetters": 236,
                 "isPlainObject": 205,
                 "makesNewLazy": 195,
-                "FORMAT_NAMES$1": 170,
+                "FORMAT_NAMES$1": 175,
                 "toDecimal": 134,
                 "COERCED_TYPES": 132,
                 "assertFunction": 121,
@@ -5547,8 +5547,8 @@
               "bytes": 26
             }
           },
-          "gzip": 3703,
-          "minified": 9194
+          "gzip": 3728,
+          "minified": 9257
         },
         "tooBigMessage": {
           "files": {
@@ -6192,13 +6192,15 @@
         "validator": {
           "files": {
             "dist/index.js": {
-              "bytes": 2904,
+              "bytes": 3453,
               "declarations": {
-                "validator": 305,
+                "validator": 348,
+                "assertIssue": 298,
                 "adopt": 202,
                 "wait$1": 185,
                 "join": 183,
                 "call": 130,
+                "assertOption": 123,
                 "assertFunction": 121,
                 "standardOf": 121,
                 "say": 118,
@@ -6211,9 +6213,10 @@
                 "Waiting": 95,
                 "toStandard": 93,
                 "merged": 88,
+                "(top level)": 87,
                 "straighten": 86,
                 "isThenable": 85,
-                "(top level)": 81,
+                "isPath": 79,
                 "settle$1": 48,
                 "after": 43,
                 "tools": 39,
@@ -6236,15 +6239,15 @@
               "bytes": 23
             }
           },
-          "gzip": 1339,
-          "minified": 2927
+          "gzip": 1493,
+          "minified": 3476
         }
       },
       "files": {
         "dist/index.js": {
-          "bytes": 95083,
+          "bytes": 95218,
           "declarations": {
-            "toJsonSchema": 6584,
+            "toJsonSchema": 6642,
             "encode": 2598,
             "audit": 1939,
             "url": 1930,
@@ -6284,12 +6287,12 @@
             "settleEntries": 494,
             "datetime": 485,
             "instanceOf": 480,
+            "emailOf": 476,
             "describeValue$2": 475,
             "split": 475,
             "bigint": 466,
             "(top level)": 463,
             "uuid": 455,
-            "emailOf": 450,
             "coerceDate": 446,
             "partsFormat": 446,
             "map": 442,
@@ -6310,6 +6313,7 @@
             "describeType$2": 365,
             "wordSize": 363,
             "readTypes": 360,
+            "validator": 355,
             "producesPrimitive": 338,
             "codec": 337,
             "nested": 337,
@@ -6322,7 +6326,6 @@
             "multipleOf": 314,
             "select": 314,
             "readIso": 312,
-            "validator": 312,
             "describeType": 309,
             "describeType$1": 308,
             "coercing": 299,
@@ -6397,11 +6400,11 @@
             "meantIssue": 178,
             "formatPath": 177,
             "port": 177,
+            "FORMAT_NAMES$1": 176,
             "fileOf": 176,
             "PRODUCE_WHAT_THEY_ACCEPT": 174,
             "isCalendarDate": 173,
             "wordFormat": 173,
-            "FORMAT_NAMES$1": 171,
             "fractionPattern": 171,
             "decided": 170,
             "cap": 166,
@@ -6633,6 +6636,7 @@
             "OPTION_NAMES": 37,
             "brand$1": 37,
             "finished": 37,
+            "internationalEmail": 37,
             "then": 37,
             "DECIMAL_NUMBER_PATTERN": 36,
             "JWT_PATTERN": 36,
@@ -6651,7 +6655,6 @@
             "FIELD_PATTERN": 34,
             "UNESCAPED_PATTERN": 34,
             "email": 34,
-            "internationalEmail": 34,
             "FAIL": 33,
             "RUN": 33,
             "AMBIGUOUS_KEY_PATTERN": 32,
@@ -6765,9 +6768,9 @@
           "bytes": 1750
         }
       },
-      "gzip": 32383,
-      "minified": 96833,
-      "sha256": "6417021fb6ede603454569233762f3ed4ea6f7aedf1d5ff99aeaef5c4195779a"
+      "gzip": 32426,
+      "minified": 96968,
+      "sha256": "9ff1290bd06062d179db090bfd9b4234d1b11af2dfb0d3afcdbf258464e40179"
     }
   }
 }

@@ -179,7 +179,7 @@ A composer takes no other function as a validator: what calls a function written
 
 **Returns** — A validator that gives what `validate` returns, asynchronous when `validate` may return a promise.
 
-**Throws** — `TypeError` — When `validate` is not a function. From the returned validator, when `validate` returns something that is not a result, or a failure without issues.
+**Throws** — `TypeError` — When `validate` is not a function. From the returned validator, when `validate` returns something that is not a result, a failure without issues, or an issue `fail()` would refuse: one that is not an object, with a `code` or `message` that is not text, or a `path` that is not a list of keys and indexes.
 
 **Example**
 

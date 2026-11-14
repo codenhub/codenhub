@@ -2,7 +2,7 @@
 title: Validadores personalizados
 description: Agrega reglas con verificaciones, crea validadores que se comportan como los integrados, valida de forma asíncrona y nombra los tipos que exporta una biblioteca de validadores.
 order: 6
-source: f41eee1c5e2e39b89c00f8aae7f67d9a014f2b4f
+source: cb25383af5ab4fa55341f17593b637048df4fd02
 ---
 
 # Validadores personalizados
@@ -176,7 +176,7 @@ La causa habitual es una fábrica pasada donde va su validador, como `string` en
 
 Un validador hecho por otra copia instalada de este paquete se rechaza de la misma forma, y también una de sus verificaciones: ocurre cuando dos paquetes dependen de versiones de `@codenhub/validation` que no coinciden, y a uno se le da un esquema del otro. Cada copia se reporta los problemas a sí misma, así que una no puede ejecutar los validadores de la otra como propios. Instala una sola versión para ambos, o pasa el validador a `validator`, que lo ejecuta como cualquier función escrita a mano y conserva sus problemas, aunque ya no lo que `describe` y `toJsonSchema` leen de él.
 
-Una función pasada a `validator` que devuelve algo que no es un resultado también es un bug: nada, la propia entrada o una falla sin problemas. El validador lanza un `TypeError` cuando se ejecuta, "A validator written by hand must return pass(value) or fail(issue)".
+Una función pasada a `validator` que devuelve algo que no es un resultado también es un bug: nada, la propia entrada o una falla sin problemas. El validador lanza un `TypeError` cuando se ejecuta, "A validator written by hand must return pass(value) or fail(issue)". Una falla construida a mano en lugar de con `fail` se verifica como `fail` verifica sus problemas, así que un `path` como `"confirm"` también lanza ahí.
 
 ### Una conversión que puede fallar
 

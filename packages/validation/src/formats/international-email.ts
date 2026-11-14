@@ -33,5 +33,5 @@ export function internationalEmail<const TOptions extends EmailOptions>(
 export function internationalEmail(...checks: AsyncCheck<string>[]): AsyncSchema<string, string>;
 export function internationalEmail(options: EmailOptions, ...checks: AsyncCheck<string>[]): AsyncSchema<string, string>;
 export function internationalEmail(...rest: unknown[]): AnyValidator {
-  return emailOf(rest, toEmailAddress);
+  return emailOf(rest, toEmailAddress, true);
 }

@@ -33,10 +33,10 @@ export type EmailParts<TOptions> = Extract<TOptions[keyof TOptions & ("domain" |
 
 /**
  * Makes an email validator of what follows its name, options and then checks, which reads an address
- * with `read`: `email` and `internationalEmail` differ in that alone, so each carries its own reader
- * and no other.
+ * with `read`: `email` and `internationalEmail` differ in that, so each carries its own reader and no
+ * other, and in `international`, which says in the description that the domain may be internationalized.
  */
-export function emailOf(rest: readonly unknown[], read: ReadAddress): AnyValidator {
+export function emailOf(rest: readonly unknown[], read: ReadAddress, international?: true): AnyValidator {
   const [options, checks] = split<EmailOptions, string>(rest, "allowPlus domain local");
   const { allowPlus = true, domain, local, message } = options;
   assertOption("allowPlus", allowPlus, "boolean");
@@ -63,7 +63,13 @@ export function emailOf(rest: readonly unknown[], read: ReadAddress): AnyValidat
     checks,
     [local, domain],
   );
-  return formatted(validator, { kind: "format", format: "email", options, checks });
+  return formatted(validator, {
+    kind: "format",
+    format: "email",
+    options,
+    checks,
+    ...(international && { international }),
+  });
 }
 
 /**

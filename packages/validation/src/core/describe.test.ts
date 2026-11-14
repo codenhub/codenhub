@@ -64,7 +64,11 @@ const validators: Record<string, [validator: unknown, kind: string, parts?: Reco
   hex: [api.hex(), "format", { format: "hex" }],
   hostname: [api.hostname(), "format", { format: "hostname" }],
   instanceOf: [api.instanceOf(Date), "instance", { target: Date }],
-  internationalEmail: [api.internationalEmail({ allowPlus: false }), "format", { format: "email" }],
+  internationalEmail: [
+    api.internationalEmail({ allowPlus: false }),
+    "format",
+    { format: "email", international: true },
+  ],
   intersection: [api.intersection(object({}), object({})), "intersection"],
   ip: [api.ip({ version: "v4" }), "format", { format: "ip", options: { version: "v4" } }],
   isoDate: [api.isoDate(), "format", { format: "isoDate" }],

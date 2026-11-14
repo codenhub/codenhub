@@ -51,6 +51,7 @@ import { duration } from "../formats/duration";
 import { email } from "../formats/email";
 import { hex } from "../formats/hex";
 import { hostname } from "../formats/hostname";
+import { internationalEmail } from "../formats/international-email";
 import { ip } from "../formats/ip";
 import { isoDate } from "../formats/iso-date";
 import { jwt } from "../formats/jwt";
@@ -94,7 +95,7 @@ describe("toJsonSchema", () => {
       type: "object",
       properties: {
         name: { type: "string", minLength: 2 },
-        email: { type: "string" },
+        email: { type: "string", format: "email" },
         age: { type: "integer" },
       },
       required: ["name", "email"],
@@ -223,10 +224,37 @@ describe("toJsonSchema", () => {
   });
 
   it("should write no format for the input of a format whose input may be Unicode, and the ASCII one for its output", () => {
-    expect(schemaOf(email())).toEqual({ type: "string" });
-    expect(schemaOf(email(), { io: "output" })).toEqual({ type: "string", format: "email" });
+    expect(schemaOf(internationalEmail())).toEqual({ type: "string" });
+    expect(schemaOf(internationalEmail(), { io: "output" })).toEqual({ type: "string", format: "email" });
     expect(schemaOf(domain())).toEqual({ type: "string" });
     expect(schemaOf(domain(), { io: "output" })).toEqual({ type: "string", format: "hostname" });
+  });
+
+  it("should write email for the input of an email, whose rules accept less than ajv-formats' email", () => {
+    // The pattern of `email` in ajv-formats 3.0.1, in its default mode, "full".
+    const ajvEmail =
+      /^[a-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\.[a-z0-9!#$%&'*+/=?^_`{|}~-]+)*@(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/i;
+    const addresses = [
+      "ada@example.com",
+      "Ada.Lovelace+tag@Example.COM",
+      "a_b-c@sub-domain.example.net",
+      "a!#$%&'*+/=?^_`{|}~-@example.com",
+      `${"a".repeat(64)}@${"b".repeat(63)}.co`,
+    ];
+    expect(addresses.filter((address) => !email()(address).ok)).toEqual([]);
+    expect(addresses.filter((address) => !ajvEmail.test(address))).toEqual([]);
+    expect(schemaOf(email(pattern(/@example\.com$/)))).toEqual({
+      type: "string",
+      format: "email",
+      pattern: String.raw`@example\.com$`,
+    });
+  });
+
+  it("should write no format for the input of an email with a domain option, which may accept a host without a dot", () => {
+    const local = email({ domain: hostname() });
+    expect(local("ada@localhost").ok).toBe(true);
+    expect(schemaOf(local)).toEqual({ type: "string" });
+    expect(schemaOf(email({ domain: domain() }))).toEqual({ type: "string" });
   });
 
   it("should write no format where the one JSON Schema names refuses text the validator accepts", () => {

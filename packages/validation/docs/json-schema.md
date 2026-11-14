@@ -25,7 +25,7 @@ toJsonSchema(user);
 //   type: "object",
 //   properties: {
 //     name: { type: "string", minLength: 2 },
-//     email: { type: "string" },
+//     email: { type: "string", format: "email" },
 //     age: { type: "integer", minimum: 0 },
 //   },
 //   required: ["name", "email"],
@@ -107,7 +107,8 @@ A format is written under JSON Schema's name for it, and with no `format` where 
 
 | Format                                                   | Input                                                   | Output     |
 | -------------------------------------------------------- | ------------------------------------------------------- | ---------- |
-| `email`, `internationalEmail`                            | None, since the domain may be internationalized         | `email`    |
+| `email`                                                  | `email`, and none with a `domain` option                | `email`    |
+| `internationalEmail`                                     | None, since the domain may be internationalized         | `email`    |
 | `domain`                                                 | None, for the same reason                               | `hostname` |
 | `hostname`, `uuid`                                       | Their own names                                         | The same   |
 | `datetime`                                               | `date-time`, and none with `local`, which has no offset | The same   |
@@ -117,7 +118,7 @@ A format is written under JSON Schema's name for it, and with no `format` where 
 | `port`, `base64`                                         | As the table above writes them                          | The same   |
 | Any other, and any made with `format`, whatever its name | None                                                    | None       |
 
-A format is left out where JSON Schema's has stricter rules: `time` needs an offset, which a time of day such as `12:00` never has, `duration` allows no fraction, as in `PT0.5S`, and no weeks beside days, as in `P1W1D`, an IPv6 address may have a zone, as in `fe80::1%eth0`, which `ipv6` does not allow, and a URL may hold `|` or `^`, which a URI may not. The input of `email` and `domain` may be internationalized, as in `user@bücher.example`, which `email` and `hostname` refuse; `idn-email` and `idn-hostname` would fit, but [ajv-formats](https://github.com/ajv-validator/ajv-formats) does not know them, and Ajv in its default strict mode refuses to compile a schema with a format it does not know. That is also why a format JSON Schema has no name for, such as `phone`, `slug` or one made with `format`, is written with none.
+A format is left out where JSON Schema's has stricter rules: `time` needs an offset, which a time of day such as `12:00` never has, `duration` allows no fraction, as in `PT0.5S`, and no weeks beside days, as in `P1W1D`, an IPv6 address may have a zone, as in `fe80::1%eth0`, which `ipv6` does not allow, and a URL may hold `|` or `^`, which a URI may not. The input of `internationalEmail` and `domain` may be internationalized, as in `user@bücher.example`, which `email` and `hostname` refuse; `idn-email` and `idn-hostname` would fit, but [ajv-formats](https://github.com/ajv-validator/ajv-formats) does not know them, and Ajv in its default strict mode refuses to compile a schema with a format it does not know. An `email` with a `domain` option may accept a host of one label, as `email({ domain: hostname() })` accepts `ada@localhost`, which ajv-formats' `email` refuses for want of a dot. That is also why a format JSON Schema has no name for, such as `phone`, `slug` or one made with `format`, is written with none.
 
 A `strictObject` writes `additionalProperties: false`, and an `objectWithRest` the schema of the validator it gives its unknown keys, as a `record` writes the schema of its values. An `object` and a `looseObject` write none, since any other key passes. The schema says nothing of `__proto__`, which a `looseObject`, an `objectWithRest` and a `record` reject, so a schema validator accepts it there.
 
@@ -232,7 +233,7 @@ A validator inside another is given as the validator itself, to be described in 
 | `"oneOf"`                                                                                               | `oneOf`                                           | `values`, a list, for an enum too                                                                                               |
 | `"instance"`                                                                                            | `instanceOf`                                      | `target`, the class                                                                                                             |
 | `"guard"`                                                                                               | A factory `guard` made                            | `expected`                                                                                                                      |
-| `"format"`                                                                                              | Every format, `port`, and a factory `format` made | `format`, its name, as in the issue it reports                                                                                  |
+| `"format"`                                                                                              | Every format, `port`, and a factory `format` made | `format`, its name, as in the issue it reports; `international: true` for `internationalEmail`, whose issues name `email`       |
 | `"coerce"`                                                                                              | The `coerce` validators                           | `inner`, the strict validator, which has the options; `options` for an option of the coercion's own, `zoneless` of `coerceDate` |
 | `"object"`, `"objectLike"`                                                                              | `object`, `objectLike`                            | `shape`                                                                                                                         |
 | `"array"`, `"set"`                                                                                      | `array`, `set`                                    | `item`                                                                                                                          |
