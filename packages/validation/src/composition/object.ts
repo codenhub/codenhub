@@ -207,9 +207,10 @@ export function objectOf(shape: Shape, args: readonly unknown[], unknownKeys?: U
       checks,
       shape: Object.freeze(read),
       // How it treats unlisted keys, for a reader of the schema, and the code that does it, for `pick` and
-      // the rest to make an object of the same kind.
-      unknownKeys,
-      way,
+      // the rest to make an object of the same kind. Absent for `object`, so a reader asking whether the key
+      // is there reads its way right.
+      ...(unknownKeys !== undefined && { unknownKeys }),
+      ...(way !== undefined && { way }),
     },
     unknowns === undefined ? TYPE_WORDS : unknowns[2],
     [...Object.values(read), unknownKeys],
