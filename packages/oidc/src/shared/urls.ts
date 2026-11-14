@@ -26,20 +26,23 @@ function hasDisallowedUrlCharacter(value: string): boolean {
 }
 
 /**
- * Whether a special scheme is followed by `//`, as in `https://`. The URL parser accepts `https:host` and
- * rewrites it, so the stored string would differ from the URL it serializes to. The scheme is matched without
- * regard to case, as the parser does.
+ * Whether a special scheme is followed by exactly `//`, as in `https://`. The URL parser accepts `https:host` and
+ * rewrites it, and skips extra slashes so that `https:///cb` becomes `https://cb/`, so the stored string would
+ * differ from the URL it serializes to. The scheme is matched without regard to case, as the parser does.
  */
 function hasDoubleSlashAfterScheme(value: string, url: URL): boolean {
+  const end = url.protocol.length;
   return (
     !SPECIAL_PROTOCOLS.has(url.protocol) ||
-    (value.toLowerCase().startsWith(url.protocol) && value.slice(url.protocol.length, url.protocol.length + 2) === "//")
+    (value.toLowerCase().startsWith(url.protocol) &&
+      value.slice(end, end + 2) === "//" &&
+      value.charAt(end + 2) !== "/")
   );
 }
 
 /**
- * Tests whether a value is an absolute `https:` URL of visible ASCII, with `//` after the scheme, no credentials
- * and no fragment. A backslash is refused too, since special schemes read it as a slash.
+ * Tests whether a value is an absolute `https:` URL of visible ASCII, with exactly `//` after the scheme, no
+ * credentials and no fragment. A backslash is refused too, since special schemes read it as a slash.
  *
  * A `#` anywhere in the string counts as a fragment, even an empty one, because the URL parser drops
  * an empty fragment and the caller should still see it as present.
@@ -59,8 +62,9 @@ export function isHttpsUrl(value: unknown): value is string {
  * no fragment.
  *
  * Any scheme is accepted except those a browser would execute, since native apps register custom schemes. A
- * special scheme must be followed by `//`, as in `https://`; a custom scheme such as `com.example.app:/callback`
- * may have one slash. A backslash is refused too, since special schemes read it as a slash.
+ * special scheme must be followed by exactly `//`, as in `https://`; a custom scheme such as
+ * `com.example.app:/callback` may have one slash. A backslash is refused too, since special schemes read it as a
+ * slash.
  */
 export function isRedirectUri(value: unknown): value is string {
   if (typeof value !== "string" || value.includes("#") || hasDisallowedUrlCharacter(value) || !URL.canParse(value)) {
@@ -87,8 +91,5 @@ export function isResourceUri(value: unknown): value is string {
     return false;
   }
   const url = new URL(value);
-  return (
-    hasDoubleSlashAfterScheme(value, url) &&
-    (!SPECIAL_PROTOCOLS.has(url.protocol) || value.charAt(url.protocol.length + 2) !== "/")
-  );
+  return hasDoubleSlashAfterScheme(value, url);
 }
