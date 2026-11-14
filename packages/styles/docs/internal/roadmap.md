@@ -42,7 +42,7 @@ Rejected:
 
 What is not known yet: whether a generated adapter can keep the overrides [Cascade layers](./model.md#cascade-layers) records, which are tuned to the order Tailwind emits rules in, such as the `utilities.families` sublayer and the defaults written at zero specificity. Working that out again is expected to be most of the work, and it has not been measured.
 
-This carries no release commitment and holds no release. It changes how the package is built and, by intent, no documented surface, so it is not a deferred feature in the sense of `docs/specs/packages-lifecycle.md`. A change to a documented surface that the design turns out to need is settled in the release that ships the build.
+This is deferred in the sense of `docs/specs/packages-lifecycle.md`, and carries no release commitment. It waits on the question above: whether a generated adapter keeps the overrides `/tw` documents. `/tw` is a documented surface and the build rewrites what it publishes, so until that is answered, shipping the build in the release being prepared is not a plausible option. That spec rejects deferring a feature because it needs its own design; what this waits on is narrower, whether the build can be done at all without changing what `/tw` documents. When it is answered, the build goes into the release then being prepared, together with any change to `/tw` the answer requires.
 
 ### Aesthetics
 
