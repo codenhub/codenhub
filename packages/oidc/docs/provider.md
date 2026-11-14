@@ -480,7 +480,7 @@ It never has a `nonce`, which the specification forbids. Because its `typ` is `l
 
 The app owns delivery: the provider sets no timeout, retries nothing and reads no answer.
 
-- Send it with `fetch`. A client answers `200` when it ended the session, or `400` with an error (Back-Channel Logout 1.0 §2.8). Treat any `2xx` as success and anything else as a failure, and do not read the body, which is not part of the contract.
+- Send it with `fetch`. A client answers `200` when it ended the session, or `400` with an error (Back-Channel Logout 1.0 §2.8). Treat any `2xx` as success and anything else as a failure, and do not read the body, which is not part of the contract. Cancel it instead, with `response.body?.cancel()`: Node.js keeps the connection of a body that is neither read nor cancelled until it is garbage-collected.
 - Use a short timeout, a few seconds. A client that is down or slow must not hold up the user's sign-out, so send to all clients at once and do not make the user wait for the slowest.
 - Do not follow redirects. The token is a bearer credential for that client, and the client's registered `uri` is the only place it should go. A `3xx` answer is a failure. The request the provider builds has `redirect: "manual"`, so `fetch` does not follow it: Node.js and workerd return the `3xx` response itself, and a browser's `fetch` returns an opaque-redirect response with status `0` (Fetch standard). Either way `response.ok` is `false`.
 - A `Request` body can be read once, so to retry, call `backchannelLogout` again. The new token has a new `jti` and a fresh `exp`, and a client that remembers `jti` values, as the specification asks it to, accepts it.
@@ -515,6 +515,7 @@ async function signOut(session: { readonly id: string; readonly subject: string 
       }
       try {
         const response = await fetch(request, { redirect: "manual", signal: AbortSignal.timeout(5000) });
+        await response.body?.cancel(); // the answer's body is not read, and an unread body can hold its connection
         if (!response.ok) {
           logFailure(clientId, response.status); // 400, 3xx or a server error: any non-2xx is a failure
         }

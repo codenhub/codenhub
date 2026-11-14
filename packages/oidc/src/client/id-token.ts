@@ -51,15 +51,25 @@ const OPTIONAL_CLAIM_TYPES: readonly (readonly [string, (value: unknown) => bool
   ["sid", isString],
 ];
 
-/** A `typ` names an access token when, lowercased and without an `application/` prefix, it is `at+jwt` (RFC 9068 §2.1). */
-const isAccessTokenType = (typ: string | undefined): boolean =>
-  typ !== undefined && typ.toLowerCase().replace(APPLICATION_PREFIX, "") === AT_JWT;
+/** The `typ` values of the provider's other JWTs: access tokens (RFC 9068 §2.1) and logout tokens (Back-Channel Logout 1.0 §2.4). */
+const OTHER_TOKEN_TYPES: ReadonlySet<string> = new Set([AT_JWT, "logout+jwt"]);
+
+/**
+ * A `typ` names another token than an ID token when, lowercased and without an `application/` prefix, it is
+ * `at+jwt` or `logout+jwt`.
+ */
+const isOtherTokenType = (typ: string | undefined): boolean =>
+  typ !== undefined && OTHER_TOKEN_TYPES.has(typ.toLowerCase().replace(APPLICATION_PREFIX, ""));
 
 /** The payload claim an issue names, as its path: `["id_token", "payload", claim]`. */
 const claimPath = (claim: string): OidcIssue["path"] => ["id_token", "payload", claim];
 
 function invalidClaim(claim: string): OidcIssue {
-  return { code: "invalid_id_token", path: claimPath(claim), params: { jwtCode: "invalid_claim" } };
+  return {
+    code: "invalid_id_token",
+    path: claimPath(claim),
+    params: { jwtCode: "invalid_claim" },
+  };
 }
 
 /** Failed result from a non-empty issue list. The callers never pass an empty one. */
@@ -156,9 +166,9 @@ async function claimIssues(
 ): Promise<OidcIssue[]> {
   const { header, payload } = verified;
   const issues: OidcIssue[] = [];
-  // An access token must never pass as an ID token: both are signed by the same provider, so the type is
-  // the only thing that tells them apart.
-  if (isAccessTokenType(header.typ)) {
+  // An access or logout token must never pass as an ID token: all are signed by the same provider, so the
+  // type is what tells them apart. A logout token has no nonce, so on refresh nothing else would refuse it.
+  if (isOtherTokenType(header.typ)) {
     issues.push({
       code: "invalid_id_token",
       path: ["id_token", "header", "typ"],
