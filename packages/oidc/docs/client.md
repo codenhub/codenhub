@@ -1,6 +1,6 @@
 ---
 title: Client
-description: Discovering a provider, creating a relying-party client, starting and finishing a sign-in, refreshing tokens, fetching userinfo, revoking tokens, ending the session at the provider, client credentials, and authenticating to the token endpoint.
+description: Discovering a provider, creating a relying-party client, starting and finishing a sign-in, refreshing tokens, fetching userinfo, revoking tokens, ending the session at the provider, receiving back-channel logout, client credentials, and authenticating to the token endpoint.
 order: 1
 ---
 
@@ -64,16 +64,17 @@ const client = createClient({
 });
 ```
 
-| Option           | Meaning                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       | Default                   |
-| ---------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------- |
-| `metadata`       | The provider's metadata, from `discover` or written by hand. Checked as strictly as a fetched document.                                                                                                                                                                                                                                                                                                                                                                                                                                       | Required                  |
-| `clientId`       | The client identifier the provider registered. A non-empty string of well-formed Unicode, with no lone surrogates.                                                                                                                                                                                                                                                                                                                                                                                                                            | Required                  |
-| `redirectUri`    | The redirect URI registered for this client. Sent in the authorization request and in the code exchange at the token endpoint, but not in refresh requests (RFC 6749 §6). An absolute URI of visible ASCII (no spaces, control or non-ASCII characters; use punycode hosts and percent-encoding), with no fragment or credentials, and not `javascript:`, `data:`, `vbscript:` or `file:`. Required by `authorize` and `callback`, which throw `TypeError` without it. A service client that only calls `clientCredentials` can leave it out. | None; required to sign in |
-| `auth`           | How the client authenticates to the token endpoint. See [Client authentication](#client-authentication).                                                                                                                                                                                                                                                                                                                                                                                                                                      | Required                  |
-| `fetch`          | The `fetch` for the token, userinfo and JWKS requests. Looked up on each call when you omit it.                                                                                                                                                                                                                                                                                                                                                                                                                                               | `globalThis.fetch`        |
-| `timeout`        | Seconds to wait for each response, including its body, before failing. An integer from 1 through 60.                                                                                                                                                                                                                                                                                                                                                                                                                                          | `5`                       |
-| `clockTolerance` | Seconds of clock skew allowed on the ID token's `exp`, `iat` and `auth_time`. An integer from 0 through 300. The default absorbs ordinary drift between the two servers: with `0`, a provider whose clock runs a second ahead makes sign-ins fail with `issued_in_future`.                                                                                                                                                                                                                                                                    | `60`                      |
-| `now`            | The current time in milliseconds since the Unix epoch. For tests.                                                                                                                                                                                                                                                                                                                                                                                                                                                                             | `Date.now`                |
+| Option              | Meaning                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       | Default                   |
+| ------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------- |
+| `metadata`          | The provider's metadata, from `discover` or written by hand. Checked as strictly as a fetched document.                                                                                                                                                                                                                                                                                                                                                                                                                                       | Required                  |
+| `clientId`          | The client identifier the provider registered. A non-empty string of well-formed Unicode, with no lone surrogates.                                                                                                                                                                                                                                                                                                                                                                                                                            | Required                  |
+| `redirectUri`       | The redirect URI registered for this client. Sent in the authorization request and in the code exchange at the token endpoint, but not in refresh requests (RFC 6749 §6). An absolute URI of visible ASCII (no spaces, control or non-ASCII characters; use punycode hosts and percent-encoding), with no fragment or credentials, and not `javascript:`, `data:`, `vbscript:` or `file:`. Required by `authorize` and `callback`, which throw `TypeError` without it. A service client that only calls `clientCredentials` can leave it out. | None; required to sign in |
+| `auth`              | How the client authenticates to the token endpoint. See [Client authentication](#client-authentication).                                                                                                                                                                                                                                                                                                                                                                                                                                      | Required                  |
+| `fetch`             | The `fetch` for the token, userinfo and JWKS requests. Looked up on each call when you omit it.                                                                                                                                                                                                                                                                                                                                                                                                                                               | `globalThis.fetch`        |
+| `timeout`           | Seconds to wait for each response, including its body, before failing. An integer from 1 through 60.                                                                                                                                                                                                                                                                                                                                                                                                                                          | `5`                       |
+| `clockTolerance`    | Seconds of clock skew allowed on the ID token's `exp`, `iat` and `auth_time`. An integer from 0 through 300. The default absorbs ordinary drift between the two servers: with `0`, a provider whose clock runs a second ahead makes sign-ins fail with `issued_in_future`.                                                                                                                                                                                                                                                                    | `60`                      |
+| `backchannelLogout` | How the client receives back-channel logout: `{ sessionRequired?: boolean }`. With `sessionRequired: true`, a logout token without `sid` fails, as for a client registered with `backchannel_logout_session_required`. See [Receiving back-channel logout](#receiving-back-channel-logout).                                                                                                                                                                                                                                                   | `sessionRequired: false`  |
+| `now`               | The current time in milliseconds since the Unix epoch. For tests.                                                                                                                                                                                                                                                                                                                                                                                                                                                                             | `Date.now`                |
 
 The client accepts an ID token only when its signature verifies with one of the provider's keys, and only with an asymmetric algorithm the provider advertises in `id_token_signing_alg_values_supported` that this package supports: `ES256`, `EdDSA`, `Ed25519`, `RS256` or `PS256`. An ID token signed with `HS256` or `none` is never accepted. The keys come from the provider's `jwks_uri`, which the client fetches on first use and caches.
 
@@ -277,6 +278,64 @@ On the page at `postLogoutRedirectUri`, compare the `state` parameter with the `
 The URL always carries `client_id`, so the provider can match `postLogoutRedirectUri` even after the hint has expired. A hint issued to a different client is refused: the provider returns `invalid_request` at `id_token_hint`, so send the hint from the client it was issued to. The URL keeps any query the endpoint already has. Empty strings are left out.
 
 `endSessionUrl` throws `TypeError` when the metadata has no `end_session_endpoint`, when `postLogoutRedirectUri` breaks the redirect URI rules, when a string option is not a string, not well-formed Unicode or longer than 4096 characters (except `idTokenHint`, which has no cap of its own), when `uiLocales` is invalid, or when the URL is longer than 8192 characters once encoded.
+
+## Receiving back-channel logout
+
+When the user signs out at the provider, the provider can tell this client server to server, without the browser (OpenID Connect Back-Channel Logout 1.0). It sends a `POST` to the client's registered `backchannel_logout_uri` with a signed logout token in the form body. With this package's provider, that URI is the `uri` of the client record's `backchannelLogout`, and the provider's app sends what `provider.backchannelLogout` builds; see [Provider](provider.md#back-channel-logout).
+
+`client.readBackchannelLogout(request)` reads that request and verifies its token. It returns a promise of a result whose value is a `BackchannelLogout`: `subject` (the token's `sub`), `sessionId` (its `sid`), `jti`, `issuedAt` and `expiresAt`. At least one of `subject` and `sessionId` is present. `client.verifyLogoutToken(logoutToken)` verifies a token the app has already taken from the form body itself; prefer the first, which also checks the request.
+
+```ts
+const noStore = { "cache-control": "no-store" };
+
+// The route at the client's back-channel logout URI.
+async function backchannelLogout(request: Request): Promise<Response> {
+  const logout = await client.readBackchannelLogout(request);
+  // rememberJti stores the jti until the given time and returns false when it was already stored.
+  if (!logout.ok || !(await rememberJti(logout.value.jti, logout.value.expiresAt + 60))) {
+    return Response.json({ error: "invalid_request" }, { status: 400, headers: noStore });
+  }
+  const { subject, sessionId } = logout.value;
+  if (sessionId !== undefined) {
+    await endSessionsWithSid(sessionId); // the sessions that signed in with an ID token carrying this sid
+  } else if (subject !== undefined) {
+    await endSessionsOfUser(subject); // every session of this user from this provider
+  }
+  return new Response(null, { status: 200, headers: noStore });
+}
+```
+
+To find the session a `sessionId` names, keep the ID token's `sid` with the app's session at sign-in: `signedIn.value.claims.sid` after `callback`. With only `subject`, the provider means every session of that user that it issued tokens for.
+
+Answer as §2.8 says: `200` when the logout succeeded, including when no session matched, since there is nothing left to end; `400` with a JSON body `{ "error": "invalid_request" }` when the request or token failed. Send `Cache-Control: no-store` with both. Never put the token or the issues in the response: the sender may be an attacker, and the issues are for your logs.
+
+The client stores nothing, so it accepts the same token again until it expires. To refuse a replay, as the specification suggests, remember each `jti` until `expiresAt` plus your `clockTolerance`, when the client stops accepting the token anyway, and refuse one seen before. The example does that with the default tolerance of 60 seconds. A provider of this package signs every token with a new `jti`, so a retry of the same logout is never refused as a replay.
+
+### The request
+
+`readBackchannelLogout` checks the request before it verifies anything, and stops at the first failure, which is `invalid_logout_request` with a path naming the part at fault:
+
+- The method is `POST`. Otherwise path `["request", "method"]`.
+- `Content-Type` is `application/x-www-form-urlencoded`, with no parameter other than a UTF-8 `charset`. Otherwise path `["request", "headers", "content-type"]`.
+- The body is at most 16384 bytes of UTF-8. Otherwise path `["request", "body"]`, with `params.reason` of `too_large` or `unreadable`. The size is checked against `Content-Length` before reading and again while reading.
+- The form parses under the same rules as every request the provider reads: no parameter twice, at most 32 parameters, none longer than 4096 characters, no percent-escape that is not UTF-8. Otherwise path `["request", "body"]`, with `params.reason` of `duplicate`, `too_many`, `too_long` or `malformed`. A second `logout_token`, even an empty one, is `duplicate`.
+- `logout_token` is present and not empty. Otherwise path `["request", "body", "logout_token"]`. Other parameters are ignored.
+
+It rejects with `TypeError` when the request's body was already read, such as by middleware that parsed the form first: route the request to it untouched.
+
+### Logout token checks
+
+A logout token is checked like an ID token where the two agree, and every problem found is reported. A failure is `invalid_logout_token`, with `path` set to the place in the token, such as `["logout_token", "header", "typ"]`, and `params.jwtCode` naming the check, as for [ID tokens](#id-token-checks):
+
+- The signature verifies with one of the provider's keys, with an algorithm the client accepts for ID tokens. The key set is the one ID tokens use, fetched once and cached.
+- The header's `typ` is `logout+jwt` (an `application/` prefix and case are ignored). A missing or other `typ` is `wrong_type`, so an ID token or an access token of the same provider never passes.
+- `iss` equals the provider's issuer and `aud` contains the client identifier. `azp` is checked as for ID tokens, and a failure is `azp_mismatch` at `["logout_token", "payload", "azp"]`.
+- `iat`, `exp`, `jti` and `events` are present (`missing_claim` otherwise), and `exp` and `iat` are compared with `clockTolerance`. An empty `jti` is `invalid_claim`.
+- `events` is an object holding the member `http://schemas.openid.net/event/backchannel-logout`, whose value is an object. Otherwise `invalid_claim` at `["logout_token", "payload", "events"]`.
+- `sub` and `sid` are non-empty strings when present, and at least one is present. With `backchannelLogout.sessionRequired`, `sid` is required. A missing one is `missing_claim` at `["logout_token", "payload", "sid"]`.
+- There is no `nonce`, which the specification forbids so that an ID token cannot pass. A `nonce` of any value is `invalid_claim`.
+
+`verifyLogoutToken` rejects with `TypeError` when `logoutToken` is not a string, and never for a string's content.
 
 ## Client credentials
 

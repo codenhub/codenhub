@@ -145,6 +145,26 @@ Each row is checked before any token request is sent, unless it says otherwise.
 | An ID token longer than 8192 characters                                                                                                              | `invalid_id_token`, with `jwtCode` of `too_large`. See [Limits](#limits).                                                        |
 | A JWKS the client cannot fetch, or that is not valid                                                                                                 | `invalid_id_token`, with `jwtCode` of `key_fetch_failed` and `params.reason`.                                                    |
 
+## Client: back-channel logout
+
+`client.readBackchannelLogout` serves the client's back-channel logout URI, which anyone can reach. The request checks stop at the first failure and come before any key is fetched; the token checks report every failure. See [Client](client.md#receiving-back-channel-logout).
+
+| Input                                                                                               | Outcome                                                                                                                      |
+| --------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| A method other than `POST`                                                                          | `invalid_logout_request`, path `["request", "method"]`.                                                                      |
+| A body that is not `application/x-www-form-urlencoded`, or names a charset other than UTF-8         | `invalid_logout_request`, path `["request", "headers", "content-type"]`.                                                     |
+| A body over 16384 bytes, declared or streamed, or one that is not UTF-8                             | `invalid_logout_request`, path `["request", "body"]`, `params.reason` of `too_large` or `unreadable`. Nothing is verified.   |
+| Two `logout_token` parameters, even the same token twice, or any other parameter failure            | `invalid_logout_request`, path `["request", "body"]`, `params.reason` of `duplicate`, `too_many`, `too_long` or `malformed`. |
+| No `logout_token`, or an empty one                                                                  | `invalid_logout_request`, path `["request", "body", "logout_token"]`.                                                        |
+| An ID token or an access token of the same provider                                                 | `invalid_logout_token`, `jwtCode` of `wrong_type`, with the claims it lacks (`events`, `jti`) as `missing_claim`.            |
+| A token with no `typ`, or another one                                                               | `invalid_logout_token`, `jwtCode` of `wrong_type`.                                                                           |
+| A token signed with `none`, an HMAC secret, or a key the provider does not publish                  | `invalid_logout_token`, with the `@codenhub/jwt` code of the failure.                                                        |
+| A token for another issuer or client, or expired or issued in the future beyond the clock tolerance | `invalid_logout_token`, `jwtCode` of `wrong_issuer`, `wrong_audience`, `expired` or `issued_in_future`.                      |
+| A token without `events`, or whose logout event is missing or not an object                         | `invalid_logout_token` at `["logout_token", "payload", "events"]`.                                                           |
+| A token with a `nonce`                                                                              | `invalid_logout_token`, `jwtCode` of `invalid_claim`, at `["logout_token", "payload", "nonce"]`.                             |
+| A token with neither `sub` nor `sid`, or without `sid` for a client with `sessionRequired`          | `invalid_logout_token`, `jwtCode` of `missing_claim`, at `["logout_token", "payload", "sid"]`.                               |
+| The same valid token presented again before it expires                                              | Accepted. The client stores nothing; the app refuses a `jti` it has seen.                                                    |
+
 ## Client: discovery, token, userinfo and JWKS responses
 
 | Input                                                           | Outcome                                                                                                                                                                                                                                     |

@@ -25,7 +25,7 @@ PKCE is required on every flow, including for confidential clients, unless a con
 Beyond the code flow, the package also covers:
 
 - **RP-initiated logout**, which ends the user's session at the provider. See [Client](client.md#ending-the-session-at-the-provider) and [Provider](provider.md#ending-sessions).
-- **Back-channel logout**, which lets the app tell each client a user signed into that the session ended. See [Provider](provider.md#back-channel-logout).
+- **Back-channel logout**, which lets the app tell each client a user signed into that the session ended, and lets a client verify what it is told. See [Provider](provider.md#back-channel-logout) and [Client](client.md#receiving-back-channel-logout).
 - **Client credentials** (RFC 6749 §4.4), which gives a service client a token for itself, with no user. See [Client](client.md#client-credentials).
 - **JWT access tokens** (RFC 9068), as an option in place of the opaque default. See [Provider](provider.md#jwt-access-tokens).
 

@@ -20,7 +20,7 @@ Creates a relying party for one provider and one registered client.
 
 The client holds no per-user state. Between the redirect and the callback the app keeps the [`PendingAuthorization`](#pendingauthorization) that `Client.authorize` returned, in its own session. Every method validates its input first and throws only for a caller's mistake; a response from the provider, or a URL the browser was redirected to, comes back as a result, and never throws.
 
-The ID token's signature is checked against the provider's JWKS, which the client fetches on first use and caches. Only the asymmetric algorithms this package supports, and that the provider advertises, are accepted. An ID token signed with `none`, or with an HMAC secret, is never accepted.
+The ID token's signature, and a logout token's, is checked against the provider's JWKS, which the client fetches on first use and caches. Only the asymmetric algorithms this package supports, and that the provider advertises, are accepted. An ID token signed with `none`, or with an HMAC secret, is never accepted.
 
 **Parameters**
 
@@ -178,6 +178,62 @@ readonly uiLocales?: readonly string[];
 
 Preferred languages for the provider's pages, as BCP 47 tags.
 
+### BackchannelLogout
+
+```ts
+export interface BackchannelLogout {
+    readonly subject?: string;
+    readonly sessionId?: string;
+    readonly jti: string;
+    readonly issuedAt: number;
+    readonly expiresAt: number;
+}
+```
+
+A verified back-channel logout: the provider says a session of the user ended. Frozen. At least one of `subject` and `sessionId` is present, and `sessionId` always is when the client set `backchannelLogout.sessionRequired`.
+
+End every session the app holds that matches: with `sessionId`, the session it signed in with that `sid`; with only `subject`, every session of that user from this provider.
+
+#### BackchannelLogout › expiresAt
+
+```ts
+readonly expiresAt: number;
+```
+
+The token's `exp`, in seconds since the Unix epoch. The client accepts it until `clockTolerance` after.
+
+#### BackchannelLogout › issuedAt
+
+```ts
+readonly issuedAt: number;
+```
+
+The token's `iat`, in seconds since the Unix epoch.
+
+#### BackchannelLogout › jti
+
+```ts
+readonly jti: string;
+```
+
+The token's `jti`. The client stores nothing, so it accepts the same token again until it expires. To refuse a replay, as §2.6 suggests, remember each `jti` until `expiresAt` plus the client's `clockTolerance`, and refuse one seen before.
+
+#### BackchannelLogout › sessionId
+
+```ts
+readonly sessionId?: string;
+```
+
+The token's `sid`: the provider's session, as the `sid` claim of the ID tokens issued during it.
+
+#### BackchannelLogout › subject
+
+```ts
+readonly subject?: string;
+```
+
+The token's `sub`: the user, as the ID tokens of this provider name them.
+
 ### Client
 
 ```ts
@@ -190,6 +246,8 @@ export interface Client {
     revoke(options: RevokeOptions): Promise<OidcResult<void>>;
     clientCredentials(options?: ClientCredentialsOptions): Promise<OidcResult<TokenSet>>;
     endSessionUrl(options?: EndSessionOptions): string;
+    verifyLogoutToken(logoutToken: string): Promise<OidcResult<BackchannelLogout>>;
+    readBackchannelLogout(request: Request): Promise<OidcResult<BackchannelLogout>>;
 }
 ```
 
@@ -247,6 +305,26 @@ Builds the URL to send the browser to so the provider ends the user's session th
 
 **Throws** — `TypeError` — When the provider metadata has no end_session_endpoint, an option is invalid, or the URL would be longer than 8192 characters.
 
+#### Client › readBackchannelLogout
+
+```ts
+readBackchannelLogout(request: Request): Promise<OidcResult<BackchannelLogout>>;
+```
+
+Reads a back-channel logout request the provider sent to this client (OpenID Connect Back-Channel Logout 1.0 §2.5) and verifies its logout token as `Client.verifyLogoutToken` does.
+
+The request must be a `POST` with `Content-Type: application/x-www-form-urlencoded` (a `charset` other than UTF-8 is refused), a body of at most 16384 bytes, and exactly one non-empty `logout_token`. Other parameters are ignored. A request that fails any of these is an `invalid_logout_request` issue whose path names the part at fault; the token is not verified.
+
+Answer `200` on success and `400` on failure, both with `Cache-Control: no-store` (§2.8). A `400` may carry a JSON body `{ "error": "invalid_request" }`; never echo the token or the issues' details to the sender.
+
+**Parameters**
+
+- `request` — The incoming request, before anything has read its body.
+
+**Returns** — Who signed out, or every issue found. Never throws for any request a sender can make.
+
+**Throws** — `TypeError` — When the request's body was already read, which is a bug in the calling code, such as middleware that parsed the form first.
+
 #### Client › refresh
 
 ```ts
@@ -285,6 +363,26 @@ Fetches the user's claims from the userinfo endpoint. The access token must be g
 
 **Throws** — `TypeError` — When the provider metadata has no userinfo_endpoint, or an option is invalid.
 
+#### Client › verifyLogoutToken
+
+```ts
+verifyLogoutToken(logoutToken: string): Promise<OidcResult<BackchannelLogout>>;
+```
+
+Verifies a logout token the provider sent to this client's back-channel logout URI (OpenID Connect Back-Channel Logout 1.0 §2.6), for an app that has already read the request's form body itself. Prefer `Client.readBackchannelLogout`, which also checks the request.
+
+The signature must verify against the provider's JWKS with an algorithm accepted for ID tokens, and the header must have `typ: "logout+jwt"`, so an ID token or an access token never passes. `iss` must be the issuer, `aud` must include the client (with `azp` checked as for ID tokens), `iat`, `exp` and `jti` must be present, and `exp` and `iat` are checked with the client's `clockTolerance`. `events` must hold the back-channel logout event with an object value, the token must name `sub`, `sid` or both, `sid` is required when `ClientOptions.backchannelLogout` says so, and a `nonce` fails it. Every problem found is returned.
+
+The client stores nothing, so it does not refuse a replayed token; see `BackchannelLogout.jti`.
+
+**Parameters**
+
+- `logoutToken` — The compact logout token, the `logout_token` form parameter.
+
+**Returns** — Who signed out, or every issue found, as `invalid_logout_token` (or `azp_mismatch`) issues whose `params.jwtCode` names the check. Never throws for any token.
+
+**Throws** — `TypeError` — When `logoutToken` is not a string.
+
 ### ClientCredentialsOptions
 
 ```ts
@@ -314,6 +412,16 @@ export interface ClientOptions {
     readonly fetch?: typeof fetch;
     readonly timeout?: number;
     readonly clockTolerance?: number;
+    readonly backchannelLogout?: {
+        /**
+         * Whether a logout token must carry `sid`, as a client registered with `backchannel_logout_session_required`
+         * expects. When `true`, a token with only `sub` fails, so the app never ends every session of a user when it
+         * asked to be told which one ended.
+         *
+         * @defaultValue false
+         */
+        readonly sessionRequired?: boolean;
+    };
     readonly now?: () => number;
 }
 ```
@@ -327,6 +435,23 @@ readonly auth: ClientAuth;
 ```
 
 How the client authenticates to the token endpoint.
+
+#### ClientOptions › backchannelLogout
+
+```ts
+readonly backchannelLogout?: {
+    /**
+     * Whether a logout token must carry `sid`, as a client registered with `backchannel_logout_session_required`
+     * expects. When `true`, a token with only `sub` fails, so the app never ends every session of a user when it
+     * asked to be told which one ended.
+     *
+     * @defaultValue false
+     */
+    readonly sessionRequired?: boolean;
+};
+```
+
+How this client receives back-channel logout (OpenID Connect Back-Channel Logout 1.0), as it registered it at the provider. Only `Client.verifyLogoutToken` and `Client.readBackchannelLogout` read it.
 
 #### ClientOptions › clientId
 
@@ -658,7 +783,7 @@ Stable failure category.
 readonly params?: Readonly<Record<string, string | number | boolean>>;
 ```
 
-Facts that are never input values, such as `{ endpoint: "token", reason: "timeout" }`. The keys are a fixed set: `endpoint` (`discovery`, `authorization`, `token`, `userinfo` or `revocation`) and `reason` on `request_failed`, with `status` when the reason is `status`; `endpoint` and `error` (an [`OAuthErrorCode`](#oautherrorcode) or `unknown`) on `provider_error`; `jwtCode`, the `@codenhub/jwt` issue code, and that issue's own params on `invalid_id_token`; `reason` on a provider `invalid_request` the app renders, and on `invalid_callback` a parameter failure: `duplicate`, `too_many`, `too_long` or `malformed`.
+Facts that are never input values, such as `{ endpoint: "token", reason: "timeout" }`. The keys are a fixed set: `endpoint` (`discovery`, `authorization`, `token`, `userinfo` or `revocation`) and `reason` on `request_failed`, with `status` when the reason is `status`; `endpoint` and `error` (an [`OAuthErrorCode`](#oautherrorcode) or `unknown`) on `provider_error`; `jwtCode`, the `@codenhub/jwt` issue code, and that issue's own params on `invalid_id_token` and `invalid_logout_token`; `reason` on a provider `invalid_request` the app renders, and on `invalid_callback` and `invalid_logout_request` a parameter failure: `duplicate`, `too_many`, `too_long` or `malformed`, or for a logout request's body, `too_large` or `unreadable`.
 
 #### OidcIssue › path
 
@@ -1218,7 +1343,7 @@ OAuth 2.0 and OpenID Connect error codes a provider sends to a client, from RFC 
 ### OidcIssueCode
 
 ```ts
-export type OidcIssueCode = "request_failed" | "invalid_metadata" | "issuer_mismatch" | "invalid_token_response" | "invalid_userinfo" | "provider_error" | "invalid_callback" | "state_mismatch" | "iss_mismatch" | "invalid_id_token" | "nonce_mismatch" | "azp_mismatch" | "at_hash_mismatch" | "auth_time_missing" | "auth_too_old" | "subject_mismatch" | "unknown_client" | "invalid_redirect_uri" | "interaction_not_found" | "invalid_request" | "unauthorized_client" | "unsupported_response_type" | "invalid_scope" | "request_not_supported" | "request_uri_not_supported" | "registration_not_supported";
+export type OidcIssueCode = "request_failed" | "invalid_metadata" | "issuer_mismatch" | "invalid_token_response" | "invalid_userinfo" | "provider_error" | "invalid_callback" | "state_mismatch" | "iss_mismatch" | "invalid_id_token" | "nonce_mismatch" | "azp_mismatch" | "at_hash_mismatch" | "auth_time_missing" | "auth_too_old" | "subject_mismatch" | "invalid_logout_request" | "invalid_logout_token" | "unknown_client" | "invalid_redirect_uri" | "interaction_not_found" | "invalid_request" | "unauthorized_client" | "unsupported_response_type" | "invalid_scope" | "request_not_supported" | "request_uri_not_supported" | "registration_not_supported";
 ```
 
 Stable category of a failure that callers can branch on without parsing messages.
