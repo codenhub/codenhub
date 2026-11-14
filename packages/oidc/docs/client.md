@@ -295,11 +295,16 @@ async function backchannelLogout(request: Request): Promise<Response> {
   if (!logout.ok || !(await rememberJti(logout.value.jti, logout.value.expiresAt + 60))) {
     return Response.json({ error: "invalid_request" }, { status: 400, headers: noStore });
   }
-  const { subject, sessionId } = logout.value;
-  if (sessionId !== undefined) {
-    await endSessionsWithSid(sessionId); // the sessions that signed in with an ID token carrying this sid
-  } else if (subject !== undefined) {
-    await endSessionsOfUser(subject); // every session of this user from this provider
+  const { subject, sessionId, jti } = logout.value;
+  try {
+    if (sessionId !== undefined) {
+      await endSessionsWithSid(sessionId); // the sessions that signed in with an ID token carrying this sid
+    } else if (subject !== undefined) {
+      await endSessionsOfUser(subject); // every session of this user from this provider
+    }
+  } catch (error) {
+    await forgetJti(jti); // so a retransmission of this token is not refused as a replay
+    throw error;
   }
   return new Response(null, { status: 200, headers: noStore });
 }
@@ -309,7 +314,7 @@ To find the session a `sessionId` names, keep the ID token's `sid` with the app'
 
 Answer as §2.8 says: `200` when the logout succeeded, including when no session matched, since there is nothing left to end; `400` with a JSON body `{ "error": "invalid_request" }` when the request or token failed. Send `Cache-Control: no-store` with both. Never put the token or the issues in the response: the sender may be an attacker, and the issues are for your logs.
 
-The client stores nothing, so it accepts the same token again until it expires. To refuse a replay, as the specification suggests, remember each `jti` until `expiresAt` plus your `clockTolerance`, when the client stops accepting the token anyway, and refuse one seen before. The example does that with the default tolerance of 60 seconds. A provider of this package signs every token with a new `jti`, so a retry of the same logout is never refused as a replay.
+The client stores nothing, so it accepts the same token again until it expires. To refuse a replay, as the specification suggests, remember each `jti` until `expiresAt` plus your `clockTolerance`, when the client stops accepting the token anyway, and refuse one seen before. The example does that with the default tolerance of 60 seconds. It forgets the `jti` when ending the sessions fails, since the specification lets a provider send the same token again after a failure, and a remembered `jti` would refuse it while the sessions stay open. A provider of this package signs every token with a new `jti`, so a retry of the same logout is never refused as a replay.
 
 ### The request
 
