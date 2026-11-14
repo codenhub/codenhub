@@ -6,7 +6,8 @@ import type { OidcIssue, OidcResult, UserinfoClaims } from "../shared/types";
 import { buildAuthorization, denseCopy, requireRedirectUri } from "./authorize";
 import { buildEndSessionUrl } from "./end-session";
 import { readErrorCode, requestFailure, requestJson } from "./http";
-import { createIdTokenValidator, type IdTokenValidator } from "./id-token";
+import { createIdTokenValidator, createProviderKeySet, type IdTokenValidator } from "./id-token";
+import { createLogoutTokenValidator, readBackchannelLogout } from "./logout-token";
 import { type ResolvedClientOptions, resolveClientOptions } from "./options";
 import { requestRevocation, requestTokens } from "./tokens";
 import type {
@@ -377,8 +378,8 @@ async function requestClientToken(
  * validates its input first and throws only for a caller's mistake; a response from the provider, or a URL
  * the browser was redirected to, comes back as a result, and never throws.
  *
- * The ID token's signature is checked against the provider's JWKS, which the client fetches on first use
- * and caches. Only the asymmetric algorithms this package supports, and that the provider advertises, are
+ * The ID token's signature, and a logout token's, is checked against the provider's JWKS, which the client
+ * fetches on first use and caches. Only the asymmetric algorithms this package supports, and that the provider advertises, are
  * accepted. An ID token signed with `none`, or with an HMAC secret, is never accepted.
  *
  * @param options - The provider metadata, the client's identifier, redirect URI, and authentication method.
@@ -414,7 +415,9 @@ async function requestClientToken(
  */
 export function createClient(options: ClientOptions): Client {
   const resolved = resolveClientOptions(options);
-  const validate = createIdTokenValidator(resolved);
+  const keys = createProviderKeySet(resolved);
+  const validate = createIdTokenValidator(resolved, keys);
+  const verifyLogoutToken = createLogoutTokenValidator(resolved, keys);
   return Object.freeze({
     metadata: resolved.metadata,
     authorize: (request?: AuthorizeOptions) => buildAuthorization(resolved, request),
@@ -424,5 +427,7 @@ export function createClient(options: ClientOptions): Client {
     revoke: (request: RevokeOptions) => revokeToken(resolved, request),
     clientCredentials: (request?: ClientCredentialsOptions) => requestClientToken(resolved, request),
     endSessionUrl: (request?: EndSessionOptions) => buildEndSessionUrl(resolved, request),
+    verifyLogoutToken,
+    readBackchannelLogout: (request: Request) => readBackchannelLogout(verifyLogoutToken, request),
   });
 }
