@@ -1,6 +1,6 @@
 ---
 status: IMPLEMENTED
-last_updated: 2026-11-09
+last_updated: 2026-11-14
 scope: The root script names and what each guarantees, the shared tool configurations, the pinned toolchain, install rules, and how dependency versions are declared.
 ---
 
@@ -87,14 +87,17 @@ A public package that depends on another public package installs it from its rel
 
 Local and CI runs resolve the same versions, each declared once:
 
-| Where                                | Declares                                        |
-| ------------------------------------ | ----------------------------------------------- |
-| `package.json` `engines`             | The Node.js and pnpm range every run must meet  |
-| `package.json` `packageManager`      | The exact pnpm version pnpm installs itself     |
-| `.nvmrc`                             | The exact Node.js version, read by `nvm` and CI |
-| `pnpm-workspace.yaml` `engineStrict` | Makes an install outside `engines` fail         |
+| Where                                | Declares                                                               |
+| ------------------------------------ | ---------------------------------------------------------------------- |
+| `package.json` `engines`             | The Node.js and pnpm range every run must meet                         |
+| `package.json` `packageManager`      | The exact pnpm version pnpm installs itself                            |
+| `.nvmrc`                             | The exact Node.js version, read by `nvm` and CI                        |
+| `pnpm-workspace.yaml` `engineStrict` | Makes an install outside `engines` fail                                |
+| `.node-floor`                        | The older Node.js version the CI `floor` job runs, while one is needed |
 
 CI reads those same files rather than repeating a version: `pnpm/action-setup` takes pnpm from `packageManager`, and `actions/setup-node` takes Node.js from `.nvmrc`, both in the [setup action](ci.md#toolchain), which then installs with `--frozen-lockfile`.
+
+`.nvmrc` pins a release of the Node.js line in Active LTS: the line with the longest support ahead of it, and the one the Node.js website offers by default, so a new contributor's install meets `engines`. When a new line enters Active LTS each October, `.nvmrc`, the root `engines`, and `@types/node` move to it together, in one change. Published packages' floors follow their own rule, which [Package lifecycle](specs/packages-lifecycle.md#nodejs-support) owns: one that keeps the previous line is tested on the version in `.node-floor`, which exists only while such a package does.
 
 `engineStrict` is deliberate friction. A patch-level difference rarely matters, and the one time it does, the failure looks like a bug in the change under review rather than a difference in the runtime.
 
