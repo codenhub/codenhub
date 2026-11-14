@@ -297,6 +297,7 @@ describe("beginAuthorization", () => {
         await beginAuthorization(options, getRequest(query({ acr_values: "a".repeat(MAX_PARAMETER_LENGTH + 1) }))),
       );
       expect(failure.redirect).toBeNull();
+      expect(failure.issues).toEqual([{ code: "invalid_request", params: { reason: "too_long" } }]);
     });
 
     it("shouldIgnoreUnknownParameters", async () => {
