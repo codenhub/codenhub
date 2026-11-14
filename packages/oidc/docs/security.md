@@ -87,27 +87,27 @@ The end-session endpoint never redirects a failed request, so the app renders ea
 
 ## Provider: userinfo
 
-| Input                                                   | Outcome                                                                                                 |
-| ------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
-| No `Authorization` header                               | `401`, `WWW-Authenticate: Bearer`, with no error code.                                                  |
-| A header that is not a well-formed `Bearer` credential  | `400`, `WWW-Authenticate: Bearer error="invalid_request"`.                                              |
-| A token in the query or the body, and no header         | Ignored. The response is the same as for no header.                                                     |
-| An ID token presented as an access token                | `401`, `WWW-Authenticate: Bearer error="invalid_token"`. ID tokens are never in the access token table. |
-| A refresh token presented as an access token            | `401`, `invalid_token`, for the same reason.                                                            |
-| An expired access token, or one whose grant was revoked | `401`, `invalid_token`.                                                                                 |
+| Input                                                               | Outcome                                                                                                 |
+| ------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| No `Authorization` header, or one of another scheme such as `Basic` | `401`, `WWW-Authenticate: Bearer`, with no error code.                                                  |
+| A `Bearer` header that is not a well-formed credential              | `400`, `WWW-Authenticate: Bearer error="invalid_request"`.                                              |
+| A token in the query or the body, and no header                     | Ignored. The response is the same as for no header.                                                     |
+| An ID token presented as an access token                            | `401`, `WWW-Authenticate: Bearer error="invalid_token"`. ID tokens are never in the access token table. |
+| A refresh token presented as an access token                        | `401`, `invalid_token`, for the same reason.                                                            |
+| An expired access token, or one whose grant was revoked             | `401`, `invalid_token`.                                                                                 |
 
 ## Provider: authenticate
 
-| Input                                                                              | Outcome                                                                                                                |
-| ---------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
-| No `Authorization` header, or a token only in the query or the body                | Failure `access_token_missing`: `401`, `WWW-Authenticate: Bearer`, with no error code.                                 |
-| A header that is not a well-formed `Bearer` credential                             | Failure `access_token_malformed`: `400`, `error="invalid_request"`.                                                    |
-| An oversized token                                                                 | Not found, so `access_token_unknown`: `401`, `error="invalid_token"`. The request body is never read.                  |
-| An ID token, a refresh token or a code presented as an access token                | `access_token_unknown`, `401`, `invalid_token`. Only access tokens are looked up.                                      |
-| An expired access token, or one whose grant was revoked                            | `access_token_expired` or `access_token_unknown`, `401`, `invalid_token`.                                              |
-| An access token for another resource server, or for none, when `audience` is given | `access_token_audience_mismatch`, `401`, `invalid_token`. Checked before the scopes, so the challenge names none.      |
-| An access token without one of the required `scopes`                               | `access_token_scope_insufficient`, `403`, `error="insufficient_scope"` and the required scopes, each once, in `scope`. |
-| Malformed `options` from the app                                                   | Rejects with `TypeError` before the store is read. No request input can cause it.                                      |
+| Input                                                                                                      | Outcome                                                                                                                |
+| ---------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| No `Authorization` header, one of another scheme such as `Basic`, or a token only in the query or the body | Failure `access_token_missing`: `401`, `WWW-Authenticate: Bearer`, with no error code.                                 |
+| A `Bearer` header that is not a well-formed credential                                                     | Failure `access_token_malformed`: `400`, `error="invalid_request"`.                                                    |
+| An oversized token                                                                                         | Not found, so `access_token_unknown`: `401`, `error="invalid_token"`. The request body is never read.                  |
+| An ID token, a refresh token or a code presented as an access token                                        | `access_token_unknown`, `401`, `invalid_token`. Only access tokens are looked up.                                      |
+| An expired access token, or one whose grant was revoked                                                    | `access_token_expired` or `access_token_unknown`, `401`, `invalid_token`.                                              |
+| An access token for another resource server, or for none, when `audience` is given                         | `access_token_audience_mismatch`, `401`, `invalid_token`. Checked before the scopes, so the challenge names none.      |
+| An access token without one of the required `scopes`                                                       | `access_token_scope_insufficient`, `403`, `error="insufficient_scope"` and the required scopes, each once, in `scope`. |
+| Malformed `options` from the app                                                                           | Rejects with `TypeError` before the store is read. No request input can cause it.                                      |
 
 No outcome is reported to `onDiagnostic`, and no response carries CORS headers.
 

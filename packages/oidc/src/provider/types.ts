@@ -578,7 +578,7 @@ export interface ProviderOptions {
    * a property whose value is `undefined` is left out. Keep the claims small and free of anything the client must
    * not read: a JWT access token is readable by whoever holds it.
    *
-   * A result that is not a plain object, such as an array or `null`, makes `handle` reject with `TypeError`, and,
+   * A result that is not a plain object, such as an array, `null`, a `Date`, a `Map` or a class instance, makes `handle` reject with `TypeError`, and,
    * as with the `claims` callback, a throw or a rejected promise makes `handle` reject with that error. At a
    * refresh it runs before the next refresh token is saved, so a failure leaves no token the client never
    * receives; the spent refresh token makes the client's retry a reuse, which revokes the family.

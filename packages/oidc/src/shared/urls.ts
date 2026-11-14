@@ -77,12 +77,18 @@ export function isRedirectUri(value: unknown): value is string {
 
 /**
  * Tests whether a value is a resource indicator (RFC 8707 §2): an absolute URI of visible ASCII without a fragment.
- * Any scheme is accepted, since a resource may be named by a URN, but a special scheme must be followed by `//`, so
- * the string is the URL it serializes to. A backslash is refused too, since special schemes read it as a slash.
+ * Any scheme is accepted, since a resource may be named by a URN, but a special scheme must be followed by `//` and
+ * an authority, so the string is the URL it serializes to: the parser reads `https:///api.example` as
+ * `https://api.example/`, whose host the string does not hold where a host belongs. A backslash is refused too,
+ * since special schemes read it as a slash.
  */
 export function isResourceUri(value: unknown): value is string {
   if (typeof value !== "string" || value.includes("#") || hasDisallowedUrlCharacter(value) || !URL.canParse(value)) {
     return false;
   }
-  return hasDoubleSlashAfterScheme(value, new URL(value));
+  const url = new URL(value);
+  return (
+    hasDoubleSlashAfterScheme(value, url) &&
+    (!SPECIAL_PROTOCOLS.has(url.protocol) || value.charAt(url.protocol.length + 2) !== "/")
+  );
 }

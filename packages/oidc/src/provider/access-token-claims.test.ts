@@ -198,7 +198,7 @@ describe("accessTokenClaims", () => {
   it("reads only own enumerable data properties, without running a getter", async () => {
     const getter = vi.fn(() => "from-getter");
     const { op } = await setup(() => {
-      const claims = Object.create({ inherited: "x" }) as Record<string, unknown>;
+      const claims = Object.create(null) as Record<string, unknown>;
       Object.defineProperty(claims, "computed", { enumerable: true, get: getter });
       Object.defineProperty(claims, "hidden", { enumerable: false, value: "x" });
       Object.defineProperty(claims, "__proto__", { enumerable: true, value: "plain", configurable: true });
@@ -211,7 +211,6 @@ describe("accessTokenClaims", () => {
 
     expect(getter).not.toHaveBeenCalled();
     expect(Object.keys(payload)).not.toContain("computed");
-    expect(payload).not.toHaveProperty("inherited");
     expect(payload).not.toHaveProperty("hidden");
     expect(payload).not.toHaveProperty("missing");
     expect(Object.hasOwn(payload, "__proto__")).toBe(true);
@@ -284,10 +283,27 @@ describe("accessTokenClaims", () => {
     ["null", null],
     ["a string", "roles"],
     ["undefined", undefined],
+    ["a Date", new Date(0)],
+    ["a Map", new Map([["roles", ["admin"]]])],
+    [
+      "a class instance",
+      new (class Claims {
+        readonly roles = ["admin"];
+      })(),
+    ],
+    ["an object with an inherited claim", Object.create({ roles: ["admin"] }) as unknown],
   ])("makes handle reject with a TypeError for a result that is %s", async (_, result) => {
     const { op } = await setup(() => result as never);
 
     await expect(op.handle(await codeRequest(op, API))).rejects.toThrow(TypeError);
+  });
+
+  it("accepts a plain object without a prototype", async () => {
+    const { op } = await setup(() => Object.assign(Object.create(null) as object, { roles: ["admin"] }));
+
+    const payload = payloadOf((await tokens(op, await codeRequest(op, API))).access_token);
+
+    expect(payload.roles).toEqual(["admin"]);
   });
 
   it("lets a throw propagate from the code exchange", async () => {

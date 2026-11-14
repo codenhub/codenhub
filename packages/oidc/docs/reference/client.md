@@ -346,7 +346,7 @@ When the response carries an ID token that fails validation, the result is a fai
 
 **Returns** — The new tokens, or every issue found. Never throws for any response.
 
-**Throws** — `TypeError` — When `options` is invalid, such as an empty `refreshToken` or a scope list that is not a non-empty array of scope tokens. The message names the option and never its value.
+**Throws** — `TypeError` — When `options` is invalid, such as an empty `refreshToken`, a scope list that is not a non-empty array of scope tokens, or a `resource` that is not a non-empty array of at most 20 absolute URIs without a fragment. The message names the option and never its value.
 
 #### Client › revoke
 
@@ -1141,7 +1141,7 @@ The refresh token to exchange. A refresh response may omit `refresh_token`; then
 readonly resource?: readonly string[];
 ```
 
-The resource servers the new access token is for (RFC 8707), as absolute URIs without a fragment. Each must be one the sign-in asked for with `AuthorizeOptions.resource`. Without it, this package's provider issues the token for every resource of the sign-in.
+The resource servers the new access token is for (RFC 8707), as absolute URIs without a fragment. Each must be one the sign-in asked for with `AuthorizeOptions.resource`. Without it, this package's provider issues the token for every resource of the sign-in that the client's registration still lists.
 
 #### RefreshOptions › scope
 
