@@ -3,7 +3,7 @@ import { runOf, toolsOf } from "../core/child";
 import { accepter, waitsOf } from "../core/finish";
 import { refuseRepeated } from "../core/keys";
 import { setOwn } from "../core/objects";
-import { assertFunction, issue, nested } from "../core/result";
+import { issue, nested } from "../core/result";
 import { adopt, after, cap, count, cut, FAIL, MAX_ISSUES, refuse, report, straighten, type Run } from "../core/run";
 import type { AnyValidator, AsyncCheck, Message, ValidationIssue } from "../core/types";
 
@@ -27,11 +27,14 @@ export type Reading = { value: string; parts: Part[] } | { issues: ValidationIss
 export const partIssue = (format: string, part: string, issues: readonly ValidationIssue[]): ValidationIssue =>
   issue("invalid_format", { format, part, issues: issues.map(nested) });
 
-/** Rejects a part validator that is given and is not a function, such as a hostname written as text. */
+/**
+ * Rejects a part validator that is given and is not a validator of this copy of the package, such as a
+ * hostname written as text, by the name of its option.
+ */
 export function assertParts(parts: Readonly<Record<string, unknown>>): void {
   for (const [name, validator] of Object.entries(parts)) {
     if (validator !== undefined) {
-      assertFunction(name, validator);
+      runOf(validator as AnyValidator, name);
     }
   }
 }

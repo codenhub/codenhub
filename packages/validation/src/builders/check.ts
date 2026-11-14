@@ -39,7 +39,7 @@ const answered = (
     if (!Array.isArray(settled)) {
       throw new TypeError("The test of a check must return a boolean or a list of issues");
     }
-    return settled.length === 0 ? undefined : word(settled.map(written), message);
+    return settled.length === 0 ? undefined : word([...settled].map(written), message);
   };
   // oxlint-disable-next-line promise/prefer-await-to-then
   return isThenable(answer) ? Promise.resolve(answer).then(decide) : decide(answer);

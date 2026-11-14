@@ -216,6 +216,11 @@ describe("a message function", () => {
     expect(() => number(check((() => [[]]) as never))(1)).toThrow(
       new TypeError("An issue must be an object, received a list"),
     );
+    // A hole, as in `[, ]`, is read as `undefined`, not skipped past the check of each issue.
+    // oxlint-disable-next-line no-sparse-arrays
+    expect(() => number(check((() => [,]) as never))(1)).toThrow(
+      new TypeError("An issue must be an object, received undefined"),
+    );
     expect(issuesOf(number(check((() => [{}]) as never))(1))).toEqual([{ code: "custom", path: [] }]);
   });
 
@@ -319,20 +324,19 @@ describe("a function given where a validator belongs", () => {
   });
 
   it.each([
-    ["optional", () => optional(factory)],
-    ["fallback", () => fallback(factory, "x")],
-    ["intersection", () => intersection(factory, unknown())],
-    ["set", () => set(factory)],
-    ["objectLike", () => objectLike({ a: factory })],
-    ["tagged", () => tagged("type", { a: factory as never })],
-    ["strictObject", () => strictObject({ a: factory })],
-    ["looseObject", () => looseObject({ a: factory })],
-    ["objectWithRest, as a property", () => objectWithRest({ a: factory }, string())],
-    ["objectWithRest, as the rest", () => objectWithRest({}, factory)],
-    ["email, as a part", () => email({ domain: factory })],
-  ])("should refuse a factory given to %s when it is created", (_, make) => {
-    expect(make).toThrow(TypeError);
-    expect(make).toThrow(/is not a validator|needs a validator|must be/);
+    ["optional", "validator", () => optional(factory)],
+    ["fallback", "validator", () => fallback(factory, "x")],
+    ["intersection", "left", () => intersection(factory, unknown())],
+    ["set", "item", () => set(factory)],
+    ["objectLike", "shape.a", () => objectLike({ a: factory })],
+    ["tagged", "variants.a", () => tagged("type", { a: factory as never })],
+    ["strictObject", "shape.a", () => strictObject({ a: factory })],
+    ["looseObject", "shape.a", () => looseObject({ a: factory })],
+    ["objectWithRest, as a property", "shape.a", () => objectWithRest({ a: factory }, string())],
+    ["objectWithRest, as the rest", "rest", () => objectWithRest({}, factory)],
+    ["email, as a part", "domain", () => email({ domain: factory })],
+  ])("should refuse a factory given to %s when it is created, naming it", (_, name, make) => {
+    expect(make).toThrow(refused(name));
   });
 
   it("should refuse the validator a lazy getter gives when it is first read, since it is not called before", () => {
