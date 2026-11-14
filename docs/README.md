@@ -10,7 +10,7 @@ scope: Index of repository-wide documentation.
 
 Every document in `docs/` is listed here. Adding, moving, or deleting one updates this index in the same change.
 
-Package-specific consumer and maintainer documentation lives with each workspace package; this index covers what holds across the repository. Start with the [roadmap](roadmap.md) for where the repository is heading.
+Package-specific consumer and maintainer documentation lives with each workspace package; this index covers what holds across the repository. The [roadmap](roadmap.md) records where the repository is heading.
 
 ## Overview
 
