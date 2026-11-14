@@ -2,7 +2,7 @@
 title: Primeros pasos
 description: Qué es un validador, cómo leer su resultado, y los validadores de cadenas, números, fechas, valores fijos y objetos.
 order: 1
-source: 4c6087b77f6c350743d49222fbf038894b989049
+source: dd75ab05d1a18806995880cf8ce341dfdb816ff3
 ---
 
 # Primeros pasos
@@ -84,7 +84,7 @@ Un tipo de entrada todavía puede lanzar una excepción: la entrada que ejecuta 
 
 - Se aplica la limpieza que pediste, como `trim`, `case` o `clamp`.
 - Un objeto descarta las propiedades que su forma no incluye.
-- Un formato con varias escrituras de un mismo valor produce una de ellas. `email` y `url` producen lo que lee el parser de URL, como un dominio en minúsculas, y `phone` produce `+` y los dígitos.
+- Un formato con varias escrituras de un mismo valor produce una de ellas. `url` e `internationalEmail` producen lo que lee el parser de URL, como un dominio en minúsculas, y `phone` produce `+` y los dígitos.
 
 Así, una verificación posterior sobre el valor ve lo mismo que verá un servidor de correo o una solicitud. La entrada en sí nunca se modifica.
 

@@ -1,7 +1,7 @@
 ---
 title: Visión general
 description: Para qué sirve el paquete de validación, cómo instalarlo y en qué orden leer sus páginas.
-source: b740f4e453473d7b05f56526e86c13e78a07780d
+source: 581fc697386226546be1bd593bc702776e43eb5a
 ---
 
 # Valida valores y formas
@@ -16,7 +16,7 @@ Los datos que cruzan una frontera que no controlas pueden traer cualquier cosa: 
 
 El paquete está hecho para esa frontera, donde la entrada puede ser hostil:
 
-- **Un formato te da lo que leyó el parser.** `email()` y `url()` producen el valor que lee el parser de URL de la plataforma. El valor que guardas es el que usará una solicitud o un servidor de correo.
+- **Un formato te da lo que leyó el parser.** `url()` e `internationalEmail()` producen el valor que lee el parser de URL de la plataforma. El valor que guardas es el que usará una solicitud o un servidor de correo.
 - **Lo que reporta una entrada que falla está acotado.** Cada colección deja de reportar en 1000 problemas, como explica [Límites](./limits.md#una-entrada-que-falla-tiene-un-costo-acotado). Una entrada anidada demasiado profundo es un solo problema, no un desbordamiento de pila, siempre que el límite de profundidad de un esquema recursivo, [`maxDepth`](./limits.md#maxdepth), quepa en la pila.
 - **Un problema nunca contiene un valor de la entrada.** Un registro de fallos no contiene ninguna contraseña que se haya enviado. Un problema sí contiene aquello con lo que se configuró el esquema, como los valores que acepta un `oneOf` o el prefijo de un `startsWith`, y las claves de la entrada, en su `path`, como dice [El problema](./errors.md#el-problema).
 

@@ -1,7 +1,7 @@
 ---
 title: Moldando valores
 description: Encadeie validadores, converta valores, escreva-os de volta, marque e congele valores, descreva-os, troque uma falha por um fallback e reaproveite a estrutura de um objeto.
-source: 2e29da1976dbdfa514a58b356bc0196f6fc6ace3
+source: a9270051cdf74f15ac6b3830d522ea35bc6d99e0
 order: 8
 ---
 
@@ -88,7 +88,7 @@ encode(invitation, { code: "AB12", expiresAt: new Date(0) });
 `Encoded<typeof validator>` é o tipo do que ele retorna: um resultado, que precisa de `await` quando o validador é assíncrono. Cada tipo de parte é escrito de volta do seu jeito:
 
 - **Um `codec`** escreve o valor de volta primeiro pelo seu `output`. Um codec dentro do output escreve a parte dele primeiro. Um output escrito à mão verifica o valor e o repassa sem alterações. Depois, o codec executa o seu `encode` sobre o resultado e verifica se o seu `input` aceita o que ele retorna.
-- **Uma parte que produz o que aceita**, como `string`, `number`, um formato ou uma conversão, valida o valor e devolve o que produziu. `email()` devolve o endereço como o parser o lê, e `coerceNumber()` devolve o número, que ele aceita.
+- **Uma parte que produz o que aceita**, como `string`, `number`, um formato ou uma conversão, valida o valor e devolve o que produziu. `internationalEmail()` devolve o endereço como o parser o lê, e `coerceNumber()` devolve o número, que ele aceita.
 - **Um compositor**, como `object`, `array`, `tuple`, `record`, `map`, `set`, `union` ou `tagged`, escreve de volta cada uma das suas partes com as próprias opções, e executa suas verificações sobre o valor quando as partes passaram. `optional`, `nullable` e `nullish` mantêm o que deixam passar, e um `pipe` escreve seus passos de volta a partir do último.
 - **`json` e `searchParams`** escrevem texto: o `JSON.stringify` do que o validador deles escreveu de volta, e uma query string com cada valor como texto e cada item de uma lista como uma chave repetida. O validador de origem então lê o texto de volta, então um texto que ele recusaria falha: uma lista escrita como chave repetida, que `searchParams` só lê com `repeated: true`, e `undefined`, que não é JSON. O que `JSON.stringify` altera fica alterado: `NaN` é escrito como `null`, e uma propriedade `undefined` é omitida.
 - **`optional` com um valor padrão** escreve o valor padrão de volta como `undefined` quando a parte interna o recusa, já que só `undefined` o produziu: `optional(string({ min: 3 }), "")` escreve `""` de volta como `undefined`. Um valor padrão gerado por uma função não pode ser comparado. Um valor de `fallback` que a parte interna recusa falha, já que toda entrada que a parte interna recusa o produz, e não se sabe qual delas foi dada.

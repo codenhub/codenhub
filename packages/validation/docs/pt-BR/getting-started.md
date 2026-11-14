@@ -1,7 +1,7 @@
 ---
 title: Primeiros passos
 description: O que é um validador, como ler o resultado dele e os validadores para strings, números, datas, valores fixos e objetos.
-source: 4c6087b77f6c350743d49222fbf038894b989049
+source: dd75ab05d1a18806995880cf8ce341dfdb816ff3
 order: 1
 ---
 
@@ -84,7 +84,7 @@ Um tipo de entrada ainda pode lançar exceção: a entrada que executa código p
 
 - A limpeza que você pediu é aplicada, como `trim`, `case` ou `clamp`.
 - Um objeto descarta as propriedades que a estrutura dele não lista.
-- Um formato com várias grafias para um mesmo valor produz uma delas. `email` e `url` produzem o que o parser de URL lê, como um domínio em minúsculas, e `phone` produz `+` e os dígitos.
+- Um formato com várias grafias para um mesmo valor produz uma delas. `url` e `internationalEmail` produzem o que o parser de URL lê, como um domínio em minúsculas, e `phone` produz `+` e os dígitos.
 
 Assim, uma verificação feita depois sobre o valor vê o que um servidor de e-mail ou uma requisição vai ver. A entrada em si nunca é modificada.
 
