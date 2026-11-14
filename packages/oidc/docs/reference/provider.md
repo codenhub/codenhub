@@ -1713,7 +1713,7 @@ Returns claims the app adds to each JWT access token, such as the user's roles f
 
 The provider's own claims always win: a returned `iss`, `exp`, `aud`, `sub`, `client_id`, `iat`, `jti`, `scope`, `auth_time`, `acr`, `amr`, `nbf`, `cnf` or `azp` is dropped, as is any other claim the token sets, even one this token happens not to carry. Only own enumerable data properties are read, so a getter never runs, and a property whose value is `undefined` is left out. Keep the claims small and free of anything the client must not read: a JWT access token is readable by whoever holds it.
 
-A result that is not a plain object, such as an array or `null`, makes `handle` reject with `TypeError`, and, as with the `claims` callback, a throw or a rejected promise makes `handle` reject with that error. At a refresh it runs before the next refresh token is saved, so a failure leaves no token the client never receives; the spent refresh token makes the client's retry a reuse, which revokes the family.
+A result that is not a plain object, such as an array, `null`, a `Date`, a `Map` or a class instance, makes `handle` reject with `TypeError`, and, as with the `claims` callback, a throw or a rejected promise makes `handle` reject with that error. At a refresh it runs before the next refresh token is saved, so a failure leaves no token the client never receives; the spent refresh token makes the client's retry a reuse, which revokes the family.
 
 Requires `accessToken: { format: "jwt" }`; given with opaque access tokens, `createProvider` throws `TypeError`, since an opaque token carries no claims.
 
