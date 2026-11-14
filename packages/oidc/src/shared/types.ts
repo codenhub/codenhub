@@ -175,6 +175,8 @@ export interface IdTokenClaims {
   readonly amr?: readonly string[];
   readonly azp?: string;
   readonly at_hash?: string;
+  /** The provider's identifier for the session the sign-in belongs to (OpenID Connect Front-Channel Logout 1.0 §3). */
+  readonly sid?: string;
   /** Any other claim the provider included. */
   readonly [claim: string]: unknown;
 }

@@ -169,7 +169,7 @@ The ID token's signature and its registered claims are checked by `@codenhub/jwt
 
 - `iss` equals the provider's issuer, `aud` contains the client identifier, and `exp`, `iat` and `sub` are present. The times are compared with `clockTolerance`.
 - The header's `typ` is not an access token type (`at+jwt`). Otherwise `invalid_id_token` with path `["id_token", "header", "typ"]` and `jwtCode` of `wrong_type`.
-- The optional claims have their types when present: `amr` is an array of strings, and `acr`, `azp`, `nonce` and `at_hash` are strings. A claim of another type is `invalid_id_token` with path `["id_token", "payload", <claim>]` and `params.jwtCode` of `invalid_claim`. The check that reads that claim is then skipped, so the same claim is not reported twice.
+- The optional claims have their types when present: `amr` is an array of strings, and `acr`, `azp`, `nonce`, `at_hash` and `sid` are strings. A claim of another type is `invalid_id_token` with path `["id_token", "payload", <claim>]` and `params.jwtCode` of `invalid_claim`. The check that reads that claim is then skipped, so the same claim is not reported twice.
 - `sub` is a non-empty string. Otherwise `invalid_id_token` with path `["id_token", "payload", "sub"]`.
 - `azp`, when present, must equal the client identifier, and it is required when `aud` has more than one value. A wrong value, or a missing one where `aud` has several, is `azp_mismatch`.
 - `nonce` equals `pending.nonce`. Otherwise `nonce_mismatch`.

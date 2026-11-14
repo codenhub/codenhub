@@ -161,7 +161,7 @@ Each value is an absolute `https` URL of visible ASCII (no spaces, control or no
 - `grant_types_supported`: `["authorization_code", "refresh_token", "client_credentials"]`. `subject_types_supported`: `["public"]`.
 - `id_token_signing_alg_values_supported`: the algorithms of every published key.
 - `token_endpoint_auth_methods_supported`: `client_secret_basic`, `client_secret_post`, `client_secret_jwt`, `private_key_jwt` and `none`. `token_endpoint_auth_signing_alg_values_supported`: `ES256`, `EdDSA`, `Ed25519`, `RS256`, `PS256` and `HS256`. The revocation endpoint publishes the same two lists as `revocation_endpoint_auth_methods_supported` and `revocation_endpoint_auth_signing_alg_values_supported`, and `revocation_endpoint` holds its URL.
-- `claims_supported`: the ID token's claims and every claim the scopes release.
+- `claims_supported`: the ID token's claims, `sid` among them, and every claim the scopes release.
 - `code_challenge_methods_supported`: `["S256"]`. `authorization_response_iss_parameter_supported`: `true`.
 - `claims_parameter_supported`, `request_parameter_supported` and `request_uri_parameter_supported`: `false`, because the package does not implement them.
 
