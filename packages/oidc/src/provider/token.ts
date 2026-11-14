@@ -8,13 +8,13 @@ import { parseParameters } from "../shared/parameters";
 import { computeCodeChallenge, isCodeVerifier } from "../shared/pkce";
 import { computeTokenHash } from "../shared/token-hash";
 import type { OAuthErrorCode } from "../shared/types";
+import { releaseClaims } from "./claims";
 import { authenticateClient } from "./client-auth";
 import { type CheckedClient, isScopeOfClient, lifetimesOf } from "./client-record";
 import { refuse } from "./diagnostics";
 import { PROTOCOL_SCOPES, type ResolvedOptions, type ResolvedTtl, selectIdTokenKey } from "./options";
 import { jsonResponse, methodNotAllowed, preflightResponse, tokenErrorResponse } from "./responses";
 import type { ClientRecord, CodeRecord, ProviderDiagnosticReason, RefreshTokenRecord } from "./types";
-import { releaseClaims } from "./userinfo";
 
 /** Claims the provider sets in every ID token it signs, which a scope's claims may never replace or add. */
 const PROTOCOL_CLAIMS: ReadonlySet<string> = new Set([
