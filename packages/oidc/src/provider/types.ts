@@ -532,7 +532,9 @@ export interface ProviderOptions {
    * `true` issues as it would without this option. `false` answers `invalid_grant`, revokes the whole family with
    * `store.revokeGrant`, and is reported to {@link ProviderOptions.onDiagnostic} as `refresh_refused`. Anything else
    * than a boolean makes `handle` reject with `TypeError`, and, as with the store and the `claims` callback, an
-   * exception it throws or a promise it rejects makes `handle` reject with that error and revokes nothing.
+   * exception it throws or a promise it rejects makes `handle` reject with that error and revokes nothing. The
+   * refresh token is spent by then, so the client's retry with it is a reuse and revokes the family: an app whose
+   * check fails on a transient outage signs its users out, so keep the check from throwing, or answer `false`.
    *
    * It is not called for a code exchange, which is the sign-in itself.
    */
