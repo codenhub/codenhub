@@ -1151,11 +1151,11 @@ A request for `refresh_token` must carry `refresh_token`, or it is `invalid_requ
 2. The token is spent atomically with `consumeRefreshToken`. An unknown or revoked token is `invalid_grant`, and it is not spent.
 3. A token that was already spent is a **reuse**. The provider revokes the family, so the access tokens and refresh tokens issued from that sign-in stop working, and returns `invalid_grant`.
 4. Otherwise the token is spent, and it must be unexpired and issued to this client. Otherwise `invalid_grant`.
-5. The `scope` parameter, when given, must be a subset of the family's scopes. Otherwise `invalid_scope`. When it is omitted, the access token has every scope the family holds.
+5. The `scope` parameter, when given, must be a subset of the family's scopes. Otherwise `invalid_scope`. When it is omitted, the access token has every scope the family holds that the client's record still lists. A scope removed from the record stops being issued on the client's next refresh, and listing it again restores it on the one after, since the family keeps its scopes. The record of a client that refreshes must list `openid`, and one that does not is a `TypeError` read before the token is spent, so narrowing never drops `openid`. Removing `offline_access` from the record drops it from the issued `scope` but still rotates the refresh token, as a request that leaves it out does; to stop the family, revoke its grant or refuse it in `onRefresh`.
 6. When the app set [`onRefresh`](#re-checking-a-refresh), it is asked. A `false` answer is `invalid_grant`, and it revokes the family.
 7. A new access token is issued, and a new refresh token that replaces the spent one. The new refresh token keeps the family's original scopes and its original expiry, so rotation neither widens the family nor extends it. An ID token is issued too, without a nonce, and with the `sid` the family carries.
 
-The response has the same shape as the code exchange, with `scope` set to the scopes of the new access token.
+The response has the same shape as the code exchange, with `scope` set to the scopes of the new access token, so a client sees a narrowed scope (RFC 6749 §5.1).
 
 ### Re-checking a refresh
 
@@ -1177,7 +1177,7 @@ export const provider = createProvider({
 The argument is a frozen `RefreshCheck`:
 
 - `subject` and `clientId`: the user the family was issued to, and the client that is refreshing.
-- `scopes`: what this refresh will issue, the request's `scope` or the family's scopes when it sent none.
+- `scopes`: what this refresh will issue, the request's `scope` or, when it sent none, the family's scopes that the client's record still lists.
 - `grantId`: the family's grant.
 - `sessionId`: the app's session the grant was issued during, absent when `completeAuthorization` was given none. Checking it also covers the app's session revocation.
 
@@ -1696,6 +1696,7 @@ The end-session endpoint never redirects a failed request, so the app renders ea
 | A refresh token that is expired, or presented by another client                                                                                                                                 | `400`, `invalid_grant`. The token is spent.                                                                                      |
 | A refresh `scope` that names a scope the client's record does not list                                                                                                                          | `400`, `invalid_scope`. The token is not spent.                                                                                  |
 | A refresh `scope` that names a scope the family does not hold                                                                                                                                   | `400`, `invalid_scope`. The token is spent, and no new refresh token is issued.                                                  |
+| A refresh without `scope` after a scope was removed from the client's record                                                                                                                    | `200`, without that scope in `scope` or either token. The family keeps it, so listing it again restores it.                      |
 | A refresh that the app's `onRefresh` refuses by answering `false`                                                                                                                               | `400`, `invalid_grant`. The token is spent and the family is revoked.                                                            |
 | An access token sent as a `refresh_token`                                                                                                                                                       | `400`, `invalid_grant`. Refresh tokens are looked up in their own table.                                                         |
 | A `client_credentials` request that asks for `openid` or `offline_access`, or for a scope the client does not have                                                                              | `400`, `invalid_scope`. No token is issued.                                                                                      |

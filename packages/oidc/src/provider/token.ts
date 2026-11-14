@@ -270,10 +270,13 @@ async function refreshTokens(
   if (record.clientId !== client.clientId) {
     return refused("invalid_grant", "refresh_token_client_mismatch");
   }
-  const scopes = requested ?? record.scopes;
-  if (!scopes.every((scope) => record.scopes.includes(scope))) {
+  if (requested !== undefined && !requested.every((scope) => record.scopes.includes(scope))) {
     return refused("invalid_scope", "scope_not_granted");
   }
+  // Narrowed to what the client's record lists now, so a scope an admin removed stops being issued on the next
+  // refresh, and comes back once it is listed again. A requested scope was already checked against the record.
+  // The record of a client that refreshes lists `openid` (`checkClientRecord`), so narrowing never drops it.
+  const scopes = requested ?? record.scopes.filter((scope) => isScopeOfClient(client, scope));
   if (options.onRefresh !== undefined && !(await isRefreshAllowed(options.onRefresh, record, scopes))) {
     // The family ends with this refusal, not only this request: a user who lost the entitlement must not
     // keep a token that could be refreshed again once the check passes.
@@ -290,7 +293,7 @@ async function refreshTokens(
   const nextRefreshToken = randomToken();
   await options.store.saveRefreshToken(await digestKey(nextRefreshToken), {
     ...grantRecord(record),
-    // The family keeps its original scopes, even when this response narrowed them.
+    // The family keeps its original scopes, even when the request or the client's record narrowed this response.
     scopes: record.scopes,
     expiresAt: record.expiresAt,
   });

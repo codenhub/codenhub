@@ -705,6 +705,92 @@ describe("handleToken: refresh_token grant", () => {
   });
 });
 
+describe("handleToken: a refresh after the client's record changes", () => {
+  const PUBLIC: ClientRecord = {
+    clientId: "public",
+    redirectUris: [REDIRECT_URI],
+    scopes: ["openid", "profile", "email", "offline_access"],
+    auth: { method: "none" },
+    idTokenClaims: true,
+  };
+  const withScopes = (scopes: readonly string[]): ClientRecord => ({ ...PUBLIC, scopes });
+  const profileClaims = (): Record<string, unknown> => ({ name: "Ada Lovelace", email: "ada@example.com" });
+  const refresh = (options: ResolvedOptions, token: string, overrides: Record<string, string> = {}) =>
+    handleToken(options, tokenRequest(refreshBody(token, overrides)));
+
+  it("drops a scope the record no longer lists from the next refresh, and restores it once re-added", async () => {
+    const { options, store } = await setup({ clients: [PUBLIC], claims: profileClaims });
+    const issued = await redeemCode(options, store, { scopes: ["openid", "profile", "email", "offline_access"] });
+
+    store.addClient(withScopes(["openid", "email", "offline_access"]));
+    const narrowed = (await (await refresh(options, issued.refresh_token ?? "")).json()) as TokenBody;
+    store.addClient(PUBLIC);
+    const restored = (await (await refresh(options, narrowed.refresh_token ?? "")).json()) as TokenBody;
+
+    expect(narrowed.scope).toBe("openid email offline_access");
+    expect(await store.findAccessToken(await digestKey(narrowed.access_token))).toMatchObject({
+      scopes: ["openid", "email", "offline_access"],
+    });
+    expect(payloadOf(narrowed.id_token)).toMatchObject({ email: "ada@example.com" });
+    expect(payloadOf(narrowed.id_token)).not.toHaveProperty("name");
+    expect(restored.scope).toBe("openid profile email offline_access");
+    expect(payloadOf(restored.id_token)).toMatchObject({ name: "Ada Lovelace", email: "ada@example.com" });
+  });
+
+  it("tells onRefresh the narrowed scopes", async () => {
+    const seen: unknown[] = [];
+    const { options, store } = await setup({
+      clients: [PUBLIC],
+      onRefresh: ({ scopes }) => {
+        seen.push(scopes);
+        return true;
+      },
+    });
+    const issued = await redeemCode(options, store, { scopes: ["openid", "profile", "offline_access"] });
+
+    store.addClient(withScopes(["openid", "offline_access"]));
+    await refresh(options, issued.refresh_token ?? "");
+
+    expect(seen).toEqual([["openid", "offline_access"]]);
+  });
+
+  it("still refuses an explicit scope the record no longer lists before spending the token", async () => {
+    const { options, store } = await setup({ clients: [PUBLIC] });
+    const issued = await redeemCode(options, store, { scopes: ["openid", "profile", "offline_access"] });
+
+    store.addClient(withScopes(["openid", "offline_access"]));
+    const refused = await refresh(options, issued.refresh_token ?? "", { scope: "openid profile" });
+    const narrowed = await refresh(options, issued.refresh_token ?? "", { scope: "openid" });
+
+    expect(await errorOf(refused)).toEqual({ status: 400, body: JSON.stringify({ error: "invalid_scope" }) });
+    expect(narrowed.status).toBe(200);
+    expect(((await narrowed.json()) as TokenBody).scope).toBe("openid");
+  });
+
+  it("refuses a record without openid before spending the token, so narrowing never drops it", async () => {
+    const { options, store } = await setup({ clients: [PUBLIC] });
+    const issued = await redeemCode(options, store, { scopes: ["openid", "profile", "offline_access"] });
+
+    store.addClient(withScopes(["profile", "offline_access"]));
+    await expect(refresh(options, issued.refresh_token ?? "")).rejects.toThrow(TypeError);
+    store.addClient(PUBLIC);
+    const retried = await refresh(options, issued.refresh_token ?? "");
+
+    expect(retried.status).toBe(200);
+  });
+
+  it("keeps the family's scopes in the next refresh token while it is narrowed", async () => {
+    const { options, store } = await setup({ clients: [PUBLIC] });
+    const issued = await redeemCode(options, store, { scopes: ["openid", "profile", "offline_access"] });
+
+    store.addClient(withScopes(["openid", "offline_access"]));
+    const narrowed = (await (await refresh(options, issued.refresh_token ?? "")).json()) as TokenBody;
+    const consumption = await store.consumeRefreshToken(await digestKey(narrowed.refresh_token ?? ""));
+
+    expect(consumption).toMatchObject({ record: { scopes: ["openid", "profile", "offline_access"] } });
+  });
+});
+
 describe("handleToken: the onRefresh re-check", () => {
   it("issues as without the option on true, telling it what the refresh will issue", async () => {
     const seen: unknown[] = [];

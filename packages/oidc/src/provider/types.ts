@@ -51,6 +51,9 @@ export interface ClientRecord {
    *
    * A scope listed here need not be defined in {@link ProviderOptions.scopes}: one that is not is accepted at
    * authorization, in a refresh `scope` and by `client_credentials`, and releases no claims.
+   *
+   * A refresh issues only the family's scopes this list still holds, so removing a scope from it takes effect on
+   * the client's next refresh, and listing it again restores it on the one after; the family itself keeps its scopes.
    */
   readonly scopes: readonly string[];
   /**
@@ -541,7 +544,10 @@ export interface RefreshCheck {
   /** The user the family was issued to. */
   readonly subject: string;
   readonly clientId: string;
-  /** The scopes this refresh will issue: the request's `scope`, or the family's when it sent none. */
+  /**
+   * The scopes this refresh will issue: the request's `scope`, or, when it sent none, the family's scopes that the
+   * client's record still lists.
+   */
   readonly scopes: readonly string[];
   /** The grant the family belongs to; the provider revokes it when the answer is `false`. */
   readonly grantId: string;
