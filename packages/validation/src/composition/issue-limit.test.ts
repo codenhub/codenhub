@@ -171,6 +171,16 @@ describe("the most issues a collection reports", () => {
     expect(issuesOf(same).at(-1)).toEqual(stopped());
   });
 
+  it("should word with unique's message its repeats, and not the issue saying their list was cut", () => {
+    const repeats = Array.from({ length: COUNT }, () => "a");
+    const issues = issuesOf(array(string(), unique(undefined, "Must be unique"))(repeats));
+    expect(issues[0]?.message).toBe("Must be unique");
+    expect(issues.at(-1)).toEqual(stopped());
+    expect(
+      issuesOf(array(string(), { message: "Bad list" }, unique(undefined, "Must be unique"))(repeats)).at(-1)?.message,
+    ).toBe("Bad list");
+  });
+
   it("should list the conflicts of an intersection up to the limit", () => {
     const both = intersection(array(string({ trim: true })), array(string()));
     const issues = issuesOf(both(Array.from({ length: COUNT }, () => " a ")));

@@ -29,7 +29,8 @@ const CUT_WORDS: readonly Word[] = [wordSize];
  *
  * @typeParam T - The type of an item, a primitive when `by` is omitted.
  * @param by - What to compare for each item. The item itself when omitted.
- * @param message - Wording for each issue.
+ * @param message - Wording for each repeat. The issue saying their list was cut is worded as the
+ * validator words its own issues.
  * @returns A check of arrays.
  * @throws {TypeError} When `by` is given and is not a function, such as a message in its place: a
  * message alone is `unique(undefined, message)`, or `message` is neither text nor a function.
@@ -55,11 +56,18 @@ export function unique<T>(by?: (item: T) => unknown, message?: Message): Check<r
         }
         seen.add(key);
       });
-      if (repeats.length > MAX_ISSUES) {
-        repeats.length = MAX_ISSUES;
+      if (repeats.length === 0) {
+        return undefined;
+      }
+      // `message` words each repeat. The issue saying the list was cut is no repeat, so it is left to the
+      // validator's message, as a collection's own limit is.
+      const cut = repeats.length > MAX_ISSUES;
+      repeats.length = Math.min(repeats.length, MAX_ISSUES);
+      word(repeats, message);
+      if (cut) {
         repeats.push(issue("too_big", { maximum: MAX_ISSUES, type: "issues" }));
       }
-      return repeats.length > 0 ? word(repeats, message) : undefined;
+      return repeats;
     },
     { kind: "check", code: "invalid_value", params: Object.freeze({ unique: true }), by },
     CUT_WORDS,
