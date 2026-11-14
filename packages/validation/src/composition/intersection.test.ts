@@ -20,6 +20,7 @@ import { optional } from "./optional";
 import { pipe } from "./pipe";
 import { set } from "./set";
 import { transform } from "./transform";
+import { union } from "./union";
 
 describe("intersection", () => {
   it("should report a revoked proxy one side passed through as a conflict, not throw", () => {
@@ -202,6 +203,19 @@ describe("intersection", () => {
     const rested = objectWithRest({}, object({ ["__proto__"]: unknown() }));
     const output = valueOf(intersection(object({ inner: unknown() }), rested)(parsed)) as { inner: object };
     expect(Object.hasOwn(output.inner, "__proto__")).toBe(true);
+  });
+
+  it("should look for a shape listing __proto__ in time linear in the depth of a recursive union", () => {
+    // Walking each option of each level on its own took 1.4 s at depth 20 and twice as long per level.
+    const node: Validator<unknown> = lazy(() =>
+      union([object({ c: optional(node) }), object({ c: optional(node), y: string() })]),
+    );
+    const depth = 22;
+    const parsed = JSON.parse(`${'{"c":'.repeat(depth)}{"__proto__":{}}${"}".repeat(depth)}`) as unknown;
+    const started = performance.now();
+    const issues = issuesOf(intersection(node, unknown())(parsed));
+    expect(performance.now() - started).toBeLessThan(1000);
+    expect(issues).toEqual([reserved(Array.from({ length: depth }, () => "c"))]);
   });
 
   it("should read a __proto__ listed only by the step of a pipe that produced the output", () => {

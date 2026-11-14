@@ -155,28 +155,50 @@ function partsAt(record: Description, { segment, isKey }: Place): readonly unkno
 }
 
 /**
- * Whether a shape that `validator` reaches at `path` lists `__proto__`, so the developer named the key.
- * Where more than one part may have produced the value, as in a union, any of them listing it is enough,
- * which keeps what such a shape gave before. `seen` stops a `lazy` that returns itself at the same level.
+ * The descriptions of the validators that build a value themselves, reached from `validators` through
+ * those that produce another's value, such as a union and its members. `seen` stops a `lazy` that returns
+ * itself, and each validator is described once however many paths reach it.
  */
-function listsReserved(validator: unknown, path: readonly Place[], seen = new Set<unknown>()): boolean {
-  const record = typeof validator === "function" ? describe(validator as AnyValidator) : undefined;
-  if (record === undefined || seen.has(validator)) {
-    return false;
+function buildersOf(validators: readonly unknown[]): Description[] {
+  const builders: Description[] = [];
+  const seen = new Set<unknown>();
+  const queue = [...validators];
+  while (queue.length > 0) {
+    const validator = queue.pop();
+    const record = typeof validator === "function" ? describe(validator as AnyValidator) : undefined;
+    if (record === undefined || seen.has(validator)) {
+      continue;
+    }
+    seen.add(validator);
+    const producers = producersOf(validator, record);
+    if (producers === undefined) {
+      builders.push(record);
+    } else {
+      queue.push(...producers);
+    }
   }
-  seen.add(validator);
-  const producers = producersOf(validator, record);
-  if (producers !== undefined) {
-    return producers.some((each) => listsReserved(each, path, seen));
+  return builders;
+}
+
+/**
+ * Whether a shape that `validators` reach at `path` lists `__proto__`, so the developer named the key.
+ * Where more than one part may have produced the value, as in a union, any of them listing it is enough,
+ * which keeps what such a shape gave before. The walk keeps the set of validators each level reaches
+ * rather than following each on its own, which over a recursive union took twice as long per level.
+ */
+function listsReserved(validators: readonly unknown[], path: readonly Place[]): boolean {
+  let builders = buildersOf(validators);
+  for (const place of path) {
+    builders = buildersOf(builders.flatMap((record) => partsAt(record, place)));
+    if (builders.length === 0) {
+      return false;
+    }
   }
-  const [place, ...rest] = path;
-  if (place === undefined) {
-    return (
+  return builders.some(
+    (record) =>
       (record.kind === "object" || record.kind === "objectLike") &&
-      Object.hasOwn(record["shape"] as object, RESERVED_KEY)
-    );
-  }
-  return partsAt(record, place).some((each) => listsReserved(each, rest));
+      Object.hasOwn(record["shape"] as object, RESERVED_KEY),
+  );
 }
 
 /**
@@ -185,11 +207,7 @@ function listsReserved(validator: unknown, path: readonly Place[], seen = new Se
  * become the prototype of any copy of it made by assignment.
  */
 function checkReserved(output: unknown, pending: Pending, walk: Walk): unknown {
-  if (
-    isPlainObject(output) &&
-    Object.hasOwn(output, RESERVED_KEY) &&
-    !walk.members.some((each) => listsReserved(each, placesOf(pending)))
-  ) {
+  if (isPlainObject(output) && Object.hasOwn(output, RESERVED_KEY) && !listsReserved(walk.members, placesOf(pending))) {
     reserved(walk.conflicts, pending);
   }
   return output;
