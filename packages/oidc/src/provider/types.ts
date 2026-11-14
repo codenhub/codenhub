@@ -648,8 +648,9 @@ export interface Provider {
    *
    * The app owns the delivery. The client answers `200` on success, or `400` with an error (§2.8), so treat any
    * `2xx` as success and anything else as a failure. Use a short timeout, since a slow client must not hold the
-   * user's sign-out, and decide whether to retry. The request has `redirect: "manual"`, so `fetch` returns a `3xx`
-   * as it is rather than forwarding the token; treat it as a failure.
+   * user's sign-out, and decide whether to retry. The request has `redirect: "manual"`, so `fetch` never forwards
+   * the token to a redirect's target: Node.js and workerd return the `3xx` response itself, and a browser's `fetch`
+   * an opaque-redirect response with status `0`. Either way `response.ok` is `false`; treat it as a failure.
    *
    * @param request - The client, and who or what ended. At least one of `subject` and `sessionId` is required.
    * @returns The request to send, or `null` when the client is unknown or has no `backchannelLogout`, so there

@@ -1106,7 +1106,7 @@ Builds the back-channel logout request (OpenID Connect Back-Channel Logout 1.0) 
 
 The request is a `POST` to the client's `ClientRecord.backchannelLogout` `uri`, with the form body `logout_token=<token>`. The token is a JWT signed like the client's ID tokens, with `typ: "logout+jwt"`, the claims `iss`, `aud` (the client), `iat`, `exp` (120 seconds after `iat`), a random `jti`, `events`, and the `sub` and `sid` given here, and never a `nonce`.
 
-The app owns the delivery. The client answers `200` on success, or `400` with an error (§2.8), so treat any `2xx` as success and anything else as a failure. Use a short timeout, since a slow client must not hold the user's sign-out, and decide whether to retry. The request has `redirect: "manual"`, so `fetch` returns a `3xx` as it is rather than forwarding the token; treat it as a failure.
+The app owns the delivery. The client answers `200` on success, or `400` with an error (§2.8), so treat any `2xx` as success and anything else as a failure. Use a short timeout, since a slow client must not hold the user's sign-out, and decide whether to retry. The request has `redirect: "manual"`, so `fetch` never forwards the token to a redirect's target: Node.js and workerd return the `3xx` response itself, and a browser's `fetch` an opaque-redirect response with status `0`. Either way `response.ok` is `false`; treat it as a failure.
 
 **Parameters**
 
