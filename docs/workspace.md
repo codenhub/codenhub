@@ -53,6 +53,7 @@ Every root script here except `prepare` is a thin wrapper around `hub`, and [Too
 | `package.json`        | The root scripts, the tooling as `devDependencies`, and the pinned Node.js and pnpm (`engines`, `packageManager`).                                                                                                                                                        |
 | `pnpm-workspace.yaml` | The workspace globs, the catalog of every dependency version, the supply-chain rules for installs ([below](#dependency-installs)), and `engineStrict`, so an install outside `engines` fails.                                                                             |
 | `.nvmrc`              | The exact Node.js version, read by `nvm` and by CI.                                                                                                                                                                                                                       |
+| `.node-floor`         | The older Node.js version the CI `floor` job runs, present only while a published package keeps that line.                                                                                                                                                                |
 | `.editorconfig`       | Indentation, final newline, LF line endings, and no hard wrap in Markdown.                                                                                                                                                                                                |
 | `.gitattributes`      | LF line endings in the repository and the working tree on every platform, and the binary file types.                                                                                                                                                                      |
 | `.oxfmtrc.json`       | oxfmt: 120 columns, double quotes, semicolons, trailing commas, sorted imports and `package.json` keys. Markdown is excluded; Prettier owns it. Nothing else is listed: oxfmt already skips what `.gitignore` and `.prettierignore` list, and the lockfile.               |
@@ -87,13 +88,13 @@ A public package that depends on another public package installs it from its rel
 
 Local and CI runs resolve the same versions, each declared once:
 
-| Where                                | Declares                                                               |
-| ------------------------------------ | ---------------------------------------------------------------------- |
-| `package.json` `engines`             | The Node.js and pnpm range every run must meet                         |
-| `package.json` `packageManager`      | The exact pnpm version pnpm installs itself                            |
-| `.nvmrc`                             | The exact Node.js version, read by `nvm` and CI                        |
-| `pnpm-workspace.yaml` `engineStrict` | Makes an install outside `engines` fail                                |
-| `.node-floor`                        | The older Node.js version the CI `floor` job runs, while one is needed |
+| Where                                | Declares                                                                  |
+| ------------------------------------ | ------------------------------------------------------------------------- |
+| `package.json` `engines`             | The Node.js and pnpm range every run must meet, except the CI `floor` job |
+| `package.json` `packageManager`      | The exact pnpm version pnpm installs itself                               |
+| `.nvmrc`                             | The exact Node.js version, read by `nvm` and CI                           |
+| `pnpm-workspace.yaml` `engineStrict` | Makes an install outside `engines` fail                                   |
+| `.node-floor`                        | The older Node.js version the CI `floor` job runs, while one is needed    |
 
 CI reads those same files rather than repeating a version: `pnpm/action-setup` takes pnpm from `packageManager`, and `actions/setup-node` takes Node.js from `.nvmrc`, both in the [setup action](ci.md#toolchain), which then installs with `--frozen-lockfile`.
 

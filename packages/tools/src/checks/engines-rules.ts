@@ -118,6 +118,15 @@ async function checkNodeFloor(
       ),
     ];
   }
+  if (floorPinned !== undefined && floorPinned[0] >= pinned[0]) {
+    return [
+      fail(
+        "pin",
+        `The root ${FLOOR_PIN_FILE} names Node.js ${floorPin?.trim()}, but it must name a major below the ${pin?.trim()} in ${PIN_FILE}.`,
+        FLOOR_PIN_FILE,
+      ),
+    ];
+  }
 
   const findings: Finding[] = [];
   if (floorPinned !== undefined && floor[0] === floorPinned[0] && floor[0] < pinned[0]) {

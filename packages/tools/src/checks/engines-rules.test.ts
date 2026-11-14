@@ -144,6 +144,13 @@ describe("engines rules", () => {
     expect(findings.map(({ code, location }) => [code, location])).toEqual([["engines/pin", ".node-floor"]]);
   });
 
+  it.each(["26.1.0\n", "27.0.0\n"])("shouldReportAFloorPinThatIsNotBelowThePinnedMajor: %j", async (floorPin) => {
+    const { directory, root } = await createFixture(undefined, "26.13.1\n", floorPin);
+    const findings = await runRules(createPackage(directory), root);
+
+    expect(findings.map(({ code, location }) => [code, location])).toEqual([["engines/pin", ".node-floor"]]);
+  });
+
   it("shouldReportARangeThatIsNotALowerBoundOnly", async () => {
     await expect(codes({ node: ">=24 <25" })).resolves.toEqual(["engines/node-range"]);
     await expect(codes({ node: "^24" })).resolves.toEqual(["engines/node-range"]);
