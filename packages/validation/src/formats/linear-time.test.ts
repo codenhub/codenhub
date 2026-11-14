@@ -164,6 +164,21 @@ describe("every format reads text of ten megabytes without overflowing the stack
     "jwt, with a long signature that is not base64url": [jwt(), `${header}.${payload}.${"A".repeat(LARGE + 1)}`, false],
     creditCard: [creditCard(), "1 ".repeat(LARGE / 2), false],
     "creditCard, of digits": [creditCard(), "4".repeat(LARGE), false],
+    phone: [phone(), `+1${"1".repeat(LARGE)}`, false],
+    "phone, with separators": [phone(), `+1${" 1".repeat(LARGE / 2)}`, false],
+    semver: [semver(), `1.0.0-${"a.".repeat(LARGE / 2)}a`, true],
+    "semver, with build metadata": [semver(), `1.0.0+${"a.".repeat(LARGE / 2)}a`, true],
+    "semver, invalid at the end": [semver(), `1.0.0-${"a.".repeat(LARGE / 2)}`, false],
+    slug: [slug(), `${"a-".repeat(LARGE / 2)}a`, true],
+    "slug, invalid at the end": [slug(), "a-".repeat(LARGE / 2), false],
+    tel: [url({ protocols: ["tel"] }), `tel:+1${"1".repeat(LARGE)}`, true],
+    "tel, with separators": [url({ protocols: ["tel"] }), `tel:+1${"-1".repeat(LARGE / 2)}`, true],
+    "tel, with a long parameter": [url({ protocols: ["tel"] }), `tel:+1;x=${"a".repeat(LARGE)}`, true],
+    "tel, with many parameters": [url({ protocols: ["tel"] }), `tel:+1${";x".repeat(LARGE / 2)}`, true],
+    "tel, invalid at the end": [url({ protocols: ["tel"] }), `tel:+1${"1".repeat(LARGE)}-`, false],
+    urn: [url({ protocols: ["urn"] }), `urn:ab:${"a".repeat(LARGE)}`, true],
+    "urn, of escapes": [url({ protocols: ["urn"] }), `urn:ab:${"%41".repeat(LARGE / 3)}`, true],
+    "urn, invalid at the end": [url({ protocols: ["urn"] }), `urn:ab:${"a".repeat(LARGE)}%`, false],
   };
 
   for (const [name, [validate, text, isValid]] of Object.entries(cases)) {
