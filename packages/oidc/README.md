@@ -62,7 +62,7 @@ To issue tokens as an OpenID Provider instead, see [Provider](docs/provider.md).
 ## Notes
 
 - **Experimental.** See the note at the top. The security behavior, the meaning of each issue code, and the result shape are the parts meant to hold.
-- **Authorization code flow for users, client credentials for services.** No implicit, hybrid or resource owner password flow. PKCE with `S256` is required of every client unless a confidential client is registered with `requirePkce: false`, which makes it send a `nonce` instead; `plain` is always refused.
+- **Authorization code flow for users, client credentials for services.** No implicit, hybrid or resource owner password flow. PKCE with `S256` is required of every client unless a confidential client is registered with `requirePkce: false`, whose authorization request must then carry a `nonce` instead; `plain` is always refused.
 - **Opaque access tokens by default.** An access token is a random value the store looks up by digest. The provider can issue JWT access tokens (RFC 9068) instead, with `accessToken: { format: "jwt", audience }`. See [Provider](docs/provider.md#jwt-access-tokens).
 - **Logout and service tokens.** `client.endSessionUrl` builds the URL the browser is redirected to, to end the session at the provider (RP-initiated logout), and `client.clientCredentials` gets a token for a client with no user. See [Client](docs/client.md#ending-the-session-at-the-provider) and [Client](docs/client.md#client-credentials).
 - **Exact redirect matching.** A redirect URI must match a registered one byte for byte. Wildcards, prefixes, normalization and loopback redirects with variable ports are not supported.

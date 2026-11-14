@@ -20,7 +20,7 @@ This package implements the **authorization code flow**, the one OpenID Connect 
 3. The client sends the code to the provider's token endpoint, together with the PKCE verifier, and receives an access token, an ID token and, when the user granted `offline_access`, a refresh token.
 4. The client checks the ID token: its signature, issuer, audience, expiry, nonce and the other claims the spec names.
 
-PKCE is required on every flow, including for confidential clients, unless a confidential client is registered with `requirePkce: false` (see [Provider](provider.md#clients-that-send-no-pkce)). The client and provider each see only what the other must see: the browser carries the code and the state, and the token endpoint, reached directly by the client, carries the verifier.
+PKCE is required on every flow, including for confidential clients, unless a confidential client is registered with `requirePkce: false` (see [Provider](provider.md#clients-that-send-no-pkce)). The client and provider each see only what the other must see: the browser carries the code and the state, and the token endpoint, reached directly by the client, carries the verifier. A confidential client with `requirePkce: false` that sent no challenge sends no verifier either.
 
 Beyond the code flow, the package also covers:
 

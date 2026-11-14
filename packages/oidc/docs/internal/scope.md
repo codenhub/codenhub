@@ -1,6 +1,6 @@
 ---
 status: APPROVED
-last_updated: 2026-11-10
+last_updated: 2026-11-13
 scope: What `@codenhub/oidc` 0.1 covers, the invariants it keeps, and the decisions taken while building it.
 ---
 
