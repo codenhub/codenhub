@@ -29,7 +29,10 @@ beforeAll(async () => {
 });
 
 const jsonResponse = (body: unknown, status = 200): Response =>
-  new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } });
+  new Response(JSON.stringify(body), {
+    status,
+    headers: { "content-type": "application/json" },
+  });
 
 /** A validator for this client, whose JWKS comes from `fetch`. */
 const validatorWith = (fetchFunction: typeof fetch, clockTolerance?: number) =>
@@ -72,7 +75,11 @@ async function tokenWith(changes: Record<string, unknown> = {}, options: TokenOp
   for (const name of options.remove ?? []) {
     delete payload[name];
   }
-  return sign({ payload, key: options.key ?? keys.privateKey, header: { typ: options.typ ?? "JWT" } });
+  return sign({
+    payload,
+    key: options.key ?? keys.privateKey,
+    header: { typ: options.typ ?? "JWT" },
+  });
 }
 
 const expected: IdTokenExpectations = { nonce: "nonce-1" };
@@ -91,7 +98,10 @@ describe("createIdTokenValidator", () => {
     it("returns the payload as the claims", async () => {
       const result = await validator()(await tokenWith(), expected);
 
-      expect(result).toMatchObject({ ok: true, value: { sub: "user-1", iss: ISSUER, aud: CLIENT_ID } });
+      expect(result).toMatchObject({
+        ok: true,
+        value: { sub: "user-1", iss: ISSUER, aud: CLIENT_ID },
+      });
     });
 
     it("accepts a token that carries no optional claims", async () => {
@@ -162,8 +172,16 @@ describe("createIdTokenValidator", () => {
       const result = await validator()(await tokenWith({ aud: "other-app", exp: NOW_S - 60 }), expected);
 
       expect(issuesOf(result)).toEqual([
-        { code: "invalid_id_token", path: ["id_token", "payload", "exp"], params: { jwtCode: "expired" } },
-        { code: "invalid_id_token", path: ["id_token", "payload", "aud"], params: { jwtCode: "wrong_audience" } },
+        {
+          code: "invalid_id_token",
+          path: ["id_token", "payload", "exp"],
+          params: { jwtCode: "expired" },
+        },
+        {
+          code: "invalid_id_token",
+          path: ["id_token", "payload", "aud"],
+          params: { jwtCode: "wrong_audience" },
+        },
       ]);
     });
 
@@ -187,7 +205,11 @@ describe("createIdTokenValidator", () => {
       const result = await validator()(await tokenWith({}, { typ: "at+jwt" }), expected);
 
       expect(issuesOf(result)).toEqual([
-        { code: "invalid_id_token", path: ["id_token", "header", "typ"], params: { jwtCode: "wrong_type" } },
+        {
+          code: "invalid_id_token",
+          path: ["id_token", "header", "typ"],
+          params: { jwtCode: "wrong_type" },
+        },
       ]);
     });
 
@@ -196,6 +218,21 @@ describe("createIdTokenValidator", () => {
 
       expect(jwtCodesOf(result)).toEqual(["wrong_type"]);
     });
+
+    it.each(["logout+jwt", "application/Logout+JWT"])(
+      "refuses a logout token typed %s presented as an ID token",
+      async (typ) => {
+        const result = await validator()(await tokenWith({}, { typ }), expected);
+
+        expect(issuesOf(result)).toEqual([
+          {
+            code: "invalid_id_token",
+            path: ["id_token", "header", "typ"],
+            params: { jwtCode: "wrong_type" },
+          },
+        ]);
+      },
+    );
 
     it("refuses a token whose sub is an empty string", async () => {
       const result = await validator()(await tokenWith({ sub: "" }), expected);
@@ -210,7 +247,10 @@ describe("createIdTokenValidator", () => {
     });
 
     it("reports only invalid_claim for an empty sub when a subject is expected", async () => {
-      const result = await validator()(await tokenWith({ sub: "" }), { ...expected, subject: "user-2" });
+      const result = await validator()(await tokenWith({ sub: "" }), {
+        ...expected,
+        subject: "user-2",
+      });
 
       expect(issuesOf(result)).toEqual([
         {
@@ -284,7 +324,10 @@ describe("createIdTokenValidator", () => {
     it("accepts an amr array of strings and an acr string", async () => {
       const result = await validator()(await tokenWith({ amr: ["pwd", "mfa"], acr: "urn:x" }), expected);
 
-      expect(result).toMatchObject({ ok: true, value: { amr: ["pwd", "mfa"], acr: "urn:x" } });
+      expect(result).toMatchObject({
+        ok: true,
+        value: { amr: ["pwd", "mfa"], acr: "urn:x" },
+      });
     });
 
     it("passes a string sid through", async () => {
@@ -359,7 +402,12 @@ describe("createIdTokenValidator", () => {
         maxAge: { seconds: 300, requestedAt: NOW_S },
       });
 
-      expect(issuesOf(result)).toEqual([{ code: "auth_time_missing", path: ["id_token", "payload", "auth_time"] }]);
+      expect(issuesOf(result)).toEqual([
+        {
+          code: "auth_time_missing",
+          path: ["id_token", "payload", "auth_time"],
+        },
+      ]);
     });
 
     it("refuses max_age when the authentication is older than allowed", async () => {
@@ -438,19 +486,27 @@ describe("createIdTokenValidator", () => {
 
     it("accepts an at_hash that matches the access token", async () => {
       const hash = await computeTokenHash("at-1", "ES256");
-      const result = await validator()(await tokenWith({ at_hash: hash }), { nonce: "nonce-1", accessToken: "at-1" });
+      const result = await validator()(await tokenWith({ at_hash: hash }), {
+        nonce: "nonce-1",
+        accessToken: "at-1",
+      });
 
       expect(result.ok).toBe(true);
     });
 
     it("refuses a subject that is not the expected one", async () => {
-      const result = await validator()(await tokenWith(), { subject: "user-2" });
+      const result = await validator()(await tokenWith(), {
+        subject: "user-2",
+      });
 
       expect(issuesOf(result)).toEqual([{ code: "subject_mismatch", path: ["id_token", "payload", "sub"] }]);
     });
 
     it("reports every failing claim in one result", async () => {
-      const token = await tokenWith({ nonce: "nonce-2", auth_time: NOW_S - 1000 });
+      const token = await tokenWith({
+        nonce: "nonce-2",
+        auth_time: NOW_S - 1000,
+      });
 
       const result = await validator()(token, {
         nonce: "nonce-1",
