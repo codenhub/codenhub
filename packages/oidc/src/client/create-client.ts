@@ -3,7 +3,7 @@ import { MAX_PARAMETER_LENGTH, MAX_URL_LENGTH } from "../shared/limits";
 import { parseParameters } from "../shared/parameters";
 import { fail, ok } from "../shared/result";
 import type { OidcIssue, OidcResult, UserinfoClaims } from "../shared/types";
-import { buildAuthorization, denseCopy, requireRedirectUri } from "./authorize";
+import { buildAuthorization, denseCopy, readResources, requireRedirectUri } from "./authorize";
 import { buildEndSessionUrl } from "./end-session";
 import { readErrorCode, requestFailure, requestJson } from "./http";
 import { createIdTokenValidator, createProviderKeySet, type IdTokenValidator } from "./id-token";
@@ -179,6 +179,7 @@ function readRefreshOptions(options: unknown): {
   readonly refreshToken: string;
   readonly subject: string;
   readonly scope: readonly string[] | undefined;
+  readonly resource: readonly string[];
 } {
   if (!isObject(options)) {
     throw new TypeError("refresh: options must be an object");
@@ -187,7 +188,15 @@ function readRefreshOptions(options: unknown): {
     refreshToken: readRequiredString(options, "refreshToken", "refresh"),
     subject: readRequiredString(options, "subject", "refresh"),
     scope: readScopeList(options.scope, "refresh"),
+    resource: readResources(options.resource, "refresh"),
   };
+}
+
+/** Adds each `resource` (RFC 8707 §2) to a token request's form, as a parameter of its own. */
+function appendResources(form: URLSearchParams, resources: readonly string[]): void {
+  for (const resource of resources) {
+    form.append("resource", resource);
+  }
 }
 
 /**
@@ -224,6 +233,7 @@ async function refreshTokens(
   if (request.scope !== undefined) {
     form.set("scope", request.scope.join(" "));
   }
+  appendResources(form, request.resource);
   const tokens = await requestTokens(options, form);
   if (!tokens.ok) {
     return tokens;
@@ -353,10 +363,12 @@ async function requestClientToken(
     throw new TypeError("clientCredentials: metadata.grant_types_supported does not list client_credentials");
   }
   const scope = readScopeList(input.scope, "clientCredentials");
+  const resources = readResources(input.resource, "clientCredentials");
   const form = new URLSearchParams({ grant_type: "client_credentials" });
   if (scope !== undefined) {
     form.set("scope", scope.join(" "));
   }
+  appendResources(form, resources);
   const tokens = await requestTokens(options, form);
   if (!tokens.ok || (tokens.value.idToken === undefined && tokens.value.refreshToken === undefined)) {
     return tokens;

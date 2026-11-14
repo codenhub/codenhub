@@ -131,6 +131,7 @@ export interface AuthorizeOptions {
     readonly maxAge?: number;
     readonly loginHint?: string;
     readonly uiLocales?: readonly string[];
+    readonly resource?: readonly string[];
 }
 ```
 
@@ -159,6 +160,14 @@ readonly prompt?: readonly Prompt[];
 ```
 
 Whether the provider must, or must not, show its login and consent pages. `none` stands alone.
+
+#### AuthorizeOptions › resource
+
+```ts
+readonly resource?: readonly string[];
+```
+
+The resource servers the tokens are for (RFC 8707), as absolute URIs without a fragment, such as `https://api.example`. The provider must allow each for this client. A refresh may narrow them with `RefreshOptions.resource`, but never widen them.
 
 #### AuthorizeOptions › scope
 
@@ -291,7 +300,7 @@ Gets an access token for the client itself, with no user, through the `client_cr
 
 **Returns** — The tokens, or every issue found. An `id_token` or `refresh_token` in the response is dropped: nothing checks the one, and RFC 6749 §4.4.3 says the other SHOULD NOT be included. Never throws for any response; it rejects only for the caller errors listed below.
 
-**Throws** — `TypeError` — When the client authenticates with `none`, when the provider metadata lists grant_types_supported without client_credentials, or when `scope` is given but is not a non-empty array of at most 100 scope tokens.
+**Throws** — `TypeError` — When the client authenticates with `none`, when the provider metadata lists grant_types_supported without client_credentials, when `scope` is given but is not a non-empty array of at most 100 scope tokens, or when `resource` is given but is not a non-empty array of at most 20 absolute URIs without a fragment.
 
 #### Client › endSessionUrl
 
@@ -388,10 +397,19 @@ The client stores nothing, so it does not refuse a replayed token; see `Backchan
 ```ts
 export interface ClientCredentialsOptions {
     readonly scope?: readonly string[];
+    readonly resource?: readonly string[];
 }
 ```
 
 What `Client.clientCredentials` asks for.
+
+#### ClientCredentialsOptions › resource
+
+```ts
+readonly resource?: readonly string[];
+```
+
+The resource servers the access token is for (RFC 8707), as absolute URIs without a fragment. The provider must allow each for this client. Without it, this package's provider gives a JWT access token its default audience.
 
 #### ClientCredentialsOptions › scope
 
@@ -1103,6 +1121,7 @@ export interface RefreshOptions {
     readonly refreshToken: string;
     readonly subject: string;
     readonly scope?: readonly string[];
+    readonly resource?: readonly string[];
 }
 ```
 
@@ -1115,6 +1134,14 @@ readonly refreshToken: string;
 ```
 
 The refresh token to exchange. A refresh response may omit `refresh_token`; then the old one stays valid and the app keeps using it (RFC 6749 §6), so only a new `tokens.refreshToken` replaces it.
+
+#### RefreshOptions › resource
+
+```ts
+readonly resource?: readonly string[];
+```
+
+The resource servers the new access token is for (RFC 8707), as absolute URIs without a fragment. Each must be one the sign-in asked for with `AuthorizeOptions.resource`. Without it, this package's provider issues the token for every resource of the sign-in.
 
 #### RefreshOptions › scope
 

@@ -758,7 +758,7 @@ declare const client: ClientRecord; // the client as the app registered it
 const withResources: ClientRecord = { ...client, resources: ["https://api.example", "https://data.example"] };
 ```
 
-`resource` may repeat, unlike every other parameter, and a value sent twice counts once.
+`resource` may repeat, unlike every other parameter, and a value sent twice counts once. This package's client sends it with the `resource` option of `authorize`, `refresh` and `clientCredentials`; see [Resource servers](client.md#resource-servers).
 
 - **Authorization.** Each `resource` must be one of the client's `resources`, or the request is redirected with `invalid_target`. The interaction carries them as `resources`, so the consent page can show which servers the user is granting access to. The grant covers every one of them, and `completeAuthorization` cannot narrow it.
 - **Token request.** For `authorization_code` and `refresh_token`, each `resource` must be one of the client's `resources`, checked before the code or refresh token is spent, and then one the grant covers, checked after. Either failure is `invalid_target`. A request that names none gets a token for every resource the grant covers. For `client_credentials`, each `resource` must be one of the client's `resources`.

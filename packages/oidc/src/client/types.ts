@@ -110,6 +110,12 @@ export interface AuthorizeOptions {
   readonly loginHint?: string;
   /** Preferred languages for the provider's pages, as BCP 47 tags. */
   readonly uiLocales?: readonly string[];
+  /**
+   * The resource servers the tokens are for (RFC 8707), as absolute URIs without a fragment, such as
+   * `https://api.example`. The provider must allow each for this client. A refresh may narrow them with
+   * {@link RefreshOptions.resource}, but never widen them.
+   */
+  readonly resource?: readonly string[];
 }
 
 /**
@@ -177,6 +183,12 @@ export interface RefreshOptions {
   readonly subject: string;
   /** A narrower set of scopes to request. Must be within the original grant. */
   readonly scope?: readonly string[];
+  /**
+   * The resource servers the new access token is for (RFC 8707), as absolute URIs without a fragment. Each must be
+   * one the sign-in asked for with {@link AuthorizeOptions.resource}. Without it, this package's provider issues the
+   * token for every resource of the sign-in.
+   */
+  readonly resource?: readonly string[];
 }
 
 /** What {@link Client.clientCredentials} asks for. */
@@ -187,6 +199,11 @@ export interface ClientCredentialsOptions {
    * define is dropped.
    */
   readonly scope?: readonly string[];
+  /**
+   * The resource servers the access token is for (RFC 8707), as absolute URIs without a fragment. The provider must
+   * allow each for this client. Without it, this package's provider gives a JWT access token its default audience.
+   */
+  readonly resource?: readonly string[];
 }
 
 /** What {@link Client.endSessionUrl} puts in the logout request. Every member is optional. */
@@ -309,8 +326,9 @@ export interface Client {
    * checks the one, and RFC 6749 §4.4.3 says the other SHOULD NOT be included.
    * Never throws for any response; it rejects only for the caller errors listed below.
    * @throws {TypeError} When the client authenticates with `none`, when the provider metadata lists
-   * grant_types_supported without client_credentials, or when `scope` is given but is not a non-empty array of at
-   * most 100 scope tokens.
+   * grant_types_supported without client_credentials, when `scope` is given but is not a non-empty array of at
+   * most 100 scope tokens, or when `resource` is given but is not a non-empty array of at most 20 absolute URIs
+   * without a fragment.
    */
   clientCredentials(options?: ClientCredentialsOptions): Promise<OidcResult<TokenSet>>;
   /**

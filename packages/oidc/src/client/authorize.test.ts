@@ -137,6 +137,35 @@ describe("buildAuthorization", () => {
     expect(new URL(url).searchParams.get("ui_locales")).toBe("pt-BR en");
   });
 
+  it("sends each resource as a parameter of its own, once, in the order given", async () => {
+    const { url } = await buildAuthorization(resolvedOptions(), {
+      resource: ["https://api.example", "urn:example:ledger", "https://api.example"],
+    });
+
+    expect(new URL(url).searchParams.getAll("resource")).toEqual(["https://api.example", "urn:example:ledger"]);
+  });
+
+  it("omits the resource parameter when none was requested", async () => {
+    const { url } = await buildAuthorization(resolvedOptions());
+
+    expect(new URL(url).searchParams.has("resource")).toBe(false);
+  });
+
+  it("accepts as many resources as the provider reads beside the other parameters", async () => {
+    const resource = Array.from({ length: 20 }, (_, index) => `https://api${index}.example`);
+    const { url } = await buildAuthorization(resolvedOptions(), {
+      scope: ["openid"],
+      prompt: ["login"],
+      maxAge: 0,
+      loginHint: "user",
+      uiLocales: ["en"],
+      resource,
+    });
+
+    // The provider reads at most 32 parameters per request.
+    expect([...new URL(url).searchParams]).toHaveLength(32);
+  });
+
   it("sets the code challenge to the S256 of the code verifier", async () => {
     const { url, pending } = await buildAuthorization(resolvedOptions());
 
@@ -354,6 +383,51 @@ describe("buildAuthorization", () => {
     const error = await refusalOf({ uiLocales: [locale] });
     expect(error).toBeInstanceOf(TypeError);
     expect((error as Error).message).toContain("uiLocales");
+  });
+
+  it.each([
+    ["not an array", "https://api.example"],
+    ["empty", []],
+    ["a relative URI", ["/api"]],
+    ["a URI with a fragment", ["https://api.example/#part"]],
+    ["a URI with a space", ["https://api.example/a b"]],
+    ["a URI with a non-ASCII character", ["https://api.example/caf\u00e9"]],
+    ["a special scheme without //", ["https:api.example"]],
+    ["not a string", [42]],
+    ["more entries than the provider reads", Array.from({ length: 21 }, (_, index) => `https://api${index}.example`)],
+  ])("throws TypeError when resource is %s", async (_, resource) => {
+    const error = await refusalOf({ resource });
+    expect(error).toBeInstanceOf(TypeError);
+    expect((error as Error).message).toContain("resource");
+  });
+
+  it("throws TypeError when resource is sparse", async () => {
+    const resource: string[] = ["https://api.example"];
+    resource[2] = "https://other.example";
+    const error = await refusalOf({ resource });
+    expect(error).toBeInstanceOf(TypeError);
+    expect((error as Error).message).toContain("resource");
+  });
+
+  it("throws TypeError when a resource is longer than the provider accepts", async () => {
+    const error = await refusalOf({ resource: [`https://api.example/${"a".repeat(4096)}`] });
+    expect(error).toBeInstanceOf(TypeError);
+    expect((error as Error).message).toContain("resource");
+  });
+
+  it("never names the resource in the TypeError message", async () => {
+    const error = await refusalOf({ resource: ["https://api.example/#secret-part"] });
+    expect(error).toBeInstanceOf(TypeError);
+    expect((error as Error).message).not.toContain("secret-part");
+  });
+
+  it("uses the resources copied before computeCodeChallenge, not a later mutation of the caller's array", async () => {
+    const resource = ["https://api.example"];
+    const pending = buildAuthorization(resolvedOptions(), { resource });
+    resource[0] = "https://other.example";
+    const { url } = await pending;
+
+    expect(new URL(url).searchParams.getAll("resource")).toEqual(["https://api.example"]);
   });
 
   it("uses the prompt copied before computeCodeChallenge, not a later mutation of the caller's array", async () => {
