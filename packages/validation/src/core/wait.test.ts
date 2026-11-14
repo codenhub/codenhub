@@ -53,9 +53,9 @@ describe("validations that wait at the same time", () => {
       code: string(check((code) => later(3, code !== "x"), { code: "bad_code" })),
     });
     const first = signup({ name: "taken", tags: ["ok", "a"], code: "fine" });
-    const between = signup({ name: 1, tags: "no", code: "x" });
+    const between = signup({ name: 1, tags: "no", code: 2 });
     const second = signup({ name: "free", tags: ["b", "cd", "e"], code: "x" });
-    expect(isPending(first) && isPending(second)).toBe(true);
+    expect([isPending(first), isPending(between), isPending(second)]).toEqual([true, false, true]);
     const [one, other, synchronous] = await Promise.all([first, second, between]);
     expect(issuesOf(one)).toEqual([
       { code: "taken", path: ["name"] },

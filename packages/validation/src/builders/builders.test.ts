@@ -31,10 +31,12 @@ describe("check", () => {
     );
   });
 
-  it("should reject a path index that is not a whole number of zero or more, and params that are no object", () => {
-    expect(() => check(() => true, { path: [-1] })).toThrow(
-      new TypeError("issue.path must be a list of keys and indexes"),
-    );
+  it("should reject a path index that is not a whole number of zero or more, and params that are not an object", () => {
+    for (const index of [-1, 1.5, Number.NaN]) {
+      expect(() => check(() => true, { path: [index] })).toThrow(
+        new TypeError("issue.path must be a list of keys and indexes"),
+      );
+    }
     expect(() => check(() => true, { params: "x" as never })).toThrow(
       new TypeError("issue.params must be a plain object"),
     );

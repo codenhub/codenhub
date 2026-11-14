@@ -205,17 +205,29 @@ describe("intersection", () => {
     expect(Object.hasOwn(output.inner, "__proto__")).toBe(true);
   });
 
-  it("should look for a shape listing __proto__ in time linear in the depth of a recursive union", () => {
-    // Walking each option of each level on its own took 1.4 s at depth 20 and twice as long per level.
+  it("should look for a shape listing __proto__ in time that grows with the depth of a recursive union", () => {
     const node: Validator<unknown> = lazy(() =>
       union([object({ c: optional(node) }), object({ c: optional(node), y: string() })]),
     );
-    const depth = 22;
-    const parsed = JSON.parse(`${'{"c":'.repeat(depth)}{"__proto__":{}}${"}".repeat(depth)}`) as unknown;
-    const started = performance.now();
-    const issues = issuesOf(intersection(node, unknown())(parsed));
-    expect(performance.now() - started).toBeLessThan(1000);
-    expect(issues).toEqual([reserved(Array.from({ length: depth }, () => "c"))]);
+    const both = intersection(node, unknown());
+    const nested = (depth: number): unknown =>
+      JSON.parse(`${'{"c":'.repeat(depth)}{"__proto__":{}}${"}".repeat(depth)}`) as unknown;
+    const time = (input: unknown): number => {
+      const started = performance.now();
+      both(input);
+      return performance.now() - started;
+    };
+    const [deep, shallow] = [nested(18), nested(9)];
+    expect(issuesOf(both(deep))).toEqual([reserved(Array.from({ length: 18 }, () => "c"))]);
+    // Two depths compared, not one timed alone, so a busy machine slows both, and the fastest of six
+    // interleaved runs of each keeps one pause from counting. Walking each option of each level on its own
+    // doubled the time per level: twice the depth took 450 times as long, and takes 1.8 times now.
+    const fastest = [Infinity, Infinity];
+    for (let round = 0; round < 6; round += 1) {
+      fastest[0] = Math.min(fastest[0] ?? Infinity, time(deep));
+      fastest[1] = Math.min(fastest[1] ?? Infinity, time(shallow));
+    }
+    expect(fastest[0]).toBeLessThan(20 * (fastest[1] ?? 0));
   });
 
   it("should read a __proto__ listed only by the step of a pipe that produced the output", () => {
