@@ -18,7 +18,9 @@ const NO_STORE_HEADERS: Readonly<Record<string, string>> = {
 
 /**
  * `WWW-Authenticate` is not a CORS-safelisted response header, so a cross-origin page reads a challenge only when
- * the response names it here. Every response that carries a challenge also carries CORS_HEADERS, so both go together.
+ * the response names it here. Every response of the provider's own endpoints that carries a challenge also carries
+ * CORS_HEADERS, so both go together. {@link resourceChallengeResponse} carries neither, since it answers for the app's
+ * API, whose cross-origin policy is the app's.
  */
 const CHALLENGE_EXPOSURE: Readonly<Record<string, string>> = {
   "access-control-expose-headers": "WWW-Authenticate",
