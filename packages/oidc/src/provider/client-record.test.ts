@@ -40,11 +40,13 @@ describe("checkClientRecord", () => {
     ["a resource with a backslash", ["https://api.example\\evil"]],
     ["a non-ASCII resource", ["https://api.exämple"]],
     ["a special scheme without //", ["https:api.example"]],
+    ["an empty authority", ["https:///api.example"]],
+    ["an empty authority in another case", ["HTTPS:///api.example"]],
     ["a non-string resource", [42]],
     ["a string instead of a list", "https://api.example"],
   ])("shouldRejectResourcesWith_%s", (_, resources) => {
     expect(() => checkClientRecord(valid({ resources }), "client-a", KEYS)).toThrow(
-      "OidcStore.findClient: a client record must list resources, when present, as absolute URIs of visible ASCII without a fragment",
+      "OidcStore.findClient: a client record must list resources, when present, as absolute URIs of visible ASCII without a fragment or a backslash, with an authority after // for a special scheme such as https",
     );
   });
 

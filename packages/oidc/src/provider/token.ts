@@ -574,6 +574,18 @@ async function signAccessToken(
 }
 
 /**
+ * Whether a value is an object as `{}` or `Object.create(null)` makes it. A `Date`, a `Map` or a class instance holds
+ * its data where reading own properties does not find it, so it would add no claim without saying so.
+ */
+function isPlainObject(value: unknown): value is object {
+  if (typeof value !== "object" || value === null) {
+    return false;
+  }
+  const prototype: unknown = Object.getPrototypeOf(value);
+  return prototype === Object.prototype || prototype === null;
+}
+
+/**
  * The claims the app's `accessTokenClaims` adds, read as own enumerable data properties so a getter never runs,
  * minus every claim the provider sets or could set (decision 55's rule, applied to access tokens).
  *
@@ -591,8 +603,8 @@ async function appAccessTokenClaims(
       audience: Object.freeze([...request.audience]),
     }),
   );
-  if (typeof returned !== "object" || returned === null || Array.isArray(returned)) {
-    throw new TypeError("accessTokenClaims must return an object or a promise of one");
+  if (!isPlainObject(returned)) {
+    throw new TypeError("accessTokenClaims must return a plain object or a promise of one");
   }
   const entries: [string, unknown][] = [];
   for (const name of Object.keys(returned)) {

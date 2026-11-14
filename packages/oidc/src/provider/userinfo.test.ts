@@ -184,7 +184,7 @@ describe("handleUserinfo", () => {
     expect(response.headers.get("access-control-expose-headers")).toBe("WWW-Authenticate");
   });
 
-  it("shouldRespond400WhenTheSchemeIsNotBearer", async () => {
+  it("shouldRespond401WithABareChallengeWhenTheSchemeIsNotBearer", async () => {
     const { options } = await setUp();
 
     const response = await handleUserinfo(
@@ -192,8 +192,9 @@ describe("handleUserinfo", () => {
       new Request(ENDPOINT, { headers: { authorization: `Basic ${ACCESS_TOKEN}` } }),
     );
 
-    expect(response.status).toBe(400);
-    expect(response.headers.get("www-authenticate")).toBe('Bearer error="invalid_request"');
+    // RFC 6750 §3.1: a request that used an unsupported authentication method carries no token information.
+    expect(response.status).toBe(401);
+    expect(response.headers.get("www-authenticate")).toBe("Bearer");
   });
 
   it("shouldRespond400WhenTheTokenIsMalformed", async () => {

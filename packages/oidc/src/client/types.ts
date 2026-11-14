@@ -186,7 +186,7 @@ export interface RefreshOptions {
   /**
    * The resource servers the new access token is for (RFC 8707), as absolute URIs without a fragment. Each must be
    * one the sign-in asked for with {@link AuthorizeOptions.resource}. Without it, this package's provider issues the
-   * token for every resource of the sign-in.
+   * token for every resource of the sign-in that the client's registration still lists.
    */
   readonly resource?: readonly string[];
 }
@@ -293,8 +293,9 @@ export interface Client {
    * user in again.
    *
    * @returns The new tokens, or every issue found. Never throws for any response.
-   * @throws {TypeError} When `options` is invalid, such as an empty `refreshToken` or a scope list that is not
-   * a non-empty array of scope tokens. The message names the option and never its value.
+   * @throws {TypeError} When `options` is invalid, such as an empty `refreshToken`, a scope list that is not
+   * a non-empty array of scope tokens, or a `resource` that is not a non-empty array of at most 20 absolute URIs
+   * without a fragment. The message names the option and never its value.
    */
   refresh(options: RefreshOptions): Promise<OidcResult<Refreshed>>;
   /**

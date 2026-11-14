@@ -183,7 +183,7 @@ export function readResources(value: unknown, caller: string): readonly string[]
   const copy = denseCopy(value);
   if (copy === undefined || copy.length === 0 || copy.length > MAX_RESOURCES || !copy.every(isResourceUri)) {
     throw new TypeError(
-      `${caller}: resource must be a non-empty array of at most ${MAX_RESOURCES} absolute URIs of visible ASCII without a fragment`,
+      `${caller}: resource must be a non-empty array of at most ${MAX_RESOURCES} absolute URIs of visible ASCII without a fragment or a backslash, with an authority after // for a special scheme such as https`,
     );
   }
   const unique = [...new Set(copy as string[])];

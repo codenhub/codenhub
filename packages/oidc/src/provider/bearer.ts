@@ -4,9 +4,13 @@ import type { AccessTokenRecord } from "./types";
 
 /**
  * The `Authorization` header a bearer token is read from: the `Bearer` scheme in any letter case, one or more spaces
- * (RFC 6750 §2.1: `"Bearer" 1*SP`), then a token of the RFC 6750 §2.1 character set. Anything else is malformed.
+ * (RFC 6750 §2.1: `"Bearer" 1*SP`), then a token of the RFC 6750 §2.1 character set. A `Bearer` header that is
+ * anything else is malformed; a header of another scheme counts as no token.
  */
 const BEARER_AUTHORIZATION = /^Bearer +([A-Za-z0-9\-._~+/]+=*)$/i;
+
+/** The authentication scheme of an `Authorization` header: its first word, compared without regard to case. */
+const AUTHORIZATION_SCHEME = /^[^ ]*/;
 
 /** Why a request's bearer token found no live access token. */
 export type BearerFailure =
@@ -41,7 +45,9 @@ export type BearerLookup =
  */
 export async function findBearerAccessToken(options: ResolvedOptions, request: Request): Promise<BearerLookup> {
   const header = request.headers.get("authorization");
-  if (header === null) {
+  // RFC 6750 §3.1: a request that used another authentication method carries no token information, so it is
+  // answered as one without a token, with a bare challenge that names no error.
+  if (header === null || AUTHORIZATION_SCHEME.exec(header)?.[0].toLowerCase() !== "bearer") {
     return { ok: false, reason: "access_token_missing" };
   }
   const token = BEARER_AUTHORIZATION.exec(header)?.[1];

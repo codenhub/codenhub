@@ -113,7 +113,9 @@ export function checkClientRecord(
     return invalid("must not turn requirePkce off for a client whose auth.method is none");
   }
   if (record.resources !== undefined && (!isStringArray(record.resources) || !record.resources.every(isResourceUri))) {
-    return invalid("must list resources, when present, as absolute URIs of visible ASCII without a fragment");
+    return invalid(
+      "must list resources, when present, as absolute URIs of visible ASCII without a fragment or a backslash, with an authority after // for a special scheme such as https",
+    );
   }
   checkBackchannelLogout(record.backchannelLogout);
   // Resolved here, so every endpoint reads the list and the flag without repeating the default.
