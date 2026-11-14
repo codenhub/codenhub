@@ -115,7 +115,7 @@ The end-session endpoint never redirects a failed request, so the app renders ea
 | An ID token presented where a logout token is expected                                                                 | Refused for the same reason, in the other direction.                                                                    |
 | A logout token for a client other than the one it names in `aud`                                                       | Refused by the audience check of whoever verifies it. The token names only the client it was built for.                 |
 
-The token lives for 120 seconds and carries a random `jti`, so a captured one is useless soon, and a client that remembers `jti` values refuses a replay within that time. The provider remembers nothing, and each call signs a new token.
+The token is a bearer credential: whoever captures it can present it until its `exp`, 120 seconds after it was signed. It carries a random `jti`, so a client that remembers the `jti` values it accepted refuses a replay within that time. The provider remembers nothing, and each call signs a new token.
 
 ## Client: the callback
 
