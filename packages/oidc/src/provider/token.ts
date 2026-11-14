@@ -219,6 +219,20 @@ async function exchangeCode(
   return issueFromCode(options, client, record, resources);
 }
 
+/**
+ * The resources of a family that the client's record still lists, in the family's order, or `undefined` when none
+ * is left, so the token falls back as one for a grant without resources does. Narrowing to the current record means a
+ * resource an admin removed stops being issued on the next refresh and comes back once it is listed again, as scopes
+ * do; it only ever drops resources, so it cannot widen what the family covers.
+ */
+function resourcesOfClient(
+  client: ClientRecord,
+  resources: readonly string[] | undefined,
+): readonly string[] | undefined {
+  const listed = resources?.filter((resource) => client.resources?.includes(resource) === true);
+  return listed === undefined || listed.length === 0 ? undefined : listed;
+}
+
 /** Whether a token request's resources are all ones the grant covers; a request that names none always is. */
 function isWithinGrant(requested: RequestedResources, granted: readonly string[] | undefined): boolean {
   return requested === undefined || requested.every((resource) => granted?.includes(resource) === true);
@@ -363,7 +377,14 @@ async function refreshTokens(
   const now = options.now();
   const ttl = lifetimesOf(options.ttl, client);
   const grant: Grant = { ...grantRecord(record) };
-  const accessToken = await issueAccessToken(options, ttl, grant, scopes, resources ?? grant.resources, now);
+  const accessToken = await issueAccessToken(
+    options,
+    ttl,
+    grant,
+    scopes,
+    resources ?? resourcesOfClient(client, grant.resources),
+    now,
+  );
   // Signed before the next refresh token is saved: the claims callback may fail, and a failure after the save
   // would leave a token the client never receives. The spent token's retry is still a reuse (decision 55).
   const idToken = await issueIdToken(options, client, ttl, grant, accessToken, scopes, now, {});
