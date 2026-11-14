@@ -56,13 +56,35 @@ export const isPath = (path: unknown): boolean =>
   );
 
 /**
+ * Tests whether a value is a plain object: created by `{}`, `Object.create(null)`, or `JSON.parse`,
+ * in this realm or another, such as an iframe or a `vm` context, whose `Object.prototype` is not ours.
+ * A value whose prototype cannot be inspected, such as a proxy that throws, is not one.
+ */
+export function isPlainObject(value: unknown): value is Record<string, unknown> {
+  if (typeof value !== "object" || value === null) {
+    return false;
+  }
+  try {
+    const prototype: unknown = Object.getPrototypeOf(value);
+    if (prototype === Object.prototype || prototype === null) {
+      return true;
+    }
+    // Another realm's Object.prototype ends its own chain and owns `isPrototypeOf`. That is a test of
+    // shape: a prototype made to look exactly so passes too, which costs nothing, since only own
+    // properties are read and the output is a new object.
+    return Object.getPrototypeOf(prototype) === null && Object.hasOwn(prototype as object, "isPrototypeOf");
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Rejects `params` written by hand that are not a plain object, such as `null` or text, which the wording
  * of an issue reads its values from: `{ code: "too_small", params: null }` was worded "Must be at least
- * undefined". Not `isPlainObject`, which imports this module.
+ * undefined".
  */
 export function assertParams(params: unknown): void {
-  const prototype: unknown = typeof params === "object" && params !== null ? Object.getPrototypeOf(params) : undefined;
-  if (params !== undefined && prototype !== Object.prototype && prototype !== null) {
+  if (params !== undefined && !isPlainObject(params)) {
     throw new TypeError("issue.params must be a plain object");
   }
 }
@@ -89,10 +111,10 @@ export function fail(...issues: [IssueInput, ...IssueInput[]]): ValidationErr {
 
 /**
  * Rejects an issue written by hand that is not one: not an object, a list, or with a `code` or `message`
- * that is not text, a `path` that is not a list of keys and indexes, or `params` that are no plain object. An issue is plain data a form or a
- * log shows, so a number as its message, or a symbol in its path, would surface as a bug far from its
- * cause, and a list of issues given in place of them, as in `fail(issues)`, would be read as one issue
- * that says nothing, losing every issue in it.
+ * that is not text, a `path` that is not a list of keys and indexes, or `params` that is not a plain object.
+ * An issue is plain data a form or a log shows, so a number as its message, or a symbol in its path, would
+ * surface as a bug far from its cause, and a list of issues given in place of them, as in `fail(issues)`,
+ * would be read as one issue that says nothing, losing every issue in it.
  */
 export function assertIssue(each: unknown): asserts each is IssueInput {
   if (typeof each !== "object" || each === null) {

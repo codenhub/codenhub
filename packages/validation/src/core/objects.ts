@@ -1,29 +1,9 @@
-import { describeType } from "./result";
+import { describeType, isPlainObject } from "./result";
 import { report, type Fail } from "./run";
 import type { Message } from "./types";
 
-/**
- * Tests whether a value is a plain object: created by `{}`, `Object.create(null)`, or `JSON.parse`,
- * in this realm or another, such as an iframe or a `vm` context, whose `Object.prototype` is not ours.
- * A value whose prototype cannot be inspected, such as a proxy that throws, is not one.
- */
-export function isPlainObject(value: unknown): value is Record<string, unknown> {
-  if (typeof value !== "object" || value === null) {
-    return false;
-  }
-  try {
-    const prototype: unknown = Object.getPrototypeOf(value);
-    if (prototype === Object.prototype || prototype === null) {
-      return true;
-    }
-    // Another realm's Object.prototype ends its own chain and owns `isPrototypeOf`. That is a test of
-    // shape: a prototype made to look exactly so passes too, which costs nothing, since only own
-    // properties are read and the output is a new object.
-    return Object.getPrototypeOf(prototype) === null && Object.hasOwn(prototype as object, "isPrototypeOf");
-  } catch {
-    return false;
-  }
-}
+// Defined beside the checks of an issue, which need it and which this module imports.
+export { isPlainObject };
 
 /**
  * Rejects a shape that is not a plain object, such as a list of validators, whose properties would be
