@@ -235,7 +235,7 @@ Without `by` it compares the validated items themselves; with it, the value `by`
 **Parameters**
 
 - `by` — What to compare for each item. The item itself when omitted.
-- `message` — Wording for each issue.
+- `message` — Wording for each repeat. The issue saying their list was cut is worded as the validator words its own issues.
 
 **Type parameters**
 
