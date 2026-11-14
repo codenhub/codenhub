@@ -16,7 +16,7 @@ import { string } from "../primitives/string";
 import { unknown } from "../primitives/unknown";
 import { issuesOf, valueOf } from "../test-utils";
 import { entriesOf, isPlainObject, sizeOfMap, sizeOfSet, timeOf, valuesOf } from "./objects";
-import { describeType } from "./result";
+import { describeType, fail } from "./result";
 
 /*
  * Objects made in a `vm` context stand for those from an iframe or another window: they have the
@@ -36,6 +36,10 @@ describe("values from another realm", () => {
     expect(isPlainObject(foreign("({ a: 1 })"))).toBe(true);
     expect(isPlainObject(foreign("Object.create(null)"))).toBe(true);
     expect(isPlainObject(foreign("JSON.parse('{\"a\":1}')"))).toBe(true);
+  });
+
+  it("should be taken as the params of an issue written by hand, as plain objects of ours are", () => {
+    expect(issuesOf(fail({ code: "x", params: foreign("({ limit: 3 })") }))[0]?.params).toEqual({ limit: 3 });
   });
 
   it("should not be plain objects when they are instances, arrays or built with a prototype of their own", () => {
@@ -163,6 +167,7 @@ describe("an object whose prototype cannot be inspected", () => {
 
   it("should be rejected, not thrown from", () => {
     expect(isPlainObject(hostile)).toBe(false);
+    expect(() => fail({ code: "x", params: hostile })).toThrow(new TypeError("issue.params must be a plain object"));
     expect(issuesOf(object({})(hostile)).map((issue) => issue.code)).toEqual(["invalid_type"]);
     expect(issuesOf(record(string(), number())(hostile)).map((issue) => issue.code)).toEqual(["invalid_type"]);
   });

@@ -1,7 +1,7 @@
 ---
 title: Validadores personalizados
 description: Adicione regras com verificações, crie validadores que se comportam como os nativos, valide de forma assíncrona e nomeie os tipos que uma biblioteca de validadores exporta.
-source: cb25383af5ab4fa55341f17593b637048df4fd02
+source: 7c6a075adf1e6739262f33c23ff9b0e4c1e732ee
 order: 6
 ---
 
@@ -38,7 +38,7 @@ O segundo argumento é o problema a reportar quando o teste retorna `false`:
 
 - Uma string é a mensagem dele.
 - Uma função do problema escreve o texto quando ele é reportado, como faz a mensagem de uma verificação nativa. Ela precisa retornar texto, ou o validador lança um `TypeError` ao reportar o problema.
-- Um objeto pode definir `code`, `path`, `params` e `message`. Um `path` é uma lista de chaves e índices, e um `path` de texto ou que contém um symbol lança um `TypeError` quando a verificação é criada. O mesmo vale para uma lista passada como o problema.
+- Um objeto pode definir `code`, `path`, `params` e `message`. Um `path` é uma lista de chaves e índices, cada índice um inteiro de zero ou mais, e `params` é um objeto simples. Um `path` de texto, um que contém um symbol ou um índice como `-1`, um `params` que não é um objeto simples e uma lista passada como o problema lançam, cada um, um `TypeError` quando a verificação é criada.
 
 Sem código, o problema tem o código `custom`, no próprio local do valor. Um problema sem mensagem própria é descrito pela opção `message` do validador que recebe a verificação, quando ele tem uma. Caso contrário, só resta o código, e `formatIssue` diz "Invalid value". Então dê uma mensagem à verificação sempre que pessoas forem ler o que ela reporta.
 
@@ -71,7 +71,7 @@ Cada problema da lista é um objeto, na forma que `fail()` aceita:
 
 - Um problema sem `code` tem o código `custom`, e um sem `path` fica no próprio local do valor.
 - Um problema sem `message` é descrito pelo segundo argumento de `check`, quando ele é uma mensagem ou um problema que tem uma.
-- Qualquer outra coisa na lista, como `null` ou um texto, lança um `TypeError` quando a verificação a reporta. O mesmo vale para um `path` que não é uma lista, como `"confirm"`.
+- Qualquer outra coisa na lista, como `null` ou um texto, lança um `TypeError` quando a verificação a reporta. O mesmo vale para um `path` que não é uma lista, como `"confirm"`, para um índice de um `path` que é negativo ou não é inteiro, como `-1`, e para um `params` que não é um objeto simples.
 
 Um teste que retorna qualquer coisa que não seja um booleano ou uma lista lança um `TypeError` quando a verificação roda. Isso inclui o `undefined` de um teste que esqueceu de retornar: lido como um valor que passou, ele aceitaria todo valor.
 
@@ -160,7 +160,7 @@ Um compositor só aceita uma função escrita à mão por meio de `validator`. O
 | `params`  | Fatos sobre a falha, para montar uma mensagem ou para quem chama inspecionar. Nunca coloque a entrada aqui: um problema é algo que quem chama registra em log. |
 | `message` | Texto fixo da mensagem. Sem ele, [`formatIssue`](errors.md#transformando-um-problema-em-texto) monta o texto a partir de `code` e `params`.                    |
 
-`fail` lança um `TypeError` quando não recebe nenhum problema, já que uma falha sem problema não diz nada. Ele também lança para um `path` que não é uma lista, como `"confirm"` onde se queria `["confirm"]`, que seria dividido em um segmento por letra, e para uma lista passada como problema, como `fail(issues)` onde se queria `fail(...issues)`, que seria lida como um único problema que não diz nada.
+`fail` lança um `TypeError` quando não recebe nenhum problema, já que uma falha sem problema não diz nada. Ele também lança para um `path` que não é uma lista, como `"confirm"` onde se queria `["confirm"]`, que seria dividido em um segmento por letra, para um índice de um `path` que é negativo ou não é inteiro, como `-1`, para um `params` que não é um objeto simples, e para uma lista passada como problema, como `fail(issues)` onde se queria `fail(...issues)`, que seria lida como um único problema que não diz nada.
 
 ### Uma função que não é um validador
 
@@ -176,7 +176,7 @@ A causa comum é passar uma factory onde deveria estar o validador dela, como `s
 
 Um validador feito por outra cópia instalada deste pacote é recusado da mesma forma, e uma de suas verificações também: acontece quando dois pacotes dependem de versões de `@codenhub/validation` que não coincidem, e um recebe um esquema do outro. Cada cópia relata os problemas a si mesma, então uma não consegue executar os validadores da outra como seus. Instale uma única versão para ambos, ou passe o validador para `validator`, que o executa como qualquer função escrita à mão e mantém seus problemas, embora não mais o que `describe` e `toJsonSchema` leem dele.
 
-Uma função passada para `validator` que retorna qualquer coisa que não seja um resultado também é um bug: nada, a própria entrada ou uma falha sem problemas. O validador lança um `TypeError` quando roda, "A validator written by hand must return pass(value) or fail(issue)". Uma falha construída à mão em vez de com `fail` é verificada como `fail` verifica os problemas dela, então um `path` como `"confirm"` também lança ali.
+Uma função passada para `validator` que retorna qualquer coisa que não seja um resultado também é um bug: nada, a própria entrada ou uma falha sem problemas. O validador lança um `TypeError` quando roda, "A validator written by hand must return pass(value) or fail(issue)". Uma falha construída à mão em vez de com `fail` é verificada como `fail` verifica os problemas dela, então um `path` como `"confirm"` ou `[-1]`, ou um `params` que não é um objeto simples, também lança ali.
 
 ### Uma conversão que pode falhar
 

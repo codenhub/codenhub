@@ -40,6 +40,36 @@ describe("a validation that waits", () => {
   });
 });
 
+describe("validations that wait at the same time", () => {
+  const later = <T>(milliseconds: number, value: T): Promise<T> =>
+    new Promise((resolve) => setTimeout(() => resolve(value), milliseconds));
+
+  it("should each keep their own issues and paths, with another validation run between them", async () => {
+    // The issues of the validation running are kept in one place and swapped around each wait, so a
+    // mistake there would give one request's issues to another.
+    const signup = object({
+      name: string(check((name) => later(5, name !== "taken"), { code: "taken" })),
+      tags: array(string(check((tag) => later(1, tag.length > 1), { code: "short" }))),
+      code: string(check((code) => later(3, code !== "x"), { code: "bad_code" })),
+    });
+    const first = signup({ name: "taken", tags: ["ok", "a"], code: "fine" });
+    const between = signup({ name: 1, tags: "no", code: 2 });
+    const second = signup({ name: "free", tags: ["b", "cd", "e"], code: "x" });
+    expect([isPending(first), isPending(between), isPending(second)]).toEqual([true, false, true]);
+    const [one, other, synchronous] = await Promise.all([first, second, between]);
+    expect(issuesOf(one)).toEqual([
+      { code: "taken", path: ["name"] },
+      { code: "short", path: ["tags", 1] },
+    ]);
+    expect(issuesOf(other)).toEqual([
+      { code: "short", path: ["tags", 0] },
+      { code: "short", path: ["tags", 2] },
+      { code: "bad_code", path: ["code"] },
+    ]);
+    expect(issuesOf(synchronous).map(({ path }) => path)).toEqual([["name"], ["tags"], ["code"]]);
+  });
+});
+
 describe("a thenable that is not a promise", () => {
   // A minimal thenable: it settles through its callbacks and returns nothing from `then`, as `await` allows.
   const settling = <T>(value: T, sync = false): PromiseLike<T> =>

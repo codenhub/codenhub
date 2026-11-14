@@ -10,17 +10,42 @@ export const HOSTLESS_SCHEMES = ["mailto", "tel", "urn"];
 /**
  * A global number from RFC 3966: `+`, digits with the visual separators `-`, `.`, `(` and `)`
  * between them, then `;name=value` parameters whose value holds only the characters the RFC lists
- * and escapes. Every repetition ends on a digit or starts with `;`, so matching stays linear.
+ * and escapes. Read part by part with patterns that repeat no group, since one repeating a digit or
+ * a parameter overflowed the stack on a few megabytes of text.
  */
-const TEL_PATTERN = /^\+[0-9](?:[-.()]*[0-9])*(?:;[a-z0-9-]+(?:=(?:[\w.!~*'()[\]/:&+$-]|%[0-9a-f]{2})+)?)*$/i;
+const TEL_NUMBER_PATTERN = /^\+[0-9](?:[-.()0-9]*[0-9])?$/;
+const TEL_PARAMETER_PATTERN = /^[a-z0-9-]+(?:=[\w.!~*'()[\]/:&+$%-]+)?$/i;
+/** A `%` that does not start an escape of two hexadecimal digits. */
+const BROKEN_ESCAPE_PATTERN = /%(?![0-9a-f]{2})/i;
+
+/** The number and its parameters, which hold no `;`, so the first `;` ends the number and each one a parameter. */
+const isTel = (text: string): boolean => {
+  const [number = "", ...parameters] = text.split(";");
+  return (
+    TEL_NUMBER_PATTERN.test(number) &&
+    parameters.every((parameter) => TEL_PARAMETER_PATTERN.test(parameter)) &&
+    !BROKEN_ESCAPE_PATTERN.test(text)
+  );
+};
 
 /**
  * An RFC 8141 name after `urn:`: a namespace of 2 to 32 letters, digits and inner hyphens, a colon,
- * a non-empty specific string, then the optional `?+`, `?=` and `#` components. A `%` must start an
- * escape, and the escape and the plain characters never overlap, so matching stays linear.
+ * a non-empty specific string that does not start with `/`, then the optional `?+`, `?=` and `#`
+ * components. A `%` must start an escape, checked apart, so the pattern repeats no group, which
+ * overflowed the stack on a few megabytes of text.
  */
 const URN_PATTERN =
-  /^[a-z0-9][a-z0-9-]{0,30}[a-z0-9]:(?:[\w\-.~!$&'()*+,;=:@]|%[0-9a-f]{2})(?:[\w\-.~!$&'()*+,;=:@/]|%[0-9a-f]{2})*(?:\?\+[^?#]*)?(?:\?=[^#]*)?(?:#.*)?$/i;
+  /^[a-z0-9][a-z0-9-]{0,30}[a-z0-9]:(?!\/)[\w\-.~!$&'()*+,;=:@/%]+(?:\?\+[^?#]*)?(?:\?=[^#]*)?(?:#.*)?$/i;
+
+/**
+ * The name, with each `%` of its specific string starting an escape. The namespace holds no `:`, and the
+ * specific string no `?` or `#`, so the first of them bound it; the components after it are not checked.
+ */
+const isUrn = (text: string): boolean => {
+  const rest = text.slice(text.indexOf(":") + 1);
+  const end = rest.search(/[?#]/);
+  return URN_PATTERN.test(text) && !BROKEN_ESCAPE_PATTERN.test(end === -1 ? rest : rest.slice(0, end));
+};
 
 /** The header fields RFC 6068 gives a message. Any other, such as `from`, fails. */
 const FIELD_PATTERN = /^(?:to|cc|bcc|subject|body)$/;
@@ -49,7 +74,7 @@ const CONTROL_PATTERN = /%(?:[01][\da-f]|7f|c2%[89][\da-f]|e2%80%a[89])/i;
 const MAILTO_ESCAPED_PATTERN = /[^\w.~!$'*+@-]/g;
 
 /**
- * Reads the part of a mailto URL after the colon, returning it with every recipient as `email` returns
+ * Reads the part of a mailto URL after the colon, returning it with every recipient as `internationalEmail` returns
  * it and every field name in lowercase, or undefined when it is not a mailto. Every field of the query
  * must be `name=value` with a name from an allowlist: `to`, `cc` and `bcc`, whose recipients must pass
  * as addresses like those in the path, and `subject` and `body`, each at most once, whose text must be
@@ -114,9 +139,9 @@ export function toHostlessUrl(scheme: string, rest: string, allowLocal: boolean)
     case "mailto":
       return toMailto(rest, allowLocal);
     case "tel":
-      return TEL_PATTERN.test(rest) ? rest : undefined;
+      return isTel(rest) ? rest : undefined;
     case "urn":
-      return URN_PATTERN.test(rest) ? rest : undefined;
+      return isUrn(rest) ? rest : undefined;
     default:
       return undefined;
   }

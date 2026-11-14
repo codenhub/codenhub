@@ -85,7 +85,7 @@ const validators: Record<string, [validator: unknown, kind: string, parts?: Reco
   nullable: [api.nullable(name), "nullable", { inner: name }],
   nullish: [api.nullish(name), "nullish", { inner: name }],
   number: [number({ int: true }), "number", { options: { int: true } }],
-  object: [object({ name }), "object", { shape: { name }, options: {}, unknownKeys: undefined }],
+  object: [object({ name }), "object", { shape: { name }, options: {} }],
   objectLike: [api.objectLike({ name }), "objectLike", { shape: { name } }],
   objectWithRest: [api.objectWithRest({ name }, rest), "object", { shape: { name }, unknownKeys: rest }],
   oneOf: [api.oneOf(["a", "b"]), "oneOf", { values: ["a", "b"] }],
@@ -225,6 +225,9 @@ group("the description of a validator", () => {
       api.objectWithRest({ name }, rest, { message: "Bad" }),
     ];
     expect(made.map((each) => describe(each)?.["unknownKeys"])).toEqual([undefined, "strict", "passthrough", rest]);
+    // Absent for object, so a reader that asks whether the key is there reads the default way.
+    expect(made.map((each) => "unknownKeys" in (describe(each) ?? {}))).toEqual([false, true, true, true]);
+    expect("way" in (describe(made[0] as never) ?? {})).toBe(false);
     for (const each of made) {
       expect(describe(each)?.kind).toBe("object");
       expect(describe(each)?.options).toEqual({ message: "Bad" });

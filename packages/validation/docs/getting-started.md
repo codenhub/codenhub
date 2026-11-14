@@ -83,7 +83,7 @@ One kind of input can still throw: input that runs code of its own while it is r
 
 - Clean-up you asked for is applied, such as `trim`, `case` or `clamp`.
 - An object drops the properties its shape does not list.
-- A format with several spellings of one value produces one of them. `email` and `url` produce what the URL parser reads, such as a lowercase domain, and `phone` produces `+` and the digits.
+- A format with several spellings of one value produces one of them. `email` produces its domain in lowercase, `url` and `internationalEmail` produce what the URL parser reads, such as a lowercase domain, and `phone` produces `+` and the digits.
 
 So a check made later on the value sees what a mail server or a request will see. The input itself is never modified.
 

@@ -20,6 +20,7 @@ import { optional } from "./optional";
 import { pipe } from "./pipe";
 import { set } from "./set";
 import { transform } from "./transform";
+import { union } from "./union";
 
 describe("intersection", () => {
   it("should report a revoked proxy one side passed through as a conflict, not throw", () => {
@@ -202,6 +203,31 @@ describe("intersection", () => {
     const rested = objectWithRest({}, object({ ["__proto__"]: unknown() }));
     const output = valueOf(intersection(object({ inner: unknown() }), rested)(parsed)) as { inner: object };
     expect(Object.hasOwn(output.inner, "__proto__")).toBe(true);
+  });
+
+  it("should look for a shape listing __proto__ in time that grows with the depth of a recursive union", () => {
+    const node: Validator<unknown> = lazy(() =>
+      union([object({ c: optional(node) }), object({ c: optional(node), y: string() })]),
+    );
+    const both = intersection(node, unknown());
+    const nested = (depth: number): unknown =>
+      JSON.parse(`${'{"c":'.repeat(depth)}{"__proto__":{}}${"}".repeat(depth)}`) as unknown;
+    const time = (input: unknown): number => {
+      const started = performance.now();
+      both(input);
+      return performance.now() - started;
+    };
+    const [deep, shallow] = [nested(18), nested(9)];
+    expect(issuesOf(both(deep))).toEqual([reserved(Array.from({ length: 18 }, () => "c"))]);
+    // Two depths compared, not one timed alone, so a busy machine slows both, and the fastest of six
+    // interleaved runs of each keeps one pause from counting. Walking each option of each level on its own
+    // doubled the time per level: twice the depth took 450 times as long, and takes 1.8 times now.
+    const fastest = [Infinity, Infinity];
+    for (let round = 0; round < 6; round += 1) {
+      fastest[0] = Math.min(fastest[0] ?? Infinity, time(deep));
+      fastest[1] = Math.min(fastest[1] ?? Infinity, time(shallow));
+    }
+    expect(fastest[0]).toBeLessThan(20 * (fastest[1] ?? 0));
   });
 
   it("should read a __proto__ listed only by the step of a pipe that produced the output", () => {

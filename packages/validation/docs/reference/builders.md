@@ -35,7 +35,7 @@ A validator takes no other function as a check: what runs a check comes with `ch
 
 **Returns** — A check that reports the issue when `test` returns `false`, or the issues it returns.
 
-**Throws** — `TypeError` — When `test` is not a function, or `issue` is neither a message nor an issue: an object that is not a list, whose `code` and `message` are text when given, and whose `path` is a list. From the returned check, when `test` returns neither a boolean nor a list of issues.
+**Throws** — `TypeError` — When `test` is not a function, or `issue` is neither a message nor an issue: an object that is not a list, whose `code` and `message` are text when given, whose `path` is a list of keys and indexes, each index an integer of zero or more, when given, and whose `params` is a plain object when given. From the returned check, when `test` returns neither a boolean nor a list of issues.
 
 **Example**
 
@@ -179,7 +179,7 @@ A composer takes no other function as a validator: what calls a function written
 
 **Returns** — A validator that gives what `validate` returns, asynchronous when `validate` may return a promise.
 
-**Throws** — `TypeError` — When `validate` is not a function. From the returned validator, when `validate` returns something that is not a result, a failure without issues, or an issue `fail()` would refuse: one that is not an object, with a `code` or `message` that is not text, or a `path` that is not a list of keys and indexes.
+**Throws** — `TypeError` — When `validate` is not a function. From the returned validator, when `validate` returns something that is not a result, a failure without issues, or an issue `fail()` would refuse: one that is not an object or is a list, with a `code` or `message` that is not text, a `path` that is not a list of keys and indexes or holds an index that is negative or not an integer, or `params` that is not a plain object.
 
 **Example**
 

@@ -37,7 +37,7 @@ The second argument is the issue to report when the test returns `false`:
 
 - A string is its message.
 - A function of the issue words it when it is reported, as the message of a built-in check does. It must return text, or the validator throws a `TypeError` when it reports the issue.
-- An object can set a `code`, `path`, `params` and `message`. A `path` is a list of keys and indexes, and a path of text or one holding a symbol throws a `TypeError` when the check is made. So does a list given as the issue.
+- An object can set a `code`, `path`, `params` and `message`. A `path` is a list of keys and indexes, each index an integer of zero or more, and `params` is a plain object. A path of text, one holding a symbol or an index such as `-1`, `params` that is not a plain object, and a list given as the issue each throw a `TypeError` when the check is made.
 
 Without a code, the issue has code `custom`, at the value's own location. An issue without a message of its own is worded by the `message` option of the validator the check is given to, when it has one. Otherwise only its code is left, and `formatIssue` says "Invalid value". So give a check a message wherever people read what it reports.
 
@@ -70,7 +70,7 @@ Each issue in the list is an object, as `fail()` takes one:
 
 - An issue without a `code` has code `custom`, and one without a `path` is at the value's own location.
 - An issue without a `message` is worded by the second argument of `check`, when that is a message or an issue with one.
-- Anything else in the list, such as `null` or text, throws a `TypeError` when the check reports it. So does a `path` that is not a list, such as `"confirm"`.
+- Anything else in the list, such as `null` or text, throws a `TypeError` when the check reports it. So do a `path` that is not a list, such as `"confirm"`, an index in a path that is negative or not an integer, such as `-1`, and `params` that is not a plain object.
 
 A test that returns anything but a boolean or a list throws a `TypeError` when the check runs. That includes the `undefined` of a test that forgot to return: read as a pass, it would accept every value.
 
@@ -159,7 +159,7 @@ A composer takes a function written by hand only through `validator`. The code t
 | `params`  | Facts about the failure, for building a message or for callers to inspect. Never put the input in here: an issue is something callers log. |
 | `message` | Fixed message text. Without it, [`formatIssue`](errors.md#turning-an-issue-into-text) builds text from the `code` and `params`.            |
 
-`fail` throws a `TypeError` for no issue, since a failure with no issue says nothing. It also throws for a `path` that is not a list, such as `"confirm"` where `["confirm"]` was meant, which would be split into one segment per letter, and for a list given as an issue, as `fail(issues)` where `fail(...issues)` was meant, which would be read as one issue that says nothing.
+`fail` throws a `TypeError` for no issue, since a failure with no issue says nothing. It also throws for a `path` that is not a list, such as `"confirm"` where `["confirm"]` was meant, which would be split into one segment per letter, for an index in a path that is negative or not an integer, such as `-1`, for `params` that is not a plain object, and for a list given as an issue, as `fail(issues)` where `fail(...issues)` was meant, which would be read as one issue that says nothing.
 
 ### A function that is no validator
 
@@ -175,7 +175,7 @@ The common cause is a factory given where its validator belongs, as `string` ins
 
 A validator made by another installed copy of this package is refused the same way, and so is one of its checks: it happens when two packages depend on versions of `@codenhub/validation` that do not overlap, and one is given a schema of the other. Each copy reports issues to itself, so one cannot run the validators of the other as its own. Install one version for both, or give the validator to `validator`, which runs it as any function written by hand and keeps its issues, though no longer what `describe` and `toJsonSchema` read of it.
 
-A function given to `validator` that returns anything other than a result is a bug too: nothing, the input itself, or a failure without issues. The validator throws a `TypeError` when it runs, "A validator written by hand must return pass(value) or fail(issue)". A failure it built by hand rather than with `fail` is checked as `fail` checks its issues, so a `path` such as `"confirm"` throws there too.
+A function given to `validator` that returns anything other than a result is a bug too: nothing, the input itself, or a failure without issues. The validator throws a `TypeError` when it runs, "A validator written by hand must return pass(value) or fail(issue)". A failure it built by hand rather than with `fail` is checked as `fail` checks its issues, so a `path` such as `"confirm"` or `[-1]`, or `params` that is not a plain object, throws there too.
 
 ### A conversion that can fail
 

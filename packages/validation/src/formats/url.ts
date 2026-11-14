@@ -190,7 +190,7 @@ type UrlParts<TOptions> = Extract<
  * sees the URL a request will reach: `https://Example.com/a/../b` is `https://example.com/b`, a host
  * spelled with fullwidth letters or invisible characters is the host they spell, an internationalized
  * host is in punycode, an IPv4 host is four decimal parts, the host of a scheme the parser has no rules
- * for, such as `ssh`, is in lowercase, and characters such as `"` and `<` are percent-encoded. A `mailto` URL gives each recipient as `email` does. Text holding whitespace or control characters is rejected rather than cleaned, and
+ * for, such as `ssh`, is in lowercase, and characters such as `"` and `<` are percent-encoded. A `mailto` URL gives each recipient as `internationalEmail` does. Text holding whitespace or control characters is rejected rather than cleaned, and
  * no scheme is guessed for text that lacks one. A host longer than 253 characters is rejected, and so is
  * the host of a scheme the parser has rules for that is written with more than 759, three for each, which
  * is refused before the parser reads it, since the parser takes time that grows with the square of the

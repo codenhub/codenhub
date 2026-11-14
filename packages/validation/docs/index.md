@@ -15,7 +15,7 @@ Data that crosses a boundary you do not control can hold anything: a request, a 
 
 The package is built for that boundary, where the input may be hostile:
 
-- **A format gives you what the parser read.** `email()` and `url()` produce the value the platform's URL parser reads. The value you store is the one a request or a mail server will use.
+- **A format gives you what the parser read.** `url()` and `internationalEmail()` produce the value the platform's URL parser reads. The value you store is the one a request or a mail server will use.
 - **A failing input has a bounded report.** Each collection stops reporting at 1,000 issues, as [Limits](limits.md#a-failing-input-has-a-bounded-cost) explains. Input nested too deep is one issue, not a stack overflow, as long as the depth limit of a recursive schema, [`maxDepth`](limits.md#maxdepth), fits the stack.
 - **An issue never holds a value of the input.** A log of failures holds no password that was sent. An issue does hold what the schema was configured with, such as the values a `oneOf` accepts or the prefix of a `startsWith`, and the input's keys, in its `path`, as [The issue](errors.md#the-issue) says.
 

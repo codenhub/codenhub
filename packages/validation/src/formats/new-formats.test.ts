@@ -45,6 +45,23 @@ describe("semver", () => {
     );
   });
 
+  it("should read hyphens and dots inside a pre-release and build metadata as their identifiers do", () => {
+    expect(accepts(semver(), "1.0.0-a-b", "1.0.0-a-b+c-d", "1.0.0+01", "1.0.0--", "1.0.0-a.0.b")).toEqual(
+      Array(5).fill(true),
+    );
+    const invalid = [
+      "1.0.0-+a",
+      "1.0.0-.a",
+      "1.0.0-a.",
+      "1.0.0+a..b",
+      "1.0.0+.a",
+      "1.0.0+a+b",
+      "1.0.0-a.01",
+      "1.0-0.0",
+    ];
+    expect(accepts(semver(), ...invalid)).toEqual(invalid.map(() => false));
+  });
+
   it("should answer a long run of digits at once, since matching is linear", () => {
     const started = performance.now();
     expect(semver()(`1.0.0-${"1".repeat(50_000)}!`).ok).toBe(false);
@@ -128,6 +145,11 @@ describe("phone", () => {
   it("should accept at most one group in parentheses", () => {
     expect(accepts(phone(), "+55 (11) 98765-4321", "+1 (201) 555-0123")).toEqual([true, true]);
     expect(accepts(phone(), "+1(2)(3)(4)(5)(6)(7)", "+55 (11) (98765) 4321")).toEqual([false, false]);
+  });
+
+  it("should accept the longest way to write 15 digits, a separator before each and one group", () => {
+    expect(valueOf(phone()("+1-2-3-4-5-6-7-8-9-0-1-2-3-4-(5)"))).toBe("+123456789012345");
+    expect(valueOf(phone()("+1 2 3 4 5 6 7 8 9 0 1 2 3 4 (5)"))).toBe("+123456789012345");
   });
 
   it("should keep a trunk prefix written without parentheses, since the numbering plan is not checked", () => {

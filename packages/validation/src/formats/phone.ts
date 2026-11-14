@@ -20,6 +20,12 @@ const SECOND_GROUP_PATTERN = /\(.*\(/;
 /** E.164 allows at most 15 digits; the shortest numbers in use have 7. */
 const MIN_DIGITS = 7;
 const MAX_DIGITS = 15;
+/**
+ * The `+`, a separator before each digit after the first, and one pair of parentheses, so longer text has
+ * more than 15 digits. Refused by its length first, since the pattern repeats a group and overflowed the
+ * stack on a few megabytes of text.
+ */
+const MAX_LENGTH = 1 + MAX_DIGITS * 2 - 1 + 2;
 
 /**
  * Creates a validator for international phone numbers in E.164 form: a `+`, the country code and the
@@ -40,7 +46,12 @@ const MAX_DIGITS = 15;
  * ```
  */
 export const phone = /* @__PURE__ */ formatFactory("phone", (text) => {
-  if (!PHONE_PATTERN.test(text) || TRUNK_PREFIX_PATTERN.test(text) || SECOND_GROUP_PATTERN.test(text)) {
+  if (
+    text.length > MAX_LENGTH ||
+    !PHONE_PATTERN.test(text) ||
+    TRUNK_PREFIX_PATTERN.test(text) ||
+    SECOND_GROUP_PATTERN.test(text)
+  ) {
     return undefined;
   }
   const digits = text.replace(/\D/g, "");
