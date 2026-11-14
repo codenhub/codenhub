@@ -1,0 +1,23 @@
+{
+  "name": "@codenhub/oidc-conformance",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Cloudflare Worker that hosts @codenhub/oidc for the OpenID Foundation conformance suite.",
+  "type": "module",
+  "scripts": {
+    "preview": "wrangler dev",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc -b"
+  },
+  "devDependencies": {
+    "@codenhub/jwt": "catalog:",
+    "@codenhub/oidc": "workspace:*",
+    "@types/node": "catalog:",
+    "esbuild": "catalog:",
+    "miniflare": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:",
+    "wrangler": "catalog:"
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "codenhub-oidc-conformance",
+  "main": "src/worker.ts",
+  "compatibility_date": "2026-08-08",
+  // ISSUER is the public https origin this Worker is served from, with no trailing slash, and SUITE_ALIAS the alias
+  // of the test plans, as docs/runbook.md says. The four client secrets are wrangler secrets, never vars.
+  "vars": {
+    "ISSUER": "https://codenhub-oidc-conformance.example.workers.dev",
+    "SUITE_ALIAS": "codenhub-oidc",
+  },
+  "durable_objects": {
+    "bindings": [{ "name": "HOST", "class_name": "ConformanceHost" }],
+  },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["ConformanceHost"] }],
+}
