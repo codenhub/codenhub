@@ -235,7 +235,7 @@ Without `by` it compares the validated items themselves; with it, the value `by`
 **Parameters**
 
 - `by` — What to compare for each item. The item itself when omitted.
-- `message` — Wording for each repeat. The issue saying their list was cut is worded as the validator words its own issues.
+- `message` — Wording for each repeat. The issue saying the list of repeats was cut, after 1,000, does not take it: the validator words that issue, as it words a collection's own limit.
 
 **Type parameters**
 
