@@ -68,7 +68,7 @@ To issue tokens as an OpenID Provider instead, see [Provider](docs/provider.md).
 - **Opaque access tokens by default.** An access token is a random value the store looks up by digest. The provider can issue JWT access tokens (RFC 9068) instead, with `accessToken: { format: "jwt", audience }`. See [Provider](docs/provider.md#jwt-access-tokens).
 - **Logout and service tokens.** `client.endSessionUrl` builds the URL the browser is redirected to, to end the session at the provider (RP-initiated logout), and `client.clientCredentials` gets a token for a client with no user. See [Client](docs/client.md#ending-the-session-at-the-provider) and [Client](docs/client.md#client-credentials).
 - **Back-channel logout.** `provider.backchannelLogout` builds the logout request for one client, a signed `logout+jwt` the app sends with `fetch` when its user signs out. The provider keeps no sessions and makes no outbound request. See [Provider](docs/provider.md#back-channel-logout).
-- **Resource servers.** A client registered with `resources` asks for tokens restricted to the APIs it names, with the `resource` parameter (RFC 8707), and each token records that audience. See [Provider](docs/provider.md#resource-indicators).
+- **Resource servers.** A client registered with `resources` asks for tokens restricted to the APIs it names, with the `resource` parameter (RFC 8707), and each token records that audience. An API the app serves over the same store checks a request's token, its audience and its scopes with `authenticate`. See [Provider](docs/provider.md#resource-indicators).
 - **Exact redirect matching.** A redirect URI must match a registered one byte for byte. Wildcards, prefixes, normalization and loopback redirects with variable ports are not supported.
 - **The app keeps login, consent and sessions.** The provider decides what a request may ask for and checks the app's outcome against it. It does not decide who the user is, and it does not render pages.
 - **Token revocation.** A client revokes a token with `client.revoke` (RFC 7009), and the provider serves the revocation endpoint. The provider revokes the whole sign-in with either kind of token. A client presenting another client's access token is refused with `invalid_request`, and that token is left alone. See [Client](docs/client.md#revoking-tokens) and [Provider](docs/provider.md).
@@ -1212,7 +1212,7 @@ if (verified.ok) {
 
 ## Resource indicators
 
-A client that calls more than one resource server can ask for a token restricted to the ones it will call, with the `resource` parameter of RFC 8707. A token for one API is then refused by another, which a JWT verifier with that `audience` checks. The client's record lists the resources it may name in [`resources`](docs/store.md#client-records), each an absolute URI without a fragment, and a client without the list may name none.
+A client that calls more than one resource server can ask for a token restricted to the ones it will call, with the `resource` parameter of RFC 8707. A token for one API is then refused by another, which [`authenticate`](#authenticating-api-requests) or a JWT verifier with that `audience` checks. The client's record lists the resources it may name in [`resources`](docs/store.md#client-records), each an absolute URI without a fragment, and a client without the list may name none.
 
 ```ts
 import type { ClientRecord } from "@codenhub/oidc/provider";
@@ -1229,6 +1229,44 @@ const withResources: ClientRecord = { ...client, resources: ["https://api.exampl
 - **The token.** The access token's audience is the token request's resources, else the grant's. With neither, a JWT access token is for the `accessToken.audience` option, and an opaque one has no audience. The audience is saved on the access token record as `audience`. A JWT's `aud` is a string for one audience and an array for several.
 
 A refresh family keeps the resources of its sign-in, so a refresh may narrow a token to fewer of them but never add one. RFC 8707 also lets a client name resources at the token endpoint that it did not name at authorization, when the provider allows it. This provider does not: a resource the user did not consent to is never added later.
+
+## Authenticating API requests
+
+An app that serves its own API beside the provider, over the same store, checks the API's bearer tokens with `authenticate`. It reads the access token as [userinfo](#userinfo) does, from the `Authorization: Bearer` header only, looks it up by its digest, and checks its expiry, then the `audience` and `scopes` the API requires. It works for opaque and JWT access tokens alike, and a revocation takes effect at once, since the record is read on every request.
+
+```ts
+import type { Provider } from "@codenhub/oidc/provider";
+
+declare const provider: Provider;
+
+export async function listItems(request: Request): Promise<Response> {
+  const authenticated = await provider.authenticate(request, {
+    audience: "https://api.example",
+    scopes: ["data:read"],
+  });
+  if (!authenticated.ok) {
+    console.warn("api request refused", authenticated.error.reason);
+    return authenticated.error.response;
+  }
+  const { subject, clientId, scopes } = authenticated.value;
+  return Response.json({ subject, clientId, scopes });
+}
+```
+
+The value is a frozen copy of the token's [record](docs/store.md#keys-and-records): `grantId`, `clientId`, `subject`, `scopes`, `expiresAt`, and `sessionId` and `audience` when the record has them. A client credentials token's `subject` is the client identifier, as in a [JWT access token](#jwt-access-tokens). A failure carries a `response` to return as it is, the RFC 6750 §3 challenge, and a `reason` for the app's logs:
+
+| Request                                                                 | `reason`                          | `response`                                                                   |
+| ----------------------------------------------------------------------- | --------------------------------- | ---------------------------------------------------------------------------- |
+| No `Authorization` header                                               | `access_token_missing`            | `401` with `WWW-Authenticate: Bearer`, and no error code.                    |
+| A header that is not a well-formed `Bearer` credential                  | `access_token_malformed`          | `400` with `error="invalid_request"`.                                        |
+| A token that is not a live access token, such as an ID or refresh token | `access_token_unknown`            | `401` with `error="invalid_token"`.                                          |
+| An expired access token                                                 | `access_token_expired`            | `401` with `error="invalid_token"`.                                          |
+| A token whose `audience` does not include the required one              | `access_token_audience_mismatch`  | `401` with `error="invalid_token"`.                                          |
+| A token without one of the required scopes                              | `access_token_scope_insufficient` | `403` with `error="insufficient_scope"`, and the required scopes in `scope`. |
+
+The audience is checked before the scopes, so a token for another API is refused as invalid rather than told which scopes it lacks. The failure's issue code is the RFC 6750 error, `invalid_token` for a request with no token, and it has the token's `clientId` once the store found the token. Each response is `no-store` and carries no CORS headers, since the app owns its API's cross-origin policy. Leave `audience` out only for an API that every access token of the provider may call: without it, a token issued for another resource server passes.
+
+`authenticate` never throws for a request and does not report to [`onDiagnostic`](#diagnostics), since a refused API call is the API's to log. It rejects when the store does, and with a `TypeError` when the options are malformed: not an object, `scopes` that is not an array of scope tokens, or an `audience` that is not a non-empty string. A resource server that does not share the store verifies a JWT access token offline instead; see [JWT access tokens](#jwt-access-tokens). Token introspection (RFC 7662) is not supported.
 
 ## Userinfo
 
@@ -1592,7 +1630,7 @@ describe("OidcStore", () => {
 
 # Hostile input
 
-This page answers one question for each input that can come from the other side: what does it get? It covers the provider's endpoints (authorization, end-session, token, userinfo and revocation) and the client's callback, token, userinfo and discovery requests. For each input it states the exact outcome, so you can test your deployment against it.
+This page answers one question for each input that can come from the other side: what does it get? It covers the provider's endpoints (authorization, end-session, token, userinfo and revocation), `authenticate` for the app's own API, and the client's callback, token, userinfo and discovery requests. For each input it states the exact outcome, so you can test your deployment against it.
 
 Two results are used throughout. A **result** is the failed value `{ ok: false, error: { issues } }`, described in [Issues](docs/errors.md). A **response** is the HTTP answer the provider sends. A `TypeError` is never an outcome of hostile input, because the package treats the input as data.
 
@@ -1679,6 +1717,21 @@ The end-session endpoint never redirects a failed request, so the app renders ea
 | An ID token presented as an access token                | `401`, `WWW-Authenticate: Bearer error="invalid_token"`. ID tokens are never in the access token table. |
 | A refresh token presented as an access token            | `401`, `invalid_token`, for the same reason.                                                            |
 | An expired access token, or one whose grant was revoked | `401`, `invalid_token`.                                                                                 |
+
+## Provider: authenticate
+
+| Input                                                                              | Outcome                                                                                                                |
+| ---------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| No `Authorization` header, or a token only in the query or the body                | Failure `access_token_missing`: `401`, `WWW-Authenticate: Bearer`, with no error code.                                 |
+| A header that is not a well-formed `Bearer` credential                             | Failure `access_token_malformed`: `400`, `error="invalid_request"`.                                                    |
+| An oversized token                                                                 | Not found, so `access_token_unknown`: `401`, `error="invalid_token"`. The request body is never read.                  |
+| An ID token, a refresh token or a code presented as an access token                | `access_token_unknown`, `401`, `invalid_token`. Only access tokens are looked up.                                      |
+| An expired access token, or one whose grant was revoked                            | `access_token_expired` or `access_token_unknown`, `401`, `invalid_token`.                                              |
+| An access token for another resource server, or for none, when `audience` is given | `access_token_audience_mismatch`, `401`, `invalid_token`. Checked before the scopes, so the challenge names none.      |
+| An access token without one of the required `scopes`                               | `access_token_scope_insufficient`, `403`, `error="insufficient_scope"` and the required scopes, each once, in `scope`. |
+| Malformed `options` from the app                                                   | Rejects with `TypeError` before the store is read. No request input can cause it.                                      |
+
+No outcome is reported to `onDiagnostic`, and no response carries CORS headers.
 
 ## Provider: revocation
 
@@ -1805,7 +1858,7 @@ These are outside its scope. Each one is either the app's job or a known gap.
 - **A client with `requirePkce: false` is trusted to check the `nonce`.** Without PKCE, the ID token's `nonce` is what stops an attacker from injecting a stolen code into the client's session (OAuth 2.1 §7.5.1.1, RFC 9700 §2.1.1). The provider makes such a client send a `nonce` and puts it in the ID token, but cannot check that the client compares it. Turn it off only for a confidential client you know does, and never for a public one, which the provider refuses.
 - **A client with `idTokenClaims: true` receives personal data in a token it may pass around.** The claims the granted scopes release are placed in every ID token of that client, where a client that logs the token, stores it in a cookie, or forwards it to another service exposes them. The provider cannot see what the client does with its tokens. Turn it on only for a relying party that reads nothing else, and give it only the scopes it needs. The provider's own claims are never replaceable by the callback's, so the option cannot forge a `nonce`, `sid` or any other protocol claim.
 - **Assertion replay.** A client assertion's `jti` is required but not remembered, so a captured assertion can be replayed while it is accepted: an `exp` at most 300 seconds ahead of the provider's clock, plus 60 seconds of tolerance. This is by design. A replayed assertion alone gets nothing, since a code also needs its PKCE verifier and a refresh token is single use. Remembering every `jti` would cost each store a table and a write on every token request.
-- **Revocation reaches only what the provider sees.** The revocation endpoint ends a grant, but the package has no introspection endpoint. A resource server sees a revocation only by calling userinfo. An access token it accepts without calling userinfo keeps working until `ttl.accessToken` seconds have passed.
+- **Revocation reaches only what the provider sees.** The revocation endpoint ends a grant, but the package has no introspection endpoint. A resource server sees a revocation only by calling userinfo, or by `authenticate` when the app serves it over the provider's store. An access token it accepts otherwise keeps working until `ttl.accessToken` seconds have passed.
 - **JWT access tokens and revocation.** With `accessToken: { format: "jwt" }`, the provider revokes a token at once, but a resource server that verifies it offline sees a revocation only when the token expires. Keep `ttl.accessToken` short, as [JWT access tokens](docs/provider.md#jwt-access-tokens) advises.
 - **Sender-constrained tokens.** Access tokens are bearer tokens. DPoP and mutual TLS are not supported.
 - **How the user authenticates.** The package records what the app says about the login in `authTime`, `amr` and `acr`. It does not verify them, and an `amr` of `["pwd"]` is what the app claims, not a check. The same holds for `sessionId`: the provider copies it into the `sid` claim without interpreting it, so a client sees whatever the app chose, and it should not be a secret.
@@ -1900,9 +1953,9 @@ The OAuth codes a provider can send as `provider_error`'s `params.error` are the
 
 ## Provider issues
 
-These come from `beginAuthorization`, `completeAuthorization` and `endSession`. The token and userinfo endpoints do not return issues. They answer with the OAuth error responses described in [Provider](docs/provider.md#the-token-endpoint), which carry only the code.
+These come from `beginAuthorization`, `completeAuthorization`, `endSession` and `authenticate`. The token and userinfo endpoints do not return issues. They answer with the OAuth error responses described in [Provider](docs/provider.md#the-token-endpoint), which carry only the code.
 
-Eight of the OAuth codes are issue codes, and only in this table: `invalid_request`, `unauthorized_client`, `unsupported_response_type`, `invalid_scope`, `request_not_supported`, `request_uri_not_supported`, `registration_not_supported` and `invalid_target`. No other OAuth code is an issue code. A denial that `completeAuthorization` returns is a redirect carrying an `error` parameter, such as `access_denied`, which the client receives in its callback, not an issue.
+Ten of the OAuth codes are issue codes, and only in this table: `invalid_request`, `unauthorized_client`, `unsupported_response_type`, `invalid_scope`, `request_not_supported`, `request_uri_not_supported`, `registration_not_supported`, `invalid_target`, `invalid_token` and `insufficient_scope`. No other OAuth code is an issue code. A denial that `completeAuthorization` returns is a redirect carrying an `error` parameter, such as `access_denied`, which the client receives in its callback, not an issue.
 
 | Code                                                                               | Where it comes from                                                                                                                                                                             | `path`                                                                                                                                                | `params`                                                                                                                                          |
 | ---------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -1918,8 +1971,11 @@ Eight of the OAuth codes are issue codes, and only in this table: `invalid_reque
 | `invalid_request`                                                                  | `endSession`, for a malformed request: a method or media type the endpoint does not accept, an oversized URL or request body, an unreadable body, or a parameter that does not parse. Rendered. | `["id_token_hint"]` when a verified hint was issued to another client than `client_id`; otherwise none.                                               | `reason` for a parameter that does not parse: `duplicate`, `too_many`, `too_long` or `malformed`.                                                 |
 | `unknown_client`                                                                   | `endSession`, when `client_id` names no client. Rendered.                                                                                                                                       | None.                                                                                                                                                 | None.                                                                                                                                             |
 | `invalid_redirect_uri`                                                             | `endSession`, when `post_logout_redirect_uri` is not one of the client's `postLogoutRedirectUris`, or no client is known to check it against. Rendered.                                         | `["post_logout_redirect_uri"]`.                                                                                                                       | None.                                                                                                                                             |
+| `invalid_request`                                                                  | `authenticate`, for an `Authorization` header that is not a well-formed `Bearer` credential.                                                                                                    | None.                                                                                                                                                 | None.                                                                                                                                             |
+| `invalid_token`                                                                    | `authenticate`, for a request with no token, or a token that is unknown, expired, revoked, or not for the required `audience`.                                                                  | None.                                                                                                                                                 | None.                                                                                                                                             |
+| `insufficient_scope`                                                               | `authenticate`, for a token without one of the required `scopes`.                                                                                                                               | None.                                                                                                                                                 | None.                                                                                                                                             |
 
-Whether a `beginAuthorization` code redirects depends on whether the client and its redirect URI were verified first. The codes checked after that verification redirect, and the others are rendered. The `endSession` codes are always rendered.
+Whether a `beginAuthorization` code redirects depends on whether the client and its redirect URI were verified first. The codes checked after that verification redirect, and the others are rendered. The `endSession` codes are always rendered. An `authenticate` failure carries its own `response`, and its `reason` tells apart the cases one code covers.
 
 ## What throws
 

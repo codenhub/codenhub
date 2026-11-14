@@ -37,7 +37,7 @@ export type OAuthErrorCode =
  * Stable category of a failure that callers can branch on without parsing messages.
  *
  * Client codes come from `discover` and the client's methods; provider codes from
- * `beginAuthorization`, `completeAuthorization` and `endSession`. A `beginAuthorization` failure that redirects
+ * `beginAuthorization`, `completeAuthorization`, `endSession` and `authenticate`. A `beginAuthorization` failure that redirects
  * reuses the OAuth error code the client is sent; only the codes it can send are listed, so an exhaustive `switch`
  * has no dead branches. An OAuth code a provider sends to this client is reported as `provider_error` with the
  * code in `params.error`.
@@ -74,7 +74,10 @@ export type OidcIssueCode =
   | "request_not_supported"
   | "request_uri_not_supported"
   | "registration_not_supported"
-  | "invalid_target";
+  | "invalid_target"
+  // Provider: bearer tokens at the app's own APIs
+  | "invalid_token"
+  | "insufficient_scope";
 
 /**
  * A single reason an operation failed.

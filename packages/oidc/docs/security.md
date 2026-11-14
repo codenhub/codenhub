@@ -6,7 +6,7 @@ order: 4
 
 # Hostile input
 
-This page answers one question for each input that can come from the other side: what does it get? It covers the provider's endpoints (authorization, end-session, token, userinfo and revocation) and the client's callback, token, userinfo and discovery requests. For each input it states the exact outcome, so you can test your deployment against it.
+This page answers one question for each input that can come from the other side: what does it get? It covers the provider's endpoints (authorization, end-session, token, userinfo and revocation), `authenticate` for the app's own API, and the client's callback, token, userinfo and discovery requests. For each input it states the exact outcome, so you can test your deployment against it.
 
 Two results are used throughout. A **result** is the failed value `{ ok: false, error: { issues } }`, described in [Issues](errors.md). A **response** is the HTTP answer the provider sends. A `TypeError` is never an outcome of hostile input, because the package treats the input as data.
 
@@ -93,6 +93,21 @@ The end-session endpoint never redirects a failed request, so the app renders ea
 | An ID token presented as an access token                | `401`, `WWW-Authenticate: Bearer error="invalid_token"`. ID tokens are never in the access token table. |
 | A refresh token presented as an access token            | `401`, `invalid_token`, for the same reason.                                                            |
 | An expired access token, or one whose grant was revoked | `401`, `invalid_token`.                                                                                 |
+
+## Provider: authenticate
+
+| Input                                                                              | Outcome                                                                                                                |
+| ---------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| No `Authorization` header, or a token only in the query or the body                | Failure `access_token_missing`: `401`, `WWW-Authenticate: Bearer`, with no error code.                                 |
+| A header that is not a well-formed `Bearer` credential                             | Failure `access_token_malformed`: `400`, `error="invalid_request"`.                                                    |
+| An oversized token                                                                 | Not found, so `access_token_unknown`: `401`, `error="invalid_token"`. The request body is never read.                  |
+| An ID token, a refresh token or a code presented as an access token                | `access_token_unknown`, `401`, `invalid_token`. Only access tokens are looked up.                                      |
+| An expired access token, or one whose grant was revoked                            | `access_token_expired` or `access_token_unknown`, `401`, `invalid_token`.                                              |
+| An access token for another resource server, or for none, when `audience` is given | `access_token_audience_mismatch`, `401`, `invalid_token`. Checked before the scopes, so the challenge names none.      |
+| An access token without one of the required `scopes`                               | `access_token_scope_insufficient`, `403`, `error="insufficient_scope"` and the required scopes, each once, in `scope`. |
+| Malformed `options` from the app                                                   | Rejects with `TypeError` before the store is read. No request input can cause it.                                      |
+
+No outcome is reported to `onDiagnostic`, and no response carries CORS headers.
 
 ## Provider: revocation
 
@@ -219,7 +234,7 @@ These are outside its scope. Each one is either the app's job or a known gap.
 - **A client with `requirePkce: false` is trusted to check the `nonce`.** Without PKCE, the ID token's `nonce` is what stops an attacker from injecting a stolen code into the client's session (OAuth 2.1 §7.5.1.1, RFC 9700 §2.1.1). The provider makes such a client send a `nonce` and puts it in the ID token, but cannot check that the client compares it. Turn it off only for a confidential client you know does, and never for a public one, which the provider refuses.
 - **A client with `idTokenClaims: true` receives personal data in a token it may pass around.** The claims the granted scopes release are placed in every ID token of that client, where a client that logs the token, stores it in a cookie, or forwards it to another service exposes them. The provider cannot see what the client does with its tokens. Turn it on only for a relying party that reads nothing else, and give it only the scopes it needs. The provider's own claims are never replaceable by the callback's, so the option cannot forge a `nonce`, `sid` or any other protocol claim.
 - **Assertion replay.** A client assertion's `jti` is required but not remembered, so a captured assertion can be replayed while it is accepted: an `exp` at most 300 seconds ahead of the provider's clock, plus 60 seconds of tolerance. This is by design. A replayed assertion alone gets nothing, since a code also needs its PKCE verifier and a refresh token is single use. Remembering every `jti` would cost each store a table and a write on every token request.
-- **Revocation reaches only what the provider sees.** The revocation endpoint ends a grant, but the package has no introspection endpoint. A resource server sees a revocation only by calling userinfo. An access token it accepts without calling userinfo keeps working until `ttl.accessToken` seconds have passed.
+- **Revocation reaches only what the provider sees.** The revocation endpoint ends a grant, but the package has no introspection endpoint. A resource server sees a revocation only by calling userinfo, or by `authenticate` when the app serves it over the provider's store. An access token it accepts otherwise keeps working until `ttl.accessToken` seconds have passed.
 - **JWT access tokens and revocation.** With `accessToken: { format: "jwt" }`, the provider revokes a token at once, but a resource server that verifies it offline sees a revocation only when the token expires. Keep `ttl.accessToken` short, as [JWT access tokens](provider.md#jwt-access-tokens) advises.
 - **Sender-constrained tokens.** Access tokens are bearer tokens. DPoP and mutual TLS are not supported.
 - **How the user authenticates.** The package records what the app says about the login in `authTime`, `amr` and `acr`. It does not verify them, and an `amr` of `["pwd"]` is what the app claims, not a check. The same holds for `sessionId`: the provider copies it into the `sid` claim without interpreting it, so a client sees whatever the app chose, and it should not be a secret.

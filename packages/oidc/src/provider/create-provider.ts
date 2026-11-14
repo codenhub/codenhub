@@ -1,4 +1,5 @@
 import type { ProviderMetadata } from "../shared/types";
+import { authenticate } from "./authenticate";
 import { beginAuthorization, completeAuthorization } from "./authorization";
 import { backchannelLogout } from "./backchannel-logout";
 import { reportRefusal } from "./diagnostics";
@@ -8,7 +9,7 @@ import { type ResolvedEndpoints, type ResolvedOptions, resolveOptions } from "./
 import { jsonResponse, methodNotAllowed, preflightResponse } from "./responses";
 import { handleRevocation } from "./revocation";
 import { handleToken } from "./token";
-import type { AuthorizationDenial, AuthorizationGrant, Provider, ProviderOptions } from "./types";
+import type { AuthenticateOptions, AuthorizationDenial, AuthorizationGrant, Provider, ProviderOptions } from "./types";
 import { handleUserinfo } from "./userinfo";
 
 /** The endpoints this provider answers itself. The authorization endpoint is not one of them. */
@@ -139,5 +140,6 @@ export function createProvider(options: ProviderOptions): Provider {
       completeAuthorization(resolved, interactionId, outcome),
     endSession: (request: Request) => endSession(resolved, request),
     backchannelLogout: (request: Parameters<Provider["backchannelLogout"]>[0]) => backchannelLogout(resolved, request),
+    authenticate: (request: Request, options?: AuthenticateOptions) => authenticate(resolved, request, options),
   });
 }

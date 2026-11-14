@@ -8,6 +8,9 @@ export { generateClientSecret, hashClientSecret } from "./provider/secrets";
 export type {
   AccessTokenFormat,
   AccessTokenRecord,
+  AuthenticateOptions,
+  AuthenticationFailure,
+  AuthenticationFailureReason,
   AuthorizationDenial,
   AuthorizationFailure,
   AuthorizationGrant,

@@ -1209,12 +1209,12 @@ OAuth 2.0 and OpenID Connect error codes a provider sends to a client, from RFC 
 ### OidcIssueCode
 
 ```ts
-export type OidcIssueCode = "request_failed" | "invalid_metadata" | "issuer_mismatch" | "invalid_token_response" | "invalid_userinfo" | "provider_error" | "invalid_callback" | "state_mismatch" | "iss_mismatch" | "invalid_id_token" | "nonce_mismatch" | "azp_mismatch" | "at_hash_mismatch" | "auth_time_missing" | "auth_too_old" | "subject_mismatch" | "unknown_client" | "invalid_redirect_uri" | "interaction_not_found" | "invalid_request" | "unauthorized_client" | "unsupported_response_type" | "invalid_scope" | "request_not_supported" | "request_uri_not_supported" | "registration_not_supported" | "invalid_target";
+export type OidcIssueCode = "request_failed" | "invalid_metadata" | "issuer_mismatch" | "invalid_token_response" | "invalid_userinfo" | "provider_error" | "invalid_callback" | "state_mismatch" | "iss_mismatch" | "invalid_id_token" | "nonce_mismatch" | "azp_mismatch" | "at_hash_mismatch" | "auth_time_missing" | "auth_too_old" | "subject_mismatch" | "unknown_client" | "invalid_redirect_uri" | "interaction_not_found" | "invalid_request" | "unauthorized_client" | "unsupported_response_type" | "invalid_scope" | "request_not_supported" | "request_uri_not_supported" | "registration_not_supported" | "invalid_target" | "invalid_token" | "insufficient_scope";
 ```
 
 Stable category of a failure that callers can branch on without parsing messages.
 
-Client codes come from `discover` and the client's methods; provider codes from `beginAuthorization`, `completeAuthorization` and `endSession`. A `beginAuthorization` failure that redirects reuses the OAuth error code the client is sent; only the codes it can send are listed, so an exhaustive `switch` has no dead branches. An OAuth code a provider sends to this client is reported as `provider_error` with the code in `params.error`.
+Client codes come from `discover` and the client's methods; provider codes from `beginAuthorization`, `completeAuthorization`, `endSession` and `authenticate`. A `beginAuthorization` failure that redirects reuses the OAuth error code the client is sent; only the codes it can send are listed, so an exhaustive `switch` has no dead branches. An OAuth code a provider sends to this client is reported as `provider_error` with the code in `params.error`.
 
 ### OidcPathSegment
 

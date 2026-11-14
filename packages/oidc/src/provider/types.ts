@@ -659,6 +659,48 @@ export interface AuthorizationDenial {
     | "account_selection_required";
 }
 
+/** What {@link Provider.authenticate} requires of a token, beyond being a live access token. */
+export interface AuthenticateOptions {
+  /**
+   * Scopes the token must carry, every one of them. A token missing one is refused with `insufficient_scope`, and
+   * the challenge names these scopes. Each must be a scope token (RFC 6749 §3.3).
+   */
+  readonly scopes?: readonly string[];
+  /**
+   * The resource server the token must be for: one of the {@link AccessTokenRecord.audience} values, compared byte
+   * for byte. A token issued for another resource, or for none, is refused with `invalid_token`. Absent, the
+   * audience is not checked, which suits only an API that every token of the provider may call.
+   */
+  readonly audience?: string;
+}
+
+/** Why {@link Provider.authenticate} refused a request, for the app's logs. */
+export type AuthenticationFailureReason =
+  | "access_token_missing"
+  | "access_token_malformed"
+  | "access_token_unknown"
+  | "access_token_expired"
+  | "access_token_audience_mismatch"
+  | "access_token_scope_insufficient";
+
+/**
+ * Why a request to the app's API did not authenticate, and how to answer it. The issue's code is the RFC 6750 error:
+ * `invalid_request` for a malformed `Authorization` header, `insufficient_scope` for a token without a required
+ * scope, and `invalid_token` for everything else, including a request with no token, whose challenge has no error.
+ */
+export interface AuthenticationFailure extends OidcFailure {
+  /**
+   * The response to return as is: `401` with `WWW-Authenticate: Bearer` when no token was sent, `400` with
+   * `error="invalid_request"` for a malformed header, `403` with `error="insufficient_scope"` and the required
+   * scopes in `scope`, or `401` with `error="invalid_token"`. It is `no-store` and carries no CORS headers.
+   */
+  readonly response: Response;
+  /** Which check failed. Never sent to the client. */
+  readonly reason: AuthenticationFailureReason;
+  /** The client the token was issued to, when the store found the token. */
+  readonly clientId?: string;
+}
+
 /** OpenID Provider endpoints on the Fetch API. */
 export interface Provider {
   /** The discovery document this provider publishes. */
@@ -741,6 +783,27 @@ export interface Provider {
     readonly subject?: string;
     readonly sessionId?: string;
   }): Promise<Request | null>;
+  /**
+   * Checks the bearer token of a request to the app's own API, served beside the provider over the same store: the
+   * access token in the `Authorization` header, its expiry, then the `audience` and `scopes` the API requires.
+   *
+   * @remarks
+   * The token is read from the `Authorization: Bearer` header only, as userinfo reads it, and is looked up by its
+   * digest among access tokens, so an ID token, a refresh token or a code never authenticates. It works for opaque
+   * and JWT access tokens alike, and sees a revocation at once. The audience is checked before the scopes. Nothing
+   * is reported to {@link ProviderOptions.onDiagnostic}; the failure's `reason` is for the app's logs.
+   *
+   * @param request - The request to the API. Only its headers are read.
+   * @param options - What the token must carry.
+   * @returns The token's record, a frozen copy, or a failure with the response to send. Never throws for any
+   * request; rejects only when the store does, or with a `TypeError` when `options` is malformed: not an object,
+   * `scopes` that is not an array of scope tokens, or an `audience` that is not a non-empty string. Options are
+   * checked before the store is read.
+   */
+  authenticate(
+    request: Request,
+    options?: AuthenticateOptions,
+  ): Promise<OidcResult<AccessTokenRecord, AuthenticationFailure>>;
 }
 
 /**

@@ -144,6 +144,73 @@ The app's session identifier from the grant.
 readonly subject: string;
 ```
 
+### AuthenticateOptions
+
+```ts
+export interface AuthenticateOptions {
+    readonly scopes?: readonly string[];
+    readonly audience?: string;
+}
+```
+
+What `Provider.authenticate` requires of a token, beyond being a live access token.
+
+#### AuthenticateOptions › audience
+
+```ts
+readonly audience?: string;
+```
+
+The resource server the token must be for: one of the `AccessTokenRecord.audience` values, compared byte for byte. A token issued for another resource, or for none, is refused with `invalid_token`. Absent, the audience is not checked, which suits only an API that every token of the provider may call.
+
+#### AuthenticateOptions › scopes
+
+```ts
+readonly scopes?: readonly string[];
+```
+
+Scopes the token must carry, every one of them. A token missing one is refused with `insufficient_scope`, and the challenge names these scopes. Each must be a scope token (RFC 6749 §3.3).
+
+### AuthenticationFailure
+
+```ts
+export interface AuthenticationFailure extends OidcFailure {
+    readonly response: Response;
+    readonly reason: AuthenticationFailureReason;
+    readonly clientId?: string;
+}
+```
+
+Why a request to the app's API did not authenticate, and how to answer it. The issue's code is the RFC 6750 error: `invalid_request` for a malformed `Authorization` header, `insufficient_scope` for a token without a required scope, and `invalid_token` for everything else, including a request with no token, whose challenge has no error.
+
+#### AuthenticationFailure › clientId
+
+```ts
+readonly clientId?: string;
+```
+
+The client the token was issued to, when the store found the token.
+
+#### AuthenticationFailure › issues
+
+Inherited from [`OidcFailure`](#oidcfailure--issues).
+
+#### AuthenticationFailure › reason
+
+```ts
+readonly reason: AuthenticationFailureReason;
+```
+
+Which check failed. Never sent to the client.
+
+#### AuthenticationFailure › response
+
+```ts
+readonly response: Response;
+```
+
+The response to return as is: `401` with `WWW-Authenticate: Bearer` when no token was sent, `400` with `error="invalid_request"` for a malformed header, `403` with `error="insufficient_scope"` and the required scopes in `scope`, or `401` with `error="invalid_token"`. It is `no-store` and carries no CORS headers.
+
 ### AuthorizationDenial
 
 ```ts
@@ -1141,6 +1208,7 @@ export interface Provider {
         readonly subject?: string;
         readonly sessionId?: string;
     }): Promise<Request | null>;
+    authenticate(request: Request, options?: AuthenticateOptions): Promise<OidcResult<AccessTokenRecord, AuthenticationFailure>>;
 }
 ```
 
@@ -1153,6 +1221,23 @@ readonly metadata: ProviderMetadata;
 ```
 
 The discovery document this provider publishes.
+
+#### Provider › authenticate
+
+```ts
+authenticate(request: Request, options?: AuthenticateOptions): Promise<OidcResult<AccessTokenRecord, AuthenticationFailure>>;
+```
+
+Checks the bearer token of a request to the app's own API, served beside the provider over the same store: the access token in the `Authorization` header, its expiry, then the `audience` and `scopes` the API requires.
+
+The token is read from the `Authorization: Bearer` header only, as userinfo reads it, and is looked up by its digest among access tokens, so an ID token, a refresh token or a code never authenticates. It works for opaque and JWT access tokens alike, and sees a revocation at once. The audience is checked before the scopes. Nothing is reported to `ProviderOptions.onDiagnostic`; the failure's `reason` is for the app's logs.
+
+**Parameters**
+
+- `request` — The request to the API. Only its headers are read.
+- `options` — What the token must carry.
+
+**Returns** — The token's record, a frozen copy, or a failure with the response to send. Never throws for any request; rejects only when the store does, or with a `TypeError` when `options` is malformed: not an object, `scopes` that is not an array of scope tokens, or an `audience` that is not a non-empty string. Options are checked before the store is read.
 
 #### Provider › backchannelLogout
 
@@ -1872,6 +1957,14 @@ export type AccessTokenFormat =
 
 How access tokens are issued. See `ProviderOptions.accessToken`.
 
+### AuthenticationFailureReason
+
+```ts
+export type AuthenticationFailureReason = "access_token_missing" | "access_token_malformed" | "access_token_unknown" | "access_token_expired" | "access_token_audience_mismatch" | "access_token_scope_insufficient";
+```
+
+Why `Provider.authenticate` refused a request, for the app's logs.
+
 ### ClientAuthentication
 
 ```ts
@@ -1952,12 +2045,12 @@ OAuth 2.0 and OpenID Connect error codes a provider sends to a client, from RFC 
 ### OidcIssueCode
 
 ```ts
-export type OidcIssueCode = "request_failed" | "invalid_metadata" | "issuer_mismatch" | "invalid_token_response" | "invalid_userinfo" | "provider_error" | "invalid_callback" | "state_mismatch" | "iss_mismatch" | "invalid_id_token" | "nonce_mismatch" | "azp_mismatch" | "at_hash_mismatch" | "auth_time_missing" | "auth_too_old" | "subject_mismatch" | "unknown_client" | "invalid_redirect_uri" | "interaction_not_found" | "invalid_request" | "unauthorized_client" | "unsupported_response_type" | "invalid_scope" | "request_not_supported" | "request_uri_not_supported" | "registration_not_supported" | "invalid_target";
+export type OidcIssueCode = "request_failed" | "invalid_metadata" | "issuer_mismatch" | "invalid_token_response" | "invalid_userinfo" | "provider_error" | "invalid_callback" | "state_mismatch" | "iss_mismatch" | "invalid_id_token" | "nonce_mismatch" | "azp_mismatch" | "at_hash_mismatch" | "auth_time_missing" | "auth_too_old" | "subject_mismatch" | "unknown_client" | "invalid_redirect_uri" | "interaction_not_found" | "invalid_request" | "unauthorized_client" | "unsupported_response_type" | "invalid_scope" | "request_not_supported" | "request_uri_not_supported" | "registration_not_supported" | "invalid_target" | "invalid_token" | "insufficient_scope";
 ```
 
 Stable category of a failure that callers can branch on without parsing messages.
 
-Client codes come from `discover` and the client's methods; provider codes from `beginAuthorization`, `completeAuthorization` and `endSession`. A `beginAuthorization` failure that redirects reuses the OAuth error code the client is sent; only the codes it can send are listed, so an exhaustive `switch` has no dead branches. An OAuth code a provider sends to this client is reported as `provider_error` with the code in `params.error`.
+Client codes come from `discover` and the client's methods; provider codes from `beginAuthorization`, `completeAuthorization`, `endSession` and `authenticate`. A `beginAuthorization` failure that redirects reuses the OAuth error code the client is sent; only the codes it can send are listed, so an exhaustive `switch` has no dead branches. An OAuth code a provider sends to this client is reported as `provider_error` with the code in `params.error`.
 
 ### OidcPathSegment
 

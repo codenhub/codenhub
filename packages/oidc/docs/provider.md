@@ -718,7 +718,7 @@ if (verified.ok) {
 
 ## Resource indicators
 
-A client that calls more than one resource server can ask for a token restricted to the ones it will call, with the `resource` parameter of RFC 8707. A token for one API is then refused by another, which a JWT verifier with that `audience` checks. The client's record lists the resources it may name in [`resources`](store.md#client-records), each an absolute URI without a fragment, and a client without the list may name none.
+A client that calls more than one resource server can ask for a token restricted to the ones it will call, with the `resource` parameter of RFC 8707. A token for one API is then refused by another, which [`authenticate`](#authenticating-api-requests) or a JWT verifier with that `audience` checks. The client's record lists the resources it may name in [`resources`](store.md#client-records), each an absolute URI without a fragment, and a client without the list may name none.
 
 ```ts
 import type { ClientRecord } from "@codenhub/oidc/provider";
@@ -735,6 +735,44 @@ const withResources: ClientRecord = { ...client, resources: ["https://api.exampl
 - **The token.** The access token's audience is the token request's resources, else the grant's. With neither, a JWT access token is for the `accessToken.audience` option, and an opaque one has no audience. The audience is saved on the access token record as `audience`. A JWT's `aud` is a string for one audience and an array for several.
 
 A refresh family keeps the resources of its sign-in, so a refresh may narrow a token to fewer of them but never add one. RFC 8707 also lets a client name resources at the token endpoint that it did not name at authorization, when the provider allows it. This provider does not: a resource the user did not consent to is never added later.
+
+## Authenticating API requests
+
+An app that serves its own API beside the provider, over the same store, checks the API's bearer tokens with `authenticate`. It reads the access token as [userinfo](#userinfo) does, from the `Authorization: Bearer` header only, looks it up by its digest, and checks its expiry, then the `audience` and `scopes` the API requires. It works for opaque and JWT access tokens alike, and a revocation takes effect at once, since the record is read on every request.
+
+```ts
+import type { Provider } from "@codenhub/oidc/provider";
+
+declare const provider: Provider;
+
+export async function listItems(request: Request): Promise<Response> {
+  const authenticated = await provider.authenticate(request, {
+    audience: "https://api.example",
+    scopes: ["data:read"],
+  });
+  if (!authenticated.ok) {
+    console.warn("api request refused", authenticated.error.reason);
+    return authenticated.error.response;
+  }
+  const { subject, clientId, scopes } = authenticated.value;
+  return Response.json({ subject, clientId, scopes });
+}
+```
+
+The value is a frozen copy of the token's [record](store.md#keys-and-records): `grantId`, `clientId`, `subject`, `scopes`, `expiresAt`, and `sessionId` and `audience` when the record has them. A client credentials token's `subject` is the client identifier, as in a [JWT access token](#jwt-access-tokens). A failure carries a `response` to return as it is, the RFC 6750 §3 challenge, and a `reason` for the app's logs:
+
+| Request                                                                 | `reason`                          | `response`                                                                   |
+| ----------------------------------------------------------------------- | --------------------------------- | ---------------------------------------------------------------------------- |
+| No `Authorization` header                                               | `access_token_missing`            | `401` with `WWW-Authenticate: Bearer`, and no error code.                    |
+| A header that is not a well-formed `Bearer` credential                  | `access_token_malformed`          | `400` with `error="invalid_request"`.                                        |
+| A token that is not a live access token, such as an ID or refresh token | `access_token_unknown`            | `401` with `error="invalid_token"`.                                          |
+| An expired access token                                                 | `access_token_expired`            | `401` with `error="invalid_token"`.                                          |
+| A token whose `audience` does not include the required one              | `access_token_audience_mismatch`  | `401` with `error="invalid_token"`.                                          |
+| A token without one of the required scopes                              | `access_token_scope_insufficient` | `403` with `error="insufficient_scope"`, and the required scopes in `scope`. |
+
+The audience is checked before the scopes, so a token for another API is refused as invalid rather than told which scopes it lacks. The failure's issue code is the RFC 6750 error, `invalid_token` for a request with no token, and it has the token's `clientId` once the store found the token. Each response is `no-store` and carries no CORS headers, since the app owns its API's cross-origin policy. Leave `audience` out only for an API that every access token of the provider may call: without it, a token issued for another resource server passes.
+
+`authenticate` never throws for a request and does not report to [`onDiagnostic`](#diagnostics), since a refused API call is the API's to log. It rejects when the store does, and with a `TypeError` when the options are malformed: not an object, `scopes` that is not an array of scope tokens, or an `audience` that is not a non-empty string. A resource server that does not share the store verifies a JWT access token offline instead; see [JWT access tokens](#jwt-access-tokens). Token introspection (RFC 7662) is not supported.
 
 ## Userinfo
 

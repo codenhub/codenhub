@@ -65,7 +65,9 @@ Resource indicators (decision 59) follow the scope's path. `parseParameters` col
 
 The client credentials grant consumes nothing: it checks the requested scopes, then issues an access token whose subject is the client, under a new grant of its own, with no ID token or refresh token.
 
-Access tokens are opaque by default, or RFC 9068 JWTs signed with the ID token key when `accessToken.format` is `jwt` (decision 36). Both are saved under their digest, so userinfo and revocation never parse a token: a JWT access token is found the same way as an opaque one, and its signature matters only to resource servers.
+Access tokens are opaque by default, or RFC 9068 JWTs signed with the ID token key when `accessToken.format` is `jwt` (decision 36). Both are saved under their digest, so userinfo, revocation and `authenticate` never parse a token: a JWT access token is found the same way as an opaque one, and its signature matters only to resource servers that verify it offline.
+
+`authenticate` (decision 57) is userinfo's lookup without the endpoint: `bearer.ts` reads the header and finds the access token record for both, and `authenticate.ts` adds the audience and scope checks and builds its own RFC 6750 responses, without CORS, since the app's API is not one of the provider's endpoints. It returns its reason instead of reporting a diagnostic.
 
 A code or refresh token is consumed before it is checked, so a wrong verifier or redirect URI still burns it, and a second attempt is a replay. A replay revokes the grant. Because a replay can arrive while the first exchange is still saving its tokens, the store contract requires `revokeGrant` to cover tokens saved after it (decision 10); the memory store keeps a set of revoked grants and checks it on every read.
 
