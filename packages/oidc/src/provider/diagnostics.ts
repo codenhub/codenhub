@@ -27,21 +27,24 @@ export function refuse(response: Response, reason: ProviderDiagnosticReason, cli
 }
 
 /**
- * Passes the refusal recorded for `response`, if any, to the app's `onDiagnostic` callback.
+ * Passes the refusal recorded for `response`, if any, to the app's `onDiagnostic` callback, with the request
+ * that was refused.
  *
  * @param onDiagnostic - The app's callback, when it set one.
  * @param endpoint - The endpoint that answered.
+ * @param request - The request `handle` was given.
  * @param response - Its response.
  * @returns `response`, unchanged, once the callback has settled. A rejected callback rejects this promise.
  */
 export async function reportRefusal(
   onDiagnostic: ProviderOptions["onDiagnostic"],
   endpoint: ProviderDiagnostic["endpoint"],
+  request: Request,
   response: Response,
 ): Promise<Response> {
   const refusal = refusals.get(response);
   if (onDiagnostic !== undefined && refusal !== undefined) {
-    await onDiagnostic(Object.freeze({ endpoint, status: response.status, ...refusal }));
+    await onDiagnostic(Object.freeze({ endpoint, status: response.status, ...refusal }), request);
   }
   return response;
 }
