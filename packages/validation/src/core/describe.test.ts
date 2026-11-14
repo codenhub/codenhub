@@ -3,7 +3,7 @@ import { describe as group, expect, it } from "vitest";
 import * as api from "../index";
 import type { StandardSchemaV1 } from "../interop/standard-schema";
 import type { Description } from "./describe";
-import type { AnyValidator, ValidationResult, Validator } from "./types";
+import type { AnyValidator, ValidationResult } from "./types";
 
 const {
   array,
@@ -17,15 +17,18 @@ const {
   number,
   object,
   optional,
+  pass,
   pattern,
   standard,
   string,
   union,
+  validator,
 } = api;
 
 const name = string({ min: 2 });
 const slug = format("slug-ish", (text) => /^[a-z-]+$/.test(text));
-const byHand: Validator<unknown> = (input) => ({ ok: true, value: input });
+const byHand = validator((input) => pass(input));
+const rest = number();
 const file = guard("File", (value): value is Date => value instanceof Date);
 
 /** What a validator's own Standard Schema gives for a result, whatever words its messages. */
@@ -61,6 +64,7 @@ const validators: Record<string, [validator: unknown, kind: string, parts?: Reco
   hex: [api.hex(), "format", { format: "hex" }],
   hostname: [api.hostname(), "format", { format: "hostname" }],
   instanceOf: [api.instanceOf(Date), "instance", { target: Date }],
+  internationalEmail: [api.internationalEmail({ allowPlus: false }), "format", { format: "email" }],
   intersection: [api.intersection(object({}), object({})), "intersection"],
   ip: [api.ip({ version: "v4" }), "format", { format: "ip", options: { version: "v4" } }],
   isoDate: [api.isoDate(), "format", { format: "isoDate" }],
@@ -69,6 +73,7 @@ const validators: Record<string, [validator: unknown, kind: string, parts?: Reco
   codec: [api.codec(name, name, { decode: String, encode: String }), "codec", { input: name, output: name }],
   lazy: [api.lazy(() => name), "lazy"],
   literal: [api.literal("a"), "literal", { value: "a" }],
+  looseObject: [api.looseObject({ name }), "object", { shape: { name }, unknownKeys: "passthrough" }],
   mac: [api.mac(), "format", { format: "mac" }],
   map: [api.map(name, number()), "map", { key: name }],
   nanoid: [api.nanoid(), "format", { format: "nanoid" }],
@@ -76,12 +81,9 @@ const validators: Record<string, [validator: unknown, kind: string, parts?: Reco
   nullable: [api.nullable(name), "nullable", { inner: name }],
   nullish: [api.nullish(name), "nullish", { inner: name }],
   number: [number({ int: true }), "number", { options: { int: true } }],
-  object: [
-    object({ name }, { unknownKeys: "strict" }),
-    "object",
-    { shape: { name }, options: { unknownKeys: "strict" } },
-  ],
+  object: [object({ name }), "object", { shape: { name }, options: {}, unknownKeys: undefined }],
   objectLike: [api.objectLike({ name }), "objectLike", { shape: { name } }],
+  objectWithRest: [api.objectWithRest({ name }, rest), "object", { shape: { name }, unknownKeys: rest }],
   oneOf: [api.oneOf(["a", "b"]), "oneOf", { values: ["a", "b"] }],
   optional: [optional(name, "anonymous"), "optional", { inner: name, default: "anonymous" }],
   phone: [api.phone(), "format", { format: "phone" }],
@@ -94,6 +96,7 @@ const validators: Record<string, [validator: unknown, kind: string, parts?: Reco
   semver: [api.semver(), "format", { format: "semver" }],
   set: [api.set(name), "set", { item: name }],
   slug: [api.slug(), "format", { format: "slug" }],
+  strictObject: [api.strictObject({ name }), "object", { shape: { name }, unknownKeys: "strict" }],
   string: [name, "string", { options: { min: 2 }, checks: [] }],
   symbol: [api.symbol(), "symbol"],
   tagged: [api.tagged("type", { a: object({}) }), "tagged", { key: "type" }],
@@ -123,8 +126,9 @@ const checks: Record<string, [check: unknown, params: Record<string, unknown>]> 
 };
 
 /**
- * The exports the tables above do not list: the ones that make no validator, `check`, whose check cannot
- * be read, and the ones that give a validator made of another, which have tests of their own.
+ * The exports the tables above do not list: the ones that make no validator, `check` and `validator`,
+ * whose check and validator cannot be read, and the ones that give a validator made of another, which
+ * have tests of their own.
  */
 const others = new Set([
   "assert",
@@ -161,6 +165,7 @@ const others = new Set([
   "tooBigMessage",
   "tooSmallMessage",
   "unrecognizedKeyMessage",
+  "validator",
 ]);
 
 group("the description of a validator", () => {
@@ -206,6 +211,21 @@ group("the description of a validator", () => {
     expect(describe(byHand)).toBeUndefined();
     expect(describe(undefined as never)).toBeUndefined();
     expect(describe({ "~description": { kind: "string" } } as never)).toBeUndefined();
+  });
+
+  it("should say how an object treats the keys it does not list as a part of its own, not among its options", () => {
+    const made = [
+      object({ name }, { message: "Bad" }),
+      api.strictObject({ name }, { message: "Bad" }),
+      api.looseObject({ name }, { message: "Bad" }),
+      api.objectWithRest({ name }, rest, { message: "Bad" }),
+    ];
+    expect(made.map((each) => describe(each)?.["unknownKeys"])).toEqual([undefined, "strict", "passthrough", rest]);
+    for (const each of made) {
+      expect(describe(each)?.kind).toBe("object");
+      expect(describe(each)?.options).toEqual({ message: "Bad" });
+      expect(describe(each)?.["shape"]).toEqual({ name });
+    }
   });
 
   it("should give frozen data that a later change to what the factory was given does not reach", () => {

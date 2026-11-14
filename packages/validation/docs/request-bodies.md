@@ -194,7 +194,7 @@ The merged object is new. So an own `__proto__` key that one side passed on unch
 
 So `intersection(object({ ["__proto__"]: unknown() }), unknown())` keeps a `__proto__` key, since the left shape lists it and made the value. Wrap that `object` in a `transform` and the key is reported instead, unless the transform hands back the input object itself. The computed key matters: written as `{ __proto__: unknown() }`, the literal sets the shape's prototype and lists no key at all. Yes, really.
 
-Both validators see the whole input, so two `object`s with `unknownKeys: "strict"` pass together only when every key of the input is listed in both shapes: each rejects the keys only the other lists. To combine strict shapes, spread them into one: `object({ ...named, ...aged }, { unknownKeys: "strict" })`.
+Both validators see the whole input, so two `strictObject`s pass together only when every key of the input is listed in both shapes: each rejects the keys only the other lists. To combine strict shapes, spread them into one: `strictObject({ ...named, ...aged })`.
 
 ## Recursive data
 

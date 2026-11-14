@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { validator } from "../builders/validator";
 import { describe as describeValidator } from "../core/describe";
 import type { Validator } from "../core/types";
 import { email } from "../formats/email";
@@ -72,10 +73,11 @@ describe("meta", () => {
   });
 
   it("should give a validator written by hand a description that holds it and the meta", () => {
-    const byHand: Validator<string> = (input) =>
+    const byHand: Validator<string> = validator((input) =>
       typeof input === "string"
         ? { ok: true, value: input }
-        : { ok: false, error: { issues: [{ code: "custom", path: [] }] } };
+        : { ok: false, error: { issues: [{ code: "custom", path: [] }] } },
+    );
     const described = meta(byHand, { title: "Text" });
     expect(describeValidator(described)).toEqual({ kind: "meta", inner: byHand, meta: { title: "Text" } });
     expect(valueOf(described("a"))).toBe("a");

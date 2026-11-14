@@ -3,110 +3,53 @@ import { describe, expect, it } from "vitest";
 import { accepts, codesOf, issuesOf, valueOf } from "../test-utils";
 import { email } from "./email";
 import { hostname } from "./hostname";
-import { url } from "./url";
 
 describe("email", () => {
-  it("should keep the local part as written and return the domain as the parser writes it", () => {
+  it("should keep the local part as written and return the domain in lowercase", () => {
     expect(valueOf(email()("Me.Name+tag@Example.COM"))).toBe("Me.Name+tag@example.com");
+    expect(valueOf(email()("ADA@MAIL.Example.Co.UK"))).toBe("ADA@mail.example.co.uk");
   });
 
-  it("should accept subdomains and internationalized top-level domains in punycode", () => {
-    expect(accepts(email(), "a@mail.example.co.uk", "a@example.xn--p1ai")).toEqual([true, true]);
+  it("should accept subdomains", () => {
+    expect(accepts(email(), "a@mail.example.co.uk", "a@a.b.c.example.com")).toEqual([true, true]);
   });
 
-  it("should accept an internationalized domain and return it in the ASCII form mail is delivered to", () => {
-    expect(valueOf(email()("ada@münchen.de"))).toBe("ada@xn--mnchen-3ya.de");
-    expect(accepts(email(), "ada@例え.jp", "ada@bücher.example.co.uk", "ada@xn--mnchen-3ya.de")).toEqual([
-      true,
-      true,
-      true,
-    ]);
+  it("should reject a domain with a letter beyond ASCII, which internationalEmail reads", () => {
+    // The last is written with its accent apart, which the parser composes.
+    const written = ["ada@münchen.de", "ada@例え.jp", "ada@bücher.example.co.uk", "ada@mu\u0308nchen.de"];
+    expect(accepts(email(), ...written)).toEqual(written.map(() => false));
   });
 
-  it("should accept a domain with a joiner where IDNA allows one, as url reads it, and reject one between letters", () => {
-    // A zero-width non-joiner after a Persian letter and after a Devanagari virama, and a zero-width
-    // joiner after a Sinhala virama, as these scripts write them (RFC 5892 CONTEXTJ).
-    for (const name of ["می\u200Cخواهم.com", "क्\u200Cष.com", "ශ්\u200Dරී.lk"]) {
-      const host = new URL(valueOf(url()(`http://${name}/`))).hostname;
-      expect(valueOf(email()(`ada@${name}`))).toBe(`ada@${host}`);
-    }
-    expect(accepts(email(), "ada@a\u200Cb.com", "ada@a\u200Db.com", "ada@xn--ab-j1t.com")).toEqual([
-      false,
-      false,
-      false,
-    ]);
+  it("should reject a domain with a punycode label that decodes, in any position and letter case", () => {
+    const valid = ["ada@xn--mnchen-3ya.de", "a@example.xn--p1ai", "a@a.xn--ls8h", "a@XN--MNCHEN-3YA.de"];
+    expect(accepts(email(), ...valid)).toEqual(valid.map(() => false));
+    // A domain validator replaces the rule that the domain is public, not the one that it is written in ASCII.
+    const local = email({ domain: hostname() });
+    expect(accepts(local, "a@intranet", "a@xn--mnchen-3ya", "a@xn--mnchen-3ya.de")).toEqual([true, false, false]);
   });
 
-  it("should reject a domain the parser writes as a label it cannot read again", () => {
-    expect(email()("a@éxn--.com").ok).toBe(false);
-  });
-
-  it("should reject a punycode label that does not decode, in any position", () => {
+  it("should reject a domain with a punycode label that does not decode, in any position", () => {
     const invalid = ["a@example.xn--zz", "a@xn--zz.com", "a@XN--ZZ.example.com", "a@a.xn--a"];
     expect(accepts(email(), ...invalid)).toEqual(invalid.map(() => false));
-    expect(accepts(email(), "a@a.xn--ls8h", "a@XN--MNCHEN-3YA.de")).toEqual([true, true]);
-    const local = email({ domain: hostname() });
-    expect(accepts(local, "a@xn--zz", "a@xn--mnchen-3ya")).toEqual([false, true]);
+    expect(email({ domain: hostname() })("a@xn--zz").ok).toBe(false);
   });
 
-  it("should return the domain the parser reads when the text spells it another way, so one address has one spelling", () => {
-    expect(valueOf(email()("ada@\uff45xample.com"))).toBe("ada@example.com");
-    expect(valueOf(email()("ada@mu\u0308nchen.de"))).toBe("ada@xn--mnchen-3ya.de");
-    expect(valueOf(email()("ada@\ufb01sh.com"))).toBe("ada@fish.com");
-    expect(valueOf(email()("ada@exa\ufe0fmple.com"))).toBe("ada@example.com");
-  });
-
-  it("should read the full stops IDNA maps to a dot as dots, as url does", () => {
-    for (const stop of ["\u3002", "\uff0e", "\uff61"]) {
-      expect(valueOf(email()(`ada@example${stop}com`))).toBe("ada@example.com");
-      expect(valueOf(url()(`https://example${stop}com/`))).toBe("https://example.com/");
-    }
-  });
-
-  it("should measure the address as it is delivered, where an internationalized host is longer", () => {
-    const label = Array.from({ length: 26 }, (_, index) => String.fromCodePoint(0x4e00 + index * 7)).join("");
-    const host = `${label}.${label}.${label}.${label}.com`;
-    const address = `${"a".repeat(64)}@${host}`;
-    expect(address.length).toBeLessThan(254);
-    expect(email()(address).ok).toBe(false);
-    expect(email()(`a@${host}`).ok).toBe(true);
-  });
-
-  it("should reject a domain written with more than 759 characters, and read a shorter one the parser shortens", () => {
-    // A variation selector, which the parser drops from a host, so the domain read is `example.com`.
-    const padded = (marks: number): string => `e${"️".repeat(marks)}xample.com`;
-    expect(padded(748)).toHaveLength(759);
-    expect(valueOf(email()(`a@${padded(748)}`))).toBe("a@example.com");
-    expect(email()(`a@${padded(749)}`).ok).toBe(false);
-    expect(email({ domain: hostname() })(`a@${padded(749)}`).ok).toBe(false);
-    expect(accepts(url({ protocols: ["mailto"] }), `mailto:a@${padded(748)}`, `mailto:a@${padded(749)}`)).toEqual([
-      true,
-      false,
-    ]);
-    // Letters written with their accents apart are longer than the 253 characters of the host they spell.
-    const decomposed = `${Array.from({ length: 5 }, () => "é".repeat(30)).join(".")}.com`;
-    expect(decomposed.length).toBeGreaterThan(253);
-    expect(email()(`a@${decomposed}`).ok).toBe(true);
+  it("should reject a domain the URL parser would read as another spelling of an ASCII one", () => {
+    // A fullwidth letter, a ligature, a variation selector, and the full stops IDNA maps to a dot.
+    const spelled = [
+      "ada@\uff45xample.com",
+      "ada@\uff45\uff58\uff41\uff4d\uff50\uff4c\uff45.\uff43\uff4f\uff4d",
+      "ada@\ufb01sh.com",
+      "ada@exa\ufe0fmple.com",
+      "ada@example\u3002com",
+      "ada@example\uff0ecom",
+      "ada@example\uff61com",
+    ];
+    expect(accepts(email(), ...spelled)).toEqual(spelled.map(() => false));
   });
 
   it("should reject a non-ASCII local part", () => {
     expect(accepts(email(), "ü@example.com", "用户@example.com")).toEqual([false, false]);
-  });
-
-  it("should reject an internationalized host that is not a public domain name or not a host at all", () => {
-    expect(
-      accepts(
-        email(),
-        "a@münchen",
-        "a@münchen.test",
-        "a@münchen.de/x",
-        "a@münchen.de:80",
-        "a@m%C3%BCnchen.de",
-        "a@münchen.de?x",
-        "a@münch en.de",
-        `a@${"ü".repeat(60)}.${"ü".repeat(60)}.${"ü".repeat(60)}.com`,
-      ),
-    ).toEqual(Array(8).fill(false));
   });
 
   it("should reject malformed addresses", () => {
@@ -134,6 +77,16 @@ describe("email", () => {
 
   it("should reject hosts that are not public domain names", () => {
     expect(accepts(email(), "a@127.0.0.1", "a@[::1]", "a@intranet")).toEqual([false, false, false]);
+  });
+
+  it("should reject a host the URL parser reads as an IPv4 address, whatever the domain validator", () => {
+    const numeric = ["a@127.0.0.1", "a@2130706433", "a@0x7f000001", "a@0x7F.1", "a@example.123", "a@1.2.3.4."];
+    expect(accepts(email(), ...numeric)).toEqual(numeric.map(() => false));
+    expect(accepts(email({ domain: hostname() }), ...numeric)).toEqual(numeric.map(() => false));
+  });
+
+  it("should reject an absolute name, ending in a dot", () => {
+    expect(accepts(email(), "a@example.com.", "a@example.com..")).toEqual([false, false]);
   });
 
   it("should reject special-use domain names, in any letter case", () => {

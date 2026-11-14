@@ -1,7 +1,7 @@
 ---
 title: Validadores personalizados
 description: Adicione regras com verificações, crie validadores que se comportam como os nativos, valide de forma assíncrona e nomeie os tipos que uma biblioteca de validadores exporta.
-source: af94592a6ca7df1e142842b835a6da5cf77e3251
+source: f41eee1c5e2e39b89c00f8aae7f67d9a014f2b4f
 order: 6
 ---
 
@@ -44,34 +44,38 @@ Sem código, o problema tem o código `custom`, no próprio local do valor. Um p
 
 Uma verificação roda depois que o valor tem o seu tipo e passou pelas opções do próprio validador. Então o `username` acima nunca testa um nome com mais de 30 caracteres. Para um objeto, isso significa depois que todas as propriedades passaram, então uma verificação pode compará-las. [Formulários](forms.md#campos-que-precisam-coincidir) mostra duas senhas que precisam coincidir, e [`checkFields`](forms.md#uma-regra-que-não-espera-os-outros-campos), uma verificação que roda antes de os outros campos passarem.
 
-### Uma verificação escrita à mão
+### Uma verificação que reporta vários problemas
 
-Uma verificação também pode ser uma função que não retorna nada para um valor que aceita, ou retorna os problemas que encontrou. Tipe-a como `Check<T>`. É assim que uma verificação reporta vários problemas de uma vez, ou escolhe um caminho para cada falha:
+Um teste também pode retornar os problemas que encontrou, e uma lista vazia para um valor que aceita. É assim que uma verificação reporta vários problemas de uma vez, ou escolhe um caminho para cada falha:
 
 ```ts
-import { string, type Check } from "@codenhub/validation";
+import { check, string, type IssueInput } from "@codenhub/validation";
 
-const strongPassword: Check<string> = (password) => {
-  const issues = [];
+const strongPassword = check((password: string) => {
+  const issues: IssueInput[] = [];
   if (!/\d/.test(password)) {
-    issues.push({ code: "missing_digit", path: [] });
+    issues.push({ code: "missing_digit" });
   }
   if (!/[A-Z]/.test(password)) {
-    issues.push({ code: "missing_uppercase", path: [] });
+    issues.push({ code: "missing_uppercase" });
   }
-  return issues.length > 0 ? issues : undefined;
-};
+  return issues;
+});
 
 const password = string({ min: 12, max: 200 }, strongPassword);
+
+password("correct horse battery"); // { ok: false, ... }, code "missing_digit"
 ```
 
-Cada problema que ela retorna é um objeto, como `fail()` cria, e o tipo dele é `ValidationIssue`:
+Cada problema da lista é um objeto, na forma que `fail()` aceita:
 
-- Qualquer outra coisa na lista, como `null`, lança um `TypeError` quando a verificação a reporta.
-- Um problema sem `code` tem o código `custom`.
-- O `code` e a `message` dele são texto, e o `path` é uma lista de chaves e índices. Um `path` que não é uma lista, como `"confirm"`, também lança um `TypeError`.
+- Um problema sem `code` tem o código `custom`, e um sem `path` fica no próprio local do valor.
+- Um problema sem `message` é descrito pelo segundo argumento de `check`, quando ele é uma mensagem ou um problema que tem uma.
+- Qualquer outra coisa na lista, como `null` ou um texto, lança um `TypeError` quando a verificação a reporta. O mesmo vale para um `path` que não é uma lista, como `"confirm"`.
 
-Criar os problemas com `fail()` verifica o restante no momento em que são criados.
+Um teste que retorna qualquer coisa que não seja um booleano ou uma lista lança um `TypeError` quando a verificação roda. Isso inclui o `undefined` de um teste que esqueceu de retornar: lido como um valor que passou, ele aceitaria todo valor.
+
+Um validador aceita como verificação só o que `check`, [`checkFields`](forms.md#uma-regra-que-não-espera-os-outros-campos) ou uma verificação nativa como `nonBlank()` criou. Uma função passada no lugar de uma verificação lança um `TypeError` quando o validador é criado. O código que roda um teste e lê a resposta dele vem com `check`, então um schema sem `check` não carrega nada desse código.
 
 ## Criando um validador
 
@@ -127,19 +131,25 @@ export function sku(prefix: string): Validator<string> {
 
 ### À mão
 
-Um validador é qualquer função que recebe uma entrada e retorna um resultado. Retorne `pass(value)` quando a entrada for aceitável, e `fail(...)` quando não for:
+`validator(validate)` cria um validador a partir de uma função que recebe uma entrada e retorna um resultado. Retorne `pass(value)` quando a entrada for aceitável, e `fail(...)` quando não for:
 
 ```ts
-import { fail, pass, type Validator } from "@codenhub/validation";
+import { fail, pass, validator } from "@codenhub/validation";
 
-const even: Validator<number> = (input) => (typeof input === "number" && input % 2 === 0 ? pass(input) : fail({ code: "not_even" }));
+const even = validator((input) => (typeof input === "number" && input % 2 === 0 ? pass(input) : fail({ code: "not_even" })));
+
+even(4); // { ok: true, value: 4 }
+even(3); // { ok: false, ... }, code "not_even"
 ```
 
-O parâmetro é `unknown`, porque um validador existe para verificar dados em que você ainda não confia. A anotação `Validator<number>` faz o compilador conferir a sua função contra o contrato, e diz a `Infer` o que ela produz.
+O parâmetro é `unknown`, porque um validador existe para verificar dados em que você ainda não confia. O tipo que o validador produz é lido do que a função retorna, então `even` é um validador de `number`, e `Infer` diz isso.
 
-Um segundo tipo diz o que ela aceita, para [`InferInput`](forms.md#os-tipos-de-um-formulário): `Validator<number, string>` é um validador que lê um número a partir de texto. Sem ele, o tipo de entrada é `unknown`.
+- Para nomear um tipo que o corpo não mostra, tipe o que a função retorna: `validator((input): ValidationResult<User> => ...)`.
+- Para dizer o que ele aceita, para [`InferInput`](forms.md#os-tipos-de-um-formulário), tipe a função como um validador antes de passá-la: uma tipada como `Validator<number, string>` lê um número a partir de texto. Sem isso, o tipo de entrada é `unknown`.
 
-Um validador escrito à mão funciona em todo lugar em que um nativo funciona, como dentro de `object`, `optional` e `pipe`. Ele não tem opção `message` nem verificações, a não ser que você as escreva, e é para isso que servem os builders.
+O que `validator` retorna funciona em todo lugar em que um nativo funciona, como dentro de `object`, `optional` e `pipe`, e é um [Standard Schema](standard-schema.md) como eles são. Ele não tem opção `message` nem verificações, a não ser que você as escreva, e é para isso que servem os builders.
+
+Um compositor só aceita uma função escrita à mão por meio de `validator`. O código que chama uma função assim, verifica o que ela retornou e espera por ela vem com `validator`, então um schema sem `validator` não carrega nada desse código.
 
 `fail` aceita um ou mais problemas. Cada um pode definir:
 
@@ -152,33 +162,35 @@ Um validador escrito à mão funciona em todo lugar em que um nativo funciona, c
 
 `fail` lança um `TypeError` quando não recebe nenhum problema, já que uma falha sem problema não diz nada. Ele também lança para um `path` que não é uma lista, como `"confirm"` onde se queria `["confirm"]`, que seria dividido em um segmento por letra.
 
-### Um validador que não retorna resultado
+### Uma função que não é um validador
 
-Um validador que retorna qualquer coisa que não seja um resultado é um bug, e o pacote lança um `TypeError` que diz onde ele está:
+Uma função que não foi criada por este pacote é recusada onde deveria estar um validador, com um `TypeError` que nomeia o argumento quando o compositor é criado:
 
 ```ts
 import { object, string, type Validator } from "@codenhub/validation";
 
-const profile = object({ name: string as unknown as Validator<string> });
-
-profile({ name: { min: 2 } }); // TypeError: The validator at ["name"] returned no result. A factory is called first, as in string()
+object({ name: string as unknown as Validator<string> }); // TypeError: shape.name is not a validator of this copy of the package. A factory is called first, as in string(), and any other function is given to validator()
 ```
 
-A causa comum é passar uma factory onde deveria estar o validador dela, como `string` em vez de `string()`. Chamada com a entrada, uma factory retorna um validador, ou lança uma exceção para uma entrada que não é um objeto de opções. Os tipos rejeitam isso, então acontece em JavaScript, ou depois de um cast. Um validador escrito à mão que não retorna nada, que retorna a própria entrada ou uma falha sem problemas é reportado do mesmo jeito. Onde não há caminho, a mensagem nomeia o lugar: "The validator given to fallback", "The key validator of record", ou `options[1]` de um `union`.
+A causa comum é passar uma factory onde deveria estar o validador dela, como `string` em vez de `string()`. Os tipos rejeitam isso, então acontece em JavaScript, ou depois de um cast. A outra é uma função escrita à mão que não foi passada para `validator`, o que os tipos aceitam quando ela é tipada como um `Validator`. O nome é o do argumento: `shape.name`, `item`, `options[1]` de um `union`, `key` de um `record`. Um `lazy` lê o validador dele quando roda pela primeira vez, então é nesse momento que ele lança.
+
+Um validador feito por outra cópia instalada deste pacote é recusado da mesma forma, e uma de suas verificações também: acontece quando dois pacotes dependem de versões de `@codenhub/validation` que não coincidem, e um recebe um esquema do outro. Cada cópia relata os problemas a si mesma, então uma não consegue executar os validadores da outra como seus. Instale uma única versão para ambos, ou passe o validador para `validator`, que o executa como qualquer função escrita à mão e mantém seus problemas, embora não mais o que `describe` e `toJsonSchema` leem dele.
+
+Uma função passada para `validator` que retorna qualquer coisa que não seja um resultado também é um bug: nada, a própria entrada ou uma falha sem problemas. O validador lança um `TypeError` quando roda, "A validator written by hand must return pass(value) or fail(issue)".
 
 ### Uma conversão que pode falhar
 
 [`transform`](shaping-values.md#transform) transforma o valor que um validador produziu em outro, e não pode rejeitá-lo. Uma conversão que pode falhar, como ler um dia como um `Date`, é um validador por si só, colocado depois do primeiro com `pipe`:
 
 ```ts
-import { fail, isoDate, pass, pipe, type Validator } from "@codenhub/validation";
+import { fail, isoDate, pass, pipe, validator } from "@codenhub/validation";
 
 // isoDate já verificou que o texto é um dia como 2026-09-28, então isto o lê como meia-noite UTC
 // do mesmo jeito em todo runtime. `new Date(text)` com texto em formato livre não faria isso.
-const startOfDay: Validator<Date> = (input) => {
+const startOfDay = validator((input) => {
   const date = new Date(`${String(input)}T00:00:00Z`);
   return Number.isNaN(date.getTime()) ? fail({ code: "invalid_date" }) : pass(date);
-};
+});
 
 const birthday = pipe(isoDate(), startOfDay);
 ```
@@ -204,17 +216,17 @@ const result = await signup(input);
 
 Nada mais muda. Um validador que recebe uma verificação assíncrona vira um `AsyncValidator`, e o mesmo acontece com tudo que o contém: o `signup` acima é um porque `username` é.
 
-O tipo diz ao compilador que o resultado precisa ser aguardado. Então ler `signup(input).ok` sem `await` é um erro que você encontra enquanto escreve, não um bug que você encontra em produção, onde uma promise não tem `ok`: `!result.ok` barraria todo cadastro, e `result.ok === false` deixaria todos passarem. Uma verificação escrita à mão que pode esperar é tipada como `AsyncCheck<T>`. Tipá-la como `Check<T>` mantém os validadores dela síncronos, e o compilador cobra isso de você.
+O tipo diz ao compilador que o resultado precisa ser aguardado. Então ler `signup(input).ok` sem `await` é um erro que você encontra enquanto escreve, não um bug que você encontra em produção, onde uma promise não tem `ok`: `!result.ok` barraria todo cadastro, e `result.ok === false` deixaria todos passarem. Uma verificação cujo teste pode esperar é um `AsyncCheck<T>`, e uma cujo teste responde na hora é um `Check<T>`, que mantém os validadores dela síncronos.
 
 Você também pode escrever um validador assíncrono diretamente:
 
 ```ts
-import { fail, pass, type AsyncValidator } from "@codenhub/validation";
+import { fail, pass, validator } from "@codenhub/validation";
 
-const existingUser: AsyncValidator<User> = async (input) => {
+const existingUser = validator(async (input) => {
   const user = typeof input === "string" ? await findUser(input) : undefined;
   return user ? pass(user) : fail({ code: "unknown_user" });
-};
+});
 ```
 
 O que um validador assim chama depois do próprio `await` é uma validação separada, já que o pacote não consegue acompanhar um `await` que não foi ele que fez. Um `lazy` que ele alcança volta a contar o `maxCalls` do zero, então a recursão por ali não tem limite. Quando o validador leva de volta a um schema recursivo, deixe o `await` em uma verificação, cujos awaits o próprio pacote faz.
@@ -230,7 +242,7 @@ O que saber sobre validação assíncrona:
 ## O que você não deve fazer
 
 - **Não coloque a entrada em um problema.** Nenhum valor em `params`, e nenhuma `message` montada a partir da entrada. Problemas vão para logs, e entradas são senhas e tokens.
-- **Não lance exceções para entrada ruim.** Retorne `false` de um teste, problemas de uma verificação, ou `fail` de um validador. Lance exceções só para um erro na configuração de um validador, e faça isso quando ele é criado, não quando roda.
+- **Não lance exceções para entrada ruim.** Retorne `false` ou uma lista de problemas de um teste, ou `fail` de um validador. Lance exceções só para um erro na configuração de um validador, e faça isso quando ele é criado, não quando roda.
 - **Não modifique a entrada.** Retorne um novo valor com `pass` quando um validador o altera.
 - **Não crie um validador no carregamento de um módulo a menos que a chamada seja marcada como pura.** `export const postcode = format(...)` roda quando o módulo carrega, então um bundler o mantém mesmo em um programa que nunca o usa. Em um app, isso é inofensivo. Uma biblioteca de validadores que quer que cada um seja descartado quando não for usado escreve `export const postcode = /* @__PURE__ */ format(...)`.
 
@@ -256,15 +268,16 @@ Uma biblioteca que exporta validadores próprios os nomeia nas suas declaraçõe
 Os tipos que você mais escreve:
 
 - `Validator<T, TInput?>` e `AsyncValidator<T, TInput?>`: um validador, síncrono ou não. `AnyValidator` é qualquer um dos dois.
-- `Schema<T, TInput?>` e `AsyncSchema<T, TInput?>`: um validador criado por uma factory deste pacote, que também é um [Standard Schema](standard-schema.md). Um validador escrito à mão é um `Validator` e não um `Schema`, já que não tem `~standard`.
+- `Schema<T, TInput?>` e `AsyncSchema<T, TInput?>`: um validador criado por uma factory deste pacote, que também é um [Standard Schema](standard-schema.md). O que `validator` retorna também é um. Uma função só tipada como `Validator` não é, e nenhum compositor a aceita.
 - `Check<T>` e `AsyncCheck<T>`: uma verificação.
 - `Infer` e `InferInput`: o tipo que um validador produz, e o tipo que pode passar por ele.
 - `ValidationResult<T>`, que é `ValidationOk<T>` ou `ValidationErr`. Um `ValidationErr` guarda um `ValidationFailure`, cujos `issues` são `ValidationIssue`s.
 - `ValidationIssueCode`, os códigos nativos, aberto a qualquer outra string, e `ValidationPathSegment`, uma chave ou um índice de um `path`.
-- `IssueInput`, um problema na forma que `fail` aceita.
+- `IssueInput`, um problema na forma que `fail` aceita, e `CheckAnswer`, o que o teste de um `check` retorna.
+- `Validated`, o que uma função passada para `validator` retorna, e `ValidatedValue`, o tipo do valor que há nele.
 - `Message`, o texto ou a função de uma opção `message`, e `MessageOptions`, as opções que todo validador aceita.
 
-As opções de cada validador levam o nome dele: `StringOptions`, `NumberOptions`, `BigintOptions`, `DateOptions`, `FileOptions`, `ArrayOptions`, `TupleOptions`, `ObjectOptions`, `LazyOptions`, `FormDataOptions`, `SearchParamsOptions`, `CoerceDateOptions`, `EmailOptions`, `UrlOptions`, `IpOptions`, `UuidOptions`, `DatetimeOptions`, `TimeOptions` e `Base64Options`. `SizeOptions` guarda o `min`, o `max` e o `length` que `set`, `map` e `record` aceitam. `AssertOptions`, `JsonSchemaOptions` e os demais pertencem às páginas das suas funções.
+As opções de cada validador levam o nome dele: `StringOptions`, `NumberOptions`, `BigintOptions`, `DateOptions`, `FileOptions`, `ArrayOptions`, `TupleOptions`, `LazyOptions`, `FormDataOptions`, `SearchParamsOptions`, `CoerceDateOptions`, `EmailOptions`, `UrlOptions`, `IpOptions`, `UuidOptions`, `DatetimeOptions`, `TimeOptions` e `Base64Options`. `SizeOptions` guarda o `min`, o `max` e o `length` que `set`, `map` e `record` aceitam. `AssertOptions`, `JsonSchemaOptions` e os demais pertencem às páginas das suas funções.
 
 Os tipos de estruturas, que nomeiam o que um compositor produz e aceita:
 

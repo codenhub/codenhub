@@ -1,11 +1,12 @@
-import { chain, collect, runEach, type Maybe } from "../core/async";
-import { tail } from "../core/checks";
-import { describe, described, type Description } from "../core/describe";
+import { runOf, toolsOf } from "../core/child";
+import { describe, type Description } from "../core/describe";
+import { accepter, waitsOf } from "../core/finish";
 import { resolvedOf } from "../core/lazy";
-import { cap, MAX_ISSUES } from "../core/limit";
-import { call, composed } from "../core/nesting";
+import { toValidator } from "../core/make";
 import { entriesOf, isArray, isPlainObject, setOwn, sizeOfMap, sizeOfSet, timeOf, valuesOf } from "../core/objects";
-import { assertFunction, failWith, issue, RESERVED_KEY, reservedKey } from "../core/result";
+import { issue, RESERVED_KEY, reservedKey } from "../core/result";
+import { adopt, cap, count, FAIL, MAX_ISSUES, type Pending as Waiting, type Run } from "../core/run";
+import { split } from "../core/split";
 import type {
   AnyValidator,
   AsyncRest,
@@ -17,8 +18,8 @@ import type {
   Rest,
   ValidationIssue,
   ValidationPathSegment,
-  ValidationResult,
 } from "../core/types";
+import { wordKey, wordSize } from "../core/words";
 
 /** A pair of values still to be merged, where the result goes, and how it was reached. */
 interface Pending {
@@ -130,7 +131,7 @@ function partsAt(record: Description, { segment, isKey }: Place): readonly unkno
     case "object":
     case "objectLike": {
       const shape = record["shape"] as Record<string, unknown>;
-      const rest = record.options?.["unknownKeys"];
+      const rest = record["unknownKeys"];
       return typeof segment === "string" && Object.hasOwn(shape, segment)
         ? [shape[segment]]
         : typeof rest === "function"
@@ -359,7 +360,7 @@ function merge(left: unknown, right: unknown, walk: Walk): unknown {
  * in a `pipe` step followed by a step that makes a new object, or a `map` entry's key validator, for
  * the entry's value. A value both sides passed on whole is the input's own object, and is
  * kept as it is. Two `object`s
- * with `unknownKeys: "strict"` pass together only when every key of the input is listed in both shapes,
+ * made by `strictObject` pass together only when every key of the input is listed in both shapes,
  * since each rejects the keys only the other lists; spread their shapes into one strict object instead. It is synchronous when both validators are, and
  * asynchronous otherwise.
  *
@@ -388,20 +389,53 @@ export function intersection<TLeft extends AnyValidator, TRight extends AnyValid
   ...rest: AsyncRest<Infer<TLeft> & Infer<TRight>, MessageOptions>
 ): AsyncSchema<Infer<TLeft> & Infer<TRight>, InferInput<TLeft> & InferInput<TRight>>;
 export function intersection(left: AnyValidator, right: AnyValidator, ...rest: unknown[]): AnyValidator {
-  assertFunction("left", left);
-  assertFunction("right", right);
-  const [options, reject, accept, checks] = tail<MessageOptions, unknown>(rest);
-  return described(
-    composed((input, place): Maybe<ValidationResult<unknown>> =>
-      chain(collect(runEach(2, (index) => call(index === 0 ? left : right, input, place))), ([first, second]) => {
-        if (first?.ok && second?.ok) {
-          const conflicts: ValidationIssue[] = [];
-          const merged = merge(first.value, second.value, { members: [left, right], conflicts, merged: new Map() });
-          return conflicts.length > 0 ? reject(cap(conflicts, undefined, undefined), place) : accept(merged, place);
-        }
-        return failWith([first, second].flatMap((result) => (result?.ok === false ? result.error.issues : [])));
-      }),
-    ),
+  const runLeft = runOf(left, "left");
+  const runRight = runOf(right, "right");
+  const [options, checks] = split<MessageOptions, unknown>(rest);
+  const { message } = options;
+  const accept = accepter(checks, message);
+  const tools = toolsOf([runLeft, runRight], waitsOf(checks));
+  // `from` is where the issues of this intersection begin: a member that failed left some there.
+  const finish = (first: unknown, second: unknown, from: number): unknown => {
+    if (count() > from) {
+      return FAIL;
+    }
+    const conflicts: ValidationIssue[] = [];
+    const merged = merge(first, second, { members: [left, right], conflicts, merged: new Map() });
+    if (conflicts.length === 0) {
+      return accept(merged);
+    }
+    adopt(conflicts, message);
+    return cap(from, message);
+  };
+  const run: Run = (input) => {
+    const start = count();
+    // Both run, whatever the first found, so one run reports what each of them refuses.
+    const first = runLeft(input);
+    const mark = count() - start;
+    const second = runRight(input);
+    if (tools === undefined || !(tools.is(first) || tools.is(second))) {
+      return finish(first, second, start);
+    }
+    const waited: Waiting[] = [];
+    const marks: number[] = [];
+    if (tools.is(first)) {
+      waited.push(first);
+      marks.push(0);
+    }
+    if (tools.is(second)) {
+      waited.push(second);
+      marks.push(mark);
+    }
+    return tools.join(start, waited, [], marks, (settled) =>
+      finish(tools.is(first) ? settled[0] : first, tools.is(second) ? settled.at(-1) : second, 0),
+    );
+  };
+  run.w = tools;
+  return toValidator(
+    run,
     { kind: "intersection", options, checks, members: Object.freeze([left, right]) },
+    [wordKey, wordSize],
+    [left, right],
   );
 }

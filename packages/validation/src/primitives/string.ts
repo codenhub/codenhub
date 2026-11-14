@@ -1,8 +1,10 @@
-import { assertSizeOptions, sizeIssues } from "../composition/size";
-import { leaf, split } from "../core/checks";
-import { described } from "../core/describe";
+import { assertSizeOptions, reportSize } from "../composition/size";
+import { leaf } from "../core/leaf";
+import { toValidator } from "../core/make";
 import { assertOption } from "../core/result";
+import { split } from "../core/split";
 import type { Factory, MessageOptions } from "../core/types";
+import { SIZE_WORDS } from "../core/words";
 
 /**
  * Constraints and clean-up for {@link string}. Every option is optional. Rarer constraints, such as a
@@ -63,21 +65,21 @@ export const string = ((...args: unknown[]) => {
   const isPlain =
     trim !== true && letterCase === undefined && min === undefined && max === undefined && length === undefined;
   // Text no option reads is the value as it is, and is passed without a list for issues it cannot have.
-  const validator = leaf<string>(
+  const run = leaf<string>(
     "string",
     isString,
     message,
     checks,
     isPlain
       ? undefined
-      : (input, issues) => {
+      : (input) => {
           let value = trim === true ? input.trim() : input;
           if (letterCase !== undefined) {
             value = letterCase === "lower" ? value.toLowerCase() : value.toUpperCase();
           }
-          sizeIssues(value.length, "string", options, issues);
+          reportSize(value.length, "string", options, message);
           return value;
         },
   );
-  return described(validator, { kind: "string", options, checks });
+  return toValidator(run, { kind: "string", options, checks }, SIZE_WORDS);
 }) as Factory<string, StringOptions>;

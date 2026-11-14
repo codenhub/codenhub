@@ -18,13 +18,13 @@ export declare function email(...checks: AsyncCheck<string>[]): AsyncSchema<stri
 export declare function email(options: EmailOptions, ...checks: AsyncCheck<string>[]): AsyncSchema<string, string>;
 ```
 
-Creates a validator for email addresses with a public domain name, which may be internationalized.
+Creates a validator for email addresses with a public domain name written in ASCII.
 
-The value is the address as mail is delivered to it: the local part as written, and the domain as the URL parser reads it, lowercase ASCII with internationalized labels in punycode. So `Ada@München.DE` is `Ada@xn--mnchen-3ya.de`, and every spelling that names one domain, such as fullwidth letters or an invisible variation selector, gives one address. The local part must be a dot-atom, as HTML's email input accepts: ASCII letters, digits, the backtick and `!#$%&'*+/=?^_{|}~-`, with single dots between them, so a quoted local part such as `"a b"@example.com`, and addresses with letters beyond ASCII before the `@` (RFC 6531), are rejected. Surrounding whitespace is not trimmed; trim first with `pipe` when the input may need it. A domain written with more than 759 characters, three for each one a domain can have, is rejected before the parser reads it. The `domain` and `local` options check those parts with validators of your own, which make the validator asynchronous when one is. A part that fails is one `invalid_format` issue at the address's own place, `{ format: "email", part, issues }`, so a form shows it beside the field, and the `message` option words it.
+The value is the address as mail is delivered to it: the local part as written, and the domain in lowercase, so `Ada@Example.COM` is `Ada@example.com`. A domain with a letter beyond ASCII, such as `ada@münchen.de`, is refused, and so is one with a punycode label, `xn--`, which can only be told valid by decoding it: `internationalEmail` reads both, and carries the code that does. The local part must be a dot-atom, as HTML's email input accepts: ASCII letters, digits, the backtick and `!#$%&'*+/=?^_{|}~-`, with single dots between them, so a quoted local part such as `"a b"@example.com`, and addresses with letters beyond ASCII before the `@` (RFC 6531), are rejected. Surrounding whitespace is not trimmed; trim first with `pipe` when the input may need it. The `domain` and `local` options check those parts with validators of your own, which make the validator asynchronous when one is. A part that fails is one `invalid_format` issue at the address's own place, `{ format: "email", part, issues }`, so a form shows it beside the field, and the `message` option words it.
 
-**Returns** — A validator that produces the address, its domain as the parser reads it.
+**Returns** — A validator that produces the address, its domain in lowercase.
 
-**Throws** — `TypeError` — When `domain` or `local` is not a function, or `allowPlus` is not a boolean.
+**Throws** — `TypeError` — When `domain` or `local` is not a validator, or `allowPlus` is not a boolean.
 
 **Example**
 
@@ -32,6 +32,32 @@ The value is the address as mail is delivered to it: the local part as written, 
 email()("Ada@Example.COM"); // { ok: true, value: "Ada@example.com" }
 email()("ada@localhost"); // { ok: false, error: { issues: [{ code: "invalid_format", ... }] } }
 email({ domain: oneOf(["company.com"]), message: "Use your company address" });
+```
+
+### internationalEmail
+
+```ts
+export declare function internationalEmail(...checks: Check<string>[]): Schema<string, string>;
+export declare function internationalEmail<const TOptions extends EmailOptions>(options: TOptions, ...checks: Check<string>[]): Composed<EmailParts<TOptions>, string, string>;
+export declare function internationalEmail(...checks: AsyncCheck<string>[]): AsyncSchema<string, string>;
+export declare function internationalEmail(options: EmailOptions, ...checks: AsyncCheck<string>[]): AsyncSchema<string, string>;
+```
+
+Creates a validator for email addresses with a public domain name, which may be internationalized.
+
+It validates as `email` does, and reads a domain as the URL parser does, so the value holds it in lowercase ASCII with internationalized labels in punycode: `Ada@München.DE` is `Ada@xn--mnchen-3ya.de`, and every spelling that names one domain, such as fullwidth letters or an invisible variation selector, gives one address. A punycode label is decoded and checked as every browser checks it. A domain written with more than 759 characters, three for each one a domain can have, is rejected before the parser reads it. The local part is ASCII, as in `email`.
+
+It carries the punycode decoder and the rule for right-to-left labels, which `email` leaves out: use it where an address may be written with such a domain.
+
+**Returns** — A validator that produces the address, its domain as the parser reads it.
+
+**Throws** — `TypeError` — When `domain` or `local` is not a validator, or `allowPlus` is not a boolean.
+
+**Example**
+
+```ts
+internationalEmail()("Ada@München.DE"); // { ok: true, value: "Ada@xn--mnchen-3ya.de" }
+internationalEmail()("ada@localhost"); // { ok: false, error: { issues: [{ code: "invalid_format", ... }] } }
 ```
 
 ### searchParams
@@ -175,7 +201,7 @@ export interface EmailOptions extends MessageOptions {
 }
 ```
 
-Options for [`email`](#email).
+Options for [`email`](#email) and `internationalEmail`.
 
 #### EmailOptions › allowPlus
 
@@ -193,7 +219,7 @@ Accepts `+` in the local part, as in `me+tag@example.com`.
 domain?: AnyValidator | undefined;
 ```
 
-Validates the domain instead of the default rule, that it is a public domain name. It receives the domain as the URL parser reads it, lowercase ASCII with internationalized labels in punycode, and the domain must still be a hostname: `email({ domain: hostname() })` accepts `ada@localhost`, and `email({ domain: oneOf(["example.com"]) })` accepts that domain alone. Its failure is reported as the address's, with `params.part` `"domain"`.
+Validates the domain instead of the default rule, that it is a public domain name. It receives the domain as the value holds it, lowercase ASCII, with internationalized labels in punycode from `internationalEmail`, and the domain must still be a hostname: `email({ domain: hostname() })` accepts `ada@localhost`, and `email({ domain: oneOf(["example.com"]) })` accepts that domain alone. Its failure is reported as the address's, with `params.part` `"domain"`.
 
 #### EmailOptions › local
 
@@ -343,7 +369,7 @@ Accepted protocols, without the colon, in any letter case. Of the schemes withou
 query?: AnyValidator | undefined;
 ```
 
-Validates the query, as an object of its decoded parameters: each key's value as a string, or with `repeated` every value of every key as an array. A key given twice fails at `[key]` inside the query unless `repeated` is set. Its failure is reported as the URL's, with `params.part` `"query"` and paths relative to the query in `params.issues`. To reject parameters it does not list, give it `object(shape, { unknownKeys: "strict" })`.
+Validates the query, as an object of its decoded parameters: each key's value as a string, or with `repeated` every value of every key as an array. A key given twice fails at `[key]` inside the query unless `repeated` is set. Its failure is reported as the URL's, with `params.part` `"query"` and paths relative to the query in `params.issues`. To reject parameters it does not list, give it `strictObject(shape)`.
 
 #### UrlOptions › repeated
 

@@ -4,13 +4,12 @@ import { check } from "../builders/check";
 import { checkFields } from "../builders/check-fields";
 import { format } from "../builders/format";
 import { guard } from "../builders/guard";
-import { endsWith } from "../checks/ends-with";
+import { validator } from "../builders/validator";
 import { multipleOf } from "../checks/multiple-of";
 import { pattern } from "../checks/pattern";
 import { startsWith } from "../checks/starts-with";
-import { fastOf, MISS, withFast } from "../core/nesting";
 import { fail, pass } from "../core/result";
-import type { AnyValidator } from "../core/types";
+import type { AnyValidator, ValidationResult } from "../core/types";
 import { email } from "../formats/email";
 import { uuid } from "../formats/uuid";
 import { boolean } from "../primitives/boolean";
@@ -21,20 +20,27 @@ import { oneOf } from "../primitives/one-of";
 import { string } from "../primitives/string";
 import { unknown } from "../primitives/unknown";
 import { array } from "./array";
+import { looseObject } from "./loose-object";
 import { nullable } from "./nullable";
 import { nullish } from "./nullish";
 import { object } from "./object";
+import { objectWithRest } from "./object-with-rest";
 import { optional } from "./optional";
 import { record } from "./record";
+import { strictObject } from "./strict-object";
 import { tagged } from "./tagged";
 import { transform } from "./transform";
 import { tuple } from "./tuple";
 import { union } from "./union";
 
-/** The same validator with no fast test, so every composer around it does its full work. */
-const slow = <T extends AnyValidator>(validator: T): T => ((input: unknown) => validator(input)) as T;
+/**
+ * The same validator called by hand, so a composer around it knows nothing of what it is made of and reads
+ * only its result. What a schema gives must not depend on which of the two it was given.
+ */
+const byHand = <T extends AnyValidator>(inner: T): T =>
+  validator((input: unknown) => inner(input) as ValidationResult<unknown>) as unknown as T;
 
-const build = (leaf: (validator: AnyValidator) => AnyValidator) =>
+const build = (leaf: (inner: AnyValidator) => AnyValidator) =>
   object({
     name: leaf(string({ trim: true, min: 2, max: 20 })),
     email: leaf(email()),
@@ -49,8 +55,8 @@ const build = (leaf: (validator: AnyValidator) => AnyValidator) =>
     extra: leaf(unknown()),
   });
 
-const fastSchema = build((validator) => validator);
-const slowSchema = build(slow);
+const ownSchema = build((inner) => inner);
+const handSchema = build(byHand);
 
 const valid = {
   name: "  Ada  ",
@@ -65,17 +71,7 @@ const valid = {
   extra: { anything: true },
 };
 
-describe("the fast path of valid input", () => {
-  it("should exist for an object whose every part has one, and not for one that cannot", () => {
-    expect(fastOf(fastSchema)).toBeDefined();
-    expect(fastOf(slowSchema)).toBeUndefined();
-    expect(
-      fastOf(object({ a: guard("thing", (input): input is object => typeof input === "object")() })),
-    ).toBeUndefined();
-    expect(fastOf(optional(string(), () => "made"))).toBeUndefined();
-    expect(fastOf(string((value) => (value === "" ? [{ code: "custom", path: [] }] : undefined)))).toBeUndefined();
-  });
-
+describe("one pass over the input", () => {
   it.each([
     ["valid input", valid],
     ["input without the optional parts", { ...valid, age: undefined, flags: undefined, note: null }],
@@ -88,35 +84,32 @@ describe("the fast path of valid input", () => {
     ["a missing property", Object.fromEntries(Object.entries(valid).filter(([key]) => key !== "kind"))],
     ["no object", ["not", "an", "object"]],
     ["an unknown property, which is dropped", { ...valid, other: 1 }],
-  ])("should give what the full work gives, for %s", (_, input) => {
-    expect(fastSchema(input)).toEqual(slowSchema(input));
+  ])("should give what the same schema of validators called by hand gives, for %s", (_, input) => {
+    expect(ownSchema(input)).toEqual(handSchema(input));
   });
 
-  it("should give what the full work gives for strict and passthrough objects", () => {
-    for (const unknownKeys of ["strict", "passthrough"] as const) {
-      const quick = object({ a: string() }, { unknownKeys });
-      const full = object({ a: slow(string()) }, { unknownKeys });
+  it("should give the same for strict and loose objects", () => {
+    for (const make of [strictObject, looseObject]) {
+      const quick = make({ a: string() });
+      const full = make({ a: byHand(string()) });
       for (const input of [{ a: "x" }, { a: "x", b: 1 }, { a: 1, b: 1 }]) {
         expect(quick(input)).toEqual(full(input));
       }
     }
   });
 
-  it("should give what the full work gives for an object with a validator of unknown keys", () => {
-    const quick = object({ a: string() }, { unknownKeys: number() });
-    const full = object({ a: slow(string()) }, { unknownKeys: slow(number()) });
+  it("should give the same for an object with a validator of unknown keys", () => {
+    const quick = objectWithRest({ a: string() }, number());
+    const full = objectWithRest({ a: byHand(string()) }, byHand(number()));
     const parsed = JSON.parse('{"a":"x","__proto__":1}') as unknown;
     for (const input of [{ a: "x" }, { a: "x", b: 1 }, { b: 1, a: "x", c: 2 }, { a: "x", b: "1" }, { a: 1 }, parsed]) {
       expect(quick(input)).toEqual(full(input));
     }
-    expect(fastOf(quick)).toBeDefined();
-    // Without a fast test for the unknown keys, there is none for the object.
-    expect(fastOf(object({ a: string() }, { unknownKeys: slow(number()) }))).toBeUndefined();
   });
 
-  it("should give what the full work gives for arrays, holes included", () => {
+  it("should give the same for arrays, holes included", () => {
     const quick = array(number(), { min: 1, max: 3 });
-    const full = array(slow(number()), { min: 1, max: 3 });
+    const full = array(byHand(number()), { min: 1, max: 3 });
     // oxlint-disable-next-line no-sparse-arrays
     for (const input of [[1, 2], [], [1, 2, 3, 4], [1, "2"], [1, , 3], "1,2"]) {
       expect(quick(input)).toEqual(full(input));
@@ -164,16 +157,14 @@ describe("the fast path of valid input", () => {
     expect(calls).toBe(1);
   });
 
-  it("should answer an object with checks from its properties' fast tests, and run each check once", () => {
+  it("should run each check of an object once, under a parent that fails too", () => {
     let calls = 0;
-    const differ = (value: { a: string; b: string }) => {
+    const differ = check((value: { a: string; b: string }) => {
       calls += 1;
-      return value.a === value.b ? [{ code: "custom", path: ["b"] }] : undefined;
-    };
+      return value.a === value.b ? [{ code: "custom", path: ["b"] }] : [];
+    });
     const quick = object({ a: string(), b: string() }, differ);
-    const full = object({ a: slow(string()), b: string() }, differ);
-    // The object has no fast test of its own, so a parent that missed later would run its checks again.
-    expect(fastOf(quick)).toBeUndefined();
+    const full = object({ a: byHand(string()), b: string() }, differ);
     for (const input of [{ a: "x", b: "y" }, { a: "x", b: "x" }, { a: 1, b: "x" }, { a: "x", b: "y", c: 1 }, "no"]) {
       calls = 0;
       const answer = quick(input);
@@ -204,12 +195,12 @@ describe("the fast path of valid input", () => {
     expect(calls).toBe(4);
   });
 
-  it("should exist for a leaf whose every check is built in, and give what the full work gives", () => {
-    expect(fastOf(string(startsWith("x"), pattern(/y$/)))).toBeDefined();
-    expect(fastOf(email(endsWith(".com")))).toBeDefined();
-    expect(fastOf(string(startsWith("x"), (value) => (value === "" ? [] : undefined)))).toBeUndefined();
+  it("should give the same for a leaf with built-in checks", () => {
     const quick = object({ a: string({ trim: true }, startsWith("x"), pattern(/y$/)), b: number(multipleOf(2)) });
-    const full = object({ a: slow(string({ trim: true }, startsWith("x"), pattern(/y$/))), b: number(multipleOf(2)) });
+    const full = object({
+      a: byHand(string({ trim: true }, startsWith("x"), pattern(/y$/))),
+      b: number(multipleOf(2)),
+    });
     for (const input of [
       { a: " xy ", b: 4 },
       { a: "zy", b: 4 },
@@ -237,7 +228,7 @@ describe("the fast path of valid input", () => {
     expect(result.ok && result.value).not.toBe(list);
   });
 
-  describe("an object some of whose properties have no fast test", () => {
+  describe("an object with a property that changes its value", () => {
     const counted = () => {
       const calls = { count: 0 };
       const length = transform(string(), (text) => {
@@ -258,12 +249,12 @@ describe("the fast path of valid input", () => {
       "no",
     ];
 
-    it("should give what the full work gives, and run the transform as often", () => {
-      for (const unknownKeys of ["strip", "strict", "passthrough"] as const) {
+    it("should give the same, and run the transform as often", () => {
+      for (const make of [object, strictObject, looseObject]) {
         const [quickCalls, quickLength] = counted();
         const [fullCalls, fullLength] = counted();
-        const quick = object({ a: quickLength, b: string(), c: optional(string()) }, { unknownKeys });
-        const full = object({ a: fullLength, b: slow(string()), c: optional(slow(string())) }, { unknownKeys });
+        const quick = make({ a: quickLength, b: string(), c: optional(string()) });
+        const full = make({ a: fullLength, b: byHand(string()), c: optional(byHand(string())) });
         for (const input of inputs) {
           quickCalls.count = 0;
           fullCalls.count = 0;
@@ -274,9 +265,9 @@ describe("the fast path of valid input", () => {
       }
     });
 
-    it("should give what the full work gives with several such properties, each run once", async () => {
+    it("should give the same with several transforms, each run once", async () => {
       const calls: string[] = [];
-      const build = (wrap: (validator: AnyValidator) => AnyValidator) =>
+      const build = (wrap: (inner: AnyValidator) => AnyValidator) =>
         object({
           a: transform(string(), (text) => {
             calls.push(`a ${text}`);
@@ -293,8 +284,8 @@ describe("the fast path of valid input", () => {
             return text;
           }),
         });
-      const quick = build((validator) => validator);
-      const full = build(slow);
+      const quick = build((inner) => inner);
+      const full = build(byHand);
       for (const input of [
         { a: "x", b: 1, c: "y", d: "z", e: "w" },
         { a: "x", b: 1, c: "y" },
@@ -315,7 +306,7 @@ describe("the fast path of valid input", () => {
       }
     });
 
-    it("should give what the full work gives for a transform whose validator has a fast test", async () => {
+    it("should give the same for a transform of a validator of this package and of one called by hand", async () => {
       let calls = 0;
       const convert = (value: unknown) => {
         calls += 1;
@@ -328,47 +319,44 @@ describe("the fast path of valid input", () => {
         [optional(number(), 3), [undefined, 1, "1"]],
       ];
       for (const [inner, inputs] of inners) {
-        expect(fastOf(inner)).toBeDefined();
         for (const input of inputs) {
           calls = 0;
           const quick = transform(inner, convert)(input);
           const quickCalls = calls;
           calls = 0;
-          expect(quick).toEqual(transform(slow(inner), convert)(input));
+          expect(quick).toEqual(transform(byHand(inner), convert)(input));
           expect(quickCalls).toBe(calls);
           expect(object({ x: transform(inner, convert) })({ x: input })).toEqual(
-            object({ x: transform(slow(inner), convert) })({ x: input }),
+            object({ x: transform(byHand(inner), convert) })({ x: input }),
           );
         }
       }
-      expect(fastOf(transform(string(), convert))).toBeUndefined();
     });
 
-    it("should give a property with a fast test what it produced, when a later one misses", () => {
-      // Produces a value its own test would not give again, so running it a second time, on what it
-      // produced, would be seen by the field check.
-      const doubled = withFast(
-        (input: unknown) =>
-          typeof input === "number" ? pass(input * 2) : fail({ code: "custom", message: "Not a number" }),
-        (input) => (typeof input === "number" ? input * 2 : MISS),
-      );
+    it("should give a property what its validator produced, and run that validator once, when a later one fails", () => {
+      // Produces a value it would not give again for what it produced, so running it a second time, on its
+      // own output, would be seen by the field check.
+      let calls = 0;
+      const doubled = validator((input: unknown) => {
+        calls += 1;
+        return typeof input === "number" ? pass(input * 2) : fail({ code: "custom", message: "Not a number" });
+      });
       const [, length] = counted();
-      const quick = object(
+      const schema = object(
         { d: doubled, a: length, b: string() },
         checkFields<{ d: number; a: number; b: string }, "d">(["d"], (value) => value.d !== 4),
       );
-      const full = object(
-        { d: slow(doubled), a: length, b: slow(string()) },
-        checkFields<{ d: number; a: number; b: string }, "d">(["d"], (value) => value.d !== 4),
-      );
-      for (const input of [
-        { d: 2, a: "x", b: 1 },
-        { d: 2, a: 1, b: "y" },
-        { d: 2, a: "x", b: "y" },
-      ]) {
-        expect(quick(input)).toEqual(full(input));
+      for (const [input, codes] of [
+        [{ d: 2, a: "x", b: 1 }, ["invalid_type", "custom"]],
+        [{ d: 2, a: 1, b: "y" }, ["invalid_type", "custom"]],
+        [{ d: 2, a: "x", b: "y" }, ["custom"]],
+        [{ d: 3, a: "x", b: "y" }, []],
+      ] as const) {
+        calls = 0;
+        const result = schema(input);
+        expect(result.ok ? [] : result.error.issues.map((issue) => issue.code)).toEqual(codes);
+        expect(calls).toBe(1);
       }
-      expect(quick({ d: 2, a: "x", b: 1 }).ok).toBe(false);
     });
 
     it("should run the transform once when another property fails, and not when its own value does", () => {
@@ -398,7 +386,7 @@ describe("the fast path of valid input", () => {
       });
       for (const extra of [[same], [fields], [same, fields]]) {
         const quick = object({ a: length, b: string() }, ...(extra as []));
-        const full = object({ a: fullLength, b: slow(string()) }, ...(extra as []));
+        const full = object({ a: fullLength, b: byHand(string()) }, ...(extra as []));
         for (const input of [
           { a: "x", b: "y" },
           { a: "xy", b: "y" },
@@ -420,7 +408,7 @@ describe("the fast path of valid input", () => {
       }
     });
 
-    it("should run an asynchronous transform once, and give what the full work gives", async () => {
+    it("should run an asynchronous transform once, and give the same", async () => {
       let calls = 0;
       const later = (fast: boolean) =>
         object({
@@ -428,7 +416,7 @@ describe("the fast path of valid input", () => {
             calls += 1;
             return text.length;
           }),
-          b: fast ? string() : slow(string()),
+          b: fast ? string() : byHand(string()),
         });
       for (const input of [
         { a: "four", b: "y" },
@@ -447,11 +435,11 @@ describe("the fast path of valid input", () => {
       }
     });
 
-    it("should run the transform once for each item of a list, at the paths the full work gives", () => {
+    it("should run the transform once for each item of a list, at the same paths", () => {
       const [calls, length] = counted();
       const [fullCalls, fullLength] = counted();
       const quick = array(object({ a: length, b: string() }));
-      const full = array(object({ a: fullLength, b: slow(string()) }));
+      const full = array(object({ a: fullLength, b: byHand(string()) }));
       const input = [
         { a: "x", b: "y" },
         { a: "xy", b: 1 },
@@ -482,27 +470,11 @@ describe("the fast path of valid input", () => {
     });
   });
 
-  it("should exist for a tuple, record, union and tagged whose every part has one, and not for one that cannot", () => {
-    expect(fastOf(tuple([number(), string()], { rest: boolean() }))).toBeDefined();
-    expect(fastOf(record(string(), number()))).toBeDefined();
-    expect(fastOf(union([string(), number()]))).toBeDefined();
-    expect(fastOf(tagged("type", { a: object({ x: number() }) }))).toBeDefined();
-    expect(fastOf(tuple([number(), slow(string())]))).toBeUndefined();
-    expect(fastOf(tuple([number()], { rest: slow(string()) }))).toBeUndefined();
-    expect(fastOf(record(slow(string()), number()))).toBeUndefined();
-    expect(fastOf(record(string(), slow(number())))).toBeUndefined();
-    expect(fastOf(union([string(), slow(number())]))).toBeUndefined();
-    expect(fastOf(tagged("type", { a: object({ x: number() }), b: slow(object({})) }))).toBeUndefined();
-    const always = () => undefined;
-    expect(fastOf(union([string()], always))).toBeUndefined();
-    expect(fastOf(tagged("type", { a: object({}) }, always))).toBeUndefined();
-  });
-
-  it("should give what the full work gives for tuples, with and without rest", () => {
+  it("should give the same for tuples, with and without rest", () => {
     const quick = tuple([number(), string()], { rest: boolean(), max: 4 });
-    const full = tuple([slow(number()), string()], { rest: boolean(), max: 4 });
+    const full = tuple([byHand(number()), string()], { rest: boolean(), max: 4 });
     const exact = tuple([number(), string({ trim: true })]);
-    const exactFull = tuple([number(), slow(string({ trim: true }))]);
+    const exactFull = tuple([number(), byHand(string({ trim: true }))]);
     for (const input of [
       [1, "a"],
       [1, "a", true],
@@ -519,32 +491,32 @@ describe("the fast path of valid input", () => {
     }
   });
 
-  it("should give what the full work gives for records, a repeated key included", () => {
+  it("should give the same for records, a repeated key included", () => {
     const quick = record(string({ trim: true, min: 1 }), number(), { max: 2 });
-    const full = record(string({ trim: true, min: 1 }), slow(number()), { max: 2 });
+    const full = record(string({ trim: true, min: 1 }), byHand(number()), { max: 2 });
     for (const input of [{ a: 1 }, {}, { a: 1, b: 2, c: 3 }, { a: "1" }, { " ": 1 }, { " a": 1, a: 2 }, [], null]) {
       expect(quick(input)).toEqual(full(input));
     }
   });
 
-  it("should give what the full work gives for unions, choosing the first option that accepts", () => {
+  it("should give the same for unions, choosing the first option that accepts", () => {
     const quick = union([string({ trim: true }), string(), object({ a: number() })]);
-    const full = union([slow(string({ trim: true })), string(), object({ a: number() })]);
+    const full = union([byHand(string({ trim: true })), string(), object({ a: number() })]);
     for (const input of [" x ", "x", { a: 1 }, { a: "1" }, 1, null]) {
       expect(quick(input)).toEqual(full(input));
     }
   });
 
-  it("should give what the full work gives for tagged objects", () => {
-    const variants = (wrap: (validator: AnyValidator) => AnyValidator) => ({
+  it("should give the same for tagged objects", () => {
+    const variants = (wrap: (inner: AnyValidator) => AnyValidator) => ({
       a: object({ x: wrap(number()) }),
-      b: object({ y: string() }, { unknownKeys: "strict" }),
+      b: strictObject({ y: string() }),
     });
     const quick = tagged(
       "type",
-      variants((validator) => validator),
+      variants((inner) => inner),
     );
-    const full = tagged("type", variants(slow));
+    const full = tagged("type", variants(byHand));
     for (const input of [
       { type: "a", x: 1 },
       { x: 1, type: "a" },

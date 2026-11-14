@@ -1,9 +1,10 @@
-import type { Maybe } from "../core/async";
-import { tail } from "../core/checks";
-import { described } from "../core/describe";
-import { childOf, composed, fastOf, MISS, type Child, type Fast } from "../core/nesting";
+import { runOf, toolsOf } from "../core/child";
+import { accepter, waitsOf } from "../core/finish";
+import { toValidator } from "../core/make";
 import { isArray } from "../core/objects";
-import { assertFunction, assertList, assertOrder, assertSize, issue, typeIssue } from "../core/result";
+import { assertFunction, assertList, assertOrder, assertSize } from "../core/result";
+import { refuse, report, type Run } from "../core/run";
+import { split } from "../core/split";
 import type {
   AnyValidator,
   AsyncRest,
@@ -13,9 +14,9 @@ import type {
   InferInput,
   MessageOptions,
   Rest,
-  ValidationResult,
 } from "../core/types";
-import { settle } from "./settle";
+import { SIZE_WORDS } from "../core/words";
+import { settle } from "./items";
 
 type InferItems<TItems extends readonly AnyValidator[]> = { -readonly [K in keyof TItems]: Infer<TItems[K]> };
 
@@ -101,8 +102,8 @@ export function tuple<
   ...rest: AsyncRest<InferTuple<TItems, TRest>, TupleOptions<TRest>>
 ): AsyncSchema<InferTuple<TItems, TRest>, InferTupleInput<TItems, TRest>>;
 export function tuple(items: readonly AnyValidator[], ...args: unknown[]): AnyValidator {
-  const [options, reject, accept, checks] = tail<TupleOptions<AnyValidator | undefined>, unknown[]>(args, "rest max");
-  const { rest, max } = options;
+  const [options, checks] = split<TupleOptions<AnyValidator | undefined>, unknown[]>(args, "rest max");
+  const { rest, max, message } = options;
   assertList("items", items);
   // Copied, so changing the list after the validator is made changes nothing.
   const fixed = [...items];
@@ -123,65 +124,37 @@ export function tuple(items: readonly AnyValidator[], ...args: unknown[]): AnyVa
     assertOrder("the fixed items", length, "max", max);
   }
 
-  const children = fixed.map(childOf);
-  const restChild = rest === undefined ? undefined : childOf(rest);
-
-  // Valid input is answered without a result for each item when every item has a fast test, as in `array`.
-  const fastItems = fixed.map(fastOf);
-  const fastRest = rest === undefined ? undefined : fastOf(rest);
-  const fast: Fast | undefined =
-    checks.length > 0 || fastItems.includes(undefined) || (rest !== undefined && fastRest === undefined)
-      ? undefined
-      : (input) => {
-          if (!isArray(input)) {
-            return MISS;
-          }
-          const size = input.length;
-          if ((max !== undefined && size > max) || size < length || (rest === undefined && size > length)) {
-            return MISS;
-          }
-          const output: unknown[] = [];
-          for (let index = 0; index < size; index += 1) {
-            const value = ((index < length ? fastItems[index] : fastRest) as Fast)(input[index]);
-            if (value === MISS) {
-              return MISS;
-            }
-            output.push(value);
-          }
-          return output;
-        };
-
-  return described(
-    composed((input, place): Maybe<ValidationResult<unknown>> => {
-      if (!isArray(input)) {
-        return reject([typeIssue("array", input)], place);
-      }
-      const size = input.length;
-      if (max !== undefined && size > max) {
-        return reject([issue("too_big", { maximum: max, type: "array" })], place);
-      }
-      if (size < length || (rest === undefined && size > length)) {
-        const isShort = size < length;
-        return reject(
-          [
-            issue(isShort ? "too_small" : "too_big", {
-              [isShort ? "minimum" : "maximum"]: length,
-              type: "array",
-              ...(rest === undefined && { exact: true }),
-            }),
-          ],
-          place,
-        );
-      }
-      return settle(
-        size,
-        // By index up to the length that was checked, never through the array's own iterator, as in `array`.
-        (index) => ((index < length ? children[index] : restChild) as Child)(input[index], place, index),
-        place,
-        options.message,
-        (values) => accept(values, place),
+  const runs = fixed.map((item, index) => runOf(item, `items[${index}]`));
+  const runRest = rest === undefined ? undefined : runOf(rest, "rest");
+  const accept = accepter(checks, message);
+  const tools = toolsOf([...runs, runRest], waitsOf(checks));
+  // Made once, and given the input by `settle`, so validating a tuple makes no function.
+  const runAt = (index: number, input: readonly unknown[]): unknown =>
+    ((index < length ? runs[index] : runRest) as Run)(input[index]);
+  const run: Run = (input) => {
+    if (!isArray(input)) {
+      return refuse("array", input, message);
+    }
+    const size = input.length;
+    if (max !== undefined && size > max) {
+      return report("too_big", { maximum: max, type: "array" }, message);
+    }
+    if (size < length || (rest === undefined && size > length)) {
+      const isShort = size < length;
+      return report(
+        isShort ? "too_small" : "too_big",
+        { [isShort ? "minimum" : "maximum"]: length, type: "array", ...(rest === undefined && { exact: true }) },
+        message,
       );
-    }, fast),
+    }
+    // By index up to the length that was checked, never through the array's own iterator, as in `array`.
+    return settle(size, runAt, message, tools, accept, undefined, undefined, input);
+  };
+  run.w = tools;
+  return toValidator(
+    run,
     { kind: "tuple", options, checks, items: Object.freeze(fixed), rest },
+    SIZE_WORDS,
+    rest === undefined ? fixed : [...fixed, rest],
   );
 }

@@ -1,7 +1,10 @@
-import { leaf, split } from "../core/checks";
-import { described } from "../core/describe";
-import { assertBounds, assertOption, issue } from "../core/result";
-import type { Factory, MessageOptions, ValidationIssue } from "../core/types";
+import { leaf } from "../core/leaf";
+import { toValidator } from "../core/make";
+import { assertBounds, assertOption } from "../core/result";
+import { report } from "../core/run";
+import { split } from "../core/split";
+import type { Factory, Message, MessageOptions } from "../core/types";
+import { SIZE_WORDS } from "../core/words";
 
 /** Constraints for {@link bigint}. Every option is optional. */
 export interface BigintOptions extends MessageOptions {
@@ -17,12 +20,16 @@ export interface BigintOptions extends MessageOptions {
 
 // The bound is written as its decimal digits, since `JSON.stringify` throws on a bigint, and an issue is
 // data a server sends. `type: "bigint"` says what the digits are.
-const outOfRange = (side: "min" | "max", bound: bigint, isInclusive: boolean): ValidationIssue =>
-  issue(side === "min" ? "too_small" : "too_big", {
-    [side === "min" ? "minimum" : "maximum"]: String(bound),
-    inclusive: isInclusive,
-    type: "bigint",
-  });
+const outOfRange = (side: "min" | "max", bound: bigint, isInclusive: boolean, message: Message | undefined): unknown =>
+  report(
+    side === "min" ? "too_small" : "too_big",
+    {
+      [side === "min" ? "minimum" : "maximum"]: String(bound),
+      inclusive: isInclusive,
+      type: "bigint",
+    },
+    message,
+  );
 
 const isBigint = (input: unknown): boolean => typeof input === "bigint";
 
@@ -51,22 +58,23 @@ export const bigint = ((...args: unknown[]) => {
   if (gt !== undefined && lt !== undefined && lt - gt <= 1n) {
     throw new RangeError(`No bigint lies between gt ${gt} and lt ${lt}`);
   }
-  return described(
-    leaf<bigint>("bigint", isBigint, message, checks, (value, issues) => {
+  return toValidator(
+    leaf<bigint>("bigint", isBigint, message, checks, (value) => {
       if (min !== undefined && value < min) {
-        issues.push(outOfRange("min", min, true));
+        outOfRange("min", min, true, message);
       }
       if (gt !== undefined && value <= gt) {
-        issues.push(outOfRange("min", gt, false));
+        outOfRange("min", gt, false, message);
       }
       if (max !== undefined && value > max) {
-        issues.push(outOfRange("max", max, true));
+        outOfRange("max", max, true, message);
       }
       if (lt !== undefined && value >= lt) {
-        issues.push(outOfRange("max", lt, false));
+        outOfRange("max", lt, false, message);
       }
       return value;
     }),
     { kind: "bigint", options, checks },
+    SIZE_WORDS,
   );
 }) as Factory<bigint, BigintOptions>;

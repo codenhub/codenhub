@@ -323,25 +323,25 @@ A shape holds enumerable text keys only. `object` throws a `TypeError` when crea
 
 ### Keys the shape does not list
 
-The `unknownKeys` option decides what happens to input properties the shape does not list:
+`object` drops the input properties the shape does not list. Three other factories read a plain object the same way and differ in what they do with those properties:
 
-| `unknownKeys`   | Effect                                                                                  |
-| --------------- | --------------------------------------------------------------------------------------- |
-| `"strip"`       | Drop them from the output. This is the default.                                         |
-| `"strict"`      | Reject each with an `unrecognized_key` issue at the key's path, and `params: { key }`.  |
-| `"passthrough"` | Copy them to the output unchanged and unchecked, except `__proto__`, which is rejected. |
-| A validator     | Validate each with it, and keep what it produces.                                       |
+| Factory                       | Properties the shape does not list                                                        |
+| ----------------------------- | ----------------------------------------------------------------------------------------- |
+| `object(shape)`               | Dropped from the output.                                                                  |
+| `strictObject(shape)`         | Rejected, each with an `unrecognized_key` issue at the key's path, and `params: { key }`. |
+| `looseObject(shape)`          | Copied to the output unchanged and unchecked, except `__proto__`, which is rejected.      |
+| `objectWithRest(shape, rest)` | Validated with `rest`, and what it produces is kept.                                      |
 
-Any other value, such as a misspelled `"Strict"`, throws a `TypeError` when the validator is created, instead of falling back to `"strip"`.
+Each takes a `message` option and checks after its arguments, as `object` does. They are factories and not an option of `object`, so a program carries the code of the ones it uses and of no other.
 
-A passthrough object rejects `__proto__` because a kept `__proto__` key would become the prototype of any copy of the output made by assignment, such as `Object.assign({}, output)`. The issue is `invalid_key` with one issue inside, `invalid_value` with `{ reserved: true }`.
+A loose object rejects `__proto__` because a kept `__proto__` key would become the prototype of any copy of the output made by assignment, such as `Object.assign({}, output)`. The issue is `invalid_key` with one issue inside, `invalid_value` with `{ reserved: true }`.
 
-A validator given as `unknownKeys` checks each key the shape does not list, as `record` checks its values:
+`objectWithRest` checks each key the shape does not list with the validator it is given, as `record` checks its values:
 
 ```ts
-import { boolean, object, string } from "@codenhub/validation";
+import { boolean, objectWithRest, string } from "@codenhub/validation";
 
-const settings = object({ name: string() }, { unknownKeys: boolean() });
+const settings = objectWithRest({ name: string() }, boolean());
 
 settings({ name: "Ada", beta: true }); // { ok: true, value: { name: "Ada", beta: true } }
 settings({ name: "Ada", beta: "yes" }); // { ok: false, ... }, code "invalid_type" at ["beta"]
@@ -369,7 +369,7 @@ feedback({ message: "" }); // { ok: false, ... }, code "too_small"
 - It accepts every object that is not an array: a plain object, a class instance, a `Map`, a `Date`. Anything else, a function included, fails with `invalid_type` and `{ expected: "object", received }`.
 - It reads each listed property as `input[key]`, so a property that is inherited, not enumerable or computed by a getter counts.
 - A property that throws while it is read, as a getter or a `Proxy` trap may, is reported as `invalid_value` with `params: { unreadable: true }` at the property's path, and the other properties are still validated.
-- The output is a new plain object that holds the listed properties only, without the ones whose value is `undefined`. There is no `unknownKeys` option.
+- The output is a new plain object that holds the listed properties only, without the ones whose value is `undefined`. There is no strict or loose `objectLike`.
 - Its checks run once every property has passed, and see the output.
 
 To choose between instances by a property, put the `objectLike` validators in a `union`. `tagged` reads the tag of a plain object only, as [Request bodies](request-bodies.md#tagged) explains.

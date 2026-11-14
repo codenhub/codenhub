@@ -58,7 +58,7 @@ Input that passes a validator is validated in full, so a body of a million items
 
 Text read by `coerceBigint` needs a bound on each side, since converting it takes longer than linear time in its length, and a bound limits the digits converted.
 
-It reads the schema and never calls it, though it calls the getter of each `lazy` twice, to tell a schema built anew at every level from one built once. Whether a `max` is small enough is not its to judge: any number says someone decided. A check is not read, since it runs on a value that already passed. It lists the bounds an option can set, so it does not report the keys an `object` with `unknownKeys: "passthrough"` or a validator keeps, nor what `unknown()` accepts: none has an option that bounds it. Use `"strip"` or `"strict"` for keys the schema does not name, and a validator of the type you expect in place of `unknown()`. A validator given as `unknownKeys` is walked at the object's path followed by `{}`, as the values of a `record` are.
+It reads the schema and never calls it, though it calls the getter of each `lazy` twice, to tell a schema built anew at every level from one built once. Whether a `max` is small enough is not its to judge: any number says someone decided. A check is not read, since it runs on a value that already passed. It lists the bounds an option can set, so it does not report the keys a `looseObject` or an `objectWithRest` keeps, nor what `unknown()` accepts: none has an option that bounds it. Use `object` or `strictObject` for keys the schema does not name, and a validator of the type you expect in place of `unknown()`. The validator `objectWithRest` gives its unlisted keys is walked at the object's path followed by `{}`, as the values of a `record` are.
 
 **Parameters**
 
@@ -87,7 +87,7 @@ export declare function describe(target: AnyValidator | AsyncCheck<never>): Desc
 
 Reads what a validator or a check is made of, so a program can walk a schema: to write it in another notation, build a form from it, or derive another validator.
 
-Only what a factory of this package made is described. A validator or check written by hand, and a check made by `check`, is a function like any other and gives `undefined`, as does anything that is not a function: to a reader of the schema it is a rule that cannot be read.
+Only what a factory of this package made is described. A validator made by `validator` and a check made by `check` hold a function written by hand and give `undefined`, as does anything that is not a function: to a reader of the schema it is a rule that cannot be read.
 
 **Parameters**
 
@@ -423,7 +423,7 @@ export interface Schema<T, TInput = unknown> extends Validator<T, TInput>, Stand
 
 A [`Validator`](#validator) a factory of this package made, which is also a Standard Schema as it is: a library that takes one, such as a form library or a router, takes it without a `standard` call, and words its issues in short English. `standard(validator, messages)` gives the full wording or another language.
 
-Accepted wherever a [`Validator`](#validator) is. A validator written by hand is a [`Validator`](#validator) and not a Schema, since it has no `~standard` of its own.
+Accepted wherever a [`Validator`](#validator) is. A function written by hand is a [`Validator`](#validator) and not a Schema until `validator()` is given it, since it has no `~standard` of its own.
 
 #### Schema › ~standard
 

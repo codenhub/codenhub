@@ -1,5 +1,6 @@
 import { assertOrder, assertSize, issue } from "../core/result";
-import type { ValidationIssue } from "../core/types";
+import { report } from "../core/run";
+import type { Message, ValidationIssue } from "../core/types";
 
 /** The names of the size options, for the options a collection reads. */
 export const SIZE_OPTIONS = "min max length";
@@ -39,6 +40,36 @@ export function assertSizeOptions({ min, max, length }: SizeOptions, noun = "Siz
  * The issues for a value whose size breaks a constraint, added to `issues`, which is a new list unless one
  * is given, and empty when the size satisfies them all.
  */
+/**
+ * Reports each bound a size is outside of, at the value being validated, worded by `message`, and says
+ * whether it reported any.
+ */
+export function reportSize(
+  size: number,
+  type: string,
+  { min, max, length }: SizeOptions,
+  message: Message | undefined,
+): boolean {
+  let isOutside = false;
+  if (min !== undefined && size < min) {
+    isOutside = true;
+    report("too_small", { minimum: min, type }, message);
+  }
+  if (max !== undefined && size > max) {
+    isOutside = true;
+    report("too_big", { maximum: max, type }, message);
+  }
+  if (length !== undefined && size !== length) {
+    isOutside = true;
+    report(
+      size < length ? "too_small" : "too_big",
+      { [size < length ? "minimum" : "maximum"]: length, exact: true, type },
+      message,
+    );
+  }
+  return isOutside;
+}
+
 export function sizeIssues(
   size: number,
   type: string,

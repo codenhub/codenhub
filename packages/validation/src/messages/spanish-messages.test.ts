@@ -16,6 +16,7 @@ import { object } from "../composition/object";
 import { objectLike } from "../composition/object-like";
 import { optional } from "../composition/optional";
 import { record } from "../composition/record";
+import { strictObject } from "../composition/strict-object";
 import { tagged } from "../composition/tagged";
 import { union } from "../composition/union";
 import type { ValidationIssue, ValidationResult } from "../core/types";
@@ -166,7 +167,7 @@ describe("spanishMessages", () => {
   });
 
   it("should word keys, unions and an intersection that conflicts", () => {
-    expect(said(object({}, { unknownKeys: "strict" })({ extra: 1 }))).toEqual(['Clave no reconocida "extra"']);
+    expect(said(strictObject({})({ extra: 1 }))).toEqual(['Clave no reconocida "extra"']);
     expect(said(record(string({ min: 2 }), string())({ a: "x" }))).toEqual([
       "Clave no válida: Debe tener como mínimo 2 caracteres",
     ]);

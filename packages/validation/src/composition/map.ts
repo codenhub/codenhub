@@ -1,10 +1,9 @@
-import { chain, collect, type Maybe } from "../core/async";
-import { report, tail } from "../core/checks";
-import { described } from "../core/describe";
-import { cap, countIssues, runItems } from "../core/limit";
-import { append, below, call, composed } from "../core/nesting";
+import { runOf, toolsOf } from "../core/child";
+import { accepter, waitsOf } from "../core/finish";
+import { toValidator } from "../core/make";
 import { entriesOf, sizeOfMap } from "../core/objects";
-import { assertFunction, failWith, isResult, issue, nested, notResult, repeatedKey, typeIssue } from "../core/result";
+import { FAIL, refuse, type Run } from "../core/run";
+import { split } from "../core/split";
 import type {
   AnyValidator,
   AsyncRest,
@@ -14,11 +13,10 @@ import type {
   InferInput,
   MessageOptions,
   Rest,
-  ValidationIssue,
-  ValidationPathSegment,
-  ValidationResult,
 } from "../core/types";
-import { SIZE_OPTIONS, assertSizeOptions, sizeIssues, type SizeOptions } from "./size";
+import { wordKey, wordSize, wordType } from "../core/words";
+import { settleEntries } from "./entries";
+import { SIZE_OPTIONS, assertSizeOptions, reportSize, type SizeOptions } from "./size";
 
 /**
  * Creates a validator for `Map`s whose every key passes `key` and every value passes `value`.
@@ -60,78 +58,44 @@ export function map<TKey extends AnyValidator, TValue extends AnyValidator>(
   ...rest: AsyncRest<Map<Infer<TKey>, Infer<TValue>>, SizeOptions & MessageOptions>
 ): AsyncSchema<Map<Infer<TKey>, Infer<TValue>>, Map<InferInput<TKey>, InferInput<TValue>>>;
 export function map(key: AnyValidator, value: AnyValidator, ...rest: unknown[]): AnyValidator {
-  assertFunction("key", key);
-  assertFunction("value", value);
-  const [options, reject, accept, checks] = tail<SizeOptions & MessageOptions, Map<unknown, unknown>>(
-    rest,
-    SIZE_OPTIONS,
-  );
+  // A key's issues stay relative to the key, so they are held behind an issue of the map.
+  const runKey = runOf(key, "key");
+  const runValue = runOf(value, "value");
+  const [options, checks] = split<SizeOptions & MessageOptions, Map<unknown, unknown>>(rest, SIZE_OPTIONS);
   assertSizeOptions(options);
-  // A key's issues stay relative to the key, so it is not called with a place, and its result is checked here.
-  const readKey = (name: unknown): Maybe<ValidationResult<unknown>> =>
-    chain(key(name), (result: ValidationResult<unknown>) => {
-      if (!isResult(result)) {
-        throw notResult("The key validator of map");
-      }
-      return result;
-    });
-  return described(
-    composed((input, place): Maybe<ValidationResult<unknown>> => {
-      const size = sizeOfMap(input);
-      if (size === undefined) {
-        return reject([typeIssue("map", input)], place);
-      }
-      const oversize = sizeIssues(size, "map", options);
-      if (oversize.length > 0) {
-        return reject(oversize, place);
-      }
-      const entries = entriesOf(input);
+  const { message } = options;
+  const accept = accepter(checks, message);
+  const tools = toolsOf([runKey, runValue], waitsOf(checks));
+  const run: Run = (input) => {
+    const size = sizeOfMap(input);
+    if (size === undefined) {
+      return refuse("map", input, message);
+    }
+    if (reportSize(size, "map", options, message)) {
+      return FAIL;
+    }
+    const entries = entriesOf(input);
+    const output = new Map<unknown, unknown>();
+    return settleEntries(
+      entries.map(([name]) => name),
+      entries.map(([, item]) => item),
       // A string key is its own segment; any other is the position, a number, so segments never collide.
-      const segments = entries.map(([name], index) => (typeof name === "string" ? name : index));
-      const results = runItems(
-        entries.length,
-        (index) => {
-          const [name, item] = entries[index] as [unknown, unknown];
-          return chain(readKey(name), (keyResult) =>
-            chain(call(value, item, below(place, segments[index] as ValidationPathSegment)), (valueResult) => ({
-              keyResult,
-              valueResult,
-            })),
-          );
-        },
-        ({ keyResult, valueResult }) => countIssues(keyResult) + countIssues(valueResult),
-      );
-      return chain(collect(results), (settled) => {
-        const issues: ValidationIssue[] = [];
-        const output = new Map<unknown, unknown>();
-        settled.forEach(({ keyResult, valueResult }, index) => {
-          const segment = segments[index] as ValidationPathSegment;
-          if (!keyResult.ok) {
-            // Wrapped, so a bad key is not mistaken for a bad value at the same path.
-            issues.push(
-              ...report(
-                [issue("invalid_key", { issues: keyResult.error.issues.map(nested) }, [segment])],
-                place,
-                options.message,
-              ),
-            );
-          }
-          if (!valueResult.ok) {
-            append(issues, valueResult.error.issues);
-          }
-          if (keyResult.ok && valueResult.ok) {
-            if (output.has(keyResult.value)) {
-              issues.push(...report([repeatedKey(segment)], place, options.message));
-            } else {
-              output.set(keyResult.value, valueResult.value);
-            }
-          }
-        });
-        return issues.length > 0
-          ? failWith(cap(issues, place, options.message, settled.length < entries.length))
-          : accept(output, place);
-      });
-    }),
-    { kind: "map", options, checks, key, value },
-  );
+      entries.map(([name], index) => (typeof name === "string" ? name : index)),
+      runKey,
+      runValue,
+      tools,
+      message,
+      accept,
+      (name, item) => {
+        if (output.has(name)) {
+          return false;
+        }
+        output.set(name, item);
+        return true;
+      },
+      output,
+    );
+  };
+  run.w = tools;
+  return toValidator(run, { kind: "map", options, checks, key, value }, [wordType, wordSize, wordKey], [key, value]);
 }

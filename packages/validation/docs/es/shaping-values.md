@@ -2,7 +2,7 @@
 title: Dar forma a los valores
 description: Encadena validadores, convierte valores, vuelve a escribirlos, márcalos y congélalos, descríbelos, reemplaza un fallo por un valor de respaldo y reutiliza la forma de un objeto.
 order: 8
-source: 210016e82ea9da98e51685547f5408c1acffdfe7
+source: 2e29da1976dbdfa514a58b356bc0196f6fc6ace3
 ---
 
 # Dar forma a los valores
@@ -230,15 +230,15 @@ const admin = extend(user, { admin: boolean() }); // todas las propiedades de us
 - `extend(validator, shape)` agrega las propiedades de `shape`, como al expandir una forma dentro de otra. Una propiedad que el objeto ya tiene se reemplaza por la que se pasó, en su lugar.
 - `required(validator)` hace obligatoria cada propiedad. Una propiedad creada con `optional` pasa a ser el validador que envolvía, así que también se quita su valor predeterminado, y una propiedad ausente falla. Una creada con `nullish` pasa a ser `nullable`, que sigue aceptando `null`. Una propiedad que acepta `undefined` de otra forma, como `unknown()`, se conserva sin cambios.
 
-El objeto nuevo conserva las opciones del que proviene, `unknownKeys` y `message`. Recibe opciones y verificaciones propias después de sus argumentos, como `object`: `pick(user, ["name"], { unknownKeys: "strict" }, check(...))`.
+El objeto nuevo es de la misma clase que aquel del que proviene, y conserva su `message`. Recibe un `message` y verificaciones propias después de sus argumentos, como `object`: `pick(user, ["name"], { message: "Not a name" }, check(...))`.
 
-- Cada opción pasada reemplaza la de su mismo nombre y deja las demás. Así, un objeto estricto del que se toman propiedades pasando solo un `message` sigue siendo estricto.
-- Una opción pasada como `undefined` cuenta como no pasada, y conserva la del original. Así, `pick(strictUser, ["name"], { unknownKeys: undefined })` sigue siendo estricto.
-- Un validador pasado como `unknownKeys` también se conserva. Así, una propiedad que `pick` u `omit` deja fuera va a él cuando la entrada la tiene, como cualquier otra clave que la forma nueva no incluye.
+- Lo que hace con las claves que su forma no incluye queda como estaba, y ninguna opción lo cambia. Así, un `strictObject` del que se toman propiedades sigue siendo estricto. Para otra clase, pasa la forma a su fábrica, reutilizada como muestra [Expandir una forma](#expandir-una-forma).
+- Un `message` pasado reemplaza el del original, y uno pasado como `undefined` cuenta como no pasado.
+- El validador de un `objectWithRest` también se conserva. Así, una propiedad que `pick` u `omit` deja fuera va a él cuando la entrada la tiene, como cualquier otra clave que la forma nueva no incluye.
 
 Un objeto con verificaciones se rechaza con un `TypeError`. Una verificación lee el objeto entero, así que puede leer una propiedad que le falta al objeto nuevo. Si se conservara, podría hacer fallar todos los valores. Si se descartara sin aviso, el objeto nuevo aceptaría lo que el primero se escribió para rechazar. Crea el objeto sin sus verificaciones, deriva a partir de ese y dale a cada resultado las verificaciones que necesita.
 
-Necesitan un validador creado por `object`, ya que así conocen su forma. `objectLike`, un `pipe` o un `transform` alrededor de un objeto, y un validador escrito a mano, son un `TypeError`. Leen la forma a través de [`describe`](./json-schema.md#leer-un-esquema), que es como escribirías una función así por tu cuenta.
+Necesitan un validador creado por `object`, `strictObject`, `looseObject` u `objectWithRest`, ya que así conocen su forma. `objectLike`, un `pipe` o un `transform` alrededor de un objeto, y un validador escrito a mano, son un `TypeError`. Leen la forma a través de [`describe`](./json-schema.md#leer-un-esquema), que es como escribirías una función así por tu cuenta.
 
 Los tipos que devuelven tienen nombre, para una biblioteca que exporta lo que deriva:
 

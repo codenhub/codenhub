@@ -23,12 +23,19 @@ const DOMAIN_NAME_PATTERN = /^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+(?:[a-z
  * `.internal`). `home`, `corp` and `mail` are the names ICANN resolved in 2018 never to delegate, since
  * private networks already use them, and `localdomain` is the name many systems give the local machine,
  * as in `localhost.localdomain`. `svc` and `cluster` end the names Kubernetes gives services inside a
- * cluster, such as `kubernetes.default.svc`, a known target for requests forged to reach inside it. The
- * list also holds the eleven IDN test top-level domains IANA listed, in their ASCII form: `إختبار`,
- * `آزمایشی`, `测试`, `測試`, `испытание`, `परीक्षा`, `δοκιμή`, `테스트`, `טעסט`, `テスト` and `பரிட்சை`.
+ * cluster, such as `kubernetes.default.svc`, a known target for requests forged to reach inside it.
  */
 const SPECIAL_USE_NAME_PATTERN =
-  /(?:^|\.)(?:localhost|localdomain|local|internal|home|corp|mail|svc|cluster|test|example|invalid|alt|onion|arpa|xn--(?:kgbechtv|hgbk6aj7f53bba|0zwm56d|g6w251d|80akhbyknj4f|11b5bs3a9aj6g|jxalpdlp|9t4b11yi5a|deba0ad|zckzah|hlcj6aya9esc7a))$/i;
+  /(?:^|\.)(?:localhost|localdomain|local|internal|home|corp|mail|svc|cluster|test|example|invalid|alt|onion|arpa)$/i;
+
+/**
+ * The eleven IDN test top-level domains IANA listed, in their ASCII form, which name no public host
+ * either: `إختبار`, `آزمایشی`, `测试`, `測試`, `испытание`, `परीक्षा`, `δοκιμή`, `테스트`, `טעסט`, `テスト` and
+ * `பரிட்சை`. Apart from {@link SPECIAL_USE_NAME_PATTERN}, so a reader of ASCII domains alone, which refuses
+ * every punycode label, does not carry them.
+ */
+const TEST_NAME_PATTERN =
+  /(?:^|\.)xn--(?:kgbechtv|hgbk6aj7f53bba|0zwm56d|g6w251d|80akhbyknj4f|11b5bs3a9aj6g|jxalpdlp|9t4b11yi5a|deba0ad|zckzah|hlcj6aya9esc7a)$/i;
 
 /** A label in punycode, the ASCII form of an internationalized one. */
 const PUNYCODE_LABEL_PATTERN = /(?:^|\.)xn--/i;
@@ -51,7 +58,14 @@ export const isIdnHost = (host: string): boolean =>
  * compares the value as a string, such as a list of blocked hosts.
  */
 export const isPublicHost = (host: string): boolean =>
-  DOMAIN_NAME_PATTERN.test(host) && !SPECIAL_USE_NAME_PATTERN.test(host) && isIdnHost(host);
+  isPlainPublicHost(host) && !TEST_NAME_PATTERN.test(host) && isIdnHost(host);
+
+/**
+ * {@link isPublicHost} for a host {@link toPlainHost} read, which has no internationalized label to
+ * check, so it carries neither the punycode decoder nor the bidi rule.
+ */
+export const isPlainPublicHost = (host: string): boolean =>
+  DOMAIN_NAME_PATTERN.test(host) && !SPECIAL_USE_NAME_PATTERN.test(host);
 
 /**
  * Letters, combining marks and digits from any script, joined by hyphens and dots: what a domain is
@@ -106,24 +120,35 @@ const ASCII_HOST_PATTERN = /^[a-z0-9.-]+$/i;
 const NUMERIC_HOST_PATTERN = /(?:^|\.)(?:\d+|0x[0-9a-f]*)\.?$/i;
 
 /**
+ * A host written in ASCII that the URL parser would only lowercase, lowercased, or undefined for any
+ * other text: one with a letter beyond ASCII, a punycode label, or a last label the parser reads as a
+ * number. It is all of a host that `email` reads, which so carries no parser, no punycode decoder and
+ * no bidi rule.
+ */
+export function toPlainHost(host: string): string | undefined {
+  return host.length <= HOST_MAX_LENGTH &&
+    ASCII_HOST_PATTERN.test(host) &&
+    !PUNYCODE_LABEL_PATTERN.test(host) &&
+    !NUMERIC_HOST_PATTERN.test(host)
+    ? host.toLowerCase()
+    : undefined;
+}
+
+/**
  * A host as the URL parser reads it: lowercase ASCII, with an internationalized label in punycode, so
  * `München.de` is `xn--mnchen-3ya.de`, or undefined when the text is not a host at all. The parser's
  * reading is returned rather than the text, so every spelling it maps to one host, such as fullwidth
  * letters or an invisible variation selector, becomes that host, and no later check on the value can
  * see a different one. Text longer than a host is ever written is no host, and is not given to the parser.
  *
- * A host the parser would only lowercase is lowercased here instead, which is most of them and took half
- * of `email()`'s time: see {@link ASCII_HOST_PATTERN}. `parser-agreement.test.ts` compares the two over
- * generated hosts of every class it tells apart.
+ * A host the parser would only lowercase is lowercased by {@link toPlainHost} instead, which is most of
+ * them and took half of an email's time: see {@link ASCII_HOST_PATTERN}. `parser-agreement.test.ts`
+ * compares the two over generated hosts of every class it tells apart.
  */
 export function toAsciiHost(host: string): string | undefined {
-  if (
-    host.length <= HOST_MAX_LENGTH &&
-    ASCII_HOST_PATTERN.test(host) &&
-    !PUNYCODE_LABEL_PATTERN.test(host) &&
-    !NUMERIC_HOST_PATTERN.test(host)
-  ) {
-    return host.toLowerCase();
+  const plain = toPlainHost(host);
+  if (plain !== undefined) {
+    return plain;
   }
   if (host.length > HOST_TEXT_MAX_LENGTH || !DOMAIN_TEXT_PATTERN.test(host)) {
     return undefined;
@@ -143,5 +168,8 @@ const NUMERIC_LAST_LABEL_PATTERN = /(?:^|\.)(?:\d+|0x[0-9a-f]*)$/i;
  * way is an IPv4 address, and whose internationalized labels are valid in every browser. An absolute
  * name, ending in a dot, is not one, as {@link isPublicHost} says.
  */
-export const isHostname = (name: string): boolean =>
-  HOSTNAME_PATTERN.test(name) && !NUMERIC_LAST_LABEL_PATTERN.test(name) && isIdnHost(name);
+export const isHostname = (name: string): boolean => isPlainHostname(name) && isIdnHost(name);
+
+/** {@link isHostname} for a host {@link toPlainHost} read, which has no internationalized label to check. */
+export const isPlainHostname = (name: string): boolean =>
+  HOSTNAME_PATTERN.test(name) && !NUMERIC_LAST_LABEL_PATTERN.test(name);

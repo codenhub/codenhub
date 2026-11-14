@@ -1,9 +1,10 @@
-import { chain, type Maybe } from "../core/async";
-import { tail } from "../core/checks";
-import { described } from "../core/describe";
-import { call, composed, fastOf, MISS, type Fast } from "../core/nesting";
-import { assertShape, isPlainObject, objectIssue, setOwn } from "../core/objects";
-import { assertFunction, assertText, describeType, issue } from "../core/result";
+import { runOf, toolsOf } from "../core/child";
+import { accepter, waitsOf } from "../core/finish";
+import { toValidator } from "../core/make";
+import { assertShape, isPlainObject, refuseObject, setOwn } from "../core/objects";
+import { assertText, describeType } from "../core/result";
+import { count, FAIL, report, type Run } from "../core/run";
+import { split } from "../core/split";
 import type {
   AnyValidator,
   AsyncRest,
@@ -13,8 +14,8 @@ import type {
   InferInput,
   MessageOptions,
   Rest,
-  ValidationResult,
 } from "../core/types";
+import { wordType, wordUnion } from "../core/words";
 
 type Simplify<T> = { [K in keyof T]: T[K] } & {};
 
@@ -128,62 +129,47 @@ export function tagged(key: string, variants: Variants, ...rest: unknown[]): Any
     // The types forbid it, but a union of no variants would reject every value without saying why.
     throw new TypeError("tagged() needs at least one variant");
   }
-  table.forEach((variant, tag) => assertFunction(`variants.${tag}`, variant));
-  const [options, reject, accept, checks] = tail<MessageOptions, object>(rest);
-
-  // Valid input is answered by the fast test of its variant, when every variant has one. A variant that
-  // produces anything but a plain object is a miss, so the full work throws for it.
-  const fasts = new Map([...table].map(([tag, variant]) => [tag, fastOf(variant)] as const));
-  const fast: Fast | undefined =
-    checks.length > 0 || [...fasts.values()].includes(undefined)
-      ? undefined
-      : (input) => {
-          if (!isPlainObject(input)) {
-            return MISS;
-          }
-          const tag = Object.hasOwn(input, key) ? input[key] : undefined;
-          const variant = typeof tag === "string" ? fasts.get(tag) : undefined;
-          if (variant === undefined) {
-            return MISS;
-          }
-          const others = {};
-          for (const name of Object.keys(input)) {
-            if (name !== key) {
-              setOwn(others, name, input[name]);
-            }
-          }
-          const value = variant(others);
-          return value === MISS || !isPlainObject(value) ? MISS : { [key]: tag, ...value, [key]: tag };
-        };
-
-  return described(
-    composed((input, place): Maybe<ValidationResult<unknown>> => {
-      if (!isPlainObject(input)) {
-        return reject([objectIssue(input)], place);
+  const runs = new Map([...table].map(([tag, variant]) => [tag, runOf(variant, `variants.${tag}`)] as const));
+  const [options, checks] = split<MessageOptions, object>(rest);
+  const { message } = options;
+  const accept = accepter(checks, message);
+  const tools = toolsOf([...runs.values()], waitsOf(checks));
+  const finish = (value: unknown, tag: string): unknown => {
+    if (value === FAIL) {
+      return FAIL;
+    }
+    if (!isPlainObject(value)) {
+      // Spreading it into the tagged output would take it apart, silently, so it is a bug in the schema.
+      throw new TypeError(`variants.${tag} must produce a plain object, received ${describeType(value)}`);
+    }
+    // The tag is defined first, for its place in the output, and again last, so the variant cannot replace it.
+    return accept({ [key]: tag, ...value, [key]: tag });
+  };
+  const run: Run = (input) => {
+    if (!isPlainObject(input)) {
+      return refuseObject(input, message);
+    }
+    const tag = Object.hasOwn(input, key) ? input[key] : undefined;
+    const variant = typeof tag === "string" ? runs.get(tag) : undefined;
+    if (variant === undefined) {
+      return report("invalid_union", { discriminator: key, options: [...tags] }, message, key);
+    }
+    const others = {};
+    for (const name of Object.keys(input)) {
+      if (name !== key) {
+        setOwn(others, name, input[name]);
       }
-      const tag = Object.hasOwn(input, key) ? input[key] : undefined;
-      const variant = typeof tag === "string" ? table.get(tag) : undefined;
-      if (variant === undefined) {
-        return reject([issue("invalid_union", { discriminator: key, options: [...tags] }, [key])], place);
-      }
-      const others = {};
-      for (const name of Object.keys(input)) {
-        if (name !== key) {
-          setOwn(others, name, input[name]);
-        }
-      }
-      return chain(call(variant, others, place), (result) => {
-        if (!result.ok) {
-          return result;
-        }
-        if (!isPlainObject(result.value)) {
-          // Spreading it into the tagged output would take it apart, silently, so it is a bug in the schema.
-          throw new TypeError(`variants.${tag} must produce a plain object, received ${describeType(result.value)}`);
-        }
-        // The tag is defined first, for its place in the output, and again last, so the variant cannot replace it.
-        return accept({ [key]: tag, ...result.value, [key]: tag }, place);
-      });
-    }, fast),
+    }
+    const value = variant(others);
+    return tools !== undefined && tools.is(value)
+      ? tools.after(count(), value, (later) => finish(later, tag as string))
+      : finish(value, tag as string);
+  };
+  run.w = tools;
+  return toValidator(
+    run,
     { kind: "tagged", options, checks, key, variants: Object.freeze(Object.fromEntries(table)) },
+    [wordType, wordUnion],
+    [...table.values()],
   );
 }

@@ -1,8 +1,7 @@
-import { split } from "../core/checks";
-import { described } from "../core/describe";
+import { split } from "../core/split";
 import type { Factory, MessageOptions } from "../core/types";
 import { fractionPattern, TIME } from "./datetime";
-import { stringFormat } from "./text-format";
+import { formatted, stringFormat } from "./text-format";
 
 /** Options for {@link time}. */
 export interface TimeOptions extends MessageOptions {
@@ -35,7 +34,7 @@ export const time = ((...args: unknown[]) => {
       ? `^(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d${fractionPattern(undefined)})?$`
       : `^${TIME}${fractionPattern(precision)}$`,
   );
-  return described(
+  return formatted(
     stringFormat("time", (text) => (pattern.test(text) ? text : undefined), message, checks),
     { kind: "format", format: "time", options, checks },
   );

@@ -2,7 +2,7 @@
 title: Límites
 description: Lo que cuesta una entrada que falla, los límites de los esquemas recursivos, los tamaños que necesita una entrada no confiable y cómo audit encuentra los límites que un esquema deja abiertos.
 order: 12
-source: 0d5df4008c35a7d4451adff8dab664749c0704a9
+source: 9586fb41a4c9dd27006c86dfb8ebc139b058f743
 ---
 
 # Límites
@@ -191,7 +191,7 @@ Lo que no juzga:
 
 - Si un `max` es lo bastante pequeño. Cualquier número indica que alguien lo decidió.
 - Las verificaciones, ya que se ejecutan sobre un valor que ya pasó, ni nada de lo que hace por dentro un `guard` o un validador escrito a mano.
-- Lo que ninguna opción acota. Cuántas claves conserva un `object` con `unknownKeys: "passthrough"` o un validador, y lo que acepta `unknown()`, no se reportan. El propio validador se lee, así que sus límites sí. Usa `"strip"` o `"strict"` para las claves que el esquema no nombra, y un validador del tipo que esperas en lugar de `unknown()`.
+- Lo que ninguna opción acota. Cuántas claves conserva un `looseObject` o un `objectWithRest`, y lo que acepta `unknown()`, no se reportan. El validador pasado a `objectWithRest` se lee, así que sus límites sí. Usa `object` o `strictObject` para las claves que el esquema no nombra, y un validador del tipo que esperas en lugar de `unknown()`.
 
 ## Siguiente
 

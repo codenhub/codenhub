@@ -1,8 +1,8 @@
-import { chain } from "../core/async";
-import { described } from "../core/describe";
-import { call, composed } from "../core/nesting";
-import { assertFunction } from "../core/result";
+import { runOf } from "../core/child";
+import { toValidator } from "../core/make";
+import { count, type Run } from "../core/run";
 import type { AnyValidator, Composed, Infer, InferInput } from "../core/types";
+import { NO_WORDS } from "../core/words";
 
 /**
  * What `readonly` makes of the type a validator produces: its properties or items read-only, and a `Map`
@@ -66,18 +66,27 @@ type BrandOf<T> = T extends { readonly "~brand": infer TBrand } ? { readonly "~b
 export function readonly<TValidator extends AnyValidator>(
   validator: TValidator,
 ): Composed<TValidator, ReadonlyOutput<Infer<TValidator>>, InferInput<TValidator>> {
-  assertFunction("validator", validator);
-  const validate = composed((input, place) =>
-    chain(call(validator, input, place), (result) => {
-      if (result.ok && result.value !== input && !ArrayBuffer.isView(result.value)) {
-        Object.freeze(result.value);
-      }
-      return result;
-    }),
+  const runInner = runOf(validator, "validator");
+  const tools = runInner.w;
+  // A value the validator gave back as it is belongs to the caller, and a view of a buffer cannot be
+  // frozen. What a failure gives in place of a value is neither, and freezing it changes nothing.
+  const frozen = (value: unknown, input: unknown): unknown => {
+    if (value !== input && !ArrayBuffer.isView(value)) {
+      Object.freeze(value);
+    }
+    return value;
+  };
+  const run: Run = (input) => {
+    const value = runInner(input);
+    return tools !== undefined && tools.is(value)
+      ? tools.after(count(), value, (later) => frozen(later, input))
+      : frozen(value, input);
+  };
+  run.w = tools;
+  return toValidator<Composed<TValidator, ReadonlyOutput<Infer<TValidator>>, InferInput<TValidator>>>(
+    run,
+    { kind: "readonly", inner: validator },
+    NO_WORDS,
+    [validator],
   );
-  return described(validate, { kind: "readonly", inner: validator }) as Composed<
-    TValidator,
-    ReadonlyOutput<Infer<TValidator>>,
-    InferInput<TValidator>
-  >;
 }

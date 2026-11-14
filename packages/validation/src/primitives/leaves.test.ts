@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { check } from "../builders/check";
 import { coerceBigint } from "../coercion/coerce-bigint";
 import { coerceBoolean } from "../coercion/coerce-boolean";
 import { coerceDate } from "../coercion/coerce-date";
@@ -49,7 +50,7 @@ const leaves: [name: string, factory: Leaf, good: unknown, bad: unknown][] = [
 ];
 
 describe.each(leaves)("%s", (_name, factory, good) => {
-  const refuse: Check<never> = () => [{ code: "refused", path: [] }];
+  const refuse: Check<never> = check(() => [{ code: "refused", path: [] }]);
 
   it("should accept a value of its kind with no arguments", () => {
     expect(factory()(good).ok).toBe(true);
@@ -62,14 +63,15 @@ describe.each(leaves)("%s", (_name, factory, good) => {
 
   it("should turn asynchronous with an asynchronous check, and only then", async () => {
     expect(isPending(factory(refuse)(good))).toBe(false);
-    const later = (async () => undefined) as unknown as Check<never>;
+    const later = check(async () => []) as unknown as Check<never>;
     const pending = factory(later)(good);
     expect(isPending(pending)).toBe(true);
     expect((await pending).ok).toBe(true);
   });
 
-  it("should refuse a check that is not a function when it is created", () => {
+  it("should refuse a check that check() did not make when it is created", () => {
     expect(() => factory({}, "x" as unknown as Check<never>)).toThrow(TypeError);
+    expect(() => factory((() => true) as unknown as Check<never>)).toThrow(/checks made with check\(\)/);
   });
 });
 
@@ -77,7 +79,7 @@ describe.each(leaves)("%s", (_name, factory, good) => {
 const rejecting = leaves.filter(([name]) => name !== "unknown");
 
 describe.each(rejecting)("%s, given a value it rejects", (_name, factory, _good, bad) => {
-  const refuse: Check<never> = () => [{ code: "refused", path: [] }];
+  const refuse: Check<never> = check(() => [{ code: "refused", path: [] }]);
 
   it("should word its own issue with the message option", () => {
     expect(issuesOf(factory({ message: "Nope" })(bad)).map((issue) => issue.message)).toEqual(["Nope"]);

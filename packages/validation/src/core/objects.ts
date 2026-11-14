@@ -1,5 +1,6 @@
 import { describeType, issue } from "./result";
-import type { ValidationIssue } from "./types";
+import { report, type Fail } from "./run";
+import type { Message, ValidationIssue } from "./types";
 
 /**
  * Tests whether a value is a plain object: created by `{}`, `Object.create(null)`, or `JSON.parse`,
@@ -181,4 +182,17 @@ export function objectIssue(input: unknown): ValidationIssue {
     expected: "object",
     received: received === "object" && !isPlainObject(input) ? "non-plain object" : received,
   });
+}
+
+/**
+ * Reports an input that is not a plain object. An object that has a prototype of its own is named as
+ * such, since `received: "object"` beside `expected: "object"` would explain nothing.
+ */
+export function refuseObject(input: unknown, message: Message | undefined): Fail {
+  const received = describeType(input);
+  return report(
+    "invalid_type",
+    { expected: "object", received: received === "object" ? "non-plain object" : received },
+    message,
+  );
 }

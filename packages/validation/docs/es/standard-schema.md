@@ -2,7 +2,7 @@
 title: Standard Schema
 description: Usa un validador en cualquier lugar donde una biblioteca acepte un Standard Schema, como bibliotecas de formularios, frameworks de API y routers.
 order: 9
-source: 73e46b19be7edce0bf1530eb1b7febf6e6a3f8dd
+source: 70075416515af6450dc4a244fd80abe14ce80fa0
 ---
 
 # Standard Schema
@@ -42,7 +42,6 @@ Algunos problemas reciben menos que una frase:
 
 - **El inglés completo**, como "Invalid email address" y "Must contain at most 3 items", que es el predeterminado.
 - **Otro idioma**, con `portugueseMessages`, `spanishMessages` o un mapa propio.
-- **Un validador que escribiste a mano**, que no tiene un `~standard` propio, ya que este paquete no lo creó.
 
 ```ts
 import { email, number, object, portugueseMessages, standard } from "@codenhub/validation";
@@ -52,7 +51,7 @@ const signup = standard(object({ email: email(), age: number({ int: true }) }), 
 
 ## Los tipos
 
-Una fábrica devuelve un `Schema<T, TInput>`, o un `AsyncSchema<T, TInput>` cuando una de sus reglas espera: un `Validator` o `AsyncValidator` que también es un `StandardSchemaV1<TInput, T>`. Se acepta en cualquier lugar donde se acepta un `Validator`, así que el código que recibe un validador, como `assert` o una función propia, lo recibe igual que antes. Un validador que escribes a mano se tipa como `Validator`, que no pide `~standard`, y el `brand` de uno sigue siendo un `Validator`, ya que `brand` devuelve el validador que recibe.
+Una fábrica devuelve un `Schema<T, TInput>`, o un `AsyncSchema<T, TInput>` cuando una de sus reglas espera: un `Validator` o `AsyncValidator` que también es un `StandardSchemaV1<TInput, T>`. Se acepta en cualquier lugar donde se acepta un `Validator`, así que el código que recibe un validador, como `assert` o una función propia, lo recibe igual que antes. Lo que [`validator`](./custom-validators.md#a-mano) crea a partir de una función que escribiste también es un `Schema`. Un valor que tú mismo tipaste como `Validator`, como se tipa un esquema recursivo, no pide `~standard`, y el `brand` de uno sigue siendo un `Validator`, ya que `brand` devuelve el validador que recibe.
 
 ## Lo que devuelve `standard`
 

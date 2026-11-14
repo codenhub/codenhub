@@ -1,8 +1,11 @@
-import { leaf, split } from "../core/checks";
-import { described } from "../core/describe";
+import { leaf } from "../core/leaf";
+import { toValidator } from "../core/make";
 import { timeOf } from "../core/objects";
-import { assertOrder, describeType, issue } from "../core/result";
+import { assertOrder, describeType } from "../core/result";
+import { report } from "../core/run";
+import { split } from "../core/split";
 import type { Factory, MessageOptions } from "../core/types";
+import { SIZE_WORDS } from "../core/words";
 
 /** Bounds for {@link date}. Every option is optional. */
 export interface DateOptions extends MessageOptions {
@@ -60,17 +63,19 @@ export const date = ((...args: unknown[]) => {
   const min = readBound("Minimum date", options.min);
   const max = readBound("Maximum date", options.max);
   assertOrder("min", min, "max", max);
-  return described(
-    leaf<Date>("valid date", isValidDate, options.message, checks, (value, issues) => {
+  const { message } = options;
+  return toValidator(
+    leaf<Date>("valid date", isValidDate, message, checks, (value) => {
       const time = timeOf(value) as number;
       if (min !== undefined && time < min) {
-        issues.push(issue("too_small", { minimum: new Date(min), inclusive: true, type: "date" }));
+        report("too_small", { minimum: new Date(min), inclusive: true, type: "date" }, message);
       }
       if (max !== undefined && time > max) {
-        issues.push(issue("too_big", { maximum: new Date(max), inclusive: true, type: "date" }));
+        report("too_big", { maximum: new Date(max), inclusive: true, type: "date" }, message);
       }
       return value;
     }),
     { kind: "date", options, checks },
+    SIZE_WORDS,
   );
 }) as Factory<Date, DateOptions>;

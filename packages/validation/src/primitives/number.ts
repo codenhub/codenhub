@@ -1,7 +1,10 @@
-import { leaf, split } from "../core/checks";
-import { described } from "../core/describe";
-import { assertBounds, assertOption, assertOrder, describeType, issue } from "../core/result";
-import type { Factory, MessageOptions, ValidationIssue } from "../core/types";
+import { leaf } from "../core/leaf";
+import { toValidator } from "../core/make";
+import { assertBounds, assertOption, assertOrder, describeType } from "../core/result";
+import { report } from "../core/run";
+import { split } from "../core/split";
+import type { Factory, Message, MessageOptions } from "../core/types";
+import { wordInteger, wordSize, wordType } from "../core/words";
 
 /**
  * Constraints and clean-up for {@link number}. Every option is optional. Rarer constraints, such as
@@ -32,14 +35,21 @@ export interface NumberOptions extends MessageOptions {
   clamp?: { min: number; max: number } | undefined;
 }
 
-const outOfRange = (side: "min" | "max", bound: number, isInclusive: boolean): ValidationIssue =>
-  issue(side === "min" ? "too_small" : "too_big", {
-    [side === "min" ? "minimum" : "maximum"]: bound,
-    inclusive: isInclusive,
-    type: "number",
-  });
+const outOfRange = (side: "min" | "max", bound: number, isInclusive: boolean, message: Message | undefined): unknown =>
+  report(
+    side === "min" ? "too_small" : "too_big",
+    {
+      [side === "min" ? "minimum" : "maximum"]: bound,
+      inclusive: isInclusive,
+      type: "number",
+    },
+    message,
+  );
 
-const invalidValue = (format: string): ValidationIssue => issue("invalid_value", { type: "number", format });
+const invalidValue = (format: string, message: Message | undefined): unknown =>
+  report("invalid_value", { type: "number", format }, message);
+
+const WORDS = [wordType, wordSize, wordInteger];
 
 const isNumber = (input: unknown): boolean => typeof input === "number" && Number.isFinite(input);
 
@@ -119,37 +129,37 @@ export const number = ((...args: unknown[]) => {
   // `int: false` and `safeInt: false` ask for nothing, as leaving them out does.
   const isPlain = [clamp, min, max, gt, lt].every((option) => option === undefined) && int !== true && safeInt !== true;
   // A number no option reads is the value as it is, and is passed without a list for issues it cannot have.
-  const validator = leaf<number>(
+  const run = leaf<number>(
     "number",
     isNumber,
     message,
     checks,
     isPlain
       ? undefined
-      : (input, issues) => {
+      : (input) => {
           const value = clamp === undefined ? input : Math.min(Math.max(input, clamp.min), clamp.max);
           if (min !== undefined && value < min) {
-            issues.push(outOfRange("min", min, true));
+            outOfRange("min", min, true, message);
           }
           if (gt !== undefined && value <= gt) {
-            issues.push(outOfRange("min", gt, false));
+            outOfRange("min", gt, false, message);
           }
           if (max !== undefined && value > max) {
-            issues.push(outOfRange("max", max, true));
+            outOfRange("max", max, true, message);
           }
           if (lt !== undefined && value >= lt) {
-            issues.push(outOfRange("max", lt, false));
+            outOfRange("max", lt, false, message);
           }
           if (int === true && !Number.isInteger(value)) {
-            issues.push(invalidValue("int"));
+            invalidValue("int", message);
           } else if (safeInt === true && !Number.isSafeInteger(value)) {
             // A fraction that int already reported is not reported again as an unsafe integer.
-            issues.push(invalidValue("safeInt"));
+            invalidValue("safeInt", message);
           }
           return value;
         },
   );
   // The range the validator clamps to, and not the caller's object, which may change after.
   const read = clamp === undefined ? options : Object.freeze({ ...options, clamp: Object.freeze(clamp) });
-  return described(validator, { kind: "number", options: read, checks });
+  return toValidator(run, { kind: "number", options: read, checks }, WORDS);
 }) as Factory<number, NumberOptions>;

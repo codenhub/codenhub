@@ -5,6 +5,7 @@ import { describe, expect, it } from "vitest";
 import { coerceDate } from "../coercion/coerce-date";
 import { map } from "../composition/map";
 import { object } from "../composition/object";
+import { objectWithRest } from "../composition/object-with-rest";
 import { record } from "../composition/record";
 import { set } from "../composition/set";
 import { tagged } from "../composition/tagged";
@@ -71,7 +72,7 @@ describe("values from another realm", () => {
   it("should be accepted by object and record, and copied into this realm", () => {
     expect(valueOf(object({ a: number() })(foreign("({ a: 1 })")))).toEqual({ a: 1 });
     expect(valueOf(record(string(), number())(foreign("({ a: 1 })")))).toEqual({ a: 1 });
-    const rested = valueOf(object({ a: number() }, { unknownKeys: number() })(foreign("({ a: 1, b: 2 })")));
+    const rested = valueOf(objectWithRest({ a: number() }, number())(foreign("({ a: 1, b: 2 })")));
     expect(rested).toEqual({ a: 1, b: 2 });
     expect(Object.getPrototypeOf(rested)).toBe(Object.prototype);
     expect(valueOf(tagged("t", { x: object({ n: number() }) })(foreign("({ t: 'x', n: 1 })")))).toEqual({

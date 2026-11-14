@@ -1,11 +1,12 @@
-import { split } from "../core/checks";
-import { described } from "../core/describe";
 import { assertOption, issue } from "../core/result";
+import { count, cut, straighten } from "../core/run";
+import { split } from "../core/split";
 import type { AnyValidator, AsyncCheck, AsyncSchema, Check, Composed, MessageOptions, Schema } from "../core/types";
 import { HOSTLESS_SCHEMES, toHostlessUrl } from "./hostless-url";
 import { toCanonicalIpv6 } from "./ip";
 import { assertParts, notFormat, partIssue, partsFormat, readEntries, type Part, type Reading } from "./parts";
 import { HOST_MAX_LENGTH, HOST_TEXT_MAX_LENGTH, isIdnHost, isPublicHost, readUrl } from "./patterns";
+import { formatted } from "./text-format";
 
 /**
  * No whitespace and no control characters: a written URL holds neither (RFC 3986), and the parser would
@@ -161,7 +162,7 @@ export interface UrlOptions extends MessageOptions {
    * `repeated` every value of every key as an array. A key given twice fails at `[key]` inside the
    * query unless `repeated` is set. Its failure is reported as the URL's, with `params.part` `"query"`
    * and paths relative to the query in `params.issues`. To reject parameters it does not list,
-   * give it `object(shape, { unknownKeys: "strict" })`.
+   * give it `strictObject(shape)`.
    */
   query?: AnyValidator | undefined;
   /**
@@ -327,15 +328,18 @@ export function url(...rest: unknown[]): AnyValidator {
       parts.push(["path", path, parsed.pathname]);
     }
     if (query !== undefined) {
-      const { value, issues } = readEntries(parsed.searchParams, repeated);
-      if (issues.length > 0) {
-        return { issues: [partIssue("url", "query", issues)] };
+      // Reported, then taken back out: they are held behind the issue of the URL, which its message words.
+      const from = count();
+      const value = readEntries(parsed.searchParams, repeated, undefined);
+      const found = cut(from);
+      if (found !== undefined) {
+        return { issues: [partIssue("url", "query", straighten(found))] };
       }
       parts.push(["query", query, value]);
     }
     return { value: parsed.href, parts };
   };
-  return described(partsFormat("url", read, message, checks, [credentials, host, port, path, query]), {
+  return formatted(partsFormat("url", read, message, checks, [credentials, host, port, path, query]), {
     kind: "format",
     format: "url",
     options,

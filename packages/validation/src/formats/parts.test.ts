@@ -6,6 +6,7 @@ import { coerceNumber } from "../coercion/coerce-number";
 import { array } from "../composition/array";
 import { object } from "../composition/object";
 import { optional } from "../composition/optional";
+import { strictObject } from "../composition/strict-object";
 import { union } from "../composition/union";
 import { literal } from "../primitives/literal";
 import { oneOf } from "../primitives/one-of";
@@ -15,6 +16,7 @@ import { accepts, isFree, issuesOf, isPending, valueOf } from "../test-utils";
 import { domain } from "./domain";
 import { email } from "./email";
 import { hostname } from "./hostname";
+import { internationalEmail } from "./international-email";
 import { ip } from "./ip";
 import { port } from "./port";
 import { searchParams } from "./search-params";
@@ -189,7 +191,7 @@ describe("url parts", () => {
   });
 
   it("should give the query as an object of decoded parameters, and reject a repeated key", () => {
-    const search = url({ query: object({ q: string(), page: optional(string()) }, { unknownKeys: "strict" }) });
+    const search = url({ query: strictObject({ q: string(), page: optional(string()) }) });
     expect(valueOf(search("https://example.com/?q=red+shoes"))).toBe("https://example.com/?q=red+shoes");
     expect(
       accepts(search, "https://example.com/?q=%C3%A9", "https://example.com/", "https://example.com/?q=a&x=1"),
@@ -269,7 +271,15 @@ describe("email parts", () => {
   });
 
   it("should give the domain in ASCII and the local part as written, and name a failing part", () => {
-    const corporate = email({ domain: oneOf(["xn--mnchen-3ya.de"]), local: string({ max: 3 }) });
+    const corporate = email({ domain: oneOf(["example.de"]), local: string({ max: 3 }) });
+    expect(valueOf(corporate("Ada@Example.DE"))).toBe("Ada@example.de");
+    expect(issuesOf(corporate("adalovelace@example.de")).map((issue) => [issue.path, issue.params?.part])).toEqual([
+      [[], "local"],
+    ]);
+  });
+
+  it("should give the domain of an international address in punycode, and name a failing part", () => {
+    const corporate = internationalEmail({ domain: oneOf(["xn--mnchen-3ya.de"]), local: string({ max: 3 }) });
     expect(valueOf(corporate("Ada@München.DE"))).toBe("Ada@xn--mnchen-3ya.de");
     expect(issuesOf(corporate("adalovelace@münchen.de")).map((issue) => [issue.path, issue.params?.part])).toEqual([
       [[], "local"],

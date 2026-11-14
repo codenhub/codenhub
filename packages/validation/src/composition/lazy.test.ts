@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { check } from "../builders/check";
 import { format } from "../builders/format";
 import { guard } from "../builders/guard";
-import { fastOf } from "../core/nesting";
+import { validator } from "../builders/validator";
 import type { AsyncValidator, Validator } from "../core/types";
 import { boolean } from "../primitives/boolean";
 import { literal } from "../primitives/literal";
@@ -57,9 +57,9 @@ describe("lazy", () => {
   });
 
   it("should work with asynchronous validators", async () => {
-    const validator = lazy(() => isFree);
-    expect(isPending(validator("a"))).toBe(true);
-    expect(valueOf(await validator("a"))).toBe("a");
+    const free = lazy(() => isFree);
+    expect(isPending(free("a"))).toBe(true);
+    expect(valueOf(await free("a"))).toBe("a");
   });
 
   describe("depth", () => {
@@ -318,10 +318,10 @@ describe("lazy", () => {
     const doubling = (copy = false): { node: Validator<unknown>; calls: () => number } => {
       let calls = 0;
       // Counts every call a lazy validator lets through to the union.
-      const counted: Validator<unknown> = (input) => {
+      const counted: Validator<unknown> = validator((input) => {
         calls += 1;
         return node(input);
-      };
+      });
       // A copy is a new value each time, so no result can be shared for it.
       const kid = (): Validator<unknown> =>
         copy
@@ -507,11 +507,11 @@ describe("lazy", () => {
 
     it("should count each validation afresh, even one made by a hand-written validator", () => {
       const linked: Validator<Link> = object({ next: optional(lazy(() => linked, { maxCalls: 3 })) });
-      const twice: Validator<unknown> = (input) => {
+      const twice: Validator<unknown> = validator((input) => {
         const first = linked(input);
         // A copy, so the second call is new work rather than a result already found.
         return first.ok ? linked(structuredClone(input)) : first;
-      };
+      });
       // Inside one validation, the two calls share its count.
       expect(object({ a: twice })({ a: chain(2) }).ok).toBe(false);
       expect([twice(chain(1)).ok, twice(chain(1)).ok]).toEqual([true, true]);
@@ -579,10 +579,9 @@ describe("lazy", () => {
       expect(issuesOf(node(tree(10_002)))[0]?.params).toEqual({ maximum: 10_000, type: "calls" });
     });
 
-    it("should count the calls an option of a union spent before it failed, so lazy has no fast test", () => {
-      // The first option fails at `kind`, after its full work has spent six calls of `shared` on `kids`;
-      // the second reaches them one level deeper, where nothing kept is reused. A fast test would miss the
-      // first option at `kind` without a call, and pass what the full work rejects.
+    it("should count the calls an option of a union spent before it failed", () => {
+      // The first option fails at `kind`, after it has spent six calls of `shared` on `kids`; the second
+      // reaches them one level deeper, where nothing kept is reused.
       const shared = lazy(() => object({ n: number() }), { maxCalls: 10 });
       const option = (kind: string, kids: Validator<unknown>) => object({ kind: literal(kind), kids: array(kids) });
       const second = option(
@@ -593,7 +592,6 @@ describe("lazy", () => {
       expect(second(input).ok).toBe(true);
       const result = union([option("a", shared), second])(input);
       expect(JSON.stringify(result)).toContain('"maximum":10,"type":"calls"');
-      expect(fastOf(shared)).toBeUndefined();
     });
 
     it("should reject a limit that is not a positive integer, or not a number", () => {
@@ -624,10 +622,10 @@ describe("lazy, given a getter that returns null", () => {
 
   it("should validate an object once when two options of a union reach it at the same place", () => {
     let calls = 0;
-    const counted: Validator<{ n: number }> = (input) => {
+    const counted: Validator<{ n: number }> = validator((input) => {
       calls += 1;
       return object({ n: number() })(input);
-    };
+    });
     const node = lazy(() => counted);
     const either = union([object({ child: node, tag: literal("a") }), object({ child: node, tag: literal("b") })]);
     expect(valueOf(either({ child: { n: 1 }, tag: "b" }))).toEqual({ child: { n: 1 }, tag: "b" });
@@ -640,10 +638,10 @@ describe("lazy, given a getter that returns null", () => {
   it("should keep a result for each path of an object found again inside its own validation", () => {
     let calls = 0;
     type Loop = { next?: Loop };
-    const counted: Validator<Loop> = (input) => {
+    const counted: Validator<Loop> = validator((input) => {
       calls += 1;
       return object({ next: optional(node) })(input);
-    };
+    });
     const node: Validator<Loop> = lazy(() => counted, { maxDepth: 4 });
     const loop: Loop = {};
     loop.next = loop;

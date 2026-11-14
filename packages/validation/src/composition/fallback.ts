@@ -1,7 +1,9 @@
-import { chain, detached } from "../core/async";
-import { described } from "../core/describe";
-import { assertFunction, assertUnshared, isResult, notResult, pass } from "../core/result";
+import { runOf } from "../core/child";
+import { toValidator } from "../core/make";
+import { assertUnshared } from "../core/result";
+import { after, count, cut, detached, FAIL, straighten, type Run } from "../core/run";
 import type { AnyValidator, Composed, Infer, ValidationIssue } from "../core/types";
+import { NO_WORDS } from "../core/words";
 import type { AnyFunction } from "../primitives/func";
 import type { LiteralValue } from "../primitives/literal";
 
@@ -48,21 +50,21 @@ export function fallback<TValidator extends AnyValidator>(
   validator: TValidator,
   value: Replacement<Infer<TValidator>>,
 ): Composed<TValidator, Infer<TValidator>> {
-  assertFunction("validator", validator);
+  // No result is a mistake in the schema, not a failure, so it is named and never replaced.
+  const runInner = runOf(validator, "validator");
   assertUnshared("A fallback object", value);
-  const validate = (input: unknown) =>
-    chain(validator(input), (result) => {
-      // No result is a mistake in the schema, not a failure, so it is named and never replaced.
-      if (!isResult(result)) {
-        throw notResult("The validator given to fallback");
-      }
-      return result.ok
-        ? result
-        : pass(
-            typeof value === "function"
-              ? detached(value as (issues: readonly ValidationIssue[]) => unknown, result.error.issues)
-              : value,
-          );
-    });
-  return described(validate, { kind: "fallback", inner: validator, value }) as Composed<TValidator, Infer<TValidator>>;
+  const replace = (produced: unknown, from: number): unknown => {
+    if (produced !== FAIL) {
+      return produced;
+    }
+    // Taken out of the validation, so the parent of this validator never sees what was replaced.
+    const found = straighten(cut(from) ?? []);
+    return typeof value === "function"
+      ? detached(value as (issues: readonly ValidationIssue[]) => unknown, found)
+      : value;
+  };
+  const run: Run = (input) => after(runInner.w, count(), runInner(input), replace);
+  run.w = runInner.w;
+  // It reports nothing, so it has no words, its validator's included.
+  return toValidator(run, { kind: "fallback", inner: validator, value }, NO_WORDS);
 }

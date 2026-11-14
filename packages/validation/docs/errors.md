@@ -91,7 +91,7 @@ The `params` of `invalid_value`:
 - `content: true` beside `options` for a file whose first bytes are of none of the types `contentType` lists.
 - `encodedSeparator: true` and `dotSegment: true` for the URL paths described in [Formats](formats.md#paths-a-server-reads-otherwise).
 
-A `__proto__` key is reported where it would be copied into a new object: in a `record`, among the unlisted keys of a passthrough `object`, and in an `intersection` whose sides passed it on unchecked.
+A `__proto__` key is reported where it would be copied into a new object: in a `record`, among the unlisted keys of a `looseObject` or an `objectWithRest`, and in an `intersection` whose sides passed it on unchecked.
 
 `englishMessages` has no wording for `custom`, since a failed check carries nothing to word, so `formatIssue` says "Invalid value". Give a check a message where people read what it reports.
 

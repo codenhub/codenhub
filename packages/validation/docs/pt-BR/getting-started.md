@@ -1,7 +1,7 @@
 ---
 title: Primeiros passos
 description: O que é um validador, como ler o resultado dele e os validadores para strings, números, datas, valores fixos e objetos.
-source: 00992dea16dfbcb706c35d248f777a563f7119f5
+source: 4c6087b77f6c350743d49222fbf038894b989049
 order: 1
 ---
 
@@ -324,25 +324,25 @@ Uma estrutura só contém chaves de texto enumeráveis. `object` lança um `Type
 
 ### Chaves que a estrutura não lista
 
-A opção `unknownKeys` decide o que acontece com as propriedades da entrada que a estrutura não lista:
+`object` descarta as propriedades da entrada que a estrutura não lista. Três outras factories leem um objeto simples do mesmo jeito e diferem no que fazem com essas propriedades:
 
-| `unknownKeys`   | Efeito                                                                                        |
-| --------------- | --------------------------------------------------------------------------------------------- |
-| `"strip"`       | Descarta-as da saída. É o padrão.                                                             |
-| `"strict"`      | Rejeita cada uma com um problema `unrecognized_key` no caminho da chave, e `params: { key }`. |
-| `"passthrough"` | Copia-as para a saída sem alteração e sem verificação, exceto `__proto__`, que é rejeitada.   |
-| Um validador    | Valida cada uma com ele, e mantém o que ele produz.                                           |
+| Factory                       | Propriedades que a estrutura não lista                                                            |
+| ----------------------------- | ------------------------------------------------------------------------------------------------- |
+| `object(shape)`               | Descartadas da saída.                                                                             |
+| `strictObject(shape)`         | Rejeitadas, cada uma com um problema `unrecognized_key` no caminho da chave, e `params: { key }`. |
+| `looseObject(shape)`          | Copiadas para a saída sem alteração e sem verificação, exceto `__proto__`, que é rejeitada.       |
+| `objectWithRest(shape, rest)` | Validadas com `rest`, e o que ele produz é mantido.                                               |
 
-Qualquer outro valor, como um `"Strict"` com erro de digitação, lança um `TypeError` quando o validador é criado, em vez de cair para `"strip"`.
+Cada uma aceita uma opção `message` e verificações depois dos argumentos, como `object`. Elas são factories e não uma opção de `object`, então um programa carrega o código das que usa e de nenhuma outra.
 
-Um objeto passthrough rejeita `__proto__` porque uma chave `__proto__` mantida viraria o protótipo de qualquer cópia da saída feita por atribuição, como `Object.assign({}, output)`. O problema é `invalid_key` com um problema dentro, `invalid_value` com `{ reserved: true }`.
+Um objeto loose rejeita `__proto__` porque uma chave `__proto__` mantida viraria o protótipo de qualquer cópia da saída feita por atribuição, como `Object.assign({}, output)`. O problema é `invalid_key` com um problema dentro, `invalid_value` com `{ reserved: true }`.
 
-Um validador passado como `unknownKeys` verifica cada chave que a estrutura não lista, como `record` verifica os valores dele:
+`objectWithRest` verifica cada chave que a estrutura não lista com o validador que recebe, como `record` verifica os valores dele:
 
 ```ts
-import { boolean, object, string } from "@codenhub/validation";
+import { boolean, objectWithRest, string } from "@codenhub/validation";
 
-const settings = object({ name: string() }, { unknownKeys: boolean() });
+const settings = objectWithRest({ name: string() }, boolean());
 
 settings({ name: "Ada", beta: true }); // { ok: true, value: { name: "Ada", beta: true } }
 settings({ name: "Ada", beta: "yes" }); // { ok: false, ... }, code "invalid_type" at ["beta"]
@@ -370,7 +370,7 @@ feedback({ message: "" }); // { ok: false, ... }, code "too_small"
 - Ele aceita todo objeto que não seja um array: um objeto simples, uma instância de classe, um `Map`, um `Date`. Qualquer outra coisa, inclusive uma função, falha com `invalid_type` e `{ expected: "object", received }`.
 - Ele lê cada propriedade listada como `input[key]`, então conta uma propriedade herdada, não enumerável ou calculada por um getter.
 - Uma propriedade que lança ao ser lida, como pode acontecer com um getter ou um trap de `Proxy`, é reportada como `invalid_value` com `params: { unreadable: true }` no caminho da propriedade, e as outras propriedades continuam sendo validadas.
-- A saída é um novo objeto simples que contém só as propriedades listadas, sem as que têm valor `undefined`. Não existe a opção `unknownKeys`.
+- A saída é um novo objeto simples que contém só as propriedades listadas, sem as que têm valor `undefined`. Não existe `objectLike` strict nem loose.
 - As verificações dele rodam depois que todas as propriedades passaram, e veem a saída.
 
 Para escolher entre instâncias por uma propriedade, coloque os validadores `objectLike` em uma `union`. `tagged` só lê a tag de um objeto simples, como explica [Corpos de requisição](request-bodies.md#tagged).

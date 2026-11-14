@@ -12,8 +12,10 @@ import { array } from "./array";
 import { intersection } from "./intersection";
 import { json } from "./json";
 import { lazy } from "./lazy";
+import { looseObject } from "./loose-object";
 import { map } from "./map";
 import { object } from "./object";
+import { objectWithRest } from "./object-with-rest";
 import { optional } from "./optional";
 import { pipe } from "./pipe";
 import { set } from "./set";
@@ -197,7 +199,7 @@ describe("intersection", () => {
 
   it("should keep a __proto__ key listed by the shape an object gives its unknown keys", () => {
     const parsed = JSON.parse('{"inner":{"__proto__":{"admin":true}}}') as unknown;
-    const rested = object({}, { unknownKeys: object({ ["__proto__"]: unknown() }) });
+    const rested = objectWithRest({}, object({ ["__proto__"]: unknown() }));
     const output = valueOf(intersection(object({ inner: unknown() }), rested)(parsed)) as { inner: object };
     expect(Object.hasOwn(output.inner, "__proto__")).toBe(true);
   });
@@ -256,7 +258,7 @@ describe("intersection", () => {
   it("should keep a value both sides passed through as it is, so cyclic input does not recurse forever", () => {
     const cyclic: Record<string, unknown> = { name: "a" };
     cyclic["self"] = cyclic;
-    const open = object({ name: string() }, { unknownKeys: "passthrough" });
+    const open = looseObject({ name: string() });
     const merged = valueOf(intersection(open, open)(cyclic)) as Record<string, unknown>;
     expect(merged["self"]).toBe(cyclic);
     expect(merged["name"]).toBe("a");

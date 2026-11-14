@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { check } from "../builders/check";
+import { validator } from "../builders/validator";
 import { fail, pass } from "../core/result";
 import type { AsyncValidator, Validator } from "../core/types";
 import { email } from "../formats/email";
@@ -23,16 +24,19 @@ describe("pipe", () => {
 
   it("should not run later validators after a failure", () => {
     let calls = 0;
-    const later: Validator<unknown> = (input) => {
+    const later: Validator<unknown> = validator((input) => {
       calls += 1;
       return pass(input);
-    };
+    });
     pipe(number(), later)("not a number");
     expect(calls).toBe(0);
   });
 
   it("should let a later validator change the type", () => {
-    const length = pipe(string(), (input): ReturnType<Validator<number>> => pass((input as string).length));
+    const length = pipe(
+      string(),
+      validator((input): ReturnType<Validator<number>> => pass((input as string).length)),
+    );
     expect(valueOf(length("four"))).toBe(4);
   });
 
@@ -41,8 +45,9 @@ describe("pipe", () => {
   });
 
   it("should be asynchronous when any step is, and preserve order", async () => {
-    const taken: AsyncValidator<string> = async (input) =>
-      input === "admin" ? fail({ code: "taken" }) : pass(input as string);
+    const taken: AsyncValidator<string> = validator(async (input) =>
+      input === "admin" ? fail({ code: "taken" }) : pass(input as string),
+    );
     const username = pipe(string({ trim: true }), taken, string(check((name) => name.length > 2, { code: "short" })));
     expect(valueOf(await username(" ada "))).toBe("ada");
     expect(codesOf(await username(" admin "))).toEqual(["taken"]);

@@ -190,7 +190,7 @@ What it does not judge:
 
 - Whether a `max` is small enough. Any number says someone decided.
 - Checks, since they run on a value that already passed, and anything a `guard` or a validator written by hand does inside.
-- What no option bounds. How many keys an `object` with `unknownKeys: "passthrough"` or a validator keeps, and what `unknown()` accepts, are not reported. The validator itself is read, so its own bounds are. Use `"strip"` or `"strict"` for keys the schema does not name, and a validator of the type you expect in place of `unknown()`.
+- What no option bounds. How many keys a `looseObject` or an `objectWithRest` keeps, and what `unknown()` accepts, are not reported. The validator given to `objectWithRest` is read, so its own bounds are. Use `object` or `strictObject` for keys the schema does not name, and a validator of the type you expect in place of `unknown()`.
 
 ## Next
 

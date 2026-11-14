@@ -1,21 +1,11 @@
-import { chain, collect, type Maybe } from "../core/async";
-import { report, tail } from "../core/checks";
-import { described } from "../core/describe";
-import { cap, countIssues, runItems } from "../core/limit";
-import { append, childOf, composed, fastOf, MISS, type Fast } from "../core/nesting";
-import { isPlainObject, objectIssue, setOwn } from "../core/objects";
-import {
-  assertFunction,
-  describeType,
-  failWith,
-  isResult,
-  issue,
-  nested,
-  notResult,
-  repeatedKey,
-  RESERVED_KEY,
-  reservedKey,
-} from "../core/result";
+import { runOf, toolsOf } from "../core/child";
+import { accepter, waitsOf } from "../core/finish";
+import { refuseReserved, RESERVED_KEY } from "../core/keys";
+import { toValidator } from "../core/make";
+import { isPlainObject, refuseObject, setOwn } from "../core/objects";
+import { describeType } from "../core/result";
+import { FAIL, type Run } from "../core/run";
+import { split } from "../core/split";
 import type {
   AnyValidator,
   AsyncRest,
@@ -25,10 +15,10 @@ import type {
   InferInput,
   MessageOptions,
   Rest,
-  ValidationIssue,
-  ValidationResult,
 } from "../core/types";
-import { SIZE_OPTIONS, assertSizeOptions, sizeIssues, type SizeOptions } from "./size";
+import { wordKey, wordSize, wordType } from "../core/words";
+import { settleEntries } from "./entries";
+import { SIZE_OPTIONS, assertSizeOptions, reportSize, type SizeOptions } from "./size";
 
 /**
  * The object type a record produces. A record with open string keys always has every key it lists;
@@ -105,120 +95,53 @@ export function record<TKey extends AnyValidator<string>, TValue extends AnyVali
   ...rest: AsyncRest<InferRecord<Extract<Infer<TKey>, string>, Infer<TValue>>, SizeOptions & MessageOptions>
 ): AsyncSchema<InferRecord<Extract<Infer<TKey>, string>, Infer<TValue>>, InferRecordInput<TKey, TValue>>;
 export function record(key: AnyValidator, value: AnyValidator, ...rest: unknown[]): AnyValidator {
-  assertFunction("key", key);
-  assertFunction("value", value);
-  const [options, reject, accept, checks] = tail<SizeOptions & MessageOptions, Record<string, unknown>>(
-    rest,
-    SIZE_OPTIONS,
-  );
+  // A key's issues stay relative to the key, so they are held behind an issue of the record.
+  const runKey = runOf(key, "key");
+  const runValue = runOf(value, "value");
+  const [options, checks] = split<SizeOptions & MessageOptions, Record<string, unknown>>(rest, SIZE_OPTIONS);
   assertSizeOptions(options);
-  const child = childOf(value);
-  // A key's issues stay relative to the key, so it is not called with a place, and its result is checked here.
-  const readKey = (name: unknown): Maybe<ValidationResult<unknown>> =>
-    chain(key(name), (result: ValidationResult<unknown>) => {
-      if (!isResult(result)) {
-        throw notResult("The key validator of record");
-      }
-      return result;
-    });
-
-  // Valid input is answered without a result for each entry when the key and the value have a fast test.
-  // A key that is not text, is produced twice or is `__proto__` is a miss, so the full work throws or reports it.
-  const fastKey = fastOf(key);
-  const fastValue = fastOf(value);
-  const fast: Fast | undefined =
-    checks.length > 0 || fastKey === undefined || fastValue === undefined
-      ? undefined
-      : (input) => {
-          if (!isPlainObject(input)) {
-            return MISS;
-          }
-          const names = Object.keys(input);
-          if (sizeIssues(names.length, "record", options).length > 0) {
-            return MISS;
-          }
-          const output: Record<string, unknown> = {};
-          for (const name of names) {
-            const produced = fastKey(name);
-            if (
-              produced === MISS ||
-              typeof produced !== "string" ||
-              produced === RESERVED_KEY ||
-              Object.hasOwn(output, produced)
-            ) {
-              return MISS;
-            }
-            const item = fastValue(input[name]);
-            if (item === MISS) {
-              return MISS;
-            }
-            setOwn(output, produced, item);
-          }
-          return output;
-        };
-
-  return described(
-    composed((input, place): Maybe<ValidationResult<unknown>> => {
-      if (!isPlainObject(input)) {
-        return reject([objectIssue(input)], place);
-      }
-      const names = Object.keys(input);
-      const oversize = sizeIssues(names.length, "record", options);
-      if (oversize.length > 0) {
-        return reject(oversize, place);
-      }
-      // Every value is read before any validator runs, as in `object`, so neither a key validator that
-      // changes the input nor a change made while one waits can reach the output.
-      const values = names.map((name) => input[name]);
-      const entries = runItems(
-        names.length,
-        (index) => {
-          const name = names[index] as string;
-          return chain(readKey(name), (keyResult) =>
-            chain(child(values[index], place, name), (valueResult) => ({ keyResult, valueResult })),
-          );
-        },
-        ({ keyResult, valueResult }) => countIssues(keyResult) + countIssues(valueResult),
-      );
-      return chain(collect(entries), (settled) => {
-        const issues: ValidationIssue[] = [];
-        const output: Record<string, unknown> = {};
-        settled.forEach(({ keyResult, valueResult }, index) => {
-          const name = names[index] as string;
-          if (!keyResult.ok) {
-            // Wrapped, so a bad key is not mistaken for a bad value at the same path.
-            issues.push(
-              ...report(
-                [issue("invalid_key", { issues: keyResult.error.issues.map(nested) }, [name])],
-                place,
-                options.message,
-              ),
-            );
-          }
-          if (!valueResult.ok) {
-            append(issues, valueResult.error.issues);
-          }
-          if (keyResult.ok && typeof keyResult.value !== "string") {
-            // The types forbid it, but a number would become text and a symbol a key no `Object.keys` lists.
-            throw new TypeError(
-              `A record's key validator must produce text, received ${describeType(keyResult.value)}`,
-            );
-          }
-          if (keyResult.ok && keyResult.value === RESERVED_KEY) {
-            issues.push(...report([reservedKey(name)], place, options.message));
-          } else if (keyResult.ok && valueResult.ok) {
-            if (Object.hasOwn(output, keyResult.value as string)) {
-              issues.push(...report([repeatedKey(name)], place, options.message));
-            } else {
-              setOwn(output, keyResult.value as string, valueResult.value);
-            }
-          }
-        });
-        return issues.length > 0
-          ? failWith(cap(issues, place, options.message, settled.length < names.length))
-          : accept(output, place);
-      });
-    }, fast),
-    { kind: "record", options, checks, key, value },
-  );
+  const { message } = options;
+  const accept = accepter(checks, message);
+  const tools = toolsOf([runKey, runValue], waitsOf(checks));
+  const run: Run = (input) => {
+    if (!isPlainObject(input)) {
+      return refuseObject(input, message);
+    }
+    const names = Object.keys(input);
+    if (reportSize(names.length, "record", options, message)) {
+      return FAIL;
+    }
+    const output: Record<string, unknown> = {};
+    return settleEntries(
+      names,
+      // Every value is read before any validator runs, so neither a key validator that changes the
+      // input nor a change made while one waits can reach the output.
+      names.map((name) => input[name]),
+      names,
+      runKey,
+      runValue,
+      tools,
+      message,
+      accept,
+      (name, item) => {
+        if (Object.hasOwn(output, name as string)) {
+          return false;
+        }
+        setOwn(output, name as string, item);
+        return true;
+      },
+      output,
+      (name, worded, segment) => {
+        if (typeof name !== "string") {
+          // The types forbid it, but a number would become text and a symbol a key no `Object.keys` lists.
+          throw new TypeError(`A record's key validator must produce text, received ${describeType(name)}`);
+        }
+        if (name === RESERVED_KEY) {
+          refuseReserved(worded, segment);
+        }
+      },
+    );
+  };
+  run.w = tools;
+  return toValidator(run, { kind: "record", options, checks, key, value }, [wordType, wordSize, wordKey], [key, value]);
 }

@@ -1,6 +1,5 @@
-import type { AnyValidator, AsyncRest, AsyncSchema, Infer, InferInput, Rest } from "../core/types";
-import type { ObjectOptions, UnknownKeys } from "./object";
-import { mapping, unwrapped, type AllRequired, type Remade, type RemadeInput, type ReshapedWith } from "./reshape";
+import type { AnyValidator, AsyncRest, AsyncSchema, Infer, InferInput, MessageOptions, Rest } from "../core/types";
+import { mapping, unwrapped, type AllRequired, type Reshaped } from "./reshape";
 
 /**
  * Creates an object validator whose properties are all required, from one where some are optional.
@@ -11,9 +10,10 @@ import { mapping, unwrapped, type AllRequired, type Remade, type RemadeInput, ty
  * it is: one that accepts `undefined` some other way, such as `unknown()` or a `union` with
  * `literal(undefined)`, still does, though the type says otherwise.
  *
- * The validator must be one `object` made, and the new object keeps its options, each option given here
- * replacing the one of its name. One with checks is refused, since a check may rely on a property being absent: give the checks
- * the new object needs here instead.
+ * The validator must be one `object`, `strictObject`, `looseObject` or `objectWithRest` made. The new
+ * object treats the keys its shape does not list as that one does, so a strict object stays strict, and
+ * keeps its `message` unless one is given here. One with checks is refused, since a check may rely on a
+ * property being absent: give the checks the new object needs here instead.
  *
  * @example
  * ```ts
@@ -24,26 +24,18 @@ import { mapping, unwrapped, type AllRequired, type Remade, type RemadeInput, ty
  *
  * @typeParam TValidator - The object validator to make required.
  * @param validator - A validator made by `object`, without checks.
- * @param rest - Options, each replacing the one of its name in the object, then checks on the new object.
+ * @param rest - A `message` that replaces the object's, then checks on the new object.
  * @returns A validator made by `object`, with every property required.
  * @throws {TypeError} When the validator was not made by `object` or has checks.
  */
-export function required<TValidator extends AnyValidator<object>, TUnknownKeys extends UnknownKeys = never>(
+export function required<TValidator extends AnyValidator<object>>(
   validator: TValidator,
-  ...rest: Rest<Remade<AllRequired<Infer<TValidator>>, TUnknownKeys>, ObjectOptions<TUnknownKeys>>
-): ReshapedWith<
-  TValidator,
-  TUnknownKeys,
-  Remade<AllRequired<Infer<TValidator>>, TUnknownKeys>,
-  RemadeInput<AllRequired<InferInput<TValidator>>, TUnknownKeys>
->;
-export function required<TValidator extends AnyValidator<object>, TUnknownKeys extends UnknownKeys = never>(
+  ...rest: Rest<AllRequired<Infer<TValidator>>, MessageOptions>
+): Reshaped<TValidator, AllRequired<Infer<TValidator>>, AllRequired<InferInput<TValidator>>>;
+export function required<TValidator extends AnyValidator<object>>(
   validator: TValidator,
-  ...rest: AsyncRest<Remade<AllRequired<Infer<TValidator>>, TUnknownKeys>, ObjectOptions<TUnknownKeys>>
-): AsyncSchema<
-  Remade<AllRequired<Infer<TValidator>>, TUnknownKeys>,
-  RemadeInput<AllRequired<InferInput<TValidator>>, TUnknownKeys>
->;
+  ...rest: AsyncRest<AllRequired<Infer<TValidator>>, MessageOptions>
+): AsyncSchema<AllRequired<Infer<TValidator>>, AllRequired<InferInput<TValidator>>>;
 export function required(validator: AnyValidator, ...rest: unknown[]): AnyValidator {
   return mapping("required", validator, unwrapped, rest);
 }

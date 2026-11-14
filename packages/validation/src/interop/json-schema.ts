@@ -510,7 +510,7 @@ export function toJsonSchema(validator: AnyValidator, options?: JsonSchemaOption
         if (required.length > 0) {
           schema["required"] = required;
         }
-        const unknownKeys = given["unknownKeys"];
+        const unknownKeys = record["unknownKeys"];
         if (unknownKeys === "strict") {
           schema["additionalProperties"] = false;
         } else if (typeof unknownKeys === "function") {

@@ -12,26 +12,30 @@ order: 1
 ### check
 
 ```ts
-export declare function check<T>(test: (value: T) => boolean, issue?: IssueInput | Message): Check<T>;
-export declare function check<T>(test: (value: T) => boolean | PromiseLike<boolean>, issue?: IssueInput | Message): AsyncCheck<T>;
+export declare function check<T>(test: (value: T) => CheckAnswer, issue?: IssueInput | Message): Check<T>;
+export declare function check<T>(test: (value: T) => CheckAnswer | PromiseLike<CheckAnswer>, issue?: IssueInput | Message): AsyncCheck<T>;
 ```
 
 Makes a check from a test of a typed value, for a rule a validator's options do not express.
 
 Give it to a validator after its options. It runs once the value has its type and has passed the validator's options, such as `min` and `max`: for an object, once every property has passed, so it can compare them. A test that returns a promise makes an [`AsyncCheck`](index.md#asynccheck), and the validator given it asynchronous.
 
+A test that has more to say than yes or no returns the issues it found, each as `fail` takes one, and an empty list for a value that passes. Their paths are relative to the value the check was given.
+
+A validator takes no other function as a check: what runs a check comes with `check`, so a schema without one carries none of it.
+
 **Parameters**
 
-- `test` — Returns `true` when the value is acceptable.
-- `issue` — What to report when it is not: an issue, or a message, text or a function of the issue, as a built-in check takes. Defaults to code `"custom"` at the value's own location.
+- `test` — Returns `true` when the value is acceptable and `false` when it is not, or the issues it found.
+- `issue` — What to report when the test returns `false`: an issue, or a message, text or a function of the issue, as a built-in check takes. Defaults to code `"custom"` at the value's own location. Its message also words the issues of a list that have none.
 
 **Type parameters**
 
 - `T` — The type of the value it checks.
 
-**Returns** — A check that reports the issue when `test` returns `false`.
+**Returns** — A check that reports the issue when `test` returns `false`, or the issues it returns.
 
-**Throws** — `TypeError` — When `test` is not a function, or `issue` is neither a message nor an issue: one whose `code` and `message` are text when given, and whose `path` is a list.
+**Throws** — `TypeError` — When `test` is not a function, or `issue` is neither a message nor an issue: one whose `code` and `message` are text when given, and whose `path` is a list. From the returned check, when `test` returns neither a boolean nor a list of issues.
 
 **Example**
 
@@ -42,6 +46,10 @@ number({ int: true }, even);
 const signup = object(
   { password: string({ min: 8 }), confirm: string() },
   check((data) => data.password === data.confirm, { path: ["confirm"], message: "Passwords must match" }),
+);
+
+const range = check((data: { from: number; to: number }) =>
+  data.from <= data.to ? [] : [{ code: "range", path: ["from"] }, { code: "range", path: ["to"] }],
 );
 ```
 
@@ -143,3 +151,73 @@ A value the guard rejects fails with `invalid_type` and `params.expected` set to
 const file = guard("File", (input): input is File => input instanceof File);
 const upload = object({ avatar: file({ message: "Choose an image" }) });
 ```
+
+### validator
+
+```ts
+export declare function validator<TReturn extends Validated, TInput = unknown>(validate: ((input: unknown) => TReturn) & {
+    readonly "~types"?: {
+        readonly input: TInput;
+    };
+}): [Extract<TReturn, PromiseLike<unknown>>] extends [never] ? Schema<ValidatedValue<TReturn>, TInput> : AsyncSchema<ValidatedValue<TReturn>, TInput>;
+```
+
+Makes a validator from a function written by hand, for a value no factory or builder of this package describes.
+
+The function is given the input and returns `pass(value)` or `fail(issue)`, or a promise of one, which makes the validator asynchronous. The paths of its issues are relative to the value it was given, and a composer places them. A validator it calls in turn is part of the same validation.
+
+A composer takes no other function as a validator: what calls a function written by hand, and waits for it, comes with `validator`, so a schema without one carries none of it.
+
+**Parameters**
+
+- `validate` — Returns the result for an input.
+
+**Type parameters**
+
+- `TReturn` — What the function returns, which says the type of the value and whether it waits.
+- `TInput` — The type of input that can pass, read from a function typed as a validator and `unknown` otherwise.
+
+**Returns** — A validator that gives what `validate` returns, asynchronous when `validate` may return a promise.
+
+**Throws** — `TypeError` — When `validate` is not a function. From the returned validator, when `validate` returns something that is not a result, or a failure without issues.
+
+**Example**
+
+```ts
+const even = validator((input) =>
+  typeof input === "number" && input % 2 === 0 ? pass(input) : fail({ code: "odd" }),
+);
+even(4); // { ok: true, value: 4 }
+object({ count: even })({ count: 3 }); // { ok: false, ... }, code "odd" at ["count"]
+```
+
+The type of the value is read from what the function returns, so a function that returns `pass(input)` for a `number` makes a validator of `number`. To say it, type what the function returns, as in `(input): ValidationResult<User> => ...`.
+
+## Type aliases
+
+### CheckAnswer
+
+```ts
+export type CheckAnswer = boolean | readonly IssueInput[];
+```
+
+What the test of a check answers: whether the value is acceptable, or the issues it found, none for a value that is.
+
+### Validated
+
+```ts
+export type Validated = ValidationResult<unknown> | PromiseLike<ValidationResult<unknown>>;
+```
+
+What a function written by hand returns: a result, or a promise of one.
+
+### ValidatedValue
+
+```ts
+export type ValidatedValue<TReturn> = Extract<Awaited<TReturn>, {
+    ok: true;
+    value: unknown;
+}>["value"];
+```
+
+The type of the value in the results `TReturn` holds.

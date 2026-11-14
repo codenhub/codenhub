@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { validator } from "../builders/validator";
 import { fail, pass } from "../core/result";
 import type { Validator } from "../core/types";
 import { literal } from "../primitives/literal";
@@ -38,12 +39,11 @@ describe("union", () => {
 
   it("should try options in order and stop at the first that accepts", () => {
     const calls: string[] = [];
-    const record =
-      (name: string, accepted: boolean): Validator<string> =>
-      () => {
+    const record = (name: string, accepted: boolean): Validator<string> =>
+      validator(() => {
         calls.push(name);
         return accepted ? pass(name) : fail({ code: "no" });
-      };
+      });
     expect(valueOf(union([record("a", false), record("b", true), record("c", true)])(1))).toBe("b");
     expect(calls).toEqual(["a", "b"]);
   });

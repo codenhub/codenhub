@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { check } from "../builders/check";
 import { format } from "../builders/format";
 import { guard } from "../builders/guard";
+import { validator } from "../builders/validator";
 import { endsWith } from "../checks/ends-with";
 import { includes } from "../checks/includes";
 import { lowercase } from "../checks/lowercase";
@@ -28,14 +29,17 @@ import { meta } from "../composition/meta";
 import { nullable } from "../composition/nullable";
 import { nullish } from "../composition/nullish";
 import { object } from "../composition/object";
+import { objectWithRest } from "../composition/object-with-rest";
 import { optional } from "../composition/optional";
 import { pipe } from "../composition/pipe";
 import { record } from "../composition/record";
 import { set } from "../composition/set";
+import { strictObject } from "../composition/strict-object";
 import { tagged } from "../composition/tagged";
 import { transform } from "../composition/transform";
 import { tuple } from "../composition/tuple";
 import { union } from "../composition/union";
+import { pass } from "../core/result";
 import type { AnyValidator, Check, Validator } from "../core/types";
 import { base64 } from "../formats/base64";
 import { cidr } from "../formats/cidr";
@@ -302,7 +306,7 @@ describe("toJsonSchema", () => {
 
   it("should write the tag of a tagged union into each variant, a strict one included", () => {
     const event = tagged("type", {
-      click: object({ x: number() }, { unknownKeys: "strict" }),
+      click: strictObject({ x: number() }),
       key: object({ code: optional(string()) }),
     });
     expect(schemaOf(event)).toEqual({
@@ -353,7 +357,7 @@ describe("toJsonSchema", () => {
   });
 
   it("should write meta on a part it wraps, a validator written by hand and a recursive one", () => {
-    const byHand: Validator<string> = (input) => ({ ok: true, value: input as string });
+    const byHand = validator((input) => pass(input as string));
     expect(schemaOf(meta(byHand, { title: "Text" }), { unrepresentable: "any" })).toEqual({ title: "Text" });
     expect(() => toJsonSchema(meta(byHand, { title: "Text" }))).toThrow("a validator written by hand at the root");
     type Tree = { children: Tree[] };
@@ -444,7 +448,7 @@ describe("toJsonSchema", () => {
   });
 
   it("should write strict objects as closed, and a key named like a prototype member as a property", () => {
-    const strict = object({ ["__proto__"]: string(), constructor: number() }, { unknownKeys: "strict" });
+    const strict = strictObject({ ["__proto__"]: string(), constructor: number() });
     const schema = schemaOf(strict);
     expect(schema["additionalProperties"]).toBe(false);
     expect(Object.keys(schema["properties"] as object)).toEqual(["__proto__", "constructor"]);
@@ -452,7 +456,7 @@ describe("toJsonSchema", () => {
   });
 
   it("should write the validator of an object's unknown keys as its additionalProperties, by the side asked for", () => {
-    const scores = object({ name: string() }, { unknownKeys: coerceNumber({ min: 0 }) });
+    const scores = objectWithRest({ name: string() }, coerceNumber({ min: 0 }));
     expect(schemaOf(scores)).toEqual({
       type: "object",
       properties: { name: { type: "string" } },
@@ -460,7 +464,10 @@ describe("toJsonSchema", () => {
       additionalProperties: { anyOf: [{ type: "number", minimum: 0 }, { type: "string" }] },
     });
     expect(schemaOf(scores, { io: "output" })["additionalProperties"]).toEqual({ type: "number", minimum: 0 });
-    const opaque = object({}, { unknownKeys: transform(string(), (text) => text.length) });
+    const opaque = objectWithRest(
+      {},
+      transform(string(), (text) => text.length),
+    );
     expect(() => toJsonSchema(opaque, { io: "output" })).toThrow("what a transform returns at {}");
   });
 
@@ -562,7 +569,7 @@ describe("toJsonSchema", () => {
   });
 
   describe("what cannot be written", () => {
-    const byHand: Validator<string> = (input) => ({ ok: true, value: String(input) });
+    const byHand = validator((input) => pass(String(input)));
     const file = guard("File", (value): value is Date => value instanceof Date);
 
     it.each([

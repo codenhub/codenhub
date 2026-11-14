@@ -2,7 +2,7 @@
 title: Cuerpos de solicitud
 description: Texto JSON, listas, tuplas, diccionarios, sets y maps, elegir entre formas, y datos recursivos.
 order: 3
-source: cafb386ee90fc6dd3ca6b8e33415a1a57425b76a
+source: 1709b13516555bea6f3b517e1282646ba97340c8
 ---
 
 # Cuerpos de solicitud
@@ -195,7 +195,7 @@ El objeto fusionado es nuevo. Así que una clave `__proto__` propia que un lado 
 
 Así, `intersection(object({ ["__proto__"]: unknown() }), unknown())` conserva una clave `__proto__`, ya que la forma de la izquierda la incluye y produjo el valor. Envuelve ese `object` en un `transform` y la clave se reporta en su lugar, salvo que el `transform` devuelva el propio objeto de la entrada. La clave computada importa: escrito como `{ __proto__: unknown() }`, el literal fija el prototipo de la forma y no incluye ninguna clave. Sí, en serio.
 
-Ambos validadores ven la entrada completa, así que dos `object` con `unknownKeys: "strict"` solo pasan juntos cuando cada clave de la entrada está incluida en ambas formas: cada uno rechaza las claves que solo incluye el otro. Para combinar formas estrictas, expándelas en una sola: `object({ ...named, ...aged }, { unknownKeys: "strict" })`.
+Ambos validadores ven la entrada completa, así que dos `strictObject` solo pasan juntos cuando cada clave de la entrada está incluida en ambas formas: cada uno rechaza las claves que solo incluye el otro. Para combinar formas estrictas, expándelas en una sola: `strictObject({ ...named, ...aged })`.
 
 ## Datos recursivos
 

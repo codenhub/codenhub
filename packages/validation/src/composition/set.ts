@@ -1,10 +1,9 @@
-import type { Maybe } from "../core/async";
-import { tail } from "../core/checks";
-import { described } from "../core/describe";
-import { cap, MAX_ISSUES } from "../core/limit";
-import { childOf, composed } from "../core/nesting";
+import { runOf, toolsOf } from "../core/child";
+import { accepter, waitsOf } from "../core/finish";
+import { toValidator } from "../core/make";
 import { sizeOfSet, valuesOf } from "../core/objects";
-import { assertFunction, repeatedItem, typeIssue } from "../core/result";
+import { count, FAIL, MAX_ISSUES, refuse, report, type Run } from "../core/run";
+import { split } from "../core/split";
 import type {
   AnyValidator,
   AsyncRest,
@@ -14,11 +13,10 @@ import type {
   InferInput,
   MessageOptions,
   Rest,
-  ValidationIssue,
-  ValidationResult,
 } from "../core/types";
-import { settle } from "./settle";
-import { SIZE_OPTIONS, assertSizeOptions, sizeIssues, type SizeOptions } from "./size";
+import { SIZE_WORDS } from "../core/words";
+import { settle } from "./items";
+import { SIZE_OPTIONS, assertSizeOptions, reportSize, type SizeOptions } from "./size";
 
 /**
  * Creates a validator for `Set`s whose every value passes `item`.
@@ -56,45 +54,46 @@ export function set<TItem extends AnyValidator>(
   ...rest: AsyncRest<Set<Infer<TItem>>, SizeOptions & MessageOptions>
 ): AsyncSchema<Set<Infer<TItem>>, Set<InferInput<TItem>>>;
 export function set(item: AnyValidator, ...rest: unknown[]): AnyValidator {
-  assertFunction("item", item);
-  const [options, reject, accept, checks] = tail<SizeOptions & MessageOptions, Set<unknown>>(rest, SIZE_OPTIONS);
+  const runItem = runOf(item, "item");
+  const [options, checks] = split<SizeOptions & MessageOptions, Set<unknown>>(rest, SIZE_OPTIONS);
   assertSizeOptions(options);
-  const child = childOf(item);
-  return described(
-    composed((input, place): Maybe<ValidationResult<unknown>> => {
-      const size = sizeOfSet(input);
-      if (size === undefined) {
-        return reject([typeIssue("set", input)], place);
-      }
-      const oversize = sizeIssues(size, "set", options);
-      if (oversize.length > 0) {
-        return reject(oversize, place);
-      }
-      const values = valuesOf(input);
-      return settle(
-        values.length,
-        (index) => child(values[index], place, index),
-        place,
-        options.message,
-        (values) => {
-          // A value that validation made equal to an earlier one is reported, not merged, so the output
-          // holds as many values as the size options were checked against.
-          const output = new Set<unknown>();
-          const repeats: ValidationIssue[] = [];
+  const { message } = options;
+  const accept = accepter(checks, message);
+  const tools = toolsOf([runItem], waitsOf(checks));
+  const run: Run = (input) => {
+    const size = sizeOfSet(input);
+    if (size === undefined) {
+      return refuse("set", input, message);
+    }
+    if (reportSize(size, "set", options, message)) {
+      return FAIL;
+    }
+    const items = valuesOf(input);
+    return settle(
+      items.length,
+      (index) => runItem(items[index]),
+      message,
+      tools,
+      accept,
+      undefined,
+      (values, from) => {
+        const output = new Set<unknown>();
+        // Only once every item passed. A value that validation made equal to an earlier one is reported,
+        // not merged, so the output holds as many values as the size options were checked against.
+        if (count() === from) {
           values.forEach((value, index) => {
-            if (output.has(value)) {
-              // One past the limit, which is how the list is known to be cut.
-              if (repeats.length <= MAX_ISSUES) {
-                repeats.push(repeatedItem(index));
-              }
-            } else {
+            if (!output.has(value)) {
               output.add(value);
+            } else if (count() - from <= MAX_ISSUES) {
+              // One past the limit, which is how the list is known to be cut.
+              report("invalid_value", { unique: true }, message, index);
             }
           });
-          return repeats.length > 0 ? reject(cap(repeats, undefined, undefined), place) : accept(output, place);
-        },
-      );
-    }),
-    { kind: "set", options, checks, item },
-  );
+        }
+        return output;
+      },
+    );
+  };
+  run.w = tools;
+  return toValidator(run, { kind: "set", options, checks, item }, SIZE_WORDS, [item]);
 }

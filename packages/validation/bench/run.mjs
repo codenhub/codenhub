@@ -18,6 +18,7 @@ import {
   optional,
   record,
   startsWith,
+  strictObject,
   string,
   tagged,
   transform,
@@ -43,7 +44,7 @@ const scenarios = [
   ["object of three strings", object({ a: string(), b: string(), c: string() }), { a: "x", b: "y", c: "z" }],
   [
     "object of three strings, strict",
-    object({ a: string(), b: string(), c: string() }, { unknownKeys: "strict" }),
+    strictObject({ a: string(), b: string(), c: string() }),
     { a: "x", b: "y", c: "z" },
   ],
   [

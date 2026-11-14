@@ -1,7 +1,7 @@
 ---
 title: Moldando valores
 description: Encadeie validadores, converta valores, escreva-os de volta, marque e congele valores, descreva-os, troque uma falha por um fallback e reaproveite a estrutura de um objeto.
-source: 210016e82ea9da98e51685547f5408c1acffdfe7
+source: 2e29da1976dbdfa514a58b356bc0196f6fc6ace3
 order: 8
 ---
 
@@ -230,15 +230,15 @@ const admin = extend(user, { admin: boolean() }); // todas as propriedades de us
 - `extend(validator, shape)` acrescenta as propriedades de `shape`, como espalhar uma estrutura dentro de outra. Uma propriedade que o objeto já tem é substituída pela passada, na mesma posição.
 - `required(validator)` torna todas as propriedades obrigatórias. Uma propriedade criada com `optional` vira o validador que ela envolvia, então o valor padrão dela também é removido, e uma propriedade ausente falha. Uma criada com `nullish` vira `nullable`, que ainda aceita `null`. Uma propriedade que aceita `undefined` de outro jeito, como `unknown()`, é mantida sem alterações.
 
-O novo objeto mantém as opções do objeto de origem, `unknownKeys` e `message`. Ele aceita opções e verificações próprias depois dos argumentos, como `object`: `pick(user, ["name"], { unknownKeys: "strict" }, check(...))`.
+O novo objeto é da mesma espécie que o objeto de origem, e mantém a `message` dele. Ele aceita uma `message` e verificações próprias depois dos argumentos, como `object`: `pick(user, ["name"], { message: "Not a name" }, check(...))`.
 
-- Cada opção passada substitui a de mesmo nome e mantém as outras. Então um objeto strict do qual se faz `pick` passando só uma `message` continua strict.
-- Uma opção passada como `undefined` conta como não passada, e mantém a do original. Então `pick(strictUser, ["name"], { unknownKeys: undefined })` continua strict.
-- Um validador passado como `unknownKeys` também é mantido. Assim, uma propriedade que `pick` ou `omit` deixa de fora vai para ele quando a entrada a tem, como qualquer outra chave que a nova estrutura não lista.
+- O que ele faz com as chaves que a estrutura dele não lista continua como era, e nenhuma opção muda isso. Então um `strictObject` do qual se faz `pick` continua strict. Para outra espécie, passe a estrutura para a factory dela, reaproveitada como mostra [Espalhando uma estrutura](#espalhando-uma-estrutura).
+- Uma `message` passada substitui a do original, e uma passada como `undefined` conta como não passada.
+- O validador de um `objectWithRest` também é mantido. Assim, uma propriedade que `pick` ou `omit` deixa de fora vai para ele quando a entrada a tem, como qualquer outra chave que a nova estrutura não lista.
 
 Um objeto com verificações é recusado com um `TypeError`. Uma verificação lê o objeto inteiro, então pode ler uma propriedade que o novo objeto não tem. Mantida, ela poderia fazer todo valor falhar. Descartada sem aviso, o novo objeto aceitaria o que o primeiro foi escrito para recusar. Crie o objeto sem as verificações, derive a partir dele e dê a cada resultado as verificações de que ele precisa.
 
-Elas precisam de um validador criado por `object`, já que é assim que conhecem a estrutura dele. `objectLike`, um `pipe` ou um `transform` em volta de um objeto, e um validador escrito à mão, são um `TypeError`. Elas leem a estrutura por meio de [`describe`](json-schema.md#lendo-um-schema), que é como você escreveria uma função dessas por conta própria.
+Elas precisam de um validador criado por `object`, `strictObject`, `looseObject` ou `objectWithRest`, já que é assim que conhecem a estrutura dele. `objectLike`, um `pipe` ou um `transform` em volta de um objeto, e um validador escrito à mão, são um `TypeError`. Elas leem a estrutura por meio de [`describe`](json-schema.md#lendo-um-schema), que é como você escreveria uma função dessas por conta própria.
 
 Os tipos que elas retornam têm nomes, para uma biblioteca que exporta o que deriva:
 

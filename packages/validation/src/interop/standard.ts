@@ -1,6 +1,6 @@
-import { isThenable } from "../core/async";
-import { describe, described } from "../core/describe";
+import { sameAs } from "../core/make";
 import { assertFunction } from "../core/result";
+import { isThenable } from "../core/thenable";
 import type { AnyValidator, Infer, InferInput, ValidationResult } from "../core/types";
 import { englishMessages } from "../messages/english-messages";
 import { assertMessages, wordIssue, type Messages } from "../messages/word";
@@ -43,7 +43,6 @@ export function standard<TValidator extends AnyValidator>(
 ): TValidator & StandardSchemaV1<InferInput<TValidator>, Infer<TValidator>> {
   assertFunction("validator", validator);
   assertMessages(messages);
-  const wrapped = (input: unknown) => validator(input);
   type Output = Infer<TValidator>;
   const toStandard = (result: ValidationResult<Output>): StandardSchemaV1.Result<Output> =>
     result.ok
@@ -58,9 +57,7 @@ export function standard<TValidator extends AnyValidator>(
       return isThenable(result) ? (async () => toStandard(await result))() : toStandard(result);
     },
   };
-  const record = describe(validator);
   // Described as the validator it wraps, which it behaves as.
-  return Object.assign(record === undefined ? wrapped : described(wrapped, record), {
-    "~standard": props,
-  }) as unknown as TValidator & StandardSchemaV1<InferInput<TValidator>, Infer<TValidator>>;
+  return Object.assign(sameAs(validator), { "~standard": props }) as unknown as TValidator &
+    StandardSchemaV1<InferInput<TValidator>, Infer<TValidator>>;
 }

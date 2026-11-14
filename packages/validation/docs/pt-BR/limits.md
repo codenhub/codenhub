@@ -1,7 +1,7 @@
 ---
 title: Limites
 description: Quanto custa uma entrada inválida, os limites dos schemas recursivos, os tamanhos que uma entrada não confiável exige e como audit encontra os limites que um schema deixa em aberto.
-source: 0d5df4008c35a7d4451adff8dab664749c0704a9
+source: 9586fb41a4c9dd27006c86dfb8ebc139b058f743
 order: 12
 ---
 
@@ -191,7 +191,7 @@ O que ele não avalia:
 
 - Se um `max` é pequeno o bastante. Qualquer número indica que alguém decidiu.
 - Verificações, já que rodam sobre um valor que já passou, e qualquer coisa que um `guard` ou um validador escrito à mão faça por dentro.
-- O que nenhuma opção limita. Quantas chaves um `object` com `unknownKeys: "passthrough"` ou um validador mantém, e o que `unknown()` aceita, não são reportados. O próprio validador é lido, então os limites dele são. Use `"strip"` ou `"strict"` para as chaves que o schema não nomeia, e um validador do tipo que você espera no lugar de `unknown()`.
+- O que nenhuma opção limita. Quantas chaves um `looseObject` ou um `objectWithRest` mantém, e o que `unknown()` aceita, não são reportados. O validador passado para `objectWithRest` é lido, então os limites dele são. Use `object` ou `strictObject` para as chaves que o schema não nomeia, e um validador do tipo que você espera no lugar de `unknown()`.
 
 ## Próximos passos
 

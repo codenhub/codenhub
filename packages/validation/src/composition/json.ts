@@ -1,8 +1,8 @@
-import { chain } from "../core/async";
-import { tail } from "../core/checks";
-import { described } from "../core/describe";
-import { call, composed } from "../core/nesting";
-import { assertFunction, issue, pass, typeIssue } from "../core/result";
+import { runOf, toolsOf } from "../core/child";
+import { endOf, waitsOf } from "../core/finish";
+import { toValidator } from "../core/make";
+import { refuse, report, type Run } from "../core/run";
+import { split } from "../core/split";
 import type {
   AnyValidator,
   AsyncRest,
@@ -12,8 +12,8 @@ import type {
   MessageOptions,
   Rest,
   Schema,
-  ValidationResult,
 } from "../core/types";
+import { FORMAT_WORDS } from "../core/words";
 
 /**
  * Creates a validator for text that holds JSON: it parses the text, then optionally validates what
@@ -53,24 +53,24 @@ export function json(...args: unknown[]): AnyValidator {
   // undefined, is a mistake in the schema, which would otherwise accept any JSON.
   const [first] = args;
   const isOptions = args.length === 0 || (typeof first === "object" && first !== null);
-  const [validator, rest] = isOptions ? [pass as AnyValidator, args] : [first as AnyValidator, args.slice(1)];
-  assertFunction("validator", validator);
-  const [options, reject, accept, checks] = tail<MessageOptions, unknown>(rest);
-  return described(
-    composed((input, place) => {
-      if (typeof input !== "string") {
-        return reject([typeIssue("string", input)], place);
-      }
-      let parsed: unknown;
-      try {
-        parsed = JSON.parse(input);
-      } catch {
-        return reject([issue("invalid_format", { format: "json" })], place);
-      }
-      return chain(call(validator, parsed, place), (result: ValidationResult<unknown>) =>
-        result.ok ? accept(result.value, place) : result,
-      );
-    }),
-    { kind: "json", options, checks, inner: isOptions ? undefined : validator },
-  );
+  const [validator, rest] = isOptions ? [undefined, args] : [first as AnyValidator, args.slice(1)];
+  const runInner = isOptions ? undefined : runOf(validator as AnyValidator, "validator");
+  const [options, checks] = split<MessageOptions, unknown>(rest);
+  const { message } = options;
+  const tools = toolsOf([runInner], waitsOf(checks));
+  const end = endOf(checks, message, tools);
+  const run: Run = (input) => {
+    if (typeof input !== "string") {
+      return refuse("string", input, message);
+    }
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(input);
+    } catch {
+      return report("invalid_format", { format: "json" }, message);
+    }
+    return end(runInner === undefined ? parsed : runInner(parsed));
+  };
+  run.w = tools;
+  return toValidator(run, { kind: "json", options, checks, inner: validator }, FORMAT_WORDS, [validator]);
 }

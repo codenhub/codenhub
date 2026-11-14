@@ -1,6 +1,8 @@
-import { leaf, split } from "../core/checks";
-import { described } from "../core/describe";
+import { leaf } from "../core/leaf";
+import { toValidator } from "../core/make";
+import { split } from "../core/split";
 import type { Factory, MessageOptions } from "../core/types";
+import { TYPE_WORDS } from "../core/words";
 
 const isSymbol = (input: unknown): boolean => typeof input === "symbol";
 
@@ -16,5 +18,5 @@ const isSymbol = (input: unknown): boolean => typeof input === "symbol";
 export const symbol = ((...args: unknown[]) => {
   const [options, checks] = split<MessageOptions, symbol>(args);
   const { message } = options;
-  return described(leaf("symbol", isSymbol, message, checks), { kind: "symbol", options, checks });
+  return toValidator(leaf("symbol", isSymbol, message, checks), { kind: "symbol", options, checks }, TYPE_WORDS);
 }) as Factory<symbol, MessageOptions>;

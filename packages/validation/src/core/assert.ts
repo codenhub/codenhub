@@ -1,7 +1,7 @@
 import { assertMessages, formatPath, wordIssue, type Messages } from "../messages/word";
-import { isThenable } from "./async";
 import { isPlainObject } from "./objects";
 import { assertOption, describeType, ROOT_PATH } from "./result";
+import { isThenable } from "./thenable";
 import type { ValidationErr, ValidationIssue, ValidationResult, Validator } from "./types";
 
 /** Options for {@link assert}. */

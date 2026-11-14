@@ -1,9 +1,14 @@
-import { chain, detached, type Maybe } from "../core/async";
-import { described } from "../core/describe";
-import { useMixedRun } from "../core/mixed";
-import { call, composed, fastOf, MISS } from "../core/nesting";
-import { assertFunction, pass } from "../core/result";
-import type { AnyValidator, AsyncSchema, Schema, ValidationResult, Validator } from "../core/types";
+import { runOf } from "../core/child";
+import { toValidator } from "../core/make";
+import { assertFunction } from "../core/result";
+import { after, count, detached, FAIL, type Run } from "../core/run";
+import { isThenable } from "../core/thenable";
+import type { AnyValidator, AsyncSchema, Schema, Validator } from "../core/types";
+import { tools } from "../core/wait";
+import { NO_WORDS } from "../core/words";
+
+/** A value a promise resolved to is the value produced. */
+const same = (value: unknown): unknown => value;
 
 /**
  * What a synchronous validator becomes once `convert` runs on its value: still synchronous when
@@ -58,20 +63,22 @@ export function transform<T, R, TInput = unknown>(
   validator: AnyValidator<T, TInput>,
   convert: (value: T) => R,
 ): AsyncSchema<Awaited<R>, TInput>;
-export function transform<T, R>(validator: AnyValidator<T>, convert: (value: T) => Maybe<R>): AnyValidator<R> {
-  assertFunction("validator", validator);
+export function transform<T, R>(
+  validator: AnyValidator<T>,
+  convert: (value: T) => R | PromiseLike<R>,
+): AnyValidator<R> {
+  const runInner = runOf(validator, "validator");
   assertFunction("convert", convert);
-  useMixedRun();
-  // The validator's fast test, when it has one, is asked first, as `childOf` asks a composer's: it gives what
-  // the validator would produce, and on a miss the validator runs and says why.
-  const fast = fastOf(validator);
-  const validate = composed((input, place) => {
-    const value = fast === undefined ? MISS : fast(input);
-    return chain(
-      (value === MISS ? call(validator, input, place) : pass(value)) as Maybe<ValidationResult<T>>,
-      (result): Maybe<ValidationResult<R>> =>
-        result.ok ? chain(detached(convert, result.value), (converted) => pass(converted)) : result,
-    );
-  });
-  return described(validate, { kind: "transform", inner: validator, convert }) as AnyValidator<R>;
+  const converted = (value: unknown): unknown => {
+    if (value === FAIL) {
+      return FAIL;
+    }
+    // A value with a `then` method is waited for, as `await` would wait for it.
+    const made = detached(convert, value as T);
+    return isThenable(made) ? tools.wait(count(), made, same) : made;
+  };
+  const run: Run = (input) => after(tools, count(), runInner(input), converted);
+  // The function may return a promise whatever the validator does, so this one may always wait.
+  run.w = tools;
+  return toValidator(run, { kind: "transform", inner: validator, convert }, NO_WORDS, [validator]);
 }

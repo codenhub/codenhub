@@ -1,5 +1,8 @@
-import { rule } from "../core/checks";
+import { rule } from "../core/rule";
 import type { Check, Message } from "../core/types";
+import { wordMultiple, type Word } from "../core/words";
+
+const MULTIPLE_WORDS: readonly Word[] = [wordMultiple];
 
 /** A number's shortest text as whole digits and a power of ten: 0.35 is 35 and -2, 1e-7 is 1 and -7. */
 const toDecimal = (value: number): { digits: bigint; exponent: number } => {
@@ -77,5 +80,6 @@ export function multipleOf(step: number, message?: Message): Check<number> {
     "invalid_value",
     { type: "number", format: "multipleOf", value: step },
     message,
+    MULTIPLE_WORDS,
   );
 }

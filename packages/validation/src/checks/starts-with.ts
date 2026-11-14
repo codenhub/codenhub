@@ -1,5 +1,5 @@
-import { rule } from "../core/checks";
 import { assertText } from "../core/result";
+import { rule } from "../core/rule";
 import type { Check, Message } from "../core/types";
 
 /**

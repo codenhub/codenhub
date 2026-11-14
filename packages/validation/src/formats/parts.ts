@@ -1,10 +1,14 @@
-import { chain, collect, runEach, type Maybe } from "../core/async";
-import { finish, withRules, word } from "../core/checks";
-import { cap, MAX_ISSUES } from "../core/limit";
-import { fastOf, MISS, withFast, type Fast } from "../core/nesting";
+import { settle } from "../composition/items";
+import { runOf, toolsOf } from "../core/child";
+import { accepter, waitsOf } from "../core/finish";
+import { refuseRepeated } from "../core/keys";
 import { setOwn } from "../core/objects";
-import { assertFunction, failWith, issue, nested, repeatedKey, typeIssue } from "../core/result";
-import type { AnyValidator, AsyncCheck, Message, ValidationIssue, ValidationResult } from "../core/types";
+import { assertFunction, issue, nested } from "../core/result";
+import { adopt, after, cap, count, cut, FAIL, MAX_ISSUES, refuse, report, straighten, type Run } from "../core/run";
+import type { AnyValidator, AsyncCheck, Message, ValidationIssue } from "../core/types";
+
+/** Every part places its own issue, at the text itself. */
+const PLACED: readonly undefined[] = [];
 
 /** A part of a format given to the validator the consumer chose for it: its name, the validator, and what the parser read. */
 export type Part = [name: string, validator: AnyValidator, value: unknown];
@@ -37,12 +41,16 @@ export function assertParts(parts: Readonly<Record<string, unknown>>): void {
  * `repeated` every value of every key as an array. Without `repeated`, a key given twice is reported at its path, one issue per key, since a
  * validator that saw one of its values while a server read the other would pass a value nobody checked.
  * The sender repeats as many keys as it likes, so they are listed up to the limit of a collection.
- * The parameters are read once, so the time it takes grows with their number and no faster.
+ * The parameters are read once, so the time it takes grows with their number and no faster. The issues
+ * are reported into the validation running now, worded by `message`, so a caller tells a failure by
+ * their count.
  */
 export function readEntries(
   params: Iterable<readonly [string, unknown]>,
   repeated: boolean,
-): { value: Record<string, unknown>; issues: ValidationIssue[] } {
+  message: Message | undefined,
+): Record<string, unknown> {
+  const start = count();
   const byKey = new Map<string, unknown[]>();
   for (const [key, item] of params) {
     const all = byKey.get(key);
@@ -53,16 +61,18 @@ export function readEntries(
     }
   }
   const value: Record<string, unknown> = {};
-  const issues: ValidationIssue[] = [];
   for (const [key, all] of byKey) {
     // One past the limit of a collection, which is how the list is known to be cut.
-    if (!repeated && all.length > 1 && issues.length <= MAX_ISSUES) {
-      issues.push(repeatedKey(key));
+    if (!repeated && all.length > 1 && count() - start <= MAX_ISSUES) {
+      refuseRepeated(message, key);
     }
     // Defined as own data, so a key such as `__proto__` is a parameter and not a prototype.
     setOwn(value, key, repeated ? all : all[0]);
   }
-  return { value, issues: cap(issues, undefined, undefined) };
+  if (count() > start) {
+    cap(start, message);
+  }
+  return value;
 }
 
 /**
@@ -78,49 +88,44 @@ export function partsFormat(
   message: Message | undefined,
   checks: readonly AsyncCheck<string>[],
   validators: readonly (AnyValidator | undefined)[],
-): (input: unknown) => Maybe<ValidationResult<string>> {
-  // `validators` are those the format may give its parts, so whether every one has a fast test is known now.
-  const given = validators.filter((validator) => validator !== undefined);
-  const fast = given.some((validator) => fastOf(validator) === undefined)
-    ? undefined
-    : withRules((input: unknown): unknown => {
-        if (typeof input !== "string") {
-          return MISS;
-        }
-        const reading = read(input);
-        if ("issues" in reading) {
-          return MISS;
-        }
-        for (const [, validator, part] of reading.parts) {
-          if ((fastOf(validator) as Fast)(part) === MISS) {
-            return MISS;
-          }
-        }
-        return reading.value;
-      }, checks);
-  return withFast((input: unknown): Maybe<ValidationResult<string>> => {
+): Run {
+  // `validators` are those the format may give its parts, so the run of each is found now.
+  const runs = new Map<AnyValidator, Run>();
+  for (const validator of validators) {
+    if (validator !== undefined) {
+      runs.set(validator, runOf(validator, "part"));
+    }
+  }
+  const tools = toolsOf([...runs.values()], waitsOf(checks));
+  const accept = accepter(checks, message);
+  const run: Run = (input) => {
     if (typeof input !== "string") {
-      return failWith(word([typeIssue("string", input)], message));
+      return refuse("string", input, message);
     }
     const reading = read(input);
     if ("issues" in reading) {
-      return failWith(word(reading.issues, message));
+      return adopt(reading.issues, message);
     }
     const { value, parts } = reading;
-    const pending = runEach(parts.length, (index) => {
-      const [, validator, part] = parts[index] as Part;
-      return validator(part);
-    });
-    return chain(collect(pending), (results) => {
-      const issues: ValidationIssue[] = [];
-      results.forEach((result, index) => {
-        if (!result.ok) {
-          issues.push(partIssue(format, (parts[index] as Part)[0], result.error.issues));
-        }
-      });
-      return issues.length > 0 ? failWith(word(issues, message)) : finish(value, [], message, checks);
-    });
-  }, fast);
+    return settle(
+      parts.length,
+      (index) => {
+        const [name, validator, part] = parts[index] as Part;
+        // What the part's validator found is relative to the part, so it is held behind an issue of the format.
+        return after(tools, count(), (runs.get(validator) as Run)(part), (produced, from) =>
+          produced === FAIL
+            ? report("invalid_format", { format, part: name, issues: straighten(cut(from) ?? []).map(nested) }, message)
+            : produced,
+        );
+      },
+      message,
+      tools,
+      () => accept(value),
+      PLACED,
+    );
+  };
+  run.w = tools;
+  return run;
 }
 
 /** The issue of a composite format whose text is not of the format. */

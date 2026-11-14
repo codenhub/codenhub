@@ -2,7 +2,7 @@
 title: Problemas y mensajes
 description: Qué contiene un resultado fallido, los códigos de problema integrados y sus params, y cómo convertir los problemas en texto en inglés, en portugués o con tus propias palabras.
 order: 5
-source: 5f3c50beff8b77b5b46b7079817190f714e06411
+source: 14c1370b9885c56194a30577e19aa0d7cd43dc22
 ---
 
 # Problemas y mensajes
@@ -92,7 +92,7 @@ Los `params` de `invalid_value`:
 - `content: true` junto a `options` para un archivo cuyos primeros bytes no son de ninguno de los tipos que enumera `contentType`.
 - `encodedSeparator: true` y `dotSegment: true` para las rutas de URL que se describen en [Formatos](./formats.md#rutas-que-un-servidor-lee-de-otra-forma).
 
-Una clave `__proto__` se reporta donde se copiaría a un objeto nuevo: en un `record`, entre las claves no incluidas de un `object` passthrough, y en una `intersection` cuyos lados la dejaron pasar sin verificar.
+Una clave `__proto__` se reporta donde se copiaría a un objeto nuevo: en un `record`, entre las claves no incluidas de un `looseObject` o de un `objectWithRest`, y en una `intersection` cuyos lados la dejaron pasar sin verificar.
 
 `englishMessages` no tiene redacción para `custom`, porque una verificación fallida no lleva nada que redactar, así que `formatIssue` dice "Invalid value". Ponle un mensaje a una verificación donde las personas lean lo que reporta.
 

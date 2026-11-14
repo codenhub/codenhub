@@ -1,8 +1,10 @@
-import { decided } from "../core/async";
-import { leaf, split } from "../core/checks";
-import { described } from "../core/describe";
+import { decided } from "../core/decide";
+import { leaf } from "../core/leaf";
+import { toValidator } from "../core/make";
 import { assertFunction, assertText } from "../core/result";
+import { split } from "../core/split";
 import type { Factory, MessageOptions } from "../core/types";
+import { TYPE_WORDS } from "../core/words";
 
 /**
  * Makes the factory of a validator for any type, from a type guard.
@@ -29,15 +31,7 @@ export function guard<T>(expected: string, accepts: (input: unknown) => input is
   assertFunction("accepts", accepts);
   return ((...args: unknown[]) => {
     const [options, checks] = split<MessageOptions, T>(args);
-    // No fast test: the test is the consumer's code, which a miss would run a second time.
-    const validator = leaf(
-      expected,
-      (input) => decided("guard", accepts, input),
-      options.message,
-      checks,
-      undefined,
-      false,
-    );
-    return described(validator, { kind: "guard", expected, options, checks });
+    const run = leaf(expected, (input) => decided("guard", accepts, input), options.message, checks);
+    return toValidator(run, { kind: "guard", expected, options, checks }, TYPE_WORDS);
   }) as Factory<T, MessageOptions>;
 }

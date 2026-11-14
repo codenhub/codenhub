@@ -1,8 +1,11 @@
-import { chain, decided, type Maybe } from "../core/async";
+import { ownRun, runOf } from "../core/child";
+import { decided } from "../core/decide";
 import { describe, type Description } from "../core/describe";
-import { call, composed } from "../core/nesting";
-import { assertFunction, pass } from "../core/result";
-import type { AnyValidator, AsyncCheck, Infer, InferInput, ValidationResult, Validator } from "../core/types";
+import { runChecks } from "../core/finish";
+import { assertFunction } from "../core/result";
+import { after, call, count, cut, FAIL, RUN, type Run } from "../core/run";
+import type { AnyValidator, AsyncCheck, Infer, InferInput, Message, ValidationResult, Validator } from "../core/types";
+import { tools } from "../core/wait";
 import { unknown } from "../primitives/unknown";
 import { array } from "./array";
 import { intersection } from "./intersection";
@@ -10,7 +13,7 @@ import { lazy } from "./lazy";
 import { map } from "./map";
 import { nullable } from "./nullable";
 import { nullish } from "./nullish";
-import { object, type Shape } from "./object";
+import { objectOf, type Shape, type UnknownKeys, type Way } from "./object";
 import { objectLike } from "./object-like";
 import { optional } from "./optional";
 import { pipe } from "./pipe";
@@ -27,6 +30,16 @@ export type Encoded<TValidator extends AnyValidator> = [TValidator] extends [Val
   : ValidationResult<InferInput<TValidator>> | PromiseLike<ValidationResult<InferInput<TValidator>>>;
 
 type Make = (...args: unknown[]) => AnyValidator;
+
+/** Gives what `next` returns for what a run produced when it passed, now when it is ready and once it is otherwise. */
+const then = (value: unknown, next: (value: unknown) => unknown): unknown =>
+  after(tools, count(), value, (later) => (later === FAIL ? FAIL : next(later)));
+
+/** The validator of a run that may wait, for an encoder a factory is given as a child. */
+function fromRun(run: Run): AnyValidator {
+  run.w = tools;
+  return Object.assign((input: unknown) => call(run, input), { [RUN]: run }) as unknown as AnyValidator;
+}
 
 /** The kinds that produce a value they accept, so writing one back is validating it. */
 const PRODUCE_WHAT_THEY_ACCEPT = new Set([
@@ -166,13 +179,11 @@ export function encode<TValidator extends AnyValidator>(
     if (checks.length === 0) {
       return encoded;
     }
-    const message = record.options?.["message"];
-    const rules = (unknown as unknown as Make)(...(message === undefined ? [] : [{ message }]), ...checks);
-    return composed((given, place) =>
-      chain(call(encoded, given, place), (result): Maybe<ValidationResult<unknown>> =>
-        result.ok ? chain(call(rules, given, place), (ruled) => (ruled.ok ? result : ruled)) : result,
-      ),
-    ) as AnyValidator;
+    const message = record.options?.["message"] as Message | undefined;
+    const runEncoded = runOf(encoded, "encoder");
+    return fromRun((given) =>
+      then(runEncoded(given), (written) => then(runChecks(given, checks, message), () => written)),
+    );
   };
 
   const encoderOf = (target: AnyValidator, path: string): AnyValidator => {
@@ -189,6 +200,10 @@ export function encode<TValidator extends AnyValidator>(
     const record = describe(target);
     if (record === undefined) {
       return refuse("a validator written by hand", path);
+    }
+    if (ownRun(target) === undefined) {
+      // Its parts would run in the copy that made them, and report where this one does not look.
+      return refuse("a validator another copy of the package made", path);
     }
     if (PRODUCE_WHAT_THEY_ACCEPT.has(record.kind)) {
       return target;
@@ -207,12 +222,11 @@ export function encode<TValidator extends AnyValidator>(
     const over = (encoded: AnyValidator): AnyValidator => checked(encoded, record);
     // The text `json` or `searchParams` wrote, once the validator it came from reads it back, so text it
     // would refuse, such as JSON of `undefined` or a list written as a key it reads only once, fails.
-    const readBack = (writer: AnyValidator): AnyValidator =>
-      composed((given, place) =>
-        chain(call(writer, given, place), (written): Maybe<ValidationResult<unknown>> =>
-          written.ok ? chain(call(target, written.value, place), (read) => (read.ok ? written : read)) : written,
-        ),
-      ) as AnyValidator;
+    const readBack = (writer: AnyValidator): AnyValidator => {
+      const runWriter = runOf(writer, "writer");
+      const runTarget = runOf(target, "validator");
+      return fromRun((given) => then(runWriter(given), (written) => then(runTarget(written), () => written)));
+    };
 
     switch (record.kind) {
       case "codec": {
@@ -224,24 +238,24 @@ export function encode<TValidator extends AnyValidator>(
         // it may change it. Any other part that cannot be written back throws, naming its place.
         const isByHand = describe(output) === undefined;
         const writeOutput = isByHand ? output : encoderOf(output, path);
-        return composed((given, place) =>
-          chain(call(writeOutput, given, place), (produced): Maybe<ValidationResult<unknown>> => {
-            if (!produced.ok) {
-              return produced;
-            }
-            const written = decided("codec", write, isByHand ? given : produced.value, "encode");
-            return chain(call(input, written, place), (read) => (read.ok ? pass(written) : read));
+        const runOutput = runOf(writeOutput, "output");
+        const runInput = runOf(input, "input");
+        return fromRun((given) =>
+          then(runOutput(given), (produced) => {
+            const written = decided("codec", write, isByHand ? given : produced, "encode");
+            return then(runInput(written), () => written);
           }),
-        ) as AnyValidator;
+        );
       }
       case "object": {
-        const rest = options["unknownKeys"];
+        // Written back by an object that treats the keys its shape does not list as this one does.
+        const rest = record["unknownKeys"] as UnknownKeys;
         return over(
-          (object as unknown as Make)(
+          objectOf(
             shape(),
-            typeof rest === "function"
-              ? { ...options, unknownKeys: encoderOf(rest as AnyValidator, `${path}{}`) }
-              : options,
+            [options],
+            typeof rest === "function" ? encoderOf(rest, `${path}{}`) : rest,
+            record["way"] as Way | undefined,
           ),
         );
       }
@@ -275,13 +289,19 @@ export function encode<TValidator extends AnyValidator>(
         const given = record["default"];
         // A default the inner part refuses was produced from `undefined` alone, so it is written back as that.
         // One a function makes cannot be compared, and is written back as the inner part writes it.
-        return given === undefined || typeof given === "function"
-          ? kept
-          : (composed((value, place) =>
-              chain(call(kept, value, place), (result) =>
-                result.ok || !Object.is(value, given) ? result : pass(undefined),
-              ),
-            ) as AnyValidator);
+        if (given === undefined || typeof given === "function") {
+          return kept;
+        }
+        const runKept = runOf(kept, "inner");
+        return fromRun((value) =>
+          after(tools, count(), runKept(value), (written, from) => {
+            if (written !== FAIL || !Object.is(value, given)) {
+              return written;
+            }
+            cut(from);
+            return undefined;
+          }),
+        );
       }
       case "nullable":
         return (nullable as unknown as Make)(part("inner"));

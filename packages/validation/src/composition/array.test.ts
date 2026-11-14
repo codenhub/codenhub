@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { validator } from "../builders/validator";
 import { unique } from "../checks/unique";
 import { fail, pass } from "../core/result";
 import type { AsyncValidator, Check } from "../core/types";
@@ -72,10 +73,10 @@ describe("array", () => {
     it("should report a wrong size without validating the items", () => {
       let calls = 0;
       const counted = array(
-        (input) => {
+        validator((input) => {
           calls += 1;
           return { ok: true, value: input };
-        },
+        }),
         { max: 1 },
       );
       expect(codesOf(counted([1, 2, 3]))).toEqual(["too_big"]);
@@ -162,7 +163,7 @@ describe("array", () => {
 
     // Waits for text and answers at once for anything else, so one list holds items of both kinds.
     const calls: unknown[] = [];
-    const mixed: AsyncValidator<unknown> = (input) => {
+    const mixed: AsyncValidator<unknown> = validator((input) => {
       calls.push(input);
       if (input === "throw") {
         throw new Error("a bug in the item");
@@ -173,7 +174,7 @@ describe("array", () => {
           ? Promise.reject(new Error("late"))
           : Promise.resolve(result)
         : result;
-    };
+    });
 
     it("should keep values and issues in index order when only a later item waits", async () => {
       const result = array(mixed)([1, -2, "a", -4, 5]);

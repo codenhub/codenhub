@@ -3,6 +3,7 @@ import { runInNewContext } from "node:vm";
 import { describe, expect, it } from "vitest";
 
 import { format } from "../builders/format";
+import { validator } from "../builders/validator";
 import { endsWith } from "../checks/ends-with";
 import { includes } from "../checks/includes";
 import { lowercase } from "../checks/lowercase";
@@ -460,7 +461,9 @@ describe("formatIssue", () => {
   });
 
   it("should read an option's issue written by hand without a path as one at the value", () => {
-    const pathless = (() => ({ ok: false, error: { issues: [{ code: "invalid_type" }] } })) as never;
+    const pathless = validator(
+      () => ({ ok: false, error: { issues: [{ code: "invalid_type" }] } }) as unknown as ValidationResult<unknown>,
+    );
     const messageOf = (result: ValidationResult<unknown>): string =>
       formatIssue(issuesOf(result)[0] as ValidationIssue);
     expect(messageOf(union([pathless, string({ min: 3 })])("ab"))).toBe("Must be at least 3 characters");

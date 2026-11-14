@@ -155,11 +155,11 @@ function boundOf(part: unknown): Bound {
  * It reads the schema and never calls it, though it calls the getter of each `lazy` twice, to tell a schema
  * built anew at every level from one built once. Whether a `max` is small enough is not its to judge: any number
  * says someone decided. A check is not read, since it runs on a value that already passed. It lists the
- * bounds an option can set, so it does not report the keys an `object` with `unknownKeys: "passthrough"`
- * or a validator keeps, nor what `unknown()` accepts: none has an option that bounds it. Use `"strip"` or
- * `"strict"` for keys the schema does not name, and a validator of the type you expect in place of
- * `unknown()`. A validator given as `unknownKeys` is walked at the object's path followed by `{}`, as the
- * values of a `record` are.
+ * bounds an option can set, so it does not report the keys a `looseObject` or an `objectWithRest`
+ * keeps, nor what `unknown()` accepts: none has an option that bounds it. Use `object` or
+ * `strictObject` for keys the schema does not name, and a validator of the type you expect in place of
+ * `unknown()`. The validator `objectWithRest` gives its unlisted keys is walked at the object's path
+ * followed by `{}`, as the values of a `record` are.
  *
  * @example
  * ```ts
@@ -254,8 +254,8 @@ export function audit(validator: AnyValidator): readonly AuditFinding[] {
           walk(part, at(path, key), held);
         }
         // The validator of the keys the shape does not list, at the place of a record's values.
-        if (typeof record.options?.["unknownKeys"] === "function") {
-          walk(record.options["unknownKeys"], `${path}{}`, held);
+        if (typeof record["unknownKeys"] === "function") {
+          walk(record["unknownKeys"], `${path}{}`, held);
         }
         return;
       case "tagged":

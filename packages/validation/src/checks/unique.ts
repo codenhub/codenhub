@@ -1,9 +1,12 @@
-import { assertMessage, word } from "../core/checks";
-import { described } from "../core/describe";
-import { cap, MAX_ISSUES } from "../core/limit";
-import { assertFunction, repeatedItem } from "../core/result";
+import { assertFunction, issue, repeatedItem } from "../core/result";
+import { assertMessage, toCheck, word } from "../core/rule";
+import { detached, MAX_ISSUES } from "../core/run";
 import type { Check, Message, ValidationIssue } from "../core/types";
+import { wordSize, type Word } from "../core/words";
 import type { LiteralValue } from "../primitives/literal";
+
+/** Words the issue that says the list of repeats was cut. */
+const CUT_WORDS: readonly Word[] = [wordSize];
 
 /**
  * Requires the items of an array to be distinct, reporting each repeat at its own index with
@@ -38,8 +41,9 @@ export function unique<T>(by?: (item: T) => unknown, message?: Message): Check<r
     assertFunction("by", by);
   }
   assertMessage(message);
-  const keyOf = by ?? ((item: T): unknown => item);
-  return described<Check<readonly T[]>>(
+  // Apart from the validation running now, as everything a consumer wrote is run.
+  const keyOf = by === undefined ? (item: T): unknown => item : (item: T): unknown => detached(by, item);
+  return toCheck<Check<readonly T[]>>(
     (items) => {
       const seen = new Set<unknown>();
       const repeats: ValidationIssue[] = [];
@@ -51,8 +55,13 @@ export function unique<T>(by?: (item: T) => unknown, message?: Message): Check<r
         }
         seen.add(key);
       });
-      return repeats.length > 0 ? word(cap(repeats, undefined, message), message) : undefined;
+      if (repeats.length > MAX_ISSUES) {
+        repeats.length = MAX_ISSUES;
+        repeats.push(issue("too_big", { maximum: MAX_ISSUES, type: "issues" }));
+      }
+      return repeats.length > 0 ? word(repeats, message) : undefined;
     },
     { kind: "check", code: "invalid_value", params: Object.freeze({ unique: true }), by },
+    CUT_WORDS,
   );
 }

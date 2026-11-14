@@ -2,7 +2,7 @@
 title: Formularios
 description: Reglas entre campos, campos opcionales y valores predeterminados, errores junto a cada campo, archivos y los tipos que contiene un formulario.
 order: 2
-source: 1ff0836cb731bb25d0500b44a4838571dc4d9066
+source: d0325e850b22858c42d7cf527348f6d039a514a5
 ---
 
 # Formularios
@@ -205,7 +205,7 @@ Los dos tipos difieren en:
 
 La limpieza no crea una diferencia: `string({ trim: true })` acepta y produce un `string`.
 
-Un validador se sigue llamando con cualquier valor. El tipo de entrada dice qué puede pasar, para los tipos de un formulario o de quien lo llama, y nunca limita el argumento. Un validador que escribes a mano tiene el tipo de entrada `unknown`, a menos que su tipo diga otra cosa, como hace `Validator<number, string>` para uno que lee un número de un texto.
+Un validador se sigue llamando con cualquier valor. El tipo de entrada dice qué puede pasar, para los tipos de un formulario o de quien lo llama, y nunca limita el argumento. Lo que [`validator`](./custom-validators.md#a-mano) crea a partir de una función que escribiste tiene el tipo de entrada `unknown`, a menos que el tipo de la función diga otra cosa, como hace `Validator<number, string>` para una que lee un número de un texto.
 
 Una biblioteca de formularios que acepta un [Standard Schema](./standard-schema.md) obtiene ambos tipos del validador. [Integraciones](./integrations.md#formularios) muestra react-hook-form y TanStack Form.
 
