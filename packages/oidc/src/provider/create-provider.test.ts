@@ -72,6 +72,29 @@ describe("createProvider", () => {
     expect(() => createProvider(options)).not.toThrow();
   });
 
+  it.each([
+    ["empty", []],
+    ["not an array", "pairwise"],
+    ["an unknown type", ["public", "ephemeral"]],
+    ["a repeated type", ["pairwise", "pairwise"]],
+    ["sparse", Object.assign([] as string[], { 1: "public" })],
+    ["null", null],
+  ])("shouldThrowTypeErrorWhenSubjectTypesIs %s", async (_name, subjectTypes) => {
+    const options = await optionsWith({ subjectTypes: subjectTypes as ProviderOptions["subjectTypes"] });
+
+    expect(() => createProvider(options)).toThrow(
+      expect.objectContaining({ name: "TypeError", message: expect.stringContaining("subjectTypes") }),
+    );
+  });
+
+  it("shouldNotRepeatTheSubjectTypesInItsMessage", async () => {
+    const options = await optionsWith({ subjectTypes: ["secret-type"] as unknown as ProviderOptions["subjectTypes"] });
+
+    expect(() => createProvider(options)).toThrow(
+      expect.objectContaining({ message: expect.not.stringContaining("secret-type") }),
+    );
+  });
+
   it("shouldThrowTypeErrorWhenAnEndpointIsExplicitlyNull", async () => {
     const options = await optionsWith({ endpoints: { token: null } as unknown as ProviderOptions["endpoints"] });
 

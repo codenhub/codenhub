@@ -1688,6 +1688,7 @@ export interface ProviderOptions {
     readonly onDiagnostic?: (diagnostic: ProviderDiagnostic) => void;
     readonly onRefresh?: (request: RefreshCheck) => boolean | Promise<boolean>;
     readonly accessTokenClaims?: (request: AccessTokenClaimsRequest) => Readonly<Record<string, unknown>> | Promise<Readonly<Record<string, unknown>>>;
+    readonly subjectTypes?: readonly ("public" | "pairwise")[];
 }
 ```
 
@@ -1798,6 +1799,18 @@ readonly store: OidcStore;
 ```
 
 Where clients, codes, tokens, and interactions are kept.
+
+#### ProviderOptions › subjectTypes
+
+```ts
+readonly subjectTypes?: readonly ("public" | "pairwise")[];
+```
+
+The subject identifier types the provider offers (OpenID Connect Core §8), published as discovery's `subject_types_supported`. A non-empty list of `public` and `pairwise`, without repeats.
+
+The provider never derives a subject: the app passes each sign-in's `subject` to `completeAuthorization`, so listing `pairwise` states that the app gives the clients it chose a subject of their own, derived as OpenID Connect Core §8.1 describes. The provider does not check that it does.
+
+**Default** — `["public"]`
 
 #### ProviderOptions › ttl
 

@@ -17,7 +17,7 @@ Many items below change a contract: a record the store persists, a client record
 The SSO application is the package's first real consumer, and a review of its scope (2026-11-12) against this package found what it needs and the package lacks. The order follows the SSO application's own roadmap.
 
 - **Release what `main` already holds.** The fixes after 0.0.1, the 60-second client clock tolerance (decision 44) and the expired `id_token_hint` at logout (decision 45), are not on npm. The SSO application installs from npm, so it needs a release that carries them.
-- **Run the OpenID conformance plans.** Every change the review found is built, and scope.md decisions 47 to 56 record them; the record shapes are settled before the SSO application writes its `OidcStore` adapters. What its data API needs followed: `authenticate`, `accessTokenClaims` and resource indicators on both sides, in decisions 57 to 59. What is left before 0.1 is the conformance run below and the release.
+- **Run the OpenID conformance plans.** Every change the review found is built, and scope.md decisions 47 to 56 record them; the record shapes are settled before the SSO application writes its `OidcStore` adapters. What its data API needs followed: `authenticate`, `accessTokenClaims` and resource indicators on both sides, in decisions 57 to 59, and its privacy asks for pairwise subjects, in decision 60. What is left before 0.1 is the conformance run below and the release.
 
 ## Planned
 
@@ -29,21 +29,19 @@ The target is that the provider passes the Basic OP and Config OP plans; no plan
 
 ### Release
 
-- **What the SSO application finds next.** 0.0.1 aimed to be the last release before a breaking change (`docs/specs/packages-lifecycle.md`, "Versioning"). What the first look at the consumer found is built, as scope.md decisions 47 to 59 record; a change building it shows the public API needs ships in the release that makes it, as a breaking change if it is one. 0.1.0 is the judgment that the SSO application builds on the package without such changes.
+- **What the SSO application finds next.** 0.0.1 aimed to be the last release before a breaking change (`docs/specs/packages-lifecycle.md`, "Versioning"). What the first look at the consumer found is built, as scope.md decisions 47 to 60 record; a change building it shows the public API needs ships in the release that makes it, as a breaking change if it is one. 0.1.0 is the judgment that the SSO application builds on the package without such changes.
 - **A changelog from 0.1.0**, opened by `hub release --cut` with the release, per `docs/specs/packages-changelog.md`.
 
 ## Later / Possible
 
-None of these breaks an existing contract, so each can wait for its consumer.
-
-- **Pairwise subject identifiers in discovery.** The app already derives a subject per client (decision 38); an option for `subject_types_supported` is the remaining change, when the SSO application turns pairwise subjects on.
+None at present. Pairwise subject identifiers, the last item here, shipped as the `subjectTypes` option (scope.md decision 60).
 
 ## Not Planned
 
 - Implicit and hybrid flows, the password grant, and PKCE `plain` (scope.md section 2, "Never supported").
 - Tracking client assertion `jti` values (scope.md decision 23).
 - A non-consuming refresh token lookup, unless a real client needs it (scope.md decision 20).
-- Loopback redirect URIs with variable ports, PAR, front-channel logout and session management. Each waits for a consumer and its case (scope.md decision 38). Back-channel logout shipped (decision 53), and pairwise subjects moved to Later.
+- Loopback redirect URIs with variable ports, PAR, front-channel logout and session management. Each waits for a consumer and its case (scope.md decision 38). Back-channel logout shipped (decision 53), and so did pairwise subjects (decision 60).
 - Device flow, CIBA, DPoP, mTLS, dynamic client registration, request objects, JWE-encrypted tokens and token introspection (scope.md section 2).
 
 ## Notes

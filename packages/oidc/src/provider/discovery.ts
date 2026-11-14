@@ -60,8 +60,9 @@ function listSigningAlgs(options: ResolvedOptions): string[] {
  *
  * @remarks
  * Every value comes from the resolved options, so the document cannot drift from what the endpoints
- * enforce. The flags for features this package does not implement (`claims` and `request` parameters, the
- * `subject_types` other than `public`) are published as unsupported, so a client never tries them.
+ * enforce. The flags for features this package does not implement (`claims` and `request` parameters) are
+ * published as unsupported, so a client never tries them. `subject_types_supported` is the app's `subjectTypes`,
+ * since the app derives the subjects.
  *
  * @param options - Validated provider options.
  * @returns A deep-frozen metadata document.
@@ -77,7 +78,7 @@ export function buildMetadata(options: ResolvedOptions): ProviderMetadata {
     response_types_supported: ["code"],
     response_modes_supported: ["query"],
     grant_types_supported: ["authorization_code", "refresh_token", "client_credentials"],
-    subject_types_supported: ["public"],
+    subject_types_supported: options.subjectTypes,
     id_token_signing_alg_values_supported: listSigningAlgs(options),
     token_endpoint_auth_methods_supported: TOKEN_ENDPOINT_AUTH_METHODS,
     token_endpoint_auth_signing_alg_values_supported: TOKEN_ENDPOINT_AUTH_SIGNING_ALGS,
