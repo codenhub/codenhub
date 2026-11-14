@@ -18,6 +18,7 @@ const WORKSPACE_WIDE_PATHS: readonly string[] = [
   "package.json",
   "tsconfig.json",
   ".nvmrc",
+  ".node-floor",
   ".npmrc",
   ".oxlintrc.json",
   ".oxfmtrc.json",

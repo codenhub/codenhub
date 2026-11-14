@@ -185,6 +185,12 @@ describe("selectPackages", () => {
     ]);
   });
 
+  it("shouldSelectEveryPackageWhenTheNodeFloorChanged", async () => {
+    const selection = await select([], root, [".node-floor"]);
+
+    expect(selection.targets).toHaveLength(4);
+  });
+
   it("shouldSelectOnlyTheOwnerWhenAPackageManifestChanged", async () => {
     const selection = await select([], root, ["packages/alpha/package.json"]);
 
