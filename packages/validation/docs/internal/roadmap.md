@@ -22,7 +22,7 @@ This records what `@codenhub/validation` is building toward, what it takes to re
 
 ## Current Focus
 
-**The next release is 0.6.0: the core rewritten as one pass, for size.** The owner named bundle size the package's largest problem after 0.5.1, and approved replacing the fast tests and the full work with one pass over the input, with the changes to the API that keep what a schema does not use out of its bundle. [One pass](architecture.md#one-pass) has the design, what it reverses, and the sizes and speeds measured. It breaks callers, so by [Versioning until 1.0](#versioning-until-10) it is the next minor. The version is not raised and no changelog page is written yet: both are the release cut, which the owner calls.
+**The next release is 0.6.0: the core rewritten as one pass, for size.** The owner named bundle size the package's largest problem after 0.5.1, and approved replacing the fast tests and the full work with one pass over the input, with the changes to the API that keep what a schema does not use out of its bundle. [One pass](architecture.md#one-pass) has the design, what it reverses, and the sizes and speeds measured. It breaks callers, so by [Versioning until 1.0](#versioning-until-10) it is the next minor. The version is raised to 0.6.0, and the [0.6.0 changelog](../changelog/0.6.0.md) lists each change and what to do about it.
 
 What a caller of 0.5.1 changes:
 
