@@ -11,6 +11,7 @@ describe("parseParameters", () => {
         ["client_id", "abc"],
         ["scope", "openid"],
       ]),
+      lists: new Map(),
     });
   });
 
@@ -71,7 +72,7 @@ describe("parseParameters", () => {
   });
 
   it("shouldReturnEmptyMapForEmptyString", () => {
-    expect(parseParameters("")).toEqual({ ok: true, parameters: new Map() });
+    expect(parseParameters("")).toEqual({ ok: true, parameters: new Map(), lists: new Map() });
   });
 
   it("shouldNotThrowOnMalformedPercentEncoding", () => {
@@ -100,5 +101,43 @@ describe("parseParameters", () => {
   it("shouldDecodePlusAloneAsSpace", () => {
     const result = parseParameters("a=+");
     expect(result.ok && result.parameters.get("a")).toBe(" ");
+  });
+
+  it("shouldCollectEveryValueOfARepeatableName", () => {
+    const result = parseParameters("resource=https%3A%2F%2Fa.test&scope=openid&resource=https%3A%2F%2Fb.test", [
+      "resource",
+    ]);
+    expect(result).toEqual({
+      ok: true,
+      parameters: new Map([["scope", "openid"]]),
+      lists: new Map([["resource", ["https://a.test", "https://b.test"]]]),
+    });
+  });
+
+  it("shouldKeepARepeatedValueOfARepeatableNameOnce", () => {
+    const result = parseParameters("resource=x&resource=x", ["resource"]);
+    expect(result.ok && result.lists.get("resource")).toEqual(["x"]);
+  });
+
+  it("shouldDropEmptyValuesOfARepeatableName", () => {
+    const result = parseParameters("resource=&resource=", ["resource"]);
+    expect(result).toEqual({ ok: true, parameters: new Map(), lists: new Map() });
+  });
+
+  it("shouldStillRejectRepeatsOfOtherNamesWhenOneIsRepeatable", () => {
+    expect(parseParameters("resource=x&resource=y&scope=a&scope=b", ["resource"])).toEqual({
+      ok: false,
+      reason: "duplicate",
+    });
+  });
+
+  it("shouldCountRepeatsOfARepeatableNameTowardTheCap", () => {
+    const text = Array.from({ length: MAX_PARAMETERS + 1 }, (_, index) => `resource=r${index}`).join("&");
+    expect(parseParameters(text, ["resource"])).toEqual({ ok: false, reason: "too_many" });
+  });
+
+  it("shouldRejectAnOverlongValueOfARepeatableName", () => {
+    const text = `resource=${"a".repeat(MAX_PARAMETER_LENGTH + 1)}`;
+    expect(parseParameters(text, ["resource"])).toEqual({ ok: false, reason: "too_long" });
   });
 });

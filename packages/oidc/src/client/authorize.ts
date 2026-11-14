@@ -1,8 +1,9 @@
 import { randomToken } from "../shared/encoding";
-import { MAX_PARAMETER_LENGTH, MAX_URL_LENGTH } from "../shared/limits";
+import { MAX_PARAMETER_LENGTH, MAX_PARAMETERS, MAX_URL_LENGTH } from "../shared/limits";
 import { computeCodeChallenge } from "../shared/pkce";
 import { deepFreeze } from "../shared/result";
 import type { Prompt } from "../shared/types";
+import { isResourceUri } from "../shared/urls";
 import type { ResolvedClientOptions } from "./options";
 import type { AuthorizationStart, AuthorizeOptions, PendingAuthorization } from "./types";
 
@@ -18,6 +19,13 @@ const MAX_AGE_LIMIT = 999999999;
 const RESPONSE_TYPE = "code";
 const MILLISECONDS_PER_SECOND = 1000;
 const CODE_CHALLENGE_METHOD = "S256";
+/** The most parameters other than `resource` an authorization request sends: eight required and four optional. */
+const MAX_OTHER_PARAMETERS = 12;
+/**
+ * The most `resource` values a request may send. Each is a parameter of its own, and the provider reads at most
+ * {@link MAX_PARAMETERS} per request, so more would be refused with an error page rather than a redirect.
+ */
+const MAX_RESOURCES = MAX_PARAMETERS - MAX_OTHER_PARAMETERS;
 
 /** The validated, normalized request. Every field is ready to send. */
 interface ReadRequest {
@@ -26,6 +34,7 @@ interface ReadRequest {
   readonly maxAge: number | undefined;
   readonly loginHint: string | undefined;
   readonly uiLocales: readonly string[];
+  readonly resource: readonly string[];
 }
 
 const isScopeToken = (value: unknown): boolean => typeof value === "string" && SCOPE_TOKEN.test(value);
@@ -160,6 +169,30 @@ export function readUiLocales(uiLocales: readonly string[] | undefined, caller =
   return copy as string[];
 }
 
+/**
+ * Reads the `resource` values of a request (RFC 8707 §2), each sent as a parameter of its own. A value is checked as
+ * the provider checks a client's `resources`: an absolute URI of visible ASCII without a fragment. Duplicates are
+ * dropped in first-seen order, since the provider counts a repeated value once. `caller` is the method the message
+ * names.
+ */
+export function readResources(value: unknown, caller: string): readonly string[] {
+  if (value === undefined) {
+    return [];
+  }
+  // Copied by index, so a sparse or oversized array is refused rather than serialized.
+  const copy = denseCopy(value);
+  if (copy === undefined || copy.length === 0 || copy.length > MAX_RESOURCES || !copy.every(isResourceUri)) {
+    throw new TypeError(
+      `${caller}: resource must be a non-empty array of at most ${MAX_RESOURCES} absolute URIs of visible ASCII without a fragment or a backslash, with an authority after // for a special scheme such as https`,
+    );
+  }
+  const unique = [...new Set(copy as string[])];
+  if (unique.some((resource) => resource.length > MAX_PARAMETER_LENGTH)) {
+    throw new TypeError(`${caller}: resource is longer than the provider accepts`);
+  }
+  return unique;
+}
+
 /** Validates the whole request before anything is generated, so a refused request has no side effects. */
 function readRequest(request: AuthorizeOptions): ReadRequest {
   return {
@@ -168,6 +201,7 @@ function readRequest(request: AuthorizeOptions): ReadRequest {
     maxAge: readMaxAge(request.maxAge),
     loginHint: readLoginHint(request.loginHint),
     uiLocales: readUiLocales(request.uiLocales),
+    resource: readResources(request.resource, "authorize"),
   };
 }
 
@@ -212,6 +246,9 @@ function optionalParameters(request: ReadRequest): [string, string][] {
   }
   if (request.uiLocales.length > 0) {
     parameters.push(["ui_locales", request.uiLocales.join(" ")]);
+  }
+  for (const resource of request.resource) {
+    parameters.push(["resource", resource]);
   }
   return parameters;
 }

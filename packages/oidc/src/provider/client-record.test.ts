@@ -24,6 +24,32 @@ describe("checkClientRecord", () => {
     });
   });
 
+  it.each([[["https://api.example"]], [["urn:example:data", "https://api.example/v1?tenant=a"]], [[]]])(
+    "shouldAcceptResourcesOfAbsoluteUris_%#",
+    (resources) => {
+      expect(() => checkClientRecord(valid({ resources }), "client-a", KEYS)).not.toThrow();
+    },
+  );
+
+  it.each([
+    ["a resource with a fragment", ["https://api.example#x"]],
+    ["a resource with an empty fragment", ["https://api.example#"]],
+    ["a relative resource", ["/api"]],
+    ["an empty resource", [""]],
+    ["a resource with a space", ["https://api.example/a b"]],
+    ["a resource with a backslash", ["https://api.example\\evil"]],
+    ["a non-ASCII resource", ["https://api.exämple"]],
+    ["a special scheme without //", ["https:api.example"]],
+    ["an empty authority", ["https:///api.example"]],
+    ["an empty authority in another case", ["HTTPS:///api.example"]],
+    ["a non-string resource", [42]],
+    ["a string instead of a list", "https://api.example"],
+  ])("shouldRejectResourcesWith_%s", (_, resources) => {
+    expect(() => checkClientRecord(valid({ resources }), "client-a", KEYS)).toThrow(
+      "OidcStore.findClient: a client record must list resources, when present, as absolute URIs of visible ASCII without a fragment or a backslash, with an authority after // for a special scheme such as https",
+    );
+  });
+
   it("shouldRejectARecordWithAnotherClientId", () => {
     expect(() => checkClientRecord(valid({ clientId: "client-b" }), "client-a", KEYS)).toThrow(TypeError);
   });

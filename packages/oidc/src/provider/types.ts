@@ -142,6 +142,15 @@ export interface ClientRecord {
    * @defaultValue `false`
    */
   readonly idTokenClaims?: boolean;
+  /**
+   * The resource servers this client may ask for tokens to (RFC 8707): each an absolute URI without a fragment, of
+   * visible ASCII, such as `https://api.example.com`. A `resource` parameter at authorization or at the token
+   * endpoint must name one of them, or the request fails with `invalid_target`. An access token issued for one or
+   * more resources carries them as its audience, which {@link Provider.authenticate} checks and which a JWT access
+   * token puts in `aud`. Absent or empty, the client may name none, and its tokens keep the default audience. The
+   * provider checks the list when it reads the record, and throws `TypeError` if it is malformed.
+   */
+  readonly resources?: readonly string[];
 }
 
 /** How the client asks the app to show its pages (OpenID Connect Core §3.1.2.1). */
@@ -165,6 +174,8 @@ export interface InteractionRecord {
   readonly acrValues?: readonly string[];
   readonly claimsLocales?: readonly string[];
   readonly display?: Display;
+  /** The `resource` values the client asked for (RFC 8707), each one of the client's `resources`. */
+  readonly resources?: readonly string[];
   /** When the request was validated, in seconds since the Unix epoch. */
   readonly createdAt: number;
   /** When the interaction expires, in seconds since the Unix epoch. */
@@ -191,6 +202,8 @@ export interface CodeRecord {
   readonly sessionId?: string;
   /** Whether the request carried `max_age`, which makes `auth_time` required in the ID token. */
   readonly maxAgeRequested: boolean;
+  /** The resource servers the grant covers (RFC 8707): the authorization request's `resource` values. */
+  readonly resources?: readonly string[];
   /** In seconds since the Unix epoch. */
   readonly expiresAt: number;
 }
@@ -203,6 +216,12 @@ export interface AccessTokenRecord {
   readonly scopes: readonly string[];
   /** The app's session identifier from the grant. */
   readonly sessionId?: string;
+  /**
+   * The resource servers the token is for: the token request's `resource` values, else the grant's (at a refresh,
+   * those the client's record still lists), else, for a JWT access token, the `accessToken.audience` option. Absent
+   * for an opaque token issued for no resource.
+   */
+  readonly audience?: readonly string[];
   /** In seconds since the Unix epoch. */
   readonly expiresAt: number;
 }
@@ -218,6 +237,8 @@ export interface RefreshTokenRecord {
   readonly acr?: string;
   /** The app's session identifier from the grant. Rotation keeps it. */
   readonly sessionId?: string;
+  /** The resource servers the family covers (RFC 8707), from the authorization request. Rotation keeps it. */
+  readonly resources?: readonly string[];
   /** When the whole token family expires, in seconds since the Unix epoch. Rotation keeps it. */
   readonly expiresAt: number;
 }
@@ -428,6 +449,8 @@ export type ProviderDiagnosticReason =
   | "refresh_token_client_mismatch"
   | "scope_not_granted"
   | "refresh_refused"
+  | "resource_invalid"
+  | "resource_not_granted"
   // Userinfo
   | "access_token_missing"
   | "access_token_malformed"
@@ -539,6 +562,41 @@ export interface ProviderOptions {
    * It is not called for a code exchange, which is the sign-in itself.
    */
   readonly onRefresh?: (request: RefreshCheck) => boolean | Promise<boolean>;
+  /**
+   * Returns claims the app adds to each JWT access token, such as the user's roles for a resource server. Called
+   * for every JWT access token the provider issues: at the code exchange, at each refresh, and for
+   * `client_credentials`, whose `subject` is the client identifier.
+   *
+   * The provider's own claims always win: a returned `iss`, `exp`, `aud`, `sub`, `client_id`, `iat`, `jti`,
+   * `scope`, `auth_time`, `acr`, `amr`, `nbf`, `cnf` or `azp` is dropped, as is any other claim the token sets, even
+   * one this token happens not to carry. Only own enumerable data properties are read, so a getter never runs, and
+   * a property whose value is `undefined` is left out. Keep the claims small and free of anything the client must
+   * not read: a JWT access token is readable by whoever holds it.
+   *
+   * A result that is not a plain object, such as an array, `null`, a `Date`, a `Map` or a class instance, makes `handle` reject with `TypeError`, and,
+   * as with the `claims` callback, a throw or a rejected promise makes `handle` reject with that error. At a
+   * refresh it runs before the next refresh token is saved, so a failure leaves no token the client never
+   * receives; the spent refresh token makes the client's retry a reuse, which revokes the family.
+   *
+   * Requires `accessToken: { format: "jwt" }`; given with opaque access tokens, `createProvider` throws
+   * `TypeError`, since an opaque token carries no claims.
+   */
+  readonly accessTokenClaims?: (
+    request: AccessTokenClaimsRequest,
+  ) => Readonly<Record<string, unknown>> | Promise<Readonly<Record<string, unknown>>>;
+}
+
+/** What {@link ProviderOptions.accessTokenClaims} is asked about: the JWT access token about to be signed. Frozen. */
+export interface AccessTokenClaimsRequest {
+  /** The user the token is for, or the client identifier for `client_credentials`. */
+  readonly subject: string;
+  readonly clientId: string;
+  /** The scopes the token carries. */
+  readonly scopes: readonly string[];
+  /** The token's audience, as its `aud` claim and {@link AccessTokenRecord.audience} hold it. */
+  readonly audience: readonly string[];
+  /** The grant the token belongs to; for `client_credentials`, a new one per token. */
+  readonly grantId: string;
 }
 
 /** What {@link ProviderOptions.onRefresh} is asked about: the refresh that is about to issue tokens. */
@@ -595,6 +653,11 @@ export interface AuthorizationInteraction {
    * is ignored, so it is absent here, and the app may ignore this one as well.
    */
   readonly display?: Display;
+  /**
+   * The resource servers the client asked for tokens to (RFC 8707 `resource`), each one of the client's
+   * `resources`. Show them on the consent page: the grant covers every one, and the app cannot narrow it.
+   */
+  readonly resources?: readonly string[];
   /** When the request was validated, in seconds since the Unix epoch. A `prompt=login` login must happen at or after it. */
   readonly createdAt: number;
 }
@@ -640,6 +703,48 @@ export interface AuthorizationDenial {
     | "consent_required"
     | "interaction_required"
     | "account_selection_required";
+}
+
+/** What {@link Provider.authenticate} requires of a token, beyond being a live access token. */
+export interface AuthenticateOptions {
+  /**
+   * Scopes the token must carry, every one of them. A token missing one is refused with `insufficient_scope`, and
+   * the challenge names these scopes. Each must be a scope token (RFC 6749 §3.3).
+   */
+  readonly scopes?: readonly string[];
+  /**
+   * The resource server the token must be for: one of the {@link AccessTokenRecord.audience} values, compared byte
+   * for byte. A token issued for another resource, or for none, is refused with `invalid_token`. Absent, the
+   * audience is not checked, which suits only an API that every token of the provider may call.
+   */
+  readonly audience?: string;
+}
+
+/** Why {@link Provider.authenticate} refused a request, for the app's logs. */
+export type AuthenticationFailureReason =
+  | "access_token_missing"
+  | "access_token_malformed"
+  | "access_token_unknown"
+  | "access_token_expired"
+  | "access_token_audience_mismatch"
+  | "access_token_scope_insufficient";
+
+/**
+ * Why a request to the app's API did not authenticate, and how to answer it. The issue's code is the RFC 6750 error:
+ * `invalid_request` for a malformed `Authorization` header, `insufficient_scope` for a token without a required
+ * scope, and `invalid_token` for everything else, including a request with no token, whose challenge has no error.
+ */
+export interface AuthenticationFailure extends OidcFailure {
+  /**
+   * The response to return as is: `401` with `WWW-Authenticate: Bearer` when no token was sent, `400` with
+   * `error="invalid_request"` for a malformed header, `403` with `error="insufficient_scope"` and the required
+   * scopes in `scope`, or `401` with `error="invalid_token"`. It is `no-store` and carries no CORS headers.
+   */
+  readonly response: Response;
+  /** Which check failed. Never sent to the client. */
+  readonly reason: AuthenticationFailureReason;
+  /** The client the token was issued to, when the store found the token. */
+  readonly clientId?: string;
 }
 
 /** OpenID Provider endpoints on the Fetch API. */
@@ -725,6 +830,27 @@ export interface Provider {
     readonly subject?: string;
     readonly sessionId?: string;
   }): Promise<Request | null>;
+  /**
+   * Checks the bearer token of a request to the app's own API, served beside the provider over the same store: the
+   * access token in the `Authorization` header, its expiry, then the `audience` and `scopes` the API requires.
+   *
+   * @remarks
+   * The token is read from the `Authorization: Bearer` header only, as userinfo reads it, and is looked up by its
+   * digest among access tokens, so an ID token, a refresh token or a code never authenticates. It works for opaque
+   * and JWT access tokens alike, and sees a revocation at once. The audience is checked before the scopes. Nothing
+   * is reported to {@link ProviderOptions.onDiagnostic}; the failure's `reason` is for the app's logs.
+   *
+   * @param request - The request to the API. Only its headers are read.
+   * @param options - What the token must carry.
+   * @returns The token's record, a frozen copy, or a failure with the response to send. Never throws for any
+   * request; rejects only when the store does, or with a `TypeError` when `options` is malformed: not an object,
+   * `scopes` that is not an array of scope tokens, or an `audience` that is not a non-empty string. Options are
+   * checked before the store is read.
+   */
+  authenticate(
+    request: Request,
+    options?: AuthenticateOptions,
+  ): Promise<OidcResult<AccessTokenRecord, AuthenticationFailure>>;
 }
 
 /**

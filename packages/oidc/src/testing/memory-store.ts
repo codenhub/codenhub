@@ -148,8 +148,8 @@ export function createMemoryStore(options: MemoryStoreOptions = {}): MemoryStore
 }
 
 /**
- * Copies a client record one level down: the record, its redirect URIs, scopes, grant types and post-logout
- * redirect URIs, and its `auth`, `ttl` and `backchannelLogout` objects. An optional list is copied only when present, so an absent one stays
+ * Copies a client record one level down: the record, its redirect URIs, scopes, grant types, post-logout
+ * redirect URIs and resources, and its `auth`, `ttl` and `backchannelLogout` objects. An optional list is copied only when present, so an absent one stays
  * absent. A client may hold `@codenhub/jwt` keys, which are recognized by identity and hold functions, so they
  * are shared by reference rather than cloned. A value that is not an array is copied as it is, so a malformed
  * record reaches the provider's own check and gets its own `TypeError`.
@@ -163,6 +163,7 @@ function copyClient(client: ClientRecord): ClientRecord {
     ...(client.postLogoutRedirectUris === undefined
       ? {}
       : { postLogoutRedirectUris: copyList(client.postLogoutRedirectUris) }),
+    ...(client.resources === undefined ? {} : { resources: copyList(client.resources) }),
     ...(client.ttl === undefined ? {} : { ttl: copyObject(client.ttl) }),
     ...(client.backchannelLogout === undefined ? {} : { backchannelLogout: copyObject(client.backchannelLogout) }),
     auth: copyAuth(client.auth),

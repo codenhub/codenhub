@@ -36,19 +36,20 @@ export async function createSsoProvider() {
 }
 ```
 
-| Option         | Meaning                                                                                                                                                                | Default                     |
-| -------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------- |
-| `issuer`       | The issuer identifier: an `https` URL of visible ASCII, with no query, fragment or credentials. It is used byte for byte in `iss`, and a trailing slash is kept there. | Required                    |
-| `signingKeys`  | Key pairs from `generateKeyPair`, or from `importPrivateKey` and `importPublicKey`. See [Signing keys](#signing-keys).                                                 | Required                    |
-| `store`        | Where clients, codes, tokens and interactions are kept. An object with every method of `OidcStore`. See [Store](store.md).                                             | Required                    |
-| `claims`       | Returns the claims about a user for the scopes granted. See [Claims](#claims).                                                                                         | Required                    |
-| `scopes`       | Extra scopes and the claims each releases, merged over the standard scopes. See [Scopes](#scopes).                                                                     | Standard scopes only        |
-| `ttl`          | Token and interaction lifetimes in seconds. See [Lifetimes](#lifetimes).                                                                                               | See [Lifetimes](#lifetimes) |
-| `accessToken`  | How access tokens are issued: opaque, the default, or a signed JWT. See [JWT access tokens](#jwt-access-tokens).                                                       | `{ format: "opaque" }`      |
-| `endpoints`    | The URLs of the authorization, end-session, token, userinfo, JWKS and revocation endpoints. See [Endpoints](#endpoints).                                               | Paths under the issuer      |
-| `onDiagnostic` | Called with the reason each token, userinfo or revocation request is refused with an OAuth error response. See [Diagnostics](#diagnostics).                            | None                        |
-| `onRefresh`    | Asked before each refresh issues tokens, so the app can end a family whose user is no longer entitled to it. See [Re-checking a refresh](#re-checking-a-refresh).      | Every refresh is issued     |
-| `now`          | The current time in milliseconds since the Unix epoch. For tests.                                                                                                      | `Date.now`                  |
+| Option              | Meaning                                                                                                                                                                | Default                     |
+| ------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------- |
+| `issuer`            | The issuer identifier: an `https` URL of visible ASCII, with no query, fragment or credentials. It is used byte for byte in `iss`, and a trailing slash is kept there. | Required                    |
+| `signingKeys`       | Key pairs from `generateKeyPair`, or from `importPrivateKey` and `importPublicKey`. See [Signing keys](#signing-keys).                                                 | Required                    |
+| `store`             | Where clients, codes, tokens and interactions are kept. An object with every method of `OidcStore`. See [Store](store.md).                                             | Required                    |
+| `claims`            | Returns the claims about a user for the scopes granted. See [Claims](#claims).                                                                                         | Required                    |
+| `scopes`            | Extra scopes and the claims each releases, merged over the standard scopes. See [Scopes](#scopes).                                                                     | Standard scopes only        |
+| `ttl`               | Token and interaction lifetimes in seconds. See [Lifetimes](#lifetimes).                                                                                               | See [Lifetimes](#lifetimes) |
+| `accessToken`       | How access tokens are issued: opaque, the default, or a signed JWT. See [JWT access tokens](#jwt-access-tokens).                                                       | `{ format: "opaque" }`      |
+| `accessTokenClaims` | Returns extra claims for each JWT access token. Needs `accessToken: { format: "jwt" }`. See [Claims for the resource server](#claims-for-the-resource-server).         | None                        |
+| `endpoints`         | The URLs of the authorization, end-session, token, userinfo, JWKS and revocation endpoints. See [Endpoints](#endpoints).                                               | Paths under the issuer      |
+| `onDiagnostic`      | Called with the reason each token, userinfo or revocation request is refused with an OAuth error response. See [Diagnostics](#diagnostics).                            | None                        |
+| `onRefresh`         | Asked before each refresh issues tokens, so the app can end a family whose user is no longer entitled to it. See [Re-checking a refresh](#re-checking-a-refresh).      | Every refresh is issued     |
+| `now`               | The current time in milliseconds since the Unix epoch. For tests.                                                                                                      | `Date.now`                  |
 
 `createProvider` throws `TypeError` when:
 
@@ -286,7 +287,7 @@ The checks run in this order, and the first failure is the one reported. Failure
 | ------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------- | ---------- |
 | The URL is at most 8192 characters.                                                                                                                    | `invalid_request`                                                                              | `null`     |
 | The method is `GET`, or `POST` with a form body. The body is at most 16384 bytes.                                                                      | `invalid_request`                                                                              | `null`     |
-| The parameters parse: no duplicate, at most 32, none longer than 4096 characters, and no percent-escape that is not valid UTF-8.                       | `invalid_request`, with `params.reason` of `duplicate`, `too_many`, `too_long` or `malformed`  | `null`     |
+| The parameters parse: no duplicate except `resource`, at most 32, none longer than 4096 characters, and no percent-escape that is not valid UTF-8.     | `invalid_request`, with `params.reason` of `duplicate`, `too_many`, `too_long` or `malformed`  | `null`     |
 | `client_id` is present.                                                                                                                                | `invalid_request`, path `["client_id"]`                                                        | `null`     |
 | The client is registered.                                                                                                                              | `unknown_client`                                                                               | `null`     |
 | `redirect_uri` is present and is one of the client's registered URIs, byte for byte.                                                                   | `invalid_redirect_uri`                                                                         | `null`     |
@@ -295,6 +296,7 @@ The checks run in this order, and the first failure is the one reported. Failure
 | `response_type` is present and is `code`.                                                                                                              | `invalid_request` with path `["response_type"]` when missing, else `unsupported_response_type` | Redirect   |
 | `response_mode`, when present, is `query`.                                                                                                             | `invalid_request`, path `["response_mode"]`                                                    | Redirect   |
 | `scope` contains `openid`, and every scope is a scope token that the client's record lists.                                                            | `invalid_scope`                                                                                | Redirect   |
+| Each `resource`, when present, is one of the client's [`resources`](#resource-indicators), byte for byte.                                              | `invalid_target`                                                                               | Redirect   |
 | `code_challenge` is present and has the shape of an S256 challenge. A client with [`requirePkce: false`](#clients-that-send-no-pkce) may leave it out. | `invalid_request`, path `["code_challenge"]`                                                   | Redirect   |
 | `code_challenge_method` is `S256`. `plain` is refused.                                                                                                 | `invalid_request`, path `["code_challenge_method"]`                                            | Redirect   |
 | A client with `requirePkce: false` that sent no `code_challenge` sent a non-empty `nonce`.                                                             | `invalid_request`, path `["nonce"]`                                                            | Redirect   |
@@ -307,6 +309,7 @@ On success the result carries the interaction:
 - `clientId`, `redirectUri`, `scopes` and `prompt`, as validated.
 - `maxAge`, `loginHint` and `uiLocales`, when the request carried them. `loginHint` is passed through as sent. `uiLocales` has its empty entries, from repeated or trailing spaces, dropped; no entries left means absent. Both are within the length limit.
 - `acrValues`, `claimsLocales` and `display`, when the request carried them. See [Hints for the login pages](#hints-for-the-login-pages).
+- `resources`, when the request carried `resource`: the resource servers the client asks for tokens to, each once, in the order sent. See [Resource indicators](#resource-indicators).
 - `createdAt`, in seconds since the Unix epoch.
 
 Keep the whole interaction in the user's server-side session. It is a frozen plain object, so it serializes as JSON. The pages between the two calls need it: the consent page shows `clientId` and `scopes`, the login page follows `prompt`, `maxAge` and `loginHint`, and the scopes the user grants must be among `scopes`. The provider offers no lookup by `id`, because the store's only read of an interaction is the atomic `consumeInteraction` that completes it. Do not put `id` in a URL the user can edit, because whoever holds it can complete the interaction. The interaction lasts `ttl.interaction` seconds, 1800 by default, and it can be completed once.
@@ -554,7 +557,7 @@ The checks run in this order:
 1. The method. `OPTIONS` gets a preflight. Any other method but `POST` gets `405` with `Allow: POST, OPTIONS`.
 2. The `Content-Type`. It must be `application/x-www-form-urlencoded`, optionally with `charset=utf-8`, which may be quoted (`charset="utf-8"`) and written in any letter case. Otherwise `invalid_request`.
 3. The body. It is read as strict UTF-8 and is at most 16384 bytes. Otherwise `invalid_request`.
-4. The parameters. No duplicate, at most 32, none longer than 4096 characters, and no percent-escape that is not valid UTF-8. Otherwise `invalid_request`.
+4. The parameters. No duplicate except `resource`, at most 32, none longer than 4096 characters, and no percent-escape that is not valid UTF-8. Otherwise `invalid_request`.
 5. The client's credentials. See [Client authentication](#client-authentication).
 6. The `grant_type`. Missing is `invalid_request`. `authorization_code` and `refresh_token` are `unauthorized_client` for a client whose record does not list `authorization_code` in `grantTypes`, and `client_credentials` is `unauthorized_client` for a client whose record does not list it. A value other than these three is `unsupported_grant_type`.
 7. The grant. See [Authorization code](#authorization-code), [Refresh tokens](#refresh-tokens) and [Client credentials](#client-credentials).
@@ -581,13 +584,15 @@ A client assertion is a JWT that the provider verifies with the client's key fro
 A request for `authorization_code` must carry `code`, `redirect_uri` and `code_verifier`. A missing one is `invalid_request`. The exception is a client with [`requirePkce: false`](#clients-that-send-no-pkce), which may omit `code_verifier` when its code was issued without a challenge. The checks that follow, in order:
 
 1. The verifier, when there is one, has the shape RFC 7636 defines, 43 to 128 unreserved characters. Otherwise `invalid_grant`, and the code is **not** spent.
-2. The code is redeemed atomically with `consumeCode`. An unknown or purged code is `invalid_grant`.
-3. A code that was already redeemed is a **replay**. The provider revokes the grant the code belongs to, so every access token and refresh token issued from it stops working, and returns `invalid_grant`.
-4. Otherwise the code is spent, and each of these checks returns `invalid_grant`: it has expired, it was issued to another client, its `redirect_uri` is not the one in the request, or the verifier does not fit the code. For a code with a challenge that means the verifier is missing or its S256 digest is not the challenge, which only a client with `requirePkce: false` can send, since another client's missing verifier was refused before step 2. For a code issued without a challenge, any verifier is a downgrade attempt and is refused. A failure here still burns the code, so a wrong verifier cannot be retried against the same code.
+2. Each `resource`, when there is one, is one of the client's `resources`. Otherwise `invalid_target`, and the code is not spent.
+3. The code is redeemed atomically with `consumeCode`. An unknown or purged code is `invalid_grant`.
+4. A code that was already redeemed is a **replay**. The provider revokes the grant the code belongs to, so every access token and refresh token issued from it stops working, and returns `invalid_grant`.
+5. Otherwise the code is spent, and each of these checks returns `invalid_grant`: it has expired, it was issued to another client, its `redirect_uri` is not the one in the request, or the verifier does not fit the code. For a code with a challenge that means the verifier is missing or its S256 digest is not the challenge, which only a client with `requirePkce: false` can send, since another client's missing verifier was refused before step 3. For a code issued without a challenge, any verifier is a downgrade attempt and is refused. A failure here still burns the code, so a wrong verifier cannot be retried against the same code.
+6. Each `resource`, when there is one, is one the authorization request named. Otherwise `invalid_target`, and the code is spent.
 
 On success the provider starts a grant, and issues:
 
-- An access token: by default an opaque random value that only its digest is stored under, or a JWT under [`accessToken`](#jwt-access-tokens). It lasts `ttl.accessToken` seconds.
+- An access token: by default an opaque random value that only its digest is stored under, or a JWT under [`accessToken`](#jwt-access-tokens). It lasts `ttl.accessToken` seconds. Its audience is the request's `resource` values, or every resource of the grant when it sent none; see [Resource indicators](#resource-indicators).
 - A refresh token, only when the granted scopes include `offline_access`. Its family lasts `ttl.refreshToken` seconds from this exchange.
 - An ID token, signed with the signing key chosen for the client (see [Signing keys](#signing-keys)). Its claims are `iss`, `sub`, `aud` (the client identifier), `iat`, `exp` (`ttl.idToken` after `iat`), `auth_time`, and `amr` and `acr` when the grant had them, `nonce` when the authorization request had one, and `at_hash` for the access token. It also carries `sid` when the grant has a `sessionId`, and refreshes repeat it. Its header is `typ: JWT` and the key's `alg` and `kid`. An ID token carries no scope claims, which are released at userinfo, unless the client's record sets [`idTokenClaims`](#scope-claims-in-the-id-token).
 
@@ -595,13 +600,13 @@ On success the provider starts a grant, and issues:
 
 A request for `refresh_token` must carry `refresh_token`, or it is `invalid_request`. Each refresh token is single-use, and rotation replaces it:
 
-1. The `scope` parameter, when given, must name only scopes the client's record lists, and it must include `openid`. Otherwise `invalid_scope`, and the token is not spent.
+1. The `scope` parameter, when given, must name only scopes the client's record lists, and it must include `openid`. Otherwise `invalid_scope`, and the token is not spent. Each `resource`, when given, must be one of the client's `resources`. Otherwise `invalid_target`, and the token is not spent.
 2. The token is spent atomically with `consumeRefreshToken`. An unknown or revoked token is `invalid_grant`, and it is not spent.
 3. A token that was already spent is a **reuse**. The provider revokes the family, so the access tokens and refresh tokens issued from that sign-in stop working, and returns `invalid_grant`.
 4. Otherwise the token is spent, and it must be unexpired and issued to this client. Otherwise `invalid_grant`.
-5. The `scope` parameter, when given, must be a subset of the family's scopes. Otherwise `invalid_scope`. When it is omitted, the access token has every scope the family holds that the client's record still lists. A scope removed from the record stops being issued on the client's next refresh, and listing it again restores it on the one after, since the family keeps its scopes. The record of a client that refreshes must list `openid`, and one that does not is a `TypeError` read before the token is spent, so narrowing never drops `openid`. Removing `offline_access` from the record drops it from the issued `scope` but still rotates the refresh token, as a request that leaves it out does; to stop the family, revoke its grant or refuse it in `onRefresh`.
+5. The `scope` parameter, when given, must be a subset of the family's scopes. Otherwise `invalid_scope`. When it is omitted, the access token has every scope the family holds that the client's record still lists. A scope removed from the record stops being issued on the client's next refresh, and listing it again restores it on the one after, since the family keeps its scopes. The record of a client that refreshes must list `openid`, and one that does not is a `TypeError` read before the token is spent, so narrowing never drops `openid`. Removing `offline_access` from the record drops it from the issued `scope` but still rotates the refresh token, as a request that leaves it out does; to stop the family, revoke its grant or refuse it in `onRefresh`. Each `resource`, when given, must be one the family covers. Otherwise `invalid_target`. When it is omitted, the access token is for every resource the family covers that the client's record still lists, in the family's order, and `accessTokenClaims` and the stored access token get that audience. As with scopes, a resource removed from the record stops being issued on the client's next refresh, and listing it again restores it on the one after, since the family keeps its resources. When the record lists none of the family's resources, the token falls back as one for a grant without resources does: a JWT is for the `accessToken.audience` option, and an opaque token has no audience. Narrowing only drops resources, so a refresh is never for a resource the family does not cover; the fallback audience is the one any of the client's grants without `resource` already gets.
 6. When the app set [`onRefresh`](#re-checking-a-refresh), it is asked. A `false` answer is `invalid_grant`, and it revokes the family.
-7. A new access token is issued, and a new refresh token that replaces the spent one. The new refresh token keeps the family's original scopes and its original expiry, so rotation neither widens the family nor extends it. An ID token is issued too, without a nonce, and with the `sid` the family carries.
+7. A new access token is issued, and a new refresh token that replaces the spent one. The new refresh token keeps the family's original scopes, resources and expiry, so rotation neither widens the family nor extends it. An ID token is issued too, without a nonce, and with the `sid` the family carries.
 
 The response has the same shape as the code exchange, with `scope` set to the scopes of the new access token, so a client sees a narrowed scope (RFC 6749 §5.1).
 
@@ -651,7 +656,7 @@ The client authenticates as at any token request, and its `scope` parameter is r
 
 Whether the provider's [`scopes`](#scopes) option defines a scope does not matter here: a scope that only the record lists is issued, and it releases no claims.
 
-A scope that breaks these rules, or an empty result, is `invalid_scope` with status `400`.
+A scope that breaks these rules, or an empty result, is `invalid_scope` with status `400`. Each `resource`, when given, must be one of the client's `resources`, or the request is `invalid_target` with status `400`, and the token is for those resources.
 
 On success the response is a `200` with `Cache-Control: no-store`, and a body with `access_token`, `token_type` (`Bearer`), `expires_in` and `scope`. It carries no `id_token` and no `refresh_token`. The access token is opaque or JWT, as [`accessToken`](#jwt-access-tokens) says. Its subject is the client identifier, and each response is its own grant, so revoking one token leaves the client's other tokens valid. The token has no `openid`, so [userinfo](#userinfo) answers `403` for it.
 
@@ -674,7 +679,7 @@ A successful token response is JSON, with `Cache-Control: no-store` and `Pragma:
 
 ## JWT access tokens
 
-The `accessToken` option chooses the format of access tokens. The default, `{ format: "opaque" }`, issues a random value. `{ format: "jwt", audience }` issues a signed JWT (RFC 9068) instead, whose `aud` is `audience`, usually the resource server's identifier. `audience` must be a non-empty string of well-formed Unicode.
+The `accessToken` option chooses the format of access tokens. The default, `{ format: "opaque" }`, issues a random value. `{ format: "jwt", audience }` issues a signed JWT (RFC 9068) instead, whose `aud` is `audience`, usually the resource server's identifier, unless the token was issued for [resources](#resource-indicators). `audience` must be a non-empty string of well-formed Unicode.
 
 ```ts
 import { createProvider, type ProviderOptions } from "@codenhub/oidc/provider";
@@ -689,7 +694,32 @@ export const provider = createProvider({
 
 A JWT access token is signed with the first signing key, whatever `idTokenSigningAlg` the client has. Its header has `typ: "at+jwt"`. Its payload has `iss`, `exp` (`ttl.accessToken` after issue), `aud`, `sub`, `client_id`, `iat`, a random `jti`, and `scope` (space-separated). A user's token also has `auth_time`, `amr` and `acr` when the grant had them. A client credentials token has none of these three, and its `sub` is the client identifier.
 
-A resource server must therefore not take `sub` alone for a user: a token whose `sub` equals its `client_id` belongs to the client itself (RFC 9068 §5). Tell the two apart by that comparison, and assign client identifiers that can never equal a user's subject, such as by giving them a prefix no subject has.
+### Claims for the resource server
+
+`accessTokenClaims` adds the app's own claims to every JWT access token, such as the roles a resource server authorizes by. It is called for each JWT access token the provider issues: at the code exchange, at each refresh, and for client credentials. It receives a frozen `{ subject, clientId, scopes, audience, grantId }`, where `audience` is the token's, and returns an object of claims, or a promise of one.
+
+```ts
+import { createProvider, type ProviderOptions } from "@codenhub/oidc/provider";
+
+declare const options: ProviderOptions; // the options shown above
+declare function rolesOf(subject: string, audience: readonly string[]): Promise<readonly string[]>;
+
+export const provider = createProvider({
+  ...options,
+  accessToken: { format: "jwt", audience: "https://api.example" },
+  accessTokenClaims: async ({ subject, audience }) => ({ roles: await rolesOf(subject, audience) }),
+});
+```
+
+The provider's claims always win. A returned `iss`, `exp`, `aud`, `sub`, `client_id`, `iat`, `jti`, `scope`, `auth_time`, `acr`, `amr`, `nbf`, `cnf` or `azp` is dropped, even when this token does not carry it, as is any other claim the token sets. Only own enumerable data properties are read, so a getter never runs, and a claim whose value is `undefined` is left out. The ID token and userinfo are unchanged.
+
+A result that is not a plain object, such as an array, `null`, a `Date`, a `Map` or a class instance, makes `handle` reject with `TypeError`, and a throw or a rejection makes it reject with that error. At a refresh the callback runs before the next refresh token is saved, so a failure leaves no refresh token the client never received; the spent one makes the client's retry a reuse, which revokes the family, as for [`onRefresh`](#re-checking-a-refresh). An opaque token carries no claims, so `accessTokenClaims` without `accessToken: { format: "jwt" }` makes `createProvider` throw `TypeError`.
+
+Whoever holds a JWT access token can read it, the client included. Put in it only what the client may see, and keep it small, since it travels with every API request. A claim reflects the moment the token was signed, so a role removed later lasts until the token expires; [`authenticate`](#authenticating-api-requests) sees a revocation at once, but not a changed role.
+
+### Verifying a JWT access token
+
+A resource server must not take `sub` alone for a user: a token whose `sub` equals its `client_id` belongs to the client itself (RFC 9068 §5). Tell the two apart by that comparison, and assign client identifiers that can never equal a user's subject, such as by giving them a prefix no subject has.
 
 The provider stores a JWT access token by its digest, as it stores an opaque one, so userinfo and revocation accept it, and a revocation takes effect at the provider at once. A resource server that verifies the token offline sees a revocation only when the token expires, so keep `ttl.accessToken` short. The ID token's `at_hash` is computed over the JWT string.
 
@@ -717,17 +747,75 @@ if (verified.ok) {
 }
 ```
 
+## Resource indicators
+
+A client that calls more than one resource server can ask for a token restricted to the ones it will call, with the `resource` parameter of RFC 8707. A token for one API is then refused by another, which [`authenticate`](#authenticating-api-requests) or a JWT verifier with that `audience` checks. The client's record lists the resources it may name in [`resources`](store.md#client-records), each an absolute URI without a fragment, and a client without the list may name none.
+
+```ts
+import type { ClientRecord } from "@codenhub/oidc/provider";
+
+declare const client: ClientRecord; // the client as the app registered it
+
+const withResources: ClientRecord = { ...client, resources: ["https://api.example", "https://data.example"] };
+```
+
+`resource` may repeat, unlike every other parameter, and a value sent twice counts once. This package's client sends it with the `resource` option of `authorize`, `refresh` and `clientCredentials`; see [Resource servers](client.md#resource-servers).
+
+- **Authorization.** Each `resource` must be one of the client's `resources`, or the request is redirected with `invalid_target`. The interaction carries them as `resources`, so the consent page can show which servers the user is granting access to. The grant covers every one of them, and `completeAuthorization` cannot narrow it.
+- **Token request.** For `authorization_code` and `refresh_token`, each `resource` must be one of the client's `resources`, checked before the code or refresh token is spent, and then one the grant covers, checked after. Either failure is `invalid_target`. A request that names none gets a token for every resource the grant covers. For `client_credentials`, each `resource` must be one of the client's `resources`.
+- **The token.** The access token's audience is the token request's resources, else the grant's. With neither, a JWT access token is for the `accessToken.audience` option, and an opaque one has no audience. The audience is saved on the access token record as `audience`. A JWT's `aud` is a string for one audience and an array for several.
+
+A refresh family keeps the resources of its sign-in, so a refresh may narrow a token to fewer of them but never add one. RFC 8707 also lets a client name resources at the token endpoint that it did not name at authorization, when the provider allows it. This provider does not: a resource the user did not consent to is never added later.
+
+## Authenticating API requests
+
+An app that serves its own API beside the provider, over the same store, checks the API's bearer tokens with `authenticate`. It reads the access token as [userinfo](#userinfo) does, from the `Authorization: Bearer` header only, looks it up by its digest, and checks its expiry, then the `audience` and `scopes` the API requires. It works for opaque and JWT access tokens alike, and a revocation takes effect at once, since the record is read on every request.
+
+```ts
+import type { Provider } from "@codenhub/oidc/provider";
+
+declare const provider: Provider;
+
+export async function listItems(request: Request): Promise<Response> {
+  const authenticated = await provider.authenticate(request, {
+    audience: "https://api.example",
+    scopes: ["data:read"],
+  });
+  if (!authenticated.ok) {
+    console.warn("api request refused", authenticated.error.reason);
+    return authenticated.error.response;
+  }
+  const { subject, clientId, scopes } = authenticated.value;
+  return Response.json({ subject, clientId, scopes });
+}
+```
+
+The value is a frozen copy of the token's [record](store.md#keys-and-records): `grantId`, `clientId`, `subject`, `scopes`, `expiresAt`, and `sessionId` and `audience` when the record has them. A client credentials token's `subject` is the client identifier, as in a [JWT access token](#jwt-access-tokens). A failure carries a `response` to return as it is, the RFC 6750 §3 challenge, and a `reason` for the app's logs:
+
+| Request                                                                 | `reason`                          | `response`                                                                   |
+| ----------------------------------------------------------------------- | --------------------------------- | ---------------------------------------------------------------------------- |
+| No `Authorization` header, or one of another scheme such as `Basic`     | `access_token_missing`            | `401` with `WWW-Authenticate: Bearer`, and no error code.                    |
+| A `Bearer` header that is not a well-formed credential                  | `access_token_malformed`          | `400` with `error="invalid_request"`.                                        |
+| A token that is not a live access token, such as an ID or refresh token | `access_token_unknown`            | `401` with `error="invalid_token"`.                                          |
+| An expired access token                                                 | `access_token_expired`            | `401` with `error="invalid_token"`.                                          |
+| A token whose `audience` does not include the required one              | `access_token_audience_mismatch`  | `401` with `error="invalid_token"`.                                          |
+| A token without one of the required scopes                              | `access_token_scope_insufficient` | `403` with `error="insufficient_scope"`, and the required scopes in `scope`. |
+
+The audience is checked before the scopes, so a token for another API is refused as invalid rather than told which scopes it lacks. The failure's issue code is the RFC 6750 error, `invalid_token` for a request with no token, and it has the token's `clientId` once the store found the token. Each response is `no-store` and carries no CORS headers, since the app owns its API's cross-origin policy. Leave `audience` out only for an API that every access token of the provider may call: without it, a token issued for another resource server passes.
+
+`authenticate` never throws for a request and does not report to [`onDiagnostic`](#diagnostics), since a refused API call is the API's to log. It rejects when the store does, and with a `TypeError` when the options are malformed: not an object, `scopes` that is not an array of scope tokens, or an `audience` that is not a non-empty string. A resource server that does not share the store verifies a JWT access token offline instead; see [JWT access tokens](#jwt-access-tokens). Token introspection (RFC 7662) is not supported.
+
 ## Userinfo
 
 The userinfo endpoint answers `GET` and `POST`, and `OPTIONS` for a preflight. It reads the access token from the `Authorization` header only, in the form `Bearer` followed by one or more spaces and an RFC 6750 token. The scheme's letter case does not matter. A token in the body or the query is never read, so a credential does not land in a URL a proxy or a log keeps.
 
-| Request                                                   | Answer                                                                                                                                                                                                                                                            |
-| --------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| No `Authorization` header                                 | `401` with `WWW-Authenticate: Bearer`, and no error code, as RFC 6750 asks.                                                                                                                                                                                       |
-| A header that is not a well-formed `Bearer` credential    | `400` with `WWW-Authenticate: Bearer error="invalid_request"`.                                                                                                                                                                                                    |
-| A token that is unknown, expired, or from a revoked grant | `401` with `WWW-Authenticate: Bearer error="invalid_token"`.                                                                                                                                                                                                      |
-| A valid access token                                      | `200` with the released claims as JSON, and `Cache-Control: no-store`.                                                                                                                                                                                            |
-| A valid access token whose scopes do not include `openid` | `403` with `WWW-Authenticate: Bearer error="insufficient_scope"`, and `claims` is not called. A token from a user sign-in always has `openid`. A client-credentials token has none, so this is the answer it gets; see [Client credentials](#client-credentials). |
+| Request                                                             | Answer                                                                                                                                                                                                                                                            |
+| ------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| No `Authorization` header, or one of another scheme such as `Basic` | `401` with `WWW-Authenticate: Bearer`, and no error code, as RFC 6750 asks.                                                                                                                                                                                       |
+| A `Bearer` header that is not a well-formed credential              | `400` with `WWW-Authenticate: Bearer error="invalid_request"`.                                                                                                                                                                                                    |
+| A token that is unknown, expired, or from a revoked grant           | `401` with `WWW-Authenticate: Bearer error="invalid_token"`.                                                                                                                                                                                                      |
+| A valid access token                                                | `200` with the released claims as JSON, and `Cache-Control: no-store`.                                                                                                                                                                                            |
+| A valid access token whose scopes do not include `openid`           | `403` with `WWW-Authenticate: Bearer error="insufficient_scope"`, and `claims` is not called. A token from a user sign-in always has `openid`. A client-credentials token has none, so this is the answer it gets; see [Client credentials](#client-credentials). |
 
 The lookup finds only access tokens. An ID token or a refresh token presented here is not found, so it gets `invalid_token`. The released claims are the names the token's scopes release, each taken from what the `claims` callback returns, and `sub` set to the token's subject. See [Claims](#claims).
 
@@ -820,13 +908,13 @@ Each diagnostic is a frozen object with these members:
 
 The reasons, grouped as in the provider's types:
 
-| Group                                   | Reasons                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
-| --------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| The request, before the client is known | `content_type`, `body`, `parameters`                                                                                                                                                                                                                                                                                                                                                                                                                                             |
-| Client authentication                   | `client_credentials_missing`, `client_credentials_ambiguous`, `client_credentials_malformed`, `client_unknown`, `client_method_mismatch`, `client_credentials_wrong`                                                                                                                                                                                                                                                                                                             |
-| The token request                       | `grant_type_missing`, `grant_type_unsupported`, `grant_type_unauthorized`, `parameter_missing`, `code_verifier_malformed`, `code_verifier_missing`, `code_verifier_unexpected`, `code_unknown`, `code_replayed`, `code_expired`, `code_client_mismatch`, `redirect_uri_mismatch`, `code_verifier_mismatch`, `scope_invalid`, `refresh_token_unknown`, `refresh_token_replayed`, `refresh_token_expired`, `refresh_token_client_mismatch`, `scope_not_granted`, `refresh_refused` |
-| Userinfo                                | `access_token_missing`, `access_token_malformed`, `access_token_unknown`, `access_token_expired`, `access_token_without_openid`                                                                                                                                                                                                                                                                                                                                                  |
-| Revocation                              | `token_missing`, `token_of_another_client`                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| Group                                   | Reasons                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| --------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| The request, before the client is known | `content_type`, `body`, `parameters`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| Client authentication                   | `client_credentials_missing`, `client_credentials_ambiguous`, `client_credentials_malformed`, `client_unknown`, `client_method_mismatch`, `client_credentials_wrong`                                                                                                                                                                                                                                                                                                                                                         |
+| The token request                       | `grant_type_missing`, `grant_type_unsupported`, `grant_type_unauthorized`, `parameter_missing`, `code_verifier_malformed`, `code_verifier_missing`, `code_verifier_unexpected`, `code_unknown`, `code_replayed`, `code_expired`, `code_client_mismatch`, `redirect_uri_mismatch`, `code_verifier_mismatch`, `scope_invalid`, `refresh_token_unknown`, `refresh_token_replayed`, `refresh_token_expired`, `refresh_token_client_mismatch`, `scope_not_granted`, `refresh_refused`, `resource_invalid`, `resource_not_granted` |
+| Userinfo                                | `access_token_missing`, `access_token_malformed`, `access_token_unknown`, `access_token_expired`, `access_token_without_openid`                                                                                                                                                                                                                                                                                                                                                                                              |
+| Revocation                              | `token_missing`, `token_of_another_client`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
 
 The callback is called once for each refusal that is answered with an OAuth error response, after the response is built and before `handle` resolves. A `405` for a method the endpoint does not accept, and an `OPTIONS` preflight, are not reported. Authorization failures are not reported either, since `beginAuthorization` and `completeAuthorization` return their issues. The diagnostic never holds a value the request carried: no token, code, verifier, secret or redirect URI.
 
