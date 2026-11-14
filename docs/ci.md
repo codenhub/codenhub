@@ -1,6 +1,6 @@
 ---
 status: IMPLEMENTED
-last_updated: 2026-11-09
+last_updated: 2026-11-14
 scope: Continuous integration workflows and the checks that report on pull requests.
 ---
 
@@ -45,7 +45,7 @@ The `.github/` rule is how a browser-install fix once went green on its pull req
 
 The verification sequence builds declarations before `hub check` inspects them. Its `undocumented-export/missing-jsdoc` errors fail the `Verify` job when a selected package exposes a top-level typed export without JSDoc/TSDoc. The scope and remaining review responsibilities are defined in [`docs/guidelines/code.md`](guidelines/code.md).
 
-CI runs one Node.js version and no other, for the packages as for the repository. A published package's `engines.node` floor is therefore the pinned major, so it names a line CI tests. [`docs/specs/packages-lifecycle.md`](specs/packages-lifecycle.md), "Node.js support", owns that rule, why no job tests an older floor, and what moving `.nvmrc` to a new major requires.
+CI runs the repository on one Node.js version, the one `.nvmrc` pins. While `.node-floor` exists, the `floor` job also runs the suites of the published packages that keep the previous line's floor, on the version that file names, so their `engines.node` still names a line CI tests. [`docs/specs/packages-lifecycle.md`](specs/packages-lifecycle.md), "Node.js support", owns that rule and what moving `.nvmrc` to a new major requires.
 
 The scripts the workflow runs are `hub` commands: `hub verify`, `hub generate --dry-run`, and `hub browsers` all run locally, and [tooling](tooling.md) describes them.
 
@@ -61,10 +61,11 @@ The jobs run in parallel except that `browser` and `drift` wait for `playwright`
 | `drift`          | `pnpm generate --dry-run`, then an assertion that the working tree is unchanged                                                                                                |
 | `browser-result` | Nothing; it passes only when every `browser` job passed                                                                                                                        |
 | `tailwind`       | For `packages/styles`: installs `tailwindcss` and the test suite's `@tailwindcss/cli` at the floor of its peer range or the newest 4.x, then `pnpm test styles`                |
+| `floor`          | Switches to the Node.js `.node-floor` names, then `pnpm test <packages on the floor> <selector>`                                                                               |
 
 `verify` skips the browser step because the `browser` job owns it. Running it in both would double the slowest part of the run for no extra signal.
 
-`browser` is a matrix of one job per engine — `chromium`, `firefox`, `webkit` — so with the two `tailwind` jobs and the four single ones the workflow runs nine in total. The browser suites are by far the slowest thing in a run and the three engines share nothing, so splitting them trades runner minutes, which are cheap, for wall-clock time, which is what anyone waits on. The engines are no longer far apart. Firefox once cost roughly five times what Chromium did on the `styles` suite, which was a fixture problem rather than an engine one: every test took a fresh browser context, and Firefox charges far more for one than the others do. `packages/styles` now shares a context per worker, which brought that suite from 285s to 84s on Firefox. WebKit is the slowest engine on it today, and the matrix is what keeps the slowest one off everybody else’s critical path.
+`browser` is a matrix of one job per engine — `chromium`, `firefox`, `webkit` — so with the two `tailwind` jobs and the five single ones the workflow runs ten in total. The browser suites are by far the slowest thing in a run and the three engines share nothing, so splitting them trades runner minutes, which are cheap, for wall-clock time, which is what anyone waits on. The engines are no longer far apart. Firefox once cost roughly five times what Chromium did on the `styles` suite, which was a fixture problem rather than an engine one: every test took a fresh browser context, and Firefox charges far more for one than the others do. `packages/styles` now shares a context per worker, which brought that suite from 285s to 84s on Firefox. WebKit is the slowest engine on it today, and the matrix is what keeps the slowest one off everybody else’s critical path.
 
 `fail-fast` is off for the matrix. "Firefox broke" and "WebKit broke" are different findings, and cancelling one to report the other hides half of what a run was started to learn.
 
@@ -124,6 +125,8 @@ The groups take minor and patch updates only, so a week is one grouped pull requ
 
 Renovate does the same job, and was rejected: it runs as a GitHub App with a configuration of its own, while Dependabot is built into GitHub and already raises the repository's security updates.
 
+`floor` exists while a published package keeps the floor of the Node.js line before the one `.nvmrc` pins, as [`docs/specs/packages-lifecycle.md`](specs/packages-lifecycle.md), "Node.js support", allows. It installs on the pinned version, because the root `engines` refuses any other, then switches to the version in `.node-floor` and runs the unit and integration suites of every public package whose `engines.node` names that major, with the same selection as `verify`. The list is read from the manifests, so a package that raises its floor leaves the job in the same change; with no package left, the job runs nothing, and the change that deletes `.node-floor` deletes the job. Prerequisite builds run on the floor too. Browser suites do not: they test the browsers, not Node.js. It is a required check, because a floor no required check tests is a claim nothing holds.
+
 ## Branch protection
 
 The workflow reports; it does not block on its own. What blocks is a branch protection rule or a ruleset on `main`, repository settings no file here can enforce. A ruleset does the same job with more control, and either works if nobody can bypass it. The recommended configuration:
@@ -141,12 +144,12 @@ Turn on "Automatically delete head branches" in the repository's general setting
 
 This repository's ruleset for `main` goes further than the recommendation, and has no bypass actors:
 
-| Setting                | Value                                                                         |
-| ---------------------- | ----------------------------------------------------------------------------- |
-| Required status checks | `Verify`, `Browser tests`, and `Generated files`, from the GitHub Actions app |
-| Merge queue            | Required, merging with a merge commit, grouped so all entries must pass       |
-| Pull request required  | Yes, with every review thread resolved, and merge commits only                |
-| Force pushes, deletion | Refused                                                                       |
+| Setting                | Value                                                                                          |
+| ---------------------- | ---------------------------------------------------------------------------------------------- |
+| Required status checks | `Verify`, `Browser tests`, `Generated files`, and `Node.js floor`, from the GitHub Actions app |
+| Merge queue            | Required, merging with a merge commit, grouped so all entries must pass                        |
+| Pull request required  | Yes, with every review thread resolved, and merge commits only                                 |
+| Force pushes, deletion | Refused                                                                                        |
 
 The merge queue is what lets pull requests check only what they changed ([Triggers and selection](#triggers-and-selection)). `Browser tests` is the `browser-result` job's name, so the rule names no engine. The Actions setting that refuses an action referenced by anything but a full SHA is on, and "Automatically delete head branches" is on.
 
