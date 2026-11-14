@@ -291,7 +291,8 @@ const noStore = { "cache-control": "no-store" };
 // The route at the client's back-channel logout URI.
 async function backchannelLogout(request: Request): Promise<Response> {
   const logout = await client.readBackchannelLogout(request);
-  // rememberJti stores the jti until the given time and returns false when it was already stored.
+  // rememberJti stores the jti until the given time and returns false when it was already stored, in one
+  // atomic step (an insert that fails on a duplicate key), so two deliveries at once cannot both pass.
   if (!logout.ok || !(await rememberJti(logout.value.jti, logout.value.expiresAt + 60))) {
     return Response.json({ error: "invalid_request" }, { status: 400, headers: noStore });
   }
