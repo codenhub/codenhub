@@ -132,6 +132,16 @@ describe("findClient", () => {
     });
   });
 
+  it.each([
+    ["NaN", Number.NaN],
+    ["null", null],
+    ["a string", "client_secret_basic"],
+  ])("should return a malformed auth (%s) as it was registered, for the provider to refuse", async (_name, auth) => {
+    const store = createMemoryStore({ clients: [makeClient({ auth } as unknown as Partial<ClientRecord>)] });
+
+    expect((await store.findClient("client-a"))?.auth).toEqual(auth);
+  });
+
   it("should replace a client when addClient is called with the same id", async () => {
     const store = createMemoryStore({ clients: [makeClient()] });
 

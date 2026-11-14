@@ -20,6 +20,7 @@ const CLAIMS_SUPPORTED = [
   "acr",
   "amr",
   "at_hash",
+  "sid",
   "name",
   "family_name",
   "given_name",
@@ -116,6 +117,12 @@ describe("buildMetadata", () => {
     const options = resolve({ scopes: { "read:orders": ["order_count"] } }, [await keyPair("2026-10")]);
 
     expect(buildMetadata(options).claims_supported).toContain("order_count");
+  });
+
+  it("shouldListSidInClaimsSupported", async () => {
+    const options = resolve({}, [await keyPair("2026-10")]);
+
+    expect(buildMetadata(options).claims_supported).toContain("sid");
   });
 
   it("shouldListEachClaimOnceWhenScopesShareIt", async () => {

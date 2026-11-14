@@ -29,6 +29,8 @@ export interface ResolvedClientOptions {
   readonly now: () => number;
   /** Asymmetric algorithms the client accepts for ID tokens: the provider's advertised ones this package supports. */
   readonly idTokenAlgorithms: readonly IdTokenAlgorithm[];
+  /** Whether a logout token must carry `sid`: `backchannelLogout.sessionRequired`. */
+  readonly logoutSessionRequired: boolean;
 }
 
 interface IntegerRange {
@@ -210,6 +212,21 @@ function readIdTokenAlgorithms(metadata: ProviderMetadata): readonly IdTokenAlgo
   return Object.freeze(ID_TOKEN_ALGORITHMS.filter((algorithm) => advertised.includes(algorithm)));
 }
 
+/** Reads `backchannelLogout`, an optional object whose only member is an optional boolean. */
+function readLogoutSessionRequired(value: unknown): boolean {
+  if (value === undefined) {
+    return false;
+  }
+  if (!isObject(value)) {
+    throw new TypeError(`${PREFIX} backchannelLogout must be an object`);
+  }
+  const { sessionRequired } = value as { readonly sessionRequired?: unknown };
+  if (sessionRequired !== undefined && typeof sessionRequired !== "boolean") {
+    throw new TypeError(`${PREFIX} backchannelLogout.sessionRequired must be a boolean`);
+  }
+  return sessionRequired === true;
+}
+
 /**
  * Validates client options and fixes their defaults, so every later operation reads the same values.
  *
@@ -238,5 +255,6 @@ export function resolveClientOptions(options: ClientOptions): ResolvedClientOpti
     }),
     now: readNow(options.now),
     idTokenAlgorithms: readIdTokenAlgorithms(metadata),
+    logoutSessionRequired: readLogoutSessionRequired(options.backchannelLogout),
   });
 }

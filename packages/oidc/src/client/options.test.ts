@@ -310,4 +310,35 @@ describe("resolveClientOptions", () => {
   it("throws TypeError when now is not a function", () => {
     expect(() => resolveClientOptions(withOptions({ now: Date.now() }))).toThrow("now");
   });
+
+  it("does not require sid in logout tokens by default", () => {
+    expect(resolveClientOptions(validOptions()).logoutSessionRequired).toBe(false);
+    expect(resolveClientOptions(withOptions({ backchannelLogout: {} })).logoutSessionRequired).toBe(false);
+  });
+
+  it("requires sid in logout tokens when backchannelLogout.sessionRequired is true", () => {
+    const options = withOptions({ backchannelLogout: { sessionRequired: true } });
+
+    expect(resolveClientOptions(options).logoutSessionRequired).toBe(true);
+  });
+
+  it.each([
+    ["null", null],
+    ["a boolean", true],
+    ["a string", "sessionRequired"],
+  ])("throws TypeError when backchannelLogout is %s", (_name, backchannelLogout) => {
+    expect(() => resolveClientOptions(withOptions({ backchannelLogout }))).toThrow(
+      "createClient: backchannelLogout must be an object",
+    );
+  });
+
+  it.each([
+    ["a string", "true"],
+    ["a number", 1],
+    ["null", null],
+  ])("throws TypeError when backchannelLogout.sessionRequired is %s", (_name, sessionRequired) => {
+    expect(() => resolveClientOptions(withOptions({ backchannelLogout: { sessionRequired } }))).toThrow(
+      "createClient: backchannelLogout.sessionRequired must be a boolean",
+    );
+  });
 });

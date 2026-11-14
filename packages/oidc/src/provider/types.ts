@@ -51,6 +51,9 @@ export interface ClientRecord {
    *
    * A scope listed here need not be defined in {@link ProviderOptions.scopes}: one that is not is accepted at
    * authorization, in a refresh `scope` and by `client_credentials`, and releases no claims.
+   *
+   * A refresh issues only the family's scopes this list still holds, so removing a scope from it takes effect on
+   * the client's next refresh, and listing it again restores it on the one after; the family itself keeps its scopes.
    */
   readonly scopes: readonly string[];
   /**
@@ -255,6 +258,8 @@ export type Consumption<TRecord> =
  * lifetime, since an access token issued by the last refresh outlives its family. Lifetimes can differ by client
  * ({@link ClientRecord.ttl}), so keep the marker for the longest refresh token lifetime of any client plus the
  * longest access token lifetime of any client, the provider's own `ttl` counting for a client that sets none.
+ * Count a lifetime since lowered too, until the tokens issued under it have expired: a family keeps the expiry
+ * it got at the code exchange, and an access token keeps its own.
  */
 export interface OidcStore {
   /** Looks up a registered client. `undefined` when none has this identifier. */
@@ -527,7 +532,9 @@ export interface ProviderOptions {
    * `true` issues as it would without this option. `false` answers `invalid_grant`, revokes the whole family with
    * `store.revokeGrant`, and is reported to {@link ProviderOptions.onDiagnostic} as `refresh_refused`. Anything else
    * than a boolean makes `handle` reject with `TypeError`, and, as with the store and the `claims` callback, an
-   * exception it throws or a promise it rejects makes `handle` reject with that error and revokes nothing.
+   * exception it throws or a promise it rejects makes `handle` reject with that error and revokes nothing. The
+   * refresh token is spent by then, so the client's retry with it is a reuse and revokes the family: an app whose
+   * check fails on a transient outage signs its users out, so keep the check from throwing, or answer `false`.
    *
    * It is not called for a code exchange, which is the sign-in itself.
    */
@@ -539,7 +546,10 @@ export interface RefreshCheck {
   /** The user the family was issued to. */
   readonly subject: string;
   readonly clientId: string;
-  /** The scopes this refresh will issue: the request's `scope`, or the family's when it sent none. */
+  /**
+   * The scopes this refresh will issue: the request's `scope`, or, when it sent none, the family's scopes that the
+   * client's record still lists.
+   */
   readonly scopes: readonly string[];
   /** The grant the family belongs to; the provider revokes it when the answer is `false`. */
   readonly grantId: string;
@@ -699,8 +709,9 @@ export interface Provider {
    *
    * The app owns the delivery. The client answers `200` on success, or `400` with an error (§2.8), so treat any
    * `2xx` as success and anything else as a failure. Use a short timeout, since a slow client must not hold the
-   * user's sign-out, and decide whether to retry. The request has `redirect: "manual"`, so `fetch` returns a `3xx`
-   * as it is rather than forwarding the token; treat it as a failure.
+   * user's sign-out, and decide whether to retry. The request has `redirect: "manual"`, so `fetch` never forwards
+   * the token to a redirect's target: Node.js and workerd return the `3xx` response itself, and a browser's `fetch`
+   * an opaque-redirect response with status `0`. Either way `response.ok` is `false`; treat it as a failure.
    *
    * @param request - The client, and who or what ended. At least one of `subject` and `sessionId` is required.
    * @returns The request to send, or `null` when the client is unknown or has no `backchannelLogout`, so there

@@ -524,6 +524,8 @@ Scopes this client may request. Must include `openid` when the client may use `a
 
 A scope listed here need not be defined in `ProviderOptions.scopes`: one that is not is accepted at authorization, in a refresh `scope` and by `client_credentials`, and releases no claims.
 
+A refresh issues only the family's scopes this list still holds, so removing a scope from it takes effect on the client's next refresh, and listing it again restores it on the one after; the family itself keeps its scopes.
+
 #### ClientRecord › ttl
 
 ```ts
@@ -940,7 +942,7 @@ Stable failure category.
 readonly params?: Readonly<Record<string, string | number | boolean>>;
 ```
 
-Facts that are never input values, such as `{ endpoint: "token", reason: "timeout" }`. The keys are a fixed set: `endpoint` (`discovery`, `authorization`, `token`, `userinfo` or `revocation`) and `reason` on `request_failed`, with `status` when the reason is `status`; `endpoint` and `error` (an [`OAuthErrorCode`](#oautherrorcode) or `unknown`) on `provider_error`; `jwtCode`, the `@codenhub/jwt` issue code, and that issue's own params on `invalid_id_token`; `reason` on a provider `invalid_request` the app renders, and on `invalid_callback` a parameter failure: `duplicate`, `too_many`, `too_long` or `malformed`.
+Facts that are never input values, such as `{ endpoint: "token", reason: "timeout" }`. The keys are a fixed set: `endpoint` (`discovery`, `authorization`, `token`, `userinfo` or `revocation`) and `reason` on `request_failed`, with `status` when the reason is `status`; `endpoint` and `error` (an [`OAuthErrorCode`](#oautherrorcode) or `unknown`) on `provider_error`; `jwtCode`, the `@codenhub/jwt` issue code, and that issue's own params on `invalid_id_token` and `invalid_logout_token`; `reason` on a provider `invalid_request` the app renders, and on `invalid_callback` and `invalid_logout_request` a parameter failure: `duplicate`, `too_many`, `too_long` or `malformed`, or for a logout request's body, `too_large` or `unreadable`.
 
 #### OidcIssue › path
 
@@ -1000,7 +1002,7 @@ The `consume*` methods must be atomic: two concurrent calls for one key must nev
 
 Each `save*` method must reject when its key already exists, and must never reset a used entry, which would make a spent code or refresh token consumable again. The provider's keys are random digests, so this happens only through an adapter bug.
 
-Expiry is the provider's to check: a method returns a record whatever its `expiresAt`. No method purges, so the adapter deletes expired rows itself, such as with a scheduled job, keeping a used code or refresh token at least until its `expiresAt`, so a replay is still recognized, and a revoked grant's marker until the last token of that grant expires: a refresh token lifetime after the code exchange plus one access token lifetime, since an access token issued by the last refresh outlives its family. Lifetimes can differ by client (`ClientRecord.ttl`), so keep the marker for the longest refresh token lifetime of any client plus the longest access token lifetime of any client, the provider's own `ttl` counting for a client that sets none.
+Expiry is the provider's to check: a method returns a record whatever its `expiresAt`. No method purges, so the adapter deletes expired rows itself, such as with a scheduled job, keeping a used code or refresh token at least until its `expiresAt`, so a replay is still recognized, and a revoked grant's marker until the last token of that grant expires: a refresh token lifetime after the code exchange plus one access token lifetime, since an access token issued by the last refresh outlives its family. Lifetimes can differ by client (`ClientRecord.ttl`), so keep the marker for the longest refresh token lifetime of any client plus the longest access token lifetime of any client, the provider's own `ttl` counting for a client that sets none. Count a lifetime since lowered too, until the tokens issued under it have expired: a family keeps the expiry it got at the code exchange, and an access token keeps its own.
 
 #### OidcStore › consumeCode
 
@@ -1123,7 +1125,7 @@ Builds the back-channel logout request (OpenID Connect Back-Channel Logout 1.0) 
 
 The request is a `POST` to the client's `ClientRecord.backchannelLogout` `uri`, with the form body `logout_token=<token>`. The token is a JWT signed like the client's ID tokens, with `typ: "logout+jwt"`, the claims `iss`, `aud` (the client), `iat`, `exp` (120 seconds after `iat`), a random `jti`, `events`, and the `sub` and `sid` given here, and never a `nonce`.
 
-The app owns the delivery. The client answers `200` on success, or `400` with an error (§2.8), so treat any `2xx` as success and anything else as a failure. Use a short timeout, since a slow client must not hold the user's sign-out, and decide whether to retry. The request has `redirect: "manual"`, so `fetch` returns a `3xx` as it is rather than forwarding the token; treat it as a failure.
+The app owns the delivery. The client answers `200` on success, or `400` with an error (§2.8), so treat any `2xx` as success and anything else as a failure. Use a short timeout, since a slow client must not hold the user's sign-out, and decide whether to retry. The request has `redirect: "manual"`, so `fetch` never forwards the token to a redirect's target: Node.js and workerd return the `3xx` response itself, and a browser's `fetch` an opaque-redirect response with status `0`. Either way `response.ok` is `false`; treat it as a failure.
 
 **Parameters**
 
@@ -1346,7 +1348,7 @@ Whether the logout token can carry `sid` (OpenID Connect Back-Channel Logout 1.0
 readonly backchannel_logout_supported?: boolean;
 ```
 
-Whether the provider can send back-channel logout requests (OpenID Connect Back-Channel Logout 1.0 §2.1).
+Whether the provider supports back-channel logout (OpenID Connect Back-Channel Logout 1.0 §2.1).
 
 #### ProviderMetadata › claims\_parameter\_supported
 
@@ -1570,7 +1572,7 @@ readonly onRefresh?: (request: RefreshCheck) => boolean | Promise<boolean>;
 
 Asked before each refresh issues tokens, so the app can end a family whose user is no longer entitled to it: a user who is disabled, loses a role, or revokes consent otherwise keeps refreshing until the family expires (`ttl.refreshToken`, 30 days by default). It also covers the app's session revocation, since the grant's `sessionId` is passed.
 
-It runs after the refresh token is consumed and every check on it passes, just before tokens are issued. `true` issues as it would without this option. `false` answers `invalid_grant`, revokes the whole family with `store.revokeGrant`, and is reported to `ProviderOptions.onDiagnostic` as `refresh_refused`. Anything else than a boolean makes `handle` reject with `TypeError`, and, as with the store and the `claims` callback, an exception it throws or a promise it rejects makes `handle` reject with that error and revokes nothing.
+It runs after the refresh token is consumed and every check on it passes, just before tokens are issued. `true` issues as it would without this option. `false` answers `invalid_grant`, revokes the whole family with `store.revokeGrant`, and is reported to `ProviderOptions.onDiagnostic` as `refresh_refused`. Anything else than a boolean makes `handle` reject with `TypeError`, and, as with the store and the `claims` callback, an exception it throws or a promise it rejects makes `handle` reject with that error and revokes nothing. The refresh token is spent by then, so the client's retry with it is a reuse and revokes the family: an app whose check fails on a transient outage signs its users out, so keep the check from throwing, or answer `false`.
 
 It is not called for a code exchange, which is the sign-in itself.
 
@@ -1706,7 +1708,7 @@ The grant the family belongs to; the provider revokes it when the answer is `fal
 readonly scopes: readonly string[];
 ```
 
-The scopes this refresh will issue: the request's `scope`, or the family's when it sent none.
+The scopes this refresh will issue: the request's `scope`, or, when it sent none, the family's scopes that the client's record still lists.
 
 #### RefreshCheck › sessionId
 
@@ -1898,7 +1900,7 @@ OAuth 2.0 and OpenID Connect error codes a provider sends to a client, from RFC 
 ### OidcIssueCode
 
 ```ts
-export type OidcIssueCode = "request_failed" | "invalid_metadata" | "issuer_mismatch" | "invalid_token_response" | "invalid_userinfo" | "provider_error" | "invalid_callback" | "state_mismatch" | "iss_mismatch" | "invalid_id_token" | "nonce_mismatch" | "azp_mismatch" | "at_hash_mismatch" | "auth_time_missing" | "auth_too_old" | "subject_mismatch" | "unknown_client" | "invalid_redirect_uri" | "interaction_not_found" | "invalid_request" | "unauthorized_client" | "unsupported_response_type" | "invalid_scope" | "request_not_supported" | "request_uri_not_supported" | "registration_not_supported";
+export type OidcIssueCode = "request_failed" | "invalid_metadata" | "issuer_mismatch" | "invalid_token_response" | "invalid_userinfo" | "provider_error" | "invalid_callback" | "state_mismatch" | "iss_mismatch" | "invalid_id_token" | "nonce_mismatch" | "azp_mismatch" | "at_hash_mismatch" | "auth_time_missing" | "auth_too_old" | "subject_mismatch" | "invalid_logout_request" | "invalid_logout_token" | "unknown_client" | "invalid_redirect_uri" | "interaction_not_found" | "invalid_request" | "unauthorized_client" | "unsupported_response_type" | "invalid_scope" | "request_not_supported" | "request_uri_not_supported" | "registration_not_supported";
 ```
 
 Stable category of a failure that callers can branch on without parsing messages.
