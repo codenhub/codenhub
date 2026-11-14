@@ -37,7 +37,6 @@ What it costs in speed is named in [One pass](architecture.md#one-pass): a `unio
 
 0.6.0 is released when:
 
-- The owner has moved their own projects to it, or decided to release first.
 - `README.md`, every public page and the translations describe 0.6.0 as it ships, and `llms.txt` and `llms-full.txt` are current.
 - `pnpm verify` passes, the changelog entry says what breaks and how to move, with its date, and `hub release validation` reports it ready. `size.json` is measured again by that cut, since the `size` rule skips a released version.
 
