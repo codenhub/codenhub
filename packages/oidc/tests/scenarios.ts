@@ -262,6 +262,92 @@ export const scenarios: Readonly<Record<string, Scenario>> = {
     check(revoked.ok, "revoke failed");
   },
 
+  "restricts a JWT access token to a resource server, which authenticates it": async (modules) => {
+    const { client, jwt, provider, testing } = modules;
+    const api = "https://api.example";
+    const signingKey = await jwt.generateKeyPair({ alg: "ES256", kid: "op-1" });
+    const store = testing.createMemoryStore({
+      clients: [
+        {
+          clientId: "app",
+          redirectUris: [REDIRECT_URI],
+          scopes: ["openid", "offline_access"],
+          auth: { method: "none" },
+          resources: [api],
+        },
+      ],
+    });
+    const op = provider.createProvider({
+      issuer: ISSUER,
+      signingKeys: [signingKey],
+      store,
+      claims: () => ({}),
+      accessToken: { format: "jwt", audience: "https://default.example" },
+      accessTokenClaims: ({ audience }) => ({ roles: audience.includes(api) ? ["editor"] : [] }),
+    });
+    const fetchFromProvider: typeof fetch = async (input, init) =>
+      (await op.handle(new Request(input, init))) ?? new Response(null, { status: 404 });
+    const rp = client.createClient({
+      metadata: op.metadata,
+      clientId: "app",
+      redirectUri: REDIRECT_URI,
+      auth: { method: "none" },
+      fetch: fetchFromProvider,
+    });
+    const { url, pending } = await rp.authorize({ scope: ["openid", "offline_access"] });
+    const begun = await op.beginAuthorization(new Request(`${url}&resource=${encodeURIComponent(api)}`));
+    check(begun.ok && begun.value.resources?.join(" ") === api, `beginAuthorization failed: ${JSON.stringify(begun)}`);
+    if (!begun.ok) {
+      throw new Error("unreachable");
+    }
+    const completed = await op.completeAuthorization(begun.value.id, {
+      subject: "user-1",
+      authTime: Math.floor(Date.now() / 1000),
+      scopes: begun.value.scopes,
+    });
+    check(completed.ok, "completeAuthorization failed");
+    if (!completed.ok) {
+      throw new Error("unreachable");
+    }
+    const signedIn = await rp.callback(completed.value.headers.get("location") ?? "", pending);
+    check(signedIn.ok, `callback failed: ${JSON.stringify(signedIn)}`);
+    if (!signedIn.ok) {
+      throw new Error("unreachable");
+    }
+    const { accessToken } = signedIn.value.tokens;
+    const verified = await jwt.createVerifier({
+      keys: jwt.createKeySet([signingKey.publicKey]),
+      issuer: ISSUER,
+      audience: api,
+      type: "at+jwt",
+    })(accessToken);
+    check(verified.ok, `access token did not verify for the API: ${JSON.stringify(verified)}`);
+    if (!verified.ok) {
+      throw new Error("unreachable");
+    }
+    check(JSON.stringify(verified.value.payload.roles) === '["editor"]', "the app's claims are missing");
+    const request = new Request(`${api}/items`, { headers: { authorization: `Bearer ${accessToken}` } });
+    const authenticated = await op.authenticate(request, { audience: api, scopes: ["openid"] });
+    check(
+      authenticated.ok && authenticated.value.subject === "user-1" && Object.isFrozen(authenticated.value),
+      `authenticate failed: ${JSON.stringify(authenticated)}`,
+    );
+    const elsewhere = await op.authenticate(request, { audience: "https://other.example" });
+    check(
+      !elsewhere.ok &&
+        elsewhere.error.response.status === 401 &&
+        elsewhere.error.reason === "access_token_audience_mismatch",
+      "a token for another API authenticated",
+    );
+    const lacking = await op.authenticate(request, { audience: api, scopes: ["data:write"] });
+    check(
+      !lacking.ok &&
+        lacking.error.response.headers.get("www-authenticate") ===
+          'Bearer error="insufficient_scope", scope="data:write"',
+      "a missing scope was not refused",
+    );
+  },
+
   // Run here as well as on Node.js because a bundler once dropped the check as dead code.
   "refuses invalid UTF-8 escapes": async (modules) => {
     const { op } = await setUp(modules, "none");
