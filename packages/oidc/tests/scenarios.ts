@@ -332,8 +332,8 @@ export const scenarios: Readonly<Record<string, Scenario>> = {
       auth: { method: "none" },
       fetch: fetchFromProvider,
     });
-    const { url, pending } = await rp.authorize({ scope: ["openid", "offline_access"] });
-    const begun = await op.beginAuthorization(new Request(`${url}&resource=${encodeURIComponent(api)}`));
+    const { url, pending } = await rp.authorize({ scope: ["openid", "offline_access"], resource: [api] });
+    const begun = await op.beginAuthorization(new Request(url));
     check(begun.ok && begun.value.resources?.join(" ") === api, `beginAuthorization failed: ${JSON.stringify(begun)}`);
     if (!begun.ok) {
       throw new Error("unreachable");
@@ -383,6 +383,29 @@ export const scenarios: Readonly<Record<string, Scenario>> = {
         lacking.error.response.headers.get("www-authenticate") ===
           'Bearer error="insufficient_scope", scope="data:write"',
       "a missing scope was not refused",
+    );
+    const refreshed = await rp.refresh({
+      refreshToken: signedIn.value.tokens.refreshToken ?? "",
+      subject: "user-1",
+      resource: [api],
+    });
+    check(refreshed.ok, `refresh failed: ${JSON.stringify(refreshed)}`);
+    if (!refreshed.ok) {
+      throw new Error("unreachable");
+    }
+    const again = await op.authenticate(
+      new Request(`${api}/items`, { headers: { authorization: `Bearer ${refreshed.value.tokens.accessToken}` } }),
+      { audience: api },
+    );
+    check(again.ok && again.value.audience?.join(" ") === api, `refreshed token refused: ${JSON.stringify(again)}`);
+    const widened = await rp.refresh({
+      refreshToken: refreshed.value.tokens.refreshToken ?? "",
+      subject: "user-1",
+      resource: ["https://default.example"],
+    });
+    check(
+      !widened.ok && widened.error.issues[0]?.params?.error === "invalid_target",
+      `a refresh widened the resources: ${JSON.stringify(widened)}`,
     );
   },
 
