@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { createHost } from "../src/host";
-import { ConformanceHost, type Env } from "../src/worker";
+import { ConformanceHost, type Env, readConfig } from "../src/worker";
 import { ALIAS, ISSUER, SECRETS } from "./support";
 
 vi.mock("../src/host", () => ({ createHost: vi.fn() }));
@@ -17,6 +17,16 @@ const env = {
 
 afterEach(() => {
   vi.restoreAllMocks();
+});
+
+describe("readConfig", () => {
+  it("drops a trailing slash from SUITE_ORIGIN, which the callback URLs are appended to", () => {
+    expect(readConfig({ ...env, SUITE_ORIGIN: "https://suite.example/" }).suiteOrigin).toBe("https://suite.example");
+  });
+
+  it.each(["https://suite.example/plans", "suite.example"])("refuses %s as SUITE_ORIGIN", (value) => {
+    expect(() => readConfig({ ...env, SUITE_ORIGIN: value })).toThrow("SUITE_ORIGIN must be an origin");
+  });
 });
 
 describe("a failure in the Worker's object", () => {

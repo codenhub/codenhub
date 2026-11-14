@@ -25,7 +25,7 @@ export interface HostNamespace {
 /**
  * Reads the host's configuration from the environment.
  *
- * @throws Error naming each missing variable, never a value.
+ * @throws Error naming each missing variable, never a value, or saying that `SUITE_ORIGIN` is not an origin.
  */
 export function readConfig(env: Partial<Omit<Env, "HOST">>): HostConfig {
   const missing = [
@@ -41,7 +41,7 @@ export function readConfig(env: Partial<Omit<Env, "HOST">>): HostConfig {
   }
   return {
     issuer: env.ISSUER as string,
-    suiteOrigin: env.SUITE_ORIGIN || SUITE_ORIGIN,
+    suiteOrigin: suiteOrigin(env.SUITE_ORIGIN || SUITE_ORIGIN),
     alias: env.SUITE_ALIAS as string,
     secrets: {
       first: env.CLIENT_SECRET_1 as string,
@@ -50,6 +50,18 @@ export function readConfig(env: Partial<Omit<Env, "HOST">>): HostConfig {
       control: env.CLIENT_SECRET_CONTROL as string,
     },
   };
+}
+
+/**
+ * Accepts the suite's origin with or without a trailing slash, since its callback URLs are built by appending a
+ * path, and refuses anything else, such as a value with a path, rather than registering callbacks that never match.
+ */
+function suiteOrigin(value: string): string {
+  const origin = URL.canParse(value) ? new URL(value).origin : "null";
+  if (origin === "null" || value.replace(/\/$/, "") !== origin) {
+    throw new Error(`SUITE_ORIGIN must be an origin, such as ${SUITE_ORIGIN}. See docs/runbook.md.`);
+  }
+  return origin;
 }
 
 /**
