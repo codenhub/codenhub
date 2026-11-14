@@ -1,6 +1,6 @@
 import type { AsymmetricAlgorithm } from "@codenhub/jwt";
 
-import { isHttpsUrl, isRedirectUri } from "../shared/urls";
+import { isHttpsUrl, isRedirectUri, isResourceUri } from "../shared/urls";
 import { CLIENT_TTL_NAMES, describeTtlRange, isTtlInRange, type ResolvedTtl, SCOPE_TOKEN } from "./options";
 import type { ClientRecord, GrantType } from "./types";
 
@@ -112,6 +112,9 @@ export function checkClientRecord(
   if (requirePkce === false && auth.method === "none") {
     return invalid("must not turn requirePkce off for a client whose auth.method is none");
   }
+  if (record.resources !== undefined && (!isStringArray(record.resources) || !record.resources.every(isResourceUri))) {
+    return invalid("must list resources, when present, as absolute URIs of visible ASCII without a fragment");
+  }
   checkBackchannelLogout(record.backchannelLogout);
   // Resolved here, so every endpoint reads the list and the flag without repeating the default.
   return { ...(record as unknown as ClientRecord), grantTypes, requirePkce: requirePkce ?? true };
@@ -163,6 +166,13 @@ function checkTtl(ttl: unknown): void {
  */
 export const isScopeOfClient = (client: Pick<ClientRecord, "scopes">, scope: string): boolean =>
   SCOPE_TOKEN.test(scope) && client.scopes.includes(scope);
+
+/**
+ * Whether a request may ask for tokens to every one of `resources` (RFC 8707 §2): each is one of the client's
+ * `resources`, compared byte for byte. A client without the list may name none.
+ */
+export const areResourcesOfClient = (client: Pick<ClientRecord, "resources">, resources: readonly string[]): boolean =>
+  resources.every((resource) => client.resources?.includes(resource) === true);
 
 /** The lifetimes for tokens of `client`: its own where its record sets them, the provider's otherwise. */
 export function lifetimesOf(provider: ResolvedTtl, client: ClientRecord): ResolvedTtl {

@@ -6,7 +6,7 @@ export type OidcPathSegment = string | number;
 
 /**
  * OAuth 2.0 and OpenID Connect error codes a provider sends to a client, from RFC 6749 §4.1.2.1 and
- * §5.2, RFC 6750 §3.1, RFC 7009 §2.2.1, and OpenID Connect Core §3.1.2.6.
+ * §5.2, RFC 6750 §3.1, RFC 7009 §2.2.1, RFC 8707 §2, and OpenID Connect Core §3.1.2.6.
  */
 export type OAuthErrorCode =
   | "invalid_request"
@@ -30,7 +30,8 @@ export type OAuthErrorCode =
   | "invalid_request_object"
   | "request_not_supported"
   | "request_uri_not_supported"
-  | "registration_not_supported";
+  | "registration_not_supported"
+  | "invalid_target";
 
 /**
  * Stable category of a failure that callers can branch on without parsing messages.
@@ -72,7 +73,8 @@ export type OidcIssueCode =
   | "invalid_scope"
   | "request_not_supported"
   | "request_uri_not_supported"
-  | "registration_not_supported";
+  | "registration_not_supported"
+  | "invalid_target";
 
 /**
  * A single reason an operation failed.

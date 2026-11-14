@@ -111,6 +111,7 @@ function interactionFixture(): InteractionRecord {
     acrValues: ["conformance-acr"],
     claimsLocales: ["en"],
     display: "popup",
+    resources: ["https://api.example/", "urn:example:data"],
     createdAt: now,
     expiresAt: now + LIFETIME_SECONDS,
   };
@@ -129,6 +130,7 @@ function codeFixture(grantId: string): CodeRecord {
     authTime: now,
     sessionId: "conformance-session",
     maxAgeRequested: false,
+    resources: ["https://api.example/", "urn:example:data"],
     expiresAt: now + LIFETIME_SECONDS,
   };
 }
@@ -140,6 +142,7 @@ function accessTokenFixture(grantId: string): AccessTokenRecord {
     subject: "conformance-user",
     scopes: ["openid", "profile"],
     sessionId: "conformance-session",
+    audience: ["https://api.example/", "urn:example:data"],
     expiresAt: nowSeconds() + LIFETIME_SECONDS,
   };
 }
@@ -153,6 +156,7 @@ function refreshTokenFixture(grantId: string): RefreshTokenRecord {
     scopes: ["openid", "profile"],
     authTime: now,
     sessionId: "conformance-session",
+    resources: ["https://api.example/", "urn:example:data"],
     expiresAt: now + LIFETIME_SECONDS,
   };
 }
@@ -226,6 +230,43 @@ const cases: StoreConformanceCase[] = [
       );
     },
   ),
+
+  defineCase("a record saved without resources or an audience comes back without them", async (createStore) => {
+    const store = await createStore(NO_CLIENTS);
+    const keys = { interaction: newKey(), code: newKey(), accessToken: newKey(), refreshToken: newKey() };
+    // A request that names no resource leaves every record without one, and an opaque access token issued for no
+    // resource has no audience. A column that comes back as null, or as an empty list, is not the same record.
+    const without = <T extends object>(record: T): T =>
+      Object.fromEntries(Object.entries(record).filter(([name]) => name !== "resources" && name !== "audience")) as T;
+    const interaction = without(interactionFixture());
+    const code = without(codeFixture(newKey()));
+    const accessToken = without(accessTokenFixture(newKey()));
+    const refreshToken = without(refreshTokenFixture(newKey()));
+    await store.saveInteraction(keys.interaction, interaction);
+    await store.saveCode(keys.code, code);
+    await store.saveAccessToken(keys.accessToken, accessToken);
+    await store.saveRefreshToken(keys.refreshToken, refreshToken);
+    assert(
+      sameRecord(await store.consumeInteraction(keys.interaction), interaction),
+      "consumeInteraction must return a record saved without resources as it was, with no resources",
+    );
+    const consumedCode = await store.consumeCode(keys.code);
+    assert(
+      consumedCode !== undefined && consumedCode.status === "consumed" && sameRecord(consumedCode.record, code),
+      "consumeCode must return a record saved without resources as it was, with no resources",
+    );
+    assert(
+      sameRecord(await store.findAccessToken(keys.accessToken), accessToken),
+      "findAccessToken must return a record saved without audience as it was, with no audience",
+    );
+    const consumedRefresh = await store.consumeRefreshToken(keys.refreshToken);
+    assert(
+      consumedRefresh !== undefined &&
+        consumedRefresh.status === "consumed" &&
+        sameRecord(consumedRefresh.record, refreshToken),
+      "consumeRefreshToken must return a record saved without resources as it was, with no resources",
+    );
+  }),
 
   defineCase("a record saved without a codeChallenge comes back without one", async (createStore) => {
     const store = await createStore(NO_CLIENTS);
@@ -503,6 +544,7 @@ const cases: StoreConformanceCase[] = [
       auth: { method: "client_secret_basic", secretHashes: [newKey()] },
       grantTypes: ["authorization_code"],
       postLogoutRedirectUris: ["https://app.example/signed-out"],
+      resources: ["https://api.example/", "urn:example:data"],
     };
     const store = await createStore({ clients: [structuredClone(client)] });
     assert(

@@ -139,6 +139,15 @@ export interface ClientRecord {
    * @defaultValue `false`
    */
   readonly idTokenClaims?: boolean;
+  /**
+   * The resource servers this client may ask for tokens to (RFC 8707): each an absolute URI without a fragment, of
+   * visible ASCII, such as `https://api.example.com`. A `resource` parameter at authorization or at the token
+   * endpoint must name one of them, or the request fails with `invalid_target`. An access token issued for one or
+   * more resources carries them as its audience, which {@link Provider.authenticate} checks and which a JWT access
+   * token puts in `aud`. Absent or empty, the client may name none, and its tokens keep the default audience. The
+   * provider checks the list when it reads the record, and throws `TypeError` if it is malformed.
+   */
+  readonly resources?: readonly string[];
 }
 
 /** How the client asks the app to show its pages (OpenID Connect Core §3.1.2.1). */
@@ -162,6 +171,8 @@ export interface InteractionRecord {
   readonly acrValues?: readonly string[];
   readonly claimsLocales?: readonly string[];
   readonly display?: Display;
+  /** The `resource` values the client asked for (RFC 8707), each one of the client's `resources`. */
+  readonly resources?: readonly string[];
   /** When the request was validated, in seconds since the Unix epoch. */
   readonly createdAt: number;
   /** When the interaction expires, in seconds since the Unix epoch. */
@@ -188,6 +199,8 @@ export interface CodeRecord {
   readonly sessionId?: string;
   /** Whether the request carried `max_age`, which makes `auth_time` required in the ID token. */
   readonly maxAgeRequested: boolean;
+  /** The resource servers the grant covers (RFC 8707): the authorization request's `resource` values. */
+  readonly resources?: readonly string[];
   /** In seconds since the Unix epoch. */
   readonly expiresAt: number;
 }
@@ -200,6 +213,11 @@ export interface AccessTokenRecord {
   readonly scopes: readonly string[];
   /** The app's session identifier from the grant. */
   readonly sessionId?: string;
+  /**
+   * The resource servers the token is for: the token request's `resource` values, else the grant's, else, for a
+   * JWT access token, the `accessToken.audience` option. Absent for an opaque token issued for no resource.
+   */
+  readonly audience?: readonly string[];
   /** In seconds since the Unix epoch. */
   readonly expiresAt: number;
 }
@@ -215,6 +233,8 @@ export interface RefreshTokenRecord {
   readonly acr?: string;
   /** The app's session identifier from the grant. Rotation keeps it. */
   readonly sessionId?: string;
+  /** The resource servers the family covers (RFC 8707), from the authorization request. Rotation keeps it. */
+  readonly resources?: readonly string[];
   /** When the whole token family expires, in seconds since the Unix epoch. Rotation keeps it. */
   readonly expiresAt: number;
 }
@@ -423,6 +443,8 @@ export type ProviderDiagnosticReason =
   | "refresh_token_client_mismatch"
   | "scope_not_granted"
   | "refresh_refused"
+  | "resource_invalid"
+  | "resource_not_granted"
   // Userinfo
   | "access_token_missing"
   | "access_token_malformed"
@@ -585,6 +607,11 @@ export interface AuthorizationInteraction {
    * is ignored, so it is absent here, and the app may ignore this one as well.
    */
   readonly display?: Display;
+  /**
+   * The resource servers the client asked for tokens to (RFC 8707 `resource`), each one of the client's
+   * `resources`. Show them on the consent page: the grant covers every one, and the app cannot narrow it.
+   */
+  readonly resources?: readonly string[];
   /** When the request was validated, in seconds since the Unix epoch. A `prompt=login` login must happen at or after it. */
   readonly createdAt: number;
 }

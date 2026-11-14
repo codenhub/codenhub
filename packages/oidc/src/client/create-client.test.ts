@@ -382,6 +382,18 @@ describe("callback", () => {
     ]);
   });
 
+  it("reports an invalid_target from the provider as provider_error with its code (RFC 8707)", async () => {
+    const op = createFakeOp();
+    const rp = clientFor(op);
+    const { pending, code } = await begin(op, rp);
+
+    const result = await rp.callback(redirect({ code, state: pending.state, error: "invalid_target" }), pending);
+
+    expect(issuesOf(result)).toEqual([
+      { code: "provider_error", params: { endpoint: "authorization", error: "invalid_target" } },
+    ]);
+  });
+
   it("narrows an unknown provider error to unknown, and keeps its text out of the result", async () => {
     const op = createFakeOp();
     const rp = clientFor(op);

@@ -9,7 +9,7 @@ import { computeCodeChallenge, isCodeVerifier } from "../shared/pkce";
 import { computeTokenHash } from "../shared/token-hash";
 import type { OAuthErrorCode } from "../shared/types";
 import { authenticateClient } from "./client-auth";
-import { type CheckedClient, isScopeOfClient, lifetimesOf } from "./client-record";
+import { areResourcesOfClient, type CheckedClient, isScopeOfClient, lifetimesOf } from "./client-record";
 import { refuse } from "./diagnostics";
 import { PROTOCOL_SCOPES, type ResolvedOptions, type ResolvedTtl, selectIdTokenKey } from "./options";
 import { jsonResponse, methodNotAllowed, preflightResponse, tokenErrorResponse } from "./responses";
@@ -46,7 +46,12 @@ interface Grant {
   readonly amr?: readonly string[];
   readonly acr?: string;
   readonly sessionId?: string;
+  /** The resource servers the grant covers (RFC 8707), from the authorization request. */
+  readonly resources?: readonly string[];
 }
+
+/** A token request's `resource` values (RFC 8707 §2), or `undefined` when it sent none. */
+type RequestedResources = readonly string[] | undefined;
 
 /**
  * Answers the token endpoint (RFC 6749 §3.2): authenticates the client, then runs the grant it asked for.
@@ -61,11 +66,12 @@ interface Grant {
  * @returns The token response or an error response.
  */
 export async function handleToken(options: ResolvedOptions, request: Request): Promise<Response> {
-  const read = await readClientRequest(options, request);
+  const read = await readClientRequest(options, request, ["resource"]);
   if (!read.ok) {
     return read.response;
   }
   const { client, parameters } = read;
+  const resources = read.lists.get("resource");
   const grantType = parameters.get("grant_type");
   if (grantType === undefined) {
     return refuse(tokenErrorResponse("invalid_request"), "grant_type_missing", client.clientId);
@@ -80,11 +86,11 @@ export async function handleToken(options: ResolvedOptions, request: Request): P
         return unauthorized();
       }
       return grantType === "authorization_code"
-        ? exchangeCode(options, client, parameters)
-        : refreshTokens(options, client, parameters);
+        ? exchangeCode(options, client, parameters, resources)
+        : refreshTokens(options, client, parameters, resources);
     case "client_credentials":
       return client.grantTypes.includes("client_credentials")
-        ? issueForClient(options, client, parameters)
+        ? issueForClient(options, client, parameters, resources)
         : unauthorized();
     default:
       return refuse(tokenErrorResponse("unsupported_grant_type"), "grant_type_unsupported", client.clientId);
@@ -93,7 +99,13 @@ export async function handleToken(options: ResolvedOptions, request: Request): P
 
 /** Outcome of {@link readClientRequest}: the authenticated client and its parameters, or the response to send. */
 export type ClientRequestResult =
-  | { readonly ok: true; readonly client: CheckedClient; readonly parameters: ReadonlyMap<string, string> }
+  | {
+      readonly ok: true;
+      readonly client: CheckedClient;
+      readonly parameters: ReadonlyMap<string, string>;
+      /** The values of each name in `repeatable` the request sent. */
+      readonly lists: ReadonlyMap<string, readonly string[]>;
+    }
   | { readonly ok: false; readonly response: Response };
 
 /**
@@ -102,9 +114,14 @@ export type ClientRequestResult =
  *
  * @param options - The resolved provider options.
  * @param request - The request to the endpoint.
+ * @param repeatable - The names that may repeat, whose values come back in `lists`.
  * @returns The authenticated client and its parameters, or the response that refuses the request.
  */
-export async function readClientRequest(options: ResolvedOptions, request: Request): Promise<ClientRequestResult> {
+export async function readClientRequest(
+  options: ResolvedOptions,
+  request: Request,
+  repeatable: readonly string[] = [],
+): Promise<ClientRequestResult> {
   assertBodyUnread(request, "handle");
   if (request.method === "OPTIONS") {
     return { ok: false, response: preflightResponse(["POST"]) };
@@ -119,12 +136,12 @@ export async function readClientRequest(options: ResolvedOptions, request: Reque
   if (!body.ok) {
     return { ok: false, response: refuse(tokenErrorResponse("invalid_request"), "body") };
   }
-  const parsed = parseParameters(body.text);
+  const parsed = parseParameters(body.text, repeatable);
   if (!parsed.ok) {
     return { ok: false, response: refuse(tokenErrorResponse("invalid_request"), "parameters") };
   }
   const auth = await authenticateClient(options, request, parsed.parameters);
-  return auth.ok ? { ok: true, client: auth.client, parameters: parsed.parameters } : auth;
+  return auth.ok ? { ok: true, client: auth.client, parameters: parsed.parameters, lists: parsed.lists } : auth;
 }
 
 /**
@@ -135,6 +152,7 @@ async function exchangeCode(
   options: ResolvedOptions,
   client: CheckedClient,
   parameters: ReadonlyMap<string, string>,
+  resources: RequestedResources,
 ): Promise<Response> {
   const code = parameters.get("code");
   const redirectUri = parameters.get("redirect_uri");
@@ -149,6 +167,11 @@ async function exchangeCode(
   if (verifier !== undefined && !isCodeVerifier(verifier)) {
     return refused("invalid_grant", "code_verifier_malformed");
   }
+  // Checked against the client before consumption, so a resource the client may never name does not burn the code.
+  // Only the subset check below needs the record (decision 20).
+  if (resources !== undefined && !areResourcesOfClient(client, resources)) {
+    return refused("invalid_target", "resource_invalid");
+  }
   const consumption = await options.store.consumeCode(await digestKey(code));
   if (consumption === undefined) {
     return refused("invalid_grant", "code_unknown");
@@ -162,7 +185,15 @@ async function exchangeCode(
   if (unredeemable !== undefined) {
     return refused("invalid_grant", unredeemable);
   }
-  return issueFromCode(options, client, record);
+  if (!isWithinGrant(resources, record.resources)) {
+    return refused("invalid_target", "resource_not_granted");
+  }
+  return issueFromCode(options, client, record, resources);
+}
+
+/** Whether a token request's resources are all ones the grant covers; a request that names none always is. */
+function isWithinGrant(requested: RequestedResources, granted: readonly string[] | undefined): boolean {
+  return requested === undefined || requested.every((resource) => granted?.includes(resource) === true);
 }
 
 /**
@@ -198,8 +229,16 @@ async function whyUnredeemable(
     : "code_verifier_mismatch";
 }
 
-/** Issues the first tokens of a grant from a redeemed code, with a refresh token only under `offline_access`. */
-async function issueFromCode(options: ResolvedOptions, client: ClientRecord, record: CodeRecord): Promise<Response> {
+/**
+ * Issues the first tokens of a grant from a redeemed code, with a refresh token only under `offline_access`. The
+ * access token is for the requested resources, or for every resource of the grant when the request named none.
+ */
+async function issueFromCode(
+  options: ResolvedOptions,
+  client: ClientRecord,
+  record: CodeRecord,
+  resources: RequestedResources,
+): Promise<Response> {
   const now = options.now();
   const ttl = lifetimesOf(options.ttl, client);
   const grant: Grant = {
@@ -209,8 +248,9 @@ async function issueFromCode(options: ResolvedOptions, client: ClientRecord, rec
     authTime: record.authTime,
     ...optionalAuthContext(record),
     ...optionalSessionId(record),
+    ...optionalResources(record),
   };
-  const accessToken = await issueAccessToken(options, ttl, grant, record.scopes, now);
+  const accessToken = await issueAccessToken(options, ttl, grant, record.scopes, resources ?? grant.resources, now);
   let refreshToken: string | undefined;
   if (record.scopes.includes("offline_access")) {
     refreshToken = randomToken();
@@ -242,6 +282,7 @@ async function refreshTokens(
   options: ResolvedOptions,
   client: ClientRecord,
   parameters: ReadonlyMap<string, string>,
+  resources: RequestedResources,
 ): Promise<Response> {
   const refused = (error: OAuthErrorCode, reason: ProviderDiagnosticReason): Response =>
     refuse(tokenErrorResponse(error), reason, client.clientId);
@@ -254,6 +295,9 @@ async function refreshTokens(
   const requested = readRequestedScopes(parameters.get("scope"), client);
   if (requested === "invalid") {
     return refused("invalid_scope", "scope_invalid");
+  }
+  if (resources !== undefined && !areResourcesOfClient(client, resources)) {
+    return refused("invalid_target", "resource_invalid");
   }
   const consumption = await options.store.consumeRefreshToken(await digestKey(refreshToken));
   if (consumption === undefined) {
@@ -274,6 +318,9 @@ async function refreshTokens(
   if (!scopes.every((scope) => record.scopes.includes(scope))) {
     return refused("invalid_scope", "scope_not_granted");
   }
+  if (!isWithinGrant(resources, record.resources)) {
+    return refused("invalid_target", "resource_not_granted");
+  }
   if (options.onRefresh !== undefined && !(await isRefreshAllowed(options.onRefresh, record, scopes))) {
     // The family ends with this refusal, not only this request: a user who lost the entitlement must not
     // keep a token that could be refreshed again once the check passes.
@@ -283,14 +330,14 @@ async function refreshTokens(
   const now = options.now();
   const ttl = lifetimesOf(options.ttl, client);
   const grant: Grant = { ...grantRecord(record) };
-  const accessToken = await issueAccessToken(options, ttl, grant, scopes, now);
+  const accessToken = await issueAccessToken(options, ttl, grant, scopes, resources ?? grant.resources, now);
   // Signed before the next refresh token is saved: the claims callback may fail, and a failure after the save
   // would leave a token the client never receives. The spent token's retry is still a reuse (decision 55).
   const idToken = await issueIdToken(options, client, ttl, grant, accessToken, scopes, now, {});
   const nextRefreshToken = randomToken();
   await options.store.saveRefreshToken(await digestKey(nextRefreshToken), {
     ...grantRecord(record),
-    // The family keeps its original scopes, even when this response narrowed them.
+    // The family keeps its original scopes and resources, even when this response narrowed them.
     scopes: record.scopes,
     expiresAt: record.expiresAt,
   });
@@ -350,10 +397,14 @@ async function issueForClient(
   options: ResolvedOptions,
   client: ClientRecord,
   parameters: ReadonlyMap<string, string>,
+  resources: RequestedResources,
 ): Promise<Response> {
   const scopes = readClientScopes(parameters.get("scope"), client);
   if (scopes === "invalid") {
     return refuse(tokenErrorResponse("invalid_scope"), "scope_invalid", client.clientId);
+  }
+  if (resources !== undefined && !areResourcesOfClient(client, resources)) {
+    return refuse(tokenErrorResponse("invalid_target"), "resource_invalid", client.clientId);
   }
   const now = options.now();
   const ttl = lifetimesOf(options.ttl, client);
@@ -362,6 +413,7 @@ async function issueForClient(
     ttl,
     { grantId: randomToken(), clientId: client.clientId, subject: client.clientId },
     scopes,
+    resources,
     now,
   );
   return jsonResponse(
@@ -397,17 +449,24 @@ type AccessTokenGrant = Pick<Grant, "grantId" | "clientId" | "subject"> &
 /**
  * Saves a new access token for a grant and returns the token value; only its digest is stored, whatever its
  * format, so the userinfo and revocation endpoints find it the same way.
+ *
+ * The token is for `resources` when there are any. Otherwise a JWT access token is for the `accessToken.audience`
+ * option, and an opaque one has no audience. The record keeps the audience, so it is checked the same way for both
+ * formats.
  */
 async function issueAccessToken(
   options: ResolvedOptions,
   ttl: ResolvedTtl,
   grant: AccessTokenGrant,
   scopes: readonly string[],
+  resources: RequestedResources,
   now: number,
 ): Promise<string> {
+  const { accessToken: format } = options;
+  const audience = resources ?? (format.format === "jwt" ? [format.audience] : undefined);
   const accessToken =
-    options.accessToken.format === "jwt"
-      ? await signAccessToken(options, ttl, options.accessToken.audience, grant, scopes, now)
+    format.format === "jwt" && audience !== undefined
+      ? await signAccessToken(options, ttl, audience, grant, scopes, now)
       : randomToken();
   await options.store.saveAccessToken(await digestKey(accessToken), {
     grantId: grant.grantId,
@@ -415,6 +474,7 @@ async function issueAccessToken(
     subject: grant.subject,
     scopes,
     ...optionalSessionId(grant),
+    ...(audience === undefined ? {} : { audience }),
     expiresAt: now + ttl.accessToken,
   });
   return accessToken;
@@ -422,12 +482,13 @@ async function issueAccessToken(
 
 /**
  * Signs a JWT access token (RFC 9068 §2.2). Its `typ` of `at+jwt` is what keeps a resource server from taking an ID
- * token for it, and `jti` makes every token distinct, so its digest is a unique store key.
+ * token for it, and `jti` makes every token distinct, so its digest is a unique store key. `aud` is a string for one
+ * audience and an array for several (RFC 7519 §4.1.3).
  */
 function signAccessToken(
   options: ResolvedOptions,
   ttl: ResolvedTtl,
-  audience: string,
+  audience: readonly string[],
   grant: AccessTokenGrant,
   scopes: readonly string[],
   now: number,
@@ -436,7 +497,7 @@ function signAccessToken(
     payload: {
       iss: options.issuer,
       exp: now + ttl.accessToken,
-      aud: audience,
+      aud: audience.length === 1 ? audience[0] : [...audience],
       sub: grant.subject,
       client_id: grant.clientId,
       iat: now,
@@ -544,6 +605,13 @@ function optionalSessionId(source: { readonly sessionId?: string }): { readonly 
   return source.sessionId !== undefined ? { sessionId: source.sessionId } : {};
 }
 
+/** The resource servers a record or grant covers, omitting them when absent. */
+function optionalResources(source: { readonly resources?: readonly string[] }): {
+  readonly resources?: readonly string[];
+} {
+  return source.resources !== undefined ? { resources: source.resources } : {};
+}
+
 /** The part of a refresh record that identifies its grant, without its scopes or lifetime. */
 function grantRecord(source: Grant): Omit<RefreshTokenRecord, "scopes" | "expiresAt"> {
   return {
@@ -553,5 +621,6 @@ function grantRecord(source: Grant): Omit<RefreshTokenRecord, "scopes" | "expire
     authTime: source.authTime,
     ...optionalAuthContext(source),
     ...optionalSessionId(source),
+    ...optionalResources(source),
   };
 }

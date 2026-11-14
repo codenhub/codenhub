@@ -38,7 +38,12 @@ function decodeRun(run: string): string | undefined {
 
 /** Outcome of {@link parseParameters}. */
 export type ParseParametersResult =
-  | { readonly ok: true; readonly parameters: ReadonlyMap<string, string> }
+  | {
+      readonly ok: true;
+      readonly parameters: ReadonlyMap<string, string>;
+      /** The values of each repeatable name present, in order, each once. Never holds an empty list. */
+      readonly lists: ReadonlyMap<string, readonly string[]>;
+    }
   | { readonly ok: false; readonly reason: ParameterFailure };
 
 /**
@@ -46,8 +51,11 @@ export type ParseParametersResult =
  *
  * Empty values are dropped, as RFC 6749 §3.1 treats them as absent, but they still count toward
  * duplicates. The pair count is checked while parsing, so an oversized input never builds a map.
+ *
+ * A name in `repeatable` may appear more than once, as RFC 8707 §2 lets `resource` do. Its values go to `lists`
+ * rather than `parameters`, with a repeated value kept once.
  */
-export function parseParameters(text: string): ParseParametersResult {
+export function parseParameters(text: string, repeatable: readonly string[] = []): ParseParametersResult {
   if (hasInvalidUtf8Escape(text)) {
     return { ok: false, reason: "malformed" };
   }
@@ -62,10 +70,19 @@ export function parseParameters(text: string): ParseParametersResult {
   }
 
   const parameters = new Map<string, string>();
+  const lists = new Map<string, string[]>();
   const names = new Set<string>();
   for (const [name, value] of entries) {
     if (name.length > MAX_PARAMETER_LENGTH || value.length > MAX_PARAMETER_LENGTH) {
       return { ok: false, reason: "too_long" };
+    }
+    if (repeatable.includes(name)) {
+      const list = lists.get(name) ?? [];
+      if (value !== "" && !list.includes(value)) {
+        list.push(value);
+        lists.set(name, list);
+      }
+      continue;
     }
     // RFC 6749 §3.1: a parameter MUST NOT be included more than once, even if one copy is empty.
     if (names.has(name)) {
@@ -76,5 +93,5 @@ export function parseParameters(text: string): ParseParametersResult {
       parameters.set(name, value);
     }
   }
-  return { ok: true, parameters };
+  return { ok: true, parameters, lists };
 }

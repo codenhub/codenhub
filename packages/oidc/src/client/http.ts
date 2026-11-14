@@ -64,6 +64,7 @@ const OAUTH_ERROR_CODES: ReadonlySet<string> = new Set<OAuthErrorCode>([
   "request_not_supported",
   "request_uri_not_supported",
   "registration_not_supported",
+  "invalid_target",
 ]);
 
 /**

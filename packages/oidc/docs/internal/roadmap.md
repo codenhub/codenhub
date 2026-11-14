@@ -37,7 +37,7 @@ The provider passes the Basic OP and Config OP plans; the client runs the RP tes
 None of these breaks an existing contract, so each can wait for its consumer.
 
 - **Authenticating a bearer token for the app's own APIs.** A resource endpoint served by the app beside the provider, such as the SSO application's future user-data API, has no way to check an opaque access token except by repeating the provider's digest, lookup and expiry checks against the store. A provider method that takes a `Request` and returns the token's record, or a refusal with its `WWW-Authenticate` challenge, would keep that logic in one place. Token introspection (RFC 7662) stays out of scope.
-- **More from JWT access tokens.** Extra claims, such as roles, and an audience per resource (RFC 8707) instead of one for the provider. Decision 36 left per-resource audiences to a second resource server.
+- **More from JWT access tokens.** Extra claims, such as roles. An audience per resource shipped as resource indicators (scope.md decision 59).
 - **Pairwise subject identifiers in discovery.** The app already derives a subject per client (decision 38); an option for `subject_types_supported` is the remaining change, when the SSO application turns pairwise subjects on.
 
 ## Not Planned

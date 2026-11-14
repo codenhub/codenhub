@@ -5,16 +5,24 @@ import { type ParameterFailure, parseParameters } from "../shared/parameters";
 
 /** Outcome of {@link readFrontChannelParameters}. */
 export type FrontChannelParameters =
-  | { readonly ok: true; readonly parameters: ReadonlyMap<string, string> }
+  | {
+      readonly ok: true;
+      readonly parameters: ReadonlyMap<string, string>;
+      readonly lists: ReadonlyMap<string, readonly string[]>;
+    }
   | { readonly ok: false; readonly reason: ParameterFailure | undefined };
 
 /**
  * Reads the parameters of a request the browser sends, such as authorization or logout: from the query for `GET`,
  * from the form body for `POST`. An oversized URL, another method or media type, or an unreadable body fails with
  * no reason; a parameter string that breaks a rule fails with that rule. A body already read throws `TypeError`
- * naming `operation`.
+ * naming `operation`. A name in `repeatable` may repeat, and its values come back in `lists`.
  */
-export async function readFrontChannelParameters(request: Request, operation: string): Promise<FrontChannelParameters> {
+export async function readFrontChannelParameters(
+  request: Request,
+  operation: string,
+  repeatable: readonly string[] = [],
+): Promise<FrontChannelParameters> {
   assertBodyUnread(request, operation);
   if (request.url.length > MAX_URL_LENGTH) {
     return { ok: false, reason: undefined };
@@ -23,7 +31,7 @@ export async function readFrontChannelParameters(request: Request, operation: st
   if (text === undefined) {
     return { ok: false, reason: undefined };
   }
-  const parsed = parseParameters(text);
+  const parsed = parseParameters(text, repeatable);
   return parsed.ok ? parsed : { ok: false, reason: parsed.reason };
 }
 

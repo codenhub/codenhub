@@ -10,7 +10,13 @@ import type {
   OidcResult,
   Prompt,
 } from "../shared/types";
-import { type CheckedClient, checkClientRecord, isScopeOfClient, lifetimesOf } from "./client-record";
+import {
+  areResourcesOfClient,
+  type CheckedClient,
+  checkClientRecord,
+  isScopeOfClient,
+  lifetimesOf,
+} from "./client-record";
 import { readFrontChannelParameters } from "./front-channel";
 import type { ResolvedOptions } from "./options";
 import { redirectResponse } from "./responses";
@@ -26,6 +32,12 @@ import type {
 } from "./types";
 
 type ParameterMap = ReadonlyMap<string, string>;
+
+/** The request's parameters, and its `resource` values (RFC 8707 §2), the one parameter that may repeat. */
+interface RequestParameters {
+  readonly parameters: ParameterMap;
+  readonly resources: readonly string[] | undefined;
+}
 
 /** A failure answered by a redirect to the client's verified redirect URI. */
 type Failure = OidcErr<AuthorizationFailure>;
@@ -54,6 +66,7 @@ interface ValidatedRequest {
   readonly acrValues: readonly string[] | undefined;
   readonly claimsLocales: readonly string[] | undefined;
   readonly display: Display | undefined;
+  readonly resources: readonly string[] | undefined;
 }
 
 /** What the checks after client verification read from. */
@@ -61,6 +74,7 @@ interface RequestContext {
   readonly options: ResolvedOptions;
   readonly client: CheckedClient;
   readonly parameters: ParameterMap;
+  readonly resources: readonly string[] | undefined;
   readonly target: RedirectTarget;
 }
 
@@ -99,24 +113,25 @@ export async function beginAuthorization(
   options: ResolvedOptions,
   request: Request,
 ): Promise<OidcResult<AuthorizationInteraction, AuthorizationFailure>> {
-  const parameters = await readParameters(request);
-  if (!parameters.ok) {
-    return parameters;
+  const read = await readParameters(request);
+  if (!read.ok) {
+    return read;
   }
-  const client = await lookupClient(options, parameters.value);
+  const { parameters, resources } = read.value;
+  const client = await lookupClient(options, parameters);
   if (!client.ok) {
     return client;
   }
-  const redirectUri = checkRedirectUri(client.value, parameters.value);
+  const redirectUri = checkRedirectUri(client.value, parameters);
   if (!redirectUri.ok) {
     return redirectUri;
   }
   const target: RedirectTarget = {
     uri: redirectUri.value,
-    state: parameters.value.get("state"),
+    state: parameters.get("state"),
     issuer: options.issuer,
   };
-  const checked = checkRequest({ options, client: client.value, parameters: parameters.value, target });
+  const checked = checkRequest({ options, client: client.value, parameters, resources, target });
   if (!checked.ok) {
     return checked;
   }
@@ -199,9 +214,12 @@ function targetOf(options: ResolvedOptions, interaction: InteractionRecord): Red
   return { uri: interaction.redirectUri, state: interaction.state, issuer: options.issuer };
 }
 
-/** Reads the parameters from the query for GET or from the form body for POST, refusing anything else. */
-async function readParameters(request: Request): Promise<Checked<ParameterMap>> {
-  const read = await readFrontChannelParameters(request, "beginAuthorization");
+/**
+ * Reads the parameters from the query for GET or from the form body for POST, refusing anything else. Only
+ * `resource` may repeat (RFC 8707 §2); every other repeated name is refused.
+ */
+async function readParameters(request: Request): Promise<Checked<RequestParameters>> {
+  const read = await readFrontChannelParameters(request, "beginAuthorization", ["resource"]);
   if (!read.ok) {
     return renderError(
       read.reason === undefined
@@ -209,7 +227,7 @@ async function readParameters(request: Request): Promise<Checked<ParameterMap>> 
         : { code: "invalid_request", params: { reason: read.reason } },
     );
   }
-  return { ok: true, value: read.parameters };
+  return { ok: true, value: { parameters: read.parameters, resources: read.lists.get("resource") } };
 }
 
 /**
@@ -253,6 +271,10 @@ function checkRequest(context: RequestContext): Checked<ValidatedRequest> {
   if (!scopes.ok) {
     return scopes;
   }
+  const resourceFailure = findResourceFailure(context);
+  if (resourceFailure !== undefined) {
+    return resourceFailure;
+  }
   const codeChallenge = readCodeChallenge(context);
   if (!codeChallenge.ok) {
     return codeChallenge;
@@ -281,6 +303,7 @@ function checkRequest(context: RequestContext): Checked<ValidatedRequest> {
       acrValues: readList(parameters, "acr_values"),
       claimsLocales: readList(parameters, "claims_locales"),
       display: readDisplay(parameters),
+      resources: context.resources,
     },
   };
 }
@@ -321,6 +344,16 @@ function readScopes({ client, parameters, target }: RequestContext): Checked<rea
     return redirectFailure(target, "invalid_scope");
   }
   return { ok: true, value: [...new Set(requested)] };
+}
+
+/**
+ * Every `resource` must be one of the client's `resources`, compared byte for byte (RFC 8707 §2). A value that is
+ * not a URI, or has a fragment, can never be in a list the provider checked, so it fails the same way.
+ */
+function findResourceFailure({ client, resources, target }: RequestContext): Failure | undefined {
+  return resources === undefined || areResourcesOfClient(client, resources)
+    ? undefined
+    : redirectFailure(target, "invalid_target");
 }
 
 /**
@@ -423,6 +456,7 @@ async function saveInteraction(
     ...optionalMember("acrValues", request.acrValues),
     ...optionalMember("claimsLocales", request.claimsLocales),
     ...optionalMember("display", request.display),
+    ...optionalMember("resources", request.resources),
   };
   // The id is a bearer secret for the app's session, so the store only ever sees its digest.
   const id = randomToken();
@@ -440,6 +474,7 @@ async function saveInteraction(
     ...optionalMember("acrValues", request.acrValues),
     ...optionalMember("claimsLocales", request.claimsLocales),
     ...optionalMember("display", request.display),
+    ...optionalMember("resources", request.resources),
   });
 }
 
@@ -539,6 +574,7 @@ async function issueCode(
     ...optionalMember("acr", grant.acr),
     ...optionalMember("sessionId", grant.sessionId),
     maxAgeRequested: interaction.maxAge !== undefined,
+    ...optionalMember("resources", interaction.resources),
     expiresAt: options.now() + ttl,
   };
   await options.store.saveCode(await digestKey(code), record);

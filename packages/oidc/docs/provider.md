@@ -286,7 +286,7 @@ The checks run in this order, and the first failure is the one reported. Failure
 | ------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------- | ---------- |
 | The URL is at most 8192 characters.                                                                                                                    | `invalid_request`                                                                              | `null`     |
 | The method is `GET`, or `POST` with a form body. The body is at most 16384 bytes.                                                                      | `invalid_request`                                                                              | `null`     |
-| The parameters parse: no duplicate, at most 32, none longer than 4096 characters, and no percent-escape that is not valid UTF-8.                       | `invalid_request`, with `params.reason` of `duplicate`, `too_many`, `too_long` or `malformed`  | `null`     |
+| The parameters parse: no duplicate except `resource`, at most 32, none longer than 4096 characters, and no percent-escape that is not valid UTF-8.     | `invalid_request`, with `params.reason` of `duplicate`, `too_many`, `too_long` or `malformed`  | `null`     |
 | `client_id` is present.                                                                                                                                | `invalid_request`, path `["client_id"]`                                                        | `null`     |
 | The client is registered.                                                                                                                              | `unknown_client`                                                                               | `null`     |
 | `redirect_uri` is present and is one of the client's registered URIs, byte for byte.                                                                   | `invalid_redirect_uri`                                                                         | `null`     |
@@ -295,6 +295,7 @@ The checks run in this order, and the first failure is the one reported. Failure
 | `response_type` is present and is `code`.                                                                                                              | `invalid_request` with path `["response_type"]` when missing, else `unsupported_response_type` | Redirect   |
 | `response_mode`, when present, is `query`.                                                                                                             | `invalid_request`, path `["response_mode"]`                                                    | Redirect   |
 | `scope` contains `openid`, and every scope is a scope token that the client's record lists.                                                            | `invalid_scope`                                                                                | Redirect   |
+| Each `resource`, when present, is one of the client's [`resources`](#resource-indicators), byte for byte.                                              | `invalid_target`                                                                               | Redirect   |
 | `code_challenge` is present and has the shape of an S256 challenge. A client with [`requirePkce: false`](#clients-that-send-no-pkce) may leave it out. | `invalid_request`, path `["code_challenge"]`                                                   | Redirect   |
 | `code_challenge_method` is `S256`. `plain` is refused.                                                                                                 | `invalid_request`, path `["code_challenge_method"]`                                            | Redirect   |
 | A client with `requirePkce: false` that sent no `code_challenge` sent a non-empty `nonce`.                                                             | `invalid_request`, path `["nonce"]`                                                            | Redirect   |
@@ -307,6 +308,7 @@ On success the result carries the interaction:
 - `clientId`, `redirectUri`, `scopes` and `prompt`, as validated.
 - `maxAge`, `loginHint` and `uiLocales`, when the request carried them. `loginHint` is passed through as sent. `uiLocales` has its empty entries, from repeated or trailing spaces, dropped; no entries left means absent. Both are within the length limit.
 - `acrValues`, `claimsLocales` and `display`, when the request carried them. See [Hints for the login pages](#hints-for-the-login-pages).
+- `resources`, when the request carried `resource`: the resource servers the client asks for tokens to, each once, in the order sent. See [Resource indicators](#resource-indicators).
 - `createdAt`, in seconds since the Unix epoch.
 
 Keep the whole interaction in the user's server-side session. It is a frozen plain object, so it serializes as JSON. The pages between the two calls need it: the consent page shows `clientId` and `scopes`, the login page follows `prompt`, `maxAge` and `loginHint`, and the scopes the user grants must be among `scopes`. The provider offers no lookup by `id`, because the store's only read of an interaction is the atomic `consumeInteraction` that completes it. Do not put `id` in a URL the user can edit, because whoever holds it can complete the interaction. The interaction lasts `ttl.interaction` seconds, 1800 by default, and it can be completed once.
@@ -549,7 +551,7 @@ The checks run in this order:
 1. The method. `OPTIONS` gets a preflight. Any other method but `POST` gets `405` with `Allow: POST, OPTIONS`.
 2. The `Content-Type`. It must be `application/x-www-form-urlencoded`, optionally with `charset=utf-8`, which may be quoted (`charset="utf-8"`) and written in any letter case. Otherwise `invalid_request`.
 3. The body. It is read as strict UTF-8 and is at most 16384 bytes. Otherwise `invalid_request`.
-4. The parameters. No duplicate, at most 32, none longer than 4096 characters, and no percent-escape that is not valid UTF-8. Otherwise `invalid_request`.
+4. The parameters. No duplicate except `resource`, at most 32, none longer than 4096 characters, and no percent-escape that is not valid UTF-8. Otherwise `invalid_request`.
 5. The client's credentials. See [Client authentication](#client-authentication).
 6. The `grant_type`. Missing is `invalid_request`. `authorization_code` and `refresh_token` are `unauthorized_client` for a client whose record does not list `authorization_code` in `grantTypes`, and `client_credentials` is `unauthorized_client` for a client whose record does not list it. A value other than these three is `unsupported_grant_type`.
 7. The grant. See [Authorization code](#authorization-code), [Refresh tokens](#refresh-tokens) and [Client credentials](#client-credentials).
@@ -576,13 +578,15 @@ A client assertion is a JWT that the provider verifies with the client's key fro
 A request for `authorization_code` must carry `code`, `redirect_uri` and `code_verifier`. A missing one is `invalid_request`. The exception is a client with [`requirePkce: false`](#clients-that-send-no-pkce), which may omit `code_verifier` when its code was issued without a challenge. The checks that follow, in order:
 
 1. The verifier, when there is one, has the shape RFC 7636 defines, 43 to 128 unreserved characters. Otherwise `invalid_grant`, and the code is **not** spent.
-2. The code is redeemed atomically with `consumeCode`. An unknown or purged code is `invalid_grant`.
-3. A code that was already redeemed is a **replay**. The provider revokes the grant the code belongs to, so every access token and refresh token issued from it stops working, and returns `invalid_grant`.
-4. Otherwise the code is spent, and each of these checks returns `invalid_grant`: it has expired, it was issued to another client, its `redirect_uri` is not the one in the request, or the verifier does not fit the code. For a code with a challenge that means the verifier is missing or its S256 digest is not the challenge, which only a client with `requirePkce: false` can send, since another client's missing verifier was refused before step 2. For a code issued without a challenge, any verifier is a downgrade attempt and is refused. A failure here still burns the code, so a wrong verifier cannot be retried against the same code.
+2. Each `resource`, when there is one, is one of the client's `resources`. Otherwise `invalid_target`, and the code is not spent.
+3. The code is redeemed atomically with `consumeCode`. An unknown or purged code is `invalid_grant`.
+4. A code that was already redeemed is a **replay**. The provider revokes the grant the code belongs to, so every access token and refresh token issued from it stops working, and returns `invalid_grant`.
+5. Otherwise the code is spent, and each of these checks returns `invalid_grant`: it has expired, it was issued to another client, its `redirect_uri` is not the one in the request, or the verifier does not fit the code. For a code with a challenge that means the verifier is missing or its S256 digest is not the challenge, which only a client with `requirePkce: false` can send, since another client's missing verifier was refused before step 3. For a code issued without a challenge, any verifier is a downgrade attempt and is refused. A failure here still burns the code, so a wrong verifier cannot be retried against the same code.
+6. Each `resource`, when there is one, is one the authorization request named. Otherwise `invalid_target`, and the code is spent.
 
 On success the provider starts a grant, and issues:
 
-- An access token: by default an opaque random value that only its digest is stored under, or a JWT under [`accessToken`](#jwt-access-tokens). It lasts `ttl.accessToken` seconds.
+- An access token: by default an opaque random value that only its digest is stored under, or a JWT under [`accessToken`](#jwt-access-tokens). It lasts `ttl.accessToken` seconds. Its audience is the request's `resource` values, or every resource of the grant when it sent none; see [Resource indicators](#resource-indicators).
 - A refresh token, only when the granted scopes include `offline_access`. Its family lasts `ttl.refreshToken` seconds from this exchange.
 - An ID token, signed with the signing key chosen for the client (see [Signing keys](#signing-keys)). Its claims are `iss`, `sub`, `aud` (the client identifier), `iat`, `exp` (`ttl.idToken` after `iat`), `auth_time`, and `amr` and `acr` when the grant had them, `nonce` when the authorization request had one, and `at_hash` for the access token. It also carries `sid` when the grant has a `sessionId`, and refreshes repeat it. Its header is `typ: JWT` and the key's `alg` and `kid`. An ID token carries no scope claims, which are released at userinfo, unless the client's record sets [`idTokenClaims`](#scope-claims-in-the-id-token).
 
@@ -590,13 +594,13 @@ On success the provider starts a grant, and issues:
 
 A request for `refresh_token` must carry `refresh_token`, or it is `invalid_request`. Each refresh token is single-use, and rotation replaces it:
 
-1. The `scope` parameter, when given, must name only scopes the client's record lists, and it must include `openid`. Otherwise `invalid_scope`, and the token is not spent.
+1. The `scope` parameter, when given, must name only scopes the client's record lists, and it must include `openid`. Otherwise `invalid_scope`, and the token is not spent. Each `resource`, when given, must be one of the client's `resources`. Otherwise `invalid_target`, and the token is not spent.
 2. The token is spent atomically with `consumeRefreshToken`. An unknown or revoked token is `invalid_grant`, and it is not spent.
 3. A token that was already spent is a **reuse**. The provider revokes the family, so the access tokens and refresh tokens issued from that sign-in stop working, and returns `invalid_grant`.
 4. Otherwise the token is spent, and it must be unexpired and issued to this client. Otherwise `invalid_grant`.
-5. The `scope` parameter, when given, must be a subset of the family's scopes. Otherwise `invalid_scope`. When it is omitted, the access token has every scope the family holds.
+5. The `scope` parameter, when given, must be a subset of the family's scopes. Otherwise `invalid_scope`. When it is omitted, the access token has every scope the family holds. Each `resource`, when given, must be one the family covers. Otherwise `invalid_target`. When it is omitted, the access token is for every resource the family covers.
 6. When the app set [`onRefresh`](#re-checking-a-refresh), it is asked. A `false` answer is `invalid_grant`, and it revokes the family.
-7. A new access token is issued, and a new refresh token that replaces the spent one. The new refresh token keeps the family's original scopes and its original expiry, so rotation neither widens the family nor extends it. An ID token is issued too, without a nonce, and with the `sid` the family carries.
+7. A new access token is issued, and a new refresh token that replaces the spent one. The new refresh token keeps the family's original scopes, resources and expiry, so rotation neither widens the family nor extends it. An ID token is issued too, without a nonce, and with the `sid` the family carries.
 
 The response has the same shape as the code exchange, with `scope` set to the scopes of the new access token.
 
@@ -646,7 +650,7 @@ The client authenticates as at any token request, and its `scope` parameter is r
 
 Whether the provider's [`scopes`](#scopes) option defines a scope does not matter here: a scope that only the record lists is issued, and it releases no claims.
 
-A scope that breaks these rules, or an empty result, is `invalid_scope` with status `400`.
+A scope that breaks these rules, or an empty result, is `invalid_scope` with status `400`. Each `resource`, when given, must be one of the client's `resources`, or the request is `invalid_target` with status `400`, and the token is for those resources.
 
 On success the response is a `200` with `Cache-Control: no-store`, and a body with `access_token`, `token_type` (`Bearer`), `expires_in` and `scope`. It carries no `id_token` and no `refresh_token`. The access token is opaque or JWT, as [`accessToken`](#jwt-access-tokens) says. Its subject is the client identifier, and each response is its own grant, so revoking one token leaves the client's other tokens valid. The token has no `openid`, so [userinfo](#userinfo) answers `403` for it.
 
@@ -669,7 +673,7 @@ A successful token response is JSON, with `Cache-Control: no-store` and `Pragma:
 
 ## JWT access tokens
 
-The `accessToken` option chooses the format of access tokens. The default, `{ format: "opaque" }`, issues a random value. `{ format: "jwt", audience }` issues a signed JWT (RFC 9068) instead, whose `aud` is `audience`, usually the resource server's identifier. `audience` must be a non-empty string of well-formed Unicode.
+The `accessToken` option chooses the format of access tokens. The default, `{ format: "opaque" }`, issues a random value. `{ format: "jwt", audience }` issues a signed JWT (RFC 9068) instead, whose `aud` is `audience`, usually the resource server's identifier, unless the token was issued for [resources](#resource-indicators). `audience` must be a non-empty string of well-formed Unicode.
 
 ```ts
 import { createProvider, type ProviderOptions } from "@codenhub/oidc/provider";
@@ -711,6 +715,26 @@ if (verified.ok) {
   // verified.value.payload.sub, .client_id, .scope
 }
 ```
+
+## Resource indicators
+
+A client that calls more than one resource server can ask for a token restricted to the ones it will call, with the `resource` parameter of RFC 8707. A token for one API is then refused by another, which a JWT verifier with that `audience` checks. The client's record lists the resources it may name in [`resources`](store.md#client-records), each an absolute URI without a fragment, and a client without the list may name none.
+
+```ts
+import type { ClientRecord } from "@codenhub/oidc/provider";
+
+declare const client: ClientRecord; // the client as the app registered it
+
+const withResources: ClientRecord = { ...client, resources: ["https://api.example", "https://data.example"] };
+```
+
+`resource` may repeat, unlike every other parameter, and a value sent twice counts once.
+
+- **Authorization.** Each `resource` must be one of the client's `resources`, or the request is redirected with `invalid_target`. The interaction carries them as `resources`, so the consent page can show which servers the user is granting access to. The grant covers every one of them, and `completeAuthorization` cannot narrow it.
+- **Token request.** For `authorization_code` and `refresh_token`, each `resource` must be one of the client's `resources`, checked before the code or refresh token is spent, and then one the grant covers, checked after. Either failure is `invalid_target`. A request that names none gets a token for every resource the grant covers. For `client_credentials`, each `resource` must be one of the client's `resources`.
+- **The token.** The access token's audience is the token request's resources, else the grant's. With neither, a JWT access token is for the `accessToken.audience` option, and an opaque one has no audience. The audience is saved on the access token record as `audience`. A JWT's `aud` is a string for one audience and an array for several.
+
+A refresh family keeps the resources of its sign-in, so a refresh may narrow a token to fewer of them but never add one. RFC 8707 also lets a client name resources at the token endpoint that it did not name at authorization, when the provider allows it. This provider does not: a resource the user did not consent to is never added later.
 
 ## Userinfo
 
@@ -815,13 +839,13 @@ Each diagnostic is a frozen object with these members:
 
 The reasons, grouped as in the provider's types:
 
-| Group                                   | Reasons                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
-| --------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| The request, before the client is known | `content_type`, `body`, `parameters`                                                                                                                                                                                                                                                                                                                                                                                                                                             |
-| Client authentication                   | `client_credentials_missing`, `client_credentials_ambiguous`, `client_credentials_malformed`, `client_unknown`, `client_method_mismatch`, `client_credentials_wrong`                                                                                                                                                                                                                                                                                                             |
-| The token request                       | `grant_type_missing`, `grant_type_unsupported`, `grant_type_unauthorized`, `parameter_missing`, `code_verifier_malformed`, `code_verifier_missing`, `code_verifier_unexpected`, `code_unknown`, `code_replayed`, `code_expired`, `code_client_mismatch`, `redirect_uri_mismatch`, `code_verifier_mismatch`, `scope_invalid`, `refresh_token_unknown`, `refresh_token_replayed`, `refresh_token_expired`, `refresh_token_client_mismatch`, `scope_not_granted`, `refresh_refused` |
-| Userinfo                                | `access_token_missing`, `access_token_malformed`, `access_token_unknown`, `access_token_expired`, `access_token_without_openid`                                                                                                                                                                                                                                                                                                                                                  |
-| Revocation                              | `token_missing`, `token_of_another_client`                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| Group                                   | Reasons                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| --------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| The request, before the client is known | `content_type`, `body`, `parameters`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| Client authentication                   | `client_credentials_missing`, `client_credentials_ambiguous`, `client_credentials_malformed`, `client_unknown`, `client_method_mismatch`, `client_credentials_wrong`                                                                                                                                                                                                                                                                                                                                                         |
+| The token request                       | `grant_type_missing`, `grant_type_unsupported`, `grant_type_unauthorized`, `parameter_missing`, `code_verifier_malformed`, `code_verifier_missing`, `code_verifier_unexpected`, `code_unknown`, `code_replayed`, `code_expired`, `code_client_mismatch`, `redirect_uri_mismatch`, `code_verifier_mismatch`, `scope_invalid`, `refresh_token_unknown`, `refresh_token_replayed`, `refresh_token_expired`, `refresh_token_client_mismatch`, `scope_not_granted`, `refresh_refused`, `resource_invalid`, `resource_not_granted` |
+| Userinfo                                | `access_token_missing`, `access_token_malformed`, `access_token_unknown`, `access_token_expired`, `access_token_without_openid`                                                                                                                                                                                                                                                                                                                                                                                              |
+| Revocation                              | `token_missing`, `token_of_another_client`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
 
 The callback is called once for each refusal that is answered with an OAuth error response, after the response is built and before `handle` resolves. A `405` for a method the endpoint does not accept, and an `OPTIONS` preflight, are not reported. Authorization failures are not reported either, since `beginAuthorization` and `completeAuthorization` return their issues. The diagnostic never holds a value the request carried: no token, code, verifier, secret or redirect URI.
 

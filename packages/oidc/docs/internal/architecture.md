@@ -52,14 +52,16 @@ Each subpath is its own build entry (`client.ts`, `provider.ts`, `testing.ts`), 
 
 `beginAuthorization` reads its parameters through `readFrontChannelParameters` (`provider/front-channel.ts`), which `endSession` shares: the query of a `GET` or the form of a `POST`, after the URL length cap. It splits failures by what can be trusted when they happen:
 
-1. Before the client and its redirect URI are known, nothing in the request can be trusted with a redirect: an oversized URL, a bad method or body, a malformed or duplicated parameter, an unknown client, or a redirect URI that is not exactly one of the client's. These fail with `redirect: null`, and the app renders its own error.
+1. Before the client and its redirect URI are known, nothing in the request can be trusted with a redirect: an oversized URL, a bad method or body, a malformed parameter or a duplicated one other than `resource`, an unknown client, or a redirect URI that is not exactly one of the client's. These fail with `redirect: null`, and the app renders its own error.
 2. After both are verified, every failure is a `302` to that redirect URI with `error`, `state` and `iss`.
 
 The validated request is saved through `saveInteraction` under the digest of a random identifier (decision 1). `completeAuthorization` consumes it atomically, so a second completion gets `interaction_not_found`; it then checks the app's outcome against the request (decision 16) and saves a code record carrying everything the token endpoint must compare. `max_age` is checked against the interaction's `createdAt`, not the time of completion, so time the user spends on the login and consent pages does not count (decision 32); the client measures from `pending.requestedAt` for the same reason.
 
 ### Token endpoint
 
-Order of checks, cheapest and least trusting first: method, content type, body size, parameter parsing (duplicates refused), client authentication, grant type, then the grant. Client authentication finds exactly one presented method (Basic header, `client_secret` in the body, a client assertion, or nothing) and requires it to be the registered one; the presented credential is then checked against the record: a secret by comparing SHA-256 digests in constant time, an assertion with `@codenhub/jwt`'s verifier with the client as issuer and the issuer or token endpoint as audience.
+Order of checks, cheapest and least trusting first: method, content type, body size, parameter parsing (duplicates refused, except `resource`), client authentication, grant type, then the grant. Client authentication finds exactly one presented method (Basic header, `client_secret` in the body, a client assertion, or nothing) and requires it to be the registered one; the presented credential is then checked against the record: a secret by comparing SHA-256 digests in constant time, an assertion with `@codenhub/jwt`'s verifier with the client as issuer and the issuer or token endpoint as audience.
+
+Resource indicators (decision 59) follow the scope's path. `parseParameters` collects a repeatable name into a list of its own, which only `resource` is, at authorization and at the token endpoint. The client's `resources` is checked before a code or refresh token is consumed, and the grant's after, as decision 20 orders the scope checks. The resources travel from the interaction to the code and refresh token records, and the access token record keeps the audience it was issued for, so a check of the audience never parses a token.
 
 The client credentials grant consumes nothing: it checks the requested scopes, then issues an access token whose subject is the client, under a new grant of its own, with no ID token or refresh token.
 

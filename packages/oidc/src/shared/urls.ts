@@ -74,3 +74,15 @@ export function isRedirectUri(value: unknown): value is string {
     url.password === ""
   );
 }
+
+/**
+ * Tests whether a value is a resource indicator (RFC 8707 §2): an absolute URI of visible ASCII without a fragment.
+ * Any scheme is accepted, since a resource may be named by a URN, but a special scheme must be followed by `//`, so
+ * the string is the URL it serializes to. A backslash is refused too, since special schemes read it as a slash.
+ */
+export function isResourceUri(value: unknown): value is string {
+  if (typeof value !== "string" || value.includes("#") || hasDisallowedUrlCharacter(value) || !URL.canParse(value)) {
+    return false;
+  }
+  return hasDoubleSlashAfterScheme(value, new URL(value));
+}
