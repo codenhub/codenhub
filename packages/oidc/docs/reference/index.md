@@ -191,7 +191,7 @@ Stable failure category.
 readonly params?: Readonly<Record<string, string | number | boolean>>;
 ```
 
-Facts that are never input values, such as `{ endpoint: "token", reason: "timeout" }`. The keys are a fixed set: `endpoint` (`discovery`, `authorization`, `token`, `userinfo` or `revocation`) and `reason` on `request_failed`, with `status` when the reason is `status`; `endpoint` and `error` (an [`OAuthErrorCode`](#oautherrorcode) or `unknown`) on `provider_error`; `jwtCode`, the `@codenhub/jwt` issue code, and that issue's own params on `invalid_id_token`; `reason` on a provider `invalid_request` the app renders, and on `invalid_callback` a parameter failure: `duplicate`, `too_many`, `too_long` or `malformed`.
+Facts that are never input values, such as `{ endpoint: "token", reason: "timeout" }`. The keys are a fixed set: `endpoint` (`discovery`, `authorization`, `token`, `userinfo` or `revocation`) and `reason` on `request_failed`, with `status` when the reason is `status`; `endpoint` and `error` (an [`OAuthErrorCode`](#oautherrorcode) or `unknown`) on `provider_error`; `jwtCode`, the `@codenhub/jwt` issue code, and that issue's own params on `invalid_id_token` and `invalid_logout_token`; `reason` on a provider `invalid_request` the app renders, and on `invalid_callback` and `invalid_logout_request` a parameter failure: `duplicate`, `too_many`, `too_long` or `malformed`, or for a logout request's body, `too_large` or `unreadable`.
 
 #### OidcIssue › path
 
@@ -250,6 +250,8 @@ export interface ProviderMetadata {
     readonly revocation_endpoint_auth_methods_supported?: readonly string[];
     readonly revocation_endpoint_auth_signing_alg_values_supported?: readonly string[];
     readonly authorization_response_iss_parameter_supported?: boolean;
+    readonly backchannel_logout_supported?: boolean;
+    readonly backchannel_logout_session_supported?: boolean;
     readonly claims_parameter_supported?: boolean;
     readonly request_parameter_supported?: boolean;
     readonly request_uri_parameter_supported?: boolean;
@@ -272,6 +274,22 @@ readonly authorization_response_iss_parameter_supported?: boolean;
 ```
 
 Whether the provider sends `iss` in authorization responses (RFC 9207).
+
+#### ProviderMetadata › backchannel\_logout\_session\_supported
+
+```ts
+readonly backchannel_logout_session_supported?: boolean;
+```
+
+Whether the logout token can carry `sid` (OpenID Connect Back-Channel Logout 1.0 §2.1).
+
+#### ProviderMetadata › backchannel\_logout\_supported
+
+```ts
+readonly backchannel_logout_supported?: boolean;
+```
+
+Whether the provider supports back-channel logout (OpenID Connect Back-Channel Logout 1.0 §2.1).
 
 #### ProviderMetadata › claims\_parameter\_supported
 
@@ -453,7 +471,7 @@ OAuth 2.0 and OpenID Connect error codes a provider sends to a client, from RFC 
 ### OidcIssueCode
 
 ```ts
-export type OidcIssueCode = "request_failed" | "invalid_metadata" | "issuer_mismatch" | "invalid_token_response" | "invalid_userinfo" | "provider_error" | "invalid_callback" | "state_mismatch" | "iss_mismatch" | "invalid_id_token" | "nonce_mismatch" | "azp_mismatch" | "at_hash_mismatch" | "auth_time_missing" | "auth_too_old" | "subject_mismatch" | "unknown_client" | "invalid_redirect_uri" | "interaction_not_found" | "invalid_request" | "unauthorized_client" | "unsupported_response_type" | "invalid_scope" | "request_not_supported" | "request_uri_not_supported" | "registration_not_supported";
+export type OidcIssueCode = "request_failed" | "invalid_metadata" | "issuer_mismatch" | "invalid_token_response" | "invalid_userinfo" | "provider_error" | "invalid_callback" | "state_mismatch" | "iss_mismatch" | "invalid_id_token" | "nonce_mismatch" | "azp_mismatch" | "at_hash_mismatch" | "auth_time_missing" | "auth_too_old" | "subject_mismatch" | "invalid_logout_request" | "invalid_logout_token" | "unknown_client" | "invalid_redirect_uri" | "interaction_not_found" | "invalid_request" | "unauthorized_client" | "unsupported_response_type" | "invalid_scope" | "request_not_supported" | "request_uri_not_supported" | "registration_not_supported";
 ```
 
 Stable category of a failure that callers can branch on without parsing messages.

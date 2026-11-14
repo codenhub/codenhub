@@ -61,6 +61,9 @@ export type OidcIssueCode =
   | "auth_time_missing"
   | "auth_too_old"
   | "subject_mismatch"
+  // Client: back-channel logout
+  | "invalid_logout_request"
+  | "invalid_logout_token"
   // Provider: requests that must not redirect
   | "unknown_client"
   | "invalid_redirect_uri"
@@ -91,8 +94,9 @@ export interface OidcIssue {
    * fixed set: `endpoint` (`discovery`, `authorization`, `token`, `userinfo` or `revocation`) and `reason`
    * on `request_failed`, with `status` when the reason is `status`; `endpoint` and `error` (an
    * {@link OAuthErrorCode} or `unknown`) on `provider_error`; `jwtCode`, the `@codenhub/jwt` issue code, and
-   * that issue's own params on `invalid_id_token`; `reason` on a provider `invalid_request` the app renders, and on
-   * `invalid_callback` a parameter failure: `duplicate`, `too_many`, `too_long` or `malformed`.
+   * that issue's own params on `invalid_id_token` and `invalid_logout_token`; `reason` on a provider `invalid_request`
+   * the app renders, and on `invalid_callback` and `invalid_logout_request` a parameter failure: `duplicate`,
+   * `too_many`, `too_long` or `malformed`, or for a logout request's body, `too_large` or `unreadable`.
    */
   readonly params?: Readonly<Record<string, string | number | boolean>>;
 }
@@ -152,6 +156,10 @@ export interface ProviderMetadata {
   readonly revocation_endpoint_auth_signing_alg_values_supported?: readonly string[];
   /** Whether the provider sends `iss` in authorization responses (RFC 9207). */
   readonly authorization_response_iss_parameter_supported?: boolean;
+  /** Whether the provider supports back-channel logout (OpenID Connect Back-Channel Logout 1.0 §2.1). */
+  readonly backchannel_logout_supported?: boolean;
+  /** Whether the logout token can carry `sid` (OpenID Connect Back-Channel Logout 1.0 §2.1). */
+  readonly backchannel_logout_session_supported?: boolean;
   readonly claims_parameter_supported?: boolean;
   readonly request_parameter_supported?: boolean;
   readonly request_uri_parameter_supported?: boolean;

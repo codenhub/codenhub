@@ -1,5 +1,6 @@
 import type { ProviderMetadata } from "../shared/types";
 import { beginAuthorization, completeAuthorization } from "./authorization";
+import { backchannelLogout } from "./backchannel-logout";
 import { reportRefusal } from "./diagnostics";
 import { buildMetadata, createJwksDocument, type JwksDocument } from "./discovery";
 import { endSession } from "./end-session";
@@ -90,7 +91,9 @@ async function answerRequest(context: ProviderContext, request: Request): Promis
  * The provider answers the discovery, JWKS, token, userinfo, and revocation endpoints through {@link Provider.handle},
  * and runs the authorization flow through {@link Provider.beginAuthorization} and
  * {@link Provider.completeAuthorization}. The authorization and end-session endpoints are not routed, so the app
- * serves them and calls `beginAuthorization` and {@link Provider.endSession} from its own handlers. Options are
+ * serves them and calls `beginAuthorization` and {@link Provider.endSession} from its own handlers. The provider
+ * makes no outbound request: {@link Provider.backchannelLogout} builds a client's logout request for the app to
+ * send. Options are
  * validated here, once, so a misconfiguration fails at startup instead of on the first request. Key pairs are checked
  * for shape, algorithm and `kid` only: not that the two halves match, nor that the keys come from this package's
  * `@codenhub/jwt` copy.
@@ -135,5 +138,6 @@ export function createProvider(options: ProviderOptions): Provider {
     completeAuthorization: (interactionId: string, outcome: AuthorizationGrant | AuthorizationDenial) =>
       completeAuthorization(resolved, interactionId, outcome),
     endSession: (request: Request) => endSession(resolved, request),
+    backchannelLogout: (request: Parameters<Provider["backchannelLogout"]>[0]) => backchannelLogout(resolved, request),
   });
 }

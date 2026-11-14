@@ -118,6 +118,20 @@ describe("findClient", () => {
     expect((await store.findClient("client-a"))?.ttl).toEqual(ttl);
   });
 
+  it("should return a client's backchannelLogout without sharing the object the caller registered", async () => {
+    const client = makeClient({ backchannelLogout: { uri: "https://app.example/logout", sessionRequired: true } });
+    const store = createMemoryStore({ clients: [client] });
+
+    (client.backchannelLogout as { uri: string }).uri = "https://evil.example/logout";
+    const found = (await store.findClient("client-a")) as ClientRecord;
+    (found.backchannelLogout as { uri: string }).uri = "https://evil.example/other";
+
+    expect((await store.findClient("client-a"))?.backchannelLogout).toEqual({
+      uri: "https://app.example/logout",
+      sessionRequired: true,
+    });
+  });
+
   it.each([
     ["NaN", Number.NaN],
     ["null", null],

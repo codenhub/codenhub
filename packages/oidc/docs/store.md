@@ -136,6 +136,7 @@ interface ClientRecord {
   ttl?: ClientTtl; // this client's own code, access token, ID token and refresh token lifetimes
   idTokenSigningAlg?: AsymmetricAlgorithm; // the algorithm of the signing key for this client's ID tokens
   requirePkce?: boolean; // true (the default) requires a PKCE challenge; false only for a confidential client
+  backchannelLogout?: { uri: string; sessionRequired?: boolean }; // where the app sends this client's logout token
   auth: ClientAuthentication;
 }
 ```
@@ -158,6 +159,8 @@ A record that breaks these rules is a bug in the store, and the provider throws 
 `requirePkce` defaults to `true`: the authorization request must carry an S256 challenge. A confidential client may set it to `false` to leave the challenge out, as long as it sends a `nonce` and checks it in the ID token; a record that sets it to `false` for `auth.method` `none` is a bug in the store, and the provider throws `TypeError` for it. A challenge that is sent is always enforced. [Clients that send no PKCE](provider.md#clients-that-send-no-pkce) has the rules, and what it means for the interaction and code records, whose `codeChallenge` is then absent. A store must keep a record without `codeChallenge` as one without it, and not return `null` or an empty string for it, which the conformance cases check.
 
 `idTokenSigningAlg` picks which of the provider's signing keys signs this client's ID tokens: the first one with that algorithm. Without it, the provider uses the first `RS256` key when it has one, and otherwise its first key; [Signing keys](provider.md#signing-keys) gives the reason. A record that names an algorithm no signing key has is a bug, and the provider throws `TypeError` for it.
+
+`backchannelLogout` registers the client for [back-channel logout](provider.md#back-channel-logout). Its `uri` is the client's `backchannel_logout_uri`, and the app's server calls it, so it must be an absolute `https` URL of visible ASCII, without a fragment or credentials: unlike a redirect URI, a custom scheme or plain `http` is refused. `sessionRequired` is the client's `backchannel_logout_session_required` and defaults to `false`; when it is `true`, the app must give a `sessionId` when it asks for a logout request for the client. A record whose `backchannelLogout` is not an object of that shape, or whose `sessionRequired` is not a boolean, is a bug in the store, and the provider throws `TypeError` for it. Absent, the client has no back-channel logout and the provider has nothing to send it.
 
 The `key` and `keys` values are `@codenhub/jwt` objects, not JSON. A plain object is not one of them, and `@codenhub/jwt` refuses it with `TypeError` when the provider uses it. A store that persists these records therefore keeps the key as a JWK and rebuilds the object on each read: `exportSecretJwk` or `exportPublicJwk` writes the key, and `importSecretKey` or `importKeySet` reads it back. A secret can be exported only when it was created or imported as extractable. A store may also keep the key objects in memory, as the in-memory store does.
 

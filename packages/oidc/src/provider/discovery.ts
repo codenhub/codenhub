@@ -88,6 +88,8 @@ export function buildMetadata(options: ResolvedOptions): ProviderMetadata {
     revocation_endpoint_auth_methods_supported: TOKEN_ENDPOINT_AUTH_METHODS,
     revocation_endpoint_auth_signing_alg_values_supported: TOKEN_ENDPOINT_AUTH_SIGNING_ALGS,
     authorization_response_iss_parameter_supported: true,
+    backchannel_logout_supported: true,
+    backchannel_logout_session_supported: true,
     claims_parameter_supported: false,
     request_parameter_supported: false,
     request_uri_parameter_supported: false,

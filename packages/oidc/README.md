@@ -46,7 +46,7 @@ To issue tokens as an OpenID Provider instead, see [Provider](docs/provider.md).
 ## Documentation
 
 - [Documentation overview](docs/index.md): what the code flow is, which entrypoint to import, the result shape, and a full sign-in walkthrough.
-- [Client](docs/client.md): discovery, every `createClient` option, starting and finishing a sign-in, refresh, userinfo, revocation, ending the session at the provider, client credentials, and client authentication.
+- [Client](docs/client.md): discovery, every `createClient` option, starting and finishing a sign-in, refresh, userinfo, revocation, ending the session at the provider, receiving back-channel logout, client credentials, and client authentication.
 - [Provider](docs/provider.md): every `createProvider` option, routing, the authorization step, the token endpoint, userinfo, revocation, ending sessions, JWT access tokens, and the published metadata.
 - [Store](docs/store.md): the persistence contract the provider needs, the atomicity it requires, the in-memory reference for tests, and the conformance suite for store adapters.
 - [Hostile input](docs/security.md): what each kind of hostile input gets from each side, every limit, and what the package does not defend.
@@ -65,11 +65,12 @@ To issue tokens as an OpenID Provider instead, see [Provider](docs/provider.md).
 - **Authorization code flow for users, client credentials for services.** No implicit, hybrid or resource owner password flow. PKCE with `S256` is required of every client unless a confidential client is registered with `requirePkce: false`, whose authorization request must then carry a `nonce` instead; `plain` is always refused.
 - **Opaque access tokens by default.** An access token is a random value the store looks up by digest. The provider can issue JWT access tokens (RFC 9068) instead, with `accessToken: { format: "jwt", audience }`. See [Provider](docs/provider.md#jwt-access-tokens).
 - **Logout and service tokens.** `client.endSessionUrl` builds the URL the browser is redirected to, to end the session at the provider (RP-initiated logout), and `client.clientCredentials` gets a token for a client with no user. See [Client](docs/client.md#ending-the-session-at-the-provider) and [Client](docs/client.md#client-credentials).
+- **Back-channel logout.** `provider.backchannelLogout` builds the logout request for one client, a signed `logout+jwt` the app sends with `fetch` when its user signs out. The provider keeps no sessions and makes no outbound request. On the receiving side, `client.readBackchannelLogout` reads and verifies that request and says which user or session ended; refusing a replayed `jti` is the app's. See [Provider](docs/provider.md#back-channel-logout) and [Client](docs/client.md#receiving-back-channel-logout).
 - **Exact redirect matching.** A redirect URI must match a registered one byte for byte. Wildcards, prefixes, normalization and loopback redirects with variable ports are not supported.
 - **The app keeps login, consent and sessions.** The provider decides what a request may ask for and checks the app's outcome against it. It does not decide who the user is, and it does not render pages.
 - **Token revocation.** A client revokes a token with `client.revoke` (RFC 7009), and the provider serves the revocation endpoint. The provider revokes the whole sign-in with either kind of token. A client presenting another client's access token is refused with `invalid_request`, and that token is left alone. See [Client](docs/client.md#revoking-tokens) and [Provider](docs/provider.md).
 - **Client assertion `jti` replay.** A client assertion's `jti` is required but not remembered, so an assertion can be replayed within its capped lifetime, which is five minutes plus the clock tolerance. This is by design: a replayed assertion alone yields nothing, since a code also needs its PKCE verifier and a refresh token is single-use. See [Hostile input](docs/security.md).
-- **Not yet:** certification by the OpenID conformance suite, the 0.1 criterion. Not planned: loopback redirect URIs with variable ports, PAR, pairwise subject identifiers, and front-channel and back-channel logout.
+- **Not yet:** certification by the OpenID conformance suite, the 0.1 criterion. Not planned: loopback redirect URIs with variable ports, PAR, pairwise subject identifiers, and front-channel logout and session management.
 
 ## License
 

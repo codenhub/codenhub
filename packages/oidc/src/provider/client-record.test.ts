@@ -157,6 +157,60 @@ describe("checkClientRecord", () => {
     });
   });
 
+  describe("backchannelLogout", () => {
+    const URI = "https://app.example/backchannel-logout";
+
+    it.each([
+      ["a uri alone", { uri: URI }],
+      ["a uri that needs the session", { uri: URI, sessionRequired: true }],
+      ["a uri that does not need it", { uri: URI, sessionRequired: false }],
+      ["a uri with a port and a query", { uri: "https://app.example:8443/logout?tenant=a" }],
+    ])("shouldAccept%s", (_name, backchannelLogout) => {
+      expect(checkClientRecord(valid({ backchannelLogout }), "client-a", KEYS).backchannelLogout).toEqual(
+        backchannelLogout,
+      );
+    });
+
+    it("shouldAcceptARecordWithoutIt", () => {
+      expect(checkClientRecord(valid(), "client-a", KEYS)).not.toHaveProperty("backchannelLogout");
+    });
+
+    it.each([
+      ["a string", "https://app.example/logout"],
+      ["null", null],
+      ["an array", [URI]],
+      ["a number", 1],
+      ["an object without a uri", {}],
+      ["an empty uri", { uri: "" }],
+      ["a uri that is not a string", { uri: 42 }],
+      ["a relative uri", { uri: "/logout" }],
+      ["a plain http uri", { uri: "http://app.example/logout" }],
+      ["a custom scheme uri", { uri: "com.example.app:/logout" }],
+      ["a uri with a fragment", { uri: `${URI}#x` }],
+      ["a uri with an empty fragment", { uri: `${URI}#` }],
+      ["a uri with credentials", { uri: "https://user:pass@app.example/logout" }],
+      ["a uri with a space", { uri: "https://app.example/log out" }],
+      ["a uri with a backslash", { uri: "https://app.example\\evil.example/logout" }],
+      ["a uri with a non-ASCII character", { uri: "https://app.example/saída" }],
+      ["a sessionRequired string", { uri: URI, sessionRequired: "true" }],
+      ["a sessionRequired null", { uri: URI, sessionRequired: null }],
+      ["a sessionRequired number", { uri: URI, sessionRequired: 1 }],
+    ])("shouldReject%s", (_name, backchannelLogout) => {
+      const attempt = () => checkClientRecord(valid({ backchannelLogout }), "client-a", KEYS);
+
+      expect(attempt).toThrow(TypeError);
+      expect(attempt).toThrow("backchannelLogout");
+    });
+
+    it("shouldNotEchoTheUriInTheError", () => {
+      const attempt = () =>
+        checkClientRecord(valid({ backchannelLogout: { uri: "http://secret.example/logout" } }), "client-a", KEYS);
+
+      expect(attempt).toThrow(TypeError);
+      expect(attempt).not.toThrow("secret.example");
+    });
+  });
+
   describe("idTokenSigningAlg", () => {
     it.each(["ES256", "RS256"])("shouldAcceptAnAlgorithmASigningKeyHas_%s", (idTokenSigningAlg) => {
       expect(checkClientRecord(valid({ idTokenSigningAlg }), "client-a", KEYS).idTokenSigningAlg).toBe(
