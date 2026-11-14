@@ -46,9 +46,10 @@ Run these from the repository root. They create resources in your Cloudflare acc
 
 1. Build the provider, which the Worker bundles from `packages/oidc/dist`: `pnpm build oidc`.
 2. Pick the public URL. A `workers.dev` URL works, and it is printed by the first deploy. Put it in `ISSUER` and choose a `SUITE_ALIAS` in `apps/oidc-conformance/wrangler.jsonc`. If you do not know the URL yet, deploy once, then edit `ISSUER` and deploy again.
-3. Generate four secrets and set them. Each one is 256 random bits; keep them out of the repository, shell history shared with others, and logs:
+3. Generate four secrets, one per client, and set them. Each one is 256 random bits; keep them out of the repository, shell history shared with others, and logs. Run the generator once before each `wrangler secret put` and paste its output at that prompt, so no two clients share a secret; the plan configurations need the same values later:
 
 ```sh
+# Once per secret below: a new value each time.
 node -e "console.log(require('node:crypto').randomBytes(32).toString('base64url'))"
 cd apps/oidc-conformance
 pnpm exec wrangler secret put CLIENT_SECRET_1
