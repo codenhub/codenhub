@@ -287,6 +287,24 @@ describe("createIdTokenValidator", () => {
       expect(result).toMatchObject({ ok: true, value: { amr: ["pwd", "mfa"], acr: "urn:x" } });
     });
 
+    it("passes a string sid through", async () => {
+      const result = await validator()(await tokenWith({ sid: "session-42" }), expected);
+
+      expect(result).toMatchObject({ ok: true, value: { sid: "session-42" } });
+    });
+
+    it("refuses a sid that is not a string", async () => {
+      const result = await validator()(await tokenWith({ sid: 42 }), expected);
+
+      expect(issuesOf(result)).toEqual([
+        {
+          code: "invalid_id_token",
+          path: ["id_token", "payload", "sid"],
+          params: { jwtCode: "invalid_claim" },
+        },
+      ]);
+    });
+
     it("refuses a token with a wrong nonce", async () => {
       const result = await validator()(await tokenWith({ nonce: "nonce-2" }), expected);
 

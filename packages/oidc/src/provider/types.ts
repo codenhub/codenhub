@@ -233,6 +233,8 @@ export type Consumption<TRecord> =
  * lifetime, since an access token issued by the last refresh outlives its family. Lifetimes can differ by client
  * ({@link ClientRecord.ttl}), so keep the marker for the longest refresh token lifetime of any client plus the
  * longest access token lifetime of any client, the provider's own `ttl` counting for a client that sets none.
+ * Count a lifetime since lowered too, until the tokens issued under it have expired: a family keeps the expiry
+ * it got at the code exchange, and an access token keeps its own.
  */
 export interface OidcStore {
   /** Looks up a registered client. `undefined` when none has this identifier. */

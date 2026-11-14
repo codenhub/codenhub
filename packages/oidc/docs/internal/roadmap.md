@@ -25,7 +25,7 @@ The SSO application is the package's first real consumer, and a review of its sc
 
 Grouped by the step of the SSO application's roadmap that first needs them.
 
-**Before the store adapters:** done. The session identifier on a grant, several secrets per client, token lifetimes per client and `acr_values` on the interaction are scope.md decisions 47 to 50.
+**Before the store adapters:** done. The session identifier on a grant, several secrets per client, token lifetimes per client and `acr_values`, `claims_locales` and `display` on the interaction are scope.md decisions 47 to 50.
 
 **Before the OIDC endpoints:** the ID token signing algorithm per client is done (scope.md decision 51).
 
