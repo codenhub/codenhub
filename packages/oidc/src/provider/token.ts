@@ -211,16 +211,8 @@ async function issueFromCode(options: ResolvedOptions, client: ClientRecord, rec
     ...optionalSessionId(record),
   };
   const accessToken = await issueAccessToken(options, ttl, grant, record.scopes, now);
-  let refreshToken: string | undefined;
-  if (record.scopes.includes("offline_access")) {
-    refreshToken = randomToken();
-    await options.store.saveRefreshToken(await digestKey(refreshToken), {
-      ...grantRecord(grant),
-      scopes: record.scopes,
-      // Counted from this exchange, and never extended by rotation.
-      expiresAt: now + ttl.refreshToken,
-    });
-  }
+  // Signed before the refresh token is saved, as at a refresh: the claims callback may fail, and a failure after the
+  // save would leave a token the client never receives.
   const idToken = await issueIdToken(
     options,
     client,
@@ -231,6 +223,16 @@ async function issueFromCode(options: ResolvedOptions, client: ClientRecord, rec
     now,
     record.nonce === undefined ? {} : { nonce: record.nonce },
   );
+  let refreshToken: string | undefined;
+  if (record.scopes.includes("offline_access")) {
+    refreshToken = randomToken();
+    await options.store.saveRefreshToken(await digestKey(refreshToken), {
+      ...grantRecord(grant),
+      scopes: record.scopes,
+      // Counted from this exchange, and never extended by rotation.
+      expiresAt: now + ttl.refreshToken,
+    });
+  }
   return tokenResponse(ttl, { accessToken, scopes: record.scopes, idToken, refreshToken });
 }
 

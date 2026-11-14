@@ -1127,6 +1127,30 @@ describe("handleToken: scope claims in the ID token", () => {
     await expect(handleToken(options, tokenRequest(codeBody(code)))).rejects.toThrow("directory down");
   });
 
+  it("saves no refresh token at a code exchange whose claims callback fails", async () => {
+    const { options, store } = await setup({
+      clients: WITH_CLAIMS,
+      claims: () => {
+        throw new Error("directory down");
+      },
+    });
+    let saved = 0;
+    const counting: ResolvedOptions = {
+      ...options,
+      store: {
+        ...store,
+        saveRefreshToken: async (key, record) => {
+          saved += 1;
+          await store.saveRefreshToken(key, record);
+        },
+      },
+    };
+    const code = await saveCode(store);
+
+    await expect(handleToken(counting, tokenRequest(codeBody(code)))).rejects.toThrow("directory down");
+    expect(saved).toBe(0);
+  });
+
   it("leaves userinfo as it was", async () => {
     const { options, store } = await setup({ clients: WITH_CLAIMS, claims: profileClaims });
 
