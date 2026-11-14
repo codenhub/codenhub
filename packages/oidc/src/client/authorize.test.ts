@@ -393,6 +393,7 @@ describe("buildAuthorization", () => {
     ["a URI with a space", ["https://api.example/a b"]],
     ["a URI with a non-ASCII character", ["https://api.example/caf\u00e9"]],
     ["a special scheme without //", ["https:api.example"]],
+    ["a special scheme with an empty authority", ["https:///api.example"]],
     ["not a string", [42]],
     ["more entries than the provider reads", Array.from({ length: 21 }, (_, index) => `https://api${index}.example`)],
   ])("throws TypeError when resource is %s", async (_, resource) => {
