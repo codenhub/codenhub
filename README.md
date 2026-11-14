@@ -10,6 +10,7 @@ Shared packages, apps, and project standards for and by [coden.agency](https://c
 
 - `apps/demo`: Deployed app aggregating every package's demo/ output into one surface.
 - `apps/docs`: Documentation site that publishes every package README, public docs, and assets.
+- `apps/oidc-conformance`: Cloudflare Worker that hosts @codenhub/oidc for the OpenID Foundation conformance suite.
 - `apps/www`: The CodenHub site: landing page, package list and package pages, and search across the docs.
 
 ### Libraries & Primitives

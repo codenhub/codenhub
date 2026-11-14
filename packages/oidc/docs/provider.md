@@ -61,13 +61,13 @@ export async function createSsoProvider() {
 
 ### Signing keys
 
-Every public key in the list is published at the JWKS endpoint, so a key that is no longer used to sign stays verifiable while tokens it signed are still in circulation. To rotate, put the new pair before the old pair of the same algorithm, and keep the old pair after it until the ID tokens it signed have expired, which is `ttl.idToken` seconds after they were issued. Both keys of a pair carry the same `kid`, and the `kid` appears in each ID token's header, so a relying party can find the right key. [Changing configuration](#changing-configuration) has the order of the rebuilds and how long to keep the old pair.
+Every public key in the list is published at the JWKS endpoint, so a key that is no longer used to sign stays verifiable while tokens it signed are still in circulation. To rotate, put the new pair before the old pair of the same algorithm, and keep the old pair after it until the ID tokens it signed have expired. That is the longest ID token lifetime in force while it signed, the provider's `ttl.idToken` or one a client sets in its own `ttl`, including one since lowered, after the last of them was issued. Both keys of a pair carry the same `kid`, and the `kid` appears in each ID token's header, so a relying party can find the right key. [Changing configuration](#changing-configuration) has the order of the rebuilds and how long to keep the old pair.
 
 Which pair signs a client's ID tokens depends on the client:
 
 - A client record with `idTokenSigningAlg` gets the first pair of that algorithm. A record that names an algorithm none of the pairs has, or a value that is not one of `ES256`, `EdDSA`, `Ed25519`, `RS256` or `PS256`, makes the provider throw `TypeError` when it reads the record.
 - A client without it gets the first `RS256` pair when there is one, and otherwise the first pair. The reason is that [OpenID Connect Core §15.1](https://openid.net/specs/openid-connect-core-1_0.html#Signing) requires every provider to support `RS256`, and [OpenID Connect Registration](https://openid.net/specs/openid-connect-registration-1_0.html#ClientMetadata) makes it the default for a client that registers no algorithm, so a relying party library that never asked for an algorithm expects it. Listing an `RS256` pair therefore changes the algorithm of every ID token of the clients that name none, even when another algorithm comes first in the list.
-- JWT access tokens are signed with the first pair, whatever the client says, and the first pair is the one a resource server verifies them with.
+- JWT access tokens are signed with the first pair, whatever the client says. A resource server verifies each with the published key named by the `kid` in its header, which after a rotation is the retiring pair for a token issued before it.
 
 Signing ID tokens with a key other than the first changes nothing for `id_token_hint` at [logout](#ending-sessions), which accepts a token signed by any published key.
 
@@ -184,7 +184,7 @@ Each value is an absolute `https` URL of visible ASCII (no spaces, control or no
 - `grant_types_supported`: `["authorization_code", "refresh_token", "client_credentials"]`. `subject_types_supported`: `["public"]`.
 - `id_token_signing_alg_values_supported`: the algorithms of every published key.
 - `token_endpoint_auth_methods_supported`: `client_secret_basic`, `client_secret_post`, `client_secret_jwt`, `private_key_jwt` and `none`. `token_endpoint_auth_signing_alg_values_supported`: `ES256`, `EdDSA`, `Ed25519`, `RS256`, `PS256` and `HS256`. The revocation endpoint publishes the same two lists as `revocation_endpoint_auth_methods_supported` and `revocation_endpoint_auth_signing_alg_values_supported`, and `revocation_endpoint` holds its URL.
-- `claims_supported`: the ID token's claims and every claim the scopes release.
+- `claims_supported`: the ID token's claims, `sid` among them, and every claim the scopes release.
 - `code_challenge_methods_supported`: `["S256"]`. `authorization_response_iss_parameter_supported`: `true`.
 - `backchannel_logout_supported` and `backchannel_logout_session_supported`: `true`. See [Back-channel logout](#back-channel-logout).
 - `claims_parameter_supported`, `request_parameter_supported` and `request_uri_parameter_supported`: `false`, because the package does not implement them.
@@ -315,7 +315,7 @@ Keep the whole interaction in the user's server-side session. It is a frozen pla
 
 ### Hints for the login pages
 
-Three more parameters reach the app so it can shape its pages and its login. None of them can fail the request, and the provider checks nothing against them.
+Three more parameters reach the app so it can shape its pages and its login. Their values cannot fail the request, and the provider checks nothing against them; only the parsing every parameter goes through can, such as a duplicate or a value over 4096 characters.
 
 - `acr_values`, as `acrValues`: the authentication context classes the client would like, in its order of preference. The value is a space-separated list, and empty entries from repeated or trailing spaces are dropped. This is a **voluntary request** (OpenID Connect Core §3.1.2.1). The app chooses whether to satisfy one of the values, such as by asking for a second factor, and reports the class it actually used as the `acr` of the grant it passes to `completeAuthorization`. That class may be none of the requested ones, and the client decides whether to accept the ID token. The provider does not compare the two.
 - `claims_locales`, as `claimsLocales`: the languages the client prefers for the claims, as a space-separated list under the same rules. It is a hint for the app's `claims` callback, and the provider does not use it.
@@ -347,7 +347,7 @@ The rules for a client with `requirePkce: false`:
 
 - A `code_challenge` that is sent is always checked, and enforced as for any client: only `S256`, and the token request must carry the matching `code_verifier`. Sending a challenge is never worse than leaving it out.
 - A request with no `code_challenge` must carry a `nonce`. Without one it is redirected to the client with `invalid_request`, path `["nonce"]`, like any other missing parameter. A `code_challenge_method` without a `code_challenge` is `invalid_request` for every client.
-- The interaction and the code then hold no `codeChallenge`. At the token endpoint, a code issued with a challenge needs its verifier, as for every client. A code issued without one refuses any request that carries a `code_verifier`, with `invalid_grant` and the diagnostic reason `code_verifier_unexpected`. That is the defense against a downgrade (RFC 9700 §2.1.1): an attacker who holds a code that was bound to nothing cannot pretend it was bound to a verifier of their own.
+- The interaction and the code then hold no `codeChallenge`. At the token endpoint, a code issued with a challenge needs its verifier, as for every client. A code issued without one refuses any request that carries a `code_verifier`, with `invalid_grant` and the diagnostic reason `code_verifier_unexpected`, which spends the code. A verifier that is not the shape RFC 7636 allows is refused first, as for every client, with `invalid_grant` and `code_verifier_malformed`, before the code is spent. That is the defense against a downgrade (RFC 9700 §2.1.1): an attacker who holds a code that was bound to nothing cannot pretend it was bound to a verifier of their own.
 
 A client with the default `true` behaves as described elsewhere on this page: a missing challenge is `invalid_request`, and a missing verifier at the token endpoint is `invalid_request` before the code is spent.
 
@@ -439,7 +439,7 @@ return result.value.redirect ?? renderSignedOutPage();
 
 ## Back-channel logout
 
-RP-initiated logout ends the session at the provider when a client asks. Back-channel logout is the other direction: when the user signs out of the app, the app tells each client it signed the user into, server to server, so those clients can end their own sessions (OpenID Connect Back-Channel Logout 1.0). Discovery advertises it as `backchannel_logout_supported` and `backchannel_logout_session_supported`.
+With RP-initiated logout, a client asks the app to end the user's session: the provider validates the request, and the app ends its own session. Back-channel logout is the other direction: when the user signs out of the app, the app tells each client it signed the user into, server to server, so those clients can end their own sessions (OpenID Connect Back-Channel Logout 1.0). Discovery advertises it as `backchannel_logout_supported` and `backchannel_logout_session_supported`.
 
 The provider keeps no sessions and makes no outbound request, so the app does the work around it. `provider.backchannelLogout(request)` builds the logout request for one client, and the app sends it with `fetch`:
 
@@ -484,7 +484,7 @@ The app owns delivery: the provider sets no timeout, retries nothing and reads n
 
 - Send it with `fetch`. A client answers `200` when it ended the session, or `400` with an error (Back-Channel Logout 1.0 §2.8). Treat any `2xx` as success and anything else as a failure, and do not read the body, which is not part of the contract.
 - Use a short timeout, a few seconds. A client that is down or slow must not hold up the user's sign-out, so send to all clients at once and do not make the user wait for the slowest.
-- Do not follow redirects. The token is a bearer credential for that client, and the client's registered `uri` is the only place it should go. A `3xx` answer is a failure. The request the provider builds has `redirect: "manual"`, so `fetch` returns the `3xx` instead of following it.
+- Do not follow redirects. The token is a bearer credential for that client, and the client's registered `uri` is the only place it should go. A `3xx` answer is a failure. The request the provider builds has `redirect: "manual"`, so `fetch` does not follow it: Node.js and workerd return the `3xx` response itself, and a browser's `fetch` returns an opaque-redirect response with status `0` (Fetch standard). Either way `response.ok` is `false`.
 - A `Request` body can be read once, so to retry, call `backchannelLogout` again. The new token has a new `jti` and a fresh `exp`, and a client that remembers `jti` values, as the specification asks it to, accepts it.
 - The logout token is not a secret you log. Keep it out of logs and error reports, and log the client and the status.
 
@@ -505,7 +505,7 @@ async function signOut(session: { readonly id: string; readonly subject: string 
   const clientIds = await clientsSignedInDuring(session.id);
   await endAppSession(session.id);
 
-  await Promise.allSettled(
+  const results = await Promise.allSettled(
     clientIds.map(async (clientId) => {
       const request = await provider.backchannelLogout({
         clientId,
@@ -525,10 +525,15 @@ async function signOut(session: { readonly id: string; readonly subject: string 
       }
     }),
   );
+  for (const result of results) {
+    if (result.status === "rejected") {
+      throw result.reason; // a TypeError from backchannelLogout, or the store's own error: a bug, not a failure to log
+    }
+  }
 }
 ```
 
-`Promise.allSettled` keeps one failing client from stopping the others. The `TypeError` cases above are not caught here, since they are bugs to fix and not failures to log, but `allSettled` still lets the remaining clients go.
+`Promise.allSettled` keeps one failing client from stopping the others. A client that is down, slow or answers with an error is a failure to log, so the `fetch` is caught. A rejection of `backchannelLogout` itself, such as the `TypeError` cases above or a store that fails, is not: it is rethrown once every other client has had its request, so it reaches the app's error handling instead of being dropped with the settled results.
 
 ### What the app must track
 
@@ -598,11 +603,11 @@ A request for `refresh_token` must carry `refresh_token`, or it is `invalid_requ
 2. The token is spent atomically with `consumeRefreshToken`. An unknown or revoked token is `invalid_grant`, and it is not spent.
 3. A token that was already spent is a **reuse**. The provider revokes the family, so the access tokens and refresh tokens issued from that sign-in stop working, and returns `invalid_grant`.
 4. Otherwise the token is spent, and it must be unexpired and issued to this client. Otherwise `invalid_grant`.
-5. The `scope` parameter, when given, must be a subset of the family's scopes. Otherwise `invalid_scope`. When it is omitted, the access token has every scope the family holds. Each `resource`, when given, must be one the family covers. Otherwise `invalid_target`. When it is omitted, the access token is for every resource the family covers.
+5. The `scope` parameter, when given, must be a subset of the family's scopes. Otherwise `invalid_scope`. When it is omitted, the access token has every scope the family holds that the client's record still lists. A scope removed from the record stops being issued on the client's next refresh, and listing it again restores it on the one after, since the family keeps its scopes. The record of a client that refreshes must list `openid`, and one that does not is a `TypeError` read before the token is spent, so narrowing never drops `openid`. Removing `offline_access` from the record drops it from the issued `scope` but still rotates the refresh token, as a request that leaves it out does; to stop the family, revoke its grant or refuse it in `onRefresh`. Each `resource`, when given, must be one the family covers. Otherwise `invalid_target`. When it is omitted, the access token is for every resource the family covers.
 6. When the app set [`onRefresh`](#re-checking-a-refresh), it is asked. A `false` answer is `invalid_grant`, and it revokes the family.
 7. A new access token is issued, and a new refresh token that replaces the spent one. The new refresh token keeps the family's original scopes, resources and expiry, so rotation neither widens the family nor extends it. An ID token is issued too, without a nonce, and with the `sid` the family carries.
 
-The response has the same shape as the code exchange, with `scope` set to the scopes of the new access token.
+The response has the same shape as the code exchange, with `scope` set to the scopes of the new access token, so a client sees a narrowed scope (RFC 6749 §5.1).
 
 ### Re-checking a refresh
 
@@ -624,7 +629,7 @@ export const provider = createProvider({
 The argument is a frozen `RefreshCheck`:
 
 - `subject` and `clientId`: the user the family was issued to, and the client that is refreshing.
-- `scopes`: what this refresh will issue, the request's `scope` or the family's scopes when it sent none.
+- `scopes`: what this refresh will issue, the request's `scope` or, when it sent none, the family's scopes that the client's record still lists.
 - `grantId`: the family's grant.
 - `sessionId`: the app's session the grant was issued during, absent when `completeAuthorization` was given none. Checking it also covers the app's session revocation.
 
@@ -637,7 +642,7 @@ The answer decides what happens:
 
 The callback is not called for a code exchange, which is the sign-in itself, nor for a request refused before this step. An access token already issued stays usable until it expires when it is a JWT, as [JWT access tokens](#jwt-access-tokens) says.
 
-A refresh token that is spent by a request for a scope its family does not hold is gone: the provider does not issue a new one, and the client must sign the user in again. The same is true of a refresh token that a different client presents, which is refused after it has been spent. Both checks need the token's record, and the store reads it only by spending it. A scope the provider or the client does not know is refused before the token is spent.
+A refresh token that is spent by a request for a scope its family does not hold is gone: the provider does not issue a new one, and the client must sign the user in again. The same is true of a refresh token that a different client presents, which is refused after it has been spent. Both checks need the token's record, and the store reads it only by spending it. A `scope` that names a scope the client's record does not list or that is not a scope token, or that leaves out `openid`, is refused before the token is spent, whether or not the provider's `scopes` option defines it.
 
 ### Client credentials
 
@@ -862,7 +867,7 @@ A confidential client's secret is generated and stored by the provider in a form
 2. Roll the new secret out to the client.
 3. Remove the old hash once the client no longer sends the old secret.
 
-The list must be non-empty and every entry a non-empty string, or the provider throws `TypeError` when it reads the record. The provider compares the presented secret with every entry, and does not stop at the first match, so the time a request takes does not show which entry matched or how many there are.
+The list must be non-empty and every entry a non-empty string, or the provider throws `TypeError` when it reads the record. The provider compares the presented secret with every entry, and does not stop at the first match, so the time a request takes does not show which entry matched. It does grow with the number of entries.
 
 A single SHA-256 is enough here because the secret is 256 bits of randomness and cannot be guessed. It is not enough for a password a person chose, so never use one as a client secret: the hash would then be cheap to attack offline. `client_secret_jwt` is the exception. Its HMAC key must be the secret itself, so the record holds the `SecretKey` instead of a digest, and the store must keep that key protected.
 

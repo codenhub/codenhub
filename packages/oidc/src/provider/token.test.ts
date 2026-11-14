@@ -513,6 +513,10 @@ describe("handleToken: refresh_token grant", () => {
     expect(await store.findAccessToken(await digestKey(second.access_token))).toMatchObject({
       sessionId: "session-42",
     });
+    expect(await store.consumeRefreshToken(await digestKey(second.refresh_token ?? ""))).toMatchObject({
+      status: "consumed",
+      record: { sessionId: "session-42" },
+    });
   });
 
   it("keeps sid out of the ID token of a refresh when the family has no session id", async () => {
@@ -698,6 +702,92 @@ describe("handleToken: refresh_token grant", () => {
     const response = await handleToken(options, tokenRequest("grant_type=refresh_token&client_id=public"));
 
     expect(await errorOf(response)).toEqual({ status: 400, body: JSON.stringify({ error: "invalid_request" }) });
+  });
+});
+
+describe("handleToken: a refresh after the client's record changes", () => {
+  const PUBLIC: ClientRecord = {
+    clientId: "public",
+    redirectUris: [REDIRECT_URI],
+    scopes: ["openid", "profile", "email", "offline_access"],
+    auth: { method: "none" },
+    idTokenClaims: true,
+  };
+  const withScopes = (scopes: readonly string[]): ClientRecord => ({ ...PUBLIC, scopes });
+  const profileClaims = (): Record<string, unknown> => ({ name: "Ada Lovelace", email: "ada@example.com" });
+  const refresh = (options: ResolvedOptions, token: string, overrides: Record<string, string> = {}) =>
+    handleToken(options, tokenRequest(refreshBody(token, overrides)));
+
+  it("drops a scope the record no longer lists from the next refresh, and restores it once re-added", async () => {
+    const { options, store } = await setup({ clients: [PUBLIC], claims: profileClaims });
+    const issued = await redeemCode(options, store, { scopes: ["openid", "profile", "email", "offline_access"] });
+
+    store.addClient(withScopes(["openid", "email", "offline_access"]));
+    const narrowed = (await (await refresh(options, issued.refresh_token ?? "")).json()) as TokenBody;
+    store.addClient(PUBLIC);
+    const restored = (await (await refresh(options, narrowed.refresh_token ?? "")).json()) as TokenBody;
+
+    expect(narrowed.scope).toBe("openid email offline_access");
+    expect(await store.findAccessToken(await digestKey(narrowed.access_token))).toMatchObject({
+      scopes: ["openid", "email", "offline_access"],
+    });
+    expect(payloadOf(narrowed.id_token)).toMatchObject({ email: "ada@example.com" });
+    expect(payloadOf(narrowed.id_token)).not.toHaveProperty("name");
+    expect(restored.scope).toBe("openid profile email offline_access");
+    expect(payloadOf(restored.id_token)).toMatchObject({ name: "Ada Lovelace", email: "ada@example.com" });
+  });
+
+  it("tells onRefresh the narrowed scopes", async () => {
+    const seen: unknown[] = [];
+    const { options, store } = await setup({
+      clients: [PUBLIC],
+      onRefresh: ({ scopes }) => {
+        seen.push(scopes);
+        return true;
+      },
+    });
+    const issued = await redeemCode(options, store, { scopes: ["openid", "profile", "offline_access"] });
+
+    store.addClient(withScopes(["openid", "offline_access"]));
+    await refresh(options, issued.refresh_token ?? "");
+
+    expect(seen).toEqual([["openid", "offline_access"]]);
+  });
+
+  it("still refuses an explicit scope the record no longer lists before spending the token", async () => {
+    const { options, store } = await setup({ clients: [PUBLIC] });
+    const issued = await redeemCode(options, store, { scopes: ["openid", "profile", "offline_access"] });
+
+    store.addClient(withScopes(["openid", "offline_access"]));
+    const refused = await refresh(options, issued.refresh_token ?? "", { scope: "openid profile" });
+    const narrowed = await refresh(options, issued.refresh_token ?? "", { scope: "openid" });
+
+    expect(await errorOf(refused)).toEqual({ status: 400, body: JSON.stringify({ error: "invalid_scope" }) });
+    expect(narrowed.status).toBe(200);
+    expect(((await narrowed.json()) as TokenBody).scope).toBe("openid");
+  });
+
+  it("refuses a record without openid before spending the token, so narrowing never drops it", async () => {
+    const { options, store } = await setup({ clients: [PUBLIC] });
+    const issued = await redeemCode(options, store, { scopes: ["openid", "profile", "offline_access"] });
+
+    store.addClient(withScopes(["profile", "offline_access"]));
+    await expect(refresh(options, issued.refresh_token ?? "")).rejects.toThrow(TypeError);
+    store.addClient(PUBLIC);
+    const retried = await refresh(options, issued.refresh_token ?? "");
+
+    expect(retried.status).toBe(200);
+  });
+
+  it("keeps the family's scopes in the next refresh token while it is narrowed", async () => {
+    const { options, store } = await setup({ clients: [PUBLIC] });
+    const issued = await redeemCode(options, store, { scopes: ["openid", "profile", "offline_access"] });
+
+    store.addClient(withScopes(["openid", "offline_access"]));
+    const narrowed = (await (await refresh(options, issued.refresh_token ?? "")).json()) as TokenBody;
+    const consumption = await store.consumeRefreshToken(await digestKey(narrowed.refresh_token ?? ""));
+
+    expect(consumption).toMatchObject({ record: { scopes: ["openid", "profile", "offline_access"] } });
   });
 });
 
@@ -1037,6 +1127,30 @@ describe("handleToken: scope claims in the ID token", () => {
     await expect(handleToken(options, tokenRequest(codeBody(code)))).rejects.toThrow("directory down");
   });
 
+  it("saves no refresh token at a code exchange whose claims callback fails", async () => {
+    const { options, store } = await setup({
+      clients: WITH_CLAIMS,
+      claims: () => {
+        throw new Error("directory down");
+      },
+    });
+    let saved = 0;
+    const counting: ResolvedOptions = {
+      ...options,
+      store: {
+        ...store,
+        saveRefreshToken: async (key, record) => {
+          saved += 1;
+          await store.saveRefreshToken(key, record);
+        },
+      },
+    };
+    const code = await saveCode(store);
+
+    await expect(handleToken(counting, tokenRequest(codeBody(code)))).rejects.toThrow("directory down");
+    expect(saved).toBe(0);
+  });
+
   it("leaves userinfo as it was", async () => {
     const { options, store } = await setup({ clients: WITH_CLAIMS, claims: profileClaims });
 
@@ -1174,6 +1288,18 @@ describe("handleToken: the ID token's signing key", () => {
     const refreshed = (await response.json()) as TokenBody;
 
     expect(headerOf(refreshed.id_token)).toMatchObject({ alg: "RS256", kid: "RS256-1" });
+  });
+
+  it("signs the ID token of a refresh with the key of the algorithm the client names", async () => {
+    const keys = await keysOf("RS256", "ES256", "ES256");
+    const { options, store } = await setup({ keys, clients: withClient({ idTokenSigningAlg: "ES256" }) });
+    const issued = await redeemCode(options, store);
+
+    const response = await handleToken(options, tokenRequest(refreshBody(issued.refresh_token ?? "")));
+    const refreshed = (await response.json()) as TokenBody;
+
+    expect(headerOf(refreshed.id_token)).toMatchObject({ alg: "ES256", kid: "ES256-1" });
+    expect(payloadOf(refreshed.id_token).at_hash).toBe(await computeTokenHash(refreshed.access_token, "ES256"));
   });
 
   it("verifies against the published key of that algorithm", async () => {

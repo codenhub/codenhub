@@ -85,7 +85,10 @@ export interface SetUpOverrides {
   readonly wrapStore?: (store: MemoryStore) => OidcStore;
 }
 
-/** A provider with two registered clients, and everything a test needs to drive it. */
+/**
+ * A provider with three registered clients, {@link PUBLIC_CLIENT}, {@link CONFIDENTIAL_CLIENT} and
+ * {@link LEGACY_CLIENT}, and everything a test needs to drive it.
+ */
 export interface ProviderSetup {
   readonly provider: Provider;
   readonly store: OidcStore;

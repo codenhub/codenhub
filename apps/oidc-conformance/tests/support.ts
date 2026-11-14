@@ -111,5 +111,8 @@ export async function codeFlow(send: Send): Promise<CodeFlow> {
   const info = await send(
     new Request(`${ISSUER}/userinfo`, { headers: { Authorization: `Bearer ${tokens.access_token}` } }),
   );
+  if (info.status !== 200) {
+    throw new Error(`The userinfo endpoint answered ${info.status}`);
+  }
   return { tokens, userinfo: (await info.json()) as Record<string, unknown>, cookie: sessionCookie(authorized) };
 }

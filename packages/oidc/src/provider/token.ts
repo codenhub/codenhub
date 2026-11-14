@@ -8,6 +8,7 @@ import { parseParameters } from "../shared/parameters";
 import { computeCodeChallenge, isCodeVerifier } from "../shared/pkce";
 import { computeTokenHash } from "../shared/token-hash";
 import type { OAuthErrorCode } from "../shared/types";
+import { ownDataValue, releaseClaims } from "./claims";
 import { authenticateClient } from "./client-auth";
 import { areResourcesOfClient, type CheckedClient, isScopeOfClient, lifetimesOf } from "./client-record";
 import { refuse } from "./diagnostics";
@@ -20,7 +21,6 @@ import type {
   ProviderDiagnosticReason,
   RefreshTokenRecord,
 } from "./types";
-import { ownDataValue, releaseClaims } from "./userinfo";
 
 /** Claims the provider sets in every ID token it signs, which a scope's claims may never replace or add. */
 const PROTOCOL_CLAIMS: ReadonlySet<string> = new Set([
@@ -279,16 +279,8 @@ async function issueFromCode(
     ...optionalResources(record),
   };
   const accessToken = await issueAccessToken(options, ttl, grant, record.scopes, resources ?? grant.resources, now);
-  let refreshToken: string | undefined;
-  if (record.scopes.includes("offline_access")) {
-    refreshToken = randomToken();
-    await options.store.saveRefreshToken(await digestKey(refreshToken), {
-      ...grantRecord(grant),
-      scopes: record.scopes,
-      // Counted from this exchange, and never extended by rotation.
-      expiresAt: now + ttl.refreshToken,
-    });
-  }
+  // Signed before the refresh token is saved, as at a refresh: the claims callback may fail, and a failure after the
+  // save would leave a token the client never receives.
   const idToken = await issueIdToken(
     options,
     client,
@@ -299,6 +291,16 @@ async function issueFromCode(
     now,
     record.nonce === undefined ? {} : { nonce: record.nonce },
   );
+  let refreshToken: string | undefined;
+  if (record.scopes.includes("offline_access")) {
+    refreshToken = randomToken();
+    await options.store.saveRefreshToken(await digestKey(refreshToken), {
+      ...grantRecord(grant),
+      scopes: record.scopes,
+      // Counted from this exchange, and never extended by rotation.
+      expiresAt: now + ttl.refreshToken,
+    });
+  }
   return tokenResponse(ttl, { accessToken, scopes: record.scopes, idToken, refreshToken });
 }
 
@@ -342,13 +344,16 @@ async function refreshTokens(
   if (record.clientId !== client.clientId) {
     return refused("invalid_grant", "refresh_token_client_mismatch");
   }
-  const scopes = requested ?? record.scopes;
-  if (!scopes.every((scope) => record.scopes.includes(scope))) {
+  if (requested !== undefined && !requested.every((scope) => record.scopes.includes(scope))) {
     return refused("invalid_scope", "scope_not_granted");
   }
   if (!isWithinGrant(resources, record.resources)) {
     return refused("invalid_target", "resource_not_granted");
   }
+  // Narrowed to what the client's record lists now, so a scope an admin removed stops being issued on the next
+  // refresh, and comes back once it is listed again. A requested scope was already checked against the record.
+  // The record of a client that refreshes lists `openid` (`checkClientRecord`), so narrowing never drops it.
+  const scopes = requested ?? record.scopes.filter((scope) => isScopeOfClient(client, scope));
   if (options.onRefresh !== undefined && !(await isRefreshAllowed(options.onRefresh, record, scopes))) {
     // The family ends with this refusal, not only this request: a user who lost the entitlement must not
     // keep a token that could be refreshed again once the check passes.
@@ -365,7 +370,8 @@ async function refreshTokens(
   const nextRefreshToken = randomToken();
   await options.store.saveRefreshToken(await digestKey(nextRefreshToken), {
     ...grantRecord(record),
-    // The family keeps its original scopes and resources, even when this response narrowed them.
+    // The family keeps its original scopes and resources, even when the request or the client's record narrowed
+    // this response.
     scopes: record.scopes,
     expiresAt: record.expiresAt,
   });
