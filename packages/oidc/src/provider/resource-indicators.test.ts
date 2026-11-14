@@ -13,6 +13,7 @@ import type {
   AuthorizationFailure,
   AuthorizationInteraction,
   Provider,
+  ProviderOptions,
 } from "./types";
 
 const ISSUER = "https://op.example";
@@ -30,17 +31,21 @@ interface Setup {
   readonly secret: string;
 }
 
-async function setup(accessToken: AccessTokenFormat = { format: "opaque" }): Promise<Setup> {
+const WEB_CLIENT = {
+  clientId: "web",
+  redirectUris: [REDIRECT_URI],
+  scopes: ["openid", "profile", "offline_access"],
+  auth: { method: "none" },
+} as const;
+
+async function setup(
+  accessToken: AccessTokenFormat = { format: "opaque" },
+  extra: Partial<ProviderOptions> = {},
+): Promise<Setup> {
   const secret = generateClientSecret();
   const store = createMemoryStore({
     clients: [
-      {
-        clientId: "web",
-        redirectUris: [REDIRECT_URI],
-        scopes: ["openid", "profile", "offline_access"],
-        auth: { method: "none" },
-        resources: [API, DATA],
-      },
+      { ...WEB_CLIENT, resources: [API, DATA] },
       {
         clientId: "plain",
         redirectUris: [REDIRECT_URI],
@@ -64,6 +69,7 @@ async function setup(accessToken: AccessTokenFormat = { format: "opaque" }): Pro
     claims: () => ({}),
     accessToken,
     now: () => NOW_MS,
+    ...extra,
   });
   return { op, store, secret };
 }
@@ -363,5 +369,88 @@ describe("resource indicators in JWT access tokens", () => {
 
     expect(payloadOf(body.access_token ?? "").aud).toBe(DEFAULT_AUDIENCE);
     expect((await recordOf(store, body.access_token ?? ""))?.audience).toEqual([DEFAULT_AUDIENCE]);
+  });
+});
+
+describe("resource narrowing at a refresh that names no resource", () => {
+  /** Signs in for both resources, and returns the first refresh token of the family. */
+  async function family(op: Provider): Promise<string> {
+    const code = await codeFor(op, "web", [API, DATA]);
+    return (await tokens(op, tokenRequest(codeBody(code)))).refresh_token ?? "";
+  }
+
+  it("leaves out a resource removed from the client's list, and restores it once it is listed again", async () => {
+    const { op, store } = await setup();
+    const first = await family(op);
+
+    store.addClient({ ...WEB_CLIENT, resources: [API] });
+    const narrowed = await tokens(op, tokenRequest(refreshBody(first)));
+    store.addClient({ ...WEB_CLIENT, resources: [DATA, API] });
+    const restored = await tokens(op, tokenRequest(refreshBody(narrowed.refresh_token ?? "")));
+
+    expect((await recordOf(store, narrowed.access_token ?? ""))?.audience).toEqual([API]);
+    expect((await recordOf(store, restored.access_token ?? ""))?.audience).toEqual([API, DATA]);
+  });
+
+  it("gives accessTokenClaims and the JWT the narrowed audience", async () => {
+    const seen: unknown[] = [];
+    const { op, store } = await setup(
+      { format: "jwt", audience: DEFAULT_AUDIENCE },
+      {
+        accessTokenClaims: (context) => {
+          seen.push(context.audience);
+          return {};
+        },
+      },
+    );
+    const first = await family(op);
+    seen.length = 0;
+
+    store.addClient({ ...WEB_CLIENT, resources: [DATA] });
+    const body = await tokens(op, tokenRequest(refreshBody(first)));
+
+    expect(payloadOf(body.access_token ?? "").aud).toBe(DATA);
+    expect(seen).toEqual([[DATA]]);
+  });
+
+  it("falls back as a grant without resources does when the client lists none of the family's", async () => {
+    const opaque = await setup();
+    const jwt = await setup({ format: "jwt", audience: DEFAULT_AUDIENCE });
+    const opaqueFirst = await family(opaque.op);
+    const jwtFirst = await family(jwt.op);
+
+    opaque.store.addClient({ ...WEB_CLIENT, resources: ["https://other.example"] });
+    jwt.store.addClient({ ...WEB_CLIENT });
+    const opaqueBody = await tokens(opaque.op, tokenRequest(refreshBody(opaqueFirst)));
+    const jwtBody = await tokens(jwt.op, tokenRequest(refreshBody(jwtFirst)));
+
+    expect((await recordOf(opaque.store, opaqueBody.access_token ?? ""))?.audience).toBeUndefined();
+    expect(payloadOf(jwtBody.access_token ?? "").aud).toBe(DEFAULT_AUDIENCE);
+    expect((await recordOf(jwt.store, jwtBody.access_token ?? ""))?.audience).toEqual([DEFAULT_AUDIENCE]);
+  });
+
+  it("keeps the family's resources, so a refresh may still name one the client lists", async () => {
+    const { op, store } = await setup();
+    const first = await family(op);
+
+    store.addClient({ ...WEB_CLIENT });
+    const emptied = await tokens(op, tokenRequest(refreshBody(first)));
+    store.addClient({ ...WEB_CLIENT, resources: [API, DATA] });
+    const named = await tokens(op, tokenRequest(refreshBody(emptied.refresh_token ?? "", [DATA])));
+
+    expect((await recordOf(store, named.access_token ?? ""))?.audience).toEqual([DATA]);
+  });
+
+  it("refuses a named resource removed from the client's list without spending the token", async () => {
+    const { op, store } = await setup();
+    const first = await family(op);
+
+    store.addClient({ ...WEB_CLIENT, resources: [API] });
+
+    expect(await errorOf(op, tokenRequest(refreshBody(first, [DATA])))).toEqual({
+      status: 400,
+      error: "invalid_target",
+    });
+    await tokens(op, tokenRequest(refreshBody(first)));
   });
 });

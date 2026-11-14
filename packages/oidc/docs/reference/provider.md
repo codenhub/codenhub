@@ -154,7 +154,7 @@ What an access token stands for.
 readonly audience?: readonly string[];
 ```
 
-The resource servers the token is for: the token request's `resource` values, else the grant's, else, for a JWT access token, the `accessToken.audience` option. Absent for an opaque token issued for no resource.
+The resource servers the token is for: the token request's `resource` values, else the grant's (at a refresh, those the client's record still lists), else, for a JWT access token, the `accessToken.audience` option. Absent for an opaque token issued for no resource.
 
 #### AccessTokenRecord › clientId
 
