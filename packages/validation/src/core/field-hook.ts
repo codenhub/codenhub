@@ -2,19 +2,20 @@
  * How an object runs the checks of `checkFields` when a property failed, without carrying the code for it:
  * the check brings what builds it, and an object given no such check reaches none of it.
  */
+import type { FAIL, Pending } from "./run";
 import type { AsyncCheck, Message } from "./types";
 
 /**
  * Ends an object that reported issues since `from`: runs the checks whose properties are not among
- * `failed` on `output`, which holds the properties that passed, and gives `FAIL`, or a result that waits
- * for it.
+ * `failed` on `output`, which holds the properties that passed and may hold a placeholder for one that
+ * waited and failed, which those checks do not read, and gives `FAIL`, or a result that waits for it.
  */
 export type FieldFailure = (
   failed: readonly string[] | undefined,
   output: Record<string, unknown>,
   message: Message | undefined,
   from: number,
-) => unknown;
+) => typeof FAIL | Pending;
 
 /** Builds the {@link FieldFailure} of an object from its checks and the keys of its shape. */
 export type FieldFailureOf = (

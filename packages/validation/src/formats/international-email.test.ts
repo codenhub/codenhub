@@ -75,7 +75,7 @@ describe("internationalEmail", () => {
 
   it("should reject a domain written with more than 759 characters, and read a shorter one the parser shortens", () => {
     // A variation selector, which the parser drops from a host, so the domain read is `example.com`.
-    const padded = (marks: number): string => `e${"️".repeat(marks)}xample.com`;
+    const padded = (marks: number): string => `e${"\ufe0f".repeat(marks)}xample.com`;
     expect(padded(748)).toHaveLength(759);
     expect(valueOf(internationalEmail()(`a@${padded(748)}`))).toBe("a@example.com");
     expect(internationalEmail()(`a@${padded(749)}`).ok).toBe(false);
