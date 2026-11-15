@@ -14,17 +14,22 @@ const COMPLIANT_README = "# Example\n\n## Requirements\n\n- Node.js 24 or newer.
  * Creates a repository root holding a `.nvmrc` and one package with the given files.
  * @param files Package-relative paths mapped to their contents.
  * @param pin Contents of the root `.nvmrc`, or `undefined` to leave it out.
+ * @param floorPin Contents of the root `.node-floor`, or `undefined` to leave it out.
  * @returns Absolute root and package directories.
  */
 async function createFixture(
   files: Readonly<Record<string, string>> = { "README.md": COMPLIANT_README },
   pin: string | undefined = "24.14.1\n",
+  floorPin?: string,
 ): Promise<{ root: string; directory: string }> {
   const root = await mkdtemp(join(tmpdir(), "codenhub-engines-"));
   const directory = join(root, "packages", "example");
   await mkdir(directory, { recursive: true });
   if (pin !== undefined) {
     await writeFile(join(root, ".nvmrc"), pin);
+  }
+  if (floorPin !== undefined) {
+    await writeFile(join(root, ".node-floor"), floorPin);
   }
   await Promise.all(
     Object.entries(files).map(async ([file, contents]) => {
@@ -57,8 +62,13 @@ async function runRules(workspacePackage: WorkspacePackage, root: string): Promi
   return findings.flat();
 }
 
-async function codes(engines: unknown, files?: Readonly<Record<string, string>>, pin?: string): Promise<string[]> {
-  const { directory, root } = await createFixture(files, pin);
+async function codes(
+  engines: unknown,
+  files?: Readonly<Record<string, string>>,
+  pin?: string,
+  floorPin?: string,
+): Promise<string[]> {
+  const { directory, root } = await createFixture(files, pin, floorPin);
   return (await runRules(createPackage(directory, engines), root)).map(({ code }) => code);
 }
 
@@ -104,6 +114,41 @@ describe("engines rules", () => {
     const files = { "README.md": "- Node.js 24.14.1 or newer, for an API 24.0 lacks.\n" };
 
     await expect(codes({ node: ">=24.14.1" }, files)).resolves.toEqual([]);
+  });
+
+  it("shouldAcceptTheFloorJobMajorWhileTheFloorJobRuns", async () => {
+    await expect(codes({ node: ">=24" }, undefined, "26.13.1\n", "24.22.1\n")).resolves.toEqual([]);
+    await expect(
+      codes({ node: ">=26" }, { "README.md": "- Node.js 26 or newer.\n" }, "26.13.1\n", "24.22.1\n"),
+    ).resolves.toEqual([]);
+  });
+
+  it("shouldReportAFloorBelowTheFloorJobMajor", async () => {
+    const files = { "README.md": "- Node.js 22 or newer.\n" };
+
+    await expect(codes({ node: ">=22" }, files, "26.13.1\n", "24.22.1\n")).resolves.toEqual(["engines/node-below-pin"]);
+  });
+
+  it("shouldReportAFloorAboveTheVersionTheFloorJobRuns", async () => {
+    const files = { "README.md": "- Node.js 24.30 or newer.\n" };
+
+    await expect(codes({ node: ">=24.30" }, files, "26.13.1\n", "24.22.1\n")).resolves.toEqual([
+      "engines/node-above-floor",
+    ]);
+  });
+
+  it("shouldReportAnUnreadableFloorPin", async () => {
+    const { directory, root } = await createFixture(undefined, "26.13.1\n", "lts/iron\n");
+    const findings = await runRules(createPackage(directory), root);
+
+    expect(findings.map(({ code, location }) => [code, location])).toEqual([["engines/pin", ".node-floor"]]);
+  });
+
+  it.each(["26.1.0\n", "27.0.0\n"])("shouldReportAFloorPinThatIsNotBelowThePinnedMajor: %j", async (floorPin) => {
+    const { directory, root } = await createFixture(undefined, "26.13.1\n", floorPin);
+    const findings = await runRules(createPackage(directory), root);
+
+    expect(findings.map(({ code, location }) => [code, location])).toEqual([["engines/pin", ".node-floor"]]);
   });
 
   it("shouldReportARangeThatIsNotALowerBoundOnly", async () => {

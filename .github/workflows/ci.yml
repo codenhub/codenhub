@@ -75,6 +75,77 @@ jobs:
           fi
         shell: bash
 
+  # A published package may keep the floor of the previous Node.js line after
+  # `.nvmrc` moves to a new one, as long as a run tests it: this job runs the
+  # unit and integration suites of every public package whose `engines.node`
+  # names the major in `.node-floor`, on that version. The workspace installs on
+  # the pinned version first, because the root `engines` guards the install and
+  # names only that one. `docs/specs/packages-lifecycle.md`, "Node.js support",
+  # owns the rule; delete this job with `.node-floor` once no package declares
+  # that floor, which codenhub/codenhub#553 tracks.
+  floor:
+    name: Node.js floor
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Set up the workspace
+        uses: ./.github/actions/setup
+
+      - name: Assert the base ref is present
+        if: github.event_name == 'pull_request'
+        run: git rev-parse --verify origin/${{ github.base_ref }}
+
+      # As in the verify job: a change to CI runs every package on the floor.
+      - name: Widen the selection for a change to CI
+        if: github.event_name == 'pull_request'
+        run: |
+          if git diff --name-only "origin/${{ github.base_ref }}...HEAD" | grep -q '^\.github/'; then
+            echo "SELECTOR=" >> "$GITHUB_ENV"
+          fi
+
+      # Read from the manifests, so a package that raises its floor leaves the
+      # job in the same change. An empty list skips the run rather than letting a
+      # bare `pnpm test` select the whole workspace.
+      - name: List the packages on the floor
+        id: packages
+        run: |
+          packages="$(pnpm --silent hub list --json | node -e '
+            const { readFileSync } = require("node:fs");
+            const listed = JSON.parse(readFileSync(0, "utf8"));
+            // Parsed as hub check parses it (engines-rules.ts): a "v" prefix and surrounding space are allowed.
+            const floor = Number(/^v?(\d+)/.exec(readFileSync(".node-floor", "utf8").trim())?.[1]);
+            if (!Number.isInteger(floor)) {
+              throw new Error(".node-floor must hold one Node.js version.");
+            }
+            const onFloor = listed.filter(({ isPrivate, location }) => {
+              const range = JSON.parse(readFileSync(`${location}/package.json`, "utf8")).engines?.node;
+              return !isPrivate && Number(/^>=\s*(\d+)/.exec(String(range ?? "").trim())?.[1]) === floor;
+            });
+            console.log(onFloor.map(({ location }) => location).join(" "));
+          ')"
+          echo "Packages on the floor: ${packages:-none}"
+          echo "list=$packages" >> "$GITHUB_OUTPUT"
+
+      - name: Switch to the floor's Node.js
+        if: steps.packages.outputs.list != ''
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .node-floor
+
+      # Prerequisite builds run on the floor too, which is what a consumer's
+      # build-time plugin does. Browser suites stay with the browser jobs: they
+      # test the browsers, not Node.js.
+      - name: Test on the floor
+        if: steps.packages.outputs.list != ''
+        run: |
+          node --version
+          pnpm test ${{ steps.packages.outputs.list }} $SELECTOR
+
   # `@codenhub/styles/tw` is compiled by the consumer's Tailwind, anywhere in
   # the peer range, while the workspace builds and tests with the one version
   # its catalog pins. This job runs the package's integration suite, which

@@ -53,6 +53,7 @@ Every root script here except `prepare` is a thin wrapper around `hub`, and [Too
 | `package.json`        | The root scripts, the tooling as `devDependencies`, and the pinned Node.js and pnpm (`engines`, `packageManager`).                                                                                                                                                        |
 | `pnpm-workspace.yaml` | The workspace globs, the catalog of every dependency version, the supply-chain rules for installs ([below](#dependency-installs)), and `engineStrict`, so an install outside `engines` fails.                                                                             |
 | `.nvmrc`              | The exact Node.js version, read by `nvm` and by CI.                                                                                                                                                                                                                       |
+| `.node-floor`         | The older Node.js version the CI `floor` job runs, present only while a published package keeps that line.                                                                                                                                                                |
 | `.editorconfig`       | Indentation, final newline, LF line endings, and no hard wrap in Markdown.                                                                                                                                                                                                |
 | `.gitattributes`      | LF line endings in the repository and the working tree on every platform, and the binary file types.                                                                                                                                                                      |
 | `.oxfmtrc.json`       | oxfmt: 120 columns, double quotes, semicolons, trailing commas, sorted imports and `package.json` keys. Markdown is excluded; Prettier owns it. Nothing else is listed: oxfmt already skips what `.gitignore` and `.prettierignore` list, and the lockfile.               |
@@ -87,14 +88,17 @@ A public package that depends on another public package installs it from its rel
 
 Local and CI runs resolve the same versions, each declared once:
 
-| Where                                | Declares                                        |
-| ------------------------------------ | ----------------------------------------------- |
-| `package.json` `engines`             | The Node.js and pnpm range every run must meet  |
-| `package.json` `packageManager`      | The exact pnpm version pnpm installs itself     |
-| `.nvmrc`                             | The exact Node.js version, read by `nvm` and CI |
-| `pnpm-workspace.yaml` `engineStrict` | Makes an install outside `engines` fail         |
+| Where                                | Declares                                                                  |
+| ------------------------------------ | ------------------------------------------------------------------------- |
+| `package.json` `engines`             | The Node.js and pnpm range every run must meet, except the CI `floor` job |
+| `package.json` `packageManager`      | The exact pnpm version pnpm installs itself                               |
+| `.nvmrc`                             | The exact Node.js version, read by `nvm` and CI                           |
+| `pnpm-workspace.yaml` `engineStrict` | Makes an install outside `engines` fail                                   |
+| `.node-floor`                        | The older Node.js version the CI `floor` job runs, while one is needed    |
 
 CI reads those same files rather than repeating a version: `pnpm/action-setup` takes pnpm from `packageManager`, and `actions/setup-node` takes Node.js from `.nvmrc`, both in the [setup action](ci.md#toolchain), which then installs with `--frozen-lockfile`.
+
+`.nvmrc` pins a release of the Node.js line in Active LTS: the line with the longest support ahead of it, and the one the Node.js website offers by default, so a new contributor's install meets `engines`. When a new line enters Active LTS each October, `.nvmrc`, the root `engines`, and `@types/node` move to it together, in one change. Published packages' floors follow their own rule, which [Package lifecycle](specs/packages-lifecycle.md#nodejs-support) owns: one that keeps the previous line is tested on the version in `.node-floor`, which exists only while such a package does.
 
 `engineStrict` is deliberate friction. A patch-level difference rarely matters, and the one time it does, the failure looks like a bug in the change under review rather than a difference in the runtime.
 

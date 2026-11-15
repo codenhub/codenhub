@@ -9,6 +9,10 @@ const MANIFEST_LOCATION = "package.json";
 const README = "README.md";
 const DOCS_DIRECTORY = "docs";
 const PIN_FILE = ".nvmrc";
+// The older Node.js release a CI job keeps testing after `.nvmrc` moves to a new
+// major, so packages can keep that floor until they raise it. Absent when no such
+// job runs.
+const FLOOR_PIN_FILE = ".node-floor";
 // Internal docs are not shipped, and a changelog page describes the floor of the
 // release it belongs to, so neither has to name the current one.
 const UNSTATED_DOCS = new Set(["internal", "changelog"]);
@@ -73,9 +77,14 @@ function statedFloors(text: string): string[] {
  * Checks a declared Node.js floor against the pinned toolchain and the documents that repeat it.
  * @param workspacePackage Package to inspect.
  * @param pin Contents of the root `.nvmrc`, or `undefined` when it cannot be read.
+ * @param floorPin Contents of the root `.node-floor`, or `undefined` when no floor job runs.
  * @returns Findings for a floor CI does not test or that the docs misstate.
  */
-async function checkNodeFloor(workspacePackage: WorkspacePackage, pin: string | undefined): Promise<Finding[]> {
+async function checkNodeFloor(
+  workspacePackage: WorkspacePackage,
+  pin: string | undefined,
+  floorPin: string | undefined,
+): Promise<Finding[]> {
   const fail = (code: string, message: string, location = MANIFEST_LOCATION): Finding => ({
     code: `engines/${code}`,
     location,
@@ -99,14 +108,42 @@ async function checkNodeFloor(workspacePackage: WorkspacePackage, pin: string | 
     ];
   }
 
-  const findings: Finding[] = [];
-  if (floor[0] < pinned[0]) {
-    findings.push(
+  const floorPinned = floorPin === undefined ? undefined : parseVersion(floorPin);
+  if (floorPin !== undefined && floorPinned === undefined) {
+    return [
       fail(
-        "node-below-pin",
-        `"engines.node" is ${range as string}, but CI runs only Node.js ${pin?.trim()}; declare ">=${pinned[0]}", the pinned major.`,
+        "pin",
+        `The root ${FLOOR_PIN_FILE} must hold one Node.js version, the one the floor job tests.`,
+        FLOOR_PIN_FILE,
       ),
-    );
+    ];
+  }
+  if (floorPinned !== undefined && floorPinned[0] >= pinned[0]) {
+    return [
+      fail(
+        "pin",
+        `The root ${FLOOR_PIN_FILE} names Node.js ${floorPin?.trim()}, but it must name a major below the ${pin?.trim()} in ${PIN_FILE}.`,
+        FLOOR_PIN_FILE,
+      ),
+    ];
+  }
+
+  const findings: Finding[] = [];
+  if (floorPinned !== undefined && floor[0] === floorPinned[0] && floor[0] < pinned[0]) {
+    if (compareVersions(floor, floorPinned) > 0) {
+      findings.push(
+        fail(
+          "node-above-floor",
+          `"engines.node" is ${range as string}, above the Node.js ${floorPin?.trim()} the floor job runs, so that run tests a version the package rejects; declare ">=${floorPinned[0]}".`,
+        ),
+      );
+    }
+  } else if (floor[0] < pinned[0]) {
+    const tested =
+      floorPinned === undefined
+        ? `CI runs only Node.js ${pin?.trim()}; declare ">=${pinned[0]}", the pinned major.`
+        : `CI runs only Node.js ${pin?.trim()} and, on the floor job, ${floorPin?.trim()}; declare ">=${pinned[0]}" or ">=${floorPinned[0]}".`;
+    findings.push(fail("node-below-pin", `"engines.node" is ${range as string}, but ${tested}`));
   } else if (compareVersions(floor, pinned) > 0) {
     findings.push(
       fail(
@@ -151,20 +188,23 @@ async function checkNodeFloor(workspacePackage: WorkspacePackage, pin: string | 
  *
  * Only a declared floor is checked. Whether a package runs on Node.js at all, and
  * so whether it should declare one, is not knowable from its files.
- * @param root Absolute repository root, where `.nvmrc` pins the Node.js version CI runs.
+ * @param root Absolute repository root, where `.nvmrc` pins the Node.js version CI runs and
+ * `.node-floor`, when present, the older one the floor job runs.
  * @returns Engines rules ready for registration.
  */
 export function createEnginesRules(root: string): CheckRule[] {
-  let pin: Promise<string | undefined> | undefined;
+  let pins: Promise<[string | undefined, string | undefined]> | undefined;
   return [
     {
       appliesTo: (workspacePackage) => !workspacePackage.isPrivate && declaredNodeRange(workspacePackage) !== undefined,
       name: "engines",
       run: async ({ package: workspacePackage }) => {
-        pin ??= readText(join(root, PIN_FILE));
-        return checkNodeFloor(workspacePackage, await pin);
+        pins ??= Promise.all([readText(join(root, PIN_FILE)), readText(join(root, FLOOR_PIN_FILE))]);
+        const [pin, floorPin] = await pins;
+        return checkNodeFloor(workspacePackage, pin, floorPin);
       },
-      summary: "A declared Node.js floor is the pinned major, and the README and public docs state it.",
+      summary:
+        "A declared Node.js floor is the pinned major or the floor job's, and the README and public docs state it.",
     },
   ];
 }
