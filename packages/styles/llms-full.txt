@@ -138,7 +138,7 @@ The package is below 1.0 and follows the [semantic versioning rule for 0.x relea
 - A minor release, such as 0.7.0 to 0.8.0, may break. It can rename or remove a class or token, or change a default. Every break is listed under **Changed** or **Removed** on that version's [changelog](docs/changelog/index.md) page, with what to use instead.
 - A patch release, such as 0.7.0 to 0.7.1, never breaks.
 
-npm's default range for a new dependency, `^0.9.0`, already accepts patches only, because below 1.0 a caret range does not cross into the next minor version. Read the changelog before raising it. When you link a file from a CDN, put the exact version in the URL; see [Without a bundler](docs/integrating/without-a-bundler.md).
+npm's default range for a new dependency, `^0.10.0`, already accepts patches only, because below 1.0 a caret range does not cross into the next minor version. Read the changelog before raising it. When you link a file from a CDN, put the exact version in the URL; see [Without a bundler](docs/integrating/without-a-bundler.md).
 
 Breaks are not softened with aliases because the model is still settling, and keeping each old name beside its replacement would grow the surface every release. A rename or removal usually costs one find-and-replace when you upgrade; a changed default may need your own CSS retuned.
 
@@ -760,8 +760,8 @@ jsDelivr and unpkg serve every file of every published npm version, so a page ca
 
 ```html
 <head>
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@codenhub/styles@0.9.0/dist/index.css" />
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@codenhub/styles@0.9.0/dist/aesthetics/pixel.css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@codenhub/styles@0.10.0/dist/index.css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@codenhub/styles@0.10.0/dist/aesthetics/pixel.css" />
 </head>
 ```
 
@@ -3495,6 +3495,18 @@ Use ARIA or data attributes where the element or your component library has no n
 ## Next
 
 That completes the reading path. The [Introduction](docs/index.md) links every page, and [Composing](docs/usage/composing.md), [Customizing](docs/usage/customizing.md), and [Content and layout](docs/usage/content-and-layout.md) are the lookup pages for later.
+
+<!-- Source: docs/changelog/0.10.0.md -->
+
+# 0.10.0
+
+Every Tailwind source path now ends in `/tw`, so the source of a compiled entrypoint is its path with `/tw` added. Node.js 26 is the floor. The compiled stylesheets are built by the package's own build instead of Tailwind, and ship the same CSS as before.
+
+## Changed
+
+- **Breaking: the focused Tailwind source paths end in `/tw`.** `@codenhub/styles/tw/<name>` is now `@codenhub/styles/<name>/tw`, such as `@codenhub/styles/button/tw` and `@codenhub/styles/native/tw`, and `@codenhub/styles/tw/aesthetics/<name>` is now `@codenhub/styles/aesthetics/<name>/tw`. The old paths are gone, with no alias. Move `/tw` to the end of each import. `@codenhub/styles/tw` is unchanged. See [Tailwind CSS v4 → Using a focused entrypoint](docs/integrating/tailwind.md#using-a-focused-entrypoint).
+- **Breaking: Node.js 26 or newer.** `engines.node` is `>=26`, so Yarn 1, and npm with `engine-strict`, refuse the install on Node.js 24, and `chs build` exits with an error there. Update Node.js where the package is installed or the CSS is built; the stylesheets themselves need nothing. See [Setup → Requirements](docs/setup.md#requirements). ([#553](https://github.com/codenhub/codenhub/issues/553))
+- **The compiled stylesheets are built without Tailwind.** The package compiles them with its own build, and they carry the same rules as in 0.9.0. Through `/tw`, your Tailwind compiles the same classes as before. The only difference is the nine `--tw-*` property registrations the package's classes use, which it now always emits, about 0.7 KB. `NOTICE` now carries Tailwind's MIT licence, for the parts of Tailwind's theme, Preflight, and registrations the package ships.
 
 <!-- Source: docs/changelog/0.9.0.md -->
 

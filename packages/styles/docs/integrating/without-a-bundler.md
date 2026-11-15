@@ -37,8 +37,8 @@ jsDelivr and unpkg serve every file of every published npm version, so a page ca
 
 ```html
 <head>
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@codenhub/styles@0.9.0/dist/index.css" />
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@codenhub/styles@0.9.0/dist/aesthetics/pixel.css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@codenhub/styles@0.10.0/dist/index.css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@codenhub/styles@0.10.0/dist/aesthetics/pixel.css" />
 </head>
 ```
 
