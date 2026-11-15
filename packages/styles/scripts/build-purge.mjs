@@ -18,7 +18,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 
 import { compile, optimize, Polyfills } from "@tailwindcss/node";
 
-import { classesOf, parse } from "../src/cli/purge.ts";
+import { classesOf, parse, serialize } from "../src/cli/purge.ts";
 import { withNotice } from "./notice.mjs";
 
 const packageRoot = fileURLToPath(new URL("..", import.meta.url));
@@ -50,7 +50,8 @@ function createCompiler() {
    this way rather than from the selectors of an empty build, which name
    component classes inside rules Tailwind always emits. */
 const probe = await createCompiler();
-const complete = classesOf(parse(readFileSync(path.join(packageRoot, "dist/index.css"), "utf8")));
+const completeTree = parse(readFileSync(path.join(packageRoot, "dist/index.css"), "utf8"));
+const complete = classesOf(completeTree);
 const base = [];
 let size = probe.build([]).length;
 
@@ -76,8 +77,26 @@ const variants = VARIANTS.flatMap((variant) => variantClasses.map((name) => `${v
    page that names every class purges to `dist/index.css` byte for byte. */
 const REGISTRATION = /@property --tw-[\w-]+\{[^}]*\}/g;
 
+/* Tailwind's theme values and Preflight are the copy in `src/base/` that
+   `dist/index.css` carries, not those of the Tailwind installed here, which the
+   Tailwind workflow moves to the floor of the peer range on purpose. So the
+   `theme` and `base` layers are taken from `dist/index.css`: with the catalog's
+   Tailwind they are the same bytes, and with another the command still ships
+   the package's own. */
+const OWN_LAYERS = new Map(
+  completeTree
+    .filter((node) => node.kind === "group" && /^\s*@layer (?:theme|base)\s*$/.test(node.prelude))
+    .map((node) => [node.prelude.trim(), node.children]),
+);
+
 const compiler = await createCompiler();
-const compiled = optimize(compiler.build([...base, ...variants]), { minify: true }).code;
+const compiled = serialize(
+  parse(optimize(compiler.build([...base, ...variants]), { minify: true }).code).map((node) =>
+    node.kind === "group" && OWN_LAYERS.has(node.prelude.trim())
+      ? { ...node, children: OWN_LAYERS.get(node.prelude.trim()) }
+      : node,
+  ),
+);
 const css = withNotice(compiled.replace(REGISTRATION, "") + (compiled.match(REGISTRATION) ?? []).join(""));
 const droppable = [...base, ...variants].sort();
 
