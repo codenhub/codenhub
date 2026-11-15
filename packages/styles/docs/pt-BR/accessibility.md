@@ -2,7 +2,7 @@
 title: Acessibilidade
 description: O que o CSS faz por foco, estados, movimento, contraste, cores forçadas e texto da direita para a esquerda, e o que a sua aplicação ainda deve aos seus usuários.
 order: 5
-source: 88ce6c4707ee04ac76cdb5e6b31dcca399a5327e
+source: 6cf1b372ca62105b24ec2d38a2f9986b24632272
 ---
 
 # Acessibilidade
@@ -26,7 +26,7 @@ Esta página lista as duas metades: o que o CSS fornece e o que a sua aplicaçã
 
 ### Conteúdo visualmente oculto
 
-`.visually-hidden` esconde o conteúdo na tela e o mantém para leitores de tela, como faz a `<caption>` da tabela de chaves de API em [Conteúdo e layout → Tabelas](./usage/content-and-layout.md#tabelas). Ela vem com os utilitários de layout: em `.`, `./native`, `./tw`, `./tw/native` e `./tw/utilities`. Ela não está em `./components` nem nos entrypoints de componentes `./tw/components` e `./tw/*`.
+`.visually-hidden` esconde o conteúdo na tela e o mantém para leitores de tela, como faz a `<caption>` da tabela de chaves de API em [Conteúdo e layout → Tabelas](./usage/content-and-layout.md#tabelas). Ela vem com os utilitários de layout: em `.`, `./native`, `./tw`, `./native/tw` e `./utilities/tw`. Ela não está em `./components` nem nos entrypoints de componentes `./components/tw` e `./*/tw`.
 
 ### Limites dos controles
 
@@ -65,7 +65,7 @@ Sem classe de intenção, o contorno é o cinza de borda discreto, `--color-bord
 | Movimento reduzido, página inteira | O reset também encurta todas as outras animações e transições da página.                                                                                                                                                                                                                                                                                              |
 | Transparência reduzida             | Com `prefers-reduced-transparency: reduce`, e em cores forçadas, `.glass`, `.glass-liquid` e `.glass-solo` perdem o desfoque e a lente e ficam opacos.                                                                                                                                                                                                                |
 
-A regra de movimento reduzido de cada componente vem com o componente, então todo entrypoint que o inclui respeita o movimento reduzido sem o reset, incluindo `@codenhub/styles/components`, `@codenhub/styles/tw/components` e cada entrypoint de componente `/tw/*`. Os entrypoints completos e nativos adicionam a regra do reset para a página inteira.
+A regra de movimento reduzido de cada componente vem com o componente, então todo entrypoint que o inclui respeita o movimento reduzido sem o reset, incluindo `@codenhub/styles/components`, `@codenhub/styles/components/tw` e cada entrypoint de componente `/*/tw`. Os entrypoints completos e nativos adicionam a regra do reset para a página inteira.
 
 A regra do reset é `!important` dentro da camada `base`, e um `!important` com camada vence um sem camada, então o seu próprio `!important` não consegue religar uma animação. Para manter uma rodando para usuários que pedem movimento reduzido, como um spinner de upload que você considera essencial, declare-a `!important` numa camada ordenada antes de `base`. A primeira declaração `@layer` que o navegador lê define a ordem, então a sua vem antes do pacote:
 

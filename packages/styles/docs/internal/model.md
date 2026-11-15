@@ -1,6 +1,6 @@
 ---
 status: IMPLEMENTED
-last_updated: 2026-11-10
+last_updated: 2026-11-15
 scope: `@codenhub/styles` styling model, token contracts, and composition rules.
 ---
 
@@ -391,7 +391,7 @@ The rules that follow:
 
 Tailwind registers a `@utility` once for every route by which the file defining it reaches a build, imported or referenced, and each registration appends its body: `@apply box` expanded to as many copies as there were files that `@reference`d `box.css`. Nine did, and 63% of the declarations in `dist/index.css` repeated one already in the same rule. A repeat changes nothing a browser computes, so nothing else failed.
 
-So a stylesheet that defines rules is split in two. `X.rules.css` holds the rules and brings nothing they need. `X.css` is the focused entry, the one a granular `/tw/*` export names: it brings Tailwind, the theme, and its reference to `box.css` or `surface.css`, then imports its rules file. An aggregate imports the rules files and brings what they need once. `components/rules.css` imports `box.css` and `surface.rules.css` once each and then every component's rules, and `components/index.css`, `index.css`, and `native.css` import it; `utilities/rules.css` does the same for the layout and content utilities. Typography, the reset, and `surface` follow the same split. `index.css` and `native.css` do not import `typography.css`, because `components/rules.css` brings its rules and a second route stacks them.
+So a stylesheet that defines rules is split in two. `X.rules.css` holds the rules and brings nothing they need. `X.css` is the focused entry, the one a granular `/*/tw` export names: it brings Tailwind, the theme, and its reference to `box.css` or `surface.css`, then imports its rules file. An aggregate imports the rules files and brings what they need once. `components/rules.css` imports `box.css` and `surface.rules.css` once each and then every component's rules, and `components/index.css`, `index.css`, and `native.css` import it; `utilities/rules.css` does the same for the layout and content utilities. Typography, the reset, and `surface` follow the same split. `index.css` and `native.css` do not import `typography.css`, because `components/rules.css` brings its rules and a second route stacks them.
 
 `exports.test.ts` ("aggregate exports state each declaration once") holds every aggregate export and `dist/native.css` to it. Two repeats are recorded there rather than removed: the tooltip bubble restates `box`'s shortened transition under reduced motion because it replaces that transition after applying `box`, and Tailwind's minifier emits a prefixed declaration of Preflight's link rule twice.
 
@@ -400,6 +400,10 @@ The route an aggregate used before, importing the focused entries, is what this 
 ### What `tw/` ships
 
 `tw/` is `src/` copied by `scripts/build-tw.mjs`, less what only the compiled build reads: `palette.css`, which reaches consumers as `dist/palette.css`, and `theme.compiled.css`. `files` publishes the whole directory, so a stylesheet no `/tw` export reaches would ship as bytes nobody can load; `exports.test.ts` checks that every stylesheet under `tw/` is reachable from a `/tw` export.
+
+The export that names a file in `tw/` is the compiled path with `/tw` added: `./tw` for the complete stylesheet, `./native/tw` for `./native`, `./aesthetics/glass/tw` for `./aesthetics/glass`. A consumer who moves to Tailwind adds `/tw` to the import they have, and needs no table to find the path. The entries with no compiled counterpart follow the same shape, as `./button/tw`, so there is one rule; `./palette` has no `/tw`, since it holds generated values with nothing for Tailwind to compile. `exports.test.ts` holds both halves: every compiled export but `./palette` has its `/tw`, and only a `/tw` export resolves into `tw/`.
+
+Through 0.9.0 the prefix came first, `./tw/native`, and 0.10.0 renamed all eighteen with no alias. A prefix needs the reader to know where in the path the prefix goes, and the old paths have no consumer outside this workspace to keep working, so an alias would be a second set of names to document and remove. Cost accepted: `./button/tw` reads as the source of a `./button` that does not exist, and `tw` cannot name an aesthetic, since `./aesthetics/tw` is the source of all of them; `chs build` leaves that path out of the names `--aesthetic` takes.
 
 The theme builds its tokens from Tailwind's palette, so a `/tw` consumer keeps the ramps it reads: `neutral`, `emerald`, `amber`, `rose`, `indigo`, and `white`. Clearing one of those leaves its intent with no colour and no error; clearing the rest of the palette is supported, and `tests/browser/tw-consumer.spec.ts` builds a consumer that does. `docs/usage/theming.md` lists the ramps to keep.
 
@@ -797,7 +801,7 @@ Rejected: keeping only `--progress-value` public, as the customizing page once s
 
 0.9.0 publishes the other twelve. Each is a size or a colour a consumer sets once for a page, a form, or a table, and each was already a single named input in its component, so publishing it adds no mechanism. What those components derive from them became `--_*` privates in the same release: the switch's knob geometry, the tooltip's position set, and the quotation's fill and edge chain, as did the plain-page elevation geometry and the rest of the table's palette.
 
-`box` declares `box-sizing: border-box` on itself. A box sizes itself as `min-height`/`min-width: var(--control-height)` plus its own padding and the composed `border` shorthand, so its geometry only resolves correctly under `border-box`. `reset.css` sets that on `*`, but the reset ships only with `.`, `/native`, and `/tw/reset`; `/components` and the granular `/tw/*` component entrypoints carry neither it nor Preflight. A component's own geometry is not an external reset's responsibility; the universal rule in `reset.css` covers only the consumer's own markup.
+`box` declares `box-sizing: border-box` on itself. A box sizes itself as `min-height`/`min-width: var(--control-height)` plus its own padding and the composed `border` shorthand, so its geometry only resolves correctly under `border-box`. `reset.css` sets that on `*`, but the reset ships only with `.`, `/native`, and `/reset/tw`; `/components` and the granular `/*/tw` component entrypoints carry neither it nor Preflight. A component's own geometry is not an external reset's responsibility; the universal rule in `reset.css` covers only the consumer's own markup.
 
 ## Variant specs
 

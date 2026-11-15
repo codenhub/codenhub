@@ -92,7 +92,7 @@ export default defineConfig({
        all, since the pre-built `dist/` CSS is scanned only from
        `packages/styles/src/**` and never sees this page's markup. */
     alias: {
-      "@codenhub/styles/tw/native": resolve(__dirname, "../../styles/src/native.css"),
+      "@codenhub/styles/native/tw": resolve(__dirname, "../../styles/src/native.css"),
       "@codenhub/styles/tw": resolve(__dirname, "../../styles/src/index.css"),
       "@codenhub/styles/native": resolve(__dirname, "../../styles/dist/native.css"),
       "@codenhub/styles": resolve(__dirname, "../../styles/dist/index.css"),

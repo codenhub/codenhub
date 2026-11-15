@@ -279,8 +279,8 @@
   /* Every box sizes itself as `min-height`/`min-width: var(--control-height)`
      plus its own padding and the border shorthand above, so its geometry is
      only right under `border-box`. `reset.css` sets that on `*`, but only the
-     `.`, `/native` and `/tw/reset` entrypoints carry the reset; `/components`
-     and the granular `/tw/*` component entrypoints ship neither it nor
+     `.`, `/native` and `/reset/tw` entrypoints carry the reset; `/components`
+     and the granular `/<name>/tw` component entrypoints ship neither it nor
      Preflight, so `box` owns it. */
   box-sizing: border-box;
   background-color: var(--_bg);
@@ -325,7 +325,7 @@
     translate var(--motion-duration-normal) var(--motion-ease);
 
   /* Reduced motion stops here as well as in `reset.css`: `/components` and the
-     focused `/tw/*` entries carry no reset, so each component that moves says
+     focused `/<name>/tw` entries carry no reset, so each component that moves says
      so itself -- this for everything `box` paints, and the components with a
      transition or animation of their own beside it. The same near-zero
      duration the reset uses, so a `transitionend` still fires. */

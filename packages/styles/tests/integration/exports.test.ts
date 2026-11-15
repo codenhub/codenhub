@@ -26,11 +26,15 @@ const executeFile = promisify(execFile);
 const packagePath = fileURLToPath(new URL("../../package.json", import.meta.url));
 const packageRoot = path.dirname(packagePath);
 const manifest = JSON.parse(await readFile(packagePath, "utf8")) as PackageManifest;
-const exportTargets = Object.entries(manifest.exports).flatMap(([exportName, target]) =>
+/* A Tailwind source export is the compiled one with `/tw` added: `./tw` for
+   the root, `./button/tw` for a subpath. */
+const isTailwindExport = (subpath: string) => subpath === "./tw" || subpath.endsWith("/tw");
+const exportTargets = Object.entries(manifest.exports).flatMap(([subpath, target]) =>
   typeof target === "string"
-    ? [{ exportName, target }]
+    ? [{ subpath, exportName: subpath, target }]
     : Object.entries(target).map(([condition, conditionTarget]) => ({
-        exportName: `${exportName} (${condition})`,
+        subpath,
+        exportName: `${subpath} (${condition})`,
         target: conditionTarget,
       })),
 );
@@ -47,7 +51,7 @@ const tailwindExportContracts: Record<string, TailwindExportContract> = {
      system-preference fallback excluded from a forced-light subtree -- so a
      single candidate has to prove both are present rather than just that the
      variant exists at all. */
-  "./tw/theme": {
+  "./theme/tw": {
     candidates: "dark:hidden",
     patterns: [
       /--color-primary:/,
@@ -55,27 +59,27 @@ const tailwindExportContracts: Record<string, TailwindExportContract> = {
       /@media \(prefers-color-scheme:dark\)\{\.dark\\:hidden:not\(:where\(\.light,\.light \*,\.theme-light,\.theme-light \*,\[data-theme=light\],\[data-theme=light\] \*\)\)/,
     ],
   },
-  "./tw/components": {
+  "./components/tw": {
     candidates: "alert btn alert-icon",
     patterns: [/\.alert\{[^}]*--_capped:/, /\.btn\{[^}]*--_capped:/, /\.alert-icon\{/],
   },
-  "./tw/surface": {
+  "./surface/tw": {
     candidates: "panel",
     patterns: [/\.panel\{[^}]*--_capped:/, /backdrop-filter:var\(--_layers-clear,var\(--ui-backdrop,none\)\)/],
   },
-  "./tw/button": {
+  "./button/tw": {
     candidates: "btn",
     patterns: [/\.btn\{[^}]*--_capped:/, /\.btn\{[^}]*background-color:var\(--_bg\)/],
   },
-  "./tw/form": {
+  "./form/tw": {
     candidates: "ipt radio",
     patterns: [/\.ipt\{[^}]*--_capped:/, /\.radio\{[^}]*--_capped:/, /background-color:var\(--_bg\)/],
   },
-  "./tw/feedback": {
+  "./feedback/tw": {
     candidates: "alert badge progress",
     patterns: [/\.alert\{[^}]*--_capped:/, /\.badge\{[^}]*--_capped:/, /\.progress\{/],
   },
-  "./tw/tooltip": {
+  "./tooltip/tw": {
     candidates: "tooltip tooltip-bubble tooltip-icon",
     patterns: [
       /\.tooltip\{/,
@@ -84,30 +88,30 @@ const tailwindExportContracts: Record<string, TailwindExportContract> = {
       /background-color:var\(--_bg\)/,
     ],
   },
-  "./tw/reset": { candidates: "text-body", patterns: [/:focus-visible\{/] },
-  "./tw/native": { candidates: "btn", patterns: [/h1\{/, /button,/] },
-  "./tw/typography": { candidates: "text-title", patterns: [/\.text-title\{/] },
-  "./tw/utilities": {
+  "./reset/tw": { candidates: "text-body", patterns: [/:focus-visible\{/] },
+  "./native/tw": { candidates: "btn", patterns: [/h1\{/, /button,/] },
+  "./typography/tw": { candidates: "text-title", patterns: [/\.text-title\{/] },
+  "./utilities/tw": {
     candidates: "stack data-table",
     patterns: [/\.stack\{/, /\.data-table\{/, /--_capped:/, /background-color:var\(--_bg\)/],
   },
-  "./tw/aesthetics": {
+  "./aesthetics/tw": {
     patterns: [/\.neobrutalism\{/, /\.glass\{/, /\.pixel\{/, /\.chunky-tile\{/, /\.cyber\{/, /\.sketch\{/],
   },
-  "./tw/aesthetics/neobrutalism": { patterns: [/\.neobrutalism\{/, /--ui-shadow-x:/, /--ui-ink:/] },
-  "./tw/aesthetics/glass": { patterns: [/\.glass\{/, /--ui-backdrop:/, /--glass-radius,/] },
+  "./aesthetics/neobrutalism/tw": { patterns: [/\.neobrutalism\{/, /--ui-shadow-x:/, /--ui-ink:/] },
+  "./aesthetics/glass/tw": { patterns: [/\.glass\{/, /--ui-backdrop:/, /--glass-radius,/] },
   /* The bar is a shade of the element rather than a repeat of it, which takes the
      opaque depth colour as well as the ink amount. Both are asserted because
      either one alone leaves the bar invisible. */
-  "./tw/aesthetics/chunky-tile": {
+  "./aesthetics/chunky-tile/tw": {
     patterns: [/\.chunky-tile\{/, /--tile-radius,/, /--elevation-color:/, /--ui-shadow-ink:/, /--ui-active-transform:/],
   },
   /* The bevel is a corner shape rather than a clip, and it has to fall back to a
      square where an engine cannot draw it; both halves are asserted. */
-  "./tw/aesthetics/cyber": {
+  "./aesthetics/cyber/tw": {
     patterns: [/\.cyber\{/, /--cyber-cut,/, /--ui-corner-shape:\s*bevel/, /@supports not \(corner-shape:\s*bevel\)/],
   },
-  "./tw/aesthetics/sketch": {
+  "./aesthetics/sketch/tw": {
     patterns: [
       /\.sketch\{/,
       /--sketch-radius,/,
@@ -120,7 +124,7 @@ const tailwindExportContracts: Record<string, TailwindExportContract> = {
   },
   /* The aesthetic publishes the silhouette and the inset edge as material
      tokens; the declarations that consume them belong to `box` and `surface`. */
-  "./tw/aesthetics/pixel": {
+  "./aesthetics/pixel/tw": {
     patterns: [
       /\.pixel\{/,
       /--ui-clip:\s*polygon/,
@@ -274,7 +278,7 @@ test("no source stylesheet reads a variable private to Tailwind", async () => {
    reached consumers only through `dist/palette.css`. */
 test("every stylesheet under tw/ is reachable from a /tw export", async () => {
   const targets = Object.entries(manifest.exports)
-    .filter(([exportName]) => exportName.startsWith("./tw"))
+    .filter(([exportName]) => isTailwindExport(exportName))
     .map(([, target]) => (typeof target === "string" ? target : target.default).replace(/^\.\//, ""));
   const reached = new Set<string>();
   const queue = [...targets];
@@ -333,8 +337,8 @@ test("side-effect imports typecheck with noUncheckedSideEffectImports", () => {
     "@codenhub/styles/aesthetics/glass",
     "@codenhub/styles/native",
     "@codenhub/styles/tw",
-    "@codenhub/styles/tw/button",
-    "@codenhub/styles/tw/aesthetics/glass",
+    "@codenhub/styles/button/tw",
+    "@codenhub/styles/aesthetics/glass/tw",
   ];
 
   const options: ts.CompilerOptions = {
@@ -402,13 +406,25 @@ test("dist holds only finished CSS, with no Tailwind or import directive left", 
   expect([...new Set(unfinished)]).toEqual([]);
 });
 
-test("every /tw export resolves into tw/, outside dist", () => {
+test("every /tw export resolves into tw/, outside dist, and nothing else does", () => {
   const misplaced = exportTargets
-    .filter(({ exportName }) => exportName.startsWith("./tw"))
-    .filter(({ target }) => !target.startsWith("./tw/"))
+    .filter(({ subpath, target }) => isTailwindExport(subpath) !== target.startsWith("./tw/"))
     .map(({ exportName, target }) => `${exportName} -> ${target}`);
 
   expect(misplaced).toEqual([]);
+});
+
+/* The rule a consumer is told: the Tailwind source of an entry is its path with
+   `/tw` added. `./palette` has none: it is generated values, with nothing for
+   Tailwind to compile. */
+test("every compiled export has its Tailwind source at the same path with /tw added", () => {
+  const subpaths = Object.keys(manifest.exports);
+  const missing = subpaths
+    .filter((subpath) => !isTailwindExport(subpath) && subpath !== "./package.json" && subpath !== "./palette")
+    .map((subpath) => (subpath === "." ? "./tw" : `${subpath}/tw`))
+    .filter((subpath) => !subpaths.includes(subpath));
+
+  expect(missing).toEqual([]);
 });
 
 for (const [exportName, contract] of Object.entries(compiledExportContracts)) {
@@ -1061,7 +1077,7 @@ const undeclaredColors = (css: string) => {
 };
 
 /* The aesthetics carry no theme by contract; everything else does. */
-const carriesTheme = (exportName: string) => !exportName.startsWith("./tw/aesthetics");
+const carriesTheme = (exportName: string) => !exportName.startsWith("./aesthetics/");
 
 for (const [exportName, contract] of Object.entries(tailwindExportContracts)) {
   test(`${exportName} emits its representative public surface`, async () => {

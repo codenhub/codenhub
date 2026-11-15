@@ -1,5 +1,5 @@
 @import "@codenhub/styles/tw";
-@import "@codenhub/styles/tw/native";
+@import "@codenhub/styles/native/tw";
 
 /* `.card` has no intrinsic width; without one a dialog stretches to fit its
    widest input placeholder instead of reading as a fixed-size panel. */

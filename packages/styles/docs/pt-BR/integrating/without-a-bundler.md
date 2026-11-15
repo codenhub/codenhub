@@ -2,7 +2,7 @@
 title: Sem bundler
 description: Como referenciar as folhas de estilos compiladas a partir de HTML puro, Rails, Laravel, Django ou qualquer aplicação renderizada no servidor, e o build por linha de comando.
 order: 6
-source: ce92609c893eb3ce869e91e4bd78fcb7fcb43df0
+source: b8d660825405e45b9b4ccd6189d2eab666d35bce
 ---
 
 # Sem bundler
@@ -11,7 +11,7 @@ As folhas de estilos compiladas são CSS pronto: cada uma é um único arquivo, 
 
 O que precisa de uma ferramenta de build é o _nome_ do import. `@import "@codenhub/styles"` nomeia um pacote, e encontrar o arquivo por trás desse nome — `node_modules/@codenhub/styles/dist/index.css` — é trabalho de ferramentas que conhecem o Node, como Vite, webpack ou a CLI do Tailwind, que leem o mapa `exports` do pacote. Um navegador não faz isso: ele resolve a URL de um `@import` em relação à folha de estilos que o contém, e um `<link href>` em relação à página, então um nome de pacote solto vira uma requisição para um caminho que não existe. Sem bundler, referencie o arquivo pelo caminho.
 
-Os entrypoints `/tw` são código-fonte do Tailwind e precisam de um build do Tailwind. O `/tw/aesthetics` é a exceção, CSS puro sem nada para o Tailwind processar, mas sem bundler referencie os arquivos compilados de `dist/aesthetics/`, como abaixo. Esta página é para uma página que não tem um build de CSS com Node.js: HTML puro, Rails, Laravel, Django ou qualquer aplicação renderizada no servidor. Há dois caminhos:
+Os entrypoints `/tw` são código-fonte do Tailwind e precisam de um build do Tailwind. O `/aesthetics/tw` é a exceção, CSS puro sem nada para o Tailwind processar, mas sem bundler referencie os arquivos compilados de `dist/aesthetics/`, como abaixo. Esta página é para uma página que não tem um build de CSS com Node.js: HTML puro, Rails, Laravel, Django ou qualquer aplicação renderizada no servidor. Há dois caminhos:
 
 1. **Referencie a folha de estilos compilada.** Não precisa de nada além de arquivos estáticos. Você entrega todas as classes, usadas ou não pelas suas páginas.
 2. **Gere uma folha de estilos com o comando `chs build` do pacote.** Ela varre os seus templates e escreve uma folha de estilos com só as classes que eles usam. Veja [Gere só as classes que você usa](#gere-só-as-classes-que-você-usa).

@@ -2,7 +2,7 @@
 title: Temas
 description: Modo claro y oscuro, reemplazar la paleta con los colores de marca, definir una intención propia, y cada token de color, intención, base y fuente con su valor por defecto.
 order: 5
-source: b54ac4e817f35fb4f5f32b7f7022061f9658147a
+source: a186dbf5bc4db8e56427da1f0a420518d9c8a102
 ---
 
 # Temas
@@ -271,7 +271,7 @@ El paquete no incluye archivos de fuente ni hace peticiones de red. Cada token d
 | `--font-cyber`   | [`.cyber`](./aesthetics.md#cyber) y `.cyber-solo`                                                  | No declarado. Recurre a una pila monoespaciada.                                                                                                   |
 | `--font-sketch`  | [`.sketch`](./aesthetics.md#sketch) y `.sketch-solo`                                               | No declarado. Recurre a la familia `cursive` de la plataforma.                                                                                    |
 
-`--font-default` solo llega a la página a través del reset, que incluyen `@codenhub/styles`, `/native`, `/tw`, `/tw/native` y `/tw/reset`. Con `/theme` o `/components` solos, define tú mismo `font-family` en `body` y define `--font-default` con la misma fuente: las regiones `.glass` y `.neobrutalism` definen su propio `font-family` a partir del token, así que una fuente definida solo en `body` no llega dentro de ellas. O define solo el token y escribe `font-family: var(--font-default)` en `body`. Los tokens de las estéticas los lee la propia clase de la estética, así que funcionan con cualquier punto de entrada.
+`--font-default` solo llega a la página a través del reset, que incluyen `@codenhub/styles`, `/native`, `/tw`, `/native/tw` y `/reset/tw`. Con `/theme` o `/components` solos, define tú mismo `font-family` en `body` y define `--font-default` con la misma fuente: las regiones `.glass` y `.neobrutalism` definen su propio `font-family` a partir del token, así que una fuente definida solo en `body` no llega dentro de ellas. O define solo el token y escribe `font-family: var(--font-default)` en `body`. Los tokens de las estéticas los lee la propia clase de la estética, así que funcionan con cualquier punto de entrada.
 
 Para usar una fuente web, cárgala como cargas cualquier fuente y después nómbrala en el token. Define el token en `:root` para toda la página, o en cualquier elemento para esa parte:
 

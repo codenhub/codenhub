@@ -61,7 +61,7 @@ The command supports Node.js 26 and newer, the version this repository builds an
 
 The command resolves everything from this package's own files, never through its package name: a package resolving itself by name depends on self-reference and on how it was installed. The running file is `src/cli/run.ts` in the tests and `dist/cli.js` once built, two different depths below the package root, so `findPackageRoot` walks up from the running file to the nearest folder holding a `package.json`. No folder between either file and the root holds one. `tests/integration/cli.test.ts` covers the walk, and its `--version` test checks the root it finds in practice is this package's.
 
-The aesthetic names are read from the keys of the same manifest's `exports` (`./aesthetics/<name>`), and each `--aesthetic` reads the file that subpath names under the `import` condition, so a new aesthetic needs no change to the command. An aesthetic is added only when asked for, since no template names which one a project wants, and is purged against the same classes as the stylesheet: its solo class is not in `classes.json`, so it is kept, and its rules for unused components are dropped.
+The aesthetic names are read from the keys of the same manifest's `exports` (`./aesthetics/<name>`, less `./aesthetics/tw`, which is the Tailwind source of all of them), and each `--aesthetic` reads the file that subpath names under the `import` condition, so a new aesthetic needs no change to the command. An aesthetic is added only when asked for, since no template names which one a project wants, and is purged against the same classes as the stylesheet: its solo class is not in `classes.json`, so it is kept, and its rules for unused components are dropped.
 
 ## How classes are found
 

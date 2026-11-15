@@ -2,7 +2,7 @@
 title: Estilização
 description: A folha de estilos, as cores com e sem @codenhub/styles, classes de apresentação, tamanho, modo escuro, sobrescrita de cores, Content Security Policy e a ordem das folhas de estilo.
 order: 4
-source: d6079abe49e29d1f3fc1f994a6fdb31384bb4d37
+source: 970a174286fd8745c8432b398753fd904302ee17
 ---
 
 # Estilização
@@ -205,7 +205,7 @@ O pacote também nunca interpreta HTML, então funciona com Trusted Types també
 
 ## Ordem das folhas de estilo com `@codenhub/styles/native`
 
-Se você usa a folha de estilos de elementos nativos do `@codenhub/styles` (`@codenhub/styles/native` ou `@codenhub/styles/tw/native`), importe-a **antes** da folha de estilos do toaster:
+Se você usa a folha de estilos de elementos nativos do `@codenhub/styles` (`@codenhub/styles/native` ou `@codenhub/styles/native/tw`), importe-a **antes** da folha de estilos do toaster:
 
 ```ts
 import "@codenhub/styles/native";

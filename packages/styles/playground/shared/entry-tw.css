@@ -1,5 +1,5 @@
 @import "tailwindcss";
 @import "@codenhub/styles/tw";
-@import "@codenhub/styles/tw/aesthetics";
+@import "@codenhub/styles/aesthetics/tw";
 @source "../**/*.html";
 @source "./matrix.js";

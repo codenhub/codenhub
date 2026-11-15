@@ -204,7 +204,7 @@ The package also never parses HTML, so it works under Trusted Types as well; see
 
 ## Stylesheet order with `@codenhub/styles/native`
 
-If you use `@codenhub/styles`' native-element stylesheet (`@codenhub/styles/native` or `@codenhub/styles/tw/native`), import it **before** the toaster stylesheet:
+If you use `@codenhub/styles`' native-element stylesheet (`@codenhub/styles/native` or `@codenhub/styles/native/tw`), import it **before** the toaster stylesheet:
 
 ```ts
 import "@codenhub/styles/native";

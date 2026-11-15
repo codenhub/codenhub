@@ -2,7 +2,7 @@
 title: Sin bundler
 description: Enlazar las hojas de estilos compiladas desde HTML simple, Rails, Laravel, Django o cualquier aplicación renderizada en el servidor, y el build por línea de comandos.
 order: 6
-source: ce92609c893eb3ce869e91e4bd78fcb7fcb43df0
+source: b8d660825405e45b9b4ccd6189d2eab666d35bce
 ---
 
 # Sin bundler
@@ -11,7 +11,7 @@ Las hojas de estilos compiladas son CSS terminado: cada una es un único archivo
 
 Lo que necesita una herramienta de build es el _nombre_ del import. `@import "@codenhub/styles"` nombra un paquete, y encontrar el archivo que hay detrás de ese nombre, `node_modules/@codenhub/styles/dist/index.css`, lo hacen herramientas que conocen Node, como Vite, webpack o la CLI de Tailwind, que leen el mapa `exports` del paquete. Un navegador no: resuelve la URL de un `@import` respecto a la hoja de estilos que lo contiene y un `<link href>` respecto a la página, así que un nombre de paquete sin más se convierte en una petición a una ruta que no existe. Sin bundler, enlaza el archivo por su ruta.
 
-Los puntos de entrada `/tw` son código fuente de Tailwind y necesitan un build de Tailwind. `/tw/aesthetics` es la excepción, CSS simple sin nada que Tailwind tenga que procesar, pero sin bundler enlaza en su lugar los archivos compilados de `dist/aesthetics/`, como se muestra abajo. Esta página es para una página que no tiene un build de CSS con Node.js: HTML simple, Rails, Laravel, Django o cualquier aplicación renderizada en el servidor. Hay dos caminos:
+Los puntos de entrada `/tw` son código fuente de Tailwind y necesitan un build de Tailwind. `/aesthetics/tw` es la excepción, CSS simple sin nada que Tailwind tenga que procesar, pero sin bundler enlaza en su lugar los archivos compilados de `dist/aesthetics/`, como se muestra abajo. Esta página es para una página que no tiene un build de CSS con Node.js: HTML simple, Rails, Laravel, Django o cualquier aplicación renderizada en el servidor. Hay dos caminos:
 
 1. **Enlazar la hoja de estilos compilada.** No necesita más que archivos estáticos. Envías todas las clases, las usen tus páginas o no.
 2. **Generar una hoja de estilos con el comando `chs build` del paquete.** Escanea tus plantillas y escribe una hoja de estilos con solo las clases que usan. Consulta [Generar solo las clases que usas](#generar-solo-las-clases-que-usas).

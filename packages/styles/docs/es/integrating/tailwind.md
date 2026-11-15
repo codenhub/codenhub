@@ -2,7 +2,7 @@
 title: Tailwind CSS v4
 description: Usar los puntos de entrada de código fuente /tw en un proyecto con Tailwind CSS v4.
 order: 1
-source: 4866b77d4cfb1655499f633fff8bf61dde2aa4bb
+source: f22779f7f4682d22b3c79d6efd617fb9d2ae5916
 ---
 
 # Tailwind CSS v4
@@ -21,7 +21,7 @@ Los puntos de entrada `/tw` publican código fuente copiado y sin compilar desde
 @source "./src";
 ```
 
-`/tw` importa el propio Tailwind, así que sustituye a tu `@import "tailwindcss"` en lugar de sumarse a él: con los dos, el Preflight de Tailwind se emite dos veces. Todos los demás puntos de entrada `/tw/*` esperan que tu import vaya primero; consulta [Usar un punto de entrada específico](#usar-un-punto-de-entrada-específico).
+`/tw` importa el propio Tailwind, así que sustituye a tu `@import "tailwindcss"` en lugar de sumarse a él: con los dos, el Preflight de Tailwind se emite dos veces. Todos los demás puntos de entrada `/*/tw` esperan que tu import vaya primero; consulta [Usar un punto de entrada específico](#usar-un-punto-de-entrada-específico).
 
 Tailwind CSS v4 escanea tu proyecto automáticamente: la mayoría de los proyectos no necesita nada más que el import anterior. Las rutas de `@source` se resuelven respecto al archivo CSS que las declara, no respecto a la raíz de tu proyecto, así que aquí `./src` significa "el `src/` que está junto a esta hoja de estilos"; ajústalo según dónde esté realmente tu hoja de estilos global. Añade `@source` solo para el markup al que el escaneo automático de Tailwind no llega por sí solo: una ruta excluida por defecto (incluida en `.gitignore`, o dentro de `node_modules`, por ejemplo una librería de componentes externa) o, en un monorepo, una que está fuera del árbol de directorios de este archivo. Apúntalo al markup de tu aplicación, no a este paquete: el código fuente del paquete nombra cada clase que define, así que escanearlo las emite todas, las usen tus páginas o no.
 
@@ -31,20 +31,20 @@ Añade una estética desde el punto de entrada de código fuente igual que con e
 
 ```css
 @import "@codenhub/styles/tw";
-@import "@codenhub/styles/tw/aesthetics";
+@import "@codenhub/styles/aesthetics/tw";
 
 @source "./src";
 ```
 
 ## Usar un punto de entrada específico
 
-Importa un punto de entrada `/tw/*` específico en lugar del combinado, como `/tw/button` o `/tw/form`, cuando un build solo necesita una familia de componentes; consulta la [tabla de puntos de entrada](../setup.md#todos-los-puntos-de-entrada) completa para ver qué compone cada uno.
+Importa un punto de entrada `/*/tw` específico en lugar del combinado, como `/button/tw` o `/form/tw`, cuando un build solo necesita una familia de componentes; consulta la [tabla de puntos de entrada](../setup.md#todos-los-puntos-de-entrada) completa para ver qué compone cada uno.
 
-A diferencia de `/tw`, los puntos de entrada específicos y `/tw/native` no importan Tailwind, así que mantén tu propio import primero:
+A diferencia de `/tw`, los puntos de entrada específicos y `/native/tw` no importan Tailwind, así que mantén tu propio import primero:
 
 ```css
 @import "tailwindcss";
-@import "@codenhub/styles/tw/button";
+@import "@codenhub/styles/button/tw";
 ```
 
 ## Construir tus propios componentes con `@apply`

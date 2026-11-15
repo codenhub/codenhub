@@ -101,13 +101,13 @@ const packageCost = async (imports: string[], candidates: string[]) => {
 describe("a /tw consumer build", { timeout: 60_000 }, () => {
   const scenarios = [
     {
-      name: "a page with one primary button, through /tw/button",
+      name: "a page with one primary button, through /button/tw",
       imports: [tailwindCss, twEntry("components/button.css")],
       candidates: ["btn", "primary"],
       ceiling: 21_000,
     },
     {
-      name: "a page that names no package class, through /tw/button",
+      name: "a page that names no package class, through /button/tw",
       imports: [tailwindCss, twEntry("components/button.css")],
       candidates: [],
       ceiling: 9_200,

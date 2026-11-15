@@ -1,6 +1,6 @@
 ---
 status: APPROVED
-last_updated: 2026-09-29
+last_updated: 2026-11-15
 scope: `@codenhub/styles` package test strategy.
 ---
 
@@ -133,8 +133,8 @@ Node-based Vitest checks validate every published target. Every compiled export 
 | `dist/aesthetics/sketch.css`               | 14,905   | 2,094  | 15,350  |
 | `dist/purge/index.css`                     | 276,578  | 23,545 | 282,000 |
 | `dist/purge/classes.json`                  | 6,855    | 1,626  | 7,100   |
-| `/tw/button`, a page with `btn primary`    | 20,450   |        | 21,000  |
-| `/tw/button`, a page with no package class | 8,912    |        | 9,200   |
+| `/button/tw`, a page with `btn primary`    | 20,450   |        | 21,000  |
+| `/button/tw`, a page with no package class | 8,912    |        | 9,200   |
 | `/tw`, a page with `btn primary`           | 24,115   |        | 25,000  |
 
 The two sketch rows were measured again on 2026-11-12, when the first position of sketch's rotation declared its outline so a knob set inside a region reaches it. The `dist/purge/` rows were set the same day, with Tailwind 4.3.4: `chs build` reads those files and no page serves them, but every consumer installs them, as [Build command](./cli.md) accepts.

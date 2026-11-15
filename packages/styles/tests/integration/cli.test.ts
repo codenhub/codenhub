@@ -236,6 +236,14 @@ describe("failures", () => {
     );
   });
 
+  /* `./aesthetics/tw` is the Tailwind source of every aesthetic, an export
+     beside the aesthetics, not one of them. */
+  it("does not take the Tailwind source of the aesthetics for an aesthetic", async () => {
+    expect(await failureOf("build", "-c", "app/views/**/*.erb", "-o", "app.css", "--aesthetic", "tw")).toBe(
+      'chs: unknown aesthetic "tw"; choose from chunky-tile, cyber, glass, neobrutalism, pixel, sketch.',
+    );
+  });
+
   it("rejects a --content glob that matches no file, naming it", async () => {
     expect(await failureOf("build", "-c", "app/view/**/*.erb", "-o", "app.css")).toMatch(/app\/view\/\*\*\/\*\.erb/);
   });

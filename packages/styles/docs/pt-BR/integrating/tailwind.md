@@ -2,7 +2,7 @@
 title: Tailwind CSS v4
 description: Como usar os entrypoints de código-fonte /tw num projeto com Tailwind CSS v4.
 order: 1
-source: 4866b77d4cfb1655499f633fff8bf61dde2aa4bb
+source: f22779f7f4682d22b3c79d6efd617fb9d2ae5916
 ---
 
 # Tailwind CSS v4
@@ -21,7 +21,7 @@ Os entrypoints `/tw` publicam uma cópia do código-fonte não compilado da past
 @source "./src";
 ```
 
-O `/tw` importa o próprio Tailwind, então ele substitui o seu `@import "tailwindcss"` em vez de se somar a ele: com os dois, o Preflight do Tailwind é emitido duas vezes. Todos os outros entrypoints `/tw/*` esperam que o seu import venha antes; veja [Usando um entrypoint específico](#usando-um-entrypoint-específico).
+O `/tw` importa o próprio Tailwind, então ele substitui o seu `@import "tailwindcss"` em vez de se somar a ele: com os dois, o Preflight do Tailwind é emitido duas vezes. Todos os outros entrypoints `/*/tw` esperam que o seu import venha antes; veja [Usando um entrypoint específico](#usando-um-entrypoint-específico).
 
 O Tailwind CSS v4 varre o seu projeto automaticamente — a maioria dos projetos não precisa de nada além do import acima. Os caminhos de `@source` são resolvidos a partir do arquivo CSS que os declara, não da raiz do projeto, então `./src` aqui significa "o `src/` ao lado desta folha de estilos"; ajuste para onde a sua folha de estilos global realmente está. Adicione `@source` só para markup que a varredura automática do Tailwind não alcança sozinha: um caminho excluído por padrão (listado no `.gitignore`, ou dentro de `node_modules` — uma biblioteca de componentes externa, por exemplo) ou, num monorepo, um caminho fora da árvore de diretórios deste arquivo. Aponte para o markup da sua aplicação, não para este pacote: o código-fonte do pacote nomeia todas as classes que ele define, então varrê-lo emite todas elas, quer as suas páginas as usem ou não.
 
@@ -31,20 +31,20 @@ Adicione uma estética a partir do entrypoint de código-fonte do mesmo jeito qu
 
 ```css
 @import "@codenhub/styles/tw";
-@import "@codenhub/styles/tw/aesthetics";
+@import "@codenhub/styles/aesthetics/tw";
 
 @source "./src";
 ```
 
 ## Usando um entrypoint específico
 
-Importe um entrypoint `/tw/*` específico em vez do combinado — como `/tw/button` ou `/tw/form` — quando um build só precisa de uma família de componentes; veja a [tabela de entrypoints](../setup.md#todos-os-entrypoints) completa para saber o que cada um reúne.
+Importe um entrypoint `/*/tw` específico em vez do combinado — como `/button/tw` ou `/form/tw` — quando um build só precisa de uma família de componentes; veja a [tabela de entrypoints](../setup.md#todos-os-entrypoints) completa para saber o que cada um reúne.
 
-Diferente do `/tw`, os entrypoints específicos e o `/tw/native` não importam o Tailwind, então mantenha o seu próprio import primeiro:
+Diferente do `/tw`, os entrypoints específicos e o `/native/tw` não importam o Tailwind, então mantenha o seu próprio import primeiro:
 
 ```css
 @import "tailwindcss";
-@import "@codenhub/styles/tw/button";
+@import "@codenhub/styles/button/tw";
 ```
 
 ## Construa seus próprios componentes com `@apply`

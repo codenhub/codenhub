@@ -2,7 +2,7 @@
 title: Estilos
 description: La hoja de estilos, los colores con y sin @codenhub/styles, las clases de presentación, el tamaño, el modo oscuro, sobrescribir colores, la Content Security Policy y el orden de las hojas de estilos.
 order: 4
-source: d6079abe49e29d1f3fc1f994a6fdb31384bb4d37
+source: 970a174286fd8745c8432b398753fd904302ee17
 ---
 
 # Estilos
@@ -205,7 +205,7 @@ Además, el paquete nunca interpreta HTML, así que también funciona con Truste
 
 ## Orden de las hojas de estilos con `@codenhub/styles/native`
 
-Si usas la hoja de estilos para elementos nativos de `@codenhub/styles` (`@codenhub/styles/native` o `@codenhub/styles/tw/native`), impórtala **antes** que la hoja de estilos del toaster:
+Si usas la hoja de estilos para elementos nativos de `@codenhub/styles` (`@codenhub/styles/native` o `@codenhub/styles/native/tw`), impórtala **antes** que la hoja de estilos del toaster:
 
 ```ts
 import "@codenhub/styles/native";
