@@ -18,10 +18,10 @@ Generated work either leaves imagery out or fills the gap with whatever it can m
 1. The person's own assets: product photos, screenshots, team and place photos, brand illustration.
 2. The product itself: real screens, real data, and real output, cropped to the part that matters.
 3. An image model, when the environment offers one.
-4. A photo library whose license covers the use, such as one that allows commercial use without attribution, or one where the attribution is given.
+4. A photo library whose terms cover the use: the license for the medium and purpose, the attribution it asks for, and a model or property release where people, private places, or trademarks are recognizable.
 5. Type alone, with no image.
 
-Never draw the subject by hand in SVG or CSS, such as a person, a device, a dish, or a building. A drawing that does not read as the thing at a glance costs more than no image. Geometry you can define exactly, such as a chart, a diagram, a pattern, or a shape from the brand, is not this.
+Do not stand in a hand-drawn SVG or CSS picture of the subject, such as a person, a device, a dish, or a building, for an image you do not have. Keep a drawing only when it reads as the thing at a glance at its viewing size; one that does not costs more than no image. Geometry you can define exactly, such as a chart, a diagram, a pattern, or a shape from the brand, is not this.
 
 When none of the first four is available and the work needs a picture to carry it, say so, name the image that would, and build the type-only version.
 
@@ -31,7 +31,7 @@ Judge each candidate against these, and drop one that fails any:
 
 - **One subject.** The viewer can say what the image shows in a second. A wide scene with many small things is texture, not a subject.
 - **This product, not the category.** An image that would fit any competitor's page, such as a handshake, a team around a laptop, a city at night, or a glowing network, says nothing. Prefer the specific person, place, object, or screen.
-- **Room for what goes on it.** When text or an interface sits over the image, it needs a calm area where that will go. Crop to make one, or choose another image.
+- **Room for what goes on it.** When text or an interface sits over the image, it needs a calm area where that will go. Crop to make one, lay a band or a gradient behind the text, or choose another image.
 - **Light and color that fit the palette.** An image whose dominant colors fight the accent pulls attention from it. Choose images that share a temperature with the palette, or let the image set the palette.
 - **Resolution for the largest size it is shown at,** at twice that size for screens with high pixel density.
 
@@ -67,7 +67,7 @@ Look at each one at full size and at the size it will be shown. Flaws hide in th
 - **Match the text.** Choose the stroke weight to match the weight of the text beside it, size the icon to about the text's line height, and center it on the text's line.
 - **Add an icon only where it speeds recognition:** navigation, repeated actions, status, and file or item types. A heading, a paragraph, or a list of benefits does not need one.
 - **Choose a literal metaphor or none.** An icon must name the action or object it stands for: a trash can for delete, a bell for notifications. Skip the abstract clichés, such as a rocket for launch or growth, a lightbulb for ideas, a handshake for partnership, a shield for security, a lightning bolt for speed, and sparkles for AI. When no icon names the thing without its label, use the label.
-- **Icons with their labels.** An icon alone works only for the few that everyone reads, such as search, close, and menu. Give the rest a visible label, or at least an accessible name and a tooltip.
+- **Icons with their labels.** An icon alone is understood only for the few that everyone reads, such as search, close, and menu. Give the rest a visible label. Every icon-only control needs an accessible name, whichever icon it uses; a tooltip adds to the name and does not replace it.
 
 ## Emoji
 
@@ -76,8 +76,8 @@ Emoji are not icons. They carry a tone, and they look different on every platfor
 They can be right when the tone is the point and the content is casual, personal, or playful, such as a social post, a short video, a friendly empty state, or a product whose voice already uses them. Then:
 
 - **Use few, chosen for the art.** One or two, large enough to be seen as an image, chosen because that drawing fits. Judge the drawing as you would an illustration, not the character's meaning alone.
-- **Fix the rendering where the output is an image or a video.** The capture bakes in the emoji font of the machine that renders it, which may be the crude one. Render the emoji as an image from an openly licensed set, such as Noto Color Emoji, Microsoft's Fluent Emoji, or Twemoji, and keep the set's license and any required attribution. Do not export Apple's emoji art into published graphics; it is Apple's copyrighted artwork, with no license for reuse.
-- **Accept the viewer's rendering in live text.** In a web page or an app, an emoji typed as text renders in each viewer's own system font. Use it there only where any rendering fits, or use an image from an open set at a fixed size.
+- **Fix the rendering where the output is an image or a video.** The capture bakes in the emoji font of the machine that renders it, which may be the crude one. Render the emoji as an image from an openly licensed set, such as Noto Color Emoji, Microsoft's Fluent Emoji, or Twemoji, and keep the set's license and any required attribution. Do not export Apple's emoji art into published graphics; it is Apple's copyrighted artwork, with no public license for reuse.
+- **Accept the viewer's rendering in live text.** In a web page or an app, an emoji typed as text renders in each viewer's own system font. Use it there only where any rendering fits, or use an image from an open set at a fixed size, with alternative text that says what a meaningful emoji says, or empty alternative text for a decorative one.
 - **Check the rendered result.** Look at the emoji in the render at its real size, and for live text, check it on at least two platforms when you can.
 - **Do not mix sets** on one surface, or mix emoji with a line icon set in one role.
 

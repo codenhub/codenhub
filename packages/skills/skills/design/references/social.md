@@ -17,7 +17,7 @@
 
 A post is met mid-scroll on a phone, beside photos of people and things, and gets about a second before the thumb moves on. It is closer to a poster than to a web page: one message, seen at a glance, at a fraction of its pixel size. Most weak generated posts are a landing page fitted into a square, with a heading, a paragraph, a bulleted list, a button, and a logo, all at web sizes.
 
-Decide the one thing a viewer should take from it in that second, such as a number, a date, a claim, a face, or a product. Everything else on the canvas supports that thing or goes into the caption, which carries the detail, the links, and the call to action.
+Decide the one thing a viewer should take from it in that second, such as a number, a date, a claim, a face, or a product. Everything else on the canvas supports that thing or goes into the caption, which carries the detail and the call to action. A story has no caption: its detail goes on the next story or behind a link sticker. Give each feed image alt text that repeats the text on the canvas, where the platform allows it.
 
 ## Canvas
 
@@ -48,7 +48,7 @@ Keep the canvas to as few words as the message allows: the main message readable
 
 - **One focal element, large.** Give the thing from What A Post Is about half the canvas or more: the number at display size, the product photo cropped close, the face filling the frame. A post where every element is medium-sized reads as nothing from a feed.
 - **Use the content as the image.** A real photo, a product screenshot cropped to the part that matters, a chart with one line highlighted, or type alone. A post with none of these is a type poster, which works when the type is large and set with care. Never stand in a crude drawing or a stock-like gradient for an image you do not have.
-- **No interface parts.** A drawn button cannot be tapped, a navigation bar has nowhere to go, and chips, tick lists, and shadowed cards are web-page residue. State the action in words, such as the date and place, and put the link in the caption.
+- **No interface parts.** A drawn button cannot be tapped, a navigation bar has nowhere to go, and chips, tick lists, and shadowed cards are web-page residue. State the action in words, such as the date and place, and put the link where the platform makes it tappable: the caption where links work there, the profile link for an Instagram feed post, or a link sticker in a story.
 - **Compose for the frame, not a card in it.** Let the content reach the edges with a margin. A small rounded card floating in the middle of a gradient wastes most of the canvas.
 - **One reading path.** Read top to bottom, the post goes from the main message to the details, each once. Keep the details together in one block in the order people need them, such as what, when, where, how much, and how to join, as lines of plain text. A brand in one corner, a city in another, a date in a third, and a price in the fourth make the viewer hunt. The signature level, such as the handle and the slide number, sits together in one place, not split across corners.
 - **No lines, chips, or monospace.** A post has no table to rule and nothing to select. Rules, bordered pills, and monospaced labels make it look like an interface.
@@ -71,7 +71,7 @@ A carousel is a sequence read by swiping. The first slide decides whether anyone
 - **One point per slide,** at the same text sizes as a single post. A slide that needs a paragraph is two slides.
 - **Hold the layout.** Keep margins, the type positions, the text sizes, and the color roles identical on every slide, so each swipe reads as the next page of the same thing and only the content changes. Number the slides when order matters.
 - **No label above each headline.** A small uppercase or colored line such as a step and a topic over every slide's headline is the generated label repeated five times, and a level of its own. Put the step number in the headline or with the slide number, and let the headline name the topic.
-- **Lead into the next slide** with the content, such as a sentence that completes on the next slide or a step number, rather than with a "swipe" arrow on every slide.
+- **Lead into the next slide** with the content, such as a step number or a question the next slide answers, rather than with a "swipe" arrow on every slide.
 - **End on the payoff,** such as the summary, the result, or the one action, and keep the action in words.
 - Each slide may be shared or seen alone, so each one must still make sense with its slide number and the brand mark.
 
