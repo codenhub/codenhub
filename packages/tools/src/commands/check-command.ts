@@ -1,5 +1,5 @@
 import type { CheckExceptions } from "../checks/exceptions.ts";
-import type { Finding } from "../checks/rule.ts";
+import { runCheckRules, type Finding } from "../checks/rule.ts";
 import { mapConcurrent } from "../process/concurrency.ts";
 import type { SummaryRow } from "../reporting/reporter.ts";
 import type { WorkspacePackage } from "../workspace/discover.ts";
@@ -65,15 +65,11 @@ async function inspectPackages(context: CommandContext): Promise<CheckReport> {
 
   const reports = await mapConcurrent(packages, context.options.concurrency, async (workspacePackage) => {
     const applicable = rules.filter((rule) => rule.appliesTo(workspacePackage));
-    const results = await Promise.all(
-      applicable.map(async (rule) =>
-        rule.run({
-          includePack: context.options.includePack,
-          package: workspacePackage,
-          timeoutMs: context.options.timeoutMs,
-        }),
-      ),
-    );
+    const results = await runCheckRules(applicable, {
+      includePack: context.options.includePack,
+      package: workspacePackage,
+      timeoutMs: context.options.timeoutMs,
+    });
     return inspectPackage(
       workspacePackage,
       exceptions.get(workspacePackage.name) ?? new Set(),

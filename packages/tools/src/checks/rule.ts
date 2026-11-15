@@ -43,6 +43,36 @@ export interface CheckRule {
    * "not applicable" apart from "compliant".
    */
   appliesTo(workspacePackage: WorkspacePackage): boolean;
+  /**
+   * Whether the rule rebuilds the package, replacing its build output while it runs.
+   *
+   * Such a rule runs after every other rule of the package has finished, so none
+   * of them reads build output that the rebuild has emptied (codenhub/codenhub#556).
+   */
+  rebuildsPackage?: boolean;
   /** Inspects one package. */
   run(context: CheckRuleContext): Promise<Finding[]> | Finding[];
+}
+
+/**
+ * Runs every rule against one package: the rules that only read it concurrently, then the
+ * ones that rebuild it, one at a time.
+ * @param rules Rules that apply to the package.
+ * @param context What each rule inspects, and how.
+ * @returns Each rule's findings, in the order of `rules`.
+ */
+export async function runCheckRules(rules: readonly CheckRule[], context: CheckRuleContext): Promise<Finding[][]> {
+  const results = new Map<CheckRule, Finding[]>();
+  await Promise.all(
+    rules
+      .filter((rule) => rule.rebuildsPackage !== true)
+      .map(async (rule) => {
+        results.set(rule, await rule.run(context));
+      }),
+  );
+  for (const rule of rules.filter((candidate) => candidate.rebuildsPackage === true)) {
+    // oxlint-disable-next-line no-await-in-loop -- two rebuilds at once would each empty the other's output.
+    results.set(rule, await rule.run(context));
+  }
+  return rules.map((rule) => results.get(rule) ?? []);
 }
