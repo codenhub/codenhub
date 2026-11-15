@@ -61,19 +61,7 @@ jobs:
       - name: Verify
         # Browser tests are skipped here because the browser job owns them; running
         # them twice would double the slowest step of the run.
-        # TEMPORARY diagnostic for the icons dist failure on Node.js 26; reverted before merge.
-        run: |
-          snap() { echo "::group::icons dist after $1"; ls -la packages/icons/dist packages/icons/dist/tw packages/icons/dist/data 2>&1 | head -60; echo "::endgroup::"; }
-          node --version
-          pnpm build icons --verbose 2>&1 | tail -40
-          snap "icons-only build"
-          pnpm build $SELECTOR
-          snap build
-          pnpm typecheck $SELECTOR
-          snap typecheck
-          pnpm test $SELECTOR
-          snap test
-          pnpm check $SELECTOR
+        run: pnpm verify --skip=test:browser $SELECTOR
 
       # A check that writes a file has changed what it was checking, so the run fails. `--untracked-files=all`
       # lists a new file, not only the directory that holds it.
