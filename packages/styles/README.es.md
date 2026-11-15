@@ -1,4 +1,4 @@
-<!-- source: fb48f90d96de3e5f00dee9ab95c8ee2ddc9b2944 -->
+<!-- source: 0fec2ef0364251d54d0fa7df180ad853241ef56d -->
 
 # @codenhub/styles
 
@@ -59,4 +59,4 @@ Este paquete no tiene comportamiento en JavaScript. No incluye alias de compatib
 
 ## Licencia
 
-Este proyecto tiene licencia [Apache-2.0](LICENSE). Las marcas de checkbox incrustadas derivan de los iconos `check` y `minus` de [Lucide](https://lucide.dev) (ISC), que Lucide deriva de [Feather](https://github.com/feathericons/feather) (MIT). Consulta [NOTICE](NOTICE) para los avisos obligatorios.
+Este proyecto tiene licencia [Apache-2.0](LICENSE). Los valores del tema, el Preflight y los registros de propiedades de `src/base/`, y las partes de cada hoja de estilos compilada que se construyen a partir de ellos, provienen de [Tailwind CSS](https://tailwindcss.com) (MIT). Las marcas de checkbox incrustadas derivan de los iconos `check` y `minus` de [Lucide](https://lucide.dev) (ISC), que Lucide deriva de [Feather](https://github.com/feathericons/feather) (MIT). Consulta [NOTICE](NOTICE) para los avisos obligatorios.
