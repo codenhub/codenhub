@@ -125,6 +125,8 @@ export function createSizeRules(sources: SizeRuleSources): CheckRule[] {
     {
       appliesTo: ({ isPrivate }) => !isPrivate,
       name: "size",
+      // It measures the package by building it again, which empties its `dist/`.
+      rebuildsPackage: true,
       run: ({ package: workspacePackage, timeoutMs }) => run(workspacePackage, serialized, timeoutMs),
       summary: "A version awaiting its release tag carries a size.json that matches its build.",
     },

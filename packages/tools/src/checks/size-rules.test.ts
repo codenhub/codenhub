@@ -33,6 +33,10 @@ function createRule(tags: readonly string[], check: ReadinessCheck = { detail: "
 }
 
 describe("size rule", () => {
+  it("runs after the rules that read the build, since measuring rebuilds the package", () => {
+    expect(createRule([]).rule.rebuildsPackage).toBe(true);
+  });
+
   it("leaves a released version alone, since size.json records the release rather than the code since", async () => {
     const { checkSize, rule } = createRule(["@codenhub/example@0.2.0"]);
 

@@ -1,6 +1,6 @@
 ---
 status: IMPLEMENTED
-last_updated: 2026-11-09
+last_updated: 2026-11-14
 scope: Index of repository-wide documentation.
 ---
 
@@ -10,7 +10,7 @@ scope: Index of repository-wide documentation.
 
 Every document in `docs/` is listed here. Adding, moving, or deleting one updates this index in the same change.
 
-Package-specific consumer and maintainer documentation lives with each workspace package; this index covers what holds across the repository. Start with the [roadmap](roadmap.md) for where the repository is heading.
+Package-specific consumer and maintainer documentation lives with each workspace package; this index covers what holds across the repository. The [roadmap](roadmap.md) records where the repository is heading.
 
 ## Overview
 
@@ -20,12 +20,12 @@ Package-specific consumer and maintainer documentation lives with each workspace
 
 ## Guidelines
 
-| Document                                     | Contains                                                                                                 |
-| -------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
-| [Code](guidelines/code.md)                   | Naming, design, errors, inputs and state, testing practices, and documentation in code.                  |
-| [Stack](guidelines/stack.md)                 | The conventions of the project's languages and the tools that check them.                                |
-| [Documentation](guidelines/documentation.md) | Metadata, prompts, status and authority, recording decisions, exceptions, layout, and the writing voice. |
-| [Security](guidelines/security.md)           | Secrets, untrusted input, what stays out of logs, and reviewing a change.                                |
+| Document                                     | Contains                                                                                                                 |
+| -------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| [Code](guidelines/code.md)                   | Naming, design, errors, inputs and state, testing practices, and documentation in code.                                  |
+| [Stack](guidelines/stack.md)                 | The conventions of the project's languages and the tools that check them.                                                |
+| [Documentation](guidelines/documentation.md) | Metadata, prompts, status and authority, recording decisions, exceptions, document roles, layout, and the writing voice. |
+| [Security](guidelines/security.md)           | Secrets, untrusted input, what stays out of logs, and reviewing a change.                                                |
 
 | Document                                                 | Contains                                                                                   |
 | -------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
