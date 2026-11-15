@@ -18,7 +18,7 @@ This document contains no drop-in code: the source and the generator own the imp
 
 ## What is generated
 
-`scripts/generate-palette.mjs` compiles the package's own `src/index.css` through the Tailwind CLI, renders the real component each ground describes for every combination in Chromium, and reads their computed styles, so the published value is the browser's own answer rather than a re-derivation of the formula. Presentation percentages and intents come from `registry.json`. `pnpm generate` writes `src/palette.css`, which is compiled to `dist/palette.css`; `--dry-run` reports drift without writing.
+`scripts/generate-palette.mjs` compiles the package's own `src/index.css` with the build that compiles `dist/`, renders the real component each ground describes for every combination in Chromium, and reads their computed styles, so the published value is the browser's own answer rather than a re-derivation of the formula. Presentation percentages and intents come from `registry.json`. `pnpm generate` writes `src/palette.css`, which is compiled to `dist/palette.css`; `--dry-run` reports drift without writing.
 
 Every `intent x presentation` cell (7 intents, `solid`/`soft`/`ghost`) gets its `bg`, `fg`, and `edge` at rest, plus `bg` and `edge` again at hover. `fg` never changes on hover, since `box-hover` only redefines background, edge, shadow, and transform.
 

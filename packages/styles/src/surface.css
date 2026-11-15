@@ -1,5 +1,3 @@
-@reference "./box.css";
-
 /* The focused entry: what the rules in `surface.rules.css` need to compile on their
    own, then the rules. An aggregate entry imports the rules file directly and
    supplies those needs once -- Tailwind stacks a `@utility` each time a file

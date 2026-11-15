@@ -1,6 +1,6 @@
 ---
 status: IMPLEMENTED
-last_updated: 2026-11-13
+last_updated: 2026-11-15
 scope: Design decisions, limits, and failure modes of the `chs` build command that ships in `@codenhub/styles`.
 ---
 
@@ -55,13 +55,13 @@ A class may be dropped when it is a Tailwind candidate: naming it adds CSS to th
 
 ## Node.js version
 
-The command supports Node.js 24 and newer, the version this repository builds and tests with; it uses `glob` from `node:fs/promises`, which older releases lack or mark experimental. The package declares `engines.node` as `>=24`, as `docs/specs/packages-lifecycle.md` requires of a package with a CLI, so a consumer on an older Node.js is warned on install by npm, stopped by Yarn 1 and by npm with `engine-strict`, and told nothing by pnpm 11, even when they only link the CSS; on Node.js 22, `yarn add` fails with "The engine \"node\" is incompatible with this module". The floor stays the pinned major regardless, because a lower one would name a line CI does not test. The command also checks the version itself when `build` runs and names both versions. `node:fs/promises` is imported as a namespace so that an older Node.js reaches that check: a named import of a missing export fails at load, before any code runs.
+The command supports Node.js 26 and newer, the version this repository builds and tests with. The package declares `engines.node` as `>=26`, as `docs/specs/packages-lifecycle.md` requires of a package with a CLI, so a consumer on an older Node.js is warned on install by npm, stopped by Yarn 1 and by npm with `engine-strict`, and told nothing by pnpm 11, even when they only link the CSS; on Node.js 22, `yarn add` fails with "The engine \"node\" is incompatible with this module". The floor is the pinned major, not the oldest release the code runs on: the newest API the command uses is `glob` from `node:fs/promises`, which Node.js 24 has, and the floor was 24 through 0.9.0. 0.10.0 raised it with the pinned major, as that specification asks of a package's next breaking release, because a floor on the previous line is tested only while the `floor` job of `docs/ci.md` lasts. The command also checks the version itself when `build` runs and names both versions. `node:fs/promises` is imported as a namespace so that an older Node.js reaches that check: a named import of a missing export fails at load, before any code runs.
 
 ## Finding the package root
 
 The command resolves everything from this package's own files, never through its package name: a package resolving itself by name depends on self-reference and on how it was installed. The running file is `src/cli/run.ts` in the tests and `dist/cli.js` once built, two different depths below the package root, so `findPackageRoot` walks up from the running file to the nearest folder holding a `package.json`. No folder between either file and the root holds one. `tests/integration/cli.test.ts` covers the walk, and its `--version` test checks the root it finds in practice is this package's.
 
-The aesthetic names are read from the keys of the same manifest's `exports` (`./aesthetics/<name>`), and each `--aesthetic` reads the file that subpath names under the `import` condition, so a new aesthetic needs no change to the command. An aesthetic is added only when asked for, since no template names which one a project wants, and is purged against the same classes as the stylesheet: its solo class is not in `classes.json`, so it is kept, and its rules for unused components are dropped.
+The aesthetic names are read from the keys of the same manifest's `exports` (`./aesthetics/<name>`, less `./aesthetics/tw`, which is the Tailwind source of all of them), and each `--aesthetic` reads the file that subpath names under the `import` condition, so a new aesthetic needs no change to the command. An aesthetic is added only when asked for, since no template names which one a project wants, and is purged against the same classes as the stylesheet: its solo class is not in `classes.json`, so it is kept, and its rules for unused components are dropped.
 
 ## How classes are found
 
@@ -77,8 +77,8 @@ Each `--content` glob is checked with `fs.glob` and has to match at least one fi
 - **No Tailwind utilities, no other variants, no stacked variants.** As [No Tailwind utilities, ten variants](#no-tailwind-utilities-ten-variants) records. A consumer who needs them has outgrown the command and imports `@codenhub/styles/tw` from their own Tailwind input.
 - **No watch mode or other commands.** They are left out until a consumer needs them.
 - **No configuration file or custom CSS input.** A project changes the look with tokens and container classes, and resizes controls with `--ui-scale`; [Roadmap → Not Planned](./roadmap.md#not-planned) records why a configuration file was dropped.
-- **Node.js 24 or newer.** The command uses `glob` from `node:fs/promises`, and checks the version itself before using it, as [Node.js version](#nodejs-version) describes. The stylesheets themselves need no Node.js.
+- **Node.js 26 or newer.** The floor is the major this repository pins, and the command checks the version itself before it reads a file, as [Node.js version](#nodejs-version) describes. The stylesheets themselves need no Node.js.
 
 ## Failure modes
 
-Every failure the command handles prints one line, `chs: <reason>`, to stderr and exits with status 1 without writing the output file. The reasons, each tested: a missing `--content` or `--output` (an `--output` of only spaces counts as missing); a `--content` glob that matches no file, naming the glob and the folder; an extra positional argument, almost always an unquoted glob the shell expanded; an unknown flag, or a flag missing its value or given one it does not take, worded from `parseArgs`'s error rather than passed through, since Node words those for programmers; an unknown aesthetic, listing the valid ones; a missing or unknown command; a Node.js older than 24, naming both versions; and a failed write, with Node.js's own message, such as `EISDIR` when `--output` names a folder, or `EPERM` for the same mistake on Windows.
+Every failure the command handles prints one line, `chs: <reason>`, to stderr and exits with status 1 without writing the output file. The reasons, each tested: a missing `--content` or `--output` (an `--output` of only spaces counts as missing); a `--content` glob that matches no file, naming the glob and the folder; an extra positional argument, almost always an unquoted glob the shell expanded; an unknown flag, or a flag missing its value or given one it does not take, worded from `parseArgs`'s error rather than passed through, since Node words those for programmers; an unknown aesthetic, listing the valid ones; a missing or unknown command; a Node.js older than 26, naming both versions; and a failed write, with Node.js's own message, such as `EISDIR` when `--output` names a folder, or `EPERM` for the same mistake on Windows.

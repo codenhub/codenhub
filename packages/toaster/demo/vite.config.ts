@@ -84,13 +84,13 @@ export default defineConfig({
        demo must never run against `src/`. `@codenhub/styles` is a
        dependency of the reused playground page, not the package under
        inspection here, so it keeps resolving the same way `dev`/`debug` do:
-       `/tw` to its Tailwind JIT source -- required for the playground's own
-       raw utility classes to compile at all, since the pre-built `dist/` CSS
-       is scanned only from `packages/styles/src/**` and never sees this
+       `/tw` to its built Tailwind source in `tw/` -- required for the
+       playground's own raw utility classes to compile at all, since the
+       pre-built `dist/` CSS holds no Tailwind utility and never sees this
        page's markup. */
     alias: {
-      "@codenhub/styles/tw/native": resolve(__dirname, "../../styles/src/native.css"),
-      "@codenhub/styles/tw": resolve(__dirname, "../../styles/src/index.css"),
+      "@codenhub/styles/native/tw": resolve(__dirname, "../../styles/tw/native.css"),
+      "@codenhub/styles/tw": resolve(__dirname, "../../styles/tw/index.css"),
       "@codenhub/styles/native": resolve(__dirname, "../../styles/dist/native.css"),
       "@codenhub/styles": resolve(__dirname, "../../styles/dist/index.css"),
       "virtual:toaster-styles": resolve(__dirname, "../dist/styles/index.css"),

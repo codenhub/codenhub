@@ -12,684 +12,723 @@
    alone gives it nothing to make room for: the class belongs on the wrapper or
    an ancestor, as `content-and-layout.md` says. A parent cannot read a child's
    tokens, and reaching down with `:has()` would name an aesthetic here. */
-@utility table-wrap {
-  @apply overflow-x-auto;
+@layer utilities {
+  .table-wrap {
+    overflow-x: auto;
 
-  --_table-wrap-bleed: calc(var(--ui-halo-blur, 0px) + var(--ui-halo-spread, 0px));
+    --_table-wrap-bleed: calc(var(--ui-halo-blur, 0px) + var(--ui-halo-spread, 0px));
 
-  box-sizing: border-box;
-  width: calc(100% + var(--_table-wrap-bleed) * 2);
-  margin: calc(var(--_table-wrap-bleed) * -1);
-  padding: var(--_table-wrap-bleed);
-}
-
-/* The one component that takes the frame of `box` and not the whole of it. The
-   border and the plate come from the box, and the corner is a surface's,
-   because a table is a pane of content rather than a control; the head tone,
-   the cell rules and the row hover are private tokens, because none of the
-   three axes has a vocabulary for the inside of a table.
-
-   Nothing here clips the table. Chromium and WebKit lay a `<caption>` out
-   inside the table's own box while painting the plate and the frame around the
-   rows alone, so anything that acts on the whole box -- an `overflow` clip, a
-   `clip-path`, a backdrop filter, a positioned layer -- spans the caption: an
-   `overflow: hidden` would round the caption's corners instead of the head's
-   and cut the caption's first letter. The corner cells take the table's corners
-   instead (below), which every engine draws on the rows. Recorded in
-   `registry.json` beside the decision. */
-@utility data-table {
-  /* The neutral reset, carried so `@apply data-table` gets it, as `btn` carries its own. */
-  @layer families {
-    :where(&:not(.data-table, .primary, .secondary, .success, .warning, .destructive, .info)) {
-      --intent-color: var(--color-text);
-      --intent-contrast: var(--color-text-contrast);
-      --intent-hover: var(--color-text-hover);
-      --intent-strong: var(--color-text-strong);
-      --intent-subtle: var(--color-surface);
-      --intent-border: var(--ui-rule-ink, var(--ui-ink, var(--color-border)));
-      --intent-fill-max: 20%;
-    }
+    box-sizing: border-box;
+    width: calc(100% + var(--_table-wrap-bleed) * 2);
+    margin: calc(var(--_table-wrap-bleed) * -1);
+    padding: var(--_table-wrap-bleed);
   }
 
-  @apply box text-body w-full border-separate text-start;
+  /* The one component that takes the frame of `box` and not the whole of it. The
+     border and the plate come from the box, and the corner is a surface's,
+     because a table is a pane of content rather than a control; the head tone,
+     the cell rules and the row hover are private tokens, because none of the
+     three axes has a vocabulary for the inside of a table.
 
-  --_d-fill: 12%;
-  --_d-fg-on-fill: 0%;
-  /* Edgeless, so the frame is asked for rather than inherited from a default
-     nobody can see in their own markup. `.edged` draws it, and the two
-     boundaries a table keeps whatever else it draws mean a frameless one still
-     reads as a table. */
-  --_d-border: 0%;
-  --_d-elevation: 0;
-
-  /* Capped the way `box` caps, because the head is a fill of the intent like any
-     other and a neutral table head is otherwise a slab of the page's ink with
-     ink printed on it. */
-  /* The head's plate is the tint, so a table carrying no fill has no head
-     plate. `.ghost` means no tint here the way it means no fill everywhere
-     else, and a ghost table is boundaries and type and nothing else -- which is
-     what `.ghost` is for on this component, since the published resting fill is
-     `soft`.
-
-     Zero stays zero, and nothing past it saturates: `* 5` keeps zero at zero,
-     lets `.solid`'s 100% clear the `min(100%, ...)` ceiling to a fully opaque
-     head, and stops `.soft`'s 12% short at 60%, a visibly lighter plate, so the
-     two presentations separate. A larger multiplier lands both on a fully
-     opaque plate, leaving only the small intent mix to tell them apart.
-
-     It reads `--ui-fill` rather than `--_table-fill` because the question is
-     what the presentation wanted, not what the intent cap and an aesthetic's
-     alpha left of it: a glass `.soft` table still wants its head plate, and
-     neutral's 20% cap has no bearing on whether there is one. Reading the raw
-     class value also keeps the expression a `calc()` over one `var()` rather
-     than over `--_table-fill`'s own `calc()`/`min()` chain, which matters for
-     the reason `--_table-rule-plated` below records. */
-  --_table-ground: min(100%, calc(var(--ui-fill, var(--_d-fill)) * 5));
-  --_table-head-bg: color-mix(in oklab, var(--intent-color) var(--_table-fill), var(--_table-head-plate));
-  --_table-head-fg: color-mix(in oklab, var(--intent-contrast) var(--_on-fill), var(--intent-strong));
-  /* The table's own contrast ink, resolved here so a row with its own intent
-     prints on the table's plate in the ink that plate takes: the row's
-     `--intent-contrast` is chosen for the row's fill, which a row does not
-     paint, and a light one on a light plate reads at 1:1. */
-  --_table-contrast: var(--intent-contrast);
-
-  /* Untinted rather than mixed, the same call `.card.soft` makes: 12% ink onto
-     `--intent-subtle` still reads as `.solid` on neutral, since neutral's ink
-     and ground are both on the same greyscale axis. A head has no hover or
-     interaction state to reveal a tint into the way a card does, so `.soft` is
-     `--color-foreground`, flat, always, for every intent. That mutes a coloured
-     `.success`/`.destructive` head at rest the way it mutes a non-interactive
-     `.card.soft`; accepted for the same reason.
-
-     The table's own base plate rests the same way: a `.soft` head at
-     `--color-foreground` (five units off the page) above a body carrying the
-     ordinary 12% tint (twenty-four units past the head) reads backwards, as
-     though the head belonged to the page and the body were the odd one out.
-     `--_fill-cap` is `box.css`'s override slot (the one `.card.soft` uses) and
-     `--_d-ground` is box's private ground slot; both land on the table's own
-     element, so nothing here fights `.soft` for `--ui-fill`. `.ghost` is left
-     at box's default (`--_d-ground: transparent`), so it stays the fully bare
-     boundaries-only table; `.soft` differs from it by keeping an opaque,
-     untinted plate and a head label strip. */
-  /* Whether the table rests on the quiet plate, as 0% or 100%: a resolved
-     fill above nothing and below full. Stepped from the resolved fill, as
-     `surface`'s `--_quiet` is, not keyed on `:not(.solid, .ghost)` here:
-     presentation cascades, and keyed on the class a container's `.solid`
-     filled the head and dropped the frame while the body kept this plate. */
-  --_table-quiet: min(
-    clamp(0%, calc(var(--ui-fill, var(--_d-fill)) * 1000), 100%),
-    clamp(0%, calc((100% - var(--ui-fill, var(--_d-fill))) * 1000), 100%)
-  );
-  /* A table is a pane of content, so under an aesthetic whose surfaces are
-     glass it is glass too: the plate is the aesthetic's surface ground when
-     one is named. Head and body share the plate, as they do on the page. Only
-     the quiet rest reads it: a `.solid` table is opaque, like every `.solid`,
-     and a `.ghost` one is boundaries and type. */
-  --_table-ground-plate: var(--ui-surface-ground, var(--color-foreground));
-  --_table-fill: min(
-    calc(min(var(--ui-fill, var(--_d-fill)), var(--intent-fill-max, 100%)) * var(--ui-bg-alpha, 1)),
-    calc(100% - var(--_table-quiet))
-  );
-  --_table-head-plate: color-mix(
-    in oklab,
-    var(--_table-ground-plate) var(--_table-quiet),
-    color-mix(in oklab, var(--intent-subtle) var(--_table-ground), transparent)
-  );
-  --_fill-cap: calc(100% - var(--_table-quiet));
-  --_d-ground: color-mix(in oklab, var(--_table-ground-plate) var(--_table-quiet), transparent);
-
-  /* A table rests on a plate of its own at every fill but `.ghost`, so no
-     ink from above passes through it, as on `surface`. A ghost table on a
-     filled parent therefore prints the page's ink on that fill: a toggle
-     cannot be stepped from the fill. */
-  --_held-ink: var(--_fg-own);
-  --_held-on: var(--_own-hold);
-
-  /* The blur behind the glass plate. A filter cannot be stepped from a
-     percentage, so this one part stays keyed on the class: a table under a
-     container's `.ghost` in a glass region still blurs what is behind it. */
-  &:not(.solid, .ghost) {
-    -webkit-backdrop-filter: var(--ui-backdrop, none);
-    backdrop-filter: var(--ui-backdrop, none);
-  }
-
-  /* How much rule there is between body rows, and none unless asked for. Ruling
-     every row is a style choice rather than part of what a table is, so it is
-     not tied to the edge axis: `.ruled` asks for it, `.ruleless` is its
-     opposite, and `--ui-rule` is behind both, so a consumer who wants a whole
-     region ruled, or a whole region bare, sets the token on a container instead
-     of classing every table.
-
-     One token covers three positions because the two places that read it take
-     different fallbacks. Unset, each site answers for itself: no rules between
-     rows, but the boundaries below still drawn. Set, the answer is the same at
-     both. So `.ruled` writes 100% and gets rules everywhere, `.ruleless` writes
-     0% and gets a table with no lines in it at all, and a table nobody classed
-     sits between them. */
-  --_table-rule-amount: var(--ui-rule, 0%);
-  --_table-boundary-amount: var(--ui-rule, 100%);
-  /* What the rule is drawn in, which is not the same tone at every fill.
-     `.ghost` and `.soft` keep `--intent-border` -- the slot an aesthetic
-     restates through `--ui-ink` -- because at those fills the plate has not
-     swallowed it. `.solid` is where it has: at a full fill `--intent-border`
-     *is* the plate for every intent, and at neutral's capped fill it is a near
-     shade of the same grey, so the row rule disappears exactly where the plate
-     is busiest.
-
-     The filled case draws in `currentColor` at a fifth instead: the ink the
-     cell is already printing (`--_table-head-fg` on a head, `box`'s own `--_fg`
-     in the body), so it reads on a light plate and a dark one without a
-     per-intent branch, and it lands *over* the plate because a translucent
-     border composites onto the background the element already painted.
-
-     Naming the ink rather than composing it also keeps this expression cheap,
-     which is a requirement: every `th` and `td` on a page resolves it, and
-     written as `color-mix(--_table-head-fg 20%, --_bg)` it expands, through four
-     levels of substitution, into a `color-mix()` over two more `color-mix()`es
-     over a `min()`/`max()`/`calc()` chain, which crashes WebKit's renderer on
-     the routes that draw tables. `currentColor` and `transparent` are leaves
-     the engine has already resolved, which takes the expression back down to
-     something every engine can carry. `--_table-row-hover` below is written the
-     same way, for the same reason. */
-  --_table-rule-plated: color-mix(in oklab, currentColor 20%, transparent);
-  --_table-rule-tone: color-mix(
-    in oklab,
-    var(--_table-rule-plated) var(--ui-fill, var(--_d-fill)),
-    var(--intent-border, var(--ui-rule-ink, var(--ui-ink, var(--color-border))))
-  );
-  --_table-rule: color-mix(in oklab, var(--_table-rule-tone) var(--_table-rule-amount), transparent);
-  --_table-boundary: color-mix(in oklab, var(--_table-rule-tone) var(--_table-boundary-amount), transparent);
-  /* A hovered row is a step from the table it is in, not from a tone the page
-     happens to own. A translucent step is relative at every fill, the way
-     `box-hover` is: the row composites onto whatever plate the table drew, so a
-     filled table shifts within its own colour, a soft one deepens its tint, and
-     a ghost one picks up a faint wash of the page. (Mixed into
-     `--color-foreground`, a solid primary table in dark theme would hover to
-     near-black, a dark band across a light table.)
-
-     Which tone it steps toward moves with the fill. On a bare or tinted plate
-     that is `--intent-hover`, the deepening every other component gets. On a
-     filled one it cannot be: `--intent-hover` is `mix(--intent-color 82%,
-     --intent-strong)`, very nearly the colour the plate is already painted, so
-     a step toward it is no step (a solid success table moves 1.00:1 in light).
-     A filled plate steps toward `currentColor` instead, the ink that plate
-     already carries and therefore always contrasts with it.
-
-     Both ends are leaves, and the step lands on `transparent` rather than on
-     `--_bg`, for the reason `--_table-rule-plated` above gives. */
-  --_table-hover-tone: color-mix(in oklab, currentColor var(--ui-fill, var(--_d-fill)), var(--intent-hover));
-  /* The default hover. `--table-hover` is public and read where the row
-     paints, not here, so a value on any ancestor of the cells reaches them,
-     a `tbody` or row included; `transparent` turns the hover off. */
-  --_table-row-hover: color-mix(in oklab, var(--_table-hover-tone) 12%, transparent);
-
-  border-spacing: 0;
-
-  /* A surface's corner, as `surface` computes it: a table sits beside cards and
-     panels as a pane, and under `.cyber` it took the controls' diagonal while
-     every pane around it cut the other one. */
-  --_corner-surface: calc(var(--ui-corner-surface, var(--radius-surface)) * var(--_scale));
-  border-radius: var(
-    --ui-radius-surface,
-    calc(var(--_corner-surface) * var(--ui-corner-tl, 1)) calc(var(--_corner-surface) * var(--ui-corner-tr, 1))
-      calc(var(--_corner-surface) * var(--ui-corner-br, 1)) calc(var(--_corner-surface) * var(--ui-corner-bl, 1))
-  );
-  /* No silhouette clip either, for the caption's sake: `.pixel`'s stepped clip
-     cut the caption's corners and left the head's square. A pixel table is
-     square, which is the chip answer that aesthetic already gives. */
-  clip-path: none;
-
-  /* The corners pass down to the cells that sit in them. Each section and row
-     inherits the table's four corners -- a radius does not apply to either, but
-     it still computes and inherits -- and each corner cell takes only its own
-     corner, as a longhand, so an elliptical or bevelled corner arrives whole.
-     The first row is the head's when there is one and the first body's when
-     not, and the last row likewise the foot's or the last body's; a caption
-     and a `colgroup` are skipped. A cell spanning rows into a corner is not
-     reached, and a percentage corner resolves against the cell. */
-  & > :is(thead, tbody, tfoot),
-  & > :is(thead, tbody, tfoot) > tr {
-    border-radius: inherit;
-    corner-shape: inherit;
-  }
-
-  & > :is(thead, tbody, tfoot) > tr > * {
-    corner-shape: inherit;
-  }
-
-  & > thead > tr:first-child,
-  &:not(:has(> thead)) > tbody:first-of-type > tr:first-child {
-    & > :first-child {
-      border-start-start-radius: inherit;
+     Nothing here clips the table. Chromium and WebKit lay a `<caption>` out
+     inside the table's own box while painting the plate and the frame around the
+     rows alone, so anything that acts on the whole box -- an `overflow` clip, a
+     `clip-path`, a backdrop filter, a positioned layer -- spans the caption: an
+     `overflow: hidden` would round the caption's corners instead of the head's
+     and cut the caption's first letter. The corner cells take the table's corners
+     instead (below), which every engine draws on the rows. Recorded in
+     `registry.json` beside the decision. */
+  .data-table {
+    /* The neutral reset, carried so `@apply data-table` gets it, as `btn` carries its own. */
+    @layer families {
+      :where(&:not(.data-table, .primary, .secondary, .success, .warning, .destructive, .info)) {
+        --intent-color: var(--color-text);
+        --intent-contrast: var(--color-text-contrast);
+        --intent-hover: var(--color-text-hover);
+        --intent-strong: var(--color-text-strong);
+        --intent-subtle: var(--color-surface);
+        --intent-border: var(--ui-rule-ink, var(--ui-ink, var(--color-border)));
+        --intent-fill-max: 20%;
+      }
     }
 
-    & > :last-child {
-      border-start-end-radius: inherit;
+    @compose box;
+    width: 100%;
+    border-collapse: separate;
+    text-align: start;
+    @compose text-body;
+
+    --_d-fill: 12%;
+    --_d-fg-on-fill: 0%;
+    /* Edgeless, so the frame is asked for rather than inherited from a default
+       nobody can see in their own markup. `.edged` draws it, and the two
+       boundaries a table keeps whatever else it draws mean a frameless one still
+       reads as a table. */
+    --_d-border: 0%;
+    --_d-elevation: 0;
+
+    /* Capped the way `box` caps, because the head is a fill of the intent like any
+       other and a neutral table head is otherwise a slab of the page's ink with
+       ink printed on it. */
+    /* The head's plate is the tint, so a table carrying no fill has no head
+       plate. `.ghost` means no tint here the way it means no fill everywhere
+       else, and a ghost table is boundaries and type and nothing else -- which is
+       what `.ghost` is for on this component, since the published resting fill is
+       `soft`.
+
+       Zero stays zero, and nothing past it saturates: `* 5` keeps zero at zero,
+       lets `.solid`'s 100% clear the `min(100%, ...)` ceiling to a fully opaque
+       head, and stops `.soft`'s 12% short at 60%, a visibly lighter plate, so the
+       two presentations separate. A larger multiplier lands both on a fully
+       opaque plate, leaving only the small intent mix to tell them apart.
+
+       It reads `--ui-fill` rather than `--_table-fill` because the question is
+       what the presentation wanted, not what the intent cap and an aesthetic's
+       alpha left of it: a glass `.soft` table still wants its head plate, and
+       neutral's 20% cap has no bearing on whether there is one. Reading the raw
+       class value also keeps the expression a `calc()` over one `var()` rather
+       than over `--_table-fill`'s own `calc()`/`min()` chain, which matters for
+       the reason `--_table-rule-plated` below records. */
+    --_table-ground: min(100%, calc(var(--ui-fill, var(--_d-fill)) * 5));
+    --_table-head-bg: color-mix(in oklab, var(--intent-color) var(--_table-fill), var(--_table-head-plate));
+    --_table-head-fg: color-mix(in oklab, var(--intent-contrast) var(--_on-fill), var(--intent-strong));
+    /* The table's own contrast ink, resolved here so a row with its own intent
+       prints on the table's plate in the ink that plate takes: the row's
+       `--intent-contrast` is chosen for the row's fill, which a row does not
+       paint, and a light one on a light plate reads at 1:1. */
+    --_table-contrast: var(--intent-contrast);
+
+    /* Untinted rather than mixed, the same call `.card.soft` makes: 12% ink onto
+       `--intent-subtle` still reads as `.solid` on neutral, since neutral's ink
+       and ground are both on the same greyscale axis. A head has no hover or
+       interaction state to reveal a tint into the way a card does, so `.soft` is
+       `--color-foreground`, flat, always, for every intent. That mutes a coloured
+       `.success`/`.destructive` head at rest the way it mutes a non-interactive
+       `.card.soft`; accepted for the same reason.
+
+       The table's own base plate rests the same way: a `.soft` head at
+       `--color-foreground` (five units off the page) above a body carrying the
+       ordinary 12% tint (twenty-four units past the head) reads backwards, as
+       though the head belonged to the page and the body were the odd one out.
+       `--_fill-cap` is `box.css`'s override slot (the one `.card.soft` uses) and
+       `--_d-ground` is box's private ground slot; both land on the table's own
+       element, so nothing here fights `.soft` for `--ui-fill`. `.ghost` is left
+       at box's default (`--_d-ground: transparent`), so it stays the fully bare
+       boundaries-only table; `.soft` differs from it by keeping an opaque,
+       untinted plate and a head label strip. */
+    /* Whether the table rests on the quiet plate, as 0% or 100%: a resolved
+       fill above nothing and below full. Stepped from the resolved fill, as
+       `surface`'s `--_quiet` is, not keyed on `:not(.solid, .ghost)` here:
+       presentation cascades, and keyed on the class a container's `.solid`
+       filled the head and dropped the frame while the body kept this plate. */
+    --_table-quiet: min(
+      clamp(0%, calc(var(--ui-fill, var(--_d-fill)) * 1000), 100%),
+      clamp(0%, calc((100% - var(--ui-fill, var(--_d-fill))) * 1000), 100%)
+    );
+    /* A table is a pane of content, so under an aesthetic whose surfaces are
+       glass it is glass too: the plate is the aesthetic's surface ground when
+       one is named. Head and body share the plate, as they do on the page. Only
+       the quiet rest reads it: a `.solid` table is opaque, like every `.solid`,
+       and a `.ghost` one is boundaries and type. */
+    --_table-ground-plate: var(--ui-surface-ground, var(--color-foreground));
+    --_table-fill: min(
+      calc(min(var(--ui-fill, var(--_d-fill)), var(--intent-fill-max, 100%)) * var(--ui-bg-alpha, 1)),
+      calc(100% - var(--_table-quiet))
+    );
+    --_table-head-plate: color-mix(
+      in oklab,
+      var(--_table-ground-plate) var(--_table-quiet),
+      color-mix(in oklab, var(--intent-subtle) var(--_table-ground), transparent)
+    );
+    --_fill-cap: calc(100% - var(--_table-quiet));
+    --_d-ground: color-mix(in oklab, var(--_table-ground-plate) var(--_table-quiet), transparent);
+
+    /* A table rests on a plate of its own at every fill but `.ghost`, so no
+       ink from above passes through it, as on `surface`. A ghost table on a
+       filled parent therefore prints the page's ink on that fill: a toggle
+       cannot be stepped from the fill. */
+    --_held-ink: var(--_fg-own);
+    --_held-on: var(--_own-hold);
+
+    /* The blur behind the glass plate. A filter cannot be stepped from a
+       percentage, so this one part stays keyed on the class: a table under a
+       container's `.ghost` in a glass region still blurs what is behind it. */
+    &:not(.solid, .ghost) {
+      -webkit-backdrop-filter: var(--ui-backdrop, none);
+      backdrop-filter: var(--ui-backdrop, none);
     }
-  }
 
-  & > tfoot > tr:last-child,
-  &:not(:has(> tfoot)) > tbody:last-of-type > tr:last-child {
-    & > :first-child {
-      border-end-start-radius: inherit;
-    }
+    /* How much rule there is between body rows, and none unless asked for. Ruling
+       every row is a style choice rather than part of what a table is, so it is
+       not tied to the edge axis: `.ruled` asks for it, `.ruleless` is its
+       opposite, and `--ui-rule` is behind both, so a consumer who wants a whole
+       region ruled, or a whole region bare, sets the token on a container instead
+       of classing every table.
 
-    & > :last-child {
-      border-end-end-radius: inherit;
-    }
-  }
+       One token covers three positions because the two places that read it take
+       different fallbacks. Unset, each site answers for itself: no rules between
+       rows, but the boundaries below still drawn. Set, the answer is the same at
+       both. So `.ruled` writes 100% and gets rules everywhere, `.ruleless` writes
+       0% and gets a table with no lines in it at all, and a table nobody classed
+       sits between them. */
+    --_table-rule-amount: var(--ui-rule, 0%);
+    --_table-boundary-amount: var(--ui-rule, 100%);
+    /* What the rule is drawn in, which is not the same tone at every fill.
+       `.ghost` and `.soft` keep `--intent-border` -- the slot an aesthetic
+       restates through `--ui-ink` -- because at those fills the plate has not
+       swallowed it. `.solid` is where it has: at a full fill `--intent-border`
+       *is* the plate for every intent, and at neutral's capped fill it is a near
+       shade of the same grey, so the row rule disappears exactly where the plate
+       is busiest.
 
-  & caption {
-    @apply text-label text-text-secondary pb-2 text-start;
-  }
+       The filled case draws in `currentColor` at a fifth instead: the ink the
+       cell is already printing (`--_table-head-fg` on a head, `box`'s own `--_fg`
+       in the body), so it reads on a light plate and a dark one without a
+       per-intent branch, and it lands *over* the plate because a translucent
+       border composites onto the background the element already painted.
 
-  /* The head's plate is painted on its cells rather than on the section, so the
-     corner cells round it: a section's background ignores the cells' corners. */
-  & thead,
-  & tfoot {
-    color: var(--_table-head-fg);
-  }
-
-  & :is(thead, tfoot) > tr > * {
-    background-color: var(--_table-head-bg);
-  }
-
-  /* Every cell carries the hairline; what varies is whether it is painted. The
-     width tracks the aesthetic's own line weight rather than a fixed `1px`, so
-     a row rule reads as the same material as the boundary around it. It
-     survives a fill that would otherwise paint over it, because color and width
-     are independent here: `.ruleless` zeroes the color, not this.
-
-     The width is the aesthetic's, not `box`'s `--_width`: that one is capped by
-     `--ui-border-max`, which `.pixel` sets to zero because its frame is an
-     inset ring a clip cannot cut. A rule is not a frame and nothing clips a
-     table, so under pixel the capped width would draw no rule at all -- no line
-     under the head or above the foot, and `.ruled` would change nothing. A
-     divider reads the same uncapped width for the same reason.
-
-     Alignment is logical and stated on the cells, not only on the table: a
-     `th` centers unless its parent names an alignment, and `start` is the
-     initial value, which counts as naming none. */
-  --_table-rule-width: var(--ui-border-width, var(--border-width));
-  /* In `:where()`: these are the cells' defaults, and at the 0-1-1 the plain
-     selector carried, `p-0` or `text-center` on a cell lost to them.
-     `--table-cell-padding` is public and read with the default, `py-3 px-4`,
-     as its fallback. A physical `padding`, because one variable has to carry
-     both axes: in a vertical writing mode its two values stay top-bottom and
-     left-right rather than following the block and inline axes. */
-  :where(& :is(th, td)) {
-    @apply text-start align-top;
-
-    padding: var(--table-cell-padding, calc(var(--spacing) * 3) calc(var(--spacing) * 4));
-
-    border-bottom-style: var(--ui-rule-style, var(--ui-line-style, solid));
-    border-bottom-width: var(--_table-rule-width);
-    border-color: var(--_table-rule);
-  }
-
-  /* The two lines that separate the parts of a table from each other: under the
-     head and above the foot. They are boundaries rather than decoration on the
-     rows, so they are drawn by default where the row rules are not, and they do
-     not answer to the edge axis -- `.edgeless` takes the silhouette off the box,
-     and a head that runs into its own body is not a silhouette question.
-
-     The foot draws upward rather than relying on the last body row drawing down,
-     because with rules off that row paints nothing. Stated on the foot, the
-     boundary holds at every setting. */
-  & thead tr:last-child > * {
-    border-bottom-color: var(--_table-boundary);
-  }
-
-  & tfoot tr:first-child > * {
-    border-top-style: var(--ui-rule-style, var(--ui-line-style, solid));
-    border-top-width: var(--_table-rule-width);
-    border-top-color: var(--_table-boundary);
-  }
-
-  :where(& th) {
-    @apply text-label font-semibold;
-  }
-
-  /* Rows deliberately inherit the table's intent instead of resetting it, so a
-     `.data-table.success` tints its own rows. A `<tr class="warning">` still wins,
-     because an intent class on the element beats an inherited value.
-
-     The class only changes the row's intent slots, though, and everything the
-     row paints was resolved on the table: the text, the rule and the hover
-     step are each a custom property whose `var()`s resolved against the
-     table's intent, so they inherited down already-green to a destructive row.
-     A row with its own intent resolves them again against it. The plate stays
-     the table's, so the ink keeps the table's ramp -- `--_on-fill`, inherited
-     as a resolved percentage -- and a solid table's rows still print the
-     table's contrast ink on it. Only a row that names an intent: an ordinary row would resolve
-     the same values, but a `color` declared on every row would override a
-     colour a consumer set on the table. */
-  & tbody tr:is(.neutral, .primary, .secondary, .success, .warning, .destructive, .info) {
+       Naming the ink rather than composing it also keeps this expression cheap,
+       which is a requirement: every `th` and `td` on a page resolves it, and
+       written as `color-mix(--_table-head-fg 20%, --_bg)` it expands, through four
+       levels of substitution, into a `color-mix()` over two more `color-mix()`es
+       over a `min()`/`max()`/`calc()` chain, which crashes WebKit's renderer on
+       the routes that draw tables. `currentColor` and `transparent` are leaves
+       the engine has already resolved, which takes the expression back down to
+       something every engine can carry. `--_table-row-hover` below is written the
+       same way, for the same reason. */
+    --_table-rule-plated: color-mix(in oklab, currentColor 20%, transparent);
     --_table-rule-tone: color-mix(
       in oklab,
       var(--_table-rule-plated) var(--ui-fill, var(--_d-fill)),
-      var(--intent-border)
+      var(--intent-border, var(--ui-rule-ink, var(--ui-ink, var(--color-border))))
     );
     --_table-rule: color-mix(in oklab, var(--_table-rule-tone) var(--_table-rule-amount), transparent);
+    --_table-boundary: color-mix(in oklab, var(--_table-rule-tone) var(--_table-boundary-amount), transparent);
+    /* A hovered row is a step from the table it is in, not from a tone the page
+       happens to own. A translucent step is relative at every fill, the way
+       `box-hover` is: the row composites onto whatever plate the table drew, so a
+       filled table shifts within its own colour, a soft one deepens its tint, and
+       a ghost one picks up a faint wash of the page. (Mixed into
+       `--color-foreground`, a solid primary table in dark theme would hover to
+       near-black, a dark band across a light table.)
+
+       Which tone it steps toward moves with the fill. On a bare or tinted plate
+       that is `--intent-hover`, the deepening every other component gets. On a
+       filled one it cannot be: `--intent-hover` is `mix(--intent-color 82%,
+       --intent-strong)`, very nearly the colour the plate is already painted, so
+       a step toward it is no step (a solid success table moves 1.00:1 in light).
+       A filled plate steps toward `currentColor` instead, the ink that plate
+       already carries and therefore always contrasts with it.
+
+       Both ends are leaves, and the step lands on `transparent` rather than on
+       `--_bg`, for the reason `--_table-rule-plated` above gives. */
     --_table-hover-tone: color-mix(in oklab, currentColor var(--ui-fill, var(--_d-fill)), var(--intent-hover));
+    /* The default hover. `--table-hover` is public and read where the row
+       paints, not here, so a value on any ancestor of the cells reaches them,
+       a `tbody` or row included; `transparent` turns the hover off. */
     --_table-row-hover: color-mix(in oklab, var(--_table-hover-tone) 12%, transparent);
 
-    /* A neutral solid table caps its fill at 20%, so its plate is a light grey
-       and the ramp keeps `--_on-fill` low: the row's ink is then mostly the
-       row's `--intent-strong`, which is chosen against the row's own subtle
-       ground rather than a grey one, and success, warning and destructive fall
-       under 4.5:1 on it. Those rows print the table's own ink, `--_fg`,
-       inherited already resolved against the table, and keep their intent in
-       the rule and the hover.
-       `--_plate` is the table's too: 100% where the intent's cap stopped its
-       fill, read rather than a `.solid` class on the table, which a
-       container's `.solid` does not put there. */
-    color: color-mix(
-      in oklab,
-      var(--_fg) var(--_plate, 0%),
-      color-mix(in oklab, var(--_table-contrast) var(--_on-fill), var(--intent-strong))
+    border-spacing: 0;
+
+    /* A surface's corner, as `surface` computes it: a table sits beside cards and
+       panels as a pane, and under `.cyber` it took the controls' diagonal while
+       every pane around it cut the other one. */
+    --_corner-surface: calc(var(--ui-corner-surface, var(--radius-surface)) * var(--_scale));
+    border-radius: var(
+      --ui-radius-surface,
+      calc(var(--_corner-surface) * var(--ui-corner-tl, 1)) calc(var(--_corner-surface) * var(--ui-corner-tr, 1))
+        calc(var(--_corner-surface) * var(--ui-corner-br, 1)) calc(var(--_corner-surface) * var(--ui-corner-bl, 1))
+    );
+    /* No silhouette clip either, for the caption's sake: `.pixel`'s stepped clip
+       cut the caption's corners and left the head's square. A pixel table is
+       square, which is the chip answer that aesthetic already gives. */
+    clip-path: none;
+
+    /* The corners pass down to the cells that sit in them. Each section and row
+       inherits the table's four corners -- a radius does not apply to either, but
+       it still computes and inherits -- and each corner cell takes only its own
+       corner, as a longhand, so an elliptical or bevelled corner arrives whole.
+       The first row is the head's when there is one and the first body's when
+       not, and the last row likewise the foot's or the last body's; a caption
+       and a `colgroup` are skipped. A cell spanning rows into a corner is not
+       reached, and a percentage corner resolves against the cell. */
+    & > :is(thead, tbody, tfoot),
+    & > :is(thead, tbody, tfoot) > tr {
+      border-radius: inherit;
+      corner-shape: inherit;
+    }
+
+    & > :is(thead, tbody, tfoot) > tr > * {
+      corner-shape: inherit;
+    }
+
+    & > thead > tr:first-child,
+    &:not(:has(> thead)) > tbody:first-of-type > tr:first-child {
+      & > :first-child {
+        border-start-start-radius: inherit;
+      }
+
+      & > :last-child {
+        border-start-end-radius: inherit;
+      }
+    }
+
+    & > tfoot > tr:last-child,
+    &:not(:has(> tfoot)) > tbody:last-of-type > tr:last-child {
+      & > :first-child {
+        border-end-start-radius: inherit;
+      }
+
+      & > :last-child {
+        border-end-end-radius: inherit;
+      }
+    }
+
+    & caption {
+      padding-bottom: calc(var(--spacing) * 2);
+      text-align: start;
+      @compose text-label;
+      color: var(--color-text-secondary);
+    }
+
+    /* The head's plate is painted on its cells rather than on the section, so the
+       corner cells round it: a section's background ignores the cells' corners. */
+    & thead,
+    & tfoot {
+      color: var(--_table-head-fg);
+    }
+
+    & :is(thead, tfoot) > tr > * {
+      background-color: var(--_table-head-bg);
+    }
+
+    /* Every cell carries the hairline; what varies is whether it is painted. The
+       width tracks the aesthetic's own line weight rather than a fixed `1px`, so
+       a row rule reads as the same material as the boundary around it. It
+       survives a fill that would otherwise paint over it, because color and width
+       are independent here: `.ruleless` zeroes the color, not this.
+
+       The width is the aesthetic's, not `box`'s `--_width`: that one is capped by
+       `--ui-border-max`, which `.pixel` sets to zero because its frame is an
+       inset ring a clip cannot cut. A rule is not a frame and nothing clips a
+       table, so under pixel the capped width would draw no rule at all -- no line
+       under the head or above the foot, and `.ruled` would change nothing. A
+       divider reads the same uncapped width for the same reason.
+
+       Alignment is logical and stated on the cells, not only on the table: a
+       `th` centers unless its parent names an alignment, and `start` is the
+       initial value, which counts as naming none. */
+    --_table-rule-width: var(--ui-border-width, var(--border-width));
+    /* In `:where()`: these are the cells' defaults, and at the 0-1-1 the plain
+       selector carried, `p-0` or `text-center` on a cell lost to them.
+       `--table-cell-padding` is public and read with the default, `py-3 px-4`,
+       as its fallback. A physical `padding`, because one variable has to carry
+       both axes: in a vertical writing mode its two values stay top-bottom and
+       left-right rather than following the block and inline axes. */
+    :where(& :is(th, td)) {
+      text-align: start;
+      vertical-align: top;
+
+      padding: var(--table-cell-padding, calc(var(--spacing) * 3) calc(var(--spacing) * 4));
+
+      border-bottom-style: var(--ui-rule-style, var(--ui-line-style, solid));
+      border-bottom-width: var(--_table-rule-width);
+      border-color: var(--_table-rule);
+    }
+
+    /* The two lines that separate the parts of a table from each other: under the
+       head and above the foot. They are boundaries rather than decoration on the
+       rows, so they are drawn by default where the row rules are not, and they do
+       not answer to the edge axis -- `.edgeless` takes the silhouette off the box,
+       and a head that runs into its own body is not a silhouette question.
+
+       The foot draws upward rather than relying on the last body row drawing down,
+       because with rules off that row paints nothing. Stated on the foot, the
+       boundary holds at every setting. */
+    & thead tr:last-child > * {
+      border-bottom-color: var(--_table-boundary);
+    }
+
+    & tfoot tr:first-child > * {
+      border-top-style: var(--ui-rule-style, var(--ui-line-style, solid));
+      border-top-width: var(--_table-rule-width);
+      border-top-color: var(--_table-boundary);
+    }
+
+    :where(& th) {
+      @compose text-label;
+      --tw-font-weight: var(--font-weight-semibold);
+      font-weight: var(--font-weight-semibold);
+    }
+
+    /* Rows deliberately inherit the table's intent instead of resetting it, so a
+       `.data-table.success` tints its own rows. A `<tr class="warning">` still wins,
+       because an intent class on the element beats an inherited value.
+
+       The class only changes the row's intent slots, though, and everything the
+       row paints was resolved on the table: the text, the rule and the hover
+       step are each a custom property whose `var()`s resolved against the
+       table's intent, so they inherited down already-green to a destructive row.
+       A row with its own intent resolves them again against it. The plate stays
+       the table's, so the ink keeps the table's ramp -- `--_on-fill`, inherited
+       as a resolved percentage -- and a solid table's rows still print the
+       table's contrast ink on it. Only a row that names an intent: an ordinary row would resolve
+       the same values, but a `color` declared on every row would override a
+       colour a consumer set on the table. */
+    & tbody tr:is(.neutral, .primary, .secondary, .success, .warning, .destructive, .info) {
+      --_table-rule-tone: color-mix(
+        in oklab,
+        var(--_table-rule-plated) var(--ui-fill, var(--_d-fill)),
+        var(--intent-border)
+      );
+      --_table-rule: color-mix(in oklab, var(--_table-rule-tone) var(--_table-rule-amount), transparent);
+      --_table-hover-tone: color-mix(in oklab, currentColor var(--ui-fill, var(--_d-fill)), var(--intent-hover));
+      --_table-row-hover: color-mix(in oklab, var(--_table-hover-tone) 12%, transparent);
+
+      /* A neutral solid table caps its fill at 20%, so its plate is a light grey
+         and the ramp keeps `--_on-fill` low: the row's ink is then mostly the
+         row's `--intent-strong`, which is chosen against the row's own subtle
+         ground rather than a grey one, and success, warning and destructive fall
+         under 4.5:1 on it. Those rows print the table's own ink, `--_fg`,
+         inherited already resolved against the table, and keep their intent in
+         the rule and the hover.
+         `--_plate` is the table's too: 100% where the intent's cap stopped its
+         fill, read rather than a `.solid` class on the table, which a
+         container's `.solid` does not put there. */
+      color: color-mix(
+        in oklab,
+        var(--_fg) var(--_plate, 0%),
+        color-mix(in oklab, var(--_table-contrast) var(--_on-fill), var(--intent-strong))
+      );
+    }
+
+    & tbody tr > * {
+      transition: background-color var(--motion-duration-fast) var(--motion-ease);
+    }
+
+    /* On the cells, for the reason the head's plate is: a hovered last row keeps
+       the table's bottom corners. Behind the query `box-hover` is, so a tapped
+       row does not stay tinted. */
+    @media (hover: hover) {
+      & tbody tr:hover > * {
+        background-color: var(--table-hover, var(--_table-row-hover));
+      }
+    }
+
+    /* The rule comes off the row that is visually last, which is not always the
+       last row of the body. `tbody tr:last-child` would remove the body's last
+       row rule unconditionally, so a table with a footer would lose the one rule
+       that separates the two while the footer kept a bottom rule of its own,
+       drawing a hairline immediately inside the frame.
+
+       Both selectors are `:last-child` on the section, so whichever section the
+       markup puts last is the one that loses its rule. That covers a footer
+       written before the body, which HTML allows, and multiple bodies, where only
+       the last one ends the table. `.ghost` drops the head and foot plate, which
+       leaves this rule doing the separating alone. */
+    & tbody:last-child tr:last-child > *,
+    & tfoot:last-child tr:last-child > * {
+      border-bottom-style: var(--tw-border-style);
+      border-bottom-width: 0px;
+    }
+  }
+
+  /* Three components rest on a ground rather than on nothing: a key cap, an
+     inline code chip and a code block are each a quiet tinted plate at rest, and
+     that tone is `--intent-subtle` rather than a fill of the component's own
+     intent.
+
+     All three rest at `soft`, and `.ghost` is published as unsupported on them:
+     the ground draws the plate whatever the fill says, so `.ghost` would draw it
+     anyway and mean nothing, and at zero fill the plate is `--intent-subtle`
+     alone, a near-page tint that renders four intents as the same invisible chip
+     (`#e5e5e5` for neutral and primary on the light page). Resting at `soft` puts
+     a real 12% of the intent over the ground, so the plate is a step past the
+     page and the intents separate.
+
+     The foreground is `box`'s, which mixes toward `--intent-strong`, the tone
+     meant to sit on a page rather than on a tint of itself, so the ground is the
+     only thing left to declare. */
+  /* Neutral, for the same reason `.panel`'s own carve-out is: 12% of
+     `--color-text` mixed onto `--intent-subtle` (`--color-surface` for
+     neutral) reads as an assertive slab rather than a quiet chip -- measured,
+     `199, 199, 199` on a light page whose own `--color-surface` step is
+     `229, 229, 229`, further off than the ground alone already carries a key
+     cap. A named intent keeps its wash unchanged: a colored chip needs it to
+     separate from the others the way `.ghost` being unsupported here already
+     protects (dropping *all* fill collapsed every intent's ghost chip onto the
+     same near-page `--intent-subtle` tone) -- the neutral case has nothing to
+     separate from, so it alone drops the extra ink. The ground itself is not
+     moved the way `.panel`'s is: `--intent-subtle` already resolves to
+     `--color-surface` for neutral, a real, visible step past the page on its
+     own, so only the wash on top of it goes. The cap is stepped from the
+     resolved fill, so a full fill -- the chip's own `.solid` or a container's --
+     is never clamped to a cap it did not ask for. */
+  .kbd {
+    /* The neutral reset, carried so `@apply kbd` gets it, as `btn` carries its own. */
+    @layer families {
+      :where(&:not(.kbd, .primary, .secondary, .success, .warning, .destructive, .info)) {
+        --intent-color: var(--color-text);
+        --intent-contrast: var(--color-text-contrast);
+        --intent-hover: var(--color-text-hover);
+        --intent-strong: var(--color-text-strong);
+        --intent-subtle: var(--color-surface);
+        --intent-border: var(--ui-ink, var(--color-border));
+        --intent-fill-max: 20%;
+      }
+    }
+
+    @compose box;
+    display: inline-flex;
+    align-items: center;
+    padding-inline: calc(var(--spacing) * 1.5);
+    padding-block: calc(var(--spacing) * 0.5);
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    line-height: var(--tw-leading, var(--text-xs--line-height));
+    --tw-font-weight: var(--font-weight-medium);
+    font-weight: var(--font-weight-medium);
+
+    --_d-fill: 12%;
+    --_d-fg-on-fill: 0%;
+    --_d-border: 100%;
+    --_d-elevation: 0;
+    --_d-ground: var(--intent-subtle);
+
+    /* A ground of its own, so no ink from above passes through, as on `surface`. */
+    --_held-ink: var(--_fg-own);
+    --_held-on: var(--_own-hold);
+
+    /* A small default remains when no aesthetic asks for a complete chip shape. */
+    border-radius: var(
+      --ui-radius-tight,
+      min(var(--ui-radius, var(--ui-corner, var(--radius-small))), var(--radius-small))
+    );
+    clip-path: var(--ui-clip-tight, var(--ui-clip, none));
+
+    /* The neutral wash goes, and only that: a neutral intent (its cap is below
+       100%) asking for less than its cap. Stepped from the resolved fill, as
+       `surface`'s `--_quiet` is, not keyed on a class here: presentation
+       cascades, and keyed on the class a container's `.solid` reached the ink
+       and the line while the plate stayed capped. */
+    --_fill-cap: calc(
+      100% -
+        min(
+          clamp(0%, calc((100% - var(--intent-fill-max, 100%)) * 1000), 100%),
+          clamp(0%, calc((var(--intent-fill-max, 100%) - var(--ui-fill, var(--_d-fill))) * 1000), 100%)
+        )
     );
   }
 
-  & tbody tr > * {
-    transition: background-color var(--motion-duration-fast) var(--motion-ease);
+  /* The same plate with no line around it. */
+  .code {
+    /* The neutral reset, carried so `@apply code` gets it, as `btn` carries its own. */
+    @layer families {
+      :where(&:not(.code, .primary, .secondary, .success, .warning, .destructive, .info)) {
+        --intent-color: var(--color-text);
+        --intent-contrast: var(--color-text-contrast);
+        --intent-hover: var(--color-text-hover);
+        --intent-strong: var(--color-text-strong);
+        --intent-subtle: var(--color-surface);
+        --intent-border: var(--ui-ink, var(--color-border));
+        --intent-fill-max: 20%;
+      }
+    }
+
+    @compose box;
+    padding-inline: calc(var(--spacing) * 1.25);
+    padding-block: calc(var(--spacing) * 0.75);
+    font-family: var(--font-mono);
+
+    --_d-fill: 12%;
+    --_d-fg-on-fill: 0%;
+    --_d-border: 0%;
+    --_d-elevation: 0;
+    --_d-ground: var(--intent-subtle);
+
+    /* A ground of its own, so no ink from above passes through, as on `surface`. */
+    --_held-ink: var(--_fg-own);
+    --_held-on: var(--_own-hold);
+
+    border-radius: var(
+      --ui-radius-tight,
+      min(var(--ui-radius, var(--ui-corner, var(--radius-small))), var(--radius-small))
+    );
+    clip-path: var(--ui-clip-tight, var(--ui-clip, none));
+
+    /* The neutral wash goes, and only that: a neutral intent (its cap is below
+       100%) asking for less than its cap. Stepped from the resolved fill, as
+       `surface`'s `--_quiet` is, not keyed on a class here: presentation
+       cascades, and keyed on the class a container's `.solid` reached the ink
+       and the line while the plate stayed capped. */
+    --_fill-cap: calc(
+      100% -
+        min(
+          clamp(0%, calc((100% - var(--intent-fill-max, 100%)) * 1000), 100%),
+          clamp(0%, calc((var(--intent-fill-max, 100%) - var(--ui-fill, var(--_d-fill))) * 1000), 100%)
+        )
+    );
   }
 
-  /* On the cells, for the reason the head's plate is: a hovered last row keeps
-     the table's bottom corners. Behind the query `box-hover` is, so a tapped
-     row does not stay tinted. */
-  @media (hover: hover) {
-    & tbody tr:hover > * {
-      background-color: var(--table-hover, var(--_table-row-hover));
+  /* And at block scale, where the radius is a control's rather than a chip's. */
+  .pre {
+    /* The neutral reset, carried so `@apply pre` gets it, as `btn` carries its own. */
+    @layer families {
+      :where(&:not(.pre, .primary, .secondary, .success, .warning, .destructive, .info)) {
+        --intent-color: var(--color-text);
+        --intent-contrast: var(--color-text-contrast);
+        --intent-hover: var(--color-text-hover);
+        --intent-strong: var(--color-text-strong);
+        --intent-subtle: var(--color-surface);
+        --intent-border: var(--ui-ink, var(--color-border));
+        --intent-fill-max: 20%;
+      }
+    }
+
+    @compose box;
+    display: block;
+    overflow-x: auto;
+    padding-inline: calc(var(--spacing) * 2.5);
+    padding-block: calc(var(--spacing) * 1.5);
+    font-family: var(--font-mono);
+
+    --_d-fill: 12%;
+    --_d-fg-on-fill: 0%;
+    --_d-border: 0%;
+    --_d-elevation: 0;
+    --_d-ground: var(--intent-subtle);
+
+    /* A ground of its own, so no ink from above passes through, as on `surface`. */
+    --_held-ink: var(--_fg-own);
+    --_held-on: var(--_own-hold);
+
+    /* The neutral wash goes, and only that: a neutral intent (its cap is below
+       100%) asking for less than its cap. Stepped from the resolved fill, as
+       `surface`'s `--_quiet` is, not keyed on a class here: presentation
+       cascades, and keyed on the class a container's `.solid` reached the ink
+       and the line while the plate stayed capped. */
+    --_fill-cap: calc(
+      100% -
+        min(
+          clamp(0%, calc((100% - var(--intent-fill-max, 100%)) * 1000), 100%),
+          clamp(0%, calc((var(--intent-fill-max, 100%) - var(--ui-fill, var(--_d-fill))) * 1000), 100%)
+        )
+    );
+  }
+
+  /* Typography wearing a component's name, so it composes none of `box`: `box`
+     draws a border on four sides and a quotation wants one, and a radius, a clip
+     and a shadow are inert on a left bar and an indent. What is left of `box`
+     after removing the border is not worth composing.
+
+     The cost is the fill and edge blends below, which repeat `box` and have to
+     agree with it. Recorded in `registry.json` beside the
+     decision.
+
+     The bar is twice the line width the aesthetic asks for, plus a pixel, which is
+     this component's own choice about what a quotation looks like rather than a
+     scale applied to an edge. The constant is
+     what makes the bar read as a bar at the default hairline: doubling 1px gives
+     2px, and a quotation mark needs more presence than a table rule. */
+  .quote {
+    /* The neutral reset, carried so `@apply quote` gets it, as `btn` carries its own. */
+    @layer families {
+      :where(&:not(.quote, .primary, .secondary, .success, .warning, .destructive, .info)) {
+        --intent-color: var(--color-text);
+        --intent-contrast: var(--color-text-contrast);
+        --intent-hover: var(--color-text-hover);
+        --intent-strong: var(--color-text-strong);
+        --intent-subtle: var(--color-surface);
+        --intent-border: var(--ui-ink, var(--color-border));
+        --intent-fill-max: 20%;
+      }
+    }
+
+    --_d-fill: 0%;
+    --_d-fg-on-fill: 0%;
+    --_d-border: 100%;
+    --_d-elevation: 0;
+
+    /* Printed as drawn, as `box` is. A browser leaves backgrounds off paper by
+       default, and a filled quotation prints its text in the contrast colour:
+       white on nothing. */
+    print-color-adjust: exact;
+
+    /* Presentation capped by the intent, the same `--_capped` `box` composes, kept
+       separate from `--_quote-fill` because the ink ramp below reads it before
+       `--ui-bg-alpha` thins it. */
+    --_quote-capped: min(var(--ui-fill, var(--_d-fill)), var(--intent-fill-max, 100%));
+    --_quote-fill: calc(var(--_quote-capped) * var(--ui-bg-alpha, 1));
+    /* `box`'s `--_plate`: a fill the intent's cap stopped short rests on the page
+       background, so a neutral `.solid` quotation is a plate rather than a tint
+       of whatever is behind it. */
+    --_quote-plate: clamp(0%, calc((var(--ui-fill, var(--_d-fill)) - var(--_quote-capped)) * 1000), 100%);
+    --_quote-bg: color-mix(
+      in oklab,
+      var(--intent-color) var(--_quote-fill),
+      color-mix(in oklab, var(--color-background) var(--_quote-plate), transparent)
+    );
+    /* The same edge blend `box` draws, in the same order and for the same reason:
+       the blend is the line's colour, and how much line there is comes after it.
+       Written the other way round, `.edgeless` lands on the fill colour rather
+       than on nothing, and the border box paints that over the fill it already
+       drew. It also fades toward `transparent` rather than toward the plate, as
+       `box`'s does: the plate runs under the bar, so a bar blended toward it
+       would paint a translucent plate twice and draw a darker stripe on a neutral
+       `.solid` quotation.
+
+       A quotation draws its own edge instead of taking `box`'s, so an edge change
+       is made in `box`, `.quote`, and `.progress`. Recorded in `registry.json`
+       beside the decision to compose none of `box`. */
+    --_quote-line: color-mix(
+      in oklab,
+      transparent var(--ui-fill, var(--_d-fill)),
+      var(--intent-border, var(--ui-ink, var(--color-border)))
+    );
+    --_quote-edge: color-mix(in oklab, var(--_quote-line) var(--ui-border, var(--_d-border)), transparent);
+    /* Public, read with its default, so a value set on any ancestor reaches the
+       bar. */
+    --_quote-width: var(--quote-width, calc(var(--ui-border-width, var(--border-width)) * 2 + 1px));
+
+    margin-block: 0px;
+    border-inline-start-style: var(--tw-border-style);
+    border-inline-start-width: 1px;
+    padding-block: calc(var(--spacing) * 2);
+    padding-inline-start: calc(var(--spacing) * 4);
+    font-style: italic;
+
+    background-color: var(--_quote-bg);
+    border-inline-start-color: var(--_quote-edge);
+    border-inline-start-width: var(--_quote-width);
+    /* The ink is gated by the plate, not tied to the fill: `--ui-fg-on-fill` is
+       the ceiling, and the contrast tone only ramps in past a half fill, reaching
+       full at a full fill. Below that the ink stays `--intent-strong`, the tone
+       chosen to read on the page. This is `box`'s `--_on-fill` exactly, and this
+       renderer has to agree with it: a fill-proportional ink prints a
+       capped-neutral `.solid` quote at ~6.6:1 where the ramp gives ~11:1. */
+    color: color-mix(
+      in oklab,
+      var(--intent-contrast)
+        min(var(--ui-fg-on-fill, var(--_d-fg-on-fill)), max(0%, calc(var(--_quote-capped) * 2 - 100%))),
+      var(--intent-strong)
+    );
+
+    /* The attribution takes no colour of its own, so it follows the quotation's.
+       Pinning it to a neutral secondary tone loses both the intent-specific strong
+       tone at zero fill and the contrast tone as the fill comes up.
+
+       Type and posture are what separate an attribution from the quotation: it is
+       upright where the quote is italic, and it sits on its own line. */
+    & cite {
+      margin-top: calc(var(--spacing) * 2);
+      display: block;
+      @compose text-body;
+      font-style: normal;
     }
   }
 
-  /* The rule comes off the row that is visually last, which is not always the
-     last row of the body. `tbody tr:last-child` would remove the body's last
-     row rule unconditionally, so a table with a footer would lose the one rule
-     that separates the two while the footer kept a bottom rule of its own,
-     drawing a hairline immediately inside the frame.
-
-     Both selectors are `:last-child` on the section, so whichever section the
-     markup puts last is the one that loses its rule. That covers a footer
-     written before the body, which HTML allows, and multiple bodies, where only
-     the last one ends the table. `.ghost` drops the head and foot plate, which
-     leaves this rule doing the separating alone. */
-  & tbody:last-child tr:last-child > *,
-  & tfoot:last-child tr:last-child > * {
-    @apply border-b-0;
+  .quote-inline {
+    color: var(--color-text-secondary);
+    font-style: italic;
   }
-}
-
-/* Three components rest on a ground rather than on nothing: a key cap, an
-   inline code chip and a code block are each a quiet tinted plate at rest, and
-   that tone is `--intent-subtle` rather than a fill of the component's own
-   intent.
-
-   All three rest at `soft`, and `.ghost` is published as unsupported on them:
-   the ground draws the plate whatever the fill says, so `.ghost` would draw it
-   anyway and mean nothing, and at zero fill the plate is `--intent-subtle`
-   alone, a near-page tint that renders four intents as the same invisible chip
-   (`#e5e5e5` for neutral and primary on the light page). Resting at `soft` puts
-   a real 12% of the intent over the ground, so the plate is a step past the
-   page and the intents separate.
-
-   The foreground is `box`'s, which mixes toward `--intent-strong`, the tone
-   meant to sit on a page rather than on a tint of itself, so the ground is the
-   only thing left to declare. */
-/* Neutral, for the same reason `.panel`'s own carve-out is: 12% of
-   `--color-text` mixed onto `--intent-subtle` (`--color-surface` for
-   neutral) reads as an assertive slab rather than a quiet chip -- measured,
-   `199, 199, 199` on a light page whose own `--color-surface` step is
-   `229, 229, 229`, further off than the ground alone already carries a key
-   cap. A named intent keeps its wash unchanged: a colored chip needs it to
-   separate from the others the way `.ghost` being unsupported here already
-   protects (dropping *all* fill collapsed every intent's ghost chip onto the
-   same near-page `--intent-subtle` tone) -- the neutral case has nothing to
-   separate from, so it alone drops the extra ink. The ground itself is not
-   moved the way `.panel`'s is: `--intent-subtle` already resolves to
-   `--color-surface` for neutral, a real, visible step past the page on its
-   own, so only the wash on top of it goes. The cap is stepped from the
-   resolved fill, so a full fill -- the chip's own `.solid` or a container's --
-   is never clamped to a cap it did not ask for. */
-@utility kbd {
-  /* The neutral reset, carried so `@apply kbd` gets it, as `btn` carries its own. */
-  @layer families {
-    :where(&:not(.kbd, .primary, .secondary, .success, .warning, .destructive, .info)) {
-      --intent-color: var(--color-text);
-      --intent-contrast: var(--color-text-contrast);
-      --intent-hover: var(--color-text-hover);
-      --intent-strong: var(--color-text-strong);
-      --intent-subtle: var(--color-surface);
-      --intent-border: var(--ui-ink, var(--color-border));
-      --intent-fill-max: 20%;
-    }
-  }
-
-  @apply box inline-flex items-center px-1.5 py-0.5 font-mono text-xs font-medium;
-
-  --_d-fill: 12%;
-  --_d-fg-on-fill: 0%;
-  --_d-border: 100%;
-  --_d-elevation: 0;
-  --_d-ground: var(--intent-subtle);
-
-  /* A ground of its own, so no ink from above passes through, as on `surface`. */
-  --_held-ink: var(--_fg-own);
-  --_held-on: var(--_own-hold);
-
-  /* A small default remains when no aesthetic asks for a complete chip shape. */
-  border-radius: var(
-    --ui-radius-tight,
-    min(var(--ui-radius, var(--ui-corner, var(--radius-small))), var(--radius-small))
-  );
-  clip-path: var(--ui-clip-tight, var(--ui-clip, none));
-
-  /* The neutral wash goes, and only that: a neutral intent (its cap is below
-     100%) asking for less than its cap. Stepped from the resolved fill, as
-     `surface`'s `--_quiet` is, not keyed on a class here: presentation
-     cascades, and keyed on the class a container's `.solid` reached the ink
-     and the line while the plate stayed capped. */
-  --_fill-cap: calc(
-    100% -
-      min(
-        clamp(0%, calc((100% - var(--intent-fill-max, 100%)) * 1000), 100%),
-        clamp(0%, calc((var(--intent-fill-max, 100%) - var(--ui-fill, var(--_d-fill))) * 1000), 100%)
-      )
-  );
-}
-
-/* The same plate with no line around it. */
-@utility code {
-  /* The neutral reset, carried so `@apply code` gets it, as `btn` carries its own. */
-  @layer families {
-    :where(&:not(.code, .primary, .secondary, .success, .warning, .destructive, .info)) {
-      --intent-color: var(--color-text);
-      --intent-contrast: var(--color-text-contrast);
-      --intent-hover: var(--color-text-hover);
-      --intent-strong: var(--color-text-strong);
-      --intent-subtle: var(--color-surface);
-      --intent-border: var(--ui-ink, var(--color-border));
-      --intent-fill-max: 20%;
-    }
-  }
-
-  @apply box px-1.25 py-0.75 font-mono;
-
-  --_d-fill: 12%;
-  --_d-fg-on-fill: 0%;
-  --_d-border: 0%;
-  --_d-elevation: 0;
-  --_d-ground: var(--intent-subtle);
-
-  /* A ground of its own, so no ink from above passes through, as on `surface`. */
-  --_held-ink: var(--_fg-own);
-  --_held-on: var(--_own-hold);
-
-  border-radius: var(
-    --ui-radius-tight,
-    min(var(--ui-radius, var(--ui-corner, var(--radius-small))), var(--radius-small))
-  );
-  clip-path: var(--ui-clip-tight, var(--ui-clip, none));
-
-  /* The neutral wash goes, and only that: a neutral intent (its cap is below
-     100%) asking for less than its cap. Stepped from the resolved fill, as
-     `surface`'s `--_quiet` is, not keyed on a class here: presentation
-     cascades, and keyed on the class a container's `.solid` reached the ink
-     and the line while the plate stayed capped. */
-  --_fill-cap: calc(
-    100% -
-      min(
-        clamp(0%, calc((100% - var(--intent-fill-max, 100%)) * 1000), 100%),
-        clamp(0%, calc((var(--intent-fill-max, 100%) - var(--ui-fill, var(--_d-fill))) * 1000), 100%)
-      )
-  );
-}
-
-/* And at block scale, where the radius is a control's rather than a chip's. */
-@utility pre {
-  /* The neutral reset, carried so `@apply pre` gets it, as `btn` carries its own. */
-  @layer families {
-    :where(&:not(.pre, .primary, .secondary, .success, .warning, .destructive, .info)) {
-      --intent-color: var(--color-text);
-      --intent-contrast: var(--color-text-contrast);
-      --intent-hover: var(--color-text-hover);
-      --intent-strong: var(--color-text-strong);
-      --intent-subtle: var(--color-surface);
-      --intent-border: var(--ui-ink, var(--color-border));
-      --intent-fill-max: 20%;
-    }
-  }
-
-  @apply box block overflow-x-auto px-2.5 py-1.5 font-mono;
-
-  --_d-fill: 12%;
-  --_d-fg-on-fill: 0%;
-  --_d-border: 0%;
-  --_d-elevation: 0;
-  --_d-ground: var(--intent-subtle);
-
-  /* A ground of its own, so no ink from above passes through, as on `surface`. */
-  --_held-ink: var(--_fg-own);
-  --_held-on: var(--_own-hold);
-
-  /* The neutral wash goes, and only that: a neutral intent (its cap is below
-     100%) asking for less than its cap. Stepped from the resolved fill, as
-     `surface`'s `--_quiet` is, not keyed on a class here: presentation
-     cascades, and keyed on the class a container's `.solid` reached the ink
-     and the line while the plate stayed capped. */
-  --_fill-cap: calc(
-    100% -
-      min(
-        clamp(0%, calc((100% - var(--intent-fill-max, 100%)) * 1000), 100%),
-        clamp(0%, calc((var(--intent-fill-max, 100%) - var(--ui-fill, var(--_d-fill))) * 1000), 100%)
-      )
-  );
-}
-
-/* Typography wearing a component's name, so it composes none of `box`: `box`
-   draws a border on four sides and a quotation wants one, and a radius, a clip
-   and a shadow are inert on a left bar and an indent. What is left of `box`
-   after removing the border is not worth composing.
-
-   The cost is the fill and edge blends below, which repeat `box` and have to
-   agree with it. Recorded in `registry.json` beside the
-   decision.
-
-   The bar is twice the line width the aesthetic asks for, plus a pixel, which is
-   this component's own choice about what a quotation looks like rather than a
-   scale applied to an edge. The constant is
-   what makes the bar read as a bar at the default hairline: doubling 1px gives
-   2px, and a quotation mark needs more presence than a table rule. */
-@utility quote {
-  /* The neutral reset, carried so `@apply quote` gets it, as `btn` carries its own. */
-  @layer families {
-    :where(&:not(.quote, .primary, .secondary, .success, .warning, .destructive, .info)) {
-      --intent-color: var(--color-text);
-      --intent-contrast: var(--color-text-contrast);
-      --intent-hover: var(--color-text-hover);
-      --intent-strong: var(--color-text-strong);
-      --intent-subtle: var(--color-surface);
-      --intent-border: var(--ui-ink, var(--color-border));
-      --intent-fill-max: 20%;
-    }
-  }
-
-  --_d-fill: 0%;
-  --_d-fg-on-fill: 0%;
-  --_d-border: 100%;
-  --_d-elevation: 0;
-
-  /* Printed as drawn, as `box` is. A browser leaves backgrounds off paper by
-     default, and a filled quotation prints its text in the contrast colour:
-     white on nothing. */
-  print-color-adjust: exact;
-
-  /* Presentation capped by the intent, the same `--_capped` `box` composes, kept
-     separate from `--_quote-fill` because the ink ramp below reads it before
-     `--ui-bg-alpha` thins it. */
-  --_quote-capped: min(var(--ui-fill, var(--_d-fill)), var(--intent-fill-max, 100%));
-  --_quote-fill: calc(var(--_quote-capped) * var(--ui-bg-alpha, 1));
-  /* `box`'s `--_plate`: a fill the intent's cap stopped short rests on the page
-     background, so a neutral `.solid` quotation is a plate rather than a tint
-     of whatever is behind it. */
-  --_quote-plate: clamp(0%, calc((var(--ui-fill, var(--_d-fill)) - var(--_quote-capped)) * 1000), 100%);
-  --_quote-bg: color-mix(
-    in oklab,
-    var(--intent-color) var(--_quote-fill),
-    color-mix(in oklab, var(--color-background) var(--_quote-plate), transparent)
-  );
-  /* The same edge blend `box` draws, in the same order and for the same reason:
-     the blend is the line's colour, and how much line there is comes after it.
-     Written the other way round, `.edgeless` lands on the fill colour rather
-     than on nothing, and the border box paints that over the fill it already
-     drew. It also fades toward `transparent` rather than toward the plate, as
-     `box`'s does: the plate runs under the bar, so a bar blended toward it
-     would paint a translucent plate twice and draw a darker stripe on a neutral
-     `.solid` quotation.
-
-     A quotation draws its own edge instead of taking `box`'s, so an edge change
-     is made in `box`, `.quote`, and `.progress`. Recorded in `registry.json`
-     beside the decision to compose none of `box`. */
-  --_quote-line: color-mix(
-    in oklab,
-    transparent var(--ui-fill, var(--_d-fill)),
-    var(--intent-border, var(--ui-ink, var(--color-border)))
-  );
-  --_quote-edge: color-mix(in oklab, var(--_quote-line) var(--ui-border, var(--_d-border)), transparent);
-  /* Public, read with its default, so a value set on any ancestor reaches the
-     bar. */
-  --_quote-width: var(--quote-width, calc(var(--ui-border-width, var(--border-width)) * 2 + 1px));
-
-  @apply my-0 border-s py-2 ps-4 italic;
-
-  background-color: var(--_quote-bg);
-  border-inline-start-color: var(--_quote-edge);
-  border-inline-start-width: var(--_quote-width);
-  /* The ink is gated by the plate, not tied to the fill: `--ui-fg-on-fill` is
-     the ceiling, and the contrast tone only ramps in past a half fill, reaching
-     full at a full fill. Below that the ink stays `--intent-strong`, the tone
-     chosen to read on the page. This is `box`'s `--_on-fill` exactly, and this
-     renderer has to agree with it: a fill-proportional ink prints a
-     capped-neutral `.solid` quote at ~6.6:1 where the ramp gives ~11:1. */
-  color: color-mix(
-    in oklab,
-    var(--intent-contrast)
-      min(var(--ui-fg-on-fill, var(--_d-fg-on-fill)), max(0%, calc(var(--_quote-capped) * 2 - 100%))),
-    var(--intent-strong)
-  );
-
-  /* The attribution takes no colour of its own, so it follows the quotation's.
-     Pinning it to a neutral secondary tone loses both the intent-specific strong
-     tone at zero fill and the contrast tone as the fill comes up.
-
-     Type and posture are what separate an attribution from the quotation: it is
-     upright where the quote is italic, and it sits on its own line. */
-  & cite {
-    @apply text-body mt-2 block not-italic;
-  }
-}
-
-@utility quote-inline {
-  @apply text-text-secondary italic;
 }

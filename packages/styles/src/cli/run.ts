@@ -16,8 +16,10 @@ export interface CliIo {
 }
 
 const BIN = "chs";
-const MIN_NODE_MAJOR = 24;
-const AESTHETIC_EXPORT = /^\.\/aesthetics\/([^/]+)$/;
+const MIN_NODE_MAJOR = 26;
+/* `./aesthetics/tw` is the Tailwind source of every aesthetic, not an aesthetic
+   named `tw`, which the path therefore rules out as a name. */
+const AESTHETIC_EXPORT = /^\.\/aesthetics\/(?!tw$)([^/]+)$/;
 /* What `scripts/build-purge.mjs` writes: the complete stylesheet with the
    variants this command offers, and the class names it may drop from one. */
 const PURGE_SOURCE = "dist/purge/index.css";

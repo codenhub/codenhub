@@ -2,7 +2,7 @@
 title: Sem bundler
 description: Como referenciar as folhas de estilos compiladas a partir de HTML puro, Rails, Laravel, Django ou qualquer aplicação renderizada no servidor, e o build por linha de comando.
 order: 6
-source: ca6e2fe1c1b8c2404b90d9a1bd77b25b7e124f82
+source: 12a96a99ddcc15f6b5e56f9d9da87fd9fabb4b61
 ---
 
 # Sem bundler
@@ -11,7 +11,7 @@ As folhas de estilos compiladas são CSS pronto: cada uma é um único arquivo, 
 
 O que precisa de uma ferramenta de build é o _nome_ do import. `@import "@codenhub/styles"` nomeia um pacote, e encontrar o arquivo por trás desse nome — `node_modules/@codenhub/styles/dist/index.css` — é trabalho de ferramentas que conhecem o Node, como Vite, webpack ou a CLI do Tailwind, que leem o mapa `exports` do pacote. Um navegador não faz isso: ele resolve a URL de um `@import` em relação à folha de estilos que o contém, e um `<link href>` em relação à página, então um nome de pacote solto vira uma requisição para um caminho que não existe. Sem bundler, referencie o arquivo pelo caminho.
 
-Os entrypoints `/tw` são código-fonte do Tailwind e precisam de um build do Tailwind. O `/tw/aesthetics` é a exceção, CSS puro sem nada para o Tailwind processar, mas sem bundler referencie os arquivos compilados de `dist/aesthetics/`, como abaixo. Esta página é para uma página que não tem um build de CSS com Node.js: HTML puro, Rails, Laravel, Django ou qualquer aplicação renderizada no servidor. Há dois caminhos:
+Os entrypoints `/tw` são código-fonte do Tailwind e precisam de um build do Tailwind. O `/aesthetics/tw` é a exceção, CSS puro sem nada para o Tailwind processar, mas sem bundler referencie os arquivos compilados de `dist/aesthetics/`, como abaixo. Esta página é para uma página que não tem um build de CSS com Node.js: HTML puro, Rails, Laravel, Django ou qualquer aplicação renderizada no servidor. Há dois caminhos:
 
 1. **Referencie a folha de estilos compilada.** Não precisa de nada além de arquivos estáticos. Você entrega todas as classes, usadas ou não pelas suas páginas.
 2. **Gere uma folha de estilos com o comando `chs build` do pacote.** Ela varre os seus templates e escreve uma folha de estilos com só as classes que eles usam. Veja [Gere só as classes que você usa](#gere-só-as-classes-que-você-usa).
@@ -38,8 +38,8 @@ O jsDelivr e o unpkg servem todos os arquivos de todas as versões publicadas no
 
 ```html
 <head>
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@codenhub/styles@0.9.0/dist/index.css" />
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@codenhub/styles@0.9.0/dist/aesthetics/pixel.css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@codenhub/styles@0.10.0/dist/index.css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@codenhub/styles@0.10.0/dist/aesthetics/pixel.css" />
 </head>
 ```
 
@@ -116,7 +116,7 @@ O pacote traz um comando, `chs`, que lê os seus templates atrás de nomes de cl
 
 O comando também serve com um bundler. Um projeto cujo bundler não roda o Tailwind, como um build simples com Vite ou webpack, pode escrever a folha de estilos entre os seus fontes, `--output src/stylekit.css`, e importar esse arquivo onde importaria `@codenhub/styles`. Um projeto que usa o Tailwind CSS v4 tem a mesma redução pelo [entrypoint de código-fonte](./tailwind.md) e não precisa do comando.
 
-Ele precisa do Node.js 24 ou mais recente na máquina que gera o CSS, seja o seu notebook, um job de CI ou uma etapa do deploy, e de nada mais: o pacote é toda a instalação, sem Tailwind e sem configuração. Instale-o como dependência de desenvolvimento a partir da raiz do projeto; o npm cria um `package.json` se você não tiver um:
+Ele precisa do Node.js 26 ou mais recente na máquina que gera o CSS, seja o seu notebook, um job de CI ou uma etapa do deploy, e de nada mais: o pacote é toda a instalação, sem Tailwind e sem configuração. Instale-o como dependência de desenvolvimento a partir da raiz do projeto; o npm cria um `package.json` se você não tiver um:
 
 ```sh
 npm install --save-dev @codenhub/styles
@@ -234,7 +234,7 @@ Cada prefixo é uma cópia fixa dessas classes, embutida no pacote, então a lis
 
 ### Num deploy
 
-Gere a folha de estilos antes da etapa que recolhe ou aplica fingerprint aos seus assets, como `rails assets:precompile`, `php artisan optimize` ou `python manage.py collectstatic`. Você pode fazer commit da saída, e aí os servidores não precisam de Node.js nenhum, ao custo de um arquivo gerado que alguém precisa lembrar de regenerar; ou gerá-la no deploy, e aí a máquina de build precisa do Node.js 24 ou mais recente.
+Gere a folha de estilos antes da etapa que recolhe ou aplica fingerprint aos seus assets, como `rails assets:precompile`, `php artisan optimize` ou `python manage.py collectstatic`. Você pode fazer commit da saída, e aí os servidores não precisam de Node.js nenhum, ao custo de um arquivo gerado que alguém precisa lembrar de regenerar; ou gerá-la no deploy, e aí a máquina de build precisa do Node.js 26 ou mais recente.
 
 Fixe a versão. Abaixo da 1.0 uma versão minor pode renomear ou remover uma classe, então o mesmo comando pode escrever outra folha de estilos com uma versão mais nova. A saída não depende de nada além da versão do pacote e dos seus templates, então faça commit do `package.json` e do lockfile que o npm escreve, e instale com `npm ci` na máquina de build, para que cada build use a versão que você testou.
 
@@ -249,7 +249,7 @@ Toda falha imprime uma linha começando com `chs:` na saída de erro padrão e t
 - **`option "<flag>" is missing its value or does not take one`.** Uma flag que leva valor foi a última coisa da linha, ou o `--no-minify` recebeu um valor, como em `--no-minify=true`.
 - **`unknown aesthetic "<name>"; choose from ...`.** Escolha um dos nomes listados. Eles são em minúsculas e com hífen, como `chunky-tile`.
 - **`missing command` ou `unknown command "<name>"`.** A primeira palavra depois de `chs` precisa ser `build`.
-- **`this command needs Node.js 24 or newer`.** Atualize o Node.js na máquina que gera o CSS.
+- **`this command needs Node.js 26 or newer`.** Atualize o Node.js na máquina que gera o CSS.
 - **`cannot write the stylesheet: <reason>`.** `<reason>` é a própria mensagem do Node.js. `EISDIR` quer dizer que o `--output` nomeia uma pasta existente, então nomeie um arquivo dentro dela; `EACCES` ou `EPERM` quer dizer que você não pode escrever ali.
 
 ## Conferindo se funcionou

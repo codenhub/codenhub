@@ -4,25 +4,7 @@
 @import "./theme.css";
 /* Tailwind's utilities into `utilities`, as `components/index.css` does it
    and for its reason. */
-@import "tailwindcss/utilities.css" layer(utilities);
-/* Everything that is not `src/` -- see the note in `index.css`. Without the
-   docs and root-file excludes a utility used only in a documentation example
-   compiles into `dist/native.css`. */
-@source not "./cli";
-@source not "../dist";
-@source not "../tests";
-@source not "../dev";
-@source not "../debug";
-@source not "../demo";
-@source not "../playground";
-@source not "../docs";
-@source not "../scripts";
-@source not "../*.md";
-@source not "../*.txt";
-@source not "../*.json";
-@source not "../*.ts";
-@source not "../LICENSE";
-@source not "../NOTICE";
+@import "./base/utilities.css" layer(utilities);
 /* No `typography.css` here: `components/rules.css` brings its rules, and a
    second route to a `@utility` stacks its body. */
 @import "./utilities/rules.css";
@@ -89,24 +71,24 @@
 
   /* Headings */
   h1 {
-    @apply text-title-lg;
+    @compose text-title-lg;
   }
 
   h2 {
-    @apply text-title;
+    @compose text-title;
   }
 
   h3 {
-    @apply text-title-sm;
+    @compose text-title-sm;
   }
 
   h4 {
-    @apply text-label-lg;
+    @compose text-label-lg;
   }
 
   h5,
   h6 {
-    @apply text-label;
+    @compose text-label;
   }
 
   /* Body copy is the page's text, set once on `body` and inherited, so a
@@ -117,32 +99,32 @@
      `normal`, so this body's wider tracking stops at them. Links take the text
      they sit in, so one inside a heading stays heading-sized. */
   body {
-    @apply text-body;
+    @compose text-body;
   }
 
   /* Content */
   table {
-    @apply data-table;
+    @compose data-table;
   }
 
   kbd {
-    @apply kbd;
+    @compose kbd;
   }
 
   blockquote {
-    @apply quote;
+    @compose quote;
   }
 
   q {
-    @apply quote-inline;
+    @compose quote-inline;
   }
 
   code {
-    @apply code;
+    @compose code;
   }
 
   pre {
-    @apply pre;
+    @compose pre;
   }
 
   /* The block is the chip; the code inside it is text. Clearing only the fill
@@ -152,7 +134,8 @@
      nothing that reads it inside a block draws one, and so does the clip a
      cutting aesthetic gives the chip, which would trim the block's text. */
   pre code {
-    @apply bg-transparent p-0;
+    background-color: transparent;
+    padding: 0px;
 
     --ui-halo-ink: initial;
     border: 0;
@@ -161,7 +144,7 @@
   }
 
   hr {
-    @apply divider;
+    @compose divider;
   }
 
   /* Form controls. Every text-like type maps onto `.ipt` for the shared chrome
@@ -180,23 +163,23 @@
   input[type="time"],
   input[type="date"],
   input[type="datetime-local"] {
-    @apply ipt;
+    @compose ipt;
   }
 
   textarea {
-    @apply textarea;
+    @compose textarea;
   }
 
   select {
-    @apply select;
+    @compose select;
   }
 
   input[type="checkbox"] {
-    @apply checkbox;
+    @compose checkbox;
   }
 
   input[type="radio"] {
-    @apply radio;
+    @compose radio;
   }
 
   /* Buttons */
@@ -204,14 +187,14 @@
   input[type="button"],
   input[type="submit"],
   input[type="reset"] {
-    @apply btn;
+    @compose btn;
   }
 
   /* A dialog is the one surface with an element of its own, and it sits above
      the page, so it is a floating card. `surface` carries the closed-dialog
      hide and the centring. */
   dialog {
-    @apply card floating;
+    @compose card floating;
   }
 
   /* The track is `.progress`'s. Its value is not: `.progress` draws the fill
@@ -220,7 +203,7 @@
      own, so the fill is restated on each. One rule per engine: a selector
      list with a pseudo-element an engine does not know drops the whole rule. */
   progress {
-    @apply progress;
+    @compose progress;
 
     display: block;
     appearance: none;

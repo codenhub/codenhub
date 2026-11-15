@@ -1,6 +1,6 @@
 @import "tailwindcss";
 @import "@codenhub/styles/tw";
-@import "@codenhub/styles/tw/native";
+@import "@codenhub/styles/native/tw";
 /* Resolved only through each Vite config's own alias below -- not a real
    package specifier, deliberately: `@codenhub/toaster/styles` is a real,
    exports-declared subpath once this package is built, so Tailwind's own

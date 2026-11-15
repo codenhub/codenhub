@@ -1,0 +1,60 @@
+name: Tailwind
+
+# `@codenhub/styles/tw` is compiled by the consumer's Tailwind, anywhere in the
+# peer range, while the workspace builds and tests with the one version its
+# catalog pins. This workflow runs the package's integration suite, which
+# compiles `/tw` as a consumer does, against the floor of that range and the
+# newest 4.x.
+#
+# It is a workflow of its own for its `paths` filter: a pull request that leaves
+# the package and CI alone starts no job here, where a job of `ci.yml` would
+# check out and install the workspace before it could tell (`docs/ci.md`).
+on:
+  pull_request:
+    paths:
+      - packages/styles/**
+      - .github/**
+  # `paths` does not apply to a merge group, so the queue always runs both jobs.
+  merge_group:
+
+# As in `ci.yml`: a newer push supersedes a pull request's run, and a
+# merge-queue run is never cancelled.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+jobs:
+  # Only the consumer's two packages move: the package's own build keeps the
+  # catalog's `@tailwindcss/node`, as a published `dist/` does.
+  tailwind:
+    name: Tailwind ${{ matrix.tailwind }} consumer
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        tailwind: [floor, latest]
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up the workspace
+        uses: ./.github/actions/setup
+
+      # The floor is read from the peer range, so raising it moves this job too.
+      - name: Install the consumer's Tailwind
+        working-directory: packages/styles
+        run: |
+          if [ "${{ matrix.tailwind }}" = floor ]; then
+            version="$(node -p "require('./package.json').peerDependencies.tailwindcss.match(/>=\s*([\d.]+)/)[1]")"
+          else
+            version=4
+          fi
+          pnpm add --save-dev "tailwindcss@$version" "@tailwindcss/cli@$version"
+          node -p "'tailwindcss ' + require('tailwindcss/package.json').version"
+
+      - name: Run the integration suite
+        run: pnpm test styles

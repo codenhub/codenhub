@@ -44,7 +44,6 @@ docs/plans
 # Framework caches and generated test output.
 .astro
 .wrangler
-**/.palette-tmp
 **/tests/**/output.css
 
 # Build-time tag-scoped snapshots and their logo copies (docs/ci.md, "Publish-scoped content")

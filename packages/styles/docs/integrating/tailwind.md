@@ -20,7 +20,7 @@ A project that already runs Tailwind CSS v4 can compile this package's source in
 @source "./src";
 ```
 
-`/tw` imports Tailwind itself, so it replaces your own `@import "tailwindcss"` rather than joining it: with both, Tailwind's Preflight is emitted twice. Every other `/tw/*` entrypoint expects your import to come first; see [Using a focused entrypoint](#using-a-focused-entrypoint).
+`/tw` imports Tailwind itself, so it replaces your own `@import "tailwindcss"` rather than joining it: with both, Tailwind's Preflight is emitted twice. Every other `/*/tw` entrypoint expects your import to come first; see [Using a focused entrypoint](#using-a-focused-entrypoint).
 
 Tailwind CSS v4 scans your project automatically — most projects need nothing beyond the import above. `@source` paths resolve relative to the CSS file that declares them, not your project root, so `./src` here means "the `src/` next to this stylesheet"; adjust it to match where your own global stylesheet actually lives. Add `@source` only for markup Tailwind's automatic scan won't reach on its own: a path excluded by default (`.gitignore`d, or inside `node_modules` — an external component library, for instance) or, in a monorepo, one outside this file's own directory tree. Point it at your app's markup, not at this package: the package's source names every class it defines, so scanning it emits all of them whether your pages use them or not.
 
@@ -30,20 +30,20 @@ Add an aesthetic from the source entrypoint the same way as the compiled one, af
 
 ```css
 @import "@codenhub/styles/tw";
-@import "@codenhub/styles/tw/aesthetics";
+@import "@codenhub/styles/aesthetics/tw";
 
 @source "./src";
 ```
 
 ## Using a focused entrypoint
 
-Import a focused `/tw/*` entrypoint instead of the combined one — such as `/tw/button` or `/tw/form` — when a build only needs one component family; see the full [entrypoint table](../setup.md#all-entrypoints) for what each one composes.
+Import a focused `/*/tw` entrypoint instead of the combined one — such as `/button/tw` or `/form/tw` — when a build only needs one component family; see the full [entrypoint table](../setup.md#all-entrypoints) for what each one composes.
 
-Unlike `/tw`, the focused entrypoints and `/tw/native` do not import Tailwind, so keep your own import first:
+Unlike `/tw`, the focused entrypoints and `/native/tw` do not import Tailwind, so keep your own import first:
 
 ```css
 @import "tailwindcss";
-@import "@codenhub/styles/tw/button";
+@import "@codenhub/styles/button/tw";
 ```
 
 ## Build your own components with `@apply`

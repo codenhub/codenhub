@@ -5,6 +5,7 @@ import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { promisify } from "node:util";
 
+import postcss, { type AtRule } from "postcss";
 import ts from "typescript";
 import { expect, test } from "vitest";
 
@@ -26,11 +27,15 @@ const executeFile = promisify(execFile);
 const packagePath = fileURLToPath(new URL("../../package.json", import.meta.url));
 const packageRoot = path.dirname(packagePath);
 const manifest = JSON.parse(await readFile(packagePath, "utf8")) as PackageManifest;
-const exportTargets = Object.entries(manifest.exports).flatMap(([exportName, target]) =>
+/* A Tailwind source export is the compiled one with `/tw` added: `./tw` for
+   the root, `./button/tw` for a subpath. */
+const isTailwindExport = (subpath: string) => subpath === "./tw" || subpath.endsWith("/tw");
+const exportTargets = Object.entries(manifest.exports).flatMap(([subpath, target]) =>
   typeof target === "string"
-    ? [{ exportName, target }]
+    ? [{ subpath, exportName: subpath, target }]
     : Object.entries(target).map(([condition, conditionTarget]) => ({
-        exportName: `${exportName} (${condition})`,
+        subpath,
+        exportName: `${subpath} (${condition})`,
         target: conditionTarget,
       })),
 );
@@ -47,7 +52,7 @@ const tailwindExportContracts: Record<string, TailwindExportContract> = {
      system-preference fallback excluded from a forced-light subtree -- so a
      single candidate has to prove both are present rather than just that the
      variant exists at all. */
-  "./tw/theme": {
+  "./theme/tw": {
     candidates: "dark:hidden",
     patterns: [
       /--color-primary:/,
@@ -55,27 +60,27 @@ const tailwindExportContracts: Record<string, TailwindExportContract> = {
       /@media \(prefers-color-scheme:dark\)\{\.dark\\:hidden:not\(:where\(\.light,\.light \*,\.theme-light,\.theme-light \*,\[data-theme=light\],\[data-theme=light\] \*\)\)/,
     ],
   },
-  "./tw/components": {
+  "./components/tw": {
     candidates: "alert btn alert-icon",
     patterns: [/\.alert\{[^}]*--_capped:/, /\.btn\{[^}]*--_capped:/, /\.alert-icon\{/],
   },
-  "./tw/surface": {
+  "./surface/tw": {
     candidates: "panel",
     patterns: [/\.panel\{[^}]*--_capped:/, /backdrop-filter:var\(--_layers-clear,var\(--ui-backdrop,none\)\)/],
   },
-  "./tw/button": {
+  "./button/tw": {
     candidates: "btn",
     patterns: [/\.btn\{[^}]*--_capped:/, /\.btn\{[^}]*background-color:var\(--_bg\)/],
   },
-  "./tw/form": {
+  "./form/tw": {
     candidates: "ipt radio",
     patterns: [/\.ipt\{[^}]*--_capped:/, /\.radio\{[^}]*--_capped:/, /background-color:var\(--_bg\)/],
   },
-  "./tw/feedback": {
+  "./feedback/tw": {
     candidates: "alert badge progress",
     patterns: [/\.alert\{[^}]*--_capped:/, /\.badge\{[^}]*--_capped:/, /\.progress\{/],
   },
-  "./tw/tooltip": {
+  "./tooltip/tw": {
     candidates: "tooltip tooltip-bubble tooltip-icon",
     patterns: [
       /\.tooltip\{/,
@@ -84,30 +89,30 @@ const tailwindExportContracts: Record<string, TailwindExportContract> = {
       /background-color:var\(--_bg\)/,
     ],
   },
-  "./tw/reset": { candidates: "text-body", patterns: [/:focus-visible\{/] },
-  "./tw/native": { candidates: "btn", patterns: [/h1\{/, /button,/] },
-  "./tw/typography": { candidates: "text-title", patterns: [/\.text-title\{/] },
-  "./tw/utilities": {
+  "./reset/tw": { candidates: "text-body", patterns: [/:focus-visible\{/] },
+  "./native/tw": { candidates: "btn", patterns: [/h1\{/, /button,/] },
+  "./typography/tw": { candidates: "text-title", patterns: [/\.text-title\{/] },
+  "./utilities/tw": {
     candidates: "stack data-table",
     patterns: [/\.stack\{/, /\.data-table\{/, /--_capped:/, /background-color:var\(--_bg\)/],
   },
-  "./tw/aesthetics": {
+  "./aesthetics/tw": {
     patterns: [/\.neobrutalism\{/, /\.glass\{/, /\.pixel\{/, /\.chunky-tile\{/, /\.cyber\{/, /\.sketch\{/],
   },
-  "./tw/aesthetics/neobrutalism": { patterns: [/\.neobrutalism\{/, /--ui-shadow-x:/, /--ui-ink:/] },
-  "./tw/aesthetics/glass": { patterns: [/\.glass\{/, /--ui-backdrop:/, /--glass-radius,/] },
+  "./aesthetics/neobrutalism/tw": { patterns: [/\.neobrutalism\{/, /--ui-shadow-x:/, /--ui-ink:/] },
+  "./aesthetics/glass/tw": { patterns: [/\.glass\{/, /--ui-backdrop:/, /--glass-radius,/] },
   /* The bar is a shade of the element rather than a repeat of it, which takes the
      opaque depth colour as well as the ink amount. Both are asserted because
      either one alone leaves the bar invisible. */
-  "./tw/aesthetics/chunky-tile": {
+  "./aesthetics/chunky-tile/tw": {
     patterns: [/\.chunky-tile\{/, /--tile-radius,/, /--elevation-color:/, /--ui-shadow-ink:/, /--ui-active-transform:/],
   },
   /* The bevel is a corner shape rather than a clip, and it has to fall back to a
      square where an engine cannot draw it; both halves are asserted. */
-  "./tw/aesthetics/cyber": {
+  "./aesthetics/cyber/tw": {
     patterns: [/\.cyber\{/, /--cyber-cut,/, /--ui-corner-shape:\s*bevel/, /@supports not \(corner-shape:\s*bevel\)/],
   },
-  "./tw/aesthetics/sketch": {
+  "./aesthetics/sketch/tw": {
     patterns: [
       /\.sketch\{/,
       /--sketch-radius,/,
@@ -120,7 +125,7 @@ const tailwindExportContracts: Record<string, TailwindExportContract> = {
   },
   /* The aesthetic publishes the silhouette and the inset edge as material
      tokens; the declarations that consume them belong to `box` and `surface`. */
-  "./tw/aesthetics/pixel": {
+  "./aesthetics/pixel/tw": {
     patterns: [
       /\.pixel\{/,
       /--ui-clip:\s*polygon/,
@@ -253,20 +258,31 @@ test("every compiled stylesheet that carries the checkbox marks names their lice
   expect(unnoticed).toEqual([]);
 });
 
-/* A `--tw-*` variable is Tailwind's own, set by its utilities and renamed or
-   dropped in any release, so a `/tw` consumer on another 4.x would lose what
-   read it. The package reads only the tokens Tailwind documents. */
-test("no source stylesheet reads a variable private to Tailwind", async () => {
-  const reads: string[] = [];
+/* A `--tw-*` variable is Tailwind's own, renamed or dropped in any release. The
+   package's bodies carry Tailwind's expansion of the utilities they were
+   written with, which reads a few, such as `--tw-leading` beside `font-size`,
+   so that a consumer's `leading-*` still reaches them. Each one read is one the
+   package registers and ships itself (`src/base/properties.css`), so on a
+   Tailwind that renamed it the body still resolves: to its fallback, or to the
+   registration's initial value. */
+test("every variable private to Tailwind that /tw reads, /tw registers", async () => {
+  const theme = await readFile(path.resolve(packageRoot, "tw/theme.css"), "utf8");
+  const registered = new Set([...theme.matchAll(/@property\s+(--tw-[\w-]+)/g)].map(([, name]) => name));
+  const unregistered: string[] = [];
 
   for (const file of await shippedStylesheets("tw")) {
     // oxlint-disable-next-line no-await-in-loop -- few files, read in turn.
     const css = await readFile(path.resolve(packageRoot, file), "utf8");
 
-    reads.push(...[...css.matchAll(/var\(\s*(--tw-[\w-]+)/g)].map(([, name]) => `${file}: ${name}`));
+    unregistered.push(
+      ...[...css.matchAll(/var\(\s*(--tw-[\w-]+)/g)]
+        .filter(([, name]) => !registered.has(name!))
+        .map(([, name]) => `${file}: ${name}`),
+    );
   }
 
-  expect(reads).toEqual([]);
+  expect(registered.size).toBe(9);
+  expect(unregistered).toEqual([]);
 });
 
 /* `files` publishes all of `tw/`, so a source no `/tw` export imports ships as
@@ -274,7 +290,7 @@ test("no source stylesheet reads a variable private to Tailwind", async () => {
    reached consumers only through `dist/palette.css`. */
 test("every stylesheet under tw/ is reachable from a /tw export", async () => {
   const targets = Object.entries(manifest.exports)
-    .filter(([exportName]) => exportName.startsWith("./tw"))
+    .filter(([exportName]) => isTailwindExport(exportName))
     .map(([, target]) => (typeof target === "string" ? target : target.default).replace(/^\.\//, ""));
   const reached = new Set<string>();
   const queue = [...targets];
@@ -333,8 +349,8 @@ test("side-effect imports typecheck with noUncheckedSideEffectImports", () => {
     "@codenhub/styles/aesthetics/glass",
     "@codenhub/styles/native",
     "@codenhub/styles/tw",
-    "@codenhub/styles/tw/button",
-    "@codenhub/styles/tw/aesthetics/glass",
+    "@codenhub/styles/button/tw",
+    "@codenhub/styles/aesthetics/glass/tw",
   ];
 
   const options: ts.CompilerOptions = {
@@ -402,13 +418,25 @@ test("dist holds only finished CSS, with no Tailwind or import directive left", 
   expect([...new Set(unfinished)]).toEqual([]);
 });
 
-test("every /tw export resolves into tw/, outside dist", () => {
+test("every /tw export resolves into tw/, outside dist, and nothing else does", () => {
   const misplaced = exportTargets
-    .filter(({ exportName }) => exportName.startsWith("./tw"))
-    .filter(({ target }) => !target.startsWith("./tw/"))
+    .filter(({ subpath, target }) => isTailwindExport(subpath) !== target.startsWith("./tw/"))
     .map(({ exportName, target }) => `${exportName} -> ${target}`);
 
   expect(misplaced).toEqual([]);
+});
+
+/* The rule a consumer is told: the Tailwind source of an entry is its path with
+   `/tw` added. `./palette` has none: it is generated values, with nothing for
+   Tailwind to compile. */
+test("every compiled export has its Tailwind source at the same path with /tw added", () => {
+  const subpaths = Object.keys(manifest.exports);
+  const missing = subpaths
+    .filter((subpath) => !isTailwindExport(subpath) && subpath !== "./package.json" && subpath !== "./palette")
+    .map((subpath) => (subpath === "." ? "./tw" : `${subpath}/tw`))
+    .filter((subpath) => !subpaths.includes(subpath));
+
+  expect(missing).toEqual([]);
 });
 
 for (const [exportName, contract] of Object.entries(compiledExportContracts)) {
@@ -557,19 +585,17 @@ for (const target of compiledTargets) {
   });
 }
 
-/* The contracts above spot-check a handful of classes per entrypoint. A
-   compiled bundle has no markup to scan, so a `@utility` emits only because the
-   self-scan or an `@source inline` in that entrypoint's index names it -- and a
-   new component added to `src/components/` that is missed in the inline list
-   ships absent from `dist/components.css` with nothing failing, the mirror of
-   the `.table` collision. This holds every `@utility` a compiled entrypoint's
-   own source tree defines against its output.
+/* The contracts above spot-check a handful of classes per entrypoint. The
+   build places every utility in an entrypoint's import closure except those its
+   entry in `scripts/lib/entries.mjs` omits, so a utility an omit list drops by
+   mistake ships absent from its bundle with nothing failing. This holds every
+   utility a compiled entrypoint's own source tree defines against its output.
 
-   `roots` is the entrypoint's import closure, not just its directory: the
-   `dist/components.css` index pulls `../box.css` and `../typography.rules.css`
-   alongside `./`, and a utility added to either belongs in that bundle. A
-   functional `@utility name-*` keeps its trailing `*` so the match below can
-   look for `.name-<value>` rather than a bare `.name`. */
+   A utility is a rule directly in `@layer utilities` whose selector is one
+   class. `roots` is the entrypoint's import closure, not just its directory:
+   the `dist/components.css` index pulls `../box.css` and
+   `../typography.rules.css` alongside `./`, and a utility added to either
+   belongs in that bundle. */
 async function definedUtilities(roots: string[]): Promise<string[]> {
   const perRoot = await Promise.all(
     roots.map(async (root) => {
@@ -586,34 +612,40 @@ async function definedUtilities(roots: string[]): Promise<string[]> {
     }),
   );
 
-  return [
-    ...new Set(
-      perRoot
-        .flat()
-        .flatMap((source) => [...source.matchAll(/@utility\s+([a-z][a-z0-9-]*\*?)\s*\{/g)].map((match) => match[1])),
-    ),
-  ];
+  const names = new Set<string>();
+
+  for (const source of perRoot.flat()) {
+    postcss.parse(source).walkRules((rule) => {
+      const parent = rule.parent;
+
+      if (
+        parent?.type === "atrule" &&
+        (parent as AtRule).name === "layer" &&
+        (parent as AtRule).params === "utilities" &&
+        /^\.[a-z][a-z0-9-]*$/.test(rule.selector)
+      ) {
+        names.add(rule.selector.slice(1));
+      }
+    });
+  }
+
+  return [...names];
 }
 
 const compiledCompleteness: Record<string, string[]> = {
   "dist/index.css": ["src"],
   "dist/components.css": ["src/components", "src/box.css", "src/typography.rules.css", "src/theme.css"],
   "dist/native.css": ["src"],
-  /* Named by hand in `theme.compiled.css`'s `@source inline` list, which a new
-     family can be left out of. */
   "dist/theme.css": ["src/intent.css", "src/presentation.css", "src/elevation.css", "src/corner.css", "src/size.css"],
 };
 
 for (const [target, roots] of Object.entries(compiledCompleteness)) {
-  test(`${target} emits every @utility its source tree defines`, async () => {
+  test(`${target} emits every utility its source tree defines`, async () => {
     const output = await readFile(path.resolve(packageRoot, target), "utf8");
-    const missing = (await definedUtilities(roots)).filter((name) => {
-      /* A functional `@utility foo-*` emits as `.foo-<value>`; a static one as a
-         bare `.foo`. The `*` is carried through so the two are told apart here. */
-      const pattern = name.endsWith("*") ? String.raw`\.${name.slice(0, -1)}[a-z0-9]` : String.raw`\.${name}(?![\w-])`;
+    const defined = await definedUtilities(roots);
+    const missing = defined.filter((name) => !new RegExp(String.raw`\.${name}(?![\w-])`).test(output));
 
-      return !new RegExp(pattern).test(output);
-    });
+    expect(defined.length, `${target}'s source defines utilities`).toBeGreaterThan(0);
 
     expect(missing, `${target} is missing rules for: ${missing.join(", ")}`).toEqual([]);
   });
@@ -622,14 +654,11 @@ for (const [target, roots] of Object.entries(compiledCompleteness)) {
 /* The check above only asks whether a utility's name appears anywhere in the
    output, which a class inside an `:is()`/`:where()` argument list already
    satisfies -- `.input-group).soft{` passes it without `input-group`'s own
-   `@utility` body ever compiling. That gap is exactly how `.input-group`,
-   `.text-control`, and `.surface` went dark when the docs prose that was
-   accidentally naming them was excluded from the content scan: every existing
-   assertion here still passed, and only the browser suite caught it. The six
-   composition utilities are the ones at risk -- unlike a component class, they
-   never appear as the selector of a rule of their own except through the
-   `@source inline` safelist in `components/index.css` -- so this holds each to
-   emitting a real rule. */
+   body ever being placed. That gap is how `.input-group`, `.text-control`, and
+   `.surface` once went dark while every assertion here still passed, and only
+   the browser suite caught it. The six composition utilities are the ones at
+   risk -- other rules name them inside selector lists far more often than any
+   component class -- so this holds each to emitting a real rule. */
 const COMPOSITION_UTILITIES = ["box", "box-hover", "box-active", "text-control", "surface", "input-group"];
 
 /* True when `name` starts a rule of its own in `output`: immediately followed
@@ -639,7 +668,7 @@ const COMPOSITION_UTILITIES = ["box", "box-hover", "box-active", "text-control",
    space, or a combinator after the name does not qualify: `.input-group.soft{`
    is a modifier rule that only fires alongside `input-group`'s own body, and
    `.input-group .child{` styles a descendant, neither of which proves
-   `input-group`'s own `@utility` block compiled. The name may be preceded by
+   `input-group`'s own rule was placed. The name may be preceded by
    the start of the string, a previous rule closing (`}`), a sibling in a
    comma-separated selector list (`,`), or the opening of an enclosing block
    such as `@media (forced-colors: active) {` (`{`). */
@@ -678,10 +707,9 @@ test("composition utilities emit their own rule body, not just a mention inside 
    in `src/`'s own declarations and comments -- `transform:` and `transition:`
    as real CSS properties, `backdrop-filter` named in `surface.css`'s own
    prose, "a container" and "a filter" used as ordinary English throughout.
-   The self-scan that makes the composition utilities above possible reads
-   that same text, so each one looks like a candidate. Verified against
-   Tailwind 4.3.2 that none of them compile into a real rule; this holds that
-   verification so a future scanner change does not ship a silent regression. */
+   The compiled build once compiled with Tailwind scanning that text, where each
+   one looked like a candidate. It scans nothing now, and a `/tw` consumer's
+   Tailwind skips `node_modules`; this keeps either from changing silently. */
 const COLLISION_PRONE_UTILITIES = ["filter", "backdrop-filter", "transition", "transform", "container"];
 
 test("utility names that collide with the package's own prose do not leak into the compiled output", async () => {
@@ -704,7 +732,7 @@ test("utility names that collide with the package's own prose do not leak into t
    a scanned file that happens to be a Tailwind utility compiles too -- the
    license's "contents" once shipped `.contents{display:contents}` -- so this
    holds every class the compiled entrypoints emit to one the stylesheet source
-   names itself: a selector, an `@utility`, or an `@source inline()` candidate.
+   names itself as a selector.
    Classes are read from selector preludes only, on both sides, so class-like
    text in a declaration value, a comment, or a string names nothing. */
 
@@ -796,16 +824,6 @@ test("compiled entrypoints emit only classes the stylesheet source names", async
     (await Promise.all(sourceFiles.map((file) => readFile(path.join(sourceDirectory, file), "utf8")))).join("\n"),
   );
   const named = classNamesIn(sourceText);
-
-  for (const match of sourceText.matchAll(/@utility\s+([\w-]+)/g)) {
-    named.add(match[1]!);
-  }
-
-  for (const match of sourceText.matchAll(/@source\s+inline\("([^"]*)"\)/g)) {
-    for (const candidate of match[1]!.split(/\s+/)) {
-      named.add(candidate);
-    }
-  }
 
   const outputs = await Promise.all(
     ["dist/index.css", "dist/components.css", "dist/native.css", "dist/theme.css"].map(async (target) => ({
@@ -977,9 +995,9 @@ test("./tw adds an xs breakpoint and keeps Tailwind's 2xl", async () => {
   expect(output).toMatch(/@media \(min-width:96rem\)\{\.\\32 xl\\:flex\{display:flex\}\}/);
 });
 
-/* The compiled entries safelist every class with `@source inline(...)`, since
-   they have no markup to scan. Left in the `/tw` copy, the same lists made a
-   consumer's build emit every class whatever their pages used -- byte for
+/* The compiled entries once safelisted every class with `@source inline(...)`,
+   since they had no markup to scan. Left in the `/tw` copy, the same lists made
+   a consumer's build emit every class whatever their pages used -- byte for
    byte the compiled `dist/index.css`. The copy keeps none. */
 test("the /tw source safelists nothing", async () => {
   const stylesheets = await shippedStylesheets("tw");
@@ -1061,7 +1079,7 @@ const undeclaredColors = (css: string) => {
 };
 
 /* The aesthetics carry no theme by contract; everything else does. */
-const carriesTheme = (exportName: string) => !exportName.startsWith("./tw/aesthetics");
+const carriesTheme = (exportName: string) => !exportName.startsWith("./aesthetics/");
 
 for (const [exportName, contract] of Object.entries(tailwindExportContracts)) {
   test(`${exportName} emits its representative public surface`, async () => {
@@ -1143,13 +1161,12 @@ test("compiled entrypoints declare every documented colour and foundation token"
   }
 });
 
-/* Tailwind's content detection scans the whole package directory, and the
-   compiled entrypoints narrow it back to `src/` with `@source not`. A miss in
-   that list leaks: a `--color-<family>-<shade>` that appears only in a docs
-   example compiles into a real `@theme` entry in the shipped CSS, so no color
-   ramp a documentation example names may reach the compiled theme. This holds
-   every palette color the build declares to one the stylesheet source
-   actually references (comments included, because Tailwind scans those too). */
+/* The compiled build keeps the theme values its output reads. When Tailwind
+   compiled it, its content detection scanned the whole package directory, and a
+   `--color-<family>-<shade>` that appeared only in a docs example compiled into
+   the shipped theme. No color ramp a documentation example names may reach the
+   compiled theme: this holds every palette color the build declares to one the
+   stylesheet source actually references, comments included. */
 test("compiled entrypoints ship only palette colors the source references", async () => {
   const sourceDirectory = path.resolve(packageRoot, "src");
   const sourceFiles = (await readdir(sourceDirectory, { recursive: true })).filter(

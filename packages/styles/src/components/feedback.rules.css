@@ -24,305 +24,343 @@
 
 /* A soft, edged surface, so an aesthetic that blurs surfaces blurs this too: an
    alert is a container carrying a message, not a control. */
-@utility alert {
-  @apply surface flex items-start gap-3 p-4 leading-5;
+@layer utilities {
+  .alert {
+    @compose surface;
+    display: flex;
+    align-items: flex-start;
+    gap: calc(var(--spacing) * 3);
+    padding: calc(var(--spacing) * 4);
+    --tw-leading: calc(var(--spacing) * 5);
+    line-height: calc(var(--spacing) * 5);
 
-  --_d-fill: 12%;
-  --_d-fg-on-fill: 0%;
-  --_d-border: 100%;
-  --_d-elevation: 0;
-
-  /* Same carve-out as `.panel`'s, and for the same reason: a neutral alert
-     mixes 12% of near-black ink onto the page (`217, 217, 217` against `250,
-     250, 250`), a slab rather than a status signal. Only a quiet neutral tint
-     is untinted, through `surface`'s `--_quiet`, stepped from the resolved
-     fill so a container's `.ghost` or `.solid` renders the alert as the
-     alert's own `.ghost` or `.solid` would. A named intent keeps its ordinary wash, because untinting
-     `.alert.soft.destructive` would silence the status it exists to carry.
-
-     Grounds on `--color-foreground` through `--_d-surface-ground`, exactly like
-     `.panel` and a resting `.card.soft`, so glass's ground and a consumer's
-     `--ui-surface-ground` still win over it. An alert has no hover state to
-     reveal a tint into either, so this is permanent. A neutral alert keeps its
-     identity: `--_d-border: 100%` above holds regardless of fill, so it still
-     reads as a framed box, just a quiet one instead of a grey slab. */
-  --_fill-cap: calc(100% - var(--_quiet));
-  --_d-surface-ground: color-mix(in oklab, var(--color-foreground) var(--_quiet), var(--color-background));
-}
-
-/* No icon is shipped. `.alert` is already `flex`, so an icon dropped in as a
-   real child is spaced by `gap-3`: `.alert-icon` only fixes its size and
-   alignment, not whether one is present. Any icon element works, the same
-   contract `.input-group` documents -- an inline `<svg>`, an `<img>`, or a
-   class from an icon set such as `@codenhub/icons`. See
-   `docs/internal/model.md#input-group-owns-the-box-the-control-inside-gives-it-up`. */
-@utility alert-icon {
-  @apply inline-flex flex-none items-center justify-center;
-
-  /* A `@codenhub/icons` glyph sizes itself in an unlayered rule, which no
-     layered rule outranks whatever its specificity, but it reads its size from
-     `--ic-size`, so the size goes there as well as on the box for any other
-     icon. No `!important`: that would shut out the consumer's own resize too.
-     An icon set with another prefix, or one that sizes unlayered with no knob,
-     keeps its own size. */
-  --ic-size: 1.25rem;
-
-  width: 1.25rem;
-  height: 1.25rem;
-}
-
-/* A soft, edgeless chip. Small enough that the structural silhouette would be
-   most of its height, so it takes the tight one where an aesthetic ships a pair. */
-@utility badge {
-  /* The neutral reset, carried so `@apply badge` gets it, as `btn` carries its own. */
-  @layer families {
-    :where(&:not(.badge, .primary, .secondary, .success, .warning, .destructive, .info)) {
-      --intent-color: var(--color-text);
-      --intent-contrast: var(--color-text-contrast);
-      --intent-hover: var(--color-text-hover);
-      --intent-strong: var(--color-text-strong);
-      --intent-subtle: var(--color-surface);
-      --intent-border: var(--ui-ink, var(--color-border));
-      --intent-fill-max: 20%;
-    }
-  }
-
-  @apply box inline-flex min-h-6 w-fit items-center gap-1 px-2.5 text-xs;
-
-  /* After `@apply box`: `box` states its own resting defaults, and the later
-     declaration wins. */
-  --_d-fill: 12%;
-  --_d-fg-on-fill: 0%;
-  --_d-border: 0%;
-  --_d-elevation: 0;
-
-  /* With no fill, the neutral line is the region's unfilled ink when the
-     aesthetic names one -- glass does, for a `.ghost.edged` badge. See `--_bare-ink` in
-     `box.css`. Unset, the reference is invalid and `box` keeps its line. */
-  --_bare-ink: var(--_unfilled-ink);
-
-  /* The label material `.btn` reads. Unset, tracking is `normal`, as `.btn`'s
-     is, so neither body copy's tracking nor a container's reaches the label;
-     case and shadow inherit, as a badge's text always has. */
-  font-weight: var(--ui-label-weight, var(--font-weight-bold));
-  letter-spacing: var(--ui-label-tracking, normal);
-  text-transform: var(--ui-label-case);
-  text-shadow: var(--ui-label-shadow);
-
-  /* Pill by default, but an aesthetic that declares no radius has to mean it, so
-     the round corner is this component's fallback rather than a hardcoded value.
-     An aesthetic that keeps pills distinct from its control corner says so
-     through `--ui-radius-pill` first. */
-  border-radius: var(--ui-radius-pill, var(--ui-radius, var(--ui-corner, calc(infinity * 1px))));
-  clip-path: var(--ui-clip-tight, var(--ui-clip, none));
-}
-
-/* An indicator reads intent and no presentation token at all. It is a stand-in
-   for content rather than a box with a look of its own, so there is nothing for
-   a container's `.solid` or `.edgeless` to say about it. */
-@utility skeleton {
-  /* The indicator reset, carried so `@apply skeleton` gets it, as `btn` carries
-     its own: the neutral slots, with the two an indicator takes from the
-     colour it sits in. Without it an applied one read an undefined
-     `--intent-border`. */
-  @layer families {
-    :where(&:not(.skeleton, .primary, .secondary, .success, .warning, .destructive, .info)) {
-      --intent-color: currentColor;
-      --intent-contrast: var(--color-text-contrast);
-      --intent-hover: var(--color-text-hover);
-      --intent-strong: var(--color-text-strong);
-      --intent-subtle: var(--color-surface);
-      --intent-border: currentColor;
-      --intent-fill-max: 20%;
-    }
-  }
-
-  /* Public, read with their defaults, so a value set on any ancestor reaches
-     the placeholder. */
-  --_skeleton-base: var(--skeleton-base, color-mix(in oklab, var(--intent-color) 6%, var(--intent-subtle)));
-  --_skeleton-sheen: var(--skeleton-sheen, color-mix(in oklab, var(--intent-color) 10%, var(--color-foreground)));
-
-  @apply min-h-4 w-full;
-
-  animation: anim-skeleton calc(var(--motion-duration-slow) * 4) linear infinite;
-  background: linear-gradient(90deg, var(--_skeleton-base), var(--_skeleton-sheen), var(--_skeleton-base));
-  background-size: 200% 100%;
-  /* Not a box, so it draws the control corner and its pattern itself, the way
-     `box` does at scale 1, and reads the corner shape beside it. */
-  --_corner: var(--ui-corner, var(--radius-control));
-  border-radius: var(
-    --ui-radius,
-    calc(var(--_corner) * var(--ui-corner-tl, 1)) calc(var(--_corner) * var(--ui-corner-tr, 1))
-      calc(var(--_corner) * var(--ui-corner-br, 1)) calc(var(--_corner) * var(--ui-corner-bl, 1))
-  );
-  corner-shape: var(--ui-corner-shape, round);
-
-  /* Reduced motion stops the shimmer here, for the entries without the reset;
-     see `box.css`. The gradient stays, so the placeholder still reads. */
-  @media (prefers-reduced-motion: reduce) {
-    animation: none;
-  }
-
-  /* Forced colours remove background images, and the gradient is all a
-     skeleton is: it vanished. A system-colour outline keeps the placeholder's
-     shape on the page. A border, inside the box, so nothing moves. */
-  @media (forced-colors: active) {
-    box-sizing: border-box;
-    border: 1px solid CanvasText;
-    animation: none;
-  }
-}
-
-/* The track is a box, the fill is not: `box.css`'s formula composes the frame,
-   the value fill stays `--intent-color` at full strength with no presentation,
-   same contract as `.skeleton`. `.progress` cannot `@apply box`
-   (the fill is a `::after`, not the element's own background), so it hand-
-   reimplements the formula the way `.quote` does -- see
-   docs/internal/model.md#components-that-do-not-take-the-whole-of-box for the
-   decision and why the other two indicators do not get the same treatment. */
-@utility progress {
-  /* The indicator reset, carried so `@apply progress` gets it, as `btn` carries
-     its own: the neutral slots, with the two an indicator takes from the
-     colour it sits in. Without it an applied one read an undefined
-     `--intent-border`. */
-  @layer families {
-    :where(&:not(.progress, .primary, .secondary, .success, .warning, .destructive, .info)) {
-      --intent-color: currentColor;
-      --intent-contrast: var(--color-text-contrast);
-      --intent-hover: var(--color-text-hover);
-      --intent-strong: var(--color-text-strong);
-      --intent-subtle: var(--color-surface);
-      --intent-border: currentColor;
-      --intent-fill-max: 20%;
-    }
-  }
-
-  @layer families {
-    :where(&:not(.active)) {
-      --_m-active: initial;
-    }
-
-    :where(&:not(.indeterminate)) {
-      --_m-indeterminate: initial;
-    }
-  }
-
-  /* The two states. Each raises a flag (`modifiers.css`); the pseudo-elements
-     below read these lines, which inherit to them as the flags do. */
-  --_active-content: var(--_m-active) "";
-  --_active-shimmer: var(--_m-active) anim-skeleton calc(var(--motion-duration-slow) * 4) linear infinite;
-  --_indeterminate-width: var(--_m-indeterminate) 33%;
-  --_indeterminate-sweep: var(--_m-indeterminate) anim-progress-indeterminate 1.5s infinite ease-in-out;
-
-  /* Printed as drawn. A browser leaves backgrounds off paper by default, and
-     the bar is nothing but two backgrounds: the track and the value. */
-  print-color-adjust: exact;
-
-  --_d-fill: 12%;
-  --_d-fg-on-fill: 0%;
-  --_d-border: 0%;
-  /* The track is a 12% tint, 1.2:1 against the page. With more contrast asked
-     for it is outlined, so where the bar ends is not left to the tint. An edge
-     class still decides: `--ui-border` is read before this. */
-  @media (prefers-contrast: more) {
+    --_d-fill: 12%;
+    --_d-fg-on-fill: 0%;
     --_d-border: 100%;
-  }
-  --_d-elevation: 0;
-  /* `--progress-color`/`--progress-surface`/`--progress-edge` are the Tier 1
-     override path an aesthetic or consumer reaches `.progress` through (see
-     model.md's pseudo-element budget section), so they stay undeclared here:
-     redeclaring one on `.progress` itself would win over a value set on an
-     ancestor regardless of specificity, the same reasoning `box.css` gives
-     for `--_fill-cap`. Each is read with this formula as its fallback, in
-     private `--_progress-*` slots, at the point it paints below. */
-  /* Presentation capped by the intent, the same `--_capped` `box` composes. */
-  --_progress-capped: min(var(--ui-fill, var(--_d-fill)), var(--intent-fill-max, 100%));
-  --_progress-fill: calc(var(--_progress-capped) * var(--ui-bg-alpha, 1));
-  /* Grounded on `transparent`, the same choice `.badge` and `.btn` make --
-     not `.pre`/`.code`/`.kbd`'s opaque `--intent-subtle` ground. */
-  --_progress-surface: color-mix(in oklab, var(--intent-color) var(--_progress-fill), transparent);
-  /* One `color-mix()`, not `box`/`.quote`'s two chained through a `--_line`
-     step: a WebKit build destabilizes when composing dozens of tracks each
-     carrying a three-level color-mix chain into one page (fine at ten, a
-     ~30-minute CI hang at forty; only chain depth reproduces it).
-     `box`/`.quote`'s extra step blends the line toward the fill first so a
-     heavily filled box does not draw a ring of a different colour around its
-     own plate -- a real risk up to `.solid`'s 100% fill. `.progress` never
-     reaches that: `.solid` is unsupported here (`registry.json`), so the fill
-     this reads never exceeds `.soft`'s 12%, and mixing straight from
-     `--intent-border` at that fill is indistinguishable from blending through
-     the surface first. */
-  --_progress-edge: color-mix(in oklab, var(--intent-border) var(--ui-border, var(--_d-border)), transparent);
+    --_d-elevation: 0;
 
-  @apply relative h-2.5 w-full overflow-hidden;
-  background-color: var(--progress-surface, var(--_progress-surface));
-  border: var(--ui-border-width, var(--border-width)) var(--ui-line-style, solid)
-    var(--progress-edge, var(--_progress-edge));
-  /* Round by default; an aesthetic that declares no radius squares the track and
-     its fill together, and a pill corner reaches both first. */
-  border-radius: var(--ui-radius-pill, var(--ui-radius, var(--ui-corner, calc(infinity * 1px))));
-  /* Not a box either, and the fill below restates it, so a bevelled track
-     carries a bevelled fill rather than a pill inside a cut frame. */
-  corner-shape: var(--ui-corner-shape, round);
+    /* Same carve-out as `.panel`'s, and for the same reason: a neutral alert
+       mixes 12% of near-black ink onto the page (`217, 217, 217` against `250,
+       250, 250`), a slab rather than a status signal. Only a quiet neutral tint
+       is untinted, through `surface`'s `--_quiet`, stepped from the resolved
+       fill so a container's `.ghost` or `.solid` renders the alert as the
+       alert's own `.ghost` or `.solid` would. A named intent keeps its ordinary wash, because untinting
+       `.alert.soft.destructive` would silence the status it exists to carry.
 
-  &::after {
-    content: "";
-    @apply absolute start-0 top-0 bottom-0 block h-full transition-[width] duration-(--motion-duration-slow) ease-(--motion-ease);
-
-    border-radius: var(--ui-radius-pill, var(--ui-radius, var(--ui-corner, calc(infinity * 1px))));
-    corner-shape: var(--ui-corner-shape, round);
-    background-color: var(--progress-color, var(--intent-color));
-    width: var(--_indeterminate-width, var(--progress-value, 0%));
-    animation: var(--_indeterminate-sweep, none);
-    z-index: 2;
+       Grounds on `--color-foreground` through `--_d-surface-ground`, exactly like
+       `.panel` and a resting `.card.soft`, so glass's ground and a consumer's
+       `--ui-surface-ground` still win over it. An alert has no hover state to
+       reveal a tint into either, so this is permanent. A neutral alert keeps its
+       identity: `--_d-border: 100%` above holds regardless of fill, so it still
+       reads as a framed box, just a quiet one instead of a grey slab. */
+    --_fill-cap: calc(100% - var(--_quiet));
+    --_d-surface-ground: color-mix(in oklab, var(--color-foreground) var(--_quiet), var(--color-background));
   }
 
-  /* The shimmer, which generates no box unless `active`. Its animation is
-     gated with it: WebKit 26 lists an animation on a pseudo-element that
-     generates no box in `getAnimations()`, and an endless one there never
-     settles (`structure.spec.ts`, "reaches every line a component draws"). */
-  &::before {
-    content: var(--_active-content, none);
-    @apply absolute inset-0 block h-full;
-    animation: var(--_active-shimmer, none);
-    background: linear-gradient(
-      90deg,
-      transparent,
-      color-mix(in srgb, var(--progress-color, var(--intent-color)) 15%, transparent),
-      transparent
-    );
-    background-size: 200% 100%;
-    z-index: 1;
+  /* No icon is shipped. `.alert` is already `flex`, so an icon dropped in as a
+     real child is spaced by `gap-3`: `.alert-icon` only fixes its size and
+     alignment, not whether one is present. Any icon element works, the same
+     contract `.input-group` documents -- an inline `<svg>`, an `<img>`, or a
+     class from an icon set such as `@codenhub/icons`. See
+     `docs/internal/model.md#input-group-owns-the-box-the-control-inside-gives-it-up`. */
+  .alert-icon {
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    justify-content: center;
+
+    /* A `@codenhub/icons` glyph sizes itself in an unlayered rule, which no
+       layered rule outranks whatever its specificity, but it reads its size from
+       `--ic-size`, so the size goes there as well as on the box for any other
+       icon. No `!important`: that would shut out the consumer's own resize too.
+       An icon set with another prefix, or one that sizes unlayered with no knob,
+       keeps its own size. */
+    --ic-size: 1.25rem;
+
+    width: 1.25rem;
+    height: 1.25rem;
   }
 
-  /* Reduced motion, for the entries without the reset; see `box.css`. The
-     value moves without sliding, and the shimmer and the indeterminate sweep
-     stop where the reset would stop them: the fill rests at the start. */
-  @media (prefers-reduced-motion: reduce) {
-    &::after {
-      transition-duration: 0.01ms;
+  /* A soft, edgeless chip. Small enough that the structural silhouette would be
+     most of its height, so it takes the tight one where an aesthetic ships a pair. */
+  .badge {
+    /* The neutral reset, carried so `@apply badge` gets it, as `btn` carries its own. */
+    @layer families {
+      :where(&:not(.badge, .primary, .secondary, .success, .warning, .destructive, .info)) {
+        --intent-color: var(--color-text);
+        --intent-contrast: var(--color-text-contrast);
+        --intent-hover: var(--color-text-hover);
+        --intent-strong: var(--color-text-strong);
+        --intent-subtle: var(--color-surface);
+        --intent-border: var(--ui-ink, var(--color-border));
+        --intent-fill-max: 20%;
+      }
     }
 
-    &::before,
-    &::after {
+    @compose box;
+    display: inline-flex;
+    min-height: calc(var(--spacing) * 6);
+    width: fit-content;
+    align-items: center;
+    gap: var(--spacing);
+    padding-inline: calc(var(--spacing) * 2.5);
+    font-size: var(--text-xs);
+    line-height: var(--tw-leading, var(--text-xs--line-height));
+
+    /* After `@apply box`: `box` states its own resting defaults, and the later
+       declaration wins. */
+    --_d-fill: 12%;
+    --_d-fg-on-fill: 0%;
+    --_d-border: 0%;
+    --_d-elevation: 0;
+
+    /* With no fill, the neutral line is the region's unfilled ink when the
+       aesthetic names one -- glass does, for a `.ghost.edged` badge. See `--_bare-ink` in
+       `box.css`. Unset, the reference is invalid and `box` keeps its line. */
+    --_bare-ink: var(--_unfilled-ink);
+
+    /* The label material `.btn` reads. Unset, tracking is `normal`, as `.btn`'s
+       is, so neither body copy's tracking nor a container's reaches the label;
+       case and shadow inherit, as a badge's text always has. */
+    font-weight: var(--ui-label-weight, var(--font-weight-bold));
+    letter-spacing: var(--ui-label-tracking, normal);
+    text-transform: var(--ui-label-case);
+    text-shadow: var(--ui-label-shadow);
+
+    /* Pill by default, but an aesthetic that declares no radius has to mean it, so
+       the round corner is this component's fallback rather than a hardcoded value.
+       An aesthetic that keeps pills distinct from its control corner says so
+       through `--ui-radius-pill` first. */
+    border-radius: var(--ui-radius-pill, var(--ui-radius, var(--ui-corner, calc(infinity * 1px))));
+    clip-path: var(--ui-clip-tight, var(--ui-clip, none));
+  }
+
+  /* An indicator reads intent and no presentation token at all. It is a stand-in
+     for content rather than a box with a look of its own, so there is nothing for
+     a container's `.solid` or `.edgeless` to say about it. */
+  .skeleton {
+    /* The indicator reset, carried so `@apply skeleton` gets it, as `btn` carries
+       its own: the neutral slots, with the two an indicator takes from the
+       colour it sits in. Without it an applied one read an undefined
+       `--intent-border`. */
+    @layer families {
+      :where(&:not(.skeleton, .primary, .secondary, .success, .warning, .destructive, .info)) {
+        --intent-color: currentColor;
+        --intent-contrast: var(--color-text-contrast);
+        --intent-hover: var(--color-text-hover);
+        --intent-strong: var(--color-text-strong);
+        --intent-subtle: var(--color-surface);
+        --intent-border: currentColor;
+        --intent-fill-max: 20%;
+      }
+    }
+
+    /* Public, read with their defaults, so a value set on any ancestor reaches
+       the placeholder. */
+    --_skeleton-base: var(--skeleton-base, color-mix(in oklab, var(--intent-color) 6%, var(--intent-subtle)));
+    --_skeleton-sheen: var(--skeleton-sheen, color-mix(in oklab, var(--intent-color) 10%, var(--color-foreground)));
+
+    min-height: calc(var(--spacing) * 4);
+    width: 100%;
+
+    animation: anim-skeleton calc(var(--motion-duration-slow) * 4) linear infinite;
+    background: linear-gradient(90deg, var(--_skeleton-base), var(--_skeleton-sheen), var(--_skeleton-base));
+    background-size: 200% 100%;
+    /* Not a box, so it draws the control corner and its pattern itself, the way
+       `box` does at scale 1, and reads the corner shape beside it. */
+    --_corner: var(--ui-corner, var(--radius-control));
+    border-radius: var(
+      --ui-radius,
+      calc(var(--_corner) * var(--ui-corner-tl, 1)) calc(var(--_corner) * var(--ui-corner-tr, 1))
+        calc(var(--_corner) * var(--ui-corner-br, 1)) calc(var(--_corner) * var(--ui-corner-bl, 1))
+    );
+    corner-shape: var(--ui-corner-shape, round);
+
+    /* Reduced motion stops the shimmer here, for the entries without the reset;
+       see `box.css`. The gradient stays, so the placeholder still reads. */
+    @media (prefers-reduced-motion: reduce) {
+      animation: none;
+    }
+
+    /* Forced colours remove background images, and the gradient is all a
+       skeleton is: it vanished. A system-colour outline keeps the placeholder's
+       shape on the page. A border, inside the box, so nothing moves. */
+    @media (forced-colors: active) {
+      box-sizing: border-box;
+      border: 1px solid CanvasText;
       animation: none;
     }
   }
 
-  /* Forced colours, carried for an applied bar, as the toggles carry theirs.
-     The class also keeps the unlayered copy below, which beats every layered
-     rule; see there for why each part is named. */
-  @media (forced-colors: active) {
-    forced-color-adjust: none;
-    background-color: Canvas;
-    border-color: CanvasText;
-
-    &::after {
-      background-color: CanvasText;
+  /* The track is a box, the fill is not: `box.css`'s formula composes the frame,
+     the value fill stays `--intent-color` at full strength with no presentation,
+     same contract as `.skeleton`. `.progress` cannot `@apply box`
+     (the fill is a `::after`, not the element's own background), so it hand-
+     reimplements the formula the way `.quote` does -- see
+     docs/internal/model.md#components-that-do-not-take-the-whole-of-box for the
+     decision and why the other two indicators do not get the same treatment. */
+  .progress {
+    /* The indicator reset, carried so `@apply progress` gets it, as `btn` carries
+       its own: the neutral slots, with the two an indicator takes from the
+       colour it sits in. Without it an applied one read an undefined
+       `--intent-border`. */
+    @layer families {
+      :where(&:not(.progress, .primary, .secondary, .success, .warning, .destructive, .info)) {
+        --intent-color: currentColor;
+        --intent-contrast: var(--color-text-contrast);
+        --intent-hover: var(--color-text-hover);
+        --intent-strong: var(--color-text-strong);
+        --intent-subtle: var(--color-surface);
+        --intent-border: currentColor;
+        --intent-fill-max: 20%;
+      }
     }
 
+    @layer families {
+      :where(&:not(.active)) {
+        --_m-active: initial;
+      }
+
+      :where(&:not(.indeterminate)) {
+        --_m-indeterminate: initial;
+      }
+    }
+
+    /* The two states. Each raises a flag (`modifiers.css`); the pseudo-elements
+       below read these lines, which inherit to them as the flags do. */
+    --_active-content: var(--_m-active) "";
+    --_active-shimmer: var(--_m-active) anim-skeleton calc(var(--motion-duration-slow) * 4) linear infinite;
+    --_indeterminate-width: var(--_m-indeterminate) 33%;
+    --_indeterminate-sweep: var(--_m-indeterminate) anim-progress-indeterminate 1.5s infinite ease-in-out;
+
+    /* Printed as drawn. A browser leaves backgrounds off paper by default, and
+       the bar is nothing but two backgrounds: the track and the value. */
+    print-color-adjust: exact;
+
+    --_d-fill: 12%;
+    --_d-fg-on-fill: 0%;
+    --_d-border: 0%;
+    /* The track is a 12% tint, 1.2:1 against the page. With more contrast asked
+       for it is outlined, so where the bar ends is not left to the tint. An edge
+       class still decides: `--ui-border` is read before this. */
+    @media (prefers-contrast: more) {
+      --_d-border: 100%;
+    }
+    --_d-elevation: 0;
+    /* `--progress-color`/`--progress-surface`/`--progress-edge` are the Tier 1
+       override path an aesthetic or consumer reaches `.progress` through (see
+       model.md's pseudo-element budget section), so they stay undeclared here:
+       redeclaring one on `.progress` itself would win over a value set on an
+       ancestor regardless of specificity, the same reasoning `box.css` gives
+       for `--_fill-cap`. Each is read with this formula as its fallback, in
+       private `--_progress-*` slots, at the point it paints below. */
+    /* Presentation capped by the intent, the same `--_capped` `box` composes. */
+    --_progress-capped: min(var(--ui-fill, var(--_d-fill)), var(--intent-fill-max, 100%));
+    --_progress-fill: calc(var(--_progress-capped) * var(--ui-bg-alpha, 1));
+    /* Grounded on `transparent`, the same choice `.badge` and `.btn` make --
+       not `.pre`/`.code`/`.kbd`'s opaque `--intent-subtle` ground. */
+    --_progress-surface: color-mix(in oklab, var(--intent-color) var(--_progress-fill), transparent);
+    /* One `color-mix()`, not `box`/`.quote`'s two chained through a `--_line`
+       step: a WebKit build destabilizes when composing dozens of tracks each
+       carrying a three-level color-mix chain into one page (fine at ten, a
+       ~30-minute CI hang at forty; only chain depth reproduces it).
+       `box`/`.quote`'s extra step blends the line toward the fill first so a
+       heavily filled box does not draw a ring of a different colour around its
+       own plate -- a real risk up to `.solid`'s 100% fill. `.progress` never
+       reaches that: `.solid` is unsupported here (`registry.json`), so the fill
+       this reads never exceeds `.soft`'s 12%, and mixing straight from
+       `--intent-border` at that fill is indistinguishable from blending through
+       the surface first. */
+    --_progress-edge: color-mix(in oklab, var(--intent-border) var(--ui-border, var(--_d-border)), transparent);
+
+    position: relative;
+    height: calc(var(--spacing) * 2.5);
+    width: 100%;
+    overflow: hidden;
+    background-color: var(--progress-surface, var(--_progress-surface));
+    border: var(--ui-border-width, var(--border-width)) var(--ui-line-style, solid)
+      var(--progress-edge, var(--_progress-edge));
+    /* Round by default; an aesthetic that declares no radius squares the track and
+       its fill together, and a pill corner reaches both first. */
+    border-radius: var(--ui-radius-pill, var(--ui-radius, var(--ui-corner, calc(infinity * 1px))));
+    /* Not a box either, and the fill below restates it, so a bevelled track
+       carries a bevelled fill rather than a pill inside a cut frame. */
+    corner-shape: var(--ui-corner-shape, round);
+
+    &::after {
+      content: "";
+      position: absolute;
+      inset-inline-start: calc(var(--spacing) * 0);
+      top: 0px;
+      bottom: 0px;
+      display: block;
+      height: 100%;
+      transition-property: width;
+      transition-timing-function: var(--tw-ease, var(--default-transition-timing-function));
+      transition-duration: var(--tw-duration, var(--default-transition-duration));
+      --tw-duration: var(--motion-duration-slow);
+      transition-duration: var(--motion-duration-slow);
+      --tw-ease: var(--motion-ease);
+      transition-timing-function: var(--motion-ease);
+
+      border-radius: var(--ui-radius-pill, var(--ui-radius, var(--ui-corner, calc(infinity * 1px))));
+      corner-shape: var(--ui-corner-shape, round);
+      background-color: var(--progress-color, var(--intent-color));
+      width: var(--_indeterminate-width, var(--progress-value, 0%));
+      animation: var(--_indeterminate-sweep, none);
+      z-index: 2;
+    }
+
+    /* The shimmer, which generates no box unless `active`. Its animation is
+       gated with it: WebKit 26 lists an animation on a pseudo-element that
+       generates no box in `getAnimations()`, and an endless one there never
+       settles (`structure.spec.ts`, "reaches every line a component draws"). */
     &::before {
-      display: none;
+      content: var(--_active-content, none);
+      position: absolute;
+      inset: 0px;
+      display: block;
+      height: 100%;
+      animation: var(--_active-shimmer, none);
+      background: linear-gradient(
+        90deg,
+        transparent,
+        color-mix(in srgb, var(--progress-color, var(--intent-color)) 15%, transparent),
+        transparent
+      );
+      background-size: 200% 100%;
+      z-index: 1;
+    }
+
+    /* Reduced motion, for the entries without the reset; see `box.css`. The
+       value moves without sliding, and the shimmer and the indeterminate sweep
+       stop where the reset would stop them: the fill rests at the start. */
+    @media (prefers-reduced-motion: reduce) {
+      &::after {
+        transition-duration: 0.01ms;
+      }
+
+      &::before,
+      &::after {
+        animation: none;
+      }
+    }
+
+    /* Forced colours, carried for an applied bar, as the toggles carry theirs.
+       The class also keeps the unlayered copy below, which beats every layered
+       rule; see there for why each part is named. */
+    @media (forced-colors: active) {
+      forced-color-adjust: none;
+      background-color: Canvas;
+      border-color: CanvasText;
+
+      &::after {
+        background-color: CanvasText;
+      }
+
+      &::before {
+        display: none;
+      }
     }
   }
 }

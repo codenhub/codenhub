@@ -5,6 +5,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
 
+import postcss, { type AtRule } from "postcss";
 import { expect, test } from "vitest";
 
 /* `registry.json` is the list of what the package supports. It does not produce
@@ -61,7 +62,12 @@ interface Registry {
   modifiers: Record<string, unknown>;
   material?: Record<string, { readers: string[] }>;
   components: ComponentEntry[];
-  compositionHelpers?: { class: string; extends?: string; intents?: string[]; modifiers?: string[] }[];
+  compositionHelpers?: {
+    class: string;
+    extends?: string;
+    intents?: string[];
+    modifiers?: string[];
+  }[];
   boxStates?: string[];
   helpers?: string[];
   aesthetics?: AestheticEntry[];
@@ -75,12 +81,17 @@ const read = async (file: string): Promise<string> => readFile(path.join(package
 /* Every stylesheet the package ships, so a check covers what is there rather
    than a list someone has to remember to extend. */
 async function sourceFiles(): Promise<{ file: string; source: string }[]> {
-  const entries = await readdir(path.join(packageRoot, "src"), { recursive: true });
+  const entries = await readdir(path.join(packageRoot, "src"), {
+    recursive: true,
+  });
   return Promise.all(
     entries
       .filter((entry) => entry.endsWith(".css"))
       .map((entry) => entry.split(path.sep).join("/"))
-      .map(async (file) => ({ file, source: await read(path.posix.join("src", file)) })),
+      .map(async (file) => ({
+        file,
+        source: await read(path.posix.join("src", file)),
+      })),
   );
 }
 
@@ -386,26 +397,57 @@ test("every component is in an intent reset", async () => {
   expect(problems).toEqual([]);
 });
 
-/* Every `@utility <name> { ... }` in `src/`, keyed by name, so a check can ask
-   what one component declares instead of whether a string appears somewhere in
-   five concatenated files. */
-async function shippedUtilities(): Promise<Map<string, string>> {
-  const files = await sourceFiles();
-  const blocks = new Map<string, string>();
+/* Every utility in `src/` -- a rule directly in `@layer utilities` whose
+   selector is one class, as `scripts/lib/compile.mjs` reads it -- with its rule
+   as written, from the selector to the closing brace. */
+async function utilityRules(): Promise<{ name: string; text: string }[]> {
+  return (await sourceFiles()).flatMap(({ source }) => utilityRulesIn(source));
+}
 
-  for (const { source } of files) {
-    for (const match of source.matchAll(/@utility\s+([a-z0-9-]+)\s*\{/g)) {
-      let depth = 0;
-      let index = match.index + match[0].length - 1;
-      const start = index;
-      do {
-        depth += source[index] === "{" ? 1 : source[index] === "}" ? -1 : 0;
-        index += 1;
-      } while (depth > 0 && index < source.length);
-      blocks.set(match[1], source.slice(start, index));
+function utilityRulesIn(source: string): { name: string; text: string }[] {
+  const rules: { name: string; text: string }[] = [];
+
+  postcss.parse(source).walkRules((rule) => {
+    const parent = rule.parent;
+
+    if (
+      parent?.type === "atrule" &&
+      (parent as AtRule).name === "layer" &&
+      (parent as AtRule).params === "utilities" &&
+      /^\.[A-Za-z0-9_-]+$/.test(rule.selector)
+    ) {
+      rules.push({ name: rule.selector.slice(1), text: rule.toString() });
     }
+  });
+  return rules;
+}
+
+/* One file's utilities, keyed by name, each from its opening brace, as
+   `shippedUtilities` keys every file's. */
+function utilitiesIn(source: string): Map<string, string> {
+  return new Map(utilityRulesIn(source).map(({ name, text }) => [name, text.slice(text.indexOf("{"))]));
+}
+
+/* Every utility's block, keyed by name, so a check can ask what one component
+   declares instead of whether a string appears somewhere in five concatenated
+   files. */
+async function shippedUtilities(): Promise<Map<string, string>> {
+  return new Map((await utilityRules()).map(({ name, text }) => [name, text.slice(text.indexOf("{"))]));
+}
+
+/* The declarations directly in a utility's `@layer families` block, where an
+   intent sets its slots, one per line, or `null` when it has none. Nested
+   rules, such as the `prefers-contrast` override, are left out. */
+function familiesBlock(block: string | undefined): string | null {
+  if (block === undefined) {
+    return null;
   }
-  return blocks;
+
+  const families = (postcss.parse(`x${block}`).first as postcss.Rule).nodes.find(
+    (node): node is AtRule => node.type === "atrule" && node.name === "layer" && node.params === "families",
+  );
+
+  return families?.nodes?.filter((node) => node.type === "decl").join("\n") ?? null;
 }
 
 /* A utility's own declarations, with every nested selector and at-rule dropped.
@@ -502,7 +544,7 @@ test("every component declares its published default", async () => {
     }
     const block = utilities.get(component.class);
     if (block === undefined) {
-      problems.push(`${component.class} ships no @utility`);
+      problems.push(`${component.class} ships no utility`);
       continue;
     }
     /* All four, every time. A missing `--_d-fg-on-fill` silently inherits a
@@ -546,7 +588,7 @@ test("every composition utility that takes box states its resting geometry", asy
       continue;
     }
     const root = rootDeclarations(block);
-    const applied = [...root.matchAll(/@apply ([^;]*);/g)].flatMap(([, list]) => list.trim().split(/\s+/));
+    const applied = [...root.matchAll(/@compose ([^;]*);/g)].flatMap(([, list]) => list.trim().split(/\s+/));
 
     if (!applied.includes("box")) {
       continue;
@@ -582,7 +624,7 @@ test("a component states its resting geometry after the composition it applies",
       if (name === applied) {
         continue;
       }
-      const at = [...root.matchAll(/@apply ([^;]*);/g)].find(([, list]) =>
+      const at = [...root.matchAll(/@compose ([^;]*);/g)].find(([, list]) =>
         list.trim().split(/\s+/).includes(applied),
       )?.index;
 
@@ -593,7 +635,7 @@ test("a component states its resting geometry after the composition it applies",
         const own = root.indexOf(slot + ":");
 
         if (own !== -1 && own < at) {
-          problems.push(`${name} declares ${slot} above its @apply ${applied}`);
+          problems.push(`${name} declares ${slot} above its @compose ${applied}`);
         }
       }
     }
@@ -608,7 +650,7 @@ test("a component states its resting geometry after the composition it applies",
    shows up. A silent bug here weakens both guards without failing anything. */
 test("the root walk keeps a component's own declarations and drops its nested ones", () => {
   const root = rootDeclarations(`{
-  @apply box;
+  @compose box;
   --_d-fill: 100%;
   &:hover {
     --_d-fg-on-fill: 100%;
@@ -616,7 +658,7 @@ test("the root walk keeps a component's own declarations and drops its nested on
   --_d-border: 100%;
 }`);
 
-  expect(root).toContain("@apply box;");
+  expect(root).toContain("@compose box;");
   expect(root).toContain("--_d-fill:");
   expect(root, "declared only on hover").not.toContain("--_d-fg-on-fill:");
   expect(root, "after the nesting closes").toContain("--_d-border:");
@@ -672,7 +714,7 @@ test("every geometry-cap bound matches its min() seam, and every seam a bound", 
       const seam = block === undefined ? null : minSeam(block, property[bound.token]);
 
       if (seam === null) {
-        problems.push(`${component.class} bounds ${bound.token} but its @utility has no min() seam for it`);
+        problems.push(`${component.class} bounds ${bound.token} but its utility has no min() seam for it`);
         continue;
       }
       if (bound.kind !== "cap") {
@@ -927,7 +969,9 @@ test("every solo class carries the same composition", async () => {
 });
 
 test("the package publishes an entrypoint for every aesthetic in the registry", async () => {
-  const manifest = JSON.parse(await read("package.json")) as { exports: Record<string, unknown> };
+  const manifest = JSON.parse(await read("package.json")) as {
+    exports: Record<string, unknown>;
+  };
   for (const aesthetic of registry.aesthetics ?? []) {
     expect(manifest.exports, `./aesthetics/${aesthetic.class}`).toHaveProperty(`./aesthetics/${aesthetic.class}`);
   }
@@ -947,7 +991,10 @@ test("every aesthetic declares a whole shadow geometry", async () => {
     })),
   );
   const problems = sources
-    .map(({ name, source }) => ({ missing: parts.filter((part) => !source.includes(`${part}:`)), name }))
+    .map(({ name, source }) => ({
+      missing: parts.filter((part) => !source.includes(`${part}:`)),
+      name,
+    }))
     .filter(({ missing }) => missing.length > 0)
     .map(({ missing, name }) => `${name} declares no ${missing.join(", ")}`);
 
@@ -1035,28 +1082,13 @@ test("every aesthetic names or clears the rule ink", async () => {
   expect(problems).toEqual([]);
 });
 
-/* The body of every `@utility` in the package, keyed by name, braces matched so
-   a nested modifier stays inside its component. */
+/* The rule of every utility in the package, without comments, keyed by name,
+   so a nested modifier stays inside its component. */
 async function utilityBodies(): Promise<Map<string, string>> {
   const bodies = new Map<string, string>();
 
-  for (const { source } of await sourceFiles()) {
-    const clean = withoutComments(source);
-
-    for (const match of clean.matchAll(/@utility\s+([a-z][a-z0-9-]*)\s*\{/g)) {
-      let depth = 1;
-      let end = match.index + match[0].length;
-
-      while (depth > 0 && end < clean.length) {
-        if (clean[end] === "{") {
-          depth += 1;
-        } else if (clean[end] === "}") {
-          depth -= 1;
-        }
-        end += 1;
-      }
-      bodies.set(match[1]!, (bodies.get(match[1]!) ?? "") + clean.slice(match.index, end));
-    }
+  for (const { name, text } of await utilityRules()) {
+    bodies.set(name, (bodies.get(name) ?? "") + withoutComments(text));
   }
 
   return bodies;
@@ -1076,11 +1108,11 @@ async function utilityBodies(): Promise<Map<string, string>> {
 test("the carried neutral resets exclude exactly the package classes that apply them", async () => {
   const bodies = await utilityBodies();
   const applied = (body: string): string[] =>
-    [...body.matchAll(/@apply ([^;]*);/g)].flatMap(([, list]) => list!.trim().split(/\s+/));
+    [...body.matchAll(/@compose ([^;]*);/g)].flatMap(([, list]) => list!.trim().split(/\s+/));
   const intents = Object.keys(registry.intents).filter((name) => name !== "neutral");
   const problems: string[] = [];
 
-  /* `@apply` outside any `@utility` names a selector this test cannot list, so
+  /* `@compose` outside any utility names a selector this test cannot list, so
      it is reported rather than missed. */
   const appliedAnywhere = (await sourceFiles()).flatMap(({ source }) => applied(withoutComments(source)));
   const appliedInUtilities = [...bodies.values()].flatMap(applied);
@@ -1089,7 +1121,7 @@ test("the carried neutral resets exclude exactly the package classes that apply 
     const count = (names: string[]) => names.filter((name) => name === helper).length;
 
     if (count(appliedAnywhere) !== count(appliedInUtilities)) {
-      problems.push(`@apply ${helper} is used outside a @utility, which this check cannot list`);
+      problems.push(`@compose ${helper} is used outside a utility, which this check cannot list`);
     }
 
     const appliers = new Set<string>([helper]);
@@ -1108,7 +1140,7 @@ test("the carried neutral resets exclude exactly the package classes that apply 
     const list = bodies.get(helper)?.match(/:where\(\s*&:not\(([^)]*)\)\s*\)/)?.[1];
 
     if (list === undefined) {
-      problems.push(`could not find the carried neutral reset in @utility ${helper}`);
+      problems.push(`could not find the carried neutral reset in utility ${helper}`);
       continue;
     }
     const excluded = new Set(list.split(",").map((selector) => selector.trim()));
@@ -1197,22 +1229,20 @@ test("every aesthetic names or clears every material token", async () => {
    loses most of its fill. The symptom is a slightly pale button, which is
    exactly the kind of thing that ships. */
 test("every intent maps onto the color family and fill cap the registry names", async () => {
-  const intent = await read("src/intent.css");
+  const utilities = utilitiesIn(await read("src/intent.css"));
   const problems: string[] = [];
 
   for (const [name, { family, fillMax }] of Object.entries(registry.intents)) {
-    const block = intent.match(
-      new RegExp(String.raw`(^|\n)@utility ${name}(?![A-Za-z0-9_-])\s*\{\s*@layer families\s*` + `{([^}]*)}`),
-    );
+    const block = familiesBlock(utilities.get(name));
 
     if (block === null) {
-      problems.push(`.${name} has no block in intent.css`);
+      problems.push(`.${name} has no utility with an @layer families block`);
       continue;
     }
-    if (!block[2].includes(`--intent-color: var(--color-${family})`)) {
+    if (!block.includes(`--intent-color: var(--color-${family})`)) {
       problems.push(`.${name} should map --intent-color onto --color-${family}`);
     }
-    if (!block[2].includes(`--intent-fill-max: ${fillMax}`)) {
+    if (!block.includes(`--intent-fill-max: ${fillMax}`)) {
       problems.push(`.${name} should declare --intent-fill-max: ${fillMax}`);
     }
   }
@@ -1253,13 +1283,13 @@ test("both intent resets and the root floor declare every slot the neutral inten
   const intent = await read("src/intent.css");
   const native = await read("src/native.css");
   const problems: string[] = [];
-  const neutralMatch = intent.match(/(?:^|\n)@utility neutral\s*\{\s*@layer families\s*\{([^{}]*)}/);
+  const neutralBlock = familiesBlock(utilitiesIn(intent).get("neutral"));
 
-  if (neutralMatch === null) {
+  if (neutralBlock === null) {
     problems.push("intent.css: could not extract .neutral intent block");
   }
 
-  const slots = [...(neutralMatch?.[1] ?? "").matchAll(/--intent-[a-z-]+(?=:)/g)].map((match) => match[0]);
+  const slots = [...(neutralBlock ?? "").matchAll(/--intent-[a-z-]+(?=:)/g)].map((match) => match[0]);
 
   expect(slots.length).toBeGreaterThan(0);
 

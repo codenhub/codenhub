@@ -236,6 +236,14 @@ describe("failures", () => {
     );
   });
 
+  /* `./aesthetics/tw` is the Tailwind source of every aesthetic, an export
+     beside the aesthetics, not one of them. */
+  it("does not take the Tailwind source of the aesthetics for an aesthetic", async () => {
+    expect(await failureOf("build", "-c", "app/views/**/*.erb", "-o", "app.css", "--aesthetic", "tw")).toBe(
+      'chs: unknown aesthetic "tw"; choose from chunky-tile, cyber, glass, neobrutalism, pixel, sketch.',
+    );
+  });
+
   it("rejects a --content glob that matches no file, naming it", async () => {
     expect(await failureOf("build", "-c", "app/view/**/*.erb", "-o", "app.css")).toMatch(/app\/view\/\*\*\/\*\.erb/);
   });
@@ -255,10 +263,10 @@ describe("failures", () => {
   });
 
   it("rejects a Node.js older than it supports, naming both versions", async () => {
-    nodeVersion = "22.11.0";
+    nodeVersion = "24.22.1";
 
     expect(await failureOf("build", "-c", "app/views/**/*.erb", "-o", "app.css")).toBe(
-      "chs: this command needs Node.js 24 or newer; this is Node.js 22.11.0.",
+      "chs: this command needs Node.js 26 or newer; this is Node.js 24.22.1.",
     );
   });
 

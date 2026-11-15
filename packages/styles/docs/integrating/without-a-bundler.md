@@ -10,7 +10,7 @@ The compiled stylesheets are finished CSS: each one is a single file with no `@i
 
 What needs a build tool is the import _name_. `@import "@codenhub/styles"` names a package, and finding the file behind that name — `node_modules/@codenhub/styles/dist/index.css` — is done by Node-aware tooling such as Vite, webpack, or the Tailwind CLI, which read the package's `exports` map. A browser does not: it resolves an `@import` URL against the stylesheet that contains it and a `<link href>` against the page, so a bare package name becomes a request for a path that does not exist. Without a bundler, link the file by its path instead.
 
-The `/tw` entrypoints are Tailwind source and need a Tailwind build. `/tw/aesthetics` is the exception, plain CSS with nothing for Tailwind to process, but without a bundler link the compiled `dist/aesthetics/` files instead, as below. This page is for a page that has no Node.js CSS build: plain HTML, Rails, Laravel, Django, or any server-rendered app. There are two paths:
+The `/tw` entrypoints are Tailwind source and need a Tailwind build. `/aesthetics/tw` is the exception, plain CSS with nothing for Tailwind to process, but without a bundler link the compiled `dist/aesthetics/` files instead, as below. This page is for a page that has no Node.js CSS build: plain HTML, Rails, Laravel, Django, or any server-rendered app. There are two paths:
 
 1. **Link the compiled stylesheet.** It needs nothing but static files. You ship every class, whether your pages use it or not.
 2. **Build a stylesheet with the package's `chs build` command.** It scans your templates and writes a stylesheet with only the classes they use. See [Build only the classes you use](#build-only-the-classes-you-use).
@@ -37,8 +37,8 @@ jsDelivr and unpkg serve every file of every published npm version, so a page ca
 
 ```html
 <head>
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@codenhub/styles@0.9.0/dist/index.css" />
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@codenhub/styles@0.9.0/dist/aesthetics/pixel.css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@codenhub/styles@0.10.0/dist/index.css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@codenhub/styles@0.10.0/dist/aesthetics/pixel.css" />
 </head>
 ```
 
@@ -115,7 +115,7 @@ The package carries a command, `chs`, that reads your templates for class names 
 
 The command works with a bundler too. A project whose bundler does not run Tailwind, such as a plain Vite or webpack build, can write the stylesheet into its sources, `--output src/stylekit.css`, and import that file where it would import `@codenhub/styles`. A project that runs Tailwind CSS v4 gets the same trimming from the [source entrypoint](./tailwind.md) and does not need the command.
 
-It needs Node.js 24 or newer on the machine that builds the CSS, whether that is your laptop, a CI job, or a deploy step, and nothing else: the package is the whole install, with no Tailwind and no configuration. Install it as a development dependency from your project root; npm creates a `package.json` if you have none:
+It needs Node.js 26 or newer on the machine that builds the CSS, whether that is your laptop, a CI job, or a deploy step, and nothing else: the package is the whole install, with no Tailwind and no configuration. Install it as a development dependency from your project root; npm creates a `package.json` if you have none:
 
 ```sh
 npm install --save-dev @codenhub/styles
@@ -233,7 +233,7 @@ Each prefix is a fixed copy of those classes, built into the package, so the lis
 
 ### In a deploy
 
-Build the stylesheet before whatever step collects or fingerprints your assets, such as `rails assets:precompile`, `php artisan optimize`, or `python manage.py collectstatic`. Either commit the output, so the servers need no Node.js at all at the cost of a generated file someone has to remember to rebuild, or build it on deploy, so the build machine needs Node.js 24 or newer.
+Build the stylesheet before whatever step collects or fingerprints your assets, such as `rails assets:precompile`, `php artisan optimize`, or `python manage.py collectstatic`. Either commit the output, so the servers need no Node.js at all at the cost of a generated file someone has to remember to rebuild, or build it on deploy, so the build machine needs Node.js 26 or newer.
 
 Pin the version. Below 1.0 a minor release may rename or remove a class, so the same command can write a different stylesheet with a newer version. The output depends on nothing but the package's version and your templates, so commit `package.json` and the lockfile npm writes, and install with `npm ci` on the build machine, so every build uses the version you tested.
 
@@ -248,7 +248,7 @@ Every failure prints one line starting with `chs:` to standard error and exits w
 - **`option "<flag>" is missing its value or does not take one`.** A flag that takes a value was the last thing on the line, or `--no-minify` was given one, as in `--no-minify=true`.
 - **`unknown aesthetic "<name>"; choose from ...`.** Pick one of the names listed. They are lowercase and hyphenated, as in `chunky-tile`.
 - **`missing command` or `unknown command "<name>"`.** The first word after `chs` has to be `build`.
-- **`this command needs Node.js 24 or newer`.** Update Node.js on the machine that builds the CSS.
+- **`this command needs Node.js 26 or newer`.** Update Node.js on the machine that builds the CSS.
 - **`cannot write the stylesheet: <reason>`.** `<reason>` is Node.js's own message. `EISDIR` means `--output` names an existing folder, so name a file inside it; `EACCES` or `EPERM` means you cannot write there.
 
 ## Verifying it worked

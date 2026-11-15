@@ -1,0 +1,4 @@
+/* Where an entry's utilities go: the compiled build writes them here, sorted
+   (see `scripts/lib/compile.mjs`), and the `/tw` copy imports
+   `tailwindcss/utilities.css` in its place, where a consumer's Tailwind writes
+   the ones their markup uses. Empty on purpose. */

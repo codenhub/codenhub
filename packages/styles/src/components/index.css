@@ -10,22 +10,5 @@
    variables at the first `@theme` it meets. See docs/internal/model.md
    (Which files import the theme). */
 @import "../theme.css";
-@import "tailwindcss/utilities.css" layer(utilities);
-/* Everything that is not `src/` -- see the note in `index.css`. Keeps a class
-   name in a docs code fence from shipping as a real rule in `dist/components.css`. */
-@source not "../cli";
-@source not "../../dist";
-@source not "../../tests";
-@source not "../../dev";
-@source not "../../debug";
-@source not "../../demo";
-@source not "../../playground";
-@source not "../../docs";
-@source not "../../scripts";
-@source not "../../*.md";
-@source not "../../*.txt";
-@source not "../../*.json";
-@source not "../../*.ts";
-@source not "../../LICENSE";
-@source not "../../NOTICE";
+@import "../base/utilities.css" layer(utilities);
 @import "./rules.css";

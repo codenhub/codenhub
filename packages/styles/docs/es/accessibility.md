@@ -2,7 +2,7 @@
 title: Accesibilidad
 description: Lo que hace el CSS con el foco, los estados, el movimiento, el contraste, los colores forzados y el texto de derecha a izquierda, y lo que tu aplicación todavía les debe a sus usuarios.
 order: 5
-source: 88ce6c4707ee04ac76cdb5e6b31dcca399a5327e
+source: 6cf1b372ca62105b24ec2d38a2f9986b24632272
 ---
 
 # Accesibilidad
@@ -26,7 +26,7 @@ Esta página enumera las dos mitades: lo que aporta el CSS y lo que tu aplicaci�
 
 ### Contenido visualmente oculto
 
-`.visually-hidden` oculta contenido en pantalla y lo mantiene para los lectores de pantalla, como hace el `<caption>` de la tabla de claves de API en [Contenido y layout → Tablas](./usage/content-and-layout.md#tablas). Viene con las utilidades de layout: en `.`, `./native`, `./tw`, `./tw/native` y `./tw/utilities`. No está en `./components` ni en los puntos de entrada de componentes `./tw/components` y `./tw/*`.
+`.visually-hidden` oculta contenido en pantalla y lo mantiene para los lectores de pantalla, como hace el `<caption>` de la tabla de claves de API en [Contenido y layout → Tablas](./usage/content-and-layout.md#tablas). Viene con las utilidades de layout: en `.`, `./native`, `./tw`, `./native/tw` y `./utilities/tw`. No está en `./components` ni en los puntos de entrada de componentes `./components/tw` y `./*/tw`.
 
 ### Límites de los controles
 
@@ -65,7 +65,7 @@ Sin clase de intención, el contorno es el gris discreto de los bordes, `--color
 | Movimiento reducido, toda la página | El reset también acorta todas las demás animaciones y transiciones de la página.                                                                                                                                                                                                                                                                                                                          |
 | Transparencia reducida              | Con `prefers-reduced-transparency: reduce`, y con colores forzados, `.glass`, `.glass-liquid` y `.glass-solo` pierden su desenfoque y su lente y se vuelven opacos.                                                                                                                                                                                                                                       |
 
-La regla de movimiento reducido de cada componente viene con el componente, así que cada punto de entrada que lo incluye respeta el movimiento reducido sin el reset, incluidos `@codenhub/styles/components`, `@codenhub/styles/tw/components` y cada punto de entrada de componente `/tw/*`. Los puntos de entrada completo y native añaden la regla del reset para toda la página.
+La regla de movimiento reducido de cada componente viene con el componente, así que cada punto de entrada que lo incluye respeta el movimiento reducido sin el reset, incluidos `@codenhub/styles/components`, `@codenhub/styles/components/tw` y cada punto de entrada de componente `/*/tw`. Los puntos de entrada completo y native añaden la regla del reset para toda la página.
 
 La regla del reset es `!important` dentro de la capa `base`, y un `!important` con capa gana a uno sin capa, así que tu propio `!important` no puede volver a activar una animación. Para mantener una en marcha para los usuarios que piden movimiento reducido, como un spinner de subida que consideres esencial, declárala `!important` en una capa ordenada antes de `base`. La primera sentencia `@layer` que lee el navegador fija el orden, así que la tuya va antes del paquete:
 

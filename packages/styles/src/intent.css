@@ -1,4 +1,4 @@
-/* The intent classes are `@utility` rules in `utilities.families`, so `@apply`
+/* The intent classes are utilities in `utilities.families`, so `@apply`
    and Tailwind's variants reach them while every rule written straight into
    `utilities` still beats them; the floor and the resets are plain rules in
    `components`, below both. See docs/internal/model.md#cascade-layers. */
@@ -47,108 +47,110 @@
    `--intent-contrast` stays the page colour; a `.neutral.solid` badge's ink is
    `box`'s question, answered by the same `--ui-fg-on-fill` cap. Pointing this
    slot at `--color-text` renders a checked neutral checkbox black-on-black. */
-@utility neutral {
-  @layer families {
-    --intent-color: var(--color-text);
-    --intent-contrast: var(--color-text-contrast);
-    --intent-hover: var(--color-text-hover);
-    --intent-strong: var(--color-text-strong);
-    --intent-subtle: var(--color-surface);
-    --intent-border: var(--ui-ink, var(--color-border));
-    --intent-fill-max: 20%;
-  }
-}
-
-@utility primary {
-  @layer families {
-    --intent-color: var(--color-primary);
-    --intent-contrast: var(--color-primary-contrast);
-    --intent-hover: var(--color-primary-hover);
-    --intent-strong: var(--color-primary-strong);
-    --intent-subtle: var(--color-primary-subtle);
-    --intent-border: var(--color-primary);
-    --intent-fill-max: 100%;
-    /* With more contrast asked for, an intent's line is its strong tone, in
-       this and every intent below. `box` fades a line by the fill under it, so
-       on a soft fill the resting tone drew at 2.4:1 for warning in light and
-       2.9:1 for success in dark. See docs/accessibility.md. */
-    @media (prefers-contrast: more) {
-      --intent-border: var(--color-primary-strong);
+@layer utilities {
+  .neutral {
+    @layer families {
+      --intent-color: var(--color-text);
+      --intent-contrast: var(--color-text-contrast);
+      --intent-hover: var(--color-text-hover);
+      --intent-strong: var(--color-text-strong);
+      --intent-subtle: var(--color-surface);
+      --intent-border: var(--ui-ink, var(--color-border));
+      --intent-fill-max: 20%;
     }
   }
-}
 
-@utility secondary {
-  @layer families {
-    --intent-color: var(--color-accent);
-    --intent-contrast: var(--color-accent-contrast);
-    --intent-hover: var(--color-accent-hover);
-    --intent-strong: var(--color-accent-strong);
-    --intent-subtle: var(--color-accent-subtle);
-    --intent-border: var(--color-accent);
-    --intent-fill-max: 100%;
-    @media (prefers-contrast: more) {
-      --intent-border: var(--color-accent-strong);
+  .primary {
+    @layer families {
+      --intent-color: var(--color-primary);
+      --intent-contrast: var(--color-primary-contrast);
+      --intent-hover: var(--color-primary-hover);
+      --intent-strong: var(--color-primary-strong);
+      --intent-subtle: var(--color-primary-subtle);
+      --intent-border: var(--color-primary);
+      --intent-fill-max: 100%;
+      /* With more contrast asked for, an intent's line is its strong tone, in
+         this and every intent below. `box` fades a line by the fill under it, so
+         on a soft fill the resting tone drew at 2.4:1 for warning in light and
+         2.9:1 for success in dark. See docs/accessibility.md. */
+      @media (prefers-contrast: more) {
+        --intent-border: var(--color-primary-strong);
+      }
     }
   }
-}
 
-@utility success {
-  @layer families {
-    --intent-color: var(--color-success);
-    --intent-contrast: var(--color-success-contrast);
-    --intent-hover: var(--color-success-hover);
-    --intent-strong: var(--color-success-strong);
-    --intent-subtle: var(--color-success-subtle);
-    --intent-border: var(--color-success);
-    --intent-fill-max: 100%;
-    @media (prefers-contrast: more) {
-      --intent-border: var(--color-success-strong);
+  .secondary {
+    @layer families {
+      --intent-color: var(--color-accent);
+      --intent-contrast: var(--color-accent-contrast);
+      --intent-hover: var(--color-accent-hover);
+      --intent-strong: var(--color-accent-strong);
+      --intent-subtle: var(--color-accent-subtle);
+      --intent-border: var(--color-accent);
+      --intent-fill-max: 100%;
+      @media (prefers-contrast: more) {
+        --intent-border: var(--color-accent-strong);
+      }
     }
   }
-}
 
-@utility warning {
-  @layer families {
-    --intent-color: var(--color-warning);
-    --intent-contrast: var(--color-warning-contrast);
-    --intent-hover: var(--color-warning-hover);
-    --intent-strong: var(--color-warning-strong);
-    --intent-subtle: var(--color-warning-subtle);
-    --intent-border: var(--color-warning);
-    --intent-fill-max: 100%;
-    @media (prefers-contrast: more) {
-      --intent-border: var(--color-warning-strong);
+  .success {
+    @layer families {
+      --intent-color: var(--color-success);
+      --intent-contrast: var(--color-success-contrast);
+      --intent-hover: var(--color-success-hover);
+      --intent-strong: var(--color-success-strong);
+      --intent-subtle: var(--color-success-subtle);
+      --intent-border: var(--color-success);
+      --intent-fill-max: 100%;
+      @media (prefers-contrast: more) {
+        --intent-border: var(--color-success-strong);
+      }
     }
   }
-}
 
-@utility destructive {
-  @layer families {
-    --intent-color: var(--color-destructive);
-    --intent-contrast: var(--color-destructive-contrast);
-    --intent-hover: var(--color-destructive-hover);
-    --intent-strong: var(--color-destructive-strong);
-    --intent-subtle: var(--color-destructive-subtle);
-    --intent-border: var(--color-destructive);
-    --intent-fill-max: 100%;
-    @media (prefers-contrast: more) {
-      --intent-border: var(--color-destructive-strong);
+  .warning {
+    @layer families {
+      --intent-color: var(--color-warning);
+      --intent-contrast: var(--color-warning-contrast);
+      --intent-hover: var(--color-warning-hover);
+      --intent-strong: var(--color-warning-strong);
+      --intent-subtle: var(--color-warning-subtle);
+      --intent-border: var(--color-warning);
+      --intent-fill-max: 100%;
+      @media (prefers-contrast: more) {
+        --intent-border: var(--color-warning-strong);
+      }
     }
   }
-}
 
-@utility info {
-  @layer families {
-    --intent-color: var(--color-info);
-    --intent-contrast: var(--color-info-contrast);
-    --intent-hover: var(--color-info-hover);
-    --intent-strong: var(--color-info-strong);
-    --intent-subtle: var(--color-info-subtle);
-    --intent-border: var(--color-info);
-    --intent-fill-max: 100%;
-    @media (prefers-contrast: more) {
-      --intent-border: var(--color-info-strong);
+  .destructive {
+    @layer families {
+      --intent-color: var(--color-destructive);
+      --intent-contrast: var(--color-destructive-contrast);
+      --intent-hover: var(--color-destructive-hover);
+      --intent-strong: var(--color-destructive-strong);
+      --intent-subtle: var(--color-destructive-subtle);
+      --intent-border: var(--color-destructive);
+      --intent-fill-max: 100%;
+      @media (prefers-contrast: more) {
+        --intent-border: var(--color-destructive-strong);
+      }
+    }
+  }
+
+  .info {
+    @layer families {
+      --intent-color: var(--color-info);
+      --intent-contrast: var(--color-info-contrast);
+      --intent-hover: var(--color-info-hover);
+      --intent-strong: var(--color-info-strong);
+      --intent-subtle: var(--color-info-subtle);
+      --intent-border: var(--color-info);
+      --intent-fill-max: 100%;
+      @media (prefers-contrast: more) {
+        --intent-border: var(--color-info-strong);
+      }
     }
   }
 }

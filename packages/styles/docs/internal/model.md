@@ -1,6 +1,6 @@
 ---
 status: IMPLEMENTED
-last_updated: 2026-11-10
+last_updated: 2026-11-15
 scope: `@codenhub/styles` styling model, token contracts, and composition rules.
 ---
 
@@ -197,7 +197,7 @@ CSS has no selector for "this class reached the element by inheritance", so the 
 }
 ```
 
-The floor is full unless the element's own `.edgeless` lowers it, and the cap is 6% unless the element's own `.soft` or `.solid` raises it to 12% or 20%. `.checkbox` and `.radio` restate the floor as `100%` after `@apply`, and the tooltip bubble reads `--_own-edge` for its floor the same way.
+The floor is full unless the element's own `.edgeless` lowers it, and the cap is 6% unless the element's own `.soft` or `.solid` raises it to 12% or 20%. `.checkbox` and `.radio` restate the floor as `100%` after `@compose`, and the tooltip bubble reads `--_own-edge` for its floor the same way.
 
 Rejected: rules nested in the utility and keyed on the element's class -- `&.soft`, `&.solid`, and `&.edgeless:where(:not(.checkbox, .radio))` -- which is what these replaced. They saw only the class. `.my-field { @apply ipt soft }` carries `soft`'s declarations but not the class, so it kept the 6% cap a container's `.soft` gets, and a variant such as `md:edgeless` writes no `.edgeless`. Written by the utilities, the request travels wherever the utility's body does; see [What `@apply` carries](#what-apply-carries).
 
@@ -284,7 +284,7 @@ An aesthetic setting `--ui-surface-shadow` as a complete multi-layer value opts 
 
 ## Size
 
-`.sm` and `.lg` are the size modifier, and a modifier for the reason elevation is one. Like the fill classes they are `@utility` rules in `utilities.families` (`size.css`), so `@apply btn sm` and `md:lg` reach them. A size cannot say what it changes, because each component has its own steps, so it raises a flag and the component reads it:
+`.sm` and `.lg` are the size modifier, and a modifier for the reason elevation is one. Like the fill classes they are utilities in `utilities.families` (`size.css`), so `@apply btn sm` and `md:lg` reach them. A size cannot say what it changes, because each component has its own steps, so it raises a flag and the component reads it:
 
 ```css
 /* size.css */
@@ -307,7 +307,7 @@ Rejected: `&.sm` and `&.lg` nested in each component, which is what the flag rep
 
 ## Modifiers
 
-The classes that belong to one component -- `.tight`, `.loose`, `.vertical`, `.horizontal`, `.between`, `.narrow`, `.wide`, `.p-xs`, `.p-sm`, `.p-lg`, `.flush`, `.icon`, `.pill`, `.active`, `.indeterminate` -- are `@utility` rules in `utilities.families` (`modifiers.css`), as the size classes are and by the same mechanism. `@apply stack tight`, `@apply btn icon pill`, and `md:tight` work, so a consumer's component takes a modifier the way a shipped one does.
+The classes that belong to one component -- `.tight`, `.loose`, `.vertical`, `.horizontal`, `.between`, `.narrow`, `.wide`, `.p-xs`, `.p-sm`, `.p-lg`, `.flush`, `.icon`, `.pill`, `.active`, `.indeterminate` -- are utilities in `utilities.families` (`modifiers.css`), as the size classes are and by the same mechanism. `@apply stack tight`, `@apply btn icon pill`, and `md:tight` work, so a consumer's component takes a modifier the way a shipped one does.
 
 ```css
 /* modifiers.css */
@@ -345,6 +345,8 @@ Rejected: `&.tight` nested in each component, which is what the flags replaced, 
 
 Twenty-one components paint a box the same way, so the five expressions that mix intent x presentation x aesthetic live in exactly one place: `@utility box`. Components that share more share more: the six text controls share `@utility text-control`, and the four containers -- card, panel, alert, and the tooltip's bubble -- share `@utility surface`. Those are shared code, named for what they are. Nothing else needs a name: a key cap, a code chip and a table take `box` and say the rest themselves.
 
+In `src/` a utility is a rule directly in `@layer utilities` whose selector is one class, and a rule takes the body of one with `@compose box;`, which the build copies in at that point, in the order written. `tw/` writes each utility as `@utility box` with the copied body, which is how a consumer's Tailwind sees it and how the examples in this document write it, and a consumer takes the same body with `@apply box`.
+
 There is no taxonomy of roles above them. A role would have to be complete -- every component needs one, membership needs generating, and an aesthetic would reach components through roles instead of through tokens -- and blanket membership paints components that are not boxes: `.tooltip` is a positioning wrapper whose bubble is a pseudo-element, and `.quote` is a left bar. Per-component differences are stated by the component, as [bounds](#the-bounds-that-survive-and-the-test-for-keeping-one) or as registry entries.
 
 ### The bounds that survive, and the test for keeping one
@@ -377,29 +379,34 @@ The number is expected to move. This is a test, not a quota: a bound that passes
 
 ### Which files import the theme
 
-`box` and `surface` live beside each other at the root of `src/`, and every component that composes them `@reference`s them. Tailwind marks every `@theme` value a referenced file reaches as reference-only and leaves it out of the output, and a later write of the same value replaces an earlier one, flag included. So a shared file that imports the theme, or that references Tailwind after the theme has been imported, silently strips the tokens from every entry that pulls it in: the package's own colour tokens in the first case, and Tailwind's palette ramp they are built from in the second.
+An entry imports `theme.css` first, and an entry is the only file that does: `box.css`, `surface.css`, and every `*.rules.css` file import no theme ([One route to each utility](#one-route-to-each-utility)). `theme.css` imports Tailwind's theme values from `base/theme.css`, then the package's tokens and class families.
 
-The rules that follow:
+The rule is the one `/tw` needs. In `tw/`, `scripts/build-tw.mjs` points `base/` back at `tailwindcss`, and a focused export references the files that define the utilities it composes, such as `../box.css`. Tailwind marks every `@theme` value a referenced file reaches as reference-only and leaves it out of the output, and a later write of the same value replaces an earlier one, flag included. So a shared file that imports the theme silently strips the tokens from every export that references it.
 
-- A file other files `@reference` -- `box.css`, `surface.css` -- imports neither the theme nor Tailwind. Neither does a `*.rules.css` file ([One route to each utility](#one-route-to-each-utility)).
-- A file that references Tailwind imports the theme straight after it, so the theme is the last word. The focused entries do this. The layout and content utilities, which never stand alone, reference neither.
-- `index.css` imports all of Tailwind, then the theme. `components/index.css` and `native.css` reference Tailwind nowhere: each imports the theme first, then `tailwindcss/utilities.css` into `layer(utilities)`, as `tailwindcss/index.css` does it. Without the layer the CLI emitted the components unlayered on those two entries, where they beat every consumer rule. `theme.compiled.css`, which `dist/theme.css` is built from, imports the theme and then the same utilities with `source(none)`, and names the class families in an `@source inline` list: they are `@utility` rules, which Tailwind writes only where it finds both its utilities and a candidate, and the theme on its own has neither.
+The compiled build has no such failure: it inlines each file once, fails on a second import of it, and keeps Tailwind's theme values where the output reads them. Those values, `base/theme.css`, are the one file it allows twice, since `index.css` reaches them both through `base/index.css` and through `theme.css`.
+
+- `index.css` imports `base/index.css`, Tailwind's theme, Preflight, and the place its utilities go, then the theme. `components/index.css` and `native.css` import the theme first, then `base/utilities.css` into `layer(utilities)`, as `tailwindcss/index.css` does it. Without the layer Tailwind's CLI emitted the components unlayered on those two entries, where they beat every consumer rule.
+- `theme.compiled.css`, which `dist/theme.css` is built from, imports the theme and then `base/utilities.css`: the class families are utilities, written where that file is imported, and `theme.css` cannot carry it, since every entry imports it first.
 
 `exports.test.ts` holds it: every compiled entry, and every `/tw` entry that carries the theme must declare every `--color-*` they read.
 
 ### One route to each utility
 
-Tailwind registers a `@utility` once for every route by which the file defining it reaches a build, imported or referenced, and each registration appends its body: `@apply box` expanded to as many copies as there were files that `@reference`d `box.css`. Nine did, and 63% of the declarations in `dist/index.css` repeated one already in the same rule. A repeat changes nothing a browser computes, so nothing else failed.
+Tailwind registers a `@utility` once for every route by which the file defining it reaches a build, imported or referenced, and each registration appends its body: when Tailwind compiled `dist/`, `@apply box` expanded to as many copies as there were files that `@reference`d `box.css`. Nine did, and 63% of the declarations in `dist/index.css` repeated one already in the same rule. A repeat changes nothing a browser computes, so nothing else failed. The compiled build now fails on a second route instead, but a `/tw` consumer's Tailwind still stacks one.
 
-So a stylesheet that defines rules is split in two. `X.rules.css` holds the rules and brings nothing they need. `X.css` is the focused entry, the one a granular `/tw/*` export names: it brings Tailwind, the theme, and its reference to `box.css` or `surface.css`, then imports its rules file. An aggregate imports the rules files and brings what they need once. `components/rules.css` imports `box.css` and `surface.rules.css` once each and then every component's rules, and `components/index.css`, `index.css`, and `native.css` import it; `utilities/rules.css` does the same for the layout and content utilities. Typography, the reset, and `surface` follow the same split. `index.css` and `native.css` do not import `typography.css`, because `components/rules.css` brings its rules and a second route stacks them.
+So a stylesheet that defines rules is split in two. `X.rules.css` holds the rules and brings nothing they need. `X.css` is the focused entry, the one a granular `/*/tw` export names: it brings the theme, then imports its rules file. Its `tw/` copy also references the files that define the utilities it composes, `box.css` or `surface.rules.css`, which `scripts/build-tw.mjs` works out from the `@compose` lines its imports reach, so a consumer of that export alone can name `box` or `@apply` it. An aggregate imports the rules files and brings what they need once. `components/rules.css` imports `box.css` and `surface.rules.css` once each and then every component's rules, and `components/index.css`, `index.css`, and `native.css` import it; `utilities/rules.css` does the same for the layout and content utilities. Typography, the reset, and `surface` follow the same split. `index.css` and `native.css` do not import `typography.css`, because `components/rules.css` brings its rules and a second route stacks them.
 
-`exports.test.ts` ("aggregate exports state each declaration once") holds every aggregate export and `dist/native.css` to it. Two repeats are recorded there rather than removed: the tooltip bubble restates `box`'s shortened transition under reduced motion because it replaces that transition after applying `box`, and Tailwind's minifier emits a prefixed declaration of Preflight's link rule twice.
+`exports.test.ts` ("aggregate exports state each declaration once") holds every aggregate export and `dist/native.css` to it. Two repeats are recorded there rather than removed: the tooltip bubble restates `box`'s shortened transition under reduced motion because it replaces that transition after composing `box`, and Preflight's link rule comes out of Tailwind's minifier with a prefixed declaration twice, which `base/preflight.css` keeps so the two paths match.
 
 The route an aggregate used before, importing the focused entries, is what this replaced: each brought its own reference to `box.css`, and importing five stacked five copies.
 
 ### What `tw/` ships
 
-`tw/` is `src/` copied by `scripts/build-tw.mjs`, less what only the compiled build reads: `palette.css`, which reaches consumers as `dist/palette.css`, and `theme.compiled.css`. `files` publishes the whole directory, so a stylesheet no `/tw` export reaches would ship as bytes nobody can load; `exports.test.ts` checks that every stylesheet under `tw/` is reachable from a `/tw` export.
+`tw/` is `src/` written in Tailwind's terms by `scripts/build-tw.mjs`: each utility becomes `@utility name`, with the body the compiled build writes, `@compose` already copied in; `base/` points back at `tailwindcss`; `tokens.css` becomes `@theme static`; and `tw/theme.css` adds the nine `--tw-*` registrations a body sets by hand, which Tailwind registers only for its own utilities, and `adapter.css`, the breakpoint and the `dark` variant. Left out is what only the compiled build reads: `palette.css`, which reaches consumers as `dist/palette.css`, and `theme.compiled.css`. `tests/integration/adapter.test.ts` compiles each compiled entry again from its `/tw` counterpart, naming every utility it ships, and holds the two to the same rules in the same order. `files` publishes the whole directory, so a stylesheet no `/tw` export reaches would ship as bytes nobody can load; `exports.test.ts` checks that every stylesheet under `tw/` is reachable from a `/tw` export.
+
+The export that names a file in `tw/` is the compiled path with `/tw` added: `./tw` for the complete stylesheet, `./native/tw` for `./native`, `./aesthetics/glass/tw` for `./aesthetics/glass`. A consumer who moves to Tailwind adds `/tw` to the import they have, and needs no table to find the path. The entries with no compiled counterpart follow the same shape, as `./button/tw`, so there is one rule; `./palette` has no `/tw`, since it holds generated values with nothing for Tailwind to compile. `exports.test.ts` holds both halves: every compiled export but `./palette` has its `/tw`, and only a `/tw` export resolves into `tw/`.
+
+Through 0.9.0 the prefix came first, `./tw/native`, and 0.10.0 renamed all eighteen with no alias. A prefix needs the reader to know where in the path the prefix goes, and the old paths have no consumer outside this workspace to keep working, so an alias would be a second set of names to document and remove. Cost accepted: `./button/tw` reads as the source of a `./button` that does not exist, and `tw` cannot name an aesthetic, since `./aesthetics/tw` is the source of all of them; `chs build` leaves that path out of the names `--aesthetic` takes.
 
 The theme builds its tokens from Tailwind's palette, so a `/tw` consumer keeps the ramps it reads: `neutral`, `emerald`, `amber`, `rose`, `indigo`, and `white`. Clearing one of those leaves its intent with no colour and no error; clearing the rest of the palette is supported, and `tests/browser/tw-consumer.spec.ts` builds a consumer that does. `docs/usage/theming.md` lists the ramps to keep.
 
@@ -614,18 +621,18 @@ The cost of the rule is that a state can only express itself in the vocabulary t
 
 CSS shipped by the package is placed across Tailwind's four cascade layers, in Tailwind's order (with documented unlayered exceptions), on every entrypoint, and every entrypoint states that order before it uses a layer -- a browser orders layers by the first time it meets each name, so a sheet opening `components` first would rank it lowest. This applies to standalone `/components`, `/native`, `/theme`, `/palette`, and aesthetic entries as well as the aggregate: loading an aesthetic before components does not change which layer wins. Built-file browser probes cover Tailwind utilities, plain consumer CSS, and raw entries in Chromium, Firefox, and WebKit.
 
-| Layer                | Holds                                                                                                                                                                 |
-| -------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `theme`              | Tailwind's theme, the `:root` foundation tokens, the colour-scheme selectors and the print rule, and `./palette`.                                                     |
-| `base`               | The reset, the native element styles, and the `[hidden]` rule.                                                                                                        |
-| `components`         | The intent floor and both intent resets, and every aesthetic's token class.                                                                                           |
-| `utilities.families` | The class families as `@utility` bodies: intent, presentation, elevation, corner, and size. Beside them, the `.neutral` arms and the neutral resets components carry. |
-| `utilities`          | Every component, and the seams that must beat their own component.                                                                                                    |
-| _unlayered_          | The `forced-colors` overrides, the closed-`<dialog>` and closed-popover restatements, solo classes, and `@property`.                                                  |
+| Layer                | Holds                                                                                                                                                                                       |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `theme`              | Tailwind's theme, the `:root` foundation tokens, the colour-scheme selectors and the print rule, and `./palette`.                                                                           |
+| `base`               | The reset, the native element styles, and the `[hidden]` rule.                                                                                                                              |
+| `components`         | The intent floor and both intent resets, and every aesthetic's token class.                                                                                                                 |
+| `utilities.families` | The class families as utility bodies: intent, presentation, elevation, corner, size, and the component modifiers. Beside them, the `.neutral` arms and the neutral resets components carry. |
+| `utilities`          | Every component, and the seams that must beat their own component.                                                                                                                          |
+| _unlayered_          | The `forced-colors` overrides, the closed-`<dialog>` and closed-popover restatements, solo classes, and `@property`.                                                                        |
 
 `utilities.families` is a sublayer of `utilities`, and a layer's own rules beat the rules of every layer nested in it. So every rule written straight into `utilities` -- a component's, or a consumer's own utility -- beats a family class on the same element whatever the specificity, and so does a consumer's unlayered CSS. A consumer's utility and a component contest one layer, by specificity and then source order: components cannot sit below `utilities`, because `@apply` reaches only `@utility` rules and `box`, `surface`, and `text-control` are applied that way.
 
-The families are `@utility` rules, with their bodies wrapped in `@layer families` (`presentation.css`, `intent.css`, `elevation.css`, `corner.css`, `size.css`), so that `@apply btn soft` and a variant -- `hover:soft`, `md:lg`, `focus:primary`, `dark:edged`, `md:raised` -- reach them; `exports.test.ts` compiles those five against `./tw`. Rejected: keeping them as plain classes in `components`, where they sat before. A plain class is not a utility, so `@apply` could not name one, and each of those variants compiled to nothing, with no error. Also rejected: bodies written straight into `utilities`, where a family class would contest a consumer's own utility on specificity and source order instead of losing to it.
+The families are utilities, with their bodies wrapped in `@layer families` (`presentation.css`, `intent.css`, `elevation.css`, `corner.css`, `size.css`), so that `@apply btn soft` and a variant -- `hover:soft`, `md:lg`, `focus:primary`, `dark:edged`, `md:raised` -- reach them; `exports.test.ts` compiles those five against `./tw`. Rejected: keeping them as plain classes in `components`, where they sat before. A plain class is not a utility, so `@apply` could not name one, and each of those variants compiled to nothing, with no error. Also rejected: bodies written straight into `utilities`, where a family class would contest a consumer's own utility on specificity and source order instead of losing to it.
 
 A component that carries the neutral reset for `@apply` -- `.btn`, `.badge`, `.kbd`, `.code`, `.pre`, `.quote`, `.data-table`, `surface`, `text-control` -- writes it as `@layer families { :where(&:not(<its own classes>, <the six intents>)) {...} }`, beside the intent classes, so an intent applied with it, `@apply text-control info`, wins there on specificity. Left in the component's own layer, the reset would beat every intent applied with it. The tooltip bubble's no-intent plate sits there for the same reason, and the `.neutral` arm that outranks the controls', the table's, and the bubble's `:where()` defaults sits there because the `.neutral` class it answers does.
 
@@ -668,7 +675,7 @@ These authored defaults are decisions, not derivations -- there is no rule that 
 
 `box` states what a box rests as when nothing says otherwise: `--_d-fill: 0%`, `--_d-fg-on-fill: 0%`, `--_d-border: 0%`, `--_d-elevation: 1`, and `--_d-holds-ink: none` -- no fill, no line, the ordinary depth, and no ink handed down. They are stated on the element rather than left to the `var()` fallbacks, for the reason `--_d-ground` is: `--_d-*` inherit like any custom property, so a bare `box` inside a `.btn` rested as the button did, with a full fill and the button's line.
 
-A component writes its own after `@apply box`. The `@apply` inlines `box`'s declarations at that point, and the later declaration in one rule wins, so a value written above the `@apply` is overridden by the very utility it was meant to specialise. The no-op restatements of `--_fill-cap`, `--_edge-floor`, `--_bare-ink`, the scale steps, and `--surface-padding` in `box` are there for the same inheritance, so a nested box reads its own presentation rather than its container's reinterpretation of one.
+A component writes its own after `@compose box`. The `@compose` inlines `box`'s declarations at that point, and the later declaration in one rule wins, so a value written above the `@compose` is overridden by the very utility it was meant to specialise. The no-op restatements of `--_fill-cap`, `--_edge-floor`, `--_bare-ink`, the scale steps, and `--surface-padding` in `box` are there for the same inheritance, so a nested box reads its own presentation rather than its container's reinterpretation of one.
 
 ### `.input-group` owns the box; the control inside gives it up
 
@@ -797,7 +804,7 @@ Rejected: keeping only `--progress-value` public, as the customizing page once s
 
 0.9.0 publishes the other twelve. Each is a size or a colour a consumer sets once for a page, a form, or a table, and each was already a single named input in its component, so publishing it adds no mechanism. What those components derive from them became `--_*` privates in the same release: the switch's knob geometry, the tooltip's position set, and the quotation's fill and edge chain, as did the plain-page elevation geometry and the rest of the table's palette.
 
-`box` declares `box-sizing: border-box` on itself. A box sizes itself as `min-height`/`min-width: var(--control-height)` plus its own padding and the composed `border` shorthand, so its geometry only resolves correctly under `border-box`. `reset.css` sets that on `*`, but the reset ships only with `.`, `/native`, and `/tw/reset`; `/components` and the granular `/tw/*` component entrypoints carry neither it nor Preflight. A component's own geometry is not an external reset's responsibility; the universal rule in `reset.css` covers only the consumer's own markup.
+`box` declares `box-sizing: border-box` on itself. A box sizes itself as `min-height`/`min-width: var(--control-height)` plus its own padding and the composed `border` shorthand, so its geometry only resolves correctly under `border-box`. `reset.css` sets that on `*`, but the reset ships only with `.`, `/native`, and `/reset/tw`; `/components` and the granular `/*/tw` component entrypoints carry neither it nor Preflight. A component's own geometry is not an external reset's responsibility; the universal rule in `reset.css` covers only the consumer's own markup.
 
 ## Variant specs
 

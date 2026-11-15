@@ -1,6 +1,6 @@
 ---
 status: APPROVED
-last_updated: 2026-09-29
+last_updated: 2026-11-15
 scope: `@codenhub/styles` package test strategy.
 ---
 
@@ -64,6 +64,7 @@ packages/styles/
       theme.spec.ts
       typography.spec.ts
     integration/
+      adapter.test.ts
       cli.test.ts
       exports.test.ts
       registry.test.ts
@@ -86,7 +87,7 @@ A second kind of page lives alongside the matrices, under its own "Screens" head
 
 ## `dev/`
 
-Vite application running against live package source CSS in `src/` for fast iteration. Starts on http://localhost:5183.
+Vite application running against `tw/`, the Tailwind source a `/tw` consumer compiles, for fast iteration. The server regenerates `tw/` from `src/` when it starts and whenever a stylesheet in `src/` changes, since Tailwind cannot compile `src/` and its `@compose` itself. Starts on http://localhost:5183.
 
 ## `debug/`
 
@@ -94,7 +95,7 @@ Vite application running against built package CSS in `dist/` for pre-ship debug
 
 ## `tests/browser/`
 
-Automated browser testing runs in Chromium, Firefox, and WebKit. One-shot runs use the `debug` server and built public exports; UI/source-mode runs use the `dev` server and live `src/` aliases for synchronized iteration.
+Automated browser testing runs in Chromium, Firefox, and WebKit. One-shot runs use the `debug` server and built public exports; UI/source-mode runs use the `dev` server, which follows `src/` through a regenerated `tw/`, for synchronized iteration.
 
 Rendering contracts are asserted primarily through computed styles on the shared playground fixtures. These assertions name the behavior the package promises, such as resolved intent colors, presentation inheritance, visible control boundaries, focus treatment, material geometry, pseudo-element artwork, and relative elevation. The suite also checks browser-visible semantics, navigation, route/environment wiring, and fixture accessibility where those are the observable contract.
 
@@ -115,7 +116,9 @@ Screenshots would add operating-system, font, antialiasing, and media-preference
 
 Node-based Vitest checks validate every published target. Every compiled export contains representative public output, and every Tailwind entrypoint is processed independently against representative public selectors. Registry tests validate its schema and internal consistency, hold component defaults and class claims against the stylesheets, and enforce material and intent invariants.
 
-`size.test.ts` holds what a consumer downloads under ceilings, in minified bytes, each about 3% above the measurement it was set from. Gzipped lengths are recorded here but never compared, because zlib output can differ between machines. A change that grows past a ceiling raises it in the same change and says why. Measured on 2026-11-11 with Tailwind 4.3.4; the two aesthetic rows that moved and the `dist/purge/` rows on 2026-11-12, and the files that carry the checkbox marks again on 2026-11-12, after their licence comment took the full notices:
+`adapter.test.ts` holds the two paths to each other: each compiled entry that has a `/tw` counterpart, every one but `dist/palette.css`, is compiled again from it with the Tailwind installed, naming every utility it ships, and the two must emit the same rules in the same order. On the Tailwind release `src/base/` was copied from, that is byte for byte apart from Tailwind's banner and the `--tw-*` registrations, which are compared as sets. On another release, as the Tailwind workflow runs it, Tailwind's theme values and Preflight are that release's, so the package's components and utilities are compared alone, and a separate test fails when the lockfile moves the catalog's Tailwind off the release `src/base/` was copied from.
+
+`size.test.ts` holds what a consumer downloads under ceilings, in minified bytes, each about 3% above the measurement it was set from. Gzipped lengths are recorded here but never compared, because zlib output can differ between machines. A change that grows past a ceiling raises it in the same change and says why. Measured on 2026-11-11 with Tailwind 4.3.4; the two aesthetic rows that moved and the `dist/purge/` rows on 2026-11-12, and the files that carry the checkbox marks again on 2026-11-12, after their licence comment took the full notices; and `dist/aesthetics/index.css` and the three `/tw` rows on 2026-11-15, when the package began compiling its own source:
 
 | Measured                                   | Minified | Gzip   | Ceiling |
 | ------------------------------------------ | -------- | ------ | ------- |
@@ -124,7 +127,7 @@ Node-based Vitest checks validate every published target. Every compiled export 
 | `dist/native.css`                          | 299,295  | 23,323 | 304,000 |
 | `dist/theme.css`                           | 11,828   | 2,471  | 12,200  |
 | `dist/palette.css`                         | 25,967   | 3,103  | 26,800  |
-| `dist/aesthetics/index.css`                | 43,917   | 4,961  | 45,200  |
+| `dist/aesthetics/index.css`                | 43,851   | 4,913  | 45,200  |
 | `dist/aesthetics/chunky-tile.css`          | 4,511    | 1,206  | 4,700   |
 | `dist/aesthetics/cyber.css`                | 4,343    | 1,227  | 4,500   |
 | `dist/aesthetics/glass.css`                | 11,013   | 2,169  | 11,400  |
@@ -133,13 +136,15 @@ Node-based Vitest checks validate every published target. Every compiled export 
 | `dist/aesthetics/sketch.css`               | 14,905   | 2,094  | 15,350  |
 | `dist/purge/index.css`                     | 276,578  | 23,545 | 282,000 |
 | `dist/purge/classes.json`                  | 6,855    | 1,626  | 7,100   |
-| `/tw/button`, a page with `btn primary`    | 20,450   |        | 21,000  |
-| `/tw/button`, a page with no package class | 8,912    |        | 9,200   |
-| `/tw`, a page with `btn primary`           | 24,115   |        | 25,000  |
+| `/button/tw`, a page with `btn primary`    | 21,156   |        | 21,800  |
+| `/button/tw`, a page with no package class | 9,610    |        | 9,900   |
+| `/tw`, a page with `btn primary`           | 24,979   |        | 25,750  |
+
+On 2026-11-15 the three `/tw` rows grew by 706, 698, and 864 bytes. 694 bytes of each are the nine `--tw-*` registrations `/tw` now ships itself, with the fallbacks Tailwind's polyfills write for them. Tailwind had registered each only on a page that used a utility setting it, and it registers nothing a utility body sets by hand. `dist/aesthetics/index.css` lost Tailwind's banner the same day, as it carries none of Tailwind's CSS.
 
 The two sketch rows were measured again on 2026-11-12, when the first position of sketch's rotation declared its outline so a knob set inside a region reaches it. The `dist/purge/` rows were set the same day, with Tailwind 4.3.4: `chs build` reads those files and no page serves them, but every consumer installs them, as [Build command](./cli.md) accepts.
 
-The `/tw` rows are the package's cost over Tailwind alone on the same page, compiled with Tailwind's polyfills on as a consumer's CLI or Vite build compiles it, so a Tailwind release that changes Preflight moves no ceiling. The compiled files are also checked for Tailwind's fallbacks for browsers without `color-mix()` or `@property`, which `scripts/build-styles.mjs` turns off, and a page that names no package class is checked for having no component rule.
+The `/tw` rows are the package's cost over Tailwind alone on the same page, compiled with Tailwind's polyfills on as a consumer's CLI or Vite build compiles it, so a Tailwind release that changes Preflight moves no ceiling. The compiled files are also checked for Tailwind's fallbacks for browsers without `color-mix()` or `@property`, which the compiled build does not write, and a page that names no package class is checked for having no component rule.
 
 ## Scripts
 

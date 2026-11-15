@@ -124,9 +124,11 @@
    still win on the element; a token would name the component through a longer
    route. `--_d-elevation` inheriting is inert -- it equals `box`'s own fallback.
 
-   In `utilities`, not with the token class: it has to beat `@utility alert`'s
-   own `--_d-elevation: 0`, which it does there at 0-2-0, and it writes only a
-   private nothing a consumer sets.
+   In `utilities`, not with the token class: it has to beat the `alert`
+   utility's own `--_d-elevation: 0`, which it does there at 0-2-0, and it
+   writes only a private nothing a consumer sets. The flag's selector is
+   `:is(.neobrutalism)`, the same 0-1-0 as the bare class, because a lone class
+   directly in `utilities` is a utility to the build, which sorts it among them.
 
    Bounded by the nearest aesthetic region: an alert inside another aesthetic
    nested in a neobrutalist region rests as that aesthetic rests it, and one in
@@ -136,7 +138,7 @@
    writes a private flag instead and inheritance hands the alert the nearest
    one's. The slab is the alert's own resting default when the flag is unset. */
 @layer utilities {
-  .neobrutalism {
+  :is(.neobrutalism) {
     --_neo-alert-elevation: 1;
   }
 

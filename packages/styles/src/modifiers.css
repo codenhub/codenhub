@@ -21,107 +21,109 @@
    on itself at zero specificity -- see `--_m-` in the component files -- so a
    `.card.p-xs` does not shrink the padding of a card inside it. See
    docs/internal/model.md#modifiers. */
-@utility tight {
-  @layer families {
-    --_m-tight: ;
+@layer utilities {
+  .tight {
+    @layer families {
+      --_m-tight: ;
+    }
   }
-}
 
-@utility loose {
-  @layer families {
-    --_m-loose: ;
+  .loose {
+    @layer families {
+      --_m-loose: ;
+    }
   }
-}
 
-@utility vertical {
-  @layer families {
-    --_m-vertical: ;
+  .vertical {
+    @layer families {
+      --_m-vertical: ;
+    }
   }
-}
 
-@utility horizontal {
-  @layer families {
-    --_m-horizontal: ;
+  .horizontal {
+    @layer families {
+      --_m-horizontal: ;
+    }
   }
-}
 
-@utility between {
-  @layer families {
-    --_m-between: ;
+  .between {
+    @layer families {
+      --_m-between: ;
+    }
   }
-}
 
-@utility narrow {
-  @layer families {
-    --_m-narrow: ;
+  .narrow {
+    @layer families {
+      --_m-narrow: ;
+    }
   }
-}
 
-@utility wide {
-  @layer families {
-    --_m-wide: ;
+  .wide {
+    @layer families {
+      --_m-wide: ;
+    }
   }
-}
 
-@utility p-xs {
-  @layer families {
-    --_m-p-xs: ;
+  .p-xs {
+    @layer families {
+      --_m-p-xs: ;
+    }
   }
-}
 
-@utility p-sm {
-  @layer families {
-    --_m-p-sm: ;
+  .p-sm {
+    @layer families {
+      --_m-p-sm: ;
+    }
   }
-}
 
-@utility p-lg {
-  @layer families {
-    --_m-p-lg: ;
+  .p-lg {
+    @layer families {
+      --_m-p-lg: ;
+    }
   }
-}
 
-@utility flush {
-  @layer families {
-    --_m-flush: ;
+  .flush {
+    @layer families {
+      --_m-flush: ;
+    }
   }
-}
 
-@utility icon {
-  @layer families {
-    --_m-icon: ;
+  .icon {
+    @layer families {
+      --_m-icon: ;
+    }
   }
-}
 
-@utility pill {
-  @layer families {
-    --_m-pill: ;
+  .pill {
+    @layer families {
+      --_m-pill: ;
+    }
   }
-}
 
-@utility active {
-  @layer families {
-    --_m-active: ;
+  .active {
+    @layer families {
+      --_m-active: ;
+    }
   }
-}
 
-@utility indeterminate {
-  @layer families {
-    --_m-indeterminate: ;
+  .indeterminate {
+    @layer families {
+      --_m-indeterminate: ;
+    }
   }
-}
 
-/* Rules between a table's body rows, and no lines at all. These two write the
-   public token directly, as `edged` writes `--ui-border`: `--ui-rule` already
-   cascades, so the class on a container rules every table inside it. */
-@utility ruled {
-  @layer families {
-    --ui-rule: 100%;
+  /* Rules between a table's body rows, and no lines at all. These two write the
+     public token directly, as `edged` writes `--ui-border`: `--ui-rule` already
+     cascades, so the class on a container rules every table inside it. */
+  .ruled {
+    @layer families {
+      --ui-rule: 100%;
+    }
   }
-}
 
-@utility ruleless {
-  @layer families {
-    --ui-rule: 0%;
+  .ruleless {
+    @layer families {
+      --ui-rule: 0%;
+    }
   }
 }

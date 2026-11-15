@@ -25,7 +25,7 @@ This page lists both halves: what the CSS provides, and what your application ha
 
 ### Visually hidden content
 
-`.visually-hidden` hides content on screen and keeps it for screen readers, as the API keys table's `<caption>` does in [Content and layout → Tables](./usage/content-and-layout.md#tables). It ships with the layout utilities: in `.`, `./native`, `./tw`, `./tw/native`, and `./tw/utilities`. It is not in `./components` or the `./tw/components` and `./tw/*` component entrypoints.
+`.visually-hidden` hides content on screen and keeps it for screen readers, as the API keys table's `<caption>` does in [Content and layout → Tables](./usage/content-and-layout.md#tables). It ships with the layout utilities: in `.`, `./native`, `./tw`, `./native/tw`, and `./utilities/tw`. It is not in `./components` or the `./components/tw` and `./*/tw` component entrypoints.
 
 ### Control boundaries
 
@@ -64,7 +64,7 @@ With no intent class, the outline is the quiet border gray, `--color-border`. To
 | Reduced motion, whole page | The reset also shortens every other animation and transition on the page.                                                                                                                                                                                                                                                                                              |
 | Reduced transparency       | With `prefers-reduced-transparency: reduce`, and in forced colors, `.glass`, `.glass-liquid`, and `.glass-solo` drop their blur and lens and become opaque.                                                                                                                                                                                                            |
 
-Each component's reduced-motion rule ships with the component, so every entrypoint that includes it respects reduced motion without the reset, including `@codenhub/styles/components`, `@codenhub/styles/tw/components`, and each `/tw/*` component entrypoint. The complete and native entrypoints add the reset's page-wide rule.
+Each component's reduced-motion rule ships with the component, so every entrypoint that includes it respects reduced motion without the reset, including `@codenhub/styles/components`, `@codenhub/styles/components/tw`, and each `/*/tw` component entrypoint. The complete and native entrypoints add the reset's page-wide rule.
 
 The reset's rule is `!important` inside the `base` layer, and a layered `!important` beats an unlayered one, so your own `!important` cannot turn an animation back on. To keep one running for users who ask for reduced motion, such as an upload spinner you consider essential, declare it `!important` in a layer ordered before `base`. The first `@layer` statement the browser reads sets the order, so yours goes before the package:
 
