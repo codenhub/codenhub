@@ -62,7 +62,12 @@ interface Registry {
   modifiers: Record<string, unknown>;
   material?: Record<string, { readers: string[] }>;
   components: ComponentEntry[];
-  compositionHelpers?: { class: string; extends?: string; intents?: string[]; modifiers?: string[] }[];
+  compositionHelpers?: {
+    class: string;
+    extends?: string;
+    intents?: string[];
+    modifiers?: string[];
+  }[];
   boxStates?: string[];
   helpers?: string[];
   aesthetics?: AestheticEntry[];
@@ -76,12 +81,17 @@ const read = async (file: string): Promise<string> => readFile(path.join(package
 /* Every stylesheet the package ships, so a check covers what is there rather
    than a list someone has to remember to extend. */
 async function sourceFiles(): Promise<{ file: string; source: string }[]> {
-  const entries = await readdir(path.join(packageRoot, "src"), { recursive: true });
+  const entries = await readdir(path.join(packageRoot, "src"), {
+    recursive: true,
+  });
   return Promise.all(
     entries
       .filter((entry) => entry.endsWith(".css"))
       .map((entry) => entry.split(path.sep).join("/"))
-      .map(async (file) => ({ file, source: await read(path.posix.join("src", file)) })),
+      .map(async (file) => ({
+        file,
+        source: await read(path.posix.join("src", file)),
+      })),
   );
 }
 
@@ -391,23 +401,31 @@ test("every component is in an intent reset", async () => {
    selector is one class, as `scripts/lib/compile.mjs` reads it -- with its rule
    as written, from the selector to the closing brace. */
 async function utilityRules(): Promise<{ name: string; text: string }[]> {
+  return (await sourceFiles()).flatMap(({ source }) => utilityRulesIn(source));
+}
+
+function utilityRulesIn(source: string): { name: string; text: string }[] {
   const rules: { name: string; text: string }[] = [];
 
-  for (const { source } of await sourceFiles()) {
-    postcss.parse(source).walkRules((rule) => {
-      const parent = rule.parent;
+  postcss.parse(source).walkRules((rule) => {
+    const parent = rule.parent;
 
-      if (
-        parent?.type === "atrule" &&
-        (parent as AtRule).name === "layer" &&
-        (parent as AtRule).params === "utilities" &&
-        /^\.[A-Za-z0-9_-]+$/.test(rule.selector)
-      ) {
-        rules.push({ name: rule.selector.slice(1), text: rule.toString() });
-      }
-    });
-  }
+    if (
+      parent?.type === "atrule" &&
+      (parent as AtRule).name === "layer" &&
+      (parent as AtRule).params === "utilities" &&
+      /^\.[A-Za-z0-9_-]+$/.test(rule.selector)
+    ) {
+      rules.push({ name: rule.selector.slice(1), text: rule.toString() });
+    }
+  });
   return rules;
+}
+
+/* One file's utilities, keyed by name, each from its opening brace, as
+   `shippedUtilities` keys every file's. */
+function utilitiesIn(source: string): Map<string, string> {
+  return new Map(utilityRulesIn(source).map(({ name, text }) => [name, text.slice(text.indexOf("{"))]));
 }
 
 /* Every utility's block, keyed by name, so a check can ask what one component
@@ -415,6 +433,21 @@ async function utilityRules(): Promise<{ name: string; text: string }[]> {
    files. */
 async function shippedUtilities(): Promise<Map<string, string>> {
   return new Map((await utilityRules()).map(({ name, text }) => [name, text.slice(text.indexOf("{"))]));
+}
+
+/* The declarations directly in a utility's `@layer families` block, where an
+   intent sets its slots, one per line, or `null` when it has none. Nested
+   rules, such as the `prefers-contrast` override, are left out. */
+function familiesBlock(block: string | undefined): string | null {
+  if (block === undefined) {
+    return null;
+  }
+
+  const families = (postcss.parse(`x${block}`).first as postcss.Rule).nodes.find(
+    (node): node is AtRule => node.type === "atrule" && node.name === "layer" && node.params === "families",
+  );
+
+  return families?.nodes?.filter((node) => node.type === "decl").join("\n") ?? null;
 }
 
 /* A utility's own declarations, with every nested selector and at-rule dropped.
@@ -936,7 +969,9 @@ test("every solo class carries the same composition", async () => {
 });
 
 test("the package publishes an entrypoint for every aesthetic in the registry", async () => {
-  const manifest = JSON.parse(await read("package.json")) as { exports: Record<string, unknown> };
+  const manifest = JSON.parse(await read("package.json")) as {
+    exports: Record<string, unknown>;
+  };
   for (const aesthetic of registry.aesthetics ?? []) {
     expect(manifest.exports, `./aesthetics/${aesthetic.class}`).toHaveProperty(`./aesthetics/${aesthetic.class}`);
   }
@@ -956,7 +991,10 @@ test("every aesthetic declares a whole shadow geometry", async () => {
     })),
   );
   const problems = sources
-    .map(({ name, source }) => ({ missing: parts.filter((part) => !source.includes(`${part}:`)), name }))
+    .map(({ name, source }) => ({
+      missing: parts.filter((part) => !source.includes(`${part}:`)),
+      name,
+    }))
     .filter(({ missing }) => missing.length > 0)
     .map(({ missing, name }) => `${name} declares no ${missing.join(", ")}`);
 
@@ -1191,22 +1229,20 @@ test("every aesthetic names or clears every material token", async () => {
    loses most of its fill. The symptom is a slightly pale button, which is
    exactly the kind of thing that ships. */
 test("every intent maps onto the color family and fill cap the registry names", async () => {
-  const intent = await read("src/intent.css");
+  const utilities = utilitiesIn(await read("src/intent.css"));
   const problems: string[] = [];
 
   for (const [name, { family, fillMax }] of Object.entries(registry.intents)) {
-    const block = intent.match(
-      new RegExp(String.raw`(^|\n)\s*\.${name}(?![A-Za-z0-9_-])\s*\{\s*@layer families\s*` + `{([^}]*)}`),
-    );
+    const block = familiesBlock(utilities.get(name));
 
     if (block === null) {
-      problems.push(`.${name} has no block in intent.css`);
+      problems.push(`.${name} has no utility with an @layer families block`);
       continue;
     }
-    if (!block[2].includes(`--intent-color: var(--color-${family})`)) {
+    if (!block.includes(`--intent-color: var(--color-${family})`)) {
       problems.push(`.${name} should map --intent-color onto --color-${family}`);
     }
-    if (!block[2].includes(`--intent-fill-max: ${fillMax}`)) {
+    if (!block.includes(`--intent-fill-max: ${fillMax}`)) {
       problems.push(`.${name} should declare --intent-fill-max: ${fillMax}`);
     }
   }
@@ -1247,13 +1283,13 @@ test("both intent resets and the root floor declare every slot the neutral inten
   const intent = await read("src/intent.css");
   const native = await read("src/native.css");
   const problems: string[] = [];
-  const neutralMatch = intent.match(/(?:^|\n)\s*\.neutral\s*\{\s*@layer families\s*\{([^{}]*)}/);
+  const neutralBlock = familiesBlock(utilitiesIn(intent).get("neutral"));
 
-  if (neutralMatch === null) {
+  if (neutralBlock === null) {
     problems.push("intent.css: could not extract .neutral intent block");
   }
 
-  const slots = [...(neutralMatch?.[1] ?? "").matchAll(/--intent-[a-z-]+(?=:)/g)].map((match) => match[0]);
+  const slots = [...(neutralBlock ?? "").matchAll(/--intent-[a-z-]+(?=:)/g)].map((match) => match[0]);
 
   expect(slots.length).toBeGreaterThan(0);
 
