@@ -621,14 +621,14 @@ The cost of the rule is that a state can only express itself in the vocabulary t
 
 CSS shipped by the package is placed across Tailwind's four cascade layers, in Tailwind's order (with documented unlayered exceptions), on every entrypoint, and every entrypoint states that order before it uses a layer -- a browser orders layers by the first time it meets each name, so a sheet opening `components` first would rank it lowest. This applies to standalone `/components`, `/native`, `/theme`, `/palette`, and aesthetic entries as well as the aggregate: loading an aesthetic before components does not change which layer wins. Built-file browser probes cover Tailwind utilities, plain consumer CSS, and raw entries in Chromium, Firefox, and WebKit.
 
-| Layer                | Holds                                                                                                                                                              |
-| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `theme`              | Tailwind's theme, the `:root` foundation tokens, the colour-scheme selectors and the print rule, and `./palette`.                                                  |
-| `base`               | The reset, the native element styles, and the `[hidden]` rule.                                                                                                     |
-| `components`         | The intent floor and both intent resets, and every aesthetic's token class.                                                                                        |
-| `utilities.families` | The class families as utility bodies: intent, presentation, elevation, corner, and size. Beside them, the `.neutral` arms and the neutral resets components carry. |
-| `utilities`          | Every component, and the seams that must beat their own component.                                                                                                 |
-| _unlayered_          | The `forced-colors` overrides, the closed-`<dialog>` and closed-popover restatements, solo classes, and `@property`.                                               |
+| Layer                | Holds                                                                                                                                                                                       |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `theme`              | Tailwind's theme, the `:root` foundation tokens, the colour-scheme selectors and the print rule, and `./palette`.                                                                           |
+| `base`               | The reset, the native element styles, and the `[hidden]` rule.                                                                                                                              |
+| `components`         | The intent floor and both intent resets, and every aesthetic's token class.                                                                                                                 |
+| `utilities.families` | The class families as utility bodies: intent, presentation, elevation, corner, size, and the component modifiers. Beside them, the `.neutral` arms and the neutral resets components carry. |
+| `utilities`          | Every component, and the seams that must beat their own component.                                                                                                                          |
+| _unlayered_          | The `forced-colors` overrides, the closed-`<dialog>` and closed-popover restatements, solo classes, and `@property`.                                                                        |
 
 `utilities.families` is a sublayer of `utilities`, and a layer's own rules beat the rules of every layer nested in it. So every rule written straight into `utilities` -- a component's, or a consumer's own utility -- beats a family class on the same element whatever the specificity, and so does a consumer's unlayered CSS. A consumer's utility and a component contest one layer, by specificity and then source order: components cannot sit below `utilities`, because `@apply` reaches only `@utility` rules and `box`, `surface`, and `text-control` are applied that way.
 
