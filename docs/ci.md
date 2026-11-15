@@ -1,6 +1,6 @@
 ---
 status: IMPLEMENTED
-last_updated: 2026-11-14
+last_updated: 2026-11-15
 scope: Continuous integration workflows and the checks that report on pull requests.
 ---
 
@@ -60,16 +60,13 @@ The jobs run in parallel except that `browser` and `drift` wait for `playwright`
 | `browser`        | In that image: `pnpm hub browsers <selector> -- <engine>`, then `pnpm test:browser <selector> -- --project='*<engine>*'`, then an assertion that the working tree is unchanged |
 | `drift`          | `pnpm generate --dry-run`, then an assertion that the working tree is unchanged                                                                                                |
 | `browser-result` | Nothing; it passes only when every `browser` job passed                                                                                                                        |
-| `tailwind`       | For `packages/styles`: installs `tailwindcss` and the test suite's `@tailwindcss/cli` at the floor of its peer range or the newest 4.x, then `pnpm test styles`                |
 | `floor`          | Switches to the Node.js `.node-floor` names, then `pnpm test <packages on the floor> <selector>`                                                                               |
 
 `verify` skips the browser step because the `browser` job owns it. Running it in both would double the slowest part of the run for no extra signal.
 
-`browser` is a matrix of one job per engine — `chromium`, `firefox`, `webkit` — so with the two `tailwind` jobs and the five single ones the workflow runs ten in total. The browser suites are by far the slowest thing in a run and the three engines share nothing, so splitting them trades runner minutes, which are cheap, for wall-clock time, which is what anyone waits on. The engines are no longer far apart. Firefox once cost roughly five times what Chromium did on the `styles` suite, which was a fixture problem rather than an engine one: every test took a fresh browser context, and Firefox charges far more for one than the others do. `packages/styles` now shares a context per worker, which brought that suite from 285s to 84s on Firefox. WebKit is the slowest engine on it today, and the matrix is what keeps the slowest one off everybody else’s critical path.
+`browser` is a matrix of one job per engine — `chromium`, `firefox`, `webkit` — so with the five single ones the workflow runs eight in total. The browser suites are by far the slowest thing in a run and the three engines share nothing, so splitting them trades runner minutes, which are cheap, for wall-clock time, which is what anyone waits on. The engines are no longer far apart. Firefox once cost roughly five times what Chromium did on the `styles` suite, which was a fixture problem rather than an engine one: every test took a fresh browser context, and Firefox charges far more for one than the others do. `packages/styles` now shares a context per worker, which brought that suite from 285s to 84s on Firefox. WebKit is the slowest engine on it today, and the matrix is what keeps the slowest one off everybody else’s critical path.
 
 `fail-fast` is off for the matrix. "Firefox broke" and "WebKit broke" are different findings, and cancelling one to report the other hides half of what a run was started to learn.
-
-`tailwind` is a matrix of two jobs, one per Tailwind version, for the one package whose output a consumer's own Tailwind compiles. `@codenhub/styles/tw` has to work anywhere in its `tailwindcss` peer range, but the workspace builds and tests with the single version its catalog pins, so a feature newer than the floor, or a change in a newer 4.x, would pass every other job. The job installs `tailwindcss`, the peer a consumer brings, at the floor read from the peer range, so raising the floor moves the job with it, and at the newest 4.x, then runs the package's integration suite, which compiles `/tw` as a consumer does. `@tailwindcss/cli` moves to the same version, though no consumer needs it since 0.9.0 dropped it as a peer: the integration suite compiles through it, and a CLI of another version would bring its own `tailwindcss`. The package's own build keeps the catalog's `@tailwindcss/node`, as a published `dist/` does. On a pull request it runs only when `packages/styles/` or `.github/` changed; the merge queue always runs it. It is not a required check: a new Tailwind release can fail it on a pull request that changed nothing about Tailwind, and that is a finding to file rather than a reason to block the merge.
 
 `browser-result` exists because a protected `main` requires a check by name, and a matrix reports one check per engine rather than the single one the rule names. It carries that name and passes only when every engine job passed, so the branch rule keeps working without naming the engines: adding or removing one is a change to `ci.yml` and to nothing else. Encoding the engines in the branch rule instead would put half of this design into settings nobody can review in a diff.
 
@@ -155,7 +152,17 @@ The merge queue is what lets pull requests check only what they changed ([Trigge
 
 ## Other workflows
 
-The workflow above verifies; it does not deploy, release or publish. A project that does adds a workflow of its own and documents it here.
+The workflow above verifies; it does not deploy, release or publish. A project that does adds a workflow of its own and documents it here. One of the workflows below verifies too, and is separate only for its trigger.
+
+### Tailwind versions
+
+`.github/workflows/tailwind.yml` is a matrix of two jobs, one per Tailwind version, for the one package whose output a consumer's own Tailwind compiles. `@codenhub/styles/tw` has to work anywhere in its `tailwindcss` peer range, but the workspace builds and tests with the single version its catalog pins, so a feature newer than the floor, or a change in a newer 4.x, would pass every job of `ci.yml`. Each job installs `tailwindcss`, the peer a consumer brings, at the floor read from the peer range, so raising the floor moves the job with it, or at the newest 4.x, then runs the package's integration suite, which compiles `/tw` as a consumer does. `@tailwindcss/cli` moves to the same version, though no consumer needs it since 0.9.0 dropped it as a peer: the integration suite compiles through it, and a CLI of another version would bring its own `tailwindcss`. The package's own build keeps the catalog's `@tailwindcss/node`, as a published `dist/` does.
+
+It is a workflow of its own for its `paths` filter. A pull request starts it only when it changes `packages/styles/` or `.github/`, so a pull request to any other package starts no job here; `paths` does not apply to a merge group, so the queue always runs both. Until 2026-11-15 the two jobs were part of `ci.yml`, where a filter would cover every job, so each one checked out the repository and installed the workspace before a step compared the changed paths and skipped the suite: about 30 seconds a job on the pull requests that skipped it, measured on two of them that week, in a repository where most pull requests touch another package. Rejected: a job in `ci.yml` that compares the paths and gates the two through `needs`. It still starts a job on every pull request, and it keeps a comparison in shell where GitHub has one.
+
+The three rules of [The workflow](#the-workflow) hold. The queue runs the suite on every merge result, a change to `.github/` runs it, and GitHub evaluates the filter against the pull request's own diff, so no ref has to be present in a checkout. The workspace-wide files `--changed` widens on, such as the lockfile, are not in the filter, as they were not in the step it replaces: they would start both jobs on every dependency update, and the queue runs them before such a change lands.
+
+It is not a required check: a new Tailwind release can fail it on a pull request that changed nothing about Tailwind, and that is a finding to file rather than a reason to block the merge. That is also what lets a filter skip it, since a required check that never reports leaves a pull request waiting.
 
 ### Deployment checks
 
