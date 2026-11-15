@@ -255,10 +255,10 @@ describe("failures", () => {
   });
 
   it("rejects a Node.js older than it supports, naming both versions", async () => {
-    nodeVersion = "22.11.0";
+    nodeVersion = "24.22.1";
 
     expect(await failureOf("build", "-c", "app/views/**/*.erb", "-o", "app.css")).toBe(
-      "chs: this command needs Node.js 24 or newer; this is Node.js 22.11.0.",
+      "chs: this command needs Node.js 26 or newer; this is Node.js 24.22.1.",
     );
   });
 

@@ -16,7 +16,7 @@ export interface CliIo {
 }
 
 const BIN = "chs";
-const MIN_NODE_MAJOR = 24;
+const MIN_NODE_MAJOR = 26;
 const AESTHETIC_EXPORT = /^\.\/aesthetics\/([^/]+)$/;
 /* What `scripts/build-purge.mjs` writes: the complete stylesheet with the
    variants this command offers, and the class names it may drop from one. */
