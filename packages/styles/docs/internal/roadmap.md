@@ -1,6 +1,6 @@
 ---
 status: APPROVED
-last_updated: 2026-11-13
+last_updated: 2026-11-15
 scope: `@codenhub/styles` package direction.
 ---
 
@@ -18,7 +18,7 @@ Finished work is not tracked here. The current token contract, component coverag
 
 ## Current Focus
 
-Nothing further is committed to a version. The foundation was built for structure, not for a look: a new material part must pass [What enters the material contract](./model.md#what-enters-the-material-contract), independently of the aesthetic that would use it. An aesthetic the foundation cannot express without breaking that rule needs a separate decision before implementation.
+0.10.0 carries [A build the package owns](#a-build-the-package-owns-with-tailwind-as-an-adapter), moves `/tw` to the end of every Tailwind path, as [What `tw/` ships](./model.md#what-tw-ships) records, and raises the Node.js floor to 26, as `docs/specs/packages-lifecycle.md`, "Node.js support", asks of the next breaking release ([#553](https://github.com/codenhub/codenhub/issues/553)). Nothing else is committed to a version. The foundation was built for structure, not for a look: a new material part must pass [What enters the material contract](./model.md#what-enters-the-material-contract), independently of the aesthetic that would use it. An aesthetic the foundation cannot express without breaking that rule needs a separate decision before implementation.
 
 ## Planned
 
@@ -26,9 +26,11 @@ Nothing further is committed to a version. The foundation was built for structur
 
 The package is to be compatible with Tailwind without depending on it. Today Tailwind compiles `src/` into every compiled entrypoint, and `/tw` publishes that same source for a consumer's Tailwind to compile, so Tailwind is the foundation of both paths. The direction makes it an adapter to one of them:
 
-- **The source is plain CSS, compiled by a build this package owns.** It is written with nesting, `@layer`, and custom properties, and the palette ramps and the reset it reads from Tailwind become the package's own. The compiled entrypoints and `chs build` then need Tailwind neither when this package is built nor in the consumer's project.
+- **The source is compiled by a build this package owns.** It is CSS with nesting, `@layer`, and custom properties, plus one directive of the package's own that gives a rule the body of a class and is resolved when the package is built. The palette ramps and the reset it reads from Tailwind become the package's own. The compiled entrypoints and `chs build` then need Tailwind neither when this package is built nor in the consumer's project.
 - **`/tw` is generated from that source.** It becomes a thin wrapper that declares the package's classes to Tailwind as utilities, so a project that runs Tailwind keeps what `/tw` gives it today: one build, one theme, the variants on the axis classes, `@apply` of a component, and a stylesheet holding only the classes its files name.
 - **The class names and the layer order stay Tailwind's.** The four layers of [Cascade layers](./model.md#cascade-layers) and the rule of [Names that avoid a collision](./model.md#names-that-avoid-a-collision) are plain CSS and need no compiler. They are what lets the compiled stylesheet sit under a consumer's Tailwind utilities, and what keeps the same markup working on both paths.
+
+Until 2026-11-15 the first point read "the source is plain CSS", with a shared body written once under a list of selectors. That did not weigh `/native`, where a bare `button` takes the body of `btn` in another layer and at the specificity of an element. One rule cannot sit in two layers, and a body nested under a list that mixes the two becomes `:is(.btn, button)`, which gives the element the specificity of a class. A step that copies a body is needed however the source is written, and the directive is that step, owned by this package and no longer by Tailwind.
 
 The reason is that the dependence that costs is on Tailwind's compiler, not on its utilities. Counted in `src/` on 2026-11-13: 111 `@utility` rules, 158 `@apply` lines, 5 `@theme` blocks, and 6 `--spacing()` calls. Most of what is applied is the package's own (`box`, `surface`, `text-control`), and the Tailwind utilities applied are single declarations such as `flex`, `items-center`, and `py-2`. What the package works around is how the compiler behaves: a referenced file that strips the theme's tokens ([Which files import the theme](./model.md#which-files-import-the-theme)), a utility that repeats its body once for each route that reaches it ([One route to each utility](./model.md#one-route-to-each-utility)), and a scan that ships a word of prose as a class, which the `@source not` lines of `src/index.css` hold back. The peer range, `>=4.3.2 <5`, also means the next Tailwind major is a port of the whole source; with an adapter it is a port of the adapter.
 
@@ -40,9 +42,18 @@ Rejected:
 - **Forking Tailwind.** [Build command](./cli.md#the-command-tree-shakes-it-does-not-compile) rejected a fork for the command, and the reason holds for the package: it would maintain a scanner and a compiler that track another project, and inherit a catalogue of utilities it did not design, to compete with the tool most of its consumers already run.
 - **Staying as it is.** Each new feature would be designed around the compiler's behavior, as the three workarounds above were.
 
-What is not known yet: whether a generated adapter can keep the overrides [Cascade layers](./model.md#cascade-layers) records, which are tuned to the order Tailwind emits rules in, such as the `utilities.families` sublayer and the defaults written at zero specificity. Working that out again is expected to be most of the work, and it has not been measured.
+This was deferred until 2026-11-15, waiting on one question: whether a generated adapter can keep the overrides [Cascade layers](./model.md#cascade-layers) records, which are tuned to the order Tailwind emits rules in, such as the `utilities.families` sublayer and the defaults written at zero specificity. It can. Measured that day on the 0.9.0 source, with Tailwind 4.3.4:
 
-This is deferred in the sense of `docs/specs/packages-lifecycle.md`, and carries no release commitment. It waits on the question above: whether a generated adapter keeps the overrides `/tw` documents. `/tw` is a documented surface and the build rewrites what it publishes, so until that is answered, shipping the build in the release being prepared is not a plausible option. That spec rejects deferring a feature because it needs its own design; what this waits on is narrower, whether the build can be done at all without changing what `/tw` documents. When it is answered, the build goes into the release then being prepared, together with any change to `/tw` the answer requires.
+- **The compiled path.** Tailwind's output for `src/index.css`, taken before minification, holds no Tailwind syntax: no `@apply`, `@theme`, `@utility`, or `--spacing()`. Minified by the minifier the build already uses, it is `dist/index.css` byte for byte. What Tailwind adds to a compiled entrypoint is therefore one expansion step, and a source written as that expansion needs only the minifier.
+- **The adapter.** The test built a copy of `tw/` in which each of the 46 utilities that use `@apply` carries Tailwind's own expansion of its body instead. A consumer compiled it naming all 89 utilities, 22 axis classes under 16 variants, and 54 Tailwind utilities, with six rules of its own that `@apply` the package's classes. The output matched today's `/tw` byte for byte through every layer, 312,137 bytes, and a page holding one button matched whole. Tailwind orders utilities by the properties their expanded bodies declare, so a body written out sorts where the applied one did, and the overrides hold without being worked out again.
+- **What the adapter has to add.** Tailwind registers a `--tw-*` property only when one of its own utilities that uses it is compiled. The package's bodies write nine through `@apply` today: `--tw-font-weight`, `--tw-leading`, `--tw-duration`, `--tw-ease`, `--tw-border-style`, `--tw-tracking`, and `--tw-scale-x`, `-y`, and `-z`. In the test `--tw-ease` went unregistered, so it would have inherited. The adapter ships those nine registrations itself.
+
+Not measured: the floor of the peer range, 4.3.2; the compiled entrypoints other than the complete stylesheet; and the 25 `@apply` lines the test left for Tailwind, which are those in rules outside a `@utility` and in `hoverable`, whose body Tailwind lifts out of its rule. The browser suite was not run against the adapter.
+
+The build is no longer deferred in the sense of `docs/specs/packages-lifecycle.md`: it goes into 0.10.0, the release being prepared, in two steps, each a change of its own.
+
+1. **The source and the build move, and no rule either path emits changes.** The comparison above is the gate, since both builds exist only until this step lands.
+2. **A compiled entrypoint states a shared body once.** Today a body several classes apply is written out under each of them: in `dist/index.css`, 53 bodies repeat, 73.4 KB of its 194.1. A build the package owns can emit each once, under the list of selectors that share it. Estimated on the 0.9.0 output without regard to rule order, so as a ceiling, `dist/index.css` goes from 194.1 KB to 125.3 (16.1 to 14.6 gzipped, 12.1 to 11.8 with Brotli) and from 561 rules to 306, and `dist/native.css` from 289.8 KB to 188.4 (21.4 to 19.3 gzipped). Moving a rule changes the order the cascade reads, so matching bytes cannot gate this step; the browser suite does, and the figure that lands is measured then.
 
 ### Aesthetics
 
