@@ -80,60 +80,62 @@
   initial-value: 100%;
 }
 
-@utility solid {
-  @layer families {
-    --ui-fill: 100%;
-    --ui-fg-on-fill: 100%;
-    --_own-fill: 100%;
-    --_holds-ink: ;
+@layer utilities {
+  .solid {
+    @layer families {
+      --ui-fill: 100%;
+      --ui-fg-on-fill: 100%;
+      --_own-fill: 100%;
+      --_holds-ink: ;
+    }
   }
-}
 
-/* Tinted with the intent color. Text is the intent color. */
-@utility soft {
-  @layer families {
-    --ui-fill: 12%;
-    --ui-fg-on-fill: 0%;
-    --_own-fill: 12%;
-    --_holds-ink: none;
+  /* Tinted with the intent color. Text is the intent color. */
+  .soft {
+    @layer families {
+      --ui-fill: 12%;
+      --ui-fg-on-fill: 0%;
+      --_own-fill: 12%;
+      --_holds-ink: none;
+    }
   }
-}
 
-/* No fill at rest; the derived hover gives it one. Text is the intent color. It
-   names a fill and only a fill: `.bare` and `.edgeless` both read as "less of
-   something", so an author wanting no border would reach for the wrong one.
+  /* No fill at rest; the derived hover gives it one. Text is the intent color. It
+     names a fill and only a fill: `.bare` and `.edgeless` both read as "less of
+     something", so an author wanting no border would reach for the wrong one.
 
-   A component that rests on a ground rather than on nothing keeps that ground
-   here: `.ghost` is zero fill, not zero paint. `.data-table` is the exception
-   that proves it -- its head plate *is* the tint, so a ghost table drops it. */
-@utility ghost {
-  @layer families {
-    --ui-fill: 0%;
-    --ui-fg-on-fill: 0%;
-    --_own-fill: 0%;
-    --_holds-ink: none;
+     A component that rests on a ground rather than on nothing keeps that ground
+     here: `.ghost` is zero fill, not zero paint. `.data-table` is the exception
+     that proves it -- its head plate *is* the tint, so a ghost table drops it. */
+  .ghost {
+    @layer families {
+      --ui-fill: 0%;
+      --ui-fg-on-fill: 0%;
+      --_own-fill: 0%;
+      --_holds-ink: none;
+    }
   }
-}
 
-/* A line in the intent color, at the aesthetic's material width. The width
-   comes from the aesthetic and nothing else: there is no presentation scale on
-   it, so small components need no ceilings to survive a thick one.
+  /* A line in the intent color, at the aesthetic's material width. The width
+     comes from the aesthetic and nothing else: there is no presentation scale on
+     it, so small components need no ceilings to survive a thick one.
 
-   The edge is the silhouette and nothing else. Rules *inside* a component that
-   has an inside are a separate decision with their own class --
-   `.data-table.ruled` -- so a consumer's own markup says whether they asked for
-   them. */
-@utility edged {
-  @layer families {
-    --ui-border: 100%;
-    --_own-edge: 100%;
+     The edge is the silhouette and nothing else. Rules *inside* a component that
+     has an inside are a separate decision with their own class --
+     `.data-table.ruled` -- so a consumer's own markup says whether they asked for
+     them. */
+  .edged {
+    @layer families {
+      --ui-border: 100%;
+      --_own-edge: 100%;
+    }
   }
-}
 
-/* No line. */
-@utility edgeless {
-  @layer families {
-    --ui-border: 0%;
-    --_own-edge: 0%;
+  /* No line. */
+  .edgeless {
+    @layer families {
+      --ui-border: 0%;
+      --_own-edge: 0%;
+    }
   }
 }

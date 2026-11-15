@@ -1,0 +1,8 @@
+/* What `@import "tailwindcss"` brings, in Tailwind's order: the layer map,
+   the theme values, Preflight, and the utilities. The `/tw` copy imports
+   `tailwindcss` in its place. */
+@layer theme, base, components, utilities;
+
+@import "./theme.css" layer(theme);
+@import "./preflight.css" layer(base);
+@import "./utilities.css" layer(utilities);

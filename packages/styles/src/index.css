@@ -1,40 +1,4 @@
-@import "tailwindcss";
-
-/* The compiled build has no markup to scan, so Tailwind's automatic content
-   detection sees only this package's own files. The `src/` scan is load-bearing: it is
-   how the composition utilities (`box`, `surface`, `text-control`,
-   `input-group`) are emitted as standalone rules, so
-   `source(none)` is not an option. Tailwind utility names that collide with a
-   CSS property or a word these comments use (`backdrop-filter`, `filter`,
-   `transition`, `transform`, `container`) do not emit, verified against
-   Tailwind 4.3.2; `tests/integration/exports.test.ts` guards it.
-
-   The `@source not` lines keep the build command's TypeScript in `src/cli/`, whose
-   prose once shipped as `.relative`, and everything that is not `src/` out of the scan:
-   the sibling app and fixture directories, the `docs/` tree, the build scripts,
-   and the root prose, data, config, and license files. Without them a class
-   name or `--color-*` reference that appears only in a documentation example
-   ships as real CSS -- the license's "contents" once shipped as
-   `.contents{display:contents}`.
-   `exports.test.ts` guards it. `scripts/build-tw.mjs` strips these lines from
-   the `tw/` copy, where they have no job: the `/tw` consumer scans their own
-   tree. */
-@source not "./cli";
-@source not "../dist";
-@source not "../tests";
-@source not "../dev";
-@source not "../debug";
-@source not "../demo";
-@source not "../playground";
-@source not "../docs";
-@source not "../scripts";
-@source not "../*.md";
-@source not "../*.txt";
-@source not "../*.json";
-@source not "../*.ts";
-@source not "../LICENSE";
-@source not "../NOTICE";
-
+@import "./base/index.css";
 @import "./theme.css";
 /* No `typography.css` here: `components/rules.css` brings its rules, and a
    second route to a `@utility` stacks its body. */

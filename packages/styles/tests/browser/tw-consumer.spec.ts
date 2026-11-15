@@ -9,7 +9,7 @@ import { expect, test, type Page } from "./fixtures";
 
 /* `/tw` ships no safelist, so a consumer's Tailwind build emits only the
    classes it finds in their files. This holds that tree-shaken build to the
-   compiled `dist/index.css`, which safelists everything: a page compiled
+   compiled `dist/index.css`, which ships everything: a page compiled
    through `/tw` from nothing but its own markup has to render every element
    the same as that page on the compiled stylesheet. The composition helpers
    are covered both ways a consumer reaches them -- as a class in the markup

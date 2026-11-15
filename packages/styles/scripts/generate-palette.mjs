@@ -7,7 +7,7 @@
  * This does not reimplement `box.css`'s formula -- that would be exactly the
  * hand-retyping this file exists to prevent (see
  * `docs/internal/generated-palette.md`). Instead it compiles the package's own
- * real `src/index.css` through the real Tailwind CLI, then renders the real
+ * real `src/index.css` with the package's own build, then renders the real
  * components each cell describes (and, for the neutral tokens, plain probes
  * reading straight off their `theme.css` token) in a real browser and reads
  * their computed styles -- the same `getComputedStyle()` contract
@@ -19,16 +19,16 @@
  * without writing it, exiting non-zero when it is stale -- what the CI drift
  * gate checks. Progress goes to stderr; the outcome is reported on stdout.
  */
-import { execFile } from "node:child_process";
-import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { promisify } from "node:util";
 
 import { applyGenerated } from "@codenhub/tools/generators";
 import { chromium } from "@playwright/test";
 
-const executeFile = promisify(execFile);
+import { createCompiler } from "./lib/compile.mjs";
+
 const packageRoot = fileURLToPath(new URL("..", import.meta.url));
 const read = (file) => readFile(path.join(packageRoot, file), "utf8");
 
@@ -67,40 +67,18 @@ const NEUTRAL_TOKENS = [
 ];
 
 /**
- * Compiles the package's own real `src/index.css` through the real Tailwind
- * CLI into one throwaway stylesheet, invoked the same way `build:styles`
- * invokes it for every other `dist/*.css` output. Windows needs `cmd.exe` in
- * the loop for a `.CMD` shim; `execFile`'s own `shell: true` mis-escapes the
- * shim path, so `cmd.exe /d /s /c` is built by hand instead.
- * @param temporaryRoot Directory to write the throwaway entry and output into.
+ * Compiles the package's own real `src/index.css` with the compiler that
+ * builds every `dist/*.css` output, into one throwaway stylesheet.
+ * @param temporaryRoot Directory to write the output into.
  * @returns Path to the compiled CSS file.
  */
 async function compileHarnessStylesheet(temporaryRoot) {
-  const inputPath = path.join(temporaryRoot, "input.css");
   const outputPath = path.join(temporaryRoot, "output.css");
-  const indexPath = path.join(packageRoot, "src", "index.css").replaceAll("\\", "/");
 
-  await writeFile(inputPath, `@import "${indexPath}";\n`);
-
-  const binName = process.platform === "win32" ? "tailwindcss.CMD" : "tailwindcss";
-  const binPath = path.join(packageRoot, "node_modules", ".bin", binName);
-  const relativeInput = path.relative(packageRoot, inputPath);
-  const relativeOutput = path.relative(packageRoot, outputPath);
-
-  if (process.platform === "win32") {
-    // `cmd.exe /d /s /c` in the loop because a `.CMD` shim needs a shell on
-    // Windows, and `execFile`'s own `shell: true` mis-escapes the shim path.
-    // Project-relative paths, matching `build:styles`'s own invocation:
-    // an absolute path here reproducibly fails with "The filename, directory
-    // name, or volume label syntax is incorrect."
-    const commandLine = `"${binPath}" -i ${relativeInput} -o ${relativeOutput}`;
-    await executeFile(process.env.ComSpec ?? "cmd.exe", ["/d", "/s", "/c", commandLine], {
-      cwd: packageRoot,
-      windowsVerbatimArguments: true,
-    });
-  } else {
-    await executeFile(binPath, ["-i", relativeInput, "-o", relativeOutput], { cwd: packageRoot });
-  }
+  await writeFile(
+    outputPath,
+    createCompiler(path.join(packageRoot, "src")).compile(path.join(packageRoot, "src", "index.css")),
+  );
 
   return outputPath;
 }
@@ -307,19 +285,12 @@ function indent(block) {
 
 async function main() {
   const isDryRun = process.argv.includes("--dry-run");
-  /* Inside the package rather than the OS temp directory: the Tailwind CLI's
-     `.CMD` shim on Windows needs `cmd.exe` in the loop (see
-     {@link compileHarnessStylesheet}), and quoting a short (8.3) OS temp path
-     through it was unreliable in a way a plain project-relative path is not. */
-  const temporaryRoot = path.join(packageRoot, ".palette-tmp");
-
-  await rm(temporaryRoot, { force: true, recursive: true });
-  await mkdir(temporaryRoot, { recursive: true });
+  const temporaryRoot = await mkdtemp(path.join(tmpdir(), "codenhub-palette-"));
 
   let output;
 
   try {
-    console.error("Compiling the real stylesheet through the real Tailwind CLI...");
+    console.error("Compiling the real stylesheet...");
     const stylesheetPath = await compileHarnessStylesheet(temporaryRoot);
 
     console.error("Launching a browser to read the real composed values...");

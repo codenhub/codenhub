@@ -6,205 +6,218 @@
    on its own element, the way `.p-xs` stays on a card, because the layout
    inside restates the flags at zero specificity in `families`, where one on
    the element itself still wins. */
-@utility view {
-  @layer families {
-    :where(&:not(.tight)) {
-      --_m-tight: initial;
+@layer utilities {
+  .view {
+    @layer families {
+      :where(&:not(.tight)) {
+        --_m-tight: initial;
+      }
+
+      :where(&:not(.loose)) {
+        --_m-loose: initial;
+      }
+
+      :where(&:not(.vertical)) {
+        --_m-vertical: initial;
+      }
+
+      :where(&:not(.horizontal)) {
+        --_m-horizontal: initial;
+      }
     }
 
-    :where(&:not(.loose)) {
-      --_m-loose: initial;
+    display: flex;
+    gap: var(--_gap);
+
+    --_tight-gap: var(--_m-tight) 0.5rem;
+    --_loose-gap: var(--_m-loose) 1.5rem;
+    --_gap: var(--_loose-gap, var(--_tight-gap, var(--layout-gap)));
+
+    /* A row unless asked: `vertical` stacks, and `horizontal` is a row that
+       wraps and centres its items. */
+    --_vertical-direction: var(--_m-vertical) column;
+    --_horizontal-direction: var(--_m-horizontal) row;
+    --_horizontal-wrap: var(--_m-horizontal) wrap;
+    --_horizontal-align: var(--_m-horizontal) center;
+
+    flex-direction: var(--_horizontal-direction, var(--_vertical-direction, row));
+    flex-wrap: var(--_horizontal-wrap, nowrap);
+    align-items: var(--_horizontal-align, normal);
+  }
+
+  .stack {
+    @layer families {
+      :where(&:not(.tight)) {
+        --_m-tight: initial;
+      }
+
+      :where(&:not(.loose)) {
+        --_m-loose: initial;
+      }
     }
 
-    :where(&:not(.vertical)) {
-      --_m-vertical: initial;
+    display: flex;
+    flex-direction: column;
+    gap: var(--_gap);
+
+    --_tight-gap: var(--_m-tight) 0.5rem;
+    --_loose-gap: var(--_m-loose) 1.5rem;
+    --_gap: var(--_loose-gap, var(--_tight-gap, var(--layout-gap)));
+  }
+
+  .cluster {
+    @layer families {
+      :where(&:not(.tight)) {
+        --_m-tight: initial;
+      }
+
+      :where(&:not(.loose)) {
+        --_m-loose: initial;
+      }
+
+      :where(&:not(.between)) {
+        --_m-between: initial;
+      }
     }
 
-    :where(&:not(.horizontal)) {
-      --_m-horizontal: initial;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--_gap);
+
+    --_tight-gap: var(--_m-tight) 0.5rem;
+    --_loose-gap: var(--_m-loose) 1.5rem;
+    --_gap: var(--_loose-gap, var(--_tight-gap, var(--layout-gap)));
+
+    --_between-justify: var(--_m-between) space-between;
+
+    justify-content: var(--_between-justify, normal);
+  }
+
+  .auto-grid {
+    @layer families {
+      :where(&:not(.tight)) {
+        --_m-tight: initial;
+      }
+
+      :where(&:not(.loose)) {
+        --_m-loose: initial;
+      }
+    }
+
+    display: grid;
+    gap: var(--_gap);
+
+    --_tight-gap: var(--_m-tight) 0.5rem;
+    --_loose-gap: var(--_m-loose) 1.5rem;
+    --_gap: var(--_loose-gap, var(--_tight-gap, var(--layout-gap)));
+
+    grid-template-columns: repeat(auto-fit, minmax(min(var(--layout-grid-min), 100%), 1fr));
+  }
+
+  .section {
+    padding-inline: var(--layout-gutter);
+    padding-block: var(--layout-section-block);
+  }
+
+  .section-content {
+    @layer families {
+      :where(&:not(.narrow)) {
+        --_m-narrow: initial;
+      }
+
+      :where(&:not(.wide)) {
+        --_m-wide: initial;
+      }
+    }
+
+    margin-inline: auto;
+    width: 100%;
+
+    --_narrow-max: var(--_m-narrow) var(--container-narrow);
+    --_wide-max: var(--_m-wide) var(--container-wide);
+
+    max-width: var(--_wide-max, var(--_narrow-max, var(--container-max)));
+  }
+
+  /* An indicator: intent only, and no presentation token at all. A rule is a
+     line, and neither a fill class nor an edge class has anything to say about
+     one -- a container's `.ghost.edgeless` must not make every `<hr>` inside it
+     invisible. The width is the aesthetic's line width, unscaled. */
+  .divider {
+    /* The indicator reset, carried so `@apply divider` gets it, as `btn` carries
+       its own: the neutral slots, with the two an indicator takes from the
+       colour it sits in. Without it an applied one read an undefined
+       `--intent-border`. */
+    @layer families {
+      :where(&:not(.divider, .primary, .secondary, .success, .warning, .destructive, .info)) {
+        --intent-color: currentColor;
+        --intent-contrast: var(--color-text-contrast);
+        --intent-hover: var(--color-text-hover);
+        --intent-strong: var(--color-text-strong);
+        --intent-subtle: var(--color-surface);
+        --intent-border: currentColor;
+        --intent-fill-max: 20%;
+      }
+    }
+
+    @layer families {
+      :where(&:not(.vertical)) {
+        --_m-vertical: initial;
+      }
+    }
+
+    /* Public, read with their defaults, so a value set on any ancestor reaches
+       the line. The colour stands in front of the intent. */
+    --_divider-color: var(--divider-color, var(--intent-color));
+    --_divider-width: var(--divider-width, var(--ui-border-width, var(--border-width)));
+
+    margin: 0px;
+    border-style: var(--tw-border-style);
+    border-width: 0px;
+
+    /* Across unless `vertical`, which turns the line to the inline-start edge
+       and stretches it down its row. */
+    --_vertical-width: var(--_m-vertical) 0px;
+    --_vertical-self: var(--_m-vertical) stretch;
+    --_vertical-line: var(--_m-vertical) var(--_divider-width);
+
+    width: var(--_vertical-width, 100%);
+    align-self: var(--_vertical-self, auto);
+    border-color: var(--_divider-color);
+    border-style: var(--ui-rule-style, var(--ui-line-style, solid));
+    border-top-width: var(--_vertical-width, var(--_divider-width));
+    border-inline-start-width: var(--_vertical-line, 0px);
+  }
+
+  .selection-contrast {
+    &::selection,
+    & *::selection {
+      background: var(--color-primary-contrast);
+      color: var(--color-primary);
     }
   }
 
-  @apply flex gap-(--_gap);
+  /* `.visually-hidden`, the standard clip-based recipe. Tailwind's `sr-only` does
+     nothing on the vanilla entries (`.`, `/native`), which compile real CSS from
+     a scan of `src/` alone with no Tailwind utility layer to reach, so the
+     package publishes its own.
 
-  --_tight-gap: var(--_m-tight) 0.5rem;
-  --_loose-gap: var(--_m-loose) 1.5rem;
-  --_gap: var(--_loose-gap, var(--_tight-gap, var(--layout-gap)));
-
-  /* A row unless asked: `vertical` stacks, and `horizontal` is a row that
-     wraps and centres its items. */
-  --_vertical-direction: var(--_m-vertical) column;
-  --_horizontal-direction: var(--_m-horizontal) row;
-  --_horizontal-wrap: var(--_m-horizontal) wrap;
-  --_horizontal-align: var(--_m-horizontal) center;
-
-  flex-direction: var(--_horizontal-direction, var(--_vertical-direction, row));
-  flex-wrap: var(--_horizontal-wrap, nowrap);
-  align-items: var(--_horizontal-align, normal);
-}
-
-@utility stack {
-  @layer families {
-    :where(&:not(.tight)) {
-      --_m-tight: initial;
-    }
-
-    :where(&:not(.loose)) {
-      --_m-loose: initial;
-    }
+     It is not named `.sr-only`: on a `/tw` entry the consumer's own Tailwind
+     build supplies that utility, and two same-named utilities in one cascade
+     collide silently -- the collision `registry.test.ts` polices (see
+     `data-table`'s `renamedFrom` in `registry.json`). `@source
+     inline("visually-hidden")` in `utilities/index.css` force-emits it on the
+     entries with no scannable markup of their own. */
+  .visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border-width: 0;
   }
-
-  @apply flex flex-col gap-(--_gap);
-
-  --_tight-gap: var(--_m-tight) 0.5rem;
-  --_loose-gap: var(--_m-loose) 1.5rem;
-  --_gap: var(--_loose-gap, var(--_tight-gap, var(--layout-gap)));
-}
-
-@utility cluster {
-  @layer families {
-    :where(&:not(.tight)) {
-      --_m-tight: initial;
-    }
-
-    :where(&:not(.loose)) {
-      --_m-loose: initial;
-    }
-
-    :where(&:not(.between)) {
-      --_m-between: initial;
-    }
-  }
-
-  @apply flex flex-wrap items-center gap-(--_gap);
-
-  --_tight-gap: var(--_m-tight) 0.5rem;
-  --_loose-gap: var(--_m-loose) 1.5rem;
-  --_gap: var(--_loose-gap, var(--_tight-gap, var(--layout-gap)));
-
-  --_between-justify: var(--_m-between) space-between;
-
-  justify-content: var(--_between-justify, normal);
-}
-
-@utility auto-grid {
-  @layer families {
-    :where(&:not(.tight)) {
-      --_m-tight: initial;
-    }
-
-    :where(&:not(.loose)) {
-      --_m-loose: initial;
-    }
-  }
-
-  @apply grid gap-(--_gap);
-
-  --_tight-gap: var(--_m-tight) 0.5rem;
-  --_loose-gap: var(--_m-loose) 1.5rem;
-  --_gap: var(--_loose-gap, var(--_tight-gap, var(--layout-gap)));
-
-  grid-template-columns: repeat(auto-fit, minmax(min(var(--layout-grid-min), 100%), 1fr));
-}
-
-@utility section {
-  @apply px-(--layout-gutter) py-(--layout-section-block);
-}
-
-@utility section-content {
-  @layer families {
-    :where(&:not(.narrow)) {
-      --_m-narrow: initial;
-    }
-
-    :where(&:not(.wide)) {
-      --_m-wide: initial;
-    }
-  }
-
-  @apply mx-auto w-full;
-
-  --_narrow-max: var(--_m-narrow) var(--container-narrow);
-  --_wide-max: var(--_m-wide) var(--container-wide);
-
-  max-width: var(--_wide-max, var(--_narrow-max, var(--container-max)));
-}
-
-/* An indicator: intent only, and no presentation token at all. A rule is a
-   line, and neither a fill class nor an edge class has anything to say about
-   one -- a container's `.ghost.edgeless` must not make every `<hr>` inside it
-   invisible. The width is the aesthetic's line width, unscaled. */
-@utility divider {
-  /* The indicator reset, carried so `@apply divider` gets it, as `btn` carries
-     its own: the neutral slots, with the two an indicator takes from the
-     colour it sits in. Without it an applied one read an undefined
-     `--intent-border`. */
-  @layer families {
-    :where(&:not(.divider, .primary, .secondary, .success, .warning, .destructive, .info)) {
-      --intent-color: currentColor;
-      --intent-contrast: var(--color-text-contrast);
-      --intent-hover: var(--color-text-hover);
-      --intent-strong: var(--color-text-strong);
-      --intent-subtle: var(--color-surface);
-      --intent-border: currentColor;
-      --intent-fill-max: 20%;
-    }
-  }
-
-  @layer families {
-    :where(&:not(.vertical)) {
-      --_m-vertical: initial;
-    }
-  }
-
-  /* Public, read with their defaults, so a value set on any ancestor reaches
-     the line. The colour stands in front of the intent. */
-  --_divider-color: var(--divider-color, var(--intent-color));
-  --_divider-width: var(--divider-width, var(--ui-border-width, var(--border-width)));
-
-  @apply m-0 border-0;
-
-  /* Across unless `vertical`, which turns the line to the inline-start edge
-     and stretches it down its row. */
-  --_vertical-width: var(--_m-vertical) 0px;
-  --_vertical-self: var(--_m-vertical) stretch;
-  --_vertical-line: var(--_m-vertical) var(--_divider-width);
-
-  width: var(--_vertical-width, 100%);
-  align-self: var(--_vertical-self, auto);
-  border-color: var(--_divider-color);
-  border-style: var(--ui-rule-style, var(--ui-line-style, solid));
-  border-top-width: var(--_vertical-width, var(--_divider-width));
-  border-inline-start-width: var(--_vertical-line, 0px);
-}
-
-@utility selection-contrast {
-  &::selection,
-  & *::selection {
-    background: var(--color-primary-contrast);
-    color: var(--color-primary);
-  }
-}
-
-/* `.visually-hidden`, the standard clip-based recipe. Tailwind's `sr-only` does
-   nothing on the vanilla entries (`.`, `/native`), which compile real CSS from
-   a scan of `src/` alone with no Tailwind utility layer to reach, so the
-   package publishes its own.
-
-   It is not named `.sr-only`: on a `/tw` entry the consumer's own Tailwind
-   build supplies that utility, and two same-named utilities in one cascade
-   collide silently -- the collision `registry.test.ts` polices (see
-   `data-table`'s `renamedFrom` in `registry.json`). `@source
-   inline("visually-hidden")` in `utilities/index.css` force-emits it on the
-   entries with no scannable markup of their own. */
-@utility visually-hidden {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  padding: 0;
-  margin: -1px;
-  overflow: hidden;
-  clip: rect(0, 0, 0, 0);
-  white-space: nowrap;
-  border-width: 0;
 }

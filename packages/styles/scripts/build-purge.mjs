@@ -71,8 +71,14 @@ const variantClasses = [
 ].filter((name) => base.includes(name) && !NO_VARIANT.has(name));
 const variants = VARIANTS.flatMap((variant) => variantClasses.map((name) => `${variant}:${name}`));
 
+/* `/tw` ships the `--tw-*` registrations inside its theme, where Tailwind
+   keeps them; the compiled build writes them last, so they move there, and a
+   page that names every class purges to `dist/index.css` byte for byte. */
+const REGISTRATION = /@property --tw-[\w-]+\{[^}]*\}/g;
+
 const compiler = await createCompiler();
-const css = withNotice(optimize(compiler.build([...base, ...variants]), { minify: true }).code);
+const compiled = optimize(compiler.build([...base, ...variants]), { minify: true }).code;
+const css = withNotice(compiled.replace(REGISTRATION, "") + (compiled.match(REGISTRATION) ?? []).join(""));
 const droppable = [...base, ...variants].sort();
 
 mkdirSync(path.join(packageRoot, "dist/purge"), { recursive: true });

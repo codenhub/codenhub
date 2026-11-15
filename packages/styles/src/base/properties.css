@@ -1,0 +1,55 @@
+/* Tailwind's registrations for the `--tw-*` properties the package's utilities
+   set or read, from Tailwind CSS 4.3.4, which is MIT licensed (see NOTICE).
+   Registered so that they do not inherit: `font-bold` on a card would otherwise
+   reach every descendant's `--tw-font-weight`. The compiled build writes each
+   one where its output sets the property, or reads it expecting the initial
+   value, as Tailwind does; `/tw` ships all of them, because the consumer's
+   Tailwind does not register what a utility body sets by hand. */
+@property --tw-font-weight {
+  syntax: "*";
+  inherits: false;
+}
+
+@property --tw-leading {
+  syntax: "*";
+  inherits: false;
+}
+
+@property --tw-duration {
+  syntax: "*";
+  inherits: false;
+}
+
+@property --tw-ease {
+  syntax: "*";
+  inherits: false;
+}
+
+@property --tw-border-style {
+  syntax: "*";
+  inherits: false;
+  initial-value: solid;
+}
+
+@property --tw-tracking {
+  syntax: "*";
+  inherits: false;
+}
+
+@property --tw-scale-x {
+  syntax: "*";
+  inherits: false;
+  initial-value: 1;
+}
+
+@property --tw-scale-y {
+  syntax: "*";
+  inherits: false;
+  initial-value: 1;
+}
+
+@property --tw-scale-z {
+  syntax: "*";
+  inherits: false;
+  initial-value: 1;
+}

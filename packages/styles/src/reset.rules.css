@@ -28,7 +28,9 @@
 
   html,
   body {
-    @apply bg-background text-text font-default;
+    background-color: var(--color-background);
+    font-family: var(--font-default);
+    color: var(--color-text);
   }
 
   h1,
@@ -63,7 +65,9 @@
   input[type="button"],
   input[type="submit"],
   input[type="reset"] {
-    @apply enabled:cursor-pointer;
+    &:enabled {
+      cursor: pointer;
+    }
   }
 
   ::selection {

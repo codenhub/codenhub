@@ -21,14 +21,16 @@
   inherits: false;
 }
 
-@utility sm {
-  @layer families {
-    --_size-sm: ;
+@layer utilities {
+  .sm {
+    @layer families {
+      --_size-sm: ;
+    }
   }
-}
 
-@utility lg {
-  @layer families {
-    --_size-lg: ;
+  .lg {
+    @layer families {
+      --_size-lg: ;
+    }
   }
 }

@@ -5,420 +5,422 @@
    inherit down already-resolved against the wrong one. So the aesthetic ships
    colourless geometry and the colour is mixed here. A component's resting values
    arrive as `--_d-*`; everything else is the three axes. */
-@utility box {
-  /* Presentation resolved against the component's registry default, then capped
-     by `--intent-fill-max` -- neutral stops early because a full fill of the
-     page's ink is a slab. The cap lands before the hover step, so a capped
-     intent still deepens on hover instead of pinning rest and hover together.
-     See model.md#the-ink-is-gated-by-the-plate-not-tied-to-the-fill.
+@layer utilities {
+  .box {
+    /* Presentation resolved against the component's registry default, then capped
+       by `--intent-fill-max` -- neutral stops early because a full fill of the
+       page's ink is a slab. The cap lands before the hover step, so a capped
+       intent still deepens on hover instead of pinning rest and hover together.
+       See model.md#the-ink-is-gated-by-the-plate-not-tied-to-the-fill.
 
-     `--_fill-cap` is the matching slot for a component that reinterprets what a
-     presentation means for itself rather than merely bounding it -- `.card.soft`
-     uses it to rest at 0% regardless of what `.soft` asks for. It is a
-     separate term rather than a write of `--ui-fill`, for two reasons. A
-     component writing `--ui-fill` from `utilities` would beat a consumer's own
-     `[--ui-fill:...]` utility, which the layer map reserves for state
-     (docs/internal/model.md#cascade-layers); a private competes with nothing a
-     consumer writes. And `--ui-fill` cascades by design, so a neutral panel
-     writing `0%` would turn every badge and button inside it ghost, where a
-     cap bounds the component and stops there (below). A state that means the
-     fill it names -- `:checked` -- writes `--ui-fill` itself.
+       `--_fill-cap` is the matching slot for a component that reinterprets what a
+       presentation means for itself rather than merely bounding it -- `.card.soft`
+       uses it to rest at 0% regardless of what `.soft` asks for. It is a
+       separate term rather than a write of `--ui-fill`, for two reasons. A
+       component writing `--ui-fill` from `utilities` would beat a consumer's own
+       `[--ui-fill:...]` utility, which the layer map reserves for state
+       (docs/internal/model.md#cascade-layers); a private competes with nothing a
+       consumer writes. And `--ui-fill` cascades by design, so a neutral panel
+       writing `0%` would turn every badge and button inside it ghost, where a
+       cap bounds the component and stops there (below). A state that means the
+       fill it names -- `:checked` -- writes `--ui-fill` itself.
 
-     Restated here at `100%` -- a no-op -- for the same reason `--_d-ground`
-     is restated `transparent` below rather than left to its `var()` fallback:
-     `--_fill-cap` inherits like any custom property, so `.card.soft` setting
-     it to `0%` would otherwise reach every box nested inside, not just the
-     card itself -- a badge sitting in a `.data-table:not(.solid, .ghost)`
-     cell inherited the table's `0%` cap and rendered with no fill and no
-     visible chip at all. An own declaration beats an inherited one at any
-     specificity, so restating it here is what keeps a nested box reading its
-     own presentation instead of the container's reinterpretation of one. */
-  --_fill-cap: 100%;
-  /* What a box rests as when nothing above `@apply box` says otherwise: no
-     fill, no line, the ordinary depth. Stated on the element, not left to
-     the `var()` fallbacks: `--_d-*` inherit like any custom property, so a
-     bare `box` inside a `.btn` rested as the button does -- a full fill and
-     the button's line. A component writes its own after `@apply box`, where
-     the later declaration wins. See docs/internal/model.md#resting-defaults. */
-  --_d-fill: 0%;
-  --_d-fg-on-fill: 0%;
-  --_d-border: 0%;
-  --_d-elevation: 1;
-  --_d-holds-ink: none;
+       Restated here at `100%` -- a no-op -- for the same reason `--_d-ground`
+       is restated `transparent` below rather than left to its `var()` fallback:
+       `--_fill-cap` inherits like any custom property, so `.card.soft` setting
+       it to `0%` would otherwise reach every box nested inside, not just the
+       card itself -- a badge sitting in a `.data-table:not(.solid, .ghost)`
+       cell inherited the table's `0%` cap and rendered with no fill and no
+       visible chip at all. An own declaration beats an inherited one at any
+       specificity, so restating it here is what keeps a nested box reading its
+       own presentation instead of the container's reinterpretation of one. */
+    --_fill-cap: 100%;
+    /* What a box rests as when nothing above `@apply box` says otherwise: no
+       fill, no line, the ordinary depth. Stated on the element, not left to
+       the `var()` fallbacks: `--_d-*` inherit like any custom property, so a
+       bare `box` inside a `.btn` rested as the button does -- a full fill and
+       the button's line. A component writes its own after `@apply box`, where
+       the later declaration wins. See docs/internal/model.md#resting-defaults. */
+    --_d-fill: 0%;
+    --_d-fg-on-fill: 0%;
+    --_d-border: 0%;
+    --_d-elevation: 1;
+    --_d-holds-ink: none;
 
-  /* Printed as drawn. A browser leaves backgrounds off paper by default, and
-     a filled box prints its label in the contrast colour: white on nothing.
-     Inherited, so everything inside keeps its paint too. */
-  print-color-adjust: exact;
+    /* Printed as drawn. A browser leaves backgrounds off paper by default, and
+       a filled box prints its label in the contrast colour: white on nothing.
+       Inherited, so everything inside keeps its paint too. */
+    print-color-adjust: exact;
 
-  --_capped: min(var(--ui-fill, var(--_d-fill)), var(--_fill-cap, 100%), var(--intent-fill-max, 100%));
-  /* Whether the intent's cap stopped the fill short, as 0% or 100%. A capped
-     fill is a plate the presentation asked to be full, so it rests on the page
-     background rather than on nothing: 20% of the page's ink over nothing
-     showed whatever sat behind a neutral `.solid` -- glass's backdrop, an
-     image, the colour of a filled card around it -- where on a plain page it
-     read as the light grey plate it is meant to be. The component's own cap
-     is measured out first, so a text control's 20% wash and a neutral
-     `.card.soft`'s 0% stay the tints they are, whatever the intent. Stepped
-     rather than scaled because the two percentages cannot be divided in every
-     engine yet. */
-  --_plate: clamp(
-    0%,
-    calc((min(var(--ui-fill, var(--_d-fill)), var(--_fill-cap, 100%)) - var(--_capped)) * 1000),
-    100%
-  );
-  --_fill: calc(var(--_capped) * var(--ui-bg-alpha, 1));
-  --_hover-fill: calc(min(100%, var(--_capped) + var(--hover-step)) * var(--ui-bg-alpha, 1));
-  /* How much of the foreground is the contrast ink: what the presentation asks
-     for, gated by how much the plate can carry. The second term ramps in past a
-     half fill and reaches full at a full fill -- below that a partial plate
-     keeps `--intent-strong`, the tone picked to be read on the page. Legibility
-     is not linear, so this is not `min(asked, --intent-fill-max)`: a capped
-     neutral `.solid` fills to 20% and needs the darkest ink, not one walked 20%
-     toward the page (measured 6.63:1 where strong gives 10.9:1). `--ui-fg-on-fill`
-     stays the ceiling, not the result, or the slot is declared and unread. */
-  --_on-fill: min(var(--ui-fg-on-fill, var(--_d-fg-on-fill)), max(0%, calc(var(--_capped) * 2 - 100%)));
+    --_capped: min(var(--ui-fill, var(--_d-fill)), var(--_fill-cap, 100%), var(--intent-fill-max, 100%));
+    /* Whether the intent's cap stopped the fill short, as 0% or 100%. A capped
+       fill is a plate the presentation asked to be full, so it rests on the page
+       background rather than on nothing: 20% of the page's ink over nothing
+       showed whatever sat behind a neutral `.solid` -- glass's backdrop, an
+       image, the colour of a filled card around it -- where on a plain page it
+       read as the light grey plate it is meant to be. The component's own cap
+       is measured out first, so a text control's 20% wash and a neutral
+       `.card.soft`'s 0% stay the tints they are, whatever the intent. Stepped
+       rather than scaled because the two percentages cannot be divided in every
+       engine yet. */
+    --_plate: clamp(
+      0%,
+      calc((min(var(--ui-fill, var(--_d-fill)), var(--_fill-cap, 100%)) - var(--_capped)) * 1000),
+      100%
+    );
+    --_fill: calc(var(--_capped) * var(--ui-bg-alpha, 1));
+    --_hover-fill: calc(min(100%, var(--_capped) + var(--hover-step)) * var(--ui-bg-alpha, 1));
+    /* How much of the foreground is the contrast ink: what the presentation asks
+       for, gated by how much the plate can carry. The second term ramps in past a
+       half fill and reaches full at a full fill -- below that a partial plate
+       keeps `--intent-strong`, the tone picked to be read on the page. Legibility
+       is not linear, so this is not `min(asked, --intent-fill-max)`: a capped
+       neutral `.solid` fills to 20% and needs the darkest ink, not one walked 20%
+       toward the page (measured 6.63:1 where strong gives 10.9:1). `--ui-fg-on-fill`
+       stays the ceiling, not the result, or the slot is declared and unread. */
+    --_on-fill: min(var(--ui-fg-on-fill, var(--_d-fg-on-fill)), max(0%, calc(var(--_capped) * 2 - 100%)));
 
-  /* The ground a partial fill is painted over. Every box rests on nothing unless
-     it says so, and it says so here rather than through the `var(--_d-ground,
-     transparent)` fallback on the line below: `--_d-ground` inherits like any
-     custom property, so a `surface` setting it to its own opaque plate would
-     reach every box nested inside -- a `ghost` button in a card would blend its
-     zero fill over the page colour and paint an opaque slab where it asked for
-     no fill, and the slab would stay while the card tints on hover. An own
-     declaration beats the inherited one at any specificity; `surface`, `kbd`,
-     `code`, `pre` and the tooltip each restate theirs after `@apply box`. */
-  --_d-ground: transparent;
-  /* The ground, made the page background wherever `--_plate` says the cap
-     stopped the fill -- over a component's own ground too, so a capped
-     `.solid` surface under glass is opaque like every other `.solid`. */
-  --_ground: color-mix(in oklab, var(--color-background) var(--_plate), var(--_d-ground, transparent));
+    /* The ground a partial fill is painted over. Every box rests on nothing unless
+       it says so, and it says so here rather than through the `var(--_d-ground,
+       transparent)` fallback on the line below: `--_d-ground` inherits like any
+       custom property, so a `surface` setting it to its own opaque plate would
+       reach every box nested inside -- a `ghost` button in a card would blend its
+       zero fill over the page colour and paint an opaque slab where it asked for
+       no fill, and the slab would stay while the card tints on hover. An own
+       declaration beats the inherited one at any specificity; `surface`, `kbd`,
+       `code`, `pre` and the tooltip each restate theirs after `@apply box`. */
+    --_d-ground: transparent;
+    /* The ground, made the page background wherever `--_plate` says the cap
+       stopped the fill -- over a component's own ground too, so a capped
+       `.solid` surface under glass is opaque like every other `.solid`. */
+    --_ground: color-mix(in oklab, var(--color-background) var(--_plate), var(--_d-ground, transparent));
 
-  --_bg: color-mix(in oklab, var(--intent-color) var(--_fill), var(--_ground));
-  /* The two ends answer different questions: `--intent-contrast` prints *on* the
-     fill, `--intent-strong` prints on the page (the slot for readable ink on a
-     subtle fill). Reading `--intent-color` at the page end instead makes every
-     colour do double duty and prints a soft amber component at 3.1:1.
-     `--intent-contrast` keeps its own meaning -- `--_on-fill` reconciles it with
-     a capped intent -- rather than being bent so neutral's contrast is the ink,
-     which renders a checked neutral checkbox black-on-black. */
-  --_fg-own: color-mix(in oklab, var(--intent-contrast) var(--_on-fill), var(--intent-strong));
-  /* The ink of the plate beneath. Intent does not cascade, so a component with
-     none prints the page's ink, and on a filled parent that ink sat on the
-     parent's fill: a badge in a primary button read at 1.11:1. A box whose
-     fill is a plate hands its own ink down; one with no plate declares these
-     invalid, which for a registered property means it inherits them, so the
-     ink passes through an input group to the field inside it. `--_through`
-     is 100% for a neutral box (its cap is below 100%) that was handed an ink
-     and holds none: an intent keeps its own ink, as it keeps its own colour.
-     A component that rests on a ground of its own restates all three after
-     `@apply box`. See docs/internal/model.md#the-ink-of-the-plate-beneath. */
-  --_held-ink: var(--_holds-ink, var(--_d-holds-ink)) var(--_fg-own);
-  --_held-on: var(--_holds-ink, var(--_d-holds-ink)) 100%;
-  --_own-hold: var(--_holds-ink, var(--_d-holds-ink)) 100%;
-  --_through: min(
-    var(--_held-on),
-    calc(100% - var(--_own-hold)),
-    clamp(0%, calc((100% - var(--intent-fill-max, 100%)) * 1000), 100%)
-  );
-  --_fg: color-mix(in oklab, var(--_held-ink) var(--_through), var(--_fg-own));
-  /* P3: the line fades out as the fill fills in, so a filled box has a seamless
-     edge. It fades toward `transparent`, not toward the plate: the plate
-     already runs under the border (nothing clips the background to the padding
-     box), so a line blended toward `--_bg` paints the plate a second time over
-     itself -- invisible on an opaque plate, a ring on a translucent one (a
-     neutral fill capped at 20%, or any fill `--ui-bg-alpha` thins). Faded
-     toward nothing, the border shows the one coat beneath it.
+    --_bg: color-mix(in oklab, var(--intent-color) var(--_fill), var(--_ground));
+    /* The two ends answer different questions: `--intent-contrast` prints *on* the
+       fill, `--intent-strong` prints on the page (the slot for readable ink on a
+       subtle fill). Reading `--intent-color` at the page end instead makes every
+       colour do double duty and prints a soft amber component at 3.1:1.
+       `--intent-contrast` keeps its own meaning -- `--_on-fill` reconciles it with
+       a capped intent -- rather than being bent so neutral's contrast is the ink,
+       which renders a checked neutral checkbox black-on-black. */
+    --_fg-own: color-mix(in oklab, var(--intent-contrast) var(--_on-fill), var(--intent-strong));
+    /* The ink of the plate beneath. Intent does not cascade, so a component with
+       none prints the page's ink, and on a filled parent that ink sat on the
+       parent's fill: a badge in a primary button read at 1.11:1. A box whose
+       fill is a plate hands its own ink down; one with no plate declares these
+       invalid, which for a registered property means it inherits them, so the
+       ink passes through an input group to the field inside it. `--_through`
+       is 100% for a neutral box (its cap is below 100%) that was handed an ink
+       and holds none: an intent keeps its own ink, as it keeps its own colour.
+       A component that rests on a ground of its own restates all three after
+       `@apply box`. See docs/internal/model.md#the-ink-of-the-plate-beneath. */
+    --_held-ink: var(--_holds-ink, var(--_d-holds-ink)) var(--_fg-own);
+    --_held-on: var(--_holds-ink, var(--_d-holds-ink)) 100%;
+    --_own-hold: var(--_holds-ink, var(--_d-holds-ink)) 100%;
+    --_through: min(
+      var(--_held-on),
+      calc(100% - var(--_own-hold)),
+      clamp(0%, calc((100% - var(--intent-fill-max, 100%)) * 1000), 100%)
+    );
+    --_fg: color-mix(in oklab, var(--_held-ink) var(--_through), var(--_fg-own));
+    /* P3: the line fades out as the fill fills in, so a filled box has a seamless
+       edge. It fades toward `transparent`, not toward the plate: the plate
+       already runs under the border (nothing clips the background to the padding
+       box), so a line blended toward `--_bg` paints the plate a second time over
+       itself -- invisible on an opaque plate, a ring on a translucent one (a
+       neutral fill capped at 20%, or any fill `--ui-bg-alpha` thins). Faded
+       toward nothing, the border shows the one coat beneath it.
 
-     Blend first, amount after (`--_edge-amount` below): the other order lands
-     `.edgeless` on the fill colour, which the border box paints as a second
-     coat -- a ring around an element that asked for no edge. See
-     docs/internal/model.md#presentation. */
-  /* The neutral line of a box with no fill, where an aesthetic's line cannot
-     be seen without one: glass's hairline is a highlight on a plate, and on a
-     `.ghost.edged` button there is no plate (1.01:1 on a light page). A
-     component that wants the swap names the ink after `@apply box`; cleared
-     here so a box nested in one does not inherit it. `--_bare` is 100% for a
-     neutral intent (its cap is below 100%) resolving to no fill, stepped from
-     the resolved values as `surface`'s `--_quiet` is, so a container's
-     `.ghost` counts and an intent's own line is never swapped. */
-  --_bare-ink: initial;
-  --_bare: min(
-    clamp(0%, calc((100% - var(--intent-fill-max, 100%)) * 1000), 100%),
-    clamp(0%, calc(100% - var(--ui-fill, var(--_d-fill)) * 1000), 100%)
-  );
-  --_line-ink: color-mix(
-    in oklab,
-    var(--_held-ink) var(--_through),
-    color-mix(
+       Blend first, amount after (`--_edge-amount` below): the other order lands
+       `.edgeless` on the fill colour, which the border box paints as a second
+       coat -- a ring around an element that asked for no edge. See
+       docs/internal/model.md#presentation. */
+    /* The neutral line of a box with no fill, where an aesthetic's line cannot
+       be seen without one: glass's hairline is a highlight on a plate, and on a
+       `.ghost.edged` button there is no plate (1.01:1 on a light page). A
+       component that wants the swap names the ink after `@apply box`; cleared
+       here so a box nested in one does not inherit it. `--_bare` is 100% for a
+       neutral intent (its cap is below 100%) resolving to no fill, stepped from
+       the resolved values as `surface`'s `--_quiet` is, so a container's
+       `.ghost` counts and an intent's own line is never swapped. */
+    --_bare-ink: initial;
+    --_bare: min(
+      clamp(0%, calc((100% - var(--intent-fill-max, 100%)) * 1000), 100%),
+      clamp(0%, calc(100% - var(--ui-fill, var(--_d-fill)) * 1000), 100%)
+    );
+    --_line-ink: color-mix(
       in oklab,
-      var(--_bare-ink, var(--intent-border, var(--ui-ink, var(--color-border)))) var(--_bare),
-      var(--intent-border, var(--ui-ink, var(--color-border)))
-    )
-  );
-  --_line: color-mix(in oklab, transparent var(--ui-fill, var(--_d-fill)), var(--_line-ink));
-  /* How much line there is, as an input rather than a result. A component that
-     must keep its line whatever the edge class says raises `--_edge-floor`
-     instead of rewriting `--_edge`, and the composition above still runs.
+      var(--_held-ink) var(--_through),
+      color-mix(
+        in oklab,
+        var(--_bare-ink, var(--intent-border, var(--ui-ink, var(--color-border)))) var(--_bare),
+        var(--intent-border, var(--ui-ink, var(--color-border)))
+      )
+    );
+    --_line: color-mix(in oklab, transparent var(--ui-fill, var(--_d-fill)), var(--_line-ink));
+    /* How much line there is, as an input rather than a result. A component that
+       must keep its line whatever the edge class says raises `--_edge-floor`
+       instead of rewriting `--_edge`, and the composition above still runs.
 
-     Rewriting the result drops every term it was composed from, silently and
-     with nothing to report. Bounding the input leaves the axis live, so
-     `.edged` and `.edgeless` still mean what they say on a component that
-     floors itself.
+       Rewriting the result drops every term it was composed from, silently and
+       with nothing to report. Bounding the input leaves the axis live, so
+       `.edged` and `.edgeless` still mean what they say on a component that
+       floors itself.
 
-     Restated at `0%` -- no floor -- for the reason `--_fill-cap` is restated
-     above: the floor inherits, so a field's or a tooltip bubble's `100%` reached
-     every box nested inside, and a `.btn.edgeless` clear button in an
-     `.input-group` drew a field's line it had asked not to have. Components
-     that floor themselves declare theirs after `@apply box`. */
-  --_edge-floor: 0%;
-  --_edge-amount: max(var(--ui-border, var(--_d-border)), var(--_edge-floor, 0%));
-  --_edge: color-mix(in oklab, var(--_line) var(--_edge-amount), transparent);
-  --_width: min(var(--ui-border-width, var(--border-width)), var(--ui-border-max, 100px));
+       Restated at `0%` -- no floor -- for the reason `--_fill-cap` is restated
+       above: the floor inherits, so a field's or a tooltip bubble's `100%` reached
+       every box nested inside, and a `.btn.edgeless` clear button in an
+       `.input-group` drew a field's line it had asked not to have. Components
+       that floor themselves declare theirs after `@apply box`. */
+    --_edge-floor: 0%;
+    --_edge-amount: max(var(--ui-border, var(--_d-border)), var(--_edge-floor, 0%));
+    --_edge: color-mix(in oklab, var(--_line) var(--_edge-amount), transparent);
+    --_width: min(var(--ui-border-width, var(--border-width)), var(--ui-border-max, 100px));
 
-  /* Elevation is a unitless multiplier over the aesthetic's shadow geometry, so
-     one number turns a raised element flat without knowing what the aesthetic
-     draws. Zero lengths are written `0px` because `calc(0 * 1)` yields a number
-     and a shadow position needs a length. */
-  --_elevation: var(--ui-elevation, var(--_d-elevation, 1));
+    /* Elevation is a unitless multiplier over the aesthetic's shadow geometry, so
+       one number turns a raised element flat without knowing what the aesthetic
+       draws. Zero lengths are written `0px` because `calc(0 * 1)` yields a number
+       and a shadow position needs a length. */
+    --_elevation: var(--ui-elevation, var(--_d-elevation, 1));
 
-  /* The size step, a unitless multiplier the size and padding modifiers publish
-     as two privates -- `.sm`/`.p-sm` 0.75, `.p-xs` 0.5, `.lg`/`.p-lg` 1.25 --
-     so that when both sit on one element the tighter wins: `.lg.p-xs` is
-     small. An unset step takes the other's value, so a lone `.lg` still grows.
-     Restated `initial` here, before any modifier, because a custom property
-     inherits and a `.card.p-xs` would otherwise shrink every button inside it;
-     the modifier rules outrank this one on specificity. `--ui-scale` is the
-     public override, undeclared by the package. See docs/internal/model.md#material-tokens. */
-  --_scale-size: initial;
-  --_scale-pad: initial;
-  --_scale: var(--ui-scale, min(var(--_scale-size, var(--_scale-pad, 1)), var(--_scale-pad, var(--_scale-size, 1))));
-  /* Depth follows the step down and not up: a 4px slab under a 20px button
-     swallows it, while a press that travels the aesthetic's whole depth has to
-     land flat on a `.lg` button too. */
-  --_depth: calc(var(--_elevation) * min(1, var(--_scale)));
-  --_sx: calc(var(--ui-shadow-x, var(--_d-shadow-x, 0px)) * var(--_depth));
-  /* Three slots, most specific first: the aesthetic, then a component that draws
-     its own depth, then the plain step `.raised`/`.floating` supply on a page
-     with no aesthetic. The order lets a raised card under `.neobrutalism` keep
-     the slab. Nothing declares the last slot until something asks for depth, so
-     a plain unmodified page has no shadow anywhere. */
-  --_sy: calc(var(--ui-shadow-y, var(--_d-shadow-y, var(--_elevation-y, 0px))) * var(--_depth));
-  --_sb: calc(var(--ui-shadow-blur, var(--_d-shadow-blur, var(--_elevation-blur, 0px))) * var(--_depth));
-  /* Spread is deliberately not scaled. An aesthetic that draws its edge as an
-     inset ring spends spread on it, and scaling that by elevation would erase
-     the edge of every component the registry rests at zero. Elevation is depth:
-     offset and blur. */
-  --_ss: var(--ui-shadow-spread, var(--_d-shadow-spread, 0px));
-  /* A shadow is a neutral depth cue by default, the intent's own ink only where
-     an aesthetic asks (`--ui-shadow-ink`, a bare percentage so it inherits and
-     mixes where the intent lives). An intent-coloured shadow at full opacity is
-     a smear of the component's hue, not depth; neobrutalism's slab, which *is*
-     ink, asks for it by name. */
-  --_depth-color: color-mix(
-    in oklab,
-    var(--intent-border, var(--ui-ink, var(--color-border))) var(--ui-shadow-ink, 0%),
-    var(--elevation-color)
-  );
-  /* Or the shadow *is* the edge. An aesthetic that draws its line as an inset
-     ring (`.pixel`) puts the border where `clip-path` cannot cut it, so that
-     ring must answer the edge axis like a real border -- `--_edge` already does,
-     carrying P3's blend and `--_edge-amount` as its alpha, transparent at
-     `.edgeless`. Kept separate from `--ui-shadow-ink`, which means the opposite:
-     neobrutalism's slab is depth in ink and stays under `.edgeless`.
+    /* The size step, a unitless multiplier the size and padding modifiers publish
+       as two privates -- `.sm`/`.p-sm` 0.75, `.p-xs` 0.5, `.lg`/`.p-lg` 1.25 --
+       so that when both sit on one element the tighter wins: `.lg.p-xs` is
+       small. An unset step takes the other's value, so a lone `.lg` still grows.
+       Restated `initial` here, before any modifier, because a custom property
+       inherits and a `.card.p-xs` would otherwise shrink every button inside it;
+       the modifier rules outrank this one on specificity. `--ui-scale` is the
+       public override, undeclared by the package. See docs/internal/model.md#material-tokens. */
+    --_scale-size: initial;
+    --_scale-pad: initial;
+    --_scale: var(--ui-scale, min(var(--_scale-size, var(--_scale-pad, 1)), var(--_scale-pad, var(--_scale-size, 1))));
+    /* Depth follows the step down and not up: a 4px slab under a 20px button
+       swallows it, while a press that travels the aesthetic's whole depth has to
+       land flat on a `.lg` button too. */
+    --_depth: calc(var(--_elevation) * min(1, var(--_scale)));
+    --_sx: calc(var(--ui-shadow-x, var(--_d-shadow-x, 0px)) * var(--_depth));
+    /* Three slots, most specific first: the aesthetic, then a component that draws
+       its own depth, then the plain step `.raised`/`.floating` supply on a page
+       with no aesthetic. The order lets a raised card under `.neobrutalism` keep
+       the slab. Nothing declares the last slot until something asks for depth, so
+       a plain unmodified page has no shadow anywhere. */
+    --_sy: calc(var(--ui-shadow-y, var(--_d-shadow-y, var(--_elevation-y, 0px))) * var(--_depth));
+    --_sb: calc(var(--ui-shadow-blur, var(--_d-shadow-blur, var(--_elevation-blur, 0px))) * var(--_depth));
+    /* Spread is deliberately not scaled. An aesthetic that draws its edge as an
+       inset ring spends spread on it, and scaling that by elevation would erase
+       the edge of every component the registry rests at zero. Elevation is depth:
+       offset and blur. */
+    --_ss: var(--ui-shadow-spread, var(--_d-shadow-spread, 0px));
+    /* A shadow is a neutral depth cue by default, the intent's own ink only where
+       an aesthetic asks (`--ui-shadow-ink`, a bare percentage so it inherits and
+       mixes where the intent lives). An intent-coloured shadow at full opacity is
+       a smear of the component's hue, not depth; neobrutalism's slab, which *is*
+       ink, asks for it by name. */
+    --_depth-color: color-mix(
+      in oklab,
+      var(--intent-border, var(--ui-ink, var(--color-border))) var(--ui-shadow-ink, 0%),
+      var(--elevation-color)
+    );
+    /* Or the shadow *is* the edge. An aesthetic that draws its line as an inset
+       ring (`.pixel`) puts the border where `clip-path` cannot cut it, so that
+       ring must answer the edge axis like a real border -- `--_edge` already does,
+       carrying P3's blend and `--_edge-amount` as its alpha, transparent at
+       `.edgeless`. Kept separate from `--ui-shadow-ink`, which means the opposite:
+       neobrutalism's slab is depth in ink and stays under `.edgeless`.
 
-     The switch is presence, not a percentage, and that is measured: written as
-     `color-mix(... var(--_edge) var(--ui-shadow-edge), var(--_depth-color))`,
-     WebKit alone resolves the nested `color-mix()` as though the percentage were
-     zero. So the aesthetic declares the token empty to mean "my shadow is my
-     edge", and an undeclared token makes the line invalid at computed-value time
-     and hands `var()` its fallback -- the idiom `--_focus-stack` also uses. */
-  --_edge-shadow-color: var(--ui-shadow-edge) var(--_edge);
-  --_shadow-color: var(--_edge-shadow-color, var(--_depth-color));
-  --_shadow-parts: var(--ui-shadow-inset,) var(--_sx) var(--_sy) var(--_sb) var(--_ss) var(--_shadow-color);
-  /* A shadow that is not depth: light in the element's own intent colour, with
-     no offset. Outside the depth layer, and not scaled by elevation, so `.flat`
-     leaves it alone and a field resting at zero still takes it. Present only
-     when `--ui-halo-ink` is declared: undeclared, the whole layer, leading
-     comma included, is invalid at computed-value time and `var()` drops it, so
-     no empty layer sits in every box's shadow. */
-  --_halo-layer:
-    ,
-    0 0 var(--ui-halo-blur, 0px) var(--ui-halo-spread, 0px)
-      color-mix(in oklab, var(--intent-border, var(--ui-ink, var(--color-border))) var(--ui-halo-ink), transparent);
-  /* Indirection so a component can substitute a complete value of its own
-     without restating the parts -- `surface` does, for the multi-layer case.
-     There is deliberately no `--ui-shadow` wrapper: a complete value has nothing
-     for the elevation multiplier to reach, so `.flat` would silently stop working
-     on anything that set one. `--ui-surface-shadow` is that escape hatch narrowed
-     to the single case that needs it. */
-  --_shadow: var(--_shadow-parts) var(--_halo-layer,);
-  /* The inset focus layer an aesthetic that clips asks for, in two tones. The
-     ring is the primary colour, so on a `.solid.primary` box it was painted
-     over its own colour and a focused button was pixel for pixel a resting
-     one. A line of the page colour sits inside it: one of the two always
-     differs from the fill, whatever the fill is. Shadows paint first-on-top,
-     so the line is listed last and is the two pixels the ring leaves showing. */
-  --_focus-stack:
-    var(--_shadow),
-    inset 0 0 0 var(--ui-focus-inset) var(--focus-ring, color-mix(in srgb, var(--color-primary) 64%, transparent)),
-    inset 0 0 0 calc(var(--ui-focus-inset) + 2px) var(--color-background);
-  /* The same line of the page colour under the outline `reset.css` draws,
-     for the same reason: the outline sits over the box's own edge, and on a
-     box filled with the ring's colour that part of it was invisible. Under a
-     two-pixel line that left one pixel of ring, which neobrutalism's slab
-     covered on two sides. Stepped from the capped fill, so only a box filled
-     past half takes it: on an unfilled one the ring already reads against the
-     page, and a line of the page colour inside a soft field is a stray mark. */
-  --_focus-gap: color-mix(
-    in oklab,
-    var(--color-background) clamp(0%, calc((var(--_capped) - 50%) * 1000), 100%),
-    transparent
-  );
-
-  /* Every box sizes itself as `min-height`/`min-width: var(--control-height)`
-     plus its own padding and the border shorthand above, so its geometry is
-     only right under `border-box`. `reset.css` sets that on `*`, but only the
-     `.`, `/native` and `/reset/tw` entrypoints carry the reset; `/components`
-     and the granular `/<name>/tw` component entrypoints ship neither it nor
-     Preflight, so `box` owns it. */
-  box-sizing: border-box;
-  background-color: var(--_bg);
-  color: var(--_fg);
-  /* The line's style is material: `solid`, `dashed`, `dotted`, or `double`,
-     which needs a width of 3px or more to draw two lines. It keeps the line's
-     colour, so its contrast, whatever it draws. */
-  border: var(--_width) var(--ui-line-style, solid) var(--_edge);
-  /* The corner is the aesthetic's length at scale 1 times the size step, so a
-     small button takes a small corner and a cut stays a true 45 degrees. Each
-     corner then multiplies by its own `--ui-corner-tl`/`-tr`/`-br`/`-bl`, 0 or
-     1, which is how `.cut-diagonal` and a bevelling aesthetic's diagonal draw
-     two corners and leave two square. An explicit `--ui-radius` still wins,
-     taken as written. */
-  --_corner: calc(var(--ui-corner, var(--radius-control)) * var(--_scale));
-  border-radius: var(
-    --ui-radius,
-    calc(var(--_corner) * var(--ui-corner-tl, 1)) calc(var(--_corner) * var(--ui-corner-tr, 1))
-      calc(var(--_corner) * var(--ui-corner-br, 1)) calc(var(--_corner) * var(--ui-corner-bl, 1))
-  );
-  /* What the radius draws: a round arc by default, a straight cut under an
-     aesthetic that bevels (`.cyber`). `round` is the property's initial value,
-     so with no aesthetic in scope this is a no-op, and an engine without
-     `corner-shape` drops the line at parse time. A component that overrides the
-     radius after `@apply box` keeps this, so it bevels by the same amount it
-     rounds. See model.md#material-tokens. */
-  corner-shape: var(--ui-corner-shape, round);
-  box-shadow: var(--_shadow);
-  clip-path: var(--ui-clip, none);
-  /* The press travel `box-active` writes; `none` at rest, because any other
-     `translate` makes the box a stacking context and a containing block.
-     Restated here so a pressed card does not carry the boxes inside it. */
-  --_press: none;
-  translate: var(--_press);
-  transition:
-    background-color var(--motion-duration-normal) var(--motion-ease),
-    border-color var(--motion-duration-normal) var(--motion-ease),
-    box-shadow var(--motion-duration-normal) var(--motion-ease),
-    color var(--motion-duration-normal) var(--motion-ease),
-    opacity var(--motion-duration-normal) var(--motion-ease),
-    transform var(--motion-duration-normal) var(--motion-ease),
-    translate var(--motion-duration-normal) var(--motion-ease);
-
-  /* Reduced motion stops here as well as in `reset.css`: `/components` and the
-     focused `/<name>/tw` entries carry no reset, so each component that moves says
-     so itself -- this for everything `box` paints, and the components with a
-     transition or animation of their own beside it. The same near-zero
-     duration the reset uses, so a `transitionend` still fires. */
-  @media (prefers-reduced-motion: reduce) {
-    transition-duration: 0.01ms;
-  }
-
-  /* An aesthetic that clips cannot show the global focus outline, so it declares
-     `--ui-focus-inset` and gets an inset layer instead. With no such aesthetic
-     the token is undefined, which makes the whole stack invalid at computed-value
-     time -- so `var()` takes the fallback and the box keeps the shadow it already
-     had, while the outline from `reset.css` does the work.
-
-     The stack has to be built as one custom property. Written inline, the
-     invalid `var()` would poison the `box-shadow` declaration itself, and a
-     declaration invalid at computed-value time becomes `unset` -- which for a
-     non-inherited property is `initial`, that is `none`. Every focused box would
-     lose its shadow rather than keep it. */
-  &:focus-visible {
-    box-shadow: var(--_focus-stack, var(--_shadow), inset 0 0 0 2px var(--_focus-gap));
-  }
-
-  &:disabled,
-  &.disabled,
-  &[aria-disabled="true"],
-  &[data-disabled] {
-    @apply cursor-not-allowed;
-
-    opacity: 0.58;
-  }
-}
-
-/* Hover is derived from the resting fill rather than declared: one formula, no
-   tokens, no branches. `ghost` picks up a tint, `soft` deepens, `solid` stays
-   full and darkens because the colour changed.
-
-   Separate from `box` because tinting on hover is right for something you press
-   and wrong for something you type into, so a component opts in.
-
-   Only where the primary pointer can hover, as Tailwind's `hover:` variant:
-   a touch screen leaves a tapped element in `:hover` until something else is
-   tapped, so without the query a button kept its hover tint after the tap. */
-@utility box-hover {
-  @media (hover: hover) {
-    &:not(:disabled, .disabled, [aria-disabled="true"], [data-disabled]):hover {
-      --_bg: color-mix(in oklab, var(--intent-hover) var(--_hover-fill), var(--_ground));
-      /* P3 again, against the hover tone: the line still fades as the fill fills
-         in, but toward the hover ink. Without this the edge keeps the resting ink
-         -- a ring of the colour the box just left. */
-      --_line: color-mix(in oklab, transparent var(--ui-fill, var(--_d-fill)), var(--intent-hover));
-      --_sx: calc(var(--ui-hover-shadow-x, var(--ui-shadow-x, var(--_d-shadow-x, 0px))) * var(--_depth));
-      --_sy: calc(
-        var(--ui-hover-shadow-y, var(--ui-shadow-y, var(--_d-shadow-y, var(--_elevation-y, 0px)))) * var(--_depth)
-      );
-
-      transform: var(--ui-hover-transform, none);
-    }
-  }
-}
-
-/* The press, beside the hover for the same reason: moving on `:active` is right
-   for something you click and meaningless on something you type into, so a
-   component opts in. `btn` and `.card.interactive` both do. The gesture is the
-   aesthetic's -- neobrutalism travels into its offset shadow, chunky-tile drops
-   onto its bar -- and with no aesthetic it is the base `scale(0.97)` from
-   `theme.css`. Reduced motion keeps every press and drops its motion, in
-   `box`, since a press is the feedback that a click landed. The
-   `--ui-active-shadow-*` slots
-   stay no-ops until an aesthetic sets them.
-
-   A press that travels into the element's own depth is a translation, given as
-   `--ui-active-translate-x`/`-y` and scaled by `--_depth` like the shadow it
-   travels into, so a `.p-xs` button that sits on half the slab moves half as
-   far, a `.floating` one twice as far, and a `.flat` one, with no slab to land
-   on, not at all. It is the independent `translate` property, so it composes
-   with `--ui-active-transform` rather than replacing it.
-
-   The press writes only `--_press`, and `box` declares `translate` from it.
-   A `translate` declaration here sorts this rule ahead of `box-hover`'s -- the
-   property ranks before `transform` in Tailwind's order -- and the hovered
-   `transform: none` then beats every press. */
-@utility box-active {
-  &:active:not(:disabled, .disabled, [aria-disabled="true"], [data-disabled]) {
-    --_sx: calc(var(--ui-active-shadow-x, var(--ui-shadow-x, var(--_d-shadow-x, 0px))) * var(--_depth));
-    /* The same three slots as the resting offset, `.raised`'s plain step last,
-       so with no aesthetic a pressed button keeps the depth it rests on. */
-    --_sy: calc(
-      var(--ui-active-shadow-y, var(--ui-shadow-y, var(--_d-shadow-y, var(--_elevation-y, 0px)))) * var(--_depth)
+       The switch is presence, not a percentage, and that is measured: written as
+       `color-mix(... var(--_edge) var(--ui-shadow-edge), var(--_depth-color))`,
+       WebKit alone resolves the nested `color-mix()` as though the percentage were
+       zero. So the aesthetic declares the token empty to mean "my shadow is my
+       edge", and an undeclared token makes the line invalid at computed-value time
+       and hands `var()` its fallback -- the idiom `--_focus-stack` also uses. */
+    --_edge-shadow-color: var(--ui-shadow-edge) var(--_edge);
+    --_shadow-color: var(--_edge-shadow-color, var(--_depth-color));
+    --_shadow-parts: var(--ui-shadow-inset,) var(--_sx) var(--_sy) var(--_sb) var(--_ss) var(--_shadow-color);
+    /* A shadow that is not depth: light in the element's own intent colour, with
+       no offset. Outside the depth layer, and not scaled by elevation, so `.flat`
+       leaves it alone and a field resting at zero still takes it. Present only
+       when `--ui-halo-ink` is declared: undeclared, the whole layer, leading
+       comma included, is invalid at computed-value time and `var()` drops it, so
+       no empty layer sits in every box's shadow. */
+    --_halo-layer:
+      ,
+      0 0 var(--ui-halo-blur, 0px) var(--ui-halo-spread, 0px)
+        color-mix(in oklab, var(--intent-border, var(--ui-ink, var(--color-border))) var(--ui-halo-ink), transparent);
+    /* Indirection so a component can substitute a complete value of its own
+       without restating the parts -- `surface` does, for the multi-layer case.
+       There is deliberately no `--ui-shadow` wrapper: a complete value has nothing
+       for the elevation multiplier to reach, so `.flat` would silently stop working
+       on anything that set one. `--ui-surface-shadow` is that escape hatch narrowed
+       to the single case that needs it. */
+    --_shadow: var(--_shadow-parts) var(--_halo-layer,);
+    /* The inset focus layer an aesthetic that clips asks for, in two tones. The
+       ring is the primary colour, so on a `.solid.primary` box it was painted
+       over its own colour and a focused button was pixel for pixel a resting
+       one. A line of the page colour sits inside it: one of the two always
+       differs from the fill, whatever the fill is. Shadows paint first-on-top,
+       so the line is listed last and is the two pixels the ring leaves showing. */
+    --_focus-stack:
+      var(--_shadow),
+      inset 0 0 0 var(--ui-focus-inset) var(--focus-ring, color-mix(in srgb, var(--color-primary) 64%, transparent)),
+      inset 0 0 0 calc(var(--ui-focus-inset) + 2px) var(--color-background);
+    /* The same line of the page colour under the outline `reset.css` draws,
+       for the same reason: the outline sits over the box's own edge, and on a
+       box filled with the ring's colour that part of it was invisible. Under a
+       two-pixel line that left one pixel of ring, which neobrutalism's slab
+       covered on two sides. Stepped from the capped fill, so only a box filled
+       past half takes it: on an unfilled one the ring already reads against the
+       page, and a line of the page colour inside a soft field is a stray mark. */
+    --_focus-gap: color-mix(
+      in oklab,
+      var(--color-background) clamp(0%, calc((var(--_capped) - 50%) * 1000), 100%),
+      transparent
     );
 
-    --_press: calc(var(--ui-active-translate-x, 0px) * var(--_depth))
-      calc(var(--ui-active-translate-y, 0px) * var(--_depth));
+    /* Every box sizes itself as `min-height`/`min-width: var(--control-height)`
+       plus its own padding and the border shorthand above, so its geometry is
+       only right under `border-box`. `reset.css` sets that on `*`, but only the
+       `.`, `/native` and `/reset/tw` entrypoints carry the reset; `/components`
+       and the granular `/<name>/tw` component entrypoints ship neither it nor
+       Preflight, so `box` owns it. */
+    box-sizing: border-box;
+    background-color: var(--_bg);
+    color: var(--_fg);
+    /* The line's style is material: `solid`, `dashed`, `dotted`, or `double`,
+       which needs a width of 3px or more to draw two lines. It keeps the line's
+       colour, so its contrast, whatever it draws. */
+    border: var(--_width) var(--ui-line-style, solid) var(--_edge);
+    /* The corner is the aesthetic's length at scale 1 times the size step, so a
+       small button takes a small corner and a cut stays a true 45 degrees. Each
+       corner then multiplies by its own `--ui-corner-tl`/`-tr`/`-br`/`-bl`, 0 or
+       1, which is how `.cut-diagonal` and a bevelling aesthetic's diagonal draw
+       two corners and leave two square. An explicit `--ui-radius` still wins,
+       taken as written. */
+    --_corner: calc(var(--ui-corner, var(--radius-control)) * var(--_scale));
+    border-radius: var(
+      --ui-radius,
+      calc(var(--_corner) * var(--ui-corner-tl, 1)) calc(var(--_corner) * var(--ui-corner-tr, 1))
+        calc(var(--_corner) * var(--ui-corner-br, 1)) calc(var(--_corner) * var(--ui-corner-bl, 1))
+    );
+    /* What the radius draws: a round arc by default, a straight cut under an
+       aesthetic that bevels (`.cyber`). `round` is the property's initial value,
+       so with no aesthetic in scope this is a no-op, and an engine without
+       `corner-shape` drops the line at parse time. A component that overrides the
+       radius after `@apply box` keeps this, so it bevels by the same amount it
+       rounds. See model.md#material-tokens. */
+    corner-shape: var(--ui-corner-shape, round);
+    box-shadow: var(--_shadow);
+    clip-path: var(--ui-clip, none);
+    /* The press travel `box-active` writes; `none` at rest, because any other
+       `translate` makes the box a stacking context and a containing block.
+       Restated here so a pressed card does not carry the boxes inside it. */
+    --_press: none;
+    translate: var(--_press);
+    transition:
+      background-color var(--motion-duration-normal) var(--motion-ease),
+      border-color var(--motion-duration-normal) var(--motion-ease),
+      box-shadow var(--motion-duration-normal) var(--motion-ease),
+      color var(--motion-duration-normal) var(--motion-ease),
+      opacity var(--motion-duration-normal) var(--motion-ease),
+      transform var(--motion-duration-normal) var(--motion-ease),
+      translate var(--motion-duration-normal) var(--motion-ease);
 
-    transform: var(--ui-active-transform, none);
+    /* Reduced motion stops here as well as in `reset.css`: `/components` and the
+       focused `/<name>/tw` entries carry no reset, so each component that moves says
+       so itself -- this for everything `box` paints, and the components with a
+       transition or animation of their own beside it. The same near-zero
+       duration the reset uses, so a `transitionend` still fires. */
+    @media (prefers-reduced-motion: reduce) {
+      transition-duration: 0.01ms;
+    }
+
+    /* An aesthetic that clips cannot show the global focus outline, so it declares
+       `--ui-focus-inset` and gets an inset layer instead. With no such aesthetic
+       the token is undefined, which makes the whole stack invalid at computed-value
+       time -- so `var()` takes the fallback and the box keeps the shadow it already
+       had, while the outline from `reset.css` does the work.
+
+       The stack has to be built as one custom property. Written inline, the
+       invalid `var()` would poison the `box-shadow` declaration itself, and a
+       declaration invalid at computed-value time becomes `unset` -- which for a
+       non-inherited property is `initial`, that is `none`. Every focused box would
+       lose its shadow rather than keep it. */
+    &:focus-visible {
+      box-shadow: var(--_focus-stack, var(--_shadow), inset 0 0 0 2px var(--_focus-gap));
+    }
+
+    &:disabled,
+    &.disabled,
+    &[aria-disabled="true"],
+    &[data-disabled] {
+      cursor: not-allowed;
+
+      opacity: 0.58;
+    }
+  }
+
+  /* Hover is derived from the resting fill rather than declared: one formula, no
+     tokens, no branches. `ghost` picks up a tint, `soft` deepens, `solid` stays
+     full and darkens because the colour changed.
+
+     Separate from `box` because tinting on hover is right for something you press
+     and wrong for something you type into, so a component opts in.
+
+     Only where the primary pointer can hover, as Tailwind's `hover:` variant:
+     a touch screen leaves a tapped element in `:hover` until something else is
+     tapped, so without the query a button kept its hover tint after the tap. */
+  .box-hover {
+    @media (hover: hover) {
+      &:not(:disabled, .disabled, [aria-disabled="true"], [data-disabled]):hover {
+        --_bg: color-mix(in oklab, var(--intent-hover) var(--_hover-fill), var(--_ground));
+        /* P3 again, against the hover tone: the line still fades as the fill fills
+           in, but toward the hover ink. Without this the edge keeps the resting ink
+           -- a ring of the colour the box just left. */
+        --_line: color-mix(in oklab, transparent var(--ui-fill, var(--_d-fill)), var(--intent-hover));
+        --_sx: calc(var(--ui-hover-shadow-x, var(--ui-shadow-x, var(--_d-shadow-x, 0px))) * var(--_depth));
+        --_sy: calc(
+          var(--ui-hover-shadow-y, var(--ui-shadow-y, var(--_d-shadow-y, var(--_elevation-y, 0px)))) * var(--_depth)
+        );
+
+        transform: var(--ui-hover-transform, none);
+      }
+    }
+  }
+
+  /* The press, beside the hover for the same reason: moving on `:active` is right
+     for something you click and meaningless on something you type into, so a
+     component opts in. `btn` and `.card.interactive` both do. The gesture is the
+     aesthetic's -- neobrutalism travels into its offset shadow, chunky-tile drops
+     onto its bar -- and with no aesthetic it is the base `scale(0.97)` from
+     `theme.css`. Reduced motion keeps every press and drops its motion, in
+     `box`, since a press is the feedback that a click landed. The
+     `--ui-active-shadow-*` slots
+     stay no-ops until an aesthetic sets them.
+
+     A press that travels into the element's own depth is a translation, given as
+     `--ui-active-translate-x`/`-y` and scaled by `--_depth` like the shadow it
+     travels into, so a `.p-xs` button that sits on half the slab moves half as
+     far, a `.floating` one twice as far, and a `.flat` one, with no slab to land
+     on, not at all. It is the independent `translate` property, so it composes
+     with `--ui-active-transform` rather than replacing it.
+
+     The press writes only `--_press`, and `box` declares `translate` from it.
+     A `translate` declaration here sorts this rule ahead of `box-hover`'s -- the
+     property ranks before `transform` in Tailwind's order -- and the hovered
+     `transform: none` then beats every press. */
+  .box-active {
+    &:active:not(:disabled, .disabled, [aria-disabled="true"], [data-disabled]) {
+      --_sx: calc(var(--ui-active-shadow-x, var(--ui-shadow-x, var(--_d-shadow-x, 0px))) * var(--_depth));
+      /* The same three slots as the resting offset, `.raised`'s plain step last,
+         so with no aesthetic a pressed button keeps the depth it rests on. */
+      --_sy: calc(
+        var(--ui-active-shadow-y, var(--ui-shadow-y, var(--_d-shadow-y, var(--_elevation-y, 0px)))) * var(--_depth)
+      );
+
+      --_press: calc(var(--ui-active-translate-x, 0px) * var(--_depth))
+        calc(var(--ui-active-translate-y, 0px) * var(--_depth));
+
+      transform: var(--ui-active-transform, none);
+    }
   }
 }
