@@ -8,6 +8,7 @@
 - Choosing A Hue
 - Building Scales
 - Color Theory As Reasoning
+- Color For Attention
 - Contrast And Accessibility
 - Dark Mode
 - Status And Data Colors
@@ -43,7 +44,7 @@ Build the neutrals first; they cover most of any surface. Then add one accent, t
 
 When no brand exists, choose the accent against the field: note the colors that competitors or neighboring products in the same space use, then pick one that differs from them and fits the content and the audience. State which ones you compared and how the choice differs. When you can search the web or open those products, look at them before choosing. Only when they cannot be inspected, or there is no competitive field, state that limitation and choose a provisional accent from the content and audience; do not claim a comparison or distinctiveness.
 
-Choosing a hue by mood lands on the pairs that mark work as generated: a cream ground with an orange, rust, terracotta, or copper accent, indigo or violet for anything technical, the purple-to-blue gradient, a near-black or slate ground with one bright accent, and deep green or teal. The structure this file teaches, tinted neutrals with one accent in a light or a dark theme, is not the failure. The failure is reaching the same pair whatever the subject is. Test the choice by changing the subject: a ground and accent you would also have picked for an unrelated product were not chosen for this one. Mood is a reason for lightness and saturation, as below, and never for a hue.
+Choosing a hue by mood lands on the pairs that mark work as generated: a cream ground with an orange, rust, terracotta, or copper accent, indigo or violet for anything technical, the purple-to-blue gradient, a near-black or slate ground with one bright accent, a cobalt or royal blue on cool gray, and deep green or teal. A framework's stock palette, such as Tailwind's slate, zinc, and blue hex values, is the same reflex in code. The structure this file teaches, tinted neutrals with one accent in a light or a dark theme, is not the failure. The failure is reaching the same pair whatever the subject is. Test the choice by changing the subject: a ground and accent you would also have picked for an unrelated product were not chosen for this one. Mood is a reason for lightness and saturation, as below, and never for a hue.
 
 - Hue associations are weak and cultural. Blue reads as trust and is the most common choice, so it differentiates least; green reads as growth, money, or go; red reads as danger or urgency in many places and as luck in others. Use them as one input, not a rule.
 - Saturation and lightness carry more meaning than hue. Muted and darker colors read as serious, calm, or premium; bright, saturated colors read as energetic and young, and as cheap when they cover everything.
@@ -66,6 +67,16 @@ Use color theory to predict what a combination will do, not as a recipe.
 - **Temperature.** Warm colors advance and cool colors recede. A warm accent on cool neutrals stands out without needing much saturation.
 - **Simultaneous contrast.** A color looks different on different backgrounds. Check the accent on every surface it sits on.
 - **Proportion.** A rough 60/30/10 split between the dominant color, a secondary color, and the accent is a useful check that one color leads. It is not a target.
+
+## Color For Attention
+
+The eye goes to what differs from its surroundings, not to the brightest thing on the screen.
+
+- **Quiet the field first.** On low-chroma neutrals, a moderately saturated accent is enough to stand out. On a page that is saturated everywhere, nothing stands out, and the accent needs a glow to compete; that is how glows get added.
+- **Budget the accent.** Spend it where the eye should land first, usually the primary action or the one number that matters. Every other use, such as a word in the headline, the icons, a border, or a tinted section, takes attention from that place. Count its uses on a screen; past a handful, it no longer marks anything.
+- **Differ in lightness before hue.** Lightness contrast is seen first, survives small sizes and grayscale, and works for color-blind viewers. Temperature comes next: a warm accent on cool neutrals, or a cool one on warm neutrals, stands out at low saturation. Two hues at the same lightness barely separate.
+- **Break a pattern once.** In a row of like items, the one that differs, such as the filled plan among outlined ones, draws the eye. Change one property on one item. Two exceptions compete, and a pattern broken in every row stops being a pattern.
+- **Demote to promote.** Gray the supporting text and mute secondary images, and the accent can stay modest. A long headline set in two tones, the statement in the text color and its continuation in the secondary text color, ranks the sentence without spending the accent.
 
 ## Contrast And Accessibility
 
