@@ -6,6 +6,7 @@ import { createBrowsersCommand } from "./browsers-command.ts";
 import { createCheckCommand } from "./check-command.ts";
 import { createCleanCommand } from "./clean-command.ts";
 import { EXIT_FAILURE, type CommandDefinition } from "./definition.ts";
+import { createDeployAffectedCommand } from "./deploy-affected-command.ts";
 import { createFormatCommand } from "./format-command.ts";
 import { createGenerateCommand } from "./generate-command.ts";
 import { createLabelsCommand } from "./labels-command.ts";
@@ -99,6 +100,7 @@ const COMMANDS: readonly CommandDefinition[] = [
     summary: "Count lines of code in the selected paths, or the whole repository.",
   }),
   createVerifyCommand(),
+  createDeployAffectedCommand(),
   createReleaseCommand(),
   createPublishCommand(),
   createCheckCommand(),
