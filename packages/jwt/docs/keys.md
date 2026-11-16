@@ -99,6 +99,23 @@ import { importPrivateKey } from "@codenhub/jwt";
 const result = await importPrivateKey(jwk, { alg: "PS256", extractable: false });
 ```
 
+## Importing a key pair
+
+A private JWK also carries the key's public members, so one stored JWK is enough to load a signing key and publish its public half. `importKeyPair` takes the same arguments and runs the same checks as `importPrivateKey`, and returns `{ privateKey, publicKey }`, both bound to `alg` and carrying the JWK's `kid`, like `generateKeyPair`'s result:
+
+```ts
+import { exportPublicJwk, importKeyPair } from "@codenhub/jwt";
+
+const result = await importKeyPair(storedPrivateJwk, { alg: "ES256" });
+if (!result.ok) {
+  throw new Error("The signing key could not be imported.");
+}
+const { privateKey, publicKey } = result.value;
+const jwks = { keys: [await exportPublicJwk(publicKey)] };
+```
+
+Before returning the pair, it signs a fixed message with the private key and verifies it with the public one. A JWK whose public members belong to another key is `invalid_key`, so the pair can never issue tokens its own public key fails to verify. Prefer it to importing the two halves from separately stored JWKs, which nothing checks belong together.
+
 ## Importing a secret
 
 `importSecretKey` takes either the secret's raw bytes or an `oct` JWK. A string is a compile error, since it could be text, base64 or hex; encode it to bytes first. A string that reaches it anyway, from untyped code, returns `invalid_key`:

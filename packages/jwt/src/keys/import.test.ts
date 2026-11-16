@@ -1,12 +1,13 @@
 import { runInNewContext } from "node:vm";
 
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import type { AsymmetricAlgorithm } from "../core/types";
 import { decodeBase64Url, encodeBase64Url } from "../encoding";
-import { exportPrivateJwk, exportSecretJwk } from "./export";
+import { ALGORITHM_PARAMS } from "./algorithms";
+import { exportPrivateJwk, exportPublicJwk, exportSecretJwk } from "./export";
 import { generateKeyPair } from "./generate";
-import { importPrivateKey, importPublicKey, importSecretKey } from "./import";
+import { importKeyPair, importPrivateKey, importPublicKey, importSecretKey } from "./import";
 import { getKeyEntry } from "./registry";
 import {
   EC_P256_PRIVATE_JWK,
@@ -383,6 +384,90 @@ describe("importPrivateKey for RSA", () => {
     expect(issuesOf(await importPrivateKey({ ...RSA_2048_PRIVATE_JWK, oth: [] }, { alg: "RS256" }))).toEqual([
       { code: "unsupported_key", path: ["oth"] },
     ]);
+  });
+});
+
+describe.each(CASES)("importKeyPair for $alg", ({ alg, privateJwk, publicJwk }) => {
+  it("should return a frozen pair of keys bound to the algorithm with the JWK's kid", async () => {
+    const result = await importKeyPair({ ...privateJwk, kid: "k1" }, { alg });
+    expect(result).toEqual({
+      ok: true,
+      value: {
+        privateKey: { kind: "private", alg, kid: "k1", extractable: false },
+        publicKey: { kind: "public", alg, kid: "k1" },
+      },
+    });
+    const pair = valueOf(result);
+    expect([pair, pair.privateKey, pair.publicKey].every((value) => Object.isFrozen(value))).toBe(true);
+  });
+
+  it("should honor extractable: true on the private key", async () => {
+    expect(valueOf(await importKeyPair(privateJwk, { alg, extractable: true })).privateKey.extractable).toBe(true);
+  });
+
+  it("should give a public key that verifies what the private key signs", async () => {
+    const { privateKey, publicKey } = valueOf(await importKeyPair(privateJwk, { alg }));
+    const data = new Uint8Array([1, 2, 3]);
+    const params = ALGORITHM_PARAMS[alg].signParams;
+    const signature = await crypto.subtle.sign(params, getKeyEntry(privateKey).cryptoKey, data);
+    expect(await crypto.subtle.verify(params, getKeyEntry(publicKey).cryptoKey, signature, data)).toBe(true);
+  });
+
+  it("should export the same public JWK importPublicKey gives", async () => {
+    const { publicKey } = valueOf(await importKeyPair(privateJwk, { alg }));
+    const expected = valueOf(await importPublicKey(publicJwk, { alg }));
+    expect(await exportPublicJwk(publicKey)).toEqual(await exportPublicJwk(expected));
+  });
+
+  it("should report invalid_key with path d for a public JWK", async () => {
+    expect(issuesOf(await importKeyPair(publicJwk, { alg }))).toEqual([{ code: "invalid_key", path: ["d"] }]);
+  });
+
+  it("should report wrong_use with path key_ops when key_ops lacks sign", async () => {
+    expect(issuesOf(await importKeyPair({ ...privateJwk, key_ops: ["verify"] }, { alg }))).toEqual([
+      { code: "wrong_use", path: ["key_ops"] },
+    ]);
+  });
+});
+
+describe("importKeyPair halves", () => {
+  it.each([
+    { alg: "ES256", privateJwk: EC_P256_PRIVATE_JWK, members: ["x", "y"] },
+    { alg: "Ed25519", privateJwk: ED25519_PRIVATE_JWK, members: ["x"] },
+    { alg: "RS256", privateJwk: RSA_2048_PRIVATE_JWK, members: ["n"] },
+  ] as const)(
+    "should report invalid_key for an $alg JWK whose public members belong to another key",
+    async ({ alg, privateJwk, members }) => {
+      const other = await exportPrivateJwk((await generateKeyPair({ alg, extractable: true })).privateKey);
+      const mixed = withMembers(privateJwk, Object.fromEntries(members.map((name) => [name, other[name]])));
+      expect(issuesOf(await importKeyPair(mixed, { alg }))).toEqual([{ code: "invalid_key" }]);
+    },
+  );
+
+  it("should report invalid_key when the public half does not verify the private half's signature", async () => {
+    // Node rejects mismatched halves at import already; an engine that does not is caught by the probe.
+    const verify = vi.spyOn(crypto.subtle, "verify").mockResolvedValueOnce(false);
+    try {
+      expect(issuesOf(await importKeyPair(EC_P256_PRIVATE_JWK, { alg: "ES256" }))).toEqual([{ code: "invalid_key" }]);
+      expect(verify).toHaveBeenCalledOnce();
+    } finally {
+      verify.mockRestore();
+    }
+  });
+
+  it("should not echo key material in issues", async () => {
+    const result = await importKeyPair(withMembers(RSA_2048_PRIVATE_JWK, { d: "!" }), { alg: "RS256" });
+    expect(materialIn(result)).toEqual([]);
+  });
+
+  it("should throw TypeError for alg HS256", async () => {
+    await expect(importKeyPair(HMAC_SECRET_JWK, { alg: "HS256" } as never)).rejects.toThrow(TypeError);
+  });
+
+  it("should throw TypeError for a non-boolean extractable", async () => {
+    await expect(importKeyPair(EC_P256_PRIVATE_JWK, { alg: "ES256", extractable: 1 } as never)).rejects.toThrow(
+      TypeError,
+    );
   });
 });
 

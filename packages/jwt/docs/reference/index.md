@@ -194,6 +194,33 @@ Generates a random 32-byte HMAC secret bound to one algorithm.
 
 **Throws** — TypeError when `options` is not an object, `options.alg` is not `HS256`, `options.kid` is not a string, or `options.extractable` is not a boolean.
 
+### importKeyPair
+
+```ts
+export declare function importKeyPair(jwk: unknown, options: ImportPrivateKeyOptions): Promise<JwtResult<KeyPair>>;
+```
+
+Imports an untrusted private JWK as a key pair bound to one algorithm: the private key, and the public key taken from the same JWK's public members.
+
+The checks of [`importPrivateKey`](#importprivatekey) apply. The pair is proved to match before it is returned: the private key signs a fixed message and the public key must verify it, so a JWK whose public members belong to another key fails. Use it to load a signing key stored with [`exportPrivateJwk`](#exportprivatejwk), and publish `exportPublicJwk(pair.publicKey)` without storing a second JWK.
+
+**Parameters**
+
+- `jwk` — The private JWK, typically parsed from JSON. Any value is accepted.
+- `options` — The algorithm to bind both keys to, and whether the private key may be exported again.
+
+**Returns** — The frozen pair, both keys carrying the JWK's `kid`, or a failure with one issue: the issues [`importPrivateKey`](#importprivatekey) returns, and `invalid_key` without a path when the public members do not belong to the private key. Issues never contain JWK values. Never throws for any `jwk`.
+
+**Throws** — TypeError when `options` is not an object, `options.alg` is not an asymmetric algorithm, or `options.extractable` is not a boolean.
+
+**Example**
+
+```ts
+const result = await importKeyPair(storedPrivateJwk, { alg: "ES256" });
+if (!result.ok) throw new Error("The signing key could not be imported.");
+const { privateKey, publicKey } = result.value;
+```
+
 ### importKeySet
 
 ```ts
