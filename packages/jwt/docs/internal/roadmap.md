@@ -20,7 +20,7 @@ The 2026-11-16 review against the SSO application added `importKeyPair` (decisio
 
 ## Planned
 
-- **A changelog from 0.1.0**, opened by `hub release --cut` with the release, per `docs/specs/packages-changelog.md`. There is no page for 0.0.1, the first release, which precedes any consumer.
+None at present. The changelog starts at 0.1.0 ([docs/changelog](../changelog/index.md)); there is no page for 0.0.1, the first release, which preceded any consumer.
 
 ## Later / Possible
 

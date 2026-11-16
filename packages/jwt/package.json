@@ -1,6 +1,6 @@
 {
   "name": "@codenhub/jwt",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "private": false,
   "description": "JWS signing and verification, JWK import and export, and key sets on Web Crypto, for untrusted tokens.",
   "homepage": "https://github.com/codenhub/codenhub/tree/main/packages/jwt",
