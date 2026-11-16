@@ -396,6 +396,22 @@ function toJsxStyle(svg: string): string {
   });
 }
 
+/** A hyphenated or namespaced attribute name, other than `aria-*` and `data-*`, which React takes as written. */
+const SVG_ATTRIBUTE_NAME = /(?<=\s)(?!aria-|data-)([a-z][a-z0-9]*(?:[-:][a-z0-9]+)+)(?==)/gi;
+
+/**
+ * Renames the attributes in rendered icon markup to the DOM property names React reads.
+ *
+ * React warns on `stroke-width` and ignores what it does not know, while the
+ * HTML parser knows only `stroke-width`, so the renaming applies only where the
+ * markup lands as a JSX element, as in `strokeWidth` and `xlinkHref`.
+ */
+function toJsxAttributeNames(svg: string): string {
+  return svg.replace(SVG_ATTRIBUTE_NAME, (name: string) =>
+    name.replace(/[-:]([a-z0-9])/gi, (_separator, letter: string) => letter.toUpperCase()),
+  );
+}
+
 /**
  * Matches an `<i>` tag carrying a `class` or `className`, quoted plainly or with
  * escaped quotes inside a string literal. The attribute name must follow
@@ -509,15 +525,21 @@ function replaceIconTagsWithSvg(source: string, registry: IconRegistry, options:
         svg = svg.replace(/`/g, "\\`").replace(/\$\{/g, "\\${");
       }
 
+      // `className` with plain quotes outside a string is a JSX element in any
+      // file, `.js` included.
+      const isJsxElement = isJsContext && !enclosingQuote && (isJsx || (attrName === "className" && !backslash));
+      if (isJsxElement) {
+        // Before the passthrough attributes, which are already written for JSX.
+        svg = toJsxAttributeNames(svg);
+      }
+
       // Passthrough attributes are copied from the source, already escaped for
       // the string they sit in, so they join after the escaping.
       if (passthroughStr) {
         svg = svg.replace(/^<svg\b/i, `<svg${passthroughStr}`);
       }
 
-      if (isJsContext && !enclosingQuote && (isJsx || (attrName === "className" && !backslash))) {
-        // `className` with plain quotes outside a string is a JSX element in
-        // any file, `.js` included.
+      if (isJsxElement) {
         svg = toJsxStyle(svg);
       }
 

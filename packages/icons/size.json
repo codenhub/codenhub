@@ -1517,16 +1517,16 @@
         "default": {
           "files": {
             "dist/vite/plugin.js": {
-              "bytes": 8076,
+              "bytes": 8264,
               "declarations": {
-                "viteIcons": 3386,
-                "replaceIconTagsWithSvg": 749,
+                "viteIcons": 3387,
+                "replaceIconTagsWithSvg": 770,
                 "getEnclosingQuote": 736,
                 "stripComments": 659,
                 "isRegexStart": 332,
                 "toJsxStyle": 266,
                 "replaceIconTagsInTemplate": 264,
-                "splitAstroFrontmatter": 256,
+                "splitAstroFrontmatter": 255,
                 "resolveIconTagClasses": 237,
                 "renderIconModule": 175,
                 "resolveIconModule": 172,
@@ -1534,12 +1534,14 @@
                 "createRegistry": 149,
                 "replaceIconTagsInAstro": 123,
                 "ICON_TAG": 97,
+                "toJsxAttributeNames": 92,
+                "SVG_ATTRIBUTE_NAME": 69,
                 "removeIconTags": 69,
                 "SOURCE_FILE": 55,
                 "MARKUP_FILE": 42,
+                "(top level)": 30,
                 "ICON_MODULE_PREFIX": 29,
                 "STYLE_STRING": 29,
-                "(top level)": 24,
                 "VIRTUAL_ID": 22,
                 "JSX_FILE": 16,
                 "ASTRO_FILE": 14,
@@ -1643,22 +1645,22 @@
               }
             }
           },
-          "gzip": 7207,
-          "minified": 18743
+          "gzip": 7275,
+          "minified": 18931
         },
         "viteIcons": {
           "files": {
             "dist/vite/plugin.js": {
-              "bytes": 8076,
+              "bytes": 8264,
               "declarations": {
-                "viteIcons": 3386,
-                "replaceIconTagsWithSvg": 749,
+                "viteIcons": 3387,
+                "replaceIconTagsWithSvg": 770,
                 "getEnclosingQuote": 736,
                 "stripComments": 659,
                 "isRegexStart": 332,
                 "toJsxStyle": 266,
                 "replaceIconTagsInTemplate": 264,
-                "splitAstroFrontmatter": 256,
+                "splitAstroFrontmatter": 255,
                 "resolveIconTagClasses": 237,
                 "renderIconModule": 175,
                 "resolveIconModule": 172,
@@ -1666,12 +1668,14 @@
                 "createRegistry": 149,
                 "replaceIconTagsInAstro": 123,
                 "ICON_TAG": 97,
+                "toJsxAttributeNames": 92,
+                "SVG_ATTRIBUTE_NAME": 69,
                 "removeIconTags": 69,
                 "SOURCE_FILE": 55,
                 "MARKUP_FILE": 42,
+                "(top level)": 30,
                 "ICON_MODULE_PREFIX": 29,
                 "STYLE_STRING": 29,
-                "(top level)": 24,
                 "VIRTUAL_ID": 22,
                 "JSX_FILE": 16,
                 "ASTRO_FILE": 14,
@@ -1775,22 +1779,22 @@
               }
             }
           },
-          "gzip": 7211,
-          "minified": 18745
+          "gzip": 7278,
+          "minified": 18933
         },
         "viteIconsPlugin": {
           "files": {
             "dist/vite/plugin.js": {
-              "bytes": 8088,
+              "bytes": 8276,
               "declarations": {
-                "viteIcons": 3386,
-                "replaceIconTagsWithSvg": 749,
+                "viteIcons": 3387,
+                "replaceIconTagsWithSvg": 770,
                 "getEnclosingQuote": 736,
                 "stripComments": 659,
                 "isRegexStart": 332,
                 "toJsxStyle": 266,
                 "replaceIconTagsInTemplate": 264,
-                "splitAstroFrontmatter": 256,
+                "splitAstroFrontmatter": 255,
                 "resolveIconTagClasses": 237,
                 "renderIconModule": 175,
                 "resolveIconModule": 172,
@@ -1798,10 +1802,12 @@
                 "createRegistry": 149,
                 "replaceIconTagsInAstro": 123,
                 "ICON_TAG": 97,
+                "toJsxAttributeNames": 92,
+                "SVG_ATTRIBUTE_NAME": 69,
                 "removeIconTags": 69,
                 "SOURCE_FILE": 55,
                 "MARKUP_FILE": 42,
-                "(top level)": 30,
+                "(top level)": 36,
                 "ICON_MODULE_PREFIX": 29,
                 "STYLE_STRING": 29,
                 "VIRTUAL_ID": 22,
@@ -1908,22 +1914,22 @@
               }
             }
           },
-          "gzip": 7222,
-          "minified": 18763
+          "gzip": 7290,
+          "minified": 18951
         }
       },
       "files": {
         "dist/vite/plugin.js": {
-          "bytes": 8086,
+          "bytes": 8274,
           "declarations": {
-            "viteIcons": 3385,
-            "replaceIconTagsWithSvg": 749,
+            "viteIcons": 3386,
+            "replaceIconTagsWithSvg": 770,
             "getEnclosingQuote": 736,
             "stripComments": 659,
             "isRegexStart": 332,
             "toJsxStyle": 266,
             "replaceIconTagsInTemplate": 264,
-            "splitAstroFrontmatter": 256,
+            "splitAstroFrontmatter": 255,
             "resolveIconTagClasses": 237,
             "renderIconModule": 175,
             "resolveIconModule": 172,
@@ -1931,10 +1937,12 @@
             "createRegistry": 149,
             "replaceIconTagsInAstro": 123,
             "ICON_TAG": 97,
+            "toJsxAttributeNames": 92,
+            "SVG_ATTRIBUTE_NAME": 69,
             "removeIconTags": 69,
             "SOURCE_FILE": 55,
             "MARKUP_FILE": 42,
-            "(top level)": 30,
+            "(top level)": 36,
             "ICON_MODULE_PREFIX": 29,
             "STYLE_STRING": 29,
             "VIRTUAL_ID": 22,
@@ -2041,9 +2049,9 @@
           }
         }
       },
-      "gzip": 7229,
-      "minified": 18791,
-      "sha256": "a91b80b5e7e738b993e554534316cba4a5f04adda0937d339ae493a22b86d54a"
+      "gzip": 7296,
+      "minified": 18979,
+      "sha256": "42d3f33d1b0d52dd8e77f503a674801474f300d2c966b50b2abbe2590fb58257"
     }
   }
 }
