@@ -4,7 +4,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { parseArgs } from "node:util";
 
-import { readFiles, splitWords, UnmatchedEntryError } from "@codenhub/scan";
+import { findFiles, readFiles, splitWords, UnmatchedEntryError } from "@codenhub/scan";
 
 import { format, parse, purge, serialize } from "./purge";
 
@@ -157,10 +157,18 @@ async function build(options: BuildOptions, io: CliIo): Promise<string> {
     throw new Error(`unknown aesthetic "${unknown}"; choose from ${validAesthetics.join(", ")}.`);
   }
 
-  const contents = [...readContent(options.contentGlobs, io.cwd)];
+  const output = path.resolve(io.cwd, options.output);
+  const contents = readContent(options.contentGlobs, io.cwd, output);
 
   const droppable = new Set(JSON.parse(await readPackageFile(PURGE_CLASSES)) as string[]);
-  const found = new Set(contents.flatMap((content) => findClasses(content, droppable)));
+  const found = new Set<string>();
+
+  // One file at a time, so a broad glob holds only the file being read and the classes found so far.
+  for (const content of contents) {
+    for (const name of findClasses(content, droppable)) {
+      found.add(name);
+    }
+  }
   // A class this command may not drop is one no template has to name, such as `.theme-dark`, so it always counts as used.
   const used = { has: (name: string) => found.has(name) || !droppable.has(name) };
 
@@ -169,7 +177,6 @@ async function build(options: BuildOptions, io: CliIo): Promise<string> {
   );
   const write = options.shouldMinify ? serialize : format;
   const css = stylesheets.map((stylesheet) => write(purge(parse(stylesheet), used))).join("");
-  const output = path.resolve(io.cwd, options.output);
 
   /* Written beside the output and renamed over it, so a write that fails
      partway, on a full disk say, leaves the previous stylesheet whole rather
@@ -191,10 +198,17 @@ async function build(options: BuildOptions, io: CliIo): Promise<string> {
 
 /* Every entry has to name a file and every file has to be readable, so a build
    from missing content fails rather than writing a stylesheet without its
-   classes. */
-function readContent(entries: readonly string[], cwd: string): Generator<string> {
+   classes. The output is left out: it names every class it keeps, so a glob
+   that matches it would keep last build's classes, and the stylesheet would
+   grow with each build instead of following the templates. `path.relative` is
+   empty for the same file, in the case Windows ignores. */
+function readContent(entries: readonly string[], cwd: string, output: string): Generator<string> {
   try {
-    return readFiles(entries, { cwd, failOnUnmatched: true, failOnUnreadable: true });
+    const files = findFiles(entries, { cwd, failOnUnmatched: true }).filter(
+      (file) => path.relative(file, output) !== "",
+    );
+
+    return readFiles(files, { cwd, failOnUnreadable: true });
   } catch (error) {
     throw error instanceof UnmatchedEntryError ? new Error(`--content ${error.message}`) : error;
   }

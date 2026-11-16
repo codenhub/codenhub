@@ -11,7 +11,10 @@ export interface ScanOptions {
   cwd?: string;
   /** Throw an {@link UnmatchedEntryError} on an entry that names no file, instead of skipping it. */
   failOnUnmatched?: boolean;
-  /** Throw Node.js's own error on a file that cannot be read, instead of skipping it. */
+  /**
+   * Throw on a file that cannot be read, instead of skipping it: Node.js's own error when it names
+   * the file, or one naming the file with Node.js's error as its `cause` when it does not.
+   */
   failOnUnreadable?: boolean;
 }
 
@@ -75,12 +78,22 @@ function* readEach(files: readonly string[], failOnUnreadable: boolean): Generat
       text = fs.readFileSync(file, "utf8");
     } catch (error) {
       if (failOnUnreadable) {
-        throw error;
+        throw namingFile(error, file);
       }
       continue;
     }
     yield text;
   }
+}
+
+/* Node.js names the path in a system error, such as ENOENT or EACCES, but not
+   in the one for a file too long for a string, which would leave a reader of a
+   broad glob unable to tell which file to leave out. */
+function namingFile(error: unknown, file: string): unknown {
+  if (!(error instanceof Error) || error.message.includes(file)) {
+    return error;
+  }
+  return new Error(`${file}: ${error.message}`, { cause: error });
 }
 
 const splitters = new Map<string, RegExp>();

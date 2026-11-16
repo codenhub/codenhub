@@ -1,4 +1,4 @@
-<!-- source: 0fec2ef0364251d54d0fa7df180ad853241ef56d -->
+<!-- source: 009dff440e348e18f3f8bbc41999fab7c50a910a -->
 
 # @codenhub/styles
 
@@ -59,4 +59,4 @@ Este pacote não tem comportamento em JavaScript. Ele não entrega aliases de co
 
 ## Licença
 
-Este projeto é licenciado sob a licença [Apache-2.0](LICENSE). Os valores do tema, o Preflight e os registros de propriedades de `src/base/`, e as partes de cada folha de estilos compilada construídas a partir deles, vêm do [Tailwind CSS](https://tailwindcss.com) (MIT). As marcas de checkbox embutidas derivam dos ícones `check` e `minus` do [Lucide](https://lucide.dev) (ISC), que o Lucide deriva do [Feather](https://github.com/feathericons/feather) (MIT). Veja [NOTICE](NOTICE) para os avisos exigidos.
+Este projeto é licenciado sob a licença [Apache-2.0](LICENSE). Os valores do tema, o Preflight e os registros de propriedades do Tailwind, incluídos nas folhas de estilos compiladas de `dist/`, e os registros de propriedades de `tw/theme.css` vêm do [Tailwind CSS](https://tailwindcss.com) (MIT). As marcas de checkbox embutidas derivam dos ícones `check` e `minus` do [Lucide](https://lucide.dev) (ISC), que o Lucide deriva do [Feather](https://github.com/feathericons/feather) (MIT). Veja [NOTICE](NOTICE) para os avisos exigidos.

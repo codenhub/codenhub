@@ -210,6 +210,17 @@ describe("build", () => {
 
     expect(await readOutput()).not.toMatch(ruleFor("data-table"));
   });
+
+  // The stylesheet names every class it keeps, `data-table` among them in the `neutral` rules, so read back it would keep them.
+  it("does not read its own output as content when a glob matches it", async () => {
+    const argv = ["build", "-c", "app/views/**/*", "-o", "app/views/app.css"];
+
+    expect(await build(...argv)).toBe(0);
+    const first = await readOutput("app/views/app.css");
+
+    expect(await build(...argv)).toBe(0);
+    expect(await readOutput("app/views/app.css")).toBe(first);
+  });
 });
 
 describe("failures", () => {
