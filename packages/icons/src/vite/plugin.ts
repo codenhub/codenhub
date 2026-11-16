@@ -1,5 +1,4 @@
-import path from "node:path";
-
+import { readFiles } from "@codenhub/scan";
 import type { Plugin, ViteDevServer } from "vite";
 
 import {
@@ -654,8 +653,11 @@ function replaceIconTagsInAstro(source: string, registry: IconRegistry, options:
 export function viteIcons(options: ViteIconsOptions = {}): Plugin {
   const prefix = options.prefix ?? "ic";
   const registry = createRegistry(options);
-  // Relative entries are read from the Vite root, set by `configResolved`.
-  let contentPaths = options.content ?? [];
+  const contentPaths = options.content ?? [];
+  // Relative entries are read from the Vite root, set by `configResolved`. It
+  // is passed as the folder they are read from rather than joined into them,
+  // so a glob character in its path, as in `app [v2]`, is not read as a pattern.
+  let contentRoot = process.cwd();
   const mode = options.mode ?? "css";
   const attributionMode = options.attribution ?? "auto";
 
@@ -775,7 +777,12 @@ export function viteIcons(options: ViteIconsOptions = {}): Plugin {
 
   function generateCssFromContent(): string {
     const foundClasses = new Set<string>(inMemoryClasses);
-    scanFiles(contentPaths, { prefix }, foundClasses);
+    // An entry that names no file, or a file that cannot be read, contributes nothing.
+    for (const text of readFiles(contentPaths, { cwd: contentRoot })) {
+      for (const className of scanIconClasses(text, { prefix })) {
+        foundClasses.add(className);
+      }
+    }
     scanFiles(scannedFiles, { prefix }, foundClasses);
 
     // Sorted so the same classes always give the same bytes: a build names the
@@ -997,9 +1004,7 @@ export function viteIcons(options: ViteIconsOptions = {}): Plugin {
 
     configResolved(config) {
       base = config.base;
-      contentPaths = (options.content ?? []).map((entry) =>
-        path.isAbsolute(entry) ? entry : path.posix.join(config.root, entry),
-      );
+      contentRoot = config.root;
       // `@vitejs/plugin-react` and `@vitejs/plugin-react-swc` name every plugin they add this way.
       isReactJsx = config.plugins.some((plugin) => plugin.name.startsWith("vite:react"));
     },
