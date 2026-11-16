@@ -49,7 +49,7 @@ Root scripts map directly onto it:
 
 `pnpm format` duplicates `pnpm format:check` on purpose. When a name matches no script, pnpm runs the executable of that name from `PATH` instead, and on Windows `format` is the system disk formatter; the alias keeps the obvious name pointed at the repository's formatter.
 
-`hub browsers`, `hub assets`, `hub new`, `hub release`, `hub publish`, `hub preview:deploy`, and `hub labels` have no root script of their own. They are occasional commands rather than part of a change loop, and they read as what they are through `pnpm hub <command>`.
+`hub browsers`, `hub assets`, `hub new`, `hub release`, `hub publish`, `hub preview:deploy`, and `hub labels` have no root script of their own. They are occasional commands rather than part of a change loop, and they read as what they are through `pnpm hub <command>`. `hub deploy:affected` has none either: `.github/workflows/deploy.yml` runs it, not a contributor.
 
 A command name without its own definition runs the package script of that name, so package-specific scripts such as `dev` and `debug` work without registration. A name that no workspace package defines fails rather than succeeding; see "How a package script is run". Package scripts also accept the package-first form, such as `hub styles dev`, when the first token identifies one package and the second names one of its scripts. `dev`, `debug`, and `preview` keep that package attached to the terminal, stream output as it arrives, and run without the default timeout.
 
@@ -275,6 +275,17 @@ pnpm hub preview:deploy demo
 It exists because neither deployment builds branches. Both Cloudflare projects build the production branch only, so a preview is something a maintainer asks for rather than something every push produces. `docs/ci.md` covers that side. The upload runs from the maintainer's machine against their own `wrangler` login, which is why it stays out of CI and needs no repository credentials.
 
 `preview` and `preview:deploy` are different things: `preview` runs `wrangler dev` locally against the built output, while `preview:deploy` puts a version on Cloudflare that other people can open.
+
+## Deployed sites
+
+`hub deploy:affected` prints the deployed sites, one directory name per line (`www`, `docs`, `demo`), that the changes since a commit can affect. It compares the same way `--changed` does, committed changes and the working tree, and selects by the workspace dependency graph rather than by package:
+
+```sh
+pnpm hub deploy:affected --changed=origin/main
+pnpm hub deploy:affected --changed=HEAD~3 --json
+```
+
+`--changed` is required; bare, it compares with `main`, as it does for every command. A ref that names no commit fails the command: elsewhere `--changed` falls back to working-tree changes alone when its ref is missing, and here that would leave out every committed change, so a clean checkout would print no site, which reads as nothing to deploy. `--json` prints an array instead. `.github/workflows/deploy.yml` runs it on each push to `main` with the commit the push started from; [CI](ci.md), "Deployments", owns which paths affect which site and why.
 
 ## Release preflight
 
