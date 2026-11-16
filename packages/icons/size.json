@@ -1517,7 +1517,7 @@
         "default": {
           "files": {
             "dist/vite/plugin.js": {
-              "bytes": 8350,
+              "bytes": 8386,
               "declarations": {
                 "viteIcons": 3387,
                 "replaceIconTagsWithSvg": 769,
@@ -1528,9 +1528,9 @@
                 "replaceIconTagsInTemplate": 264,
                 "splitAstroFrontmatter": 256,
                 "resolveIconTagClasses": 237,
+                "stringQuoteAt": 202,
                 "renderIconModule": 175,
                 "resolveIconModule": 172,
-                "stringQuoteAt": 166,
                 "createRegistry": 149,
                 "replaceIconTagsInAstro": 124,
                 "toJsxAttributeNames": 117,
@@ -1591,7 +1591,7 @@
               }
             },
             "(unattributed)": {
-              "bytes": 1043
+              "bytes": 1048
             },
             "dist/catalog/attribution.js": {
               "bytes": 1028,
@@ -1646,13 +1646,13 @@
               }
             }
           },
-          "gzip": 7316,
-          "minified": 19017
+          "gzip": 7326,
+          "minified": 19058
         },
         "viteIcons": {
           "files": {
             "dist/vite/plugin.js": {
-              "bytes": 8350,
+              "bytes": 8386,
               "declarations": {
                 "viteIcons": 3387,
                 "replaceIconTagsWithSvg": 769,
@@ -1663,9 +1663,9 @@
                 "replaceIconTagsInTemplate": 264,
                 "splitAstroFrontmatter": 256,
                 "resolveIconTagClasses": 237,
+                "stringQuoteAt": 202,
                 "renderIconModule": 175,
                 "resolveIconModule": 172,
-                "stringQuoteAt": 166,
                 "createRegistry": 149,
                 "replaceIconTagsInAstro": 124,
                 "toJsxAttributeNames": 117,
@@ -1726,7 +1726,7 @@
               }
             },
             "(unattributed)": {
-              "bytes": 1045
+              "bytes": 1050
             },
             "dist/catalog/attribution.js": {
               "bytes": 1028,
@@ -1781,13 +1781,13 @@
               }
             }
           },
-          "gzip": 7320,
-          "minified": 19019
+          "gzip": 7329,
+          "minified": 19060
         },
         "viteIconsPlugin": {
           "files": {
             "dist/vite/plugin.js": {
-              "bytes": 8362,
+              "bytes": 8398,
               "declarations": {
                 "viteIcons": 3386,
                 "replaceIconTagsWithSvg": 770,
@@ -1798,9 +1798,9 @@
                 "replaceIconTagsInTemplate": 264,
                 "splitAstroFrontmatter": 256,
                 "resolveIconTagClasses": 237,
+                "stringQuoteAt": 202,
                 "renderIconModule": 175,
                 "resolveIconModule": 171,
-                "stringQuoteAt": 166,
                 "createRegistry": 149,
                 "replaceIconTagsInAstro": 124,
                 "toJsxAttributeNames": 117,
@@ -1862,7 +1862,7 @@
               }
             },
             "(unattributed)": {
-              "bytes": 1051
+              "bytes": 1056
             },
             "dist/catalog/attribution.js": {
               "bytes": 1028,
@@ -1917,13 +1917,13 @@
               }
             }
           },
-          "gzip": 7335,
-          "minified": 19037
+          "gzip": 7342,
+          "minified": 19078
         }
       },
       "files": {
         "dist/vite/plugin.js": {
-          "bytes": 8360,
+          "bytes": 8396,
           "declarations": {
             "viteIcons": 3386,
             "replaceIconTagsWithSvg": 770,
@@ -1934,9 +1934,9 @@
             "replaceIconTagsInTemplate": 264,
             "splitAstroFrontmatter": 256,
             "resolveIconTagClasses": 237,
+            "stringQuoteAt": 202,
             "renderIconModule": 175,
             "resolveIconModule": 172,
-            "stringQuoteAt": 166,
             "createRegistry": 149,
             "replaceIconTagsInAstro": 124,
             "toJsxAttributeNames": 116,
@@ -1998,7 +1998,7 @@
           }
         },
         "(unattributed)": {
-          "bytes": 1079
+          "bytes": 1084
         },
         "dist/catalog/attribution.js": {
           "bytes": 1028,
@@ -2053,9 +2053,9 @@
           }
         }
       },
-      "gzip": 7342,
-      "minified": 19065,
-      "sha256": "9fe4f6ac6f65f83326b9ef80b2764a2cf62732b61b4a5a67cd45682166480968"
+      "gzip": 7349,
+      "minified": 19106,
+      "sha256": "1012a1d56877271fb00b159c5ea347875e24488e5d3a3e9836aaca305be8c4fd"
     }
   }
 }

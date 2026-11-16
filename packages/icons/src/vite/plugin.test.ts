@@ -540,6 +540,15 @@ describe("viteIcons in svg mode", () => {
       expect(code).not.toContain("strokeWidth");
     });
 
+    it("stays hyphenated inside a string continued onto the next line", () => {
+      const { transform } = createPlugin({ families: [createFamily(), stroked], mode: "svg" });
+
+      const code = transform(`el.innerHTML = '<i class="ic-stroked-check"></i>\\\n';`, "app.tsx")?.code;
+
+      expect(code).toContain('stroke-width="2" stroke-linecap="round"');
+      expect(code).not.toContain("strokeWidth");
+    });
+
     it("stays hyphenated in a template that is not JSX", () => {
       const { transform } = createPlugin({ families: [createFamily(), stroked], mode: "svg" });
 
@@ -617,6 +626,27 @@ describe("viteIcons in svg mode", () => {
       const code = transform(`const markup = "<i className='ic-brand-mark' />";`, "app.tsx")?.code;
 
       expect(code).toContain('style=\\"color: var(--ic-color, #181717)\\"');
+      expect(code).not.toContain("style={{");
+    });
+
+    it.each([
+      ["LF", "\n"],
+      ["CRLF", "\r\n"],
+    ])("stays a style string inside a string continued onto the next line with %s", (_name, lineBreak) => {
+      const { transform } = createPlugin({ families: [createFamily(), brand], mode: "svg" });
+
+      const code = transform(`const markup = '<i class="ic-brand-mark"></i>\\${lineBreak}';`, "app.tsx")?.code;
+
+      expect(code).toContain('style="color: var(--ic-color, #181717)"');
+      expect(code).not.toContain("style={{");
+    });
+
+    it("stays a style string inside a string that closes after an escaped backslash", () => {
+      const { transform } = createPlugin({ families: [createFamily(), brand], mode: "svg" });
+
+      const code = transform(`const markup = '<i class="ic-brand-mark"></i>\\\\';`, "app.tsx")?.code;
+
+      expect(code).toContain('style="color: var(--ic-color, #181717)"');
       expect(code).not.toContain("style={{");
     });
 

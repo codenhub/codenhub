@@ -353,7 +353,8 @@ const JSX_FILE = /\.[jt]sx$/i;
  *
  * The quote scanner knows nothing of JSX text, so an apostrophe there, as in
  * "Don't", reads to it as an open string. A real `'` or `"` string cannot span
- * a line, so one that does not close before the end of the tag's line was JSX
+ * a line, except through a line continuation, a backslash before the line
+ * break, so one that does not close before an unescaped line break was JSX
  * text, and the tag is not in a string. Template literals may span lines and
  * are taken as reported.
  */
@@ -362,10 +363,20 @@ function stringQuoteAt(code: string, offset: number, length: number): string | n
   if (quote !== '"' && quote !== "'") {
     return quote;
   }
-  const rest = code.slice(offset + length);
-  const lineEnd = rest.indexOf("\n");
-  const line = lineEnd === -1 ? rest : rest.slice(0, lineEnd);
-  return new RegExp(`(?<!\\\\)${quote}`).test(line) ? quote : null;
+  for (let i = offset + length; i < code.length; i++) {
+    const char = code[i];
+    if (char === quote) {
+      return quote;
+    }
+    if (char === "\n" || char === "\r") {
+      return null;
+    }
+    if (char === "\\") {
+      // The escaped character, and with a CRLF continuation the line feed after it too.
+      i += code.startsWith("\r\n", i + 1) ? 2 : 1;
+    }
+  }
+  return null;
 }
 const STYLE_STRING = /(?<=\s)style="([^"]*)"/g;
 
