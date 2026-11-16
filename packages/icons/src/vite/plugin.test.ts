@@ -86,10 +86,11 @@ describe("viteIcons content", () => {
       fs.rmSync(root, { force: true, recursive: true });
     }
   });
-  function createProject(): string {
-    const root = fs.mkdtempSync(path.join(os.tmpdir(), "icons-content-"));
-    roots.push(root);
-    fs.mkdirSync(path.join(root, "src"));
+  function createProject(folder = "app"): string {
+    const parent = fs.mkdtempSync(path.join(os.tmpdir(), "icons-content-"));
+    roots.push(parent);
+    const root = path.join(parent, folder);
+    fs.mkdirSync(path.join(root, "src"), { recursive: true });
     fs.writeFileSync(path.join(root, "src", "page.astro"), '<i class="ic-test-user"></i>');
     return root;
   }
@@ -103,6 +104,14 @@ describe("viteIcons content", () => {
       expect(load("\0virtual:icons.css")).toContain(".ic-test-user");
     },
   );
+
+  // The root is a folder, not a pattern, so a glob character in its name matches only itself.
+  it.each(["app [v2]", "{work}", "@(site)"])("reads a relative glob from a root named %s", (folder) => {
+    const root = createProject(folder);
+    const { load } = createPlugin({ content: ["./src/*.astro"] }, [], root);
+
+    expect(load("\0virtual:icons.css")).toContain(".ic-test-user");
+  });
 
   it("reads an absolute entry as given", () => {
     const root = createProject();
