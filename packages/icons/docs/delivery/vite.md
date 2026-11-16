@@ -36,7 +36,7 @@ The generated stylesheet is served as `virtual:icons.css` and injected into ever
 
 ## Scanning
 
-`content` takes literal paths and glob patterns, `src/**/*.{html,tsx}` among them, expanded when the scan runs. It is additive: the plugin also scans every source file the build transforms, so `content` is for what the bundler never reaches, and for making the first paint correct in dev.
+`content` takes literal paths and glob patterns, `src/**/*.{html,tsx}` among them, expanded when the scan runs. A relative entry is read from Vite's [`root`](https://vite.dev/config/shared-options.html#root), as Vite reads its own paths, so the same config works whichever directory the build runs from. It is additive: the plugin also scans every source file the build transforms, so `content` is for what the bundler never reaches, and for making the first paint correct in dev.
 
 The transform-time scan covers `.html`, `.js`, `.jsx`, `.ts`, `.tsx`, `.vue`, `.svelte`, and stylesheet files. Markup in a file type outside that set — a `.astro` or `.md` template — is only seen through `content`, so list those globs explicitly. See [Frameworks](../frameworks/index.md). This is about the stylesheet only; which files [inline SVG mode](#inline-svg-mode) rewrites is a separate set.
 

@@ -1,3 +1,5 @@
+import path from "node:path";
+
 import type { Plugin, ViteDevServer } from "vite";
 
 import {
@@ -18,7 +20,8 @@ import { scanFiles, scanIconClasses } from "../scanner/class-scanner.js";
  */
 export interface ViteIconsOptions {
   /**
-   * File paths or globs to scan for icon class names.
+   * File paths or globs to scan for icon class names. A relative entry is read
+   * from Vite's `root`, not the working directory.
    */
   content?: string[];
 
@@ -648,7 +651,8 @@ function replaceIconTagsInAstro(source: string, registry: IconRegistry, options:
 export function viteIcons(options: ViteIconsOptions = {}): Plugin {
   const prefix = options.prefix ?? "ic";
   const registry = createRegistry(options);
-  const contentPaths = options.content ?? [];
+  // Relative entries are read from the Vite root, set by `configResolved`.
+  let contentPaths = options.content ?? [];
   const mode = options.mode ?? "css";
   const attributionMode = options.attribution ?? "auto";
 
@@ -990,6 +994,9 @@ export function viteIcons(options: ViteIconsOptions = {}): Plugin {
 
     configResolved(config) {
       base = config.base;
+      contentPaths = (options.content ?? []).map((entry) =>
+        path.isAbsolute(entry) ? entry : path.posix.join(config.root, entry),
+      );
       // `@vitejs/plugin-react` and `@vitejs/plugin-react-swc` name every plugin they add this way.
       isReactJsx = config.plugins.some((plugin) => plugin.name.startsWith("vite:react"));
     },

@@ -1,4 +1,8 @@
-import { describe, expect, it } from "vitest";
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
+
+import { afterEach, describe, expect, it } from "vitest";
 
 import { IconRegistry } from "../core/registry.js";
 import type { IconAttribution, IconFamilyData } from "../core/types.js";
@@ -29,9 +33,17 @@ function createFamily(attribution: IconAttribution = "notice"): IconFamilyData {
  * Builds the plugin as Vite resolves it beside the named plugins, React's by
  * default, since svg mode writes JSX for the runtime it finds.
  */
-function createPlugin(options: Parameters<typeof viteIcons>[0] = {}, vitePlugins: string[] = ["vite:react-babel"]) {
+function createPlugin(
+  options: Parameters<typeof viteIcons>[0] = {},
+  vitePlugins: string[] = ["vite:react-babel"],
+  root = process.cwd(),
+) {
   const plugin = viteIcons({ defaultPrefix: "test", families: [createFamily()], ...options });
-  (plugin.configResolved as (config: object) => void)({ base: "/", plugins: vitePlugins.map((name) => ({ name })) });
+  (plugin.configResolved as (config: object) => void)({
+    base: "/",
+    plugins: vitePlugins.map((name) => ({ name })),
+    root: root.replaceAll("\\", "/"),
+  });
   return {
     // A bundle with no HTML entry, as a library build has.
     generateBundle(this: unknown) {
@@ -66,6 +78,39 @@ function createBundleContext() {
     warnings,
   };
 }
+
+describe("viteIcons content", () => {
+  const roots: string[] = [];
+  afterEach(() => {
+    for (const root of roots.splice(0)) {
+      fs.rmSync(root, { force: true, recursive: true });
+    }
+  });
+  function createProject(): string {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), "icons-content-"));
+    roots.push(root);
+    fs.mkdirSync(path.join(root, "src"));
+    fs.writeFileSync(path.join(root, "src", "page.astro"), '<i class="ic-test-user"></i>');
+    return root;
+  }
+
+  it.each(["./src/*.astro", "src/page.astro"])(
+    "reads relative entry %s from the Vite root, not the working directory",
+    (entry) => {
+      const root = createProject();
+      const { load } = createPlugin({ content: [entry] }, [], root);
+
+      expect(load("\0virtual:icons.css")).toContain(".ic-test-user");
+    },
+  );
+
+  it("reads an absolute entry as given", () => {
+    const root = createProject();
+    const { load } = createPlugin({ content: [path.join(root, "src", "page.astro")] }, [], process.cwd());
+
+    expect(load("\0virtual:icons.css")).toContain(".ic-test-user");
+  });
+});
 
 describe("viteIcons", () => {
   it("serves motion utilities without looking them up as icon artwork", () => {
