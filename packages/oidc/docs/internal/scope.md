@@ -98,7 +98,7 @@ These are left out to keep the surface small, not because they're bad:
 
 ## 3. Design direction
 
-- **Fetch API everywhere.** The provider takes a `Request` and returns a `Response`. The client uses an injectable `fetch`. This one choice makes it run unchanged on Workers, Node 24+, Deno, Bun, and inside any framework (Hono, plain Workers, Node adapters).
+- **Fetch API everywhere.** The provider takes a `Request` and returns a `Response`. The client uses an injectable `fetch`. This one choice makes it run unchanged on Workers, Node 26+, Deno, Bun, and inside any framework (Hono, plain Workers, Node adapters).
 - **The package owns the protocol; the app owns everything else**: users, passwords, MFA, sessions and cookies, login and consent pages, persistence. The provider never renders HTML and never decides how a user authenticates.
 - **Opinionated.** Secure choices are defaults or the only option, and rejected options are rejected loudly.
 - **The client stays small.** Importing `oidc/client` must not pull in provider code.
