@@ -6,9 +6,9 @@
         "IconRegistry": {
           "files": {
             "dist/core/registry.js": {
-              "bytes": 2196,
+              "bytes": 2204,
               "declarations": {
-                "IconRegistry": 1984,
+                "IconRegistry": 1992,
                 "parseName": 106,
                 "HEX_COLOR": 50,
                 "unwrapLoaded": 46,
@@ -19,8 +19,8 @@
               "bytes": 26
             }
           },
-          "gzip": 921,
-          "minified": 2222
+          "gzip": 920,
+          "minified": 2230
         },
         "adoptIconifySet": {
           "files": {
@@ -101,9 +101,9 @@
         "generateFamilyCss": {
           "files": {
             "dist/core/registry.js": {
-              "bytes": 2196,
+              "bytes": 2204,
               "declarations": {
-                "IconRegistry": 1984,
+                "IconRegistry": 1992,
                 "parseName": 106,
                 "HEX_COLOR": 50,
                 "unwrapLoaded": 46,
@@ -167,7 +167,7 @@
             }
           },
           "gzip": 2557,
-          "minified": 5902
+          "minified": 5910
         },
         "generateIconSetCss": {
           "files": {
@@ -519,9 +519,9 @@
           }
         },
         "dist/core/registry.js": {
-          "bytes": 2196,
+          "bytes": 2204,
           "declarations": {
-            "IconRegistry": 1984,
+            "IconRegistry": 1992,
             "parseName": 106,
             "HEX_COLOR": 50,
             "unwrapLoaded": 46,
@@ -614,8 +614,8 @@
         }
       },
       "gzip": 4750,
-      "minified": 12858,
-      "sha256": "e0db8c328f3b4ddcbf83f0c9038d445f8340b3599853b1a12436152343f0c7be"
+      "minified": 12866,
+      "sha256": "68b770dd1ad79c419d0466d9a55bb9a210dab4cc6695f070b1c883af516dc8ff"
     },
     "./tailwind": {
       "exports": {
@@ -733,9 +733,9 @@
               }
             },
             "dist/core/registry.js": {
-              "bytes": 2196,
+              "bytes": 2204,
               "declarations": {
-                "IconRegistry": 1984,
+                "IconRegistry": 1992,
                 "parseName": 106,
                 "HEX_COLOR": 50,
                 "unwrapLoaded": 46,
@@ -814,8 +814,8 @@
               "bytes": 55
             }
           },
-          "gzip": 8736438,
-          "minified": 28945673
+          "gzip": 8736437,
+          "minified": 28945681
         }
       },
       "files": {
@@ -931,9 +931,9 @@
           }
         },
         "dist/core/registry.js": {
-          "bytes": 2196,
+          "bytes": 2204,
           "declarations": {
-            "IconRegistry": 1984,
+            "IconRegistry": 1992,
             "parseName": 106,
             "HEX_COLOR": 50,
             "unwrapLoaded": 46,
@@ -1012,9 +1012,9 @@
           "bytes": 55
         }
       },
-      "gzip": 8736438,
-      "minified": 28945673,
-      "sha256": "9a82bca46d3ab84bba3cd77a23f2fbf9d81b24ddd30588239ef68c469d6e0221"
+      "gzip": 8736437,
+      "minified": 28945681,
+      "sha256": "e29b5968cbbd3a3af9ba15334b2c6a36748297152e7b97cca5311bdbb19ac0d0"
     },
     "./play": {
       "exports": {
@@ -1091,9 +1091,9 @@
               }
             },
             "dist/core/registry.js": {
-              "bytes": 2196,
+              "bytes": 2204,
               "declarations": {
-                "IconRegistry": 1984,
+                "IconRegistry": 1992,
                 "parseName": 106,
                 "HEX_COLOR": 50,
                 "unwrapLoaded": 46,
@@ -1184,8 +1184,8 @@
               }
             }
           },
-          "gzip": 4410,
-          "minified": 11385
+          "gzip": 4412,
+          "minified": 11393
         },
         "postcssIcons": {
           "files": {
@@ -1201,9 +1201,9 @@
               }
             },
             "dist/core/registry.js": {
-              "bytes": 2196,
+              "bytes": 2204,
               "declarations": {
-                "IconRegistry": 1984,
+                "IconRegistry": 1992,
                 "parseName": 106,
                 "HEX_COLOR": 50,
                 "unwrapLoaded": 46,
@@ -1294,8 +1294,8 @@
               }
             }
           },
-          "gzip": 4413,
-          "minified": 11390
+          "gzip": 4414,
+          "minified": 11398
         },
         "postcssIconsPlugin": {
           "files": {
@@ -1311,9 +1311,9 @@
               }
             },
             "dist/core/registry.js": {
-              "bytes": 2196,
+              "bytes": 2204,
               "declarations": {
-                "IconRegistry": 1984,
+                "IconRegistry": 1992,
                 "parseName": 106,
                 "HEX_COLOR": 50,
                 "unwrapLoaded": 46,
@@ -1405,8 +1405,8 @@
               }
             }
           },
-          "gzip": 4421,
-          "minified": 11406
+          "gzip": 4422,
+          "minified": 11414
         }
       },
       "files": {
@@ -1422,9 +1422,9 @@
           }
         },
         "dist/core/registry.js": {
-          "bytes": 2196,
+          "bytes": 2204,
           "declarations": {
-            "IconRegistry": 1984,
+            "IconRegistry": 1992,
             "parseName": 106,
             "HEX_COLOR": 50,
             "unwrapLoaded": 46,
@@ -1516,16 +1516,16 @@
           }
         }
       },
-      "gzip": 4430,
-      "minified": 11437,
-      "sha256": "0dbd4129c76779436aa0447b4aa9a37287753b107de0d3481e0de43a0ae939fb"
+      "gzip": 4431,
+      "minified": 11445,
+      "sha256": "cb45f906c600f311a2e4c0cf58e190067fdd5f0068b6924373db09f089e6019f"
     },
     "./vite": {
       "exports": {
         "default": {
           "files": {
             "dist/vite/plugin.js": {
-              "bytes": 8801,
+              "bytes": 8816,
               "declarations": {
                 "viteIcons": 3921,
                 "replaceIconTagsWithSvg": 815,
@@ -1548,10 +1548,10 @@
                 "ATTRIBUTE_VALUE": 79,
                 "removeIconTags": 69,
                 "ATTRIBUTE": 64,
+                "BRACED": 55,
                 "SOURCE_FILE": 55,
                 "MARKUP_FILE": 42,
                 "START_TAG": 42,
-                "BRACED": 40,
                 "(top level)": 36,
                 "ICON_MODULE_PREFIX": 29,
                 "STYLE_STRING": 29,
@@ -1576,9 +1576,9 @@
               }
             },
             "dist/core/registry.js": {
-              "bytes": 2196,
+              "bytes": 2204,
               "declarations": {
-                "IconRegistry": 1984,
+                "IconRegistry": 1992,
                 "parseName": 106,
                 "HEX_COLOR": 50,
                 "unwrapLoaded": 46,
@@ -1661,13 +1661,13 @@
               }
             }
           },
-          "gzip": 7623,
-          "minified": 19585
+          "gzip": 7625,
+          "minified": 19608
         },
         "viteIcons": {
           "files": {
             "dist/vite/plugin.js": {
-              "bytes": 8801,
+              "bytes": 8816,
               "declarations": {
                 "viteIcons": 3921,
                 "replaceIconTagsWithSvg": 815,
@@ -1690,10 +1690,10 @@
                 "ATTRIBUTE_VALUE": 79,
                 "removeIconTags": 69,
                 "ATTRIBUTE": 64,
+                "BRACED": 55,
                 "SOURCE_FILE": 55,
                 "MARKUP_FILE": 42,
                 "START_TAG": 42,
-                "BRACED": 40,
                 "(top level)": 36,
                 "ICON_MODULE_PREFIX": 29,
                 "STYLE_STRING": 29,
@@ -1718,9 +1718,9 @@
               }
             },
             "dist/core/registry.js": {
-              "bytes": 2196,
+              "bytes": 2204,
               "declarations": {
-                "IconRegistry": 1984,
+                "IconRegistry": 1992,
                 "parseName": 106,
                 "HEX_COLOR": 50,
                 "unwrapLoaded": 46,
@@ -1803,13 +1803,13 @@
               }
             }
           },
-          "gzip": 7626,
-          "minified": 19587
+          "gzip": 7627,
+          "minified": 19610
         },
         "viteIconsPlugin": {
           "files": {
             "dist/vite/plugin.js": {
-              "bytes": 8813,
+              "bytes": 8828,
               "declarations": {
                 "viteIcons": 3921,
                 "replaceIconTagsWithSvg": 815,
@@ -1832,11 +1832,11 @@
                 "ATTRIBUTE_VALUE": 79,
                 "removeIconTags": 69,
                 "ATTRIBUTE": 64,
+                "BRACED": 55,
                 "SOURCE_FILE": 55,
                 "(top level)": 42,
                 "MARKUP_FILE": 42,
                 "START_TAG": 42,
-                "BRACED": 40,
                 "ICON_MODULE_PREFIX": 29,
                 "STYLE_STRING": 29,
                 "TEMPLATE_FILE": 22,
@@ -1861,9 +1861,9 @@
               }
             },
             "dist/core/registry.js": {
-              "bytes": 2196,
+              "bytes": 2204,
               "declarations": {
-                "IconRegistry": 1984,
+                "IconRegistry": 1992,
                 "parseName": 106,
                 "HEX_COLOR": 50,
                 "unwrapLoaded": 46,
@@ -1946,13 +1946,13 @@
               }
             }
           },
-          "gzip": 7636,
-          "minified": 19605
+          "gzip": 7637,
+          "minified": 19628
         }
       },
       "files": {
         "dist/vite/plugin.js": {
-          "bytes": 8811,
+          "bytes": 8826,
           "declarations": {
             "viteIcons": 3920,
             "replaceIconTagsWithSvg": 815,
@@ -1975,11 +1975,11 @@
             "ATTRIBUTE_VALUE": 79,
             "removeIconTags": 69,
             "ATTRIBUTE": 64,
+            "BRACED": 55,
             "SOURCE_FILE": 55,
             "(top level)": 42,
             "MARKUP_FILE": 42,
             "START_TAG": 42,
-            "BRACED": 40,
             "ICON_MODULE_PREFIX": 29,
             "STYLE_STRING": 29,
             "TEMPLATE_FILE": 22,
@@ -2004,9 +2004,9 @@
           }
         },
         "dist/core/registry.js": {
-          "bytes": 2196,
+          "bytes": 2204,
           "declarations": {
-            "IconRegistry": 1984,
+            "IconRegistry": 1992,
             "parseName": 106,
             "HEX_COLOR": 50,
             "unwrapLoaded": 46,
@@ -2089,9 +2089,9 @@
           }
         }
       },
-      "gzip": 7644,
-      "minified": 19633,
-      "sha256": "9fd746c9e14a5a42715d7fa18aec79dc9dd95abdd903525bff7f58db9d743001"
+      "gzip": 7645,
+      "minified": 19656,
+      "sha256": "48301c708890a794fc981b13a583039b799a316d7c10f71a7e6c28ed955b7d58"
     }
   }
 }
