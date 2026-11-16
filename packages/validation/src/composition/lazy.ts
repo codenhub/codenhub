@@ -162,8 +162,8 @@ function again(kept: Kept): unknown {
  * A `lazy` keeps what it found for each object in one validation, and gives it again when the same
  * object is reached again as many `lazy` levels down, wherever that is, so those options share the
  * children's result and the work grows with the input. An asynchronous check under it runs once for each
- * such object, however many options reach it. When the input holds one object in two places, the
- * value produced holds one output object in both. Work that makes new objects at every level, such as a `transform` that
+ * such object, however many options reach it. When the input holds one object in two places it
+ * reaches as many levels down, the value produced holds one output object in both. Work that makes new objects at every level, such as a `transform` that
  * copies its value, cannot be shared and doubles with each level. `maxCalls` stops that:
  * past that many calls of one `lazy` in one validation, every further one fails with `too_big` and
  * `{ maximum, type: "calls" }`. A validation is a call such as `schema(input)` and everything it reaches

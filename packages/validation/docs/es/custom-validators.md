@@ -146,7 +146,7 @@ El parámetro es `unknown`, porque un validador existe para comprobar datos en l
 
 - Para nombrar un tipo que el cuerpo no muestra, tipa lo que devuelve la función: `validator((input): ValidationResult<User> => ...)`.
 - Para indicar qué acepta, para [`InferInput`](./forms.md#los-tipos-de-un-formulario), tipa la función como un validador antes de pasarla: una tipada como `Validator<number, string>` lee un número a partir de texto. Sin eso, el tipo de entrada es `unknown`.
-- Un issue conserva solo su `code`, `path`, `params` y `message`, como uno hecho con `fail()`, así que una propiedad que le agregues a mano, como la entrada, nunca llega al resultado.
+- Un problema conserva solo su `code`, `path`, `params` y `message`, como uno hecho con `fail()`, así que una propiedad que le agregues a mano, como la entrada, nunca llega al resultado.
 
 Lo que devuelve `validator` funciona en cualquier lugar donde funciona uno integrado, como dentro de `object`, `optional` y `pipe`, y es un [Standard Schema](./standard-schema.md) igual que ellos. No tiene opción `message` ni verificaciones a menos que las escribas tú, y para eso están los builders.
 

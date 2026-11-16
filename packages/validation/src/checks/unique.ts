@@ -35,7 +35,7 @@ const CUT_WORDS: readonly Word[] = [wordSize];
  * @returns A check of arrays.
  * @throws {TypeError} When `by` is given and is not a function, such as a message in its place: a
  * message alone is `unique(undefined, message)`, or `message` is neither text nor a function; and during
- * validation when `by` returns a promise, since each promise is a new object and no two would be equal.
+ * validation when `by` returns a promise, since keys are compared at once and a promise is not its key.
  */
 export function unique<T extends LiteralValue>(by?: undefined, message?: Message): Check<readonly T[]>;
 export function unique<T>(by: (item: T) => unknown, message?: Message): Check<readonly T[]>;
@@ -45,7 +45,7 @@ export function unique<T>(by?: (item: T) => unknown, message?: Message): Check<r
   }
   assertMessage(message);
   // Apart from the validation running now, as everything a consumer wrote is run. A key that is a promise
-  // is refused, since each is a new object and no two would ever be equal.
+  // is refused, since keys are compared at once and a promise is not the key it stands for.
   const keyOf =
     by === undefined ? (item: T): unknown => item : (item: T): unknown => decided("unique", by, item, "key function");
   return toCheck<Check<readonly T[]>>(
