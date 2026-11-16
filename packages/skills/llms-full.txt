@@ -498,6 +498,34 @@ Return to [Bundled skills](docs/skills.md) to choose another workflow, or the [C
 [juliusbrussee/caveman]: https://github.com/JuliusBrussee/caveman
 [obra/superpowers]: https://github.com/obra/superpowers
 
+<!-- Source: docs/changelog/0.4.0.md -->
+
+# 0.4.0
+
+## Added
+
+- `--link`, and an install mode step in the wizard, copies each skill once to the scope's `.agents/skills` and links each skill in the other selected harness folders to it, so harnesses that read only their own folder, such as Claude, use the same files. Links are relative symbolic links, or junctions on Windows. A real folder where a link belongs is never replaced; that skill fails with `Failed linking`.
+- The CLI guide shows how to share a selection with a team or a monorepo: pin the package as a development dependency and run the installer from a script.
+- `coding`, for writing and changing code in any language: design defaults, rules for inputs, failures, state, and tests, the edges to check, and per-language references. It asks before deleting or rewriting data, cost, security or access changes, and anything hard to undo, and decides and reports the rest.
+- `motion-graphics` covers narration, sound effects, music, and mixing. Narration is generated and measured before animating, a beat file times both the page and the mix, and sound is checked by measurement. It also covers depth, blur, and camera moves.
+- `design` has an expressive path behind an idea gate, and references for visual effects, imagery and emoji, and social media posts. It covers email and print, scales down to small changes and reviews, and checks that fonts loaded.
+- `branding` defines the brand's voice and sound character, for brands that speak with or without a screen.
+
+## Changed
+
+- **Breaking.** Node.js 26 or newer is required, up from 24.
+- `project-template` follows the template's stack-neutral core and per-stack profiles, and treats the template as a reference: it creates projects, compares existing ones with the template, and migrates projects off the old `.template/manifest.json` design, replacing sync, adopt, and audit.
+- `design` steers away from the generated look: one form per role, color used for attention, no bordered chips, monospace accents, or stock framework palettes by default, and social posts planned as a text hierarchy rather than a landing page.
+- `logo-design` marks may use curves and built fills, with a conversion route for strokes.
+- `ponytail` and `test-driven-development` share one rule with `coding` for tests, reports, and scope in one-off scripts.
+- The package homepage is its page on codenhub.dev, and the manifest lists npm keywords.
+
+## Fixed
+
+- `motion-graphics`'s mix command cut the music off when the narration ended.
+- `design` dropped borders on inputs inside bordered panels, replaced an existing system's framework tokens, and missed accessible names for icon-only controls and alt text for emoji images.
+- Technical claims in `design`, `logo-design`, and `motion-graphics` that review found wrong, such as an `evenodd` pair of circles drawing a ring, and `document.fonts.check()` proving that a font loaded.
+
 <!-- Source: docs/changelog/0.3.0.md -->
 
 # 0.3.0

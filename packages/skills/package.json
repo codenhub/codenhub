@@ -1,6 +1,6 @@
 {
   "name": "@codenhub/skills",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "private": false,
   "description": "Installer CLI for a curated collection of AI agent skills, for every major agent harness.",
   "keywords": [
