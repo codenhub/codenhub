@@ -213,8 +213,11 @@ describe("toJsonSchema", () => {
     for (const make of [startsWith, endsWith, includes]) {
       expect(schemaOf(string(make("\uD83D")))).toEqual({ type: "string" });
     }
-    const { pattern: written } = schemaOf(string(startsWith("😀")));
-    expect(new RegExp(written as string, "u").test("😀x")).toBe(true);
+    expect(schemaOf(string(startsWith("😀")))).toEqual({ type: "string", pattern: "^😀" });
+  });
+
+  it("should write a pattern without u that escapes a character from U+E000 up outside a range", () => {
+    expect(schemaOf(string(pattern(/^\uE000$/)))).toEqual({ type: "string", pattern: String.raw`^\uE000$` });
   });
 
   it("should refuse a pattern with the v flag, which reads a class otherwise than a schema does", () => {

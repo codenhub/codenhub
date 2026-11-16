@@ -1,7 +1,7 @@
 ---
 title: JSON Schema
 description: Escreva um validador como um JSON Schema, para o corpo de uma API HTTP, os argumentos de uma ferramenta que um modelo de linguagem chama ou um gerador de formulários.
-source: a1403c088a858fcc70ddc0f0850e5d0095bf9220
+source: ccf0b617b2f72f571f8411e5d432f382502c2c2e
 order: 10
 ---
 
@@ -42,7 +42,7 @@ Um schema diz menos do que um validador verifica. `email()` recusa um endereço 
 Em três casos essa promessa é flexibilizada. Em dois, o validador limpa um valor antes de verificá-lo, e um schema não consegue dizer isso, e no outro, os dois contam o tamanho do texto de formas diferentes:
 
 - **Opções de limpeza.** `string({ trim: true, max: 5 })` é escrito com `maxLength: 5`, que descreve um texto que não precisa de trim. Um texto com espaços em volta de cinco letras passa no validador e não no schema. Com `case` é igual, e com `clamp` ao lado de um limite também, como em `number({ max: 10, clamp: { min: 0, max: 10 } })`: o schema descreve o valor depois da limpeza. O intervalo de um `clamp` não é escrito.
-- **Comprimento de texto.** O `length` de uma string conta um emoji, e qualquer outro caractere fora do Plano Multilíngue Básico, como dois, e o JSON Schema o conta como um, então um `min` ou `max` pode diferir pelo número desses caracteres. Com `pattern` é igual: um schema o lê no modo Unicode, a flag `u`, então num pattern escrito sem essa flag, `.` e uma classe negada como `[^a]` casam com um caractere inteiro no schema e com metade de um emoji no validador. O texto de um `startsWith`, `endsWith` ou `includes` que tem metade de um caractere, com que o modo Unicode nunca casa, fica fora do schema.
+- **Comprimento de texto.** O `length` de uma string conta um emoji, e qualquer outro caractere fora do Plano Multilíngue Básico, como dois, e o JSON Schema o conta como um, então um `min` ou `max` pode diferir pelo número desses caracteres. Com `pattern` é igual: um schema o lê no modo Unicode, a flag `u`, então num pattern escrito sem essa flag, `.` e uma classe negada como `[^a]` casam com um caractere inteiro no schema e com metade de um emoji no validador. O texto de um `startsWith`, `endsWith` ou `includes` que tem metade de um caractere fica fora do schema, já que o modo Unicode nunca casa essa metade dentro de um caractere inteiro, e o validador casa.
 - **Formatos que aceitam várias grafias.** `phone()` aceita `+55 (11) 98765-4321` e produz `+5511987654321`. Uma verificação num formato assim, como em `hostname(pattern(/^[a-z.]+$/))`, vê a grafia que o formato produz e é escrita para o texto como ele chega, então `EXAMPLE.com` passa no validador e não no schema.
 
 ## Entrada e saída
@@ -190,7 +190,7 @@ O JSON Schema não tem como expressar parte do que um validador consegue verific
 - `date`, `bigint`, `symbol`, `func`, `instanceOf`, `set`, `map` e `file`, nenhum dos quais é um valor JSON; `formData`, que lê um formulário e não JSON; e um validador criado por `guard`, cujo teste é uma função que ninguém consegue ler.
 - Um validador que você escreveu à mão, e uma verificação criada por `check`, cuja regra é uma função que ninguém consegue ler.
 - `lowercase`, `uppercase`, `unique` com uma função de chave, e um `pattern` com uma flag como `i` ou `v`, que os patterns do JSON Schema não têm. As flags `g` e `y`, que `pattern` descarta, ficam de fora, assim como `u`, o modo em que um schema lê todo pattern.
-- Um `pattern` escrito sem `u` que o modo Unicode lê de outro jeito: um que é erro nesse modo, como `/^\@x$/`, cujo `\@` só esse modo recusa, e um com `\u{…}` ou `\p{…}`, que só são escapes nesse modo e, sem ele, são texto com chaves. Também um que tem metade de um caractere, escrita ou como escape, ou um escape de um caractere a partir de U+D800, que pode fechar um intervalo que cruza essas metades, já que o modo Unicode nunca casa com metade de um caractere. Adicione a flag `u` para escrevê-lo.
+- Um `pattern` escrito sem `u` que o modo Unicode lê de outro jeito: um que é erro nesse modo, como `/^\@x$/`, cujo `\@` só esse modo recusa, e um com `\u{…}` ou `\p{…}`, que só são escapes nesse modo e, sem ele, são texto com chaves. Também um que tem um caractere fora do Plano Multilíngue Básico, como um emoji, ou metade de um, escrito ou como escape, e um com um intervalo que termina em U+E000 ou acima, que cruza essas metades: o modo Unicode lê cada um de outro jeito. Adicione a flag `u` para escrevê-lo.
 - O que um `transform` retorna, no lado da saída.
 - Uma verificação num `object`, e uma variante de `tagged` que não é um `object`, como um `lazy`. Com `unrepresentable: "any"`, essa variante é escrita como um objeto só com a tag dela, para que as outras variantes continuem casando com um ramo do `oneOf`.
 
