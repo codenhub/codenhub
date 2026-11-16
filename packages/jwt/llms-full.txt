@@ -11,7 +11,7 @@ JwtKit signs and verifies JSON Web Tokens with Web Crypto, imports and exports J
 
 ES256, EdDSA, Ed25519, RS256, PS256 and HS256 are supported, with no dependencies.
 
-> **Experimental:** 0.0.1, before its first minor release. Function names, option names, issue codes and their `params` may still change before 0.1.0; the security behavior above will not be weakened.
+> **Experimental:** no real application has run on this API yet. Function names, option names, issue codes and their `params` are meant to hold, but a real consumer may still show that one of them must change; a breaking change ships in a new minor version, and the [changelog](docs/changelog/index.md) lists it with its migration. The security behavior above will not be weakened.
 
 ## Installation
 
@@ -114,11 +114,12 @@ fetches; // 1
 - [Key sets](docs/key-sets.md)
 - [Issues](docs/errors.md)
 - [API reference](docs/reference/index.md)
+- [Changelog](docs/changelog/index.md)
 
 ## Requirements
 
-- Node.js 24 or newer, or another runtime with Web Crypto, `TextEncoder` and `TextDecoder`, plus `fetch`, `AbortController` and `setTimeout` for remote key sets. No Node.js API is used, so browsers, Deno, Bun and Cloudflare Workers work too.
-- `EdDSA` and `Ed25519` need Web Crypto's Ed25519 support: Node.js 24, Chrome 137, Firefox 129 or Safari 17.
+- Node.js 26 or newer, or another runtime with Web Crypto, `TextEncoder` and `TextDecoder`, plus `fetch`, `AbortController` and `setTimeout` for remote key sets. No Node.js API is used, so browsers, Deno, Bun and Cloudflare Workers work too.
+- `EdDSA` and `Ed25519` need Web Crypto's Ed25519 support: Node.js 26, Chrome 137, Firefox 129 or Safari 17.
 - ESM-aware package resolution. The package is ESM only and marked `sideEffects: false`.
 
 ## Notes
@@ -242,8 +243,8 @@ There is no function that decodes a payload without verifying it. When you need 
 
 ## Requirements
 
-- Node.js 24 or newer, or another runtime with Web Crypto (`globalThis.crypto.subtle`), `TextEncoder`, `TextDecoder`, and, for remote key sets, `fetch`, `AbortController` and `setTimeout`. The package uses no Node.js API, so it also runs in browsers, Deno, Bun and Cloudflare Workers.
-- `EdDSA` and `Ed25519` need Web Crypto's Ed25519 support, which Node.js 24, Chrome 137, Firefox 129 and Safari 17 have. The other algorithms work wherever Web Crypto does.
+- Node.js 26 or newer, or another runtime with Web Crypto (`globalThis.crypto.subtle`), `TextEncoder`, `TextDecoder`, and, for remote key sets, `fetch`, `AbortController` and `setTimeout`. The package uses no Node.js API, so it also runs in browsers, Deno, Bun and Cloudflare Workers.
+- `EdDSA` and `Ed25519` need Web Crypto's Ed25519 support, which Node.js 26, Chrome 137, Firefox 129 and Safari 17 have. The other algorithms work wherever Web Crypto does.
 - ESM-aware package resolution. The package is ESM only and marked `sideEffects: false`.
 
 ## Next steps
@@ -565,6 +566,23 @@ import { importPrivateKey } from "@codenhub/jwt";
 const result = await importPrivateKey(jwk, { alg: "PS256", extractable: false });
 ```
 
+## Importing a key pair
+
+A private JWK also carries the key's public members, so one stored JWK is enough to load a signing key and publish its public half. `importKeyPair` takes the same arguments and runs the same checks as `importPrivateKey`, and returns `{ privateKey, publicKey }`, both bound to `alg` and carrying the JWK's `kid`, like `generateKeyPair`'s result:
+
+```ts
+import { exportPublicJwk, importKeyPair } from "@codenhub/jwt";
+
+const result = await importKeyPair(storedPrivateJwk, { alg: "ES256" });
+if (!result.ok) {
+  throw new Error("The signing key could not be imported.");
+}
+const { privateKey, publicKey } = result.value;
+const jwks = { keys: [await exportPublicJwk(publicKey)] };
+```
+
+Before returning the pair, it signs a fixed message with the private key and verifies it with the public one. A JWK whose public members belong to another key is `invalid_key`, so the pair can never issue tokens its own public key fails to verify. Prefer it to importing the two halves from separately stored JWKs, which nothing checks belong together.
+
 ## Importing a secret
 
 `importSecretKey` takes either the secret's raw bytes or an `oct` JWK. A string is a compile error, since it could be text, base64 or hex; encode it to bytes first. A string that reaches it anyway, from untyped code, returns `invalid_key`:
@@ -862,3 +880,30 @@ A `TypeError` means a mistake in the calling code, not in the input, and is thro
 A `TypeError` message names the option or member and the rule it broke, never its value.
 
 Three things propagate rather than becoming a result: an exception thrown by your own `claims` schema, a `now` option that returns something other than a finite number, and a failure of Web Crypto itself while signing or generating a key, which means the runtime lacks the algorithm. A verifier's `now` makes its promise reject with a `TypeError`, for a token whose signature checked out. A remote key set's `now` makes its `select` reject with a `TypeError`; a verifier using that key set catches the rejection like any other key-set error and reports `key_fetch_failed` with `{ reason: "key_set_error" }`.
+
+<!-- Source: docs/changelog/0.1.0.md -->
+
+# 0.1.0
+
+0.1.0 is the release `@codenhub/oidc` and the applications built on it are meant to build on. It adds `importKeyPair`, closes what an audit of 0.0.1 found, and raises the Node.js floor to 26. Each breaking change is marked below with what to do.
+
+## Added
+
+- `importKeyPair(privateJwk, { alg, extractable? })`, which loads a signing key stored with `exportPrivateJwk` as `{ privateKey, publicKey }`, like `generateKeyPair`'s result, so the public JWK no longer has to be stored beside it. It proves the two halves belong together by signing and verifying a fixed message, so a JWK whose public members belong to another key is `invalid_key`. [Keys](docs/keys.md#importing-a-key-pair) covers it.
+- An [API reference](docs/reference/index.md) generated from the package's TSDoc.
+
+## Changed
+
+- **Breaking.** `engines.node` is `>=26`, so Yarn 1, and npm with `engine-strict`, refuse the install on Node.js 24 or 25. Upgrade Node.js to 26. Browsers, Deno, Bun and Cloudflare Workers are unaffected. ([#553](https://github.com/codenhub/codenhub/issues/553))
+- **Breaking.** `createVerifier` and `createRemoteKeySet` throw a `TypeError` naming any option they do not know, even one set to `undefined`. In 0.0.1 a typo such as `audiance` was ignored, which turned the audience check off without a sign. Fix the name the error gives.
+- **Breaking.** When `now` returns anything but a finite number, the verifier's promise rejects with a `TypeError`, and so does a remote key set's `select`, which a verifier reports as `key_fetch_failed` with `{ reason: "key_set_error" }`. In 0.0.1, `now: () => NaN` passed expired tokens and kept a remote key set's cache from ever expiring. Return milliseconds, as `Date.now` does.
+- **Breaking.** `importSecretKey` takes `Uint8Array | object`, so passing a string is a compile error. At run time a string still returns `invalid_key`. Encode the secret to bytes first, such as with `new TextEncoder().encode(secret)` when it is text.
+- **Breaking.** `sign` rejects `-0`, which JSON writes as `0`; an array whose prototype is not `Array.prototype`; and a value with a `toJSON` method anywhere on its prototype chain, a polluted `Object.prototype` or `Array.prototype` included. Each would have signed a different value than the one given. Pass plain data.
+- **Breaking.** A custom key set's failure is passed through only when every issue is an object with a string `code` of its own; a list with a hole, or an issue without such a `code`, gives `key_fetch_failed` with `{ reason: "key_set_error" }`, as other key set mistakes already did. Return issues built as `{ code: "unknown_kid" }`.
+- `typ` compares ASCII letters without regard to case, and drops a leading `application/` only when no other `/` follows, as RFC 7515 §4.1.9 says. 0.0.1 used `toLowerCase`, which also folded some letters beyond ASCII, such as the Kelvin sign (U+212A) to `k`, and dropped `application/` from values such as `application/a/b`. A `typ` spelled that way no longer matches.
+
+## Fixed
+
+- Key options are read as own properties, so a polluted `Object.prototype` can no longer make a generated or imported key extractable.
+- `importSecretKey` and JWK import accept a `Uint8Array` or a plain object from another realm, as Jest and jsdom give, which 0.0.1 refused as `invalid_key`.
+- A remote key set treats a clock that steps back as an expired cache and an ended cooldown, so a removed key stops being trusted at most `cacheTtl` plus `maxStale` after the last successful fetch, as documented.

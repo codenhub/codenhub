@@ -1,6 +1,6 @@
 ---
 status: APPROVED
-last_updated: 2026-11-13
+last_updated: 2026-11-16
 scope: What `@codenhub/jwt` 0.1 covers, the invariants it keeps, and the decisions taken while building it.
 ---
 
@@ -230,3 +230,7 @@ These were asked explicitly and approved. They bind work while they stand; rever
 22. **Unknown options throw.** `createVerifier` and `createRemoteKeySet` throw a `TypeError` for an own enumerable string key that is not a documented option, such as `audiance` or `issuers`, naming the member (the caller's own option name, cut at 64 characters) and even when its value is `undefined`; symbol keys are ignored, and other functions' option handling is unchanged. A typo silently turned off the audience or issuer check, and TypeScript catches it only for inline object literals. Rejected: ignoring unknown options, as most libraries do, which lets a typo turn off a check.
 23. **A non-finite `now()` rejects.** When `options.now` returns anything but a finite number, the verifier's promise rejects with a `TypeError`, checked once per verification when it reads the time, and a remote key set's `select` rejects the same way. A verifier that calls such a key set reports `key_fetch_failed` with `{ reason: "key_set_error" }` by decision 16, which fails closed. `now: () => NaN`, such as `Date.parse` of an unset variable, otherwise disabled every time check and kept a remote cache from ever expiring. The clock is caller code, so it propagates as a throwing `claims` schema does (decision 10). Rejected: failing the token with an issue, which hides a caller bug as a token failure, as decision 10 reasoned; leaving it, which fails open.
 24. **`importSecretKey` takes `Uint8Array | object`.** A string is a compile error, while runtime behavior is unchanged: untrusted input still never throws (invariant 4), and a string at runtime still returns `invalid_key`. Rejected: `unknown`, which hides a string secret until runtime.
+
+### Approved by the maintainer (2026-11-16)
+
+25. **`importKeyPair` loads a key pair from one private JWK.** It runs `importPrivateKey`'s checks, derives the public key from the same JWK's public members, and returns `invalid_key` unless the public key verifies a fixed message the private key signed. An application that stores its signing key with `exportPrivateJwk` otherwise had to store a second, public JWK and pair the two halves itself, as `@codenhub/oidc`'s provider docs show, with nothing to check they belong together: a mismatched pair issues ID tokens nobody can verify. Node.js rejects mismatched halves at import already; the probe covers engines that do not. Rejected: letting `importPublicKey` strip private members, against invariant 8; leaving the pairing to the application, for the mismatch above.

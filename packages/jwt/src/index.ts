@@ -36,6 +36,7 @@ export {
   exportSecretJwk,
   generateKeyPair,
   generateSecretKey,
+  importKeyPair,
   importPrivateKey,
   importPublicKey,
   importSecretKey,

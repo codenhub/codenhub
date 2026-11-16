@@ -9,7 +9,7 @@ JwtKit signs and verifies JSON Web Tokens with Web Crypto, imports and exports J
 
 ES256, EdDSA, Ed25519, RS256, PS256 and HS256 are supported, with no dependencies.
 
-> **Experimental:** 0.0.1, before its first minor release. Function names, option names, issue codes and their `params` may still change before 0.1.0; the security behavior above will not be weakened.
+> **Experimental:** no real application has run on this API yet. Function names, option names, issue codes and their `params` are meant to hold, but a real consumer may still show that one of them must change; a breaking change ships in a new minor version, and the [changelog](docs/changelog/index.md) lists it with its migration. The security behavior above will not be weakened.
 
 ## Installation
 
@@ -112,11 +112,12 @@ fetches; // 1
 - [Key sets](docs/key-sets.md)
 - [Issues](docs/errors.md)
 - [API reference](docs/reference/index.md)
+- [Changelog](docs/changelog/index.md)
 
 ## Requirements
 
-- Node.js 24 or newer, or another runtime with Web Crypto, `TextEncoder` and `TextDecoder`, plus `fetch`, `AbortController` and `setTimeout` for remote key sets. No Node.js API is used, so browsers, Deno, Bun and Cloudflare Workers work too.
-- `EdDSA` and `Ed25519` need Web Crypto's Ed25519 support: Node.js 24, Chrome 137, Firefox 129 or Safari 17.
+- Node.js 26 or newer, or another runtime with Web Crypto, `TextEncoder` and `TextDecoder`, plus `fetch`, `AbortController` and `setTimeout` for remote key sets. No Node.js API is used, so browsers, Deno, Bun and Cloudflare Workers work too.
+- `EdDSA` and `Ed25519` need Web Crypto's Ed25519 support: Node.js 26, Chrome 137, Firefox 129 or Safari 17.
 - ESM-aware package resolution. The package is ESM only and marked `sideEffects: false`.
 
 ## Notes

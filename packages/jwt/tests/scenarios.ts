@@ -158,6 +158,49 @@ const jwkRoundtrips = Object.fromEntries(
   ]),
 );
 
+/** The public members of each key type, which `importKeyPair` must find to belong to the private ones. */
+const PUBLIC_MEMBERS: Readonly<Record<(typeof ASYMMETRIC)[number], readonly string[]>> = {
+  ES256: ["x", "y"],
+  EdDSA: ["x"],
+  Ed25519: ["x"],
+  RS256: ["n"],
+  PS256: ["n"],
+};
+
+const keyPairImports = Object.fromEntries(
+  ASYMMETRIC.map((alg): [string, Scenario] => [
+    `${alg} key pair import from one private JWK, refusing mismatched halves`,
+    async (module, options) => {
+      const pair = await generatePair(module, alg, options, true);
+      const privateJwk = await module.exportPrivateJwk(pair.privateKey);
+      const imported = await module.importKeyPair(privateJwk, { alg });
+      check(imported.ok, "key pair import failed", imported);
+      if (imported.ok) {
+        // Each imported half works with the matching original half.
+        await expectVerified(
+          module,
+          await module.sign({ payload: PAYLOAD, key: imported.value.privateKey }),
+          pair.publicKey,
+          alg,
+        );
+        await expectVerified(
+          module,
+          await module.sign({ payload: PAYLOAD, key: pair.privateKey }),
+          imported.value.publicKey,
+          alg,
+        );
+      }
+      const other = await module.exportPrivateJwk((await generatePair(module, alg, options, true)).privateKey);
+      const mixed = {
+        ...privateJwk,
+        ...Object.fromEntries(PUBLIC_MEMBERS[alg].map((name) => [name, other[name as keyof jwt.Jwk]])),
+      };
+      const refused = await module.importKeyPair(mixed, { alg });
+      check(!refused.ok && refused.error.issues[0]?.code === "invalid_key", "mismatched halves were accepted", refused);
+    },
+  ]),
+);
+
 /*
  * Ed25519 keys whose `d` or `x` starts with a zero byte, the keys Linux WebKit's libgcrypt backend cannot
  * generate (packages/jwt/AGENTS.md). Imported from a JWK they must still sign and verify. Test keys only.
@@ -218,6 +261,7 @@ export const scenarios: Readonly<Record<string, Scenario>> = {
   ...jwkRoundtrips,
   ...tamperedSignatures,
   ...leadingZeroImports,
+  ...keyPairImports,
   "alg none is refused": async (module, options) => {
     const { verifying } = await keysFor(module, "HS256", options);
     const token = `${encodeSegment('{"alg":"none"}')}.${encodeSegment('{"sub":"admin"}')}.AAAA`;

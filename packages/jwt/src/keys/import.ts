@@ -9,6 +9,7 @@ import type {
   SymmetricAlgorithm,
 } from "../core/types";
 import { ALGORITHM_PARAMS } from "./algorithms";
+import type { KeyPair } from "./generate";
 import { checkJwk, HS256_SIGNATURE_BYTES, MIN_HMAC_KEY_BYTES, type KeyRole } from "./jwk";
 import { readExtractable, readKid, requireAsymmetricAlg, requireOptions, requireSymmetricAlg } from "./options";
 import { kidMember, registerKey } from "./registry";
@@ -117,6 +118,80 @@ export async function importPrivateKey(jwk: unknown, options: ImportPrivateKeyOp
     extractable: isExtractable,
   }));
 }
+
+/**
+ * Imports an untrusted private JWK as a key pair bound to one algorithm: the private key, and the public
+ * key taken from the same JWK's public members.
+ *
+ * @remarks
+ * The checks of {@link importPrivateKey} apply. The pair is proved to match before it is returned: the
+ * private key signs a fixed message and the public key must verify it, so a JWK whose public members
+ * belong to another key fails. Use it to load a signing key stored with {@link exportPrivateJwk}, and
+ * publish `exportPublicJwk(pair.publicKey)` without storing a second JWK.
+ *
+ * @example
+ * ```ts
+ * const result = await importKeyPair(storedPrivateJwk, { alg: "ES256" });
+ * if (!result.ok) throw new Error("The signing key could not be imported.");
+ * const { privateKey, publicKey } = result.value;
+ * ```
+ *
+ * @param jwk - The private JWK, typically parsed from JSON. Any value is accepted.
+ * @param options - The algorithm to bind both keys to, and whether the private key may be exported again.
+ * @returns The frozen pair, both keys carrying the JWK's `kid`, or a failure with one issue: the issues
+ * {@link importPrivateKey} returns, and `invalid_key` without a path when the public members do not
+ * belong to the private key. Issues never contain JWK values. Never throws for any `jwk`.
+ * @throws TypeError when `options` is not an object, `options.alg` is not an asymmetric algorithm, or
+ * `options.extractable` is not a boolean.
+ */
+export async function importKeyPair(jwk: unknown, options: ImportPrivateKeyOptions): Promise<JwtResult<KeyPair>> {
+  const checked = requireOptions(options, "importKeyPair");
+  const alg = requireAsymmetricAlg(checked, "importKeyPair");
+  const isExtractable = readExtractable(checked, "importKeyPair");
+  const material = checkJwk(jwk, alg, "private");
+  if ("code" in material) {
+    return fail(material);
+  }
+  const params = ALGORITHM_PARAMS[alg];
+  // Signed once to prove the two halves belong together. Built here, not at module level, so bundles
+  // that never call this function can drop it.
+  const probe = new Uint8Array([0x6a, 0x77, 0x74]);
+  const publicJwk: JsonWebKey = { ...material.importJwk };
+  for (const name of PRIVATE_MEMBERS) {
+    delete publicJwk[name];
+  }
+  let privateCryptoKey: CryptoKey;
+  let publicCryptoKey: CryptoKey;
+  try {
+    privateCryptoKey = await crypto.subtle.importKey("jwk", material.importJwk, params.importParams, isExtractable, [
+      "sign",
+    ]);
+    publicCryptoKey = await crypto.subtle.importKey("jwk", publicJwk, params.importParams, true, ["verify"]);
+    const signature = await crypto.subtle.sign(params.signParams, privateCryptoKey, probe);
+    if (!(await crypto.subtle.verify(params.signParams, publicCryptoKey, signature, probe))) {
+      return fail({ code: "invalid_key" });
+    }
+  } catch {
+    // Web Crypto rejects material it cannot use, such as a point off the curve; its message may quote it.
+    return fail({ code: "invalid_key" });
+  }
+  const entry = { signatureLength: material.signatureLength };
+  return ok(
+    Object.freeze({
+      privateKey: registerKey<PrivateKey>(
+        { kind: "private", alg, ...kidMember(material.kid), extractable: isExtractable },
+        { ...entry, cryptoKey: privateCryptoKey },
+      ),
+      publicKey: registerKey<PublicKey>(
+        { kind: "public", alg, ...kidMember(material.kid) },
+        { ...entry, cryptoKey: publicCryptoKey },
+      ),
+    }),
+  );
+}
+
+/** Members that hold private material in an asymmetric JWK, removed to derive its public half. */
+const PRIVATE_MEMBERS = ["d", "p", "q", "dp", "dq", "qi"] as const;
 
 /**
  * Imports an HMAC secret, given as raw bytes or as an untrusted `oct` JWK, bound to one algorithm.

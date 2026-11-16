@@ -16,6 +16,7 @@ export {
   type RsaModulusLength,
 } from "./generate";
 export {
+  importKeyPair,
   importPrivateKey,
   importPublicKey,
   importSecretKey,
