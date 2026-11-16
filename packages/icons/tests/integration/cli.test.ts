@@ -164,6 +164,16 @@ describe("build", () => {
     expect(await readOutput("public/css/icons.css")).toContain(".ic-lucide-heart");
   });
 
+  it("does not read its previous output when --content matches it", async () => {
+    expect(await build("build", "-c", "**/*.{html,css}", "-o", "public/icons.css")).toBe(0);
+    await writeFile(path.join(project, "src", "index.html"), '<i class="ic-lucide-star"></i>\n');
+    stderr = [];
+
+    expect(await build("build", "-c", "**/*.{html,css}", "-o", "public/icons.css")).toBe(0);
+    expect(stderr).toEqual([]);
+    expect(await readOutput("public/icons.css")).not.toContain(".ic-lucide-heart");
+  });
+
   it("warns once on the classes that resolve to no icon, and still writes", async () => {
     await writeFile(
       path.join(project, "src", "index.html"),
