@@ -431,12 +431,13 @@
         "scanFiles": {
           "files": {
             "dist/scan/src/index.js": {
-              "bytes": 887,
+              "bytes": 999,
               "declarations": {
                 "findFiles": 213,
                 "resolveEntry": 196,
                 "UnmatchedEntryError": 194,
-                "readEach": 109,
+                "readEach": 114,
+                "namingFile": 107,
                 "isFileOrUnknown": 90,
                 "readFiles": 60,
                 "GLOB_CHARACTERS": 15,
@@ -458,8 +459,8 @@
               "bytes": 71
             }
           },
-          "gzip": 752,
-          "minified": 1369
+          "gzip": 810,
+          "minified": 1481
         },
         "scanIconClasses": {
           "files": {
@@ -573,12 +574,13 @@
           }
         },
         "dist/scan/src/index.js": {
-          "bytes": 889,
+          "bytes": 1003,
           "declarations": {
-            "findFiles": 213,
-            "resolveEntry": 197,
+            "findFiles": 214,
+            "resolveEntry": 198,
             "UnmatchedEntryError": 194,
-            "readEach": 109,
+            "readEach": 114,
+            "namingFile": 107,
             "isFileOrUnknown": 91,
             "readFiles": 60,
             "GLOB_CHARACTERS": 15,
@@ -635,9 +637,9 @@
           }
         }
       },
-      "gzip": 5057,
-      "minified": 13598,
-      "sha256": "9d63552e8d2c73f6818eb239a9ae7a5b479217540fc9b7e19273fd6562469cf8"
+      "gzip": 5112,
+      "minified": 13712,
+      "sha256": "224ffb3e614e2fab384a43e5e0a3b01d68a877552e57b6fc3ac804b8ca0af2de"
     },
     "./tailwind": {
       "exports": {
@@ -1102,11 +1104,11 @@
         "default": {
           "files": {
             "dist/generator/css-generator.js": {
-              "bytes": 2689,
+              "bytes": 2691,
               "declarations": {
                 "generateBaseCss": 1117,
-                "generateIconSetCss": 818,
-                "generateIconCss": 340,
+                "generateIconSetCss": 819,
+                "generateIconCss": 341,
                 "escapeSelectorClass": 255,
                 "renderMaskSvg": 92,
                 "renderBrandPaint": 67
@@ -1129,8 +1131,8 @@
                 "overridePaintAttributes": 343,
                 "overridePaint": 182,
                 "escapeAttributeValue": 110,
-                "renderAttributes": 100,
-                "setStrokeWidth": 78,
+                "renderAttributes": 101,
+                "setStrokeWidth": 77,
                 "UNPAINTED_CONTAINERS": 66,
                 "isSafeAttributeName": 48,
                 "OPENING_OR_CLOSING_TAG": 43,
@@ -1160,12 +1162,13 @@
               "bytes": 1007
             },
             "dist/scan/src/index.js": {
-              "bytes": 887,
+              "bytes": 999,
               "declarations": {
                 "findFiles": 213,
                 "resolveEntry": 196,
                 "UnmatchedEntryError": 194,
-                "readEach": 109,
+                "readEach": 114,
+                "namingFile": 107,
                 "isFileOrUnknown": 90,
                 "readFiles": 60,
                 "GLOB_CHARACTERS": 15,
@@ -1217,17 +1220,17 @@
               }
             }
           },
-          "gzip": 4708,
-          "minified": 12117
+          "gzip": 4760,
+          "minified": 12231
         },
         "postcssIcons": {
           "files": {
             "dist/generator/css-generator.js": {
-              "bytes": 2689,
+              "bytes": 2691,
               "declarations": {
                 "generateBaseCss": 1117,
-                "generateIconSetCss": 818,
-                "generateIconCss": 340,
+                "generateIconSetCss": 819,
+                "generateIconCss": 341,
                 "escapeSelectorClass": 255,
                 "renderMaskSvg": 92,
                 "renderBrandPaint": 67
@@ -1250,8 +1253,8 @@
                 "overridePaintAttributes": 343,
                 "overridePaint": 182,
                 "escapeAttributeValue": 110,
-                "renderAttributes": 100,
-                "setStrokeWidth": 78,
+                "renderAttributes": 101,
+                "setStrokeWidth": 77,
                 "UNPAINTED_CONTAINERS": 66,
                 "isSafeAttributeName": 48,
                 "OPENING_OR_CLOSING_TAG": 43,
@@ -1281,12 +1284,13 @@
               "bytes": 1012
             },
             "dist/scan/src/index.js": {
-              "bytes": 887,
+              "bytes": 999,
               "declarations": {
                 "findFiles": 213,
                 "resolveEntry": 196,
                 "UnmatchedEntryError": 194,
-                "readEach": 109,
+                "readEach": 114,
+                "namingFile": 107,
                 "isFileOrUnknown": 90,
                 "readFiles": 60,
                 "GLOB_CHARACTERS": 15,
@@ -1338,8 +1342,8 @@
               }
             }
           },
-          "gzip": 4710,
-          "minified": 12122
+          "gzip": 4762,
+          "minified": 12236
         },
         "postcssIconsPlugin": {
           "files": {
@@ -1371,8 +1375,8 @@
                 "overridePaintAttributes": 343,
                 "overridePaint": 182,
                 "escapeAttributeValue": 110,
-                "renderAttributes": 100,
-                "setStrokeWidth": 78,
+                "renderAttributes": 101,
+                "setStrokeWidth": 77,
                 "UNPAINTED_CONTAINERS": 66,
                 "isSafeAttributeName": 48,
                 "OPENING_OR_CLOSING_TAG": 43,
@@ -1402,12 +1406,13 @@
               "bytes": 1019
             },
             "dist/scan/src/index.js": {
-              "bytes": 887,
+              "bytes": 999,
               "declarations": {
                 "findFiles": 213,
                 "resolveEntry": 196,
                 "UnmatchedEntryError": 194,
-                "readEach": 109,
+                "readEach": 114,
+                "namingFile": 107,
                 "isFileOrUnknown": 90,
                 "readFiles": 60,
                 "GLOB_CHARACTERS": 15,
@@ -1423,10 +1428,10 @@
               }
             },
             "dist/postcss/plugin.js": {
-              "bytes": 729,
+              "bytes": 731,
               "declarations": {
-                "postcssIcons": 551,
-                "createRegistry": 148,
+                "postcssIcons": 552,
+                "createRegistry": 149,
                 "(top level)": 25,
                 "postcssIconsPlugin": 5
               }
@@ -1460,8 +1465,8 @@
               }
             }
           },
-          "gzip": 4714,
-          "minified": 12140
+          "gzip": 4770,
+          "minified": 12254
         }
       },
       "files": {
@@ -1487,13 +1492,13 @@
           }
         },
         "dist/core/render.js": {
-          "bytes": 1550,
+          "bytes": 1552,
           "declarations": {
-            "renderSvg": 438,
+            "renderSvg": 439,
             "overridePaintAttributes": 343,
             "overridePaint": 182,
             "escapeAttributeValue": 110,
-            "renderAttributes": 100,
+            "renderAttributes": 101,
             "setStrokeWidth": 77,
             "UNPAINTED_CONTAINERS": 66,
             "isSafeAttributeName": 48,
@@ -1524,12 +1529,13 @@
           }
         },
         "dist/scan/src/index.js": {
-          "bytes": 887,
+          "bytes": 999,
           "declarations": {
             "findFiles": 213,
             "resolveEntry": 196,
             "UnmatchedEntryError": 194,
-            "readEach": 109,
+            "readEach": 114,
+            "namingFile": 107,
             "isFileOrUnknown": 90,
             "readFiles": 60,
             "GLOB_CHARACTERS": 15,
@@ -1545,20 +1551,20 @@
           }
         },
         "dist/postcss/plugin.js": {
-          "bytes": 729,
+          "bytes": 731,
           "declarations": {
-            "postcssIcons": 551,
-            "createRegistry": 148,
+            "postcssIcons": 552,
+            "createRegistry": 149,
             "(top level)": 25,
             "postcssIconsPlugin": 5
           }
         },
         "dist/core/class-names.js": {
-          "bytes": 496,
+          "bytes": 494,
           "declarations": {
-            "resolveIconClassName": 234,
+            "resolveIconClassName": 233,
             "parseIconClass": 143,
-            "isMotionName": 62,
+            "isMotionName": 61,
             "STROKE_MODIFIER": 26,
             "RESERVED_MOTION_NAMES": 25,
             "(top level)": 6
@@ -1582,9 +1588,9 @@
           }
         }
       },
-      "gzip": 4724,
-      "minified": 12171,
-      "sha256": "d47a58930803818781ecc4a808ca91c16093ed53055fdb09be3594bce06eb5d0"
+      "gzip": 4780,
+      "minified": 12285,
+      "sha256": "19ce74b27746434c16c48793317c5aa650af9f5e44e1a3c8794136613918244c"
     },
     "./vite": {
       "exports": {
@@ -1631,9 +1637,9 @@
               }
             },
             "dist/generator/css-generator.js": {
-              "bytes": 2698,
+              "bytes": 2699,
               "declarations": {
-                "generateBaseCss": 1118,
+                "generateBaseCss": 1119,
                 "generateIconSetCss": 822,
                 "generateIconCss": 342,
                 "escapeSelectorClass": 256,
@@ -1689,12 +1695,13 @@
               }
             },
             "dist/scan/src/index.js": {
-              "bytes": 887,
+              "bytes": 999,
               "declarations": {
                 "findFiles": 213,
                 "resolveEntry": 196,
                 "UnmatchedEntryError": 194,
-                "readEach": 109,
+                "readEach": 114,
+                "namingFile": 107,
                 "isFileOrUnknown": 90,
                 "readFiles": 60,
                 "GLOB_CHARACTERS": 15,
@@ -1702,10 +1709,10 @@
               }
             },
             "dist/generator/motion.js": {
-              "bytes": 843,
+              "bytes": 844,
               "declarations": {
                 "ICON_MOTIONS": 680,
-                "motionRestSelector": 157,
+                "motionRestSelector": 158,
                 "(top level)": 6
               }
             },
@@ -1738,8 +1745,8 @@
               }
             }
           },
-          "gzip": 7900,
-          "minified": 20317
+          "gzip": 7949,
+          "minified": 20431
         },
         "viteIcons": {
           "files": {
@@ -1784,9 +1791,9 @@
               }
             },
             "dist/generator/css-generator.js": {
-              "bytes": 2698,
+              "bytes": 2699,
               "declarations": {
-                "generateBaseCss": 1118,
+                "generateBaseCss": 1119,
                 "generateIconSetCss": 822,
                 "generateIconCss": 342,
                 "escapeSelectorClass": 256,
@@ -1842,12 +1849,13 @@
               }
             },
             "dist/scan/src/index.js": {
-              "bytes": 887,
+              "bytes": 999,
               "declarations": {
                 "findFiles": 213,
                 "resolveEntry": 196,
                 "UnmatchedEntryError": 194,
-                "readEach": 109,
+                "readEach": 114,
+                "namingFile": 107,
                 "isFileOrUnknown": 90,
                 "readFiles": 60,
                 "GLOB_CHARACTERS": 15,
@@ -1855,10 +1863,10 @@
               }
             },
             "dist/generator/motion.js": {
-              "bytes": 843,
+              "bytes": 844,
               "declarations": {
                 "ICON_MOTIONS": 680,
-                "motionRestSelector": 157,
+                "motionRestSelector": 158,
                 "(top level)": 6
               }
             },
@@ -1891,8 +1899,8 @@
               }
             }
           },
-          "gzip": 7903,
-          "minified": 20319
+          "gzip": 7951,
+          "minified": 20433
         },
         "viteIconsPlugin": {
           "files": {
@@ -1938,9 +1946,9 @@
               }
             },
             "dist/generator/css-generator.js": {
-              "bytes": 2698,
+              "bytes": 2699,
               "declarations": {
-                "generateBaseCss": 1118,
+                "generateBaseCss": 1119,
                 "generateIconSetCss": 822,
                 "generateIconCss": 342,
                 "escapeSelectorClass": 256,
@@ -1996,12 +2004,13 @@
               }
             },
             "dist/scan/src/index.js": {
-              "bytes": 887,
+              "bytes": 999,
               "declarations": {
                 "findFiles": 213,
                 "resolveEntry": 196,
                 "UnmatchedEntryError": 194,
-                "readEach": 109,
+                "readEach": 114,
+                "namingFile": 107,
                 "isFileOrUnknown": 90,
                 "readFiles": 60,
                 "GLOB_CHARACTERS": 15,
@@ -2009,10 +2018,10 @@
               }
             },
             "dist/generator/motion.js": {
-              "bytes": 843,
+              "bytes": 844,
               "declarations": {
                 "ICON_MOTIONS": 680,
-                "motionRestSelector": 157,
+                "motionRestSelector": 158,
                 "(top level)": 6
               }
             },
@@ -2045,8 +2054,8 @@
               }
             }
           },
-          "gzip": 7913,
-          "minified": 20337
+          "gzip": 7962,
+          "minified": 20451
         }
       },
       "files": {
@@ -2092,9 +2101,9 @@
           }
         },
         "dist/generator/css-generator.js": {
-          "bytes": 2698,
+          "bytes": 2699,
           "declarations": {
-            "generateBaseCss": 1118,
+            "generateBaseCss": 1119,
             "generateIconSetCss": 822,
             "generateIconCss": 342,
             "escapeSelectorClass": 256,
@@ -2150,12 +2159,13 @@
           }
         },
         "dist/scan/src/index.js": {
-          "bytes": 887,
+          "bytes": 999,
           "declarations": {
             "findFiles": 213,
             "resolveEntry": 196,
             "UnmatchedEntryError": 194,
-            "readEach": 109,
+            "readEach": 114,
+            "namingFile": 107,
             "isFileOrUnknown": 90,
             "readFiles": 60,
             "GLOB_CHARACTERS": 15,
@@ -2163,10 +2173,10 @@
           }
         },
         "dist/generator/motion.js": {
-          "bytes": 843,
+          "bytes": 844,
           "declarations": {
             "ICON_MOTIONS": 680,
-            "motionRestSelector": 157,
+            "motionRestSelector": 158,
             "(top level)": 6
           }
         },
@@ -2199,9 +2209,9 @@
           }
         }
       },
-      "gzip": 7924,
-      "minified": 20365,
-      "sha256": "e27d926674072b03427e7b1fe7e0d029077dab3796ae1243c1b5d586f9ed41dd"
+      "gzip": 7972,
+      "minified": 20479,
+      "sha256": "c3bd8c41bf2c4e523bcb85bdc086acaa7170b72723f9af55a473d8e92d0284f6"
     }
   }
 }
