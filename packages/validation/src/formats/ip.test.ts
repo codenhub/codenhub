@@ -94,6 +94,8 @@ describe("ip", () => {
       expect(
         accepts(ip({ version: "v6" }), "fe80::1%", "fe80::1%a b", "fe80::1%a%b", "fec0::1%eth0", "ff02::1%eth0"),
       ).toEqual(Array(5).fill(false));
+      // A zone is held to 64 characters, so the text `ip` accepts is bounded, as `audit` takes it to be.
+      expect(accepts(ip(), `fe80::1%${"a".repeat(64)}`, `fe80::1%${"a".repeat(65)}`)).toEqual([true, false]);
       // A leading `::` stands for zero groups, so these start with 0, not with the fe80 written later.
       expect(accepts(ip({ version: "v6" }), "::fe80:1%eth0", "::fe80%eth0", "::ffff:fe80:1.2.3.4%eth0")).toEqual(
         Array(3).fill(false),

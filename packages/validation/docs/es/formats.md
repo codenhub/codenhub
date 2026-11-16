@@ -2,7 +2,7 @@
 title: Formatos
 description: Direcciones de correo, URL, nombres de dominio, direcciones IP, fechas, horas y los demás formatos de cadena, lo que acepta cada uno y el valor que produce.
 order: 7
-source: c7ac3a6cc026acb51abe10d97ea9a7bef0955734
+source: bc4cd048973800f658b8a2be5f8b2856aaf40e52
 ---
 
 # Formatos
@@ -231,7 +231,7 @@ Las direcciones que acepta:
 
 - IPv4 son cuatro partes decimales de 0 a 255, sin ceros a la izquierda, que algunos parsers leen como octal.
 - IPv6 se escribe como lo permite el RFC 4291: ocho grupos de uno a cuatro dígitos hexadecimales, con una secuencia de grupos de ceros abreviada como `::`, y una dirección IPv4 en lugar de los dos últimos grupos, como en `::ffff:192.0.2.1`, cuyas partes siguen la regla de IPv4.
-- Una zona como `%eth0` se acepta solo después de una dirección link-local (`fe80::/10`). Después de cualquier otra dirección falla, incluida una multicast con ámbito como `ff02::1%eth0`.
+- Una zona como `%eth0` se acepta solo después de una dirección link-local (`fe80::/10`). Después de cualquier otra dirección falla, incluida una multicast con ámbito como `ff02::1%eth0`. Una zona tiene como máximo 64 caracteres, así que el texto que acepta `ip` sigue acotado.
 
 Una dirección IPv4 tiene una sola escritura, y se produce tal como está escrita. Una dirección IPv6 se produce en su forma canónica, para que una dirección sea una sola cadena:
 

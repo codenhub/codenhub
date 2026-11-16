@@ -4,8 +4,12 @@ import { IPV4_PATTERN } from "./patterns";
 import { formatted, stringFormat } from "./text-format";
 
 const IPV6_GROUP_PATTERN = /^[0-9a-f]{1,4}$/i;
-/** A zone names a network interface, such as `eth0`. */
-const IPV6_ZONE_PATTERN = /^[0-9a-z._~-]+$/i;
+/**
+ * A zone names a network interface, such as `eth0`. Its length is held to 64 characters so the text `ip`
+ * accepts stays bounded, as `audit` takes it to be: Linux names an interface in at most 15, and Windows
+ * by a number.
+ */
+const IPV6_ZONE_PATTERN = /^[0-9a-z._~-]{1,64}$/i;
 const IPV6_GROUPS = 8;
 /** The first group of a link-local address, `fe80::/10`, once masked to its top ten bits. */
 const LINK_LOCAL_PREFIX = 0xfe80;
