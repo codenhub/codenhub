@@ -7,10 +7,10 @@ This product includes software developed by Coden Agency.
 Third-Party Software Notices and Licenses:
 ========================================================================
 
-This product contains CSS from Tailwind CSS (https://tailwindcss.com): the
-files in `src/base/`, which hold Tailwind's theme values, Preflight, and
-property registrations, and the parts of every compiled stylesheet built from
-them. Tailwind CSS is licensed under the MIT License:
+This product contains CSS from Tailwind CSS (https://tailwindcss.com):
+Tailwind's theme values, Preflight, and property registrations, carried in the
+compiled stylesheets in `dist/`, and its property registrations in
+`tw/theme.css`. Tailwind CSS is licensed under the MIT License:
 
 MIT License
 
