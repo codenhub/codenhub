@@ -126,7 +126,7 @@ describe("file", () => {
     expect(audit(object({ avatar: optional(file({ maxSize: 1 })) }))).toEqual([]);
   });
 
-  it("should give the same answer with and without the fast path of an object", () => {
+  it("should hold its size and types inside an object", () => {
     const form = object({ avatar: file({ maxSize: 2, types: ["text/plain"] }) });
     expect(
       accepts(form, { avatar: sized(1, "text/plain") }, { avatar: sized(3, "text/plain") }, { avatar: "x" }),
