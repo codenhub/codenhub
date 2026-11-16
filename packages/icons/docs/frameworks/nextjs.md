@@ -6,11 +6,11 @@ order: 2
 
 # Next.js
 
-Next.js builds with webpack or Turbopack, not Vite, so `@codenhub/icons/vite` does not apply. Three methods do. All of them produce plain CSS, so the App Router, React Server Components, and streaming are unaffected.
+Next.js builds with webpack or Turbopack rather than Vite, so `@codenhub/icons/vite` sits this one out. The other three delivery methods all work as expected — and because all three produce plain CSS, the App Router, React Server Components, and streaming are completely unaffected.
 
 ## Tailwind CSS v4
 
-If the project uses Tailwind v4 through `@tailwindcss/postcss`, add one import to your global stylesheet:
+If your Next.js app already runs Tailwind v4 through `@tailwindcss/postcss`, one import in your global stylesheet covers everything:
 
 ```css
 /* app/globals.css */
@@ -22,7 +22,7 @@ Only the icons your markup uses are emitted. See [Tailwind CSS](../delivery/tail
 
 ## PostCSS plugin
 
-Add the plugin to `postcss.config.mjs` and give it globs for wherever icon classes are written — it scans the stylesheet text and `content` only, with no view of the module graph:
+Without Tailwind, register the PostCSS plugin in `postcss.config.mjs` and pass `content` globs covering every directory where icon classes live — PostCSS inspects only the stylesheet text and `content`, with no visibility into the module graph:
 
 ```js
 import lucide from "@codenhub/icons/data/lucide";
@@ -43,7 +43,7 @@ Keep `@import "@codenhub/icons";` at the top of `app/globals.css` for the base r
 
 ## Plain CSS
 
-The simplest option, at the cost of stylesheet size:
+Zero config and no PostCSS plugin, trading stylesheet size for simplicity:
 
 ```css
 /* app/globals.css */
@@ -57,3 +57,5 @@ See [Plain CSS](../delivery/plain-css.md).
 
 - [Delivery methods](../delivery/index.md) — how the methods compare.
 - [Concepts](../concepts.md) — name resolution and the markup forms.
+- [SvelteKit](sveltekit.md) — the Vite-based counterpart, if you want to compare setups.
+- [JavaScript API](../javascript-api.md) — next on the reading path, for programmatic CSS or SVG generation.

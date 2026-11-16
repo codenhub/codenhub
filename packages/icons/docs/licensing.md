@@ -6,11 +6,13 @@ order: 5
 
 # Licensing and attribution
 
-Every bundled, generated family ships the license text and attribution notice its artwork requires; those files travel with the package whatever a build does. A third-party set adopted through `adoptIconifySet` is not covered by that promise — bring your own licensing material for it.
+This page explains what your build owes for the icon artwork it ships, how the `attribution` option works, how each delivery method carries the required notice, and what trademark constraints apply to brand icons.
+
+Every bundled, generated family ships the license text and attribution notice its artwork requires; those files travel with the package regardless of what a build outputs. A third-party set adopted through `adoptIconifySet` is not covered by that guarantee — supply its license and attribution material yourself.
 
 ## Attribution modes
 
-What reaches your own output is the `attribution` option:
+The `attribution` option controls how license notices reach your build output:
 
 | Mode             | Behavior                                                                                                                                                                            |
 | ---------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -20,7 +22,7 @@ What reaches your own output is the `attribution` option:
 
 ## How the notice travels
 
-The vehicle differs by delivery method, because not every method can carry a comment:
+Each delivery method carries the notice through a mechanism that its pipeline supports:
 
 | Method             | How the notice travels                                                                                    |
 | ------------------ | --------------------------------------------------------------------------------------------------------- |
@@ -30,27 +32,31 @@ The vehicle differs by delivery method, because not every method can carry a com
 | Tailwind `@plugin` | A `--ic-attribution-<family>` custom property on `:root`, one per family the build used.                  |
 | Plain CSS          | A `/*! … */` banner opening each family stylesheet you imported.                                          |
 
-`@import "@codenhub/icons/tw"` inlines a static file, so it carries an ordinary `/*! … */` banner. That file makes every bundled family resolvable except brand families, so the banner names the rest — a superset notice, which is always safe. Declaring the plugin yourself with `@plugin "@codenhub/icons/tailwind"` narrows resolution, and there the notice is a `--ic-attribution-<family>` custom property instead: Tailwind's plugin API builds declarations, not comments, and the property is emitted the first time a family produces a utility, so the output carries notices for the artwork it actually shipped and no other.
+`@import "@codenhub/icons/tw"` inlines a static file, so it carries an ordinary `/*! … */` banner. Because that file makes every bundled family resolvable except brand families, the banner names all of those core families — a superset notice, which satisfies the license requirement safely. Declaring the plugin yourself with `@plugin "@codenhub/icons/tailwind"` narrows resolution, and there the notice is emitted as a `--ic-attribution-<family>` custom property instead: Tailwind's plugin API generates CSS declarations rather than comments, and the property is emitted the first time a family produces a utility, so the output carries notices only for the artwork it actually shipped.
 
 ## Obligation levels
 
-Obligations come in three levels, because permissive is not the same as free of obligation:
+Permissive licenses still carry different distribution requirements, grouped into three levels:
 
-- `none` — public-domain dedications. Nothing is owed.
-- `notice` — MIT, ISC, Apache-2.0. The notice must travel with distributed output, which `auto` and `file` handle for you.
-- `credit` — CC-BY and similar. The author must be credited visibly.
+- **`none`** — public-domain dedications. Nothing is owed in distributed output.
+- **`notice`** — MIT, ISC, and Apache-2.0. The copyright and license notice must accompany distributed output, which `auto` and `file` handle automatically.
+- **`credit`** — CC-BY and similar licenses. The author must be credited visibly.
 
-Every bundled family except `simple-icons` and `logos` is `core` tier, meaning `none` or `notice`, so a default build satisfies every obligation automatically. A minifier configured with `legalComments: "none"` strips CSS comments, which is what `file` mode exists for.
+Every bundled family except `simple-icons` and `logos` belongs to the `core` tier, meaning its obligation level is `none` or `notice`, so a default build satisfies its license terms automatically. Note that a minifier configured with `legalComments: "none"` strips CSS comments, including `/*! … */` banners; use `attribution: "file"` in Vite, or preserve legal comments in your minifier config.
 
-A set adopted through `adoptIconifySet` is `extended` tier — you remain responsible for its license terms and attribution material. See [JavaScript API](javascript-api.md).
+A set adopted through `adoptIconifySet` belongs to the `extended` tier — you remain responsible for complying with its license terms and providing its attribution material. See [JavaScript API](javascript-api.md).
 
 ## Brand families
 
-`simple-icons` and `logos` are `brand` tier: one-color logos from [Simple Icons](https://simpleicons.org) and full-color logos from [gilbarbara/logos](https://github.com/gilbarbara/logos), both dedicated to the public domain under CC0. Neither owes a license notice, but a logo is a trademark, and the trademark is not the license: using one is subject to its owner's brand guidelines, which no build setting can satisfy and the package makes no promise about.
+`simple-icons` and `logos` belong to the `brand` tier: one-color logos from [Simple Icons](https://simpleicons.org) and full-color logos from [gilbarbara/logos](https://github.com/gilbarbara/logos), both dedicated to the public domain under CC0. Neither family owes a license notice, but a logo is a trademark, and the trademark is separate from the copyright license: using a mark remains subject to its owner's brand guidelines, which no build option can satisfy or verify.
 
-- Each is opt-in. Vite and PostCSS load only the families you pass. `@codenhub/icons/tw` never resolves brand families; a declared `@plugin "@codenhub/icons/tailwind"` resolves them only when its `families` option names them.
-- Each family's notice line, wherever the build emits one, says that the marks are trademarks of their owners. `off` suppresses it without a warning, because no license requires it.
-- Simple Icons records a separate license for some icons. Those whose own license places any obligation are left out, so no icon in the family carries a recorded license obligation: each is CC0, Unlicense, or has no license recorded upstream.
-- Each icon renders in its brand colors by default, and `--ic-color` can recolor it; a full-color logo becomes a one-color silhouette. Owners' guidelines commonly allow a mark in its official color or in plain monochrome and restrict other colors; which recoloring a mark allows is the owner's call. See [Color](concepts.md#color).
-- Simple Icons removes icons when brand owners ask. An upgrade of the family across an upstream major version can remove names, and its changelog lists them.
-- gilbarbara/logos publishes no releases, so `logos` is generated from a pinned commit, and any upgrade of it can remove or rename logos; its changelog lists them. A few upstream files whose markup cannot render as a self-contained icon, such as one embedding a bitmap, are left out, and the family's `ATTRIBUTION.md` names them.
+- **Opt-in only.** Vite and PostCSS load only the families you pass. `@codenhub/icons/tw` never resolves brand families; a declared `@plugin "@codenhub/icons/tailwind"` resolves them only when its `families` option names them.
+- **Trademark notice line.** Each family's notice line, wherever the build emits one, states that the marks are trademarks of their owners. Setting `attribution: "off"` suppresses it without a warning because no license requires it.
+- **Excluded Simple Icons entries.** Simple Icons records a separate license for some icons. Icons whose own license adds any obligation are excluded, so no icon in the family carries a recorded license obligation: each is CC0, Unlicense, or has no license recorded upstream.
+- **Recoloring and guidelines.** Each brand icon renders in its brand colors by default, and `--ic-color` can recolor it; a full-color logo becomes a monochrome silhouette. Owners' guidelines commonly permit a mark in its official colors or plain monochrome and restrict arbitrary colors; check the owner's terms when recoloring a mark. See [Color](concepts.md#color).
+- **Simple Icons removals.** Simple Icons removes icons when brand owners request it. Upgrading the package across an upstream major version can remove icon names; check the changelog for removed names.
+- **Pinned `logos` source.** gilbarbara/logos publishes no releases, so `logos` is generated from a pinned commit, and upgrading it can remove or rename logos; check the changelog for changes. A few upstream files whose markup cannot render as a self-contained icon, such as files embedding a bitmap, are excluded, and the family's `ATTRIBUTION.md` lists them.
+
+## Next
+
+Read [Troubleshooting](troubleshooting.md) if an icon fails to appear, renders as a solid square, ignores stroke width, or drops its license notice.

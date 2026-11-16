@@ -6,7 +6,7 @@ order: 3
 
 # SvelteKit
 
-SvelteKit builds on Vite, and `.svelte` is one of the file types the Vite plugin auto-scans, so this is the cleanest plugin setup of any framework.
+SvelteKit builds on Vite, and `.svelte` is already on the Vite plugin's transform-time auto-scan list. After Next.js's bundler gymnastics and Astro's extra template hints, SvelteKit is the setup with almost nothing left to explain.
 
 ## Vite plugin
 
@@ -35,13 +35,14 @@ export default defineConfig({
 @import "@codenhub/icons";
 ```
 
-Classes in `.svelte` components are picked up by the transform-time scan with no `content` entry at all. Listing `src/**/*.{svelte,html}` anyway makes the first paint correct in dev, before Vite has transformed those modules. `mode: "svg"` also works on `.svelte` files.
+Classes in `.svelte` components are picked up by the transform-time scan even without a `content` entry. Listing `src/**/*.{svelte,html}` anyway keeps the first paint right in dev before Vite transforms those component modules. `mode: "svg"` also works directly on `.svelte` files.
 
 ## Other methods
 
-[Tailwind CSS v4](../delivery/tailwind.md) and [plain CSS](../delivery/plain-css.md) work in SvelteKit exactly as they do anywhere else. Vue, SolidStart, and other Vite-based frameworks follow this same setup — `.vue` is auto-scanned like `.svelte`.
+[Tailwind CSS v4](../delivery/tailwind.md) and [plain CSS](../delivery/plain-css.md) work in SvelteKit the same way they do everywhere else. Vue, SolidStart, and other Vite-based frameworks follow this exact same setup — `.vue` is auto-scanned just like `.svelte`.
 
 ## See also
 
 - [Vite plugin](../delivery/vite.md) — full option reference and the scanning model.
 - [Delivery methods](../delivery/index.md) — how the methods compare.
+- [JavaScript API](../javascript-api.md) — next on the reading path, for programmatic CSS or SVG generation.

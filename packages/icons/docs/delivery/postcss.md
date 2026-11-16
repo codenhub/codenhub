@@ -6,6 +6,8 @@ order: 4
 
 # PostCSS plugin
 
+For builds that run PostCSS without Vite or Tailwind — most often Next.js — the PostCSS plugin scans your stylesheets and `content` globs, then appends the base rules and just the mask rules your markup uses.
+
 ```ts
 import lucide from "@codenhub/icons/data/lucide";
 import postcssIcons from "@codenhub/icons/postcss";
@@ -19,7 +21,7 @@ postcssIcons({
 });
 ```
 
-It takes the same `families`, `defaultPrefix`, `prefix`, and `strokeWidth` options as the [Vite plugin](vite.md). PostCSS has no asset pipeline, so `attribution` accepts `auto` and `off` only, and there is no `mode: "svg"`.
+It shares the same `families`, `defaultPrefix`, `prefix`, and `strokeWidth` options as the [Vite plugin](vite.md). Because PostCSS has no asset pipeline of its own, `attribution` accepts `auto` and `off` only, and there is no `mode: "svg"`.
 
 | Option          | Purpose                                                            |
 | --------------- | ------------------------------------------------------------------ |
@@ -33,7 +35,7 @@ It takes the same `families`, `defaultPrefix`, `prefix`, and `strokeWidth` optio
 
 ## Scanning
 
-Unlike the Vite plugin, this plugin has no view of the bundler's module graph. When it processes a stylesheet it scans that stylesheet's own text and every path in `content`, and nothing else. List globs that cover wherever your icon classes are written — components, templates, HTML — or only classes that literally appear in the CSS will resolve:
+Unlike the Vite plugin, this plugin has no visibility into the bundler's module graph. When it runs on a stylesheet, it sees only that stylesheet's own text and the files matched by `content` — nothing else. List globs covering everywhere your icon classes live (components, templates, HTML), or only classes written literally inside your CSS will resolve:
 
 ```ts
 postcssIcons({
@@ -43,9 +45,10 @@ postcssIcons({
 });
 ```
 
-The plugin runs once per stylesheet it processes, so apply it to a single global stylesheet rather than to every CSS module.
+The plugin runs once for every stylesheet it processes, so attach it to a single global stylesheet rather than running it across every CSS module.
 
 ## See also
 
 - [Delivery methods](index.md) — how the methods compare.
+- [Frameworks](../frameworks/index.md) — next on the reading path, covering Astro, Next.js, and SvelteKit.
 - [Frameworks: Next.js](../frameworks/nextjs.md) — the main reason to reach for PostCSS over Vite.
