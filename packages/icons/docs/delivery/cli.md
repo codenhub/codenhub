@@ -51,14 +51,16 @@ Run the command again whenever your files change which icons they use, before ea
 Each option is the PostCSS plugin's, with the same default, except `--family`. The plugin resolves no family until you pass one, while the command resolves every family except `simple-icons` and `logos`, the brand families, whose marks carry their owners' trademark terms. Name a brand family to use it, along with every other family you use, since naming one replaces the default:
 
 ```sh
-chi build --content "templates/**/*.html" --output static/icons.css --family lucide --family simple-icons
+npx @codenhub/icons build --content "templates/**/*.html" --output static/icons.css --family lucide --family simple-icons
 ```
 
 `--content` reads globs as the PostCSS plugin does: relative to the folder you run the command in, with `**` for any number of folders and `{html,erb}` for either extension. A path that names an existing file is read as that file, even when its name holds a bracket, such as Next.js's `app/[id]/page.tsx`. Quote each glob, with `\"` inside a `package.json` script, so your shell does not expand it first.
 
+Write every icon class out in full in a file the command reads: a class assembled at runtime, such as `` `ic-${name}` ``, is not in the files, so its icon gets no rule and no warning. When the name comes from data, list each class it can take in full in a file under `--content`.
+
 ## Attribution
 
-With `--attribution auto`, the default, the stylesheet starts with a preserved comment carrying the license notice of each family it used, which survives minification. With `off`, it carries none, and the command warns when a family it used requires a notice, so you can ship that notice another way. [Licensing](../licensing.md) explains what each family requires.
+With `--attribution auto`, the default, the stylesheet starts with a preserved comment carrying the license notice of each family it used. A minifier keeps it unless it is set to drop legal comments, as `legalComments: "none"` is, so keep legal comments in your minifier's configuration. With `off`, it carries none, and the command warns when a family it used requires a notice, so you can ship that notice another way. [Licensing](../licensing.md) explains what each family requires.
 
 ## Failures and warnings
 

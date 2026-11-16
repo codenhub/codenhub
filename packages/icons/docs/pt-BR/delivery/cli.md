@@ -2,7 +2,7 @@
 title: Comando de build
 description: Escreve uma folha de estilos só com os ícones que os seus arquivos usam, para um projeto que não roda Tailwind CSS, Vite nem PostCSS.
 order: 5
-source: 4219722f8a2301c3ea8f4675843852c3f21f9ab7
+source: 31d4c3332f84d29527f07220bf97c5392efc13e6
 ---
 
 # Comando de build
@@ -52,14 +52,16 @@ Rode o comando de novo sempre que os seus arquivos mudarem quais ícones usam, n
 Cada opção é a do plugin do PostCSS, com o mesmo padrão, exceto `--family`. O plugin não resolve nenhuma família até você passar uma, enquanto o comando resolve todas exceto `simple-icons` e `logos`, as famílias de marcas, cujos logotipos carregam os termos de marca dos seus donos. Nomeie uma família de marcas para usá-la, junto com todas as outras famílias que você usa, já que nomear uma substitui o padrão:
 
 ```sh
-chi build --content "templates/**/*.html" --output static/icons.css --family lucide --family simple-icons
+npx @codenhub/icons build --content "templates/**/*.html" --output static/icons.css --family lucide --family simple-icons
 ```
 
 `--content` lê globs como o plugin do PostCSS: relativos à pasta onde você roda o comando, com `**` para qualquer número de pastas e `{html,erb}` para qualquer das duas extensões. Um caminho que nomeia um arquivo existente é lido como esse arquivo, mesmo quando o nome tem um colchete, como o `app/[id]/page.tsx` do Next.js. Coloque cada glob entre aspas, com `\"` dentro de um script do `package.json`, para que o seu shell não o expanda antes.
 
+Escreva cada classe de ícone por inteiro em um arquivo que o comando lê: uma classe montada em tempo de execução, como `` `ic-${name}` ``, não está nos arquivos, então o seu ícone não recebe regra nem aviso. Quando o nome vem de dados, escreva por inteiro cada classe que ele pode assumir em um arquivo sob `--content`.
+
 ## Atribuição
 
-Com `--attribution auto`, o padrão, a folha de estilos começa com um comentário preservado que carrega o aviso de licença de cada família que ela usou, e que sobrevive à minificação. Com `off`, ela não carrega nenhum, e o comando avisa quando uma família que ela usou exige um aviso, para que você distribua esse aviso de outra forma. [Licenciamento](../licensing.md) explica o que cada família exige.
+Com `--attribution auto`, o padrão, a folha de estilos começa com um comentário preservado que carrega o aviso de licença de cada família que ela usou. Um minificador o mantém, a menos que esteja configurado para remover comentários legais, como com `legalComments: "none"`, então mantenha os comentários legais na configuração do seu minificador. Com `off`, ela não carrega nenhum, e o comando avisa quando uma família que ela usou exige um aviso, para que você distribua esse aviso de outra forma. [Licenciamento](../licensing.md) explica o que cada família exige.
 
 ## Falhas e avisos
 

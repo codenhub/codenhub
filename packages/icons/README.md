@@ -56,7 +56,7 @@ export default defineConfig({
 The `chi build` command reads your files and writes a stylesheet holding the base rules and only the icons they use, for a project that runs neither Tailwind CSS, Vite, nor PostCSS. Run it from a `package.json` script, or as `npx @codenhub/icons build`, as in [Build command](docs/delivery/cli.md).
 
 ```sh
-chi build --content "app/views/**/*.erb" --output public/icons.css
+npx @codenhub/icons build --content "app/views/**/*.erb" --output public/icons.css
 ```
 
 ### The markup

@@ -1,4 +1,4 @@
-<!-- source: 965df1f1344b6de7db801484a24588f1c85f98c0 -->
+<!-- source: 223c6a8151e70d94ef3c003a214c1aed4b2feb07 -->
 
 # @codenhub/icons
 
@@ -58,7 +58,7 @@ export default defineConfig({
 El comando `chi build` lee tus archivos y escribe una hoja de estilos con las reglas base y solo los iconos que usan, para un proyecto que no ejecuta Tailwind CSS, Vite ni PostCSS. Ejecútalo desde un script de `package.json`, o como `npx @codenhub/icons build`, como en [Comando de build](docs/es/delivery/cli.md).
 
 ```sh
-chi build --content "app/views/**/*.erb" --output public/icons.css
+npx @codenhub/icons build --content "app/views/**/*.erb" --output public/icons.css
 ```
 
 ### El marcado
