@@ -1,4 +1,4 @@
-<!-- source: 62a1b7e027f501e670f63472e0655d3aa4cee8a6 -->
+<!-- source: 5fdd9b9619621fca076e48c84fb7fa48ca47f071 -->
 
 # @codenhub/icons
 
@@ -10,9 +10,6 @@ O `@codenhub/icons` entrega 15 famílias principais de ícones geradas, somando 
 
 ```sh
 pnpm add @codenhub/icons
-npm install @codenhub/icons
-yarn add @codenhub/icons
-bun add @codenhub/icons
 ```
 
 ## Uso

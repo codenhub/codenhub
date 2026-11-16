@@ -2,7 +2,7 @@
 title: API de JavaScript
 description: El registro, los renderizadores, la carga de familias bajo demanda y el adaptador para conjuntos de iconos de terceros.
 order: 4
-source: f64af0b24b731dc3d6c97dffc8ae37139abafe9b
+source: c89d2972553157d08e4acb07d7edb7118f920a12
 ---
 
 # API de JavaScript
@@ -40,13 +40,13 @@ registry.registerFamily(lucide);
 
 const classes = scanFiles(["./src/**/*.html"]);
 const { css, families } = generateIconSetCss(classes, registry);
-const banner = renderAttributionBanner(families); // undefined cuando ninguna familia usada debe un aviso
+const banner = renderAttributionBanner(families); // undefined cuando ninguna familia usada tiene una línea de aviso que imprimir
 const stylesheet = banner ? `${banner}\n${css}` : css;
 ```
 
 `scanFiles` acepta rutas de archivo literales y patrones glob, y omite en silencio cualquier archivo que no pueda leer en lugar de hacer estallar tu script por un error de permisos suelto.
 
-Si quieres una hoja de estilos completa de una familia — el mismo formato que publica `@codenhub/icons/<family>` — llama a `generateFamilyCss`. Ambos generadores de CSS emiten una propiedad `--ic-static-mask` para que la hoja de estilos base la intercambie en el reposo del hover y bajo movimiento reducido siempre que un icono proporcione `staticBody`; el registro conserva ese marcado SVG interno opcional en `ResolvedIcon`. Comparte la geometría del cuerpo animado y acepta el mismo grosor de trazo. `renderSvg`, por el contrario, conserva el `body` animado. Consulta [Familias animadas](concepts.md#familias-animadas).
+Si quieres una hoja de estilos completa de una familia — el mismo formato que publica `@codenhub/icons/<family>` — llama a `generateFamilyCss`. Para una familia de marcas, pasa `bareNames: false`, como hace su hoja de estilos publicada, para que una marca llamada como un icono base nunca reclame la clase sin prefijo de ese icono. Ambos generadores de CSS emiten una propiedad `--ic-static-mask` para que la hoja de estilos base la intercambie en el reposo del hover y bajo movimiento reducido siempre que un icono proporcione `staticBody`; el registro conserva ese marcado SVG interno opcional en `ResolvedIcon`. Comparte la geometría del cuerpo animado y acepta el mismo grosor de trazo. `renderSvg`, por el contrario, conserva el `body` animado. Consulta [Familias animadas](concepts.md#familias-animadas).
 
 ## Un icono en `background-image`
 
@@ -99,7 +99,7 @@ await registry.resolveAsync("phosphor:heart");
 
 ## Conjuntos de iconos de terceros
 
-`adoptIconifySet` convierte cualquier documento con forma de IconifyJSON al formato de familia que espera este paquete:
+`adoptIconifySet` convierte un documento IconifyJSON al formato de familia que espera este paquete. Lee los iconos, alias y sus dimensiones, además del nombre, autor y licencia del conjunto; otros campos de IconifyJSON, como las categorías, no se trasladan:
 
 ```ts
 import { adoptIconifySet } from "@codenhub/icons";

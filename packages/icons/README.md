@@ -8,9 +8,6 @@ Zero-runtime icon system for the web. Write `ic-lucide-heart` in your markup and
 
 ```sh
 pnpm add @codenhub/icons
-npm install @codenhub/icons
-yarn add @codenhub/icons
-bun add @codenhub/icons
 ```
 
 ## Usage

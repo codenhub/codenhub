@@ -2,7 +2,7 @@
 title: Plugin do PostCSS
 description: Varre a folha de estilos e os arquivos que você listar, depois adiciona as regras base e as regras de máscara de que essas classes precisam.
 order: 4
-source: 6c56324e8954e5d2e0f4091b6c8d015249fe9b77
+source: ccc1cace12ab5568a0c49b3dfcdfc770bddd0136
 ---
 
 # Plugin do PostCSS
@@ -33,6 +33,7 @@ Ele compartilha as mesmas opções `families`, `defaultPrefix`, `prefix` e `stro
 | `prefix`        | Prefixo de classe. Padrão é `ic`.                                            |
 | `strokeWidth`   | Padrão para famílias baseadas em traço cujas classes não trazem modificador. |
 | `attribution`   | `auto` ou `off`. Veja [Licenciamento](../licensing.md).                      |
+| `registry`      | Um `IconRegistry` preparado, substituindo `families`.                        |
 
 ## Varredura
 

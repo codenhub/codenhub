@@ -2,7 +2,7 @@
 title: Astro
 description: CSS puro e Tailwind v4 funcionam sem configuração; o plugin do Vite funciona, mas precisa ser avisado sobre arquivos .astro.
 order: 1
-source: d04a2e4bd9641f9f013c6145c2e4cd5b26a75da7
+source: 6a7502bd054b4f45ee6d40ecb6bc749d13ac4de2
 ---
 
 # Astro
@@ -65,20 +65,20 @@ Depois importe a folha de estilos gerada uma única vez, a partir de um layout q
 
 ```astro
 ---
-import "../styles/global.css";
+import "../styles/global.css"; // sua folha de estilos com @import "@codenhub/icons"
 import "virtual:icons.css";
 ---
 ```
 
-As duas linhas são obrigatórias, e essa segunda é específica do Astro. Em qualquer outro lugar, o plugin do Vite injeta a folha de estilos gerada no HTML pelo hook `transformIndexHtml` do Vite. Um `astro build` de produção renderiza páginas pelo próprio pipeline do Astro em vez de usá-las como entradas HTML do Vite, então `transformIndexHtml` nunca roda nelas e esse import explícito é o que coloca as regras de máscara na página. Sem ele, o build passa, `@import "@codenhub/icons"` continua fornecendo as regras base e todo ícone renderiza como um quadrado sólido na sua cor.
+A primeira linha é qualquer folha de estilos que já carregue `@import "@codenhub/icons";`; as regras base podem morar em qualquer folha de estilos carregada pela página. A segunda linha é obrigatória, e é específica do Astro. Em qualquer outro lugar, o plugin do Vite injeta a folha de estilos gerada no HTML pelo hook `transformIndexHtml` do Vite. Um `astro build` de produção renderiza páginas pelo próprio pipeline do Astro em vez de usá-las como entradas HTML do Vite, então `transformIndexHtml` nunca roda nelas e esse import explícito é o que coloca as regras de máscara na página. Sem ele, o build passa, `@import "@codenhub/icons"` continua fornecendo as regras base e todo ícone renderiza como um quadrado sólido na sua cor.
 
-A entrada `content` é obrigatória, não opcional. O plugin varre automaticamente os arquivos que o Vite transforma em busca de `.html`, `.js(x)`, `.ts(x)`, `.vue`, `.svelte` e folhas de estilos — `.astro` não está nesse conjunto, então classes escritas em templates `.astro`, `.md` ou `.mdx` só são descobertas via `content`. Liste esses globs e mantenha `@import "@codenhub/icons";` numa folha de estilos para as regras base.
+Mantenha a entrada `content`. O plugin também varre todo módulo que o Vite transforma, incluindo arquivos `.astro`, mas a folha de estilos é gerada quando o layout a importa, e um build pode chegar a esse import antes que o Vite tenha transformado todas as páginas e componentes. `content` é o que garante que toda classe escrita em `.astro`, `.md` ou `.mdx` esteja nela.
 
 Confira se toda classe que você escreve resolve em uma família que você registrou. Um nome de ícone que o registro não encontra fica sem regra e renderiza como um quadrado sólido. O modo CSS não relata nada quando isso acontece — em qualquer host, não só no Astro — então o build continua verde e a falha só aparece na página. O modo SVG inline avisa, nomeando a classe e o arquivo.
 
 ## Modo SVG inline
 
-`mode: "svg"` funciona no Astro e reescreve tags `<i class="ic-...">` dentro de arquivos `.astro` — no template, no frontmatter e em blocos `<script>`, cada um escapado para o seu contexto. Uma tag de ícone escrita dentro de uma _string_ numa expressão de template é o único ponto em que ela é pulada, porque `{cond && <i class="ic-x" />}` contém markup e não uma string, e diferenciar os dois exigiria um parser; mova essa tag para o frontmatter ou para um componente. Tudo acima sobre entregar a folha de estilos de máscaras deixa de valer aqui: o modo `svg` não emite regras por ícone, então nem `virtual:icons.css` nem `content` fazem nada, e uma classe em qualquer elemento que não seja uma tag `<i>` não renderiza nada porque não há folha de estilos por trás.
+`mode: "svg"` funciona no Astro e reescreve tags `<i class="ic-...">` dentro de arquivos `.astro` — no template, no frontmatter e em blocos `<script>`, cada um escapado para o seu contexto. Uma tag de ícone escrita dentro de uma _string_ numa expressão de template, como `{cond ? '<i class="ic-x"></i>' : ''}`, é o único ponto em que dá errado: ela é reescrita como markup, sem escapar as aspas ao redor, porque diferenciá-la de markup como `{cond && <i class="ic-x" />}` exigiria um parser. O SVG inline pode então encerrar a string antes da hora. Mova essa tag para o frontmatter ou para um componente. Tudo acima sobre entregar a folha de estilos de máscaras deixa de valer aqui: o modo `svg` não emite regras por ícone, então nem `virtual:icons.css` nem `content` fazem nada, e uma classe em qualquer elemento que não seja uma tag `<i>` não renderiza nada porque não há folha de estilos por trás.
 
 Mantenha `@import "@codenhub/icons"` mesmo assim. Um `<svg>` inline renderiza com `1em` por conta própria, mas essa folha de estilos base é o que permite que `--ic-size` e as classes de tamanho `ic-xs`–`ic-xl` o alcancem. Veja [Plugin do Vite § Modo SVG inline](../delivery/vite.md#modo-svg-inline).
 

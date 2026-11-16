@@ -23,14 +23,14 @@ Available families:
 | ---------------------------------------------------------------- | --------- | --------------------------- | ---------- |
 | `line-md`                                                        | 1222      | animated, stroke-based      | MIT        |
 | `svg-spinners`                                                   | 46        | animated loading indicators | MIT        |
-| `lucide`                                                         | 2171      | outlined, stroke-based      | ISC        |
+| `lucide`                                                         | 2317      | outlined, stroke-based      | ISC        |
 | `phosphor`                                                       | 1512      | outlined                    | MIT        |
 | `phosphor-thin`, `phosphor-light`, `phosphor-bold`               | 1512 each | outlined, other weights     | MIT        |
 | `phosphor-fill`                                                  | 1512      | filled                      | MIT        |
 | `phosphor-duotone`                                               | 1512      | duotone                     | MIT        |
-| `material-symbols-outlined`, `-rounded`, `-sharp`                | 3932 each | outlined                    | Apache-2.0 |
-| `material-symbols-outlined-fill`, `-rounded-fill`, `-sharp-fill` | 3932 each | filled                      | Apache-2.0 |
-| `simple-icons` (brand)                                           | 3254      | filled logos, brand-colored | CC0-1.0    |
+| `material-symbols-outlined`, `-rounded`, `-sharp`                | 3940 each | outlined                    | Apache-2.0 |
+| `material-symbols-outlined-fill`, `-rounded-fill`, `-sharp-fill` | 3940 each | filled                      | Apache-2.0 |
+| `simple-icons` (brand)                                           | 3255      | filled logos, brand-colored | CC0-1.0    |
 | `logos` (brand)                                                  | 2016      | full-color logos            | CC0-1.0    |
 
 Variants such as filled or duotone live in separate families rather than acting as toggles on one family. A class name stays a prefix and an icon name, with no extra variant syntax to guess.
@@ -51,7 +51,7 @@ Full-color logos naturally weigh more than single-color icons. With the build pl
 
 The animations live inside the SVG artwork and run via SMIL. Line MD's `-loop` icons animate continuously, and its other icons draw in once. Without a [motion trigger](#motion), an icon plays the first time the page displays it. Chrome is verified; Firefox and Safari are untested, so do not infer animated-mask support from static-mask support.
 
-Add `ic-on-hover` to show the static artwork at rest and play the animation while the trigger is hovered or focused, as described in [Motion](#motion):
+Add `ic-on-hover` to show the static artwork at rest and play the animation while the trigger is hovered or has visible focus (`:focus-visible`), as described in [Motion](#motion):
 
 ```html
 <button>
@@ -128,8 +128,8 @@ A misspelled name does not throw an error: the class resolves to nothing, so the
 
 Because utility classes live in the same `ic-*` namespace as icon classes, a few names are off-limits so your icons never collide with helpers:
 
-- **`xs`, `sm`, `md`, `lg`, and `xl`** belong to the [size axis](#size) (`ic-xs` through `ic-xl`). No family may use one as a prefix or ship an icon by that name; generation refuses a family that tries.
-- **`anim`, `on-hover`, and `trigger`** belong to the [motion utilities](#motion). A family cannot use `anim` as a prefix or ship an icon named `anim` or starting with `anim-`. The exact icon names `on-hover` and `trigger` are reserved the same way, while names that merely start with them — along with `animation` — stay available.
+- **`xs`, `sm`, `md`, `lg`, and `xl`** belong to the [size axis](#size) (`ic-xs` through `ic-xl`). No family may use one as a prefix. A core or extended family that ships an icon by that name fails generation; a brand family leaves that icon out and lists it in the family's attribution file.
+- **`anim`, `on-hover`, and `trigger`** belong to the [motion utilities](#motion). A family cannot use `anim` as a prefix, and an icon named `anim` or starting with `anim-` is handled like a size name: it fails generation for a core or extended family and is left out of a brand family. The exact icon names `on-hover` and `trigger` are reserved the same way, while names that merely start with them — along with `animation` — stay available.
 - **Stroke width** lives after a `/` on the icon class itself, so it claims no prefix at all.
 
 ## Markup
@@ -212,7 +212,7 @@ Some brand colors are near-black — GitHub, X, and Vercel among them — and va
 }
 ```
 
-With a custom class `prefix`, every custom property name matches: `--ux-color` under `prefix: "ux"`. Plain CSS `color` alone does not recolor a brand icon, because its own brand color sits ahead of `currentColor`; set `--ic-color` instead. All of this works the same across every CSS delivery method and in [inline SVG mode](delivery/vite.md#inline-svg-mode), where the brand colors travel inside the `<svg>` itself. One exception applies there: under a Content Security Policy that blocks `style` attributes, an inlined brand icon keeps its brand colors, but `--ic-color` can no longer override them.
+With a custom class `prefix`, every custom property name matches: `--ux-color` under `prefix: "ux"`. Plain CSS `color` alone does not recolor a brand icon, because its own brand color sits ahead of `currentColor`; set `--ic-color` instead, or `--<prefix>-color` under a custom prefix. All of this works the same across every CSS delivery method and in [inline SVG mode](delivery/vite.md#inline-svg-mode), where the brand colors travel inside the `<svg>` itself. One exception applies there: under a Content Security Policy that blocks `style` attributes, an inlined brand icon keeps its brand colors, but `--ic-color` (or `--<prefix>-color`) can no longer override them.
 
 ## Accessibility
 

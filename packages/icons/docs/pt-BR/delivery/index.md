@@ -3,23 +3,23 @@ title: Comparação
 description: As quatro formas como classes de ícone viram regras de máscara CSS, os entrypoints do pacote por trás delas e como escolher.
 group: Métodos de entrega
 order: 2
-source: 69a59c4a23d6377d5c1011d208033585d1cb9427
+source: 4e21427f555137e5be6ac2c12755d2f9d8c9bd7e
 ---
 
 # Como os ícones chegam ao seu CSS
 
-Todo método de entrega produz as mesmas regras de máscara CSS e entende exatamente as mesmas classes de ícone. O que muda entre eles é de onde vêm essas regras por ícone: ou de uma folha de estilos pré-compilada contendo todos os ícones de uma família, ou de um plugin que varre o seu markup e gera apenas os ícones que você escreveu. Esta página compara todas as quatro opções para que você possa escolher a que combina com o seu build.
+Todo método de entrega entende exatamente as mesmas classes de ícone, e todo método CSS produz as mesmas regras de máscara para elas. A única exceção é o [modo SVG inline](vite.md#modo-svg-inline) do plugin do Vite, que reescreve tags `<i>` em elementos `<svg>` e não emite nenhuma regra de máscara. Entre os métodos CSS, o que muda entre eles é de onde vêm essas regras por ícone: ou de uma folha de estilos pré-compilada contendo todos os ícones de uma família, ou de um plugin que varre o seu markup e gera apenas os ícones que você escreveu. Esta página compara todas as quatro opções para que você possa escolher a que combina com o seu build.
 
 ## Entrypoints
 
-| Entrypoint                 | Para                         | O que entrega                                                                            |
-| -------------------------- | ---------------------------- | ---------------------------------------------------------------------------------------- |
-| `@codenhub/icons`          | Todo método                  | As regras base `.ic`, cerca de 2 KB. Nunca reescritas por um plugin.                     |
-| `@codenhub/icons/tw`       | Tailwind CSS v4              | Regras base mais o plugin. Toda família sem ser de marcas resolvida, só usados emitidos. |
-| `@codenhub/icons/tailwind` | Tailwind CSS v4, configurado | O plugin por si só, para que `@plugin` possa receber opções.                             |
-| `@codenhub/icons/<family>` | CSS puro, sem etapa de build | Uma família completa, cada ícone escrito por extenso.                                    |
-| `@codenhub/icons/vite`     | Vite                         | Varre o seu markup e gera apenas as regras de que ele precisa.                           |
-| `@codenhub/icons/postcss`  | PostCSS                      | O mesmo, para um pipeline PostCSS.                                                       |
+| Entrypoint                 | Para                         | O que entrega                                                                                                                                                 |
+| -------------------------- | ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `@codenhub/icons`          | Todo método                  | As regras base `.ic`, cerca de 2 KB. Nunca reescritas por um plugin.                                                                                          |
+| `@codenhub/icons/tw`       | Tailwind CSS v4              | Regras base mais o plugin. Toda família sem ser de marcas resolvida, só usados emitidos. Famílias de marcas precisam de `@plugin` com `families` nomeando-as. |
+| `@codenhub/icons/tailwind` | Tailwind CSS v4, configurado | O plugin por si só, para que `@plugin` possa receber opções.                                                                                                  |
+| `@codenhub/icons/<family>` | CSS puro, sem etapa de build | Uma família completa, cada ícone escrito por extenso.                                                                                                         |
+| `@codenhub/icons/vite`     | Vite                         | Varre o seu markup e gera apenas as regras de que ele precisa.                                                                                                |
+| `@codenhub/icons/postcss`  | PostCSS                      | O mesmo, para um pipeline PostCSS.                                                                                                                            |
 
 `@import "@codenhub/icons"` significa uma única coisa em todo lugar: as regras base em que as classes de ícone se apoiam. Nenhum plugin a reescreve, e nenhum plugin a remove. A única peça móvel é qual mecanismo gera as regras de máscara por ícone ao lado dela.
 

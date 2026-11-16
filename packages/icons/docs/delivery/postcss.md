@@ -32,6 +32,7 @@ It shares the same `families`, `defaultPrefix`, `prefix`, and `strokeWidth` opti
 | `prefix`        | Class prefix. Defaults to `ic`.                                    |
 | `strokeWidth`   | Default for stroke-based families whose classes carry no modifier. |
 | `attribution`   | `auto` or `off`. See [Licensing](../licensing.md).                 |
+| `registry`      | A prepared `IconRegistry`, replacing `families`.                   |
 
 ## Scanning
 

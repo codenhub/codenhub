@@ -2,7 +2,7 @@
 title: Conceitos
 description: Famílias, resolução de nomes, nomes reservados, espessura do traço e as formas de markup — o modelo compartilhado por todo método de entrega.
 order: 1
-source: e89ab300cc19996a2c828af9f29320e61c887f28
+source: 514d5acfaaa74c953f1b2bf01e0f36f5bef74062
 ---
 
 # Como o sistema de ícones se encaixa
@@ -24,14 +24,14 @@ Famílias disponíveis:
 | ---------------------------------------------------------------- | --------- | -------------------------------------- | ---------- |
 | `line-md`                                                        | 1222      | animado, baseado em traço              | MIT        |
 | `svg-spinners`                                                   | 46        | indicadores de carregamento animados   | MIT        |
-| `lucide`                                                         | 2171      | contorno, baseado em traço             | ISC        |
+| `lucide`                                                         | 2317      | contorno, baseado em traço             | ISC        |
 | `phosphor`                                                       | 1512      | contorno                               | MIT        |
 | `phosphor-thin`, `phosphor-light`, `phosphor-bold`               | 1512 cada | contorno, outros pesos                 | MIT        |
 | `phosphor-fill`                                                  | 1512      | preenchido                             | MIT        |
 | `phosphor-duotone`                                               | 1512      | duotone                                | MIT        |
-| `material-symbols-outlined`, `-rounded`, `-sharp`                | 3932 cada | contorno                               | Apache-2.0 |
-| `material-symbols-outlined-fill`, `-rounded-fill`, `-sharp-fill` | 3932 cada | preenchido                             | Apache-2.0 |
-| `simple-icons` (marca)                                           | 3254      | logotipos preenchidos, na cor da marca | CC0-1.0    |
+| `material-symbols-outlined`, `-rounded`, `-sharp`                | 3940 cada | contorno                               | Apache-2.0 |
+| `material-symbols-outlined-fill`, `-rounded-fill`, `-sharp-fill` | 3940 cada | preenchido                             | Apache-2.0 |
+| `simple-icons` (marca)                                           | 3255      | logotipos preenchidos, na cor da marca | CC0-1.0    |
 | `logos` (marca)                                                  | 2016      | logotipos coloridos                    | CC0-1.0    |
 
 Variantes como preenchido ou duotone vivem em famílias separadas em vez de funcionarem como seletores dentro de uma mesma família. Um nome de classe continua sendo só um prefixo e um nome de ícone, sem sintaxe extra de variante para adivinhar.
@@ -52,7 +52,7 @@ Logotipos coloridos naturalmente pesam mais do que ícones de uma cor só. Com o
 
 As animações vivem dentro da arte SVG e rodam via SMIL. Os ícones `-loop` do Line MD animam continuamente, e os outros ícones se desenham uma vez. Sem um [gatilho de movimento](#movimento), um ícone toca na primeira vez em que a página o exibe. O Chrome é verificado; Firefox e Safari não foram testados, então não presuma suporte a máscaras animadas a partir do suporte a máscaras estáticas.
 
-Adicione `ic-on-hover` para mostrar a arte estática em repouso e reproduzir a animação enquanto o gatilho estiver com hover ou foco, conforme descrito em [Movimento](#movimento):
+Adicione `ic-on-hover` para mostrar a arte estática em repouso e reproduzir a animação enquanto o gatilho estiver com hover ou tiver foco visível (`:focus-visible`), conforme descrito em [Movimento](#movimento):
 
 ```html
 <button>
@@ -129,8 +129,8 @@ Um nome escrito errado não lança erro: a classe não resolve para nada, então
 
 Como as classes utilitárias vivem no mesmo namespace `ic-*` que as classes de ícone, alguns nomes ficam fora de alcance para que seus ícones nunca colidam com os helpers:
 
-- **`xs`, `sm`, `md`, `lg` e `xl`** pertencem à [escala de tamanho](#tamanho) (`ic-xs` até `ic-xl`). Nenhuma família pode usar um deles como prefixo ou entregar um ícone com esse nome; a geração recusa uma família que tente.
-- **`anim`, `on-hover` e `trigger`** pertencem aos [utilitários de movimento](#movimento). Uma família não pode usar `anim` como prefixo nem entregar um ícone chamado `anim` ou que comece com `anim-`. Os nomes exatos de ícone `on-hover` e `trigger` são reservados da mesma forma, enquanto nomes que apenas começam com eles — junto com `animation` — continuam disponíveis.
+- **`xs`, `sm`, `md`, `lg` e `xl`** pertencem à [escala de tamanho](#tamanho) (`ic-xs` até `ic-xl`). Nenhuma família pode usar um deles como prefixo. Uma família principal ou estendida que entregue um ícone com esse nome falha na geração; uma família de marcas deixa esse ícone de fora e o lista no arquivo de atribuição da família.
+- **`anim`, `on-hover` e `trigger`** pertencem aos [utilitários de movimento](#movimento). Uma família não pode usar `anim` como prefixo, e um ícone chamado `anim` ou que comece com `anim-` recebe o mesmo tratamento de um nome de tamanho: falha na geração em uma família principal ou estendida e fica de fora de uma família de marcas. Os nomes exatos de ícone `on-hover` e `trigger` são reservados da mesma forma, enquanto nomes que apenas começam com eles — junto com `animation` — continuam disponíveis.
 - **Espessura do traço** mora depois de uma `/` na própria classe do ícone, então não ocupa nenhum prefixo.
 
 ## Markup
@@ -213,7 +213,7 @@ Algumas cores de marca são quase pretas — GitHub, X e Vercel estão entre ela
 }
 ```
 
-Com um `prefix` de classe personalizado, todo nome de custom property acompanha: `--ux-color` sob `prefix: "ux"`. O `color` comum do CSS sozinho não recolore um ícone de marca, porque a própria cor da marca fica na frente de `currentColor`; defina `--ic-color` no lugar. Tudo isso funciona igual em todos os métodos de entrega CSS e no [modo SVG inline](delivery/vite.md#modo-svg-inline), onde as cores da marca viajam dentro do próprio `<svg>`. Há uma exceção lá: sob uma Content Security Policy que bloqueia atributos `style`, um ícone de marca inline mantém suas cores de marca, mas `--ic-color` não consegue mais sobrescrevê-las.
+Com um `prefix` de classe personalizado, todo nome de custom property acompanha: `--ux-color` sob `prefix: "ux"`. O `color` comum do CSS sozinho não recolore um ícone de marca, porque a própria cor da marca fica na frente de `currentColor`; defina `--ic-color` no lugar, ou `--<prefix>-color` com um prefixo personalizado. Tudo isso funciona igual em todos os métodos de entrega CSS e no [modo SVG inline](delivery/vite.md#modo-svg-inline), onde as cores da marca viajam dentro do próprio `<svg>`. Há uma exceção lá: sob uma Content Security Policy que bloqueia atributos `style`, um ícone de marca inline mantém suas cores de marca, mas `--ic-color` (ou `--<prefix>-color`) não consegue mais sobrescrevê-las.
 
 ## Acessibilidade
 

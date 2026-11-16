@@ -2,7 +2,7 @@
 title: Plugin de PostCSS
 description: Escanea la hoja de estilos y los archivos que enumeres, y luego añade las reglas base y las reglas de máscara que necesitan esas clases.
 order: 4
-source: 6c56324e8954e5d2e0f4091b6c8d015249fe9b77
+source: ccc1cace12ab5568a0c49b3dfcdfc770bddd0136
 ---
 
 # Plugin de PostCSS
@@ -33,6 +33,7 @@ Comparte las mismas opciones `families`, `defaultPrefix`, `prefix` y `strokeWidt
 | `prefix`        | Prefijo de clase. Por defecto `ic`.                                           |
 | `strokeWidth`   | Valor por defecto para familias de trazos cuyas clases no llevan modificador. |
 | `attribution`   | `auto` u `off`. Consulta [Licencias](../licensing.md).                        |
+| `registry`      | Un `IconRegistry` preparado, en lugar de `families`.                          |
 
 ## Escaneo
 

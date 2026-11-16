@@ -7,18 +7,18 @@ order: 2
 
 # How icons reach your CSS
 
-Every delivery method produces the same CSS mask rules and understands the exact same icon classes. What changes between them is where those per-icon rules come from: either a prebuilt stylesheet containing every icon in a family, or a plugin that scans your markup and generates only the icons you wrote. This page compares all four options so you can pick the one that fits your build.
+Every delivery method understands the exact same icon classes, and every CSS method produces the same mask rules for them. The one exception is the Vite plugin's [inline SVG mode](vite.md#inline-svg-mode), which rewrites `<i>` tags into `<svg>` elements and emits no mask rules at all. Among the CSS methods, what changes between them is where those per-icon rules come from: either a prebuilt stylesheet containing every icon in a family, or a plugin that scans your markup and generates only the icons you wrote. This page compares all four options so you can pick the one that fits your build.
 
 ## Entry points
 
-| Entry                      | For                         | What it delivers                                                                        |
-| -------------------------- | --------------------------- | --------------------------------------------------------------------------------------- |
-| `@codenhub/icons`          | Every method                | The base `.ic` rules, about 2 KB. Never rewritten by a plugin.                          |
-| `@codenhub/icons/tw`       | Tailwind CSS v4             | Base rules plus the plugin. Every non-brand family resolvable, only used icons emitted. |
-| `@codenhub/icons/tailwind` | Tailwind CSS v4, configured | The plugin on its own, so `@plugin` can carry options.                                  |
-| `@codenhub/icons/<family>` | Plain CSS, no build step    | One complete family, every icon written out.                                            |
-| `@codenhub/icons/vite`     | Vite                        | Scans your markup and generates only the rules it needs.                                |
-| `@codenhub/icons/postcss`  | PostCSS                     | The same, for a PostCSS pipeline.                                                       |
+| Entry                      | For                         | What it delivers                                                                                                                                   |
+| -------------------------- | --------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `@codenhub/icons`          | Every method                | The base `.ic` rules, about 2 KB. Never rewritten by a plugin.                                                                                     |
+| `@codenhub/icons/tw`       | Tailwind CSS v4             | Base rules plus the plugin. Every non-brand family resolvable, only used icons emitted. Brand families need `@plugin` with `families` naming them. |
+| `@codenhub/icons/tailwind` | Tailwind CSS v4, configured | The plugin on its own, so `@plugin` can carry options.                                                                                             |
+| `@codenhub/icons/<family>` | Plain CSS, no build step    | One complete family, every icon written out.                                                                                                       |
+| `@codenhub/icons/vite`     | Vite                        | Scans your markup and generates only the rules it needs.                                                                                           |
+| `@codenhub/icons/postcss`  | PostCSS                     | The same, for a PostCSS pipeline.                                                                                                                  |
 
 `@import "@codenhub/icons"` means one thing everywhere: the base rules that icon classes build on. No plugin rewrites it, and no plugin strips it out. The only moving part is which mechanism generates the per-icon mask rules beside it.
 

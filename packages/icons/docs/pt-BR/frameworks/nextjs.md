@@ -2,7 +2,7 @@
 title: Next.js
 description: O Next.js não tem pipeline Vite, então use Tailwind v4, o plugin do PostCSS ou imports de família em CSS puro.
 order: 2
-source: f91845ade64b6316bedb5943f428c1bfb8c42893
+source: 771f62cd7d2eb4b392e187507523c80a3cbbb730
 ---
 
 # Next.js
@@ -11,7 +11,7 @@ O Next.js compila com webpack ou Turbopack em vez de Vite, então o `@codenhub/i
 
 ## Tailwind CSS v4
 
-Se a sua aplicação Next.js já roda Tailwind v4 via `@tailwindcss/postcss`, um único import na sua folha de estilos global resolve tudo:
+Se a sua aplicação Next.js já roda Tailwind v4 via `@tailwindcss/postcss`, um único import na sua folha de estilos global cobre todas as famílias, exceto as de marcas:
 
 ```css
 /* app/globals.css */
@@ -19,7 +19,7 @@ Se a sua aplicação Next.js já roda Tailwind v4 via `@tailwindcss/postcss`, um
 @import "@codenhub/icons/tw";
 ```
 
-Apenas os ícones que o seu markup usa são emitidos. Veja [Tailwind CSS](../delivery/tailwind.md).
+Apenas os ícones que o seu markup usa são emitidos. `/tw` nunca resolve as famílias de marcas `simple-icons` e `logos`; para usar uma, declare o plugin com `families` nomeando-a, como em [Tailwind CSS § Configurando o plugin](../delivery/tailwind.md#configurando-o-plugin).
 
 ## Plugin do PostCSS
 
@@ -40,7 +40,7 @@ export default {
 };
 ```
 
-Mantenha `@import "@codenhub/icons";` no topo de `app/globals.css` para as regras base. Veja [Plugin do PostCSS](../delivery/postcss.md).
+O próprio plugin adiciona as regras base, já que `injectBase` tem padrão `true`, então `app/globals.css` não precisa de `@import "@codenhub/icons";` aqui; importá-lo também enviaria as regras base duas vezes. Para importá-las por conta própria, defina `injectBase: false`. Veja [Plugin do PostCSS](../delivery/postcss.md).
 
 ## CSS puro
 

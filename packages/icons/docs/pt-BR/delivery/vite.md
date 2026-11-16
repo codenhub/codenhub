@@ -2,7 +2,7 @@
 title: Plugin do Vite
 description: Varre o markup que o Vite transforma, mais quaisquer globs que você listar, e serve apenas as regras de máscara de que precisa.
 order: 3
-source: d1efdb7318736243b8c4fdb7974c19e4df7c151a
+source: ac4f5e00bb178b89be60aec40ff551e96edd049c
 ---
 
 # Plugin do Vite
@@ -41,7 +41,7 @@ A folha de estilos gerada é servida como `virtual:icons.css` e injetada em todo
 
 `content` aceita caminhos literais e padrões glob como `src/**/*.{html,tsx}`, expandidos quando a varredura roda. Caminhos relativos são resolvidos a partir do [`root`](https://vite.dev/config/shared-options.html#root) do Vite, combinando com a forma como o Vite resolve seus próprios caminhos, então a mesma configuração funciona independentemente do diretório de onde você lançar o build. `content` é aditivo: o plugin também varre todo arquivo-fonte que o Vite transforma, então você só precisa de `content` para arquivos que o bundler nunca vê — e para primeiras renderizações limpas em dev.
 
-A varredura em tempo de transformação cobre `.html`, `.js`, `.jsx`, `.ts`, `.tsx`, `.vue`, `.svelte` e arquivos de folha de estilos. Markup em uma extensão de arquivo fora dessa lista — como templates `.astro` ou `.md` — só é visto por meio de `content`, então liste esses globs explicitamente. Veja [Frameworks](../frameworks/index.md). Note que isso se aplica apenas à geração da folha de estilos; o [modo SVG inline](#modo-svg-inline) reescreve um conjunto separado de tipos de arquivo.
+A varredura em tempo de transformação lê todo módulo que o Vite transforma, seja qual for a extensão. Um arquivo que o Vite nunca transforma só é visto por meio de `content`, assim como uma classe em um módulo transformado depois que a folha de estilos foi gerada, o que pode acontecer quando um framework importa a folha de estilos por conta própria, como fazem Astro e SvelteKit. Veja [Frameworks](../frameworks/index.md). Note que isso se aplica apenas à geração da folha de estilos; o [modo SVG inline](#modo-svg-inline) reescreve um conjunto separado de tipos de arquivo.
 
 Em dev, o Vite serve o shell HTML antes de transformar um único módulo JavaScript, então uma classe de ícone escrita apenas dentro de um módulo de componente ainda é um mistério quando a página carrega pela primeira vez. Para não deixá-la em branco, o modo dev serve a folha de estilos como um módulo em vez de colocá-la inline, e o plugin invalida esse módulo sempre que uma transformação revela uma classe nova — o ícone chega sem recarregar a página. Listar seus arquivos-fonte em `content` pula essa viagem extra de atualização desde o início, porque os arquivos são lidos do disco logo de cara.
 

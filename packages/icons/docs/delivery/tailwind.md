@@ -41,7 +41,7 @@ Notice one honest quirk: narrowing `families` does not make the build faster or 
 
 ## Motion
 
-Motion classes and `ic-on-hover` work as Tailwind utilities, matching [Motion](../concepts.md#motion): `ic-on-hover` plays the motion while the icon, its parent, or an `ic-trigger` ancestor is hovered or focused, once per hover unless `--ic-anim-iterations` says otherwise, and it controls animated artwork as well:
+Motion classes and `ic-on-hover` work as Tailwind utilities, matching [Motion](../concepts.md#motion): `ic-on-hover` plays the motion while the icon, its parent, or an `ic-trigger` ancestor is hovered or has visible focus (`:focus-visible`), once per hover unless `--ic-anim-iterations` says otherwise, and it controls animated artwork as well:
 
 ```html
 <button>
@@ -60,7 +60,7 @@ Because motion classes are real Tailwind utilities, Tailwind's variants remain a
 <i class="ic-lucide-bell hover:ic-anim-wiggle" aria-hidden="true"></i>
 ```
 
-When using variants, pair `group-focus-visible:ic-anim-spin` with `group-hover:ic-anim-spin` so keyboard users get the same cue; `ic-on-hover` handles focus automatically. Reduced-motion preferences disable animations even when a variant matches. Animated artwork has no variant form, so keep `ic-on-hover` beside the icon class for those. See [Motion](../concepts.md#motion) for all five classes, defaults, custom prefixes, and CSS-mask animation limits.
+When using variants, pair `group-focus-visible:ic-anim-spin` with `group-hover:ic-anim-spin` so keyboard users get the same cue; `ic-on-hover` handles visible focus automatically. Reduced-motion preferences disable animations even when a variant matches. Animated artwork has no variant form, so keep `ic-on-hover` beside the icon class for those. See [Motion](../concepts.md#motion) for all five classes, defaults, custom prefixes, and CSS-mask animation limits.
 
 ## Attribution
 

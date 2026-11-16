@@ -64,20 +64,20 @@ Then import the generated stylesheet once, from a layout every page uses:
 
 ```astro
 ---
-import "../styles/global.css";
+import "../styles/global.css"; // your stylesheet holding @import "@codenhub/icons"
 import "virtual:icons.css";
 ---
 ```
 
-Both lines are required, and this second one is Astro-specific. Everywhere else, the Vite plugin injects the generated stylesheet into the HTML through Vite's `transformIndexHtml` hook. A production `astro build` renders pages through Astro's own pipeline rather than as Vite HTML entries, so `transformIndexHtml` never runs on them and this explicit import is what puts the mask rules on the page. Without it, the build succeeds, `@import "@codenhub/icons"` still supplies the base rules, and every icon renders as a solid square in its color.
+The first line is whatever stylesheet already carries `@import "@codenhub/icons";`; the base rules can live in any stylesheet the page loads. The second line is required, and Astro-specific. Everywhere else, the Vite plugin injects the generated stylesheet into the HTML through Vite's `transformIndexHtml` hook. A production `astro build` renders pages through Astro's own pipeline rather than as Vite HTML entries, so `transformIndexHtml` never runs on them and this explicit import is what puts the mask rules on the page. Without it, the build succeeds, `@import "@codenhub/icons"` still supplies the base rules, and every icon renders as a solid square in its color.
 
-The `content` entry is required, not optional. The plugin auto-scans the files Vite transforms for `.html`, `.js(x)`, `.ts(x)`, `.vue`, `.svelte`, and stylesheets — `.astro` is not in that set, so classes written in `.astro`, `.md`, or `.mdx` templates are discovered only through `content`. List those globs and keep `@import "@codenhub/icons";` in a stylesheet for the base rules.
+Keep the `content` entry. The plugin also scans every module Vite transforms, `.astro` files included, but the stylesheet is generated when the layout imports it, and a build can reach that import before Vite has transformed every page and component. `content` is what guarantees each class written in `.astro`, `.md`, or `.mdx` is in it.
 
 Check that every class you write resolves in a family you registered. An icon name the registry cannot find is left without a rule and renders as a solid square. CSS mode reports nothing when that happens — in any host, not only in Astro — so the build stays green and the gap is visible only on the page. Inline SVG mode does warn, naming the class and the file.
 
 ## Inline SVG mode
 
-`mode: "svg"` works in Astro and rewrites `<i class="ic-...">` tags inside `.astro` files — in the template, in the frontmatter, and in `<script>` blocks, each escaped for its context. An icon tag written inside a _string_ in a template expression is the one place it is skipped, because `{cond && <i class="ic-x" />}` holds markup rather than a string and telling those apart requires a parser; move that tag to the frontmatter or a component instead. Everything above about delivering the mask stylesheet stops applying here: `svg` mode emits no per-icon rules, so neither `virtual:icons.css` nor `content` does anything, and a class on any element other than an `<i>` tag renders nothing because there is no stylesheet behind it.
+`mode: "svg"` works in Astro and rewrites `<i class="ic-...">` tags inside `.astro` files — in the template, in the frontmatter, and in `<script>` blocks, each escaped for its context. An icon tag written inside a _string_ in a template expression, such as `{cond ? '<i class="ic-x"></i>' : ''}`, is the one place it goes wrong: it is rewritten as markup, without escaping for the quotes around it, because telling it apart from markup such as `{cond && <i class="ic-x" />}` requires a parser. The inlined SVG can then end the string early. Move that tag to the frontmatter or a component instead. Everything above about delivering the mask stylesheet stops applying here: `svg` mode emits no per-icon rules, so neither `virtual:icons.css` nor `content` does anything, and a class on any element other than an `<i>` tag renders nothing because there is no stylesheet behind it.
 
 Keep `@import "@codenhub/icons"` even so. An inlined `<svg>` renders at `1em` on its own, but that base stylesheet is what lets `--ic-size` and the `ic-xs`–`ic-xl` size classes reach it. See [Vite plugin § Inline SVG mode](../delivery/vite.md#inline-svg-mode).
 

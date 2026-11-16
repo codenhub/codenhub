@@ -10,7 +10,7 @@ Next.js builds with webpack or Turbopack rather than Vite, so `@codenhub/icons/v
 
 ## Tailwind CSS v4
 
-If your Next.js app already runs Tailwind v4 through `@tailwindcss/postcss`, one import in your global stylesheet covers everything:
+If your Next.js app already runs Tailwind v4 through `@tailwindcss/postcss`, one import in your global stylesheet covers every family except the brand ones:
 
 ```css
 /* app/globals.css */
@@ -18,7 +18,7 @@ If your Next.js app already runs Tailwind v4 through `@tailwindcss/postcss`, one
 @import "@codenhub/icons/tw";
 ```
 
-Only the icons your markup uses are emitted. See [Tailwind CSS](../delivery/tailwind.md).
+Only the icons your markup uses are emitted. `/tw` never resolves the brand families `simple-icons` and `logos`; to use one, declare the plugin with `families` naming it, as in [Tailwind CSS § Configuring the plugin](../delivery/tailwind.md#configuring-the-plugin).
 
 ## PostCSS plugin
 
@@ -39,7 +39,7 @@ export default {
 };
 ```
 
-Keep `@import "@codenhub/icons";` at the top of `app/globals.css` for the base rules. See [PostCSS plugin](../delivery/postcss.md).
+The plugin appends the base rules itself, since `injectBase` defaults to `true`, so `app/globals.css` needs no `@import "@codenhub/icons";` here; importing it too would ship the base rules twice. To import them yourself instead, set `injectBase: false`. See [PostCSS plugin](../delivery/postcss.md).
 
 ## Plain CSS
 

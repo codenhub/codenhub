@@ -2,7 +2,7 @@
 title: Plugin de Vite
 description: Escanea el marcado que Vite transforma, más los globs que enumeres, y sirve únicamente las reglas de máscara que necesita.
 order: 3
-source: d1efdb7318736243b8c4fdb7974c19e4df7c151a
+source: ac4f5e00bb178b89be60aec40ff551e96edd049c
 ---
 
 # Plugin de Vite
@@ -41,7 +41,7 @@ La hoja de estilos generada se sirve como `virtual:icons.css` y se inyecta en ca
 
 `content` acepta rutas literales y patrones glob como `src/**/*.{html,tsx}`, que se expanden cuando corre el escaneo. Las rutas relativas se resuelven desde el [`root`](https://vite.dev/config/shared-options.html#root) de Vite, igual que Vite resuelve sus propias rutas, así que la misma configuración funciona sin importar desde qué directorio lances el build. `content` es aditivo: el plugin también escanea cada archivo fuente que Vite transforma, así que solo necesitas `content` para archivos que el bundler nunca ve — y para primeros pintados limpios en desarrollo.
 
-El escaneo en tiempo de transformación cubre `.html`, `.js`, `.jsx`, `.ts`, `.tsx`, `.vue`, `.svelte` y archivos de hoja de estilos. El marcado en una extensión de archivo fuera de esa lista — como plantillas `.astro` o `.md` — se ve únicamente mediante `content`, así que enumera esos globs explícitamente. Consulta [Frameworks](../frameworks/index.md). Ten en cuenta que esto aplica solo a la generación de hojas de estilos; el [modo SVG en línea](#modo-svg-en-línea) reescribe un conjunto distinto de tipos de archivo.
+El escaneo en tiempo de transformación lee cada módulo que Vite transforma, sea cual sea su extensión. Un archivo que Vite nunca transforma se ve únicamente mediante `content`, y lo mismo ocurre con una clase en un módulo transformado después de generarse la hoja de estilos, algo que puede pasar cuando un framework importa la hoja de estilos por su cuenta, como hacen Astro y SvelteKit. Consulta [Frameworks](../frameworks/index.md). Ten en cuenta que esto aplica solo a la generación de hojas de estilos; el [modo SVG en línea](#modo-svg-en-línea) reescribe un conjunto distinto de tipos de archivo.
 
 En desarrollo, Vite sirve el cascarón HTML antes de transformar un solo módulo de JavaScript, así que una clase de icono escrita únicamente dentro del módulo de un componente sigue siendo un misterio cuando la página carga por primera vez. Para evitar dejarla en blanco, desarrollo sirve la hoja de estilos como un módulo en lugar de insertarla en línea, y el plugin invalida ese módulo cada vez que una transformación revela una clase nueva — el icono llega sin recargar la página. Enumerar tus fuentes en `content` se ahorra por completo esa ida y vuelta de actualización porque los archivos se leen desde disco por adelantado.
 

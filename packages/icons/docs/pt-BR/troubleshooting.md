@@ -2,7 +2,7 @@
 title: Solução de problemas
 description: Por que um ícone não renderiza nada, vira um quadrado sólido, sai na largura errada ou perde seu aviso de licença, e como resolver cada caso.
 order: 6
-source: 37b8d01350b52510a4e034aa5a9fed3daffdb633
+source: bc9f941797dac6478c3a8c470eef784d29e6f16b
 ---
 
 # Solução de problemas
@@ -23,12 +23,12 @@ As regras base definiram o tamanho e a cor do elemento, então ele aparece como 
 
 - **O nome não existe na família.** Os nomes são os da origem: Material Symbols escreve `check_circle`, Lucide escreve `circle-check`, e Lucide não tem `close` (é `x`). Confira o nome exato na família; veja [Encontrando o nome de um ícone](concepts.md#encontrando-o-nome-de-um-ícone).
 - **Um nome sem qualificação sem família padrão.** `ic-heart` só resolve onde você definiu um padrão: `defaultPrefix` nos plugins do Vite e do PostCSS, `default:` no plugin do Tailwind ou a última folha de estilos de família principal importada em CSS puro. Escreva o nome qualificado `ic-lucide-heart` ou configure um padrão. Veja [Nomes](concepts.md#nomes).
-- **A família não está carregada.** Os plugins do Vite e do PostCSS resolvem apenas as famílias listadas em `families`.
+- **A família não está carregada.** Os plugins do Vite e do PostCSS resolvem apenas as famílias listadas em `families`, ou registradas no `registry` passado no lugar dela.
 - **Um ícone de marca via `@codenhub/icons/tw`.** `/tw` nunca resolve `simple-icons` nem `logos`. Declare o plugin com `families` nomeando a família de marcas; veja [Tailwind CSS](delivery/tailwind.md#configurando-o-plugin).
 - **A classe é montada em tempo de execução.** Os plugins de build só encontram uma classe quando ela está escrita por extenso: `` `ic-${name}` `` é invisível em tempo de build. Escreva cada classe literalmente ou carregue o ícone como um [módulo](delivery/vite.md#um-módulo-por-ícone).
-- **A classe está num arquivo que o plugin não varre.** O plugin do Vite varre automaticamente apenas os tipos de módulo que o Vite transforma; `.astro`, `.md` e `.mdx` exigem globs em `content`. O plugin do PostCSS varre apenas a própria folha de estilos e `content`. Veja [Vite § Varredura](delivery/vite.md#varredura) e [PostCSS § Varredura](delivery/postcss.md#varredura).
+- **A classe está num arquivo que o plugin não varre.** O plugin do Vite varre os módulos que o Vite transforma; um arquivo que ele nunca transforma precisa de um glob em `content`, assim como builds do Astro e do SvelteKit, onde a folha de estilos pode ser gerada antes que todo módulo seja transformado. O plugin do PostCSS varre apenas a própria folha de estilos e `content`. Veja [Vite § Varredura](delivery/vite.md#varredura) e [PostCSS § Varredura](delivery/postcss.md#varredura).
 - **Astro, apenas no build de produção.** O `astro build` de produção pula o hook de HTML do Vite, então importe `virtual:icons.css` explicitamente a partir de um layout compartilhado. Veja [Astro § Plugin do Vite](frameworks/astro.md#plugin-do-vite).
-- **Apenas em produção, com Content Security Policy.** Versões até a 0.2.1 colocavam a folha de estilos gerada inline numa tag `<style>`, que uma política sem `'unsafe-inline'` bloqueia. Atualize para depois da 0.2.1 para que os builds vinculem um asset de folha de estilos em vez disso; veja [Vite § Varredura](delivery/vite.md#varredura).
+- **Apenas em produção, com Content Security Policy.** Versões até a 0.2.1 colocavam a folha de estilos gerada inline numa tag `<style>`, que uma política sem `'unsafe-inline'` bloqueia. Atualize para depois da 0.2.1 para que builds em modo CSS com entradas HTML vinculem um asset de folha de estilos em vez disso; builds de biblioteca e o modo SVG inline não emitem nenhuma folha de estilos; veja [Vite § Varredura](delivery/vite.md#varredura).
 - **Modo SVG inline, num elemento que ele não reescreve.** `mode: "svg"` substitui tags `<i class="ic-…">` e não emite regras de máscara, então `.ic` em qualquer outro elemento não tem regra por trás. O build emite um aviso nomeando a classe e o arquivo. No Astro, `.md` e `.mdx` não são reescritos e nada avisa; envolva o ícone num componente para `.mdx`, ou use o modo CSS para `.md`. Veja [Vite § Modo SVG inline](delivery/vite.md#modo-svg-inline) e [Astro § Modo SVG inline](frameworks/astro.md#modo-svg-inline).
 
 ## A espessura do traço não muda

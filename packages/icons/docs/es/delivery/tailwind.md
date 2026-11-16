@@ -2,7 +2,7 @@
 title: Tailwind CSS
 description: Un import hace resolubles todas las familias no de marca; Tailwind emite solo los iconos que usó tu marcado.
 order: 2
-source: f7226d9ae2440d203551516046aa203b9f501d41
+source: 5f1f664bdcd07fdf9ae2782f1d69676fe3c9519c
 ---
 
 # Tailwind CSS v4
@@ -42,7 +42,7 @@ Un detalle honesto a tener en cuenta: acotar `families` no hace el build más r�
 
 ## Movimiento
 
-Las clases de movimiento e `ic-on-hover` funcionan como utilidades de Tailwind, en línea con [Movimiento](../concepts.md#movimiento): `ic-on-hover` reproduce el movimiento mientras el icono, su padre o un ancestro `ic-trigger` tiene hover o foco, una vez por hover salvo que `--ic-anim-iterations` indique otra cosa, y controla también el material gráfico animado:
+Las clases de movimiento e `ic-on-hover` funcionan como utilidades de Tailwind, en línea con [Movimiento](../concepts.md#movimiento): `ic-on-hover` reproduce el movimiento mientras el icono, su padre o un ancestro `ic-trigger` tiene hover o foco visible (`:focus-visible`), una vez por hover salvo que `--ic-anim-iterations` indique otra cosa, y controla también el material gráfico animado:
 
 ```html
 <button>
@@ -61,7 +61,7 @@ Como las clases de movimiento son utilidades reales de Tailwind, las variantes d
 <i class="ic-lucide-bell hover:ic-anim-wiggle" aria-hidden="true"></i>
 ```
 
-Cuando uses variantes, empareja `group-focus-visible:ic-anim-spin` con `group-hover:ic-anim-spin` para que quienes usan teclado reciban la misma señal; `ic-on-hover` gestiona el foco automáticamente. Las preferencias de movimiento reducido desactivan las animaciones incluso cuando coincide una variante. El material gráfico animado no tiene forma con variante, así que mantén `ic-on-hover` junto a la clase del icono en esos casos. Consulta [Movimiento](../concepts.md#movimiento) para ver las cinco clases, los valores por defecto, los prefijos personalizados y los límites de animación en máscara CSS.
+Cuando uses variantes, empareja `group-focus-visible:ic-anim-spin` con `group-hover:ic-anim-spin` para que quienes usan teclado reciban la misma señal; `ic-on-hover` gestiona el foco visible automáticamente. Las preferencias de movimiento reducido desactivan las animaciones incluso cuando coincide una variante. El material gráfico animado no tiene forma con variante, así que mantén `ic-on-hover` junto a la clase del icono en esos casos. Consulta [Movimiento](../concepts.md#movimiento) para ver las cinco clases, los valores por defecto, los prefijos personalizados y los límites de animación en máscara CSS.
 
 ## Atribución
 

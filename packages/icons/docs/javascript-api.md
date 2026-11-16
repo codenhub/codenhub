@@ -39,13 +39,13 @@ registry.registerFamily(lucide);
 
 const classes = scanFiles(["./src/**/*.html"]);
 const { css, families } = generateIconSetCss(classes, registry);
-const banner = renderAttributionBanner(families); // undefined when no family used owes a notice
+const banner = renderAttributionBanner(families); // undefined when no family used has a notice line to print
 const stylesheet = banner ? `${banner}\n${css}` : css;
 ```
 
 `scanFiles` accepts literal file paths and glob patterns, and quietly skips any file it cannot read rather than blowing up your script over a stray permission error.
 
-If you want one full family stylesheet — the same format `@codenhub/icons/<family>` ships — call `generateFamilyCss`. Both CSS generators emit a `--ic-static-mask` property for the base stylesheet to swap in on hover rest and under reduced motion whenever an icon provides `staticBody`; the registry preserves that optional inner SVG markup on `ResolvedIcon`. It shares the animated body's geometry and accepts the same stroke width. `renderSvg`, by contrast, keeps the animated `body`. See [Animated families](concepts.md#animated-families).
+If you want one full family stylesheet — the same format `@codenhub/icons/<family>` ships — call `generateFamilyCss`. For a brand family, pass `bareNames: false`, as its published stylesheet does, so a brand named like a core icon never claims that icon's bare class. Both CSS generators emit a `--ic-static-mask` property for the base stylesheet to swap in on hover rest and under reduced motion whenever an icon provides `staticBody`; the registry preserves that optional inner SVG markup on `ResolvedIcon`. It shares the animated body's geometry and accepts the same stroke width. `renderSvg`, by contrast, keeps the animated `body`. See [Animated families](concepts.md#animated-families).
 
 ## A background-image icon
 
@@ -98,7 +98,7 @@ await registry.resolveAsync("phosphor:heart");
 
 ## Third-party icon sets
 
-`adoptIconifySet` converts any IconifyJSON-shaped document into the family format this package expects:
+`adoptIconifySet` converts an IconifyJSON document into the family format this package expects. It reads the icons, aliases, and their dimensions, plus the set's name, author, and license; other IconifyJSON fields, such as categories, are not carried over:
 
 ```ts
 import { adoptIconifySet } from "@codenhub/icons";

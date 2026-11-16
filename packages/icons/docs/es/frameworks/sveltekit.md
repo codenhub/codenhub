@@ -2,12 +2,12 @@
 title: SvelteKit
 description: SvelteKit se apoya en Vite y los archivos .svelte se escanean automáticamente, así que el plugin de Vite casi no necesita configuración.
 order: 3
-source: 3421f6a4370a257e3ecb9cceabf28f2e1b7b2126
+source: 3de12bc69592d9d50c4fa15a6d9c70281001b947
 ---
 
 # SvelteKit
 
-SvelteKit se apoya en Vite, y `.svelte` ya está en la lista de escaneo automático en tiempo de transformación del plugin de Vite. Después de las acrobacias de bundler en Next.js y las pistas extra de plantillas en Astro, SvelteKit es la configuración donde casi no queda nada por explicar.
+SvelteKit se apoya en Vite, y el plugin de Vite escanea cada módulo `.svelte` que Vite transforma. El único paso extra es el mismo que necesita Astro: SvelteKit renderiza las páginas por su cuenta en lugar de hacerlo como entradas HTML de Vite, así que hay que importar a mano la hoja de estilos generada.
 
 ## Plugin de Vite
 
@@ -36,11 +36,27 @@ export default defineConfig({
 @import "@codenhub/icons";
 ```
 
-Las clases en componentes `.svelte` se recogen en el escaneo en tiempo de transformación incluso sin una entrada `content`. Enumerar `src/**/*.{svelte,html}` de todos modos mantiene bien el primer pintado en desarrollo antes de que Vite transforme esos módulos de componentes. `mode: "svg"` también funciona directamente sobre archivos `.svelte`.
+Después importa ambas hojas de estilos desde el layout raíz, para que todas las páginas las carguen:
+
+```svelte
+<!-- src/routes/+layout.svelte -->
+<script>
+  import "../app.css";
+  import "virtual:icons.css";
+
+  let { children } = $props();
+</script>
+
+{@render children()}
+```
+
+El plugin inyecta su hoja de estilos a través del hook `transformIndexHtml` de Vite, que SvelteKit nunca ejecuta en sus páginas, así que el import de `virtual:icons.css` es lo que pone las reglas de máscara en la página. Sin él, las reglas base siguen aplicando y cada icono se renderiza como un cuadrado sólido de su color.
+
+Conserva la entrada `content`. La hoja de estilos se genera cuando el layout la importa, y un build puede llegar a ese import antes de que Vite haya transformado cada componente, así que `content` es lo que garantiza que cada clase esté en ella. También mantiene bien el primer pintado en desarrollo. `mode: "svg"` también funciona directamente sobre archivos `.svelte`.
 
 ## Otros métodos
 
-[Tailwind CSS v4](../delivery/tailwind.md) y [CSS simple](../delivery/plain-css.md) funcionan en SvelteKit de la misma manera que en cualquier otro sitio. Vue, SolidStart y otros frameworks basados en Vite siguen exactamente esta misma configuración — `.vue` se escanea automáticamente igual que `.svelte`.
+[Tailwind CSS v4](../delivery/tailwind.md) y [CSS simple](../delivery/plain-css.md) funcionan en SvelteKit de la misma manera que en cualquier otro sitio. Una single-page app de Vite con un `index.html`, como una construida con Vue o Solid, recibe la hoja de estilos inyectada y no necesita import en el layout; un framework que renderiza su propio HTML, como Nuxt o SolidStart, necesita el import igual que SvelteKit.
 
 ## Ver también
 

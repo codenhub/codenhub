@@ -2,7 +2,7 @@
 title: Tailwind CSS
 description: Um único import torna resolvíveis todas as famílias que não são de marcas; o Tailwind emite apenas os ícones que o seu markup usou.
 order: 2
-source: f7226d9ae2440d203551516046aa203b9f501d41
+source: 5f1f664bdcd07fdf9ae2782f1d69676fe3c9519c
 ---
 
 # Tailwind CSS v4
@@ -42,7 +42,7 @@ Um detalhe sincero: restringir `families` não deixa o build mais rápido nem ma
 
 ## Movimento
 
-Classes de movimento e `ic-on-hover` funcionam como utilitários do Tailwind, acompanhando [Movimento](../concepts.md#movimento): `ic-on-hover` reproduz o movimento enquanto o ícone, seu pai ou um ancestral `ic-trigger` está com hover ou foco, uma vez por hover a menos que `--ic-anim-iterations` diga o contrário, e também controla arte animada:
+Classes de movimento e `ic-on-hover` funcionam como utilitários do Tailwind, acompanhando [Movimento](../concepts.md#movimento): `ic-on-hover` reproduz o movimento enquanto o ícone, seu pai ou um ancestral `ic-trigger` está com hover ou foco visível (`:focus-visible`), uma vez por hover a menos que `--ic-anim-iterations` diga o contrário, e também controla arte animada:
 
 ```html
 <button>
@@ -61,7 +61,7 @@ Como as classes de movimento são utilitários reais do Tailwind, as variantes d
 <i class="ic-lucide-bell hover:ic-anim-wiggle" aria-hidden="true"></i>
 ```
 
-Ao usar variantes, combine `group-focus-visible:ic-anim-spin` com `group-hover:ic-anim-spin` para que quem navega por teclado receba o mesmo sinal visual; `ic-on-hover` já cuida do foco automaticamente. Preferências de movimento reduzido desativam animações mesmo quando uma variante casa. Arte animada não tem forma com variante, então mantenha `ic-on-hover` ao lado da classe do ícone nesses casos. Veja [Movimento](../concepts.md#movimento) para todas as cinco classes, padrões, prefixos personalizados e limites da animação em máscara CSS.
+Ao usar variantes, combine `group-focus-visible:ic-anim-spin` com `group-hover:ic-anim-spin` para que quem navega por teclado receba o mesmo sinal visual; `ic-on-hover` já cuida do foco visível automaticamente. Preferências de movimento reduzido desativam animações mesmo quando uma variante casa. Arte animada não tem forma com variante, então mantenha `ic-on-hover` ao lado da classe do ícone nesses casos. Veja [Movimento](../concepts.md#movimento) para todas as cinco classes, padrões, prefixos personalizados e limites da animação em máscara CSS.
 
 ## Atribuição
 
