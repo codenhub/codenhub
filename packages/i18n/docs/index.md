@@ -43,7 +43,7 @@ Nested keys are joined with dots, so this dictionary has the keys `home.title` a
 pnpm add @codenhub/i18n
 ```
 
-The package is an ES module and needs Node.js 24 or newer, or a current browser. It has no runtime dependencies.
+The package is an ES module and needs Node.js 26 or newer, or a current browser. It has no runtime dependencies.
 
 ### 2. Write two dictionaries
 
