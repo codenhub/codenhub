@@ -2,7 +2,7 @@
 title: JSON Schema
 description: Escribe un validador como JSON Schema, para el cuerpo de una API HTTP, los argumentos de una herramienta que llama un modelo de lenguaje o un generador de formularios.
 order: 10
-source: 29f4162a9f46d04ac67c4efe39332cd2a3239877
+source: a1403c088a858fcc70ddc0f0850e5d0095bf9220
 ---
 
 # JSON Schema
@@ -42,7 +42,7 @@ Un esquema dice menos de lo que verifica un validador. `email()` rechaza una dir
 Hay tres casos que doblan esa promesa. En dos, el validador limpia un valor antes de verificarlo, algo que un esquema no puede expresar, y en el otro, los dos cuentan de forma distinta la longitud del texto:
 
 - **Opciones de limpieza.** `string({ trim: true, max: 5 })` se escribe con `maxLength: 5`, que describe un texto que no necesita que se le quiten espacios. Un texto con espacios alrededor de cinco letras pasa el validador y no el esquema. Con `case` pasa lo mismo, y también con `clamp` junto a un límite, como en `number({ max: 10, clamp: { min: 0, max: 10 } })`: el esquema describe el valor después de la limpieza. El rango de un `clamp` en sí no se escribe.
-- **Longitud del texto.** El `length` de una cadena cuenta un emoji, y cualquier otro carácter fuera del Plano Multilingüe Básico, como dos, y JSON Schema lo cuenta como uno, así que un `min` o un `max` pueden diferir en la cantidad de esos caracteres. Con un `pattern` pasa lo mismo: un esquema lo lee en modo Unicode, el flag `u`, así que en uno escrito sin ese flag, `.` y una clase negada como `[^a]` coinciden con un carácter entero en el esquema y con medio emoji en el validador.
+- **Longitud del texto.** El `length` de una cadena cuenta un emoji, y cualquier otro carácter fuera del Plano Multilingüe Básico, como dos, y JSON Schema lo cuenta como uno, así que un `min` o un `max` pueden diferir en la cantidad de esos caracteres. Con un `pattern` pasa lo mismo: un esquema lo lee en modo Unicode, el flag `u`, así que en uno escrito sin ese flag, `.` y una clase negada como `[^a]` coinciden con un carácter entero en el esquema y con medio emoji en el validador. El texto de un `startsWith`, `endsWith` o `includes` que tiene medio carácter, con el que el modo Unicode nunca coincide, se deja fuera del esquema.
 - **Formatos que aceptan varias escrituras.** `phone()` acepta `+55 (11) 98765-4321` y produce `+5511987654321`. Una verificación sobre un formato así, como en `hostname(pattern(/^[a-z.]+$/))`, ve la escritura que produce el formato y se escribe para el texto tal como llega, así que `EXAMPLE.com` pasa el validador y no el esquema.
 
 ## Entrada y salida
@@ -190,7 +190,7 @@ JSON Schema no tiene palabras para parte de lo que un validador puede verificar,
 - `date`, `bigint`, `symbol`, `func`, `instanceOf`, `set`, `map` y `file`, ninguno de los cuales es un valor JSON; `formData`, que lee un formulario y no JSON; y un validador creado por `guard`, cuya prueba es una función que nadie puede leer.
 - Un validador que escribiste a mano, y una verificación creada por `check`, cuya regla es una función que nadie puede leer.
 - `lowercase`, `uppercase`, `unique` con una función de clave, y un `pattern` con un flag como `i` o `v`, que los patrones de JSON Schema no tienen. Los flags `g` e `y`, que `pattern` descarta, se omiten, y también `u`, el modo en que un esquema lee todos los patrones.
-- Un `pattern` escrito sin `u` que el modo Unicode lee de otra forma: uno que es un error en ese modo, como `/^\@x$/`, cuyo `\@` solo ese modo rechaza, y uno con `\u{…}` o `\p{…}`, que son escapes solo en ese modo y texto con llaves fuera de él.
+- Un `pattern` escrito sin `u` que el modo Unicode lee de otra forma: uno que es un error en ese modo, como `/^\@x$/`, cuyo `\@` solo ese modo rechaza, y uno con `\u{…}` o `\p{…}`, que son escapes solo en ese modo y texto con llaves fuera de él. También uno que tiene medio carácter, escrito o como escape, o un escape de un carácter desde U+D800, que puede cerrar un rango que cruza esas mitades, ya que el modo Unicode nunca coincide con medio carácter. Agrega el flag `u` para escribirlo.
 - Lo que devuelve un `transform`, en el lado de salida.
 - Una verificación sobre un `object`, y una variante de `tagged` que no es un `object`, como un `lazy`. Con `unrepresentable: "any"`, esa variante se escribe como un objeto que tiene solo su etiqueta, para que las demás variantes sigan coincidiendo con una sola rama del `oneOf`.
 
