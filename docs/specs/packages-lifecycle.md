@@ -1,6 +1,6 @@
 ---
 status: APPROVED
-last_updated: 2026-11-14
+last_updated: 2026-11-16
 scope: Public workspace packages.
 ---
 
@@ -158,6 +158,17 @@ Three cases the check cannot settle, which reviewers MUST watch for:
 - **Dependencies selected by configuration.** A tool named by an option rather than by an import — a test environment, a coverage provider — is invisible to import analysis. The check treats a name appearing anywhere in the package as used and never reports it, which is the safe direction.
 - **Dynamic and computed specifiers.** A specifier assembled from a variable names no package the check can read. Declare whatever such code loads.
 
+#### A private workspace package
+
+Code that two or more public packages share, and that no consumer imports by name, SHOULD be a private workspace package that each of them inlines, rather than a public package. Each public package declares it in `devDependencies` as `workspace:*`, as [Ranges](#ranges) asks of a private dependency, and lists it in `codenhub.bundled`. Such code is not a published contract: it has no version of its own, no release to coordinate, and no API a consumer can come to depend on, so it can change in the same pull request as every package that uses it. It becomes a public package only when a need names why, such as a consumer outside the workspace.
+
+The cost is that a change to it reaches consumers only through each package's own release, so two packages can carry different revisions of the same code. A change to a private package inlined this way:
+
+- MUST pass the delivery gate for every public package that inlines it, not only for the private package. `--changed` selects a package by the files in its own directory, not by what it depends on, so a branch that changes only the private package selects only that package; name the inlining packages too, as in `pnpm verify scan icons styles`.
+- MUST be named in the changelog of each inlining package's next release whose behavior it changes, under that package's own wording: a consumer reads what changed in the package they install, not in code they never see.
+
+`hub release --unreleased` lists only commits inside a package's directory, so it does not show a change to a private package that package inlines either. Until the tooling follows inlined packages, read `git log <tag>.. -- packages/<private package>` beside it when preparing a release.
+
 ### Ranges
 
 A public package that depends on another public package SHOULD install it from its release, through a `catalog:` range, not from the working tree. It is then built and tested against the same code its consumers install, so a defect in the dependency shows up the way a consumer meets it, and no build order or cycle ties the two together. The cost is accepted on purpose: a change that needs new behavior from another package waits for that package to release it, rather than landing on code no consumer has yet. pnpm installs a `catalog:` range from the registry even when the workspace holds a matching version, and `pnpm-workspace.yaml` sets `linkWorkspacePackages: false` so that stays true if pnpm's default changes.
@@ -172,7 +183,7 @@ An external dependency that two or more workspace packages install MUST use `cat
 
 Workspace dependencies MUST NOT form a cycle. A cycle has no valid build order, so the tooling falls back to the declaration order and builds something before its own dependency.
 
-Do not add dependencies for simple logic that can be maintained in-house.
+Whether to add a dependency at all is decided by [Few dependencies](../guidelines/code.md#few-dependencies) in the coding guidelines.
 
 ## Publishing
 

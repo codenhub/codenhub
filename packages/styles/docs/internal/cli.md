@@ -1,6 +1,6 @@
 ---
 status: IMPLEMENTED
-last_updated: 2026-11-15
+last_updated: 2026-11-16
 scope: Design decisions, limits, and failure modes of the `chs` build command that ships in `@codenhub/styles`.
 ---
 
@@ -66,6 +66,8 @@ The aesthetic names are read from the keys of the same manifest's `exports` (`./
 ## How classes are found
 
 Content is read as text and never run, as Tailwind reads it. Every run of characters a class name can hold is a word, and a word counts when it is in `classes.json`. A word that is not one is read again by its parts around each colon, so Svelte's `class:primary={isPrimary}` and a Ruby `btn: true` are found. Only the `--content` globs are read: nothing of the consumer's other files or of this package adds a class, and nothing is written but the output. The tests hold it: a class only in an unlisted file in the working directory stays out.
+
+Approved on 2026-11-16: resolving the globs, reading the files, and splitting them into words move to `@codenhub/scan`, a private package this package and `@codenhub/icons` inline, while which words count stays here. Its one visible change for this command is that a `--content` entry is tried as a literal path before it is read as a glob, so `app/[id]/page.tsx` is found. The icons [Build command](../../../icons/docs/internal/cli.md#the-shared-scanner) records the split.
 
 ## Content globs that match nothing
 
