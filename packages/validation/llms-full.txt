@@ -56,7 +56,7 @@ Invalid input does not throw: the result says why it failed. `signup` is also a 
 
 ## Requirements
 
-- Node.js 24 or newer, or a current browser, worker or edge runtime. `url()`, `internationalEmail()`, `domain()` and `hostname()` need `URL.canParse`, which Safari before 17 lacks, so they throw there. `ip()` and `cidr()` use the `URL` parser too.
+- Node.js 26 or newer, or a current browser, worker or edge runtime. `url()`, `internationalEmail()`, `domain()` and `hostname()` need `URL.canParse`, which Safari before 17 lacks, so they throw there. `ip()` and `cidr()` use the `URL` parser too.
 - ESM-aware package resolution. The package is ESM only and marked `sideEffects: false`. CommonJS code can `require()` it on every supported Node.js version.
 - TypeScript 5.0 or newer, for the types, which use `const` type parameters.
 
