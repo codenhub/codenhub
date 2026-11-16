@@ -492,6 +492,25 @@ describe("viteIcons in svg mode", () => {
       expect(code).not.toMatch(/stroke-|fill-rule/);
     });
 
+    it("is camel-cased when namespaced or spaced before its value, leaving aria-, data-, values, and text alone", () => {
+      const marked: IconFamilyData = {
+        ...createFamily(),
+        icons: {
+          mark: {
+            body: '<title>stroke-width="2"</title><use xlink:href="#a" aria-hidden="true" data-x="a b-c=1" stroke-width = "2" />',
+          },
+        },
+        prefix: "marked",
+      };
+      const { transform } = createPlugin({ families: [createFamily(), marked], mode: "svg" });
+
+      const code = transform('export const App = () => <i className="ic-marked-mark" />;', "app.tsx")?.code;
+
+      expect(code).toContain(
+        '<title>stroke-width="2"</title><use xlinkHref="#a" aria-hidden="true" data-x="a b-c=1" strokeWidth = "2" />',
+      );
+    });
+
     it("is camel-cased for JSX in a .js file", () => {
       const { transform } = createPlugin({ families: [createFamily(), stroked], mode: "svg" });
 

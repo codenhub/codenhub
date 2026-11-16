@@ -396,8 +396,14 @@ function toJsxStyle(svg: string): string {
   });
 }
 
-/** A hyphenated or namespaced attribute name, other than `aria-*` and `data-*`, which React takes as written. */
-const SVG_ATTRIBUTE_NAME = /(?<=\s)(?!aria-|data-)([a-z][a-z0-9]*(?:[-:][a-z0-9]+)+)(?==)/gi;
+/** A start tag, quoted values included whole, so text between tags is never read as attributes. */
+const START_TAG = /<[a-z](?:"[^"]*"|'[^']*'|[^"'>])*>/gi;
+
+/**
+ * A quoted value, matched so it is skipped, or a hyphenated or namespaced
+ * attribute name other than `aria-*` and `data-*`, which React takes as written.
+ */
+const SVG_ATTRIBUTE_NAME = /("[^"]*"|'[^']*')|(?<=\s)(?!aria-|data-)[a-z][a-z0-9]*(?:[-:][a-z0-9]+)+(?=\s*=)/gi;
 
 /**
  * Renames the attributes in rendered icon markup to the DOM property names React reads.
@@ -407,8 +413,10 @@ const SVG_ATTRIBUTE_NAME = /(?<=\s)(?!aria-|data-)([a-z][a-z0-9]*(?:[-:][a-z0-9]
  * markup lands as a JSX element, as in `strokeWidth` and `xlinkHref`.
  */
 function toJsxAttributeNames(svg: string): string {
-  return svg.replace(SVG_ATTRIBUTE_NAME, (name: string) =>
-    name.replace(/[-:]([a-z0-9])/gi, (_separator, letter: string) => letter.toUpperCase()),
+  return svg.replace(START_TAG, (tag: string) =>
+    tag.replace(SVG_ATTRIBUTE_NAME, (name: string, quoted?: string) =>
+      quoted ? name : name.replace(/[-:]([a-z0-9])/gi, (_separator, letter: string) => letter.toUpperCase()),
+    ),
   );
 }
 
