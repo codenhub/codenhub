@@ -38,7 +38,7 @@ The collection covers planning and implementation (`brainstorming`, `test-driven
 
 ## Requirements
 
-- Node.js 24 or newer.
+- Node.js 26 or newer.
 - Filesystem permission to read source skills and modify selected destinations.
 - An interactive terminal (TTY) for the wizard; explicit CLI options support automation.
 

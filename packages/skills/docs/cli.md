@@ -14,7 +14,7 @@ The executable is named `codenhub-skills`. Run it without adding a project depen
 pnpm dlx @codenhub/skills@latest
 ```
 
-Use `npx @codenhub/skills@latest` for the npm equivalent. Node.js 24 or newer is required.
+Use `npx @codenhub/skills@latest` for the npm equivalent. Node.js 26 or newer is required.
 
 ## Start in a project
 

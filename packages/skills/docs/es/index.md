@@ -14,7 +14,7 @@ Esta documentación sigue un proyecto que usa Claude y Codex. Empezamos con `bra
 
 ## Inicio rápido
 
-Con Node.js 24 o posterior, abre una terminal interactiva en el directorio de tu proyecto y ejecuta:
+Con Node.js 26 o posterior, abre una terminal interactiva en el directorio de tu proyecto y ejecuta:
 
 ```sh
 pnpm dlx @codenhub/skills@latest

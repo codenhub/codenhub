@@ -13,7 +13,7 @@ These docs follow a project using Claude and Codex. We start with `brainstorming
 
 ## Quick start
 
-With Node.js 24 or newer, open an interactive terminal in your project directory and run:
+With Node.js 26 or newer, open an interactive terminal in your project directory and run:
 
 ```sh
 pnpm dlx @codenhub/skills@latest

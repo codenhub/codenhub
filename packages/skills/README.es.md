@@ -40,7 +40,7 @@ La colección cubre planificación e implementación (`brainstorming`, `test-dri
 
 ## Requisitos
 
-- Node.js 24 o posterior.
+- Node.js 26 o posterior.
 - Permisos del sistema de archivos para leer las skills de origen y modificar los destinos seleccionados.
 - Una terminal interactiva (TTY) para el asistente; las opciones explícitas de la CLI permiten automatizar la instalación.
 

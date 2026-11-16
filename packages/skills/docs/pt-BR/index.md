@@ -14,7 +14,7 @@ Esta documentação acompanha um projeto que usa Claude e Codex. Começamos com 
 
 ## Início rápido
 
-Com Node.js 24 ou mais recente, abra um terminal interativo no diretório do seu projeto e execute:
+Com Node.js 26 ou mais recente, abra um terminal interativo no diretório do seu projeto e execute:
 
 ```sh
 pnpm dlx @codenhub/skills@latest

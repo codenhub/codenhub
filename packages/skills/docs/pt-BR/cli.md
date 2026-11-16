@@ -15,7 +15,7 @@ O executável se chama `codenhub-skills`. Use um executor de pacotes para rodá-
 pnpm dlx @codenhub/skills@latest
 ```
 
-Use `npx @codenhub/skills@latest` para o equivalente com npm. É necessário ter Node.js 24 ou mais recente.
+Use `npx @codenhub/skills@latest` para o equivalente com npm. É necessário ter Node.js 26 ou mais recente.
 
 ## Comece em um projeto
 
