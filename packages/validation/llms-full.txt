@@ -3072,7 +3072,7 @@ Raise `maxDepth` only for data you know is deeper. For a schema that does not wa
 
 Work can grow faster than the input. A `union` tries every option, and an `object` checks every property even after one has failed. So in a recursive `union` of objects, the options that do not match still reach the children, at every level.
 
-A `lazy` keeps what it found for each object at each path in one validation, and gives it again when the same object is reached at the same path. So those options share the result of the children, and the work grows with the input. An asynchronous check under it runs once for each such object and path, however many options reach it. A primitive is not kept, since it has no children to multiply the work.
+A `lazy` keeps what it found for each object in one validation, and gives it again when the same object is reached as many `lazy` levels down, wherever that is. So those options share the result of the children, and the work grows with the input. An asynchronous check under it runs once for each such object, however many options reach it. When the input holds one object in two places, the value produced holds one output object in both, so changing it in one place, or a `readonly` around one of them, reaches the other. Input parsed from JSON never holds an object twice. A primitive is not kept, since it has no children to multiply the work.
 
 Work that makes a new object at every level, such as a `transform` that copies its value before a `lazy`, cannot be shared. Its work doubles with each level, so a small valid input can take a very long time. `maxCalls` stops that: past it, every further call of that `lazy` fails.
 
