@@ -157,10 +157,17 @@ async function build(options: BuildOptions, io: CliIo): Promise<string> {
     throw new Error(`unknown aesthetic "${unknown}"; choose from ${validAesthetics.join(", ")}.`);
   }
 
-  const contents = [...readContent(options.contentGlobs, io.cwd)];
+  const contents = readContent(options.contentGlobs, io.cwd);
 
   const droppable = new Set(JSON.parse(await readPackageFile(PURGE_CLASSES)) as string[]);
-  const found = new Set(contents.flatMap((content) => findClasses(content, droppable)));
+  const found = new Set<string>();
+
+  // One file at a time, so a broad glob holds only the file being read and the classes found so far.
+  for (const content of contents) {
+    for (const name of findClasses(content, droppable)) {
+      found.add(name);
+    }
+  }
   // A class this command may not drop is one no template has to name, such as `.theme-dark`, so it always counts as used.
   const used = { has: (name: string) => found.has(name) || !droppable.has(name) };
 
