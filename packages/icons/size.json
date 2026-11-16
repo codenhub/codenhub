@@ -1525,9 +1525,9 @@
         "default": {
           "files": {
             "dist/vite/plugin.js": {
-              "bytes": 8731,
+              "bytes": 8801,
               "declarations": {
-                "viteIcons": 3852,
+                "viteIcons": 3921,
                 "replaceIconTagsWithSvg": 815,
                 "createStringScanner": 739,
                 "toJsxStyle": 266,
@@ -1536,8 +1536,8 @@
                 "canStartExpression": 237,
                 "resolveIconTagClasses": 237,
                 "stringQuoteAt": 186,
+                "renderIconModule": 175,
                 "findRegexEnd": 174,
-                "renderIconModule": 174,
                 "resolveIconModule": 172,
                 "EXPRESSION_KEYWORDS": 171,
                 "createRegistry": 149,
@@ -1546,7 +1546,7 @@
                 "toJsxAttributeNames": 117,
                 "SVG_ATTRIBUTE_NAME": 88,
                 "ATTRIBUTE_VALUE": 79,
-                "removeIconTags": 70,
+                "removeIconTags": 69,
                 "ATTRIBUTE": 64,
                 "SOURCE_FILE": 55,
                 "MARKUP_FILE": 42,
@@ -1555,8 +1555,8 @@
                 "(top level)": 36,
                 "ICON_MODULE_PREFIX": 29,
                 "STYLE_STRING": 29,
+                "TEMPLATE_FILE": 22,
                 "VIRTUAL_ID": 22,
-                "TEMPLATE_FILE": 21,
                 "JSX_FILE": 16,
                 "ASTRO_FILE": 14,
                 "IDENTIFIER_CHAR": 10,
@@ -1565,14 +1565,14 @@
               }
             },
             "dist/generator/css-generator.js": {
-              "bytes": 2695,
+              "bytes": 2696,
               "declarations": {
                 "generateBaseCss": 1120,
-                "generateIconSetCss": 819,
+                "generateIconSetCss": 821,
                 "generateIconCss": 341,
                 "escapeSelectorClass": 255,
                 "renderMaskSvg": 92,
-                "renderBrandPaint": 68
+                "renderBrandPaint": 67
               }
             },
             "dist/core/registry.js": {
@@ -1586,11 +1586,11 @@
               }
             },
             "dist/core/render.js": {
-              "bytes": 1556,
+              "bytes": 1552,
               "declarations": {
-                "renderSvg": 439,
-                "overridePaintAttributes": 344,
-                "overridePaint": 185,
+                "renderSvg": 438,
+                "overridePaintAttributes": 343,
+                "overridePaint": 183,
                 "escapeAttributeValue": 110,
                 "renderAttributes": 100,
                 "setStrokeWidth": 77,
@@ -1606,7 +1606,7 @@
               }
             },
             "(unattributed)": {
-              "bytes": 1055
+              "bytes": 1080
             },
             "dist/catalog/attribution.js": {
               "bytes": 1028,
@@ -1631,13 +1631,13 @@
               }
             },
             "dist/scanner/class-scanner.js": {
-              "bytes": 609,
+              "bytes": 611,
               "declarations": {
                 "scanFiles": 157,
-                "getPatternForPrefix": 123,
+                "getPatternForPrefix": 124,
                 "resolveEntry": 116,
                 "scanIconClasses": 99,
-                "escapeRegExp": 61,
+                "escapeRegExp": 62,
                 "regexCache": 26,
                 "GLOB_CHARACTERS": 15,
                 "(top level)": 12
@@ -1661,15 +1661,15 @@
               }
             }
           },
-          "gzip": 7575,
-          "minified": 19491
+          "gzip": 7623,
+          "minified": 19585
         },
         "viteIcons": {
           "files": {
             "dist/vite/plugin.js": {
-              "bytes": 8731,
+              "bytes": 8801,
               "declarations": {
-                "viteIcons": 3852,
+                "viteIcons": 3921,
                 "replaceIconTagsWithSvg": 815,
                 "createStringScanner": 739,
                 "toJsxStyle": 266,
@@ -1678,8 +1678,8 @@
                 "canStartExpression": 237,
                 "resolveIconTagClasses": 237,
                 "stringQuoteAt": 186,
+                "renderIconModule": 175,
                 "findRegexEnd": 174,
-                "renderIconModule": 174,
                 "resolveIconModule": 172,
                 "EXPRESSION_KEYWORDS": 171,
                 "createRegistry": 149,
@@ -1688,7 +1688,7 @@
                 "toJsxAttributeNames": 117,
                 "SVG_ATTRIBUTE_NAME": 88,
                 "ATTRIBUTE_VALUE": 79,
-                "removeIconTags": 70,
+                "removeIconTags": 69,
                 "ATTRIBUTE": 64,
                 "SOURCE_FILE": 55,
                 "MARKUP_FILE": 42,
@@ -1697,8 +1697,8 @@
                 "(top level)": 36,
                 "ICON_MODULE_PREFIX": 29,
                 "STYLE_STRING": 29,
+                "TEMPLATE_FILE": 22,
                 "VIRTUAL_ID": 22,
-                "TEMPLATE_FILE": 21,
                 "JSX_FILE": 16,
                 "ASTRO_FILE": 14,
                 "IDENTIFIER_CHAR": 10,
@@ -1707,14 +1707,14 @@
               }
             },
             "dist/generator/css-generator.js": {
-              "bytes": 2695,
+              "bytes": 2696,
               "declarations": {
                 "generateBaseCss": 1120,
-                "generateIconSetCss": 819,
+                "generateIconSetCss": 821,
                 "generateIconCss": 341,
                 "escapeSelectorClass": 255,
                 "renderMaskSvg": 92,
-                "renderBrandPaint": 68
+                "renderBrandPaint": 67
               }
             },
             "dist/core/registry.js": {
@@ -1728,11 +1728,11 @@
               }
             },
             "dist/core/render.js": {
-              "bytes": 1556,
+              "bytes": 1552,
               "declarations": {
-                "renderSvg": 439,
-                "overridePaintAttributes": 344,
-                "overridePaint": 185,
+                "renderSvg": 438,
+                "overridePaintAttributes": 343,
+                "overridePaint": 183,
                 "escapeAttributeValue": 110,
                 "renderAttributes": 100,
                 "setStrokeWidth": 77,
@@ -1748,7 +1748,7 @@
               }
             },
             "(unattributed)": {
-              "bytes": 1057
+              "bytes": 1082
             },
             "dist/catalog/attribution.js": {
               "bytes": 1028,
@@ -1773,13 +1773,13 @@
               }
             },
             "dist/scanner/class-scanner.js": {
-              "bytes": 609,
+              "bytes": 611,
               "declarations": {
                 "scanFiles": 157,
-                "getPatternForPrefix": 123,
+                "getPatternForPrefix": 124,
                 "resolveEntry": 116,
                 "scanIconClasses": 99,
-                "escapeRegExp": 61,
+                "escapeRegExp": 62,
                 "regexCache": 26,
                 "GLOB_CHARACTERS": 15,
                 "(top level)": 12
@@ -1803,15 +1803,15 @@
               }
             }
           },
-          "gzip": 7578,
-          "minified": 19493
+          "gzip": 7626,
+          "minified": 19587
         },
         "viteIconsPlugin": {
           "files": {
             "dist/vite/plugin.js": {
-              "bytes": 8743,
+              "bytes": 8813,
               "declarations": {
-                "viteIcons": 3852,
+                "viteIcons": 3921,
                 "replaceIconTagsWithSvg": 815,
                 "createStringScanner": 739,
                 "toJsxStyle": 266,
@@ -1820,8 +1820,8 @@
                 "canStartExpression": 237,
                 "resolveIconTagClasses": 237,
                 "stringQuoteAt": 186,
+                "renderIconModule": 175,
                 "findRegexEnd": 174,
-                "renderIconModule": 174,
                 "resolveIconModule": 172,
                 "EXPRESSION_KEYWORDS": 171,
                 "createRegistry": 149,
@@ -1830,7 +1830,7 @@
                 "toJsxAttributeNames": 117,
                 "SVG_ATTRIBUTE_NAME": 88,
                 "ATTRIBUTE_VALUE": 79,
-                "removeIconTags": 70,
+                "removeIconTags": 69,
                 "ATTRIBUTE": 64,
                 "SOURCE_FILE": 55,
                 "(top level)": 42,
@@ -1839,8 +1839,8 @@
                 "BRACED": 40,
                 "ICON_MODULE_PREFIX": 29,
                 "STYLE_STRING": 29,
+                "TEMPLATE_FILE": 22,
                 "VIRTUAL_ID": 22,
-                "TEMPLATE_FILE": 21,
                 "JSX_FILE": 16,
                 "ASTRO_FILE": 14,
                 "IDENTIFIER_CHAR": 10,
@@ -1850,14 +1850,14 @@
               }
             },
             "dist/generator/css-generator.js": {
-              "bytes": 2695,
+              "bytes": 2696,
               "declarations": {
                 "generateBaseCss": 1120,
-                "generateIconSetCss": 819,
+                "generateIconSetCss": 821,
                 "generateIconCss": 341,
                 "escapeSelectorClass": 255,
                 "renderMaskSvg": 92,
-                "renderBrandPaint": 68
+                "renderBrandPaint": 67
               }
             },
             "dist/core/registry.js": {
@@ -1871,11 +1871,11 @@
               }
             },
             "dist/core/render.js": {
-              "bytes": 1556,
+              "bytes": 1552,
               "declarations": {
-                "renderSvg": 439,
-                "overridePaintAttributes": 344,
-                "overridePaint": 185,
+                "renderSvg": 438,
+                "overridePaintAttributes": 343,
+                "overridePaint": 183,
                 "escapeAttributeValue": 110,
                 "renderAttributes": 100,
                 "setStrokeWidth": 77,
@@ -1891,7 +1891,7 @@
               }
             },
             "(unattributed)": {
-              "bytes": 1063
+              "bytes": 1088
             },
             "dist/catalog/attribution.js": {
               "bytes": 1028,
@@ -1916,13 +1916,13 @@
               }
             },
             "dist/scanner/class-scanner.js": {
-              "bytes": 609,
+              "bytes": 611,
               "declarations": {
                 "scanFiles": 157,
-                "getPatternForPrefix": 123,
+                "getPatternForPrefix": 124,
                 "resolveEntry": 116,
                 "scanIconClasses": 99,
-                "escapeRegExp": 61,
+                "escapeRegExp": 62,
                 "regexCache": 26,
                 "GLOB_CHARACTERS": 15,
                 "(top level)": 12
@@ -1946,15 +1946,15 @@
               }
             }
           },
-          "gzip": 7588,
-          "minified": 19511
+          "gzip": 7636,
+          "minified": 19605
         }
       },
       "files": {
         "dist/vite/plugin.js": {
-          "bytes": 8741,
+          "bytes": 8811,
           "declarations": {
-            "viteIcons": 3851,
+            "viteIcons": 3920,
             "replaceIconTagsWithSvg": 815,
             "createStringScanner": 739,
             "toJsxStyle": 266,
@@ -1967,13 +1967,13 @@
             "findRegexEnd": 174,
             "resolveIconModule": 172,
             "EXPRESSION_KEYWORDS": 171,
-            "createRegistry": 148,
+            "createRegistry": 149,
             "ICON_TAG": 124,
             "replaceIconTagsInAstro": 124,
             "toJsxAttributeNames": 117,
             "SVG_ATTRIBUTE_NAME": 88,
             "ATTRIBUTE_VALUE": 79,
-            "removeIconTags": 70,
+            "removeIconTags": 69,
             "ATTRIBUTE": 64,
             "SOURCE_FILE": 55,
             "(top level)": 42,
@@ -1982,8 +1982,8 @@
             "BRACED": 40,
             "ICON_MODULE_PREFIX": 29,
             "STYLE_STRING": 29,
+            "TEMPLATE_FILE": 22,
             "VIRTUAL_ID": 22,
-            "TEMPLATE_FILE": 21,
             "JSX_FILE": 16,
             "ASTRO_FILE": 14,
             "IDENTIFIER_CHAR": 10,
@@ -1993,14 +1993,14 @@
           }
         },
         "dist/generator/css-generator.js": {
-          "bytes": 2697,
+          "bytes": 2696,
           "declarations": {
             "generateBaseCss": 1120,
-            "generateIconSetCss": 820,
-            "generateIconCss": 342,
+            "generateIconSetCss": 821,
+            "generateIconCss": 341,
             "escapeSelectorClass": 255,
             "renderMaskSvg": 92,
-            "renderBrandPaint": 68
+            "renderBrandPaint": 67
           }
         },
         "dist/core/registry.js": {
@@ -2014,11 +2014,11 @@
           }
         },
         "dist/core/render.js": {
-          "bytes": 1556,
+          "bytes": 1554,
           "declarations": {
-            "renderSvg": 439,
+            "renderSvg": 438,
             "overridePaintAttributes": 344,
-            "overridePaint": 185,
+            "overridePaint": 184,
             "escapeAttributeValue": 110,
             "renderAttributes": 100,
             "setStrokeWidth": 77,
@@ -2034,7 +2034,7 @@
           }
         },
         "(unattributed)": {
-          "bytes": 1091
+          "bytes": 1116
         },
         "dist/catalog/attribution.js": {
           "bytes": 1028,
@@ -2059,13 +2059,13 @@
           }
         },
         "dist/scanner/class-scanner.js": {
-          "bytes": 609,
+          "bytes": 611,
           "declarations": {
             "scanFiles": 157,
-            "getPatternForPrefix": 123,
+            "getPatternForPrefix": 124,
             "resolveEntry": 116,
             "scanIconClasses": 99,
-            "escapeRegExp": 61,
+            "escapeRegExp": 62,
             "regexCache": 26,
             "GLOB_CHARACTERS": 15,
             "(top level)": 12
@@ -2089,9 +2089,9 @@
           }
         }
       },
-      "gzip": 7597,
-      "minified": 19539,
-      "sha256": "6ff0ea9d53a5d2c8f5a48c89b44b8ee04b0f56a13e79e7be54f96abe9335b0a4"
+      "gzip": 7644,
+      "minified": 19633,
+      "sha256": "9fd746c9e14a5a42715d7fa18aec79dc9dd95abdd903525bff7f58db9d743001"
     }
   }
 }
