@@ -111,6 +111,25 @@ describe("playIcon", () => {
     expect(setCurrentTime).toHaveBeenCalledWith(0);
     expect(icon.properties.size).toBe(0);
   });
+  it("does nothing in a window with no matchMedia, as jsdom's", () => {
+    const icon = new TestElement();
+    icon.className = "ic-anim-spin";
+    const view: Partial<typeof icon.ownerDocument.defaultView> = { ...icon.ownerDocument.defaultView };
+    delete view.matchMedia;
+    icon.ownerDocument = { defaultView: view as typeof icon.ownerDocument.defaultView };
+
+    expect(() => playIcon(asElement(icon))).not.toThrow();
+    expect(icon.history).toEqual([]);
+  });
+  it("restarts an inline SVG's glyph motion where its timeline cannot be rewound, as in jsdom", () => {
+    const icon = new TestElement();
+    icon.className = "ic-anim-spin";
+    icon.localName = "svg";
+    icon.namespaceURI = "http://www.w3.org/2000/svg";
+
+    expect(() => playIcon(asElement(icon))).not.toThrow();
+    expect(icon.history).toEqual(["animation-name=none", "-animation-name"]);
+  });
   it.each(["", "none", 'url("https://example.test/icon.svg")'])("ignores non-SVG-data masks %s", (mask) => {
     const icon = new TestElement();
     icon.computed.set("--ic-mask", mask);
@@ -240,5 +259,13 @@ describe("bindIconPlayback", () => {
     expect(icon.properties.size).toBe(1);
     unbind();
     expect(icon.properties.size).toBe(0);
+  });
+  it("plays an icon that has visible focus itself", () => {
+    const { root, icon } = fixture();
+    const unbind = bindIconPlayback(asElement(root));
+    icon.isFocusVisible = true;
+    dispatch(root, "focusin", icon);
+    expect(icon.style.getPropertyValue("--ic-mask")).toContain(";n=");
+    unbind();
   });
 });

@@ -35,7 +35,7 @@ export declare function playIcon(element: Element, options?: IconPlaybackOptions
 
 Plays one icon's motion from the start: its `ic-anim-*` glyph motion and its animated artwork, whichever it has.
 
-Does nothing when the device requests reduced motion. Glyph motion restarts, whether running or finished, by clearing the element's `animation-name` for one style recalculation; this forces style. Artwork in a CSS mask restarts from a fresh data URL set inline as `--ic-mask`, because a browser does not restart an image it has already shown; [`bindIconPlayback`](#bindiconplayback) removes that override when the trigger ends. An inline `<svg>` restarts with `setCurrentTime(0)`. Verified in Chrome; Firefox and Safari are untested.
+Does nothing when the device requests reduced motion, or in a window that cannot say, such as jsdom's. Glyph motion restarts, whether running or finished, by clearing the element's `animation-name` for one style recalculation; this forces style. Artwork in a CSS mask restarts from a fresh data URL set inline as `--ic-mask`, because a browser does not restart an image it has already shown; [`bindIconPlayback`](#bindiconplayback) removes that override when the trigger ends. An inline `<svg>` restarts with `setCurrentTime(0)`. Verified in Chrome; Firefox and Safari are untested.
 
 **Parameters**
 
