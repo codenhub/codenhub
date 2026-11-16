@@ -2,7 +2,7 @@
 title: Sem bundler
 description: Como referenciar as folhas de estilos compiladas a partir de HTML puro, Rails, Laravel, Django ou qualquer aplicação renderizada no servidor, e o build por linha de comando.
 order: 6
-source: 12a96a99ddcc15f6b5e56f9d9da87fd9fabb4b61
+source: 312ba30c9b3ae6d23e5d0e06ffa4eca5ad792de0
 ---
 
 # Sem bundler
@@ -193,7 +193,7 @@ Escreva a saída numa pasta listada em `STATICFILES_DIRS`, aqui `static/`, para 
 
 ### Opções
 
-- `--content <glob>`, ou `-c <glob>`, indica os arquivos onde procurar nomes de classe. É obrigatório e pode ser repetido: passe uma vez por glob, e o build lê todo arquivo que casar com algum deles. Um glob relativo é resolvido em relação à pasta de onde você roda o comando, então rode a partir da raiz do projeto; um glob absoluto é usado como está. `**` casa com qualquer número de pastas, e `{rb,erb}` com qualquer uma das duas extensões. Qualquer arquivo de texto serve, seja qual for a extensão. Cada glob precisa casar com pelo menos um arquivo, senão o build falha e o nomeia, então um erro de digitação não consegue publicar uma folha de estilos vazia. Arquivos que o seu `.gitignore` exclui são lidos mesmo assim quando um glob casa com eles, e nada fora dos seus globs é lido.
+- `--content <glob>`, ou `-c <glob>`, indica os arquivos onde procurar nomes de classe. É obrigatório e pode ser repetido: passe uma vez por glob, e o build lê todo arquivo que casar com algum deles. Um glob relativo é resolvido em relação à pasta de onde você roda o comando, então rode a partir da raiz do projeto; um glob absoluto é usado como está. Um caminho que nomeia um arquivo existente é lido como esse arquivo, mesmo quando o nome tem um colchete, como o `app/[id]/page.tsx` do Next.js; só um caminho que não nomeia nenhum arquivo é lido como glob. `**` casa com qualquer número de pastas, e `{rb,erb}` com qualquer uma das duas extensões. Qualquer arquivo de texto serve, seja qual for a extensão. Cada glob precisa casar com pelo menos um arquivo, senão o build falha e o nomeia, então um erro de digitação não consegue publicar uma folha de estilos vazia. Arquivos que o seu `.gitignore` exclui são lidos mesmo assim quando um glob casa com eles, e nada fora dos seus globs é lido.
 - Coloque cada glob entre aspas, com `\"` dentro de um script do `package.json`. Sem aspas, o seu shell pode expandir o glob numa lista de arquivos antes de o comando vê-lo, e só o primeiro arquivo conta como valor do `--content`. Quando isso deixa nomes de arquivo sobrando, o build os rejeita em vez de ler em silêncio menos do que você queria; quando o glob casou com um único arquivo, o build lê só esse arquivo e nada que os seus templates ganharem depois.
 - `--output <file>`, ou `-o <file>`, é a folha de estilos a escrever. É obrigatório. Um caminho relativo é resolvido em relação à pasta de onde você roda o comando, pastas-pai que faltam são criadas, e um arquivo existente é substituído.
 - `--aesthetic <name>` acrescenta uma das [estéticas](../usage/aesthetics.md): `neobrutalism`, `glass`, `pixel`, `chunky-tile`, `cyber` ou `sketch`. Repita para mais de uma; nomear uma duas vezes a inclui uma vez só. As estéticas precisam ser pedidas porque o build não tem como saber pelos seus templates qual você quer: cada uma entra quando você a pede, menos as regras dela para classes que os seus templates não usam, e nenhuma entra quando você não pede.

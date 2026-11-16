@@ -1,3 +1,7 @@
+/* The default export rather than a named `globSync`: a Node.js release without
+   it still loads this module, so a command that inlines it reaches its own
+   version check and can name both versions. A named import of a missing export
+   fails at load, before any code runs. */
 import fs from "node:fs";
 import path from "node:path";
 
