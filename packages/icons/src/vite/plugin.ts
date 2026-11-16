@@ -1,3 +1,5 @@
+import path from "node:path";
+
 import type { Plugin, ViteDevServer } from "vite";
 
 import {
@@ -18,7 +20,8 @@ import { scanFiles, scanIconClasses } from "../scanner/class-scanner.js";
  */
 export interface ViteIconsOptions {
   /**
-   * File paths or globs to scan for icon class names.
+   * File paths or globs to scan for icon class names. A relative entry is read
+   * from Vite's `root`, not the working directory.
    */
   content?: string[];
 
@@ -82,6 +85,10 @@ const RESOLVED_ICON_MODULE_PREFIX = "\0" + ICON_MODULE_PREFIX;
 const SOURCE_FILE = /\.(html|jsx?|tsx?|vue|svelte|css|scss|sass|less)$/i;
 const MARKUP_FILE = /\.(html|jsx?|tsx?|vue|svelte|astro)$/i;
 const ASTRO_FILE = /\.astro$/i;
+// Markup with `<script>` blocks of JavaScript in it, rather than JavaScript with markup in it.
+const TEMPLATE_FILE = /\.(vue|svelte)$/i;
+// The key generated stylesheets record their families under, in place of a module id.
+const STYLESHEET_KEY = "\0stylesheet";
 
 function resolveIconModule(registry: IconRegistry, request: string): ResolvedIcon {
   // `lucide/heart` names a family and an icon; a single segment goes through
@@ -122,179 +129,150 @@ function createRegistry(options: ViteIconsOptions): IconRegistry {
   return registry;
 }
 
-function isRegexStart(chars: string[] | string, index: number): boolean {
+const IDENTIFIER_CHAR = /[\w$]/;
+const WHITESPACE = /\s/;
+
+/** Words after which an expression, and so a string or a regular expression, can begin. */
+const EXPRESSION_KEYWORDS = new Set([
+  "await",
+  "case",
+  "delete",
+  "do",
+  "else",
+  "export",
+  "extends",
+  "from",
+  "import",
+  "in",
+  "instanceof",
+  "new",
+  "of",
+  "return",
+  "throw",
+  "typeof",
+  "void",
+  "yield",
+]);
+
+/** Punctuation after which an expression can begin. `<` covers a TypeScript type argument such as `Record<'a', T>`. */
+const EXPRESSION_PUNCTUATION = "=([{,;:?!&|+-*/%^~<";
+
+/**
+ * Whether an expression can begin at `index`, judged from the code before it.
+ *
+ * A quote or a slash opens a string or a regular expression only there. JSX
+ * text is not code, so an apostrophe in "Don't" follows a word and opens
+ * nothing, and the `/` of a closing tag such as `</p>` follows a `<`.
+ */
+function canStartExpression(code: string, index: number): boolean {
   let i = index - 1;
-  while (i >= 0 && /\s/.test(chars[i])) {
+  while (i >= 0 && WHITESPACE.test(code[i])) {
     i--;
   }
   if (i < 0) {
     return true;
   }
-  const char = chars[i];
-  if (!/[a-zA-Z0-9_$]/.test(char)) {
-    return char !== ")" && char !== "]" && char !== "}";
+  const char = code[i];
+  if (char === ">") {
+    // An arrow's body. A lone `>` closes a JSX tag, so what follows it is text.
+    return code[i - 1] === "=";
+  }
+  if (!IDENTIFIER_CHAR.test(char)) {
+    return EXPRESSION_PUNCTUATION.includes(char);
   }
   let start = i;
-  while (start >= 0 && /[a-zA-Z0-9_$]/.test(chars[start])) {
+  while (start >= 0 && IDENTIFIER_CHAR.test(code[start])) {
     start--;
   }
-  let word = "";
-  for (let k = start + 1; k <= i; k++) {
-    word += chars[k];
-  }
-  const keywords = ["return", "throw", "yield", "case", "typeof", "delete", "void", "in", "instanceof"];
-  return keywords.includes(word);
-}
-
-function stripComments(code: string): string {
-  let isInsideDouble = false;
-  let isInsideSingle = false;
-  let isInsideBacktick = false;
-  let isInsideLineComment = false;
-  let isInsideBlockComment = false;
-  let isEscaped = false;
-
-  const chars = code.split("");
-
-  for (let i = 0; i < chars.length; i++) {
-    const char = chars[i];
-    const nextChar = chars[i + 1];
-
-    if (isInsideLineComment) {
-      if (char === "\n" || char === "\r") {
-        isInsideLineComment = false;
-      } else {
-        chars[i] = " ";
-      }
-      continue;
-    }
-    if (isInsideBlockComment) {
-      if (char === "*" && nextChar === "/") {
-        isInsideBlockComment = false;
-        chars[i] = " ";
-        chars[i + 1] = " ";
-        i++;
-      } else {
-        chars[i] = " ";
-      }
-      continue;
-    }
-
-    if (isEscaped) {
-      isEscaped = false;
-      continue;
-    }
-    if (char === "\\") {
-      isEscaped = true;
-      continue;
-    }
-
-    if (!isInsideDouble && !isInsideSingle && !isInsideBacktick) {
-      if (char === "/" && nextChar === "/") {
-        isInsideLineComment = true;
-        chars[i] = " ";
-        chars[i + 1] = " ";
-        i++;
-        continue;
-      }
-      if (char === "/" && nextChar === "*") {
-        isInsideBlockComment = true;
-        chars[i] = " ";
-        chars[i + 1] = " ";
-        i++;
-        continue;
-      }
-      if (char === "/" && nextChar !== "/" && nextChar !== "*" && isRegexStart(chars, i)) {
-        let j = i + 1;
-        let isInsideCharClass = false;
-        while (j < chars.length) {
-          const c = chars[j];
-          if (c === "\\") {
-            j += 2;
-            continue;
-          }
-          if (isInsideCharClass) {
-            if (c === "]") {
-              isInsideCharClass = false;
-            }
-          } else {
-            if (c === "[") {
-              isInsideCharClass = true;
-            } else if (c === "/") {
-              i = j;
-              break;
-            }
-          }
-          j++;
-        }
-        continue;
-      }
-    }
-
-    if (char === '"' && !isInsideSingle && !isInsideBacktick) {
-      isInsideDouble = !isInsideDouble;
-    } else if (char === "'" && !isInsideDouble && !isInsideBacktick) {
-      isInsideSingle = !isInsideSingle;
-    } else if (char === "`" && !isInsideDouble && !isInsideSingle) {
-      isInsideBacktick = !isInsideBacktick;
-    }
-  }
-
-  return chars.join("");
+  return EXPRESSION_KEYWORDS.has(code.slice(start + 1, i + 1));
 }
 
 /**
- * Returns the quote of the innermost string literal enclosing `matchIndex`, or `null`.
- *
- * A template literal's `${…}` is code again, with strings of its own, so the
- * scan keeps a stack: a string inside an expression inside a template is that
- * string, not the template.
+ * Returns the end of the regular expression literal opening at `index`, or
+ * `undefined` when none closes on its line, which a literal must.
  */
-function getEnclosingQuote(code: string, matchIndex: number): string | null {
+function findRegexEnd(code: string, index: number): number | undefined {
+  let isInsideCharClass = false;
+  for (let j = index + 1; j < code.length; j++) {
+    const char = code[j];
+    if (char === "\n" || char === "\r") {
+      return undefined;
+    }
+    if (char === "\\") {
+      j++;
+    } else if (isInsideCharClass) {
+      isInsideCharClass = char !== "]";
+    } else if (char === "[") {
+      isInsideCharClass = true;
+    } else if (char === "/") {
+      return j;
+    }
+  }
+  return undefined;
+}
+
+/**
+ * Creates a scanner that reports the quote of the innermost string literal
+ * enclosing an offset, or `null`, for offsets asked in increasing order.
+ *
+ * It reads the code once, however many offsets are asked, so a module with
+ * thousands of icons costs one pass rather than one per icon. A template
+ * literal's `${…}` is code again, with strings of its own, so the scan keeps a
+ * stack: a string inside an expression inside a template is that string, not
+ * the template. Comments are skipped, and an offset inside one, or inside a
+ * regular expression literal, is in no string.
+ */
+function createStringScanner(code: string): (offset: number) => string | null {
   // Each frame is a string's quote, or a brace depth for code: the file itself
   // at the bottom, and one per open `${`.
   const frames: (string | number)[] = [0];
-  let isEscaped = false;
+  let i = 0;
 
-  for (let i = 0; i < matchIndex; i++) {
+  function step(): void {
     const char = code[i];
     const nextChar = code[i + 1];
     const top = frames[frames.length - 1];
 
-    if (isEscaped) {
-      isEscaped = false;
-      continue;
-    }
-    if (char === "\\") {
-      isEscaped = true;
-      continue;
-    }
-
     if (top === '"' || top === "'") {
-      if (char === top) {
+      if (char === "\\") {
+        // The escaped character, and with a CRLF continuation the line feed after it too.
+        i += code.startsWith("\r\n", i + 1) ? 3 : 2;
+        return;
+      }
+      // A quoted string cannot span a line, so one still open at a line break
+      // was never a string.
+      if (char === top || char === "\n" || char === "\r") {
         frames.pop();
       }
-      continue;
+      i++;
+      return;
     }
     if (top === "`") {
+      if (char === "\\") {
+        i += 2;
+        return;
+      }
       if (char === "`") {
         frames.pop();
       } else if (char === "$" && nextChar === "{") {
         frames.push(0);
         i++;
       }
-      continue;
+      i++;
+      return;
     }
 
-    // `stripComments` leaves a template literal whole, so a comment inside its
-    // `${…}` arrives here, where a brace or quote in it would derail the stack.
     if (char === "/" && nextChar === "/") {
       const lineEnd = code.indexOf("\n", i);
-      i = lineEnd === -1 ? matchIndex : lineEnd - 1;
-    } else if (char === "/" && nextChar === "*") {
+      i = lineEnd === -1 ? code.length : lineEnd;
+      return;
+    }
+    if (char === "/" && nextChar === "*") {
       const commentEnd = code.indexOf("*/", i + 2);
-      i = commentEnd === -1 ? matchIndex : commentEnd + 1;
-    } else if (char === '"' || char === "'" || char === "`") {
+      i = commentEnd === -1 ? code.length : commentEnd + 2;
+      return;
+    }
+    if (char === "`" || ((char === '"' || char === "'") && canStartExpression(code, i))) {
       frames.push(char);
     } else if (char === "{") {
       frames[frames.length - 1] = (top as number) + 1;
@@ -304,37 +282,25 @@ function getEnclosingQuote(code: string, matchIndex: number): string | null {
       } else {
         frames[frames.length - 1] = Math.max(0, (top as number) - 1);
       }
-    } else if (char === "/" && nextChar !== "/" && nextChar !== "*" && isRegexStart(code, i)) {
-      let j = i + 1;
-      let isInsideCharClass = false;
-      while (j < matchIndex) {
-        const c = code[j];
-        if (c === "\\") {
-          j += 2;
-          continue;
-        }
-        if (isInsideCharClass) {
-          if (c === "]") {
-            isInsideCharClass = false;
-          }
-        } else {
-          if (c === "[") {
-            isInsideCharClass = true;
-          } else if (c === "/") {
-            i = j;
-            break;
-          }
-        }
-        j++;
+    } else if (char === "/" && canStartExpression(code, i)) {
+      const regexEnd = findRegexEnd(code, i);
+      if (regexEnd !== undefined) {
+        i = regexEnd;
       }
     }
+    i++;
   }
 
-  const top = frames[frames.length - 1];
-  if (typeof top === "string") {
-    return top;
-  }
-  return null;
+  return (offset) => {
+    while (i < offset) {
+      step();
+    }
+    if (i > offset) {
+      return null;
+    }
+    const top = frames[frames.length - 1];
+    return typeof top === "string" ? top : null;
+  };
 }
 
 interface ReplaceIconTagsOptions {
@@ -343,6 +309,8 @@ interface ReplaceIconTagsOptions {
   isJsContext?: boolean;
   /** Whether the source is JSX, where markup outside a string is a JSX element. */
   isJsx?: boolean;
+  /** Whether JSX elements are rendered by React, which reads DOM property names and style objects. */
+  isReactJsx?: boolean;
   onFamilyUsed: (family: IconFamilyData) => void;
 }
 
@@ -351,19 +319,16 @@ const JSX_FILE = /\.[jt]sx$/i;
 /**
  * Returns the quote of the string literal an icon tag sits in, or `null`.
  *
- * The quote scanner knows nothing of JSX text, so an apostrophe there, as in
- * "Don't", reads to it as an open string. A real `'` or `"` string cannot span
- * a line, except through a line continuation, a backslash before the line
- * break, so one that does not close before an unescaped line break was JSX
- * text, and the tag is not in a string. Template literals may span lines and
- * are taken as reported.
+ * A quoted string that does not close on the tag's line was JSX text the
+ * scanner could not tell from code, as in `<p>Hi, 'friend <i … /></p>`, and the
+ * tag is not in a string. Template literals may span lines and are taken as
+ * reported.
  */
-function stringQuoteAt(code: string, offset: number, length: number): string | null {
-  const quote = getEnclosingQuote(code, offset);
+function stringQuoteAt(code: string, quote: string | null, end: number): string | null {
   if (quote !== '"' && quote !== "'") {
     return quote;
   }
-  for (let i = offset + length; i < code.length; i++) {
+  for (let i = end; i < code.length; i++) {
     const char = code[i];
     if (char === quote) {
       return quote;
@@ -431,12 +396,33 @@ function toJsxAttributeNames(svg: string): string {
   );
 }
 
+// A braced expression, as in JSX or Svelte, holding braces up to two levels
+// deep, such as `{() => { if (x) { go(); } }}`. A regular expression cannot
+// count, so deeper nesting leaves the tag unmatched; three levels covers an
+// attribute handler with a block inside it.
+const BRACED = String.raw`\{(?:[^{}]|\{(?:[^{}]|\{[^{}]*\})*\})*\}`;
+
+/**
+ * An attribute value, matched whole so a `>` inside it, as in `title="a > b"`
+ * or `onClick={() => go()}`, does not end the tag: quoted, with escaped quotes
+ * inside a string literal, braced, or bare.
+ */
+const ATTRIBUTE_VALUE = String.raw`"[^"]*"|'[^']*'|\\"[^"\\]*\\"|\\'[^'\\]*\\'|${BRACED}|[^\s"'<>{}\\]+`;
+
+/** An attribute with its leading whitespace: a JSX spread, or a name with an optional value. */
+const ATTRIBUTE = String.raw`\s+(?:${BRACED}|[^\s"'<>/={}\\]+(?:\s*=\s*(?:${ATTRIBUTE_VALUE}))?)`;
+
 /**
  * Matches an `<i>` tag carrying a `class` or `className`, quoted plainly or with
- * escaped quotes inside a string literal. The attribute name must follow
- * whitespace, so the end of `data-class` is not taken for it.
+ * escaped quotes inside a string literal. Each attribute is matched whole, so
+ * the end of `data-class` is not taken for the class, and no two parts of the
+ * pattern can match the same text, which keeps a tag that never closes from
+ * backtracking for long.
  */
-const ICON_TAG = /<i\b([^>]*?)(?<=\s)(class|className)=(\\?)(["'])([^"']*?)\3\4([^>]*?)(?:>\s*<\/i>|\s*\/?>)/gi;
+const ICON_TAG = new RegExp(
+  String.raw`<i((?:${ATTRIBUTE})*?)\s+(class|className)=(\\?)(["'])([^"'\\]*)\3\4((?:${ATTRIBUTE})*)\s*(?:>\s*<\/i>|\/?>)`,
+  "gi",
+);
 
 interface IconTagClasses {
   icon: NonNullable<ReturnType<typeof resolveIconClassName>>;
@@ -490,9 +476,9 @@ function removeIconTags(source: string, registry: IconRegistry, prefix: string):
 }
 
 function replaceIconTagsWithSvg(source: string, registry: IconRegistry, options: ReplaceIconTagsOptions): string {
-  const { isJsContext = false, isJsx = false, onFamilyUsed, prefix, strokeWidth } = options;
+  const { isJsContext = false, isJsx = false, isReactJsx = false, onFamilyUsed, prefix, strokeWidth } = options;
 
-  const cleanSource = isJsContext ? stripComments(source) : source;
+  const quoteAt = isJsContext ? createStringScanner(source) : undefined;
 
   return source.replace(
     ICON_TAG,
@@ -506,6 +492,8 @@ function replaceIconTagsWithSvg(source: string, registry: IconRegistry, options:
       after: string,
       offset: number,
     ) => {
+      // Asked of every tag, in order, so the scanner reads the source once.
+      const scannedQuote = quoteAt?.(offset) ?? null;
       const resolved = resolveIconTagClasses(classValue, registry, prefix);
       if (!resolved) {
         return match;
@@ -527,7 +515,13 @@ function replaceIconTagsWithSvg(source: string, registry: IconRegistry, options:
       // below adds the backslash, and adding it here too would double it.
       svg = svg.replace(/^<svg\b/i, `<svg ${attrName}=${quote}${resolved.classes.join(" ")}${quote}`);
 
-      const enclosingQuote = isJsContext ? stringQuoteAt(cleanSource, offset, match.length) : null;
+      // Outside JavaScript, a tag written with escaped quotes can only sit in a
+      // string, such as one in a Svelte `{@html "…"}` expression.
+      const enclosingQuote = quoteAt
+        ? stringQuoteAt(source, scannedQuote, offset + match.length)
+        : backslash
+          ? quote
+          : null;
       if (enclosingQuote) {
         // A template literal reads "\r\n" as "\n", so "\r" is escaped in every string.
         svg = svg.replace(/\\/g, "\\\\").replace(/\r/g, "\\r");
@@ -545,8 +539,10 @@ function replaceIconTagsWithSvg(source: string, registry: IconRegistry, options:
       }
 
       // `className` with plain quotes outside a string is a JSX element in any
-      // file, `.js` included.
-      const isJsxElement = isJsContext && !enclosingQuote && (isJsx || (attrName === "className" && !backslash));
+      // file, `.js` included. Only React reads DOM property names and style
+      // objects: Solid, Preact, and Vue write JSX attributes into HTML as named.
+      const isJsxElement =
+        isReactJsx && isJsContext && !enclosingQuote && (isJsx || (attrName === "className" && !backslash));
       if (isJsxElement) {
         // Before the passthrough attributes, which are already written for JSX.
         svg = toJsxAttributeNames(svg);
@@ -658,15 +654,20 @@ function replaceIconTagsInAstro(source: string, registry: IconRegistry, options:
 export function viteIcons(options: ViteIconsOptions = {}): Plugin {
   const prefix = options.prefix ?? "ic";
   const registry = createRegistry(options);
-  const contentPaths = options.content ?? [];
+  // Relative entries are read from the Vite root, set by `configResolved`.
+  let contentPaths = options.content ?? [];
   const mode = options.mode ?? "css";
   const attributionMode = options.attribution ?? "auto";
 
   const scannedFiles = new Set<string>();
   const inMemoryClasses = new Set<string>();
   const resolvedVirtualIds = new Set<string>();
-  const usedFamilies = new Map<string, IconFamilyData>();
-  const unreplacedClasses = new Map<string, string>();
+  // Kept per module and replaced whenever the module is transformed again, so
+  // a watch rebuild forgets what an edit removed.
+  const familiesByModule = new Map<string, Map<string, IconFamilyData>>();
+  const unreplacedByModule = new Map<string, Set<string>>();
+  // Whether JSX is React's, which reads DOM property names and style objects.
+  let isReactJsx = false;
   let devServer: ViteDevServer | undefined;
   // Reference to the stylesheet asset of the build in progress.
   let stylesheetRef: string | undefined;
@@ -705,8 +706,31 @@ export function viteIcons(options: ViteIconsOptions = {}): Plugin {
     }
   }
 
-  function rememberFamily(family: IconFamilyData): void {
-    usedFamilies.set(family.prefix, family);
+  function rememberFamilies(moduleId: string, families: Iterable<IconFamilyData>): void {
+    familiesByModule.set(moduleId, new Map([...families].map((family) => [family.prefix, family])));
+  }
+
+  function collectUsedFamilies(): IconFamilyData[] {
+    const families = new Map<string, IconFamilyData>();
+    for (const moduleFamilies of familiesByModule.values()) {
+      for (const [familyPrefix, family] of moduleFamilies) {
+        families.set(familyPrefix, family);
+      }
+    }
+    return [...families.values()];
+  }
+
+  /** Rewrites a module's icon tags as inline SVG, and records what it used and what it left behind. */
+  function inlineIcons(
+    moduleId: string,
+    rewrite: (onFamilyUsed: (family: IconFamilyData) => void) => string,
+    source: string,
+  ): string {
+    const families: IconFamilyData[] = [];
+    const replaced = rewrite((family) => families.push(family));
+    rememberFamilies(moduleId, families);
+    collectUnreplacedClasses(removeIconTags(source, registry, prefix), moduleId);
+    return replaced;
   }
 
   /**
@@ -718,22 +742,30 @@ export function viteIcons(options: ViteIconsOptions = {}): Plugin {
    * every such class is reported once.
    */
   function collectUnreplacedClasses(source: string, file: string): void {
+    const classes = new Set<string>();
     for (const className of scanIconClasses(source, { prefix })) {
-      if (unreplacedClasses.has(className)) {
-        continue;
-      }
       const parsed = parseIconClass(className.slice(prefix.length + 1));
       if (resolveIconClassName(registry, parsed.name)) {
-        unreplacedClasses.set(className, file);
+        classes.add(className);
       }
     }
+    unreplacedByModule.set(file, classes);
   }
 
   function renderUnreplacedWarning(): string | undefined {
-    if (unreplacedClasses.size === 0) {
+    // Each class once, under the first module found with it.
+    const unreplaced = new Map<string, string>();
+    for (const [file, classes] of unreplacedByModule) {
+      for (const className of classes) {
+        if (!unreplaced.has(className)) {
+          unreplaced.set(className, file);
+        }
+      }
+    }
+    if (unreplaced.size === 0) {
       return undefined;
     }
-    const listed = [...unreplacedClasses].map(([className, file]) => `- ${className} in ${file}`);
+    const listed = [...unreplaced].map(([className, file]) => `- ${className} in ${file}`);
     return [
       `Icon classes were found on elements that mode "svg" does not rewrite, so they render nothing:`,
       ...listed,
@@ -753,9 +785,7 @@ export function viteIcons(options: ViteIconsOptions = {}): Plugin {
       prefix,
       strokeWidth: options.strokeWidth,
     });
-    for (const family of families) {
-      rememberFamily(family);
-    }
+    rememberFamilies(STYLESHEET_KEY, families);
 
     if (attributionMode !== "auto") {
       return css;
@@ -793,9 +823,7 @@ export function viteIcons(options: ViteIconsOptions = {}): Plugin {
       if (id.startsWith(RESOLVED_ICON_MODULE_PREFIX)) {
         const icon = resolveIconModule(registry, id.slice(RESOLVED_ICON_MODULE_PREFIX.length));
         const family = registry.getFamily(icon.prefix);
-        if (family) {
-          rememberFamily(family);
-        }
+        rememberFamilies(id, family ? [family] : []);
         return renderIconModule(icon, options.strokeWidth, prefix);
       }
       // Matched by the exact same fixed ids `resolveId` claims above, not by
@@ -817,14 +845,17 @@ export function viteIcons(options: ViteIconsOptions = {}): Plugin {
 
     transformIndexHtml(html, ctx) {
       if (mode === "svg") {
-        const replaced = replaceIconTagsWithSvg(html, registry, {
-          isJsContext: false,
-          onFamilyUsed: rememberFamily,
-          prefix,
-          strokeWidth: options.strokeWidth,
-        });
-        collectUnreplacedClasses(removeIconTags(html, registry, prefix), ctx.filename ?? "index.html");
-        return replaced;
+        return inlineIcons(
+          ctx.filename ?? "index.html",
+          (onFamilyUsed) =>
+            replaceIconTagsWithSvg(html, registry, {
+              isJsContext: false,
+              onFamilyUsed,
+              prefix,
+              strokeWidth: options.strokeWidth,
+            }),
+          html,
+        );
       }
 
       const scanned = scanIconClasses(html, { prefix });
@@ -882,19 +913,26 @@ export function viteIcons(options: ViteIconsOptions = {}): Plugin {
             // and part template, so it is the only one that cannot take a single
             // escaping rule. Astro never calls `transformIndexHtml` for its pages,
             // which is why this hook is the whole of svg mode's reach into them.
-            const replaceOptions = {
-              onFamilyUsed: rememberFamily,
-              prefix,
-              strokeWidth: options.strokeWidth,
-            };
-            const replaced = ASTRO_FILE.test(id)
-              ? replaceIconTagsInAstro(code, registry, replaceOptions)
-              : replaceIconTagsWithSvg(code, registry, {
+            // `.vue` and `.svelte` are markup with script blocks, which the
+            // template rule splits the same way, minus the frontmatter.
+            const replaced = inlineIcons(
+              id,
+              (onFamilyUsed) => {
+                const replaceOptions = { isReactJsx, onFamilyUsed, prefix, strokeWidth: options.strokeWidth };
+                if (ASTRO_FILE.test(id)) {
+                  return replaceIconTagsInAstro(code, registry, replaceOptions);
+                }
+                if (TEMPLATE_FILE.test(id)) {
+                  return replaceIconTagsInTemplate(code, registry, replaceOptions);
+                }
+                return replaceIconTagsWithSvg(code, registry, {
                   ...replaceOptions,
                   isJsContext: true,
                   isJsx: JSX_FILE.test(id),
                 });
-            collectUnreplacedClasses(removeIconTags(code, registry, prefix), id);
+              },
+              code,
+            );
             if (replaced !== code) {
               return { code: replaced, map: null };
             }
@@ -938,7 +976,7 @@ export function viteIcons(options: ViteIconsOptions = {}): Plugin {
         this.warn(unreplaced);
       }
 
-      const families = [...usedFamilies.values()];
+      const families = collectUsedFamilies();
       if (attributionMode === "off") {
         const warning = renderSuppressedAttributionWarning(families);
         if (warning) {
@@ -959,6 +997,18 @@ export function viteIcons(options: ViteIconsOptions = {}): Plugin {
 
     configResolved(config) {
       base = config.base;
+      contentPaths = (options.content ?? []).map((entry) =>
+        path.isAbsolute(entry) ? entry : path.posix.join(config.root, entry),
+      );
+      // `@vitejs/plugin-react` and `@vitejs/plugin-react-swc` name every plugin they add this way.
+      isReactJsx = config.plugins.some((plugin) => plugin.name.startsWith("vite:react"));
+    },
+
+    watchChange(id, change) {
+      if (change.event === "delete") {
+        familiesByModule.delete(id);
+        unreplacedByModule.delete(id);
+      }
     },
 
     configureServer(server) {

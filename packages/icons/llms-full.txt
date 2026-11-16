@@ -2,17 +2,14 @@
 
 # @codenhub/icons
 
-Zero-runtime icon system for the web. Write `ic-lucide-heart` in your markup and the icon arrives as a CSS mask — no imports, no components, no icon library in the bundle.
+Zero-runtime icon system for the web. Write `ic-lucide-heart` in your markup and the icon arrives as a CSS mask — no imports, no components, no icon library in your bundle. One class, no JavaScript sitting around just to draw a heart.
 
-`@codenhub/icons` ships 15 generated core icon families totalling over 36,000 icons, each with the license notices its artwork requires, so a project can adopt icons without auditing licenses itself. Two opt-in brand families add logos: `simple-icons`, over 3,000 in one brand color each, such as GitHub and npm, and `logos`, over 2,000 in full color, such as Google and Slack. Brand marks stay subject to their owners' trademark guidelines.
+`@codenhub/icons` ships 15 generated core icon families totalling over 36,000 icons, each with the license notices its artwork requires, so a project can adopt icons without spending an afternoon auditing licenses by hand. Two opt-in brand families add logos: `simple-icons`, over 3,000 in one brand color each, such as GitHub and npm, and `logos`, over 2,000 in full color, such as Google and Slack. Brand marks stay subject to their owners' trademark guidelines.
 
 ## Installation
 
 ```sh
 pnpm add @codenhub/icons
-npm install @codenhub/icons
-yarn add @codenhub/icons
-bun add @codenhub/icons
 ```
 
 ## Usage
@@ -30,7 +27,7 @@ One line. Every family except the brand families `simple-icons` and `logos` is r
 
 ### Plain CSS, no build step
 
-Import the base rules, then a stylesheet per family. Each family is complete, so nothing has to scan your markup.
+Import the base rules, then a stylesheet per family. Each family is complete, so nothing has to scan your markup — you trade file size for having zero build configuration.
 
 ```css
 @import "@codenhub/icons";
@@ -90,13 +87,13 @@ Size and color follow custom properties: set `--ic-size` and `--ic-color` on the
 - [JavaScript API](docs/javascript-api.md): the registry, renderers, and third-party set adapter.
 - [Licensing](docs/licensing.md): attribution modes and what each build owes.
 - [Troubleshooting](docs/troubleshooting.md): an icon that renders as nothing, as a solid square, or at the wrong width.
-- [API reference](docs/reference/index.md): every export of the root, `/vite`, and `/postcss` entry points, generated from the source.
+- [API reference](docs/reference/index.md): every export of the root, `/vite`, `/postcss`, and `/play` entry points, generated from the source.
 
 ## Requirements
 
 | Requirement  | Details                                                                                                                                                      |
 | ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Node.js      | 24 or newer, for the build-time plugins and helpers.                                                                                                         |
+| Node.js      | 26 or newer, for the build-time plugins and helpers.                                                                                                         |
 | CSS imports  | Consumer tooling must resolve package CSS imports.                                                                                                           |
 | Browsers     | Must support CSS `mask-image`, which every method uses except inline SVG mode. Animated masks have been tested in Chromium; Firefox and Safari are untested. |
 | Tailwind CSS | Version 4 or newer, and only for the `/tw` and `/tailwind` entry points.                                                                                     |
@@ -105,13 +102,13 @@ Size and color follow custom properties: set `--ic-size` and `--ic-color` on the
 ## Notes
 
 - An icon is named `prefix:name`, written `ic-prefix-name` in a class, as in `ic-material-symbols-rounded-home`.
-- The package names no default family. An unqualified `ic-heart` resolves only where you said what it means: through `defaultPrefix` in the Vite and PostCSS plugins, through `default:` in the Tailwind plugin, or, in the plugin-free path, through the last family stylesheet you imported that defines it. A family that has no icon by that name does not claim the bare selector, so an earlier family still answers to it, and the brand family stylesheets claim no bare names at all.
+- The package names no default family, because nobody agrees on whether `close` is `x` or `times`. An unqualified `ic-heart` resolves only where you said what it means: through `defaultPrefix` in the Vite and PostCSS plugins, through `default:` in the Tailwind plugin, or, in the plugin-free path, through the last family stylesheet you imported that defines it. A family that has no icon by that name does not claim the bare selector, so an earlier family still answers to it, and the brand family stylesheets claim no bare names at all.
 - Stroke width is a modifier on the icon class, `ic-lucide-heart/1.5`, and applies only to families drawn with strokes. It needs one of the plugins: a plugin-free stylesheet has no way to know which widths you want, so families there render at their authored width.
 - An icon is an `<i>` (or `.ic` on any element, in the CSS-based methods). There is no `::before`, `::after`, or form-control form: an icon beside a label is a real `<i>` in the control, and a `background-image` icon comes from `getIconMaskUrl` / `getIconCssProps`.
 - `anim` is reserved for [motion utilities](docs/concepts.md#motion); icon names cannot be `anim` or start with `anim-`, and the exact names `on-hover` and `trigger` are reserved too.
 - `xs`, `sm`, `md`, `lg`, and `xl` are reserved (`ic-xs`–`ic-xl` are the size axis): no family may use one as a prefix or ship an icon by that name.
 - Size follows `--ic-size`, default `1em`. The `ic-xs`–`ic-xl` classes each set it to a rem value (`0.75`, `0.875`, `1`, `1.25`, `1.5`) and nothing else, so they compose with a stroke modifier. An inlined `<svg>` from the renderer or `mode: "svg"` carries a `1em` box of its own and honours `--ic-size` through the base rules.
-- The `/lucide` and other family stylesheets are large by construction — a whole family, because nothing is narrowing it. `dist/css` totals about 39 MB across all 17. Import the families you use, or use Tailwind or a plugin, which emit only what your markup asked for.
+- The `/lucide` and other family stylesheets are large by construction — a whole family, because nothing is narrowing it, and `dist/css` totals about 39 MB across all 17. Import only the families you use, or use Tailwind or a plugin, which emit only what your markup asked for.
 - `mode: "svg"` in the Vite plugin rewrites `<i class="ic-...">` tags into inline SVG and nothing else. A class on another element gets no icon in this mode; the plugin warns when it finds one.
 - Animated artwork comes from `line-md` (1,222 icons) and `svg-spinners` (46 loading indicators). `ic-on-hover` shows static artwork at rest and plays it on hover with CSS alone. One-shot icons replay on every hover, rather than the first only, with the optional `@codenhub/icons/play` helper. Line MD masks stay static under reduced motion; inline SVG retains animation. See [Animated families](docs/concepts.md#animated-families) for setup and browser limits.
 - Icon names are the upstream family's own: Material Symbols names keep their underscores, as in `ic-material-symbols-rounded-check_circle`.
@@ -126,7 +123,9 @@ Its bundled, generated icon artwork comes from third parties, under ISC, MIT, Ap
 
 # Icons through CSS, with no runtime
 
-`@codenhub/icons` turns an icon class such as `ic-lucide-heart` into a CSS mask rule. There is no component layer, no icon library in your bundle, and nothing to import per icon. The package ships 15 generated core icon families totalling over 36,000 icons, each carrying the license notices its artwork requires, plus two opt-in brand families: over 3,000 one-color logos and over 2,000 full-color ones.
+Getting icons onto a web page usually means one of three chores: copying SVG files by hand, wrapping every glyph in a framework component just to ship an icon, or dragging an entire icon library into your JavaScript bundle — and then spending a Friday afternoon tracking down MIT, ISC, and Apache-2.0 license notices. `@codenhub/icons` exists to skip all three.
+
+Write a class such as `ic-lucide-heart` in your HTML and the build turns it into a CSS mask rule. There is no component layer, no icon library in your bundle, and nothing to import per icon — no JavaScript sitting around just to draw a heart. The package ships 15 generated core icon families totalling over 36,000 icons, each carrying the license notices its artwork requires, plus two opt-in brand families: over 3,000 one-color logos and over 2,000 full-color ones.
 
 ## Setup
 
@@ -138,7 +137,7 @@ pnpm add @codenhub/icons
 
 ### Quick start
 
-Icons reach a project through CSS. The shortest path with no build step is the base rules plus one family stylesheet:
+Icons reach a project through CSS. The shortest path with no build step is the base rules plus one family stylesheet — zero configuration required, provided you are fine loading the whole family:
 
 ```css
 @import "@codenhub/icons";
@@ -161,31 +160,34 @@ Four delivery methods understand the same classes — plain CSS, Tailwind CSS v4
 
 | Requirement  | Details                                                                         |
 | ------------ | ------------------------------------------------------------------------------- |
-| Node.js      | 24 or newer, for the build-time plugins and helpers.                            |
+| Node.js      | 26 or newer, for the build-time plugins and helpers.                            |
 | CSS imports  | Consumer tooling must resolve package CSS imports.                              |
 | Browsers     | Must support CSS `mask-image`, which every method uses except inline SVG mode.  |
 | Tailwind CSS | Version 4 or newer, and only for the `/tw` and `/tailwind` entry points.        |
 | Optional     | `vite` >= 5.0.0 for the Vite plugin, `postcss` >= 8.0.0 for the PostCSS plugin. |
 
-## Next steps
+## Reading path
 
-- [Concepts](docs/concepts.md): families, finding icon names, name resolution, color, stroke width, size, motion, and accessibility.
-- [Delivery methods](docs/delivery/index.md): the four ways icons reach your CSS and how to choose.
-- [Frameworks](docs/frameworks/index.md): setup for Astro, Next.js, and SvelteKit.
-- [JavaScript API](docs/javascript-api.md): the registry, renderers, and third-party set adapter.
-- [Licensing](docs/licensing.md): attribution modes and what each build owes.
-- [Troubleshooting](docs/troubleshooting.md): an icon that renders as nothing, as a solid square, or at the wrong width.
-- [API reference](docs/reference/index.md): every export of `@codenhub/icons`, `/vite`, and `/postcss`.
+Read these in order the first time. Each page builds on the last and points to the next one:
+
+1. [Concepts](docs/concepts.md): families, finding icon names, name resolution, color, stroke width, size, motion, and accessibility — the shared model every delivery method builds on.
+2. [Delivery methods](docs/delivery/index.md): the four ways icons reach your CSS and how to pick the one that fits your build.
+3. [Frameworks](docs/frameworks/index.md): setup and framework-specific quirks for Astro, Next.js, and SvelteKit.
+4. [JavaScript API](docs/javascript-api.md): the registry, renderers, runtime playback, and the third-party set adapter, for when you step outside a standard CSS build.
+5. [Licensing](docs/licensing.md): attribution modes, obligation levels, trademark notes, and what each build owes.
+6. [Troubleshooting](docs/troubleshooting.md): an icon that renders as nothing, as a solid square, or at the wrong width.
+
+When you need to look up a specific export or option, the [API reference](docs/reference/index.md) lists every export of `@codenhub/icons`, `/vite`, `/postcss`, and `/play`.
 
 <!-- Source: docs/concepts.md -->
 
 # How the icon system fits together
 
-Every delivery method reads the same classes and shares the same model. This page describes that model once, independent of which method you use.
+Every delivery method reads the same classes and follows the same rules. This page teaches that shared model once — from family names and color inheritance down to stroke width, size, and motion — so you can switch between plain CSS, Tailwind, Vite, or PostCSS without relearning how icons behave.
 
 ## Families
 
-An icon family is a namespace of icons with its own prefix, geometry, and license, such as `lucide` or `material-symbols-rounded-fill`. Families are data, generated from their upstream projects and shipped as modules:
+An icon family is a namespace of icons with its own prefix, geometry, and license, such as `lucide` or `material-symbols-rounded-fill`. Families are plain data modules generated from their upstream projects, which keeps artwork decoupled from any rendering framework:
 
 ```ts
 import lucide from "@codenhub/icons/data/lucide";
@@ -198,25 +200,25 @@ Available families:
 | ---------------------------------------------------------------- | --------- | --------------------------- | ---------- |
 | `line-md`                                                        | 1222      | animated, stroke-based      | MIT        |
 | `svg-spinners`                                                   | 46        | animated loading indicators | MIT        |
-| `lucide`                                                         | 2171      | outlined, stroke-based      | ISC        |
+| `lucide`                                                         | 2317      | outlined, stroke-based      | ISC        |
 | `phosphor`                                                       | 1512      | outlined                    | MIT        |
 | `phosphor-thin`, `phosphor-light`, `phosphor-bold`               | 1512 each | outlined, other weights     | MIT        |
 | `phosphor-fill`                                                  | 1512      | filled                      | MIT        |
 | `phosphor-duotone`                                               | 1512      | duotone                     | MIT        |
-| `material-symbols-outlined`, `-rounded`, `-sharp`                | 3932 each | outlined                    | Apache-2.0 |
-| `material-symbols-outlined-fill`, `-rounded-fill`, `-sharp-fill` | 3932 each | filled                      | Apache-2.0 |
-| `simple-icons` (brand)                                           | 3254      | filled logos, brand-colored | CC0-1.0    |
+| `material-symbols-outlined`, `-rounded`, `-sharp`                | 3940 each | outlined                    | Apache-2.0 |
+| `material-symbols-outlined-fill`, `-rounded-fill`, `-sharp-fill` | 3940 each | filled                      | Apache-2.0 |
+| `simple-icons` (brand)                                           | 3255      | filled logos, brand-colored | CC0-1.0    |
 | `logos` (brand)                                                  | 2016      | full-color logos            | CC0-1.0    |
 
-Variants such as filled or duotone are separate families rather than options on one, so resolution stays a prefix and a name.
+Variants such as filled or duotone live in separate families rather than acting as toggles on one family. A class name stays a prefix and an icon name, with no extra variant syntax to guess.
 
-`simple-icons` and `logos` are brand families. `simple-icons` draws each logo in one brand color, as in `ic-simple-icons-github` and `ic-simple-icons-npm`. `logos` draws them in full color, as in `ic-logos-google-icon` and `ic-logos-slack-icon`, for brands that one color cannot show, such as Google's four-color G. The two complement each other: most brands are in only one of them.
+`simple-icons` and `logos` are brand families, and they split the job: `simple-icons` draws each logo in one brand color, as in `ic-simple-icons-github` and `ic-simple-icons-npm`, while `logos` draws them in full color, as in `ic-logos-google-icon` and `ic-logos-slack-icon`, for brands that one color cannot show, such as Google's four-color G. Most brands appear in only one of the two, so they complement rather than duplicate each other.
 
-A full-color logo weighs more than a one-color icon. With the plugins, a project pays only for the logos it uses: about 2 KB of CSS for a typical one, and under 8 KB for 95% of them. A few traced, highly detailed logos are much heavier, from about 60 KB to 150 KB each: `lerna` (149 KB), `effector` (120 KB), `composer` (88 KB), `hugo` (85 KB), `tastejs` (69 KB), `matplotlib` (66 KB), `matplotlib-icon` (65 KB), and `chalk` (60 KB). A gzipped or Brotli-compressed stylesheet transfers several times smaller than these figures. Where weight matters, prefer a lighter mark, such as a brand's `-icon` variant, or the brand's `simple-icons` icon when it has one. Brand families are opt-in everywhere — `@codenhub/icons/tw` never resolves them, and a declared `@plugin` resolves them only when its `families` option names them — and their marks are trademarks of their owners. See [Licensing](docs/licensing.md#brand-families).
+Full-color logos naturally weigh more than single-color icons. With the build plugins, a project pays only for the logos it actually uses: about 2 KB of CSS for a typical logo, and under 8 KB for 95% of them. A handful of traced, highly detailed logos sit at the heavy end of the scale, from about 60 KB to 150 KB each: `lerna` (149 KB), `effector` (120 KB), `composer` (88 KB), `hugo` (85 KB), `tastejs` (69 KB), `matplotlib` (66 KB), `matplotlib-icon` (65 KB), and `chalk` (60 KB). Gzip or Brotli shrinks those figures several times over on the wire, and when weight still matters, prefer a lighter `-icon` variant or the brand's `simple-icons` entry if one exists. Brand families are opt-in everywhere — `@codenhub/icons/tw` never resolves them, and a declared `@plugin` resolves them only when its `families` option names them — and their marks remain trademarks of their owners. See [Licensing](docs/licensing.md#brand-families).
 
 ### Animated families
 
-`line-md` provides 1,222 animated icons from Line MD 3.0.5 by Vjacheslav Trushkin. `svg-spinners` provides 46 loading indicators by Utkarsh Verma, generated from the upstream SMIL artwork at commit `abfa05c49acf005b8b1e0ef8eb25a67a7057eb20`. Both are MIT-licensed core families, available through `@import "@codenhub/icons/tw"` by default, through the `@codenhub/icons/line-md` and `@codenhub/icons/svg-spinners` family stylesheets, or as `@codenhub/icons/data/line-md` and `@codenhub/icons/data/svg-spinners` for a configured plugin or registry.
+`line-md` provides 1,222 animated icons from Line MD 3.0.5 by Vjacheslav Trushkin, and `svg-spinners` provides 46 loading indicators by Utkarsh Verma, generated from the upstream SMIL artwork at commit `abfa05c49acf005b8b1e0ef8eb25a67a7057eb20`. Both are MIT-licensed core families, available through `@import "@codenhub/icons/tw"` by default, through the `@codenhub/icons/line-md` and `@codenhub/icons/svg-spinners` family stylesheets, or as `@codenhub/icons/data/line-md` and `@codenhub/icons/data/svg-spinners` for a configured plugin or registry.
 
 ```html
 <i class="ic-line-md-heart/1.5" aria-hidden="true"></i>
@@ -224,9 +226,9 @@ A full-color logo weighs more than a one-color icon. With the plugins, a project
 <i class="ic-svg-spinners-90-ring" aria-hidden="true"></i>
 ```
 
-These animations live inside the SVG artwork and use SMIL. Line MD's `-loop` icons animate continuously, and its other icons draw in once. Without a [motion trigger](#motion), an icon plays the first time the page displays it. Chrome is verified; Firefox and Safari are untested, so do not infer animated-mask support from static-mask support.
+The animations live inside the SVG artwork and run via SMIL. Line MD's `-loop` icons animate continuously, and its other icons draw in once. Without a [motion trigger](#motion), an icon plays the first time the page displays it. Chrome is verified; Firefox and Safari are untested, so do not infer animated-mask support from static-mask support.
 
-Add `ic-on-hover` to show the static artwork at rest and play it while the trigger is hovered or focused, as described in [Motion](#motion):
+Add `ic-on-hover` to show the static artwork at rest and play the animation while the trigger is hovered or has visible focus (`:focus-visible`), as described in [Motion](#motion):
 
 ```html
 <button>
@@ -235,15 +237,16 @@ Add `ic-on-hover` to show the static artwork at rest and play it while the trigg
 </button>
 ```
 
-Loops work on every hover with CSS alone. A one-shot icon such as `ic-line-md-heart` plays on the first hover only with CSS alone, because a browser does not restart an image it has already shown. To replay it on every hover, call [`bindIconPlayback`](docs/javascript-api.md#playing-icons-from-code) from `@codenhub/icons/play` once. Icons without static artwork keep their usual mask at rest.
+Looping icons play on every hover with CSS alone. A one-shot icon such as `ic-line-md-heart` plays on the first hover only with CSS alone, because browsers do not restart an animated image they have already painted once. To replay a one-shot icon on every hover, call [`bindIconPlayback`](docs/javascript-api.md#playing-icons-from-code) from `@codenhub/icons/play` once. Icons that have no static artwork keep their usual mask at rest.
 
-For `prefers-reduced-motion: reduce`, Line MD CSS masks always paint the upstream static artwork, including during hover. This applies to full family stylesheets, Tailwind, Vite and PostCSS CSS mode, and stroke modifiers such as `/1.5`. Each icon carries its optional static artwork in `--ic-static-mask`; the base rules choose it for reduced motion and hover rest. SVG Spinners have no static fallback; provide an accessible loading label independently of their motion.
+CSS mode and inline SVG mode handle reduced motion and hover rest differently:
 
-Inline SVG from Vite's `mode: "svg"`, virtual modules, and `renderSvg` keeps the animated `body`. CSS cannot stop SMIL, so `ic-on-hover` cannot hold that inline artwork at rest, and those paths do not swap artwork for reduced motion. `playIcon` restarts an inline SVG, but skips the restart under reduced motion; it does not stop a running timeline. Use CSS mode for the automatic swap, or select the resolved icon's `staticBody` before calling `renderSvg` when you need static inline artwork. `staticBody` shares the animated body's viewBox. `getIconMaskUrl` returns the animated artwork; `getIconCssProps` also includes the static-mask property when available.
+- **CSS-mask mode** (full family stylesheets, Tailwind, Vite CSS mode, and PostCSS, including stroke modifiers such as `/1.5`): under `prefers-reduced-motion: reduce`, Line MD masks always paint the upstream static artwork, even during hover. Each icon carries its optional static artwork in `--ic-static-mask`, and the base rules pick it for reduced motion and hover rest. SVG Spinners have no static fallback, so provide an accessible loading label independently of their motion.
+- **Inline SVG mode** (Vite's `mode: "svg"`, virtual modules, and `renderSvg`): keeps the animated `body`. Because CSS cannot stop a SMIL timeline, `ic-on-hover` cannot hold inline SVG artwork at rest, and those paths do not swap artwork for reduced motion. `playIcon` restarts an inline SVG, but skips the restart under reduced motion; it does not stop an already-running timeline. Choose CSS mode for the automatic swap, or read the resolved icon's `staticBody` before calling `renderSvg` when you need static inline artwork; `staticBody` shares the animated body's viewBox. `getIconMaskUrl` returns the animated artwork, while `getIconCssProps` also includes the static-mask property when available.
 
 ## Names
 
-An icon is identified by `prefix:name`. A class writes that with a dash, because a class name cannot contain a colon:
+An icon is identified by `prefix:name`. Because CSS class names cannot contain colons, a class replaces the colon with a dash:
 
 ```html
 <!-- lucide:heart -->
@@ -253,11 +256,11 @@ An icon is identified by `prefix:name`. A class writes that with a dash, because
 <i class="ic-material-symbols-rounded-home"></i>
 ```
 
-The longest matching family prefix wins, so `material-symbols-outlined` is preferred over `material` when both are loaded.
+When two loaded family prefixes share a start, the longest matching prefix wins, so `material-symbols-outlined` beats `material` when both are loaded.
 
-An unqualified name resolves against a default family, and against nothing at all when none is configured. The package names no default of its own and ships no curated map of semantic names: `ic-close` means whatever the family you chose calls `close`, and gets no icon if that family has no such icon. In plain CSS an earlier-imported family that does have the name still answers to it, because a family stylesheet claims only the bare names it defines. Lucide's is named `x`, so under Lucide you write `ic-x`.
+An unqualified name such as `ic-heart` resolves against a configured default family, and against nothing at all when no default is set. The package picks no default family of its own and ships no semantic alias map, because nobody agrees on whether `close` should be `x` or `times`. So `ic-close` means whatever your chosen family calls `close`, and renders no icon if that family uses another name. Lucide calls that icon `x`, so under Lucide you write `ic-x`. In plain CSS, where multiple family stylesheets can be imported in sequence, a family stylesheet claims only the bare names it actually defines, so an earlier-imported family still answers for bare names the later family lacks.
 
-Where the default comes from depends on the delivery method:
+Where the default family comes from depends on the delivery method:
 
 | Method        | Default family                                                                                                                                |
 | ------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -278,7 +281,7 @@ registry.resolve("close"); // undefined -- lucide calls it "x"
 
 ### Finding an icon's name
 
-An icon's name is the one its upstream project gives it, so browse the family's own site and write the name you find there:
+Icon names are always the upstream project's own, so browse the family's site and use the exact name shown there:
 
 | Family                 | Browse at                                                                        | Example class                                   |
 | ---------------------- | -------------------------------------------------------------------------------- | ----------------------------------------------- |
@@ -290,15 +293,25 @@ An icon's name is the one its upstream project gives it, so browse the family's 
 | `simple-icons` (brand) | [simpleicons.org](https://simpleicons.org)                                       | `ic-simple-icons-github`, `ic-simple-icons-npm` |
 | `logos` (brand)        | [svgporn.com](https://svgporn.com)                                               | `ic-logos-google`, `ic-logos-google-icon`       |
 
-Material Symbols names keep Google's underscores: `check_circle`, not `check-circle`. A Simple Icons name is the icon's slug, with any `_` written as `-`. A `logos` name is the upstream file name, lowercased, with any `_` or `.` written as `-`: `socket.io` is `ic-logos-socket-io`. Some brands come as a full logo, often a wordmark, and as a symbol with `-icon` appended; some add `-dark` or `-alt` variants. A misspelled name is not an error: the class resolves to nothing, and the element renders as a solid square with the base rules loaded, or as nothing without them, so check the name against the family when an icon does not appear. Each family module also lists its names, as the keys of its `icons` object.
+Upstream naming quirks are kept as-is rather than normalized away:
+
+- **Material Symbols** keeps Google's underscores: `check_circle`, not `check-circle`.
+- **Simple Icons** uses the icon's slug, with any `_` written as `-`.
+- **`logos`** uses the upstream file name, lowercased, with any `_` or `.` written as `-`: `socket.io` becomes `ic-logos-socket-io`. Some brands include both a full wordmark logo and a symbol with `-icon` appended, and some add `-dark` or `-alt` variants.
+
+A misspelled name does not throw an error: the class resolves to nothing, so the element renders as a solid square when the base rules are loaded, or as nothing at all when they are missing. Check the name against the family when an icon disappears — or read the keys of the family module's `icons` object directly.
 
 ## Reserved names
 
-`ic-xs` through `ic-xl` are the [size axis](#size), so `xs`, `sm`, `md`, `lg`, and `xl` cannot be family prefixes or icon names. Generation refuses a family that claims one. `anim` is reserved for the [motion utilities](#motion): a family cannot use it as a prefix or ship an icon named `anim` or starting with `anim-`. The exact icon names `on-hover` and `trigger` are reserved the same way; names that only start with them remain available, as does `animation`. Stroke width is written on the icon class itself, so it claims no prefix.
+Because utility classes live in the same `ic-*` namespace as icon classes, a few names are off-limits so your icons never collide with helpers:
+
+- **`xs`, `sm`, `md`, `lg`, and `xl`** belong to the [size axis](#size) (`ic-xs` through `ic-xl`). No family may use one as a prefix. A core or extended family that ships an icon by that name fails generation; a brand family leaves that icon out and lists it in the family's attribution file.
+- **`anim`, `on-hover`, and `trigger`** belong to the [motion utilities](#motion). A family cannot use `anim` as a prefix, and an icon named `anim` or starting with `anim-` is handled like a size name: it fails generation for a core or extended family and is left out of a brand family. The exact icon names `on-hover` and `trigger` are reserved the same way, while names that merely start with them — along with `animation` — stay available.
+- **Stroke width** lives after a `/` on the icon class itself, so it claims no prefix at all.
 
 ## Markup
 
-An icon is an element that carries an icon class. Use an `<i>`:
+An icon is an HTML element carrying an icon class. Write an `<i>` — short, semantic-neutral, and the only element [inline SVG mode](docs/delivery/vite.md#inline-svg-mode) rewrites:
 
 ```html
 <i class="ic-lucide-search" aria-hidden="true"></i>
@@ -310,15 +323,15 @@ An icon is an element that carries an icon class. Use an `<i>`:
 <i class="ic-lucide-search ic-lg"></i>
 ```
 
-`<i>` is the recommended element and the only one [inline SVG mode](docs/delivery/vite.md#inline-svg-mode) rewrites. In the CSS-based methods the class also works on any element you add `.ic` to, for a framework component that renders its own tag:
+In the CSS-based methods, the same class also works on any element if you add `.ic`, which helps when a framework component insists on rendering its own tag:
 
 ```html
 <span class="ic ic-lucide-search" aria-hidden="true"></span>
 ```
 
-There is no `::before`, `::after`, or form-control form: an icon next to a label is a real `<i>` inside the button or link, which composes with a layout gap and works in every delivery method. For an icon painted as a `background-image` — a custom control, an input affix — resolve the `url()` with [`getIconMaskUrl` or `getIconCssProps`](docs/javascript-api.md) and place it yourself.
+There is no `::before`, `::after`, or form-control form. An icon next to a label is a real `<i>` inside the button or link, so it lines up with flex or grid gaps and behaves the same across every delivery method. When you truly need a `background-image` icon — such as a custom control or an input affix — resolve its `url()` with [`getIconMaskUrl` or `getIconCssProps`](docs/javascript-api.md) and place it yourself.
 
-Size and color follow CSS custom properties:
+Size and color follow CSS custom properties set on the icon or any ancestor:
 
 ```css
 .toolbar {
@@ -331,14 +344,14 @@ See [Size](#size) and [Color](#color).
 
 ## Color
 
-An icon paints in the first of these that applies:
+An icon paints in the first source that applies, in this order:
 
-1. `--ic-color`, set on the icon itself or on any ancestor.
+1. `--ic-color`, set on the icon itself or inherited from any ancestor.
 2. The icon's own artwork, for a full-color `logos` icon: `ic-logos-google-icon` keeps all four of Google's colors and its gradients.
-3. The icon's own color. Only `simple-icons` icons have one: `ic-simple-icons-github` is GitHub's `#181717`, `ic-simple-icons-npm` is npm's `#cb3837`.
-4. `currentColor`, the text color around it.
+3. The icon's own color, for `simple-icons`: `ic-simple-icons-github` uses GitHub's `#181717`, and `ic-simple-icons-npm` uses npm's `#cb3837`.
+4. `currentColor`, matching the surrounding text color.
 
-So every icon follows the text color by default, except brand icons, which arrive in their brand colors. A full-color logo under `--ic-color` becomes a one-color silhouette of its outline: detail drawn in a contrasting color inside the logo, such as the `31` on Google Calendar's page, fills in. Setting `--ic-color` changes that, at whatever scope you set it:
+In short, core icons follow your text color automatically, while brand icons show up in their own brand colors until you tell them otherwise. Setting `--ic-color` overrides brand colors at whatever scope you set it; note that on a full-color logo, `--ic-color` turns the icon into a monochrome silhouette of its outline, so contrasting details inside the mark — such as the `31` on Google Calendar's icon — fill in solid:
 
 ```css
 /* every icon on the page, brand icons included, in the text color */
@@ -363,9 +376,9 @@ So every icon follows the text color by default, except brand icons, which arriv
 <i class="ic-simple-icons-npm" style="--ic-color: white" aria-hidden="true"></i>
 ```
 
-To keep brand colors inside a scope that sets `--ic-color`, reset it on them with `--ic-color: initial`, which lets the brand color through again.
+To restore brand colors inside a subtree that sets `--ic-color`, reset the property on those icons with `--ic-color: initial`.
 
-Some brand colors are near-black — GitHub, X, and Vercel among them — and disappear on a dark background. Give those a light color in your dark theme:
+Some brand colors are near-black — GitHub, X, and Vercel among them — and vanish quietly on a dark background. Override those in your dark theme:
 
 ```css
 @media (prefers-color-scheme: dark) {
@@ -376,11 +389,11 @@ Some brand colors are near-black — GitHub, X, and Vercel among them — and di
 }
 ```
 
-With a custom class `prefix`, every property here is renamed to match: `--ux-color` under `prefix: "ux"`. `color` alone does not recolor a brand icon, because its own color comes before `currentColor`; set `--ic-color` instead. All of this works the same in every delivery method and in [inline SVG mode](docs/delivery/vite.md#inline-svg-mode), where the brand colors are carried by the `<svg>` itself and need no stylesheet. One exception there: under a Content Security Policy that blocks `style` attributes, an inlined brand icon keeps its brand colors but `--ic-color` no longer reaches it.
+With a custom class `prefix`, every custom property name matches: `--ux-color` under `prefix: "ux"`. Plain CSS `color` alone does not recolor a brand icon, because its own brand color sits ahead of `currentColor`; set `--ic-color` instead, or `--<prefix>-color` under a custom prefix. All of this works the same across every CSS delivery method and in [inline SVG mode](docs/delivery/vite.md#inline-svg-mode), where the brand colors travel inside the `<svg>` itself. One exception applies there: under a Content Security Policy that blocks `style` attributes, an inlined brand icon keeps its brand colors, but `--ic-color` (or `--<prefix>-color`) can no longer override them.
 
 ## Accessibility
 
-An icon element has no text content, so assistive technology announces nothing for it, or an unhelpful guess. Say which kind of icon it is:
+An icon element has no text content, so assistive technology announces nothing for it, or an unhelpful guess. Mark each icon according to its role:
 
 ```html
 <!-- decorative, beside a visible label: hide it -->
@@ -393,11 +406,11 @@ An icon element has no text content, so assistive technology announces nothing f
 <i class="ic-lucide-triangle-alert" role="img" aria-label="Warning"></i>
 ```
 
-In [inline SVG mode](docs/delivery/vite.md#inline-svg-mode) the attributes you put on the `<i>` carry over to the `<svg>` that replaces it.
+In [inline SVG mode](docs/delivery/vite.md#inline-svg-mode), attributes you place on the `<i>` carry over to the `<svg>` that replaces it.
 
 ## Stroke width
 
-Stroke width is a modifier on the icon class, and only families drawn with strokes answer to it. Of the bundled families, Lucide and Line MD support it; the other families ignore it.
+Stroke width is a modifier written right onto the icon class, and only families drawn with strokes answer to it. Of the bundled families, Lucide and Line MD support it; the other families ignore it:
 
 ```html
 <!-- a thinner stroke -->
@@ -407,13 +420,13 @@ Stroke width is a modifier on the icon class, and only families drawn with strok
 <i class="ic-lucide-heart/3"></i>
 ```
 
-The width is baked into the artwork the rule carries, so it cannot be a second class applied on top: `ic-heart` and `ic-heart/1.5` are two icons, not one icon and a switch. One class is one rule, so a project pays for the widths it wrote and no others.
+The width is baked directly into the SVG artwork the rule carries, so it cannot be applied as a separate class on top. `ic-heart` and `ic-heart/1.5` are two distinct icons as far as CSS is concerned, not one icon with a toggle. Because one class produces one rule, your stylesheet only pays for the stroke widths you actually wrote.
 
-That is also why the modifier needs a build step. It works under Vite, PostCSS, and Tailwind, all of which see your markup; the plugin-free family stylesheets render at the family's authored width, because nothing there can know which widths to prepare.
+That is also why the modifier requires a build step: Vite, PostCSS, and Tailwind all scan your markup and generate the requested widths on demand, whereas the plugin-free family stylesheets render every icon at its authored width.
 
 ## Size
 
-The default size is `1em`. Set `--ic-size` on the icon or any ancestor to change it, or add a class from the axis:
+The default icon size is `1em`, matching the font size around it. Set `--ic-size` on the icon or any ancestor to resize it, or add a class from the size axis:
 
 | Class   | `--ic-size` |
 | ------- | ----------- |
@@ -427,19 +440,21 @@ The default size is `1em`. Set `--ic-size` on the icon or any ancestor to change
 <i class="ic-lucide-search ic-lg"></i>
 ```
 
-Each class does one thing — set `--ic-size` to a rem value — so it composes with a stroke modifier and needs no knowledge of the element it lands on. Unlike stroke width, a size is not baked into the artwork, so the axis is part of the base rules and works in every delivery method: the plugin-free family stylesheets, and [inline SVG mode](docs/delivery/vite.md#inline-svg-mode), where the base rules size the rewritten `<svg>` as long as `@import "@codenhub/icons"` is present. The `.ic` form itself is CSS-based methods only, as above.
+Each size class does one thing — set `--ic-size` to a rem value — so it composes cleanly with stroke modifiers and works regardless of which element it lands on. Unlike stroke width, size is not baked into the artwork, so the axis ships with the base rules and works in every delivery method, including [inline SVG mode](docs/delivery/vite.md#inline-svg-mode) as long as `@import "@codenhub/icons"` is present. Using `.ic` on a non-`<i>` element remains CSS-based methods only, as noted in [Markup](#markup).
 
-The five classes are always emitted, so `xs`, `sm`, `md`, `lg`, and `xl` are [reserved](#reserved-names): a family may not ship an icon or take a prefix by one of those names.
+Because these five classes are always emitted, `xs`, `sm`, `md`, `lg`, and `xl` are [reserved](#reserved-names): no family can ship an icon or take a prefix by those names.
 
 ## Motion
 
-Icons move in two ways. Motion classes move the whole glyph, any icon from any family. [Animated families](#animated-families) move their own artwork, with no class. Three controls apply to both:
+Icons move in two ways: motion classes animate the entire glyph for any icon in any family, while [animated families](#animated-families) animate their own artwork with no motion class needed. Three controls govern both:
 
 | Question      | Control                                                                           | Default                                    |
 | ------------- | --------------------------------------------------------------------------------- | ------------------------------------------ |
 | What moves    | an `ic-anim-*` class, or an animated family's icon                                | nothing                                    |
 | When it plays | always, `ic-on-hover`, or [`playIcon`](docs/javascript-api.md#playing-icons-from-code) | always                                     |
 | How often     | `--ic-anim-iterations`                                                            | forever; once per hover with `ic-on-hover` |
+
+Five whole-glyph motion classes ship with the base styles:
 
 | Class            | Motion                                         | Default duration |
 | ---------------- | ---------------------------------------------- | ---------------- |
@@ -449,15 +464,15 @@ Icons move in two ways. Motion classes move the whole glyph, any icon from any f
 | `ic-anim-bounce` | A vertical bounce, 15% of the icon's height    | `1s`             |
 | `ic-anim-wiggle` | Rotation back and forth by 6 degrees           | `1s`             |
 
-Spin uses linear timing; the others ease in and out. Set `--ic-anim-duration` on the icon or an ancestor to change the length of a cycle. Choose one motion class per element: it replaces the element's CSS `animation`, and the transform motions also replace its `transform` while running.
+`ic-anim-spin` uses linear timing; the other four ease in and out. Set `--ic-anim-duration` on the icon or an ancestor to change the cycle length. Use at most one motion class per element: it replaces the element's CSS `animation`, and the transform-based motions also replace its `transform` while running.
 
-**Always.** With no other class, the motion runs for as long as the class is present. A loading indicator spins; an app adds `ic-anim-spin` to a reload icon while a request runs and removes it when the request ends:
+**Always.** With no trigger class, the motion runs for as long as the class is on the element. Toggle `ic-anim-spin` on a reload icon while a request is in flight and drop it when the request finishes:
 
 ```html
 <i class="ic-lucide-loader-circle ic-anim-spin" aria-hidden="true"></i>
 ```
 
-**On hover.** `ic-on-hover` plays the motion while its trigger is hovered or has `:focus-visible`, and rests otherwise. The trigger is the icon itself, its parent element, or any ancestor with `ic-trigger`, such as a card, or a button whose icon sits in a wrapper. Each hover starts from the beginning, and by default plays once:
+**On hover.** `ic-on-hover` plays the motion while its trigger is hovered or has `:focus-visible`, and rests otherwise. The trigger can be the icon itself, its parent element, or any ancestor carrying `ic-trigger` — handy for cards or buttons where the icon sits inside a wrapper. Each hover restarts from the beginning and plays once by default:
 
 ```html
 <button>
@@ -471,36 +486,38 @@ Spin uses linear timing; the others ease in and out. Set `--ic-anim-duration` on
 </a>
 ```
 
-**How often.** `--ic-anim-iterations` sets the number of cycles: any number, or `infinite`. Set `--ic-anim-iterations: infinite` for an icon that keeps moving while hovered, such as a fan. It inherits, so one declaration on a toolbar applies to every icon in it. Animated artwork repeats as drawn and ignores it: Line MD `-loop` icons loop, and the others play once.
+**How often.** `--ic-anim-iterations` sets the repeat count: any number, or `infinite`. Set `--ic-anim-iterations: infinite` when an icon should keep moving for the whole hover, such as a fan. Because it inherits, one rule on a toolbar sets the count for every icon inside it. Animated artwork follows its own authored timeline and ignores `--ic-anim-iterations`: Line MD `-loop` icons repeat, and the rest play once.
 
-**From code.** For feedback on an event, such as a copy icon turning into a check or a like that pops, call `playIcon(element)` from the opt-in [`@codenhub/icons/play`](docs/javascript-api.md#playing-icons-from-code) entry. It restarts glyph motion and artwork alike.
+**From code.** For feedback tied to an event — a copy icon flashing on success, or a like icon popping on click — call `playIcon(element)` from the opt-in [`@codenhub/icons/play`](docs/javascript-api.md#playing-icons-from-code) entry point. It restarts glyph motion and animated artwork alike.
 
-The base import, `@import "@codenhub/icons"`, includes the keyframes and motion classes, so they work with plain CSS family stylesheets, Vite, PostCSS, and inline SVG mode. Tailwind also registers them as utilities, so variants such as `group-hover:ic-anim-spin` remain available. With a custom class `prefix`, every class, custom property, and keyframe name changes together: `ux-anim-spin`, `ux-on-hover`, `ux-trigger`, `--ux-anim-duration`, and `--ux-anim-iterations` under `prefix: "ux"`.
+The base import, `@import "@codenhub/icons"`, includes the keyframes and motion classes, so they work with plain CSS family stylesheets, Vite, PostCSS, and inline SVG mode. Tailwind also registers them as utilities, keeping variants such as `group-hover:ic-anim-spin` available. With a custom class `prefix`, every class, custom property, and keyframe name shifts together: `ux-anim-spin`, `ux-on-hover`, `ux-trigger`, `--ux-anim-duration`, and `--ux-anim-iterations` under `prefix: "ux"`.
 
 When the user's device requests reduced motion, motion classes stop, Line MD shows its static artwork even while hovered, and `playIcon` does nothing. SVG Spinners keep moving, because they have no static artwork. Keep loading or status information available in text; movement should never be the only way to understand a state.
 
-The motion classes move the icon element. In CSS-mask mode the artwork is an image, so the page cannot target or animate individual paths inside it. `ic-on-hover` needs complex `:not()` selectors and `:focus-visible`, supported together in Chrome 88+, Firefox 85+, and Safari 15.4+. Motion was verified in Chrome; Firefox and Safari are untested.
+Motion classes move the whole icon element. In CSS-mask mode, the artwork is an image, so CSS cannot reach inside it to target or animate individual paths. `ic-on-hover` relies on complex `:not()` selectors and `:focus-visible`, which work together in Chrome 88+, Firefox 85+, and Safari 15.4+. Motion was verified in Chrome; Firefox and Safari are untested.
 
-Next, choose a [delivery method](docs/delivery/index.md) for your build.
+## Next
+
+Read [Delivery methods](docs/delivery/index.md) to pick how icon classes become CSS in your build — plain CSS, Tailwind CSS v4, Vite, or PostCSS.
 
 <!-- Source: docs/delivery/index.md -->
 
 # How icons reach your CSS
 
-`@codenhub/icons` produces CSS mask rules. What differs between the delivery methods is only where those per-icon rules come from: a complete stylesheet you import, or a plugin that scans your markup and emits just what you used.
+Every delivery method understands the exact same icon classes, and every CSS method produces the same mask rules for them. The one exception is the Vite plugin's [inline SVG mode](docs/delivery/vite.md#inline-svg-mode), which rewrites `<i>` tags into `<svg>` elements and emits no mask rules at all. Among the CSS methods, what changes between them is where those per-icon rules come from: either a prebuilt stylesheet containing every icon in a family, or a plugin that scans your markup and generates only the icons you wrote. This page compares all four options so you can pick the one that fits your build.
 
 ## Entry points
 
-| Entry                      | For                         | What it delivers                                                                        |
-| -------------------------- | --------------------------- | --------------------------------------------------------------------------------------- |
-| `@codenhub/icons`          | Every method                | The base `.ic` rules, about 2 KB. Never rewritten by a plugin.                          |
-| `@codenhub/icons/tw`       | Tailwind CSS v4             | Base rules plus the plugin. Every non-brand family resolvable, only used icons emitted. |
-| `@codenhub/icons/tailwind` | Tailwind CSS v4, configured | The plugin on its own, so `@plugin` can carry options.                                  |
-| `@codenhub/icons/<family>` | Plain CSS, no build step    | One complete family, every icon written out.                                            |
-| `@codenhub/icons/vite`     | Vite                        | Scans your markup and generates only the rules it needs.                                |
-| `@codenhub/icons/postcss`  | PostCSS                     | The same, for a PostCSS pipeline.                                                       |
+| Entry                      | For                         | What it delivers                                                                                                                                   |
+| -------------------------- | --------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `@codenhub/icons`          | Every method                | The base `.ic` rules, about 2 KB. Never rewritten by a plugin.                                                                                     |
+| `@codenhub/icons/tw`       | Tailwind CSS v4             | Base rules plus the plugin. Every non-brand family resolvable, only used icons emitted. Brand families need `@plugin` with `families` naming them. |
+| `@codenhub/icons/tailwind` | Tailwind CSS v4, configured | The plugin on its own, so `@plugin` can carry options.                                                                                             |
+| `@codenhub/icons/<family>` | Plain CSS, no build step    | One complete family, every icon written out.                                                                                                       |
+| `@codenhub/icons/vite`     | Vite                        | Scans your markup and generates only the rules it needs.                                                                                           |
+| `@codenhub/icons/postcss`  | PostCSS                     | The same, for a PostCSS pipeline.                                                                                                                  |
 
-`@import "@codenhub/icons"` means exactly one thing everywhere: the base rules the icon classes build on. No plugin rewrites it, no plugin deletes it. What differs between the methods is only where the per-icon mask rules come from.
+`@import "@codenhub/icons"` means one thing everywhere: the base rules that icon classes build on. No plugin rewrites it, and no plugin strips it out. The only moving part is which mechanism generates the per-icon mask rules beside it.
 
 ## Choosing one
 
@@ -511,15 +528,19 @@ Next, choose a [delivery method](docs/delivery/index.md) for your build.
 | Runs a PostCSS pipeline but not Vite (Next.js, others)     | [PostCSS plugin](docs/delivery/postcss.md) |
 | Has no build step, or you want the simplest possible setup | [Plain CSS](docs/delivery/plain-css.md)    |
 
-The plugin methods keep output small without any manual curation: a project using three icons ships about 10 KB of CSS. The plain-CSS family stylesheets are complete by construction — Lucide is about 1.3 MB, all 17 families about 39 MB — so that method trades size for having no build integration at all.
+The plugin methods keep CSS output small with no manual pruning: a project using three icons ships about 10 KB of CSS. Plain-CSS family stylesheets take the opposite trade — zero build setup in exchange for shipping every icon in the family, where Lucide alone is about 1.3 MB and all 17 families together reach about 39 MB.
 
-The `ic-lucide-heart/1.5` stroke-width modifier needs one of the plugin methods; plain CSS renders stroke families at their authored width. See [Concepts](docs/concepts.md) for the shared model and [Frameworks](docs/frameworks/index.md) for framework-specific setup.
+One capability also depends on a build step: the `ic-lucide-heart/1.5` stroke-width modifier needs Tailwind, Vite, or PostCSS, because plain CSS stylesheets render stroke families at their authored width. See [Concepts](docs/concepts.md) for the shared model.
+
+## Next
+
+Read the guide for the method you picked — starting with [Plain CSS](docs/delivery/plain-css.md) if you want zero setup — or jump straight to [Frameworks](docs/frameworks/index.md) for Astro, Next.js, and SvelteKit wiring.
 
 <!-- Source: docs/delivery/plain-css.md -->
 
 # Plain CSS, no build step
 
-Import the base rules, then a stylesheet per family. Each family stylesheet is complete, so nothing has to scan your markup.
+Plain CSS is the zero-configuration route: import the base rules, then import one prebuilt stylesheet for each family you want. Every family stylesheet already holds its full catalog, so nothing needs to scan your markup.
 
 ```css
 @import "@codenhub/icons";
@@ -527,39 +548,43 @@ Import the base rules, then a stylesheet per family. Each family stylesheet is c
 @import "@codenhub/icons/lucide";
 ```
 
-Every rule carries two selectors, the qualified `ic-lucide-heart` and the bare `ic-heart`, sharing one copy of the artwork. That is how this method gets a default family without any configuration to hold one: the last family you import wins every bare name it defines. Above, `ic-heart` is Lucide's.
+Each rule carries two selectors sharing one copy of the artwork: the qualified `ic-lucide-heart` and the bare `ic-heart`. That is how plain CSS gets a default family with no plugin config to hold it — by standard CSS cascade order, the last family you import wins every bare name it defines. Above, `ic-heart` is Lucide's.
 
-The brand families are the exception. `@codenhub/icons/simple-icons` and `@codenhub/icons/logos` carry only qualified names, such as `ic-logos-google`, so importing one never changes what `ic-x` or `ic-play` draws.
+The brand families are the polite exception. `@codenhub/icons/simple-icons` and `@codenhub/icons/logos` emit only qualified names such as `ic-logos-google`, so importing one at the end never hijacks `ic-x` or `ic-play`.
 
 ## Cost
 
-The family stylesheets are large by construction — every icon, because nothing is narrowing them. Lucide is about 1.3 MB, Material Symbols Rounded about 3.9 MB, the full-color `logos` about 6.5 MB, Line MD about 3.0 MB including its static reduced-motion artwork, all 17 families about 39 MB. A project chooses its cost by choosing which families it imports. If that is too much, use a plugin method or Tailwind, which emit only what your markup asked for.
+Because nothing scans your markup to prune unused icons, family stylesheets ship every glyph up front: Lucide is about 1.3 MB, Material Symbols Rounded about 3.9 MB, the full-color `logos` about 6.5 MB, Line MD about 3.0 MB including its static reduced-motion artwork, and all 17 families together reach about 39 MB. You control the budget by importing only the families you actually use. If that still feels heavy for three buttons and a sidebar, switch to Tailwind, Vite, or PostCSS so only the icons you wrote land in the output.
 
-Line MD carries static artwork for reduced motion and for `ic-on-hover` at rest. Add that class to play the artwork on hover with CSS alone; replaying one-shot artwork on every hover, not only the first, needs the optional `@codenhub/icons/play` helper. SVG Spinners retain loading animation. See [Animated families](docs/concepts.md#animated-families) for one-shot timing and browser limits.
+Line MD carries static artwork for reduced motion and for `ic-on-hover` at rest. Add `ic-on-hover` to play the artwork on hover with CSS alone; replaying one-shot artwork on every hover, rather than only the first, needs the optional `@codenhub/icons/play` helper. SVG Spinners retain loading animation. See [Animated families](docs/concepts.md#animated-families) for one-shot timing and browser limits.
 
 ## Limitations
 
-Stroke width does not work here. It is baked into the artwork each rule carries, and a stylesheet with no build step behind it cannot know which widths you want. Stroke families render at their authored width.
+Stroke width does not work in plain CSS. The width is baked into each rule's artwork, and a static stylesheet with no build step behind it has no way to know which stroke widths your templates asked for, so stroke families render at their authored width.
 
 ## See also
 
 - [Delivery methods](docs/delivery/index.md) — how the methods compare.
+- [Tailwind CSS](docs/delivery/tailwind.md) — the next delivery method, if you want on-demand emission with one import.
+- [Frameworks](docs/frameworks/index.md) — framework-specific wiring once you have picked a delivery method.
 - [Concepts](docs/concepts.md) — name resolution and the markup forms.
 
 <!-- Source: docs/delivery/tailwind.md -->
 
 # Tailwind CSS v4
 
+If your project already runs Tailwind CSS v4, adding icons takes one import — zero plugin config required, and Tailwind emits only the icons your templates actually wrote:
+
 ```css
 @import "tailwindcss";
 @import "@codenhub/icons/tw";
 ```
 
-Every family the package ships is resolvable except the brand families `simple-icons` and `logos`, which only a declared `@plugin` can resolve, by naming them in `families` (below), and Tailwind emits only the icons your markup used. Loading the families costs about 150–190 ms and 112 MB once per build, both brand families included, against about 35 ms and 53 MB for a single family; a project using three icons ends up with about 10 KB of CSS.
+Every family the package ships is resolvable out of the box except the brand families `simple-icons` and `logos`, which require declaring `@plugin` yourself with `families` (below). Loading the families costs about 150–190 ms and 112 MB once per build, both brand families included, against about 35 ms and 53 MB for a single family; a project using three icons ends up with about 10 KB of CSS.
 
 ## Configuring the plugin
 
-To pass options, declare the plugin yourself instead of importing `/tw`, which already declares it with no options:
+When you want to restrict families, set a default prefix, change the class prefix, or opt into brand icons, declare `@plugin "@codenhub/icons/tailwind"` directly instead of importing `/tw` (which already declares it with no options):
 
 ```css
 @import "tailwindcss";
@@ -579,11 +604,11 @@ To pass options, declare the plugin yourself instead of importing `/tw`, which a
 | `stroke-width` | Applied to stroke-based families that carry no modifier of their own. |
 | `attribution`  | `auto` or `off`. See [Licensing](docs/licensing.md).                    |
 
-`families` does not make the build cheaper. A Tailwind plugin handler has to be synchronous — utilities registered after an `await` are dropped — so every family is already loaded by the time the options are read. It decides which names resolve, and which notices the output can carry.
+Notice one honest quirk: narrowing `families` does not make the build faster or lighter in memory. Because a Tailwind plugin handler has to run synchronously — utilities registered after an `await` are quietly dropped — every family is already loaded before your options are read. What `families` controls is which names can resolve and which license notices your built CSS carries.
 
 ## Motion
 
-Motion classes and `ic-on-hover` are utilities, used as in [Motion](docs/concepts.md#motion): `ic-on-hover` plays the motion while the icon, its parent, or an `ic-trigger` ancestor is hovered or focused, once per hover unless `--ic-anim-iterations` says otherwise, and it also controls animated artwork.
+Motion classes and `ic-on-hover` work as Tailwind utilities, matching [Motion](docs/concepts.md#motion): `ic-on-hover` plays the motion while the icon, its parent, or an `ic-trigger` ancestor is hovered or has visible focus (`:focus-visible`), once per hover unless `--ic-anim-iterations` says otherwise, and it controls animated artwork as well:
 
 ```html
 <button>
@@ -592,7 +617,7 @@ Motion classes and `ic-on-hover` are utilities, used as in [Motion](docs/concept
 </button>
 ```
 
-Tailwind's ordinary variants remain available for other conditions, since the motion classes are real utilities. A variant replaces `ic-on-hover` for glyph motion, and repeats until the condition ends:
+Because motion classes are real Tailwind utilities, Tailwind's variants remain available for other triggers. A variant replaces `ic-on-hover` for glyph motion and repeats until the state ends:
 
 ```html
 <button class="group">
@@ -602,20 +627,24 @@ Tailwind's ordinary variants remain available for other conditions, since the mo
 <i class="ic-lucide-bell hover:ic-anim-wiggle" aria-hidden="true"></i>
 ```
 
-With variants, add `group-focus-visible:ic-anim-spin` beside `group-hover:ic-anim-spin` to give keyboard users the same cue; `ic-on-hover` covers focus already. Reduced-motion preferences disable the animations even when a variant is active. Animated artwork has no variant form: use `ic-on-hover` beside the icon class. See [Motion](docs/concepts.md#motion) for all five classes, defaults, custom prefixes, and the limits of animating a CSS mask.
+When using variants, pair `group-focus-visible:ic-anim-spin` with `group-hover:ic-anim-spin` so keyboard users get the same cue; `ic-on-hover` handles visible focus automatically. Reduced-motion preferences disable animations even when a variant matches. Animated artwork has no variant form, so keep `ic-on-hover` beside the icon class for those. See [Motion](docs/concepts.md#motion) for all five classes, defaults, custom prefixes, and CSS-mask animation limits.
 
 ## Attribution
 
-`@import "@codenhub/icons/tw"` inlines a static file, so it carries an ordinary `/*! … */` banner naming every family it resolves — a superset notice, which is always safe. Declaring the plugin yourself with `@plugin` narrows resolution, and there the notice is a `--ic-attribution-<family>` custom property on `:root` instead, one per family the build actually used. See [Licensing](docs/licensing.md).
+`@import "@codenhub/icons/tw"` inlines a static stylesheet, so it carries an ordinary `/*! … */` banner naming every family it resolves — a superset notice that is always safe. Declaring `@plugin` yourself narrows resolution, and there the notice travels as a `--ic-attribution-<family>` custom property on `:root` instead, emitted once per family the build actually used. See [Licensing](docs/licensing.md).
 
 ## See also
 
 - [Delivery methods](docs/delivery/index.md) — how the methods compare.
+- [Vite plugin](docs/delivery/vite.md) — the next delivery method, for Vite builds without Tailwind.
+- [Frameworks](docs/frameworks/index.md) — framework-specific wiring once you have picked a delivery method.
 - [Concepts](docs/concepts.md) — name resolution and stroke width.
 
 <!-- Source: docs/delivery/vite.md -->
 
 # Vite plugin
+
+When your build runs on Vite without Tailwind, the Vite plugin scans your files and serves only the CSS mask rules your markup uses — or rewrites `<i class="ic-...">` tags straight into inline SVGs if you prefer no stylesheet per icon at all.
 
 ```ts
 // vite.config.ts
@@ -647,54 +676,57 @@ The generated stylesheet is served as `virtual:icons.css` and injected into ever
 
 ## Scanning
 
-`content` takes literal paths and glob patterns, `src/**/*.{html,tsx}` among them, expanded when the scan runs. It is additive: the plugin also scans every source file the build transforms, so `content` is for what the bundler never reaches, and for making the first paint correct in dev.
+`content` accepts literal paths and glob patterns such as `src/**/*.{html,tsx}`, expanded when the scan runs. Relative paths resolve from Vite's [`root`](https://vite.dev/config/shared-options.html#root), matching how Vite resolves its own paths, so the same config works no matter which directory you launch the build from. `content` is additive: the plugin also scans every source file Vite transforms, so you only need `content` for files the bundler never sees — and for clean first paints in dev.
 
-The transform-time scan covers `.html`, `.js`, `.jsx`, `.ts`, `.tsx`, `.vue`, `.svelte`, and stylesheet files. Markup in a file type outside that set — a `.astro` or `.md` template — is only seen through `content`, so list those globs explicitly. See [Frameworks](docs/frameworks/index.md). This is about the stylesheet only; which files [inline SVG mode](#inline-svg-mode) rewrites is a separate set.
+The transform-time scan reads every module Vite transforms, whatever its extension. A file Vite never transforms is seen only through `content`, and so is a class in a module transformed after the stylesheet was generated, which can happen where a framework imports the stylesheet itself, as Astro and SvelteKit do. See [Frameworks](docs/frameworks/index.md). Note that this applies only to stylesheet generation; [inline SVG mode](#inline-svg-mode) rewrites a separate set of file types.
 
-In dev, Vite serves the HTML before it transforms a single module, so a class the plugin has only ever seen inside a module is not yet known when the page is first served. The stylesheet is therefore served as a module rather than inlined, and the plugin invalidates it whenever a transform turns up something new, so the icon arrives without a reload. Listing your sources in `content` avoids the round trip entirely, because those files are read from disk up front.
+In dev, Vite serves the HTML shell before transforming a single JavaScript module, so an icon class written only inside a component module is still a mystery when the page first loads. To avoid leaving it blank, dev serves the stylesheet as a module rather than inlining it, and the plugin invalidates that module whenever a transform reveals a new class — the icon arrives without a page reload. Listing your sources in `content` skips that catch-up round trip altogether because the files are read from disk up front.
 
-In `css` mode, a build with HTML entries writes the stylesheet as a CSS asset named after its content hash, `assets/codenhub-icons-[hash].css` by default, and links it from every one of them. A build transforms modules before the HTML, so the file already holds every class the build found. A build without HTML entries, such as a library build, emits no stylesheet, and neither does [inline SVG mode](#inline-svg-mode). A linked file needs no nonce or hash in a Content Security Policy: `style-src 'self'` allows it when it is served from the page's origin. With a `base` on another origin, such as a CDN, the policy must allow that origin, as it already must for Vite's own CSS. Two alternatives were rejected:
+In `css` mode, a production build with HTML entries writes the stylesheet as a CSS asset named after its content hash, `assets/codenhub-icons-[hash].css` by default, and links it from every HTML entry. Because a build transforms all modules before emitting HTML, that file already holds every class the build saw. A build without HTML entries, such as a library build, emits no stylesheet, and neither does [inline SVG mode](#inline-svg-mode). A linked stylesheet asset needs no nonce or hash in a Content Security Policy: `style-src 'self'` allows it when served from the page's origin. With a `base` on another origin, such as a CDN, the policy must allow that origin, as it already must for Vite's own CSS. Two alternatives were rejected:
 
 - **An inline `<style>`**, which builds wrote until 0.2.1. A policy without `'unsafe-inline'`, a nonce, or a hash refuses it, so every icon rendered blank in production while dev, which uses a same-origin module script, still worked.
 - **A `nonce` option on the plugin.** Vite's own [`html.cspNonce`](https://vite.dev/config/shared-options#html-cspnonce) already stamps a nonce on the tags in the built HTML, and a nonce needs a server that sends a fresh one per response, which a static host cannot do.
 
 ## Inline SVG mode
 
-`mode: "svg"` replaces `<i class="ic-...">` tags with inline SVG at build time and emits no stylesheet at all. It rewrites those tags and nothing else, so a class left on any other element — or `.ic` on a `<span>` — renders nothing in this mode: there is no stylesheet to carry its mask. The plugin warns at build time when it finds an icon class on an element it will not rewrite, naming the class and the file.
+`mode: "svg"` skips stylesheet generation completely and rewrites `<i class="ic-...">` tags into inline `<svg>` elements at build time. It rewrites `<i>` tags and nothing else: an icon class on another element — or `.ic` on a `<span>` — renders nothing in this mode because there is no stylesheet to supply its mask. The plugin warns at build time when it finds an icon class on an element it will not rewrite, naming the class and the file.
 
 Animated SVG artwork keeps its SMIL animation in this mode, including when reduced motion is requested: CSS cannot stop SMIL. The static Line MD fallback, and `ic-on-hover` holding artwork at rest, apply only in CSS mode; glyph motion classes work in both. The optional `@codenhub/icons/play` helper restarts an inline SVG with `setCurrentTime(0)`; it skips restarts under reduced motion but does not stop existing SMIL animation. See [Animated families](docs/concepts.md#animated-families) for timing and browser limits.
 
-Switching an existing project from CSS mode is not only a config change, because the element that reaches the browser is no longer the one you wrote. Two things the `<i>` had need attention:
+Switching an existing project from CSS mode takes more than flipping a config flag, because the element reaching the browser changes from `<i>` to `<svg>`. Check two details your old `<i>` handled quietly:
 
 - **Size.** The rendered `<svg>` carries a `1em` box as a presentation attribute, so an icon renders at text size with no stylesheet at all. CSS still wins over that: keep `@import "@codenhub/icons"` in a stylesheet and the base rules size the inlined `<svg>` from `--ic-size` exactly as they size an `<i>`, so setting `--ic-size` on an ancestor and the `ic-xs`–`ic-xl` classes both work. Without that import an icon is fixed at `1em`.
 - **`hidden`.** `[hidden] { display: none }` is a user-agent rule for HTML elements, and an inlined icon is in the SVG namespace, so the attribute no longer hides it. Script that toggles an icon needs an explicit `[hidden] { display: none }` rule, and a guard written as `instanceof HTMLElement` stops matching — an SVG element is not one.
 
 One limitation is new to logos. About 400 `logos` icons draw with gradients, masks, or clip paths, which they reach by `id`. Each logo's ids are prefixed with its name, so two different logos never collide, but two copies of the same logo share them, and the browser draws both copies from the first. If that first copy is inside an element hidden with `display: none`, as in a collapsed mobile menu, every later copy renders blank (seen in Chromium). Keep a visible copy ahead of the hidden one, hide with `visibility: hidden` instead, or use CSS mode for a logo that appears more than once, since each mask image there is a document of its own. The same applies to `renderSvg` and [one module per icon](#one-module-per-icon).
 
-Rewriting covers `.html`, `.js`, `.jsx`, `.ts`, `.tsx`, `.vue`, `.svelte`, and `.astro`. An `.astro` file is rewritten in both halves, its frontmatter escaped as JavaScript and its template left as markup. `content` plays no part here — it feeds stylesheet generation, which this mode does not do.
+Rewriting covers `.html`, `.js`, `.jsx`, `.ts`, `.tsx`, `.vue`, `.svelte`, and `.astro`. An `.astro` file is rewritten in both halves, its frontmatter escaped as JavaScript and its template left as markup; `.vue` and `.svelte` files split the same way, with the template read as markup and `<script>` as JavaScript. An icon written as a JSX element receives React's attribute names, such as `strokeWidth`, and a `style` object when the project uses `@vitejs/plugin-react` or `@vitejs/plugin-react-swc`; Solid, Preact, and Vue JSX receive the HTML names, which they pass straight to the DOM. `content` plays no part in `svg` mode because it feeds stylesheet generation, which this mode skips.
 
-The class has to be written out in full, as a literal string, for the plugin to find it: a name assembled at runtime, as in `` `ic-${name}` ``, cannot be seen at build time. In CSS mode such a class simply has no rule generated. In svg mode it is worse, because there is no stylesheet to fall back on and the element renders as nothing. Reach for [one module per icon](#one-module-per-icon) whenever the icon is chosen at runtime; it is the supported form for that, and it is the only one that works in either mode.
+Write every icon class out in full as a literal string so the plugin can spot it: a class assembled at runtime, such as `` `ic-${name}` ``, is invisible at build time. In CSS mode that element simply misses a rule; in `svg` mode there is no stylesheet at all to fall back on, so the element renders nothing. Whenever the icon name comes from state or data at runtime, use [one module per icon](#one-module-per-icon) — it is the supported pattern and works in both modes.
 
 ## One module per icon
 
-For icons chosen at runtime, import a single icon instead of a family:
+When an icon is chosen dynamically at runtime, import a virtual module for that icon instead of shipping a whole family:
 
 ```ts
 const { svg } = await import("virtual:@codenhub/icons/lucide/heart");
 element.innerHTML = svg;
 ```
 
-The module exports the rendered markup as `svg` and its default export, and the resolved icon as `icon`. The `<svg>` carries the icon's qualified class, such as `ic-lucide-heart` under the configured `prefix`, as an `<svg>` svg mode inlines does, so the base rules size and color it from `--ic-size`, `--ic-color`, and the `ic-xs`–`ic-xl` classes. It carries no `aria-hidden`: add it for a decorative icon, or give a meaningful one `role="img"` and a label. Each import is its own module, so the bundler splits and tree-shakes at icon granularity. A name with no prefix — `virtual:@codenhub/icons/close` — resolves like any other unqualified name. An unknown icon fails the build rather than resolving to nothing.
+The module exports the rendered markup as both `svg` and its default export, alongside the resolved icon object as `icon`. The `<svg>` carries the icon's qualified class (such as `ic-lucide-heart` under the configured `prefix`) just like inline SVG mode, so the base rules size and color it via `--ic-size`, `--ic-color`, and the `ic-xs`–`ic-xl` classes. It carries no `aria-hidden` attribute: add it yourself for a decorative icon, or give a meaningful icon `role="img"` and a label. Each import becomes its own module, letting the bundler code-split and tree-shake down to single icons. An unqualified path such as `virtual:@codenhub/icons/close` resolves through your configured default prefix like any other bare name, and an unknown icon fails the build loudly rather than shipping a blank element.
 
 ## See also
 
 - [Delivery methods](docs/delivery/index.md) — how the methods compare.
+- [PostCSS plugin](docs/delivery/postcss.md) — the next delivery method, for non-Vite PostCSS builds.
 - [Frameworks](docs/frameworks/index.md) — Astro and SvelteKit build on this plugin.
 - [JavaScript API](docs/javascript-api.md) — preparing a `registry` by hand.
 
 <!-- Source: docs/delivery/postcss.md -->
 
 # PostCSS plugin
+
+For builds that run PostCSS without Vite or Tailwind — most often Next.js — the PostCSS plugin scans your stylesheets and `content` globs, then appends the base rules and just the mask rules your markup uses.
 
 ```ts
 import lucide from "@codenhub/icons/data/lucide";
@@ -709,7 +741,7 @@ postcssIcons({
 });
 ```
 
-It takes the same `families`, `defaultPrefix`, `prefix`, and `strokeWidth` options as the [Vite plugin](docs/delivery/vite.md). PostCSS has no asset pipeline, so `attribution` accepts `auto` and `off` only, and there is no `mode: "svg"`.
+It shares the same `families`, `defaultPrefix`, `prefix`, and `strokeWidth` options as the [Vite plugin](docs/delivery/vite.md). Because PostCSS has no asset pipeline of its own, `attribution` accepts `auto` and `off` only, and there is no `mode: "svg"`.
 
 | Option          | Purpose                                                            |
 | --------------- | ------------------------------------------------------------------ |
@@ -720,10 +752,11 @@ It takes the same `families`, `defaultPrefix`, `prefix`, and `strokeWidth` optio
 | `prefix`        | Class prefix. Defaults to `ic`.                                    |
 | `strokeWidth`   | Default for stroke-based families whose classes carry no modifier. |
 | `attribution`   | `auto` or `off`. See [Licensing](docs/licensing.md).                 |
+| `registry`      | A prepared `IconRegistry`, replacing `families`.                   |
 
 ## Scanning
 
-Unlike the Vite plugin, this plugin has no view of the bundler's module graph. When it processes a stylesheet it scans that stylesheet's own text and every path in `content`, and nothing else. List globs that cover wherever your icon classes are written — components, templates, HTML — or only classes that literally appear in the CSS will resolve:
+Unlike the Vite plugin, this plugin has no visibility into the bundler's module graph. When it runs on a stylesheet, it sees only that stylesheet's own text and the files matched by `content` — nothing else. List globs covering everywhere your icon classes live (components, templates, HTML), or only classes written literally inside your CSS will resolve:
 
 ```ts
 postcssIcons({
@@ -733,18 +766,19 @@ postcssIcons({
 });
 ```
 
-The plugin runs once per stylesheet it processes, so apply it to a single global stylesheet rather than to every CSS module.
+The plugin runs once for every stylesheet it processes, so attach it to a single global stylesheet rather than running it across every CSS module.
 
 ## See also
 
 - [Delivery methods](docs/delivery/index.md) — how the methods compare.
+- [Frameworks](docs/frameworks/index.md) — next on the reading path, covering Astro, Next.js, and SvelteKit.
 - [Frameworks: Next.js](docs/frameworks/nextjs.md) — the main reason to reach for PostCSS over Vite.
 
 <!-- Source: docs/frameworks/index.md -->
 
 # Framework setup
 
-Every framework consumes `@codenhub/icons` through one of the [delivery methods](docs/delivery/index.md). This section covers the frameworks whose setup has a wrinkle worth spelling out; the rest follow their bundler.
+Every framework consumes `@codenhub/icons` through one of the [delivery methods](docs/delivery/index.md). Most Vite-based frameworks work out of the box without a dedicated guide, while a few have build pipelines or template extensions with opinions of their own. This section covers the three worth calling out.
 
 | Framework                           | Recommended method                              | Notes                                                                                           |
 | ----------------------------------- | ----------------------------------------------- | ----------------------------------------------------------------------------------------------- |
@@ -754,17 +788,21 @@ Every framework consumes `@codenhub/icons` through one of the [delivery methods]
 | Vue, SolidStart, Nuxt, Remix (Vite) | Vite plugin                                     | Follow [SvelteKit](docs/frameworks/sveltekit.md); `.vue` is auto-scanned like `.svelte`.                        |
 | Any framework                       | Plain CSS                                       | [Plain-CSS](docs/delivery/plain-css.md) family imports work everywhere that resolves package CSS. |
 
-If your framework is not listed and it builds with Vite, follow the [SvelteKit](docs/frameworks/sveltekit.md) guide. If it builds with webpack or another PostCSS host, follow [Next.js](docs/frameworks/nextjs.md). If in doubt, [plain CSS](docs/delivery/plain-css.md) works anywhere at the cost of larger stylesheets.
+If your framework is missing from the table and builds with Vite, follow the [SvelteKit](docs/frameworks/sveltekit.md) guide. If it builds with webpack or another PostCSS host, follow [Next.js](docs/frameworks/nextjs.md). And if you just want icons on screen with zero build plumbing, [plain CSS](docs/delivery/plain-css.md) works anywhere at the cost of larger stylesheets.
+
+## Next
+
+Pick the framework guide above that matches your stack — starting with [Astro](docs/frameworks/astro.md) — or continue to the [JavaScript API](docs/javascript-api.md) when you need programmatic control outside a framework build.
 
 <!-- Source: docs/frameworks/astro.md -->
 
 # Astro
 
-Astro builds on Vite, so all four [delivery methods](docs/delivery/index.md) are available. Two of them need no Astro-specific setup.
+Astro runs on Vite, so all four [delivery methods](docs/delivery/index.md) are on the table. Two of them work without any Astro-specific wiring at all; the Vite plugin takes two extra lines because Astro renders production HTML outside Vite's own HTML pipeline.
 
 ## Plain CSS (no configuration)
 
-Import the base rules and a family stylesheet from a layout or a global stylesheet:
+Import the base rules and a family stylesheet from a layout or global stylesheet:
 
 ```css
 /* src/styles/icons.css */
@@ -779,7 +817,7 @@ import "../styles/icons.css";
 <i class="ic-lucide-heart" aria-hidden="true"></i>
 ```
 
-Astro resolves the package's CSS exports directly. This is the least-effort path; its cost is stylesheet size and no stroke-width modifier. See [Plain CSS](docs/delivery/plain-css.md).
+Astro resolves the package's CSS exports directly. This is the least-effort path — one CSS import and zero config — at the cost of stylesheet size and no stroke-width modifier. See [Plain CSS](docs/delivery/plain-css.md).
 
 ## Tailwind CSS v4 (no configuration)
 
@@ -818,41 +856,46 @@ Then import the generated stylesheet once, from a layout every page uses:
 
 ```astro
 ---
-import "../styles/global.css";
+import "../styles/global.css"; // your stylesheet holding @import "@codenhub/icons"
 import "virtual:icons.css";
 ---
 ```
 
-Both lines are required, and this one is specific to Astro. Everywhere else the plugin injects the generated stylesheet into the HTML itself, from Vite's `transformIndexHtml` hook. A production `astro build` renders pages through Astro's own pipeline rather than as Vite HTML entries and does not put them through that hook, so the injection never reaches them and this import is what puts the mask rules on the page. Without it the build still succeeds, `@import "@codenhub/icons"` still supplies the base rules, and every icon renders as a solid square in its color.
+The first line is whatever stylesheet already carries `@import "@codenhub/icons";`; the base rules can live in any stylesheet the page loads. The second line is required, and Astro-specific. Everywhere else, the Vite plugin injects the generated stylesheet into the HTML through Vite's `transformIndexHtml` hook. A production `astro build` renders pages through Astro's own pipeline rather than as Vite HTML entries, so `transformIndexHtml` never runs on them and this explicit import is what puts the mask rules on the page. Without it, the build succeeds, `@import "@codenhub/icons"` still supplies the base rules, and every icon renders as a solid square in its color.
 
-The `content` entry is required, not optional. The plugin auto-scans the files Vite transforms for `.html`, `.js(x)`, `.ts(x)`, `.vue`, `.svelte`, and stylesheets — `.astro` is not in that set, so classes written in `.astro`, `.md`, or `.mdx` templates are only discovered through `content`. List those globs and keep `@import "@codenhub/icons";` in a stylesheet for the base rules.
+Keep the `content` entry. The plugin also scans every module Vite transforms, `.astro` files included, but the stylesheet is generated when the layout imports it, and a build can reach that import before Vite has transformed every page and component. `content` is what guarantees each class written in `.astro`, `.md`, or `.mdx` is in it.
 
 Check that every class you write resolves in a family you registered. An icon name the registry cannot find is left without a rule and renders as a solid square. CSS mode reports nothing when that happens — in any host, not only in Astro — so the build stays green and the gap is visible only on the page. Inline SVG mode does warn, naming the class and the file.
 
 ## Inline SVG mode
 
-`mode: "svg"` works in Astro and rewrites `<i class="ic-...">` tags in `.astro` files — in the template, in the frontmatter, and in a `<script>` block, each escaped for what it is. An icon tag written inside a _string_ in a template expression is the one place it is not handled, because `{cond && <i class="ic-x" />}` holds markup rather than a string and telling those apart needs a parser; put such a tag in the frontmatter or a component instead. Everything above about delivering the mask stylesheet stops applying: svg mode emits no per-icon rules, so neither the `virtual:icons.css` import nor `content` does anything here, and a class on any element the plugin does not rewrite — anything that is not an `<i>` tag — renders nothing, because there is no stylesheet behind it.
+`mode: "svg"` works in Astro and rewrites `<i class="ic-...">` tags inside `.astro` files — in the template, in the frontmatter, and in `<script>` blocks, each escaped for its context. An icon tag written inside a _string_ in a template expression, such as `{cond ? '<i class="ic-x"></i>' : ''}`, is the one place it goes wrong: it is rewritten as markup, without escaping for the quotes around it, because telling it apart from markup such as `{cond && <i class="ic-x" />}` requires a parser. The inlined SVG can then end the string early. Move that tag to the frontmatter or a component instead. Everything above about delivering the mask stylesheet stops applying here: `svg` mode emits no per-icon rules, so neither `virtual:icons.css` nor `content` does anything, and a class on any element other than an `<i>` tag renders nothing because there is no stylesheet behind it.
 
 Keep `@import "@codenhub/icons"` even so. An inlined `<svg>` renders at `1em` on its own, but that base stylesheet is what lets `--ic-size` and the `ic-xs`–`ic-xl` size classes reach it. See [Vite plugin § Inline SVG mode](docs/delivery/vite.md#inline-svg-mode).
 
 `.md` and `.mdx` are not rewritten. An icon class written in one of those reaches the page as a bare `<i>` element with no mask rule behind it, so it renders as a solid square with the base rules loaded, or as nothing without them. Nothing reports it, either: the unresolved-class warning only covers the files this mode rewrites, so such a page builds green and ships broken icons.
 
-There are two ways through it. In `.mdx`, put the icon in a component and use the component from the markdown: the component is an `.astro`, `.jsx`, or `.tsx` file, all of which are rewritten. In plain `.md`, which cannot import a component, there is no such route — a site that writes icon classes directly into its markdown wants CSS mode, where `content` globs cover `.md` and `.mdx` like any other file.
+There are two ways through this:
+
+- **In `.mdx`**, wrap the icon in a component and render that component from your markdown: the component lives in an `.astro`, `.jsx`, or `.tsx` file, all of which are rewritten.
+- **In plain `.md`**, which cannot import components, use CSS mode instead so `content` globs cover `.md` and `.mdx` files just like any other template.
 
 ## See also
 
 - [Vite plugin](docs/delivery/vite.md) — full option reference and the scanning model.
 - [Delivery methods](docs/delivery/index.md) — how the methods compare.
+- [Next.js](docs/frameworks/nextjs.md) and [SvelteKit](docs/frameworks/sveltekit.md) — the other framework guides.
+- [JavaScript API](docs/javascript-api.md) — next on the reading path, for programmatic CSS or SVG generation.
 
 <!-- Source: docs/frameworks/nextjs.md -->
 
 # Next.js
 
-Next.js builds with webpack or Turbopack, not Vite, so `@codenhub/icons/vite` does not apply. Three methods do. All of them produce plain CSS, so the App Router, React Server Components, and streaming are unaffected.
+Next.js builds with webpack or Turbopack rather than Vite, so `@codenhub/icons/vite` sits this one out. The other three delivery methods all work as expected — and because all three produce plain CSS, the App Router, React Server Components, and streaming are completely unaffected.
 
 ## Tailwind CSS v4
 
-If the project uses Tailwind v4 through `@tailwindcss/postcss`, add one import to your global stylesheet:
+If your Next.js app already runs Tailwind v4 through `@tailwindcss/postcss`, one import in your global stylesheet covers every family except the brand ones:
 
 ```css
 /* app/globals.css */
@@ -860,11 +903,11 @@ If the project uses Tailwind v4 through `@tailwindcss/postcss`, add one import t
 @import "@codenhub/icons/tw";
 ```
 
-Only the icons your markup uses are emitted. See [Tailwind CSS](docs/delivery/tailwind.md).
+Only the icons your markup uses are emitted. `/tw` never resolves the brand families `simple-icons` and `logos`; to use one, declare the plugin with `families` naming it, as in [Tailwind CSS § Configuring the plugin](docs/delivery/tailwind.md#configuring-the-plugin).
 
 ## PostCSS plugin
 
-Add the plugin to `postcss.config.mjs` and give it globs for wherever icon classes are written — it scans the stylesheet text and `content` only, with no view of the module graph:
+Without Tailwind, register the PostCSS plugin in `postcss.config.mjs` and pass `content` globs covering every directory where icon classes live — PostCSS inspects only the stylesheet text and `content`, with no visibility into the module graph:
 
 ```js
 import lucide from "@codenhub/icons/data/lucide";
@@ -881,11 +924,11 @@ export default {
 };
 ```
 
-Keep `@import "@codenhub/icons";` at the top of `app/globals.css` for the base rules. See [PostCSS plugin](docs/delivery/postcss.md).
+The plugin appends the base rules itself, since `injectBase` defaults to `true`, so `app/globals.css` needs no `@import "@codenhub/icons";` here; importing it too would ship the base rules twice. To import them yourself instead, set `injectBase: false`. See [PostCSS plugin](docs/delivery/postcss.md).
 
 ## Plain CSS
 
-The simplest option, at the cost of stylesheet size:
+Zero config and no PostCSS plugin, trading stylesheet size for simplicity:
 
 ```css
 /* app/globals.css */
@@ -899,12 +942,14 @@ See [Plain CSS](docs/delivery/plain-css.md).
 
 - [Delivery methods](docs/delivery/index.md) — how the methods compare.
 - [Concepts](docs/concepts.md) — name resolution and the markup forms.
+- [SvelteKit](docs/frameworks/sveltekit.md) — the Vite-based counterpart, if you want to compare setups.
+- [JavaScript API](docs/javascript-api.md) — next on the reading path, for programmatic CSS or SVG generation.
 
 <!-- Source: docs/frameworks/sveltekit.md -->
 
 # SvelteKit
 
-SvelteKit builds on Vite, and `.svelte` is one of the file types the Vite plugin auto-scans, so this is the cleanest plugin setup of any framework.
+SvelteKit builds on Vite, and the Vite plugin scans every `.svelte` module Vite transforms. The one extra step is the same one Astro needs: SvelteKit renders pages itself rather than as Vite HTML entries, so the generated stylesheet has to be imported by hand.
 
 ## Vite plugin
 
@@ -933,22 +978,39 @@ export default defineConfig({
 @import "@codenhub/icons";
 ```
 
-Classes in `.svelte` components are picked up by the transform-time scan with no `content` entry at all. Listing `src/**/*.{svelte,html}` anyway makes the first paint correct in dev, before Vite has transformed those modules. `mode: "svg"` also works on `.svelte` files.
+Then import both stylesheets from the root layout, so every page loads them:
+
+```svelte
+<!-- src/routes/+layout.svelte -->
+<script>
+  import "../app.css";
+  import "virtual:icons.css";
+
+  let { children } = $props();
+</script>
+
+{@render children()}
+```
+
+The plugin injects its stylesheet through Vite's `transformIndexHtml` hook, which SvelteKit never runs on its pages, so the `virtual:icons.css` import is what puts the mask rules on the page. Without it, the base rules still apply and every icon renders as a solid square in its color.
+
+Keep the `content` entry. The stylesheet is generated when the layout imports it, and a build can reach that import before Vite has transformed every component, so `content` is what guarantees each class is in it. It also keeps the first paint right in dev. `mode: "svg"` also works directly on `.svelte` files.
 
 ## Other methods
 
-[Tailwind CSS v4](docs/delivery/tailwind.md) and [plain CSS](docs/delivery/plain-css.md) work in SvelteKit exactly as they do anywhere else. Vue, SolidStart, and other Vite-based frameworks follow this same setup — `.vue` is auto-scanned like `.svelte`.
+[Tailwind CSS v4](docs/delivery/tailwind.md) and [plain CSS](docs/delivery/plain-css.md) work in SvelteKit the same way they do everywhere else. A Vite single-page app with an `index.html`, such as one built with Vue or Solid, gets the stylesheet injected and needs no layout import; a framework that renders its own HTML, such as Nuxt or SolidStart, needs the import as SvelteKit does.
 
 ## See also
 
 - [Vite plugin](docs/delivery/vite.md) — full option reference and the scanning model.
 - [Delivery methods](docs/delivery/index.md) — how the methods compare.
+- [JavaScript API](docs/javascript-api.md) — next on the reading path, for programmatic CSS or SVG generation.
 
 <!-- Source: docs/javascript-api.md -->
 
 # JavaScript API
 
-The plugins are built on a small set of exported helpers. Reach for them directly when you generate CSS or SVG outside a bundler, or when you need to prepare a registry the plugins can reuse.
+The Tailwind, Vite, and PostCSS plugins are thin wrappers around a small set of exported helpers. Reach for these functions directly when you generate CSS or SVG outside a bundler, load icon families lazily at runtime, animate icons from application events, or wire up a pre-configured `IconRegistry` for a plugin to reuse.
 
 ```ts
 import { generateIconSetCss, getIconCssProps, IconRegistry, renderSvg } from "@codenhub/icons";
@@ -966,11 +1028,11 @@ getIconCssProps("lucide:x", registry);
 // { "--ic-uri": 'url("data:image/svg+xml;…")', "--ic-mask": "var(--ic-uri)" }
 ```
 
-`generateIconSetCss` returns the families it drew from alongside the CSS, which is what lets a caller emit the right license notice. Every export, with its options, is listed in the [API reference](docs/reference/index.md).
+`generateIconSetCss` returns both the generated CSS and the list of `families` it drew from, so a caller knows which license notices belong in the banner. Every export and option is documented in the [API reference](docs/reference/index.md).
 
 ## Generating CSS outside a bundler
 
-The plugins are a scan followed by a generate. Run the two yourself to produce a stylesheet from a script:
+At bottom, every plugin just runs a scan followed by a CSS emit. You can run the exact same two-step pipeline yourself in a build script or static generator:
 
 ```ts
 import { generateIconSetCss, IconRegistry, renderAttributionBanner, scanFiles } from "@codenhub/icons";
@@ -981,28 +1043,28 @@ registry.registerFamily(lucide);
 
 const classes = scanFiles(["./src/**/*.html"]);
 const { css, families } = generateIconSetCss(classes, registry);
-const banner = renderAttributionBanner(families); // undefined when no family used owes a notice
+const banner = renderAttributionBanner(families); // undefined when no family used has a notice line to print
 const stylesheet = banner ? `${banner}\n${css}` : css;
 ```
 
-`scanFiles` takes paths and glob patterns, and ignores a file it cannot read.
+`scanFiles` accepts literal file paths and glob patterns, and quietly skips any file it cannot read rather than blowing up your script over a stray permission error.
 
-`generateFamilyCss` writes out one whole family instead, the way the package builds its own `@codenhub/icons/<family>` stylesheets. Both CSS generators carry a `--ic-static-mask` property for the base stylesheet to select on hover and under reduced motion when an icon provides `staticBody`; the registry preserves this optional inner SVG markup on `ResolvedIcon`. It shares the animated body's geometry and accepts the same stroke width. `renderSvg` keeps the animated `body`. See [Animated families](docs/concepts.md#animated-families).
+If you want one full family stylesheet — the same format `@codenhub/icons/<family>` ships — call `generateFamilyCss`. For a brand family, pass `bareNames: false`, as its published stylesheet does, so a brand named like a core icon never claims that icon's bare class. Both CSS generators emit a `--ic-static-mask` property for the base stylesheet to swap in on hover rest and under reduced motion whenever an icon provides `staticBody`; the registry preserves that optional inner SVG markup on `ResolvedIcon`. It shares the animated body's geometry and accepts the same stroke width. `renderSvg`, by contrast, keeps the animated `body`. See [Animated families](docs/concepts.md#animated-families).
 
 ## A background-image icon
 
-The base rules render an icon as an element (`<i>` or `.ic`) or an inlined `<svg>`, and nothing else. When you need one as a `background-image` — a custom control, an input affix, a `::before` you own — resolve the `url()` yourself:
+The base stylesheet styles icons on an element (`<i>` or `.ic`) or an inlined `<svg>`. When CSS puts the icon in a place with no inner element — a custom form control, an input affix, or a `::before` pseudo-element you own — resolve the `url()` in JavaScript and feed it to your CSS yourself:
 
 ```ts
 getIconMaskUrl("lucide:search", registry); // 'url("data:image/svg+xml;…")'
 getIconCssProps("lucide:search", registry); // { "--ic-uri": …, "--ic-mask": "var(--ic-uri)" }
 ```
 
-`getIconMaskUrl` also takes a string that begins with `<svg` and encodes it directly, skipping the registry — pass the element itself, with no leading whitespace or XML declaration. `getIconCssProps` includes `--ic-static-mask` when the resolved icon supplies static artwork. The base stylesheet uses it for reduced motion and hover rest. It gives the custom properties an inline `style` attribute or a CSS-in-JS object needs; pair them with `background-image: var(--ic-uri)` or `mask-image: var(--ic-mask)` and your own sizing.
+`getIconMaskUrl` also accepts a raw string starting with `<svg` and encodes it directly without consulting a registry — pass the element markup itself, with no leading whitespace or XML declaration. `getIconCssProps` includes `--ic-static-mask` when the resolved icon supplies static artwork, which the base stylesheet uses for reduced motion and hover rest. It returns the exact custom-property object an inline `style` attribute or CSS-in-JS object expects; pair those properties with `background-image: var(--ic-uri)` or `mask-image: var(--ic-mask)` and your own sizing.
 
 ## Playing icons from code
 
-`@codenhub/icons/play` is an opt-in entry point for the motion CSS cannot start on its own. It loads no icon data, and importing it does nothing until a function is called.
+`@codenhub/icons/play` is an opt-in entry point for playback behavior CSS cannot handle on its own. It loads no icon data, and simply importing it does nothing until you call one of its two functions:
 
 ```ts
 import { bindIconPlayback, playIcon } from "@codenhub/icons/play";
@@ -1020,13 +1082,15 @@ copyButton.addEventListener("click", async () => {
 unbind();
 ```
 
-`playIcon(element, { prefix: "ic" })` plays an icon from the start: its `ic-anim-*` motion, whether running or finished, and its animated artwork. For glyph motion it clears the element's `animation-name` for one style recalculation and restores it. For a CSS-mask icon it sets a fresh SVG data URL as the inline `--ic-mask`, because a browser does not restart an image it has already shown. A direct call leaves that override in place; remove it with `element.style.removeProperty("--ic-mask")` before changing the icon class. Inline `<svg>` icons restart through `setCurrentTime(0)`. An element with neither kind of motion is left alone.
+`playIcon(element, { prefix: "ic" })` restarts an icon from frame zero, whether it uses an `ic-anim-*` class (running or finished) or animated SVG artwork. For glyph motion, it briefly clears `animation-name` for one style recalculation and restores it. For a CSS-mask icon, it writes a fresh SVG data URL to the inline `--ic-mask` property, because browsers refuse to restart an animated mask image they have already painted once. A direct call leaves that inline override on the element, so clear it with `element.style.removeProperty("--ic-mask")` before swapping the icon class later. Inline `<svg>` icons restart via `setCurrentTime(0)`. An element with neither kind of motion is left untouched.
 
-`bindIconPlayback(root = document, { prefix: "ic" })` calls `playIcon` for each `ic-on-hover` icon when its trigger starts, following the same rule as the CSS: the icon itself, its parent, or any `ic-trigger` ancestor, hovered or with `:focus-visible`. CSS alone already restarts glyph motion and looping artwork on each hover; the binder is what replays one-shot artwork, such as a Line MD draw-in. It uses delegated listeners, so icons inserted later are covered. Pass a subtree containing both the triggers and their icons to scope it. Moving between children of the same trigger keeps the current playback. When the trigger ends, it removes its inline mask override so a later icon-class change takes effect. The returned function removes the listeners and the active overrides.
+`bindIconPlayback(root = document, { prefix: "ic" })` calls `playIcon` for every `ic-on-hover` icon when its trigger activates, following the exact same trigger rule as the CSS: the icon itself, its parent, or any `ic-trigger` ancestor on hover or `:focus-visible`. CSS alone already restarts glyph motion and looping artwork on every hover; this binder is what lets one-shot artwork, such as a Line MD draw-in, replay on every hover instead of only the first. It attaches delegated listeners, so icons mounted later work automatically. Pass a subtree containing both the triggers and their icons to scope it. Moving the pointer between children inside the same trigger preserves the active playback, and when the trigger ends, the binder cleans up its inline `--ic-mask` override so future icon-class changes work normally. Calling the returned cleanup function removes the listeners and clears active overrides.
 
-A custom prefix changes the classes, the custom property, and the animation names both functions look for. Both do nothing when the device requests reduced motion: CSS-mask icons keep their static fallback, while inline SVG keeps its own animated artwork, so use static artwork yourself when needed. Calling the binder without a root outside a browser returns an empty cleanup function. Chrome playback is verified; Firefox and Safari are untested. See [Motion](docs/concepts.md#motion) for the CSS controls.
+Passing a custom `prefix` shifts the classes, custom property, and animation names both functions target. Both functions do nothing when the device requests reduced motion: CSS-mask icons keep their static fallback, while inline SVG keeps its own animated artwork, so substitute static artwork yourself when needed. Calling `bindIconPlayback` with no `root` outside a browser returns a no-op cleanup function. Chrome playback is verified; Firefox and Safari are untested. See [Motion](docs/concepts.md#motion) for the CSS controls.
 
 ## Loading a family on demand
+
+In a browser UI such as an icon picker, bundling every family up front would weigh megabytes. Register async loaders instead so families load only when someone asks for them:
 
 ```ts
 registry.registerLoader("phosphor", () => import("@codenhub/icons/data/phosphor"));
@@ -1034,11 +1098,11 @@ registry.registerLoader("phosphor", () => import("@codenhub/icons/data/phosphor"
 await registry.resolveAsync("phosphor:heart");
 ```
 
-`resolve` is synchronous and sees only loaded families; `resolveAsync` loads the family first. Build-time consumers use the synchronous path, because a build knows its families before it starts.
+`resolve` stays synchronous and checks only families already in memory, whereas `resolveAsync` loads the requested family first. Build-time plugins stay on the synchronous path because a build knows its configured families before it starts scanning.
 
 ## Third-party icon sets
 
-`adoptIconifySet` converts an IconifyJSON-shaped document into this package's internal family contract:
+`adoptIconifySet` converts an IconifyJSON document into the family format this package expects. It reads the icons, aliases, and their dimensions, plus the set's name, author, and license; other IconifyJSON fields, such as categories, are not carried over:
 
 ```ts
 import { adoptIconifySet } from "@codenhub/icons";
@@ -1048,17 +1112,23 @@ registry.registerFamily(adoptIconifySet(someIconifySet, { attribution: "notice" 
 
 Pass `attribution: "credit"` instead when the adopted set's license requires visible authorship credit, such as CC-BY.
 
-Adopted sets are `extended` tier: the licensing promise this package makes covers the families it generates, not data a consumer supplies. See [Licensing](docs/licensing.md).
+Adopted sets belong to the `extended` tier: the licensing promise this package makes covers the families it generates, not data a consumer supplies. See [Licensing](docs/licensing.md).
+
+## Next
+
+Read [Licensing](docs/licensing.md) to see what attribution your build emits for each delivery method and what obligations apply to core, brand, and adopted icon sets.
 
 <!-- Source: docs/licensing.md -->
 
 # Licensing and attribution
 
-Every bundled, generated family ships the license text and attribution notice its artwork requires; those files travel with the package whatever a build does. A third-party set adopted through `adoptIconifySet` is not covered by that promise — bring your own licensing material for it.
+This page explains what your build owes for the icon artwork it ships, how the `attribution` option works, how each delivery method carries the required notice, and what trademark constraints apply to brand icons.
+
+Every bundled, generated family ships the license text and attribution notice its artwork requires; those files travel with the package regardless of what a build outputs. A third-party set adopted through `adoptIconifySet` is not covered by that guarantee — supply its license and attribution material yourself.
 
 ## Attribution modes
 
-What reaches your own output is the `attribution` option:
+The `attribution` option controls how license notices reach your build output:
 
 | Mode             | Behavior                                                                                                                                                                            |
 | ---------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -1068,7 +1138,7 @@ What reaches your own output is the `attribution` option:
 
 ## How the notice travels
 
-The vehicle differs by delivery method, because not every method can carry a comment:
+Each delivery method carries the notice through a mechanism that its pipeline supports:
 
 | Method             | How the notice travels                                                                                    |
 | ------------------ | --------------------------------------------------------------------------------------------------------- |
@@ -1078,75 +1148,83 @@ The vehicle differs by delivery method, because not every method can carry a com
 | Tailwind `@plugin` | A `--ic-attribution-<family>` custom property on `:root`, one per family the build used.                  |
 | Plain CSS          | A `/*! … */` banner opening each family stylesheet you imported.                                          |
 
-`@import "@codenhub/icons/tw"` inlines a static file, so it carries an ordinary `/*! … */` banner. That file makes every bundled family resolvable except brand families, so the banner names the rest — a superset notice, which is always safe. Declaring the plugin yourself with `@plugin "@codenhub/icons/tailwind"` narrows resolution, and there the notice is a `--ic-attribution-<family>` custom property instead: Tailwind's plugin API builds declarations, not comments, and the property is emitted the first time a family produces a utility, so the output carries notices for the artwork it actually shipped and no other.
+`@import "@codenhub/icons/tw"` inlines a static file, so it carries an ordinary `/*! … */` banner. Because that file makes every bundled family resolvable except brand families, the banner names all of those core families — a superset notice, which satisfies the license requirement safely. Declaring the plugin yourself with `@plugin "@codenhub/icons/tailwind"` narrows resolution, and there the notice is emitted as a `--ic-attribution-<family>` custom property instead: Tailwind's plugin API generates CSS declarations rather than comments, and the property is emitted the first time a family produces a utility, so the output carries notices only for the artwork it actually shipped.
 
 ## Obligation levels
 
-Obligations come in three levels, because permissive is not the same as free of obligation:
+Permissive licenses still carry different distribution requirements, grouped into three levels:
 
-- `none` — public-domain dedications. Nothing is owed.
-- `notice` — MIT, ISC, Apache-2.0. The notice must travel with distributed output, which `auto` and `file` handle for you.
-- `credit` — CC-BY and similar. The author must be credited visibly.
+- **`none`** — public-domain dedications. Nothing is owed in distributed output.
+- **`notice`** — MIT, ISC, and Apache-2.0. The copyright and license notice must accompany distributed output, which `auto` and `file` handle automatically.
+- **`credit`** — CC-BY and similar licenses. The author must be credited visibly.
 
-Every bundled family except `simple-icons` and `logos` is `core` tier, meaning `none` or `notice`, so a default build satisfies every obligation automatically. A minifier configured with `legalComments: "none"` strips CSS comments, which is what `file` mode exists for.
+Every bundled family except `simple-icons` and `logos` belongs to the `core` tier, meaning its obligation level is `none` or `notice`, so a default build satisfies its license terms automatically. Note that a minifier configured with `legalComments: "none"` strips CSS comments, including `/*! … */` banners; use `attribution: "file"` in Vite, or preserve legal comments in your minifier config.
 
-A set adopted through `adoptIconifySet` is `extended` tier — you remain responsible for its license terms and attribution material. See [JavaScript API](docs/javascript-api.md).
+A set adopted through `adoptIconifySet` belongs to the `extended` tier — you remain responsible for complying with its license terms and providing its attribution material. See [JavaScript API](docs/javascript-api.md).
 
 ## Brand families
 
-`simple-icons` and `logos` are `brand` tier: one-color logos from [Simple Icons](https://simpleicons.org) and full-color logos from [gilbarbara/logos](https://github.com/gilbarbara/logos), both dedicated to the public domain under CC0. Neither owes a license notice, but a logo is a trademark, and the trademark is not the license: using one is subject to its owner's brand guidelines, which no build setting can satisfy and the package makes no promise about.
+`simple-icons` and `logos` belong to the `brand` tier: one-color logos from [Simple Icons](https://simpleicons.org) and full-color logos from [gilbarbara/logos](https://github.com/gilbarbara/logos), both dedicated to the public domain under CC0. Neither family owes a license notice, but a logo is a trademark, and the trademark is separate from the copyright license: using a mark remains subject to its owner's brand guidelines, which no build option can satisfy or verify.
 
-- Each is opt-in. Vite and PostCSS load only the families you pass. `@codenhub/icons/tw` never resolves brand families; a declared `@plugin "@codenhub/icons/tailwind"` resolves them only when its `families` option names them.
-- Each family's notice line, wherever the build emits one, says that the marks are trademarks of their owners. `off` suppresses it without a warning, because no license requires it.
-- Simple Icons records a separate license for some icons. Those whose own license places any obligation are left out, so no icon in the family carries a recorded license obligation: each is CC0, Unlicense, or has no license recorded upstream.
-- Each icon renders in its brand colors by default, and `--ic-color` can recolor it; a full-color logo becomes a one-color silhouette. Owners' guidelines commonly allow a mark in its official color or in plain monochrome and restrict other colors; which recoloring a mark allows is the owner's call. See [Color](docs/concepts.md#color).
-- Simple Icons removes icons when brand owners ask. An upgrade of the family across an upstream major version can remove names, and its changelog lists them.
-- gilbarbara/logos publishes no releases, so `logos` is generated from a pinned commit, and any upgrade of it can remove or rename logos; its changelog lists them. A few upstream files whose markup cannot render as a self-contained icon, such as one embedding a bitmap, are left out, and the family's `ATTRIBUTION.md` names them.
+- **Opt-in only.** Vite and PostCSS load only the families you pass. `@codenhub/icons/tw` never resolves brand families; a declared `@plugin "@codenhub/icons/tailwind"` resolves them only when its `families` option names them.
+- **Trademark notice line.** Each family's notice line, wherever the build emits one, states that the marks are trademarks of their owners. Setting `attribution: "off"` suppresses it without a warning because no license requires it.
+- **Excluded Simple Icons entries.** Simple Icons records a separate license for some icons. Icons whose own license adds any obligation are excluded, so no icon in the family carries a recorded license obligation: each is CC0, Unlicense, or has no license recorded upstream.
+- **Recoloring and guidelines.** Each brand icon renders in its brand colors by default, and `--ic-color` can recolor it; a full-color logo becomes a monochrome silhouette. Owners' guidelines commonly permit a mark in its official colors or plain monochrome and restrict arbitrary colors; check the owner's terms when recoloring a mark. See [Color](docs/concepts.md#color).
+- **Simple Icons removals.** Simple Icons removes icons when brand owners request it. Upgrading the package across an upstream major version can remove icon names; check the changelog for removed names.
+- **Pinned `logos` source.** gilbarbara/logos publishes no releases, so `logos` is generated from a pinned commit, and upgrading it can remove or rename logos; check the changelog for changes. A few upstream files whose markup cannot render as a self-contained icon, such as files embedding a bitmap, are excluded, and the family's `ATTRIBUTION.md` lists them.
+
+## Next
+
+Read [Troubleshooting](docs/troubleshooting.md) if an icon fails to appear, renders as a solid square, ignores stroke width, or drops its license notice.
 
 <!-- Source: docs/troubleshooting.md -->
 
 # Troubleshooting
 
-Most failures here are silent: the build stays green and the page is where the gap shows. Work through the section that matches what you see.
+Most icon failures are silent: the build succeeds and the missing or broken icon shows up only in the browser. Jump to the symptom that matches what you see.
 
 ## The icon renders as nothing
 
-No base rule matched the element, so it has no size.
+No base rule matched the element, so it has no size — or, in inline SVG mode, no SVG replaced it or an ID collision hid it.
 
-- **No base rules.** Plain CSS and a declared Tailwind `@plugin` need `@import "@codenhub/icons";` in a stylesheet. `@codenhub/icons/tw`, the Vite plugin's stylesheet, and the PostCSS plugin include the base rules already, the PostCSS plugin unless `injectBase` is `false`. Inline SVG mode needs no base rules to render; they add `--ic-size`, the size classes, and `--ic-color` for icons without a color of their own.
-- **The element is not an `<i>` and has no `.ic`.** The base rules match `<i class="ic-…">`, or any element that also carries `.ic`. A `<span class="ic-lucide-heart">` matches neither.
-- **An inlined logo whose first copy is hidden.** In inline SVG, two copies of the same `logos` icon share their gradient, mask, and clip-path ids, and a copy drawn after one inside a `display: none` element renders blank. See [Vite § Inline SVG mode](docs/delivery/vite.md#inline-svg-mode).
+- **No base rules.** Plain CSS and a declared Tailwind `@plugin` need `@import "@codenhub/icons";` in a stylesheet. `@codenhub/icons/tw`, the Vite plugin's stylesheet, and the PostCSS plugin include the base rules already (for PostCSS, unless `injectBase` is `false`). Inline SVG mode renders without base rules, though adding `@import "@codenhub/icons"` supplies `--ic-size`, the size classes, and `--ic-color` for icons without a color of their own.
+- **The element is not an `<i>` and has no `.ic`.** The base rules match `<i class="ic-…">`, or any element that also carries `.ic`. A `<span class="ic-lucide-heart">` without `.ic` matches neither.
+- **An inlined logo whose first copy is hidden.** In inline SVG mode, two copies of the same `logos` icon share gradient, mask, and clip-path ids. If the first copy sits inside a `display: none` element, every later copy renders blank (seen in Chromium). Move a visible copy ahead of the hidden one, hide with `visibility: hidden`, or use CSS mode; see [Vite § Inline SVG mode](docs/delivery/vite.md#inline-svg-mode).
 
 ## The icon renders as a solid square
 
-The base rules sized and colored the element, but no rule gave it a mask, so the whole box paints in the icon color.
+The base rules sized and colored the element, so it appears as a box — but no mask rule matched it, leaving the entire box painted in the icon color.
 
-- **The name does not exist in the family.** Names are upstream names: Material Symbols writes `check_circle`, Lucide writes `circle-check`, and Lucide has no `close` (it is `x`). See [Finding an icon's name](docs/concepts.md#finding-an-icons-name).
-- **An unqualified name with no default family.** `ic-heart` resolves only where you set a default: `defaultPrefix` in the Vite and PostCSS plugins, `default:` in the Tailwind plugin, or the last family stylesheet imported in plain CSS. Write the qualified `ic-lucide-heart`, or set a default. See [Names](docs/concepts.md#names).
-- **The family is not loaded.** The Vite and PostCSS plugins resolve only the families in `families`.
-- **A brand icon through `@codenhub/icons/tw`.** `/tw` never resolves `simple-icons` or `logos`. Declare the plugin with `families` naming it. See [Tailwind CSS](docs/delivery/tailwind.md#configuring-the-plugin).
-- **The class is assembled at runtime.** A plugin finds a class only when it is written out in full: `` `ic-${name}` `` is invisible at build time. Write each class literally, or load the icon as a [module](docs/delivery/vite.md#one-module-per-icon).
-- **The class is in a file the plugin does not scan.** The Vite plugin scans the modules Vite transforms; `.astro`, `.md`, and `.mdx` need `content` globs. The PostCSS plugin scans only the stylesheet and `content`. See [Vite § Scanning](docs/delivery/vite.md#scanning) and [PostCSS § Scanning](docs/delivery/postcss.md#scanning).
-- **Astro, production build only.** Import `virtual:icons.css` from a layout. See [Astro § Vite plugin](docs/frameworks/astro.md#vite-plugin).
-- **Production only, with a Content Security Policy.** Versions up to 0.2.1 inlined the built stylesheet as a `<style>` tag, which a policy without `'unsafe-inline'` blocks. Later versions link a file instead. See [Vite § Scanning](docs/delivery/vite.md#scanning).
-- **Inline SVG mode, on an element it does not rewrite.** `mode: "svg"` replaces `<i class="ic-…">` tags and emits no mask rules, so `.ic` on any other element has nothing behind it. The build warns, naming the class and the file. Under Astro, `.md` and `.mdx` are not rewritten, and nothing warns. See [Vite § Inline SVG mode](docs/delivery/vite.md#inline-svg-mode) and [Astro § Inline SVG mode](docs/frameworks/astro.md#inline-svg-mode).
+- **The name does not exist in the family.** Names are upstream names: Material Symbols writes `check_circle`, Lucide writes `circle-check`, and Lucide has no `close` (it is `x`). Check the exact name in the family; see [Finding an icon's name](docs/concepts.md#finding-an-icons-name).
+- **An unqualified name with no default family.** `ic-heart` resolves only where you set a default: `defaultPrefix` in the Vite and PostCSS plugins, `default:` in the Tailwind plugin, or the last core family stylesheet imported in plain CSS. Write the qualified `ic-lucide-heart`, or configure a default. See [Names](docs/concepts.md#names).
+- **The family is not loaded.** The Vite and PostCSS plugins resolve only the families listed in `families`, or registered in the `registry` passed in its place.
+- **A brand icon through `@codenhub/icons/tw`.** `/tw` never resolves `simple-icons` or `logos`. Declare the plugin with `families` naming the brand family; see [Tailwind CSS](docs/delivery/tailwind.md#configuring-the-plugin).
+- **The class is assembled at runtime.** Build plugins find a class only when it is written out in full: `` `ic-${name}` `` is invisible at build time. Write each class literally, or load the icon as a [module](docs/delivery/vite.md#one-module-per-icon).
+- **The class is in a file the plugin does not scan.** The Vite plugin scans the modules Vite transforms; a file it never transforms needs a `content` glob, and so do Astro and SvelteKit builds, where the stylesheet can be generated before every module is transformed. The PostCSS plugin scans only the stylesheet itself and `content`. See [Vite § Scanning](docs/delivery/vite.md#scanning) and [PostCSS § Scanning](docs/delivery/postcss.md#scanning).
+- **Astro, production build only.** Production `astro build` skips Vite's HTML hook, so import `virtual:icons.css` explicitly from a shared layout. See [Astro § Vite plugin](docs/frameworks/astro.md#vite-plugin).
+- **Production only, with a Content Security Policy.** Versions up to 0.2.1 inlined the built stylesheet as a `<style>` tag, which a policy without `'unsafe-inline'` blocks. Upgrade past 0.2.1 so CSS-mode builds with HTML entries link a stylesheet asset instead; library builds and inline SVG mode emit no stylesheet at all; see [Vite § Scanning](docs/delivery/vite.md#scanning).
+- **Inline SVG mode, on an element it does not rewrite.** `mode: "svg"` replaces `<i class="ic-…">` tags and emits no mask rules, so `.ic` on any other element has no rule behind it. The build warns, naming the class and the file. Under Astro, `.md` and `.mdx` are not rewritten and nothing warns; wrap the icon in a component for `.mdx`, or use CSS mode for `.md`. See [Vite § Inline SVG mode](docs/delivery/vite.md#inline-svg-mode) and [Astro § Inline SVG mode](docs/frameworks/astro.md#inline-svg-mode).
 
 ## The stroke width does not change
 
 - **Plain CSS.** Family stylesheets carry each icon at its authored width; `ic-lucide-heart/1.5` needs Tailwind, Vite, or PostCSS. See [Stroke width](docs/concepts.md#stroke-width).
-- **A family drawn with fills.** Only `lucide` is stroke-based. Every other bundled family ignores the modifier.
+- **A family drawn with fills.** Only `lucide` and `line-md` are stroke-based. Every other bundled family ignores the modifier.
 
 ## The color does not change
 
-Set `--ic-color` on the icon or an ancestor, or `--<prefix>-color` under a custom class prefix. `color` reaches only icons without a color of their own: a brand icon keeps its brand color until `--ic-color` is set. A `background-color` you set on the icon element itself replaces its color, because the mask paints with the background. In inline SVG mode under a Content Security Policy that blocks `style` attributes, a brand icon keeps its brand color and ignores `--ic-color`. See [Color](docs/concepts.md#color).
+Set `--ic-color` on the icon or an ancestor, or `--<prefix>-color` under a custom class prefix. Plain `color` reaches only icons without a color of their own: a brand icon keeps its brand color until `--ic-color` overrides it. Setting `background-color` on the icon element itself replaces its paint, because CSS mask icons paint through their `background`. In inline SVG mode under a Content Security Policy that blocks `style` attributes, a brand icon keeps its brand color and ignores `--ic-color`. See [Color](docs/concepts.md#color).
 
 ## A brand icon is invisible in dark mode
 
-Its brand color is near-black, as GitHub's, X's, and Vercel's are. Set `--ic-color` on it in your dark theme. See [Color](docs/concepts.md#color).
+Its brand color is near-black, as GitHub's, X's, and Vercel's are. Set `--ic-color` to a light color on those classes inside your dark theme. See [Color](docs/concepts.md#color).
 
 ## The license notice is missing from the output
 
-A minifier configured with `legalComments: "none"` strips `/*! … */` comments. Use `attribution: "file"` with Vite, or keep legal comments. See [Licensing](docs/licensing.md).
+A minifier configured with `legalComments: "none"` strips `/*! … */` comments. Use `attribution: "file"` with Vite to emit `icons-attribution.txt`, or configure your minifier to keep legal comments. See [Licensing](docs/licensing.md).
+
+## Next
+
+Return to the [Overview](docs/index.md) for the full reading path, or look up individual exports and options in the [API reference](docs/reference/index.md).
 
 <!-- Source: docs/changelog/0.4.0.md -->
 
@@ -1165,12 +1243,24 @@ A minifier configured with `legalComments: "none"` strips `/*! … */` comments.
 
 - **Breaking.** The `<svg>` a `virtual:@codenhub/icons/<family>/<name>` module exports carries the icon's qualified class, such as `class="ic-lucide-tag"`, so the base rules size and color it from `--ic-size`, `--ic-color`, and the `ic-xs`–`ic-xl` classes, as they do an `<svg>` that svg mode inlines. Code that adds its own `class` attribute to that markup as a string now produces a second one; add to the existing attribute, or use `classList`. [codenhub/codenhub#452](https://github.com/codenhub/codenhub/issues/452)
 - **Breaking.** `anim` is reserved for the motion utilities, as `xs`–`xl` are for size. A class `ic-anim` or `ic-anim-*` never resolves as an icon, including from a family adopted with `adoptIconifySet`, and the generator refuses a family prefix or icon named that way, or leaves the icon out of a brand family. The exact names `on-hover` and `trigger` are reserved the same way. No icon in a shipped family is affected.
+- **Breaking.** A relative `content` entry for the Vite plugin is read from Vite's `root` instead of the working directory, so `./src/**/*.astro` finds the app's files when the build runs from a monorepo root or with `vite --root`. A project whose `root` differs from the directory it builds from and whose entries were written relative to that directory needs them rewritten relative to `root`, or made absolute. The PostCSS plugin, which has no root, still reads from the working directory.
+- **Breaking.** Node.js 26 or newer. `engines.node` is `>=26`, so Yarn 1, and npm with `engine-strict`, refuse the install on Node.js 24. Update Node.js where the package is installed or where the build-time plugins and helpers run; the plain CSS stylesheets themselves need nothing. See [Overview → Requirements](docs/index.md#requirements). ([#553](https://github.com/codenhub/codenhub/issues/553))
 - The package is larger: the tarball unpacks to about 72 MB, up from 67 MB, and the full `line-md` stylesheet is about 3 MB, a third of it the static fallback. CSS from the plugins still carries only the icons a project uses.
 
 ## Fixed
 
 - In `mode: "svg"`, an icon tag written inside a string in an `.astro` frontmatter broke `astro build` with a parse error. Astro compiled the file before the plugin's transform ran, so the `<svg>` landed unescaped in a string the compiler had re-quoted. The transform now runs ahead of other plugins' ordinary transforms, Astro's compiler among them; a plugin that also orders its transform `"pre"` and is listed earlier still runs first. [codenhub/codenhub#451](https://github.com/codenhub/codenhub/issues/451)
-- In `mode: "svg"`, an icon inlined as a JSX element kept HTML attribute names such as `stroke-width`, so React logged an invalid DOM property warning for every stroked icon in development. Hyphenated attributes there are now written as React names them, such as `strokeWidth` and `fillRule`. An icon tag inside a string, as one assigned to `innerHTML`, keeps the hyphenated names the HTML parser reads. [codenhub/codenhub#561](https://github.com/codenhub/codenhub/issues/561)
+- In `mode: "svg"`, an icon inlined as a React JSX element kept HTML attribute names such as `stroke-width`, so React logged an invalid DOM property warning for every stroked icon in development. In a project that uses `@vitejs/plugin-react` or `@vitejs/plugin-react-swc`, hyphenated attributes in a JSX element are now written as React names them, such as `strokeWidth` and `fillRule`, and a `style` becomes an object. Solid, Preact, and Vue JSX write attribute names into HTML as given, so there the hyphenated names and the `style` string stay. An icon tag inside a string, as one assigned to `innerHTML`, keeps the hyphenated names the HTML parser reads. [codenhub/codenhub#561](https://github.com/codenhub/codenhub/issues/561)
+- In `mode: "svg"`, a quote in JSX text, such as the apostrophe in `<p>Don't</p>`, made the transform treat the next icon tag as part of a string and escape its markup, so the page showed the escaped `<svg>`. A string now ends at its line, and a quote opens one only where an expression can start.
+- In `mode: "svg"`, an icon tag with a `>` inside an attribute, such as `onClick={() => a > b}` or `title="a > b"`, was cut at that `>` and left broken markup. The whole tag is now replaced.
+- In `mode: "svg"`, a file with many unclosed `<i` tags took over a minute to transform. It now takes milliseconds.
+- In `mode: "svg"`, a quote in a `.vue` or `.svelte` template, which the framework reads as markup, made the next icon inlined inside it be escaped as if it were in a JavaScript string. Templates and `<script>` blocks are now read separately.
+- In `mode: "svg"`, an icon removed from a file kept its family in the attribution notice, and its class in the unresolved-class warning, of every later build in the same process, such as `vite build --watch`. Each file now forgets what it used when it is transformed again or deleted.
+- With the Tailwind plugin, a variant on a motion utility, such as `hover:ic-anim-spin`, lost its animation in a production build, because Tailwind's optimizer drops a rule that nests `@keyframes`. The keyframes are now declared once at the top level.
+- `playIcon` and `bindIconPlayback` threw in jsdom, which has neither `matchMedia` nor `SVGSVGElement.setCurrentTime`. Without `matchMedia`, an icon is not played, since the page cannot say whether motion is reduced; an inline `<svg>` without `setCurrentTime` restarts its glyph motion only.
+- `generateFamilyCss` with `bareNames` wrote a bare selector for an icon named like a motion utility, such as `anim-spin`, so `class="ic-anim-spin"` painted that icon. Such an icon now keeps only its qualified selector.
+- An `ic-on-hover` icon that itself had keyboard focus stayed at rest, though its focused parent or `ic-trigger` played it. The icon now plays when it has `:focus-visible` too, in CSS as `bindIconPlayback` already did.
+- An icon name inherited by every JavaScript object, such as `ic-lucide-constructor`, resolved as an empty icon. Only a family's own icons and aliases resolve now.
 
 <!-- Source: docs/changelog/0.3.0.md -->
 

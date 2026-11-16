@@ -1,5 +1,5 @@
 import { carriesNotice, describeFamilyNotice } from "../catalog/attribution.js";
-import { parseIconClass, resolveIconClassName } from "../core/class-names.js";
+import { isMotionName, parseIconClass, resolveIconClassName } from "../core/class-names.js";
 import { IconRegistry as IconRegistryConstructor } from "../core/registry.js";
 import type { IconRegistry } from "../core/registry.js";
 import { renderSvg } from "../core/render.js";
@@ -494,7 +494,8 @@ export function generateFamilyCss(family: IconFamilyData, options?: GenerateFami
       continue;
     }
     const selectors = [`.${escapeSelectorClass(`${prefix}-${family.prefix}-${name}`)}`];
-    if (bareNames) {
+    // A bare `ic-on-hover` or `ic-anim-spin` is a motion utility, never an icon.
+    if (bareNames && !isMotionName(name)) {
       selectors.push(`.${escapeSelectorClass(`${prefix}-${name}`)}`);
     }
     rules.push(

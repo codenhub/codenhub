@@ -22,7 +22,8 @@ export interface IconPlaybackOptions {
  * @param element - Icon to play. Elements with neither are ignored.
  * @param options - Class and custom property prefix.
  * @remarks
- * Does nothing when the device requests reduced motion. Glyph motion restarts,
+ * Does nothing when the device requests reduced motion, or in a window that
+ * cannot say, such as jsdom's. Glyph motion restarts,
  * whether running or finished, by clearing the element's `animation-name` for one
  * style recalculation; this forces style. Artwork in a CSS mask restarts
  * from a fresh data URL set inline as `--ic-mask`, because a browser does not
@@ -32,7 +33,9 @@ export interface IconPlaybackOptions {
  */
 export function playIcon(element: Element, options?: IconPlaybackOptions): void {
   const view = element.ownerDocument.defaultView;
-  if (!view || view.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+  // A window with no `matchMedia`, such as jsdom's in a component test, cannot
+  // say whether reduced motion is requested, so nothing plays.
+  if (typeof view?.matchMedia !== "function" || view.matchMedia("(prefers-reduced-motion: reduce)").matches) {
     return;
   }
   const prefix = options?.prefix ?? "ic";
@@ -51,7 +54,11 @@ export function playIcon(element: Element, options?: IconPlaybackOptions): void 
     }
   }
   if (element.namespaceURI === SVG_NAMESPACE && element.localName === "svg") {
-    (element as SVGSVGElement).setCurrentTime(0);
+    // jsdom's `<svg>` has no animation timeline to rewind.
+    const svg = element as Partial<SVGSVGElement>;
+    if (typeof svg.setCurrentTime === "function") {
+      svg.setCurrentTime(0);
+    }
     return;
   }
   const property = `--${prefix}-mask`;

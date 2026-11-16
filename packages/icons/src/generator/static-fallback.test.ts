@@ -32,7 +32,9 @@ function createAnimatedFamily(): IconFamilyData {
 describe("static artwork for reduced motion", () => {
   it.each(["ic", "ux"])("paints static artwork at rest and under reduced motion with prefix %s", (prefix) => {
     const css = generateBaseCss({ prefix });
-    expect(css).toContain(`.${prefix}.${prefix}-on-hover:not(:hover):not(:hover > *):not(:focus-visible > *)`);
+    expect(css).toContain(
+      `.${prefix}.${prefix}-on-hover:not(:hover):not(:focus-visible):not(:hover > *):not(:focus-visible > *)`,
+    );
     expect(css).toContain(`mask-image: var(--${prefix}-static-mask, var(--${prefix}-mask));`);
     expect(css).toContain(`mask-image: var(--${prefix}-static-mask, var(--${prefix}-mask)) !important;`);
   });

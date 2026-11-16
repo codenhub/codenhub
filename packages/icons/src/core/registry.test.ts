@@ -85,6 +85,24 @@ describe("IconRegistry", () => {
     expect(resolved?.name).toBe("test:x");
   });
 
+  it.each(["constructor", "toString", "__proto__", "hasOwnProperty"])(
+    "does not resolve %s, a name every object inherits",
+    (name) => {
+      const registry = new IconRegistry();
+      registry.registerFamily(createFamily());
+
+      expect(registry.resolve(`test:${name}`)).toBeUndefined();
+      expect(registry.has(`test:${name}`)).toBe(false);
+    },
+  );
+
+  it("follows an alias whose parent is an empty string rather than resolving the alias name itself", () => {
+    const registry = new IconRegistry();
+    registry.registerFamily(createFamily({ aliases: { heart: { parent: "" } } }));
+
+    expect(registry.resolve("test:heart")).toBeUndefined();
+  });
+
   it("uses per-icon geometry when it differs from the family default", () => {
     const registry = new IconRegistry();
     registry.registerFamily(createFamily());

@@ -1,4 +1,8 @@
-import { describe, expect, it } from "vitest";
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
+
+import { afterEach, describe, expect, it } from "vitest";
 
 import { IconRegistry } from "../core/registry.js";
 import type { IconAttribution, IconFamilyData } from "../core/types.js";
@@ -25,8 +29,21 @@ function createFamily(attribution: IconAttribution = "notice"): IconFamilyData {
   };
 }
 
-function createPlugin(options: Parameters<typeof viteIcons>[0] = {}) {
+/**
+ * Builds the plugin as Vite resolves it beside the named plugins, React's by
+ * default, since svg mode writes JSX for the runtime it finds.
+ */
+function createPlugin(
+  options: Parameters<typeof viteIcons>[0] = {},
+  vitePlugins: string[] = ["vite:react-babel"],
+  root = process.cwd(),
+) {
   const plugin = viteIcons({ defaultPrefix: "test", families: [createFamily()], ...options });
+  (plugin.configResolved as (config: object) => void)({
+    base: "/",
+    plugins: vitePlugins.map((name) => ({ name })),
+    root: root.replaceAll("\\", "/"),
+  });
   return {
     // A bundle with no HTML entry, as a library build has.
     generateBundle(this: unknown) {
@@ -61,6 +78,39 @@ function createBundleContext() {
     warnings,
   };
 }
+
+describe("viteIcons content", () => {
+  const roots: string[] = [];
+  afterEach(() => {
+    for (const root of roots.splice(0)) {
+      fs.rmSync(root, { force: true, recursive: true });
+    }
+  });
+  function createProject(): string {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), "icons-content-"));
+    roots.push(root);
+    fs.mkdirSync(path.join(root, "src"));
+    fs.writeFileSync(path.join(root, "src", "page.astro"), '<i class="ic-test-user"></i>');
+    return root;
+  }
+
+  it.each(["./src/*.astro", "src/page.astro"])(
+    "reads relative entry %s from the Vite root, not the working directory",
+    (entry) => {
+      const root = createProject();
+      const { load } = createPlugin({ content: [entry] }, [], root);
+
+      expect(load("\0virtual:icons.css")).toContain(".ic-test-user");
+    },
+  );
+
+  it("reads an absolute entry as given", () => {
+    const root = createProject();
+    const { load } = createPlugin({ content: [path.join(root, "src", "page.astro")] }, [], process.cwd());
+
+    expect(load("\0virtual:icons.css")).toContain(".ic-test-user");
+  });
+});
 
 describe("viteIcons", () => {
   it("serves motion utilities without looking them up as icon artwork", () => {
@@ -556,6 +606,202 @@ describe("viteIcons in svg mode", () => {
 
       expect(code).toContain('stroke-width="2"');
     });
+
+    it.each([
+      ["Solid", ["solid"]],
+      ["Preact", ["preact:config", "vite:preact-jsx"]],
+      ["Vue JSX", ["vite:vue-jsx"]],
+      ["no JSX plugin", []],
+    ])("stays hyphenated in JSX rendered by %s, which writes the names into HTML", (_runtime, vitePlugins) => {
+      const { transform } = createPlugin({ families: [createFamily(), stroked], mode: "svg" }, vitePlugins);
+
+      const code = transform('export const App = () => <i class="ic-stroked-check" />;', "app.tsx")?.code;
+
+      expect(code).toContain('<g stroke-width="2" stroke-linecap="round"><path fill-rule="evenodd" d="check" /></g>');
+      expect(code).not.toContain("strokeWidth");
+    });
+
+    it("is camel-cased with React's SWC plugin too", () => {
+      const { transform } = createPlugin({ families: [createFamily(), stroked], mode: "svg" }, ["vite:react-swc"]);
+
+      const code = transform('export const App = () => <i className="ic-stroked-check" />;', "app.tsx")?.code;
+
+      expect(code).toContain('strokeWidth="2"');
+    });
+  });
+
+  describe("quotes in the text around a JSX element", () => {
+    const brand: IconFamilyData = {
+      ...createFamily(),
+      icons: { mark: { body: '<path d="mark" />', color: "#181717" } },
+      prefix: "brand",
+    };
+
+    it.each([
+      [
+        "apostrophes on both sides of the tag",
+        "export const A = () => <p>Don't <i className=\"ic-brand-mark\" /> won't</p>;",
+      ],
+      [
+        "an apostrophe on an earlier line and one after the tag",
+        "export const A = () => <p>Don't panic</p>;\nexport const B = () => <button><i className=\"ic-brand-mark\" /> It's liked</button>;",
+      ],
+    ])("leave the element JSX with %s", (_case, source) => {
+      const { transform } = createPlugin({ families: [createFamily(), brand], mode: "svg" });
+
+      const code = transform(source, "app.tsx")?.code;
+
+      expect(code).toContain('<svg className="ic-brand-mark"');
+      expect(code).toContain('style={{"color":"var(--ic-color, #181717)"}}');
+      expect(code).not.toContain('style="');
+    });
+
+    it("leave the element unescaped when double quotes surround it", () => {
+      const { transform } = createPlugin({ mode: "svg" });
+
+      const code = transform('export const A = () => <p>Press "<i className="ic-user" /> Like"</p>;', "app.tsx")?.code;
+
+      expect(code).toContain('<p>Press "<svg className="ic-user"');
+      expect(code).not.toContain("\\");
+    });
+
+    it("still escape a tag in a string that follows the text", () => {
+      const { transform } = createPlugin({ mode: "svg" });
+
+      const code = transform(
+        'export const A = () => <p title="x">Don\'t {"<i class=\\"ic-user\\"></i>"}</p>;',
+        "app.tsx",
+      )?.code;
+
+      expect(code).toContain('{"<svg class=\\"ic-user\\"');
+    });
+  });
+
+  it.each([
+    ["Svelte", "app.svelte", '<p>Press "<i class="ic-user"></i> Like" to save</p>'],
+    ["Vue", "app.vue", '<template><p>Press "<i class="ic-user"></i> Like"</p></template>'],
+  ])("leaves %s template markup unescaped when quotes surround a tag", (_framework, id, source) => {
+    const { transform } = createPlugin({ mode: "svg" });
+
+    const code = transform(source, id)?.code;
+
+    expect(code).toContain('Press "<svg class="ic-user"');
+    expect(code).not.toContain("\\");
+  });
+
+  it.each([
+    ["Svelte", "app.svelte"],
+    ["Vue", "app.vue"],
+  ])("escapes a tag in a %s script string", (_framework, id) => {
+    const { transform } = createPlugin({ mode: "svg" });
+
+    const code = transform('<script>const markup = "<i class=\\"ic-user\\"></i>";</script><p>Hi</p>', id)?.code;
+
+    expect(code).toContain('const markup = "<svg class=\\"ic-user\\"');
+  });
+
+  it.each([
+    [
+      "an arrow function in a JSX attribute",
+      "app.tsx",
+      'export const A = () => <i className="ic-user" onClick={() => go()} />;',
+      'export const A = () => <svg onClick={() => go()} className="ic-user"',
+    ],
+    [
+      "a nested block in a JSX attribute",
+      "app.tsx",
+      'export const A = () => <i className="ic-user" onClick={() => { go(); }} />;',
+      'export const A = () => <svg onClick={() => { go(); }} className="ic-user"',
+    ],
+    [
+      "a block nested two levels deep in a JSX attribute",
+      "app.tsx",
+      'export const A = () => <i className="ic-user" onClick={() => { if (x) { go(); } }} />;',
+      'export const A = () => <svg onClick={() => { if (x) { go(); } }} className="ic-user"',
+    ],
+    [
+      "a quoted HTML attribute",
+      "index.html",
+      '<i class="ic-user" title="a > b"></i>',
+      '<svg title="a > b" class="ic-user"',
+    ],
+  ])("reads a > inside %s as part of the tag", (_case, id, source, expected) => {
+    const { transform, transformIndexHtml } = createPlugin({ mode: "svg" });
+
+    const code = id.endsWith(".html") ? (transformIndexHtml(source, {}) as string) : transform(source, id)?.code;
+
+    expect(code?.startsWith(expected)).toBe(true);
+    expect(code).toMatch(/<\/svg>;?$/);
+  });
+
+  it("gives up promptly on many icon tags that never close", () => {
+    const { transformIndexHtml } = createPlugin({ mode: "svg" });
+    const html = '<i class="x"'.repeat(2000);
+
+    const started = performance.now();
+    const result = transformIndexHtml(html, {});
+
+    expect(result).toBe(html);
+    expect(performance.now() - started).toBeLessThan(2000);
+  });
+
+  it("rewrites a module with thousands of icons in time linear in their number", () => {
+    const { transform } = createPlugin({ mode: "svg" });
+    const source = `export const A = () => <div>${'<i className="ic-user" />\n'.repeat(8000)}</div>;`;
+
+    const started = performance.now();
+    const code = transform(source, "gallery.tsx")?.code;
+
+    expect(code?.match(/<svg /g)).toHaveLength(8000);
+    expect(performance.now() - started).toBeLessThan(5000);
+  });
+
+  it("forgets an unrewritten class once its module is transformed again without it", () => {
+    const { generateBundle, transform } = createPlugin({ mode: "svg" });
+    transform('export const A = () => <span className="ic-user" />;', "app.tsx");
+    const first = createBundleContext();
+    generateBundle.call(first.context);
+
+    transform('export const A = () => <i className="ic-user" />;', "app.tsx");
+    const second = createBundleContext();
+    generateBundle.call(second.context);
+
+    expect(first.warnings.join("\n")).toContain("ic-user in app.tsx");
+    expect(second.warnings).toEqual([]);
+  });
+
+  it("escapes a tag written with escaped quotes in a Svelte markup expression", () => {
+    const { transform } = createPlugin({ mode: "svg" });
+
+    const code = transform('<p>{@html "<i class=\\"ic-user\\"></i>"}</p>', "app.svelte")?.code;
+
+    expect(code).toContain('{@html "<svg class=\\"ic-user\\"');
+    expect(code).not.toMatch(/[^\\]"ic-user/);
+  });
+
+  it("forgets a deleted module's unrewritten classes", () => {
+    const { generateBundle, plugin, transform } = createPlugin({ mode: "svg" });
+    transform('export const A = () => <span className="ic-user" />;', "app.tsx");
+
+    (plugin.watchChange as (id: string, change: { event: string }) => void)("app.tsx", { event: "delete" });
+    const { context, warnings } = createBundleContext();
+    generateBundle.call(context);
+
+    expect(warnings).toEqual([]);
+  });
+
+  it("drops a family from the notice once no module uses it", () => {
+    const { generateBundle, transform } = createPlugin({ mode: "svg" });
+    transform('export const A = () => <i className="ic-user" />;', "app.tsx");
+    const first = createBundleContext();
+    generateBundle.call(first.context);
+
+    transform("export const A = () => null;", "app.tsx");
+    const second = createBundleContext();
+    generateBundle.call(second.context);
+
+    expect(first.files.map((file) => file.fileName)).toEqual(["icons-attribution.txt"]);
+    expect(second.files).toEqual([]);
   });
 
   describe("a multicolor icon's paint", () => {
@@ -983,7 +1229,7 @@ describe("viteIcons dev invalidation", () => {
 describe("viteIcons dev HTML injection", () => {
   it("injects the stylesheet script at the site root by default", () => {
     const { plugin, transformIndexHtml } = createPlugin();
-    (plugin.configResolved as (config: { base: string }) => void)({ base: "/" });
+    (plugin.configResolved as (config: object) => void)({ base: "/", plugins: [] });
 
     const result = transformIndexHtml("<html><head></head></html>", { server: {} }) as { attrs: { src: string } }[];
 
@@ -999,7 +1245,7 @@ describe("viteIcons dev HTML injection", () => {
     // path-based proxy never forwards to this dev server at all, so a
     // different (or no) plugin instance silently answered instead.
     const { plugin, transformIndexHtml } = createPlugin();
-    (plugin.configResolved as (config: { base: string }) => void)({ base: "/icons/" });
+    (plugin.configResolved as (config: object) => void)({ base: "/icons/", plugins: [] });
 
     const result = transformIndexHtml("<html><head></head></html>", { server: {} }) as { attrs: { src: string } }[];
 

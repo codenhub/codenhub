@@ -1,16 +1,13 @@
 # @codenhub/icons
 
-Zero-runtime icon system for the web. Write `ic-lucide-heart` in your markup and the icon arrives as a CSS mask — no imports, no components, no icon library in the bundle.
+Zero-runtime icon system for the web. Write `ic-lucide-heart` in your markup and the icon arrives as a CSS mask — no imports, no components, no icon library in your bundle. One class, no JavaScript sitting around just to draw a heart.
 
-`@codenhub/icons` ships 15 generated core icon families totalling over 36,000 icons, each with the license notices its artwork requires, so a project can adopt icons without auditing licenses itself. Two opt-in brand families add logos: `simple-icons`, over 3,000 in one brand color each, such as GitHub and npm, and `logos`, over 2,000 in full color, such as Google and Slack. Brand marks stay subject to their owners' trademark guidelines.
+`@codenhub/icons` ships 15 generated core icon families totalling over 36,000 icons, each with the license notices its artwork requires, so a project can adopt icons without spending an afternoon auditing licenses by hand. Two opt-in brand families add logos: `simple-icons`, over 3,000 in one brand color each, such as GitHub and npm, and `logos`, over 2,000 in full color, such as Google and Slack. Brand marks stay subject to their owners' trademark guidelines.
 
 ## Installation
 
 ```sh
 pnpm add @codenhub/icons
-npm install @codenhub/icons
-yarn add @codenhub/icons
-bun add @codenhub/icons
 ```
 
 ## Usage
@@ -28,7 +25,7 @@ One line. Every family except the brand families `simple-icons` and `logos` is r
 
 ### Plain CSS, no build step
 
-Import the base rules, then a stylesheet per family. Each family is complete, so nothing has to scan your markup.
+Import the base rules, then a stylesheet per family. Each family is complete, so nothing has to scan your markup — you trade file size for having zero build configuration.
 
 ```css
 @import "@codenhub/icons";
@@ -88,13 +85,13 @@ Size and color follow custom properties: set `--ic-size` and `--ic-color` on the
 - [JavaScript API](docs/javascript-api.md): the registry, renderers, and third-party set adapter.
 - [Licensing](docs/licensing.md): attribution modes and what each build owes.
 - [Troubleshooting](docs/troubleshooting.md): an icon that renders as nothing, as a solid square, or at the wrong width.
-- [API reference](docs/reference/index.md): every export of the root, `/vite`, and `/postcss` entry points, generated from the source.
+- [API reference](docs/reference/index.md): every export of the root, `/vite`, `/postcss`, and `/play` entry points, generated from the source.
 
 ## Requirements
 
 | Requirement  | Details                                                                                                                                                      |
 | ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Node.js      | 24 or newer, for the build-time plugins and helpers.                                                                                                         |
+| Node.js      | 26 or newer, for the build-time plugins and helpers.                                                                                                         |
 | CSS imports  | Consumer tooling must resolve package CSS imports.                                                                                                           |
 | Browsers     | Must support CSS `mask-image`, which every method uses except inline SVG mode. Animated masks have been tested in Chromium; Firefox and Safari are untested. |
 | Tailwind CSS | Version 4 or newer, and only for the `/tw` and `/tailwind` entry points.                                                                                     |
@@ -103,13 +100,13 @@ Size and color follow custom properties: set `--ic-size` and `--ic-color` on the
 ## Notes
 
 - An icon is named `prefix:name`, written `ic-prefix-name` in a class, as in `ic-material-symbols-rounded-home`.
-- The package names no default family. An unqualified `ic-heart` resolves only where you said what it means: through `defaultPrefix` in the Vite and PostCSS plugins, through `default:` in the Tailwind plugin, or, in the plugin-free path, through the last family stylesheet you imported that defines it. A family that has no icon by that name does not claim the bare selector, so an earlier family still answers to it, and the brand family stylesheets claim no bare names at all.
+- The package names no default family, because nobody agrees on whether `close` is `x` or `times`. An unqualified `ic-heart` resolves only where you said what it means: through `defaultPrefix` in the Vite and PostCSS plugins, through `default:` in the Tailwind plugin, or, in the plugin-free path, through the last family stylesheet you imported that defines it. A family that has no icon by that name does not claim the bare selector, so an earlier family still answers to it, and the brand family stylesheets claim no bare names at all.
 - Stroke width is a modifier on the icon class, `ic-lucide-heart/1.5`, and applies only to families drawn with strokes. It needs one of the plugins: a plugin-free stylesheet has no way to know which widths you want, so families there render at their authored width.
 - An icon is an `<i>` (or `.ic` on any element, in the CSS-based methods). There is no `::before`, `::after`, or form-control form: an icon beside a label is a real `<i>` in the control, and a `background-image` icon comes from `getIconMaskUrl` / `getIconCssProps`.
 - `anim` is reserved for [motion utilities](docs/concepts.md#motion); icon names cannot be `anim` or start with `anim-`, and the exact names `on-hover` and `trigger` are reserved too.
 - `xs`, `sm`, `md`, `lg`, and `xl` are reserved (`ic-xs`–`ic-xl` are the size axis): no family may use one as a prefix or ship an icon by that name.
 - Size follows `--ic-size`, default `1em`. The `ic-xs`–`ic-xl` classes each set it to a rem value (`0.75`, `0.875`, `1`, `1.25`, `1.5`) and nothing else, so they compose with a stroke modifier. An inlined `<svg>` from the renderer or `mode: "svg"` carries a `1em` box of its own and honours `--ic-size` through the base rules.
-- The `/lucide` and other family stylesheets are large by construction — a whole family, because nothing is narrowing it. `dist/css` totals about 39 MB across all 17. Import the families you use, or use Tailwind or a plugin, which emit only what your markup asked for.
+- The `/lucide` and other family stylesheets are large by construction — a whole family, because nothing is narrowing it, and `dist/css` totals about 39 MB across all 17. Import only the families you use, or use Tailwind or a plugin, which emit only what your markup asked for.
 - `mode: "svg"` in the Vite plugin rewrites `<i class="ic-...">` tags into inline SVG and nothing else. A class on another element gets no icon in this mode; the plugin warns when it finds one.
 - Animated artwork comes from `line-md` (1,222 icons) and `svg-spinners` (46 loading indicators). `ic-on-hover` shows static artwork at rest and plays it on hover with CSS alone. One-shot icons replay on every hover, rather than the first only, with the optional `@codenhub/icons/play` helper. Line MD masks stay static under reduced motion; inline SVG retains animation. See [Animated families](docs/concepts.md#animated-families) for setup and browser limits.
 - Icon names are the upstream family's own: Material Symbols names keep their underscores, as in `ic-material-symbols-rounded-check_circle`.

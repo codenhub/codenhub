@@ -161,7 +161,7 @@ describe("generateBaseCss motion", () => {
   });
 
   const rest =
-    ":not(:hover):not(:hover > *):not(:focus-visible > *):not(.ic-trigger:hover *):not(.ic-trigger:focus-visible *)";
+    ":not(:hover):not(:focus-visible):not(:hover > *):not(:focus-visible > *):not(.ic-trigger:hover *):not(.ic-trigger:focus-visible *)";
 
   it("removes on-hover motion at rest, outside the icon, its parent, and any ic-trigger ancestor", () => {
     expect(generateBaseCss()).toContain(`.ic-on-hover${rest} {\n  animation: none;\n}`);
@@ -442,5 +442,19 @@ describe("generateFamilyCss", () => {
 
   it("honours a custom class prefix", () => {
     expect(generateFamilyCss(family, { prefix: "icon" })).toContain(".icon-quill-heart,\n.icon-heart {");
+  });
+
+  it("keeps the motion utilities' names out of the bare selectors, leaving the qualified ones", () => {
+    const body = '<path d="m" />';
+    const css = generateFamilyCss({
+      ...family,
+      icons: { "anim-spin": { body }, heart: { body }, "on-hover": { body }, trigger: { body } },
+    });
+
+    expect(css).toContain(".ic-quill-anim-spin {");
+    expect(css).toContain(".ic-quill-on-hover {");
+    expect(css).toContain(".ic-quill-trigger {");
+    expect(css).toContain(".ic-quill-heart,\n.ic-heart {");
+    expect(css).not.toMatch(/\.ic-(?:anim-spin|on-hover|trigger)\b/);
   });
 });

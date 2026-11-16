@@ -63,7 +63,7 @@ How license notices for the families used reach the build output.
 content?: string[];
 ```
 
-File paths or globs to scan for icon class names.
+File paths or globs to scan for icon class names. A relative entry is read from Vite's `root`, not the working directory.
 
 #### ViteIconsOptions › defaultPrefix
 
