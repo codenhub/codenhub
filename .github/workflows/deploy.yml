@@ -1,0 +1,87 @@
+name: Deploy
+
+# Each site is built and deployed by its own Cloudflare Workers Builds project. This
+# workflow decides which sites a push to `main` changed, through `hub deploy:affected`,
+# and starts only their builds, through each project's deploy hook. A push starts no
+# build by itself: every project's build watch paths exclude `*`. A release rebuilds the
+# main and documentation sites from `publish.yml` instead. `docs/ci.md`, "Deployments",
+# explains the split.
+on:
+  push:
+    branches: [main]
+  # Rebuilds every site: after a hook that failed, or for a change made outside this
+  # repository, such as the brand assets.
+  workflow_dispatch:
+
+# No concurrency group. A group keeps one pending run and cancels the one before it,
+# which would drop the only trigger for a site the newer push did not change. Parallel
+# runs are harmless: a hook builds the head of `main`, and Cloudflare returns the queued
+# build rather than starting a second one.
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: Deploy
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        # Full history: the push is compared with the commit it started from, which a
+        # shallow clone does not contain.
+        with:
+          fetch-depth: 0
+
+      - name: Set up the workspace
+        uses: ./.github/actions/setup
+
+      # `hub deploy:affected` fails when the commit is missing, rather than printing no
+      # site and passing. `shell: bash` adds `pipefail`, without which `tr` would hide
+      # that failure.
+      - name: Select the sites this push changed
+        id: sites
+        shell: bash
+        env:
+          BEFORE: ${{ github.event.before }}
+          EVENT_NAME: ${{ github.event_name }}
+        run: |
+          if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
+            sites="www docs demo"
+          else
+            sites="$(pnpm --silent hub deploy:affected --changed="$BEFORE" | tr '\n' ' ')"
+          fi
+          echo "sites=$sites" >> "$GITHUB_OUTPUT"
+          echo "Sites to deploy: ${sites:-none}"
+
+      # Fatal, unlike the hooks in `publish.yml`: no push builds a site any more, so a
+      # build that did not start is a site that stays stale until the next change to it.
+      - name: Trigger the builds
+        if: steps.sites.outputs.sites != ''
+        shell: bash
+        env:
+          SITES: ${{ steps.sites.outputs.sites }}
+          WWW_HOOK: ${{ secrets.CLOUDFLARE_WWW_DEPLOY_HOOK_URL }}
+          DOCS_HOOK: ${{ secrets.CLOUDFLARE_DOCS_DEPLOY_HOOK_URL }}
+          DEMO_HOOK: ${{ secrets.CLOUDFLARE_DEMO_DEPLOY_HOOK_URL }}
+        run: |
+          status=0
+          for site in $SITES; do
+            case "$site" in
+              www) hook="$WWW_HOOK" ;;
+              docs) hook="$DOCS_HOOK" ;;
+              demo) hook="$DEMO_HOOK" ;;
+              *) echo "::error::No deploy hook is configured for the $site site."; status=1; continue ;;
+            esac
+            if [ -z "$hook" ]; then
+              echo "::error::The deploy hook secret for the $site site is not set; trigger its build by hand."
+              status=1
+            elif curl --fail --silent --show-error --output /dev/null --connect-timeout 10 --max-time 30 --request POST "$hook"; then
+              echo "Started the $site build."
+            else
+              echo "::error::Could not reach the $site deploy hook; rerun this workflow or trigger the build by hand."
+              status=1
+            fi
+          done
+          exit "$status"

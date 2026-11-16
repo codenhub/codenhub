@@ -12,7 +12,7 @@ It does not describe a specific app's implementation. `apps/demo` is the current
 
 ## Why one shared aggregator
 
-A dedicated app and Cloudflare project per package multiplies the delivery plumbing `docs/roadmap.md` deliberately keeps out of this repository: one dashboard project, one set of watch paths, and one build to reason about per package instead of one for the whole workspace. `apps/docs` already proves the pattern for documentation — it aggregates every package's docs into one deployed site rather than one site per package — and a demo aggregator follows the same shape.
+A dedicated app and Cloudflare project per package multiplies the delivery plumbing `docs/roadmap.md` deliberately keeps out of this repository: one dashboard project, one deploy hook, and one build to reason about per package instead of one for the whole workspace. `apps/docs` already proves the pattern for documentation — it aggregates every package's docs into one deployed site rather than one site per package — and a demo aggregator follows the same shape.
 
 ## Per-package contract
 

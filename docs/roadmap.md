@@ -41,14 +41,14 @@ Durable direction for the workspace: what is being worked on now, what is intend
 
 ## Notes
 
-- **Delivery split.** All three deploy surfaces run from Cloudflare dashboard state — the `codenhub`, `codenhub-docs`, and `codenhub-demo` Workers Builds projects. The repository carries build configuration (`apps/*/wrangler.jsonc`) and, for `codenhub-docs` and `codenhub`, a deploy-hook secret each that lets a publish trigger a rebuild directly instead of waiting on a merge (`docs/ci.md`, "Publish-scoped content" and "Credentials"). `docs/ci.md` records each project's build watch-path excludes and the reasoning.
+- **Delivery split.** All three deploy surfaces build from Cloudflare dashboard state — the `codenhub`, `codenhub-docs`, and `codenhub-demo` Workers Builds projects. The repository carries build configuration (`apps/*/wrangler.jsonc`) and a deploy-hook secret per project, which can only start a build: `deploy.yml` calls the hooks of the sites a push changes, read from the workspace dependency graph by `hub deploy:affected`, and `publish.yml` calls the main and documentation sites' hooks after a release (`docs/ci.md`, "Deployments" and "Credentials"). No Cloudflare API token is kept here; moving the builds into Actions with one is the option to revisit once the sites have a Cloudflare account of their own.
 - **Release model.** A maintainer authorizes a release by pushing a `<package name>@<version>` tag; `.github/workflows/publish.yml` publishes through trusted publishing (OIDC, provenance), refusing a tag whose version disagrees with the manifest. The first release of a name is manual, because npm cannot configure a trusted publisher for a name that does not exist yet. `docs/specs/packages-lifecycle.md` and `docs/ci.md` own the rules.
 - **`ui-kit` is on hold.** `@codenhub/ui-kit` is old and is not being worked on. It will be either deprecated or rewritten from scratch. Until then it is left out of audits, reviews, and cross-package compliance work: a finding against it is not acted on, and it is not a reason to change another package or a spec.
 - **Unlisted packages.** `router`, `store`, the plugins, and `ui-kit` are internal, WIP, deprecated, or evaluated separately, and have no package roadmap by intent.
 
 ## References
 
-- `docs/ci.md` — pinned toolchain, pull-request workflow, deployment watch paths.
+- `docs/ci.md` — pinned toolchain, pull-request workflow, deployments.
 - `docs/specs/packages-lifecycle.md` — metadata, scripts, publishing, versioning.
 - `docs/specs/packages-reference.md` — generated API reference contract.
 - `docs/specs/packages-demo.md` — package demo and aggregator contract.
