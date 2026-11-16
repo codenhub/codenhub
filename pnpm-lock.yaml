@@ -971,6 +971,21 @@ importers:
         specifier: 'catalog:'
         version: 8.3.6(@types/node@26.6.6)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1)
 
+  packages/scan:
+    devDependencies:
+      '@types/node':
+        specifier: 'catalog:'
+        version: 26.6.6
+      '@vitest/coverage-v8':
+        specifier: 'catalog:'
+        version: 4.1.12(vitest@4.1.12)
+      typescript:
+        specifier: 'catalog:'
+        version: 6.0.3
+      vitest:
+        specifier: 'catalog:'
+        version: 4.1.12(@types/node@26.6.6)(@vitest/coverage-v8@4.1.12)(jsdom@30.1.3)(vite@8.3.6(@types/node@26.6.6)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1))
+
   packages/skills:
     devDependencies:
       '@types/node':

@@ -1,0 +1,22 @@
+{
+  "name": "@codenhub/scan",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Finds and reads the content files the build commands of @codenhub/styles and @codenhub/icons scan for class names.",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "test:watch": "vitest",
+    "typecheck": "tsc -b"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:",
+    "@vitest/coverage-v8": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}
