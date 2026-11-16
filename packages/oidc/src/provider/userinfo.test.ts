@@ -67,6 +67,21 @@ describe("handleUserinfo", () => {
     expect(await response.json()).toEqual({ email: "ada@example.test", sub: SUBJECT });
   });
 
+  it("shouldAnswerATokenRestrictedToAResourceServerWithoutCheckingItsAudience", async () => {
+    const { options, store } = await setUp();
+    await store.saveAccessToken(await digestKey(ACCESS_TOKEN), {
+      grantId: "grant-1",
+      clientId: CLIENT_ID,
+      subject: SUBJECT,
+      scopes: ["openid", "email"],
+      audience: ["https://data.example"],
+      expiresAt: NOW_S + 600,
+    });
+    const response = await handleUserinfo(options, getWithToken(ACCESS_TOKEN));
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ email: "ada@example.test", sub: SUBJECT });
+  });
+
   it("shouldKeepSubjectWhenTheCallbackReturnsAnotherSub", async () => {
     const { options, store } = await setUp(() => ({ sub: "someone-else", email: "ada@example.test" }));
     await saveAccessToken(store, ACCESS_TOKEN);
