@@ -2,7 +2,7 @@
 title: Seguridad y fallos
 description: Entiende los riesgos de sobrescritura y limpieza, diagnostica instalaciones fallidas y recupérate de escrituras parciales.
 order: 3
-source: a1c71a831257750069b3fffde3fe361698e2823b
+source: 84829e99f943de1b27baa792372df65d9b905ada
 ---
 
 # Instala con seguridad y recupérate de los fallos
@@ -49,7 +49,7 @@ Si no se encuentran skills o no se puede leer una fuente incluida, usa una insta
 
 Una copia puede fallar porque su origen haya desaparecido, se haya incumplido una restricción de rutas o haya fallado la lectura, resolución, creación o escritura de una entrada del sistema de archivos. La CLI muestra `Failed copying` para cada skill afectada y luego continúa con las skills y los destinos restantes. Termina con el código `1` después de intentarlos todos. Para errores de permisos, habilita la escritura en el destino seleccionado; para conflictos entre archivos y directorios, haz una copia de seguridad y resuelve la entrada en conflicto. Comprueba la ruta indicada antes de cambiar nada.
 
-Un enlace falla cuando falta su destino porque falló la copia compartida de esa skill, cuando algo que no es un enlace ocupa su ruta o cuando no se puede crear. La CLI informa `Failed linking` para cada skill afectada y continúa, como con las copias. Haz una copia de seguridad y mueve la carpeta que indica el mensaje, o corrige primero el fallo de la copia compartida, y vuelve a ejecutar.
+Un enlace falla cuando falta su destino porque falló la copia compartida de esa skill, cuando algo que no es un enlace ocupa su ruta o cuando no se puede crear. La CLI informa `Failed linking` para cada skill afectada y continúa, como con las copias. Haz una copia de seguridad y mueve lo que haya en la ruta que indica el mensaje, o corrige primero el fallo de la copia compartida, y vuelve a ejecutar.
 
 ## Recupérate de escrituras parciales
 

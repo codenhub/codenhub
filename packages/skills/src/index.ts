@@ -280,8 +280,13 @@ export function linkDirectory(options: LinkDirectoryOptions): void {
   }
 
   fs.mkdirSync(path.dirname(link), { recursive: true });
-  // The type is read only on Windows; elsewhere this is a relative symlink.
-  fs.symlinkSync(path.relative(path.dirname(link), target), link, "junction");
+  const realTarget = fs.realpathSync(target);
+  // A relative target resolves from the link's real parent, which differs from
+  // the lexical one when a parent is itself a link. Junctions store an absolute
+  // path, and the type is read only on Windows.
+  const linkTarget =
+    process.platform === "win32" ? realTarget : path.relative(fs.realpathSync(path.dirname(link)), realTarget);
+  fs.symlinkSync(linkTarget, link, "junction");
 }
 
 function isSameDirectory(link: string, target: string): boolean {

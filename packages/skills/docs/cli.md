@@ -153,7 +153,7 @@ Use `-w` only in a pnpm workspace, and `npm install -D` for npm. Then add the sc
 
 Each developer runs `pnpm skills` after installing dependencies, and again after the dependency is updated, to refresh the skills. Ignore the installed skill folders in git, both under `.agents/skills` and under each linked harness folder, but not any skills the repository maintains itself. Name the installed skills in `.gitignore` rather than whole folders when the repository keeps its own skills there.
 
-To commit the skills instead, so they are present right after a clone, install without `--link` to the destinations your team uses and commit the copies. With `Agent Skills Workspace` alone, one copy serves every harness that reads `.agents/skills`; each other harness needs its own copy.
+To commit the skills instead, so they are present right after a clone, install without `--link` to the destinations your team uses and commit the copies. With `Agent Skills Workspace` alone, one copy serves every harness that reads `.agents/skills`, without the Codex metadata in `agents` entries; each other harness needs its own copy.
 
 ## Destructive Cleanup
 

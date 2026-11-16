@@ -2,7 +2,7 @@
 title: Segurança e falhas
 description: Entenda os riscos de sobrescrita e limpeza, diagnostique falhas de instalação e se recupere de gravações parciais.
 order: 3
-source: a1c71a831257750069b3fffde3fe361698e2823b
+source: 84829e99f943de1b27baa792372df65d9b905ada
 ---
 
 # Instale com segurança e se recupere de falhas
@@ -49,7 +49,7 @@ Se nenhuma skill for encontrada ou uma fonte incluída não puder ser lida, use 
 
 Uma cópia pode falhar porque sua origem desapareceu, uma restrição de caminho foi violada ou houve falha ao ler, resolver, criar ou gravar uma entrada no sistema de arquivos. A CLI exibe `Failed copying` para cada skill afetada e continua com as skills e os destinos restantes. Ela encerra com `1` depois de tentar todos. Para erros de permissão, torne o destino selecionado gravável; para conflitos entre arquivos e diretórios, faça backup e resolva a entrada conflitante. Confira o caminho informado antes de mudar qualquer coisa.
 
-Um link falha quando o destino dele não existe porque a cópia compartilhada daquela skill falhou, quando algo que não é um link ocupa o caminho dele ou quando não é possível criá-lo. A CLI informa `Failed linking` para cada skill afetada e continua, como faz com as cópias. Faça backup e mova a pasta que a mensagem indica, ou corrija antes a falha da cópia compartilhada, e execute de novo.
+Um link falha quando o destino dele não existe porque a cópia compartilhada daquela skill falhou, quando algo que não é um link ocupa o caminho dele ou quando não é possível criá-lo. A CLI informa `Failed linking` para cada skill afetada e continua, como faz com as cópias. Faça backup e mova o que estiver no caminho que a mensagem indica, ou corrija antes a falha da cópia compartilhada, e execute de novo.
 
 ## Recupere-se de gravações parciais
 

@@ -48,7 +48,7 @@ If no skills are found or a bundled source cannot be read, use an intact package
 
 A copy can fail because its source disappeared, a path constraint was violated, or reading, resolving, creating, or writing a filesystem entry failed. The CLI reports `Failed copying` for each affected skill, then continues with remaining skills and destinations. It exits `1` after attempting them all. For permission errors, make the selected destination writable; for file/directory conflicts, back up and resolve the conflicting entry. Check the reported path before changing anything.
 
-A link fails when its target is missing because the shared copy of that skill failed, when something other than a link occupies its path, or when creating it fails. The CLI reports `Failed linking` for each affected skill and continues, as for copies. Back up and move the folder the message names, or fix the shared copy's failure first, then rerun.
+A link fails when its target is missing because the shared copy of that skill failed, when something other than a link occupies its path, or when creating it fails. The CLI reports `Failed linking` for each affected skill and continues, as for copies. Back up and move the entry at the path the message names, or fix the shared copy's failure first, then rerun.
 
 ## Recover from partial writes
 

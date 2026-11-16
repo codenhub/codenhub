@@ -2,7 +2,7 @@
 title: Instalador CLI
 description: Instale skills selecionadas local ou globalmente, escolha destinos por harness e automatize atualizações.
 order: 2
-source: 4027fd9b53531a8bad82a5856af76b6be1a2c9da
+source: 1e490140a84d1954e7a76764a02858886beea6b2
 ---
 
 # Instale skills nas suas ferramentas de agente
@@ -154,7 +154,7 @@ Use `-w` apenas em um workspace do pnpm, e `npm install -D` com o npm. Depois ad
 
 Cada desenvolvedor executa `pnpm skills` depois de instalar as dependências, e de novo quando a dependência é atualizada, para atualizar as skills. Ignore no git as pastas das skills instaladas, tanto em `.agents/skills` quanto em cada pasta de harness vinculada, mas não as skills mantidas pelo próprio repositório. Liste as skills instaladas no `.gitignore`, em vez de pastas inteiras, quando o repositório guarda ali as próprias skills.
 
-Para fazer commit das skills, de modo que estejam presentes logo após o clone, instale sem `--link` nos destinos que sua equipe usa e faça commit das cópias. Só com `Agent Skills Workspace`, uma cópia atende a todos os harnesses que leem `.agents/skills`; cada um dos outros precisa da própria cópia.
+Para fazer commit das skills, de modo que estejam presentes logo após o clone, instale sem `--link` nos destinos que sua equipe usa e faça commit das cópias. Só com `Agent Skills Workspace`, uma cópia atende a todos os harnesses que leem `.agents/skills`, sem os metadados do Codex das entradas `agents`; cada um dos outros precisa da própria cópia.
 
 ## Limpeza destrutiva
 

@@ -247,6 +247,16 @@ describe("linkDirectory", () => {
     expect(fs.readlinkSync(link)).toBe(path.join("..", "..", ".agents", "skills", "demo"));
   });
 
+  it.skipIf(process.platform === "win32")("should resolve when a parent of the link is itself a link", () => {
+    const realClaude = path.join(tempDir, "nested", "dir", "claude");
+    fs.mkdirSync(realClaude, { recursive: true });
+    fs.symlinkSync(realClaude, path.join(tempDir, ".claude"));
+
+    linkDirectory({ target, link });
+
+    expect(fs.readFileSync(path.join(link, "SKILL.md"), "utf8")).toBe("demo");
+  });
+
   it("should leave a link that already points at the target in place", () => {
     linkDirectory({ target, link });
     linkDirectory({ target, link });
