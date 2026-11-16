@@ -119,9 +119,6 @@ export async function importPrivateKey(jwk: unknown, options: ImportPrivateKeyOp
   }));
 }
 
-/** Bytes signed once by {@link importKeyPair} to prove its two halves belong together. */
-const PAIR_PROBE = new Uint8Array([0x6a, 0x77, 0x74]);
-
 /**
  * Imports an untrusted private JWK as a key pair bound to one algorithm: the private key, and the public
  * key taken from the same JWK's public members.
@@ -156,6 +153,9 @@ export async function importKeyPair(jwk: unknown, options: ImportPrivateKeyOptio
     return fail(material);
   }
   const params = ALGORITHM_PARAMS[alg];
+  // Signed once to prove the two halves belong together. Built here, not at module level, so bundles
+  // that never call this function can drop it.
+  const probe = new Uint8Array([0x6a, 0x77, 0x74]);
   const publicJwk: JsonWebKey = { ...material.importJwk };
   for (const name of PRIVATE_MEMBERS) {
     delete publicJwk[name];
@@ -167,8 +167,8 @@ export async function importKeyPair(jwk: unknown, options: ImportPrivateKeyOptio
       "sign",
     ]);
     publicCryptoKey = await crypto.subtle.importKey("jwk", publicJwk, params.importParams, true, ["verify"]);
-    const signature = await crypto.subtle.sign(params.signParams, privateCryptoKey, PAIR_PROBE);
-    if (!(await crypto.subtle.verify(params.signParams, publicCryptoKey, signature, PAIR_PROBE))) {
+    const signature = await crypto.subtle.sign(params.signParams, privateCryptoKey, probe);
+    if (!(await crypto.subtle.verify(params.signParams, publicCryptoKey, signature, probe))) {
       return fail({ code: "invalid_key" });
     }
   } catch {
