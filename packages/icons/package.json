@@ -3,7 +3,22 @@
   "version": "0.4.0",
   "private": false,
   "description": "Zero-runtime CSS icons from Lucide, Phosphor, Material Symbols, and Simple Icons, for Tailwind v4, Vite, PostCSS, or plain CSS.",
-  "homepage": "https://github.com/codenhub/codenhub/tree/main/packages/icons",
+  "keywords": [
+    "animated-icons",
+    "css-icons",
+    "css-mask",
+    "icons",
+    "line-md",
+    "lucide",
+    "material-symbols",
+    "phosphor",
+    "postcss",
+    "simple-icons",
+    "svg",
+    "tailwindcss",
+    "vite"
+  ],
+  "homepage": "https://codenhub.dev/packages/icons/",
   "license": "Apache-2.0",
   "repository": {
     "type": "git",
@@ -199,7 +214,7 @@
     }
   },
   "engines": {
-    "node": ">=24"
+    "node": ">=26"
   },
   "codenhub": {
     "label": "IconKit",

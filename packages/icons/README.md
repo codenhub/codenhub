@@ -94,7 +94,7 @@ Size and color follow custom properties: set `--ic-size` and `--ic-color` on the
 
 | Requirement  | Details                                                                                                                                                      |
 | ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Node.js      | 24 or newer, for the build-time plugins and helpers.                                                                                                         |
+| Node.js      | 26 or newer, for the build-time plugins and helpers.                                                                                                         |
 | CSS imports  | Consumer tooling must resolve package CSS imports.                                                                                                           |
 | Browsers     | Must support CSS `mask-image`, which every method uses except inline SVG mode. Animated masks have been tested in Chromium; Firefox and Safari are untested. |
 | Tailwind CSS | Version 4 or newer, and only for the `/tw` and `/tailwind` entry points.                                                                                     |
