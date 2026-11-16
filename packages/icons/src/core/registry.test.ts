@@ -96,6 +96,13 @@ describe("IconRegistry", () => {
     },
   );
 
+  it("follows an alias whose parent is an empty string rather than resolving the alias name itself", () => {
+    const registry = new IconRegistry();
+    registry.registerFamily(createFamily({ aliases: { heart: { parent: "" } } }));
+
+    expect(registry.resolve("test:heart")).toBeUndefined();
+  });
+
   it("uses per-icon geometry when it differs from the family default", () => {
     const registry = new IconRegistry();
     registry.registerFamily(createFamily());
