@@ -53,4 +53,4 @@ La colección cubre planificación e implementación (`brainstorming`, `test-dri
 
 ## Licencia
 
-Distribuido bajo la licencia Apache-2.0. Las skills incluidas contienen material adaptado de terceros; consulta [NOTICE](NOTICE) y la [procedencia de las skills](docs/es/provenance.md).
+Distribuido bajo la licencia [Apache-2.0](LICENSE). Las skills incluidas contienen material adaptado de terceros; consulta [NOTICE](NOTICE) y la [procedencia de las skills](docs/es/provenance.md).

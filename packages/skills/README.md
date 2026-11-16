@@ -51,4 +51,4 @@ The collection covers planning and implementation (`brainstorming`, `test-driven
 
 ## License
 
-Licensed under Apache-2.0. Bundled skills include adapted third-party material; see [NOTICE](NOTICE) and [skill provenance](docs/provenance.md).
+Licensed under [Apache-2.0](LICENSE). Bundled skills include adapted third-party material; see [NOTICE](NOTICE) and [skill provenance](docs/provenance.md).

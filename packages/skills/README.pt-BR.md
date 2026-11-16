@@ -53,4 +53,4 @@ A coleção cobre planejamento e implementação (`brainstorming`, `test-driven-
 
 ## Licença
 
-Licenciado sob Apache-2.0. As skills incluídas contêm material adaptado de terceiros; veja [NOTICE](NOTICE) e a [origem das skills](docs/pt-BR/provenance.md).
+Licenciado sob [Apache-2.0](LICENSE). As skills incluídas contêm material adaptado de terceiros; veja [NOTICE](NOTICE) e a [origem das skills](docs/pt-BR/provenance.md).
