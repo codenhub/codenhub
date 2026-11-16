@@ -1,4 +1,4 @@
-<!-- source: 1d6c0b91961d5af28e479b0d8a8fd113b0916067 -->
+<!-- source: 489e6e135cee1d983d708ce8da474fe9b3bc1756 -->
 
 # @codenhub/skills
 
@@ -27,6 +27,8 @@ Para repetir una instalación sin preguntas, selecciona explícitamente las skil
 ```sh
 pnpm dlx @codenhub/skills@latest --local --skills=brainstorming,test-driven-development --harnesses="Claude Workspace,Codex Workspace"
 ```
+
+Añade `--link` para mantener una sola copia en `.agents/skills` y enlazar a ella las carpetas de los demás harnesses, de modo que todos lean los mismos archivos. Para compartir una selección con un equipo, fija el paquete como dependencia de desarrollo y ejecuta el instalador desde un script; la [guía de la CLI](docs/es/cli.md#configura-un-repositorio-compartido) muestra cómo.
 
 La colección cubre planificación e implementación (`brainstorming`, `test-driven-development`, `coding`, `ponytail`), revisión y entrega (`audit`, `babysit-pr`), trabajo creativo (`branding`, `design`, `logo-design`, `motion-graphics`, `naming`), e instrucciones para agentes y escritura. Consulta el [catálogo de skills](docs/es/skills.md) para conocer cada skill y cuándo se aplica.
 

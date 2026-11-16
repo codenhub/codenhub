@@ -1,7 +1,7 @@
 ---
 title: Visão geral
 description: Escolha skills para agentes e instale-as nas pastas certas para suas ferramentas.
-source: e8cf45dade9d688c28c9dc80fe8f106bd39dfbf5
+source: 903d5e5e04d4a9994c033b7ee0c7eac3f877bf4b
 ---
 
 # Instale e gerencie skills para agentes
@@ -22,7 +22,7 @@ pnpm dlx @codenhub/skills@latest
 
 O equivalente com npm é `npx @codenhub/skills@latest`. Nenhum dos comandos adiciona uma dependência ao seu projeto.
 
-No assistente, escolha o escopo local, recuse a opção de instalar todas as skills, selecione `brainstorming` e `test-driven-development` e escolha `Claude Workspace` e `Codex Workspace`. Deixe a limpeza desativada para manter as outras skills instaladas. O instalador copia os diretórios selecionados para `.claude/skills` e `.agents/skills` dentro do diretório atual.
+No assistente, escolha o escopo local, recuse a opção de instalar todas as skills, selecione `brainstorming` e `test-driven-development` e escolha `Claude Workspace` e `Codex Workspace`. Deixe o modo de instalação em cópia e a limpeza desativada para manter as outras skills instaladas. O instalador copia os diretórios selecionados para `.claude/skills` e `.agents/skills` dentro do diretório atual.
 
 Para fazer a mesma seleção sem perguntas:
 
@@ -41,7 +41,7 @@ Arquivos existentes nos mesmos caminhos são sobrescritos, diretórios são mesc
 ## Ordem de leitura
 
 1. [Skills incluídas](skills.md): escolha fluxos de trabalho, entenda o que uma skill contém e conheça o formato, as regras de qualidade e a política de versionamento.
-2. [Instalador CLI](cli.md): instale a dupla para Claude e Codex, repita a instalação globalmente e conheça todas as opções, os destinos e as diferenças entre harnesses.
+2. [Instalador CLI](cli.md): instale a dupla para Claude e Codex, repita a instalação globalmente, vincule as pastas dos harnesses a uma única cópia, compartilhe uma seleção com uma equipe e conheça todas as opções, os destinos e as diferenças entre harnesses.
 3. [Segurança e falhas](security-and-failures.md): entenda o que uma atualização pode sobrescrever, diagnostique uma instalação parcial e interprete os códigos de saída.
 4. [Origem das skills](provenance.md): confira as origens, as licenças e os avisos que precisam ser preservados ao compartilhar skills instaladas.
 
