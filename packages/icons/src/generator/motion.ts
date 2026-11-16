@@ -43,11 +43,11 @@ export const ICON_MOTIONS: Record<
 
 /**
  * Selector suffix matching an `ic-on-hover` icon at rest: neither it nor its
- * parent is hovered, its parent has no visible focus, and no `ic-trigger`
+ * parent is hovered or has visible focus, and no `ic-trigger`
  * ancestor is hovered or has visible focus. See docs/internal/motion.md.
  * @param prefix - Class prefix.
  * @internal
  */
 export function motionRestSelector(prefix: string): string {
-  return `:not(:hover):not(:hover > *):not(:focus-visible > *):not(.${prefix}-trigger:hover *):not(.${prefix}-trigger:focus-visible *)`;
+  return `:not(:hover):not(:focus-visible):not(:hover > *):not(:focus-visible > *):not(.${prefix}-trigger:hover *):not(.${prefix}-trigger:focus-visible *)`;
 }

@@ -189,13 +189,21 @@ export function createIconsTailwindPlugin(availableFamilies: readonly IconFamily
         registry.registerFamily(family);
       }
 
+      // At the top level rather than inside each utility: a `@keyframes` nested
+      // in a style rule is invalid CSS, and Lightning CSS, which Tailwind's
+      // production builds run, drops the whole rule, `animation` and all.
+      addBase(
+        Object.fromEntries(
+          Object.entries(ICON_MOTIONS).map(([name, motion]) => [`@keyframes ${prefix}-anim-${name}`, motion.keyframes]),
+        ),
+      );
+
       addUtilities({
         ...Object.fromEntries(
           Object.entries(ICON_MOTIONS).map(([name, motion]) => [
             `.${prefix}-anim-${name}`,
             {
               animation: `${prefix}-anim-${name} var(--${prefix}-anim-duration, ${motion.duration}) ${motion.easing} var(--${prefix}-anim-iterations, infinite)`,
-              [`@keyframes ${prefix}-anim-${name}`]: motion.keyframes,
               "@media (prefers-reduced-motion: reduce)": { animation: "none !important" },
             },
           ]),

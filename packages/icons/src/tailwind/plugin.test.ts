@@ -1,3 +1,4 @@
+import postcss from "postcss";
 import { compile } from "tailwindcss";
 import { describe, expect, it } from "vitest";
 
@@ -44,7 +45,12 @@ function runPlugin(families: IconFamilyData[], options?: TailwindIconsOptions) {
   let resolve: ((value: string, extra?: { modifier?: string | null }) => UtilityResult) | undefined;
 
   created(options).handler({
-    addBase: (rules: Record<string, Record<string, string>>) => base.push(rules),
+    // The motion keyframes are base rules too, registered whatever is used; only notices are recorded.
+    addBase: (rules: Record<string, Record<string, string>>) => {
+      if (!Object.keys(rules).every((selector) => selector.startsWith("@keyframes "))) {
+        base.push(rules);
+      }
+    },
     addUtilities: () => undefined,
     matchUtilities: (
       utilities: Record<string, (value: string, extra?: { modifier?: string | null }) => UtilityResult>,
@@ -265,7 +271,7 @@ describe("Tailwind motion utilities", () => {
     const compiler = await compileMotion(prefix);
     const css = compiler.build([`${prefix}-on-hover`]);
     expect(css).toContain(`.${prefix}-on-hover`);
-    expect(css).toContain(":not(:focus-visible > *)");
+    expect(css).toContain(":not(:hover):not(:focus-visible):not(:hover > *):not(:focus-visible > *)");
     expect(css).toContain(`:not(.${prefix}-trigger:hover *)`);
     expect(css).toContain(`animation-iteration-count: var(--${prefix}-anim-iterations, 1)`);
     expect(css).toContain(`var(--${prefix}-static-mask, var(--${prefix}-mask))`);
@@ -291,6 +297,31 @@ describe("Tailwind motion utilities", () => {
       expect(css).toContain("animation: none !important;");
     },
   );
+
+  // A minifier such as Lightning CSS, which Tailwind's production builds run,
+  // drops a style rule holding `@keyframes`, taking its `animation` with it.
+  it.each(["ic", "ux"])("puts every %s keyframes rule outside style rules", async (prefix) => {
+    const compiler = await compileMotion(prefix);
+    const root = postcss.parse(compiler.build([`hover:${prefix}-anim-spin`, `${prefix}-anim-pulse`]));
+    const keyframes: string[] = [];
+    const nested: string[] = [];
+
+    root.walkAtRules("keyframes", (rule) => {
+      keyframes.push(rule.params);
+      for (
+        let parent = rule.parent as postcss.Node | undefined;
+        parent;
+        parent = parent.parent as postcss.Node | undefined
+      ) {
+        if (parent.type === "rule") {
+          nested.push(rule.params);
+        }
+      }
+    });
+
+    expect(keyframes).toEqual(expect.arrayContaining([`${prefix}-anim-spin`, `${prefix}-anim-pulse`]));
+    expect(nested).toEqual([]);
+  });
 
   it("registers the hover trigger and motion with a custom prefix and repeat count", async () => {
     const compiler = await compileMotion("ux");
