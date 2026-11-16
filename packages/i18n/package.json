@@ -3,6 +3,19 @@
   "version": "0.3.0",
   "private": false,
   "description": "Runtime-neutral translations with optional browser and locale-path integrations.",
+  "keywords": [
+    "i18n",
+    "icu",
+    "internationalization",
+    "l10n",
+    "locale",
+    "localization",
+    "localized-routes",
+    "messageformat",
+    "pluralization",
+    "translation",
+    "typescript"
+  ],
   "homepage": "https://codenhub.dev/packages/i18n/",
   "license": "Apache-2.0",
   "repository": {
