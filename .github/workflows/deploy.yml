@@ -24,6 +24,9 @@ permissions:
 jobs:
   deploy:
     name: Deploy
+    # A hand-run from another branch would still build `main`, which the hooks are
+    # bound to, so it is refused rather than left to look like a branch deploy.
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -49,6 +52,10 @@ jobs:
         run: |
           if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
             sites="www docs demo"
+          elif [ -z "$BEFORE" ]; then
+            # A bare `--changed` would compare with `main`, which here is the pushed commit itself.
+            echo "::error::The push names no commit it started from; run this workflow by hand to rebuild every site."
+            exit 1
           else
             sites="$(pnpm --silent hub deploy:affected --changed="$BEFORE" | tr '\n' ' ')"
           fi
