@@ -1,4 +1,4 @@
-import { mkdir, mkdtemp, readFile, rm, stat, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, stat, symlink, writeFile } from "node:fs/promises";
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import path from "node:path";
@@ -165,6 +165,20 @@ describe("build", () => {
   });
 
   it("does not read its previous output when --content matches it", async () => {
+    expect(await build("build", "-c", "**/*.{html,css}", "-o", "public/icons.css")).toBe(0);
+    await writeFile(path.join(project, "src", "index.html"), '<i class="ic-lucide-star"></i>\n');
+    stderr = [];
+
+    expect(await build("build", "-c", "**/*.{html,css}", "-o", "public/icons.css")).toBe(0);
+    expect(stderr).toEqual([]);
+    expect(await readOutput("public/icons.css")).not.toContain(".ic-lucide-heart");
+  });
+
+  it("does not read its previous output through a linked folder", async () => {
+    await mkdir(path.join(project, "assets"));
+    // A junction needs no privilege on Windows; elsewhere the type is ignored and a folder link is made.
+    await symlink(path.join(project, "assets"), path.join(project, "public"), "junction");
+
     expect(await build("build", "-c", "**/*.{html,css}", "-o", "public/icons.css")).toBe(0);
     await writeFile(path.join(project, "src", "index.html"), '<i class="ic-lucide-star"></i>\n');
     stderr = [];

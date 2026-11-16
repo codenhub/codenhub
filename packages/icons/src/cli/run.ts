@@ -1,4 +1,4 @@
-import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, realpathSync } from "node:fs";
 import * as fs from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -257,10 +257,23 @@ function readContent(entries: readonly string[], cwd: string, output: string): G
     throw error instanceof UnmatchedEntryError ? new Error(`--content ${error.message}`) : error;
   }
 
+  const previous = canonicalPath(output);
+
   return readFiles(
-    files.filter((file) => file !== output),
+    files.filter((file) => canonicalPath(file) !== previous),
     { failOnUnreadable: true },
   );
+}
+
+/* Links resolved, so the output is recognized however a glob reaches it, as
+   through a linked folder. A path that cannot be resolved, such as an output
+   not written yet, is compared as given. */
+function canonicalPath(file: string): string {
+  try {
+    return realpathSync.native(file);
+  } catch {
+    return file;
+  }
 }
 
 /* Only the families a found class can name are loaded, with the default
