@@ -396,8 +396,11 @@ function toJsxAttributeNames(svg: string): string {
   );
 }
 
-/** A braced expression, as in JSX or Svelte, holding braces one level deep, such as `{() => { go(); }}`. */
-const BRACED = String.raw`\{(?:[^{}]|\{[^{}]*\})*\}`;
+// A braced expression, as in JSX or Svelte, holding braces up to two levels
+// deep, such as `{() => { if (x) { go(); } }}`. A regular expression cannot
+// count, so deeper nesting leaves the tag unmatched; three levels covers an
+// attribute handler with a block inside it.
+const BRACED = String.raw`\{(?:[^{}]|\{(?:[^{}]|\{[^{}]*\})*\})*\}`;
 
 /**
  * An attribute value, matched whole so a `>` inside it, as in `title="a > b"`

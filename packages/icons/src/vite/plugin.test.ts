@@ -714,6 +714,12 @@ describe("viteIcons in svg mode", () => {
       'export const A = () => <svg onClick={() => { go(); }} className="ic-user"',
     ],
     [
+      "a block nested two levels deep in a JSX attribute",
+      "app.tsx",
+      'export const A = () => <i className="ic-user" onClick={() => { if (x) { go(); } }} />;',
+      'export const A = () => <svg onClick={() => { if (x) { go(); } }} className="ic-user"',
+    ],
+    [
       "a quoted HTML attribute",
       "index.html",
       '<i class="ic-user" title="a > b"></i>',
