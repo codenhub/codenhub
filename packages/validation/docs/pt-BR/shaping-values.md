@@ -1,7 +1,7 @@
 ---
 title: Moldando valores
 description: Encadeie validadores, converta valores, escreva-os de volta, marque e congele valores, descreva-os, troque uma falha por um fallback e reaproveite a estrutura de um objeto.
-source: a9270051cdf74f15ac6b3830d522ea35bc6d99e0
+source: df61dba3615740cc76b1ee005c48dc1690c374b8
 order: 8
 ---
 
@@ -140,7 +140,7 @@ type Settings = Infer<typeof settings>; // { readonly theme: string; readonly ta
 - Ele congela o próprio valor, e não o que está dentro dele, como faz `Object.freeze` e como diz o tipo. Envolva também um validador interno onde o valor dele não puder mudar, como `tags` acima.
 - Um valor que é a própria entrada nunca é congelado, já que pertence a quem chamou. `instanceOf`, `guard` e `unknown` produzem o que receberam, então `readonly` muda só o tipo deles. `object`, `objectLike`, `array`, `tuple`, `record`, `set` e `map` produzem um valor novo, que é congelado.
 - Um `Map` ou um `Set` é tipado como `ReadonlyMap` ou `ReadonlySet`, e só o tipo o protege: congelar um deles não impede `set` nem `add`, que é o que o JavaScript entende por congelado. Um typed array não pode ser congelado, e fica sem congelar, assim como um `DataView`. O tipo cobre propriedades e não métodos, então um `Date` mantém seus setters.
-- Um valor só conta como de quem chamou quando é a própria entrada. Quando um `transform` retorna um valor de dentro da entrada, como `(value) => value.tags`, esse valor é congelado. Faça uma cópia ali quando quem chamou precisar mantê-lo alterável. O mesmo vale para um objeto que ele retorne dos seus próprios dados: `readonly(transform(string(), (key) => cache[key]))` congela a entrada em `cache`, então retorne uma cópia ali também.
+- Um valor só conta como de quem chamou quando é a própria entrada. Quando um `transform` retorna um valor de dentro da entrada, como `(value) => value.tags`, esse valor é congelado. Faça uma cópia ali quando quem chamou precisar mantê-lo alterável. O mesmo vale para um objeto que ele retorne dos seus próprios dados: `readonly(transform(string(), (key) => cache[key]))` congela a entrada em `cache`, então retorne uma cópia ali também. Com um valor padrão é igual: `readonly(optional(settings, () => DEFAULTS))` congela `DEFAULTS`, então retorne uma cópia na função.
 - `pick`, `omit`, `required` e `partial` leem um `object`, então mude a estrutura primeiro e envolva depois: `readonly(pick(user, ["name"]))`.
 
 ## `meta`
