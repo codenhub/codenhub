@@ -62,7 +62,7 @@ Two optional entry points cover what differs by environment:
 ## Requirements
 
 - An ESM-aware bundler or runtime.
-- Node.js 24 or newer, or a current Chromium, Firefox, or WebKit browser or Web Worker.
+- Node.js 26 or newer, or a current Chromium, Firefox, or WebKit browser or Web Worker.
 - No runtime dependencies.
 
 In a Web Worker, the root entry point and `@codenhub/i18n/routing` work as anywhere else. `@codenhub/i18n/browser` works only with `syncDocument: false` and no `root`, since a worker has no page; with the defaults it throws a `TypeError` before starting the manager. See [In a Web Worker](docs/browser.md#in-a-web-worker).
@@ -75,7 +75,7 @@ In a Web Worker, the root entry point and `@codenhub/i18n/routing` work as anywh
 
 ## License
 
-Licensed under Apache-2.0.
+Licensed under [Apache-2.0](LICENSE).
 
 <!-- Source: docs/index.md -->
 
@@ -119,7 +119,7 @@ Nested keys are joined with dots, so this dictionary has the keys `home.title` a
 pnpm add @codenhub/i18n
 ```
 
-The package is an ES module and needs Node.js 24 or newer, or a current browser. It has no runtime dependencies.
+The package is an ES module and needs Node.js 26 or newer, or a current browser. It has no runtime dependencies.
 
 ### 2. Write two dictionaries
 
@@ -1078,7 +1078,7 @@ function pickLocale<TLocale extends string>(i18n: I18n<TLocale>, request: Reques
 
 A visitor whose languages all fail to match, including one who refuses your default with `en;q=0`, still gets the default locale, since the page has to be in some language. This helper does not implement the rest of `Accept-Language`, such as `*`; use your server framework's parser if you need it, and pass its result to `matchLocale()`.
 
-`matchLocale()` takes a list rather than the header because parsing the header, and limiting its size, belongs to your server. Keep the limit: `matchLocale()` tries preferences in order until one matches, so a request whose 16 KB header lists thousands of languages you don't support would otherwise hold your server's event loop for tens of milliseconds, about 60 ms on Node 24. It matches the same way the browser binding does, so a visitor gets the same language from the server as from the browser: `pt-BR` gets your `pt`, and `zh-TW` gets your `zh-Hant`. Malformed tags are skipped, and `undefined` means nothing matched. [Turn outside input into a locale](docs/index.md#turn-outside-input-into-a-locale) has the full matching order, including which of two regional locales wins, and `resolveLocale()` for a locale from a cookie or a query string.
+`matchLocale()` takes a list rather than the header because parsing the header, and limiting its size, belongs to your server. Keep the limit: `matchLocale()` tries preferences in order until one matches, so a request whose 16 KB header lists thousands of languages you don't support would otherwise hold your server's event loop for tens of milliseconds. It matches the same way the browser binding does, so a visitor gets the same language from the server as from the browser: `pt-BR` gets your `pt`, and `zh-TW` gets your `zh-Hant`. Malformed tags are skipped, and `undefined` means nothing matched. [Turn outside input into a locale](docs/index.md#turn-outside-input-into-a-locale) has the full matching order, including which of two regional locales wins, and `resolveLocale()` for a locale from a cookie or a query string.
 
 When the URL carries the language, as on [a localized site](docs/localized-urls.md), read it from the URL instead and use `Accept-Language` only to choose where to redirect a visitor who arrives at `/`. A static site has no server to see the header; see [Detect the language on a static site](docs/localized-urls.md#detect-the-language-on-a-static-site).
 
@@ -1731,6 +1731,15 @@ The browser warnings are silenced along with the rest when the manager has `isSi
 ## Still stuck
 
 The [reference](docs/reference/index.md) documents every export, option, and the errors each one throws. If the behavior changed after an upgrade, the [changelog](docs/changelog/index.md) says what changed and how to move to it.
+
+<!-- Source: docs/changelog/0.4.0.md -->
+
+# 0.4.0
+
+## Changed
+
+- **Breaking.** Node.js 26 or newer is required, up from 24. Installing on Node.js 24 or 25 makes npm and pnpm warn, or fail with `engine-strict` on; upgrade Node.js to 26. Browsers and Web Workers are unaffected.
+- The manifest lists npm keywords, and the README links the license.
 
 <!-- Source: docs/changelog/0.3.0.md -->
 
