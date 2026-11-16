@@ -85,6 +85,17 @@ describe("IconRegistry", () => {
     expect(resolved?.name).toBe("test:x");
   });
 
+  it.each(["constructor", "toString", "__proto__", "hasOwnProperty"])(
+    "does not resolve %s, a name every object inherits",
+    (name) => {
+      const registry = new IconRegistry();
+      registry.registerFamily(createFamily());
+
+      expect(registry.resolve(`test:${name}`)).toBeUndefined();
+      expect(registry.has(`test:${name}`)).toBe(false);
+    },
+  );
+
   it("uses per-icon geometry when it differs from the family default", () => {
     const registry = new IconRegistry();
     registry.registerFamily(createFamily());

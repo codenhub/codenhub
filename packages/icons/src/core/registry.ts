@@ -225,8 +225,10 @@ export class IconRegistry {
   }
 
   private resolveInFamily(family: IconFamilyData, requestedName: string): ResolvedIcon | undefined {
-    const iconName = family.aliases?.[requestedName]?.parent ?? requestedName;
-    const icon = family.icons[iconName];
+    const { aliases, icons } = family;
+    const iconName =
+      (aliases && Object.hasOwn(aliases, requestedName) && aliases[requestedName]?.parent) || requestedName;
+    const icon = Object.hasOwn(icons, iconName) ? icons[iconName] : undefined;
     if (!icon) {
       return undefined;
     }
