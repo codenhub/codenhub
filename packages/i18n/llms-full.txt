@@ -1732,6 +1732,15 @@ The browser warnings are silenced along with the rest when the manager has `isSi
 
 The [reference](docs/reference/index.md) documents every export, option, and the errors each one throws. If the behavior changed after an upgrade, the [changelog](docs/changelog/index.md) says what changed and how to move to it.
 
+<!-- Source: docs/changelog/0.4.0.md -->
+
+# 0.4.0
+
+## Changed
+
+- **Breaking.** Node.js 26 or newer is required, up from 24. Installs on Node.js 24 or 25 fail the engines check; upgrade Node.js to 26. Browsers and Web Workers are unaffected.
+- The manifest lists npm keywords, and the README links the license.
+
 <!-- Source: docs/changelog/0.3.0.md -->
 
 # 0.3.0
