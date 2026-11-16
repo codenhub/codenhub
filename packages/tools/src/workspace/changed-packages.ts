@@ -48,7 +48,9 @@ export function parsePorcelainPaths(output: string): string[] {
  */
 export async function findChangedPaths(root: string, baseRef: string = DEFAULT_BASE_REF): Promise<string[]> {
   const [committed, workingTree] = await Promise.all([
-    readGitOutput(root, ["diff", "--name-only", "-z", "--merge-base", baseRef, "HEAD"]),
+    // `--no-renames` lists a rename as a deletion and an addition: the package a file
+    // left changed as much as the one it moved to.
+    readGitOutput(root, ["diff", "--name-only", "-z", "--no-renames", "--merge-base", baseRef, "HEAD"]),
     readGitOutput(root, ["status", "--porcelain", "-z", "--untracked-files=all"]),
   ]);
 
