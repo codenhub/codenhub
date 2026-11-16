@@ -10,6 +10,7 @@ import {
   groupByDest,
   INCLUDE_DRAFTS_FLAG,
   loadSkills,
+  planInstall,
   PromptExitError,
   EXIT_CODE_CANCELLED,
   clearScreen,
@@ -18,7 +19,7 @@ import {
   type State,
 } from "./cli-helpers.js";
 import { createWizardSteps, getActiveSteps } from "./cli-steps.js";
-import { copyRecursiveSync, type Skill } from "./index.js";
+import { copyRecursiveSync, linkDirectory, type Skill } from "./index.js";
 import { ANSI, BACK, CancelledError } from "./prompts.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -56,6 +57,7 @@ async function main() {
         `  --all-skills      Install all available skills\n` +
         `  --harnesses=<list> Comma-separated list of harnesses to install to\n` +
         `  --all-harnesses   Install to all valid harnesses for the selected scope\n` +
+        `  --link            Copy skills once to .agents/skills and link the other harness folders to it\n` +
         `  --include-drafts  Also offer the draft skills (repository checkout only)\n` +
         `  --help, -h        Display this help message`,
     );
@@ -71,6 +73,7 @@ async function main() {
     selectedSkills: skills.map((s) => s.id),
     selectedHarnesses: [],
     shouldCleanupFirst: false,
+    shouldLink: false,
   };
 
   if (isInteractive) {
@@ -134,6 +137,8 @@ async function main() {
         scopeOption = "both";
       } else if (arg === "--cleanup") {
         shouldCleanup = true;
+      } else if (arg === "--link") {
+        state.shouldLink = true;
       } else if (arg === "--all-harnesses") {
         shouldInstallAllHarnesses = true;
       } else if (arg === "--all-skills") {
@@ -177,7 +182,7 @@ async function main() {
       } else {
         console.error(`${ANSI.RED}Unknown argument: ${arg}${ANSI.RESET}`);
         console.error(
-          `Usage: codenhub-skills [--local|--global|--both] [--cleanup] [--harnesses=...] [--all-harnesses] [--skills=...] [--all-skills] [--include-drafts]`,
+          `Usage: codenhub-skills [--local|--global|--both] [--cleanup] [--link] [--harnesses=...] [--all-harnesses] [--skills=...] [--all-skills] [--include-drafts]`,
         );
         process.exit(1);
       }
@@ -246,15 +251,20 @@ async function main() {
   const skillsToInstall = state.shouldInstallAll ? skills.map((s) => s.id) : state.selectedSkills;
 
   // Harnesses that read the same directory share one copy (and one cleanup).
-  const destinationGroups = groupByDest(
-    state.selectedHarnesses
-      .map((label) => findHarnessByLabel(label, state.scope))
-      .filter((harness) => harness !== undefined),
+  const plan = planInstall(
+    groupByDest(
+      state.selectedHarnesses
+        .map((label) => findHarnessByLabel(label, state.scope))
+        .filter((harness) => harness !== undefined),
+    ),
+    state.shouldLink,
   );
 
   if (state.shouldCleanupFirst) {
     console.log(`${ANSI.YELLOW}Cleaning up target directories...${ANSI.RESET}`);
-    for (const group of destinationGroups) {
+    // Only the selected folders: the shared copy of a linked install is cleaned
+    // when a label that reads it is selected, so links from earlier runs keep working.
+    for (const group of [...plan.copies.filter((copy) => copy.labels.length > 0), ...plan.links]) {
       if (fs.existsSync(group.dest)) {
         try {
           fs.rmSync(group.dest, { recursive: true, force: true });
@@ -272,8 +282,9 @@ async function main() {
 
   let hasFailures = false;
 
-  for (const group of destinationGroups) {
-    console.log(`${ANSI.BLUE}→ Installing to ${group.labels.join(", ")}...${ANSI.RESET}`);
+  for (const group of plan.copies) {
+    const names = group.labels.length > 0 ? group.labels.join(", ") : `${group.dest} (shared copy)`;
+    console.log(`${ANSI.BLUE}→ Installing to ${names}...${ANSI.RESET}`);
 
     for (const skillId of skillsToInstall) {
       const skill = skills.find((s) => s.id === skillId);
@@ -293,6 +304,26 @@ async function main() {
         hasFailures = true;
         const msg = err instanceof Error ? err.message : String(err);
         console.error(`  ${ANSI.RED}✘${ANSI.RESET} Failed copying ${skill.name}: ${msg}`);
+      }
+    }
+  }
+
+  for (const group of plan.links) {
+    console.log(`${ANSI.BLUE}→ Linking ${group.labels.join(", ")} to ${group.target}...${ANSI.RESET}`);
+
+    for (const skillId of skillsToInstall) {
+      const skill = skills.find((s) => s.id === skillId);
+      if (!skill) {
+        continue;
+      }
+
+      try {
+        linkDirectory({ target: path.join(group.target, skillId), link: path.join(group.dest, skillId) });
+        console.log(`  ${ANSI.GREEN}✔${ANSI.RESET} Linked: ${skill.name}`);
+      } catch (err: unknown) {
+        hasFailures = true;
+        const msg = err instanceof Error ? err.message : String(err);
+        console.error(`  ${ANSI.RED}✘${ANSI.RESET} Failed linking ${skill.name}: ${msg}`);
       }
     }
   }

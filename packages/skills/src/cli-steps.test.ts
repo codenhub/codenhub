@@ -31,6 +31,7 @@ describe("cli-steps", () => {
       selectedSkills: [],
       selectedHarnesses: [],
       shouldCleanupFirst: false,
+      shouldLink: false,
     };
     const steps = createWizardSteps(state, dummySkills);
     expect(steps).toBeInstanceOf(Array);
@@ -45,6 +46,7 @@ describe("cli-steps", () => {
       selectedSkills: [],
       selectedHarnesses: [],
       shouldCleanupFirst: false,
+      shouldLink: false,
     };
     const steps = createWizardSteps(state, dummySkills);
 
@@ -71,6 +73,7 @@ describe("cli-steps", () => {
       selectedSkills: ["skill-a"],
       selectedHarnesses: ["Antigravity Workspace"],
       shouldCleanupFirst: false,
+      shouldLink: false,
     };
     const steps = createWizardSteps(state, dummySkills);
 
@@ -94,6 +97,38 @@ describe("cli-steps", () => {
 
     const cleanupStep = steps.find((s) => s.id === "cleanup")!;
     expect(cleanupStep.summarize()).toBe("No");
+
+    const linkStep = steps.find((s) => s.id === "link")!;
+    expect(linkStep.summarize()).toBe("Copy into each folder");
+    state.shouldLink = true;
+    expect(linkStep.summarize()).toBe("Link to one shared copy");
+  });
+
+  it("should offer the install mode only when a selected harness reads another folder", () => {
+    const state: State = {
+      scope: "local",
+      shouldInstallAll: true,
+      selectedSkills: [],
+      selectedHarnesses: ["Codex Workspace", "Agent Skills Workspace"],
+      shouldCleanupFirst: false,
+      shouldLink: false,
+    };
+    const steps = createWizardSteps(state, dummySkills);
+    expect(getActiveSteps(state, steps).map((s) => s.id)).toEqual([
+      "scope",
+      "shouldInstallAll",
+      "harnesses",
+      "cleanup",
+    ]);
+
+    state.selectedHarnesses.push("Claude Workspace");
+    expect(getActiveSteps(state, steps).map((s) => s.id)).toEqual([
+      "scope",
+      "shouldInstallAll",
+      "harnesses",
+      "link",
+      "cleanup",
+    ]);
   });
 
   describe("run steps", () => {
@@ -104,6 +139,7 @@ describe("cli-steps", () => {
         selectedSkills: [],
         selectedHarnesses: [],
         shouldCleanupFirst: false,
+        shouldLink: false,
       };
       const steps = createWizardSteps(state, dummySkills);
       const scopeStep = steps.find((s) => s.id === "scope")!;
@@ -125,6 +161,7 @@ describe("cli-steps", () => {
         selectedSkills: [],
         selectedHarnesses: [],
         shouldCleanupFirst: false,
+        shouldLink: false,
       };
       const steps = createWizardSteps(state, dummySkills);
       const allSkillsStep = steps.find((s) => s.id === "shouldInstallAll")!;
@@ -146,6 +183,7 @@ describe("cli-steps", () => {
         selectedSkills: [],
         selectedHarnesses: [],
         shouldCleanupFirst: false,
+        shouldLink: false,
       };
       const steps = createWizardSteps(state, dummySkills);
       const selectSkillsStep = steps.find((s) => s.id === "selectSkills")!;
@@ -170,6 +208,7 @@ describe("cli-steps", () => {
         selectedSkills: [],
         selectedHarnesses: [],
         shouldCleanupFirst: false,
+        shouldLink: false,
       };
       const steps = createWizardSteps(state, dummySkills);
       const harnessesStep = steps.find((s) => s.id === "harnesses")!;
@@ -187,6 +226,32 @@ describe("cli-steps", () => {
       await expect(harnessesStep.run(true)).rejects.toThrow("No harnesses selected");
     });
 
+    it("should run install mode step successfully", async () => {
+      const state: State = {
+        scope: "local",
+        shouldInstallAll: true,
+        selectedSkills: [],
+        selectedHarnesses: ["Claude Workspace"],
+        shouldCleanupFirst: false,
+        shouldLink: false,
+      };
+      const steps = createWizardSteps(state, dummySkills);
+      const linkStep = steps.find((s) => s.id === "link")!;
+
+      vi.mocked(promptSelect).mockResolvedValue("link");
+      expect(await linkStep.run(true)).toBe(true);
+      expect(state.shouldLink).toBe(true);
+      expect(vi.mocked(promptSelect).mock.lastCall?.[1].initialCursor).toBe(0);
+
+      vi.mocked(promptSelect).mockResolvedValue("copy");
+      expect(await linkStep.run(true)).toBe(true);
+      expect(state.shouldLink).toBe(false);
+      expect(vi.mocked(promptSelect).mock.lastCall?.[1].initialCursor).toBe(1);
+
+      vi.mocked(promptSelect).mockResolvedValue(BACK);
+      expect(await linkStep.run(true)).toBe(BACK);
+    });
+
     it("should run cleanup step successfully", async () => {
       const state: State = {
         scope: "local",
@@ -194,6 +259,7 @@ describe("cli-steps", () => {
         selectedSkills: [],
         selectedHarnesses: [],
         shouldCleanupFirst: false,
+        shouldLink: false,
       };
       const steps = createWizardSteps(state, dummySkills);
       const cleanupStep = steps.find((s) => s.id === "cleanup")!;

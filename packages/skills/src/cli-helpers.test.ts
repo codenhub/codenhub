@@ -14,6 +14,8 @@ import {
   groupByDest,
   HARNESS_DESTINATIONS,
   loadSkills,
+  planInstall,
+  SHARED_SKILLS_DESTINATIONS,
   PromptExitError,
   EXIT_CODE_CANCELLED,
   EXCLUDE_FOLDER_AGENTS,
@@ -114,6 +116,57 @@ describe("cli-helpers", () => {
     const groups = groupByDest([standard, codex]);
     expect(groups).toHaveLength(1);
     expect(groups[0].includeAgentsFolder).toBe(true);
+  });
+
+  it("should copy into every selected destination when not linking", () => {
+    const groups = groupByDest([
+      findHarnessByLabel("Claude Workspace", "local")!,
+      findHarnessByLabel("Cursor Workspace", "local")!,
+    ]);
+    expect(planInstall(groups, false)).toEqual({ copies: groups, links: [] });
+  });
+
+  it("should copy once to the shared folder and link the other destinations to it", () => {
+    const claude = findHarnessByLabel("Claude Workspace", "local")!;
+    const cursor = findHarnessByLabel("Cursor Workspace", "local")!;
+
+    const plan = planInstall(groupByDest([claude, cursor]), true);
+
+    expect(plan.copies).toEqual([
+      { dest: SHARED_SKILLS_DESTINATIONS.workspace, scope: "workspace", labels: [], includeAgentsFolder: false },
+    ]);
+    expect(plan.links).toEqual([
+      { dest: claude.dest, labels: ["Claude Workspace"], target: SHARED_SKILLS_DESTINATIONS.workspace },
+      { dest: cursor.dest, labels: ["Cursor Workspace"], target: SHARED_SKILLS_DESTINATIONS.workspace },
+    ]);
+  });
+
+  it("should keep a selected shared folder's labels and agents metadata when linking", () => {
+    const codex = findHarnessByLabel("Codex Workspace", "local")!;
+    const claude = findHarnessByLabel("Claude Workspace", "local")!;
+
+    const plan = planInstall(groupByDest([claude, codex]), true);
+
+    expect(plan.copies).toEqual([
+      { dest: codex.dest, scope: "workspace", labels: ["Codex Workspace"], includeAgentsFolder: true },
+    ]);
+    expect(plan.links.map((link) => link.dest)).toEqual([claude.dest]);
+  });
+
+  it("should link each scope to its own shared folder", () => {
+    const plan = planInstall(
+      groupByDest([findHarnessByLabel("Claude Workspace", "both")!, findHarnessByLabel("Claude Global", "both")!]),
+      true,
+    );
+
+    expect(plan.copies.map((copy) => copy.dest)).toEqual([
+      SHARED_SKILLS_DESTINATIONS.workspace,
+      SHARED_SKILLS_DESTINATIONS.global,
+    ]);
+    expect(plan.links.map((link) => link.target)).toEqual([
+      SHARED_SKILLS_DESTINATIONS.workspace,
+      SHARED_SKILLS_DESTINATIONS.global,
+    ]);
   });
 
   it("should instantiate PromptExitError correctly", () => {

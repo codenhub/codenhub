@@ -239,3 +239,56 @@ function copyDirectoryInternal(options: {
     }
   }
 }
+
+/**
+ * Options for {@link linkDirectory}.
+ */
+export interface LinkDirectoryOptions {
+  /** Directory the link points to. */
+  target: string;
+  /** Path where the link is created. */
+  link: string;
+}
+
+/**
+ * Links `link` to the directory `target`, creating missing parent directories.
+ *
+ * The link stores a relative target, except on Windows, where it is a
+ * junction: junctions need neither administrator rights nor Developer Mode,
+ * and always store an absolute path. An existing link is replaced, which
+ * leaves its old target untouched. Anything else at `link` is kept.
+ *
+ * @param options - Link configuration options.
+ * @throws {Error} When `target` is not a directory, when something other than
+ *   a link exists at `link`, or when a filesystem operation fails.
+ */
+export function linkDirectory(options: LinkDirectoryOptions): void {
+  const { target, link } = options;
+  if (!fs.statSync(target, { throwIfNoEntry: false })?.isDirectory()) {
+    throw new Error(`Link target "${target}" does not exist or is not a directory`);
+  }
+
+  const existing = fs.lstatSync(link, { throwIfNoEntry: false });
+  if (existing) {
+    if (!existing.isSymbolicLink()) {
+      throw new Error(`"${link}" already exists and is not a link; move it away or use --cleanup, then install again`);
+    }
+    if (isSameDirectory(link, target)) {
+      return;
+    }
+    fs.rmSync(link);
+  }
+
+  fs.mkdirSync(path.dirname(link), { recursive: true });
+  // The type is read only on Windows; elsewhere this is a relative symlink.
+  fs.symlinkSync(path.relative(path.dirname(link), target), link, "junction");
+}
+
+function isSameDirectory(link: string, target: string): boolean {
+  try {
+    return fs.realpathSync(link) === fs.realpathSync(target);
+  } catch {
+    // A dangling link resolves to nothing, so it is replaced.
+    return false;
+  }
+}

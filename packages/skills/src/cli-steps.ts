@@ -1,7 +1,14 @@
 import * as fs from "fs";
 import * as path from "path";
 
-import { getHarnessesForScope, PromptExitError, type State, type Step } from "./cli-helpers.js";
+import {
+  findHarnessByLabel,
+  getHarnessesForScope,
+  PromptExitError,
+  SHARED_SKILLS_DESTINATIONS,
+  type State,
+  type Step,
+} from "./cli-helpers.js";
 import { type Skill } from "./index.js";
 import { BACK, promptCheckbox, promptConfirm, promptSelect, type Choice, type SelectChoice } from "./prompts.js";
 
@@ -114,6 +121,27 @@ export function createWizardSteps(state: State, skills: Skill[]): Step[] {
       },
     },
     {
+      id: "link",
+      title: "Install Mode",
+      summarize: () => (state.shouldLink ? "Link to one shared copy" : "Copy into each folder"),
+      run: async (canGoBack) => {
+        const modeChoices: SelectChoice[] = [
+          { name: "Copy into each folder", value: "copy" },
+          { name: "Link each folder to one shared copy in .agents/skills", value: "link" },
+        ];
+        const selected = await promptSelect("How should the selected harness folders get the skills?", {
+          choices: modeChoices,
+          initialCursor: state.shouldLink ? 1 : 0,
+          canGoBack,
+        });
+        if (selected === BACK) {
+          return BACK;
+        }
+        state.shouldLink = selected === "link";
+        return true;
+      },
+    },
+    {
       id: "cleanup",
       title: "Clean Up Option",
       summarize: () => (state.shouldCleanupFirst ? "Yes" : "No"),
@@ -145,6 +173,18 @@ export function getActiveSteps(state: State, steps: Step[]): Step[] {
   if (!state.shouldInstallAll) {
     active.push(getStepById("selectSkills"));
   }
-  active.push(getStepById("harnesses"), getStepById("cleanup"));
+  active.push(getStepById("harnesses"));
+  if (hasLinkableHarness(state)) {
+    active.push(getStepById("link"));
+  }
+  active.push(getStepById("cleanup"));
   return active;
+}
+
+/** Linking changes nothing when every selected harness reads the shared folder. */
+function hasLinkableHarness(state: State): boolean {
+  return state.selectedHarnesses.some((label) => {
+    const harness = findHarnessByLabel(label, state.scope);
+    return harness !== undefined && harness.dest !== SHARED_SKILLS_DESTINATIONS[harness.scope];
+  });
 }
