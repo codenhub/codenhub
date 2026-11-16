@@ -1,3 +1,5 @@
+import { createKeySet, createVerifier, generateSecretKey, sign } from "@codenhub/jwt";
+
 import type {
   AccessTokenRecord,
   ClientRecord,
@@ -551,6 +553,52 @@ const cases: StoreConformanceCase[] = [
       sameRecord(await store.findClient(client.clientId), client),
       "findClient must return a registered client with the values it was registered with",
     );
+  }),
+
+  defineCase("findClient returns every optional field a client was registered with", async (createStore) => {
+    const client: ClientRecord = {
+      clientId: `conformance-${newKey()}`,
+      redirectUris: ["https://app.example/callback"],
+      scopes: ["openid", "email"],
+      auth: { method: "client_secret_post", secretHashes: [newKey(), newKey()] },
+      grantTypes: ["authorization_code", "client_credentials"],
+      postLogoutRedirectUris: ["https://app.example/signed-out"],
+      ttl: { code: 120, accessToken: 300, idToken: 900, refreshToken: 86400 },
+      idTokenSigningAlg: "ES256",
+      requirePkce: false,
+      backchannelLogout: { uri: "https://app.example/backchannel-logout", sessionRequired: true },
+      idTokenClaims: true,
+      resources: ["https://api.example/"],
+    };
+    const store = await createStore({ clients: [structuredClone(client)] });
+    assert(
+      sameRecord(await store.findClient(client.clientId), client),
+      "findClient must return every optional field a client was registered with, such as ttl, idTokenSigningAlg, requirePkce, backchannelLogout and idTokenClaims",
+    );
+  }),
+
+  defineCase("findClient returns a client_secret_jwt client whose key still verifies", async (createStore) => {
+    // Extractable, so an adapter that persists the key can export it as a JWK, as `docs/store.md` describes.
+    const key = await generateSecretKey({ alg: "HS256", extractable: true });
+    const clientId = `conformance-${newKey()}`;
+    const expected = { clientId, redirectUris: ["https://app.example/callback"], scopes: ["openid"] };
+    const client: ClientRecord = { ...expected, auth: { method: "client_secret_jwt", key } };
+    const store = await createStore({ clients: [client] });
+    const found = await store.findClient(clientId);
+    const { auth, ...rest } = found ?? client;
+    assert(
+      found !== undefined && auth.method === "client_secret_jwt" && sameRecord(rest, expected),
+      "findClient must return a client_secret_jwt client with the values it was registered with",
+    );
+    const now = nowSeconds();
+    const assertion = await sign({ payload: { iss: clientId, sub: clientId, iat: now, exp: now + 60 }, key });
+    let verified = false;
+    try {
+      verified = (await createVerifier({ keys: createKeySet([auth.key]), issuer: clientId })(assertion)).ok;
+    } catch {
+      // A key that is not a `SecretKey`, such as one rebuilt as a plain object, is refused with a TypeError.
+    }
+    assert(verified, "findClient must return a client_secret_jwt key that verifies what the registered key signed");
   }),
 
   defineCase(
