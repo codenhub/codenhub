@@ -1,10 +1,10 @@
-import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, realpathSync } from "node:fs";
 import * as fs from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { parseArgs } from "node:util";
 
-import { readFiles, UnmatchedEntryError } from "@codenhub/scan";
+import { findFiles, readFiles, UnmatchedEntryError } from "@codenhub/scan";
 
 import { renderAttributionBanner, renderSuppressedAttributionWarning } from "../catalog/attribution.js";
 import { parseIconClass, resolveIconClassName } from "../core/class-names.js";
@@ -199,9 +199,10 @@ async function build(options: BuildOptions, io: CliIo): Promise<string> {
     throw new Error(`unknown default prefix "${options.defaultPrefix}"; choose from ${selected.join(", ")}.`);
   }
 
+  const output = path.resolve(io.cwd, options.output);
   const found = new Set<string>();
 
-  for (const text of readContent(options.contentGlobs, io.cwd)) {
+  for (const text of readContent(options.contentGlobs, io.cwd, output)) {
     for (const className of scanIconClasses(text, { prefix: options.prefix })) {
       found.add(className);
     }
@@ -223,7 +224,6 @@ async function build(options: BuildOptions, io: CliIo): Promise<string> {
   }
 
   const css = renderStylesheet(found, registry, options, io);
-  const output = path.resolve(io.cwd, options.output);
 
   /* Written beside the output and renamed over it, so a write that fails
      partway, on a full disk say, leaves the previous stylesheet whole rather
@@ -245,12 +245,34 @@ async function build(options: BuildOptions, io: CliIo): Promise<string> {
 
 /* Every entry has to name a file and every file has to be readable, so a build
    from missing content fails rather than writing a stylesheet without some
-   icons. */
-function readContent(entries: readonly string[], cwd: string): Generator<string> {
+   icons. The previous output is never read, even when an entry matches it:
+   its rules would keep every icon it ever held, and its words would be
+   reported as classes that resolve to no icon. */
+function readContent(entries: readonly string[], cwd: string, output: string): Generator<string> {
+  let files: string[];
+
   try {
-    return readFiles(entries, { cwd, failOnUnmatched: true, failOnUnreadable: true });
+    files = findFiles(entries, { cwd, failOnUnmatched: true });
   } catch (error) {
     throw error instanceof UnmatchedEntryError ? new Error(`--content ${error.message}`) : error;
+  }
+
+  const previous = canonicalPath(output);
+
+  return readFiles(
+    files.filter((file) => canonicalPath(file) !== previous),
+    { failOnUnreadable: true },
+  );
+}
+
+/* Links resolved, so the output is recognized however a glob reaches it, as
+   through a linked folder. A path that cannot be resolved, such as an output
+   not written yet, is compared as given. */
+function canonicalPath(file: string): string {
+  try {
+    return realpathSync.native(file);
+  } catch {
+    return file;
   }
 }
 
