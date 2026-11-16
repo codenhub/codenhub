@@ -104,6 +104,20 @@ describe("createIdTokenValidator", () => {
       });
     });
 
+    it("accepts a token longer than 8192 characters, such as one that carries many groups", async () => {
+      const groups = Array.from({ length: 300 }, (_, index) => `engineering-platform-team-${index}`);
+      const token = await tokenWith({ groups });
+      expect(token.length).toBeGreaterThan(8192);
+      const result = await validator()(token, expected);
+      expect(result).toMatchObject({ ok: true, value: { groups } });
+    });
+
+    it("refuses a token longer than 65536 characters as too large", async () => {
+      const token = await tokenWith({ padding: "x".repeat(65536) });
+      const result = await validator()(token, expected);
+      expect(jwtCodesOf(result)).toEqual(["too_large"]);
+    });
+
     it("accepts a token that carries no optional claims", async () => {
       const token = await tokenWith({}, { remove: ["nonce", "auth_time"] });
 

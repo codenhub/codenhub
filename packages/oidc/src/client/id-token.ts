@@ -9,6 +9,7 @@ import {
 } from "@codenhub/jwt";
 
 import { timingSafeEqual } from "../shared/encoding";
+import { MAX_ID_TOKEN_LENGTH } from "../shared/limits";
 import { fail, ok } from "../shared/result";
 import { computeTokenHash } from "../shared/token-hash";
 import type { IdTokenClaims, OidcIssue, OidcResult } from "../shared/types";
@@ -243,6 +244,10 @@ export function createIdTokenValidator(
     audience: options.clientId,
     clockTolerance: options.clockTolerance,
     requiredClaims: ["sub", "exp", "iat"],
+    // A token with many claims, such as a user's groups, outgrows the verifier's 8192-character default, and refusing
+    // it after the code is spent leaves the user unable to sign in. The token response that carries it is already
+    // capped at `MAX_RESPONSE_BYTES`, which is also the verifier's ceiling.
+    maxLength: MAX_ID_TOKEN_LENGTH,
     now: options.now,
   });
   return async (idToken, expected) => {
