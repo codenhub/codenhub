@@ -73,4 +73,4 @@ In a Web Worker, the root entry point and `@codenhub/i18n/routing` work as anywh
 
 ## License
 
-Licensed under Apache-2.0.
+Licensed under [Apache-2.0](LICENSE).
