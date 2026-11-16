@@ -431,7 +431,7 @@
         "scanFiles": {
           "files": {
             "dist/scan/src/index.js": {
-              "bytes": 886,
+              "bytes": 887,
               "declarations": {
                 "findFiles": 213,
                 "resolveEntry": 196,
@@ -439,7 +439,7 @@
                 "readEach": 109,
                 "isFileOrUnknown": 90,
                 "readFiles": 60,
-                "GLOB_CHARACTERS": 14,
+                "GLOB_CHARACTERS": 15,
                 "(top level)": 10
               }
             },
@@ -458,8 +458,8 @@
               "bytes": 71
             }
           },
-          "gzip": 751,
-          "minified": 1368
+          "gzip": 752,
+          "minified": 1369
         },
         "scanIconClasses": {
           "files": {
@@ -573,7 +573,7 @@
           }
         },
         "dist/scan/src/index.js": {
-          "bytes": 888,
+          "bytes": 889,
           "declarations": {
             "findFiles": 213,
             "resolveEntry": 197,
@@ -581,7 +581,7 @@
             "readEach": 109,
             "isFileOrUnknown": 91,
             "readFiles": 60,
-            "GLOB_CHARACTERS": 14,
+            "GLOB_CHARACTERS": 15,
             "(top level)": 10
           }
         },
@@ -636,8 +636,8 @@
         }
       },
       "gzip": 5057,
-      "minified": 13597,
-      "sha256": "4b330bdaadee2f2be2771b592f638afcdf71df7e8dc646000799dece8d8c21e9"
+      "minified": 13598,
+      "sha256": "9d63552e8d2c73f6818eb239a9ae7a5b479217540fc9b7e19273fd6562469cf8"
     },
     "./tailwind": {
       "exports": {
@@ -1160,7 +1160,7 @@
               "bytes": 1007
             },
             "dist/scan/src/index.js": {
-              "bytes": 886,
+              "bytes": 887,
               "declarations": {
                 "findFiles": 213,
                 "resolveEntry": 196,
@@ -1168,7 +1168,7 @@
                 "readEach": 109,
                 "isFileOrUnknown": 90,
                 "readFiles": 60,
-                "GLOB_CHARACTERS": 14,
+                "GLOB_CHARACTERS": 15,
                 "(top level)": 10
               }
             },
@@ -1217,8 +1217,8 @@
               }
             }
           },
-          "gzip": 4707,
-          "minified": 12116
+          "gzip": 4708,
+          "minified": 12117
         },
         "postcssIcons": {
           "files": {
@@ -1281,7 +1281,7 @@
               "bytes": 1012
             },
             "dist/scan/src/index.js": {
-              "bytes": 886,
+              "bytes": 887,
               "declarations": {
                 "findFiles": 213,
                 "resolveEntry": 196,
@@ -1289,7 +1289,7 @@
                 "readEach": 109,
                 "isFileOrUnknown": 90,
                 "readFiles": 60,
-                "GLOB_CHARACTERS": 14,
+                "GLOB_CHARACTERS": 15,
                 "(top level)": 10
               }
             },
@@ -1338,8 +1338,8 @@
               }
             }
           },
-          "gzip": 4709,
-          "minified": 12121
+          "gzip": 4710,
+          "minified": 12122
         },
         "postcssIconsPlugin": {
           "files": {
@@ -1402,7 +1402,7 @@
               "bytes": 1019
             },
             "dist/scan/src/index.js": {
-              "bytes": 886,
+              "bytes": 887,
               "declarations": {
                 "findFiles": 213,
                 "resolveEntry": 196,
@@ -1410,7 +1410,7 @@
                 "readEach": 109,
                 "isFileOrUnknown": 90,
                 "readFiles": 60,
-                "GLOB_CHARACTERS": 14,
+                "GLOB_CHARACTERS": 15,
                 "(top level)": 10
               }
             },
@@ -1460,8 +1460,8 @@
               }
             }
           },
-          "gzip": 4713,
-          "minified": 12139
+          "gzip": 4714,
+          "minified": 12140
         }
       },
       "files": {
@@ -1524,7 +1524,7 @@
           }
         },
         "dist/scan/src/index.js": {
-          "bytes": 886,
+          "bytes": 887,
           "declarations": {
             "findFiles": 213,
             "resolveEntry": 196,
@@ -1532,7 +1532,7 @@
             "readEach": 109,
             "isFileOrUnknown": 90,
             "readFiles": 60,
-            "GLOB_CHARACTERS": 14,
+            "GLOB_CHARACTERS": 15,
             "(top level)": 10
           }
         },
@@ -1582,9 +1582,9 @@
           }
         }
       },
-      "gzip": 4723,
-      "minified": 12170,
-      "sha256": "529017ccd19700c0343448ab381ad3e19e9ebfb5fa8e5bc9fead79a95787333f"
+      "gzip": 4724,
+      "minified": 12171,
+      "sha256": "d47a58930803818781ecc4a808ca91c16093ed53055fdb09be3594bce06eb5d0"
     },
     "./vite": {
       "exports": {
@@ -1689,7 +1689,7 @@
               }
             },
             "dist/scan/src/index.js": {
-              "bytes": 899,
+              "bytes": 900,
               "declarations": {
                 "findFiles": 216,
                 "resolveEntry": 199,
@@ -1697,7 +1697,7 @@
                 "readEach": 110,
                 "isFileOrUnknown": 91,
                 "readFiles": 63,
-                "GLOB_CHARACTERS": 15,
+                "GLOB_CHARACTERS": 16,
                 "(top level)": 10
               }
             },
@@ -1738,8 +1738,8 @@
               }
             }
           },
-          "gzip": 7909,
-          "minified": 20312
+          "gzip": 7910,
+          "minified": 20313
         },
         "viteIcons": {
           "files": {
@@ -1842,7 +1842,7 @@
               }
             },
             "dist/scan/src/index.js": {
-              "bytes": 899,
+              "bytes": 900,
               "declarations": {
                 "findFiles": 216,
                 "resolveEntry": 199,
@@ -1850,7 +1850,7 @@
                 "readEach": 110,
                 "isFileOrUnknown": 91,
                 "readFiles": 63,
-                "GLOB_CHARACTERS": 15,
+                "GLOB_CHARACTERS": 16,
                 "(top level)": 10
               }
             },
@@ -1892,7 +1892,7 @@
             }
           },
           "gzip": 7912,
-          "minified": 20314
+          "minified": 20315
         },
         "viteIconsPlugin": {
           "files": {
@@ -1996,7 +1996,7 @@
               }
             },
             "dist/scan/src/index.js": {
-              "bytes": 899,
+              "bytes": 900,
               "declarations": {
                 "findFiles": 216,
                 "resolveEntry": 199,
@@ -2004,7 +2004,7 @@
                 "readEach": 110,
                 "isFileOrUnknown": 91,
                 "readFiles": 63,
-                "GLOB_CHARACTERS": 15,
+                "GLOB_CHARACTERS": 16,
                 "(top level)": 10
               }
             },
@@ -2045,8 +2045,8 @@
               }
             }
           },
-          "gzip": 7923,
-          "minified": 20332
+          "gzip": 7924,
+          "minified": 20333
         }
       },
       "files": {
@@ -2150,7 +2150,7 @@
           }
         },
         "dist/scan/src/index.js": {
-          "bytes": 899,
+          "bytes": 900,
           "declarations": {
             "findFiles": 216,
             "resolveEntry": 199,
@@ -2158,7 +2158,7 @@
             "readEach": 110,
             "isFileOrUnknown": 91,
             "readFiles": 63,
-            "GLOB_CHARACTERS": 15,
+            "GLOB_CHARACTERS": 16,
             "(top level)": 10
           }
         },
@@ -2199,9 +2199,9 @@
           }
         }
       },
-      "gzip": 7929,
-      "minified": 20360,
-      "sha256": "9af696a90de76b271d3c0854f5dc73ba5ded7a411165dbe718ffcae0c5a15d77"
+      "gzip": 7930,
+      "minified": 20361,
+      "sha256": "c52dd0ab87f992a03a0a0ec78f11ab872d82a4533727f064d95e3f8a1aa34c43"
     }
   }
 }

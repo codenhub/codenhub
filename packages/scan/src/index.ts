@@ -28,7 +28,8 @@ export class UnmatchedEntryError extends Error {
   }
 }
 
-const GLOB_CHARACTERS = /[*?[\]{}]/;
+// `(` starts every extglob, such as `@(a|b)`, the one glob form with none of the other characters.
+const GLOB_CHARACTERS = /[*?[\]{}(]/;
 
 /**
  * Resolves entries into the files they name, as absolute paths, each listed once.

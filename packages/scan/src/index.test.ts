@@ -36,6 +36,13 @@ describe("findFiles", () => {
     ]);
   });
 
+  it("expands an extglob entry, which holds no other glob character", () => {
+    expect(relative(findFiles(["app/views/@(a.html|notes.md)"], { cwd: root }))).toEqual([
+      "app/views/a.html",
+      "app/views/notes.md",
+    ]);
+  });
+
   it("returns absolute paths", () => {
     for (const file of findFiles(["app/views/*.html"], { cwd: root })) {
       expect(path.isAbsolute(file)).toBe(true);
