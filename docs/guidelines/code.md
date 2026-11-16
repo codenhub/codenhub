@@ -1,6 +1,6 @@
 ---
 status: IMPLEMENTED
-last_updated: 2026-11-14
+last_updated: 2026-11-16
 scope: Coding conventions for every package and app in the workspace.
 ---
 
@@ -26,9 +26,24 @@ Name by domain intent. Avoid names that say only the type or the mechanism, such
 - Keep each package's public surface small and intentional.
 - Keep dependency direction clear: shared code does not import app-specific code.
 - Do not add compatibility layers unless there is a real consumer, persisted data, shipped behavior, or explicit requirement that needs one.
-- Do not add a dependency unless simple in-house code is clearly worse.
 
 Workspace packages live in `packages/` and the sites in `apps/`. An app may import packages; a package never imports an app. A public package installs its public siblings from their npm releases through the catalog, never from the working tree, so it is built and tested against what its consumers install; [`docs/specs/packages-lifecycle.md`](../specs/packages-lifecycle.md), "Ranges", owns that rule. `packages/tools` is private, and every package builds and checks with it.
+
+### Few dependencies
+
+The project keeps what its packages depend on as close to zero as it can, and prefers owning a part to depending on a third party for it. Do not add a dependency unless simple in-house code is clearly worse.
+
+The principle is about what reaches a package's consumers: its `dependencies`, any peer it requires, and any third-party tool that decides what the package ships, such as the compiler its stylesheets are built with. Tools that check or package the code without shaping what a consumer receives, such as TypeScript, the test runner, the bundler, and the formatter, are held only to the sentence above.
+
+- **A tool consumers may already run is an adapter, never a requirement.** A package supports Tailwind CSS, Vite, PostCSS, or a framework through an entry point of its own that declares the tool as an optional peer, and every package works without it. Tailwind CSS is in this repository for compatibility with the projects that run it, not as a source of utilities.
+- **A tool used to start faster is a step.** `@codenhub/styles` was first written as Tailwind CSS source, because that was quicker to build on. Such a dependency stays until the package owns the part it covers, and the package's roadmap records that plan, as [the build styles owns](../../packages/styles/docs/internal/roadmap.md#a-build-the-package-owns-with-tailwind-as-an-adapter) does.
+- **Code two packages share starts private.** It is a private workspace package inlined into each package that uses it, as [Inlined dependencies](../specs/packages-lifecycle.md#inlined-dependencies) describes, and becomes a public package only when a need names why.
+
+Each dependency costs a consumer in three ways that `@codenhub/styles` measured when its build command dropped Tailwind CSS ([Build command](../../packages/styles/docs/internal/cli.md#the-command-tree-shakes-it-does-not-compile)): an install they would not otherwise make, an output that varies with a version this repository can neither test nor pin, and behavior the package has to work around rather than decide. The cost accepted in exchange is code the project writes and maintains itself.
+
+The principle does not remove a dependency by itself. An existing one stays until a change weighs it and finds owning the part worth that code. A decision that keeps a package's scope narrow, such as the `@codenhub/styles` rejection of a command that writes Tailwind-style utilities, may be reopened under this principle; the reopening names what the package would then own.
+
+Rejected: a third-party tool as the foundation a package is built on, as Tailwind CSS was for `@codenhub/styles` through 0.9.0. It was the fastest start, and it made every later feature a design around another project's compiler, and every major release of that project a port of the package.
 
 ### Fix it upstream
 

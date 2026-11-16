@@ -36,13 +36,13 @@ Icons reach a project through CSS. The shortest path with no build step is the b
 
 An icon is an `<i>` carrying an icon class (or `.ic` on any element, in the CSS-based methods). Size and color follow custom properties: set `--ic-size` and `--ic-color` on the icon or any ancestor, or use the `ic-xs`–`ic-xl` size classes. Icons follow the text color, except brand icons, which arrive in their brand color; see [Color](concepts.md#color).
 
-Four delivery methods understand the same classes — plain CSS, Tailwind CSS v4, a Vite plugin, and a PostCSS plugin. The plugins scan your markup and emit only the rules you used; the plain-CSS family stylesheets are complete and large by construction. See [Delivery methods](delivery/index.md) to choose one, and [Frameworks](frameworks/index.md) for framework-specific setup.
+Five delivery methods understand the same classes — plain CSS, Tailwind CSS v4, a Vite plugin, a PostCSS plugin, and the `chi build` command. The plugins and the command scan your markup and emit only the rules you used; the plain-CSS family stylesheets are complete and large by construction. See [Delivery methods](delivery/index.md) to choose one, and [Frameworks](frameworks/index.md) for framework-specific setup.
 
 ## Requirements
 
 | Requirement  | Details                                                                         |
 | ------------ | ------------------------------------------------------------------------------- |
-| Node.js      | 26 or newer, for the build-time plugins and helpers.                            |
+| Node.js      | 26 or newer, for the build-time plugins, helpers, and `chi build`.              |
 | CSS imports  | Consumer tooling must resolve package CSS imports.                              |
 | Browsers     | Must support CSS `mask-image`, which every method uses except inline SVG mode.  |
 | Tailwind CSS | Version 4 or newer, and only for the `/tw` and `/tailwind` entry points.        |
@@ -53,7 +53,7 @@ Four delivery methods understand the same classes — plain CSS, Tailwind CSS v4
 Read these in order the first time. Each page builds on the last and points to the next one:
 
 1. [Concepts](concepts.md): families, finding icon names, name resolution, color, stroke width, size, motion, and accessibility — the shared model every delivery method builds on.
-2. [Delivery methods](delivery/index.md): the four ways icons reach your CSS and how to pick the one that fits your build.
+2. [Delivery methods](delivery/index.md): the five ways icons reach your CSS and how to pick the one that fits your build.
 3. [Frameworks](frameworks/index.md): setup and framework-specific quirks for Astro, Next.js, and SvelteKit.
 4. [JavaScript API](javascript-api.md): the registry, renderers, runtime playback, and the third-party set adapter, for when you step outside a standard CSS build.
 5. [Licensing](licensing.md): attribution modes, obligation levels, trademark notes, and what each build owes.

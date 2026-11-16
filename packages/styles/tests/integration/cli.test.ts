@@ -84,6 +84,15 @@ describe("build", () => {
     expect(css).toMatch(ruleFor("data-table"));
   });
 
+  // Read as a glob, `[id]` is a set matching the one letter `i` or `d`, so the file would match nothing.
+  it("reads a --content path whose name holds a bracket as that file", async () => {
+    await mkdir(path.join(project, "app", "[id]"));
+    await writeFile(path.join(project, "app", "[id]", "page.tsx"), '<table className="data-table" />\n');
+
+    expect(await build("build", "-c", "app/[id]/page.tsx", "-o", "app.css")).toBe(0);
+    expect(await readOutput()).toMatch(ruleFor("data-table"));
+  });
+
   it("keeps a variant of a class the templates use", async () => {
     await writeFile(
       path.join(project, "app", "views", "list.html.erb"),

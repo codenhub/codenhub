@@ -1,4 +1,4 @@
-import fs from "node:fs";
+import { readFiles } from "@codenhub/scan";
 
 /**
  * Options for scanning content for icon class names.
@@ -47,34 +47,6 @@ export function scanIconClasses(content: string, options?: ScanIconClassesOption
   return new Set<string>(matches);
 }
 
-const GLOB_CHARACTERS = /[*?[\]{}]/;
-
-/**
- * Resolves one entry into the files it names.
- *
- * An entry is tried as a literal path first, so a real file whose name contains
- * a bracket is read rather than treated as a pattern. Only when no such file
- * exists is the entry expanded as a glob.
- *
- * @param entry - Literal file path or glob pattern.
- * @returns The files the entry names, which may be none.
- */
-function resolveEntry(entry: string): string[] {
-  try {
-    if (fs.existsSync(entry)) {
-      return fs.statSync(entry).isFile() ? [entry] : [];
-    }
-    if (!GLOB_CHARACTERS.test(entry)) {
-      return [];
-    }
-    return fs.globSync(entry);
-  } catch {
-    // An unreadable path or a pattern the platform rejects contributes nothing,
-    // the same as a path that names no file.
-    return [];
-  }
-}
-
 /**
  * Scans file paths and glob patterns on disk for icon class usages matching the
  * given prefix.
@@ -93,16 +65,10 @@ export function scanFiles(
   options?: ScanIconClassesOptions,
   targetSet: Set<string> = new Set<string>(),
 ): Set<string> {
-  for (const entry of filePaths) {
-    for (const filePath of resolveEntry(entry)) {
-      try {
-        const content = fs.readFileSync(filePath, "utf-8");
-        for (const cls of scanIconClasses(content, options)) {
-          targetSet.add(cls);
-        }
-      } catch {
-        // Ignore unreadable files gracefully
-      }
+  // An entry that names no file, or a file that cannot be read, contributes nothing.
+  for (const content of readFiles(filePaths)) {
+    for (const cls of scanIconClasses(content, options)) {
+      targetSet.add(cls);
     }
   }
 

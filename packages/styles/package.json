@@ -242,6 +242,7 @@
     "typecheck": "tsc -b"
   },
   "devDependencies": {
+    "@codenhub/scan": "workspace:*",
     "@codenhub/tools": "workspace:*",
     "@playwright/test": "catalog:",
     "@tailwindcss/cli": "catalog:",
@@ -267,6 +268,9 @@
     "node": ">=26"
   },
   "codenhub": {
+    "bundled": [
+      "@codenhub/scan"
+    ],
     "label": "StyleKit",
     "status": "active",
     "docs": {

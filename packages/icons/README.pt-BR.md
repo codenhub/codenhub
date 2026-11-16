@@ -1,4 +1,4 @@
-<!-- source: 5fdd9b9619621fca076e48c84fb7fa48ca47f071 -->
+<!-- source: 223c6a8151e70d94ef3c003a214c1aed4b2feb07 -->
 
 # @codenhub/icons
 
@@ -14,7 +14,7 @@ pnpm add @codenhub/icons
 
 ## Uso
 
-Os ícones chegam ao projeto via CSS. Escolha o entrypoint que combina com o seu pipeline; todos os três entendem as mesmas classes.
+Os ícones chegam ao projeto via CSS. Escolha o entrypoint que combina com o seu pipeline; todos eles entendem as mesmas classes.
 
 ### Tailwind CSS v4
 
@@ -51,6 +51,14 @@ export default defineConfig({
 
 ```css
 @import "@codenhub/icons";
+```
+
+### Sem ferramenta de build
+
+O comando `chi build` lê os seus arquivos e escreve uma folha de estilos com as regras base e só os ícones que eles usam, para um projeto que não roda Tailwind CSS, Vite nem PostCSS. Rode-o a partir de um script do `package.json`, ou como `npx @codenhub/icons build`, como em [Comando de build](docs/pt-BR/delivery/cli.md).
+
+```sh
+npx @codenhub/icons build --content "app/views/**/*.erb" --output public/icons.css
 ```
 
 ### O markup
@@ -93,7 +101,7 @@ Tamanho e cor seguem custom properties: defina `--ic-size` e `--ic-color` no íc
 
 | Requisito      | Detalhes                                                                                                                                                             |
 | -------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Node.js        | 26 ou mais recente, para os plugins e helpers em tempo de build.                                                                                                     |
+| Node.js        | 26 ou mais recente, para os plugins, helpers e `chi build` em tempo de build.                                                                                        |
 | Imports de CSS | O ferramental do projeto precisa resolver imports de CSS de pacotes.                                                                                                 |
 | Navegadores    | Precisa suportar CSS `mask-image`, usado por todos os métodos exceto o modo SVG inline. Máscaras animadas foram testadas no Chromium; Firefox e Safari não testados. |
 | Tailwind CSS   | Versão 4 ou mais recente, e apenas para os entrypoints `/tw` e `/tailwind`.                                                                                          |

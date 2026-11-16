@@ -14,7 +14,7 @@ pnpm add @codenhub/icons
 
 ## Usage
 
-Icons reach a project through CSS. Pick the entry point that matches your pipeline; all three understand the same classes.
+Icons reach a project through CSS. Pick the entry point that matches your pipeline; all of them understand the same classes.
 
 ### Tailwind CSS v4
 
@@ -51,6 +51,14 @@ export default defineConfig({
 
 ```css
 @import "@codenhub/icons";
+```
+
+### No build tool
+
+The `chi build` command reads your files and writes a stylesheet holding the base rules and only the icons they use, for a project that runs neither Tailwind CSS, Vite, nor PostCSS. Run it from a `package.json` script, or as `npx @codenhub/icons build`, as in [Build command](docs/delivery/cli.md).
+
+```sh
+npx @codenhub/icons build --content "app/views/**/*.erb" --output public/icons.css
 ```
 
 ### The markup
@@ -93,7 +101,7 @@ Size and color follow custom properties: set `--ic-size` and `--ic-color` on the
 
 | Requirement  | Details                                                                                                                                                      |
 | ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Node.js      | 26 or newer, for the build-time plugins and helpers.                                                                                                         |
+| Node.js      | 26 or newer, for the build-time plugins, helpers, and `chi build`.                                                                                           |
 | CSS imports  | Consumer tooling must resolve package CSS imports.                                                                                                           |
 | Browsers     | Must support CSS `mask-image`, which every method uses except inline SVG mode. Animated masks have been tested in Chromium; Firefox and Safari are untested. |
 | Tailwind CSS | Version 4 or newer, and only for the `/tw` and `/tailwind` entry points.                                                                                     |
@@ -154,13 +162,13 @@ Icons reach a project through CSS. The shortest path with no build step is the b
 
 An icon is an `<i>` carrying an icon class (or `.ic` on any element, in the CSS-based methods). Size and color follow custom properties: set `--ic-size` and `--ic-color` on the icon or any ancestor, or use the `ic-xs`–`ic-xl` size classes. Icons follow the text color, except brand icons, which arrive in their brand color; see [Color](docs/concepts.md#color).
 
-Four delivery methods understand the same classes — plain CSS, Tailwind CSS v4, a Vite plugin, and a PostCSS plugin. The plugins scan your markup and emit only the rules you used; the plain-CSS family stylesheets are complete and large by construction. See [Delivery methods](docs/delivery/index.md) to choose one, and [Frameworks](docs/frameworks/index.md) for framework-specific setup.
+Five delivery methods understand the same classes — plain CSS, Tailwind CSS v4, a Vite plugin, a PostCSS plugin, and the `chi build` command. The plugins and the command scan your markup and emit only the rules you used; the plain-CSS family stylesheets are complete and large by construction. See [Delivery methods](docs/delivery/index.md) to choose one, and [Frameworks](docs/frameworks/index.md) for framework-specific setup.
 
 ## Requirements
 
 | Requirement  | Details                                                                         |
 | ------------ | ------------------------------------------------------------------------------- |
-| Node.js      | 26 or newer, for the build-time plugins and helpers.                            |
+| Node.js      | 26 or newer, for the build-time plugins, helpers, and `chi build`.              |
 | CSS imports  | Consumer tooling must resolve package CSS imports.                              |
 | Browsers     | Must support CSS `mask-image`, which every method uses except inline SVG mode.  |
 | Tailwind CSS | Version 4 or newer, and only for the `/tw` and `/tailwind` entry points.        |
@@ -171,7 +179,7 @@ Four delivery methods understand the same classes — plain CSS, Tailwind CSS v4
 Read these in order the first time. Each page builds on the last and points to the next one:
 
 1. [Concepts](docs/concepts.md): families, finding icon names, name resolution, color, stroke width, size, motion, and accessibility — the shared model every delivery method builds on.
-2. [Delivery methods](docs/delivery/index.md): the four ways icons reach your CSS and how to pick the one that fits your build.
+2. [Delivery methods](docs/delivery/index.md): the five ways icons reach your CSS and how to pick the one that fits your build.
 3. [Frameworks](docs/frameworks/index.md): setup and framework-specific quirks for Astro, Next.js, and SvelteKit.
 4. [JavaScript API](docs/javascript-api.md): the registry, renderers, runtime playback, and the third-party set adapter, for when you step outside a standard CSS build.
 5. [Licensing](docs/licensing.md): attribution modes, obligation levels, trademark notes, and what each build owes.
@@ -504,7 +512,7 @@ Read [Delivery methods](docs/delivery/index.md) to pick how icon classes become 
 
 # How icons reach your CSS
 
-Every delivery method understands the exact same icon classes, and every CSS method produces the same mask rules for them. The one exception is the Vite plugin's [inline SVG mode](docs/delivery/vite.md#inline-svg-mode), which rewrites `<i>` tags into `<svg>` elements and emits no mask rules at all. Among the CSS methods, what changes between them is where those per-icon rules come from: either a prebuilt stylesheet containing every icon in a family, or a plugin that scans your markup and generates only the icons you wrote. This page compares all four options so you can pick the one that fits your build.
+Every delivery method understands the exact same icon classes, and every CSS method produces the same mask rules for them. The one exception is the Vite plugin's [inline SVG mode](docs/delivery/vite.md#inline-svg-mode), which rewrites `<i>` tags into `<svg>` elements and emits no mask rules at all. Among the CSS methods, what changes between them is where those per-icon rules come from: either a prebuilt stylesheet containing every icon in a family, or a plugin or command that scans your markup and generates only the icons you wrote. This page compares all five options so you can pick the one that fits your build.
 
 ## Entry points
 
@@ -516,6 +524,7 @@ Every delivery method understands the exact same icon classes, and every CSS met
 | `@codenhub/icons/<family>` | Plain CSS, no build step    | One complete family, every icon written out.                                                                                                       |
 | `@codenhub/icons/vite`     | Vite                        | Scans your markup and generates only the rules it needs.                                                                                           |
 | `@codenhub/icons/postcss`  | PostCSS                     | The same, for a PostCSS pipeline.                                                                                                                  |
+| `chi build`                | A build with none of these  | A command that reads your files and writes a stylesheet of the base rules and only the icons they use.                                             |
 
 `@import "@codenhub/icons"` means one thing everywhere: the base rules that icon classes build on. No plugin rewrites it, and no plugin strips it out. The only moving part is which mechanism generates the per-icon mask rules beside it.
 
@@ -526,11 +535,12 @@ Every delivery method understands the exact same icon classes, and every CSS met
 | Already uses Tailwind CSS v4                               | [Tailwind](docs/delivery/tailwind.md)      |
 | Builds with Vite (or a Vite-based framework)               | [Vite plugin](docs/delivery/vite.md)       |
 | Runs a PostCSS pipeline but not Vite (Next.js, others)     | [PostCSS plugin](docs/delivery/postcss.md) |
+| Runs none of these, but can run a command before deploying | [Build command](docs/delivery/cli.md)      |
 | Has no build step, or you want the simplest possible setup | [Plain CSS](docs/delivery/plain-css.md)    |
 
-The plugin methods keep CSS output small with no manual pruning: a project using three icons ships about 10 KB of CSS. Plain-CSS family stylesheets take the opposite trade — zero build setup in exchange for shipping every icon in the family, where Lucide alone is about 1.3 MB and all 17 families together reach about 39 MB.
+The plugins and the build command keep CSS output small with no manual pruning: a project using three icons ships about 10 KB of CSS. Plain-CSS family stylesheets take the opposite trade — zero build setup in exchange for shipping every icon in the family, where Lucide alone is about 1.3 MB and all 17 families together reach about 39 MB.
 
-One capability also depends on a build step: the `ic-lucide-heart/1.5` stroke-width modifier needs Tailwind, Vite, or PostCSS, because plain CSS stylesheets render stroke families at their authored width. See [Concepts](docs/concepts.md) for the shared model.
+One capability also depends on a build step: the `ic-lucide-heart/1.5` stroke-width modifier needs Tailwind, Vite, PostCSS, or the build command, because plain CSS stylesheets render stroke families at their authored width. See [Concepts](docs/concepts.md) for the shared model.
 
 ## Next
 
@@ -773,6 +783,90 @@ The plugin runs once for every stylesheet it processes, so attach it to a single
 - [Delivery methods](docs/delivery/index.md) — how the methods compare.
 - [Frameworks](docs/frameworks/index.md) — next on the reading path, covering Astro, Next.js, and SvelteKit.
 - [Frameworks: Next.js](docs/frameworks/nextjs.md) — the main reason to reach for PostCSS over Vite.
+
+<!-- Source: docs/delivery/cli.md -->
+
+# Build command
+
+For a project with no Tailwind CSS, Vite, or PostCSS, such as a Rails, Laravel, or Django app, or a static site, the `build` command reads your files, finds the icon classes they use, and writes a stylesheet holding only those icons. A page with three icons gets about 10 KB of CSS rather than a complete family stylesheet, where Lucide alone is about 1.3 MB, and the `ic-lucide-heart/1.5` stroke-width modifier works as it does with the plugins.
+
+Run it from a `package.json` script, where the package's command is named `chi`:
+
+```json
+{
+  "scripts": {
+    "build:icons": "chi build --content \"app/views/**/*.erb\" --output public/icons.css"
+  }
+}
+```
+
+Or run it once without a script:
+
+```sh
+npx @codenhub/icons build --content "app/views/**/*.erb" --output public/icons.css
+```
+
+Use `npx @codenhub/icons`, not `npx chi`: an unrelated package named `chi` exists on npm, and `npx chi` runs it wherever this package is not installed.
+
+Then link the stylesheet it wrote. It already holds the base `.ic` rules, so nothing else is imported:
+
+```html
+<link rel="stylesheet" href="/icons.css" />
+```
+
+Run the command again whenever your files change which icons they use, before each deploy at the least. It writes the same rules the [PostCSS plugin](docs/delivery/postcss.md) appends for the same files and options, so a project can move between the two without its CSS changing.
+
+## Options
+
+| Flag                          | Purpose                                                                                     |
+| ----------------------------- | ------------------------------------------------------------------------------------------- |
+| `-c`, `--content <glob>`      | Files to read for icon classes. Required and repeatable.                                    |
+| `-o`, `--output <file>`       | Stylesheet to write. Required. Parent folders are created.                                  |
+| `--family <prefix>`           | A family to resolve icons from. Repeatable. Defaults to every family except the brand ones. |
+| `--default-prefix <prefix>`   | Family a bare name, such as `ic-heart`, resolves against. Without it, none resolves.        |
+| `--prefix <prefix>`           | Class prefix. Defaults to `ic`.                                                             |
+| `--stroke-width <width>`      | Default for stroke-based families whose classes carry no modifier.                          |
+| `--no-base`                   | Leave out the base `.ic` rules, for a page that loads them from `@codenhub/icons` already.  |
+| `--attribution <auto \| off>` | `auto` writes the license notices as a comment at the top; `off` writes none. See below.    |
+| `--help`, `--version`         | Print the usage or the package version.                                                     |
+
+Each option is the PostCSS plugin's, with the same default, except `--family`. The plugin resolves no family until you pass one, while the command resolves every family except `simple-icons` and `logos`, the brand families, whose marks carry their owners' trademark terms. Name a brand family to use it, along with every other family you use, since naming one replaces the default:
+
+```sh
+npx @codenhub/icons build --content "templates/**/*.html" --output static/icons.css --family lucide --family simple-icons
+```
+
+`--content` reads globs as the PostCSS plugin does: relative to the folder you run the command in, with `**` for any number of folders and `{html,erb}` for either extension. A path that names an existing file is read as that file, even when its name holds a bracket, such as Next.js's `app/[id]/page.tsx`. Quote each glob, with `\"` inside a `package.json` script, so your shell does not expand it first.
+
+Write every icon class out in full in a file the command reads: a class assembled at runtime, such as `` `ic-${name}` ``, is not in the files, so its icon gets no rule and no warning. When the name comes from data, list each class it can take in full in a file under `--content`.
+
+## Attribution
+
+With `--attribution auto`, the default, the stylesheet starts with a preserved comment carrying the license notice of each family it used. A minifier keeps it unless it is set to drop legal comments, as `legalComments: "none"` is, so keep legal comments in your minifier's configuration. With `off`, it carries none, and the command warns when a family it used requires a notice, so you can ship that notice another way. [Licensing](docs/licensing.md) explains what each family requires.
+
+## Failures and warnings
+
+The command stops, writes nothing, and prints one line starting `chi:` when the build would be wrong:
+
+- **`--content "<glob>" matches no file in <folder>`.** Usually a typo, or the command running from another folder than your project root. A build from missing files would write a stylesheet without some icons, and the site would lose them silently.
+- **A file it cannot read**, with Node.js's own message.
+- **`unexpected argument "<file>"`.** Almost always a `--content` glob without quotes, which your shell expanded. Quote the glob.
+- **`unknown family`, `unknown default prefix`**, listing the valid ones, and **an `--attribution` other than `auto` or `off`**, or **a `--stroke-width` that is not a positive number**.
+- **A Node.js older than 26**, naming both versions.
+
+A class that resolves to no icon, such as a misspelled `ic-lucide-hart`, is a warning, not a failure: the command lists every such class once and still writes the stylesheet. A word that only looks like a class, such as `ic-` text in a comment, would otherwise stop a build.
+
+## What it does not do
+
+- **Inline SVG and per-icon modules.** They change your source files or serve modules to a bundler. Use the [Vite plugin](docs/delivery/vite.md).
+- **A custom registry or an adopted icon set.** These take JavaScript values. Use a plugin.
+- **Watch mode, a configuration file, and minification.** Run the command from your own watcher or build script, and minify its output in your own pipeline if you minify CSS.
+
+## See also
+
+- [Delivery methods](docs/delivery/index.md) — how the methods compare.
+- [PostCSS plugin](docs/delivery/postcss.md) — the same rules, from a PostCSS pipeline.
+- [Frameworks](docs/frameworks/index.md) — next on the reading path.
 
 <!-- Source: docs/frameworks/index.md -->
 
@@ -1238,6 +1332,7 @@ Return to the [Overview](docs/index.md) for the full reading path, or look up in
 - `line-md`, a core family of 1,222 animated, stroke-based icons such as `ic-line-md-loading-loop` and `ic-line-md-heart`, from [Line MD](https://github.com/cyberalien/line-md) 3.0.5 under MIT, and its stylesheet `@codenhub/icons/line-md`. Icons named `-loop` animate continuously; the others draw in or morph once. Under `prefers-reduced-motion: reduce`, CSS masks switch to the upstream static artwork, in the family stylesheet, Tailwind, and CSS mode in Vite and PostCSS; inline SVG keeps the animated artwork, since CSS cannot stop it. Tested in Chrome only; Firefox and Safari are untested. See Concepts, Animated families.
 - `svg-spinners`, a core family of 46 loading indicators such as `ic-svg-spinners-90-ring`, from [SVG Spinners](https://github.com/n3r4zzurr0/svg-spinners) under MIT, and its stylesheet `@codenhub/icons/svg-spinners`. They keep animating under reduced motion, because the motion conveys loading.
 - `--ic-static-mask` carries an animated icon's static artwork, next to `--ic-mask`. `IconData.staticBody` and `ResolvedIcon.staticBody` carry the same artwork as markup.
+- `chi build`, a command that reads a project's files and writes a stylesheet holding the base rules and only the icons they use, for a project that runs neither Tailwind CSS, Vite, nor PostCSS. Its options are the PostCSS plugin's, and it writes the same rules, stroke-width modifiers such as `ic-lucide-heart/1.5` included. It resolves every family except the brand ones unless `--family` names others, fails without writing when a `--content` glob matches no file, and warns once on the classes that resolve to no icon. Run it from a `package.json` script, or as `npx @codenhub/icons build`. See Delivery methods, Build command.
 
 ## Changed
 

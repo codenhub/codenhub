@@ -1,9 +1,10 @@
 import { existsSync, readFileSync } from "node:fs";
-// A namespace, because `glob` is missing from Node.js releases older than the one this command supports, and a named import of a missing export fails before the version check below can say so.
 import * as fs from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { parseArgs } from "node:util";
+
+import { readFiles, splitWords, UnmatchedEntryError } from "@codenhub/scan";
 
 import { format, parse, purge, serialize } from "./purge";
 
@@ -156,15 +157,7 @@ async function build(options: BuildOptions, io: CliIo): Promise<string> {
     throw new Error(`unknown aesthetic "${unknown}"; choose from ${validAesthetics.join(", ")}.`);
   }
 
-  const files = new Set((await Promise.all(options.contentGlobs.map((pattern) => findFiles(pattern, io.cwd)))).flat());
-  /* One at a time: a glob can match thousands of files, and opening them all at
-     once can exceed the open-file limit, 256 by default on macOS. */
-  const contents: string[] = [];
-
-  for (const file of files) {
-    // oxlint-disable-next-line no-await-in-loop -- bounded by the open-file limit, as above.
-    contents.push(await fs.readFile(file, "utf8"));
-  }
+  const contents = [...readContent(options.contentGlobs, io.cwd)];
 
   const droppable = new Set(JSON.parse(await readPackageFile(PURGE_CLASSES)) as string[]);
   const found = new Set(contents.flatMap((content) => findClasses(content, droppable)));
@@ -196,21 +189,15 @@ async function build(options: BuildOptions, io: CliIo): Promise<string> {
   return output;
 }
 
-/** Returns the files a `--content` glob matches, as absolute paths, and fails when there are none. */
-async function findFiles(pattern: string, cwd: string): Promise<string[]> {
-  const files: string[] = [];
-
-  for await (const entry of fs.glob(pattern, { cwd, withFileTypes: true })) {
-    if (entry.isFile()) {
-      files.push(path.resolve(entry.parentPath, entry.name));
-    }
+/* Every entry has to name a file and every file has to be readable, so a build
+   from missing content fails rather than writing a stylesheet without its
+   classes. */
+function readContent(entries: readonly string[], cwd: string): Generator<string> {
+  try {
+    return readFiles(entries, { cwd, failOnUnmatched: true, failOnUnreadable: true });
+  } catch (error) {
+    throw error instanceof UnmatchedEntryError ? new Error(`--content ${error.message}`) : error;
   }
-
-  if (files.length === 0) {
-    throw new Error(`--content "${pattern}" matches no file in ${cwd}; check the path, or run from the project root.`);
-  }
-
-  return files;
 }
 
 /* Content is read as text and never run, as Tailwind reads it: every run of
@@ -219,8 +206,7 @@ async function findFiles(pattern: string, cwd: string): Promise<string[]> {
    parts around each colon, so Svelte's `class:primary={isPrimary}` and a Ruby
    `btn: true` are found. */
 function findClasses(content: string, known: ReadonlySet<string>): string[] {
-  return content
-    .split(/[^\w:-]+/)
+  return splitWords(content, String.raw`\w:-`)
     .flatMap((word) => (known.has(word) ? [word] : word.split(":")))
     .filter((word) => known.has(word));
 }

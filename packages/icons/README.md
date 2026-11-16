@@ -12,7 +12,7 @@ pnpm add @codenhub/icons
 
 ## Usage
 
-Icons reach a project through CSS. Pick the entry point that matches your pipeline; all three understand the same classes.
+Icons reach a project through CSS. Pick the entry point that matches your pipeline; all of them understand the same classes.
 
 ### Tailwind CSS v4
 
@@ -49,6 +49,14 @@ export default defineConfig({
 
 ```css
 @import "@codenhub/icons";
+```
+
+### No build tool
+
+The `chi build` command reads your files and writes a stylesheet holding the base rules and only the icons they use, for a project that runs neither Tailwind CSS, Vite, nor PostCSS. Run it from a `package.json` script, or as `npx @codenhub/icons build`, as in [Build command](docs/delivery/cli.md).
+
+```sh
+npx @codenhub/icons build --content "app/views/**/*.erb" --output public/icons.css
 ```
 
 ### The markup
@@ -91,7 +99,7 @@ Size and color follow custom properties: set `--ic-size` and `--ic-color` on the
 
 | Requirement  | Details                                                                                                                                                      |
 | ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Node.js      | 26 or newer, for the build-time plugins and helpers.                                                                                                         |
+| Node.js      | 26 or newer, for the build-time plugins, helpers, and `chi build`.                                                                                           |
 | CSS imports  | Consumer tooling must resolve package CSS imports.                                                                                                           |
 | Browsers     | Must support CSS `mask-image`, which every method uses except inline SVG mode. Animated masks have been tested in Chromium; Firefox and Safari are untested. |
 | Tailwind CSS | Version 4 or newer, and only for the `/tw` and `/tailwind` entry points.                                                                                     |

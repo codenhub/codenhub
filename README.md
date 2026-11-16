@@ -34,6 +34,7 @@ Shared packages, apps, and project standards for and by [coden.agency](https://c
 ### Tooling
 
 - `packages/app-shell`: Shared chrome, theme handling, and SEO helpers for the CodenHub deploy surfaces.
+- `packages/scan`: Finds and reads the content files the build commands of @codenhub/styles and @codenhub/icons scan for class names.
 - `packages/tools`: Workspace-aware repository tooling behind the root pnpm scripts.
 
 ### Plugins
