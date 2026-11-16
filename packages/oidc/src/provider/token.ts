@@ -10,7 +10,13 @@ import { computeTokenHash } from "../shared/token-hash";
 import type { OAuthErrorCode } from "../shared/types";
 import { ownDataValue, releaseClaims } from "./claims";
 import { authenticateClient } from "./client-auth";
-import { areResourcesOfClient, type CheckedClient, isScopeOfClient, lifetimesOf } from "./client-record";
+import {
+  areResourcesOfClient,
+  type CheckedClient,
+  isScopeOfClient,
+  lifetimesOf,
+  resourcesOfClient,
+} from "./client-record";
 import { refuse } from "./diagnostics";
 import { PROTOCOL_SCOPES, type ResolvedOptions, type ResolvedTtl, selectIdTokenKey } from "./options";
 import { jsonResponse, methodNotAllowed, preflightResponse, tokenErrorResponse } from "./responses";
@@ -219,20 +225,6 @@ async function exchangeCode(
   return issueFromCode(options, client, record, resources);
 }
 
-/**
- * The resources of a family that the client's record still lists, in the family's order, or `undefined` when none
- * is left, so the token falls back as one for a grant without resources does. Narrowing to the current record means a
- * resource an admin removed stops being issued on the next refresh and comes back once it is listed again, as scopes
- * do; it only ever drops resources, so it cannot widen what the family covers.
- */
-function resourcesOfClient(
-  client: ClientRecord,
-  resources: readonly string[] | undefined,
-): readonly string[] | undefined {
-  const listed = resources?.filter((resource) => client.resources?.includes(resource) === true);
-  return listed === undefined || listed.length === 0 ? undefined : listed;
-}
-
 /** Whether a token request's resources are all ones the grant covers; a request that names none always is. */
 function isWithinGrant(requested: RequestedResources, granted: readonly string[] | undefined): boolean {
   return requested === undefined || requested.every((resource) => granted?.includes(resource) === true);
@@ -273,7 +265,8 @@ async function whyUnredeemable(
 
 /**
  * Issues the first tokens of a grant from a redeemed code, with a refresh token only under `offline_access`. The
- * access token is for the requested resources, or for every resource of the grant when the request named none.
+ * access token is for the requested resources, or for every resource of the grant the client's record still lists
+ * when the request named none.
  */
 async function issueFromCode(
   options: ResolvedOptions,
@@ -292,7 +285,18 @@ async function issueFromCode(
     ...optionalSessionId(record),
     ...optionalResources(record),
   };
-  const accessToken = await issueAccessToken(options, ttl, grant, record.scopes, resources ?? grant.resources, now);
+  // Narrowed to what the client's record lists now, as a refresh narrows, so a scope or resource an admin removed
+  // after the code was issued is not in its tokens. The record of a client that redeems a code lists `openid`
+  // (`checkClientRecord`), so narrowing never drops it. The family keeps the code's scopes and resources.
+  const scopes = record.scopes.filter((scope) => isScopeOfClient(client, scope));
+  const accessToken = await issueAccessToken(
+    options,
+    ttl,
+    grant,
+    scopes,
+    resources ?? resourcesOfClient(client, grant.resources),
+    now,
+  );
   // Signed before the refresh token is saved, as at a refresh: the claims callback may fail, and a failure after the
   // save would leave a token the client never receives.
   const idToken = await issueIdToken(
@@ -301,7 +305,7 @@ async function issueFromCode(
     ttl,
     grant,
     accessToken,
-    record.scopes,
+    scopes,
     now,
     record.nonce === undefined ? {} : { nonce: record.nonce },
   );
@@ -315,7 +319,7 @@ async function issueFromCode(
       expiresAt: now + ttl.refreshToken,
     });
   }
-  return tokenResponse(ttl, { accessToken, scopes: record.scopes, idToken, refreshToken });
+  return tokenResponse(ttl, { accessToken, scopes, idToken, refreshToken });
 }
 
 /**

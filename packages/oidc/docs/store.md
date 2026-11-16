@@ -212,9 +212,12 @@ The cases cover:
 - `findAccessToken` is not single-use.
 - `revokeGrant` hides the grant's access and refresh tokens, including tokens saved after the call, and leaves other grants alone. A refresh token consumed before the revocation then gives `undefined`, not `replayed`.
 - `findClient` gives `undefined` for unknown identifiers, including `__proto__`, `constructor` and `toString`.
-- `findClient` returns a registered client with the values it was registered with.
+- `findClient` returns a registered client with the values it was registered with, including every optional field, such as `ttl`, `idTokenSigningAlg`, `requirePkce`, `backchannelLogout` and `idTokenClaims`.
+- `findClient` returns a `client_secret_jwt` client whose key still verifies what the registered key signed. The seeded key is extractable, so an adapter that persists it can export it with `exportSecretJwk`. No case seeds a `private_key_jwt` client, since a `KeySet` cannot be exported; test that your adapter rebuilds one with `importKeySet` yourself.
 - A record saved without `codeChallenge`, `resources` or `audience` comes back without it.
 - The records a store returns do not change when the caller changes what it saved.
+
+Passing the concurrent cases does not prove an adapter atomic. Twenty calls from one process can still be served one after another, such as by a database client that sends one query at a time over a single connection, and then a read followed by a separate write passes them while two servers running the same code would not. Make atomicity a property of each statement, as the SQL above does, rather than relying on these cases to find a race.
 
 Records use an `expiresAt` one hour ahead, so an adapter that purges expired rows still passes. Keys are random per case, so the factory may return stores on one shared database. The factory is called once for each case.
 

@@ -12,3 +12,6 @@ export const MAX_URL_LENGTH = 8192;
 
 /** Bytes a client reads from a response body; a JWKS or discovery document is far smaller. */
 export const MAX_RESPONSE_BYTES = 65536;
+
+/** Characters in an ID token the client accepts: the token response that carries it holds no more. */
+export const MAX_ID_TOKEN_LENGTH = MAX_RESPONSE_BYTES;

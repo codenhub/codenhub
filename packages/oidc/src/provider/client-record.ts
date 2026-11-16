@@ -176,6 +176,20 @@ export const isScopeOfClient = (client: Pick<ClientRecord, "scopes">, scope: str
 export const areResourcesOfClient = (client: Pick<ClientRecord, "resources">, resources: readonly string[]): boolean =>
   resources.every((resource) => client.resources?.includes(resource) === true);
 
+/**
+ * The resources of a grant that the client's record still lists, in the grant's order, or `undefined` when none is
+ * left, so a token falls back as one for a grant without resources does. Narrowing to the current record means a
+ * resource an admin removed stops being issued, and comes back once it is listed again, as scopes do; it only ever
+ * drops resources, so it cannot widen what the grant covers.
+ */
+export function resourcesOfClient(
+  client: Pick<ClientRecord, "resources">,
+  resources: readonly string[] | undefined,
+): readonly string[] | undefined {
+  const listed = resources?.filter((resource) => client.resources?.includes(resource) === true);
+  return listed === undefined || listed.length === 0 ? undefined : listed;
+}
+
 /** The lifetimes for tokens of `client`: its own where its record sets them, the provider's otherwise. */
 export function lifetimesOf(provider: ResolvedTtl, client: ClientRecord): ResolvedTtl {
   const own = client.ttl;

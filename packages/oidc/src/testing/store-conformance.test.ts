@@ -2,20 +2,21 @@ import { describe, expect, it } from "vitest";
 
 import type {
   AccessTokenRecord,
+  ClientRecord,
   CodeRecord,
   InteractionRecord,
   OidcStore,
   RefreshTokenRecord,
 } from "../provider/types";
 import { createMemoryStore } from "./memory-store";
-import { storeConformanceCases } from "./store-conformance";
+import { type StoreSeed, storeConformanceCases } from "./store-conformance";
 
 it.each(storeConformanceCases)("$name", async (c) => {
   await expect(c.run((seed) => createMemoryStore(seed))).resolves.toBeUndefined();
 });
 
 /** Runs the named case against `createStore` and returns the Error it rejects with. */
-async function failureOf(name: string, createStore: () => OidcStore): Promise<Error> {
+async function failureOf(name: string, createStore: (seed: StoreSeed) => OidcStore): Promise<Error> {
   const testCase = storeConformanceCases.find((candidate) => candidate.name === name);
   if (testCase === undefined) {
     throw new Error(`no conformance case named "${name}"`);
@@ -261,6 +262,40 @@ describe("storeConformanceCases checks findClient", () => {
     );
     expect(error.message).toBe(
       "OidcStore contract: findClient must return a registered client with the values it was registered with",
+    );
+  });
+
+  it.each(["ttl", "idTokenSigningAlg", "requirePkce", "backchannelLogout", "idTokenClaims"])(
+    "rejects a store that drops %s",
+    async (field) => {
+      const createBroken = (seed: StoreSeed): OidcStore => {
+        const memory = createMemoryStore(seed);
+        return {
+          ...memory,
+          findClient: async (id) => {
+            const found = await memory.findClient(id);
+            return found === undefined ? undefined : { ...found, [field]: undefined };
+          },
+        };
+      };
+      const error = await failureOf(
+        "findClient returns every optional field a client was registered with",
+        createBroken,
+      );
+      expect(error.message).toMatch(/^OidcStore contract: findClient must return every optional field/);
+    },
+  );
+
+  it("rejects a store that returns a client_secret_jwt key rebuilt from JSON", async () => {
+    const error = await failureOf("findClient returns a client_secret_jwt client whose key still verifies", (seed) => {
+      const memory = createMemoryStore(seed);
+      return {
+        ...memory,
+        findClient: async (id) => JSON.parse(JSON.stringify(await memory.findClient(id))) as ClientRecord,
+      };
+    });
+    expect(error.message).toBe(
+      "OidcStore contract: findClient must return a client_secret_jwt key that verifies what the registered key signed",
     );
   });
 });

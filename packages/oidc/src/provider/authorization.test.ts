@@ -609,11 +609,58 @@ describe("completeAuthorization", () => {
     await expect(completeAuthorization(options, interaction.id, GRANT)).rejects.toThrow(TypeError);
   });
 
-  it("shouldNotReadTheClientToSendADenial", async () => {
+  it.each([
+    ["a grant", GRANT],
+    ["a denial", { error: "access_denied" } as const],
+  ])("shouldReturnNotFoundFor%sWhenTheRedirectUriWasRemovedDuringTheInteraction", async (_name, outcome) => {
     const interaction = await beginOk();
-    const findSpy = vi.spyOn(store, "findClient");
-    await completeAuthorization(options, interaction.id, { error: "access_denied" });
-    expect(findSpy).not.toHaveBeenCalled();
+    store.addClient({ ...client, redirectUris: ["https://app.example/other"] });
+    const saveSpy = vi.spyOn(store, "saveCode");
+    const result = await completeAuthorization(options, interaction.id, outcome);
+    expect(!result.ok && result.error.issues).toEqual([{ code: "interaction_not_found" }]);
+    expect(saveSpy).not.toHaveBeenCalled();
+  });
+
+  it("shouldReturnNotFoundWhenTheClientLostTheCodeGrantDuringTheInteraction", async () => {
+    const interaction = await beginOk();
+    store.addClient({
+      ...client,
+      scopes: ["profile"],
+      grantTypes: ["client_credentials"],
+      auth: { method: "client_secret_basic", secretHashes: ["hash"] },
+    });
+    const result = await completeAuthorization(options, interaction.id, GRANT);
+    expect(!result.ok && result.error.issues).toEqual([{ code: "interaction_not_found" }]);
+  });
+
+  it("shouldDropFromTheCodeAScopeRemovedFromTheClientDuringTheInteraction", async () => {
+    const saveSpy = vi.spyOn(store, "saveCode");
+    const interaction = await beginOk(query({ scope: "openid profile email" }));
+    store.addClient({ ...client, scopes: ["openid", "email"] });
+    const result = await completeAuthorization(options, interaction.id, {
+      ...GRANT,
+      scopes: ["openid", "profile", "email"],
+    });
+    expect(result.ok).toBe(true);
+    expect(saveSpy.mock.calls[0]?.[1]).toMatchObject({ scopes: ["openid", "email"] });
+  });
+
+  it("shouldDropFromTheCodeAResourceRemovedFromTheClientDuringTheInteraction", async () => {
+    store.addClient({ ...client, resources: ["https://a.example", "https://b.example"] });
+    const saveSpy = vi.spyOn(store, "saveCode");
+    const interaction = await beginOk(`${query()}&resource=https%3A%2F%2Fa.example&resource=https%3A%2F%2Fb.example`);
+    store.addClient({ ...client, resources: ["https://b.example"] });
+    await completeAuthorization(options, interaction.id, GRANT);
+    expect(saveSpy.mock.calls[0]?.[1]).toMatchObject({ resources: ["https://b.example"] });
+  });
+
+  it("shouldSaveACodeWithoutResourcesWhenEveryResourceWasRemovedDuringTheInteraction", async () => {
+    store.addClient({ ...client, resources: ["https://a.example"] });
+    const saveSpy = vi.spyOn(store, "saveCode");
+    const interaction = await beginOk(`${query()}&resource=https%3A%2F%2Fa.example`);
+    store.addClient(client);
+    await completeAuthorization(options, interaction.id, GRANT);
+    expect("resources" in (saveSpy.mock.calls[0]?.[1] ?? {})).toBe(false);
   });
 
   it("shouldSetMaxAgeRequestedWhenMaxAgeWasSent", async () => {
