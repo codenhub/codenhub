@@ -25,6 +25,9 @@
     "url": "git+https://github.com/codenhub/codenhub.git",
     "directory": "packages/icons"
   },
+  "bin": {
+    "chi": "./dist/cli.js"
+  },
   "files": [
     "dist",
     "docs",
@@ -164,7 +167,8 @@
     "access": "public"
   },
   "scripts": {
-    "build": "tsdown src/index.ts src/postcss.ts src/vite.ts src/tailwind.ts src/play.ts --format esm --dts --clean --no-fixed-extension --unbundle && node scripts/build-data.mjs && node scripts/build-tailwind.mjs && node scripts/build-style.mjs && node scripts/build-css.mjs",
+    "build": "tsdown src/index.ts src/postcss.ts src/vite.ts src/tailwind.ts src/play.ts --format esm --dts --clean --no-fixed-extension --unbundle && node scripts/build-data.mjs && node scripts/build-tailwind.mjs && node scripts/build-style.mjs && node scripts/build-css.mjs && pnpm build:cli",
+    "build:cli": "tsdown src/cli/cli.ts --format esm --no-clean --no-fixed-extension --no-dts",
     "clean": "node -e \"require('node:fs').rmSync('dist', { recursive: true, force: true })\"",
     "dev": "pnpm --filter=@codenhub/icons-dev dev",
     "debug": "pnpm build && pnpm --filter=@codenhub/icons-debug dev",

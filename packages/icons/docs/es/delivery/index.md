@@ -1,14 +1,14 @@
 ---
 title: Comparación
-description: Las cuatro formas en que las clases de icono se convierten en reglas de máscara CSS, los puntos de entrada del paquete detrás de ellas y cómo elegir.
+description: Las cinco formas en que las clases de icono se convierten en reglas de máscara CSS, los puntos de entrada del paquete detrás de ellas y cómo elegir.
 group: Métodos de entrega
 order: 2
-source: 4e21427f555137e5be6ac2c12755d2f9d8c9bd7e
+source: cc543910fd107f588648fd7ed32a995d11f4401c
 ---
 
 # Cómo llegan los iconos a tu CSS
 
-Todos los métodos de entrega entienden exactamente las mismas clases de icono, y cada método CSS produce para ellas las mismas reglas de máscara. La única excepción es el [modo SVG en línea](vite.md#modo-svg-en-línea) del plugin de Vite, que reescribe etiquetas `<i>` en elementos `<svg>` y no emite ninguna regla de máscara. Entre los métodos CSS, lo que cambia entre ellos es de dónde salen esas reglas por icono: bien de una hoja de estilos precompilada que contiene todos los iconos de una familia, o bien de un plugin que escanea tu marcado y genera solo los iconos que escribiste. Esta página compara las cuatro opciones para que elijas la que encaja con tu build.
+Todos los métodos de entrega entienden exactamente las mismas clases de icono, y cada método CSS produce para ellas las mismas reglas de máscara. La única excepción es el [modo SVG en línea](vite.md#modo-svg-en-línea) del plugin de Vite, que reescribe etiquetas `<i>` en elementos `<svg>` y no emite ninguna regla de máscara. Entre los métodos CSS, lo que cambia entre ellos es de dónde salen esas reglas por icono: bien de una hoja de estilos precompilada que contiene todos los iconos de una familia, o bien de un plugin o comando que escanea tu marcado y genera solo los iconos que escribiste. Esta página compara las cinco opciones para que elijas la que encaja con tu build.
 
 ## Puntos de entrada
 
@@ -20,21 +20,23 @@ Todos los métodos de entrega entienden exactamente las mismas clases de icono, 
 | `@codenhub/icons/<family>` | CSS simple, sin paso de build | Una familia completa, con cada icono ya escrito.                                                                                                                     |
 | `@codenhub/icons/vite`     | Vite                          | Escanea tu marcado y genera únicamente las reglas que necesita.                                                                                                      |
 | `@codenhub/icons/postcss`  | PostCSS                       | Lo mismo, para un pipeline de PostCSS.                                                                                                                               |
+| `chi build`                | Un build sin ninguno de ellos | Un comando que lee tus archivos y escribe una hoja de estilos con las reglas base y solo los iconos que usan.                                                        |
 
 `@import "@codenhub/icons"` significa una sola cosa en todas partes: las reglas base sobre las que se apoyan las clases de icono. Ningún plugin lo reescribe y ningún plugin lo elimina. La única pieza móvil es qué mecanismo genera a su lado las reglas de máscara por icono.
 
 ## Cómo elegir uno
 
-| Si tu proyecto…                                               | Usa                             |
-| ------------------------------------------------------------- | ------------------------------- |
-| Ya usa Tailwind CSS v4                                        | [Tailwind](tailwind.md)         |
-| Compila con Vite (o un framework basado en Vite)              | [Plugin de Vite](vite.md)       |
-| Ejecuta un pipeline de PostCSS pero no Vite (Next.js, otros)  | [Plugin de PostCSS](postcss.md) |
-| No tiene paso de build, o quieres la configuración más simple | [CSS simple](plain-css.md)      |
+| Si tu proyecto…                                                                | Usa                             |
+| ------------------------------------------------------------------------------ | ------------------------------- |
+| Ya usa Tailwind CSS v4                                                         | [Tailwind](tailwind.md)         |
+| Compila con Vite (o un framework basado en Vite)                               | [Plugin de Vite](vite.md)       |
+| Ejecuta un pipeline de PostCSS pero no Vite (Next.js, otros)                   | [Plugin de PostCSS](postcss.md) |
+| No ejecuta ninguno de ellos, pero puede ejecutar un comando antes de desplegar | [Comando de build](cli.md)      |
+| No tiene paso de build, o quieres la configuración más simple                  | [CSS simple](plain-css.md)      |
 
-Los métodos con plugin mantienen pequeña la salida CSS sin podar manualmente: un proyecto que usa tres iconos distribuye unos 10 KB de CSS. Las hojas de estilos de familia en CSS simple hacen el intercambio opuesto — cero configuración de build a cambio de distribuir todos los iconos de la familia, donde Lucide por sí sola pesa unos 1.3 MB y las 17 familias juntas alcanzan unos 39 MB.
+Los plugins y el comando de build mantienen pequeña la salida CSS sin podar manualmente: un proyecto que usa tres iconos distribuye unos 10 KB de CSS. Las hojas de estilos de familia en CSS simple hacen el intercambio opuesto — cero configuración de build a cambio de distribuir todos los iconos de la familia, donde Lucide por sí sola pesa unos 1.3 MB y las 17 familias juntas alcanzan unos 39 MB.
 
-Una capacidad también depende de un paso de build: el modificador de grosor de trazo `ic-lucide-heart/1.5` necesita Tailwind, Vite o PostCSS, porque las hojas de estilos de CSS simple renderizan las familias de trazos con su grosor original. Consulta [Conceptos](../concepts.md) para el modelo compartido.
+Una capacidad también depende de un paso de build: el modificador de grosor de trazo `ic-lucide-heart/1.5` necesita Tailwind, Vite, PostCSS o el comando de build, porque las hojas de estilos de CSS simple renderizan las familias de trazos con su grosor original. Consulta [Conceptos](../concepts.md) para el modelo compartido.
 
 ## Siguiente paso
 

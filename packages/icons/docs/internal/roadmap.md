@@ -13,7 +13,6 @@ Durable direction for `@codenhub/icons` that does not yet belong in the root `do
 ## Planned
 
 - **A first-party icon family** that owns the semantic names.
-- **`chi build`, in 0.4.0.** Icons trimmed to a project's files without Tailwind CSS, Vite, or PostCSS, on a scanner shared with `@codenhub/styles`. [Build command](./cli.md) records the design.
 
 ## Later / Possible
 

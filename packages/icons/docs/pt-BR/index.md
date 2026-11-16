@@ -1,7 +1,7 @@
 ---
 title: Visão geral
 description: Sistema de ícones zero-runtime para a web — classes de ícone no seu markup viram regras de máscara CSS em tempo de build.
-source: 488a9d5dc317d8c4723950a8660e38e4e260e846
+source: 87336853531703f5bd8c0de265204188a574b9f8
 ---
 
 # Ícones via CSS, sem runtime
@@ -37,13 +37,13 @@ Os ícones chegam ao projeto via CSS. O caminho mais curto sem etapa de build s�
 
 Um ícone é um `<i>` carregando uma classe de ícone (ou `.ic` em qualquer elemento, nos métodos baseados em CSS). Tamanho e cor seguem custom properties: defina `--ic-size` e `--ic-color` no ícone ou em qualquer ancestral, ou use as classes de tamanho `ic-xs`–`ic-xl`. Os ícones seguem a cor do texto, exceto os ícones de marca, que chegam na cor da própria marca; veja [Cor](concepts.md#cor).
 
-Quatro métodos de entrega entendem as mesmas classes — CSS puro, Tailwind CSS v4, um plugin do Vite e um plugin do PostCSS. Os plugins varrem o seu markup e emitem apenas as regras que você usou; as folhas de estilos de família em CSS puro vêm completas e são grandes por construção. Veja [Métodos de entrega](delivery/index.md) para escolher um, e [Frameworks](frameworks/index.md) para a configuração específica de cada framework.
+Cinco métodos de entrega entendem as mesmas classes — CSS puro, Tailwind CSS v4, um plugin do Vite, um plugin do PostCSS e o comando `chi build`. Os plugins e o comando varrem o seu markup e emitem apenas as regras que você usou; as folhas de estilos de família em CSS puro vêm completas e são grandes por construção. Veja [Métodos de entrega](delivery/index.md) para escolher um, e [Frameworks](frameworks/index.md) para a configuração específica de cada framework.
 
 ## Requisitos
 
 | Requisito      | Detalhes                                                                                |
 | -------------- | --------------------------------------------------------------------------------------- |
-| Node.js        | 26 ou mais recente, para os plugins e helpers em tempo de build.                        |
+| Node.js        | 26 ou mais recente, para os plugins, helpers e `chi build` em tempo de build.           |
 | Imports de CSS | O ferramental do projeto precisa resolver imports de CSS de pacotes.                    |
 | Navegadores    | Precisa suportar CSS `mask-image`, usado por todos os métodos exceto o modo SVG inline. |
 | Tailwind CSS   | Versão 4 ou mais recente, e apenas para os entrypoints `/tw` e `/tailwind`.             |
@@ -54,7 +54,7 @@ Quatro métodos de entrega entendem as mesmas classes — CSS puro, Tailwind CSS
 Leia nesta ordem na primeira vez. Cada página se apoia na anterior e aponta para a próxima:
 
 1. [Conceitos](concepts.md): famílias, como encontrar nomes de ícones, resolução de nomes, cor, espessura do traço, tamanho, movimento e acessibilidade — o modelo compartilhado em que todo método de entrega se apoia.
-2. [Métodos de entrega](delivery/index.md): as quatro formas como os ícones chegam ao seu CSS e como escolher a que combina com o seu build.
+2. [Métodos de entrega](delivery/index.md): as cinco formas como os ícones chegam ao seu CSS e como escolher a que combina com o seu build.
 3. [Frameworks](frameworks/index.md): configuração e particularidades específicas de framework para Astro, Next.js e SvelteKit.
 4. [API JavaScript](javascript-api.md): o registro, renderizadores, reprodução em runtime e o adaptador para conjuntos de terceiros, para quando você sai de um build CSS padrão.
 5. [Licenciamento](licensing.md): modos de atribuição, níveis de obrigação, notas sobre marcas registradas e o que cada build deve incluir.

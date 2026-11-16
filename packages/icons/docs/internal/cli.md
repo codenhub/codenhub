@@ -1,5 +1,5 @@
 ---
-status: APPROVED
+status: IMPLEMENTED
 last_updated: 2026-11-16
 scope: Design decisions, options, limits, and failure modes of the `chi` build command in `@codenhub/icons`, and the private scanner it shares with `@codenhub/styles`.
 ---
