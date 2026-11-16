@@ -1,7 +1,7 @@
 ---
 title: Validadores personalizados
 description: Adicione regras com verificações, crie validadores que se comportam como os nativos, valide de forma assíncrona e nomeie os tipos que uma biblioteca de validadores exporta.
-source: 7c6a075adf1e6739262f33c23ff9b0e4c1e732ee
+source: ff02e37f8386f3f2860d78df4b955d5115b9a260
 order: 6
 ---
 
@@ -146,6 +146,7 @@ O parâmetro é `unknown`, porque um validador existe para verificar dados em qu
 
 - Para nomear um tipo que o corpo não mostra, tipe o que a função retorna: `validator((input): ValidationResult<User> => ...)`.
 - Para dizer o que ele aceita, para [`InferInput`](forms.md#os-tipos-de-um-formulário), tipe a função como um validador antes de passá-la: uma tipada como `Validator<number, string>` lê um número a partir de texto. Sem isso, o tipo de entrada é `unknown`.
+- Um issue guarda só seu `code`, `path`, `params` e `message`, como um feito com `fail()`, então uma propriedade que você adicione à mão, como a entrada, nunca chega ao resultado.
 
 O que `validator` retorna funciona em todo lugar em que um nativo funciona, como dentro de `object`, `optional` e `pipe`, e é um [Standard Schema](standard-schema.md) como eles são. Ele não tem opção `message` nem verificações, a não ser que você as escreva, e é para isso que servem os builders.
 

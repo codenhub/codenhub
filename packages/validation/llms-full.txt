@@ -1634,6 +1634,7 @@ The parameter is `unknown`, because a validator exists to check data you do not 
 
 - To name a type the body does not show, type what the function returns: `validator((input): ValidationResult<User> => ...)`.
 - To say what it accepts, for [`InferInput`](docs/forms.md#the-types-of-a-form), type the function as a validator before giving it: one typed `Validator<number, string>` reads a number from text. Without that, the input type is `unknown`.
+- An issue keeps only its `code`, `path`, `params` and `message`, as one made with `fail()` does, so a property you add to it by hand, such as the input, never reaches the result.
 
 What `validator` returns works everywhere a built-in one does, such as inside `object`, `optional` and `pipe`, and is a [Standard Schema](docs/standard-schema.md) as they are. It has no `message` option or checks unless you write them, which is what the builders are for.
 
