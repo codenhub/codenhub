@@ -21,7 +21,7 @@ pnpm dlx @codenhub/skills@latest
 
 The npm equivalent is `npx @codenhub/skills@latest`. Neither command adds a dependency to your project.
 
-In the wizard, choose local scope, decline the all-skills option, select `brainstorming` and `test-driven-development`, and choose `Claude Workspace` and `Codex Workspace`. Leave cleanup off to keep other installed skills. The installer copies the selected directories into `.claude/skills` and `.agents/skills` under the current directory.
+In the wizard, choose local scope, decline the all-skills option, select `brainstorming` and `test-driven-development`, and choose `Claude Workspace` and `Codex Workspace`. Keep the install mode at copy, and leave cleanup off to keep other installed skills. The installer copies the selected directories into `.claude/skills` and `.agents/skills` under the current directory.
 
 To make the same selection without prompts:
 
@@ -40,7 +40,7 @@ Existing files at matching paths are overwritten, directories are merged, and st
 ## Reading path
 
 1. [Bundled skills](skills.md): choose workflows, understand what a skill contains, and learn the format, quality rules, and versioning policy.
-2. [CLI installer](cli.md): install the pair for Claude and Codex, repeat it globally, and learn all options, destinations, and harness differences.
+2. [CLI installer](cli.md): install the pair for Claude and Codex, repeat it globally, link harness folders to one copy, share a selection with a team, and learn all options, destinations, and harness differences.
 3. [Security and failures](security-and-failures.md): understand what an update can overwrite, diagnose a partial install, and interpret exit codes.
 4. [Skill provenance](provenance.md): check origins, licenses, and the notices to preserve when sharing installed skills.
 

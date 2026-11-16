@@ -39,7 +39,7 @@ The installer copies files and reports the result. Consult your harness's instru
 
 The wizard appears only when stdin is a TTY (an interactive terminal) and no arguments are supplied, except that `--include-drafts` alone keeps it interactive. Scope, skill selection, harnesses, install mode, and cleanup are all choices in the wizard. Detected harness paths are preselected; change that selection before confirming if you want fewer destinations.
 
-When stdin is not a TTY, or any other argument is supplied, the CLI does not prompt. Even `--local` alone starts an install with defaults: all skills, local scope, detected harnesses, and no cleanup. Use explicit selections in scripts so the result does not depend on which folders already exist.
+When stdin is not a TTY, or any other argument is supplied, the CLI does not prompt. Even `--local` alone starts an install with defaults: all skills, local scope, detected harnesses, copies rather than links, and no cleanup. Use explicit selections in scripts so the result does not depend on which folders already exist.
 
 Detection means the destination skills folder or its parent exists; it does not check whether the harness application is installed. For example, an existing `.claude/` directory detects `Claude Workspace` even without `.claude/skills/`. Detection is restricted to the selected scope. If nothing is detected, the command fails. Choose labels with `--harnesses` to create their destinations, or use `--all-harnesses` to opt into every destination in that scope.
 

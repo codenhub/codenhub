@@ -1,6 +1,6 @@
 ---
 status: DRAFT
-last_updated: 2026-11-05
+last_updated: 2026-11-16
 scope: `@codenhub/skills` direction.
 ---
 
@@ -25,4 +25,5 @@ Durable direction for `@codenhub/skills`. The repo-wide roadmap is `docs/roadmap
 
 ## Not Planned
 
+- **A programmatic API for installing skills.** 0.3.0 removed the library exports, which could not reach the bundled skills. A repository that wants the skills in every harness without choosing one gets them from `--link` and a pinned development dependency run from a script ([CLI guide](../cli.md#set-up-a-shared-repository)); an API would only produce the same per-harness copies one level lower. Revisit when a tool needs to embed the installer rather than run it.
 - **A `writing-functions` skill.** `coding` replaced it. A broad `coding` skill was first set aside because it would overlap `ponytail`, `test-driven-development`, and `naming` and load on every coding task. That did not weigh the baseline runs in [coding-skill-research.md](coding-skill-research.md), which showed the gaps lie in inputs, failures, state, and tests, not in function design alone. The overlap with `ponytail` and `test-driven-development` was resolved by giving them one shared rule for tests, reports, and scope; `naming` overlaps only the one-line naming default. The load was cut by moving detail into references. The narrower `writing-functions` skill was rejected because it would miss those gaps.
