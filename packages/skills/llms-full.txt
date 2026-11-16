@@ -28,6 +28,8 @@ For a repeatable install without prompts, select skills and destinations explici
 pnpm dlx @codenhub/skills@latest --local --skills=brainstorming,test-driven-development --harnesses="Claude Workspace,Codex Workspace"
 ```
 
+Add `--link` to keep one copy in `.agents/skills` and link the other harness folders to it, so every harness reads the same files. To share a selection with a team, pin the package as a development dependency and run the installer from a script; the [CLI guide](docs/cli.md#set-up-a-shared-repository) shows how.
+
 The collection covers planning and implementation (`brainstorming`, `test-driven-development`, `coding`, `ponytail`), review and delivery (`audit`, `babysit-pr`), creative work (`branding`, `design`, `logo-design`, `motion-graphics`, `naming`), and agent guidance and writing. See the [skill catalog](docs/skills.md) for every skill and when it applies.
 
 ## Documentation
@@ -40,7 +42,7 @@ The collection covers planning and implementation (`brainstorming`, `test-driven
 
 ## Requirements
 
-- Node.js 24 or newer.
+- Node.js 26 or newer.
 - Filesystem permission to read source skills and modify selected destinations.
 - An interactive terminal (TTY) for the wizard; explicit CLI options support automation.
 
@@ -53,7 +55,7 @@ The collection covers planning and implementation (`brainstorming`, `test-driven
 
 ## License
 
-Licensed under Apache-2.0. Bundled skills include adapted third-party material; see [NOTICE](NOTICE) and [skill provenance](docs/provenance.md).
+Licensed under [Apache-2.0](LICENSE). Bundled skills include adapted third-party material; see [NOTICE](NOTICE) and [skill provenance](docs/provenance.md).
 
 <!-- Source: docs/index.md -->
 
@@ -67,7 +69,7 @@ These docs follow a project using Claude and Codex. We start with `brainstorming
 
 ## Quick start
 
-With Node.js 24 or newer, open an interactive terminal in your project directory and run:
+With Node.js 26 or newer, open an interactive terminal in your project directory and run:
 
 ```sh
 pnpm dlx @codenhub/skills@latest
@@ -75,7 +77,7 @@ pnpm dlx @codenhub/skills@latest
 
 The npm equivalent is `npx @codenhub/skills@latest`. Neither command adds a dependency to your project.
 
-In the wizard, choose local scope, decline the all-skills option, select `brainstorming` and `test-driven-development`, and choose `Claude Workspace` and `Codex Workspace`. Leave cleanup off to keep other installed skills. The installer copies the selected directories into `.claude/skills` and `.agents/skills` under the current directory.
+In the wizard, choose local scope, decline the all-skills option, select `brainstorming` and `test-driven-development`, and choose `Claude Workspace` and `Codex Workspace`. Keep the install mode at copy, and leave cleanup off to keep other installed skills. The installer copies the selected directories into `.claude/skills` and `.agents/skills` under the current directory.
 
 To make the same selection without prompts:
 
@@ -94,7 +96,7 @@ Existing files at matching paths are overwritten, directories are merged, and st
 ## Reading path
 
 1. [Bundled skills](docs/skills.md): choose workflows, understand what a skill contains, and learn the format, quality rules, and versioning policy.
-2. [CLI installer](docs/cli.md): install the pair for Claude and Codex, repeat it globally, and learn all options, destinations, and harness differences.
+2. [CLI installer](docs/cli.md): install the pair for Claude and Codex, repeat it globally, link harness folders to one copy, share a selection with a team, and learn all options, destinations, and harness differences.
 3. [Security and failures](docs/security-and-failures.md): understand what an update can overwrite, diagnose a partial install, and interpret exit codes.
 4. [Skill provenance](docs/provenance.md): check origins, licenses, and the notices to preserve when sharing installed skills.
 
@@ -224,7 +226,7 @@ The executable is named `codenhub-skills`. Run it without adding a project depen
 pnpm dlx @codenhub/skills@latest
 ```
 
-Use `npx @codenhub/skills@latest` for the npm equivalent. Node.js 24 or newer is required.
+Use `npx @codenhub/skills@latest` for the npm equivalent. Node.js 26 or newer is required.
 
 ## Start in a project
 
@@ -236,9 +238,10 @@ Run the command above in an interactive terminal, then:
 2. Answer **No** to installing all skills. The default is **Yes**; declining opens the individual selection screen, initially with all skills checked.
 3. Keep only `brainstorming` and `test-driven-development` selected.
 4. Select `Claude Workspace` and `Codex Workspace`, clearing any other checked harnesses.
-5. Leave cleanup at its default, **No**, to retain other installed skills.
+5. Keep the install mode at its default, **Copy into each folder**. [Link mode](#link-harness-folders-to-one-copy) is the alternative.
+6. Leave cleanup at its default, **No**, to retain other installed skills.
 
-Use Up and Down to move, Space to toggle checkboxes, and Enter to confirm a step. Backspace or Left returns to the previous step where offered. Ctrl+C cancels the wizard. Once you confirm the cleanup step, installation starts.
+The install mode step appears only when a selected harness reads a folder other than `.agents/skills`, as Claude does here. Use Up and Down to move, Space to toggle checkboxes, and Enter to confirm a step. Backspace or Left returns to the previous step where offered. Ctrl+C cancels the wizard. Once you confirm the cleanup step, installation starts.
 
 Each skill becomes a child directory under `.claude/skills` and `.agents/skills`. For example, Codex receives `.agents/skills/brainstorming/SKILL.md`. Missing destination directories are created. By default, existing directories are merged and matching files are overwritten; files present only at the destination remain. Back up local edits before updating.
 
@@ -246,9 +249,9 @@ The installer copies files and reports the result. Consult your harness's instru
 
 ## Modes
 
-The wizard appears only when stdin is a TTY (an interactive terminal) and no arguments are supplied, except that `--include-drafts` alone keeps it interactive. Scope, skill selection, harnesses, and cleanup are all choices in the wizard. Detected harness paths are preselected; change that selection before confirming if you want fewer destinations.
+The wizard appears only when stdin is a TTY (an interactive terminal) and no arguments are supplied, except that `--include-drafts` alone keeps it interactive. Scope, skill selection, harnesses, install mode, and cleanup are all choices in the wizard. Detected harness paths are preselected; change that selection before confirming if you want fewer destinations.
 
-When stdin is not a TTY, or any other argument is supplied, the CLI does not prompt. Even `--local` alone starts an install with defaults: all skills, local scope, detected harnesses, and no cleanup. Use explicit selections in scripts so the result does not depend on which folders already exist.
+When stdin is not a TTY, or any other argument is supplied, the CLI does not prompt. Even `--local` alone starts an install with defaults: all skills, local scope, detected harnesses, copies rather than links, and no cleanup. Use explicit selections in scripts so the result does not depend on which folders already exist.
 
 Detection means the destination skills folder or its parent exists; it does not check whether the harness application is installed. For example, an existing `.claude/` directory detects `Claude Workspace` even without `.claude/skills/`. Detection is restricted to the selected scope. If nothing is detected, the command fails. Choose labels with `--harnesses` to create their destinations, or use `--all-harnesses` to opt into every destination in that scope.
 
@@ -285,6 +288,7 @@ Local and global copies are separate files. Updating one does not update the oth
 | `--all-skills`       | Install every available skill. This is the default; drafts are included when enabled. |
 | `--harnesses=<list>` | Install to comma-separated harness labels, matched case-insensitively.                |
 | `--all-harnesses`    | Select every harness valid for the chosen scope.                                      |
+| `--link`             | Copy skills once to `.agents/skills` and link the other selected destinations to it.  |
 | `--cleanup`          | Remove entire selected skills destination roots before copying. Off by default.       |
 | `--include-drafts`   | Also offer draft skills. Works only from a repository checkout.                       |
 | `--help`, `-h`       | Print command help.                                                                   |
@@ -325,9 +329,49 @@ Destinations selected through a Codex label receive the complete bundled skill d
 
 In our example, Codex gets each skill's `agents/openai.yaml` when present; Claude's copy excludes it. Selecting only `Agent Skills Workspace` also excludes `agents` entries, even though Codex reads that destination. Select a Codex label when you want its metadata included. Exclusion skips source entries; it does not delete an `agents` folder left by an earlier install.
 
+## Link harness folders to one copy
+
+Harnesses that read `.agents/skills` share one copy of each skill, but Claude and the others in the table read only their own folder, so a copy install gives each of them a separate copy. `--link` keeps one copy instead: it copies each skill to the scope's `.agents/skills` folder, then makes each skill in every other selected destination a link to that copy.
+
+```sh
+pnpm dlx @codenhub/skills@latest --local --link --skills=brainstorming,test-driven-development --harnesses="Claude Workspace,Codex Workspace"
+```
+
+Codex receives `.agents/skills/brainstorming`, and Claude receives `.claude/skills/brainstorming` as a link to it. The shared copy is written whether or not a label that reads it is selected: with `--harnesses="Claude Workspace"` alone, the skills still land in `.agents/skills`. Global installs use `~/.agents/skills`, and `--both` keeps one copy per scope. The [Codex `agents` rule](#harness-behavior) applies to the shared copy, so every linked harness reads the same files, `agents` folder included when a Codex label is selected.
+
+Each skill gets its own link, so other skills in `.claude/skills` stay as they are. A skill that reaches the shared folder some other way, such as a later install without `--link`, is not linked until an install with `--link` includes it. On macOS and Linux the link is a symbolic link with a relative path. On Windows it is a directory junction, which needs neither administrator rights nor Developer Mode but stores an absolute path, so it works only on the machine that made it. Treat links as local to each machine: let each developer run the install, as [Set up a shared repository](#set-up-a-shared-repository) does, rather than committing them.
+
+Running the same install again leaves correct links alone and updates the shared copy. A link that points elsewhere is replaced; the folder it pointed to is left alone. Anything else at a link's path, such as a skill folder from an earlier copy install, is never replaced: that skill fails with `Failed linking`, the other skills continue, and the command exits `1`. Move the folder away or delete it, or use `--cleanup`, then install again.
+
+An install without `--link` into a destination that holds links copies through them into the shared copy, and the `agents` rule of that destination applies to what it writes.
+
+## Set up a shared repository
+
+To give everyone on a project the same skills whichever harness they use, keep the installer and its selection in the repository. Pin the package as a development dependency and add a script to the root `package.json`; in a monorepo, that is the workspace root, since local paths resolve from the directory the command runs in and pnpm runs root scripts there.
+
+```sh
+pnpm add -D -w @codenhub/skills@<version>
+```
+
+Use `-w` only in a pnpm workspace, and `npm install -D` for npm. Then add the script:
+
+```json
+{
+  "scripts": {
+    "skills": "codenhub-skills --local --link --skills=brainstorming,test-driven-development --harnesses=\"Claude Workspace,Codex Workspace\""
+  }
+}
+```
+
+Each developer runs `pnpm skills` after installing dependencies, and again after the dependency is updated, to refresh the skills. Ignore the installed skill folders in git, both under `.agents/skills` and under each linked harness folder, but not any skills the repository maintains itself. Name the installed skills in `.gitignore` rather than whole folders when the repository keeps its own skills there.
+
+To commit the skills instead, so they are present right after a clone, install without `--link` to the destinations your team uses and commit the copies. With `Agent Skills Workspace` alone, one copy serves every harness that reads `.agents/skills`, without the Codex metadata in `agents` entries; each other harness needs its own copy.
+
 ## Destructive Cleanup
 
 `--cleanup` recursively removes each selected harness's entire skills destination before installation. This deletes all content in that directory, including skills and files not managed by `@codenhub/skills`. In our local example, adding it removes both `.claude/skills` and `.agents/skills` as whole directories, even though only two skills are selected. Labels that share a destination, such as `Codex Workspace` and `Agent Skills Workspace`, remove that one directory once.
+
+With `--link`, cleanup removes the selected roots only. The shared `.agents/skills` is removed when a selected label reads it, such as `Agent Skills Workspace` or `Codex Workspace`; that also leaves dangling the links other harness folders hold from earlier runs, until an install with `--link` restores the copy.
 
 All selected roots are cleaned before any skill is copied. Back up those directories and check the current working directory and selected scope first. To remove a single stale skill, delete its own folder instead of cleaning the whole root.
 
@@ -370,6 +414,8 @@ Installing the [Claude and Codex example](docs/cli.md#repeat-the-selection-witho
 
 By default, installation merges directories and overwrites files with matching paths. If you edited `.agents/skills/brainstorming/SKILL.md`, installing that skill again replaces your edits. Back up customized skills before updating.
 
+With [`--link`](docs/cli.md#link-harness-folders-to-one-copy), every linked harness reads the shared copy in `.agents/skills`, so an edit there, or an update that overwrites it, reaches all of them at once. The installer never replaces a real folder with a link: back up and move a customized skill folder yourself before linking its destination.
+
 Files found only at the destination remain. An old reference file or a skill removed from a later package release stays installed until you remove it yourself. To remove one stale skill, delete that skill's directory in each destination where it was installed. The installer does not track which files it owns.
 
 ### Destructive cleanup
@@ -394,15 +440,17 @@ These checks constrain source reads and prevent self-copying; they are not a fil
 
 The command prints failures and uses these exit codes:
 
-- **`0`:** the selected copies succeeded, or help was printed. Selecting no skills or no harnesses in the wizard prints an exit message and also returns `0`, without installing. Cleanup failures can still have occurred.
+- **`0`:** the selected copies and links succeeded, or help was printed. Selecting no skills or no harnesses in the wizard prints an exit message and also returns `0`, without installing. Cleanup failures can still have occurred.
 - **`130`:** Ctrl+C cancelled the interactive wizard before installation. Run the installer again when ready to make a selection.
-- **`1`:** invalid arguments, unknown skill IDs, harness labels invalid for the scope, no detected harness, missing skills, source-loading failures, an unhandled exception, or any skill copy failure. The error output identifies what to correct.
+- **`1`:** invalid arguments, unknown skill IDs, harness labels invalid for the scope, no detected harness, missing skills, source-loading failures, an unhandled exception, or any skill copy or link failure. The error output identifies what to correct.
 
 For argument errors, use the IDs in the [catalog](docs/skills.md#bundled-catalog) and scope-qualified labels in the [CLI guide](docs/cli.md#options). If no harness is detected, explicitly select the destinations you intend with `--harnesses`, or use `--all-harnesses` when you want every destination for the scope. Do not add cleanup to resolve a selection error.
 
 If no skills are found or a bundled source cannot be read, use an intact package installation or restore the checkout's skill files. `--include-drafts` additionally fails when there are no drafts or a draft ID duplicates a bundled ID; omit the flag for published installations.
 
 A copy can fail because its source disappeared, a path constraint was violated, or reading, resolving, creating, or writing a filesystem entry failed. The CLI reports `Failed copying` for each affected skill, then continues with remaining skills and destinations. It exits `1` after attempting them all. For permission errors, make the selected destination writable; for file/directory conflicts, back up and resolve the conflicting entry. Check the reported path before changing anything.
+
+A link fails when its target is missing because the shared copy of that skill failed, when something other than a link occupies its path, or when creating it fails. The CLI reports `Failed linking` for each affected skill and continues, as for copies. Back up and move the entry at the path the message names, or fix the shared copy's failure first, then rerun.
 
 ## Recover from partial writes
 
@@ -449,6 +497,34 @@ Return to [Bundled skills](docs/skills.md) to choose another workflow, or the [C
 [dietrichgebert/ponytail]: https://github.com/DietrichGebert/ponytail
 [juliusbrussee/caveman]: https://github.com/JuliusBrussee/caveman
 [obra/superpowers]: https://github.com/obra/superpowers
+
+<!-- Source: docs/changelog/0.4.0.md -->
+
+# 0.4.0
+
+## Added
+
+- `--link`, and an install mode step in the wizard, copies each skill once to the scope's `.agents/skills` and links each skill in the other selected harness folders to it, so harnesses that read only their own folder, such as Claude, use the same files. Links are relative symbolic links, or junctions on Windows. A real folder where a link belongs is never replaced; that skill fails with `Failed linking`.
+- The CLI guide shows how to share a selection with a team or a monorepo: pin the package as a development dependency and run the installer from a script.
+- `coding`, for writing and changing code in any language: design defaults, rules for inputs, failures, state, and tests, the edges to check, and per-language references. It asks before deleting or rewriting data, cost, security or access changes, and anything hard to undo, and decides and reports the rest.
+- `motion-graphics` covers narration, sound effects, music, and mixing. Narration is generated and measured before animating, a beat file times both the page and the mix, and sound is checked by measurement. It also covers depth, blur, and camera moves.
+- `design` has an expressive path behind an idea gate, and references for visual effects, imagery and emoji, and social media posts. It covers email and print, scales down to small changes and reviews, and checks that fonts loaded.
+- `branding` defines the brand's voice and sound character, for brands that speak with or without a screen.
+
+## Changed
+
+- **Breaking.** Node.js 26 or newer is required, up from 24.
+- `project-template` follows the template's stack-neutral core and per-stack profiles, and treats the template as a reference: it creates projects, compares existing ones with the template, and migrates projects off the old `.template/manifest.json` design, replacing sync, adopt, and audit.
+- `design` steers away from the generated look: one form per role, color used for attention, no bordered chips, monospace accents, or stock framework palettes by default, and social posts planned as a text hierarchy rather than a landing page.
+- `logo-design` marks may use curves and built fills, with a conversion route for strokes.
+- `ponytail` and `test-driven-development` share one rule with `coding` for tests, reports, and scope in one-off scripts.
+- The package homepage is its page on codenhub.dev, and the manifest lists npm keywords.
+
+## Fixed
+
+- `motion-graphics`'s mix command cut the music off when the narration ended.
+- `design` dropped borders on inputs inside bordered panels, replaced an existing system's framework tokens, and missed accessible names for icon-only controls and alt text for emoji images.
+- Technical claims in `design`, `logo-design`, and `motion-graphics` that review found wrong, such as an `evenodd` pair of circles drawing a ring, and `document.fonts.check()` proving that a font loaded.
 
 <!-- Source: docs/changelog/0.3.0.md -->
 

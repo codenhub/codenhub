@@ -2,7 +2,7 @@
 title: Instalador CLI
 description: Instala las skills seleccionadas de forma local o global, elige los harnesses de destino y automatiza las actualizaciones.
 order: 2
-source: 6c8ba2bb6def412604fa6835ddfee0361e95b0a7
+source: 1e490140a84d1954e7a76764a02858886beea6b2
 ---
 
 # Instala skills en tus herramientas de agentes
@@ -15,7 +15,7 @@ El ejecutable se llama `codenhub-skills`. Ejecútalo sin añadir una dependencia
 pnpm dlx @codenhub/skills@latest
 ```
 
-Usa `npx @codenhub/skills@latest` como equivalente con npm. Se requiere Node.js 24 o posterior.
+Usa `npx @codenhub/skills@latest` como equivalente con npm. Se requiere Node.js 26 o posterior.
 
 ## Empieza en un proyecto
 
@@ -27,9 +27,10 @@ Ejecuta el comando anterior en una terminal interactiva y luego:
 2. Responde **No** a instalar todas las skills. La opción por defecto es **Yes**; al rechazarla se abre la pantalla de selección individual, inicialmente con todas las skills marcadas.
 3. Deja seleccionadas solo `brainstorming` y `test-driven-development`.
 4. Selecciona `Claude Workspace` y `Codex Workspace` y desmarca cualquier otro harness.
-5. Deja la limpieza en su valor por defecto, **No**, para conservar otras skills instaladas.
+5. Deja el modo de instalación en su valor por defecto, **Copy into each folder**. El [modo de enlace](#enlaza-las-carpetas-de-los-harnesses-a-una-sola-copia) es la alternativa.
+6. Deja la limpieza en su valor por defecto, **No**, para conservar otras skills instaladas.
 
-Usa las flechas arriba y abajo para moverte, Espacio para marcar o desmarcar casillas e Intro para confirmar un paso. Retroceso o la flecha izquierda vuelve al paso anterior cuando esa opción está disponible. Ctrl+C cancela el asistente. La instalación comienza en cuanto confirmas el paso de limpieza.
+El paso del modo de instalación solo aparece cuando un harness seleccionado lee una carpeta distinta de `.agents/skills`, como Claude en este caso. Usa las flechas arriba y abajo para moverte, Espacio para marcar o desmarcar casillas e Intro para confirmar un paso. Retroceso o la flecha izquierda vuelve al paso anterior cuando esa opción está disponible. Ctrl+C cancela el asistente. La instalación comienza en cuanto confirmas el paso de limpieza.
 
 Cada skill pasa a ser un subdirectorio de `.claude/skills` y `.agents/skills`. Por ejemplo, Codex recibe `.agents/skills/brainstorming/SKILL.md`. Si los directorios de destino no existen, se crean. Por defecto, los directorios existentes se combinan y los archivos coincidentes se sobrescriben; los archivos que solo están en el destino permanecen. Haz una copia de seguridad de tus cambios locales antes de actualizar.
 
@@ -37,9 +38,9 @@ El instalador copia archivos e informa del resultado. Consulta las instrucciones
 
 ## Modos
 
-El asistente solo aparece cuando stdin es una TTY (una terminal interactiva) y no se proporcionan argumentos, con la excepción de `--include-drafts`, que por sí solo mantiene el modo interactivo. El ámbito, la selección de skills, los harnesses y la limpieza se eligen en el asistente. Las rutas de harnesses detectadas se preseleccionan; cambia esa selección antes de confirmar si quieres menos destinos.
+El asistente solo aparece cuando stdin es una TTY (una terminal interactiva) y no se proporcionan argumentos, con la excepción de `--include-drafts`, que por sí solo mantiene el modo interactivo. El ámbito, la selección de skills, los harnesses, el modo de instalación y la limpieza se eligen en el asistente. Las rutas de harnesses detectadas se preseleccionan; cambia esa selección antes de confirmar si quieres menos destinos.
 
-Cuando stdin no es una TTY o se proporciona cualquier otro argumento, la CLI no hace preguntas. Incluso `--local` por sí solo inicia una instalación con los valores por defecto: todas las skills, ámbito local, harnesses detectados y sin limpieza. Usa selecciones explícitas en los scripts para que el resultado no dependa de las carpetas que ya existan.
+Cuando stdin no es una TTY o se proporciona cualquier otro argumento, la CLI no hace preguntas. Incluso `--local` por sí solo inicia una instalación con los valores por defecto: todas las skills, ámbito local, harnesses detectados, copias en lugar de enlaces y sin limpieza. Usa selecciones explícitas en los scripts para que el resultado no dependa de las carpetas que ya existan.
 
 La detección consiste en comprobar si existe la carpeta de skills de destino o su directorio padre; no comprueba si la aplicación del harness está instalada. Por ejemplo, un directorio `.claude/` existente permite detectar `Claude Workspace` incluso sin `.claude/skills/`. La detección se limita al ámbito seleccionado. Si no se detecta nada, el comando falla. Elige etiquetas con `--harnesses` para crear sus destinos o usa `--all-harnesses` para seleccionar todos los destinos de ese ámbito.
 
@@ -76,6 +77,7 @@ Las copias locales y globales son archivos independientes. Actualizar una no act
 | `--all-skills`       | Instala todas las skills disponibles. Es el valor por defecto; incluye los borradores si están habilitados.              |
 | `--harnesses=<list>` | Instala en las etiquetas de harnesses separadas por comas, sin distinguir mayúsculas de minúsculas.                      |
 | `--all-harnesses`    | Selecciona todos los harnesses válidos para el ámbito elegido.                                                           |
+| `--link`             | Copia las skills una vez en `.agents/skills` y enlaza a esa copia los demás destinos seleccionados.                      |
 | `--cleanup`          | Elimina los directorios raíz completos de los destinos de skills seleccionados antes de copiar. Desactivado por defecto. |
 | `--include-drafts`   | Ofrece también las skills en borrador. Solo funciona desde una copia de trabajo del repositorio.                         |
 | `--help`, `-h`       | Muestra la ayuda del comando.                                                                                            |
@@ -116,9 +118,49 @@ Los destinos seleccionados mediante una etiqueta de Codex reciben el directorio 
 
 En nuestro ejemplo, Codex recibe el archivo `agents/openai.yaml` de cada skill cuando existe; la copia de Claude lo excluye. Seleccionar solo `Agent Skills Workspace` también excluye las entradas `agents`, aunque Codex lea ese destino. Selecciona una etiqueta de Codex cuando quieras incluir sus metadatos. La exclusión omite entradas del origen; no elimina una carpeta `agents` que haya dejado una instalación anterior.
 
+## Enlaza las carpetas de los harnesses a una sola copia
+
+Los harnesses que leen `.agents/skills` comparten una copia de cada skill, pero Claude y los demás de la tabla solo leen su propia carpeta, así que una instalación por copia les da a cada uno una copia aparte. `--link` mantiene una sola copia: copia cada skill en la carpeta `.agents/skills` del ámbito y luego convierte cada skill de los demás destinos seleccionados en un enlace a esa copia.
+
+```sh
+pnpm dlx @codenhub/skills@latest --local --link --skills=brainstorming,test-driven-development --harnesses="Claude Workspace,Codex Workspace"
+```
+
+Codex recibe `.agents/skills/brainstorming`, y Claude recibe `.claude/skills/brainstorming` como un enlace a ella. La copia compartida se escribe aunque no se seleccione ninguna etiqueta que la lea: solo con `--harnesses="Claude Workspace"`, las skills también llegan a `.agents/skills`. Las instalaciones globales usan `~/.agents/skills`, y `--both` mantiene una copia por ámbito. La [regla de `agents` de Codex](#comportamiento-de-los-harnesses) se aplica a la copia compartida, así que todos los harnesses enlazados leen los mismos archivos, carpeta `agents` incluida cuando se selecciona una etiqueta de Codex.
+
+Cada skill recibe su propio enlace, así que las demás skills de `.claude/skills` quedan como están. Una skill que llega a la carpeta compartida por otra vía, como una instalación posterior sin `--link`, no se enlaza hasta que una instalación con `--link` la incluya. En macOS y Linux, el enlace es un enlace simbólico con una ruta relativa. En Windows es una unión de directorio (junction), que no necesita derechos de administrador ni el modo de desarrollador, pero guarda una ruta absoluta, así que solo funciona en la máquina que la creó. Trata los enlaces como locales de cada máquina: deja que cada desarrollador ejecute la instalación, como hace [Configura un repositorio compartido](#configura-un-repositorio-compartido), en lugar de hacer commit de ellos.
+
+Ejecutar de nuevo la misma instalación deja intactos los enlaces correctos y actualiza la copia compartida. Un enlace que apunta a otro lugar se reemplaza; la carpeta a la que apuntaba queda intacta. Cualquier otra cosa en la ruta de un enlace, como la carpeta de una skill de una instalación anterior por copia, nunca se reemplaza: esa skill falla con `Failed linking`, las demás continúan y el comando sale con `1`. Mueve o borra la carpeta, o usa `--cleanup`, y vuelve a instalar.
+
+Una instalación sin `--link` en un destino que contiene enlaces copia a través de ellos en la copia compartida, y lo que escribe sigue la regla de `agents` de ese destino.
+
+## Configura un repositorio compartido
+
+Para que todo el equipo de un proyecto tenga las mismas skills, use el harness que use, guarda el instalador y su selección en el repositorio. Fija el paquete como dependencia de desarrollo y añade un script al `package.json` raíz; en un monorepo, es la raíz del workspace, ya que las rutas locales se resuelven desde el directorio donde se ejecuta el comando y pnpm ejecuta allí los scripts de la raíz.
+
+```sh
+pnpm add -D -w @codenhub/skills@<version>
+```
+
+Usa `-w` solo en un workspace de pnpm, y `npm install -D` con npm. Después añade el script:
+
+```json
+{
+  "scripts": {
+    "skills": "codenhub-skills --local --link --skills=brainstorming,test-driven-development --harnesses=\"Claude Workspace,Codex Workspace\""
+  }
+}
+```
+
+Cada desarrollador ejecuta `pnpm skills` después de instalar las dependencias, y de nuevo cuando se actualiza la dependencia, para refrescar las skills. Ignora en git las carpetas de las skills instaladas, tanto en `.agents/skills` como en cada carpeta de harness enlazada, pero no las skills que mantiene el propio repositorio. Nombra las skills instaladas en `.gitignore`, en lugar de carpetas completas, cuando el repositorio guarda allí sus propias skills.
+
+Para hacer commit de las skills, de modo que estén presentes nada más clonar, instala sin `--link` en los destinos que usa tu equipo y haz commit de las copias. Con `Agent Skills Workspace` solo, una copia sirve a todos los harnesses que leen `.agents/skills`, sin los metadatos de Codex de las entradas `agents`; cada uno de los demás necesita su propia copia.
+
 ## Limpieza destructiva
 
 `--cleanup` elimina de forma recursiva todo el destino de skills de cada harness seleccionado antes de instalar. Esto borra todo el contenido de ese directorio, incluidas las skills y los archivos que no gestiona `@codenhub/skills`. En nuestro ejemplo local, añadirlo elimina `.claude/skills` y `.agents/skills` como directorios completos, aunque solo haya dos skills seleccionadas. Las etiquetas que comparten un destino, como `Codex Workspace` y `Agent Skills Workspace`, eliminan ese único directorio una sola vez.
+
+Con `--link`, la limpieza elimina solo los directorios raíz seleccionados. La carpeta compartida `.agents/skills` se elimina cuando una etiqueta seleccionada la lee, como `Agent Skills Workspace` o `Codex Workspace`; eso también deja rotos los enlaces que otras carpetas de harnesses tengan de ejecuciones anteriores, hasta que una instalación con `--link` restaure la copia.
 
 Todos los directorios raíz seleccionados se limpian antes de copiar cualquier skill. Haz una copia de seguridad de esos directorios y comprueba primero el directorio de trabajo actual y el ámbito seleccionado. Para eliminar una sola skill obsoleta, borra su propia carpeta en lugar de limpiar todo el directorio raíz.
 

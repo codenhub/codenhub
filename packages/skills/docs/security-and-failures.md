@@ -12,6 +12,8 @@ Installing the [Claude and Codex example](cli.md#repeat-the-selection-without-pr
 
 By default, installation merges directories and overwrites files with matching paths. If you edited `.agents/skills/brainstorming/SKILL.md`, installing that skill again replaces your edits. Back up customized skills before updating.
 
+With [`--link`](cli.md#link-harness-folders-to-one-copy), every linked harness reads the shared copy in `.agents/skills`, so an edit there, or an update that overwrites it, reaches all of them at once. The installer never replaces a real folder with a link: back up and move a customized skill folder yourself before linking its destination.
+
 Files found only at the destination remain. An old reference file or a skill removed from a later package release stays installed until you remove it yourself. To remove one stale skill, delete that skill's directory in each destination where it was installed. The installer does not track which files it owns.
 
 ### Destructive cleanup
@@ -36,15 +38,17 @@ These checks constrain source reads and prevent self-copying; they are not a fil
 
 The command prints failures and uses these exit codes:
 
-- **`0`:** the selected copies succeeded, or help was printed. Selecting no skills or no harnesses in the wizard prints an exit message and also returns `0`, without installing. Cleanup failures can still have occurred.
+- **`0`:** the selected copies and links succeeded, or help was printed. Selecting no skills or no harnesses in the wizard prints an exit message and also returns `0`, without installing. Cleanup failures can still have occurred.
 - **`130`:** Ctrl+C cancelled the interactive wizard before installation. Run the installer again when ready to make a selection.
-- **`1`:** invalid arguments, unknown skill IDs, harness labels invalid for the scope, no detected harness, missing skills, source-loading failures, an unhandled exception, or any skill copy failure. The error output identifies what to correct.
+- **`1`:** invalid arguments, unknown skill IDs, harness labels invalid for the scope, no detected harness, missing skills, source-loading failures, an unhandled exception, or any skill copy or link failure. The error output identifies what to correct.
 
 For argument errors, use the IDs in the [catalog](skills.md#bundled-catalog) and scope-qualified labels in the [CLI guide](cli.md#options). If no harness is detected, explicitly select the destinations you intend with `--harnesses`, or use `--all-harnesses` when you want every destination for the scope. Do not add cleanup to resolve a selection error.
 
 If no skills are found or a bundled source cannot be read, use an intact package installation or restore the checkout's skill files. `--include-drafts` additionally fails when there are no drafts or a draft ID duplicates a bundled ID; omit the flag for published installations.
 
 A copy can fail because its source disappeared, a path constraint was violated, or reading, resolving, creating, or writing a filesystem entry failed. The CLI reports `Failed copying` for each affected skill, then continues with remaining skills and destinations. It exits `1` after attempting them all. For permission errors, make the selected destination writable; for file/directory conflicts, back up and resolve the conflicting entry. Check the reported path before changing anything.
+
+A link fails when its target is missing because the shared copy of that skill failed, when something other than a link occupies its path, or when creating it fails. The CLI reports `Failed linking` for each affected skill and continues, as for copies. Back up and move the entry at the path the message names, or fix the shared copy's failure first, then rerun.
 
 ## Recover from partial writes
 

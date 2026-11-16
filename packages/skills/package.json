@@ -1,9 +1,23 @@
 {
   "name": "@codenhub/skills",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "private": false,
   "description": "Installer CLI for a curated collection of AI agent skills, for every major agent harness.",
-  "homepage": "https://github.com/codenhub/codenhub/tree/main/packages/skills",
+  "keywords": [
+    "agent-skills",
+    "ai-agents",
+    "claude-code",
+    "cli",
+    "codex",
+    "copilot",
+    "cursor",
+    "gemini-cli",
+    "installer",
+    "opencode",
+    "skill-md",
+    "skills"
+  ],
+  "homepage": "https://codenhub.dev/packages/skills/",
   "license": "Apache-2.0",
   "repository": {
     "type": "git",
@@ -49,7 +63,7 @@
     "vitest": "catalog:"
   },
   "engines": {
-    "node": ">=24"
+    "node": ">=26"
   },
   "codenhub": {
     "label": "Coden Skills",

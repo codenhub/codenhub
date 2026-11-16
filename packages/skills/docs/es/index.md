@@ -1,7 +1,7 @@
 ---
 title: Introducción
 description: Elige skills para agentes e instálalas en las carpetas que usan tus herramientas.
-source: e8cf45dade9d688c28c9dc80fe8f106bd39dfbf5
+source: 903d5e5e04d4a9994c033b7ee0c7eac3f877bf4b
 ---
 
 # Instala y administra skills para agentes
@@ -14,7 +14,7 @@ Esta documentación sigue un proyecto que usa Claude y Codex. Empezamos con `bra
 
 ## Inicio rápido
 
-Con Node.js 24 o posterior, abre una terminal interactiva en el directorio de tu proyecto y ejecuta:
+Con Node.js 26 o posterior, abre una terminal interactiva en el directorio de tu proyecto y ejecuta:
 
 ```sh
 pnpm dlx @codenhub/skills@latest
@@ -22,7 +22,7 @@ pnpm dlx @codenhub/skills@latest
 
 El equivalente con npm es `npx @codenhub/skills@latest`. Ninguno de los dos comandos añade una dependencia a tu proyecto.
 
-En el asistente, elige el ámbito local, rechaza la opción de instalar todas las skills, selecciona `brainstorming` y `test-driven-development`, y elige `Claude Workspace` y `Codex Workspace`. Deja desactivada la limpieza para conservar otras skills instaladas. El instalador copia los directorios seleccionados en `.claude/skills` y `.agents/skills` dentro del directorio actual.
+En el asistente, elige el ámbito local, rechaza la opción de instalar todas las skills, selecciona `brainstorming` y `test-driven-development`, y elige `Claude Workspace` y `Codex Workspace`. Deja el modo de instalación en copia y desactivada la limpieza para conservar otras skills instaladas. El instalador copia los directorios seleccionados en `.claude/skills` y `.agents/skills` dentro del directorio actual.
 
 Para hacer la misma selección sin preguntas:
 
@@ -41,7 +41,7 @@ Los archivos existentes en rutas coincidentes se sobrescriben, los directorios s
 ## Orden de lectura
 
 1. [Skills incluidas](skills.md): elige flujos de trabajo, conoce el contenido de una skill y aprende el formato, las reglas de calidad y la política de versionado.
-2. [Instalador CLI](cli.md): instala las dos skills para Claude y Codex, repite la instalación de forma global y conoce todas las opciones, los destinos y las diferencias entre harnesses.
+2. [Instalador CLI](cli.md): instala las dos skills para Claude y Codex, repite la instalación de forma global, enlaza las carpetas de los harnesses a una sola copia, comparte una selección con un equipo y conoce todas las opciones, los destinos y las diferencias entre harnesses.
 3. [Seguridad y fallos](security-and-failures.md): entiende qué puede sobrescribir una actualización, diagnostica una instalación parcial e interpreta los códigos de salida.
 4. [Procedencia de las skills](provenance.md): consulta sus orígenes, licencias y los avisos que debes conservar al compartir las skills instaladas.
 

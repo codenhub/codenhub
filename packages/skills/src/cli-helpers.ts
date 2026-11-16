@@ -84,6 +84,7 @@ export function findHarnessByLabel(label: string, scope: string): HarnessDestina
 
 export interface DestinationGroup {
   dest: string;
+  scope: HarnessScope;
   /** Labels the user selected that resolve to this destination. */
   labels: string[];
   includeAgentsFolder: boolean;
@@ -105,12 +106,63 @@ export function groupByDest(harnesses: HarnessDestination[]): DestinationGroup[]
     } else {
       groups.set(harness.dest, {
         dest: harness.dest,
+        scope: harness.scope,
         labels: [harness.label],
         includeAgentsFolder: harness.includeAgentsFolder === true,
       });
     }
   }
   return Array.from(groups.values());
+}
+
+/**
+ * Where a linked install keeps its one copy of each skill: the Agent Skills
+ * standard location of the scope, which most harnesses read natively.
+ */
+export const SHARED_SKILLS_DESTINATIONS: Record<HarnessScope, string> = {
+  workspace: HARNESS_DESTINATIONS.find((harness) => harness.label === "Agent Skills Workspace")!.dest,
+  global: HARNESS_DESTINATIONS.find((harness) => harness.label === "Agent Skills Global")!.dest,
+};
+
+export interface LinkGroup {
+  dest: string;
+  /** Labels the user selected that resolve to this destination. */
+  labels: string[];
+  /** Shared skills folder each skill directory in `dest` links to. */
+  target: string;
+}
+
+export interface InstallPlan {
+  /** Destinations that receive a copy of each skill, written first. */
+  copies: DestinationGroup[];
+  /** Destinations that receive a link per skill into a copy above. */
+  links: LinkGroup[];
+}
+
+/**
+ * Without linking, every destination gets its own copy. With linking, each
+ * scope's shared folder gets the only copy, whether or not it was selected,
+ * and every other destination links to it, so harnesses that cannot read the
+ * shared folder still read the same files.
+ */
+export function planInstall(groups: DestinationGroup[], shouldLink: boolean): InstallPlan {
+  if (!shouldLink) {
+    return { copies: groups, links: [] };
+  }
+  const copies = new Map<HarnessScope, DestinationGroup>();
+  const links: LinkGroup[] = [];
+  for (const group of groups) {
+    const shared = SHARED_SKILLS_DESTINATIONS[group.scope];
+    if (group.dest === shared) {
+      copies.set(group.scope, group);
+      continue;
+    }
+    if (!copies.has(group.scope)) {
+      copies.set(group.scope, { dest: shared, scope: group.scope, labels: [], includeAgentsFolder: false });
+    }
+    links.push({ dest: group.dest, labels: group.labels, target: shared });
+  }
+  return { copies: Array.from(copies.values()), links };
 }
 
 export const INCLUDE_DRAFTS_FLAG = "--include-drafts";
@@ -158,6 +210,8 @@ export interface State {
   selectedSkills: string[];
   selectedHarnesses: string[];
   shouldCleanupFirst: boolean;
+  /** Link every destination other than the shared folder to one copy. */
+  shouldLink: boolean;
 }
 
 export interface Step {

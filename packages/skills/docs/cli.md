@@ -14,7 +14,7 @@ The executable is named `codenhub-skills`. Run it without adding a project depen
 pnpm dlx @codenhub/skills@latest
 ```
 
-Use `npx @codenhub/skills@latest` for the npm equivalent. Node.js 24 or newer is required.
+Use `npx @codenhub/skills@latest` for the npm equivalent. Node.js 26 or newer is required.
 
 ## Start in a project
 
@@ -26,9 +26,10 @@ Run the command above in an interactive terminal, then:
 2. Answer **No** to installing all skills. The default is **Yes**; declining opens the individual selection screen, initially with all skills checked.
 3. Keep only `brainstorming` and `test-driven-development` selected.
 4. Select `Claude Workspace` and `Codex Workspace`, clearing any other checked harnesses.
-5. Leave cleanup at its default, **No**, to retain other installed skills.
+5. Keep the install mode at its default, **Copy into each folder**. [Link mode](#link-harness-folders-to-one-copy) is the alternative.
+6. Leave cleanup at its default, **No**, to retain other installed skills.
 
-Use Up and Down to move, Space to toggle checkboxes, and Enter to confirm a step. Backspace or Left returns to the previous step where offered. Ctrl+C cancels the wizard. Once you confirm the cleanup step, installation starts.
+The install mode step appears only when a selected harness reads a folder other than `.agents/skills`, as Claude does here. Use Up and Down to move, Space to toggle checkboxes, and Enter to confirm a step. Backspace or Left returns to the previous step where offered. Ctrl+C cancels the wizard. Once you confirm the cleanup step, installation starts.
 
 Each skill becomes a child directory under `.claude/skills` and `.agents/skills`. For example, Codex receives `.agents/skills/brainstorming/SKILL.md`. Missing destination directories are created. By default, existing directories are merged and matching files are overwritten; files present only at the destination remain. Back up local edits before updating.
 
@@ -36,9 +37,9 @@ The installer copies files and reports the result. Consult your harness's instru
 
 ## Modes
 
-The wizard appears only when stdin is a TTY (an interactive terminal) and no arguments are supplied, except that `--include-drafts` alone keeps it interactive. Scope, skill selection, harnesses, and cleanup are all choices in the wizard. Detected harness paths are preselected; change that selection before confirming if you want fewer destinations.
+The wizard appears only when stdin is a TTY (an interactive terminal) and no arguments are supplied, except that `--include-drafts` alone keeps it interactive. Scope, skill selection, harnesses, install mode, and cleanup are all choices in the wizard. Detected harness paths are preselected; change that selection before confirming if you want fewer destinations.
 
-When stdin is not a TTY, or any other argument is supplied, the CLI does not prompt. Even `--local` alone starts an install with defaults: all skills, local scope, detected harnesses, and no cleanup. Use explicit selections in scripts so the result does not depend on which folders already exist.
+When stdin is not a TTY, or any other argument is supplied, the CLI does not prompt. Even `--local` alone starts an install with defaults: all skills, local scope, detected harnesses, copies rather than links, and no cleanup. Use explicit selections in scripts so the result does not depend on which folders already exist.
 
 Detection means the destination skills folder or its parent exists; it does not check whether the harness application is installed. For example, an existing `.claude/` directory detects `Claude Workspace` even without `.claude/skills/`. Detection is restricted to the selected scope. If nothing is detected, the command fails. Choose labels with `--harnesses` to create their destinations, or use `--all-harnesses` to opt into every destination in that scope.
 
@@ -75,6 +76,7 @@ Local and global copies are separate files. Updating one does not update the oth
 | `--all-skills`       | Install every available skill. This is the default; drafts are included when enabled. |
 | `--harnesses=<list>` | Install to comma-separated harness labels, matched case-insensitively.                |
 | `--all-harnesses`    | Select every harness valid for the chosen scope.                                      |
+| `--link`             | Copy skills once to `.agents/skills` and link the other selected destinations to it.  |
 | `--cleanup`          | Remove entire selected skills destination roots before copying. Off by default.       |
 | `--include-drafts`   | Also offer draft skills. Works only from a repository checkout.                       |
 | `--help`, `-h`       | Print command help.                                                                   |
@@ -115,9 +117,49 @@ Destinations selected through a Codex label receive the complete bundled skill d
 
 In our example, Codex gets each skill's `agents/openai.yaml` when present; Claude's copy excludes it. Selecting only `Agent Skills Workspace` also excludes `agents` entries, even though Codex reads that destination. Select a Codex label when you want its metadata included. Exclusion skips source entries; it does not delete an `agents` folder left by an earlier install.
 
+## Link harness folders to one copy
+
+Harnesses that read `.agents/skills` share one copy of each skill, but Claude and the others in the table read only their own folder, so a copy install gives each of them a separate copy. `--link` keeps one copy instead: it copies each skill to the scope's `.agents/skills` folder, then makes each skill in every other selected destination a link to that copy.
+
+```sh
+pnpm dlx @codenhub/skills@latest --local --link --skills=brainstorming,test-driven-development --harnesses="Claude Workspace,Codex Workspace"
+```
+
+Codex receives `.agents/skills/brainstorming`, and Claude receives `.claude/skills/brainstorming` as a link to it. The shared copy is written whether or not a label that reads it is selected: with `--harnesses="Claude Workspace"` alone, the skills still land in `.agents/skills`. Global installs use `~/.agents/skills`, and `--both` keeps one copy per scope. The [Codex `agents` rule](#harness-behavior) applies to the shared copy, so every linked harness reads the same files, `agents` folder included when a Codex label is selected.
+
+Each skill gets its own link, so other skills in `.claude/skills` stay as they are. A skill that reaches the shared folder some other way, such as a later install without `--link`, is not linked until an install with `--link` includes it. On macOS and Linux the link is a symbolic link with a relative path. On Windows it is a directory junction, which needs neither administrator rights nor Developer Mode but stores an absolute path, so it works only on the machine that made it. Treat links as local to each machine: let each developer run the install, as [Set up a shared repository](#set-up-a-shared-repository) does, rather than committing them.
+
+Running the same install again leaves correct links alone and updates the shared copy. A link that points elsewhere is replaced; the folder it pointed to is left alone. Anything else at a link's path, such as a skill folder from an earlier copy install, is never replaced: that skill fails with `Failed linking`, the other skills continue, and the command exits `1`. Move the folder away or delete it, or use `--cleanup`, then install again.
+
+An install without `--link` into a destination that holds links copies through them into the shared copy, and the `agents` rule of that destination applies to what it writes.
+
+## Set up a shared repository
+
+To give everyone on a project the same skills whichever harness they use, keep the installer and its selection in the repository. Pin the package as a development dependency and add a script to the root `package.json`; in a monorepo, that is the workspace root, since local paths resolve from the directory the command runs in and pnpm runs root scripts there.
+
+```sh
+pnpm add -D -w @codenhub/skills@<version>
+```
+
+Use `-w` only in a pnpm workspace, and `npm install -D` for npm. Then add the script:
+
+```json
+{
+  "scripts": {
+    "skills": "codenhub-skills --local --link --skills=brainstorming,test-driven-development --harnesses=\"Claude Workspace,Codex Workspace\""
+  }
+}
+```
+
+Each developer runs `pnpm skills` after installing dependencies, and again after the dependency is updated, to refresh the skills. Ignore the installed skill folders in git, both under `.agents/skills` and under each linked harness folder, but not any skills the repository maintains itself. Name the installed skills in `.gitignore` rather than whole folders when the repository keeps its own skills there.
+
+To commit the skills instead, so they are present right after a clone, install without `--link` to the destinations your team uses and commit the copies. With `Agent Skills Workspace` alone, one copy serves every harness that reads `.agents/skills`, without the Codex metadata in `agents` entries; each other harness needs its own copy.
+
 ## Destructive Cleanup
 
 `--cleanup` recursively removes each selected harness's entire skills destination before installation. This deletes all content in that directory, including skills and files not managed by `@codenhub/skills`. In our local example, adding it removes both `.claude/skills` and `.agents/skills` as whole directories, even though only two skills are selected. Labels that share a destination, such as `Codex Workspace` and `Agent Skills Workspace`, remove that one directory once.
+
+With `--link`, cleanup removes the selected roots only. The shared `.agents/skills` is removed when a selected label reads it, such as `Agent Skills Workspace` or `Codex Workspace`; that also leaves dangling the links other harness folders hold from earlier runs, until an install with `--link` restores the copy.
 
 All selected roots are cleaned before any skill is copied. Back up those directories and check the current working directory and selected scope first. To remove a single stale skill, delete its own folder instead of cleaning the whole root.
 

@@ -1,4 +1,4 @@
-<!-- source: 1d6c0b91961d5af28e479b0d8a8fd113b0916067 -->
+<!-- source: 489e6e135cee1d983d708ce8da474fe9b3bc1756 -->
 
 # @codenhub/skills
 
@@ -28,6 +28,8 @@ Para repetir uma instalação sem perguntas, selecione as skills e os destinos e
 pnpm dlx @codenhub/skills@latest --local --skills=brainstorming,test-driven-development --harnesses="Claude Workspace,Codex Workspace"
 ```
 
+Adicione `--link` para manter uma única cópia em `.agents/skills` e vincular a ela as pastas dos outros harnesses, para que todos leiam os mesmos arquivos. Para compartilhar uma seleção com uma equipe, fixe o pacote como dependência de desenvolvimento e execute o instalador a partir de um script; o [guia da CLI](docs/pt-BR/cli.md#configure-um-repositório-compartilhado) mostra como.
+
 A coleção cobre planejamento e implementação (`brainstorming`, `test-driven-development`, `coding`, `ponytail`), revisão e entrega (`audit`, `babysit-pr`), trabalho criativo (`branding`, `design`, `logo-design`, `motion-graphics`, `naming`), além de orientação para agentes e escrita. Veja todas as skills e quando cada uma se aplica no [catálogo de skills](docs/pt-BR/skills.md).
 
 ## Documentação
@@ -40,7 +42,7 @@ A coleção cobre planejamento e implementação (`brainstorming`, `test-driven-
 
 ## Requisitos
 
-- Node.js 24 ou mais recente.
+- Node.js 26 ou mais recente.
 - Permissão no sistema de arquivos para ler as skills de origem e modificar os destinos selecionados.
 - Um terminal interativo (TTY) para o assistente; opções explícitas da CLI permitem automatizar a instalação.
 
@@ -53,4 +55,4 @@ A coleção cobre planejamento e implementação (`brainstorming`, `test-driven-
 
 ## Licença
 
-Licenciado sob Apache-2.0. As skills incluídas contêm material adaptado de terceiros; veja [NOTICE](NOTICE) e a [origem das skills](docs/pt-BR/provenance.md).
+Licenciado sob [Apache-2.0](LICENSE). As skills incluídas contêm material adaptado de terceiros; veja [NOTICE](NOTICE) e a [origem das skills](docs/pt-BR/provenance.md).

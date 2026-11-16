@@ -4,7 +4,7 @@ import * as path from "path";
 
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 
-import { parseFrontmatter, getSkills, copyRecursiveSync } from "./index.js";
+import { parseFrontmatter, getSkills, copyRecursiveSync, linkDirectory } from "./index.js";
 
 describe("parseFrontmatter", () => {
   it("should parse valid frontmatter", () => {
@@ -215,5 +215,77 @@ describe("copyRecursiveSync", () => {
     }
 
     expect(() => copyRecursiveSync({ src: srcDir, dest: symlinkPath })).toThrow("subdirectory of itself");
+  });
+});
+
+describe("linkDirectory", () => {
+  let tempDir: string;
+  let target: string;
+  let link: string;
+
+  beforeEach(() => {
+    tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "skills-link-"));
+    target = path.join(tempDir, ".agents", "skills", "demo");
+    fs.mkdirSync(target, { recursive: true });
+    fs.writeFileSync(path.join(target, "SKILL.md"), "demo");
+    link = path.join(tempDir, ".claude", "skills", "demo");
+  });
+
+  afterEach(() => {
+    fs.rmSync(tempDir, { recursive: true, force: true });
+  });
+
+  it("should create the link and its missing parent directories", () => {
+    linkDirectory({ target, link });
+    expect(fs.lstatSync(link).isSymbolicLink()).toBe(true);
+    expect(fs.realpathSync(link)).toBe(fs.realpathSync(target));
+    expect(fs.readFileSync(path.join(link, "SKILL.md"), "utf8")).toBe("demo");
+  });
+
+  it.skipIf(process.platform === "win32")("should store a relative target so the tree can move", () => {
+    linkDirectory({ target, link });
+    expect(fs.readlinkSync(link)).toBe(path.join("..", "..", ".agents", "skills", "demo"));
+  });
+
+  it.skipIf(process.platform === "win32")("should resolve when a parent of the link is itself a link", () => {
+    const realClaude = path.join(tempDir, "nested", "dir", "claude");
+    fs.mkdirSync(realClaude, { recursive: true });
+    fs.symlinkSync(realClaude, path.join(tempDir, ".claude"));
+
+    linkDirectory({ target, link });
+
+    expect(fs.readFileSync(path.join(link, "SKILL.md"), "utf8")).toBe("demo");
+  });
+
+  it("should leave a link that already points at the target in place", () => {
+    linkDirectory({ target, link });
+    linkDirectory({ target, link });
+    expect(fs.realpathSync(link)).toBe(fs.realpathSync(target));
+  });
+
+  it("should replace a link that points elsewhere without touching its old target", () => {
+    const other = path.join(tempDir, "other");
+    fs.mkdirSync(other);
+    fs.writeFileSync(path.join(other, "keep.md"), "keep");
+    linkDirectory({ target: other, link });
+
+    linkDirectory({ target, link });
+
+    expect(fs.realpathSync(link)).toBe(fs.realpathSync(target));
+    expect(fs.readFileSync(path.join(other, "keep.md"), "utf8")).toBe("keep");
+  });
+
+  it("should refuse to replace a real directory and leave its files", () => {
+    fs.mkdirSync(link, { recursive: true });
+    fs.writeFileSync(path.join(link, "SKILL.md"), "local edit");
+
+    expect(() => linkDirectory({ target, link })).toThrow(/is not a link/);
+    expect(fs.lstatSync(link).isSymbolicLink()).toBe(false);
+    expect(fs.readFileSync(path.join(link, "SKILL.md"), "utf8")).toBe("local edit");
+  });
+
+  it("should fail when the target does not exist", () => {
+    expect(() => linkDirectory({ target: path.join(tempDir, "missing"), link })).toThrow(/does not exist/);
+    expect(fs.existsSync(link)).toBe(false);
   });
 });

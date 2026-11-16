@@ -2,7 +2,7 @@
 title: Seguridad y fallos
 description: Entiende los riesgos de sobrescritura y limpieza, diagnostica instalaciones fallidas y recupérate de escrituras parciales.
 order: 3
-source: 2e1bc5678c893e5bf5327e32407eba66f7f0edca
+source: 84829e99f943de1b27baa792372df65d9b905ada
 ---
 
 # Instala con seguridad y recupérate de los fallos
@@ -12,6 +12,8 @@ La instalación del [ejemplo de Claude y Codex](cli.md#repite-la-selección-sin-
 ## Protege las skills existentes
 
 Por defecto, la instalación combina directorios y sobrescribe archivos con rutas coincidentes. Si editaste `.agents/skills/brainstorming/SKILL.md`, volver a instalar esa skill reemplaza tus cambios. Haz una copia de seguridad de las skills personalizadas antes de actualizar.
+
+Con [`--link`](cli.md#enlaza-las-carpetas-de-los-harnesses-a-una-sola-copia), todos los harnesses enlazados leen la copia compartida en `.agents/skills`, así que una edición allí, o una actualización que la sobrescriba, les llega a todos a la vez. El instalador nunca reemplaza una carpeta real por un enlace: haz una copia de seguridad y mueve tú mismo la carpeta de una skill personalizada antes de enlazar su destino.
 
 Los archivos que solo están en el destino permanecen. Un archivo de referencia antiguo o una skill eliminada de una versión posterior del paquete sigue instalada hasta que la elimines tú. Para eliminar una skill obsoleta, borra su directorio en cada destino donde se haya instalado. El instalador no lleva un registro de qué archivos le pertenecen.
 
@@ -37,15 +39,17 @@ Estas comprobaciones limitan las lecturas del origen y evitan la copia sobre sí
 
 El comando muestra los fallos y usa estos códigos de salida:
 
-- **`0`:** las copias seleccionadas se completaron correctamente o se mostró la ayuda. No seleccionar skills o harnesses en el asistente muestra un mensaje de salida y también devuelve `0`, sin instalar. Aun así, puede haber habido fallos de limpieza.
+- **`0`:** las copias y los enlaces seleccionados se completaron correctamente o se mostró la ayuda. No seleccionar skills o harnesses en el asistente muestra un mensaje de salida y también devuelve `0`, sin instalar. Aun así, puede haber habido fallos de limpieza.
 - **`130`:** Ctrl+C canceló el asistente interactivo antes de la instalación. Vuelve a ejecutar el instalador cuando quieras hacer una selección.
-- **`1`:** argumentos no válidos, IDs de skills desconocidos, etiquetas de harnesses no válidas para el ámbito, ningún harness detectado, skills faltantes, fallos al cargar las fuentes, una excepción no controlada o cualquier fallo al copiar una skill. La salida de error indica qué corregir.
+- **`1`:** argumentos no válidos, IDs de skills desconocidos, etiquetas de harnesses no válidas para el ámbito, ningún harness detectado, skills faltantes, fallos al cargar las fuentes, una excepción no controlada o cualquier fallo al copiar o enlazar una skill. La salida de error indica qué corregir.
 
 Para los errores de argumentos, usa los IDs del [catálogo](skills.md#catálogo-de-skills-incluidas) y las etiquetas con ámbito de la [guía de la CLI](cli.md#opciones). Si no se detecta ningún harness, selecciona explícitamente los destinos que quieras con `--harnesses` o usa `--all-harnesses` cuando quieras todos los destinos del ámbito. No añadas limpieza para resolver un error de selección.
 
 Si no se encuentran skills o no se puede leer una fuente incluida, usa una instalación íntegra del paquete o restaura los archivos de skills de la copia de trabajo. `--include-drafts` también falla cuando no hay borradores o el ID de un borrador duplica el de una skill incluida; omite la opción en instalaciones del paquete publicado.
 
 Una copia puede fallar porque su origen haya desaparecido, se haya incumplido una restricción de rutas o haya fallado la lectura, resolución, creación o escritura de una entrada del sistema de archivos. La CLI muestra `Failed copying` para cada skill afectada y luego continúa con las skills y los destinos restantes. Termina con el código `1` después de intentarlos todos. Para errores de permisos, habilita la escritura en el destino seleccionado; para conflictos entre archivos y directorios, haz una copia de seguridad y resuelve la entrada en conflicto. Comprueba la ruta indicada antes de cambiar nada.
+
+Un enlace falla cuando falta su destino porque falló la copia compartida de esa skill, cuando algo que no es un enlace ocupa su ruta o cuando no se puede crear. La CLI informa `Failed linking` para cada skill afectada y continúa, como con las copias. Haz una copia de seguridad y mueve lo que haya en la ruta que indica el mensaje, o corrige primero el fallo de la copia compartida, y vuelve a ejecutar.
 
 ## Recupérate de escrituras parciales
 

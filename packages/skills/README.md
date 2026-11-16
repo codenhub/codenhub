@@ -26,6 +26,8 @@ For a repeatable install without prompts, select skills and destinations explici
 pnpm dlx @codenhub/skills@latest --local --skills=brainstorming,test-driven-development --harnesses="Claude Workspace,Codex Workspace"
 ```
 
+Add `--link` to keep one copy in `.agents/skills` and link the other harness folders to it, so every harness reads the same files. To share a selection with a team, pin the package as a development dependency and run the installer from a script; the [CLI guide](docs/cli.md#set-up-a-shared-repository) shows how.
+
 The collection covers planning and implementation (`brainstorming`, `test-driven-development`, `coding`, `ponytail`), review and delivery (`audit`, `babysit-pr`), creative work (`branding`, `design`, `logo-design`, `motion-graphics`, `naming`), and agent guidance and writing. See the [skill catalog](docs/skills.md) for every skill and when it applies.
 
 ## Documentation
@@ -38,7 +40,7 @@ The collection covers planning and implementation (`brainstorming`, `test-driven
 
 ## Requirements
 
-- Node.js 24 or newer.
+- Node.js 26 or newer.
 - Filesystem permission to read source skills and modify selected destinations.
 - An interactive terminal (TTY) for the wizard; explicit CLI options support automation.
 
@@ -51,4 +53,4 @@ The collection covers planning and implementation (`brainstorming`, `test-driven
 
 ## License
 
-Licensed under Apache-2.0. Bundled skills include adapted third-party material; see [NOTICE](NOTICE) and [skill provenance](docs/provenance.md).
+Licensed under [Apache-2.0](LICENSE). Bundled skills include adapted third-party material; see [NOTICE](NOTICE) and [skill provenance](docs/provenance.md).

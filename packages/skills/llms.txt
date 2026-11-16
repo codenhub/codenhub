@@ -1,8 +1,8 @@
 # @codenhub/skills
 
-> A curated collection of agent skills and an installer CLI that copies selected skills into local or global harness folders without manually copying directories.
+> A curated collection of agent skills and an installer CLI that copies selected skills into local or global harness folders, or keeps one copy in `.agents/skills` and links the other harness folders to it.
 
-Requires Node.js 24 or newer. Run `pnpm dlx @codenhub/skills@latest` or
+Requires Node.js 26 or newer. Run `pnpm dlx @codenhub/skills@latest` or
 `npx @codenhub/skills@latest` in the target project for the wizard. Explicit
 options support automation. There are no supported programmatic library imports.
 Treat `skills/**` Markdown as shipped agent instructions rather than package
@@ -13,7 +13,7 @@ stale files. Review destructive cleanup and failure behavior before updating.
 
 - [Documentation overview](docs/index.md): Canonical package documentation entrypoint.
 - [Bundled skills](docs/skills.md): Choose workflows; learn skill format, quality rules, drafts, and versioning.
-- [CLI installer](docs/cli.md): Modes, options, destinations, harness behavior, and destructive cleanup.
+- [CLI installer](docs/cli.md): Modes, options, destinations, harness behavior, link mode, team setup through a pinned development dependency, and destructive cleanup.
 - [Security and failure behavior](docs/security-and-failures.md): Path constraints, partial writes, and exit behavior.
 
 ## Optional

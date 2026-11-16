@@ -2,7 +2,7 @@
 title: Segurança e falhas
 description: Entenda os riscos de sobrescrita e limpeza, diagnostique falhas de instalação e se recupere de gravações parciais.
 order: 3
-source: 2e1bc5678c893e5bf5327e32407eba66f7f0edca
+source: 84829e99f943de1b27baa792372df65d9b905ada
 ---
 
 # Instale com segurança e se recupere de falhas
@@ -12,6 +12,8 @@ A instalação do [exemplo com Claude e Codex](cli.md#repita-a-seleção-sem-per
 ## Proteja as skills existentes
 
 Por padrão, a instalação mescla diretórios e sobrescreve arquivos nos mesmos caminhos. Se você editou `.agents/skills/brainstorming/SKILL.md`, instalar essa skill novamente substitui suas alterações. Faça backup das skills personalizadas antes de atualizar.
+
+Com [`--link`](cli.md#vincule-as-pastas-dos-harnesses-a-uma-única-cópia), todos os harnesses vinculados leem a cópia compartilhada em `.agents/skills`, então uma edição ali, ou uma atualização que a sobrescreva, chega a todos de uma vez. O instalador nunca substitui uma pasta real por um link: faça backup e mova você mesmo a pasta de uma skill personalizada antes de vincular o destino dela.
 
 Arquivos que existem apenas no destino permanecem. Um arquivo de referência antigo ou uma skill removida em uma versão posterior do pacote continua instalado até você removê-lo por conta própria. Para remover uma skill obsoleta, apague o diretório dela em cada destino em que foi instalada. O instalador não mantém um registro de quais arquivos gerencia.
 
@@ -37,15 +39,17 @@ Essas verificações restringem as leituras da origem e evitam a cópia para den
 
 O comando exibe as falhas e usa estes códigos de saída:
 
-- **`0`:** as cópias selecionadas foram concluídas ou a ajuda foi exibida. Não selecionar nenhuma skill ou nenhum harness no assistente exibe uma mensagem de saída e também retorna `0`, sem instalar. Ainda assim, podem ter ocorrido falhas na limpeza.
+- **`0`:** as cópias e os links selecionados foram concluídos ou a ajuda foi exibida. Não selecionar nenhuma skill ou nenhum harness no assistente exibe uma mensagem de saída e também retorna `0`, sem instalar. Ainda assim, podem ter ocorrido falhas na limpeza.
 - **`130`:** Ctrl+C cancelou o assistente interativo antes da instalação. Execute o instalador novamente quando estiver pronto para fazer uma seleção.
-- **`1`:** argumentos inválidos, IDs de skills desconhecidos, rótulos de harnesses inválidos para o escopo, nenhum harness detectado, skills ausentes, falhas ao carregar as fontes, uma exceção não tratada ou qualquer falha na cópia de uma skill. A saída de erro identifica o que corrigir.
+- **`1`:** argumentos inválidos, IDs de skills desconhecidos, rótulos de harnesses inválidos para o escopo, nenhum harness detectado, skills ausentes, falhas ao carregar as fontes, uma exceção não tratada ou qualquer falha na cópia ou no link de uma skill. A saída de erro identifica o que corrigir.
 
 Para erros de argumento, use os IDs do [catálogo](skills.md#catálogo-de-skills-incluídas) e os rótulos que incluem o escopo no [guia da CLI](cli.md#opções). Se nenhum harness for detectado, selecione explicitamente os destinos desejados com `--harnesses` ou use `--all-harnesses` quando quiser todos os destinos do escopo. Não adicione limpeza para resolver um erro de seleção.
 
 Se nenhuma skill for encontrada ou uma fonte incluída não puder ser lida, use uma instalação íntegra do pacote ou restaure os arquivos de skills do checkout. `--include-drafts` também falha quando não há rascunhos ou quando o ID de um rascunho duplica o de uma skill incluída; omita a opção em instalações publicadas.
 
 Uma cópia pode falhar porque sua origem desapareceu, uma restrição de caminho foi violada ou houve falha ao ler, resolver, criar ou gravar uma entrada no sistema de arquivos. A CLI exibe `Failed copying` para cada skill afetada e continua com as skills e os destinos restantes. Ela encerra com `1` depois de tentar todos. Para erros de permissão, torne o destino selecionado gravável; para conflitos entre arquivos e diretórios, faça backup e resolva a entrada conflitante. Confira o caminho informado antes de mudar qualquer coisa.
+
+Um link falha quando o destino dele não existe porque a cópia compartilhada daquela skill falhou, quando algo que não é um link ocupa o caminho dele ou quando não é possível criá-lo. A CLI informa `Failed linking` para cada skill afetada e continua, como faz com as cópias. Faça backup e mova o que estiver no caminho que a mensagem indica, ou corrija antes a falha da cópia compartilhada, e execute de novo.
 
 ## Recupere-se de gravações parciais
 
