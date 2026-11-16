@@ -16,6 +16,7 @@ import {
   checkClientRecord,
   isScopeOfClient,
   lifetimesOf,
+  resourcesOfClient,
 } from "./client-record";
 import { readFrontChannelParameters } from "./front-channel";
 import type { ResolvedOptions } from "./options";
@@ -155,23 +156,42 @@ export async function completeAuthorization(
   if (!interaction.ok) {
     return interaction;
   }
+  if (!("error" in outcome)) {
+    assertGrantFits(interaction.value, outcome, options.now());
+  }
+  // Read again, since an admin may have edited the client while the user signed in: the redirect, a denial's
+  // included, goes only to a URI the record lists now (invariant 3), and the code grants only what it lists now.
+  const client = await currentClient(options, interaction.value);
+  if (client === undefined) {
+    // Nobody is left to send the result to, so the app renders its own page.
+    return fail({ code: "interaction_not_found" });
+  }
   const target = targetOf(options, interaction.value);
   if ("error" in outcome) {
     return ok(respond(target, { error: outcome.error }));
   }
-  assertGrantFits(interaction.value, outcome, options.now());
-  // The code's lifetime may be the client's own, and the interaction does not carry the client's record.
-  const record = await options.store.findClient(interaction.value.clientId);
-  if (record === undefined) {
-    // The client was removed while the user signed in, so there is nobody to issue a code to.
-    return fail({ code: "interaction_not_found" });
-  }
-  const { code: codeTtl } = lifetimesOf(
-    options.ttl,
-    checkClientRecord(record, interaction.value.clientId, options.publicKeys),
-  );
-  const code = await issueCode(options, interaction.value, outcome, codeTtl);
+  // The code's lifetime may be the client's own.
+  const { code: codeTtl } = lifetimesOf(options.ttl, client);
+  const code = await issueCode(options, interaction.value, outcome, client, codeTtl);
   return ok(respond(target, { code }));
+}
+
+/**
+ * The record of the interaction's client, when it still exists, may still use the code flow, and still lists the
+ * interaction's redirect URI; `undefined` otherwise.
+ */
+async function currentClient(
+  options: ResolvedOptions,
+  interaction: InteractionRecord,
+): Promise<CheckedClient | undefined> {
+  const record = await options.store.findClient(interaction.clientId);
+  if (record === undefined) {
+    return undefined;
+  }
+  const client = checkClientRecord(record, interaction.clientId, options.publicKeys);
+  return client.grantTypes.includes("authorization_code") && client.redirectUris.includes(interaction.redirectUri)
+    ? client
+    : undefined;
 }
 
 /** Builds an issue, adding `path` only when one is given so an absent member stays absent. */
@@ -558,23 +578,27 @@ async function issueCode(
   options: ResolvedOptions,
   interaction: InteractionRecord,
   grant: AuthorizationGrant,
+  client: ClientRecord,
   ttl: number,
 ): Promise<string> {
   const code = randomToken();
+  // Narrowed to the record as it is now. A client that uses the code flow lists `openid` (`checkClientRecord`), so
+  // the narrowed scopes still include it.
+  const scopes = [...new Set(grant.scopes)].filter((scope) => isScopeOfClient(client, scope));
   const record: CodeRecord = {
     grantId: randomToken(),
     clientId: interaction.clientId,
     redirectUri: interaction.redirectUri,
     ...optionalMember("codeChallenge", interaction.codeChallenge),
     ...optionalMember("nonce", interaction.nonce),
-    scopes: [...new Set(grant.scopes)],
+    scopes,
     subject: grant.subject,
     authTime: grant.authTime,
     ...optionalMember("amr", grant.amr),
     ...optionalMember("acr", grant.acr),
     ...optionalMember("sessionId", grant.sessionId),
     maxAgeRequested: interaction.maxAge !== undefined,
-    ...optionalMember("resources", interaction.resources),
+    ...optionalMember("resources", resourcesOfClient(client, interaction.resources)),
     expiresAt: options.now() + ttl,
   };
   await options.store.saveCode(await digestKey(code), record);

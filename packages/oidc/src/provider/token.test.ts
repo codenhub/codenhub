@@ -791,6 +791,47 @@ describe("handleToken: a refresh after the client's record changes", () => {
   });
 });
 
+describe("handleToken: a code exchange after the client's record changes", () => {
+  const PUBLIC: ClientRecord = {
+    clientId: "public",
+    redirectUris: [REDIRECT_URI],
+    scopes: ["openid", "profile", "email", "offline_access"],
+    auth: { method: "none" },
+    resources: ["https://a.example", "https://b.example"],
+    idTokenClaims: true,
+  };
+  const profileClaims = (): Record<string, unknown> => ({ name: "Ada Lovelace", email: "ada@example.com" });
+
+  it("issues only the code's scopes the record still lists, and keeps the code's in the family", async () => {
+    const { options, store } = await setup({ clients: [PUBLIC], claims: profileClaims });
+    const code = await saveCode(store, { scopes: ["openid", "profile", "email", "offline_access"] });
+
+    store.addClient({ ...PUBLIC, scopes: ["openid", "email", "offline_access"] });
+    const issued = (await (await handleToken(options, tokenRequest(codeBody(code)))).json()) as TokenBody;
+
+    expect(issued.scope).toBe("openid email offline_access");
+    expect(await store.findAccessToken(await digestKey(issued.access_token))).toMatchObject({
+      scopes: ["openid", "email", "offline_access"],
+    });
+    expect(payloadOf(issued.id_token)).toMatchObject({ email: "ada@example.com" });
+    expect(payloadOf(issued.id_token)).not.toHaveProperty("name");
+    const family = await store.consumeRefreshToken(await digestKey(issued.refresh_token ?? ""));
+    expect(family).toMatchObject({ record: { scopes: ["openid", "profile", "email", "offline_access"] } });
+  });
+
+  it("issues the access token only for the code's resources the record still lists", async () => {
+    const { options, store } = await setup({ clients: [PUBLIC] });
+    const code = await saveCode(store, { resources: ["https://a.example", "https://b.example"] });
+
+    store.addClient({ ...PUBLIC, resources: ["https://b.example"] });
+    const issued = (await (await handleToken(options, tokenRequest(codeBody(code)))).json()) as TokenBody;
+
+    expect(await store.findAccessToken(await digestKey(issued.access_token))).toMatchObject({
+      audience: ["https://b.example"],
+    });
+  });
+});
+
 describe("handleToken: the onRefresh re-check", () => {
   it("issues as without the option on true, telling it what the refresh will issue", async () => {
     const seen: unknown[] = [];
