@@ -56,7 +56,7 @@ Invalid input does not throw: the result says why it failed. `signup` is also a 
 
 ## Requirements
 
-- Node.js 24 or newer, or a current browser, worker or edge runtime. `url()`, `internationalEmail()`, `domain()` and `hostname()` need `URL.canParse`, which Safari before 17 lacks, so they throw there. `ip()` and `cidr()` use the `URL` parser too.
+- Node.js 26 or newer, or a current browser, worker or edge runtime. `url()`, `internationalEmail()`, `domain()` and `hostname()` need `URL.canParse`, which Safari before 17 lacks, so they throw there. `ip()` and `cidr()` use the `URL` parser too.
 - ESM-aware package resolution. The package is ESM only and marked `sideEffects: false`. CommonJS code can `require()` it on every supported Node.js version.
 - TypeScript 5.0 or newer, for the types, which use `const` type parameters.
 
@@ -821,7 +821,7 @@ interests(["math", "music"]); // ok
 interests(["math", "math"]); // { ok: false, ... }, code "invalid_value"
 ```
 
-- It compares the validated items the way a `Set` does, or the key `by` returns for each item: `unique((user) => user.id)` makes ids unique.
+- It compares the validated items the way a `Set` does, or the key `by` returns for each item: `unique((user) => user.id)` makes ids unique. `by` must answer at once: one that returns a promise throws a `TypeError` when the validator runs, since keys are compared at once and a promise is not the key it stands for.
 - Each repeat is reported at its own index, as `invalid_value` with `{ unique: true }`, and the first occurrence is kept.
 - Like every check, it runs only once every item is valid.
 - A `Set` finds two objects equal only when they are the same object. Every object or list a composer such as `object` or `array` produces is new, and two `Date`s of one moment are two objects. So without `by`, `unique()` would find no repeat among them. Its types accept it only for an array of primitives; an array of objects, lists or dates needs `by`, such as `unique((day) => day.getTime())`.
@@ -1634,6 +1634,7 @@ The parameter is `unknown`, because a validator exists to check data you do not 
 
 - To name a type the body does not show, type what the function returns: `validator((input): ValidationResult<User> => ...)`.
 - To say what it accepts, for [`InferInput`](docs/forms.md#the-types-of-a-form), type the function as a validator before giving it: one typed `Validator<number, string>` reads a number from text. Without that, the input type is `unknown`.
+- An issue keeps only its `code`, `path`, `params` and `message`, as one made with `fail()` does, so a property you add to it by hand, such as the input, never reaches the result.
 
 What `validator` returns works everywhere a built-in one does, such as inside `object`, `optional` and `pipe`, and is a [Standard Schema](docs/standard-schema.md) as they are. It has no `message` option or checks unless you write them, which is what the builders are for.
 
@@ -2014,7 +2015,7 @@ The addresses it accepts:
 
 - IPv4 is four decimal parts from 0 to 255, without leading zeros, which some parsers read as octal.
 - IPv6 is written as RFC 4291 allows: eight groups of one to four hex digits, with one run of zero groups shortened to `::`, and an IPv4 address in place of the last two groups, as in `::ffff:192.0.2.1`, whose parts follow the IPv4 rule.
-- A zone such as `%eth0` is accepted only after a link-local address (`fe80::/10`). After any other address it fails, a scoped multicast one such as `ff02::1%eth0` included.
+- A zone such as `%eth0` is accepted only after a link-local address (`fe80::/10`). After any other address it fails, a scoped multicast one such as `ff02::1%eth0` included. A zone is at most 64 characters, so the text `ip` accepts stays bounded.
 
 An IPv4 address has one spelling, and is produced as written. An IPv6 address is produced in its canonical form, so that one address is one string:
 
@@ -2238,7 +2239,7 @@ type Settings = Infer<typeof settings>; // { readonly theme: string; readonly ta
 - It freezes the value itself and not what is inside it, as `Object.freeze` does and as the type says. Wrap an inner validator too where its value must not change, as `tags` above.
 - A value that is the input itself is never frozen, since the caller owns it. `instanceOf`, `guard` and `unknown` produce what they were given, so `readonly` changes only their type. `object`, `objectLike`, `array`, `tuple`, `record`, `set` and `map` produce a new value, which is frozen.
 - A `Map` or a `Set` is typed `ReadonlyMap` or `ReadonlySet`, and only the type protects it: freezing one does not stop `set` or `add`, which is JavaScript's idea of frozen. A typed array cannot be frozen, and is left unfrozen, and so is a `DataView`. The type covers properties and not methods, so a `Date` keeps its setters.
-- A value counts as the caller's only when it is the input itself. When a `transform` returns a value from inside the input, such as `(value) => value.tags`, that value is frozen. Copy it there when the caller must keep it changeable. The same goes for an object it returns from your own data: `readonly(transform(string(), (key) => cache[key]))` freezes the entry in `cache`, so return a copy there too.
+- A value counts as the caller's only when it is the input itself. When a `transform` returns a value from inside the input, such as `(value) => value.tags`, that value is frozen. Copy it there when the caller must keep it changeable. The same goes for an object it returns from your own data: `readonly(transform(string(), (key) => cache[key]))` freezes the entry in `cache`, so return a copy there too. A default is the same: `readonly(optional(settings, () => DEFAULTS))` freezes `DEFAULTS`, so return a copy from the function.
 - `pick`, `omit`, `required` and `partial` read an `object`, so reshape first and wrap after: `readonly(pick(user, ["name"]))`.
 
 ## `meta`
@@ -2491,7 +2492,7 @@ A schema says less than a validator checks. `email()` refuses an address at `loc
 Three places bend that promise. In two, the validator cleans a value before it checks it, which a schema cannot say, and in the other, the two count the length of text differently:
 
 - **Clean-up options.** `string({ trim: true, max: 5 })` is written with `maxLength: 5`, which describes text that needs no trimming. Text with spaces around five letters passes the validator and not the schema. `case` is the same, and so is `clamp` beside a limit, as in `number({ max: 10, clamp: { min: 0, max: 10 } })`: the schema describes the value after cleaning. The range of a `clamp` is itself not written.
-- **Length of text.** A string's `length` counts an emoji, and any other character outside the Basic Multilingual Plane, as two, and JSON Schema counts it as one, so a `min` or `max` can differ by the number of such characters. A `pattern` is the same: a schema reads it in Unicode mode, the `u` flag, so in one written without that flag `.` and a negated class such as `[^a]` match a whole character in the schema and half of an emoji in the validator.
+- **Length of text.** A string's `length` counts an emoji, and any other character outside the Basic Multilingual Plane, as two, and JSON Schema counts it as one, so a `min` or `max` can differ by the number of such characters. A `pattern` is the same: a schema reads it in Unicode mode, the `u` flag, so in one written without that flag `.` and a negated class such as `[^a]` match a whole character in the schema and half of an emoji in the validator. The text of a `startsWith`, `endsWith` or `includes` that holds half of a character is left out of the schema, since Unicode mode never matches that half inside a whole character, where the validator does.
 - **Formats that accept several spellings.** `phone()` accepts `+55 (11) 98765-4321` and produces `+5511987654321`. A check on such a format, as in `hostname(pattern(/^[a-z.]+$/))`, sees the spelling the format produces and is written for the text as it arrives, so `EXAMPLE.com` passes the validator and not the schema.
 
 ## Input and output
@@ -2639,7 +2640,7 @@ JSON Schema has no words for some of what a validator can check, and JSON has no
 - `date`, `bigint`, `symbol`, `func`, `instanceOf`, `set`, `map` and `file`, none of which is a JSON value, `formData`, which reads a form and not JSON, and a validator made by `guard`, whose test is a function nobody can read.
 - A validator you wrote by hand, and a check made by `check`, whose rule is a function nobody can read.
 - `lowercase`, `uppercase`, `unique` with a key function, and a `pattern` with a flag such as `i` or `v`, which JSON Schema patterns do not have. The flags `g` and `y`, which `pattern` drops, are left out, and so is `u`, the mode a schema reads every pattern in.
-- A `pattern` written without `u` that Unicode mode reads otherwise: one that is an error there, such as `/^\@x$/`, whose `\@` only that mode refuses, and one with `\u{…}` or `\p{…}`, which are escapes only there and text with braces without it.
+- A `pattern` written without `u` that Unicode mode reads otherwise: one that is an error there, such as `/^\@x$/`, whose `\@` only that mode refuses, and one with `\u{…}` or `\p{…}`, which are escapes only there and text with braces without it. So is one that holds a character outside the Basic Multilingual Plane, such as an emoji, or half of one, written or escaped, and one with a range that ends at U+E000 or above, which crosses those halves: Unicode mode reads each otherwise. Add the `u` flag to write it.
 - What a `transform` returns, on the output side.
 - A check on an `object`, and a variant of `tagged` that is not an `object`, such as a `lazy`. With `unrepresentable: "any"` that variant is written as an object with only its tag, so the other variants still match one branch of the `oneOf`.
 
@@ -3071,7 +3072,7 @@ Raise `maxDepth` only for data you know is deeper. For a schema that does not wa
 
 Work can grow faster than the input. A `union` tries every option, and an `object` checks every property even after one has failed. So in a recursive `union` of objects, the options that do not match still reach the children, at every level.
 
-A `lazy` keeps what it found for each object at each path in one validation, and gives it again when the same object is reached at the same path. So those options share the result of the children, and the work grows with the input. An asynchronous check under it runs once for each such object and path, however many options reach it. A primitive is not kept, since it has no children to multiply the work.
+A `lazy` keeps what it found for each object in one validation, and gives it again when the same object is reached as many `lazy` levels down, wherever that is. So those options share the result of the children, and the work grows with the input. An asynchronous check under it runs once for each such object, however many options reach it. When the input holds one object in two places that a `lazy` reaches as many levels down, the value produced holds one output object in both, so changing it in one place, or a `readonly` around one of them, reaches the other. Input parsed from JSON never holds an object twice. A primitive is not kept, since it has no children to multiply the work.
 
 Work that makes a new object at every level, such as a `transform` that copies its value before a `lazy`, cannot be shared. Its work doubles with each level, so a small valid input can take a very long time. `maxCalls` stops that: past it, every further call of that `lazy` fails.
 

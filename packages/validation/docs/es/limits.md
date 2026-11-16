@@ -2,7 +2,7 @@
 title: Límites
 description: Lo que cuesta una entrada que falla, los límites de los esquemas recursivos, los tamaños que necesita una entrada no confiable y cómo audit encuentra los límites que un esquema deja abiertos.
 order: 12
-source: 2a59b304c4e4d7ee12100ca415ebd3253e581e38
+source: a948d308d5a834c08b482db25b6816cfda37d657
 ---
 
 # Límites
@@ -88,7 +88,7 @@ Sube `maxDepth` solo para datos que sabes que son más profundos. Para un esquem
 
 El trabajo puede crecer más rápido que la entrada. Una `union` prueba cada opción, y un `object` verifica cada propiedad incluso después de que una falló. Así que en una `union` recursiva de objetos, las opciones que no coinciden igual llegan a los hijos, en cada nivel.
 
-Un `lazy` guarda lo que encontró para cada objeto en cada ruta durante una validación, y lo devuelve otra vez cuando llega al mismo objeto en la misma ruta. Así, esas opciones comparten el resultado de los hijos, y el trabajo crece con la entrada. Una verificación asíncrona debajo de él se ejecuta una vez por cada uno de esos pares de objeto y ruta, sin importar cuántas opciones lleguen a ella. Un primitivo no se guarda, ya que no tiene hijos que multipliquen el trabajo.
+Un `lazy` guarda lo que encontró para cada objeto durante una validación, y lo devuelve otra vez cuando llega al mismo objeto con la misma cantidad de niveles de `lazy` abiertos, esté donde esté. Así, esas opciones comparten el resultado de los hijos, y el trabajo crece con la entrada. Una verificación asíncrona debajo de él se ejecuta una vez por cada uno de esos objetos, sin importar cuántas opciones lleguen a ella. Cuando la entrada tiene un mismo objeto en dos lugares a los que un `lazy` llega con la misma cantidad de niveles, el valor producido tiene un único objeto de salida en ambos, así que cambiarlo en un lugar, o un `readonly` alrededor de uno de ellos, alcanza al otro. Una entrada leída de JSON nunca tiene un objeto dos veces. Un primitivo no se guarda, ya que no tiene hijos que multipliquen el trabajo.
 
 El trabajo que crea un objeto nuevo en cada nivel, como un `transform` que copia su valor antes de un `lazy`, no se puede compartir. Su trabajo se duplica con cada nivel, así que una entrada válida pequeña puede tardar muchísimo. `maxCalls` lo detiene: al superarlo, cada llamada siguiente de ese `lazy` falla.
 

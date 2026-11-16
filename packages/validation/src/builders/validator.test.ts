@@ -19,6 +19,15 @@ describe("validator", () => {
     expect(even(3)).toEqual({ ok: false, error: { issues: [{ code: "not_even", path: [] }] } });
   });
 
+  it("should keep only the fields of an issue from a failure built by hand, as fail() does", () => {
+    const leaky = validator(
+      (input) =>
+        ({ ok: false, error: { issues: [{ code: "x", path: [], message: "m", params: { a: 1 }, input }] } }) as never,
+    );
+    expect(issuesOf(leaky("secret"))).toEqual([{ code: "x", path: [], message: "m", params: { a: 1 } }]);
+    expect(issuesOf(leaky("secret"))[0]).not.toHaveProperty("input");
+  });
+
   it("should be taken by a composer, which places its issues under the child", () => {
     const counted = object({ count: even });
     expect(counted({ count: 2 })).toEqual({ ok: true, value: { count: 2 } });

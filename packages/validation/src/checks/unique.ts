@@ -1,6 +1,7 @@
+import { decided } from "../core/decide";
 import { assertFunction, issue, repeatedItem } from "../core/result";
 import { assertMessage, toCheck, word } from "../core/rule";
-import { detached, MAX_ISSUES } from "../core/run";
+import { MAX_ISSUES } from "../core/run";
 import type { Check, Message, ValidationIssue } from "../core/types";
 import { wordSize, type Word } from "../core/words";
 import type { LiteralValue } from "../primitives/literal";
@@ -33,7 +34,8 @@ const CUT_WORDS: readonly Word[] = [wordSize];
  * not take it: the validator words that issue, as it words a collection's own limit.
  * @returns A check of arrays.
  * @throws {TypeError} When `by` is given and is not a function, such as a message in its place: a
- * message alone is `unique(undefined, message)`, or `message` is neither text nor a function.
+ * message alone is `unique(undefined, message)`, or `message` is neither text nor a function; and during
+ * validation when `by` returns a promise, since keys are compared at once and a promise is not its key.
  */
 export function unique<T extends LiteralValue>(by?: undefined, message?: Message): Check<readonly T[]>;
 export function unique<T>(by: (item: T) => unknown, message?: Message): Check<readonly T[]>;
@@ -42,8 +44,10 @@ export function unique<T>(by?: (item: T) => unknown, message?: Message): Check<r
     assertFunction("by", by);
   }
   assertMessage(message);
-  // Apart from the validation running now, as everything a consumer wrote is run.
-  const keyOf = by === undefined ? (item: T): unknown => item : (item: T): unknown => detached(by, item);
+  // Apart from the validation running now, as everything a consumer wrote is run. A key that is a promise
+  // is refused, since keys are compared at once and a promise is not the key it stands for.
+  const keyOf =
+    by === undefined ? (item: T): unknown => item : (item: T): unknown => decided("unique", by, item, "key function");
   return toCheck<Check<readonly T[]>>(
     (items) => {
       const seen = new Set<unknown>();

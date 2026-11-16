@@ -230,7 +230,7 @@ The addresses it accepts:
 
 - IPv4 is four decimal parts from 0 to 255, without leading zeros, which some parsers read as octal.
 - IPv6 is written as RFC 4291 allows: eight groups of one to four hex digits, with one run of zero groups shortened to `::`, and an IPv4 address in place of the last two groups, as in `::ffff:192.0.2.1`, whose parts follow the IPv4 rule.
-- A zone such as `%eth0` is accepted only after a link-local address (`fe80::/10`). After any other address it fails, a scoped multicast one such as `ff02::1%eth0` included.
+- A zone such as `%eth0` is accepted only after a link-local address (`fe80::/10`). After any other address it fails, a scoped multicast one such as `ff02::1%eth0` included. A zone is at most 64 characters, so the text `ip` accepts stays bounded.
 
 An IPv4 address has one spelling, and is produced as written. An IPv6 address is produced in its canonical form, so that one address is one string:
 

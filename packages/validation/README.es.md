@@ -1,4 +1,4 @@
-<!-- source: d971bdbc7182d6599660edaa7158575ec5f9499b -->
+<!-- source: cd7744ae9f72b2ed47551ee01658551cd3ab0242 -->
 
 # @codenhub/validation
 
@@ -56,7 +56,7 @@ Una entrada inválida no lanza excepciones: el resultado dice por qué falló. `
 
 ## Requisitos
 
-- Node.js 24 o posterior, o un navegador, worker o runtime de edge actual. `url()`, `internationalEmail()`, `domain()` y `hostname()` necesitan `URL.canParse`, que Safari anterior a la 17 no tiene, así que ahí lanzan una excepción. `ip()` y `cidr()` también usan el parser de `URL`.
+- Node.js 26 o posterior, o un navegador, worker o runtime de edge actual. `url()`, `internationalEmail()`, `domain()` y `hostname()` necesitan `URL.canParse`, que Safari anterior a la 17 no tiene, así que ahí lanzan una excepción. `ip()` y `cidr()` también usan el parser de `URL`.
 - Resolución de paquetes compatible con ESM. El paquete es solo ESM y está marcado con `sideEffects: false`. El código CommonJS puede cargarlo con `require()` en todas las versiones de Node.js compatibles.
 - TypeScript 5.0 o posterior, para los tipos, que usan parámetros de tipo `const`.
 

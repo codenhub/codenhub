@@ -197,6 +197,29 @@ describe("toJsonSchema", () => {
     }
   });
 
+  it("should refuse a pattern without u that holds a surrogate, which Unicode mode never matches half of", () => {
+    for (const written of [/[\uD800-\uDBFF][\uDC00-\uDFFF]/, /^[\u0020-\uFFFF]*$/, new RegExp("\uD83D")]) {
+      expect(() => toJsonSchema(string(pattern(written)))).toThrow(
+        "a pattern Unicode mode reads otherwise at the root",
+      );
+    }
+    expect(schemaOf(string(pattern(/^[\u0020-\uFFFF]*$/u)))).toEqual({
+      type: "string",
+      pattern: String.raw`^[\u0020-\uFFFF]*$`,
+    });
+  });
+
+  it("should leave out the pattern of text holding half of a character, and keep one holding a whole one", () => {
+    for (const make of [startsWith, endsWith, includes]) {
+      expect(schemaOf(string(make("\uD83D")))).toEqual({ type: "string" });
+    }
+    expect(schemaOf(string(startsWith("😀")))).toEqual({ type: "string", pattern: "^😀" });
+  });
+
+  it("should write a pattern without u that escapes a character from U+E000 up outside a range", () => {
+    expect(schemaOf(string(pattern(/^\uE000$/)))).toEqual({ type: "string", pattern: String.raw`^\uE000$` });
+  });
+
   it("should refuse a pattern with the v flag, which reads a class otherwise than a schema does", () => {
     expect(() => toJsonSchema(string(pattern(new RegExp("^[a]$", "v"))))).toThrow("a pattern with flags at the root");
   });

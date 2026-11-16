@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 
+import { unique } from "../checks/unique";
+import { array } from "../composition/array";
 import { number } from "../primitives/number";
+import { string } from "../primitives/string";
 import { accepts, issuesOf, isPending } from "../test-utils";
 import { check } from "./check";
 import { format } from "./format";
@@ -129,6 +132,13 @@ describe("format and guard, given a test that returns a promise", () => {
     );
     expect(() => guard("x", pending as never)()(5)).toThrow(
       new TypeError("guard() needs a synchronous test. Put a rule that waits in a check."),
+    );
+  });
+
+  it("should throw the same TypeError from unique given a key function that returns a promise", () => {
+    const lower = async (text: string): Promise<string> => text.toLowerCase();
+    expect(() => array(string(), unique(lower))(["a", "A", "a"])).toThrow(
+      new TypeError("unique() needs a synchronous key function. Put a rule that waits in a check."),
     );
   });
 });

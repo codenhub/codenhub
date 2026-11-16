@@ -99,10 +99,13 @@ const escapeForPattern = (text: string): string => text.replace(/[\\^$.*+?()[\]{
 
 /**
  * Whether a pattern written without the `u` flag means the same in Unicode mode, but for what `.` and a
- * negated class match. `\u{41}` and `\p{L}` are escapes only there, and text with braces without it.
+ * negated class match. `\u{41}` and `\p{L}` are escapes only there, and text with braces without it. A
+ * surrogate matches half of a character without it and never half of a whole one in Unicode mode, so a
+ * pattern holding one, written or escaped, an emoji included, is taken to read otherwise, and so is a range
+ * that ends at U+E000 or above, which may cross them, as `[\u0020-\uFFFF]` does.
  */
 const readsAlikeInUnicode = (source: string): boolean => {
-  if (/\\[pPu]\{/.test(source)) {
+  if (/\\[pPu]\{|\\u[dD][89a-fA-F]|-(?:\\u[eEfF]|[\uE000-\uFFFF])|[\uD800-\uDFFF]/.test(source)) {
     return false;
   }
   try {
@@ -112,6 +115,9 @@ const readsAlikeInUnicode = (source: string): boolean => {
     return false;
   }
 };
+
+/** Half of a character with no other half beside it, which Unicode mode reads as a character of its own. */
+const LONE_SURROGATE_PATTERN = /\p{Cs}/u;
 
 const isJsonPrimitive = (value: unknown): boolean =>
   value === null || typeof value === "string" || typeof value === "boolean" || Number.isFinite(value);
@@ -341,6 +347,12 @@ export function toJsonSchema(validator: AnyValidator, options?: JsonSchemaOption
         } else {
           refuse("a pattern Unicode mode reads otherwise", path);
         }
+      } else if (
+        (format === "startsWith" || format === "endsWith" || format === "includes") &&
+        LONE_SURROGATE_PATTERN.test(String(value))
+      ) {
+        // Unicode mode never matches half of a whole character, so the text has no pattern. Left out, the schema
+        // accepts more than the check, which it may.
       } else if (format === "startsWith") {
         patterns.push(`^${escapeForPattern(String(value))}`);
       } else if (format === "endsWith") {

@@ -152,7 +152,15 @@ export const refuse = (expected: string, input: unknown, message: Message | unde
  */
 export function adopt(list: readonly IssueInput[], message?: Message): Fail {
   for (const each of list) {
-    const found: Draft = { ...each, code: each.code ?? "custom", path: each.path === undefined ? [] : [...each.path] };
+    // Only the fields of an issue are taken, as `fail()` takes them, so a property written by hand, such as
+    // the input, never reaches a result.
+    const found: Draft = { code: each.code ?? "custom", path: each.path === undefined ? [] : [...each.path] };
+    if (each.params !== undefined) {
+      found.params = each.params;
+    }
+    if (each.message !== undefined) {
+      found.message = each.message;
+    }
     if (message !== undefined && found.message === undefined) {
       say(found, message);
     }

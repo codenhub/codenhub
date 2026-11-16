@@ -1,7 +1,7 @@
 ---
 title: Limites
 description: Quanto custa uma entrada inválida, os limites dos schemas recursivos, os tamanhos que uma entrada não confiável exige e como audit encontra os limites que um schema deixa em aberto.
-source: 2a59b304c4e4d7ee12100ca415ebd3253e581e38
+source: a948d308d5a834c08b482db25b6816cfda37d657
 order: 12
 ---
 
@@ -88,7 +88,7 @@ Aumente `maxDepth` só para dados que você sabe que são mais profundos. Para u
 
 O trabalho pode crescer mais rápido que a entrada. Uma `union` tenta todas as opções, e um `object` verifica todas as propriedades mesmo depois que uma falhou. Então, numa `union` recursiva de objetos, as opções que não casam também chegam aos filhos, em todo nível.
 
-Um `lazy` guarda o que encontrou para cada objeto em cada caminho numa validação, e devolve isso de novo quando o mesmo objeto é alcançado no mesmo caminho. Assim, essas opções compartilham o resultado dos filhos, e o trabalho cresce junto com a entrada. Uma verificação assíncrona abaixo dele roda uma vez para cada objeto e caminho desses, não importa quantas opções cheguem a ela. Um primitivo não é guardado, já que não tem filhos para multiplicar o trabalho.
+Um `lazy` guarda o que encontrou para cada objeto numa validação, e devolve isso de novo quando o mesmo objeto é alcançado com o mesmo número de níveis de `lazy` abertos, onde quer que esteja. Assim, essas opções compartilham o resultado dos filhos, e o trabalho cresce junto com a entrada. Uma verificação assíncrona abaixo dele roda uma vez para cada objeto desses, não importa quantas opções cheguem a ela. Quando a entrada tem o mesmo objeto em dois lugares que um `lazy` alcança com o mesmo número de níveis, o valor produzido tem um único objeto de saída nos dois, então alterá-lo em um lugar, ou um `readonly` em volta de um deles, atinge o outro. Uma entrada lida de JSON nunca tem o mesmo objeto duas vezes. Um primitivo não é guardado, já que não tem filhos para multiplicar o trabalho.
 
 Um trabalho que cria um objeto novo em todo nível, como um `transform` que copia o valor antes de um `lazy`, não pode ser compartilhado. O trabalho dele dobra a cada nível, então uma entrada válida pequena pode levar muito tempo. `maxCalls` impede isso: depois dele, toda nova chamada daquele `lazy` falha.
 
