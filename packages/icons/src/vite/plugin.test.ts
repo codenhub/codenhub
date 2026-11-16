@@ -472,6 +472,83 @@ describe("viteIcons in svg mode", () => {
     expect(markup).toContain('<p><svg class="ic-user"');
   });
 
+  describe("a hyphenated SVG attribute name", () => {
+    const stroked: IconFamilyData = {
+      ...createFamily(),
+      icons: {
+        check: {
+          body: '<g stroke-width="2" stroke-linecap="round"><path fill-rule="evenodd" d="check" /></g>',
+        },
+      },
+      prefix: "stroked",
+    };
+
+    it("is camel-cased in bare JSX, as React names the DOM property", () => {
+      const { transform } = createPlugin({ families: [createFamily(), stroked], mode: "svg" });
+
+      const code = transform('export const App = () => <i className="ic-stroked-check" />;', "app.tsx")?.code;
+
+      expect(code).toContain('<g strokeWidth="2" strokeLinecap="round"><path fillRule="evenodd" d="check" /></g>');
+      expect(code).not.toMatch(/stroke-|fill-rule/);
+    });
+
+    it("is camel-cased when namespaced or spaced before its value, leaving aria-, data-, values, and text alone", () => {
+      const marked: IconFamilyData = {
+        ...createFamily(),
+        icons: {
+          mark: {
+            body: '<title>stroke-width="2"</title><use xlink:href="#a" aria-hidden="true" data-x="a b-c=1" stroke-width = "2" />',
+          },
+        },
+        prefix: "marked",
+      };
+      const { transform } = createPlugin({ families: [createFamily(), marked], mode: "svg" });
+
+      const code = transform('export const App = () => <i className="ic-marked-mark" />;', "app.tsx")?.code;
+
+      expect(code).toContain(
+        '<title>stroke-width="2"</title><use xlinkHref="#a" aria-hidden="true" data-x="a b-c=1" strokeWidth = "2" />',
+      );
+    });
+
+    it("is camel-cased for JSX in a .js file", () => {
+      const { transform } = createPlugin({ families: [createFamily(), stroked], mode: "svg" });
+
+      const code = transform('export const App = () => <i className="ic-stroked-check" />;', "app.js")?.code;
+
+      expect(code).toContain('strokeWidth="2"');
+    });
+
+    it("keeps the passthrough attributes as written", () => {
+      const { transform } = createPlugin({ families: [createFamily(), stroked], mode: "svg" });
+
+      const code = transform(
+        'export const App = () => <i className="ic-stroked-check" aria-label="Done" data-test-id="ok" />;',
+        "app.tsx",
+      )?.code;
+
+      expect(code).toContain('aria-label="Done" data-test-id="ok"');
+      expect(code).toContain('strokeWidth="2"');
+    });
+
+    it("stays hyphenated inside a string literal in a JSX file, which the HTML parser reads", () => {
+      const { transform } = createPlugin({ families: [createFamily(), stroked], mode: "svg" });
+
+      const code = transform(`el.innerHTML = '<i class="ic-stroked-check"></i>';`, "app.tsx")?.code;
+
+      expect(code).toContain('stroke-width="2" stroke-linecap="round"');
+      expect(code).not.toContain("strokeWidth");
+    });
+
+    it("stays hyphenated in a template that is not JSX", () => {
+      const { transform } = createPlugin({ families: [createFamily(), stroked], mode: "svg" });
+
+      const code = transform('<template><i class="ic-stroked-check"></i></template>', "app.vue")?.code;
+
+      expect(code).toContain('stroke-width="2"');
+    });
+  });
+
   describe("a multicolor icon's paint", () => {
     const logos: IconFamilyData = {
       ...createFamily(),
