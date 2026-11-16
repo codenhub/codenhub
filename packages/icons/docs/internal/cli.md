@@ -76,13 +76,13 @@ The plugins cannot do this, as [Roadmap](./roadmap.md) records, because they see
 
 ## The shared scanner
 
-Finding classes in files is the same work in both build commands: expand each content entry into files, read each file as text, split the text into words, and fail when an entry names no file. It lives in a private workspace package, `@codenhub/scan` in `packages/scan`, that both `@codenhub/icons` and `@codenhub/styles` inline, as [A private workspace package](../../../../docs/specs/packages-lifecycle.md#a-private-workspace-package) describes.
+Finding classes in files is the same work in both build commands: expand each content entry into files, read each file as text, and fail when an entry names no file. It lives in a private workspace package, `@codenhub/scan` in `packages/scan`, that both `@codenhub/icons` and `@codenhub/styles` inline, as [A private workspace package](../../../../docs/specs/packages-lifecycle.md#a-private-workspace-package) describes.
 
 **What it holds:**
 
 - Resolving an entry: tried as a literal path first, so a real file whose name holds a bracket, such as Next.js's `app/[id]/page.tsx`, is read rather than taken as a pattern, and expanded as a glob only when no such file exists. That is the behavior of `scanFiles` today. For `chs`, it fixes a literal path with a bracket, which `fs.glob` reads as a pattern and fails to match; the `@codenhub/styles` changelog names that fix in the release that takes the scanner.
 - Reading each file as UTF-8 text, one at a time, so a glob that matches thousands of files stays under the open-file limit, as `chs` reads them today.
-- Splitting text into words by the characters a word may hold, which the caller gives. Icons gives the characters an icon class and its stroke modifier hold, `/` and `.` among them; styles gives the ones a class name holds, and keeps its own second reading of a word around each colon.
+- Splitting text into words by the characters a word may hold, which the caller gives. Styles gives the ones a class name holds, and keeps its own second reading of a word around each colon. Icons does not split: its class pattern finds where a class starts and ends in the raw text, so a split first finds the same classes, measured about six times slower on 2.6 MB of text, and `scanIconClasses` runs on every module the Vite plugin transforms.
 - Two strict modes the caller turns on: failing on an entry that names no file, with a message naming the entry and the folder it was read from, and failing on a file that cannot be read, with Node.js's own message. Both commands turn both on, as `chs` behaves today; `scanFiles`, and so the plugins, turn both off, as it behaves today.
 
 **What it leaves to each package:** which words count, what is written, and every message about the package's own classes. The split keeps a change to the scanner from changing what either command emits for a class it already found.

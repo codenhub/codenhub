@@ -52,7 +52,7 @@ src/cli/                      `chi build`, for a project with none of the three
 
 Direction is one-way. The core never imports a family, an integration, or the catalog. Family data never imports code.
 
-Reading content files is moving to `@codenhub/scan`, a private workspace package that this package and `@codenhub/styles` inline; `src/scanner/` keeps the icon-class pattern and the public `scanFiles` and `scanIconClasses`. [Build command](./cli.md#the-shared-scanner) records that split and the command.
+Reading content files is done by `@codenhub/scan`, a private workspace package that this package and `@codenhub/styles` inline; `src/scanner/` keeps the icon-class pattern and the public `scanFiles` and `scanIconClasses`. [Build command](./cli.md#the-shared-scanner) records that split and the command.
 
 ## Data model
 

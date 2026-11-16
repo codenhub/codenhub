@@ -646,6 +646,9 @@ importers:
 
   packages/icons:
     devDependencies:
+      '@codenhub/scan':
+        specifier: workspace:*
+        version: link:../scan
       '@codenhub/tools':
         specifier: workspace:*
         version: link:../tools

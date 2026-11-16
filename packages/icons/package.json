@@ -179,6 +179,7 @@
     "typecheck": "tsc -b"
   },
   "devDependencies": {
+    "@codenhub/scan": "workspace:*",
     "@codenhub/tools": "workspace:*",
     "@material-symbols/svg-400": "0.48.3",
     "@phosphor-icons/core": "2.1.1",
@@ -217,6 +218,9 @@
     "node": ">=26"
   },
   "codenhub": {
+    "bundled": [
+      "@codenhub/scan"
+    ],
     "label": "IconKit",
     "status": "active",
     "docs": {
