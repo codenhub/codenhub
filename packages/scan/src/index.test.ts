@@ -2,7 +2,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { findFiles, readFiles, splitWords, UnmatchedEntryError } from "./index.ts";
 
@@ -148,6 +148,27 @@ describe("readFiles", () => {
 
     fs.rmSync(path.join(root, "app", "views", "a.html"));
     expect(() => [...texts]).toThrow(/ENOENT/);
+  });
+
+  // Node.js names the path in a system error such as ENOENT, but not when the text is too long for one string.
+  it("names the file in an error that does not, with failOnUnreadable", () => {
+    const cause = new RangeError("Cannot create a string longer than 0x1fffffe8 characters");
+    const read = vi.spyOn(fs, "readFileSync").mockImplementation(() => {
+      throw cause;
+    });
+
+    try {
+      const texts = readFiles(["app/views/a.html"], { cwd: root, failOnUnreadable: true });
+
+      expect(() => [...texts]).toThrow(
+        expect.objectContaining({
+          message: `${path.join(root, "app", "views", "a.html")}: ${cause.message}`,
+          cause,
+        }),
+      );
+    } finally {
+      read.mockRestore();
+    }
   });
 
   it("fails before reading on an entry that names no file, with failOnUnmatched", () => {
