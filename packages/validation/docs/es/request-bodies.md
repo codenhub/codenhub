@@ -2,7 +2,7 @@
 title: Cuerpos de solicitud
 description: Texto JSON, listas, tuplas, diccionarios, sets y maps, elegir entre formas, y datos recursivos.
 order: 3
-source: 9e43ed15787b3aacc10281456197985061c55ddd
+source: a6537a9a5c48cae259a2a707f5299fc4aaae6c82
 ---
 
 # Cuerpos de solicitud
@@ -73,7 +73,7 @@ interests(["math", "music"]); // ok
 interests(["math", "math"]); // { ok: false, ... }, código "invalid_value"
 ```
 
-- Compara los elementos validados como lo hace un `Set`, o bien la clave que `by` devuelve para cada elemento: `unique((user) => user.id)` hace que los ids sean únicos.
+- Compara los elementos validados como lo hace un `Set`, o bien la clave que `by` devuelve para cada elemento: `unique((user) => user.id)` hace que los ids sean únicos. `by` debe responder de inmediato: uno que devuelve una promesa lanza un `TypeError` cuando el validador se ejecuta, ya que no hay dos promesas iguales.
 - Cada repetido se reporta en su propio índice, como `invalid_value` con `{ unique: true }`, y se conserva la primera aparición.
 - Como toda verificación, se ejecuta solo cuando todos los elementos son válidos.
 - Un `Set` considera iguales dos objetos solo cuando son el mismo objeto. Cada objeto o lista que produce un compositor como `object` o `array` es nuevo, y dos `Date` del mismo instante son dos objetos. Así que, sin `by`, `unique()` no encontraría ningún repetido entre ellos. Sus tipos lo aceptan solo para un array de primitivos; un array de objetos, listas o fechas necesita `by`, como `unique((day) => day.getTime())`.

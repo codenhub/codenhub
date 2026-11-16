@@ -243,7 +243,7 @@ Without `by` it compares the validated items themselves; with it, the value `by`
 
 **Returns** — A check of arrays.
 
-**Throws** — `TypeError` — When `by` is given and is not a function, such as a message in its place: a message alone is `unique(undefined, message)`, or `message` is neither text nor a function.
+**Throws** — `TypeError` — When `by` is given and is not a function, such as a message in its place: a message alone is `unique(undefined, message)`, or `message` is neither text nor a function; and during validation when `by` returns a promise, since each promise is a new object and no two would be equal.
 
 **Example**
 

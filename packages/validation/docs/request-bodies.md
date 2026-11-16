@@ -72,7 +72,7 @@ interests(["math", "music"]); // ok
 interests(["math", "math"]); // { ok: false, ... }, code "invalid_value"
 ```
 
-- It compares the validated items the way a `Set` does, or the key `by` returns for each item: `unique((user) => user.id)` makes ids unique.
+- It compares the validated items the way a `Set` does, or the key `by` returns for each item: `unique((user) => user.id)` makes ids unique. `by` must answer at once: one that returns a promise throws a `TypeError` when the validator runs, since no two promises are equal.
 - Each repeat is reported at its own index, as `invalid_value` with `{ unique: true }`, and the first occurrence is kept.
 - Like every check, it runs only once every item is valid.
 - A `Set` finds two objects equal only when they are the same object. Every object or list a composer such as `object` or `array` produces is new, and two `Date`s of one moment are two objects. So without `by`, `unique()` would find no repeat among them. Its types accept it only for an array of primitives; an array of objects, lists or dates needs `by`, such as `unique((day) => day.getTime())`.

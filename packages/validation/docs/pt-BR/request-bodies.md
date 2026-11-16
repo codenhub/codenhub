@@ -1,7 +1,7 @@
 ---
 title: Corpos de requisição
 description: Texto JSON, listas, tuplas, dicionários, sets e maps, uma escolha entre estruturas e dados recursivos.
-source: 9e43ed15787b3aacc10281456197985061c55ddd
+source: a6537a9a5c48cae259a2a707f5299fc4aaae6c82
 order: 3
 ---
 
@@ -73,7 +73,7 @@ interests(["math", "music"]); // ok
 interests(["math", "math"]); // { ok: false, ... }, code "invalid_value"
 ```
 
-- Ela compara os itens validados como um `Set` compara, ou pela chave que `by` retorna para cada item: `unique((user) => user.id)` torna os ids únicos.
+- Ela compara os itens validados como um `Set` compara, ou pela chave que `by` retorna para cada item: `unique((user) => user.id)` torna os ids únicos. `by` precisa responder na hora: um que retorna uma promise lança um `TypeError` quando o validador roda, já que duas promises nunca são iguais.
 - Cada repetição é reportada no próprio índice, como `invalid_value` com `{ unique: true }`, e a primeira ocorrência é mantida.
 - Como toda verificação, ela só roda quando todos os itens são válidos.
 - Um `Set` só considera dois objetos iguais quando são o mesmo objeto. Todo objeto ou lista que um composer como `object` ou `array` produz é novo, e duas `Date`s do mesmo instante são dois objetos. Então, sem `by`, `unique()` não acharia repetição entre eles. Os tipos dela só a aceitam para um array de primitivos; um array de objetos, listas ou datas precisa de `by`, como `unique((day) => day.getTime())`.
