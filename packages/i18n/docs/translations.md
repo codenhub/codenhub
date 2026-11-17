@@ -6,7 +6,9 @@ order: 1
 
 # Write your translations
 
-A dictionary is a plain object whose values are strings or more objects. This page covers how to organize dictionaries, load them, put values and counts into text, keep TypeScript checking all of it, and keep every language complete. It builds on the `en` and `pt` dictionaries from the [overview](index.md#walkthrough).
+A dictionary is a plain object whose values are strings or more objects. This page covers how to organize dictionaries, load them, put values and counts into text, keep TypeScript checking all of it, and keep every language complete.
+
+It builds on the tea shop's `en` and `pt` dictionaries from the [overview](index.md#walkthrough). By the end, the shop can greet a customer by name, total their cart, say when their order ships, and catch a missing Portuguese word before a customer does.
 
 ## Dictionary shape
 
@@ -14,23 +16,28 @@ Nest keys to group related text. Every leaf must be a string:
 
 ```json
 {
-  "nav": { "home": "Home", "settings": "Settings" },
-  "settings": {
-    "title": "Settings",
-    "language": { "label": "Language", "hint": "Used across the whole app" }
+  "nav": { "home": "Home", "cart": "Cart" },
+  "product": {
+    "title": "Our teas",
+    "shipping": { "label": "Shipping", "hint": "Free on orders over 50 euros" }
   }
 }
 ```
 
-The manager flattens nesting into dot-separated keys: `nav.home`, `settings.language.hint`. You can also write flat keys directly, as `{ "nav.home": "Home" }`, or mix both, as long as two spellings never produce the same key.
+The manager flattens nesting into dot-separated keys: `nav.home`, `product.shipping.hint`. You can also write flat keys directly, as `{ "nav.home": "Home" }`, or mix both, as long as two spellings never produce the same key.
 
-A dictionary is rejected with a `TypeError` when it contains something that is not text or a group, such as a number, an array, or `null`, or a key the manager can't use, such as `"nav..home"` or `" home"` with a leading space. The error names the locale and the key, as in `[I18n] Invalid locale dictionary key "nav. home" in locale "pt".`; [A dictionary is rejected](troubleshooting.md#a-dictionary-is-rejected) goes through every rule and its fix.
+A dictionary is rejected with a `TypeError` when it contains either of these:
+
+- Something that is not text or a group, such as a number, an array, or `null`.
+- A key the manager can't use, such as `"nav..home"` or `" home"` with a leading space.
+
+The error names the locale and the key, as in `[I18n] Invalid locale dictionary key "nav. home" in locale "pt".`; [A dictionary is rejected](troubleshooting.md#a-dictionary-is-rejected) goes through every rule and its fix.
 
 An empty dictionary is fine. A locale you have added but not translated yet starts normally and shows default-locale text everywhere.
 
 ## Keep dictionaries in JSON files
 
-Most apps keep one JSON file per locale, often because translators or a translation service edit them:
+Most apps keep one JSON file per locale, often because translators or a translation service edit them, and a JSON file is easier to hand over than a TypeScript one:
 
 ```text
 src/locales/
@@ -77,13 +84,13 @@ Your loader owns everything about transport: URLs, caching headers, retries, tim
 - The manager loads a locale the first time it needs it and keeps the result, so switching back to a language does not call your loader again.
 - Starting or switching to a non-default locale loads that locale, the locales it falls back to, and the default locale together, as [Regional variants](#regional-variants) explains.
 - If your loader throws or rejects, the call that needed it rejects with an `I18nError`, and the manager keeps its current language. The next call tries the loader again. [Loading a locale fails](troubleshooting.md#loading-a-locale-fails-with-i18nerror) shows how to show that error to the visitor.
-- While a locale is loading, every other call that needs it waits on the same load rather than calling your loader again. So a loader that never settles, such as a `fetch()` to a server that accepts the connection and then says nothing, blocks that locale for good: every later `setLocale()` to it, a retry button included, waits on the same stuck promise. Make your loader time out, as with `AbortSignal.timeout()` above; a timeout rejects, and the next call tries again.
+- While a locale is loading, every other call that needs it waits on the same load rather than calling your loader again. So a loader that never settles, such as a `fetch()` to a server that accepts the connection and then says nothing, blocks that locale for good. Every later `setLocale()` to it, a retry button included, waits on the same stuck promise. Make your loader time out, as with `AbortSignal.timeout()` above; a timeout rejects, and the next call tries again.
 - Returning the same object every time, such as a module-level import, lets every manager share one checked copy. That matters on a server, which [creates a manager per request](server-rendering.md).
-- Treat a dictionary as read-only once loaded: the manager keeps a frozen, checked copy, shared by every manager that loads the same object, so later changes to the object do nothing.
+- Treat a dictionary as read-only once loaded. The manager keeps a frozen, checked copy, shared by every manager that loads the same object, so later changes to the object do nothing.
 
 ## Regional variants
 
-A regional locale only needs the words that differ. With `pt` and `pt-BR` both in `locales`, `pt-BR.json` can hold just the Brazilian words, and every other key comes from `pt.json`:
+A regional locale only needs the words that differ. The shop wants a more casual "Oi" for Brazilian visitors, where its general Portuguese says "Olá", so it adds `pt-BR` next to `pt`. With both in `locales`, the `pt-BR` dictionary can hold just the Brazilian words, and every other key comes from `pt`:
 
 ```ts
 export const i18n = createI18n({
@@ -91,38 +98,46 @@ export const i18n = createI18n({
   defaultLocale: "en",
   loadLocale: (locale) => dictionaries[locale],
 });
-// pt-BR: { "greeting": "Oi" }   pt: { "greeting": "Olá", "farewell": "Tchau" }
+// pt-BR: { home: { greeting: "Oi, {name}!" } }
+// pt:    { home: { title: "Bem-vindo", greeting: "Olá, {name}!" }, ... }
 await i18n.init({ locale: "pt-BR" });
-t("greeting"); // "Oi"
-t("farewell"); // "Tchau", from pt
+t("home.greeting", { name: "Ana" }); // "Oi, Ana!"
+t("home.title"); // "Bem-vindo", from pt
 ```
 
-A key is looked up in the active locale, then in each configured locale made by dropping its last subtags, such as `zh-Hant` for `zh-Hant-TW`, then in the default locale. A parent written in another script is skipped: `zh` is Simplified Chinese, so a `zh-Hant` page falls back to the default rather than mixing scripts. A plural group uses the rules of the locale whose dictionary has it.
+A key is looked up in this order:
+
+1. The active locale.
+2. Each configured locale made by dropping its last subtags, such as `zh-Hant` for `zh-Hant-TW`. A parent written in another script is skipped: `zh` is Simplified Chinese, so a `zh-Hant` page falls back to the default rather than mixing scripts.
+3. The default locale.
+
+A plural group uses the rules of the locale whose dictionary has it.
 
 Every locale in that chain loads with the active one, so starting in `pt-BR` loads `pt-BR`, `pt`, and `en`. If one of them fails, the call rejects as for any locale.
 
-Only parents made by dropping subtags count. `es-MX` does not fall back to `es-419`, because `es-419` is not a shorter version of it; give it its own dictionary, or serve Mexican visitors from `es-419` directly, as [Turn outside input into a locale](index.md#turn-outside-input-into-a-locale) shows.
+Only parents made by dropping subtags count. `es-MX` does not fall back to `es-419`, because `es-419` is not a shorter version of it. Give it its own dictionary, or serve Mexican visitors from `es-419` directly, as [Turn outside input into a locale](index.md#turn-outside-input-into-a-locale) shows.
 
 ## Put values into text
 
 Write `{name}` where a value goes, and pass the value to `t()`:
 
 ```json
-{ "welcome": "Welcome back, {name}. You have {count} new messages." }
+{ "order": { "confirmed": "Thanks, {name}. Order {orderId} ships tomorrow." } }
 ```
 
 ```ts
-t("welcome", { name: "Ana", count: 4 });
-// "Welcome back, Ana. You have 4 new messages."
+t("order.confirmed", { name: "Ana", orderId: 1042 });
+// "Thanks, Ana. Order 1042 ships tomorrow."
 ```
 
 Values can be strings, numbers, or dates. Placeholder names use ASCII letters, digits, and `_`, such as `{firstName}` or `{first_name}`. A name with anything else, such as `{first-name}` or `{nome_ç}`, is not a placeholder: the message is invalid syntax, logs a warning, and shows `{first-name}` as written.
 
-Use placeholders instead of joining fragments. `t("before") + name + t("after")` locks every language into English word order, while a whole sentence with a placeholder lets each translation put the value where it belongs.
+Use placeholders instead of joining fragments. `t("before") + name + t("after")` locks every language into English word order, while a whole sentence with a placeholder lets each translation put the value where it belongs. Word order is the first thing every translator wants to change, and they are usually right.
 
 A few details:
 
 - A placeholder with no matching value stays as written, so a missing value shows up as `{name}` on screen rather than disappearing.
+- One `t()` call fills at most 100 arguments, counting those inside plural and select forms, and leaves the rest as written. A UI sentence never gets close; the limit keeps a huge fetched message from costing one formatting step per placeholder.
 - Numbers in a plain `{name}` are inserted as JavaScript writes them: `1234.5`. Write `{name, number}` to format them for the reader, as the next section shows.
 - Braces and apostrophes are message syntax, so text that shows them literally needs quoting; see [Literal braces and apostrophes](#literal-braces-and-apostrophes).
 
@@ -132,15 +147,20 @@ Messages use [ICU MessageFormat](https://unicode-org.github.io/icu/userguide/for
 
 ```json
 {
-  "total": "Total: {amount, number}",
-  "progress": "{ratio, number, percent} done",
-  "shipped": "Shipped on {date, date, long} at {date, time, short}"
+  "cart": {
+    "total": "Total: {amount, number}",
+    "discount": "{rate, number, percent} off"
+  },
+  "order": {
+    "shipped": "Shipped on {date, date, long} at {date, time, short}"
+  }
 }
 ```
 
 ```ts
-t("total", { amount: 1234.5 }); // "Total: 1,234.5", or "Total: 1.234,5" from the Portuguese text
-t("shipped", { date: new Date() });
+t("cart.total", { amount: 1234.5 }); // "Total: 1,234.5", or "Total: 1.234,5" from the Portuguese text
+t("cart.discount", { rate: 0.15 }); // "15% off"
+t("order.shipped", { date: new Date() });
 ```
 
 | Argument                | Styles                                                             | Value                 |
@@ -162,7 +182,7 @@ Two things messages can't do, both on purpose:
 A `select` picks text by a value, such as a pronoun, and needs an `other` option:
 
 ```json
-{ "replied": "{gender, select, female {She} male {He} other {They}} replied" }
+{ "review": { "replied": "{gender, select, female {She} male {He} other {They}} replied to your review" } }
 ```
 
 To format a value in code, use the manager's formatters. They follow the active locale:
@@ -174,11 +194,13 @@ i18n.formatRelativeTime(-1, "day", { numeric: "auto" }); // "yesterday"
 i18n.formatList(["Ana", "Bia", "Caio"]); // "Ana, Bia, and Caio"
 ```
 
-They take the same options as `Intl.NumberFormat`, `Intl.DateTimeFormat`, `Intl.RelativeTimeFormat`, and `Intl.ListFormat`, read the same way `Intl` reads them, including options an object inherits, such as from a shared defaults object passed to `Object.create()`. They throw what those throw for invalid options.
+They take the same options as `Intl.NumberFormat`, `Intl.DateTimeFormat`, `Intl.RelativeTimeFormat`, and `Intl.ListFormat`. They read those options the same way `Intl` reads them, including options an object inherits, such as from a shared defaults object passed to `Object.create()`. They throw what those throw for invalid options.
 
 ### Time zones
 
-Dates and times are written in the runtime's time zone. In a browser that is the reader's, which is usually right. On a server it is the server's, so 01:00 UTC on 2 November renders as "November 2" for a reader in São Paulo, where it is still 1 November, and the text changes once the browser takes over. Time zones: the reason a date is never just a date. Set `timeZone` to the zone the text should use:
+Dates and times are written in the runtime's time zone. In a browser that is the reader's, which is usually right. On a server it is the server's.
+
+So an order shipped at 01:00 UTC on 2 November renders as "November 2" for a reader in São Paulo, where it is still 1 November, and the text changes once the browser takes over. Time zones: the reason a date is never just a date. Set `timeZone` to the zone the text should use:
 
 ```ts
 createI18n({
@@ -201,15 +223,17 @@ An apostrophe before `{` or `}` quotes text up to the next apostrophe, and two a
 | `Ouvrir l''{app}`         | `Ouvrir l'éditeur`      |
 | `Ouvrir l’{app}`          | `Ouvrir l’éditeur`      |
 
-Watch for an apostrophe right before a placeholder, as French, Italian, and Catalan elision puts one: `Ouvrir l'{app}` quotes `{app}`, so it shows `Ouvrir l{app}`, and nothing warns, because the text is valid. Write two apostrophes, `l''{app}`, or the typographic apostrophe `’`, which French typography prefers anyway and which is never syntax.
+Watch for an apostrophe right before a placeholder, as French, Italian, and Catalan elision puts one. `Ouvrir l'{app}` quotes `{app}`, so it shows `Ouvrir l{app}`, and nothing warns, because the text is valid. Write two apostrophes, `l''{app}`, or the typographic apostrophe `’`, which French typography prefers anyway and which is never syntax.
 
-Inside a plural's forms, `#` stands for the number; write `'#'` for a literal `#`. A `select` nested in a form is not the plural itself, so a `#` there is shown as written, as in ICU; put `{count}` there instead. Quoted text is text to the types too: in `'{it''s {x}'`, which shows `{it's {x}`, `x` is not a value `t()` asks for.
+Inside a plural's forms, `#` stands for the number; write `'#'` for a literal `#`. A `select` nested in a form is not the plural itself, so a `#` there is shown as written, as in ICU; put `{count}` there instead.
+
+Quoted text is text to the types too: in `'{it''s {x}'`, which shows `{it's {x}`, `x` is not a value `t()` asks for.
 
 Text that is not valid syntax, such as an unclosed `{` or a stray `}`, logs a warning, unless the manager is silent, and is shown with only its `{name}` placeholders filled. The warning names the key and the locale, and comes once for each text in each locale, among the 1,000 most recent. [Find untranslated keys](#find-untranslated-keys) shows a test that checks every message.
 
 ## Plurals
 
-"1 items" is wrong in English, and other languages have more forms than English does. Arabic has six. To let each language choose, write the key as a group of forms instead of a single string:
+"1 items" is wrong in English, and other languages have more forms than English does. Arabic has six. To let each language choose, write the key as a group of forms instead of a single string. The shop's cart already does:
 
 ```json
 {
@@ -269,24 +293,40 @@ A plain `{count}` writes the number as JavaScript does, so 1234 items reads "123
 t("cart.items", { count: 1234 }); // "1,234 items"
 ```
 
+That is a lot of tea, but the comma is right.
+
 ### Plurals inside a sentence
 
 A plural group chooses the whole text. To choose only part of a sentence, or to give `0` its own wording, write an ICU plural in a single string. `#` is the number, formatted for the language, and `=N` matches an exact number before the forms are asked:
 
 ```json
 {
-  "inbox": "Hi {name}, {count, plural, =0 {you have no messages} one {you have # message} other {you have # messages}}."
+  "cart": {
+    "summary": "Hi {name}, {count, plural, =0 {your cart is empty} one {you have # item in your cart} other {you have # items in your cart}}."
+  }
 }
 ```
 
 ```ts
-t("inbox", { name: "Ana", count: 0 }); // "Hi Ana, you have no messages."
-t("inbox", { name: "Ana", count: 1200 }); // "Hi Ana, you have 1,200 messages."
+t("cart.summary", { name: "Ana", count: 0 }); // "Hi Ana, your cart is empty."
+t("cart.summary", { name: "Ana", count: 1200 }); // "Hi Ana, you have 1,200 items in your cart."
 ```
 
 `=N` compares numbers, not text, so `=1`, `=1.0`, and `=01` all match 1. That also makes two of them in one message the same option twice: `{n, plural, =1 {…} =1.0 {…} other {…}}` is invalid syntax. Write each number once.
 
-`offset:N` subtracts from the number before choosing a form and filling `#`, but not before matching `=N`, as in `{count, plural, offset:1 =0 {Nobody} =1 {{name}} one {{name} and # other} other {{name} and # others}}`, where a `count` of 2 shows `Ana and 1 other`. Both ways of writing plurals are supported; plural groups keep each form an ordinary key, which some translation tools handle better.
+`offset:N` subtracts from the number before choosing a form and filling `#`, but not before matching `=N`. A product page can use it to say who else bought a tea:
+
+```json
+{
+  "product": {
+    "buyers": "{count, plural, offset:1 =0 {Nobody} =1 {{name}} one {{name} and # other} other {{name} and # others}}"
+  }
+}
+```
+
+With a `count` of 2, `t("product.buyers", { name: "Ana", count: 2 })` shows `Ana and 1 other`.
+
+Both ways of writing plurals are supported. Plural groups keep each form an ordinary key, which some translation tools handle better.
 
 ## Typed keys
 
@@ -301,14 +341,18 @@ t("cart.itmes", { count: 2 }); // compile error: misspelled
 
 The type comes from what your loader returns. If it returns several `as const` dictionaries, a key from any of them is accepted. If it returns `any` or `unknown`, as `response.json()` and dynamic imports do, every string is accepted; give the loader a return type, as in the JSON example above, to get checking back.
 
-A key you build at runtime, such as ``t(`errors.${code}`)``, fails to compile even when it exists, because TypeScript can't know the value of `code`. Check it with `has()`, which narrows it to a key `t()` accepts, and pick a fallback when it isn't there:
+A key you build at runtime, such as ``t(`errors.${code}`)`` for an error code from the checkout, fails to compile even when it exists, because TypeScript can't know the value of `code`. Check it with `has()`, which narrows it to a key `t()` accepts, and pick a fallback when it isn't there:
 
 ```ts
 const key = `errors.${code}`;
 const message = i18n.has(key) ? i18n.t(key) : i18n.t("errors.unknown");
 ```
 
-`has()` looks through the same dictionaries `t()` does. A plural group counts as a key when it has an `other` form, whatever language is active. A miss neither calls `onMissingKey` nor warns, since a key you expect to be missing sometimes is not a gap in the translations. A string no dictionary can hold, such as one with a line break or longer than 1,000 characters, is a miss too, so `code` can come from a response or a query string.
+`has()` looks through the same dictionaries `t()` does:
+
+- A plural group counts as a key when it has an `other` form, whatever language is active.
+- A miss neither calls `onMissingKey` nor warns, since a key you expect to be missing sometimes is not a gap in the translations.
+- A string no dictionary can hold, such as one with a line break or longer than 1,000 characters, is a miss too, so `code` can come from a response or a query string.
 
 When you know the keys are there, cast it instead:
 
@@ -330,20 +374,29 @@ When the default dictionary is an `as const` object in a `.ts` file, TypeScript 
 ```ts
 // locales/en.ts
 export default {
-  welcome: "Welcome back, {name}.",
-  total: "Total: {amount, number}",
-  cart: { items: { one: "{count} item", other: "{count} items" } },
+  home: { greeting: "Hello, {name}!" },
+  cart: {
+    total: "Total: {amount, number}",
+    items: { one: "{count} item", other: "{count} items" },
+  },
 } as const;
 ```
 
 ```ts
-t("welcome", { name: "Ana" }); // ok
-t("welcome"); // compile error: name is required
-t("total", { amount: "3" }); // compile error: {amount, number} needs a number
+t("home.greeting", { name: "Ana" }); // ok
+t("home.greeting"); // compile error: name is required
+t("cart.total", { amount: "3" }); // compile error: {amount, number} needs a number
 t("cart.items", { count: 2 }); // ok: a plural group requires a numeric count
 ```
 
-`number`, `plural`, and `selectordinal` arguments take a number, `date` and `time` take a `Date` or a timestamp, `select` takes a string or number, and a plain `{name}` takes any of these. Extra values are allowed. When several dictionaries are typed, a key needs the values of every one that has it.
+Which values each argument takes:
+
+- `number`, `plural`, and `selectordinal` arguments take a number.
+- `date` and `time` take a `Date` or a timestamp.
+- `select` takes a string or number.
+- A plain `{name}` takes any of these.
+
+Extra values are allowed. When several dictionaries are typed, a key needs the values of every one that has it.
 
 A JSON import types every text as `string`, since TypeScript doesn't keep JSON string values, so a JSON dictionary checks keys but accepts any values. To check values, write the default language as `as const` TypeScript and keep the other languages in JSON, typed as the default:
 
@@ -359,7 +412,7 @@ The loader's return type is what types `t()`, so a translation must use the same
 
 Reading a message's arguments happens entirely in the type system, which is clever right up until it can't see the message. In these cases `t()` accepts any values, or none, for that key. Nothing fails to compile; the check is just off:
 
-- **The key is one of several.** In `t(isError ? "save.failed" : "save.done")`, TypeScript sees a union of two keys and can't know which message's values apply. Call `t()` with each key in its own branch, `isError ? t("save.failed", { file }) : t("save.done")`, and each call is checked.
+- **The key is one of several.** In `t(hasFailed ? "checkout.failed" : "checkout.done")`, TypeScript sees a union of two keys and can't know which message's values apply. Call `t()` with each key in its own branch, `hasFailed ? t("checkout.failed", { orderId }) : t("checkout.done")`, and each call is checked.
 - **The message is a plain `string`**, as every text in a JSON dictionary is. Write the default language as `as const` TypeScript, as above.
 - **The message has an unclosed `{`**, or a placeholder name that isn't ASCII letters, digits, and `_`, such as `{first-name}`. Other invalid syntax, such as `{n, number, currency}` or a `select` without `other`, may still ask for values. Either way, the runtime can't read it either: it logs a warning and shows the text with only valid `{name}` placeholders filled. Fix the message; the [message check](#find-untranslated-keys) finds these.
 - **The message is too long for the types to read**: about 900 apostrophes, 450 arguments, or 900 spaces inside one argument's braces, in one text. TypeScript has a limit on how deep a type can go, and the reading stops short of it instead of failing your build. At runtime the message works normally. If you have one of these, it is probably three messages in a trench coat; splitting it brings the checks back.
@@ -385,7 +438,7 @@ Without `as const`, TypeScript sees `defaultLocale` as any `string`, and `create
 
 ## Find untranslated keys
 
-A key missing from one language quietly shows default-language text, which is easy to miss. Catch it in a test by comparing every dictionary with the default one. `loadLocale()` returns a dictionary without changing the manager's language:
+A key missing from one language quietly shows default-language text, which is easy to miss. The shop's Portuguese visitors will spot it long before your dashboard does. Catch it in a test instead, by comparing every dictionary with the default one. `loadLocale()` returns a dictionary without changing the manager's language:
 
 ```ts
 import { expect, test } from "vitest";
@@ -445,7 +498,7 @@ createI18n({
 
 ## Size limits
 
-Dictionaries come from files and servers, and now and then a file or server sends something that isn't a dictionary at all: a truncated download, a misconfigured proxy, or something built on purpose to be huge. So the manager caps how large one can be, which stops a corrupted or hostile file from freezing the page. The defaults fit any real app:
+Dictionaries come from files and servers, and now and then a file or server sends something that isn't a dictionary at all: a truncated download, a misconfigured proxy, or something built on purpose to be huge. So the manager caps how large one can be, which stops a corrupted or hostile file from freezing the page. The defaults fit any real app, a tea shop with a very long menu included:
 
 | Limit                      | Default   | Option            |
 | -------------------------- | --------- | ----------------- |
@@ -465,8 +518,12 @@ createI18n({
 });
 ```
 
-Each limit must be a positive whole number, and a name that isn't one of the five throws a `TypeError` when the manager is created. A nested dictionary counts each group as a property, so raising `maxTranslations` often means raising `maxProperties` too. Raising `maxDepth` past 499 does nothing: each level adds at least a letter and a dot to the full key, so a text that deep would break the fixed 1,000-character key limit first.
+A few rules for the values:
+
+- Each limit must be a positive whole number, and a name that isn't one of the five throws a `TypeError` when the manager is created.
+- A nested dictionary counts each group as a property, so raising `maxTranslations` often means raising `maxProperties` too.
+- Raising `maxDepth` past 499 does nothing. Each level adds at least a letter and a dot to the full key, so a text that deep would break the fixed 1,000-character key limit first.
 
 ## Next
 
-With your dictionaries written, put them in front of someone. In a browser, continue with [Translate a browser app](browser.md). On a server or in a static build, skip to [Render on a server or at build time](server-rendering.md).
+With your dictionaries written, put them in front of someone. In a browser, continue with [Translate a browser app](browser.md), where the shop gets its language picker. On a server or in a static build, skip to [Render on a server or at build time](server-rendering.md).
