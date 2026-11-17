@@ -153,7 +153,7 @@ A stored locale the application no longer configures exactly, such as `pt-PT` af
 
 ### Custom elements translate themselves
 
-The binding skips every element inside a custom element, a tag with a dash, from an outer root. A component has its own life cycle: it may render after the page's pass, and it adds and removes text as people use it, such as a card that changes with interaction, so it has to call `t()` for that text anyway. Re-running the page's pass for each component's change was rejected as costlier than the component translating itself with `t()` and `subscribe()`.
+The binding skips every element inside a custom element, from an outer root: a tag with a dash, or a customized built-in element such as `<button is="x-button">`, which owns its content the same way. A component has its own life cycle: it may render after the page's pass, and it adds and removes text as people use it, such as a card that changes with interaction, so it has to call `t()` for that text anyway. Re-running the page's pass for each component's change was rejected as costlier than the component translating itself with `t()` and `subscribe()`.
 
 **Wrappers are skipped too.** A light-DOM wrapper, such as `<site-nav>` around links the page wrote, is not read: the binding can't tell a wrapper from a component that renders its children, and reading into one would translate, and then fight, text the component owns. The guide says to use a plain element for a wrapper, and shows `t()` and `subscribe()` for a component, rather than a component binding of its own, which a manager's one binding rules out. Rejected: a warning per skipped element with keys, which would fire for every component that translates its own content.
 
