@@ -354,7 +354,7 @@ Each preference, in order, tries an exact case-insensitive match, then the longe
 
 **Parameters**
 
-- `preferences` — Untrusted locale tags, most preferred first; blank, malformed, and non-string entries are skipped.
+- `preferences` — Untrusted locale tags, most preferred first; blank, malformed, and non-string entries are skipped, and so is `und`, which names no language, unless a configured locale is that exact tag.
 
 **Returns** — The canonical locale for the first preference that matches, or undefined when none does.
 

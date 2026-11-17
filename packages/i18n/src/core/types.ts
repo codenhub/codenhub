@@ -229,7 +229,8 @@ export interface I18n<TLocale extends string = string, TKey extends string = str
    * language and script and none matches it exactly or by likely region, the first in `locales` wins: list `es-419`
    * before `es-ES` to serve `es-MX` from `es-419`. `es-ES`, and `es`, whose likely region is Spain, still match `es-ES`.
    *
-   * @param preferences - Untrusted locale tags, most preferred first; blank, malformed, and non-string entries are skipped.
+   * @param preferences - Untrusted locale tags, most preferred first; blank, malformed, and non-string entries are
+   * skipped, and so is `und`, which names no language, unless a configured locale is that exact tag.
    * @returns The canonical locale for the first preference that matches, or undefined when none does.
    * @throws {TypeError} When `preferences` is not an array.
    */
