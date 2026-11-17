@@ -313,7 +313,7 @@ Atomically loads and activates an explicit locale or the default locale.
 
 - `options` — Optional explicit locale selection.
 
-**Returns** — A promise that resolves after loading completes. Applied initialization emits `ready`; a stale successful request, superseded by a later `init()` or `setLocale()`, resolves without changing state or emitting an event. Failure leaves active state unchanged.
+**Returns** — A promise that resolves after loading completes. Applied initialization emits `ready`; a stale request, superseded by a later `init()` or `setLocale()`, resolves without changing state or emitting an event, even when its loading fails, since the later call decides the locale. Failure leaves active state unchanged.
 
 **Throws**
 
@@ -401,7 +401,7 @@ Atomically changes the active locale after all required loads succeed.
 
 - `locale` — Supported locale to activate.
 
-**Returns** — A promise that resolves after loading completes. Applied changes emit `locale-change`; same-locale and stale successful requests resolve without changing state or emitting an event. Failure preserves active state.
+**Returns** — A promise that resolves after loading completes. Applied changes emit `locale-change`; same-locale requests and stale requests, superseded by a later call, resolve without changing state or emitting an event, a stale one even when its loading fails. Failure preserves active state.
 
 **Throws**
 

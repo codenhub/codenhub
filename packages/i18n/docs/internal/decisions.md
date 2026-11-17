@@ -18,6 +18,10 @@ A key missing from both dictionaries returns the trimmed key. The key renders a 
 
 Rejected: resolving `true` or `false` for whether it applied, because `setLocale()` reports the same case, a stale request, with no value, and a caller that needs the outcome reads `locale` and `isReady`.
 
+### A stale request resolves even when its loading fails
+
+A call to `init()` or `setLocale()` that a later call has overtaken resolves when its loading fails, as it does when its loading succeeds, and only the latest call's failure rejects. The failure no longer describes the manager's state, which follows the latest call, so a picker clicked twice would otherwise show an error for a locale the visitor already left. Rejected: rejecting every failure, which made each caller tell a stale failure from a current one by comparing `locale` afterwards.
+
 ### Direction has a default
 
 `getLocaleDirection` is optional. Rejected: requiring it, which makes nearly every configuration repeat `() => "ltr"`, and an application that later adds Arabic keeps that wrong answer. The default reads fixed lists of right-to-left scripts and languages rather than `Intl.Locale.prototype.getTextInfo()`, because not every supported engine provides it and direction must be the same in every runtime.
