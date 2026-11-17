@@ -1,6 +1,6 @@
 ---
 title: Frameworks
-description: Use the manager in React with useSyncExternalStore, with server rendering, and with Tailwind CSS's dark: variant.
+description: "Use the manager in React with useSyncExternalStore, with server rendering, and with Tailwind CSS's dark: variant."
 order: 6
 ---
 

@@ -1,8 +1,8 @@
 ---
 title: Frameworks
-description: Usa el gestor en React con useSyncExternalStore, con renderizado en el servidor y con la variante dark: de Tailwind CSS.
+description: "Usa el gestor en React con useSyncExternalStore, con renderizado en el servidor y con la variante dark: de Tailwind CSS."
 order: 6
-source: ad3b7c5fb13db729f3ed55e0f7bcfb3cb61f74b2
+source: b1514205f8aa3f3b6fe55d0ec68db0e1b2ea5b08
 ---
 
 # Frameworks
