@@ -1,11 +1,12 @@
 ---
 title: Getting Started
+description: Install the package and build a light and dark toggle that remembers the user's choice.
 order: 1
 ---
 
 # Getting Started
 
-This page builds the smallest useful thing: a page with a light and a dark theme, and a button that switches between them. It assumes a project with a bundler, such as [Vite](https://vite.dev/), that resolves `import` statements from `node_modules`.
+This page builds the smallest useful thing: a page with a light and a dark theme, and a button that switches between them. Five steps, and the button will already remember the user's choice and follow their operating system. It assumes a project with a bundler, such as [Vite](https://vite.dev/), that resolves `import` statements from `node_modules`.
 
 ## 1. Install the package
 
@@ -60,6 +61,8 @@ Any element works. This one has an `id` so the script can find it:
 <button id="theme-toggle" type="button">Toggle theme</button>
 ```
 
+Its text is its accessible name. If you swap the text for a sun or moon icon later, as every app eventually does, add an `aria-label` so screen readers still hear something more useful than "button".
+
 ## 4. Create the theme manager
 
 ```ts
@@ -77,7 +80,9 @@ Three things happen here:
 
 - `createTheme()` creates a **theme manager**, the object that owns the active theme. With no options, it knows two themes, `light` and `dark`. Creating it changes nothing on the page yet.
 - `.init()` starts it. It picks the theme to show, the user's saved choice or else the operating system's setting, applies it to `<html>`, and starts listening for system changes. It returns the same manager, so the two calls chain.
-- `theme.toggle` switches to the other theme and saves the choice. Every method of the manager can be passed as a callback on its own, as it is here, without wrapping it in an arrow function.
+- `theme.toggle` switches to the other theme and saves the choice. Every method of the manager can be passed as a callback on its own, as it is here, without wrapping it in an arrow function. No `this` was harmed.
+
+The manager's type is exported as `Theme`, for when you need to name it, such as in a function that receives the manager as a parameter.
 
 ## 5. Try it
 
@@ -89,13 +94,13 @@ To see the operating-system part, clear the saved choice by running this in the 
 localStorage.removeItem("app-theme-preference");
 ```
 
-Reload, then switch your system between light and dark mode. With no saved choice, the page follows along.
+Reload, then switch your system between light and dark mode. With no saved choice, the page follows along, no reload needed.
 
 ## What you have, and what is next
 
 You now have a working theme switch. Two things are still missing for a production app:
 
-- **A flash on load.** Your script runs after the browser has already painted the page once, so a user who chose dark sees a light page for a moment first. [Preventing the flash](preventing-the-flash.md) fixes that with a small inline script.
-- **Cleanup**, if the manager lives inside a component that can unmount. Call `theme.destroy()` in its cleanup to stop the manager's listeners. A manager created once for the whole page, as above, never needs it. [Frameworks](frameworks.md) shows where it goes in React.
+- **A flash on load.** Your script runs after the browser has already painted the page once, so a user who chose dark gets a brief flash of light first, every visit. [Preventing the flash](preventing-the-flash.md) fixes that with a small inline script.
+- **Cleanup**, if the manager lives inside a component that can unmount. Call `theme.destroy()` in its cleanup to stop the manager's listeners. A manager created once for the whole page, as above, never needs it. [Frameworks](frameworks.md#cleaning-up) shows where it goes in React.
 
-Next, [Defining themes](themes.md) replaces the two built-in themes with your own.
+Next, [Defining themes](themes.md) turns the toggle into a settings screen with themes of your own.

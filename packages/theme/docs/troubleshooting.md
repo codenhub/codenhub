@@ -1,11 +1,12 @@
 ---
 title: Troubleshooting
+description: Symptoms, how to confirm their cause, and how to fix them.
 order: 7
 ---
 
 # Troubleshooting
 
-Start with the symptom you see. Each entry says how to confirm the cause, then how to fix it.
+Start with the symptom you see. Each entry says how to confirm the cause, then how to fix it. Check the first entry before anything else: there, the package did its job, and the stylesheet has no rule for the theme. It is the cheapest fix on this page.
 
 ## Nothing changes when the theme switches
 
@@ -46,6 +47,12 @@ The options are invalid, and the error message names the problem. The most commo
 
 Your TypeScript version is older than 5.4, which added `NoInfer`. Update TypeScript in your project. Turning on `skipLibCheck` hides the error, but then the types also accept theme names you did not configure.
 
+## `createTheme()` throws `TypeError: Object.hasOwn is not a function`
+
+The browser is older than Chrome 93, Firefox 92, or Safari 15.4, the oldest versions the published package runs on; [Requirements](index.md#requirements) lists them. Update the browser, or have your build transpile dependencies and add polyfills for the browsers you support. The pre-paint script still sets the theme's attribute and classes in browsers back to Chrome 24, Firefox 24, and Safari 7, but the toggle and everything else need the manager.
+
 ## A React hydration warning mentions `<html>`
 
 React found the `data-theme`, class, or `style` the pre-paint script added. That difference is expected; add `suppressHydrationWarning` to your `<html>` element, as shown in [Preventing the flash](preventing-the-flash.md#in-a-server-rendered-app).
+
+Still stuck? The [API reference](reference/index.md) lists every rule each method enforces, and every error it throws.

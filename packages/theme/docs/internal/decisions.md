@@ -1,6 +1,6 @@
 ---
 status: IMPLEMENTED
-last_updated: 2026-11-16
+last_updated: 2026-11-17
 scope: "@codenhub/theme: design decisions behind consumer-visible behavior, and the alternatives they rejected."
 ---
 
@@ -31,3 +31,11 @@ Before any theme is applied, that is before `init()`, `set()`, `toggle()`, or `c
 Rejected: applying them right away. The only theme the manager knows before `init()` is `defaultTheme`, so applying it would replace the theme the pre-paint script applied and flash the wrong theme until `init()` runs, typically later in a component effect.
 
 Resolving the stored or system theme at that point instead was rejected: it would be `init()` without its listeners, and its `"setTokens"` notification would announce a theme change that is really the initial one.
+
+## The browser floor is the published build's, and older browsers transpile
+
+The published bundle calls `Object.hasOwn` and uses `??=`, so it runs on Chrome 93, Firefox 92, Safari 15.4, and newer; `createTheme()` throws a `TypeError` on anything older. The public docs state that floor and point older targets at a build that transpiles dependencies and adds polyfills. The pre-paint script is ES5 regardless, so the theme still applies before the first paint there.
+
+The `MediaQueryList.addListener` fallback stays, although no browser that runs the published bundle needs it: a transpiled, polyfilled build runs on Safari 13, which has only `addListener`, and without the fallback the theme would stop following the operating system there.
+
+Rejected: lowering the floor by replacing `Object.hasOwn`, which widens a promise CI does not test, for browsers the workspace's own stylesheet package already excludes (`@codenhub/styles` needs Safari 17.5). Rejected: deleting the fallback as dead code, for the transpiled case above.

@@ -296,28 +296,28 @@ describe("documentation chrome", () => {
   });
 
   it("offers every language on a page without a translation, and sends an arriving reader to theirs", async () => {
-    const html = await readOutput("theme/index.html");
+    const html = await readOutput("jwt/index.html");
     const menu = html.match(/<details class="shell-language[^"]*"[^>]*>(.*?)<\/details>/)?.[1] ?? "";
 
-    expect(menu).toContain('href="/pt-BR/theme/" hreflang="pt-BR"');
-    expect(menu).toContain('href="/es/theme/" hreflang="es"');
+    expect(menu).toContain('href="/pt-BR/jwt/" hreflang="pt-BR"');
+    expect(menu).toContain('href="/es/jwt/" hreflang="es"');
     expect(html).toContain("location.replace(");
     expect(html).not.toContain('rel="canonical"');
   });
 
   it("serves an untranslated page under each locale in the English text, marked and pointing to the English page", async () => {
-    const html = await readOutput("pt-BR/theme/troubleshooting/index.html");
+    const html = await readOutput("pt-BR/jwt/errors/index.html");
 
     expect(html).toContain('<html lang="pt-BR"');
-    expect(html).toContain('<link href="https://docs.codenhub.dev/theme/troubleshooting/" rel="canonical">');
+    expect(html).toContain('<link href="https://docs.codenhub.dev/jwt/errors/" rel="canonical">');
     expect(html).toContain("Esta página ainda não foi traduzida");
     expect(html).toContain('<article class="markdown-content" lang="en">');
-    expect(html).toContain("Start with the symptom you see.");
+    expect(html).toContain("Everything that reads input you do not control");
     // No alternates: the page is a copy of the English one, not a translation.
     expect(html).not.toContain('rel="alternate"');
     // The reader stays in their language on the page's links and its section strip.
-    expect(html).toContain('class="package-tab" href="/pt-BR/theme/reference/"');
-    expect(html.replace(/<details class="shell-language[^"]*".*?<\/details>/, "")).not.toContain('href="/theme/');
+    expect(html).toContain('class="package-tab" href="/pt-BR/jwt/reference/"');
+    expect(html.replace(/<details class="shell-language[^"]*".*?<\/details>/, "")).not.toContain('href="/jwt/');
     // The controls added to the English body speak the page's language, and say so.
     expect(html).toMatch(/<a aria-label="Link para [^"]+" class="heading-anchor" href="#[^"]+" lang="pt-BR">/);
     expect(html).not.toContain("location.replace(");
@@ -325,14 +325,14 @@ describe("documentation chrome", () => {
 
   it("opens an untranslated page's Markdown with the locale's notice and the English page", async () => {
     const [untranslated, translated] = await Promise.all([
-      readOutput("pt-BR/theme/troubleshooting/index.md"),
+      readOutput("pt-BR/jwt/errors/index.md"),
       readOutput("pt-BR/styles/index.md"),
     ]);
 
     expect(untranslated).toMatch(
-      /^> Esta página ainda não foi traduzida[^\n]*<https:\/\/docs\.codenhub\.dev\/theme\/troubleshooting\/>\n\n/,
+      /^> Esta página ainda não foi traduzida[^\n]*<https:\/\/docs\.codenhub\.dev\/jwt\/errors\/>\n\n/,
     );
-    expect(untranslated).toContain("Start with the symptom you see.");
+    expect(untranslated).toContain("Everything that reads input you do not control");
     expect(translated).not.toMatch(/^> /);
   });
 
@@ -357,9 +357,9 @@ describe("documentation chrome", () => {
   it("lists only English and translated pages in the sitemap", async () => {
     const sitemap = await readOutput("sitemap.xml");
 
-    expect(sitemap).toContain("https://docs.codenhub.dev/theme/troubleshooting/");
+    expect(sitemap).toContain("https://docs.codenhub.dev/jwt/errors/");
     expect(sitemap).toContain("https://docs.codenhub.dev/pt-BR/styles/");
-    expect(sitemap).not.toContain("https://docs.codenhub.dev/pt-BR/theme/");
+    expect(sitemap).not.toContain("https://docs.codenhub.dev/pt-BR/jwt/");
   });
 
   it("builds a search index for every locale", async () => {

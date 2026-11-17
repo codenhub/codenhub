@@ -3,7 +3,17 @@
   "version": "0.2.2",
   "private": false,
   "description": "Zero-dependency browser theme preference helper for TypeScript apps.",
-  "homepage": "https://github.com/codenhub/codenhub/tree/main/packages/theme",
+  "keywords": [
+    "color-scheme",
+    "dark-mode",
+    "design-tokens",
+    "localstorage",
+    "prefers-color-scheme",
+    "tailwindcss",
+    "theme",
+    "theme-switcher"
+  ],
+  "homepage": "https://codenhub.dev/packages/theme/",
   "license": "Apache-2.0",
   "repository": {
     "type": "git",

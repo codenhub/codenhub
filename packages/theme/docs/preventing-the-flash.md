@@ -1,17 +1,18 @@
 ---
 title: Preventing the Flash
+description: Apply the theme before the first paint with getPrePaintScript(), in static and server-rendered apps, including under a Content Security Policy.
 order: 5
 ---
 
 # Preventing the Flash
 
-Reload the page from [Getting started](getting-started.md) with the dark theme chosen, and look closely: for a moment, it is light. The browser draws the page as soon as it has the HTML and CSS, and your script, which calls `init()`, runs after that. Until then, `<html>` carries no `data-theme`, so the page shows its default colors.
+Reload the page from [Getting started](getting-started.md) with the dark theme chosen, and look closely: for a moment, it is light. A user who chose dark at midnight gets a white flash on every visit, which is exactly what they chose dark to avoid. The browser draws the page as soon as it has the HTML and CSS, and your script, which calls `init()`, runs after that. Until then, `<html>` carries no `data-theme`, so the page shows its default colors.
 
-The fix is a tiny script that runs **before** the first paint. It must be written directly into the page's `<head>`, not loaded from a file, so the browser runs it before drawing anything. `getPrePaintScript()` returns that script as a string. It repeats exactly what `init()` decides, the saved choice, else the operating system's setting, and applies the attribute, classes, `color-scheme`, and theme tokens. When `init()` runs later, the right theme is already there and nothing visibly changes.
+The fix is a tiny script that runs **before** the first paint. It must be written directly into the page's `<head>`, not loaded from a file, so the browser runs it before drawing anything. `getPrePaintScript()` returns that script as a string. It repeats exactly what `init()` decides, the saved choice, else the operating system's setting, and applies the attribute, classes, `color-scheme`, and theme tokens. When `init()` runs later, the right theme is already there and nothing visibly changes. The script is plain ES5 and catches its own errors, so a browser too old for the package itself, back to Chrome 24, Firefox 24, and Safari 7, still gets the right attribute and classes, and a failure in it can never stop the page from loading. Tokens and `color-scheme` take effect only where the browser supports CSS custom properties and `color-scheme`.
 
 ## Share the options
 
-The pre-paint script and the manager in your app must agree on every option: if one uses another `storageKey`, they disagree about the saved choice and the flash comes back. Keep the options in one module that both import:
+The pre-paint script and the manager in your app must agree on every option: if one uses another `storageKey`, they disagree about the saved choice and the flash comes back, now with a second opinion. Keep the options in one module that both import:
 
 ```ts
 // src/theme-options.ts
@@ -35,7 +36,7 @@ import { themeOptions } from "./theme-options";
 export const theme = createTheme(themeOptions).init();
 ```
 
-`satisfies ThemeOptions` checks the object against the option types while keeping its exact theme names, so `theme.set()` still accepts only `"light"` and `"dark"`.
+`satisfies ThemeOptions` checks the object against the option types while keeping its exact theme names, so `theme.set()` still accepts only `"light"` and `"dark"`. Annotating it as `const themeOptions: ThemeOptions` instead would widen the names to any string, and the compiler would stop catching typos.
 
 Where the script is generated depends on how your HTML is produced.
 
@@ -68,7 +69,7 @@ export default defineConfig({
 });
 ```
 
-Run the dev server, view the page source, and the script is the first thing in `<head>`. Other build tools have an equivalent step for editing the HTML; what matters is that the string ends up inside a `<script>` element in `<head>`, before your stylesheets.
+Run the dev server, view the page source, and the script is the first thing in `<head>`: one long line that nobody should have to read, which is why a function writes it. Other build tools have an equivalent step for editing the HTML; what matters is that the string ends up inside a `<script>` element in `<head>`, before your stylesheets.
 
 ## In a server-rendered app
 

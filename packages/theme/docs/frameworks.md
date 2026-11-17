@@ -1,17 +1,18 @@
 ---
 title: Frameworks
+description: "Use the manager in React with useSyncExternalStore, with server rendering, and with Tailwind CSS's dark: variant."
 order: 6
 ---
 
 # Frameworks
 
-The package has no framework adapter because it does not need one: a manager is a plain object, and its methods can be passed anywhere as callbacks. This page shows the patterns for React and for Tailwind CSS. The same ideas carry over to other frameworks: create one manager for the page, start it once in the browser, and subscribe to it wherever the UI shows the theme.
+The package has no framework adapter because it does not need one: a manager is a plain object, and its methods can be passed anywhere as callbacks. One less package to keep up to date with your framework's next major version. This page shows the patterns for React and for Tailwind CSS. The same ideas carry over to other frameworks: create one manager for the page, start it once in the browser, and subscribe to it wherever the UI shows the theme.
 
 ## React
 
 ### One manager for the whole app
 
-Create the manager once, in its own module, and import it wherever you need it. Do not create it inside a component: each render would create a new one.
+Create the manager once, in its own module, and import it wherever you need it. Do not create it inside a component: each render would create a new one, each with its own listeners, and you would find out from the memory profiler.
 
 ```ts
 // src/theme.ts
@@ -26,7 +27,7 @@ In an app that only runs in the browser, such as one built with Vite, calling `i
 
 ### Show the active theme in a component
 
-React re-renders a component when its data changes only if it knows about the change. `useSyncExternalStore` connects React to an outside source like the manager: `theme.subscribe` tells React when to re-read, and `theme.get` is what it reads. `get()` returns the same object until the theme changes, which is exactly what React expects.
+React re-renders a component when its data changes only if it knows about the change. `useSyncExternalStore` connects React to an outside source like the manager: `theme.subscribe` tells React when to re-read, and `theme.get` is what it reads. `get()` returns the same `ActiveTheme` object until the theme changes, which is exactly what React expects. A getter that returned a fresh object every time would send React into a re-render loop, and React would tell you so in red.
 
 ```tsx
 import { useSyncExternalStore } from "react";
@@ -83,14 +84,16 @@ If your server resolves the theme per request instead, such as from a cookie, it
 
 ### Cleaning up
 
-A manager created once for the whole page lives as long as the page, and needs no cleanup. A manager that belongs to something shorter-lived, such as a component that mounts and unmounts or a test, must be stopped with `destroy()`:
+A manager created once for the whole page lives as long as the page, and needs no cleanup: the browser cleans up when the tab closes. A manager that belongs to something shorter-lived, such as a component that mounts and unmounts or a test, must be stopped with `destroy()`:
 
 ```tsx
 useEffect(() => {
-  const preview = createTheme(previewOptions).init();
-  return () => preview.destroy();
+  const theme = createTheme(options).init();
+  return () => theme.destroy();
 }, []);
 ```
+
+Keep one started manager per page. Two would take turns writing to `<html>`, and each would believe its own theme is the one showing.
 
 `destroy()` stops listening to the operating system and other tabs, removes every subscriber, and drops token overrides. It leaves `<html>` and the saved choice as they are, so the page does not change when the component unmounts. Pass `{ revertDom: true }` to also remove the attribute, classes, `color-scheme`, and token properties the manager wrote, leaving no trace. A destroyed manager can be started again with `init()`.
 
@@ -119,6 +122,6 @@ export default {
 };
 ```
 
-Because the `dark` class follows `colorScheme` rather than a theme's name, every dark theme you define, such as a `dim` theme, gets `dark:` styles too. `darkClass` works alongside `className`, so `<html>` can carry both `dark` and `theme-dim`, for custom CSS that only the `dim` theme needs.
+Because the `dark` class follows `colorScheme` rather than a theme's name, every dark theme you define, such as a `dim` theme, gets `dark:` styles too. One `dark:` variant covers every dark theme, so a new dark theme does not mean another pass over every component. `darkClass` works alongside `className`, so `<html>` can carry both `dark` and `theme-dim`, for custom CSS that only the `dim` theme needs.
 
 Next, [Troubleshooting](troubleshooting.md) collects the problems people hit most often.
