@@ -2,7 +2,7 @@
 title: Definir temas
 description: Agrega tus propios temas, elige qué temas usan la configuración del sistema y el toggle, lee el estado actual y conoce cada opción con su valor por defecto.
 order: 2
-source: 7c3dd6f6d63d11be081eb7298e1beaa4d366674a
+source: 53a1a38922f0e0f02b46b5a61b7497a6e1a30a7c
 ---
 
 # Definir temas
@@ -108,12 +108,17 @@ El menú de temas necesita mostrar qué entrada está seleccionada. El gestor re
 | `theme.preference` | Qué tema guardó el usuario, o `null` cuando no hay nada guardado, no se puede leer el almacenamiento o el nombre guardado ya no es uno de tus temas. |
 | `theme.system`     | A qué tema corresponde ahora mismo la configuración del sistema operativo, se esté mostrando o no.                                                   |
 
-`preference` es lo que hace posible la entrada "Automático": el menú muestra "Automático" como seleccionada mientras vale `null`.
+`preference` es lo que hace posible la entrada "Automático": el menú muestra "Automático" como seleccionada mientras vale `null`. Ejecútalo también en cada cambio, para que el menú se entere cuando el toggle u otra pestaña cambian el tema a sus espaldas:
 
 ```ts
-if (menu) {
-  menu.value = theme.preference ?? "auto";
-}
+const showSelection = () => {
+  if (menu) {
+    menu.value = theme.preference ?? "auto";
+  }
+};
+
+showSelection();
+theme.subscribe(showSelection);
 ```
 
 `preference` lee lo que de verdad está guardado. Mientras el navegador bloquea `localStorage`, se queda en `null` incluso después de que el usuario elige un tema, aunque la elección se sigue aplicando mientras la página está abierta; [Guardar y sincronizar](persistence-and-sync.md#cuando-falla-el-almacenamiento) cubre ese caso.

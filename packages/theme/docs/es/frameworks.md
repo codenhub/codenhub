@@ -2,7 +2,7 @@
 title: Frameworks
 description: Usa el gestor en React con useSyncExternalStore, con renderizado en el servidor y con la variante dark: de Tailwind CSS.
 order: 6
-source: 9bfbf195365453139048b73bf34c9c4c61bd7687
+source: ad3b7c5fb13db729f3ed55e0f7bcfb3cb61f74b2
 ---
 
 # Frameworks
@@ -89,10 +89,12 @@ Un gestor creado una vez para toda la página vive lo que vive la página y no n
 
 ```tsx
 useEffect(() => {
-  const preview = createTheme(previewOptions).init();
-  return () => preview.destroy();
+  const theme = createTheme(options).init();
+  return () => theme.destroy();
 }, []);
 ```
+
+Mantén un solo gestor arrancado por página. Dos se turnarían para escribir en `<html>`, y cada uno creería que su tema es el que se ve.
 
 `destroy()` deja de escuchar al sistema operativo y a las otras pestañas, quita todos los suscriptores y descarta las sobrescrituras de tokens. Deja `<html>` y la elección guardada como están, así que la página no cambia cuando el componente se desmonta. Pasa `{ revertDom: true }` para quitar además el atributo, las clases, `color-scheme` y las propiedades de tokens que escribió el gestor, sin dejar rastro. Un gestor destruido se puede volver a arrancar con `init()`.
 

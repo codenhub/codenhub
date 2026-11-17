@@ -2,7 +2,7 @@
 title: Frameworks
 description: Use o gerenciador no React com useSyncExternalStore, com renderização no servidor e com a variante dark: do Tailwind CSS.
 order: 6
-source: 9bfbf195365453139048b73bf34c9c4c61bd7687
+source: ad3b7c5fb13db729f3ed55e0f7bcfb3cb61f74b2
 ---
 
 # Frameworks
@@ -89,10 +89,12 @@ Um gerenciador criado uma vez para a página inteira vive tanto quanto a página
 
 ```tsx
 useEffect(() => {
-  const preview = createTheme(previewOptions).init();
-  return () => preview.destroy();
+  const theme = createTheme(options).init();
+  return () => theme.destroy();
 }, []);
 ```
+
+Mantenha um só gerenciador iniciado por página. Dois se revezariam escrevendo em `<html>`, e cada um acharia que o seu tema é o que está aparecendo.
 
 `destroy()` para de escutar o sistema operacional e as outras abas, remove todos os subscribers e descarta os overrides de tokens. Ele deixa `<html>` e a escolha salva como estão, então a página não muda quando o componente desmonta. Passe `{ revertDom: true }` para também remover o atributo, as classes, `color-scheme` e as propriedades de tokens que o gerenciador escreveu, sem deixar rastro. Um gerenciador destruído pode ser iniciado de novo com `init()`.
 

@@ -127,7 +127,7 @@ The [API reference](docs/reference/index.md) lists every export with its full si
 ## Requirements
 
 - **A browser, for the theme to show.** The package uses `document.documentElement`, `localStorage`, `matchMedia`, `storage` events, and `CustomEvent`, and treats any of them that is missing as absent instead of crashing your page. A `localStorage` or `matchMedia` call that throws, as in a private window, is treated the same way. On a server it does nothing that needs a browser; see [Preventing the flash](docs/preventing-the-flash.md#what-the-server-knows).
-- **Chrome 93, Firefox 92, Safari 15.4, or newer**, as published. The package is shipped as modern JavaScript and calls `Object.hasOwn`, which older browsers lack, so `createTheme()` throws a `TypeError` there. To support an older browser, have your build transpile dependencies and add polyfills for it. The pre-paint script from [Preventing the flash](docs/preventing-the-flash.md) is plain ES5 and runs in any browser either way.
+- **Chrome 93, Firefox 92, Safari 15.4, or newer**, as published. The package is shipped as modern JavaScript and calls `Object.hasOwn`, which older browsers lack, so `createTheme()` throws a `TypeError` there. To support an older browser, have your build transpile dependencies and add polyfills for it. The pre-paint script from [Preventing the flash](docs/preventing-the-flash.md) is plain ES5 and still applies the theme in browsers far below that floor, back to Chrome 24, Firefox 24, and Safari 7.
 - **TypeScript 5.4 or newer**, if you use TypeScript. The types use `NoInfer`, which older compilers report as `Cannot find name 'NoInfer'`. Plain JavaScript projects need nothing extra.
 - **Nothing else.** No dependencies, and no framework.
 
@@ -341,12 +341,17 @@ The theme menu needs to show which entry is selected. The manager answers four q
 | `theme.preference` | Which theme the user saved, or `null` when nothing is saved, storage cannot be read, or the saved name is no longer one of your themes. |
 | `theme.system`     | Which theme the operating system's setting maps to right now, whether or not it is shown.                                               |
 
-`preference` is what makes the "Auto" entry possible: the menu shows "Auto" as selected while it is `null`.
+`preference` is what makes the "Auto" entry possible: the menu shows "Auto" as selected while it is `null`. Run that on every change too, so the menu keeps up when the toggle or another tab changes the theme behind its back:
 
 ```ts
-if (menu) {
-  menu.value = theme.preference ?? "auto";
-}
+const showSelection = () => {
+  if (menu) {
+    menu.value = theme.preference ?? "auto";
+  }
+};
+
+showSelection();
+theme.subscribe(showSelection);
 ```
 
 `preference` reads what is actually saved. While the browser blocks `localStorage`, it stays `null` even after the user picks a theme, although the choice is still applied for as long as the page runs; [Saving and syncing](docs/persistence-and-sync.md#when-storage-fails) covers that case.
@@ -480,7 +485,7 @@ While a choice is saved, changes to the operating system's light or dark mode ar
 Browsers can refuse `localStorage`: a private window may block it, a user may disable site data, or storage may be full. The package never lets that break your page, and each kind of failure (read, write, delete) is logged once with `console.error`, not on every call:
 
 - **A failed read** counts as no saved choice, so the operating system's setting applies, unless the user already picked a theme with `set()` or `toggle()` on this page, which stays.
-- **A failed write** keeps whatever was saved before, if anything. The user's new choice still works for as long as the page is open: after `set()` or `toggle()`, the chosen theme stays, and operating-system changes do not override it. On reload, the previously saved theme, or the operating system's setting, applies again.
+- **A failed write** keeps whatever was saved before, if anything. The user's new choice still works for as long as the page is open: after `set()` or `toggle()`, the chosen theme stays, and operating-system changes do not override it. On reload, the previously saved theme, or the operating system's setting, applies again. The one exception is a choice made before `init()`: `init()` reads storage first, so a previously saved theme replaces it.
 - **A failed delete** in `clearPreference()` leaves the old choice saved. The page switches to the system theme, but a reload restores the saved choice, and operating-system changes stay ignored while it is there.
 
 `theme.preference` reports the saved choice when it names one of your themes, and `null` otherwise, so in that situation it can disagree with the active theme: it stays `null` when storage cannot be read at all, and keeps the previously saved theme when only saving fails, as with a full quota.
@@ -557,7 +562,7 @@ Next, [Preventing the flash](docs/preventing-the-flash.md) makes the right theme
 
 Reload the page from [Getting started](docs/getting-started.md) with the dark theme chosen, and look closely: for a moment, it is light. A user who chose dark at midnight gets a white flash on every visit, which is exactly what they chose dark to avoid. The browser draws the page as soon as it has the HTML and CSS, and your script, which calls `init()`, runs after that. Until then, `<html>` carries no `data-theme`, so the page shows its default colors.
 
-The fix is a tiny script that runs **before** the first paint. It must be written directly into the page's `<head>`, not loaded from a file, so the browser runs it before drawing anything. `getPrePaintScript()` returns that script as a string. It repeats exactly what `init()` decides, the saved choice, else the operating system's setting, and applies the attribute, classes, `color-scheme`, and theme tokens. When `init()` runs later, the right theme is already there and nothing visibly changes. The script is plain ES5 and catches its own errors, so a browser too old for the package itself still gets the right theme, and a failure in it can never stop the page from loading.
+The fix is a tiny script that runs **before** the first paint. It must be written directly into the page's `<head>`, not loaded from a file, so the browser runs it before drawing anything. `getPrePaintScript()` returns that script as a string. It repeats exactly what `init()` decides, the saved choice, else the operating system's setting, and applies the attribute, classes, `color-scheme`, and theme tokens. When `init()` runs later, the right theme is already there and nothing visibly changes. The script is plain ES5 and catches its own errors, so a browser too old for the package itself, back to Chrome 24, Firefox 24, and Safari 7, still gets the right theme, and a failure in it can never stop the page from loading.
 
 ## Share the options
 
@@ -775,10 +780,12 @@ A manager created once for the whole page lives as long as the page, and needs n
 
 ```tsx
 useEffect(() => {
-  const preview = createTheme(previewOptions).init();
-  return () => preview.destroy();
+  const theme = createTheme(options).init();
+  return () => theme.destroy();
 }, []);
 ```
+
+Keep one started manager per page. Two would take turns writing to `<html>`, and each would believe its own theme is the one showing.
 
 `destroy()` stops listening to the operating system and other tabs, removes every subscriber, and drops token overrides. It leaves `<html>` and the saved choice as they are, so the page does not change when the component unmounts. Pass `{ revertDom: true }` to also remove the attribute, classes, `color-scheme`, and token properties the manager wrote, leaving no trace. A destroyed manager can be started again with `init()`.
 
@@ -858,7 +865,7 @@ Your TypeScript version is older than 5.4, which added `NoInfer`. Update TypeScr
 
 ## `createTheme()` throws `TypeError: Object.hasOwn is not a function`
 
-The browser is older than Chrome 93, Firefox 92, or Safari 15.4, the oldest versions the published package runs on; [Requirements](docs/index.md#requirements) lists them. Update the browser, or have your build transpile dependencies and add polyfills for the browsers you support. The pre-paint script still applies the theme in an older browser, but the toggle and everything else need the manager.
+The browser is older than Chrome 93, Firefox 92, or Safari 15.4, the oldest versions the published package runs on; [Requirements](docs/index.md#requirements) lists them. Update the browser, or have your build transpile dependencies and add polyfills for the browsers you support. The pre-paint script still applies the theme in browsers back to Chrome 24, Firefox 24, and Safari 7, but the toggle and everything else need the manager.
 
 ## A React hydration warning mentions `<html>`
 

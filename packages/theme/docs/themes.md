@@ -107,12 +107,17 @@ The theme menu needs to show which entry is selected. The manager answers four q
 | `theme.preference` | Which theme the user saved, or `null` when nothing is saved, storage cannot be read, or the saved name is no longer one of your themes. |
 | `theme.system`     | Which theme the operating system's setting maps to right now, whether or not it is shown.                                               |
 
-`preference` is what makes the "Auto" entry possible: the menu shows "Auto" as selected while it is `null`.
+`preference` is what makes the "Auto" entry possible: the menu shows "Auto" as selected while it is `null`. Run that on every change too, so the menu keeps up when the toggle or another tab changes the theme behind its back:
 
 ```ts
-if (menu) {
-  menu.value = theme.preference ?? "auto";
-}
+const showSelection = () => {
+  if (menu) {
+    menu.value = theme.preference ?? "auto";
+  }
+};
+
+showSelection();
+theme.subscribe(showSelection);
 ```
 
 `preference` reads what is actually saved. While the browser blocks `localStorage`, it stays `null` even after the user picks a theme, although the choice is still applied for as long as the page runs; [Saving and syncing](persistence-and-sync.md#when-storage-fails) covers that case.

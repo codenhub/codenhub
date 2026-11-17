@@ -2,14 +2,14 @@
 title: Evitar o flash
 description: Aplique o tema antes da primeira pintura com getPrePaintScript(), em apps estáticos e renderizados no servidor, inclusive sob uma Content Security Policy.
 order: 5
-source: 2f612948b70990d4b0dee1b718bb9d57ec09d484
+source: af5144359b17d7d707e36b11f44c6f9ab2c70d03
 ---
 
 # Evitar o flash
 
 Recarregue a página de [Primeiros passos](getting-started.md) com o tema escuro escolhido e preste atenção: por um instante, ela fica clara. Um usuário que escolheu o escuro à meia-noite leva um clarão branco em toda visita, que é exatamente o que ele escolheu o escuro para evitar. O navegador desenha a página assim que tem o HTML e o CSS, e o seu script, que chama `init()`, roda depois disso. Até lá, `<html>` não tem `data-theme`, então a página mostra as cores padrão.
 
-A solução é um script minúsculo que roda **antes** da primeira pintura. Ele precisa ser escrito direto no `<head>` da página, e não carregado de um arquivo, para que o navegador o rode antes de desenhar qualquer coisa. `getPrePaintScript()` devolve esse script como string. Ele repete exatamente o que `init()` decide, a escolha salva ou, se não houver, a configuração do sistema operacional, e aplica o atributo, as classes, `color-scheme` e os tokens do tema. Quando `init()` roda depois, o tema certo já está lá e nada muda visivelmente. O script é ES5 puro e captura os próprios erros, então um navegador antigo demais para o próprio pacote ainda recebe o tema certo, e uma falha nele nunca impede a página de carregar.
+A solução é um script minúsculo que roda **antes** da primeira pintura. Ele precisa ser escrito direto no `<head>` da página, e não carregado de um arquivo, para que o navegador o rode antes de desenhar qualquer coisa. `getPrePaintScript()` devolve esse script como string. Ele repete exatamente o que `init()` decide, a escolha salva ou, se não houver, a configuração do sistema operacional, e aplica o atributo, as classes, `color-scheme` e os tokens do tema. Quando `init()` roda depois, o tema certo já está lá e nada muda visivelmente. O script é ES5 puro e captura os próprios erros, então um navegador antigo demais para o próprio pacote, até o Chrome 24, o Firefox 24 e o Safari 7, ainda recebe o tema certo, e uma falha nele nunca impede a página de carregar.
 
 ## Compartilhe as opções
 

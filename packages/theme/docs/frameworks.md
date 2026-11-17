@@ -88,10 +88,12 @@ A manager created once for the whole page lives as long as the page, and needs n
 
 ```tsx
 useEffect(() => {
-  const preview = createTheme(previewOptions).init();
-  return () => preview.destroy();
+  const theme = createTheme(options).init();
+  return () => theme.destroy();
 }, []);
 ```
+
+Keep one started manager per page. Two would take turns writing to `<html>`, and each would believe its own theme is the one showing.
 
 `destroy()` stops listening to the operating system and other tabs, removes every subscriber, and drops token overrides. It leaves `<html>` and the saved choice as they are, so the page does not change when the component unmounts. Pass `{ revertDom: true }` to also remove the attribute, classes, `color-scheme`, and token properties the manager wrote, leaving no trace. A destroyed manager can be started again with `init()`.
 

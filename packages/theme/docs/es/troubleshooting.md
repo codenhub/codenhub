@@ -2,7 +2,7 @@
 title: Solución de problemas
 description: Síntomas, cómo confirmar su causa y cómo resolverlos.
 order: 7
-source: e5f0062c2cbfbee2f138a9d67eab546de15c4ef8
+source: fc7644c1f37fa4dcf2d1e8fad5d48d194cc29378
 ---
 
 # Solución de problemas
@@ -50,7 +50,7 @@ Tu versión de TypeScript es anterior a la 5.4, que agregó `NoInfer`. Actualiza
 
 ## `createTheme()` lanza `TypeError: Object.hasOwn is not a function`
 
-El navegador es anterior a Chrome 93, Firefox 92 o Safari 15.4, las versiones más antiguas en las que funciona el paquete publicado; [Requisitos](index.md#requisitos) las enumera. Actualiza el navegador, o haz que tu build transpile las dependencias y agregue polyfills para los navegadores que soportas. El script previo al pintado sigue aplicando el tema en un navegador antiguo, pero el toggle y todo lo demás necesitan el gestor.
+El navegador es anterior a Chrome 93, Firefox 92 o Safari 15.4, las versiones más antiguas en las que funciona el paquete publicado; [Requisitos](index.md#requisitos) las enumera. Actualiza el navegador, o haz que tu build transpile las dependencias y agregue polyfills para los navegadores que soportas. El script previo al pintado sigue aplicando el tema en navegadores hasta Chrome 24, Firefox 24 y Safari 7, pero el toggle y todo lo demás necesitan el gestor.
 
 ## Un aviso de hidratación de React menciona `<html>`
 

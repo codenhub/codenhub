@@ -2,7 +2,7 @@
 title: Guardar y sincronizar
 description: Cómo se guarda la elección, qué pasa cuando falla el almacenamiento, cómo se mantienen de acuerdo las pestañas y cómo reaccionar a los cambios de tema.
 order: 4
-source: dea770130ba871237154263ed85c91f8a27a90a4
+source: eb1875a05ca133e656b658636da57ad7a47cc408
 ---
 
 # Guardar y sincronizar
@@ -22,7 +22,7 @@ Mientras hay una elección guardada, los cambios del modo claro u oscuro del sis
 Los navegadores pueden rechazar `localStorage`: una ventana privada puede bloquearlo, un usuario puede desactivar los datos de sitios o el almacenamiento puede estar lleno. El paquete nunca deja que eso rompa tu página, y cada tipo de fallo (lectura, escritura, borrado) se registra una sola vez con `console.error`, no en cada llamada:
 
 - **Una lectura fallida** cuenta como ausencia de elección guardada, así que se aplica la configuración del sistema operativo, salvo que el usuario ya haya elegido un tema con `set()` o `toggle()` en esta página, que se mantiene.
-- **Una escritura fallida** conserva lo que estuviera guardado antes, si había algo. La nueva elección del usuario sigue funcionando mientras la página esté abierta: después de `set()` o `toggle()`, el tema elegido se mantiene, y los cambios del sistema operativo no lo reemplazan. Al recargar, vuelve a aplicarse el tema guardado antes, o la configuración del sistema operativo.
+- **Una escritura fallida** conserva lo que estuviera guardado antes, si había algo. La nueva elección del usuario sigue funcionando mientras la página esté abierta: después de `set()` o `toggle()`, el tema elegido se mantiene, y los cambios del sistema operativo no lo reemplazan. Al recargar, vuelve a aplicarse el tema guardado antes, o la configuración del sistema operativo. La única excepción es una elección hecha antes de `init()`: `init()` lee primero el almacenamiento, así que un tema guardado antes la reemplaza.
 - **Un borrado fallido** en `clearPreference()` deja guardada la elección anterior. La página cambia al tema del sistema, pero al recargar se restaura la elección guardada, y los cambios del sistema operativo se siguen ignorando mientras esté ahí.
 
 `theme.preference` informa la elección guardada cuando nombra uno de tus temas, y `null` en caso contrario, así que en esa situación puede no coincidir con el tema activo: se queda en `null` cuando el almacenamiento no se puede leer en absoluto, y conserva el tema guardado antes cuando solo falla el guardado, como con la cuota llena.

@@ -2,7 +2,7 @@
 title: Salvar e sincronizar
 description: Como a escolha é salva, o que acontece quando o armazenamento falha, como as abas ficam de acordo e como reagir a mudanças de tema.
 order: 4
-source: dea770130ba871237154263ed85c91f8a27a90a4
+source: eb1875a05ca133e656b658636da57ad7a47cc408
 ---
 
 # Salvar e sincronizar
@@ -22,7 +22,7 @@ Enquanto houver uma escolha salva, as mudanças no modo claro ou escuro do siste
 Navegadores podem recusar o `localStorage`: uma janela anônima pode bloqueá-lo, um usuário pode desativar os dados de sites, ou o armazenamento pode estar cheio. O pacote nunca deixa isso quebrar a sua página, e cada tipo de falha (leitura, escrita, remoção) é registrado uma única vez com `console.error`, e não a cada chamada:
 
 - **Uma leitura que falha** conta como nenhuma escolha salva, então vale a configuração do sistema operacional, a menos que o usuário já tenha escolhido um tema com `set()` ou `toggle()` nesta página, e aí essa escolha fica.
-- **Uma escrita que falha** mantém o que estava salvo antes, se havia algo. A nova escolha do usuário continua funcionando enquanto a página estiver aberta: depois de `set()` ou `toggle()`, o tema escolhido fica, e as mudanças do sistema operacional não o sobrescrevem. Ao recarregar, volta a valer o tema salvo antes, ou a configuração do sistema operacional.
+- **Uma escrita que falha** mantém o que estava salvo antes, se havia algo. A nova escolha do usuário continua funcionando enquanto a página estiver aberta: depois de `set()` ou `toggle()`, o tema escolhido fica, e as mudanças do sistema operacional não o sobrescrevem. Ao recarregar, volta a valer o tema salvo antes, ou a configuração do sistema operacional. A única exceção é uma escolha feita antes de `init()`: `init()` lê o armazenamento primeiro, então um tema salvo antes a substitui.
 - **Uma remoção que falha** em `clearPreference()` deixa a escolha antiga salva. A página muda para o tema do sistema, mas recarregar restaura a escolha salva, e as mudanças do sistema operacional continuam ignoradas enquanto ela estiver lá.
 
 `theme.preference` informa a escolha salva quando ela nomeia um dos seus temas, e `null` caso contrário, então nessa situação ele pode discordar do tema ativo: ele fica `null` quando o armazenamento não pode ser lido de jeito nenhum, e mantém o tema salvo antes quando só a gravação falha, como com a cota cheia.
