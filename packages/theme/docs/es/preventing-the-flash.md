@@ -2,14 +2,14 @@
 title: Evitar el destello
 description: Aplica el tema antes del primer pintado con getPrePaintScript(), en apps estáticas y renderizadas en el servidor, también bajo una Content Security Policy.
 order: 5
-source: af5144359b17d7d707e36b11f44c6f9ab2c70d03
+source: 08fe9d7872d833f4adae797213d6faf91035f5a7
 ---
 
 # Evitar el destello
 
 Recarga la página de [Primeros pasos](getting-started.md) con el tema oscuro elegido y mira con atención: por un instante, se ve clara. Un usuario que eligió el oscuro a medianoche recibe un destello blanco en cada visita, que es justo lo que quería evitar al elegirlo. El navegador dibuja la página en cuanto tiene el HTML y el CSS, y tu script, que llama a `init()`, se ejecuta después. Hasta entonces, `<html>` no tiene `data-theme`, así que la página muestra sus colores por defecto.
 
-La solución es un script diminuto que se ejecuta **antes** del primer pintado. Tiene que escribirse directamente en el `<head>` de la página, no cargarse desde un archivo, para que el navegador lo ejecute antes de dibujar nada. `getPrePaintScript()` devuelve ese script como string. Repite exactamente lo que decide `init()`, la elección guardada o, si no hay, la configuración del sistema operativo, y aplica el atributo, las clases, `color-scheme` y los tokens del tema. Cuando `init()` se ejecuta después, el tema correcto ya está ahí y no cambia nada visible. El script es ES5 puro y atrapa sus propios errores, así que un navegador demasiado antiguo para el paquete en sí, hasta Chrome 24, Firefox 24 y Safari 7, igual recibe el tema correcto, y un fallo en él nunca puede impedir que la página cargue.
+La solución es un script diminuto que se ejecuta **antes** del primer pintado. Tiene que escribirse directamente en el `<head>` de la página, no cargarse desde un archivo, para que el navegador lo ejecute antes de dibujar nada. `getPrePaintScript()` devuelve ese script como string. Repite exactamente lo que decide `init()`, la elección guardada o, si no hay, la configuración del sistema operativo, y aplica el atributo, las clases, `color-scheme` y los tokens del tema. Cuando `init()` se ejecuta después, el tema correcto ya está ahí y no cambia nada visible. El script es ES5 puro y atrapa sus propios errores, así que un navegador demasiado antiguo para el paquete en sí, hasta Chrome 24, Firefox 24 y Safari 7, igual recibe el atributo y las clases correctos, y un fallo en él nunca puede impedir que la página cargue. Los tokens y `color-scheme` solo tienen efecto donde el navegador admite propiedades personalizadas de CSS y `color-scheme`.
 
 ## Comparte las opciones
 

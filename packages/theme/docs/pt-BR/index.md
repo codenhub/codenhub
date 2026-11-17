@@ -1,7 +1,7 @@
 ---
 title: Visão geral
 description: Para que serve o pacote, como ele escolhe um tema e em que ordem ler as páginas.
-source: a5511e8d45e8b0788a0ad1943e44c616d4e0d24e
+source: 5c38fd4477c00f38da7c4ffb9083a1b0d8fd74cc
 ---
 
 # Gerenciar temas no navegador
@@ -56,7 +56,7 @@ A [referência da API](../reference/index.md) (em inglês) lista cada export com
 ## Requisitos
 
 - **Um navegador, para o tema aparecer.** O pacote usa `document.documentElement`, `localStorage`, `matchMedia`, eventos `storage` e `CustomEvent`, e trata qualquer um deles que esteja faltando como ausente, em vez de quebrar a sua página. Uma chamada a `localStorage` ou `matchMedia` que lança um erro, como numa janela anônima, é tratada do mesmo jeito. Num servidor, ele não faz nada que precise de navegador; veja [Evitar o flash](preventing-the-flash.md#o-que-o-servidor-sabe).
-- **Chrome 93, Firefox 92, Safari 15.4 ou mais recente**, no pacote como é publicado, sem transpilar. O pacote é distribuído como JavaScript moderno e chama `Object.hasOwn`, que navegadores mais antigos não têm, então `createTheme()` lança um `TypeError` neles. Para dar suporte a um navegador mais antigo, faça o seu build transpilar as dependências e adicionar polyfills para ele. O script de pré-pintura de [Evitar o flash](preventing-the-flash.md) é ES5 puro e ainda aplica o tema em navegadores bem abaixo desse mínimo, até o Chrome 24, o Firefox 24 e o Safari 7.
+- **Chrome 93, Firefox 92, Safari 15.4 ou mais recente**, no pacote como é publicado, sem transpilar. O pacote é distribuído como JavaScript moderno e chama `Object.hasOwn`, que navegadores mais antigos não têm, então `createTheme()` lança um `TypeError` neles. Para dar suporte a um navegador mais antigo, faça o seu build transpilar as dependências e adicionar polyfills para ele. O script de pré-pintura de [Evitar o flash](preventing-the-flash.md) é ES5 puro e ainda aplica o atributo e as classes do tema em navegadores bem abaixo desse mínimo, até o Chrome 24, o Firefox 24 e o Safari 7. Os tokens e o `color-scheme` só têm efeito onde o navegador suporta propriedades personalizadas de CSS e `color-scheme`.
 - **TypeScript 5.4 ou mais recente**, se você usa TypeScript. Os tipos usam `NoInfer`, que compiladores mais antigos acusam como `Cannot find name 'NoInfer'`. Projetos em JavaScript puro não precisam de nada a mais.
 - **Mais nada.** Sem dependências e sem framework.
 
