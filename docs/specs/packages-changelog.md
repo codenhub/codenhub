@@ -64,7 +64,7 @@ Each released version gets its own file, named after the exact released version 
 
 A version page's frontmatter MUST set `title`, `date`, and `description`: `date` is the release date in ISO `YYYY-MM-DD` form, and `description` is a one-sentence summary of what the release changes for a consumer, which is what a search result or a link preview shows before the page is opened.
 
-Rejected: `date` recommended and `description` permitted, because optional fields leave pages in the same changelog carrying different metadata, for no reason but that nothing asks. `hub check` enforces the two fields and the body bullets on the page for the manifest's current version only, so an older page that lacks them is brought in line when someone touches it, not by a failing check. `hub release --cut` scaffolds the description and bullets as `TODO`, which the check reports until they are written.
+Rejected: `date` recommended and `description` permitted, because optional fields leave pages in the same changelog carrying different metadata, for no reason but that nothing asks. `hub check` enforces the two fields, and rejects a `- TODO` bullet left in the body, on the page for the manifest's current version only, so an older page that lacks them is brought in line when someone touches it, not by a failing check. `hub release --cut` scaffolds the description and bullets as `TODO`, which the check reports until they are written.
 
 A version page does not need `order`, and does not need to know whether it is currently linked from `index.md` or not: publication is entirely `index.md`'s concern, not the page's.
 

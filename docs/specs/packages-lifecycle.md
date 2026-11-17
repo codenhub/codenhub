@@ -279,7 +279,7 @@ Checked by tools:
 
 Checked by review:
 
-- **Manifest.** `description`, `license`, `repository`, `homepage`, and `keywords` are set, as "Package metadata" describes. `engines.node` follows "Node.js support", which also means that a browser-only package declares none.
+- **Manifest.** `description`, `license`, `repository`, `homepage`, and `keywords` are set, as "Package metadata" recommends, or the pull request says why one is left out. `engines.node` follows "Node.js support", which also means that a browser-only package declares none.
 - **Status.** `codenhub.status` is accurate (`docs/specs/packages-metadata.md`), and an experimental notice names what has not been proven yet (`docs/specs/packages-readme.md`), not a version by which it will change.
 - **README.** It follows the required structure in `docs/specs/packages-readme.md`, its `Requirements` section states the Node.js floor when there is one, and its `License` section links the package's `LICENSE` file.
 - **Public surface.** Every export is meant for consumers, as "Public API discipline" in `docs/specs/packages-documentation.md` requires.
