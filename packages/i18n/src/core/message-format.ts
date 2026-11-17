@@ -576,6 +576,8 @@ interface FormatState {
 const formatNodes = (nodes: Message, state: FormatState, pound: number | undefined): string => {
   const { values, locale, timeZone } = state;
   let result = "";
+  // Formatted once, so a form that repeats `#` costs no formatting step per `#`, which the argument limit doesn't count.
+  let poundText: string | undefined;
 
   for (const node of nodes) {
     if (node.kind === "text") {
@@ -583,7 +585,8 @@ const formatNodes = (nodes: Message, state: FormatState, pound: number | undefin
       continue;
     }
     if (node.kind === "pound") {
-      result += pound === undefined ? "#" : getNumberFormat(locale).format(pound);
+      poundText ??= pound === undefined ? "#" : getNumberFormat(locale).format(pound);
+      result += poundText;
       continue;
     }
 

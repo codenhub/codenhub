@@ -281,6 +281,29 @@ describe("ICU messages", () => {
     expect(i18n.t("malformed", { a: "v" })).toBe(`${"v".repeat(100)}{a} }`);
   });
 
+  it("should format a plural's number once however many # its form repeats", async () => {
+    const i18n = createI18n({
+      defaultLocale: "en",
+      locales: ["en"],
+      loadLocale: () => ({
+        repeated: `{n, plural, other {${"# ".repeat(20)}#}}`,
+        nested: "{n, plural, other {# {m, plural, other {# #}} #}}",
+      }),
+      isSilent: true,
+    });
+    await i18n.init();
+    // `format` is a getter, read once per formatted number; TypeScript types it as a method.
+    const format = vi.spyOn(Intl.NumberFormat.prototype as { readonly format: unknown }, "format", "get");
+    try {
+      expect(i18n.t("repeated", { n: 1234 })).toBe(`${"1,234 ".repeat(20)}1,234`);
+      expect(format).toHaveBeenCalledTimes(1);
+      expect(i18n.t("nested", { n: 1, m: 2 })).toBe("1 2 2 1");
+      expect(i18n.t("repeated", { n: -0 })).toBe(`${"-0 ".repeat(20)}-0`);
+    } finally {
+      format.mockRestore();
+    }
+  });
+
   it("should not warn for a malformed message when silent", async () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
     try {

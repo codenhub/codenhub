@@ -22,12 +22,12 @@
         "createI18n": {
           "files": {
             "dist/index.js": {
-              "bytes": 20184,
+              "bytes": 20192,
               "declarations": {
                 "I18nInstance": 6710,
                 "Parser": 3442,
                 "normalizeDictionary": 2161,
-                "formatNodes": 1012,
+                "formatNodes": 1020,
                 "matchConfiguredLocale": 815,
                 "validateI18nConfig": 464,
                 "createLocaleLoader": 455,
@@ -137,8 +137,8 @@
               "bytes": 25
             }
           },
-          "gzip": 7785,
-          "minified": 23491
+          "gzip": 7795,
+          "minified": 23499
         },
         "i18nErrors": {
           "files": {
@@ -159,12 +159,12 @@
       },
       "files": {
         "dist/index.js": {
-          "bytes": 20184,
+          "bytes": 20192,
           "declarations": {
             "I18nInstance": 6711,
             "Parser": 3442,
             "normalizeDictionary": 2161,
-            "formatNodes": 1012,
+            "formatNodes": 1020,
             "matchConfiguredLocale": 815,
             "validateI18nConfig": 464,
             "createLocaleLoader": 455,
@@ -275,9 +275,9 @@
           "bytes": 56
         }
       },
-      "gzip": 7876,
-      "minified": 23691,
-      "sha256": "8ef6041e5af0d2d7064b34ed4bf38f887a9ba475d86b04132c18eb17d25319b1"
+      "gzip": 7886,
+      "minified": 23699,
+      "sha256": "420fa7422146e015f0e1b747d2ee564acb9fb95645fa82b6f51bce075a253a2b"
     },
     "./browser": {
       "exports": {
