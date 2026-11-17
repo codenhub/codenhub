@@ -2,7 +2,7 @@
 title: Solução de problemas
 description: Sintomas, como confirmar a causa de cada um e como corrigi-los.
 order: 7
-source: 14067fa51a5f657642449030d23dcc89505b062d
+source: d8cb7e198162be48eb6fd956c960af106d16ae9d
 ---
 
 # Solução de problemas
@@ -33,7 +33,7 @@ O script de pré-pintura está faltando, bloqueado ou fora de sintonia com o seu
 
 ## O tema ignora o sistema operacional
 
-O usuário tem uma escolha salva, que sempre ganha. `theme.preference` a mostra. Chame `theme.clearPreference()`, a partir de uma opção "Automático" ou "Sistema" na sua UI, para voltar a seguir o sistema operacional.
+O usuário fez uma escolha, que sempre ganha. `theme.preference` mostra uma escolha salva; uma que o navegador não conseguiu salvar, porque o armazenamento está bloqueado ou cheio, continua ganhando enquanto a página está aberta, a não ser que outra aba mude o tema, embora `theme.preference` mostre então `null` ou uma escolha salva anterior. Uma escolha feita antes de `init()` é a exceção; veja [Quando o armazenamento falha](persistence-and-sync.md#quando-o-armazenamento-falha). Chame `theme.clearPreference()`, a partir de uma opção "Automático" ou "Sistema" na sua UI, para voltar a seguir o sistema operacional. Se o navegador se recusar a apagar a escolha salva, o console mostra um erro `[theme]`, o tema do sistema é aplicado uma vez e as mudanças do sistema operacional continuam ignoradas enquanto a escolha continuar salva.
 
 ## `createTheme()` lança um erro
 
@@ -48,9 +48,9 @@ As opções são inválidas, e a mensagem de erro nomeia o problema. Os mais com
 
 A sua versão do TypeScript é anterior à 5.4, que adicionou `NoInfer`. Atualize o TypeScript no seu projeto. Ativar `skipLibCheck` esconde o erro, mas aí os tipos também passam a aceitar nomes de temas que você não configurou.
 
-## `createTheme()` lança `TypeError: Object.hasOwn is not a function`
+## O navegador informa `Object.hasOwn is not a function` ou um `SyntaxError`
 
-O navegador é anterior ao Chrome 93, ao Firefox 92 ou ao Safari 15.4, as versões mais antigas em que o pacote publicado roda; [Requisitos](index.md#requisitos) lista essas versões. Atualize o navegador, ou faça o seu build transpilar as dependências e adicionar polyfills para os navegadores que você suporta. O script de pré-pintura ainda aplica o atributo e as classes do tema em navegadores até o Chrome 24, o Firefox 24 e o Safari 7, mas o toggle e todo o resto precisam do gerenciador.
+`createTheme()` lança `TypeError: Object.hasOwn is not a function` ou, num navegador anterior ao Chrome 85, ao Firefox 79 ou ao Safari 14, o pacote nem carrega e falha com um `SyntaxError` antes de qualquer código seu rodar. Nos dois casos, o navegador é anterior ao Chrome 93, ao Firefox 92 ou ao Safari 15.4, as versões mais antigas em que o pacote publicado roda; [Requisitos](index.md#requisitos) lista essas versões. Atualize o navegador, ou faça o seu build transpilar as dependências e adicionar polyfills para os navegadores que você suporta. O script de pré-pintura ainda aplica o atributo e as classes do tema em navegadores até o Chrome 24, o Firefox 24 e o Safari 7, mas o toggle e todo o resto precisam do gerenciador.
 
 ## Um aviso de hidratação do React menciona `<html>`
 

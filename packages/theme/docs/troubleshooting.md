@@ -32,7 +32,7 @@ The pre-paint script is missing, blocked, or out of step with your app. In order
 
 ## The theme ignores the operating system
 
-The user has a saved choice, which always wins. `theme.preference` shows it. Call `theme.clearPreference()`, from an "Auto" or "System" option in your UI, to follow the operating system again.
+The user made a choice, which always wins. `theme.preference` shows a saved one; a choice the browser could not save, because storage is blocked or full, still wins while the page is open, unless another tab changes the theme, although `theme.preference` then shows `null` or an older saved choice. A choice made before `init()` is the exception; see [When storage fails](persistence-and-sync.md#when-storage-fails). Call `theme.clearPreference()`, from an "Auto" or "System" option in your UI, to follow the operating system again. If the browser refuses to delete the saved choice, the console shows a `[theme]` error, the system theme applies once, and operating-system changes stay ignored while the choice remains saved.
 
 ## `createTheme()` throws
 
@@ -47,9 +47,9 @@ The options are invalid, and the error message names the problem. The most commo
 
 Your TypeScript version is older than 5.4, which added `NoInfer`. Update TypeScript in your project. Turning on `skipLibCheck` hides the error, but then the types also accept theme names you did not configure.
 
-## `createTheme()` throws `TypeError: Object.hasOwn is not a function`
+## The browser reports `Object.hasOwn is not a function` or a `SyntaxError`
 
-The browser is older than Chrome 93, Firefox 92, or Safari 15.4, the oldest versions the published package runs on; [Requirements](index.md#requirements) lists them. Update the browser, or have your build transpile dependencies and add polyfills for the browsers you support. The pre-paint script still sets the theme's attribute and classes in browsers back to Chrome 24, Firefox 24, and Safari 7, but the toggle and everything else need the manager.
+`createTheme()` throws `TypeError: Object.hasOwn is not a function`, or, in a browser older than Chrome 85, Firefox 79, or Safari 14, the package fails to load with a `SyntaxError` before any of your code runs. Either way, the browser is older than Chrome 93, Firefox 92, or Safari 15.4, the oldest versions the published package runs on; [Requirements](index.md#requirements) lists them. Update the browser, or have your build transpile dependencies and add polyfills for the browsers you support. The pre-paint script still sets the theme's attribute and classes in browsers back to Chrome 24, Firefox 24, and Safari 7, but the toggle and everything else need the manager.
 
 ## A React hydration warning mentions `<html>`
 

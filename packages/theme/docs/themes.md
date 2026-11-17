@@ -143,7 +143,7 @@ A few of these deserve a word:
 
 - **`storageKey`**: Every app on the same domain shares one `localStorage`. If two apps on one domain both use this package, give each its own key, such as `"my-app-theme"`, or they will take turns overwriting each other's choice.
 - **`attribute`**: Any valid HTML attribute name works, one without spaces, quotes, `/`, `>`, or `=`, except `class` and `style`, because writing the theme name there would erase the classes and inline styles your page put on `<html>`. Use `className` to get a class.
-- **`className`**: A function, typed `ThemeClassResolver`, receives the theme, including its static tokens, and returns one class name with no spaces. `className: (theme) => theme.name` gives classes like `dark` and `dim` instead of `theme-dark`. A function that returns an empty or space-containing name makes the operation that applied it throw.
+- **`className`**: A function, typed `ThemeClassResolver`, receives the theme, including its static tokens, and returns one class name with no spaces. `className: (theme) => theme.name` gives classes like `dark` and `dim` instead of `theme-dark`. The package asks the function for every theme's class at once, the first time one is needed, usually in `init()` or `getPrePaintScript()`. A function that returns an empty or space-containing name for any theme makes that call throw, even when the theme it rejects is not the one being applied.
 
 ## When the configuration is wrong
 
