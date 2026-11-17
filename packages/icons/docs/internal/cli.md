@@ -16,7 +16,7 @@ It lands in 0.4.0, the release being prepared, and adds a `bin` to the package. 
 
 The command ships inside `@codenhub/icons` as its `bin`, named `chi`, so a consumer runs it from a `package.json` script as `chi build …`, or as `npx @codenhub/icons build …`, which runs the package's only `bin`. The pair `chs` and `chi` names the two commands after the two packages.
 
-The public documentation never shows `npx chi`. An unrelated package named `chi` exists on npm, version 0.0.10, a router for Express, checked on 2026-11-16; `npx chi` runs it wherever this package is not installed.
+The public documentation never shows `npx chi`. An unrelated package named `chi` exists on npm, version 0.0.10, a router for Express; `npx chi` runs it wherever this package is not installed.
 
 Rejected: a separate CLI package, for the reasons `@codenhub/styles` rejected `@codenhub/styles-cli`: a second name to find and install, and a second version to match to the icons it builds.
 
@@ -101,7 +101,7 @@ The command imports Node.js built-ins, this package's own modules, and the inlin
 
 ## Node.js version
 
-The package declares `engines.node` as `>=26` since 0.4.0, and the command checks the running version itself before it reads a file, naming both versions, as `chs` does.
+The package declares `engines.node` as `>=26`, and the command checks the running version itself before it reads a file, naming both versions, as `chs` does.
 
 ## Failure modes
 

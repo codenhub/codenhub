@@ -14,7 +14,7 @@ A validator goes where a library asks for a schema in one of three ways:
 - As a [JSON Schema](json-schema.md), in which the tools of language models and OpenAPI documents are written.
 - Called directly, as any function is. That is also how one field of a [zod or valibot schema](#inside-a-zod-or-valibot-schema) can use it.
 
-Every validator a factory of this package makes is already a Standard Schema, worded in short English. The examples for forms, RPC and HTTP pass it through `standard`, which words its issues in the full English, and were run that way. The other examples use what their section names: `standardJsonSchema`, `toJsonSchema`, or the validator called directly. Each example was run against the version of the library it names, on 2026-10-07: it validated input that passes and input that fails, and gave what the text around it says. Libraries move, so the date says when these were last true.
+Every validator a factory of this package makes is already a Standard Schema, worded in short English. The examples for forms, RPC and HTTP pass it through `standard`, which words its issues in the full English, and were run that way. The other examples use what their section names: `standardJsonSchema`, `toJsonSchema`, or the validator called directly. Each example was run against the version of the library it names: it validated input that passes and input that fails, and gave what the text around it says. Libraries move, so the version says what these were last true for.
 
 ## Forms
 

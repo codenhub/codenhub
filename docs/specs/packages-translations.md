@@ -154,7 +154,7 @@ Every published page, reference and changelog included, has a route in every loc
 
 The locale is the outermost path segment so that the version segment (`docs/specs/packages-docs-versions.md`, "URLs") goes inside the package route without moving any locale URL.
 
-Rejected: a locale route only for a translated document, linking each untranslated page to its English route. A reader who opened an untranslated page, which every reference and changelog page is, landed on the English site and stayed there: the section links, the language menu and the next page they opened were all English, and the interface around the page changed language under them. It was chosen to avoid serving the same content at two URLs and to let the URL say whether a page is a translation; the canonical link answers the first and the notice the second.
+Rejected: a locale route only for a translated document, linking each untranslated page to its English route. A reader who opens an untranslated page, which every reference and changelog page is, lands on the English site and stays there: the section links, the language menu and the next page they open are all English, and the interface around the page changes language under them. Its case is avoiding serving the same content at two URLs and letting the URL say whether a page is a translation; the canonical link answers the first and the notice the second.
 
 ### Section links
 

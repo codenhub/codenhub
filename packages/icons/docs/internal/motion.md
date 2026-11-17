@@ -1,6 +1,6 @@
 ---
 status: IMPLEMENTED
-last_updated: 2026-11-03
+last_updated: 2026-11-16
 scope: Icon motion in `@codenhub/icons`, covering whole-icon motion utilities, animated-family artwork, triggers, repetition, on-demand playback, and reduced motion.
 ---
 
@@ -41,7 +41,7 @@ Three independent questions, one control each.
 
 ## Mechanisms
 
-- **Restarting on each hover.** At rest, `ic-on-hover` removes glyph motion, so each hover starts a new CSS animation and plays from the start with CSS alone. Artwork cannot be restarted that way. Real-time Chrome measurements on 2026-11-03 showed that SMIL in a mask starts when an exact URL is first displayed, and showing that URL again does not restart it. A fresh media-type nonce (`data:image/svg+xml;n=2,…`) or fragment starts a new timeline. So loops work on hover with CSS alone, and one-shot artwork replays on every hover only through `bindIconPlayback()`, which calls `playIcon` on each trigger. `playIcon` rewrites the data URL head of the element's inline `--ic-mask` with an increasing nonce and removes the override when the trigger ends, so a framework that changes the icon class later is not overridden. For an inline `<svg>` it calls `setCurrentTime(0)`. For glyph motion it rewinds the element's `ic-anim-*` CSS animations.
+- **Restarting on each hover.** At rest, `ic-on-hover` removes glyph motion, so each hover starts a new CSS animation and plays from the start with CSS alone. Artwork cannot be restarted that way. In Chrome, SMIL in a mask starts when an exact URL is first displayed, and showing that URL again does not restart it. A fresh media-type nonce (`data:image/svg+xml;n=2,…`) or fragment starts a new timeline. So loops work on hover with CSS alone, and one-shot artwork replays on every hover only through `bindIconPlayback()`, which calls `playIcon` on each trigger. `playIcon` rewrites the data URL head of the element's inline `--ic-mask` with an increasing nonce and removes the override when the trigger ends, so a framework that changes the icon class later is not overridden. For an inline `<svg>` it calls `setCurrentTime(0)`. For glyph motion it rewinds the element's `ic-anim-*` CSS animations.
 - **Trigger scope.** The CSS rest selector excludes the icon when it or its parent is hovered or has `:focus-visible`, and when an `ic-trigger` ancestor is hovered or has `:focus-visible`. `bindIconPlayback` applies the same rule. Focus counts only for the trigger itself, not for a focused descendant of it, to keep the selector free of `:has()`.
 - **Prefix.** Every class, custom property, and keyframe follows the class prefix, as the size axis does.
 - **Reserved names.** `anim` is a reserved prefix: no family prefix `anim`, and no icon `anim` or `anim-*`. The exact names `on-hover` and `trigger` are reserved the same way. None collides with a shipped icon; `animation` and other names that only start with `anim` still resolve.

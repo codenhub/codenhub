@@ -2,7 +2,7 @@
 title: Plugin de Vite
 description: Escanea el marcado que Vite transforma, más los globs que enumeres, y sirve únicamente las reglas de máscara que necesita.
 order: 3
-source: ac4f5e00bb178b89be60aec40ff551e96edd049c
+source: 5b2824dab3c360911a7c471f1d7277e32fffda81
 ---
 
 # Plugin de Vite
@@ -47,7 +47,7 @@ En desarrollo, Vite sirve el cascarón HTML antes de transformar un solo módulo
 
 En modo `css`, un build de producción con entradas HTML escribe la hoja de estilos como un asset CSS nombrado según su hash de contenido, `assets/codenhub-icons-[hash].css` por defecto, y lo enlaza desde cada entrada HTML. Como un build transforma todos los módulos antes de emitir HTML, ese archivo ya contiene todas las clases que vio el build. Un build sin entradas HTML, como un build de librería, no emite ninguna hoja de estilos, y tampoco lo hace el [modo SVG en línea](#modo-svg-en-línea). Un asset de hoja de estilos enlazado no necesita nonce ni hash en una Content Security Policy: `style-src 'self'` lo permite cuando se sirve desde el origen de la página. Con un `base` en otro origen, como un CDN, la política debe permitir ese origen, como ya debe hacerlo para el propio CSS de Vite. Se descartaron dos alternativas:
 
-- **Un `<style>` en línea**, que los builds escribían hasta la versión 0.2.1. Una política sin `'unsafe-inline'`, un nonce o un hash lo rechaza, así que todos los iconos se renderizaban en blanco en producción mientras que desarrollo, que usa un script de módulo del mismo origen, seguía funcionando.
+- **Un `<style>` en línea**. Una política sin `'unsafe-inline'`, un nonce o un hash lo rechaza, así que todos los iconos se renderizarían en blanco en producción mientras que desarrollo, que usa un script de módulo del mismo origen, sigue funcionando.
 - **Una opción `nonce` en el plugin.** El propio [`html.cspNonce`](https://vite.dev/config/shared-options#html-cspnonce) de Vite ya estampa un nonce en las etiquetas del HTML compilado, y un nonce necesita un servidor que envíe uno nuevo en cada respuesta, algo que un alojamiento estático no puede hacer.
 
 ## Modo SVG en línea

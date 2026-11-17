@@ -1,6 +1,6 @@
 ---
 status: APPROVED
-last_updated: 2026-11-09
+last_updated: 2026-11-16
 scope: Recommended changelog documentation for workspace packages.
 ---
 
@@ -37,7 +37,7 @@ docs/
 
 Set `curated: true` in its frontmatter, per `docs/specs/packages-documentation.md`. That flag tells the documentation site that this page's links decide what to publish: only the version pages it links to, in the order it links them, get a route, a nav entry, and a search hit. The index itself is published as the changelog's overview at `/<slug>/changelog/`, where the site shows each linked version with its `date` and `description`. A version page written before both were required may lack one; its line then shows only what the page sets. It MAY also set `group` (for example `group: Changelog`) to label its sidebar section.
 
-The index was first a routing file with no route of its own: its body is only a list of links, so rendering it as authored would repeat the sidebar. That left `/<slug>/changelog/` a 404 while the README link required below, the codenhub.dev package page, and each package's `llms.txt` all point there. The overview fixes that without repeating the sidebar, because the date and summary of each release are what the sidebar cannot show and what an upgrading reader scans for. Redirecting `/<slug>/changelog/` to the newest version page was rejected: it fixes the link but makes a reader click through versions one at a time to find what changed since theirs.
+Rejected: an index that is only a routing file with no route of its own. Its body is only a list of links, so rendering it as authored would repeat the sidebar, but without a route `/<slug>/changelog/` is a 404 while the README link required below, the codenhub.dev package page, and each package's `llms.txt` all point there. The overview fixes that without repeating the sidebar, because the date and summary of each release are what the sidebar cannot show and what an upgrading reader scans for. Redirecting `/<slug>/changelog/` to the newest version page was rejected: it fixes the link but makes a reader click through versions one at a time to find what changed since theirs.
 
 After the required H1, its body is an ordered list of links, newest first, and nothing else. The date and description come from each version page's frontmatter; do not repeat them here:
 
@@ -64,7 +64,7 @@ Each released version gets its own file, named after the exact released version 
 
 A version page's frontmatter MUST set `title`, `date`, and `description`: `date` is the release date in ISO `YYYY-MM-DD` form, and `description` is a one-sentence summary of what the release changes for a consumer, which is what a search result or a link preview shows before the page is opened.
 
-Both were optional at first, `date` recommended and `description` permitted. That left pages in the same changelog carrying different metadata: across the workspace, one version page had no date and nine had no description, each for no reason but that nothing asked. `hub check` enforces the two fields and the body bullets on the page for the manifest's current version only, so a page written before this rule is brought in line when someone touches it, not by a failing check. `hub release --cut` scaffolds the description and bullets as `TODO`, which the check reports until they are written.
+Rejected: `date` recommended and `description` permitted, because optional fields leave pages in the same changelog carrying different metadata, for no reason but that nothing asks. `hub check` enforces the two fields and the body bullets on the page for the manifest's current version only, so an older page that lacks them is brought in line when someone touches it, not by a failing check. `hub release --cut` scaffolds the description and bullets as `TODO`, which the check reports until they are written.
 
 A version page does not need `order`, and does not need to know whether it is currently linked from `index.md` or not: publication is entirely `index.md`'s concern, not the page's.
 

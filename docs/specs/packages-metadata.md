@@ -1,6 +1,6 @@
 ---
 status: IMPLEMENTED
-last_updated: 2026-11-05
+last_updated: 2026-11-16
 scope: Package identity and presentation metadata declared in `package.json#codenhub`.
 ---
 
@@ -49,7 +49,7 @@ Status has these meanings:
 
 ## Why identity is not under `docs`
 
-These fields used to live inside `codenhub.docs`, because the documentation site was the first and only surface that presented packages. That stopped being true when `apps/www` became the package list at `codenhub.dev/packages/` and `apps/demo` also listed packages: both read a package's label and status without having anything to do with its documentation, and `status` also drives the README notice the `readme` check enforces. Identity describes the package, so it sits on `codenhub` beside the other package-level fields. `codenhub.docs` keeps what is genuinely about the documentation site: whether the package opts in, and how its reference is generated.
+Identity does not sit inside `codenhub.docs`, because the documentation site is not the only surface that presents packages: `apps/www` is the package list at `codenhub.dev/packages/` and `apps/demo` also lists packages, and both read a package's label and status without having anything to do with its documentation, and `status` also drives the README notice the `readme` check enforces. Identity describes the package, so it sits on `codenhub` beside the other package-level fields. `codenhub.docs` keeps what is genuinely about the documentation site: whether the package opts in, and how its reference is generated.
 
 Two alternatives were weighed. A nested `codenhub.package` object would group identity, but adds a level every reader and author goes through for no separation `codenhub` itself does not already give. One object per site (`codenhub.docs`, `codenhub.www`, …) would let each site evolve independently, but `label` and `status` would be declared once per site and drift apart.
 

@@ -1,6 +1,6 @@
 ---
 status: APPROVED
-last_updated: 2026-11-15
+last_updated: 2026-11-16
 scope: `@codenhub/styles` package test strategy.
 ---
 
@@ -118,7 +118,7 @@ Node-based Vitest checks validate every published target. Every compiled export 
 
 `adapter.test.ts` holds the two paths to each other: each compiled entry that has a `/tw` counterpart, every one but `dist/palette.css`, is compiled again from it with the Tailwind installed, naming every utility it ships, and the two must emit the same rules in the same order. On the Tailwind release `src/base/` was copied from, that is byte for byte apart from Tailwind's banner and the `--tw-*` registrations, which are compared as sets. On another release, as the Tailwind workflow runs it, Tailwind's theme values and Preflight are that release's, so the package's components and utilities are compared alone, and a separate test fails when the lockfile moves the catalog's Tailwind off the release `src/base/` was copied from.
 
-`size.test.ts` holds what a consumer downloads under ceilings, in minified bytes, each about 3% above the measurement it was set from. Gzipped lengths are recorded here but never compared, because zlib output can differ between machines. A change that grows past a ceiling raises it in the same change and says why. Measured on 2026-11-11 with Tailwind 4.3.4; the two aesthetic rows that moved and the `dist/purge/` rows on 2026-11-12, and the files that carry the checkbox marks again on 2026-11-12, after their licence comment took the full notices; and `dist/aesthetics/index.css` and the three `/tw` rows on 2026-11-15, when the package began compiling its own source:
+`size.test.ts` holds what a consumer downloads under ceilings, in minified bytes, each about 3% above the measurement it was set from. Gzipped lengths are recorded here but never compared, because zlib output can differ between machines. A change that grows past a ceiling raises it in the same change and says why. Measured with Tailwind 4.3.4:
 
 | Measured                                   | Minified | Gzip   | Ceiling |
 | ------------------------------------------ | -------- | ------ | ------- |
@@ -140,9 +140,9 @@ Node-based Vitest checks validate every published target. Every compiled export 
 | `/button/tw`, a page with no package class | 9,610    |        | 9,900   |
 | `/tw`, a page with `btn primary`           | 24,979   |        | 25,750  |
 
-On 2026-11-15 the three `/tw` rows grew by 706, 698, and 864 bytes. 694 bytes of each are the nine `--tw-*` registrations `/tw` now ships itself, with the fallbacks Tailwind's polyfills write for them. Tailwind had registered each only on a page that used a utility setting it, and it registers nothing a utility body sets by hand. `dist/aesthetics/index.css` lost Tailwind's banner the same day, as it carries none of Tailwind's CSS.
+About 694 bytes of each of the three `/tw` rows are the nine `--tw-*` registrations `/tw` ships itself, with the fallbacks Tailwind's polyfills write for them, because Tailwind registers each only on a page that uses a utility setting it, and registers nothing a utility body sets by hand. `dist/aesthetics/index.css` carries no Tailwind banner, as it carries none of Tailwind's CSS.
 
-The two sketch rows were measured again on 2026-11-12, when the first position of sketch's rotation declared its outline so a knob set inside a region reaches it. The `dist/purge/` rows were set the same day, with Tailwind 4.3.4: `chs build` reads those files and no page serves them, but every consumer installs them, as [Build command](./cli.md) accepts.
+The `dist/purge/` rows are under a ceiling too: `chs build` reads those files and no page serves them, but every consumer installs them, as [Build command](./cli.md) accepts.
 
 The `/tw` rows are the package's cost over Tailwind alone on the same page, compiled with Tailwind's polyfills on as a consumer's CLI or Vite build compiles it, so a Tailwind release that changes Preflight moves no ceiling. The compiled files are also checked for Tailwind's fallbacks for browsers without `color-mix()` or `@property`, which the compiled build does not write, and a page that names no package class is checked for having no component rule.
 

@@ -1,7 +1,7 @@
 ---
 title: Integrações
 description: Use um validador com bibliotecas de formulário, frameworks de RPC e HTTP, as ferramentas de um modelo de linguagem, OpenAPI e dentro de um schema zod ou valibot, com um exemplo para cada, executado com a biblioteca que ele cita.
-source: 683884d32d5982944aa45ef5e861fcef0bf00e43
+source: 4d29d313d5a8ca6a8037d9d307f2af74036f75bd
 order: 11
 ---
 
@@ -15,7 +15,7 @@ Um validador entra onde uma biblioteca pede um schema de uma de três formas:
 - Como um [JSON Schema](json-schema.md), em que são escritas as ferramentas de modelos de linguagem e os documentos OpenAPI.
 - Chamado diretamente, como qualquer função. É também assim que um campo de um [schema zod ou valibot](#dentro-de-um-schema-zod-ou-valibot) pode usá-lo.
 
-Todo validador que uma factory deste pacote cria já é um Standard Schema, com mensagens em inglês curto. Os exemplos de formulários, RPC e HTTP o passam por `standard`, que escreve os problemas em inglês completo, e foram executados assim. Os outros exemplos usam o que a seção deles nomeia: `standardJsonSchema`, `toJsonSchema` ou o validador chamado diretamente. Cada exemplo foi executado com a versão da biblioteca que ele cita, em 2026-10-07: validou uma entrada que passa e uma que falha, e deu o que o texto em volta dele diz. Bibliotecas mudam, então a data diz quando tudo isso era verdade pela última vez.
+Todo validador que uma factory deste pacote cria já é um Standard Schema, com mensagens em inglês curto. Os exemplos de formulários, RPC e HTTP o passam por `standard`, que escreve os problemas em inglês completo, e foram executados assim. Os outros exemplos usam o que a seção deles nomeia: `standardJsonSchema`, `toJsonSchema` ou o validador chamado diretamente. Cada exemplo foi executado com a versão da biblioteca que ele cita: validou uma entrada que passa e uma que falha, e deu o que o texto em volta dele diz. Bibliotecas mudam, então a versão diz para qual tudo isso era verdade pela última vez.
 
 ## Formulários
 

@@ -1,6 +1,6 @@
 ---
 status: APPROVED
-last_updated: 2026-11-09
+last_updated: 2026-11-16
 scope: TypeScript, JavaScript, and Node.js conventions, on top of the coding guidelines.
 ---
 
@@ -22,7 +22,7 @@ The [coding guidelines](code.md) hold for every language in the project. This do
 - Prefer `unknown` to `any`. Validate `unknown` at the boundary before use.
 - Prefer interfaces for object shapes and type aliases for unions and intersections.
 - Use type-only imports when importing only types.
-- Prefer string-literal unions or `as const` objects to `enum`. `enum` is not erasable syntax: Node.js type stripping rejects it, so code that `tsc` and Vitest accept can fail when Node.js loads it. Tests of `enum` support are the exception. An earlier rule allowed `enum` and named its members in UPPER_SNAKE_CASE; it was replaced once code run by Node.js directly hit the rejection ([codenhub/codenhub@e3ae18df](https://github.com/codenhub/codenhub/commit/e3ae18df)).
+- Prefer string-literal unions or `as const` objects to `enum`. `enum` is not erasable syntax: Node.js type stripping rejects it, so code that `tsc` and Vitest accept can fail when Node.js loads it. Tests of `enum` support are the exception. Rejected: allowing `enum` with its members named in UPPER_SNAKE_CASE, for that reason.
 - Keep casts narrow and close to the boundary that justifies them.
 - Do not export types or values that are not part of the package or module API.
 - A function with three or more parameters takes a typed options object instead, under the exceptions the [coding guidelines](code.md#code) give.

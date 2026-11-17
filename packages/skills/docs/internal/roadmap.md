@@ -12,7 +12,7 @@ Durable direction for `@codenhub/skills`. The repo-wide roadmap is `docs/roadmap
 
 ## Current Focus
 
-- The installer CLI is the product's entry point; the package exports no library API since 0.3.0.
+- The installer CLI is the product's entry point; the package exports no library API.
 - Keep the bundled skills to the `writing-skills` rules, and evaluate behavioral changes before they ship.
 - Maintain licensing, copyright, and attribution notices for shipped assets.
 
@@ -25,5 +25,5 @@ Durable direction for `@codenhub/skills`. The repo-wide roadmap is `docs/roadmap
 
 ## Not Planned
 
-- **A programmatic API for installing skills.** 0.3.0 removed the library exports, which could not reach the bundled skills. A repository that wants the skills in every harness without choosing one gets them from `--link` and a pinned development dependency run from a script ([CLI guide](../cli.md#set-up-a-shared-repository)); an API would only produce the same per-harness copies one level lower. Revisit when a tool needs to embed the installer rather than run it.
-- **A `writing-functions` skill.** `coding` replaced it. A broad `coding` skill was first set aside because it would overlap `ponytail`, `test-driven-development`, and `naming` and load on every coding task. That did not weigh the baseline runs in [coding-skill-research.md](coding-skill-research.md), which showed the gaps lie in inputs, failures, state, and tests, not in function design alone. The overlap with `ponytail` and `test-driven-development` was resolved by giving them one shared rule for tests, reports, and scope; `naming` overlaps only the one-line naming default. The load was cut by moving detail into references. The narrower `writing-functions` skill was rejected because it would miss those gaps.
+- **A programmatic API for installing skills.** A library export cannot reach the bundled skills. A repository that wants the skills in every harness without choosing one gets them from `--link` and a pinned development dependency run from a script ([CLI guide](../cli.md#set-up-a-shared-repository)); an API would only produce the same per-harness copies one level lower. Revisit when a tool needs to embed the installer rather than run it.
+- **A `writing-functions` skill.** `coding` covers it. A broad `coding` skill overlaps `ponytail`, `test-driven-development`, and `naming` and loads on every coding task, but the baseline runs in [coding-skill-research.md](coding-skill-research.md) show the gaps lie in inputs, failures, state, and tests, not in function design alone. The overlap with `ponytail` and `test-driven-development` is resolved by giving them one shared rule for tests, reports, and scope; `naming` overlaps only the one-line naming default. The load is cut by moving detail into references. The narrower `writing-functions` skill was rejected because it would miss those gaps.

@@ -14,32 +14,32 @@ scope: Design decisions, limits, and failure modes of the `chs` build command th
 
 The command ships inside `@codenhub/styles` as its `bin`, named `chs`, so a consumer runs it from a `package.json` script as `chs build …`, or as `npx @codenhub/styles build …`, which runs the package's only `bin`.
 
-The public documentation never shows `npx chs`. An unrelated package named `chs` exists on npm, and `npx chs` runs it wherever this package is not installed. Checked on 2026-11-12 against a packed tarball under npm 11.12 on Windows 11: with the package installed, both the script form and `npx @codenhub/styles build` build, and `npx @codenhub/styles --version` prints this package's version.
+The public documentation never shows `npx chs`. An unrelated package named `chs` exists on npm, and `npx chs` runs it wherever this package is not installed. Checked against a packed tarball under npm 11.12 on Windows 11: with the package installed, both the script form and `npx @codenhub/styles build` build, and `npx @codenhub/styles --version` prints this package's version.
 
-Rejected: an alias for the old name, `codenhub-styles`. The rename is a breaking change of a 0.x package, recorded in the 0.9.0 changelog, and an alias would be a second name to document and remove later.
+Rejected: an alias under the earlier `bin` name, `codenhub-styles`. The rename is a breaking change of a 0.x package, which the changelog records, and an alias would be a second name to document and remove later.
 
-Rejected: a separate `@codenhub/styles-cli` package. It was built first, on the branch that added the command, and never published. A second package was only harder to use: a second name to find and install, a second version that had to be matched to the StyleKit version it built, and a release order to get right, since the CLI could not be published until the StyleKit release it depended on was out.
+Rejected: a separate `@codenhub/styles-cli` package. A second package is only harder to use: a second name to find and install, a second version that has to be matched to the StyleKit version it builds, and a release order to get right, since the CLI cannot be published until the StyleKit release it depends on is out.
 
 ## The command tree-shakes; it does not compile
 
-In 0.8.0, its first release, the command ran Tailwind in the consumer's project: it loaded the `@tailwindcss/cli` and `tailwindcss` the consumer had installed as optional peers, compiled `/tw` against their templates, and wrote what Tailwind wrote. In 0.9.0 it compiles nothing. `scripts/build-purge.mjs` runs Tailwind at this package's build and writes `dist/purge/`:
+The command compiles nothing. `scripts/build-purge.mjs` runs Tailwind at this package's build and writes `dist/purge/`:
 
 - `index.css`: the complete stylesheet, as `dist/index.css`, plus each intent, presentation, and modifier class under each of ten variants, such as `md:lg` and `hover:primary`.
 - `classes.json`: the class names the command may drop.
 
 `src/cli/purge.ts` parses `index.css` and drops each rule whose selectors cannot match the classes found in the content. Any other class in the stylesheet is one Tailwind always emits, such as `.theme-dark`, which a script adds at run time and no template names, so the command keeps it. Purged to every class, the output is `dist/index.css` byte for byte, which `tests/integration/purge.test.ts` holds.
 
-The Tailwind build was replaced for three reasons:
+Rejected: running Tailwind in the consumer's project, loading the `@tailwindcss/cli` and `tailwindcss` the consumer installs as optional peers, compiling `/tw` against their templates, and writing what Tailwind writes. It loses for three reasons:
 
-- **It made the consumer install Tailwind.** Two peers, `@tailwindcss/cli` and `tailwindcss`, kept within `>=4.3.2 <5`, for a consumer who otherwise has no JavaScript build at all; `npx @codenhub/styles build` in an empty folder could not work, since no package manager installs an optional peer.
-- **Its output varied with the consumer's Tailwind.** The same templates and the same StyleKit version could write a different stylesheet under a different 4.x patch, which this package could neither test nor pin.
-- **It called API Tailwind does not document.** To turn off the polyfills the CLI always writes, the command called `compile`, `Scanner`, and `optimize` from `@tailwindcss/node` and `@tailwindcss/oxide` in its own process, the API Tailwind's own integrations use but its documentation does not promise.
+- **It makes the consumer install Tailwind.** Two peers, `@tailwindcss/cli` and `tailwindcss`, kept within `>=4.3.2 <5`, for a consumer who otherwise has no JavaScript build at all; `npx @codenhub/styles build` in an empty folder cannot work, since no package manager installs an optional peer.
+- **Its output varies with the consumer's Tailwind.** The same templates and the same StyleKit version can write a different stylesheet under a different 4.x patch, which this package can neither test nor pin.
+- **It calls API Tailwind does not document.** To turn off the polyfills the CLI always writes, the command has to call `compile`, `Scanner`, and `optimize` from `@tailwindcss/node` and `@tailwindcss/oxide` in its own process, the API Tailwind's own integrations use but its documentation does not promise.
 
-Now the command imports nothing beyond Node.js built-ins, which `tests/integration/cli.test.ts` checks of the bundle, and its output depends only on the package version and the content.
+The command imports nothing beyond Node.js built-ins, which `tests/integration/cli.test.ts` checks of the bundle, and its output depends only on the package version and the content.
 
-Cost accepted: every consumer installs `dist/purge/`, about 273 KB (22 KB gzipped) for `index.css` and 7 KB for `classes.json`, whether or not they run the command. That is far less than the 19 MB that `@tailwindcss/cli` and `tailwindcss` as regular `dependencies` cost every consumer, which made the bare `npx` work and was reverted before 0.8.0 for that size.
+Cost accepted: every consumer installs `dist/purge/`, about 273 KB (22 KB gzipped) for `index.css` and 7 KB for `classes.json`, whether or not they run the command. That is far less than the 19 MB that `@tailwindcss/cli` and `tailwindcss` as regular `dependencies` would cost every consumer to make the bare `npx` work, which is rejected for that size.
 
-Rejected: a fork of Tailwind's compiler or scanner inside the package. It would make this package maintain a CSS compiler to keep the old output, utilities included, for consumers who can run Tailwind themselves through `/tw`. Tailwind stays the authoring tool and the `/tw` integration, and nothing else. [Roadmap](./roadmap.md#a-build-the-package-owns-with-tailwind-as-an-adapter) plans to end the first of those roles with a build of this package's own, which is not the fork rejected here: it compiles this package's source and no Tailwind utility.
+Rejected: a fork of Tailwind's compiler or scanner inside the package. It would make this package maintain a CSS compiler to keep Tailwind's output, utilities included, for consumers who can run Tailwind themselves through `/tw`. Tailwind stays the authoring tool and the `/tw` integration, and nothing else. [Roadmap](./roadmap.md#a-build-the-package-owns-with-tailwind-as-an-adapter) plans to end the first of those roles with a build of this package's own, which is not the fork rejected here: it compiles this package's source and no Tailwind utility.
 
 ## No Tailwind utilities, ten variants
 
@@ -55,7 +55,7 @@ A class may be dropped when it is a Tailwind candidate: naming it adds CSS to th
 
 ## Node.js version
 
-The command supports Node.js 26 and newer, the version this repository builds and tests with. The package declares `engines.node` as `>=26`, as `docs/specs/packages-lifecycle.md` requires of a package with a CLI, so a consumer on an older Node.js is warned on install by npm, stopped by Yarn 1 and by npm with `engine-strict`, and told nothing by pnpm 11, even when they only link the CSS; on Node.js 22, `yarn add` fails with "The engine \"node\" is incompatible with this module". The floor is the pinned major, not the oldest release the code runs on: the newest API the command uses is `globSync` from `node:fs`, which Node.js 22 has, and the floor was 24 through 0.9.0. 0.10.0 raised it with the pinned major, as that specification asks of a package's next breaking release, because a floor on the previous line is tested only while the `floor` job of `docs/ci.md` lasts. The command also checks the version itself when `build` runs and names both versions. The inlined scanner takes `globSync` from the default export of `node:fs` so that an older Node.js reaches that check: a named import of a missing export fails at load, before any code runs.
+The command supports Node.js 26 and newer, the version this repository builds and tests with. The package declares `engines.node` as `>=26`, as `docs/specs/packages-lifecycle.md` requires of a package with a CLI, so a consumer on an older Node.js is warned on install by npm, stopped by Yarn 1 and by npm with `engine-strict`, and told nothing by pnpm 11, even when they only link the CSS; on Node.js 22, `yarn add` fails with "The engine \"node\" is incompatible with this module". The floor is the pinned major, not the oldest release the code runs on: the newest API the command uses is `globSync` from `node:fs`, which Node.js 22 has. The floor follows the pinned major, as that specification asks of a package's next breaking release, because a floor on the previous line is tested only while the `floor` job of `docs/ci.md` lasts. The command also checks the version itself when `build` runs and names both versions. The inlined scanner takes `globSync` from the default export of `node:fs` so that an older Node.js reaches that check: a named import of a missing export fails at load, before any code runs.
 
 ## Finding the package root
 
@@ -67,7 +67,7 @@ The aesthetic names are read from the keys of the same manifest's `exports` (`./
 
 Content is read as text and never run, as Tailwind reads it. Every run of characters a class name can hold is a word, and a word counts when it is in `classes.json`. A word that is not one is read again by its parts around each colon, so Svelte's `class:primary={isPrimary}` and a Ruby `btn: true` are found. Only the `--content` globs are read: nothing of the consumer's other files or of this package adds a class, and nothing is written but the output. The output file is left out even when a glob matches it: it names every class the last build kept, so read back it would keep them, and the stylesheet would grow with each build instead of following the templates. Files are read one at a time and each is dropped once its classes are counted, so memory follows the largest file, not the sum of them. The tests hold it: a class only in an unlisted file in the working directory stays out, and a build whose glob matches its output writes the same stylesheet twice.
 
-Resolving the globs, reading the files, and splitting them into words are done by `@codenhub/scan`, a private package this package and `@codenhub/icons` inline, since 0.10.0; which words count stays here. A `--content` entry is tried as a literal path before it is read as a glob, so `app/[id]/page.tsx` is found, where `fs.glob` alone read `[id]` as a set of letters and matched nothing. A glob that matches a link to a file reads the file, as `scanFiles` in `@codenhub/icons` always has; the command used to skip one. The icons [Build command](../../../icons/docs/internal/cli.md#the-shared-scanner) records the split.
+Resolving the globs, reading the files, and splitting them into words are done by `@codenhub/scan`, a private package this package and `@codenhub/icons` inline; which words count stays here. A `--content` entry is tried as a literal path before it is read as a glob, so `app/[id]/page.tsx` is found, where `fs.glob` alone reads `[id]` as a set of letters and matches nothing. A glob that matches a link to a file reads the file, as `scanFiles` in `@codenhub/icons` does. The icons [Build command](../../../icons/docs/internal/cli.md#the-shared-scanner) records the split.
 
 ## Content globs that match nothing
 

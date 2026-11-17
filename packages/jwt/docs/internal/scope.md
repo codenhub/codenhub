@@ -6,7 +6,7 @@ scope: What `@codenhub/jwt` 0.1 covers, the invariants it keeps, and the decisio
 
 # `@codenhub/jwt`: package scope
 
-> **How to read this document.** This started as the outcome of a brainstorming session, not a final spec. Section 3 lists the **invariants**: security and design commitments that hold unless there is a strong, explained reason to break them. Sections 1, 2, 4 and 6 are the agreed scope of 0.1. The API sketch in section 5 was a **proposal**; the shipped API answers it differently in places, as section 5 notes. Section 7 records the decisions taken while building the package: all of them approved by the maintainer. If you find a better API shape, better behavior, or a better-established practice, propose it and explain why, as `docs/guidelines/documentation.md` asks for reversing a decision. The goal is the best possible package, not faithfulness to this document.
+> **How to read this document.** This is not a final spec. Section 3 lists the **invariants**: security and design commitments that hold unless there is a strong, explained reason to break them. Sections 1, 2, 4 and 6 are the agreed scope of 0.1. The API sketch in section 5 was a **proposal**; the shipped API answers it differently in places, as section 5 notes. Section 7 records the decisions taken while building the package: all of them approved by the maintainer. If you find a better API shape, better behavior, or a better-established practice, propose it and explain why, as `docs/guidelines/documentation.md` asks for reversing a decision. The goal is the best possible package, not faithfulness to this document.
 >
 > The package is published as `@codenhub/jwt` (decision 9). The display name is `JwtKit` (section 7).
 >
@@ -199,7 +199,7 @@ readHeader(token); // Result<Header>
 
 ## 7. Decisions
 
-### Approved by the maintainer (2026-10-16)
+### Approved by the maintainer
 
 These were asked explicitly and approved. They bind work while they stand; reversing one follows "Recording decisions" in `docs/guidelines/documentation.md`.
 
@@ -224,13 +224,7 @@ These were asked explicitly and approved. They bind work while they stand; rever
 19. **Units.** Durations in options are seconds, matching the claims they are compared with; `now` returns milliseconds, matching `Date.now`, so `now: Date.now` and test clocks need no wrapper. Rejected: one unit for both, which forces a wrapper on either the clock or every duration.
 20. **`sign` input.** `sign` takes one `{ payload, key, header }` object rather than positional arguments; it rejects `undefined` values and every other value JSON cannot carry exactly, and checks registered claim types. On verification, an ill-typed registered claim is one `invalid_claim` issue and the later checks of that claim are skipped. Dropping a value silently, as `JSON.stringify` does, can sign a different token than the caller wrote: `{ aud: undefined }` becomes a token with no audience. Rejected: `JSON.stringify` semantics, for that case; positional arguments, which make `header` an easy argument to misplace.
 21. **Result type.** A package-local `JwtResult` mirrors `@codenhub/validation`'s shape, with no runtime dependency on `@codenhub/error` or `@codenhub/validation`, per the error-propagation pattern in `docs/specs/errors.md` and invariant 11.
-
-### Approved by the maintainer (2026-11-13)
-
 22. **Unknown options throw.** `createVerifier` and `createRemoteKeySet` throw a `TypeError` for an own enumerable string key that is not a documented option, such as `audiance` or `issuers`, naming the member (the caller's own option name, cut at 64 characters) and even when its value is `undefined`; symbol keys are ignored, and other functions' option handling is unchanged. A typo silently turned off the audience or issuer check, and TypeScript catches it only for inline object literals. Rejected: ignoring unknown options, as most libraries do, which lets a typo turn off a check.
 23. **A non-finite `now()` rejects.** When `options.now` returns anything but a finite number, the verifier's promise rejects with a `TypeError`, checked once per verification when it reads the time, and a remote key set's `select` rejects the same way. A verifier that calls such a key set reports `key_fetch_failed` with `{ reason: "key_set_error" }` by decision 16, which fails closed. `now: () => NaN`, such as `Date.parse` of an unset variable, otherwise disabled every time check and kept a remote cache from ever expiring. The clock is caller code, so it propagates as a throwing `claims` schema does (decision 10). Rejected: failing the token with an issue, which hides a caller bug as a token failure, as decision 10 reasoned; leaving it, which fails open.
 24. **`importSecretKey` takes `Uint8Array | object`.** A string is a compile error, while runtime behavior is unchanged: untrusted input still never throws (invariant 4), and a string at runtime still returns `invalid_key`. Rejected: `unknown`, which hides a string secret until runtime.
-
-### Approved by the maintainer (2026-11-16)
-
 25. **`importKeyPair` loads a key pair from one private JWK.** It runs `importPrivateKey`'s checks, derives the public key from the same JWK's public members, and returns `invalid_key` unless the public key verifies a fixed message the private key signed. An application that stores its signing key with `exportPrivateJwk` otherwise had to store a second, public JWK and pair the two halves itself, as `@codenhub/oidc`'s provider docs show, with nothing to check they belong together: a mismatched pair issues ID tokens nobody can verify. Node.js rejects mismatched halves at import already; the probe covers engines that do not. Rejected: letting `importPublicKey` strip private members, against invariant 8; leaving the pairing to the application, for the mismatch above.

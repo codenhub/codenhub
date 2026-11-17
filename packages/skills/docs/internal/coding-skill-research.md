@@ -1,6 +1,6 @@
 ---
 status: DRAFT
-last_updated: 2026-11-06
+last_updated: 2026-11-16
 scope: Evidence for a coding skill: what agents got wrong when first writing code in this repository.
 ---
 
@@ -210,7 +210,7 @@ These are candidates for a language adapter. Each item has at least two occurren
 
 ## Baseline without the skill
 
-Run on 2026-11-06 with the four scenarios in [coding-skill-eval.md](coding-skill-eval.md), on haiku, sonnet, and opus, with the other installed skills available. Graders checked each run by probing with hostile inputs and by breaking the code to see whether its tests failed. They did not rely on the agents' summaries.
+Run with the four scenarios in [coding-skill-eval.md](coding-skill-eval.md), on haiku, sonnet, and opus, with the other installed skills available. Graders checked each run by probing with hostile inputs and by breaking the code to see whether its tests failed. They did not rely on the agents' summaries.
 
 | Item                                     | haiku   | sonnet  | opus    |
 | ---------------------------------------- | ------- | ------- | ------- |
@@ -292,7 +292,7 @@ luna's results suggest a weaker model skips stated rules more than it lacks them
 
 Nothing below has run against a model; run the [held-out scenarios](coding-skill-eval.md#held-out-scenarios) before relying on it. To cut dilution, `SKILL.md` went from about 4,300 to 2,100 words, with test technique and the edge checklist moved to references, and it was then revised after two content reviews. These outcomes stand:
 
-- Asking before a refactor is now required only for one beyond the change or one that changes behavior, so S5 runs may no longer stop to ask; S5.2 passes either way.
+- Asking before a refactor is required only for one beyond the change or one that changes behavior, so S5 runs may not stop to ask; S5.2 passes either way.
 - Three TypeScript items have no recorded occurrence here: `sort()` without a comparator, `noUncheckedIndexedAccess`, and `Promise.all` failing fast. Remove them if an eval shows they cost more than they catch.
 - Rejected review finding: ASCII whitespace does not include vertical tab. The WHATWG definition is tab, LF, FF, CR, and space.
 
