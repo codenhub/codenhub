@@ -1,6 +1,6 @@
 ---
 status: APPROVED
-last_updated: 2026-11-09
+last_updated: 2026-11-16
 scope: Documentation for public workspace packages.
 ---
 
@@ -145,7 +145,7 @@ Write for a consumer using the package, or a package like it, for the first time
 
 Length follows the material. A fact needs as much explanation as a first-time reader needs to act on it correctly: what it is, why it is that way when the reason helps, an example when one helps, and what to do about it. Listing several behaviors in one sentence so each is mentioned is not explaining them. The README stays a concise entrypoint under `docs/specs/packages-readme.md`, and each fact keeps one canonical explanation, but returning to an earlier concept with a short reminder and a link is part of a reading path, not repetition.
 
-This section replaces an earlier rule that measured completeness by entrypoint and capability, warned that completeness "does not license padding" and "is not about length", and left per-symbol behavior to source docs. Packages complied with that rule while their docs stayed unusable without the source: `@codenhub/router` mentioned each export, default, and failure once, compressing six distinct path failures into one sentence with no example or fix. The earlier rule did not weigh that compression was the easiest way to comply.
+Rejected: measuring completeness by entrypoint and capability, with a warning that completeness "does not license padding" and "is not about length", and leaving per-symbol behavior to source docs. A package complies with that rule while its docs stay unusable without the source, by mentioning each export, default, and failure once, such as six distinct path failures compressed into one sentence with no example or fix: compression is the easiest way to comply.
 
 ### Reading path
 
@@ -163,7 +163,7 @@ Public docs SHOULD have a playful voice: an aside, a pun, or a dry remark that e
 
 Humor MUST NOT replace precision. A joke never substitutes for the exact behavior, constraint, or failure mode a consumer needs, it MUST NOT appear in warnings, security notes, or code meant to be copied, and it MUST NOT be aimed at the reader. Marketing copy that does not help usage is still out of place here, the same as in the README under `docs/specs/packages-readme.md`: personality that helps a reader is not marketing copy, and marketing copy dressed up as personality is still marketing copy.
 
-Tone was previously a MAY. An optional voice was rarely used, so the docs read like forms; the rule is now a SHOULD so that leaving it out is a choice an author makes for a reason.
+Tone is a SHOULD rather than a MAY: an optional voice is rarely used, so the docs read like forms, and as a SHOULD, leaving it out is a choice an author makes for a reason.
 
 Every public package `docs/**/*.md` file outside `docs/internal/` MUST start with portable presentation frontmatter. Its schema is closed and contains only:
 
@@ -220,7 +220,7 @@ The published copies differ from the package files in one way: each package-rela
 
 The site root also publishes `https://docs.codenhub.dev/llms.txt`, generated from the catalog. It links each package's `llms.txt` under `Packages` and each `llms-full.txt` under `Optional`, following the llms.txt convention that crawlers look for the file at the root.
 
-The files are hosted on the documentation site rather than `codenhub.dev` because the documentation site already serves every package under `/<slug>/` from the same snapshot, so the files sit next to the pages they link to. Serving them from the main site would add a second consumer of the snapshot's link layout for no gain. Linking to the files on GitHub, which the main site did before, was rejected because GitHub serves them inside an HTML page unless the reader knows to request the raw URL, and their relative links resolve to source files rather than documentation pages.
+The files are hosted on the documentation site rather than `codenhub.dev` because the documentation site already serves every package under `/<slug>/` from the same snapshot, so the files sit next to the pages they link to. Serving them from the main site would add a second consumer of the snapshot's link layout for no gain. Linking to the files on GitHub was rejected because GitHub serves them inside an HTML page unless the reader knows to request the raw URL, and their relative links resolve to source files rather than documentation pages.
 
 ### Page Markdown
 

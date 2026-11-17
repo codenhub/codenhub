@@ -1,6 +1,6 @@
 ---
 status: IMPLEMENTED
-last_updated: 2026-11-14
+last_updated: 2026-11-16
 scope: Index of repository-wide documentation.
 ---
 
@@ -48,20 +48,20 @@ Package-specific consumer and maintainer documentation lives with each workspace
 | [Tests](specs/tests.md)             | Test categories, where each lives, and coverage.                       |
 | [Stack tests](specs/stack-tests.md) | The stack's runners, file names, configuration, scripts, and commands. |
 
-| Document                                                         | Contains                                                                                  |
-| ---------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
-| [Package lifecycle](specs/packages-lifecycle.md)                 | Package metadata, scripts, exports, builds, publication, and versioning.                  |
-| [Package metadata](specs/packages-metadata.md)                   | Package identity and presentation metadata in package.json#codenhub.                      |
-| [Package documentation](specs/packages-documentation.md)         | Consumer and maintainer documentation surfaces, ownership, completeness, and publication. |
-| [Package README](specs/packages-readme.md)                       | Public package README requirements.                                                       |
-| [README template](specs/packages-readme-template.md)             | A starting structure for a public package README.                                         |
-| [Documentation index template](specs/packages-index-template.md) | An advisory structure for a package documentation index.                                  |
-| [API reference](specs/packages-reference.md)                     | Generated package API reference contracts.                                                |
-| [Package translations](specs/packages-translations.md)           | Translated READMEs and docs, drift checks, and how translations publish.                  |
-| [Documentation versions](specs/packages-docs-versions.md)        | Which past package versions the documentation site keeps, their URLs, and how they build. |
-| [Package exceptions](specs/packages-exceptions.md)               | Scoped exceptions and compliance-check waivers.                                           |
-| [Package changelog](specs/packages-changelog.md)                 | Recommended changelog structure and release entries.                                      |
-| [Package development](specs/packages-development.md)             | Optional playground, dev, and debug environments.                                         |
-| [Package demos](specs/packages-demo.md)                          | Package demos and the application that aggregates them.                                   |
-| [Errors](specs/errors.md)                                        | Consumer-facing error conventions and documentation.                                      |
-| [Roadmaps](specs/roadmaps.md)                                    | Durable roadmap structure and content.                                                    |
+| Document                                                         | Contains                                                                                    |
+| ---------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| [Package lifecycle](specs/packages-lifecycle.md)                 | Package metadata, scripts, exports, builds, publication, versioning, and release readiness. |
+| [Package metadata](specs/packages-metadata.md)                   | Package identity and presentation metadata in package.json#codenhub.                        |
+| [Package documentation](specs/packages-documentation.md)         | Consumer and maintainer documentation surfaces, ownership, completeness, and publication.   |
+| [Package README](specs/packages-readme.md)                       | Public package README requirements.                                                         |
+| [README template](specs/packages-readme-template.md)             | A starting structure for a public package README.                                           |
+| [Documentation index template](specs/packages-index-template.md) | An advisory structure for a package documentation index.                                    |
+| [API reference](specs/packages-reference.md)                     | Generated package API reference contracts.                                                  |
+| [Package translations](specs/packages-translations.md)           | Translated READMEs and docs, drift checks, and how translations publish.                    |
+| [Documentation versions](specs/packages-docs-versions.md)        | Which past package versions the documentation site keeps, their URLs, and how they build.   |
+| [Package exceptions](specs/packages-exceptions.md)               | Scoped exceptions and compliance-check waivers.                                             |
+| [Package changelog](specs/packages-changelog.md)                 | Recommended changelog structure and release entries.                                        |
+| [Package development](specs/packages-development.md)             | Optional playground, dev, and debug environments.                                           |
+| [Package demos](specs/packages-demo.md)                          | Package demos and the application that aggregates them.                                     |
+| [Errors](specs/errors.md)                                        | Consumer-facing error conventions and documentation.                                        |
+| [Roadmaps](specs/roadmaps.md)                                    | Durable roadmap structure and content.                                                      |

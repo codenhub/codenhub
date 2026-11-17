@@ -1,6 +1,6 @@
 ---
 status: DRAFT
-last_updated: 2026-11-14
+last_updated: 2026-11-16
 scope: What `@codenhub/oidc` needs between 0.0.1 and its 0.1.0 release.
 ---
 
@@ -14,10 +14,10 @@ Many items below change a contract: a record the store persists, a client record
 
 ## Current Focus
 
-The SSO application is the package's first real consumer, and a review of its scope (2026-11-12) against this package found what it needs and the package lacks. The order follows the SSO application's own roadmap.
+The SSO application is the package's first real consumer, and a review of its scope against this package found what it needs and the package lacks. The order follows the SSO application's own roadmap.
 
 - **Release what `main` already holds.** The fixes after 0.0.1, the 60-second client clock tolerance (decision 44) and the expired `id_token_hint` at logout (decision 45), are not on npm. The SSO application installs from npm, so it needs a release that carries them.
-- **Run the OpenID conformance plans.** Every change the review found is built, and scope.md decisions 47 to 56 record them; the record shapes are settled before the SSO application writes its `OidcStore` adapters. What its data API needs followed: `authenticate`, `accessTokenClaims` and resource indicators on both sides, in decisions 57 to 59, its privacy asks for pairwise subjects, in decision 60, and its audit for the refused request in `onDiagnostic`, in decision 61. What is left before 0.1 is the conformance run below and the release.
+- **Run the OpenID conformance plans.** Every change the review found is built, and scope.md decisions 47 to 56 record them; the record shapes are settled before the SSO application writes its `OidcStore` adapters. What its data API needs is built too: `authenticate`, `accessTokenClaims` and resource indicators on both sides, in decisions 57 to 59, its privacy asks for pairwise subjects, in decision 60, and its audit for the refused request in `onDiagnostic`, in decision 61. What is left before 0.1 is the conformance run below and the release.
 
 ## Planned
 
@@ -47,7 +47,7 @@ None at present. Pairwise subject identifiers, the last item here, shipped as th
 ## Notes
 
 - **Userinfo reads the token only from the `Authorization` header**, and the Basic OP plan has `oidcc-userinfo-post-body`. RFC 6750 §2.2 makes the body method optional, and the module is believed to tolerate a refusal; confirm it in the first conformance run.
-- **The SSO application's docs are behind this package.** Its scope says 0.0.1 has no logout support, and the first step of its roadmap is logout here. RP-initiated logout shipped in 0.0.1 (decision 37), and back-channel logout followed (decision 53).
+- **The SSO application's docs are behind this package.** Its scope says 0.0.1 has no logout support, and the first step of its roadmap is logout here. 0.0.1 has RP-initiated logout (decision 37), and back-channel logout is built (decision 53).
 
 ## References
 

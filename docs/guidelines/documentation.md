@@ -1,6 +1,6 @@
 ---
 status: IMPLEMENTED
-last_updated: 2026-11-14
+last_updated: 2026-11-16
 scope: Durable repository-level documentation under root `docs/`.
 ---
 
@@ -76,7 +76,11 @@ Delete a document once it no longer describes current or intended direction, in 
 
 A document that settles a choice MUST say why. Where real alternatives existed, it SHOULD name the ones it rejected and, briefly, why each lost. A decision recorded without its reason can only be obeyed or overruled, not judged, and the next reader reopens it.
 
-A change that reverses a recorded decision MUST name what the decision did not weigh: a concrete case it gets wrong, a measurement, or a constraint that has changed since. Preferring another option is not enough; without new evidence, the recorded decision stands. The reversing change records the old choice among the rejected alternatives, with the evidence that reversed it, so the decision is not reopened on arguments already heard.
+Record the reason, not the history behind it. A document states what is true now: "Do X", "Don't do Y", "Do X when Y", and the reason X is right. It does not tell how the decision came about, what was measured on which date, how many packages did something when the rule was written, or what an earlier version of the document said. That evidence belongs in the commit and the pull request that make the change, where Git keeps it with the date it held. A count goes stale the day after it is written, and a story of how a rule arose makes the reader dig the rule out of it.
+
+A change that reverses a recorded decision MUST name what the decision did not weigh: a concrete case it gets wrong, a measurement, or a constraint that has changed since. Preferring another option is not enough; without new evidence, the recorded decision stands. The evidence goes in the reversing change's pull request. The document records the old choice among the rejected alternatives, with the reason it lost, so the decision is not reopened on arguments already heard.
+
+Two kinds of document record history by design and are outside this rule: a changelog, which describes a release, and a trap in a scoped `AGENTS.md`, which names the versions and evidence it held under so it can be checked again.
 
 This applies to every document that uses this status model, wherever it lives in the repository.
 
@@ -183,7 +187,7 @@ A guide, a README, or any page meant to teach what the project ships to someone 
 
 Documents that teach, such as guides, READMEs, and tutorials, use the voice below. Everything else a person reads to check or decide, such as specifications, guidelines, changelogs, issues, and pull request descriptions, is plain: precise and friendly, without the jokes. A reader of a specification is checking compliance, and a reader of a changelog is deciding whether to upgrade; neither is helped by a wink. The guardrails below hold for plain text too.
 
-An earlier version of this section applied the playful voice to every document, changelogs and pull request descriptions included. It was narrowed because those are read to check or decide, where a joke costs the reader time and rewards nothing.
+Rejected: the playful voice in every document, changelogs and pull request descriptions included, because those are read to check or decide, where a joke costs the reader time and rewards nothing.
 
 Write like a knowledgeable friend explaining something they built: precise, a little dry, and happy to grin about the odd parts. Humor lives in the connective prose, such as introductions, transitions, and asides, and in notes, tips, informational callouts, and anything else where nothing is at risk. There it rewards the reader without slowing them down.
 

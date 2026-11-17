@@ -1,6 +1,6 @@
 ---
 status: IMPLEMENTED
-last_updated: 2026-11-09
+last_updated: 2026-11-16
 scope: Translations of package READMEs and public package documentation.
 ---
 
@@ -12,7 +12,7 @@ This document defines how a package translates its README and public documentati
 
 CodenHub is meant to be found and used by people who do not read English, and an English-only package is a harder sell to them. The main site's interface is already translated, but its package pages and the documentation site lead to READMEs and docs that were English only.
 
-Translation is optional per package and per document. A package with no translations stays fully compliant.
+A package people use MUST have its README and every public document translated into every supported locale, and kept current. People can use a package while it is still `experimental`, and from then on a reader of the docs is owed the translation as much as the English. Whether people use a package is a judgment, so leaving `experimental` is where the requirement is checked for certain: a package does not become `active` without its translations (`docs/specs/packages-lifecycle.md`, "Release readiness"). Before people use it, translation stays optional per package and per document, since a surface that is still changing would make every translation go stale with it.
 
 ## Languages
 
@@ -154,7 +154,7 @@ Every published page, reference and changelog included, has a route in every loc
 
 The locale is the outermost path segment so that the version segment (`docs/specs/packages-docs-versions.md`, "URLs") goes inside the package route without moving any locale URL.
 
-Rejected: a locale route only for a translated document, linking each untranslated page to its English route. A reader who opened an untranslated page, which every reference and changelog page is, landed on the English site and stayed there: the section links, the language menu and the next page they opened were all English, and the interface around the page changed language under them. It was chosen to avoid serving the same content at two URLs and to let the URL say whether a page is a translation; the canonical link answers the first and the notice the second.
+Rejected: a locale route only for a translated document, linking each untranslated page to its English route. A reader who opens an untranslated page, which every reference and changelog page is, lands on the English site and stays there: the section links, the language menu and the next page they open are all English, and the interface around the page changes language under them. Its case is avoiding serving the same content at two URLs and letting the URL say whether a page is a translation; the canonical link answers the first and the notice the second.
 
 ### Section links
 

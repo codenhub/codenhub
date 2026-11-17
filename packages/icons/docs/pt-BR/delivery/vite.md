@@ -2,7 +2,7 @@
 title: Plugin do Vite
 description: Varre o markup que o Vite transforma, mais quaisquer globs que você listar, e serve apenas as regras de máscara de que precisa.
 order: 3
-source: ac4f5e00bb178b89be60aec40ff551e96edd049c
+source: 5b2824dab3c360911a7c471f1d7277e32fffda81
 ---
 
 # Plugin do Vite
@@ -47,7 +47,7 @@ Em dev, o Vite serve o shell HTML antes de transformar um único módulo JavaScr
 
 No modo `css`, um build de produção com entradas HTML grava a folha de estilos como um asset CSS nomeado pelo hash do conteúdo, `assets/codenhub-icons-[hash].css` por padrão, e a vincula a partir de toda entrada HTML. Como um build transforma todos os módulos antes de emitir o HTML, esse arquivo já contém toda classe que o build viu. Um build sem entradas HTML, como um build de biblioteca, não emite folha de estilos, e o [modo SVG inline](#modo-svg-inline) também não. Um asset de folha de estilos vinculado não precisa de nonce nem hash em uma Content Security Policy: `style-src 'self'` o permite quando servido da origem da página. Com um `base` em outra origem, como uma CDN, a política precisa permitir essa origem, como já precisa para o próprio CSS do Vite. Duas alternativas foram rejeitadas:
 
-- **Um `<style>` inline**, que os builds escreviam até a 0.2.1. Uma política sem `'unsafe-inline'`, nonce ou hash o recusa, então todo ícone renderizava em branco em produção enquanto em dev, que usa um script de módulo de mesma origem, ainda funcionava.
+- **Um `<style>` inline**. Uma política sem `'unsafe-inline'`, nonce ou hash o recusa, então todo ícone renderizaria em branco em produção enquanto em dev, que usa um script de módulo de mesma origem, continua funcionando.
 - **Uma opção `nonce` no plugin.** O próprio [`html.cspNonce`](https://vite.dev/config/shared-options#html-cspnonce) do Vite já carimba um nonce nas tags do HTML compilado, e um nonce exige um servidor que envie um novo a cada resposta, algo que um host estático não consegue fazer.
 
 ## Modo SVG inline

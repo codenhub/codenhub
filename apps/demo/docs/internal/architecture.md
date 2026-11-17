@@ -1,6 +1,6 @@
 ---
 status: APPROVED
-last_updated: 2026-09-08
+last_updated: 2026-11-16
 scope: apps/demo's own architecture — this app's implementation of the contract in docs/specs/packages-demo.md.
 ---
 
@@ -31,7 +31,7 @@ Both stay in sync automatically as demos are added or removed — neither hand-m
 
 ## Dev mode
 
-`astro:build:done` only fires on `astro build`, so the copy step above has no dev-mode equivalent — `astro dev` cannot serve output that does not exist yet. `src/lib/demo-dev-server.ts` and `src/lib/dev-proxy-integration.ts` give `pnpm dev` its own path to the same result: at `astro:config:setup`, when the Astro command is `dev`, the integration discovers the same `packages/*/demo` directories, starts each one's own `dev` script with its Vite `--base` flag set to `/<slug>/`, reads the port it reports listening on from its stdout, and registers a Vite dev-server proxy from `/<slug>` to that port. A demo keeps its own dev server's hot reload; the aggregator only routes to it. A demo whose dev server fails to start is skipped with a warning rather than failing `apps/demo`'s own dev server — that demo's path serves a 404 until its dev server can start, the same as before this integration existed.
+`astro:build:done` only fires on `astro build`, so the copy step above has no dev-mode equivalent — `astro dev` cannot serve output that does not exist yet. `src/lib/demo-dev-server.ts` and `src/lib/dev-proxy-integration.ts` give `pnpm dev` its own path to the same result: at `astro:config:setup`, when the Astro command is `dev`, the integration discovers the same `packages/*/demo` directories, starts each one's own `dev` script with its Vite `--base` flag set to `/<slug>/`, reads the port it reports listening on from its stdout, and registers a Vite dev-server proxy from `/<slug>` to that port. A demo keeps its own dev server's hot reload; the aggregator only routes to it. A demo whose dev server fails to start is skipped with a warning rather than failing `apps/demo`'s own dev server — that demo's path serves a 404 until its dev server can start.
 
 ## CI and deployment
 

@@ -1,6 +1,6 @@
 ---
 status: IMPLEMENTED
-last_updated: 2026-11-09
+last_updated: 2026-11-16
 scope: Approved exceptions for workspace packages.
 ---
 
@@ -40,7 +40,7 @@ An exception to a rule that `hub check` enforces MUST also declare a `Checks byp
 - **Rules bypassed:** `docs/specs/packages-lifecycle.md` (metadata fields `main`, `module`, and `types` required in `package.json`).
 - **Checks bypassed:** `metadata/main`, `metadata/module`, `metadata/types`.
 - **Where it applies:** `packages/skills/`.
-- **Why acceptable:** Since 0.3.0 the package ships skill assets and the `codenhub-skills` installer only, and exports no JavaScript or TypeScript API; `exports` declares only `./package.json`. Its former helpers could not reach the bundled skills and had no known consumer. Adding `main`, `module`, and `types` would point at no usable entrypoint.
+- **Why acceptable:** The package ships skill assets and the `codenhub-skills` installer only, and exports no JavaScript or TypeScript API; `exports` declares only `./package.json`. Adding `main`, `module`, and `types` would point at no usable entrypoint.
 - **Temporary or permanent:** Permanent while the package exposes no library API.
 
 ## `@codenhub/error`: built-in opt-in registry presets

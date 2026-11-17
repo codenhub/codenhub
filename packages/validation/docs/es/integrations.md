@@ -2,7 +2,7 @@
 title: Integraciones
 description: Usa un validador con bibliotecas de formularios, frameworks de RPC y HTTP, las herramientas de un modelo de lenguaje, OpenAPI y dentro de un esquema de zod o valibot, con un ejemplo para cada caso que se ejecutó con la biblioteca que nombra.
 order: 11
-source: 683884d32d5982944aa45ef5e861fcef0bf00e43
+source: 4d29d313d5a8ca6a8037d9d307f2af74036f75bd
 ---
 
 # Integraciones
@@ -15,7 +15,7 @@ Un validador entra donde una biblioteca pide un esquema de una de estas tres for
 - Como un [JSON Schema](./json-schema.md), el formato en que se escriben las herramientas de los modelos de lenguaje y los documentos de OpenAPI.
 - Llamado directamente, como cualquier función. Así es también como un campo de un [esquema de zod o valibot](#dentro-de-un-esquema-de-zod-o-valibot) puede usarlo.
 
-Todo validador que crea una fábrica de este paquete ya es un Standard Schema, con mensajes en inglés breve. Los ejemplos de formularios, RPC y HTTP lo pasan por `standard`, que redacta sus problemas en el inglés completo, y se ejecutaron así. Los demás ejemplos usan lo que nombra su sección: `standardJsonSchema`, `toJsonSchema` o el validador llamado directamente. Cada ejemplo se ejecutó con la versión de la biblioteca que nombra, el 2026-10-07: validó una entrada que pasa y una que falla, y dio lo que dice el texto que lo rodea. Las bibliotecas cambian, así que la fecha dice cuándo fue cierto esto por última vez.
+Todo validador que crea una fábrica de este paquete ya es un Standard Schema, con mensajes en inglés breve. Los ejemplos de formularios, RPC y HTTP lo pasan por `standard`, que redacta sus problemas en el inglés completo, y se ejecutaron así. Los demás ejemplos usan lo que nombra su sección: `standardJsonSchema`, `toJsonSchema` o el validador llamado directamente. Cada ejemplo se ejecutó con la versión de la biblioteca que nombra: validó una entrada que pasa y una que falla, y dio lo que dice el texto que lo rodea. Las bibliotecas cambian, así que la versión dice para cuál fue cierto esto por última vez.
 
 ## Formularios
 

@@ -1,6 +1,6 @@
 ---
 status: IMPLEMENTED
-last_updated: 2026-11-03
+last_updated: 2026-11-16
 scope: Why `@codenhub/store` behaves as it does, with the alternatives each decision rejected, for whoever changes it next.
 ---
 
@@ -22,7 +22,7 @@ Rejected: overwrite with fallback plus changes after an access failure, because 
 
 ## Reads fill missing fields from initial state
 
-A stored plain object reads as `{ ...initialState, ...stored }`, one level deep, before `validate` runs. The most common shape a settings record fails is not corruption but a valid record saved before the application added a field. Without filling, a consumer without `validate` read the new field as `undefined` despite its type, and a consumer with `validate` lost the user's saved fields: validation failed, the store fell back, and the next `patch` replaced the record with fallback plus change. zustand's `persist` merges the same way by default.
+A stored plain object reads as `{ ...initialState, ...stored }`, one level deep, before `validate` runs. The most common shape a settings record fails is not corruption but a valid record saved before the application added a field. Without filling, a consumer without `validate` would read the new field as `undefined` despite its type, and a consumer with `validate` would lose the user's saved fields: validation fails, the store falls back, and the next `patch` replaces the record with fallback plus change. zustand's `persist` merges the same way by default.
 
 `removeItem` returns `withDefaults(initialState, record)`, so it matches the next read: an optional field with an initial value is reset to it, and one without is absent. The persisted record omits the field so a later change to the initial value applies.
 
@@ -30,9 +30,9 @@ Rejected: merging only when `validate` rejects the stored value, because records
 
 ## `patch` skips `undefined` values
 
-`patch` ignores fields whose value is `undefined`. `Partial<TSchema>` admits `undefined` for required fields unless a consumer enables `exactOptionalPropertyTypes`, so `patch({ token: maybeToken })` type-checked and then dropped `token` on JSON drivers while memory drivers kept it as `undefined`. Skipping the value keeps the guarantee `RemovableStoreKey` gives `removeItem` and makes every driver store the same record.
+`patch` ignores fields whose value is `undefined`. `Partial<TSchema>` admits `undefined` for required fields unless a consumer enables `exactOptionalPropertyTypes`, so `patch({ token: maybeToken })` would type-check and then drop `token` on JSON drivers while memory drivers keep it as `undefined`. Skipping the value keeps the guarantee `RemovableStoreKey` gives `removeItem` and makes every driver store the same record.
 
-Rejected: keeping spread semantics and documenting the gap, because the type system cannot catch the case in the default compiler configuration; and a narrower parameter type, because without `exactOptionalPropertyTypes` an optional property still admits `undefined`. Cost accepted: `patch({ nickname: undefined })` no longer removes an optional field on JSON drivers; `removeItem` does.
+Rejected: keeping spread semantics and documenting the gap, because the type system cannot catch the case in the default compiler configuration; and a narrower parameter type, because without `exactOptionalPropertyTypes` an optional property still admits `undefined`. Cost accepted: `patch({ nickname: undefined })` does not remove an optional field on JSON drivers; `removeItem` does.
 
 ## Non-object stored values fail validation
 
@@ -58,11 +58,11 @@ Recoverable failures use `store.read_failed`, `store.write_failed`, `store.clear
 
 The plain `storeErrors` dictionary covers every code with user-facing feedback, typed with `ErrorFeedback` imported as a type only. This lets applications register the codes without introducing a runtime dependency or registry instance.
 
-Rejected: the prior `storage-*-failed` names, because they do not identify the owning package or follow the namespacing contract; and exporting a registry instance, because applications own registration and the dictionary requires no runtime error dependency.
+Rejected: `storage-*-failed` names, because they do not identify the owning package or follow the namespacing contract; and exporting a registry instance, because applications own registration and the dictionary requires no runtime error dependency.
 
 ## One error-reporting callback on the store
 
-`localStorageDriver(storageKey?)` leaves error reporting to the store's `onError`. Its former callback duplicated the store's callback: when both were set, the driver's callback silently replaced the store's for read, write, and clear failures, while validation failures still went to the store's. Removing it keeps every failure on one reporting path.
+`localStorageDriver(storageKey?)` leaves error reporting to the store's `onError`. Rejected: a callback on the driver, which duplicates the store's: when both are set, the driver's callback silently replaces the store's for read, write, and clear failures, while validation failures still go to the store's. One callback keeps every failure on one reporting path.
 
 Rejected: keeping the driver callback, because it requires two reporting paths and a hidden lookup table to keep each failure reported once.
 

@@ -1,6 +1,6 @@
 ---
 status: DRAFT
-last_updated: 2026-11-06
+last_updated: 2026-11-16
 scope: Evaluation scenarios and rubric for the coding skill.
 ---
 
@@ -90,7 +90,7 @@ Fixture traps: pricing is duplicated in `quote()` and `checkout()` with magic nu
 
 ## Held-out scenarios
 
-Added after round 6 and never used to tune the skill. They check whether the rules generalize beyond S1 to S5, whose traps the skill's examples name. Run them with the same isolation as the other scenarios. Until a round has graded them, do not change the skill because of them. Once graded they become tuning scenarios, so write new held-out ones before the next restructure.
+These are never used to tune the skill. They check whether the rules generalize beyond S1 to S5, whose traps the skill's examples name. Run them with the same isolation as the other scenarios. Until a round has graded them, do not change the skill because of them. Once graded they become tuning scenarios, so write new held-out ones before the next restructure.
 
 ### Prompts
 

@@ -1,6 +1,6 @@
 ---
 status: IMPLEMENTED
-last_updated: 2026-11-09
+last_updated: 2026-11-16
 scope: Documentation for past package versions on the documentation site.
 ---
 
@@ -66,7 +66,7 @@ Every stable release that is not kept redirects, path included, to the newest ke
 
 The not-found page performs these redirects. The deployment serves it for every missing path, and a script on it replaces the location with the target, keeping the query and fragment. The server's answer is therefore a 404 followed by a client-side redirect, not a 301. That costs nothing this spec relies on, since archived pages are kept out of search engines anyway, but a reader without JavaScript stays on the not-found page.
 
-Rejected: rules in `_redirects`. They give a real 301, but Cloudflare accepts at most 100 rules with a wildcard or placeholder, each release needs two (English and every locale prefix), and the repository already had 36 stable releases when this was written, so the build would outgrow the limit within a few dozen releases. Redirecting only releases that were once archived would fit the limit, but it would need the history of what was archived, and it would lose a redirect when an entry is removed from the list.
+Rejected: rules in `_redirects`. They give a real 301, but Cloudflare accepts at most 100 rules with a wildcard or placeholder, each release needs two (English and every locale prefix), and the repository already has dozens of stable releases, so the build would outgrow the limit within a few dozen more. Redirecting only releases that were once archived would fit the limit, but it would need the history of what was archived, and it would lose a redirect when an entry is removed from the list.
 
 Rejected: a line segment such as `/<slug>/v2/` or `/<slug>/v0.4/`. It keeps links stable across patches without redirects, but 0.x would need a segment for a line this spec does not treat as one, an exact pin inside a kept line would need a second form anyway, and the URL would no longer show the number a consumer finds in `node_modules`.
 
@@ -89,4 +89,4 @@ A tag cannot be edited, so an archived version cannot be fixed when a later chan
 
 The current version keeps every check and fails the build as it does today.
 
-Dropping instead of failing departs from the rule that a failure is never treated as "nothing published". That rule did not weigh content the repository can never correct. Failing the build would leave the site on its last deploy, missing the docs of new releases, until someone changed the site or removed the version from the list, all for a page few people read. The cost is that a dropped version is easy to miss: only the build output reports it. Pull requests do not build the site (`docs/ci.md`, "Previews"), so a change that breaks an archived version shows up only after the merge. A later check that builds archived versions on a pull request touching `apps/docs` or `@codenhub/tools` would catch it earlier.
+Dropping instead of failing departs from the rule that a failure is never treated as "nothing published", because content at an archived tag is content the repository can never correct. Failing the build would leave the site on its last deploy, missing the docs of new releases, until someone changes the site or removes the version from the list, all for a page few people read. The cost is that a dropped version is easy to miss: only the build output reports it. Pull requests do not build the site (`docs/ci.md`, "Previews"), so a change that breaks an archived version shows up only after the merge. A later check that builds archived versions on a pull request touching `apps/docs` or `@codenhub/tools` would catch it earlier.
