@@ -901,10 +901,6 @@ Not exported; declared in `src/core/message-params.ts`.
 type MessageValue = string | number | Date;
 ```
 
-Type-level reading of ICU messages, so `t()` can require the values a literal message uses. A message TypeScript sees only as `string`, such as one from a JSON import, or one these types can't read, accepts any values, as before.
-
-Each step handles one brace, apostrophe, name character, or space around a name or format. TypeScript stops a tail-recursive type after 1,000 steps with "Type instantiation is excessively deep" (TS2589), which a long message, such as one with 1,100 apostrophes, 600 arguments, or 1,100 spaces inside one argument, would reach, so a reading gives up after a step budget and the message accepts any values.
-
 Not exported; declared in `src/core/message-params.ts`.
 
 ### NameCharacter
