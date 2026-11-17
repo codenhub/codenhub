@@ -1,5 +1,5 @@
 {
-  "bundler": "rolldown@1.2.15",
+  "bundler": "rolldown@1.2.16",
   "entrypoints": {
     ".": {
       "exports": {
