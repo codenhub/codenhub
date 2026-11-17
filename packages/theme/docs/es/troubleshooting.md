@@ -2,7 +2,7 @@
 title: Solución de problemas
 description: Síntomas, cómo confirmar su causa y cómo resolverlos.
 order: 7
-source: 7db357a5707d1044c6803b61195cefc104259bc1
+source: edffe4600f5dbd39e3ada2c2c739eda2a0f523c8
 ---
 
 # Solución de problemas
@@ -33,7 +33,7 @@ El script previo al pintado falta, está bloqueado o no coincide con tu app. En 
 
 ## El tema ignora el sistema operativo
 
-El usuario hizo una elección, que siempre gana. `theme.preference` muestra una elección guardada; una que el navegador no pudo guardar, porque el almacenamiento está bloqueado o lleno, sigue ganando hasta que se cierra la página, aunque `theme.preference` muestre entonces `null` o una elección guardada anterior. Llama a `theme.clearPreference()`, desde una opción "Automático" o "Sistema" de tu UI, para volver a seguir al sistema operativo.
+El usuario hizo una elección, que siempre gana. `theme.preference` muestra una elección guardada; una que el navegador no pudo guardar, porque el almacenamiento está bloqueado o lleno, sigue ganando mientras la página está abierta, salvo que otra pestaña cambie el tema, aunque `theme.preference` muestre entonces `null` o una elección guardada anterior. Una elección hecha antes de `init()` es la excepción; consulta [Cuando falla el almacenamiento](persistence-and-sync.md#cuando-falla-el-almacenamiento). Llama a `theme.clearPreference()`, desde una opción "Automático" o "Sistema" de tu UI, para volver a seguir al sistema operativo.
 
 ## `createTheme()` lanza una excepción
 

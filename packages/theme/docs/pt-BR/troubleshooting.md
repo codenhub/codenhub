@@ -2,7 +2,7 @@
 title: Solução de problemas
 description: Sintomas, como confirmar a causa de cada um e como corrigi-los.
 order: 7
-source: 7db357a5707d1044c6803b61195cefc104259bc1
+source: edffe4600f5dbd39e3ada2c2c739eda2a0f523c8
 ---
 
 # Solução de problemas
@@ -33,7 +33,7 @@ O script de pré-pintura está faltando, bloqueado ou fora de sintonia com o seu
 
 ## O tema ignora o sistema operacional
 
-O usuário fez uma escolha, que sempre ganha. `theme.preference` mostra uma escolha salva; uma que o navegador não conseguiu salvar, porque o armazenamento está bloqueado ou cheio, continua ganhando até a página fechar, embora `theme.preference` mostre então `null` ou uma escolha salva anterior. Chame `theme.clearPreference()`, a partir de uma opção "Automático" ou "Sistema" na sua UI, para voltar a seguir o sistema operacional.
+O usuário fez uma escolha, que sempre ganha. `theme.preference` mostra uma escolha salva; uma que o navegador não conseguiu salvar, porque o armazenamento está bloqueado ou cheio, continua ganhando enquanto a página está aberta, a não ser que outra aba mude o tema, embora `theme.preference` mostre então `null` ou uma escolha salva anterior. Uma escolha feita antes de `init()` é a exceção; veja [Quando o armazenamento falha](persistence-and-sync.md#quando-o-armazenamento-falha). Chame `theme.clearPreference()`, a partir de uma opção "Automático" ou "Sistema" na sua UI, para voltar a seguir o sistema operacional.
 
 ## `createTheme()` lança um erro
 

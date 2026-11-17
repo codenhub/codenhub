@@ -32,7 +32,7 @@ The pre-paint script is missing, blocked, or out of step with your app. In order
 
 ## The theme ignores the operating system
 
-The user made a choice, which always wins. `theme.preference` shows a saved one; a choice the browser could not save, because storage is blocked or full, still wins until the page closes, although `theme.preference` then shows `null` or an older saved choice. Call `theme.clearPreference()`, from an "Auto" or "System" option in your UI, to follow the operating system again.
+The user made a choice, which always wins. `theme.preference` shows a saved one; a choice the browser could not save, because storage is blocked or full, still wins while the page is open, unless another tab changes the theme, although `theme.preference` then shows `null` or an older saved choice. A choice made before `init()` is the exception; see [When storage fails](persistence-and-sync.md#when-storage-fails). Call `theme.clearPreference()`, from an "Auto" or "System" option in your UI, to follow the operating system again.
 
 ## `createTheme()` throws
 

@@ -2,7 +2,7 @@
 title: Tokens de diseño
 description: Da valores a los temas en JavaScript con tokenSchema, sobrescríbelos en tiempo de ejecución con setTokens() y vuelve a leerlos.
 order: 3
-source: cd6d5a2758273500c4fb9f2adbdc4fbf553ec9ef
+source: 4b484eb3f6aeb728f1a2b7572998a7208612ae5c
 ---
 
 # Tokens de diseño
@@ -61,7 +61,7 @@ Las sobrescrituras ganan sobre los `tokens` propios de los temas y se mantienen 
 Algunas reglas mantienen los valores predecibles:
 
 - **Las sobrescrituras no se guardan.** Duran hasta que la página se descarga o se ejecuta `destroy()`. Para conservar el color de un usuario, guárdalo tú y vuelve a llamar a `setTokens()` en la siguiente visita.
-- **Un valor vacío significa "sin sobrescritura".** Un token definido como `""` o `undefined` vuelve al valor propio del tema, o a tu CSS cuando el tema no define ninguno. Por eso un input de texto vaciado vuelve al color del tema en lugar de quitarlo. Un input de color siempre contiene un color y no se puede vaciar, así que dale al selector de acento un botón de restablecer que llame a `setTokens({})`.
+- **Un valor vacío significa "sin sobrescritura".** Un token definido como `""` o `undefined` vuelve al valor propio del tema, o a tu CSS cuando el tema no define ninguno. Por eso un input de texto vaciado vuelve al color del tema en lugar de quitarlo. Un input de color siempre contiene un color y no se puede vaciar, así que dale al selector de acento un botón de restablecer que vuelva a llamar a `setTokens()` con todas las sobrescrituras salvo `primary`, es decir, `{}` cuando el acento es la única.
 - **Los números se escriben como strings.** En JavaScript, `setTokens({ radius: 4 })` escribe `"4"`; los tipos de TypeScript solo aceptan strings, así que ahí escribe `"4"`. Cualquier valor que no sea un string, un número finito, `undefined` o `""` lanza una excepción, igual que un nombre de token que no está en `tokenSchema`.
 - **Los valores no se comprueban como CSS.** Un valor que el navegador rechaza, como `"red; color: blue"`, no se aplica, y la propiedad conserva su valor anterior, aunque `get().tokens` sigue informando el valor rechazado. Como las sobrescrituras se mantienen cuando cambia el tema, la propiedad conserva ese valor también entre cambios de tema, hasta que una sobrescritura válida o `setTokens({})` lo reemplace. Comprueba los valores que vienen de la entrada del usuario antes de pasarlos.
 - **Antes de `init()`, las sobrescrituras esperan.** Si se llama antes de que se aplique el primer tema, o después de `destroy()`, `setTokens()` solo registra las sobrescrituras; el siguiente cambio, normalmente `init()`, las aplica. Así una llamada temprana no muestra el tema por defecto encima del que ya está en la página.

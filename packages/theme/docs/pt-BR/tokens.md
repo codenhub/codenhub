@@ -2,7 +2,7 @@
 title: Design tokens
 description: Dê valores aos temas em JavaScript com tokenSchema, sobrescreva-os em tempo de execução com setTokens() e leia-os de volta.
 order: 3
-source: cd6d5a2758273500c4fb9f2adbdc4fbf553ec9ef
+source: 4b484eb3f6aeb728f1a2b7572998a7208612ae5c
 ---
 
 # Design tokens
@@ -61,7 +61,7 @@ Os overrides ganham dos `tokens` dos próprios temas e continuam valendo quando 
 Algumas regras deixam os valores previsíveis:
 
 - **Overrides não são salvos.** Eles duram até a página ser descarregada ou `destroy()` rodar. Para guardar a cor de um usuário, salve-a você mesmo e chame `setTokens()` de novo na próxima visita.
-- **Um valor vazio significa "sem override".** Um token definido como `""` ou `undefined` volta ao valor do próprio tema, ou ao seu CSS quando o tema não define nenhum. Um input de texto esvaziado, portanto, volta à cor do tema em vez de removê-la. Um input de cor sempre contém uma cor e não pode ser esvaziado, então dê ao seletor de destaque um botão de redefinir que chame `setTokens({})`.
+- **Um valor vazio significa "sem override".** Um token definido como `""` ou `undefined` volta ao valor do próprio tema, ou ao seu CSS quando o tema não define nenhum. Um input de texto esvaziado, portanto, volta à cor do tema em vez de removê-la. Um input de cor sempre contém uma cor e não pode ser esvaziado, então dê ao seletor de destaque um botão de redefinir que chame `setTokens()` de novo com todos os overrides exceto `primary`, ou seja, `{}` quando o destaque é o único.
 - **Números são escritos como strings.** Em JavaScript, `setTokens({ radius: 4 })` escreve `"4"`; os tipos do TypeScript aceitam só strings, então escreva `"4"` lá. Qualquer valor que não seja uma string, um número finito, `undefined` ou `""` lança um erro, assim como um nome de token que não está em `tokenSchema`.
 - **Os valores não são validados como CSS.** Um valor que o navegador rejeita, como `"red; color: blue"`, não é aplicado, e a propriedade mantém o valor anterior, embora `get().tokens` continue informando o valor rejeitado. Como os overrides continuam valendo quando o tema muda, a propriedade mantém esse valor também nas trocas de tema, até que um override válido ou `setTokens({})` o substitua. Verifique valores que vêm de entrada do usuário antes de passá-los.
 - **Antes de `init()`, os overrides esperam.** Quando chamado antes de o primeiro tema ser aplicado, ou depois de `destroy()`, `setTokens()` só registra os overrides; a próxima mudança, normalmente `init()`, os aplica. Isso evita que uma chamada antecipada mostre o tema padrão por cima do que já está na página.
