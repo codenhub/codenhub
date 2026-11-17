@@ -2,7 +2,7 @@
 title: Definir temas
 description: Agrega tus propios temas, elige qué temas usan la configuración del sistema y el toggle, lee el estado actual y conoce cada opción con su valor por defecto.
 order: 2
-source: 53a1a38922f0e0f02b46b5a61b7497a6e1a30a7c
+source: 33111d74e440174063a0af3b662a9a0fcf4efc8a
 ---
 
 # Definir temas
@@ -144,7 +144,7 @@ Algunas merecen un comentario:
 
 - **`storageKey`**: Todas las apps del mismo dominio comparten un solo `localStorage`. Si dos apps de un mismo dominio usan este paquete, dale a cada una su propia clave, como `"my-app-theme"`, o se turnarán para pisarse la elección.
 - **`attribute`**: Sirve cualquier nombre de atributo HTML válido, uno sin espacios, comillas, `/`, `>` ni `=`, excepto `class` y `style`, porque escribir ahí el nombre del tema borraría las clases y los estilos inline que tu página puso en `<html>`. Usa `className` para obtener una clase.
-- **`className`**: Una función, con tipo `ThemeClassResolver`, recibe el tema, incluidos sus tokens estáticos, y devuelve un nombre de clase sin espacios. `className: (theme) => theme.name` da clases como `dark` y `dim` en lugar de `theme-dark`. Una función que devuelve un nombre vacío o con espacios hace que lance una excepción la operación que la aplicó.
+- **`className`**: Una función, con tipo `ThemeClassResolver`, recibe el tema, incluidos sus tokens estáticos, y devuelve un nombre de clase sin espacios. `className: (theme) => theme.name` da clases como `dark` y `dim` en lugar de `theme-dark`. El paquete le pide a la función la clase de todos los temas a la vez, la primera vez que necesita una, normalmente en `init()` o `getPrePaintScript()`. Una función que devuelve un nombre vacío o con espacios para cualquier tema hace que esa llamada lance una excepción, aunque el tema rechazado no sea el que se está aplicando.
 
 ## Cuando la configuración está mal
 

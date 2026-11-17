@@ -1,7 +1,7 @@
 ---
 title: Visión general
 description: Para qué sirve el paquete, cómo elige un tema y en qué orden leer sus páginas.
-source: 5c38fd4477c00f38da7c4ffb9083a1b0d8fd74cc
+source: 05f3b784bd7ac9ef656c70f8de0859aa17ccb13b
 ---
 
 # Gestiona los temas del navegador
@@ -56,7 +56,7 @@ La [referencia de la API](../reference/index.md) (en inglés) enumera cada expor
 ## Requisitos
 
 - **Un navegador, para que el tema se vea.** El paquete usa `document.documentElement`, `localStorage`, `matchMedia`, eventos `storage` y `CustomEvent`, y trata cualquiera de ellos que falte como ausente en lugar de romper tu página. Una llamada a `localStorage` o a `matchMedia` que lanza una excepción, como en una ventana privada, se trata igual. En un servidor no hace nada que necesite un navegador; consulta [Evitar el destello](preventing-the-flash.md#lo-que-sabe-el-servidor).
-- **Chrome 93, Firefox 92, Safari 15.4 o posterior**, tal como se publica. El paquete se distribuye como JavaScript moderno y llama a `Object.hasOwn`, que los navegadores más antiguos no tienen, así que allí `createTheme()` lanza un `TypeError`. Para dar soporte a un navegador más antiguo, haz que tu build transpile las dependencias y agregue polyfills para él. El script previo al pintado de [Evitar el destello](preventing-the-flash.md) es ES5 puro y sigue poniendo el atributo y las clases del tema en navegadores muy por debajo de ese mínimo, hasta Chrome 24, Firefox 24 y Safari 7. Los tokens y `color-scheme` solo tienen efecto donde el navegador admite propiedades personalizadas de CSS y `color-scheme`.
+- **Chrome 93, Firefox 92, Safari 15.4 o posterior**, tal como se publica. El paquete se distribuye como JavaScript moderno: llama a `Object.hasOwn`, así que `createTheme()` lanza un `TypeError` en un navegador que no lo tiene, y usa el operador `??=`, así que un navegador anterior a Chrome 85, Firefox 79 o Safari 14 no puede cargarlo y en su lugar informa un `SyntaxError`. Para dar soporte a un navegador más antiguo, haz que tu build transpile las dependencias y agregue polyfills para él. El script previo al pintado de [Evitar el destello](preventing-the-flash.md) es ES5 puro y sigue poniendo el atributo y las clases del tema en navegadores muy por debajo de ese mínimo, hasta Chrome 24, Firefox 24 y Safari 7. Los tokens y `color-scheme` solo tienen efecto donde el navegador admite propiedades personalizadas de CSS y `color-scheme`.
 - **TypeScript 5.4 o posterior**, si usas TypeScript. Los tipos usan `NoInfer`, que los compiladores más antiguos reportan como `Cannot find name 'NoInfer'`. Los proyectos en JavaScript puro no necesitan nada más.
 - **Nada más.** Sin dependencias y sin framework.
 

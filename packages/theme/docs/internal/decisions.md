@@ -22,7 +22,7 @@ Rejected: making `createTheme()` throw on an option set to `undefined`, because 
 
 ## An empty token value counts as omitted
 
-A theme or runtime token set to `""` falls back to the theme's static value, or to CSS, instead of being written. The browser removes a custom property set to `""` rather than applying it, so writing it would remove the property while `get().tokens` reports `""`. Treating it as omitted makes `get().tokens` agree with the page, and gives a cleared color-picker input the useful behavior of returning to the theme's color.
+A theme or runtime token set to `""` falls back to the theme's static value, or to CSS, instead of being written. The browser removes a custom property set to `""` rather than applying it, so writing it would remove the property while `get().tokens` reports `""`. Treating it as omitted makes `get().tokens` agree with the page, and gives a cleared text input the useful behavior of returning to the theme's color.
 
 ## `setTokens()` before the first change only records the overrides
 
@@ -34,7 +34,7 @@ Resolving the stored or system theme at that point instead was rejected: it woul
 
 ## The browser floor is the published build's, and older browsers transpile
 
-The published bundle calls `Object.hasOwn` and uses `??=`, so it runs on Chrome 93, Firefox 92, Safari 15.4, and newer; `createTheme()` throws a `TypeError` on anything older. The public docs state that floor and point older targets at a build that transpiles dependencies and adds polyfills. The pre-paint script is ES5 regardless, so the theme still applies before the first paint there.
+The published bundle calls `Object.hasOwn` and uses `??=`, so it runs on Chrome 93, Firefox 92, Safari 15.4, and newer. Below that, `createTheme()` throws a `TypeError` where `Object.hasOwn` is missing, and the module fails to parse with a `SyntaxError` where `??=` is, below Chrome 85, Firefox 79, and Safari 14. The public docs state that floor and point older targets at a build that transpiles dependencies and adds polyfills. The pre-paint script is ES5 regardless, so the theme still applies before the first paint there.
 
 The `MediaQueryList.addListener` fallback stays, although no browser that runs the published bundle needs it: a transpiled, polyfilled build runs on Safari 13, which has only `addListener`, and without the fallback the theme would stop following the operating system there.
 

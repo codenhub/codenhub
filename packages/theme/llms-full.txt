@@ -127,7 +127,7 @@ The [API reference](docs/reference/index.md) lists every export with its full si
 ## Requirements
 
 - **A browser, for the theme to show.** The package uses `document.documentElement`, `localStorage`, `matchMedia`, `storage` events, and `CustomEvent`, and treats any of them that is missing as absent instead of crashing your page. A `localStorage` or `matchMedia` call that throws, as in a private window, is treated the same way. On a server it does nothing that needs a browser; see [Preventing the flash](docs/preventing-the-flash.md#what-the-server-knows).
-- **Chrome 93, Firefox 92, Safari 15.4, or newer**, as published. The package is shipped as modern JavaScript and calls `Object.hasOwn`, which older browsers lack, so `createTheme()` throws a `TypeError` there. To support an older browser, have your build transpile dependencies and add polyfills for it. The pre-paint script from [Preventing the flash](docs/preventing-the-flash.md) is plain ES5 and still sets the theme's attribute and classes in browsers far below that floor, back to Chrome 24, Firefox 24, and Safari 7. Tokens and `color-scheme` take effect only where the browser supports CSS custom properties and `color-scheme`.
+- **Chrome 93, Firefox 92, Safari 15.4, or newer**, as published. The package is shipped as modern JavaScript: it calls `Object.hasOwn`, so `createTheme()` throws a `TypeError` in a browser that lacks it, and it uses the `??=` operator, so a browser older than Chrome 85, Firefox 79, or Safari 14 cannot load it at all and reports a `SyntaxError` instead. To support an older browser, have your build transpile dependencies and add polyfills for it. The pre-paint script from [Preventing the flash](docs/preventing-the-flash.md) is plain ES5 and still sets the theme's attribute and classes in browsers far below that floor, back to Chrome 24, Firefox 24, and Safari 7. Tokens and `color-scheme` take effect only where the browser supports CSS custom properties and `color-scheme`.
 - **TypeScript 5.4 or newer**, if you use TypeScript. The types use `NoInfer`, which older compilers report as `Cannot find name 'NoInfer'`. Plain JavaScript projects need nothing extra.
 - **Nothing else.** No dependencies, and no framework.
 
@@ -377,7 +377,7 @@ A few of these deserve a word:
 
 - **`storageKey`**: Every app on the same domain shares one `localStorage`. If two apps on one domain both use this package, give each its own key, such as `"my-app-theme"`, or they will take turns overwriting each other's choice.
 - **`attribute`**: Any valid HTML attribute name works, one without spaces, quotes, `/`, `>`, or `=`, except `class` and `style`, because writing the theme name there would erase the classes and inline styles your page put on `<html>`. Use `className` to get a class.
-- **`className`**: A function, typed `ThemeClassResolver`, receives the theme, including its static tokens, and returns one class name with no spaces. `className: (theme) => theme.name` gives classes like `dark` and `dim` instead of `theme-dark`. A function that returns an empty or space-containing name makes the operation that applied it throw.
+- **`className`**: A function, typed `ThemeClassResolver`, receives the theme, including its static tokens, and returns one class name with no spaces. `className: (theme) => theme.name` gives classes like `dark` and `dim` instead of `theme-dark`. The package asks the function for every theme's class at once, the first time one is needed, usually in `init()` or `getPrePaintScript()`. A function that returns an empty or space-containing name for any theme makes that call throw, even when the theme it rejects is not the one being applied.
 
 ## When the configuration is wrong
 
@@ -443,9 +443,9 @@ Overrides win over the themes' own `tokens`, and they stay in place when the the
 A few rules keep the values predictable:
 
 - **Overrides are not saved.** They last until the page unloads or `destroy()` runs. To keep a user's color, save it yourself and call `setTokens()` again on the next visit.
-- **An empty value means "no override".** A token set to `""` or `undefined` falls back to the theme's own value, or to your CSS when the theme sets none. A cleared color input therefore returns to the theme color instead of removing it.
+- **An empty value means "no override".** A token set to `""` or `undefined` falls back to the theme's own value, or to your CSS when the theme sets none. A cleared text input therefore returns to the theme color instead of removing it. A color input always holds a color and cannot be cleared, so give the accent picker a reset button that calls `setTokens({})`.
 - **Numbers are written as strings.** In JavaScript, `setTokens({ radius: 4 })` writes `"4"`; the TypeScript types accept strings only, so write `"4"` there. Any value that is not a string, a finite number, `undefined`, or `""` throws, as does a token name that is not in `tokenSchema`.
-- **Values are not checked as CSS.** A value the browser rejects, such as `"red; color: blue"`, is not applied, and the property keeps its previous value, although `get().tokens` still reports the rejected value. Check values that come from user input before passing them in.
+- **Values are not checked as CSS.** A value the browser rejects, such as `"red; color: blue"`, is not applied, and the property keeps its previous value, although `get().tokens` still reports the rejected value. Because overrides stay in place when the theme changes, the property then keeps that value across theme changes too, until a valid override or `setTokens({})` replaces it. Check values that come from user input before passing them in.
 - **Before `init()`, overrides wait.** Called before the first theme is applied, or after `destroy()`, `setTokens()` only records the overrides; the next change, usually `init()`, applies them. This keeps an early call from showing the default theme over the one already on the page.
 
 ## Read token values
@@ -848,7 +848,7 @@ The pre-paint script is missing, blocked, or out of step with your app. In order
 
 ## The theme ignores the operating system
 
-The user has a saved choice, which always wins. `theme.preference` shows it. Call `theme.clearPreference()`, from an "Auto" or "System" option in your UI, to follow the operating system again.
+The user made a choice, which always wins. `theme.preference` shows a saved one; a choice the browser could not save, because storage is blocked or full, still wins until the page closes, although `theme.preference` then shows `null` or an older saved choice. Call `theme.clearPreference()`, from an "Auto" or "System" option in your UI, to follow the operating system again.
 
 ## `createTheme()` throws
 
@@ -863,15 +863,38 @@ The options are invalid, and the error message names the problem. The most commo
 
 Your TypeScript version is older than 5.4, which added `NoInfer`. Update TypeScript in your project. Turning on `skipLibCheck` hides the error, but then the types also accept theme names you did not configure.
 
-## `createTheme()` throws `TypeError: Object.hasOwn is not a function`
+## The browser reports `Object.hasOwn is not a function` or a `SyntaxError`
 
-The browser is older than Chrome 93, Firefox 92, or Safari 15.4, the oldest versions the published package runs on; [Requirements](docs/index.md#requirements) lists them. Update the browser, or have your build transpile dependencies and add polyfills for the browsers you support. The pre-paint script still sets the theme's attribute and classes in browsers back to Chrome 24, Firefox 24, and Safari 7, but the toggle and everything else need the manager.
+`createTheme()` throws `TypeError: Object.hasOwn is not a function`, or, in a browser older than Chrome 85, Firefox 79, or Safari 14, the package fails to load with a `SyntaxError` before any of your code runs. Either way, the browser is older than Chrome 93, Firefox 92, or Safari 15.4, the oldest versions the published package runs on; [Requirements](docs/index.md#requirements) lists them. Update the browser, or have your build transpile dependencies and add polyfills for the browsers you support. The pre-paint script still sets the theme's attribute and classes in browsers back to Chrome 24, Firefox 24, and Safari 7, but the toggle and everything else need the manager.
 
 ## A React hydration warning mentions `<html>`
 
 React found the `data-theme`, class, or `style` the pre-paint script added. That difference is expected; add `suppressHydrationWarning` to your `<html>` element, as shown in [Preventing the flash](docs/preventing-the-flash.md#in-a-server-rendered-app).
 
 Still stuck? The [API reference](docs/reference/index.md) lists every rule each method enforces, and every error it throws.
+
+<!-- Source: docs/changelog/0.2.3.md -->
+
+# 0.2.3
+
+## Added
+
+- The README and every guide are available in Brazilian Portuguese and Spanish.
+- The docs state the oldest browsers the published package runs on, Chrome 93, Firefox 92, and Safari 15.4, what fails below them, and how to support older browsers by transpiling.
+- The npm package lists `keywords`, so searches such as "dark-mode" and "prefers-color-scheme" find it.
+
+## Changed
+
+- The guides are rewritten as one walkthrough, from a first toggle to a production setup, with the accessibility work a theme switcher needs.
+- The npm `homepage` points to the documentation site, https://codenhub.dev/packages/theme/.
+
+## Fixed
+
+- The docs say when a `className` function's invalid class throws: the first time any class is needed, usually in `init()` or `getPrePaintScript()`, not only when that theme is applied.
+- The docs no longer promise that clearing a color input resets an accent token, which a color input cannot do; they suggest a reset button that calls `setTokens({})`.
+- The troubleshooting entry for a theme that ignores the operating system covers a choice the browser could not save.
+- The docs say that a token value the browser rejects stays in place across theme changes until it is replaced.
+- The `themes.md` menu example type-checks under `strict`.
 
 <!-- Source: docs/changelog/0.2.2.md -->
 

@@ -2,7 +2,7 @@
 title: Solución de problemas
 description: Síntomas, cómo confirmar su causa y cómo resolverlos.
 order: 7
-source: 14067fa51a5f657642449030d23dcc89505b062d
+source: 7db357a5707d1044c6803b61195cefc104259bc1
 ---
 
 # Solución de problemas
@@ -33,7 +33,7 @@ El script previo al pintado falta, está bloqueado o no coincide con tu app. En 
 
 ## El tema ignora el sistema operativo
 
-El usuario tiene una elección guardada, que siempre gana. `theme.preference` la muestra. Llama a `theme.clearPreference()`, desde una opción "Automático" o "Sistema" de tu UI, para volver a seguir al sistema operativo.
+El usuario hizo una elección, que siempre gana. `theme.preference` muestra una elección guardada; una que el navegador no pudo guardar, porque el almacenamiento está bloqueado o lleno, sigue ganando hasta que se cierra la página, aunque `theme.preference` muestre entonces `null` o una elección guardada anterior. Llama a `theme.clearPreference()`, desde una opción "Automático" o "Sistema" de tu UI, para volver a seguir al sistema operativo.
 
 ## `createTheme()` lanza una excepción
 
@@ -48,9 +48,9 @@ Las opciones son inválidas, y el mensaje de error nombra el problema. Los más 
 
 Tu versión de TypeScript es anterior a la 5.4, que agregó `NoInfer`. Actualiza TypeScript en tu proyecto. Activar `skipLibCheck` oculta el error, pero entonces los tipos también aceptan nombres de tema que no configuraste.
 
-## `createTheme()` lanza `TypeError: Object.hasOwn is not a function`
+## El navegador informa `Object.hasOwn is not a function` o un `SyntaxError`
 
-El navegador es anterior a Chrome 93, Firefox 92 o Safari 15.4, las versiones más antiguas en las que funciona el paquete publicado; [Requisitos](index.md#requisitos) las enumera. Actualiza el navegador, o haz que tu build transpile las dependencias y agregue polyfills para los navegadores que soportas. El script previo al pintado sigue poniendo el atributo y las clases del tema en navegadores hasta Chrome 24, Firefox 24 y Safari 7, pero el toggle y todo lo demás necesitan el gestor.
+`createTheme()` lanza `TypeError: Object.hasOwn is not a function` o, en un navegador anterior a Chrome 85, Firefox 79 o Safari 14, el paquete no llega a cargarse y falla con un `SyntaxError` antes de que se ejecute tu código. En ambos casos, el navegador es anterior a Chrome 93, Firefox 92 o Safari 15.4, las versiones más antiguas en las que funciona el paquete publicado; [Requisitos](index.md#requisitos) las enumera. Actualiza el navegador, o haz que tu build transpile las dependencias y agregue polyfills para los navegadores que soportas. El script previo al pintado sigue poniendo el atributo y las clases del tema en navegadores hasta Chrome 24, Firefox 24 y Safari 7, pero el toggle y todo lo demás necesitan el gestor.
 
 ## Un aviso de hidratación de React menciona `<html>`
 
