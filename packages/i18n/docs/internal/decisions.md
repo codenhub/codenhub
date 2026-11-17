@@ -141,6 +141,10 @@ When the loader rejects for a stored or detected locale, the binding warns and s
 
 **The detected locale comes before the default.** A failing saved locale falls back to the detected locale, then the default, each warned about, and none persisted, since the browser's languages are the next choice: a visitor with a saved `fr` whose dictionary fails to load, and a `pt-BR` browser, would otherwise get English although Portuguese is available. Rejected: trying every locale in `navigator.languages`, which can stack one failed load per preference before the page shows text.
 
+### A stored locale is matched
+
+A stored locale the application no longer configures exactly, such as `pt-PT` after only `pt-BR` remains, goes through `matchLocale()` like a browser preference, and the stored value is left as it is. It still names the visitor's choice, which serves them better than their browser's languages. Rejected: discarding it, which sends a visitor who chose Portuguese back to detection, and rewriting it to the match, which would lose the choice if the application adds `pt-PT` back.
+
 ### One data attribute per translated attribute
 
 `data-i18n-<attribute>` is used rather than a single list attribute, such as `data-i18n-attrs="placeholder:search.hint"`, because it needs no parsing and a `MutationObserver` can watch exactly those names. Attributes are limited to text read by people or assistive technology, so a translation can never set a URL, a style, or an event handler.

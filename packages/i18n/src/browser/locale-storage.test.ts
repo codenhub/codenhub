@@ -279,6 +279,27 @@ describe("initializeBrowserI18n storage integration", () => {
     expect(i18n.locale).toBe("fr");
   });
 
+  it("matches a persisted locale the application no longer configures, keeping the stored value", async () => {
+    localStorage.setItem("i18n", JSON.stringify({ locale: "pt-PT" }));
+    setNavigatorLocales(["en-US"]);
+    const i18n = createManager();
+
+    await initializeBrowserI18n({ i18n });
+
+    expect(i18n.locale).toBe("pt-BR");
+    expect(localStorage.getItem("i18n")).toBe(JSON.stringify({ locale: "pt-PT" }));
+  });
+
+  it("falls back to navigator preferences when a persisted locale matches nothing", async () => {
+    localStorage.setItem("i18n", JSON.stringify({ locale: "de" }));
+    setNavigatorLocales(["fr-CA"]);
+    const i18n = createManager();
+
+    await initializeBrowserI18n({ i18n });
+
+    expect(i18n.locale).toBe("fr");
+  });
+
   it("does not persist a locale detected from navigator preferences", async () => {
     setNavigatorLocales(["en-US"]);
     const firstVisit = createManager();

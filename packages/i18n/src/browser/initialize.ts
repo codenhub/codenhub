@@ -80,7 +80,12 @@ const readPersistedLocale = <TLocale extends string>(i18n: I18n<TLocale>, storag
     }
 
     const storedLocale = JSON.parse(storedValue) as StoredLocale;
-    return typeof storedLocale?.locale === "string" ? i18n.resolveLocale(storedLocale.locale) : undefined;
+    if (typeof storedLocale?.locale !== "string") {
+      return undefined;
+    }
+    // A locale saved before the application renamed or dropped it, such as `pt-PT` once only `pt-BR` is configured,
+    // still names the visitor's language, so it is matched rather than discarded.
+    return i18n.resolveLocale(storedLocale.locale) ?? i18n.matchLocale([storedLocale.locale]);
   } catch (cause) {
     warn(i18n, "[I18n] Could not read persisted locale.", cause);
     return undefined;
