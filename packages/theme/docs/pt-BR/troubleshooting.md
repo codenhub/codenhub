@@ -2,7 +2,7 @@
 title: Solução de problemas
 description: Sintomas, como confirmar a causa de cada um e como corrigi-los.
 order: 7
-source: edffe4600f5dbd39e3ada2c2c739eda2a0f523c8
+source: d8cb7e198162be48eb6fd956c960af106d16ae9d
 ---
 
 # Solução de problemas
@@ -33,7 +33,7 @@ O script de pré-pintura está faltando, bloqueado ou fora de sintonia com o seu
 
 ## O tema ignora o sistema operacional
 
-O usuário fez uma escolha, que sempre ganha. `theme.preference` mostra uma escolha salva; uma que o navegador não conseguiu salvar, porque o armazenamento está bloqueado ou cheio, continua ganhando enquanto a página está aberta, a não ser que outra aba mude o tema, embora `theme.preference` mostre então `null` ou uma escolha salva anterior. Uma escolha feita antes de `init()` é a exceção; veja [Quando o armazenamento falha](persistence-and-sync.md#quando-o-armazenamento-falha). Chame `theme.clearPreference()`, a partir de uma opção "Automático" ou "Sistema" na sua UI, para voltar a seguir o sistema operacional.
+O usuário fez uma escolha, que sempre ganha. `theme.preference` mostra uma escolha salva; uma que o navegador não conseguiu salvar, porque o armazenamento está bloqueado ou cheio, continua ganhando enquanto a página está aberta, a não ser que outra aba mude o tema, embora `theme.preference` mostre então `null` ou uma escolha salva anterior. Uma escolha feita antes de `init()` é a exceção; veja [Quando o armazenamento falha](persistence-and-sync.md#quando-o-armazenamento-falha). Chame `theme.clearPreference()`, a partir de uma opção "Automático" ou "Sistema" na sua UI, para voltar a seguir o sistema operacional. Se o navegador se recusar a apagar a escolha salva, o console mostra um erro `[theme]`, o tema do sistema é aplicado uma vez e as mudanças do sistema operacional continuam ignoradas enquanto a escolha continuar salva.
 
 ## `createTheme()` lança um erro
 
