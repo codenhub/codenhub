@@ -1,6 +1,6 @@
 ---
 status: APPROVED
-last_updated: 2026-10-17
+last_updated: 2026-11-16
 scope: README files for workspace packages.
 ---
 
@@ -31,7 +31,7 @@ Public package README files MUST follow this order unless a section is omitted u
 5. Documentation: links to published guides and complete reference material.
 6. Requirements: runtime, framework, peer dependency, CSS, SSR, storage, DOM, or build-tool requirements when applicable.
 7. Notes: critical limitations, stability, compatibility, failure behavior, or non-goals when applicable.
-8. License: package license and required third-party notices when applicable.
+8. License: package license, linked to the package's `LICENSE` file when it ships one, and required third-party notices when applicable.
 
 Use these heading names when practical. Small wording changes are allowed when they improve clarity, but section purpose MUST remain recognizable.
 

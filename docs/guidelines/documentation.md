@@ -1,6 +1,6 @@
 ---
 status: IMPLEMENTED
-last_updated: 2026-11-14
+last_updated: 2026-11-16
 scope: Durable repository-level documentation under root `docs/`.
 ---
 
@@ -76,7 +76,11 @@ Delete a document once it no longer describes current or intended direction, in 
 
 A document that settles a choice MUST say why. Where real alternatives existed, it SHOULD name the ones it rejected and, briefly, why each lost. A decision recorded without its reason can only be obeyed or overruled, not judged, and the next reader reopens it.
 
-A change that reverses a recorded decision MUST name what the decision did not weigh: a concrete case it gets wrong, a measurement, or a constraint that has changed since. Preferring another option is not enough; without new evidence, the recorded decision stands. The reversing change records the old choice among the rejected alternatives, with the evidence that reversed it, so the decision is not reopened on arguments already heard.
+Record the reason, not the history behind it. A document states what is true now: "Do X", "Don't do Y", "Do X when Y", and the reason X is right. It does not tell how the decision came about, what was measured on which date, how many packages did something when the rule was written, or what an earlier version of the document said. That evidence belongs in the commit and the pull request that make the change, where Git keeps it with the date it held. A count goes stale the day after it is written, and a story of how a rule arose makes the reader dig the rule out of it.
+
+A change that reverses a recorded decision MUST name what the decision did not weigh: a concrete case it gets wrong, a measurement, or a constraint that has changed since. Preferring another option is not enough; without new evidence, the recorded decision stands. The evidence goes in the reversing change's pull request. The document records the old choice among the rejected alternatives, with the reason it lost, so the decision is not reopened on arguments already heard.
+
+Two kinds of document record history by design and are outside this rule: a changelog, which describes a release, and a trap in a scoped `AGENTS.md`, which names the versions and evidence it held under so it can be checked again.
 
 This applies to every document that uses this status model, wherever it lives in the repository.
 

@@ -34,7 +34,10 @@ Public package `package.json` files MUST include:
 - `codenhub.label` and `codenhub.status`: package identity as defined by `docs/specs/packages-metadata.md`, which also defines the optional presentation fields beside them.
 - `codenhub.docs`: public documentation opt-in as defined by `docs/specs/packages-documentation.md`.
 
-Public package metadata SHOULD include `description`, `license`, and repository links when package publishing is ready.
+Public package metadata SHOULD include `description`, `license`, `repository`, `homepage`, and `keywords` when package publishing is ready:
+
+- `homepage` is the package's page in the package list, `https://codenhub.dev/packages/<slug>/`, for a package that is `listed` (`docs/specs/packages-metadata.md`), and its directory on GitHub for one that is not. The npm page links it as the package's home, and the package list is where a reader finds the documentation, the demo, and the size; the GitHub directory only holds the source.
+- `keywords` are the terms someone would type into npm search to find the package, such as `i18n`, `pluralization`, and `localization` for `@codenhub/i18n`. Without them, npm search falls back to the name and description, which is how a package nobody can find stays unused.
 
 Public packages SHOULD also ship a `LICENSE` file at the package root, carrying the terms the `license` field names. The field states the terms; the file is what a consumer receives, and npm packs it whether or not `files` lists it. The repository root ships the same file for the repository itself.
 
@@ -260,6 +263,43 @@ The same holds for planned features. Every release is an attempt at 1.0, so a fe
 Packages are also encouraged to track release history following `docs/specs/packages-changelog.md`, which requires a changelog once the documentation site keeps an earlier release of the package; it does not replace the README and `docs/` updates required above. A package that has one MUST keep it in step with its version, which `hub check` enforces.
 
 `hub release --cut=<version|major|minor|patch>` raises the version and scaffolds that entry in one step, and prints the sequence that follows. It writes only; committing and tagging stay with a person, for the reason "Who publishes" gives above.
+
+## Release readiness
+
+A release has to meet rules spread across this spec and the metadata, README, documentation, translation, and changelog specs. `hub check` enforces the ones a program can test. The others hold only if the person releasing remembers them, so this section lists them in one place, and "is this ready?" is answered by going through a list rather than from memory. It defines no rule. Each item names the document that owns its rule, and a change to a rule is made there, not here. The pull request that cuts a release goes through the list, and the pull request description says which items do not apply and why.
+
+### Every release
+
+"Versioning" makes every release an attempt at 1.0, so every release meets the same bar, whatever its version. There is no lighter bar before 1.0.
+
+Checked by tools:
+
+- `pnpm hub release <package>` passes: `pnpm verify`, including `hub check`, and the version, worktree, and tarball preconditions under "Publishing".
+- No `hub check` warning remains that this release could fix. A warning that has to stay is waived in `docs/specs/packages-exceptions.md`, with its reason.
+
+Checked by review:
+
+- **Manifest.** `description`, `license`, `repository`, `homepage`, and `keywords` are set, as "Package metadata" describes. `engines.node` follows "Node.js support", which also means that a browser-only package declares none.
+- **Status.** `codenhub.status` is accurate (`docs/specs/packages-metadata.md`), and an experimental notice names what has not been proven yet (`docs/specs/packages-readme.md`), not a version by which it will change.
+- **README.** It follows the required structure in `docs/specs/packages-readme.md`, its `Requirements` section states the Node.js floor when there is one, and its `License` section links the package's `LICENSE` file.
+- **Public surface.** Every export is meant for consumers, as "Public API discipline" in `docs/specs/packages-documentation.md` requires.
+- **Public docs.** They are complete and read as a path, under "Completeness" and "Reading path" in `docs/specs/packages-documentation.md`, and they have the playful voice its "Tone" section asks for. A page that leaves the voice out does so for a reason, not by default. Once people use the package, which can happen while it is still `experimental`, the docs are finished writing, not a draft to improve later: they are what those people learn the package from.
+- **Translations.** Each translation the package has is current, with no `translation/stale` warning. Once people use the package, its README and every public document are translated into every supported locale (`docs/specs/packages-translations.md`).
+- **Scope.** Nothing known to need changing is left for a later version, and each roadmap item either ships in this release or names what it waits on, as "Versioning" requires.
+- **Record.** The version was cut with `hub release --cut`, so the changelog entry, when the package keeps a changelog, and `size.json` describe this release.
+
+### Leaving experimental
+
+A package changes `codenhub.status` from `experimental` to `active` once what its experimental notice named has been proven. A 1.0 release is `active`: the major version promises a stable surface, and `experimental` says that part of it is not.
+
+That release meets the bar above, and also:
+
+- **Proven in use.** Each part the experimental notice named has been used by a real consumer, such as an app in `apps/` or another package, and the pull request links where.
+- **Notice removed.** The README's experimental notice is removed in the same change as the status, which the `readme` rule enforces.
+- **Translated.** The README and every public document are translated into every supported locale. Whether people use a package is a judgment; this is the point where the translation requirement is checked for certain, not the point where it starts.
+- **Roadmap settled.** No roadmap item is still deferred for a reason that no longer holds. A consumer adopting 1.0 should get what the roadmap promised them, or know what it waits on.
+
+Rejected: a list that restates each rule in short. It would be easier to read, but it would drift from the specs it summarizes, and a short version of a rule is not the rule: "set `engines.node`" would lead a browser-only package to declare a floor that "Node.js support" forbids. Rejected: a bar for 1.0 alone. It would let a 0.x release skip the bar, which is the deferral "Versioning" rejects.
 
 ## Documentation relationship
 

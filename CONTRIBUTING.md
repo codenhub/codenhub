@@ -197,7 +197,7 @@ A pull request that builds on another unmerged one targets that one's branch and
 
 Releasing is a maintainer action, and it is separate from merging. Merging changes `main`; a release puts a version where people install or reach it, and a published version can be superseded but rarely taken back.
 
-Bump the version and record what users need to know in an ordinary pull request first; the release itself names a commit already on `main`.
+Bump the version and record what users need to know in an ordinary pull request first; the release itself names a commit already on `main`. That pull request goes through the "Release readiness" list in [`docs/specs/packages-lifecycle.md`](docs/specs/packages-lifecycle.md#release-readiness).
 
 A release publishes one package to npm, where a version can be deprecated but never replaced. Check the package is ready, then push the tag that authorizes the release:
 
