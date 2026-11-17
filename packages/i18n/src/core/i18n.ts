@@ -11,6 +11,7 @@ import {
   getNumberFormat,
   intlLocale,
   isPlainMessage,
+  MAX_FILLED_ARGUMENTS,
   MessageSyntaxError,
   type MessageValues,
   parseCachedMessage,
@@ -59,11 +60,17 @@ interface InterpolateOptions {
 }
 
 /** Fills only `{name}` placeholders, as a message that is not valid ICU syntax is shown. */
-const interpolate = ({ text, params, locale, timeZone }: InterpolateOptions): string =>
-  text.replace(PLACEHOLDER_PATTERN, (placeholder, name: string) => {
+const interpolate = ({ text, params, locale, timeZone }: InterpolateOptions): string => {
+  let filledArguments = 0;
+  return text.replace(PLACEHOLDER_PATTERN, (placeholder, name: string) => {
+    if (filledArguments >= MAX_FILLED_ARGUMENTS) {
+      return placeholder;
+    }
+    filledArguments += 1;
     const value: unknown = Object.hasOwn(params, name) ? params[name] : undefined;
     return formatPlainValue(value, locale, timeZone) ?? placeholder;
   });
+};
 
 class CoreCustomEvent<TDetail> extends Event implements CustomEvent<TDetail> {
   private eventDetail: TDetail;

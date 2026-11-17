@@ -228,6 +228,25 @@ describe("ICU messages", () => {
     }
   });
 
+  it("should fill at most 100 arguments in one call, leaving the rest as written", async () => {
+    const i18n = createI18n({
+      defaultLocale: "en",
+      locales: ["en"],
+      loadLocale: () => ({
+        repeated: "{a}".repeat(101),
+        nested: `${"{a}".repeat(99)}{n, plural, other {{a}{a}}}`,
+        malformed: `${"{a}".repeat(101)} }`,
+      }),
+      isSilent: true,
+    });
+    await i18n.init();
+
+    expect(i18n.t("repeated", { a: "v" })).toBe(`${"v".repeat(100)}{a}`);
+    // The plural is the 100th argument, so it picks its form, and the two inside it stay as written.
+    expect(i18n.t("nested", { a: "v", n: 1 })).toBe(`${"v".repeat(99)}{a}{a}`);
+    expect(i18n.t("malformed", { a: "v" })).toBe(`${"v".repeat(100)}{a} }`);
+  });
+
   it("should not warn for a malformed message when silent", async () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
     try {

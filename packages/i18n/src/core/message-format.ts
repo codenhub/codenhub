@@ -558,13 +558,23 @@ export const formatPlainValue = (value: unknown, locale: string, timeZone: strin
     : undefined;
 };
 
-const formatNodes = (
-  nodes: Message,
-  values: MessageValues,
-  locale: string,
-  timeZone: string | undefined,
-  pound: number | undefined,
-): string => {
+/**
+ * How many arguments one call fills. Past it, an argument stays as written, so a message that repeats `{a}` can't turn
+ * one value into hundreds of megabytes.
+ *
+ * @internal
+ */
+export const MAX_FILLED_ARGUMENTS = 100;
+
+interface FormatState {
+  readonly values: MessageValues;
+  readonly locale: string;
+  readonly timeZone: string | undefined;
+  filledArguments: number;
+}
+
+const formatNodes = (nodes: Message, state: FormatState, pound: number | undefined): string => {
+  const { values, locale, timeZone } = state;
   let result = "";
 
   for (const node of nodes) {
@@ -577,6 +587,11 @@ const formatNodes = (
       continue;
     }
 
+    if (state.filledArguments >= MAX_FILLED_ARGUMENTS) {
+      result += node.source;
+      continue;
+    }
+    state.filledArguments += 1;
     const value: unknown = Object.hasOwn(values, node.name) ? values[node.name] : undefined;
 
     switch (node.kind) {
@@ -615,7 +630,7 @@ const formatNodes = (
         const category =
           intlLocale(locale) === "und" ? "other" : getPluralRules(locale, node.isOrdinal).select(value - node.offset);
         const option = exact ?? node.options.get(category) ?? node.options.get("other")!;
-        result += formatNodes(option, values, locale, timeZone, value - node.offset);
+        result += formatNodes(option, state, value - node.offset);
         break;
       }
       case "select": {
@@ -624,7 +639,7 @@ const formatNodes = (
           break;
         }
         const option = node.options.get(String(value)) ?? node.options.get("other")!;
-        result += formatNodes(option, values, locale, timeZone, pound);
+        result += formatNodes(option, state, pound);
         break;
       }
     }
@@ -644,4 +659,4 @@ export const formatMessage = (
   values: MessageValues,
   locale: string,
   timeZone: string | undefined,
-): string => formatNodes(message, values, locale, timeZone, undefined);
+): string => formatNodes(message, { values, locale, timeZone, filledArguments: 0 }, undefined);
