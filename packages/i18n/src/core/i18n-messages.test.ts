@@ -418,4 +418,22 @@ describe("parseCachedMessage", () => {
 
     expect(parseCachedMessage(hot)).toBe(parsed);
   });
+
+  it("should bound the cache by characters as well as by messages", () => {
+    const first = `{first} ${"x".repeat(99_990)}`;
+    const parsed = parseCachedMessage(first);
+
+    // 100 messages of 100,000 characters are far below the message count limit.
+    for (let index = 0; index < 100; index += 1) {
+      parseCachedMessage(`{a} ${index} ${"y".repeat(99_980)}`);
+    }
+
+    expect(parseCachedMessage(first)).not.toBe(parsed);
+    expect(parseCachedMessage(first)).toEqual(parsed);
+  });
+
+  it("should parse quoted text with doubled apostrophes into the same text", () => {
+    expect(parseMessage("a '{b ''c'' d}' e")).toEqual([{ kind: "text", text: "a {b 'c' d} e" }]);
+    expect(parseMessage("it''s '{open")).toEqual([{ kind: "text", text: "it's {open" }]);
+  });
 });
