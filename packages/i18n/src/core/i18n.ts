@@ -1,3 +1,4 @@
+import { quoteKey } from "../locale/dictionary";
 import { createFallbackChains } from "../locale/fallback";
 import { createLocaleLoader, type LocaleLoader } from "../locale/loader";
 import { matchConfiguredLocale } from "../locale/matching";
@@ -282,9 +283,9 @@ class I18nInstance<TLocale extends string, TKey extends string = string>
     }
     this.warnedMessages.add(warningKey);
     console.warn(
-      `[I18n] Invalid message for "${key.trim()}" in locale "${found.locale}": ${error.message}; only {name} ` +
+      `[I18n] Invalid message for ${quoteKey(key.trim())} in locale "${found.locale}": ${error.message}; only {name} ` +
         "placeholders are filled. " +
-        JSON.stringify(found.text.slice(0, 200)),
+        quoteKey(found.text.slice(0, 200)),
     );
   }
 
@@ -465,7 +466,7 @@ class I18nInstance<TLocale extends string, TKey extends string = string>
         }
       }
 
-      console.warn(`[I18n] Missing key "${key}" in locale "${this.currentLocale}".`);
+      console.warn(`[I18n] Missing key ${quoteKey(key)} in locale "${this.currentLocale}".`);
     }
   }
 

@@ -228,6 +228,40 @@ describe("ICU messages", () => {
     }
   });
 
+  it("should escape line separators in a malformed message's warning, so it can't forge a log line", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      const i18n = createI18n({
+        defaultLocale: "en",
+        locales: ["en"],
+        loadLocale: () => ({ forged: "bad {x\u2028[I18n] forged\u0085line" }),
+      });
+      await i18n.init();
+
+      i18n.t("forged");
+      const warning = String(warn.mock.calls[0]?.[0]);
+      expect(warning).not.toMatch(/[\u0085\u2028]/);
+      expect(warning).toContain(String.raw`\u2028[I18n] forged\u0085line`);
+    } finally {
+      warn.mockRestore();
+    }
+  });
+
+  it("should escape line separators in a missing key's warning, so a key from a URL can't forge a log line", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      const i18n = createI18n({ defaultLocale: "en", locales: ["en"], loadLocale: (): unknown => ({ a: "x" }) });
+      await i18n.init();
+
+      i18n.t("errors.x\u2028[I18n] fake\u0085y");
+      const warning = String(warn.mock.calls[0]?.[0]);
+      expect(warning).not.toMatch(/[\u0085\u2028]/);
+      expect(warning).toBe(String.raw`[I18n] Missing key "errors.x\u2028[I18n] fake\u0085y" in locale "en".`);
+    } finally {
+      warn.mockRestore();
+    }
+  });
+
   it("should fill at most 100 arguments in one call, leaving the rest as written", async () => {
     const i18n = createI18n({
       defaultLocale: "en",
