@@ -228,6 +228,59 @@ describe("ICU messages", () => {
     }
   });
 
+  it("should escape line separators in a malformed message's warning, so it can't forge a log line", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      const i18n = createI18n({
+        defaultLocale: "en",
+        locales: ["en"],
+        loadLocale: () => ({ forged: "bad {x\u2028[I18n] forged\u0085line" }),
+      });
+      await i18n.init();
+
+      i18n.t("forged");
+      const warning = String(warn.mock.calls[0]?.[0]);
+      expect(warning).not.toMatch(/[\u0085\u2028]/);
+      expect(warning).toContain(String.raw`\u2028[I18n] forged\u0085line`);
+    } finally {
+      warn.mockRestore();
+    }
+  });
+
+  it("should escape line separators in a missing key's warning, so a key from a URL can't forge a log line", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      const i18n = createI18n({ defaultLocale: "en", locales: ["en"], loadLocale: (): unknown => ({ a: "x" }) });
+      await i18n.init();
+
+      i18n.t("errors.x\u2028[I18n] fake\u0085y");
+      const warning = String(warn.mock.calls[0]?.[0]);
+      expect(warning).not.toMatch(/[\u0085\u2028]/);
+      expect(warning).toBe(String.raw`[I18n] Missing key "errors.x\u2028[I18n] fake\u0085y" in locale "en".`);
+    } finally {
+      warn.mockRestore();
+    }
+  });
+
+  it("should fill at most 100 arguments in one call, leaving the rest as written", async () => {
+    const i18n = createI18n({
+      defaultLocale: "en",
+      locales: ["en"],
+      loadLocale: () => ({
+        repeated: "{a}".repeat(101),
+        nested: `${"{a}".repeat(99)}{n, plural, other {{a}{a}}}`,
+        malformed: `${"{a}".repeat(101)} }`,
+      }),
+      isSilent: true,
+    });
+    await i18n.init();
+
+    expect(i18n.t("repeated", { a: "v" })).toBe(`${"v".repeat(100)}{a}`);
+    // The plural is the 100th argument, so it picks its form, and the two inside it stay as written.
+    expect(i18n.t("nested", { a: "v", n: 1 })).toBe(`${"v".repeat(99)}{a}{a}`);
+    expect(i18n.t("malformed", { a: "v" })).toBe(`${"v".repeat(100)}{a} }`);
+  });
+
   it("should not warn for a malformed message when silent", async () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
     try {
@@ -417,5 +470,23 @@ describe("parseCachedMessage", () => {
     }
 
     expect(parseCachedMessage(hot)).toBe(parsed);
+  });
+
+  it("should bound the cache by characters as well as by messages", () => {
+    const first = `{first} ${"x".repeat(99_990)}`;
+    const parsed = parseCachedMessage(first);
+
+    // 100 messages of 100,000 characters are far below the message count limit.
+    for (let index = 0; index < 100; index += 1) {
+      parseCachedMessage(`{a} ${index} ${"y".repeat(99_980)}`);
+    }
+
+    expect(parseCachedMessage(first)).not.toBe(parsed);
+    expect(parseCachedMessage(first)).toEqual(parsed);
+  });
+
+  it("should parse quoted text with doubled apostrophes into the same text", () => {
+    expect(parseMessage("a '{b ''c'' d}' e")).toEqual([{ kind: "text", text: "a {b 'c' d} e" }]);
+    expect(parseMessage("it''s '{open")).toEqual([{ kind: "text", text: "it's {open" }]);
   });
 });

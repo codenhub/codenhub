@@ -31,7 +31,8 @@ const getLanguageAndScript = (maximizedLocale: string): string => maximizedLocal
  * locale: exact, then the longest whole-subtag prefix with the same likely script, then likely subtags, then the same
  * language and likely script. A locale whose likely script differs never matches, so `zh-TW` tries the next preference
  * rather than Simplified `zh`. A locale `Intl.Locale` rejects matches by language subtag, and by the script it names
- * when it names one. `no` and `nb` are compared as one language, Norwegian Bokmål.
+ * when it names one. `no` and `nb` are compared as one language, Norwegian Bokmål. A preference whose language is `und`
+ * names no language and is skipped unless a configured locale is that exact tag.
  * Among configured locales of the same language and script, the first in `locales` wins when none matches exactly or by
  * likely region, so `es-MX` matches `es-419` when it is listed before `es-ES`, while `en` matches `en-US`, its likely
  * region, wherever it is listed.
@@ -60,7 +61,8 @@ export function matchConfiguredLocale<TLocale extends string>(
 
     const normalizedPreference = preference.trim().toLowerCase();
 
-    if (normalizedPreference.length === 0) {
+    // `und` names no language, yet likely subtags turn it into `en-Latn-US`, so it is no preference at all.
+    if (normalizedPreference.length === 0 || normalizedPreference.split("-")[0] === "und") {
       continue;
     }
 

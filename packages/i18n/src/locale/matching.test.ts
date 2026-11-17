@@ -54,4 +54,8 @@ describe("matchConfiguredLocale", () => {
   it("tries the next preference rather than a locale in another script", () => {
     expect(matchConfiguredLocale(["en", "zh"], ["zh-TW", "en"])).toBe("en");
   });
+
+  it.each(["und", "UND", "und-US", "und-Latn"])("skips %s, which names no language, for the next preference", (tag) => {
+    expect(matchConfiguredLocale(["en", "fr"], [tag, "fr"])).toBe("fr");
+  });
 });

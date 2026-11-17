@@ -1,6 +1,8 @@
 # @codenhub/i18n
 
-Translate your app's text with typed keys, ICU messages, plurals, and fallback languages, in the browser, on a server, or at build time.
+Translate your app's text with typed keys, ICU messages, plurals, and fallback languages, in the browser, on a server, or at build time. You bring the words; the package makes sure each visitor gets theirs.
+
+The example below is the start of a small online tea shop, which [the documentation](docs/index.md) grows page by page: a home page, a cart that counts its items, an about page, and a language picker.
 
 ## Installation
 

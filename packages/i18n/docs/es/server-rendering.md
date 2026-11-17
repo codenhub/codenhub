@@ -1,0 +1,180 @@
+---
+title: Renderiza en un servidor o en tiempo de build
+description: Un gestor por solicitud, cómo elegir un locale a partir de Accept-Language, builds de sitios estáticos y logs de producción silenciosos.
+order: 3
+source: c48df89e4dd7f1424ecac02c21a94249cc27c2c1
+---
+
+# Renderiza en un servidor o en tiempo de build
+
+Un navegador tiene un solo visitante, así que un solo gestor es lo correcto. Un servidor tiene muchos visitantes a la vez, en distintos idiomas, y un gestor habla un idioma por vez. Por lo tanto: **un gestor por cada página que renderizas**. El build de un sitio estático renderiza todos los idiomas en una sola ejecución y sigue la misma regla.
+
+Esta página muestra esa estructura con los diccionarios `en` y `pt` de la tienda de té de la [visión general](index.md#recorrido). Después elige el idioma de cada visitante, pone bien las fechas de sus pedidos, mantiene legibles los logs y genera toda la tienda como páginas estáticas.
+
+## Un gestor por solicitud
+
+Un gestor tiene un solo idioma actual. Si dos solicitudes compartieran uno, una solicitud en portugués que llama a `setLocale("pt")` cambiaría el idioma de una página en inglés que todavía se está renderizando, y el visitante de habla inglesa recibiría una página que cambia de idioma a mitad de camino. En desarrollo funciona perfecto, porque ahí el único visitante eres tú, y justamente por eso llega a producción. Así que crea el gestor dentro de la solicitud:
+
+```ts
+// src/i18n.ts
+import { createI18n } from "@codenhub/i18n";
+import { dictionaries } from "./locales";
+
+export const createAppI18n = () =>
+  createI18n({
+    locales: ["en", "pt"] as const,
+    defaultLocale: "en",
+    loadLocale: (locale) => dictionaries[locale],
+  });
+```
+
+```ts
+// src/render.ts
+import { createAppI18n } from "./i18n";
+
+export async function renderPage(request: Request) {
+  const i18n = createAppI18n();
+  await i18n.init({ locale: pickLocale(i18n, request) });
+  const { t } = i18n;
+
+  return `<!doctype html>
+<html lang="${i18n.locale}" dir="${i18n.direction}">
+  <title>${escapeHtml(t("home.title"))}</title>
+</html>`;
+}
+```
+
+Crear un gestor es barato, y el trabajo que no lo es se comparte. Cuando tu loader devuelve el mismo objeto en cada llamada, como hace un módulo importado, todos los gestores reutilizan la única copia comprobada de ese diccionario en lugar de comprobarlo otra vez. Un loader que lee y parsea un archivo en cada llamada pierde eso, así que lee cada archivo una sola vez y guarda el resultado.
+
+`i18n.direction` es `"rtl"` para un locale de derecha a izquierda, como el árabe, y `"ltr"` en los demás casos; [Idiomas de derecha a izquierda](index.md#idiomas-de-derecha-a-izquierda) explica cómo se decide y cómo cambiarlo. Ponlo en `<html dir>`, como arriba, y el navegador maqueta la página en el sentido correcto desde el primer byte.
+
+Pasa el gestor, o `t`, a lo que sea que renderice la página, en lugar de importar uno compartido.
+
+`t()` devuelve texto plano. Escápalo antes de ponerlo en HTML, como harías con cualquier otro texto, o deja que lo haga tu motor de plantillas.
+
+## Elige un locale a partir de `Accept-Language`
+
+Los navegadores envían los idiomas del visitante en el encabezado `Accept-Language`, como `pt-BR,pt;q=0.9,en;q=0.8`. Conviértelo en una lista, del más preferido al menos, y deja que `matchLocale()` elija el mejor locale que soportas:
+
+```ts
+import type { I18n } from "@codenhub/i18n";
+
+// Los navegadores reales envían unos pocos idiomas, y un encabezado puede enumerar miles.
+const MAX_PREFERENCES = 10;
+
+function pickLocale<TLocale extends string>(i18n: I18n<TLocale>, request: Request): TLocale {
+  const preferences = (request.headers.get("accept-language") ?? "")
+    .split(",")
+    .map((entry) => {
+      const [tag = "", ...parameters] = entry.split(";");
+      const weight = parameters.map((parameter) => parameter.trim()).find((parameter) => /^q=/i.test(parameter));
+      // Un peso va de 0 a 1 con hasta tres decimales; cualquier otra cosa, como `q=0x1`, está mal formada.
+      const quality = weight === undefined ? 1 : /^q=(0(\.\d{0,3})?|1(\.0{0,3})?)$/i.test(weight) ? Number(weight.slice(2)) : 0;
+      return { tag: tag.trim(), quality };
+    })
+    // Descarta los idiomas rechazados (q=0) y los pesos mal formados.
+    .filter(({ quality }) => quality > 0)
+    .sort((left, right) => right.quality - left.quality)
+    .slice(0, MAX_PREFERENCES)
+    .map(({ tag }) => tag);
+
+  return i18n.matchLocale(preferences) ?? i18n.defaultLocale;
+}
+```
+
+Un visitante para el que no coincide ninguno de sus idiomas, incluido uno que rechaza tu idioma por defecto con `en;q=0`, igual recibe el locale por defecto, porque la página tiene que estar en algún idioma. Este helper no implementa el resto de `Accept-Language`, como `*`; si lo necesitas, usa el parser de tu framework de servidor y pasa su resultado a `matchLocale()`.
+
+`matchLocale()` recibe una lista en lugar del encabezado porque parsear el encabezado, y limitar su tamaño, le corresponde a tu servidor. Mantén el límite: `matchLocale()` prueba las preferencias en orden hasta que una coincide, así que, sin él, una solicitud cuyo encabezado de 16 KB enumera miles de idiomas que no soportas ocuparía el event loop de tu servidor durante decenas de milisegundos.
+
+Compara igual que el binding del navegador, así que un visitante recibe el mismo idioma desde el servidor que desde el navegador: `pt-BR` recibe tu `pt`, y `zh-TW` recibe tu `zh-Hant`. Las etiquetas mal formadas se omiten, y `undefined` significa que nada coincidió. [Convierte entradas externas en un locale](index.md#convierte-entradas-externas-en-un-locale) tiene el orden completo de comparación, incluido cuál de dos locales regionales gana, y `resolveLocale()` para un locale que viene de una cookie o de un query string.
+
+Cuando la URL lleva el idioma, como en [un sitio localizado](localized-urls.md), léelo de la URL, y usa `Accept-Language` solo para elegir adónde redirigir a un visitante que llega a `/`. Un sitio estático no tiene un servidor que vea el encabezado; consulta [Detecta el idioma en un sitio estático](localized-urls.md#detecta-el-idioma-en-un-sitio-estático).
+
+## Muestra las fechas en la zona horaria del lector
+
+Un servidor formatea las fechas en su propia zona horaria, que rara vez es la del lector. El "Shipped on {date, date, long}" de la tienda puede entonces mostrar un día distinto al del calendario del lector, y cambiar cuando el navegador toma el control. Un cliente que ve cambiar su fecha de envío mientras carga la página suele escribirle a soporte por eso.
+
+Dale al gestor de cada solicitud la zona del lector, como una que tu app guarda por cuenta o que el navegador informa en una cookie:
+
+```ts
+export const createAppI18n = (timeZone?: string) =>
+  createI18n({
+    locales: ["en", "pt"] as const,
+    defaultLocale: "en",
+    loadLocale: (locale) => dictionaries[locale],
+    timeZone,
+  });
+```
+
+`Intl.DateTimeFormat().resolvedOptions().timeZone` lee la zona en el navegador. Una zona que `Intl` no conoce lanza un `TypeError`, así que comprueba un valor que viene de una cookie antes de usarlo, o recurre a una zona fija como `"UTC"`.
+
+## Mantén útiles los logs de producción
+
+Una clave que falta registra una advertencia una vez por cada locale y clave en cada gestor. Con un gestor por solicitud, eso es una vez por solicitud, así que una sola clave que falta en la página de inicio se convierte en una línea de log por cada visitante. En un buen día de ventas, son muchísimas líneas de log por una sola palabra.
+
+En producción, manda las claves faltantes a tu logger, donde puedes contarlas en lugar de pasarlas de largo, o desactiva las advertencias:
+
+```ts
+createI18n({
+  // ...
+  onMissingKey(key, locale) {
+    logger.warn({ key, locale }, "missing translation");
+  },
+});
+```
+
+`onMissingKey` reemplaza la advertencia y se ejecuta en cada clave faltante. `isSilent: true` desactiva solo las advertencias, incluida la de un mensaje con sintaxis inválida. Los errores, como una carga fallida, siguen lanzando excepciones.
+
+En Node.js, una excepción lanzada desde una función que se pasó a `subscribe()`, o desde un listener de `ready` o de `locale-change`, hace caer el proceso, como con cualquier `EventTarget`. Los servidores rara vez los necesitan, pero si los usas, envuelve su cuerpo en un `try`/`catch` para que no puedan lanzar excepciones.
+
+## Genera un sitio estático
+
+Un build estático renderiza de antemano cada página en cada idioma. Sigue la misma regla: un gestor por página. Enumera tus páginas localizadas con el [routing por locale](localized-urls.md#genera-cada-página-localizada) y después renderiza cada una:
+
+```ts
+import { createLocaleRouting } from "@codenhub/i18n/routing";
+import { createAppI18n } from "./i18n";
+
+const routing = createLocaleRouting({
+  locales: ["en", "pt"] as const,
+  defaultLocale: "en",
+  localePrefix: "except-default",
+});
+
+// Tus páginas, indexadas por su ruta canónica: la ruta sin locale, con las palabras sobre las que enruta tu código.
+const pages = { "/": renderHome, "/about": renderAbout };
+
+const builds = Object.entries(pages).flatMap(([page, render]) => routing.localizeAll(page).map(({ locale, pathname }) => ({ locale, pathname, render })));
+// [{ locale: "en", pathname: "/", render: renderHome }, { locale: "pt", pathname: "/pt", render: renderHome }, ...]
+
+await Promise.all(
+  builds.map(async ({ locale, pathname, render }) => {
+    const i18n = createAppI18n();
+    await i18n.init({ locale });
+    await writePage(pathname, render(i18n.t));
+  }),
+);
+```
+
+`pathname` es una ruta de URL, codificada con porcentajes donde la tabla tiene palabras como `/serviços`. Los hosts decodifican la solicitud antes de buscar su archivo, así que nombra el archivo según `decodeURI(pathname)`: `serviços` para `/servi%C3%A7os`, no la forma codificada, que ninguna solicitud encuentra. Dónde va ese archivo, como `serviços.html` o `serviços/index.html`, depende de tu host y de tu configuración de `trailingSlash`.
+
+Un diccionario que no carga o no pasa la comprobación hace que `init()` se rechace, así que el build falla en lugar de publicar páginas sin texto.
+
+Una clave que solo tiene tu idioma por defecto no hace fallar el build; se renderiza en el idioma por defecto. Para atrapar esos casos:
+
+- Agrega [el test de claves sin traducir](translations.md#encuentra-claves-sin-traducir).
+- Haz que `onMissingKey` lance una excepción durante el build para fallar con las claves que faltan en todos los idiomas.
+
+## Pasa el locale al navegador
+
+Cuando el navegador toma el control de una página renderizada en el servidor, tiene que arrancar en el idioma que usó el servidor, o el texto cambia mientras carga la página. Pasa ese locale explícitamente. Se impone al guardado y al detectado, y el binding lo guarda como la elección del visitante, como explica [Cómo se elige el locale](browser.md#cómo-se-elige-el-locale):
+
+```ts
+await initializeBrowserI18n({ i18n, locale: document.documentElement.lang as "en" | "pt" });
+```
+
+En un sitio localizado, léelo de la URL con `routing.parse()`, como muestra [URLs localizadas](localized-urls.md#lee-el-locale-en-el-cliente).
+
+## Siguiente
+
+Si el idioma de cada página vive en su URL, como pasa en la mayoría de los sitios renderizados en el servidor y estáticos, sigue con [URLs localizadas](localized-urls.md). Lee el locale de la ruta, construye enlaces a otros idiomas, traduce la página "acerca de" de la tienda a `/sobre` y enumera cada página que necesita un build estático.

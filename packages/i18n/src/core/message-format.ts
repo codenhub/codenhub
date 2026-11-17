@@ -109,11 +109,19 @@ class Parser {
     }
 
     const nodes: MessageNode[] = [];
-    let text = "";
+    // Text is gathered as slices and joined once: appending one character at a time leaves V8 a chain of string
+    // pieces that the cache keeps at about 30 bytes per character.
+    let parts: string[] = [];
+    let runStart = this.index;
+    const endRun = (): void => {
+      if (this.index > runStart) {
+        parts.push(this.message.slice(runStart, this.index));
+      }
+    };
     const flush = (): void => {
-      if (text.length > 0) {
-        nodes.push({ kind: "text", text });
-        text = "";
+      if (parts.length > 0) {
+        nodes.push({ kind: "text", text: parts.join("") });
+        parts = [];
       }
     };
 
@@ -121,22 +129,27 @@ class Parser {
       const character = this.peek()!;
 
       if (character === "'") {
-        text += this.readApostrophe(isInPlural);
+        endRun();
+        parts.push(this.readApostrophe(isInPlural));
       } else if (character === "{") {
+        endRun();
         flush();
         nodes.push(this.parseArgument(depth));
       } else if (character === "}") {
         break;
       } else if (character === "#" && isInPlural) {
+        endRun();
         flush();
         nodes.push({ kind: "pound" });
         this.index += 1;
       } else {
-        text += character;
         this.index += 1;
+        continue;
       }
+      runStart = this.index;
     }
 
+    endRun();
     flush();
     return nodes;
   }
@@ -155,22 +168,25 @@ class Parser {
     }
 
     this.index += 1;
-    let quoted = "";
+    const parts: string[] = [];
+    let runStart = this.index;
     while (this.index < this.message.length) {
       if (this.peek() === "'") {
+        parts.push(this.message.slice(runStart, this.index));
         if (this.peek(1) === "'") {
-          quoted += "'";
+          parts.push("'");
           this.index += 2;
+          runStart = this.index;
           continue;
         }
         this.index += 1;
-        return quoted;
+        return parts.join("");
       }
-      quoted += this.peek();
       this.index += 1;
     }
     // ICU quotes to the end of the message when the closing apostrophe is missing.
-    return quoted;
+    parts.push(this.message.slice(runStart));
+    return parts.join("");
   }
 
   private parseArgument(depth: number): MessageNode {
@@ -309,7 +325,11 @@ class Parser {
 export const parseMessage = (message: string): Message => new Parser(message).parse();
 
 const MAX_CACHED_MESSAGES = 10_000;
+// The cache is shared by every manager in the process, so a server that loads changing dictionaries, such as from a
+// CMS, must not keep them all. This is the default dictionary's maxTotalLength.
+const MAX_CACHED_CHARACTERS = 5_000_000;
 const parsedMessages = new Map<string, Message | MessageSyntaxError>();
+let cachedCharacters = 0;
 
 /**
  * Parses a message once, keeping the most recently used results, since dictionary texts repeat across lookups and
@@ -333,10 +353,15 @@ export const parseCachedMessage = (message: string): Message | MessageSyntaxErro
       }
       parsed = error;
     }
-    if (parsedMessages.size >= MAX_CACHED_MESSAGES) {
-      parsedMessages.delete(parsedMessages.keys().next().value!);
+    if (message.length <= MAX_CACHED_CHARACTERS) {
+      while (parsedMessages.size >= MAX_CACHED_MESSAGES || cachedCharacters + message.length > MAX_CACHED_CHARACTERS) {
+        const oldest = parsedMessages.keys().next().value!;
+        parsedMessages.delete(oldest);
+        cachedCharacters -= oldest.length;
+      }
+      parsedMessages.set(message, parsed);
+      cachedCharacters += message.length;
     }
-    parsedMessages.set(message, parsed);
   }
 
   return parsed;
@@ -533,13 +558,23 @@ export const formatPlainValue = (value: unknown, locale: string, timeZone: strin
     : undefined;
 };
 
-const formatNodes = (
-  nodes: Message,
-  values: MessageValues,
-  locale: string,
-  timeZone: string | undefined,
-  pound: number | undefined,
-): string => {
+/**
+ * How many arguments one call fills. Past it, an argument stays as written, so a message that repeats `{a}` can't turn
+ * one value into hundreds of megabytes.
+ *
+ * @internal
+ */
+export const MAX_FILLED_ARGUMENTS = 100;
+
+interface FormatState {
+  readonly values: MessageValues;
+  readonly locale: string;
+  readonly timeZone: string | undefined;
+  filledArguments: number;
+}
+
+const formatNodes = (nodes: Message, state: FormatState, pound: number | undefined): string => {
+  const { values, locale, timeZone } = state;
   let result = "";
 
   for (const node of nodes) {
@@ -552,6 +587,11 @@ const formatNodes = (
       continue;
     }
 
+    if (state.filledArguments >= MAX_FILLED_ARGUMENTS) {
+      result += node.source;
+      continue;
+    }
+    state.filledArguments += 1;
     const value: unknown = Object.hasOwn(values, node.name) ? values[node.name] : undefined;
 
     switch (node.kind) {
@@ -590,7 +630,7 @@ const formatNodes = (
         const category =
           intlLocale(locale) === "und" ? "other" : getPluralRules(locale, node.isOrdinal).select(value - node.offset);
         const option = exact ?? node.options.get(category) ?? node.options.get("other")!;
-        result += formatNodes(option, values, locale, timeZone, value - node.offset);
+        result += formatNodes(option, state, value - node.offset);
         break;
       }
       case "select": {
@@ -599,7 +639,7 @@ const formatNodes = (
           break;
         }
         const option = node.options.get(String(value)) ?? node.options.get("other")!;
-        result += formatNodes(option, values, locale, timeZone, pound);
+        result += formatNodes(option, state, pound);
         break;
       }
     }
@@ -619,4 +659,4 @@ export const formatMessage = (
   values: MessageValues,
   locale: string,
   timeZone: string | undefined,
-): string => formatNodes(message, values, locale, timeZone, undefined);
+): string => formatNodes(message, { values, locale, timeZone, filledArguments: 0 }, undefined);

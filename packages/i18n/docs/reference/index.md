@@ -313,7 +313,7 @@ Atomically loads and activates an explicit locale or the default locale.
 
 - `options` — Optional explicit locale selection.
 
-**Returns** — A promise that resolves after loading completes. Applied initialization emits `ready`; a stale successful request, superseded by a later `init()` or `setLocale()`, resolves without changing state or emitting an event. Failure leaves active state unchanged.
+**Returns** — A promise that resolves after loading completes. Applied initialization emits `ready`; a stale request, superseded by a later `init()` or `setLocale()`, resolves without changing state or emitting an event, even when its loading fails, since the later call decides the locale. Failure leaves active state unchanged.
 
 **Throws**
 
@@ -354,7 +354,7 @@ Each preference, in order, tries an exact case-insensitive match, then the longe
 
 **Parameters**
 
-- `preferences` — Untrusted locale tags, most preferred first; blank, malformed, and non-string entries are skipped.
+- `preferences` — Untrusted locale tags, most preferred first; blank, malformed, and non-string entries are skipped, and so is `und`, which names no language, unless a configured locale is that exact tag.
 
 **Returns** — The canonical locale for the first preference that matches, or undefined when none does.
 
@@ -401,7 +401,7 @@ Atomically changes the active locale after all required loads succeed.
 
 - `locale` — Supported locale to activate.
 
-**Returns** — A promise that resolves after loading completes. Applied changes emit `locale-change`; same-locale and stale successful requests resolve without changing state or emitting an event. Failure preserves active state.
+**Returns** — A promise that resolves after loading completes. Applied changes emit `locale-change`; same-locale requests and stale requests, superseded by a later call, resolve without changing state or emitting an event, a stale one even when its loading fails. Failure preserves active state.
 
 **Throws**
 
@@ -900,10 +900,6 @@ Not exported; declared in `src/core/message-params.ts`.
 ```ts
 type MessageValue = string | number | Date;
 ```
-
-Type-level reading of ICU messages, so `t()` can require the values a literal message uses. A message TypeScript sees only as `string`, such as one from a JSON import, or one these types can't read, accepts any values, as before.
-
-Each step handles one brace, apostrophe, name character, or space around a name or format. TypeScript stops a tail-recursive type after 1,000 steps with "Type instantiation is excessively deep" (TS2589), which a long message, such as one with 1,100 apostrophes, 600 arguments, or 1,100 spaces inside one argument, would reach, so a reading gives up after a step budget and the message accepts any values.
 
 Not exported; declared in `src/core/message-params.ts`.
 

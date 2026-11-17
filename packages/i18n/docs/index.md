@@ -5,18 +5,26 @@ description: What @codenhub/i18n does, the four ideas behind it, a five-minute w
 
 # Translate your app
 
-`@codenhub/i18n` turns keys such as `"home.title"` into text in the reader's language. You write your translations as plain objects or JSON files, one per language, and the package does the rest: it loads the right one, falls back to your main language when a translation is missing, fills in values like names and counts, writes numbers and dates the way the reader expects, and tells TypeScript which keys exist, so a typo fails to compile instead of reaching production.
+`@codenhub/i18n` turns keys such as `"home.title"` into text in the reader's language. You write your translations as plain objects or JSON files, one per language, and the package does the rest:
+
+- It loads the right one.
+- It falls back to your main language when a translation is missing.
+- It fills in values like names and counts.
+- It writes numbers and dates the way the reader expects.
+- It tells TypeScript which keys exist, so a typo fails to compile instead of reaching production.
 
 The core works the same in a browser, a Node.js server, a static site build, or a Web Worker. Two optional extras handle the jobs that differ by environment:
 
 - **`@codenhub/i18n/browser`** picks the visitor's language, remembers their choice, keeps the page's `lang` and `dir` attributes in step, and can translate HTML marked with `data-i18n`. Most of that needs a page, so in a Web Worker, which has none, it takes two extra options; see [In a Web Worker](browser.md#in-a-web-worker).
 - **`@codenhub/i18n/routing`** puts the language in the URL, as in `/pt/about`, and can translate the path itself, as in `/pt/sobre` or `/sobre`. It only reads and builds strings, so it works anywhere, a Worker included.
 
+These pages build one small app from start to finish: an online tea shop with a home page, a cart that counts its items, an about page, and a language picker. It starts in English and Portuguese. Other languages drop by when a page needs them: Brazilian Portuguese for regional variants, Arabic for right-to-left text, and Spanish once the URLs get translated. A shop collects languages the way a cart collects items: one at a time, and more than planned.
+
 ## Four ideas
 
 The whole package fits in four ideas. No fifth one is hiding in a footnote.
 
-**A locale** names a language, and sometimes a region: `en`, `pt`, `pt-BR`, `ar`. You list the locales your app supports, and pick one as the **default locale**: the language your app is written in first, which every other locale falls back to.
+**A locale** names a language, and sometimes a region: `en`, `pt`, `pt-BR`, `ar`. You list the locales your app supports, and pick one as the **default locale**: the language your app is written in first, which every other locale falls back to. The tea shop is written in English first, so its default locale is `en`.
 
 **A dictionary** holds every translation for one locale. Keys can be nested to keep related text together:
 
@@ -31,7 +39,7 @@ The whole package fits in four ideas. No fifth one is hiding in a footnote.
 
 Nested keys are joined with dots, so this dictionary has the keys `home.title` and `home.greeting`.
 
-**A loader** is a function you write that returns the dictionary for a locale. It can return an object you imported, read a file, or fetch JSON from your server. The package never decides where translations live; it calls your loader when it needs a locale, and keeps the result.
+**A loader** is a function you write that returns the dictionary for a locale. It can return an object you imported, read a file, or fetch JSON from your server. The package never decides where translations live. It calls your loader when it needs a locale, and keeps the result.
 
 **A manager** ties these together. You create one with `createI18n()`, tell it which locale to use, and ask it for text with `t()`.
 
@@ -103,7 +111,9 @@ t("cart.items", { count: 3 }); // "3 itens"
 t("home.titel"); // compile error: there is no such key
 ```
 
-`init()` without a locale starts with the default locale. Calling `t()` before `init()` has finished throws an error, because there is nothing to translate with yet.
+`init()` without a locale starts with the default locale.
+
+Calling `t()` before `init()` has finished throws an error, because there is nothing to translate with yet.
 
 ### 5. Switch languages
 
@@ -112,22 +122,31 @@ await i18n.setLocale("en");
 t("home.title"); // "Welcome"
 ```
 
-`setLocale()` loads the new dictionary first and only switches once it has loaded, so text never shows half in one language and half in another. To redraw your interface when the language changes, pass a function to `i18n.subscribe()`. It runs after every `init()` and every language switch that actually happens; [Keep track of the manager](#keep-track-of-the-manager) says exactly when that is.
+`setLocale()` loads the new dictionary first and only switches once it has loaded, so text never shows half in one language and half in another.
+
+To redraw your interface when the language changes, pass a function to `i18n.subscribe()`. It runs after every `init()` and every language switch that actually happens; [Keep track of the manager](#keep-track-of-the-manager) says exactly when that is.
 
 ## What happens when a translation is missing
 
-Translations rarely stay complete. A feature ships in English on Tuesday and in Portuguese whenever the translator gets to it. The package handles the gap in two steps:
+Translations rarely stay complete. The tea shop adds gift wrapping, the English text ships on Tuesday, and the Portuguese text arrives whenever the translation does. The package handles the gap in two steps:
 
 1. **The key is missing in the current locale but present in the default one**, or in a parent locale, such as `pt` for `pt-BR` (see [Regional variants](translations.md#regional-variants)). You get that text. In the example above, a key only in `en` shows English to Portuguese readers. Nothing is logged, because this is normal while translators catch up; [a key check in your tests](translations.md#find-untranslated-keys) finds these.
 2. **The key is missing everywhere.** `t()` returns the key, trimmed, such as `"home.subtitle"`, so the gap is visible on screen and easy to search for.
 
-In the second case, the manager also logs a warning, such as `[I18n] Missing key "home.subtitle" in locale "pt".`. It warns once for each locale and key pair, so a key used on every render doesn't flood the console. It remembers the 1,000 most recent pairs, so a pair that drops off that list can warn again. A manager created with `isSilent: true` never logs it. To send misses to your own logger instead, pass `onMissingKey(key, locale)`: it replaces the warning and runs on every miss, not once per pair.
+In the second case, the manager also logs a warning, such as `[I18n] Missing key "home.subtitle" in locale "pt".`. How often, and where it goes:
+
+- It warns once for each locale and key pair, so a key used on every render doesn't flood the console.
+- It remembers the 1,000 most recent pairs, so a pair that drops off that list can warn again.
+- A manager created with `isSilent: true` never logs it.
+- To send misses to your own logger instead, pass `onMissingKey(key, locale)`. It replaces the warning and runs on every miss, not once per pair.
 
 `t()` always returns a string, so you never need `?? ""` after it.
 
 ## Right-to-left languages
 
-Arabic, Hebrew, Persian, and Urdu are written right to left. A page in one of them must say so with `<html dir="rtl">`, or the browser aligns the text to the wrong side and puts punctuation at the wrong end of the sentence. The manager knows the direction of its active locale as `i18n.direction`, which is `"ltr"` or `"rtl"`:
+Arabic, Hebrew, Persian, and Urdu are written right to left. A page in one of them must say so with `<html dir="rtl">`, or the browser aligns the text to the wrong side and puts punctuation at the wrong end of the sentence.
+
+The manager knows the direction of its active locale as `i18n.direction`, which is `"ltr"` or `"rtl"`. Say the tea shop adds Arabic to its `locales`:
 
 ```ts
 await i18n.init({ locale: "ar" });
@@ -182,7 +201,13 @@ The manager has a few properties you can read at any time:
 
 ### React to changes
 
-`subscribe(listener)` calls `listener`, without arguments, after every applied `init()` and every applied locale change, and returns a function that stops it. "Applied" is doing real work in that sentence: a `setLocale()` to the locale already active changes nothing, and neither does a call that a later one overtook (next section), so neither calls the listener. Calling `init()` again with the same locale does apply, and does call it.
+`subscribe(listener)` calls `listener`, without arguments, after every applied `init()` and every applied locale change. It returns a function that stops it.
+
+"Applied" is doing real work in that sentence:
+
+- A `setLocale()` to the locale already active changes nothing, so it doesn't call the listener.
+- A call that a later one overtook (next section) changes nothing either, so it doesn't call the listener.
+- Calling `init()` again with the same locale does apply, and does call it.
 
 For code that needs to know what changed, the manager is also an `EventTarget` with two events:
 
@@ -195,13 +220,16 @@ i18n.addEventListener("locale-change", (event) => {
 });
 ```
 
-Listeners run in the order they were added. An exception in a listener or a `subscribe()` function is reported as for any `EventTarget`: in a browser, as an uncaught error that neither stops the other listeners nor undoes the change; in Node.js, it crashes the process, which [Render on a server](server-rendering.md#keep-production-logs-useful) comes back to.
+Listeners run in the order they were added. An exception in a listener or a `subscribe()` function is reported as for any `EventTarget`:
+
+- In a browser, it is an uncaught error that neither stops the other listeners nor undoes the change.
+- In Node.js, it crashes the process, which [Render on a server](server-rendering.md#keep-production-logs-useful) comes back to.
 
 ### The latest call wins
 
 Loading takes time, and people click faster than networks answer. When `init()` or `setLocale()` calls overlap, the one started last decides the language. An earlier call that finishes loading after a later one has started resolves without applying anything: no locale change, no event, no `subscribe()` call.
 
-Say a visitor reading in Spanish clicks "Português" in your language picker, then "English" before Portuguese has loaded:
+Say a visitor reading the shop in English clicks "Português" in your language picker, then has second thoughts and clicks "English" before Portuguese has loaded:
 
 ```ts
 const portuguese = i18n.setLocale("pt"); // first click
@@ -210,7 +238,11 @@ await Promise.all([portuguese, english]);
 i18n.locale; // "en": the Portuguese call resolved, but changed nothing
 ```
 
-So after `await i18n.setLocale("pt")`, don't assume the locale is `pt`; read `i18n.locale` when the outcome matters. A later `setLocale()` to the locale already active counts as a later call too: it cancels a pending switch, and the visitor stays where they are. A call that fails rejects and leaves the current language as it was.
+So after `await i18n.setLocale("pt")`, don't assume the locale is `pt`; read `i18n.locale` when the outcome matters.
+
+The second click in that example asks for the language already showing, and it still counts. A later `setLocale()` to the locale already active is a later call too: it cancels a pending switch, and the visitor stays where they are.
+
+Failures follow the same rule. A call that fails rejects and leaves the current language as it was. If a later call has already overtaken it, it resolves quietly instead, since its failure says nothing about the language now showing. Only the latest call's failure rejects.
 
 ### Turn outside input into a locale
 
@@ -221,8 +253,10 @@ So after `await i18n.setLocale("pt")`, don't assume the locale is `pt`; read `i1
 ```ts
 const lang = new URL(location.href).searchParams.get("lang") ?? "";
 await i18n.init({ locale: i18n.resolveLocale(lang) ?? i18n.defaultLocale });
-// ?lang=PT-br starts in "pt-BR"; ?lang=fr, or no lang, starts in the default.
+// ?lang=PT starts in "pt"; ?lang=fr, or no lang, starts in the default.
 ```
+
+With `pt-BR` among your locales, `?lang=PT-br` would start in `"pt-BR"` the same way.
 
 **`matchLocale(preferences)`** is for a visitor's language preferences, such as `navigator.languages` or the languages of an `Accept-Language` header, most preferred first. It finds the closest locale you support. Each preference is tried in order, and the first one that matches anything wins:
 
@@ -233,11 +267,21 @@ await i18n.init({ locale: i18n.resolveLocale(lang) ?? i18n.defaultLocale });
 
 Norwegian has two codes for Bokmål, `no` and `nb`, and browsers send either, so they count as one language: a site configured with `no` serves a visitor who sends `nb`, and the other way round. Nynorsk, `nn`, is its own written standard and never matches them.
 
-A locale in another script never matches, because a page in a script the visitor doesn't read serves them worse than their next language. With `zh`, which is Simplified Chinese, a `zh-TW` visitor who also lists English gets English, and one who lists nothing else gets `undefined`. A configured locale that `Intl.Locale` rejects, such as one with a private-use subtag over eight characters, has no likely script, so it matches by language, and by the script it names when it names one.
+`und`, the code for an undetermined language, is skipped, with any subtags, such as `und-US`. It names no language, though likely subtags would read it as English.
 
-It returns `undefined` when nothing matches, skips blank and malformed entries, and throws a `TypeError` when `preferences` isn't an array.
+A locale in another script never matches, because a page in a script the visitor doesn't read serves them worse than their next language. With `zh`, which is Simplified Chinese, a `zh-TW` visitor who also lists English gets English, and one who lists nothing else gets `undefined`.
 
-When several of your locales share a language and script, and none matches a preference exactly or by its likely region, the first one in `locales` wins. So order `locales` by which one should serve everyone else. To serve a visitor from Mexico, `es-MX`, from your Latin American Spanish, list `es-419` before `es-ES`:
+A configured locale that `Intl.Locale` rejects, such as one with a private-use subtag over eight characters, has no likely script. It matches by language, and by the script it names when it names one.
+
+The rest of its behavior is short:
+
+- It returns `undefined` when nothing matches.
+- It skips blank and malformed entries.
+- It throws a `TypeError` when `preferences` isn't an array.
+
+When several of your locales share a language and script, and none matches a preference exactly or by its likely region, the first one in `locales` wins. So order `locales` by which one should serve everyone else.
+
+Say the tea shop starts shipping to Spanish speakers, with one dictionary for Latin America and one for Spain. To serve a visitor from Mexico, `es-MX`, from your Latin American Spanish, list `es-419` before `es-ES`:
 
 ```ts
 const i18n = createI18n({
@@ -261,7 +305,7 @@ It translates, formats, and picks locales. A few things are deliberately left ou
 
 ## Where to go next
 
-Read these in order to learn the package end to end, or jump to the one you need:
+Read these in order to learn the package end to end, or jump to the one you need. The tea shop comes along on every page:
 
 1. [Write your translations](translations.md): dictionaries, JSON files, placeholders, ICU messages, plurals, formatters, typed keys and values, checking for untranslated keys, and size limits.
 2. [Translate a browser app](browser.md): detect and remember the visitor's language, keep `lang` and `dir` in step, re-render a framework, and translate HTML with `data-i18n`.

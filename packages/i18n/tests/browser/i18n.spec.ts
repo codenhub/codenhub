@@ -35,17 +35,38 @@ test("does not activate translated CSS", async ({ page }) => {
   expect(customProperty).toBe("");
 });
 
-test("initializes the built core package in a Web Worker", async ({ page }) => {
-  const result = await page.evaluate(
-    () =>
-      new Promise<unknown>((resolve, reject) => {
-        const worker = new Worker("/tests/browser/worker.ts", { type: "module" });
-        worker.addEventListener("message", (event) => resolve(event.data), { once: true });
-        worker.addEventListener("error", (event) => reject(new Error(event.message)), { once: true });
-      }),
-  );
+interface WorkerResult {
+  direction: string;
+  isReady: boolean;
+  locale: string;
+  translation: string;
+  bound: { detected: string; languages: string[]; translation: string };
+}
 
-  expect(result).toEqual({ direction: "ltr", isReady: true, locale: "fr", translation: "Bonjour" });
+test.describe("in a Web Worker", () => {
+  // A French browser, so a locale the binding detects can't be mistaken for the default. Chromium doesn't apply this
+  // emulation inside a worker, held with Playwright 1.63 on 2026-11-17, so the check reads the worker's own languages.
+  test.use({ locale: "fr-FR" });
+
+  test("initializes the built core package, and the browser binding without a document", async ({ page }) => {
+    const result = await page.evaluate<WorkerResult>(
+      () =>
+        new Promise<WorkerResult>((resolve, reject) => {
+          const worker = new Worker("/tests/browser/worker.ts", { type: "module" });
+          worker.addEventListener("message", (event) => resolve(event.data), { once: true });
+          worker.addEventListener("error", (event) => reject(new Error(event.message)), { once: true });
+        }),
+    );
+
+    const isFrench = result.bound.languages[0]?.startsWith("fr") === true;
+    expect(result).toEqual({
+      direction: "ltr",
+      isReady: true,
+      locale: "fr",
+      translation: "Bonjour",
+      bound: { detected: isFrench ? "fr" : "en", languages: result.bound.languages, translation: "Hello" },
+    });
+  });
 });
 
 test("translates observed additions with the active locale", async ({ page }) => {

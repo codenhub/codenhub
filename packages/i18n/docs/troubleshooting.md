@@ -6,7 +6,7 @@ order: 5
 
 # Troubleshooting
 
-Something went sideways. Each section starts from what you see on screen or in the console, then gives the cause and the fix, so you can jump straight to your symptom.
+Something went sideways. Each section starts from what you see on screen or in the console, then gives the cause and the fix, so you can jump straight to your symptom. The examples use the tea shop's keys and locales from the earlier pages.
 
 Every message the package writes starts with `[I18n]`, which makes it easy to find in a console full of other people's warnings.
 
@@ -14,7 +14,11 @@ Every message the package writes starts with `[I18n]`, which makes it easy to fi
 
 You see `home.subtitle` where text should be, and the console says `[I18n] Missing key "home.subtitle" in locale "pt".`
 
-Neither the current language nor the default language has that key. Check for a typo in the key or the dictionary, and that the dictionary file you edited is the one your loader returns. A plural group shows its key when `count` is missing or isn't a number: `t("cart.items")` or `t("cart.items", { count: "2" })`. Pass a number.
+Neither the current language nor the default language has that key. Check:
+
+- For a typo in the key or the dictionary.
+- That the dictionary file you edited is the one your loader returns.
+- For a plural group, that `count` is there and is a number. A plural group shows its key when `count` is missing or isn't a number: `t("cart.items")` or `t("cart.items", { count: "2" })`. Pass a number.
 
 The warning appears once per locale and key, so a key missing on every render doesn't drown the console, and never when `isSilent` is `true`. An `onMissingKey` callback replaces it and runs on every miss.
 
@@ -40,7 +44,7 @@ Your loader threw or rejected, and the manager wrapped the failure in an `I18nEr
 - `error.locale` is the locale that failed.
 - `error.cause` is what your loader threw, such as a network error or a timeout.
 
-The manager keeps its current language, and the next call tries the loader again, so a retry button can just call `setLocale()` again. In a browser, a saved locale that fails falls back to the detected locale, and a detected one to the default; see [How the locale is chosen](browser.md#how-the-locale-is-chosen).
+The manager keeps its current language, and the next call tries the loader again, so a retry button can just call `setLocale()` again. In a browser, a saved locale that fails falls back to the detected locale, and a detected one to the default; see [When a loader fails during start](browser.md#when-a-loader-fails-during-start).
 
 ### Show it to the visitor
 

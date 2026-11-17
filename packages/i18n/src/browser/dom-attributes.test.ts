@@ -127,6 +127,23 @@ describe("initializeBrowserI18n attribute translation", () => {
     binding.disconnect();
   });
 
+  it("skips customized built-in elements, which own their content as dash-named ones do", async () => {
+    document.body.innerHTML = [
+      '<button is="x-button" data-i18n="greeting" data-i18n-title="greeting" title="Own">Own</button>',
+      '<ul is="x-list"><li data-i18n="greeting">Item</li></ul>',
+      '<button id="plain" data-i18n="greeting">Plain</button>',
+    ].join("");
+    const i18n = createManager();
+
+    const binding = await initializeBrowserI18n({ i18n, locale: "fr", root: document.body });
+
+    expect(document.querySelector("[is=x-button]")?.textContent).toBe("Own");
+    expect(document.querySelector("[is=x-button]")?.getAttribute("title")).toBe("Own");
+    expect(document.querySelector("li")?.textContent).toBe("Item");
+    expect(document.querySelector("#plain")?.textContent).toBe("Bonjour");
+    binding.disconnect();
+  });
+
   it("translates observed additions and attribute key changes", async () => {
     const i18n = createManager();
     const binding = await initializeBrowserI18n({ i18n, locale: "fr", root: document.body, observe: true });

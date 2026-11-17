@@ -1,3 +1,4 @@
+import { quoteKey } from "../locale/dictionary";
 import { createFallbackChains } from "../locale/fallback";
 import { createLocaleLoader, type LocaleLoader } from "../locale/loader";
 import { matchConfiguredLocale } from "../locale/matching";
@@ -11,6 +12,7 @@ import {
   getNumberFormat,
   intlLocale,
   isPlainMessage,
+  MAX_FILLED_ARGUMENTS,
   MessageSyntaxError,
   type MessageValues,
   parseCachedMessage,
@@ -59,11 +61,17 @@ interface InterpolateOptions {
 }
 
 /** Fills only `{name}` placeholders, as a message that is not valid ICU syntax is shown. */
-const interpolate = ({ text, params, locale, timeZone }: InterpolateOptions): string =>
-  text.replace(PLACEHOLDER_PATTERN, (placeholder, name: string) => {
+const interpolate = ({ text, params, locale, timeZone }: InterpolateOptions): string => {
+  let filledArguments = 0;
+  return text.replace(PLACEHOLDER_PATTERN, (placeholder, name: string) => {
+    if (filledArguments >= MAX_FILLED_ARGUMENTS) {
+      return placeholder;
+    }
+    filledArguments += 1;
     const value: unknown = Object.hasOwn(params, name) ? params[name] : undefined;
     return formatPlainValue(value, locale, timeZone) ?? placeholder;
   });
+};
 
 class CoreCustomEvent<TDetail> extends Event implements CustomEvent<TDetail> {
   private eventDetail: TDetail;
@@ -147,7 +155,7 @@ class I18nInstance<TLocale extends string, TKey extends string = string>
       dictionaryLimits: this.config.dictionaryLimits,
     });
     registerI18nInternals(this, {
-      init: (options) => this.applyInit(options as I18nInitOptions<TLocale>, true),
+      init: (options) => this.applyInit(options as I18nInitOptions<TLocale>),
       lookup: (key) => {
         const found = this.lookup("translate", key);
         return found === undefined ? undefined : this.format(key, found, {});
@@ -275,9 +283,9 @@ class I18nInstance<TLocale extends string, TKey extends string = string>
     }
     this.warnedMessages.add(warningKey);
     console.warn(
-      `[I18n] Invalid message for "${key.trim()}" in locale "${found.locale}": ${error.message}; only {name} ` +
+      `[I18n] Invalid message for ${quoteKey(key.trim())} in locale "${found.locale}": ${error.message}; only {name} ` +
         "placeholders are filled. " +
-        JSON.stringify(found.text.slice(0, 200)),
+        quoteKey(found.text.slice(0, 200)),
     );
   }
 
@@ -298,11 +306,11 @@ class I18nInstance<TLocale extends string, TKey extends string = string>
   }
 
   /**
-   * Initializes, resolving whether this call applied state. With `isFailureSuperseded`, a call superseded before its
-   * loading fails also resolves false rather than rejecting, so a caller that retries on failure cannot override the
-   * later call.
+   * Initializes, resolving whether this call applied state. A call superseded before its loading fails also resolves
+   * false rather than rejecting: the later call decides the language, and a caller that retries on failure would
+   * otherwise override it.
    */
-  private async applyInit(options: I18nInitOptions<TLocale> = {}, isFailureSuperseded = false): Promise<boolean> {
+  private async applyInit(options: I18nInitOptions<TLocale> = {}): Promise<boolean> {
     const requestedLocale = options.locale === undefined ? this.defaultLocale : options.locale;
     const locale = this.requireLocale(requestedLocale);
     const requestId = this.createRequest();
@@ -313,7 +321,7 @@ class I18nInstance<TLocale extends string, TKey extends string = string>
       dictionaries = await this.loadRequiredDictionaries(locale);
       direction = this.resolveLocaleDirection(locale);
     } catch (error) {
-      if (isFailureSuperseded && !this.isLatestRequest(requestId)) {
+      if (!this.isLatestRequest(requestId)) {
         return false;
       }
       throw error;
@@ -343,8 +351,19 @@ class I18nInstance<TLocale extends string, TKey extends string = string>
       return;
     }
 
-    const dictionaries = await this.loadRequiredDictionaries(nextLocale);
-    const direction = this.resolveLocaleDirection(nextLocale);
+    let dictionaries: readonly ChainDictionary<TLocale>[];
+    let direction: LocaleDirection;
+
+    try {
+      dictionaries = await this.loadRequiredDictionaries(nextLocale);
+      direction = this.resolveLocaleDirection(nextLocale);
+    } catch (error) {
+      // A later call decides the language, so this one's failure no longer matters.
+      if (!this.isLatestRequest(requestId)) {
+        return;
+      }
+      throw error;
+    }
 
     if (!this.isLatestRequest(requestId)) {
       return;
@@ -458,7 +477,7 @@ class I18nInstance<TLocale extends string, TKey extends string = string>
         }
       }
 
-      console.warn(`[I18n] Missing key "${key}" in locale "${this.currentLocale}".`);
+      console.warn(`[I18n] Missing key ${quoteKey(key)} in locale "${this.currentLocale}".`);
     }
   }
 

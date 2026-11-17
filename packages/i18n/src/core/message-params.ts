@@ -1,4 +1,4 @@
-/**
+/*
  * Type-level reading of ICU messages, so `t()` can require the values a literal message uses. A message TypeScript sees
  * only as `string`, such as one from a JSON import, or one these types can't read, accepts any values, as before.
  *

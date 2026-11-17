@@ -1,6 +1,6 @@
 ---
 status: IMPLEMENTED
-last_updated: 2026-11-16
+last_updated: 2026-11-17
 scope: Why `@codenhub/i18n` behaves as it does, with the alternatives each decision rejected, for whoever changes it next.
 ---
 
@@ -17,6 +17,10 @@ A key missing from both dictionaries returns the trimmed key. The key renders a 
 ### `init()` returns `void`
 
 Rejected: resolving `true` or `false` for whether it applied, because `setLocale()` reports the same case, a stale request, with no value, and a caller that needs the outcome reads `locale` and `isReady`.
+
+### A stale request resolves even when its loading fails
+
+A call to `init()` or `setLocale()` that a later call has overtaken resolves when its loading fails, as it does when its loading succeeds, and only the latest call's failure rejects. The failure no longer describes the manager's state, which follows the latest call, so a picker clicked twice would otherwise show an error for a locale the visitor already left. Rejected: rejecting every failure, which made each caller tell a stale failure from a current one by comparing `locale` afterwards.
 
 ### Direction has a default
 
@@ -35,6 +39,8 @@ Rejected: matching only in the browser entry point, so a server resolving `Accep
 **Order breaks ties between regions.** Among configured locales that share a preference's language and script, with no exact or likely-region match, the first in `locales` wins, and the docs say so: list `es-419` before `es-ES` to serve `es-MX` from `es-419`. Choosing by region containment was rejected because it needs CLDR region data that `Intl` does not expose, and ordering already gives the right result.
 
 **A locale in another script never matches.** The last step requires the same likely script, as every earlier step does, and a locale `Intl.Locale` rejects still matches by language subtag. The reason is the one fallback chains skip a parent in another script for: a page in a script the visitor doesn't read serves them worse than their next language. Rejected: a last step that matches any configured locale of the same language, so with `["en", "zh"]`, `zh-TW` gets Simplified `zh` even when English comes next in the visitor's list, and with `["en", "zh-Hant"]`, `zh` gets Traditional. Rejected too: RFC 4647 lookup, which gives that result and disagrees with the fallback chains on the same pair of locales.
+
+**`und` is no preference.** `und`, the undetermined language, names no language, but likely subtags turn it into `en-Latn-US`, so a browser or header that sends it would get English ahead of the visitor's real next language. It is skipped, with any subtags, unless a configured locale is that exact tag. Rejected: matching its script or region, such as `und-Arab`, which guesses a language the visitor never named.
 
 **`no` and `nb` match each other.** Compared as `Intl.Locale` gives them, a site configured with `no` would serve the default locale to a browser that sends `nb`, and the other way round. Both are Norwegian Bokmål in practice: `no` is the macrolanguage, browsers and content use either code for Bokmål, and CLDR treats them as one. They are compared as one language at every step after the exact match, so a site listing both still serves each its own. Nynorsk, `nn`, is a separate written standard and stays apart. The guide's static-site redirect script maps `no` to `nb` the same way, so it keeps agreeing with `matchLocale()`. Rejected: a general table of macrolanguages, which no other language has needed; and matching `nn` to `no` too, which would serve Bokmål to a Nynorsk reader as an exact language.
 
@@ -81,7 +87,9 @@ Every text is read as an ICU message: `{name}`, `number` (`integer`, `percent`),
 - **Our own parser, not `intl-messageformat`.** That library is about 10 KB gzipped plus its parser, against a core of about 4.4 KB, and the package has no runtime dependencies. The subset covers what UI text uses; skeletons (`::currency/EUR`) and `{n, number, currency}` were left out, because currency needs a code the message can't know, and `formatNumber` covers it in code.
 - **Format in the dictionary's locale**, as plural groups choose rules, so English fallback text is never written with Portuguese separators.
 - **Invalid syntax warns and falls back to `{name}` filling**, rather than failing `init()`. Checking every message at load would parse all of them up front and make one translator's typo stop the application from starting. Parsed messages are cached.
+- **The parse cache is bounded by characters as well as entries**: 10,000 messages and 5,000,000 characters, the default `maxTotalLength`, least recently used first. Every manager in the process shares it, so a server that loads changing dictionaries, such as from a CMS, would otherwise keep up to 10,000 texts of 100,000 characters each. Measured on Node.js 26.13 before the bound, and before the parser stopped building text one character at a time, 400 cached messages of 100,000 characters held 1.3 GB and 2,000 exhausted the heap; after both, 2,000 hold about 4 MB.
 - **`{name}` stays compatible**: a text without `{` or `'` is returned as is, and an argument without a usable value is left as written, as placeholders were. The one difference is that `'` before a brace and `''` quote, which a plain placeholder text rarely contains.
+- **One call fills at most 100 arguments**, counted across nested plural and select forms, and leaves the rest as written. A message is fetched data in many applications, and a 100,000-character text of repeated `{a}` would otherwise run one formatter call per argument on every render, the `{name}` fallback for invalid syntax included. 100 is far above what a UI sentence uses. Rejected: limiting arguments per message at parse time, because the fallback for invalid syntax fills placeholders without parsing.
 - **A `Date` is a value**, formatted as `{name, date}`, so a plain `{when}` shows a readable date rather than `Date.prototype.toString()`.
 - **Plural groups stay**: they keep each form an ordinary key, which some translation tools need.
 - **Formatter options are copied by name.** Formatters are cached per process. A key of `JSON.stringify(options)` would see only own properties while `Intl` also reads inherited ones, so `formatNumber(x, Object.create({ style: "percent" }))` would turn every later call, in every manager, into a percentage. The options `Intl` reads are copied by name, inherited ones included, and that copy is both the cache key and what `Intl` receives, so the two cannot disagree. Values that are not primitives are never cached, so `Intl` validates them on every call. Trade-off: an `Intl` option newer than ES2025 is ignored until it is added to the list.
@@ -135,13 +143,17 @@ When the loader rejects for a stored or detected locale, the binding warns and s
 
 **The detected locale comes before the default.** A failing saved locale falls back to the detected locale, then the default, each warned about, and none persisted, since the browser's languages are the next choice: a visitor with a saved `fr` whose dictionary fails to load, and a `pt-BR` browser, would otherwise get English although Portuguese is available. Rejected: trying every locale in `navigator.languages`, which can stack one failed load per preference before the page shows text.
 
+### A stored locale is matched
+
+A stored locale the application no longer configures exactly, such as `pt-PT` after only `pt-BR` remains, goes through `matchLocale()` like a browser preference, and the stored value is left as it is. It still names the visitor's choice, which serves them better than their browser's languages. Rejected: discarding it, which sends a visitor who chose Portuguese back to detection, and rewriting it to the match, which would lose the choice if the application adds `pt-PT` back.
+
 ### One data attribute per translated attribute
 
 `data-i18n-<attribute>` is used rather than a single list attribute, such as `data-i18n-attrs="placeholder:search.hint"`, because it needs no parsing and a `MutationObserver` can watch exactly those names. Attributes are limited to text read by people or assistive technology, so a translation can never set a URL, a style, or an event handler.
 
 ### Custom elements translate themselves
 
-The binding skips every element inside a custom element, a tag with a dash, from an outer root. A component has its own life cycle: it may render after the page's pass, and it adds and removes text as people use it, such as a card that changes with interaction, so it has to call `t()` for that text anyway. Re-running the page's pass for each component's change was rejected as costlier than the component translating itself with `t()` and `subscribe()`.
+The binding skips every element inside a custom element, from an outer root: a tag with a dash, or a customized built-in element such as `<button is="x-button">`, which owns its content the same way. A component has its own life cycle: it may render after the page's pass, and it adds and removes text as people use it, such as a card that changes with interaction, so it has to call `t()` for that text anyway. Re-running the page's pass for each component's change was rejected as costlier than the component translating itself with `t()` and `subscribe()`.
 
 **Wrappers are skipped too.** A light-DOM wrapper, such as `<site-nav>` around links the page wrote, is not read: the binding can't tell a wrapper from a component that renders its children, and reading into one would translate, and then fight, text the component owns. The guide says to use a plain element for a wrapper, and shows `t()` and `subscribe()` for a component, rather than a component binding of its own, which a manager's one binding rules out. Rejected: a warning per skipped element with keys, which would fire for every component that translates its own content.
 

@@ -55,7 +55,8 @@ const isValidKey = (key: string): boolean => {
 // Unicode line and paragraph separators.
 const UNESCAPED_LINE_BREAKS = /[\u007f-\u009f\u2028\u2029]/g;
 
-const quoteKey = (key: string): string =>
+/** Quotes text for a log message as JSON does, also escaping the characters JSON leaves as written. @internal */
+export const quoteKey = (key: string): string =>
   JSON.stringify(key).replace(
     UNESCAPED_LINE_BREAKS,
     (character) => `\\u${character.charCodeAt(0).toString(16).padStart(4, "0")}`,

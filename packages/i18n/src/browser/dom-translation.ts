@@ -80,7 +80,8 @@ const isInsideCustomElement = (element: Element, root: ParentNode): boolean => {
   let currentElement: Element | null = element;
 
   while (currentElement !== null && currentElement !== root) {
-    if (currentElement.tagName.includes("-")) {
+    // A customized built-in element, such as `<button is="x-button">`, is a component too.
+    if (currentElement.tagName.includes("-") || currentElement.hasAttribute("is")) {
       return true;
     }
 
