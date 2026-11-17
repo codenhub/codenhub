@@ -1,11 +1,12 @@
 ---
 title: Defining Themes
+description: Add your own themes, choose what the system setting and the toggle pick, read the current state, and every option with its default.
 order: 2
 ---
 
 # Defining Themes
 
-[Getting started](getting-started.md) used the two built-in themes. Real apps usually want their own: a dimmer dark theme, a high-contrast one, a brand theme. This page adds them, explains how the toggle and the operating system choose between them, and shows how to read what is active.
+[Getting started](getting-started.md) used the two built-in themes. Real apps tend to want more: a dimmer dark theme for night owls, a high-contrast one, a brand theme that gets renamed twice before launch. This page adds them and builds a theme menu for a settings screen, with an "Auto" entry that follows the operating system. Along the way it explains how the toggle and the system setting choose between themes, and how to read what is active.
 
 ## Describe your themes
 
@@ -32,29 +33,33 @@ Each name is what lands in `data-theme`, so the CSS from Getting started gains o
 }
 ```
 
-`colorScheme` says whether a theme is light or dark. It is required, and it does three jobs: the package writes it to `color-scheme` so browser controls match, the toggle uses it to find the opposite theme, and Tailwind's `dark` class follows it.
+Each entry is a `ThemeDefinition`, the exported type for one theme. `colorScheme` says whether a theme is light or dark. It is required, and it does three jobs: the package writes it to `color-scheme` so browser controls match, the toggle uses it to find the opposite theme, and Tailwind's `dark` class follows it.
 
 `themes` replaces the built-in list rather than adding to it. Keep themes named `light` and `dark`, as above, or tell the package which themes to use instead, as the next sections show.
 
 ## Switch to a specific theme
 
-`set()` applies a theme and saves it as the user's choice, the same way the toggle does. Use it for a theme menu:
+`set()` applies a theme and saves it as the user's choice, the same way the toggle does. It is what a theme menu calls:
 
 ```ts
-theme.set("dim");
+const menu = document.querySelector<HTMLSelectElement>("#theme-menu");
+
+menu?.addEventListener("change", () => {
+  if (menu.value === "auto") {
+    theme.clearPreference();
+  } else {
+    theme.set(menu.value as "light" | "dark" | "dim");
+  }
+});
 ```
 
 The names come from your `themes` object, so in TypeScript a misspelled name, such as `theme.set("dimm")`, is a compile error. In JavaScript it throws `Theme is not configured: dimm.`
 
-To forget the user's choice and follow the operating system again, for an "Auto" or "System" menu entry, call `clearPreference()`:
-
-```ts
-theme.clearPreference();
-```
+`clearPreference()`, used above for the "Auto" entry, forgets the user's choice and follows the operating system again.
 
 ## Choose the themes the system picks
 
-When the user has not chosen a theme, the package follows the operating system: `light` when it is in light mode, `dark` when it is in dark mode. `systemTheme` changes which of your themes those are:
+When the user has not chosen a theme, the package follows the operating system: `light` when it is in light mode, `dark` when it is in dark mode. `systemTheme` changes which of your themes those are. Its type is exported as `SystemThemeMap`:
 
 ```ts
 const theme = createTheme({
@@ -71,7 +76,7 @@ const theme = createTheme({
 
 ## Decide what the toggle does
 
-A toggle switches between two things, but an app can have more than two themes. `toggle()` decides where to go from the active theme:
+A toggle switches between two things, but an app can have more than two themes, and the toggle has to go somewhere. `toggle()` decides from the active theme:
 
 1. If the active theme has a `pairedTheme`, it goes there.
 2. Otherwise, it goes to the system theme of the opposite color scheme: from a dark theme to `systemTheme.light`, from a light theme to `systemTheme.dark`.
@@ -93,7 +98,7 @@ Now `sepia` toggles to `dim`, and `dim` toggles back to `light`. A pair goes one
 
 ## Read the current state
 
-The manager answers four questions:
+The theme menu needs to show which entry is selected. The manager answers four questions:
 
 | Member             | Answers                                                                                                                                 |
 | ------------------ | --------------------------------------------------------------------------------------------------------------------------------------- |
@@ -102,19 +107,21 @@ The manager answers four questions:
 | `theme.preference` | Which theme the user saved, or `null` when nothing is saved, storage cannot be read, or the saved name is no longer one of your themes. |
 | `theme.system`     | Which theme the operating system's setting maps to right now, whether or not it is shown.                                               |
 
-`preference` is what makes an "Auto" option possible: a menu shows "Auto" as selected while it is `null`.
+`preference` is what makes the "Auto" entry possible: the menu shows "Auto" as selected while it is `null`.
 
 ```ts
-const selected = theme.preference ?? "auto";
+if (menu) {
+  menu.value = theme.preference ?? "auto";
+}
 ```
 
 `preference` reads what is actually saved. While the browser blocks `localStorage`, it stays `null` even after the user picks a theme, although the choice is still applied for as long as the page runs; [Saving and syncing](persistence-and-sync.md#when-storage-fails) covers that case.
 
-`get()` returns a frozen object, and the same object until the theme next changes. That makes it safe to hand to a UI framework as a store snapshot, which [Frameworks](frameworks.md#react) relies on.
+`get()` returns an `ActiveTheme`: a frozen object, and the same object until the theme next changes. That makes it safe to hand to a UI framework as a store snapshot, which [Frameworks](frameworks.md#react) relies on.
 
 ## Every option, and its default
 
-All options are optional. An option set to `undefined` gets its default, exactly as an omitted one does, so a wrapper can forward its own optional settings without checking them.
+All options are optional, and their type is exported as `ThemeOptions`. An option set to `undefined` gets its default, exactly as an omitted one does, so a wrapper can forward its own optional settings without checking them.
 
 | Option         | Default                                                              | What it controls                                                                                            |
 | -------------- | -------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
@@ -129,12 +136,12 @@ All options are optional. An option set to `undefined` gets its default, exactly
 
 A few of these deserve a word:
 
-- **`storageKey`**: Every app on the same domain shares one `localStorage`. If two apps on one domain both use this package, give each its own key, such as `"my-app-theme"`, so they do not overwrite each other's choice.
+- **`storageKey`**: Every app on the same domain shares one `localStorage`. If two apps on one domain both use this package, give each its own key, such as `"my-app-theme"`, or they will take turns overwriting each other's choice.
 - **`attribute`**: Any valid HTML attribute name works, one without spaces, quotes, `/`, `>`, or `=`, except `class` and `style`, because writing the theme name there would erase the classes and inline styles your page put on `<html>`. Use `className` to get a class.
-- **`className`**: A function receives the theme, including its static tokens, and returns one class name with no spaces. `className: (theme) => theme.name` gives classes like `dark` and `dim` instead of `theme-dark`. A function that returns an empty or space-containing name makes the operation that applied it throw.
+- **`className`**: A function, typed `ThemeClassResolver`, receives the theme, including its static tokens, and returns one class name with no spaces. `className: (theme) => theme.name` gives classes like `dark` and `dim` instead of `theme-dark`. A function that returns an empty or space-containing name makes the operation that applied it throw.
 
 ## When the configuration is wrong
 
-`createTheme()` checks every option immediately and throws an `Error` describing the first problem it finds, such as a `defaultTheme` or `pairedTheme` that names no configured theme, a `colorScheme` that is neither `"light"` nor `"dark"`, or, while `className` is `true`, a theme name that cannot be part of a class. Nothing reaches the page from invalid options, so a mistake shows up the first time the code runs, not as a theme that silently never applies. The [`createTheme` reference](reference/index.md#createtheme) lists every rule.
+`createTheme()` checks every option immediately and throws an `Error` describing the first problem it finds, such as a `defaultTheme` or `pairedTheme` that names no configured theme, a `colorScheme` that is neither `"light"` nor `"dark"`, or, while `className` is `true`, a theme name that cannot be part of a class. Nothing reaches the page from invalid options, so a mistake shows up the first time the code runs, not as a theme that silently never applies. The [`createTheme` reference](reference/index.md#createtheme) lists every rule, and [Troubleshooting](troubleshooting.md#createtheme-throws) covers the common ones with their fixes.
 
-Next, [Design tokens](tokens.md) moves theme colors from CSS into JavaScript, for apps that need to change them while running.
+Next, [Design tokens](tokens.md) adds an accent color picker to the settings screen, which means moving some colors from CSS into JavaScript.

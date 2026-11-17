@@ -45,7 +45,7 @@ document.querySelector("#theme-toggle")?.addEventListener("click", theme.toggle)
 
 With no options, there are two themes, `light` and `dark`. `init()` applies the user's saved choice, or else the operating system's setting, and `toggle()` switches themes and saves the choice.
 
-Because this script runs after the browser first paints, a user who chose dark briefly sees the light theme on load. Production apps also inline the script from `getPrePaintScript()` in `<head>` to apply the theme before the first paint; [Preventing the flash](docs/preventing-the-flash.md) shows how.
+Because this script runs after the browser first paints, a user who chose dark briefly sees the light theme on load, the one thing they asked not to see. Production apps also inline the script from `getPrePaintScript()` in `<head>` to apply the theme before the first paint; [Preventing the flash](docs/preventing-the-flash.md) shows how.
 
 ## Documentation
 
@@ -58,7 +58,7 @@ Because this script runs after the browser first paints, a user who chose dark b
 
 ## Requirements
 
-- A browser to apply the theme. On a server, the manager safely does nothing that needs one and reports the default theme.
+- A browser to apply the theme: Chrome 93, Firefox 92, Safari 15.4, or newer, since the package calls `Object.hasOwn`. For older browsers, transpile dependencies and add polyfills in your build. On a server, the manager safely does nothing that needs a browser and reports the default theme.
 - Your own CSS for each theme. The package writes the theme's name, an optional class, `color-scheme`, and optional CSS custom properties to `<html>`; it ships no styles.
 - TypeScript 5.4 or newer, if you use TypeScript, for the `NoInfer` the types rely on.
 
