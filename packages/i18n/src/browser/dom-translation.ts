@@ -109,10 +109,12 @@ const attributeStates = new WeakMap<Element, Map<string, AttributeState>>();
 
 /** Creates the DOM translator of one browser binding. @internal */
 export function createDomTranslator(options: DomTranslatorOptions): DomTranslator {
-  // The element is passed too, so a browser console can point to it.
+  // The element is passed too, so a browser console can point to it, and the message goes through `%s`, so a key such
+  // as `%o` is not read as a format.
   const warnInvalidKey = (element: Element, keyAttribute: string, rawKey: string): void => {
     if (!options.isSilent) {
       console.warn(
+        "%s",
         `[I18n] Skipping translation because ${keyAttribute} contains an invalid key, ${formatReportedKey(rawKey)}.`,
         element,
       );
@@ -214,6 +216,7 @@ export function createDomTranslator(options: DomTranslatorOptions): DomTranslato
     if (element.childElementCount > 0) {
       if (!options.isSilent) {
         console.warn(
+          "%s",
           `[I18n] Skipping translation on <${element.tagName.toLowerCase()}> because translated elements must be leaves; ` +
             `its ${TRANSLATION_ATTRIBUTE} is ${formatReportedKey(rawKey)}.`,
           element,

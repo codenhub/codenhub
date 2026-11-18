@@ -312,10 +312,10 @@
         "initializeBrowserI18n": {
           "files": {
             "dist/browser.js": {
-              "bytes": 7143,
+              "bytes": 7153,
               "declarations": {
                 "initializeBrowserI18n": 3714,
-                "createDomTranslator": 1675,
+                "createDomTranslator": 1685,
                 "readPersistedLocale": 244,
                 "TRANSLATED_ATTRIBUTES": 131,
                 "isInsideCustomElement": 127,
@@ -373,16 +373,16 @@
               "bytes": 35
             }
           },
-          "gzip": 3397,
-          "minified": 8086
+          "gzip": 3404,
+          "minified": 8096
         }
       },
       "files": {
         "dist/browser.js": {
-          "bytes": 7143,
+          "bytes": 7153,
           "declarations": {
             "initializeBrowserI18n": 3714,
-            "createDomTranslator": 1675,
+            "createDomTranslator": 1685,
             "readPersistedLocale": 244,
             "TRANSLATED_ATTRIBUTES": 131,
             "isInsideCustomElement": 127,
@@ -440,9 +440,9 @@
           "bytes": 35
         }
       },
-      "gzip": 3397,
-      "minified": 8086,
-      "sha256": "ba328beacbb23d66638507ce061d727923eb3d5a48780c634d645d6a8780020c"
+      "gzip": 3404,
+      "minified": 8096,
+      "sha256": "c2813df798006baf128306d945ac654188228b86e73480e8e2028c3f4311cebd"
     },
     "./routing": {
       "exports": {

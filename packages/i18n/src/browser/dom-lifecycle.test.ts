@@ -87,13 +87,35 @@ describe("initializeBrowserI18n document integration", () => {
     binding.disconnect();
 
     expect(warn).toHaveBeenCalledWith(
+      "%s",
       '[I18n] Skipping translation on <p> because translated elements must be leaves; its data-i18n is "key\\nforged".',
       document.querySelector("p"),
     );
-    for (const [message] of warn.mock.calls) {
+    for (const [, message] of warn.mock.calls) {
       expect(String(message)).not.toContain("key\nforged");
       expect(String(message)).not.toContain("\n");
     }
+  });
+
+  it("keeps a key that looks like a console format out of the format string", async () => {
+    document.body.innerHTML = '<p data-i18n="%s">Keep <strong>markup</strong></p><p data-i18n="%o&#10;">Text</p>';
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const i18n = createManager();
+
+    const binding = await initializeBrowserI18n({ i18n, root: document.body });
+    binding.disconnect();
+
+    const [leaf, invalid] = document.querySelectorAll("p");
+    expect(warn).toHaveBeenCalledWith(
+      "%s",
+      '[I18n] Skipping translation on <p> because translated elements must be leaves; its data-i18n is "%s".',
+      leaf,
+    );
+    expect(warn).toHaveBeenCalledWith(
+      "%s",
+      '[I18n] Skipping translation because data-i18n contains an invalid key, "%o\\n".',
+      invalid,
+    );
   });
 
   it.each(["style", "script", "noscript", "template"])("does not translate active <%s> containers", async (tagName) => {
@@ -155,6 +177,7 @@ describe("initializeBrowserI18n document integration", () => {
       expect(invalid.textContent).toBe("Invalid fallback");
       expect(valid.textContent).toBe("Bonjour");
       expect(warn).toHaveBeenCalledWith(
+        "%s",
         expect.stringMatching(/^\[I18n\] Skipping translation because data-i18n contains an invalid key, "/),
         invalid,
       );
@@ -293,6 +316,7 @@ describe("initializeBrowserI18n document integration", () => {
       expect(section.children[0]?.textContent).toBe("Invalid fallback");
       expect(section.children[1]?.textContent).toBe("Bonjour");
       expect(warn).toHaveBeenCalledWith(
+        "%s",
         '[I18n] Skipping translation because data-i18n contains an invalid key, "key\\nforged".',
         section.children[0],
       );
