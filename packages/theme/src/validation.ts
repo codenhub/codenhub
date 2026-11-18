@@ -178,6 +178,23 @@ export const assertSystemThemeOption = (systemTheme: unknown): void => {
 };
 
 /**
+ * Validates the options `set()` received.
+ *
+ * @internal
+ */
+export const assertSetOptions = (options: unknown): void => {
+  if (options === undefined) {
+    return;
+  }
+  if (!isRecord(options)) {
+    throw new Error("Theme set() options must be an object.");
+  }
+  if (options.followSystem !== undefined && typeof options.followSystem !== "boolean") {
+    throw new Error("Theme set() followSystem option must be a boolean.");
+  }
+};
+
+/**
  * Validates runtime token overrides against the configured token schema.
  *
  * @internal

@@ -96,16 +96,38 @@ const theme = createTheme({
 
 Now `sepia` toggles to `dim`, and `dim` toggles back to `light`. A pair goes one way only: give each theme its own `pairedTheme` when the toggle should return to where it came from.
 
+## Follow the system within a pair
+
+Some apps offer theme families, each with a light and a dark variant, and let the user pick a family while the operating system still picks light or dark. Pair the variants, then pass `followSystem` to `set()`:
+
+```ts
+const theme = createTheme({
+  themes: {
+    light: { colorScheme: "light" },
+    dark: { colorScheme: "dark" },
+    "ocean-light": { colorScheme: "light", pairedTheme: "ocean-dark" },
+    "ocean-dark": { colorScheme: "dark", pairedTheme: "ocean-light" },
+  },
+}).init();
+
+theme.set("ocean-light", { followSystem: true });
+```
+
+The active theme is now `ocean-light` or `ocean-dark`, whichever has the operating system's color scheme, and it switches when the operating system does, reporting `source: "system"`. Either variant names the same choice. Without `matchMedia`, the theme you passed applies. The choice is saved, so it survives a reload and reaches other tabs, and [the pre-paint script](preventing-the-flash.md) applies the right variant before the first paint.
+
+`followSystem` needs a theme whose `pairedTheme` has the opposite `colorScheme`; for any other theme, `set()` throws and changes nothing. A plain `set()` or `toggle()` saves a fixed choice again, and `clearPreference()` goes back to `systemTheme`. If you later remove the pair from a saved choice's theme, that theme stays applied as a fixed choice.
+
 ## Read the current state
 
-The theme menu needs to show which entry is selected. The manager answers four questions:
+The theme menu needs to show which entry is selected. The manager answers five questions:
 
-| Member             | Answers                                                                                                                                 |
-| ------------------ | --------------------------------------------------------------------------------------------------------------------------------------- |
-| `theme.name`       | Which theme is active, such as `"dim"`.                                                                                                 |
-| `theme.get()`      | Everything about the active theme: `name`, `colorScheme`, `tokens`, and `pairedTheme`.                                                  |
-| `theme.preference` | Which theme the user saved, or `null` when nothing is saved, storage cannot be read, or the saved name is no longer one of your themes. |
-| `theme.system`     | Which theme the operating system's setting maps to right now, whether or not it is shown.                                               |
+| Member                | Answers                                                                                                                                 |
+| --------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| `theme.name`          | Which theme is active, such as `"dim"`.                                                                                                 |
+| `theme.get()`         | Everything about the active theme: `name`, `colorScheme`, `tokens`, and `pairedTheme`.                                                  |
+| `theme.preference`    | Which theme the user saved, or `null` when nothing is saved, storage cannot be read, or the saved name is no longer one of your themes. |
+| `theme.followsSystem` | Whether the saved choice follows the operating system within its pair, as `set(name, { followSystem: true })` saves it.                 |
+| `theme.system`        | Which theme the operating system's setting maps to right now, whether or not it is shown.                                               |
 
 `preference` is what makes the "Auto" entry possible: the menu shows "Auto" as selected while it is `null`. Run that on every change too, so the menu keeps up when the toggle or another tab changes the theme behind its back:
 

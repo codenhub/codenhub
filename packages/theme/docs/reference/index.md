@@ -135,10 +135,11 @@ Theme used when the OS preference is light, and the one `toggle()` selects from 
 export interface Theme<TName extends string = string, TSchema extends Record<string, string> = Record<string, string>> {
     readonly name: TName;
     readonly preference: TName | null;
+    readonly followsSystem: boolean;
     readonly system: TName;
     init(): Theme<TName, TSchema>;
     get(): ActiveTheme<TName, TSchema>;
-    set(name: TName): ActiveTheme<TName, TSchema>;
+    set(name: TName, options?: ThemeSetOptions): ActiveTheme<TName, TSchema>;
     toggle(): ActiveTheme<TName, TSchema>;
     clearPreference(): ActiveTheme<TName, TSchema>;
     setTokens(tokens: TokenValues<TSchema>): ActiveTheme<TName, TSchema>;
@@ -159,6 +160,14 @@ Every member is safe to use without browser APIs: storage, DOM, and listener wor
 
 - `TName` — Names of every configured theme.
 - `TSchema` — Token schema from `ThemeOptions.tokenSchema`.
+
+#### Theme › followsSystem
+
+```ts
+readonly followsSystem: boolean;
+```
+
+Whether the stored preference follows the OS color scheme within its pair, as `set(name, { followSystem: true })` stores it. `false` when there is no stored preference, or its theme no longer has a `pairedTheme` of the opposite `colorScheme`, in which case the preference stays fixed on that theme.
 
 #### Theme › name
 
@@ -259,18 +268,19 @@ Reading computed styles can force a synchronous layout. Prefer `get().tokens` wh
 #### Theme › set
 
 ```ts
-set(name: TName): ActiveTheme<TName, TSchema>;
+set(name: TName, options?: ThemeSetOptions): ActiveTheme<TName, TSchema>;
 ```
 
-Activates a theme and stores it as the explicit preference.
+Activates a theme and stores it as the explicit preference. With `followSystem`, activates `name` or its `pairedTheme`, whichever has the OS's color scheme, and keeps following OS changes within that pair; without `matchMedia`, it activates `name`.
 
 **Parameters**
 
 - `name` — Configured theme name.
+- `options` — Whether the choice follows the OS color scheme within the theme's pair.
 
 **Returns** — The activated theme.
 
-**Throws** — `Error` — When `name` is not a configured theme, or a `className` resolver returns an invalid class.
+**Throws** — `Error` — When `name` is not a configured theme, `options` is not an object or has a non-boolean `followSystem`, `followSystem` is set for a theme without a `pairedTheme` of the opposite `colorScheme`, or a `className` resolver returns an invalid class.
 
 #### Theme › setTokens
 
@@ -308,7 +318,7 @@ Registers a listener called after every applied change. A listener that throws i
 toggle(): ActiveTheme<TName, TSchema>;
 ```
 
-Activates the active theme's `pairedTheme`, or else the `systemTheme` entry for the opposite color scheme, and stores it as the explicit preference.
+Activates the active theme's `pairedTheme`, or else the `systemTheme` entry for the opposite color scheme, and stores it as the explicit preference. The stored preference no longer follows the system.
 
 **Returns** — The activated theme.
 
@@ -499,6 +509,26 @@ tokenSchema?: TSchema | undefined;
 ```
 
 Maps token names to the CSS custom properties they are written to, such as `{ primary: "--color-primary" }`. Each property is `--` followed by ASCII letters, digits, `-`, `_`, or non-ASCII characters, so a stylesheet can name it without escapes.
+
+### ThemeSetOptions
+
+```ts
+export interface ThemeSetOptions {
+    followSystem?: boolean | undefined;
+}
+```
+
+Options for `Theme.set`. An option set to `undefined` is treated as omitted.
+
+#### ThemeSetOptions › followSystem
+
+```ts
+followSystem?: boolean | undefined;
+```
+
+Stores the choice as following the OS color scheme within the theme's pair: the active theme is the chosen one or its `pairedTheme`, whichever has the OS's `colorScheme`, and it switches when the OS does. Requires a `pairedTheme` whose `colorScheme` is the opposite of the chosen theme's.
+
+**Default** — `false`
 
 ## Type aliases
 

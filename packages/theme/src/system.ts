@@ -2,6 +2,23 @@ import { PREFERS_DARK_QUERY } from "./constants";
 import type { SystemThemeMap } from "./types";
 
 /**
+ * Returns whether the OS prefers a dark color scheme, or `null` when `matchMedia` is unavailable or throws.
+ *
+ * @internal
+ */
+export const readPrefersDark = (): boolean | null => {
+  if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
+    return null;
+  }
+
+  try {
+    return window.matchMedia(PREFERS_DARK_QUERY).matches;
+  } catch {
+    return null;
+  }
+};
+
+/**
  * Returns the theme name mapped to the current OS color-scheme preference, or `defaultTheme` when `matchMedia` is
  * unavailable or throws.
  *
@@ -11,16 +28,11 @@ export const readSystemTheme = <TName extends string>(options: {
   defaultTheme: TName;
   systemTheme: SystemThemeMap<TName>;
 }): TName => {
-  const { defaultTheme, systemTheme } = options;
-  if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
-    return defaultTheme;
+  const prefersDark = readPrefersDark();
+  if (prefersDark === null) {
+    return options.defaultTheme;
   }
-
-  try {
-    return window.matchMedia(PREFERS_DARK_QUERY).matches ? systemTheme.dark : systemTheme.light;
-  } catch {
-    return defaultTheme;
-  }
+  return prefersDark ? options.systemTheme.dark : options.systemTheme.light;
 };
 
 /**

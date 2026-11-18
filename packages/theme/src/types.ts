@@ -191,6 +191,20 @@ export interface ThemeOptions<
 }
 
 /**
+ * Options for {@link Theme.set}. An option set to `undefined` is treated as omitted.
+ */
+export interface ThemeSetOptions {
+  /**
+   * Stores the choice as following the OS color scheme within the theme's pair: the active theme is the chosen one or
+   * its `pairedTheme`, whichever has the OS's `colorScheme`, and it switches when the OS does. Requires a
+   * `pairedTheme` whose `colorScheme` is the opposite of the chosen theme's.
+   *
+   * @defaultValue `false`
+   */
+  followSystem?: boolean | undefined;
+}
+
+/**
  * Theme preference manager returned by `createTheme()`. Methods are bound, so they can be passed as callbacks.
  *
  * @remarks
@@ -205,6 +219,12 @@ export interface Theme<TName extends string = string, TSchema extends Record<str
   readonly name: TName;
   /** Explicit preference stored in `localStorage`, or `null` when none is stored, the stored name is not configured, or storage is unavailable. */
   readonly preference: TName | null;
+  /**
+   * Whether the stored preference follows the OS color scheme within its pair, as `set(name, { followSystem: true })`
+   * stores it. `false` when there is no stored preference, or its theme no longer has a `pairedTheme` of the opposite
+   * `colorScheme`, in which case the preference stays fixed on that theme.
+   */
+  readonly followsSystem: boolean;
   /** Theme matching the current OS color-scheme preference, or `defaultTheme` when `matchMedia` is unavailable. */
   readonly system: TName;
 
@@ -225,17 +245,22 @@ export interface Theme<TName extends string = string, TSchema extends Record<str
   get(): ActiveTheme<TName, TSchema>;
 
   /**
-   * Activates a theme and stores it as the explicit preference.
+   * Activates a theme and stores it as the explicit preference. With `followSystem`, activates `name` or its
+   * `pairedTheme`, whichever has the OS's color scheme, and keeps following OS changes within that pair; without
+   * `matchMedia`, it activates `name`.
    *
    * @param name - Configured theme name.
+   * @param options - Whether the choice follows the OS color scheme within the theme's pair.
    * @returns The activated theme.
-   * @throws {Error} When `name` is not a configured theme, or a `className` resolver returns an invalid class.
+   * @throws {Error} When `name` is not a configured theme, `options` is not an object or has a non-boolean
+   *   `followSystem`, `followSystem` is set for a theme without a `pairedTheme` of the opposite `colorScheme`, or a
+   *   `className` resolver returns an invalid class.
    */
-  set(name: TName): ActiveTheme<TName, TSchema>;
+  set(name: TName, options?: ThemeSetOptions): ActiveTheme<TName, TSchema>;
 
   /**
    * Activates the active theme's `pairedTheme`, or else the `systemTheme` entry for the opposite color scheme, and
-   * stores it as the explicit preference.
+   * stores it as the explicit preference. The stored preference no longer follows the system.
    *
    * @returns The activated theme.
    * @throws {Error} When a `className` resolver returns an invalid class.

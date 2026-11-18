@@ -1053,6 +1053,260 @@ describe("Theme change notifications", () => {
   });
 });
 
+describe("Theme following the system within a pair", () => {
+  const familyThemes = {
+    light: { colorScheme: "light" },
+    dark: { colorScheme: "dark" },
+    "ocean-light": { colorScheme: "light", pairedTheme: "ocean-dark" },
+    "ocean-dark": { colorScheme: "dark", pairedTheme: "ocean-light" },
+    solo: { colorScheme: "light" },
+    twin: { colorScheme: "light", pairedTheme: "light" },
+  } as const;
+  const key = "app-theme-preference";
+  const followOcean = JSON.stringify({ name: "ocean-light", followSystem: true });
+  const invalidStoredValues = [
+    "{not json",
+    '{"name":"absent","followSystem":true}',
+    '{"followSystem":true}',
+    "null",
+    "[]",
+  ];
+
+  it("should activate the variant with the OS color scheme and store the choice as following", () => {
+    createMatchMedia(true);
+    const theme = createTheme({ themes: familyThemes }).init();
+
+    const active = theme.set("ocean-light", { followSystem: true });
+
+    expect(active.name).toBe("ocean-dark");
+    expect(root.getAttribute("data-theme")).toBe("ocean-dark");
+    expect(theme.preference).toBe("ocean-light");
+    expect(theme.followsSystem).toBe(true);
+    expect(window.localStorage.getItem(key)).toBe(followOcean);
+  });
+
+  it("should switch within the pair when the OS changes and report it as system", () => {
+    const mediaQueryList = createMatchMedia(false);
+    const theme = createTheme({ themes: familyThemes }).init();
+    theme.set("ocean-dark", { followSystem: true });
+    const listener = vi.fn();
+    theme.subscribe(listener);
+
+    expect(theme.name).toBe("ocean-light");
+    mediaQueryList.dispatch(true);
+
+    expect(theme.name).toBe("ocean-dark");
+    expect(listener).toHaveBeenCalledOnce();
+    expect(listener.mock.calls[0]?.[0]).toMatchObject({ name: "ocean-dark", source: "system" });
+  });
+
+  it("should keep a plain set() fixed when the OS changes", () => {
+    const mediaQueryList = createMatchMedia(false);
+    const theme = createTheme({ themes: familyThemes }).init();
+    theme.set("ocean-dark", { followSystem: true });
+    theme.set("ocean-dark", { followSystem: false });
+
+    mediaQueryList.dispatch(true);
+    mediaQueryList.dispatch(false);
+
+    expect(theme.name).toBe("ocean-dark");
+    expect(theme.followsSystem).toBe(false);
+    expect(window.localStorage.getItem(key)).toBe("ocean-dark");
+  });
+
+  it("should throw for a theme without a pairedTheme of the opposite colorScheme, leaving state as it was", () => {
+    const theme = createTheme({ themes: familyThemes }).init();
+    theme.set("ocean-dark");
+
+    expect(() => theme.set("solo", { followSystem: true })).toThrow(
+      'Theme "solo" cannot follow the system: it needs a pairedTheme with the opposite colorScheme.',
+    );
+    expect(() => theme.set("twin", { followSystem: true })).toThrow("cannot follow the system");
+    expect(theme.name).toBe("ocean-dark");
+    expect(window.localStorage.getItem(key)).toBe("ocean-dark");
+  });
+
+  it("should throw for invalid set() options", () => {
+    const theme = createTheme({ themes: familyThemes }).init();
+
+    expect(() => theme.set("ocean-dark", null as never)).toThrow("Theme set() options must be an object.");
+    expect(() => theme.set("ocean-dark", { followSystem: "yes" as never })).toThrow(
+      "Theme set() followSystem option must be a boolean.",
+    );
+    expect(() => theme.set("ocean-dark", { followSystem: undefined })).not.toThrow();
+  });
+
+  it("should store toggle() as a fixed choice", () => {
+    const mediaQueryList = createMatchMedia(true);
+    const theme = createTheme({ themes: familyThemes }).init();
+    theme.set("ocean-light", { followSystem: true });
+
+    theme.toggle();
+    mediaQueryList.dispatch(false);
+    mediaQueryList.dispatch(true);
+
+    expect(theme.name).toBe("ocean-light");
+    expect(theme.followsSystem).toBe(false);
+    expect(window.localStorage.getItem(key)).toBe("ocean-light");
+  });
+
+  it("should forget the pair on clearPreference() and follow systemTheme", () => {
+    createMatchMedia(true);
+    const theme = createTheme({ themes: familyThemes }).init();
+    theme.set("ocean-light", { followSystem: true });
+
+    theme.clearPreference();
+
+    expect(theme.name).toBe("dark");
+    expect(theme.preference).toBeNull();
+    expect(theme.followsSystem).toBe(false);
+  });
+
+  it("should restore a stored following choice on init()", () => {
+    createMatchMedia(true);
+    window.localStorage.setItem(key, followOcean);
+
+    const theme = createTheme({ themes: familyThemes }).init();
+
+    expect(theme.name).toBe("ocean-dark");
+    expect(theme.followsSystem).toBe(true);
+  });
+
+  it("should keep a stored following choice fixed on its theme once that theme has no opposite pair", () => {
+    const mediaQueryList = createMatchMedia(true);
+    window.localStorage.setItem(key, JSON.stringify({ name: "solo", followSystem: true }));
+
+    const theme = createTheme({ themes: familyThemes }).init();
+    mediaQueryList.dispatch(false);
+
+    expect(theme.name).toBe("solo");
+    expect(theme.preference).toBe("solo");
+    expect(theme.followsSystem).toBe(false);
+  });
+
+  it.each(invalidStoredValues)("should ignore the stored value %s", (stored) => {
+    createMatchMedia(true);
+    window.localStorage.setItem(key, stored);
+    const theme = createTheme({ themes: familyThemes });
+
+    expect(theme.preference).toBeNull();
+    expect(theme.init().name).toBe("dark");
+  });
+
+  it("should read a configured name as a bare name even when it looks like the object form", () => {
+    const name = '{"name":"light","followSystem":true}';
+    window.localStorage.setItem(key, name);
+
+    const theme = createTheme({
+      themes: { [name]: { colorScheme: "dark", pairedTheme: "light" }, light: { colorScheme: "light" } },
+      defaultTheme: "light",
+      systemTheme: { light: "light", dark: "light" },
+    }).init();
+
+    expect(theme.name).toBe(name);
+    expect(theme.followsSystem).toBe(false);
+  });
+
+  it("should apply a following choice from another tab and keep following the OS", () => {
+    const mediaQueryList = createMatchMedia(false);
+    const theme = createTheme({ themes: familyThemes }).init();
+    theme.set("dark");
+    const listener = vi.fn();
+    theme.subscribe(listener);
+
+    window.localStorage.setItem(key, followOcean);
+    dispatchStorage({ key, newValue: followOcean });
+    mediaQueryList.dispatch(true);
+
+    expect(listener.mock.calls[0]?.[0]).toMatchObject({ name: "ocean-light", source: "storage" });
+    expect(theme.name).toBe("ocean-dark");
+  });
+
+  it("should keep following the pair when storage is unavailable", () => {
+    const mediaQueryList = createMatchMedia(false);
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const restore = replaceLocalStorage({
+      get() {
+        throw new Error("blocked");
+      },
+    });
+    try {
+      const theme = createTheme({ themes: familyThemes }).init();
+      theme.set("ocean-dark", { followSystem: true });
+      mediaQueryList.dispatch(true);
+
+      expect(theme.name).toBe("ocean-dark");
+      mediaQueryList.dispatch(false);
+      expect(theme.name).toBe("ocean-light");
+    } finally {
+      restore();
+    }
+  });
+
+  it("should activate the chosen theme when matchMedia is unavailable", () => {
+    Object.defineProperty(window, "matchMedia", { configurable: true, value: undefined });
+    const theme = createTheme({ themes: familyThemes }).init();
+
+    expect(theme.set("ocean-dark", { followSystem: true }).name).toBe("ocean-dark");
+  });
+
+  describe("pre-paint script", () => {
+    const run = (script: string): void => {
+      new Function(script)();
+    };
+
+    it.each([
+      [true, "ocean-dark"],
+      [false, "ocean-light"],
+    ])("should apply the variant of a following choice when the OS prefers dark is %s", (prefersDark, expected) => {
+      createMatchMedia(prefersDark);
+      window.localStorage.setItem(key, followOcean);
+
+      run(createTheme({ themes: familyThemes }).getPrePaintScript());
+
+      expect(root.getAttribute("data-theme")).toBe(expected);
+    });
+
+    it("should apply the stored theme of a following choice when matchMedia is unavailable", () => {
+      Object.defineProperty(window, "matchMedia", { configurable: true, value: undefined });
+      window.localStorage.setItem(key, JSON.stringify({ name: "ocean-dark", followSystem: true }));
+
+      run(createTheme({ themes: familyThemes }).getPrePaintScript());
+
+      expect(root.getAttribute("data-theme")).toBe("ocean-dark");
+    });
+
+    it("should keep a following choice fixed on a theme without an opposite pair", () => {
+      createMatchMedia(true);
+      window.localStorage.setItem(key, JSON.stringify({ name: "twin", followSystem: true }));
+
+      run(createTheme({ themes: familyThemes }).getPrePaintScript());
+
+      expect(root.getAttribute("data-theme")).toBe("twin");
+    });
+
+    it.each(invalidStoredValues)("should apply the system theme for the stored value %s", (stored) => {
+      createMatchMedia(true);
+      window.localStorage.setItem(key, stored);
+
+      run(createTheme({ themes: familyThemes }).getPrePaintScript());
+
+      expect(root.getAttribute("data-theme")).toBe("dark");
+    });
+
+    it("should apply what init() applies", () => {
+      createMatchMedia(true);
+      window.localStorage.setItem(key, followOcean);
+      const theme = createTheme({ themes: familyThemes });
+
+      run(theme.getPrePaintScript());
+      const prePainted = root.getAttribute("data-theme");
+
+      expect(theme.init().name).toBe(prePainted);
+    });
+  });
+});
+
 describe("Theme cross-tab sync", () => {
   it("should follow OS changes again after another tab clears the preference", () => {
     const mediaQueryList = createMatchMedia(false);
