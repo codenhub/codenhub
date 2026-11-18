@@ -73,12 +73,12 @@ routing.localize("/", "en"); // "/"
 `parse()` splits a path into its locale and the rest:
 
 ```ts
-routing.parse("/pt/about"); // { locale: "pt", pathname: "/about" }
-routing.parse("/about"); // { locale: "en", pathname: "/about" }
-routing.parse("/PT/about"); // { locale: "pt", pathname: "/about" }
+routing.parse("/pt/about"); // { locale: "pt", pathname: "/about", alternates: […] }
+routing.parse("/about"); // { locale: "en", pathname: "/about", alternates: […] }
+routing.parse("/PT/about"); // { locale: "pt", pathname: "/about", alternates: […] }
 ```
 
-The `pathname` it returns is the **canonical path**: the path your application routes on, the same in every language. Hold on to that idea; it matters once paths are translated.
+The `pathname` it returns is the **canonical path**: the path your application routes on, the same in every language. Hold on to that idea; it matters once paths are translated. `alternates` is the page's URL in each language, for [links to other languages](#link-to-another-language).
 
 `parse()` returns `undefined` for a path that is not a page in any locale, such as `/pt/en/about`. Once its prefix is removed it starts with another locale, so no link ever leads there. Answer it with a 404.
 
@@ -154,24 +154,31 @@ A path that already starts with a locale is read as that locale's URL, so the pr
 routing.localize("/pt/about", "en"); // "/about"
 ```
 
-On a localized site, switching language is a navigation, not just `setLocale()`: `setLocale()` changes the text but never the URL. So the shop's language picker reads the current page with `parse()`, builds its path in the new language, keeps the query string and fragment, and lets your router go there:
+On a localized site, switching language is a navigation, not just `setLocale()`: `setLocale()` changes the text but never the URL. So the shop's language picker reads the current page with `parse()`, takes its path in the new language from `alternates`, keeps the query string and fragment, and lets your router go there:
 
 ```ts
 const route = routing.parse(window.location.pathname);
-if (route !== undefined) {
-  await navigate(routing.localize(route.pathname, "pt") + window.location.search + window.location.hash);
+const target = route?.alternates.find((alternate) => alternate.locale === "pt");
+if (target !== undefined) {
+  await navigate(target.pathname + window.location.search + window.location.hash);
 }
 ```
 
 Going through `parse()` matters once paths are translated: `/sobre` is a Portuguese URL, not a canonical path, and only `parse()` knows to read it as `/about`.
 
-Use the same call for the `<link rel="alternate" hreflang>` tags that tell search engines about each language. Add an `x-default` tag for readers whose language you don't offer, pointing at the default locale's page:
+`alternates` lists the page in every language that has a URL for it, in the order of `locales`, the current one included. A language can be missing: with `/products/:id` and `/products/new` both translated, an English product called `novo` has no Portuguese URL, because `/pt/produtos/novo` is the new-product page. Build the picker from `alternates`, so it offers only the languages it can go to, or send a missing one to that language's home page. `localize()` throws for such a page instead, as [The risk you take on](#the-risk-you-take-on) explains, so don't call it with a path read from a request.
+
+Use the same list for the `<link rel="alternate" hreflang>` tags that tell search engines about each language. Add an `x-default` tag for readers whose language you don't offer, pointing at the default locale's page, when it has one:
 
 ```ts
 const defaultLocale = "en"; // the defaultLocale you configured
 const link = (hreflang: string, pathname: string) => `<link rel="alternate" hreflang="${escapeHtml(hreflang)}" href="${escapeHtml(new URL(pathname, "https://example.com").href)}">`;
 
-const alternates = [...routing.localizeAll(route.pathname).map((page) => link(page.locale, page.pathname)), link("x-default", routing.localize(route.pathname, defaultLocale))];
+const tags = route.alternates.map((page) => link(page.locale, page.pathname));
+const fallback = route.alternates.find((page) => page.locale === defaultLocale);
+if (fallback !== undefined) {
+  tags.push(link("x-default", fallback.pathname));
+}
 ```
 
 Escape both values as you would any text in HTML, or let your framework create the tags. A path can contain characters, such as `"` or `&`, that are allowed in a URL but not raw inside an attribute.
@@ -198,7 +205,7 @@ export const routing = createLocaleRouting({
 routing.localize("/about", "pt"); // "/pt/sobre"
 routing.localize("/cart", "es"); // "/es/carrito"
 routing.localize("/products/42", "pt"); // "/pt/produtos/42"
-routing.parse("/pt/produtos/42"); // { locale: "pt", pathname: "/products/42" }
+routing.parse("/pt/produtos/42"); // { locale: "pt", pathname: "/products/42", alternates: […] }
 ```
 
 Your application keeps routing on `/products/42`, whatever the language. Only the URL changes.
@@ -271,7 +278,7 @@ export const routing = createLocaleRouting({
 });
 
 routing.localize("/about", "pt"); // "/sobre"
-routing.parse("/sobre"); // { locale: "pt", pathname: "/about" }
+routing.parse("/sobre"); // { locale: "pt", pathname: "/about", alternates: […] }
 routing.localize("/", "pt"); // "/pt"
 routing.localize("/blog", "pt"); // "/pt/blog"
 ```
@@ -297,7 +304,7 @@ routing.localize("/sobre", "en");
 // RangeError: [I18n] "/sobre" in "en" would be read as "/about" in "pt"; …
 ```
 
-A static build that localizes every page it renders finds every clash at build time. A server only finds one when it builds that page's links. So if your URLs come from anywhere outside the table, such as a CMS, check new slugs against `parse()`, or keep the prefix with `"except-default"`.
+A static build that localizes every page it renders, with `localizeAll()` as in [Generate every localized page](#generate-every-localized-page), finds every clash at build time. A server only finds one when it builds a link to that page with `localize()`. The links it builds from a request's `parse().alternates` leave a clashing language out rather than fail, so nothing tells you there. So if your URLs come from anywhere outside the table, such as a CMS, run new slugs through `localizeAll()` when you publish them, or keep the prefix with `"except-default"`.
 
 The same error tells you when you passed a URL where `localize()` wants a canonical path, such as `localize("/sobre", "en")` when you meant the page at `/sobre`. Pass `parse("/sobre").pathname` instead.
 

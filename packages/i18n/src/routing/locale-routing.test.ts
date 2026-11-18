@@ -39,11 +39,14 @@ describe("createLocaleRouting", () => {
       localePrefix: "always",
     });
 
-    expect(routing.parse("/PT-br/about/")).toEqual({
+    expect(routing.parse("/PT-br/about/")).toMatchObject({
       locale: "pt-BR",
       pathname: "/about/",
     });
-    expect(routing.parse("/EN-us")).toEqual({ locale: "en-US", pathname: "/" });
+    expect(routing.parse("/EN-us")).toMatchObject({
+      locale: "en-US",
+      pathname: "/",
+    });
   });
 
   it("should reject invalid locale routing configuration", () => {
@@ -128,15 +131,15 @@ describe("createLocaleRouting", () => {
     });
 
     expect(requiredPrefix.parse("/about")).toBeUndefined();
-    expect(optionalDefaultPrefix.parse("/about")).toEqual({
+    expect(optionalDefaultPrefix.parse("/about")).toMatchObject({
       locale: "en-US",
       pathname: "/about",
     });
-    expect(optionalDefaultPrefix.parse("/EN-us/about")).toEqual({
+    expect(optionalDefaultPrefix.parse("/EN-us/about")).toMatchObject({
       locale: "en-US",
       pathname: "/about",
     });
-    expect(optionalDefaultPrefix.parse("/pt-BR-other/about")).toEqual({
+    expect(optionalDefaultPrefix.parse("/pt-BR-other/about")).toMatchObject({
       locale: "en-US",
       pathname: "/pt-BR-other/about",
     });
@@ -298,7 +301,7 @@ describe("createLocaleRouting", () => {
     config.defaultLocale = "pt";
     config.localePrefix = "except-default";
 
-    expect(routing.parse("/en/about")).toEqual({
+    expect(routing.parse("/en/about")).toMatchObject({
       locale: "en",
       pathname: "/about",
     });
@@ -317,11 +320,11 @@ describe("createLocaleRouting", () => {
       localePrefix: "except-default",
     });
 
-    expect(routing.parse("/about")).toEqual({
+    expect(routing.parse("/about")).toMatchObject({
       locale: "en-US",
       pathname: "/about",
     });
-    expect(routing.parse("/PT-br/about")).toEqual({
+    expect(routing.parse("/PT-br/about")).toMatchObject({
       locale: "pt-BR",
       pathname: "/about",
     });
@@ -373,10 +376,12 @@ describe("createLocaleRouting", () => {
         vi.mocked(normalizeSegment).mockClear();
         const result = routing.parse(request);
         // `always` has no unprefixed paths.
-        expect(result, `${localePrefix}, ${kind}`).toEqual(
+        expect(result && { locale: result.locale, pathname: result.pathname }, `${localePrefix}, ${kind}`).toEqual(
           localePrefix === "always" && kind === "unprefixed" ? undefined : expected[kind],
         );
-        const distinct = new Set([...request.split("/").filter(Boolean), ...canonical]);
+        // The alternates are this page's URL in each locale, whose words, such as `documentos`, are read too.
+        const alternates = result?.alternates.flatMap((alternate) => alternate.pathname.split("/")) ?? [];
+        const distinct = new Set([...request.split("/"), ...canonical, ...alternates].filter(Boolean));
 
         expect(vi.mocked(normalizeSegment).mock.calls.length, `${localePrefix}, ${kind}`).toBeLessThanOrEqual(
           distinct.size,
@@ -434,10 +439,10 @@ describe("createLocaleRouting", () => {
       for (const trailingSlash of ["always", "never"] as const) {
         const routing = create(trailingSlash);
 
-        expect(routing.parse("/pt-BR/marca")).toEqual({ locale: "pt-BR", pathname: "/brand" });
-        expect(routing.parse("/pt-BR/marca/")).toEqual({ locale: "pt-BR", pathname: "/brand/" });
-        expect(routing.parse("/pt-BR")).toEqual({ locale: "pt-BR", pathname: "/" });
-        expect(routing.parse("/pt-BR/")).toEqual({ locale: "pt-BR", pathname: "/" });
+        expect(routing.parse("/pt-BR/marca")).toMatchObject({ locale: "pt-BR", pathname: "/brand" });
+        expect(routing.parse("/pt-BR/marca/")).toMatchObject({ locale: "pt-BR", pathname: "/brand/" });
+        expect(routing.parse("/pt-BR")).toMatchObject({ locale: "pt-BR", pathname: "/" });
+        expect(routing.parse("/pt-BR/")).toMatchObject({ locale: "pt-BR", pathname: "/" });
       }
       const routing = create("always");
       const route = routing.parse("/pt-BR/marca")!;
