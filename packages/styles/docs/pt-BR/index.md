@@ -1,7 +1,7 @@
 ---
 title: Introdução
 description: Para que serve o @codenhub/styles, quanto ele custa e em que ordem ler esta documentação.
-source: 3910a00d68996649836959bfa1e9cb0891bfce4d
+source: 9572c05b6ba48d91df1e1a2f98583d129c477ca1
 ---
 
 # @codenhub/styles
@@ -61,7 +61,7 @@ A [Configuração](./setup.md) ajuda você a escolher.
 Conheça estes custos antes de adotar o pacote:
 
 - **Os nomes de classe são curtos e sem prefixo.** `.primary`, `.success`, `.dark`, `.label`, `.field`, `.section`, `.stack`, `.flat` e `.ghost` são nomes globais. Outra folha de estilos na mesma página que use esses nomes colide com esta. O pacote fica em [camadas de cascata](./setup.md#camadas-de-cascata), então o seu próprio CSS fora de camadas vence uma colisão, mas as regras de uma biblioteca de terceiros para o mesmo nome continuam valendo junto com as do pacote.
-- **As folhas de estilos completas são grandes antes da compressão.** Minificada, a folha de estilos completa tem cerca de 198 KB, a `/native` cerca de 295 KB e a `/components` cerca de 159 KB. Servidas com gzip, ficam em cerca de 17 KB, 22 KB e 13 KB. Os arquivos específicos são bem menores: `/theme` tem cerca de 12 KB (3 KB com gzip) e cada estética tem de 4 a 14 KB (1 a 2 KB com gzip). A maior parte do tamanho é composição que todo componente repete, e é por isso que a compressão elimina tanto. Um arquivo compilado traz todas as classes, a página usando ou não. Para entregar só as classes que as suas páginas usam, compile o pacote no seu próprio build: pelo [Tailwind CSS v4](./integrating/tailwind.md) quando o projeto o usa, ou com o [comando `build`](./integrating/without-a-bundler.md#gere-só-as-classes-que-você-usa) do pacote em qualquer outro projeto. Assim, uma página com um botão recebe de 26 a 28 KB minificados, e cerca de 6 KB com gzip. Fora isso, importe o entrypoint mais restrito que cubra a página; veja [Configuração → Todos os entrypoints](./setup.md#todos-os-entrypoints).
+- **As folhas de estilos completas são grandes antes da compressão.** Minificada, a folha de estilos completa tem cerca de 214 KB, a `/native` cerca de 319 KB e a `/components` cerca de 172 KB. Servidas com gzip, ficam em cerca de 19 KB, 24 KB e 15 KB. Os arquivos específicos são bem menores: `/theme` tem cerca de 13 KB (3 KB com gzip) e cada estética tem de 5 a 15 KB (1 a 2 KB com gzip). A maior parte do tamanho é composição que todo componente repete, e é por isso que a compressão elimina tanto. Um arquivo compilado traz todas as classes, a página usando ou não. Para entregar só as classes que as suas páginas usam, compile o pacote no seu próprio build: pelo [Tailwind CSS v4](./integrating/tailwind.md) quando o projeto o usa, ou com o [comando `build`](./integrating/without-a-bundler.md#gere-só-as-classes-que-você-usa) do pacote em qualquer outro projeto. Assim, uma página com um botão recebe de 26 a 31 KB minificados, e de 6 a 7 KB com gzip. Fora isso, importe o entrypoint mais restrito que cubra a página; veja [Configuração → Todos os entrypoints](./setup.md#todos-os-entrypoints).
 - **`--color-foreground` é um fundo, não uma cor de texto.** É o tom um passo distante da página, sobre o qual fica um card ou painel discreto. A cor do texto é `--color-text`.
 - **Quatro cores de hover são valores fixos.** `--color-success-hover`, `--color-warning-hover`, `--color-destructive-hover` e `--color-info-hover` são pré-calculadas, porque misturá-las em tempo real travava o WebKit. Se você sobrescrever só `--color-success`, o hover dela mantém o tom antigo, então substitua a família inteira; veja [Temas → Tokens de cor](./usage/theming.md#tokens-de-cor).
 - **Só navegadores modernos.** Chrome 123, Safari 17.5 ou Firefox 128 e mais recentes. Não há camada de fallback para navegadores mais antigos.
@@ -79,7 +79,7 @@ O pacote está abaixo da 1.0 e segue a [regra do versionamento semântico para v
 - Uma versão minor, como da 0.7.0 para a 0.8.0, pode quebrar compatibilidade. Ela pode renomear ou remover uma classe ou token, ou mudar um padrão. Toda quebra é listada em **Changed** ou **Removed** na página do [changelog](../changelog/index.md) daquela versão, com o que usar no lugar.
 - Uma versão patch, como da 0.7.0 para a 0.7.1, nunca quebra.
 
-O range padrão do npm para uma dependência nova, `^0.10.0`, já aceita apenas patches, porque abaixo da 1.0 um range com circunflexo não avança para a próxima versão minor. Leia o changelog antes de subir esse range. Ao referenciar um arquivo de uma CDN, coloque a versão exata na URL; veja [Sem bundler](./integrating/without-a-bundler.md).
+O range padrão do npm para uma dependência nova, `^0.11.0`, já aceita apenas patches, porque abaixo da 1.0 um range com circunflexo não avança para a próxima versão minor. Leia o changelog antes de subir esse range. Ao referenciar um arquivo de uma CDN, coloque a versão exata na URL; veja [Sem bundler](./integrating/without-a-bundler.md).
 
 As quebras não são amenizadas com aliases porque o modelo ainda está se assentando, e manter cada nome antigo ao lado do substituto aumentaria a superfície a cada versão. Uma renomeação ou remoção costuma custar um localizar-e-substituir quando você atualiza; um padrão alterado pode exigir que você reajuste o seu próprio CSS.
 

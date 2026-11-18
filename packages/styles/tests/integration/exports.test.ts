@@ -11,6 +11,7 @@ import { expect, test } from "vitest";
 
 interface PackageManifest {
   exports: Record<string, string | Record<string, string>>;
+  bin?: Record<string, string>;
 }
 
 interface TailwindExportContract {
@@ -218,6 +219,35 @@ test("every declared package export target exists after build", async () => {
   );
 });
 
+/* What npm would publish, which `files` decides, as the publish workflow packs
+   it. An export target that exists after a build but sits outside `files`
+   ships as a broken path, and the command's bundle and the purge sources are
+   no export at all, so they are named too. Run through a shell on Windows,
+   where npm is a `.cmd` script. */
+test(
+  "the package npm would publish holds every export target, the command, and its sources",
+  { timeout: 60_000 },
+  async () => {
+    const { stdout } = await executeFile("npm", ["pack", "--dry-run", "--json", "--ignore-scripts"], {
+      cwd: packageRoot,
+      shell: process.platform === "win32",
+    });
+    const [packed] = JSON.parse(stdout) as [{ files: { path: string }[] }];
+    const files = new Set(packed.files.map((file) => file.path));
+    const expected = [
+      ...new Set(exportTargets.map(({ target }) => target.replace(/^\.\//, ""))),
+      ...Object.values(manifest.bin ?? {}).map((target) => target.replace(/^\.\//, "")),
+      "dist/purge/index.css",
+      "dist/purge/classes.json",
+      "package.json",
+      "NOTICE",
+    ];
+
+    expect(expected).toContain("dist/cli.js");
+    expect(expected.filter((file) => !files.has(file))).toEqual([]);
+  },
+);
+
 /* Every CSS file under one of the package's published directories, as
    package-relative paths with forward slashes. */
 const shippedStylesheets = async (directory: string) =>
@@ -242,9 +272,10 @@ test("no shipped stylesheet contains a sequence that ends an inline style elemen
    under ISC, which Lucide derives from Feather, under MIT. Both licences ask
    for their notice in every copy, and a compiled stylesheet is copied on its
    own: served from a CDN, or committed into a project's assets, apart from the
-   package's NOTICE. So a compiled file that carries the marks names them. */
-test("every compiled stylesheet that carries the checkbox marks names their licence", async () => {
-  const stylesheets = await shippedStylesheets("dist");
+   package's NOTICE. So a compiled file that carries the marks names them, and
+   so does a `/tw` source, which a consumer's Tailwind copies into its build. */
+test("every shipped stylesheet that carries the checkbox marks names their licence", async () => {
+  const stylesheets = [...(await shippedStylesheets("dist")), ...(await shippedStylesheets("tw"))];
   const outputs = await Promise.all(stylesheets.map((file) => readFile(path.resolve(packageRoot, file), "utf8")));
   const marked = stylesheets.filter((_, index) => outputs[index]!.includes("20 6 9 17 4 12"));
   const unnoticed = marked.filter((file) => {
@@ -255,6 +286,7 @@ test("every compiled stylesheet that carries the checkbox marks names their lice
 
   expect(marked).toContain("dist/index.css");
   expect(marked).toContain("dist/purge/index.css");
+  expect(marked).toContain("tw/components/form.rules.css");
   expect(unnoticed).toEqual([]);
 });
 

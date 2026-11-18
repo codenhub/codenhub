@@ -2,7 +2,7 @@
 title: Sin bundler
 description: Enlazar las hojas de estilos compiladas desde HTML simple, Rails, Laravel, Django o cualquier aplicación renderizada en el servidor, y el build por línea de comandos.
 order: 6
-source: 41b82b20cc609ae20945918f3ff7c65885d77835
+source: 0b7b5c915a04aaf236900638e969d4a7ca85377c
 ---
 
 # Sin bundler
@@ -38,8 +38,8 @@ jsDelivr y unpkg sirven todos los archivos de cada versión publicada en npm, as
 
 ```html
 <head>
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@codenhub/styles@0.10.0/dist/index.css" />
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@codenhub/styles@0.10.0/dist/aesthetics/pixel.css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@codenhub/styles@0.11.0/dist/index.css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@codenhub/styles@0.11.0/dist/aesthetics/pixel.css" />
 </head>
 ```
 
@@ -195,7 +195,7 @@ Escribe la salida en una carpeta incluida en `STATICFILES_DIRS`, aquí `static/`
 
 - `--content <glob>`, o `-c <glob>`, indica los archivos en los que buscar nombres de clase. Es obligatorio y se puede repetir: pásalo una vez por glob, y el build lee todos los archivos que coincidan con alguno. Un glob relativo se resuelve respecto a la carpeta desde la que ejecutas el comando, así que ejecútalo desde la raíz de tu proyecto; un glob absoluto se usa tal cual. Una ruta que nombra un archivo existente se lee como ese archivo, aunque su nombre lleve un corchete, como el `app/[id]/page.tsx` de Next.js; solo una ruta que no nombra ningún archivo se lee como glob. `**` coincide con cualquier número de carpetas, y `{rb,erb}` con cualquiera de las dos extensiones. Sirve cualquier archivo de texto, tenga la extensión que tenga. Cada glob tiene que coincidir con al menos un archivo, o el build falla y lo nombra, así que una errata no puede publicar una hoja de estilos vacía. Los archivos que excluye tu `.gitignore` se leen igualmente cuando un glob coincide con ellos, y no se lee nada fuera de tus globs. Un `*` o un `**` no coincide con un nombre que empieza por punto, así que `**/*.html` omite tanto `.hidden/page.html` como `.page.html`; escribe el punto para llegar a ellos, como en `.hidden/**/*.html`. El archivo de `--output` nunca se lee, aunque un glob coincida con él.
 - Pon cada glob entre comillas, con `\"` dentro de un script de `package.json`. Sin comillas, tu shell puede expandir el glob a una lista de archivos antes de que el comando lo vea, y solo el primer archivo cuenta como valor de `--content`. Cuando eso deja nombres de archivo sobrantes, el build los rechaza en lugar de leer en silencio menos de lo que querías; cuando el glob coincidió con un solo archivo, el build lee solo ese archivo y nada de lo que tus plantillas añadan más adelante.
-- `--output <file>`, o `-o <file>`, es la hoja de estilos que se escribe. Es obligatorio. Una ruta relativa se resuelve respecto a la carpeta desde la que ejecutas el comando, las carpetas padre que falten se crean, y un archivo existente se reemplaza.
+- `--output <file>`, o `-o <file>`, es la hoja de estilos que se escribe. Es obligatorio. Una ruta relativa se resuelve respecto a la carpeta desde la que ejecutas el comando, las carpetas padre que falten se crean, y una hoja de estilos que el comando escribió antes se reemplaza. Para que no pierdas un archivo por error, rechaza un archivo que no empiece con un comentario `/*!` o con `@layer`, salvo que esté vacío, y uno que nombre una entrada de `--content`.
 - `--aesthetic <name>` añade una de las [estéticas](../usage/aesthetics.md): `neobrutalism`, `glass`, `pixel`, `chunky-tile`, `cyber` o `sketch`. Repítelo para más de una; nombrar una dos veces la incluye una sola vez. Las estéticas se piden explícitamente porque el build no puede saber por tus plantillas cuál quieres: cada una se añade cuando la pides, sin sus reglas para las clases que tus plantillas no usan, y no se incluye ninguna cuando no lo haces.
 - `--no-minify` escribe en su lugar CSS legible e indentado. Sirve para leer lo que generó el build; en producción sirve el archivo minificado.
 - `--help` imprime el uso, con las estéticas que trae esta versión. `--version` imprime la versión del paquete. Ninguno de los dos genera nada, y ambos terminan con estado 0.

@@ -119,13 +119,13 @@ A page cannot change what a media query reports, however politely it asks, so an
 </html>
 ```
 
-| Attribute       | Value      | What the package does                                                                                                                |
-| --------------- | ---------- | ------------------------------------------------------------------------------------------------------------------------------------ |
-| `data-contrast` | `more`     | Draws the [increased-contrast](#increased-contrast) borders, whatever the system asks for.                                           |
-| `data-contrast` | `standard` | Leaves them out, even when the system asks for more contrast.                                                                        |
-| `data-motion`   | `full`     | Moves as with no preference, even when the system asks for reduced motion.                                                           |
-| `data-motion`   | `reduce`   | Does what the system's reduced-motion setting does: what moves stops, and what fades still fades.                                    |
-| `data-motion`   | `none`     | Ends every animation and transition at once, fades included. The near-zero duration keeps `transitionend` and `animationend` firing. |
+| Attribute       | Value      | What the package does                                                                                                                                                                    |
+| --------------- | ---------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `data-contrast` | `more`     | Draws the [increased-contrast](#increased-contrast) borders, whatever the system asks for.                                                                                               |
+| `data-contrast` | `standard` | Leaves them out, even when the system asks for more contrast.                                                                                                                            |
+| `data-motion`   | `full`     | Moves as with no preference, even when the system asks for reduced motion.                                                                                                               |
+| `data-motion`   | `reduce`   | Does what the system's reduced-motion setting does: what moves stops, and what fades still fades.                                                                                        |
+| `data-motion`   | `none`     | Ends every animation and transition at once, fades included, after any delay it has, so a tooltip still lingers. The near-zero duration keeps `transitionend` and `animationend` firing. |
 
 A settings screen with "System / Standard / More" removes `data-contrast` for System and sets it for the other two, the way a [theme selector](./usage/theming.md#light-and-dark) works. Motion has one more level, since the system's setting has only one: "System / All / Reduced / None".
 

@@ -169,7 +169,7 @@ test.describe("forms", () => {
      success, destructive (and so an invalid field), and info near 3.1-3.7:1 in
      dark -- so the text takes `--intent-strong`, measured here on the field's
      rendered ground for every intent, both themes, and each presentation. */
-  test("prints typed text at 4.5:1 on its field for every intent and presentation", async ({ page }) => {
+  test("prints typed text and placeholders at 4.5:1 on their field, on the page and on a plate", async ({ page }) => {
     await page.goto(FORMS_URL);
 
     for (const theme of ["light", "dark"]) {
@@ -188,32 +188,42 @@ test.describe("forms", () => {
           }
           return getComputedStyle(document.documentElement).backgroundColor;
         };
-        const results: { label: string; color: string; background: string; page: string }[] = [];
+        const results: { label: string; color: string; background: string; page: string; hint?: string }[] = [];
         const intents = ["", "neutral", "primary", "secondary", "success", "warning", "destructive", "info"];
         const controls = {
-          ipt: '<input class="ipt CLASSES" ATTRS value="Typed" />',
-          textarea: '<textarea class="textarea CLASSES" ATTRS>Typed</textarea>',
+          ipt: '<input class="ipt CLASSES" ATTRS value="Typed" placeholder="Hint" />',
+          textarea: '<textarea class="textarea CLASSES" ATTRS placeholder="Hint">Typed</textarea>',
           select: '<select class="select CLASSES" ATTRS><option>Typed</option></select>',
         };
+
+        /* A neutral field held by a solid surface prints in the surface's ink,
+           and its placeholder has to as well: the page's grey read at 1 to 3:1
+           on the surface's fill. */
+        const plates = ["", "card solid primary", "card solid success", "card solid warning"];
 
         for (const [control, template] of Object.entries(controls)) {
           for (const presentation of ["ghost", "soft", "solid"]) {
             for (const state of [...intents, "invalid"]) {
-              const wrapper = document.createElement("div");
-              const classes = `${presentation} ${state === "invalid" ? "" : state}`;
-              wrapper.innerHTML = template
-                .replace("CLASSES", classes)
-                .replace("ATTRS", state === "invalid" ? 'aria-invalid="true"' : "");
-              host.append(wrapper);
-              const field = wrapper.firstElementChild!;
-              const styles = getComputedStyle(field);
-              results.push({
-                label: `${name} .${control}.${presentation}${state ? ` ${state}` : ""}`,
-                color: styles.color,
-                background: styles.backgroundColor,
-                page: ground(wrapper),
-              });
-              wrapper.remove();
+              /* A field with an intent keeps its own ink, on a plate too. */
+              for (const plate of state === "" || state === "neutral" ? plates : [""]) {
+                const wrapper = document.createElement("div");
+                wrapper.className = plate;
+                const classes = `${presentation} ${state === "invalid" ? "" : state}`;
+                wrapper.innerHTML = template
+                  .replace("CLASSES", classes)
+                  .replace("ATTRS", state === "invalid" ? 'aria-invalid="true"' : "");
+                host.append(wrapper);
+                const field = wrapper.firstElementChild!;
+                const styles = getComputedStyle(field);
+                results.push({
+                  label: `${name} .${control}.${presentation}${state ? ` ${state}` : ""}${plate ? ` in .${plate.replaceAll(" ", ".")}` : ""}`,
+                  color: styles.color,
+                  background: styles.backgroundColor,
+                  page: ground(wrapper),
+                  hint: control === "select" ? undefined : getComputedStyle(field, "::placeholder").color,
+                });
+                wrapper.remove();
+              }
             }
           }
         }
@@ -224,6 +234,10 @@ test.describe("forms", () => {
       for (const field of fields) {
         const ratio = getContrastRatio(field.color, flattenColor(field.background, field.page));
         expect.soft(ratio, `${field.label} typed text`).toBeGreaterThanOrEqual(4.5);
+        if (field.hint) {
+          const hint = getContrastRatio(field.hint, flattenColor(field.background, field.page));
+          expect.soft(hint, `${field.label} placeholder`).toBeGreaterThanOrEqual(4.5);
+        }
       }
     }
   });

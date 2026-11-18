@@ -20,6 +20,16 @@ const MARKUP = `
   <span data-testid="badge" class="badge soft edged warning">Badge</span>
   <div data-testid="alert" class="alert soft edged success">Alert</div>
   <div data-testid="card" class="card">Card</div>
+  <textarea data-testid="textarea" class="textarea"></textarea>
+  <select data-testid="select" class="select"><option>a</option></select>
+  <div data-testid="group" class="input-group"><input class="ipt" /></div>
+  <hr data-testid="divider" class="divider" />
+  <table class="data-table"><thead><tr><th data-testid="head">Head</th></tr></thead></table>
+  <div data-testid="panel" class="panel soft edged info">Panel</div>
+  <kbd data-testid="kbd" class="kbd soft edged">K</kbd>
+  <code data-testid="code" class="code soft edged">code</code>
+  <pre data-testid="pre" class="pre soft edged">pre</pre>
+  <div data-testid="chunky-tile-solo-card" class="chunky-tile-solo">Solo</div>
   <div data-testid="progress" class="progress active" style="--progress-value: 40%"></div>
   <div data-testid="indeterminate" class="progress indeterminate"></div>
   <div data-testid="skeleton" class="skeleton"></div>
@@ -49,6 +59,7 @@ const MARKUP = `
 
 const CONTRAST_PROPERTIES = [
   "border-top-color",
+  "border-bottom-color",
   "outline-color",
   "background-color",
   "backdrop-filter",

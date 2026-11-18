@@ -83,10 +83,16 @@ const consumerBuild = async (imports: string[], candidates: string[]) => {
     onDependency() {},
   });
 
-  return withNotice(optimize(compiler.build(candidates), { minify: true }).code);
+  /* A `/tw` source with the marks carries the notice too, and Lightning CSS
+     keeps it only where it lands at the head of the output, so it is taken out
+     and placed as the compiled build places it. */
+  const code = optimize(compiler.build(candidates), { minify: true }).code.replace(PACKAGE_NOTICE, "");
+
+  return withNotice(code);
 };
 
 const REGISTRATION = /@property --tw-[\w-]+\{[^}]*\}/g;
+const PACKAGE_NOTICE = /\/\*! @codenhub\/styles[^]*?\*\/\n?/g;
 
 /* The stylesheet without Tailwind's banner and the `--tw-*` registrations,
    and those registrations on their own. */

@@ -25,6 +25,8 @@ const AESTHETIC_EXPORT = /^\.\/aesthetics\/(?!tw$)([^/]+)$/;
    variants this command offers, and the class names it may drop from one. */
 const PURGE_SOURCE = "dist/purge/index.css";
 const PURGE_CLASSES = "dist/purge/classes.json";
+/* How much of an existing output is read to tell whether this command wrote it. */
+const HEAD_BYTES = 1024;
 
 const USAGE = `Usage: ${BIN} build --content <glob> [--content <glob> ...] --output <file> [options]
 
@@ -158,6 +160,9 @@ async function build(options: BuildOptions, io: CliIo): Promise<string> {
   }
 
   const output = path.resolve(io.cwd, options.output);
+
+  await assertReplaceable(options, io.cwd, output);
+
   const contents = readContent(options.contentGlobs, io.cwd, output);
 
   const droppable = new Set(JSON.parse(await readPackageFile(PURGE_CLASSES)) as string[]);
@@ -196,6 +201,55 @@ async function build(options: BuildOptions, io: CliIo): Promise<string> {
   return output;
 }
 
+/* The output is replaced whole, so a file this command did not write is
+   refused rather than lost: a template named as the output by mistake, as in
+   `--content index.html --output index.html`, or a stylesheet written by hand.
+   What it writes starts with Tailwind's `/*!` banner, and a stylesheet built
+   another way with a banner or a layer statement is taken as one built to be
+   replaced. An empty file, of no bytes, is replaced too. What is not a file is
+   left to the write, which reports it. A file that cannot be read is refused:
+   a directory can let a file be renamed over that it does not let be read. */
+async function assertReplaceable(options: BuildOptions, cwd: string, output: string): Promise<void> {
+  if (options.contentGlobs.some((entry) => path.relative(path.resolve(cwd, entry), output) === "")) {
+    throw new Error(`--output ${options.output} is also a --content file; name a stylesheet to write.`);
+  }
+
+  let head: string;
+
+  try {
+    const stats = await fs.stat(output);
+
+    if (!stats.isFile() || stats.size === 0) {
+      return;
+    }
+
+    const handle = await fs.open(output);
+
+    try {
+      const { buffer, bytesRead } = await handle.read(Buffer.alloc(HEAD_BYTES), 0, HEAD_BYTES, 0);
+
+      head = buffer.toString("utf8", 0, bytesRead);
+    } finally {
+      await handle.close();
+    }
+  } catch (error) {
+    if ((error as { code?: string }).code === "ENOENT") {
+      return;
+    }
+
+    throw new Error(
+      `cannot read --output ${options.output} to check it is a stylesheet this command wrote: ${error instanceof Error ? error.message : String(error)}`,
+    );
+  }
+
+  // `\s` takes a byte order mark too. A marker past the bytes read is not found, and the file is refused.
+  if (!/^\s*(?:\/\*!|@layer\b)/.test(head)) {
+    throw new Error(
+      `--output ${options.output} holds something this command did not write; move it or name another file.`,
+    );
+  }
+}
+
 /* Every entry has to name a file and every file has to be readable, so a build
    from missing content fails rather than writing a stylesheet without its
    classes. The output is left out: it names every class it keeps, so a glob
@@ -219,10 +273,14 @@ function readContent(entries: readonly string[], cwd: string, output: string): G
    class this package defines. A word that is not one is read again by its
    parts around each colon, so Svelte's `class:primary={isPrimary}` and a Ruby
    `btn: true` are found. */
-function findClasses(content: string, known: ReadonlySet<string>): string[] {
-  return splitWords(content, String.raw`\w:-`)
-    .flatMap((word) => (known.has(word) ? [word] : word.split(":")))
-    .filter((word) => known.has(word));
+function* findClasses(content: string, known: ReadonlySet<string>): Generator<string, void, undefined> {
+  for (const word of splitWords(content, String.raw`\w:-`)) {
+    if (known.has(word)) {
+      yield word;
+    } else if (word.includes(":")) {
+      yield* word.split(":").filter((part) => known.has(part));
+    }
+  }
 }
 
 // Read from this package's own manifest, so the list follows its `exports` instead of drifting from them.

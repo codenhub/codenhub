@@ -96,6 +96,7 @@
      group could not suppress this one and a focused field drew two rings. */
   @media (forced-colors: active) {
     input:is(
+        :not([type]),
         [type="text"],
         [type="email"],
         [type="password"],

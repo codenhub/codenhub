@@ -1,4 +1,4 @@
-import { mkdir, mkdtemp, readFile, rm, stat, writeFile } from "node:fs/promises";
+import { chmod, mkdir, mkdtemp, readFile, rm, stat, writeFile } from "node:fs/promises";
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import path from "node:path";
@@ -300,13 +300,67 @@ describe("failures", () => {
 
   // The temporary file is the one write that can fail partway; a directory in its place makes it fail.
   it("leaves the previous stylesheet whole when the write fails", async () => {
-    await writeFile(path.join(project, "app.css"), "/* previous */");
+    await writeFile(path.join(project, "app.css"), "/*! previous */");
     await mkdir(path.join(project, `app.css.${process.pid}.tmp`));
 
     expect(await failureOf("build", "-c", "app/views/**/*.erb", "-o", "app.css")).toMatch(
       /^chs: cannot write the stylesheet: /,
     );
-    expect(await readFile(path.join(project, "app.css"), "utf8")).toBe("/* previous */");
+    expect(await readFile(path.join(project, "app.css"), "utf8")).toBe("/*! previous */");
+  });
+
+  /* The output is replaced whole, so naming a template or a hand-written
+     stylesheet as the output by mistake used to lose it. */
+  it("refuses an output that is also a --content file, and leaves it", async () => {
+    const template = path.join(project, "app", "views", "show.html.erb");
+
+    expect(await failureOf("build", "-c", "app/views/show.html.erb", "-o", "app/views/show.html.erb")).toBe(
+      "chs: --output app/views/show.html.erb is also a --content file; name a stylesheet to write.",
+    );
+    expect(await readFile(template, "utf8")).toBe('<button class="btn primary">Save</button>\n');
+  });
+
+  it("refuses to replace a file it did not write, and leaves it", async () => {
+    await writeFile(path.join(project, "app.css"), ".mine { color: red; }\n");
+
+    expect(await failureOf("build", "-c", "app/views/**/*.erb", "-o", "app.css")).toBe(
+      "chs: --output app.css holds something this command did not write; move it or name another file.",
+    );
+    expect(await readOutput()).toBe(".mine { color: red; }\n");
+  });
+
+  it("refuses a file whose first bytes are only whitespace", async () => {
+    await writeFile(path.join(project, "app.css"), `${" ".repeat(2048)}.mine { color: red; }`);
+
+    expect(await failureOf("build", "-c", "app/views/**/*.erb", "-o", "app.css")).toMatch(/did not write/);
+  });
+
+  /* Renaming over a file needs the directory's permission, not the file's, so
+     a file the command cannot read could still be replaced unchecked. POSIX
+     modes only: Windows ignores them, and root reads the file anyway. */
+  it.skipIf(process.platform === "win32" || process.getuid?.() === 0)(
+    "refuses a file it cannot read, and leaves it",
+    async () => {
+      const file = path.join(project, "app.css");
+
+      await writeFile(file, ".mine { color: red; }");
+      await chmod(file, 0o200);
+
+      expect(await failureOf("build", "-c", "app/views/**/*.erb", "-o", "app.css")).toMatch(
+        /^chs: cannot read --output app\.css to check/,
+      );
+      await chmod(file, 0o600);
+      expect(await readOutput()).toBe(".mine { color: red; }");
+    },
+  );
+
+  it("replaces a stylesheet it wrote, and an empty file", async () => {
+    await writeFile(path.join(project, "empty.css"), "");
+
+    expect(await build("build", "-c", "app/views/**/*.erb", "-o", "app.css")).toBe(0);
+    expect(await build("build", "-c", "app/views/**/*.erb", "-o", "app.css", "--no-minify")).toBe(0);
+    expect(await build("build", "-c", "app/views/**/*.erb", "-o", "empty.css")).toBe(0);
+    expect(await readOutput("empty.css")).toMatch(ruleFor("btn"));
   });
 });
 

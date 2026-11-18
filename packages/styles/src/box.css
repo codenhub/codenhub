@@ -68,7 +68,12 @@
       calc((min(var(--ui-fill, var(--_d-fill)), var(--_fill-cap, 100%)) - var(--_capped)) * 1000),
       100%
     );
-    --_fill: calc(var(--_capped) * var(--ui-bg-alpha, 1));
+    /* A neutral box held by a plate tints that plate with the plate's own ink,
+       which lowers the contrast of the ink printed on it: a soft button or a
+       solid field in a dark `.card.solid.success` read at 3.6 to 4.2:1. Held,
+       it fills at most 6%, enough to mark its area, and its text stays at
+       4.5:1 wherever the plate's own does (`box.spec.ts`). */
+    --_fill: calc(min(var(--_capped), calc(100% - var(--_through) * 0.94)) * var(--ui-bg-alpha, 1));
     --_hover-fill: calc(min(100%, var(--_capped) + var(--hover-step)) * var(--ui-bg-alpha, 1));
     /* How much of the foreground is the contrast ink: what the presentation asks
        for, gated by how much the plate can carry. The second term ramps in past a
@@ -270,11 +275,15 @@
        two-pixel line that left one pixel of ring, which neobrutalism's slab
        covered on two sides. Stepped from the capped fill, so only a box filled
        past half takes it: on an unfilled one the ring already reads against the
-       page, and a line of the page colour inside a soft field is a stray mark. */
+       page, and a line of the page colour inside a soft field is a stray mark.
+       A neutral box on a plate takes the plate's ink instead: there the ring is
+       drawn over a fill of its own colour, or close to it, so a ghost button
+       focused in a `.card.solid.primary` showed no ring at all, and the ink is
+       what reads against that fill. */
     --_focus-gap: color-mix(
       in oklab,
-      var(--color-background) clamp(0%, calc((var(--_capped) - 50%) * 1000), 100%),
-      transparent
+      var(--_held-ink) var(--_through),
+      color-mix(in oklab, var(--color-background) clamp(0%, calc((var(--_capped) - 50%) * 1000), 100%), transparent)
     );
 
     /* Every box sizes itself as `min-height`/`min-width: var(--control-height)`
@@ -390,8 +399,14 @@
         --_bg: color-mix(in oklab, var(--intent-hover) var(--_hover-fill), var(--_ground));
         /* P3 again, against the hover tone: the line still fades as the fill fills
            in, but toward the hover ink. Without this the edge keeps the resting ink
-           -- a ring of the colour the box just left. */
-        --_line: color-mix(in oklab, transparent var(--ui-fill, var(--_d-fill)), var(--intent-hover));
+           -- a ring of the colour the box just left. On a plate the held ink
+           still comes first, as at rest, or a neutral edge on a solid card
+           drops to the hover tint of the fill it sits on. */
+        --_line: color-mix(
+          in oklab,
+          transparent var(--ui-fill, var(--_d-fill)),
+          color-mix(in oklab, var(--_held-ink) var(--_through), var(--intent-hover))
+        );
         --_sx: calc(var(--ui-hover-shadow-x, var(--ui-shadow-x, var(--_d-shadow-x, 0px))) * var(--_depth));
         --_sy: calc(
           var(--ui-hover-shadow-y, var(--ui-shadow-y, var(--_d-shadow-y, var(--_elevation-y, 0px)))) * var(--_depth)

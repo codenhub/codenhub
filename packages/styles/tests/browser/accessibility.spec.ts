@@ -3,6 +3,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { expect, test } from "./fixtures";
+import { getContrastRatio } from "./test-utils";
 
 const FEEDBACK_URL = "http://localhost:5184/feedback/?env=vanilla";
 const NATIVE_URL = "http://localhost:5184/native/?env=vanilla";
@@ -142,50 +143,65 @@ test("uses visible system-color outlines for form controls in forced colors", as
   }
 });
 
-test("uses visible system-color outlines for unclassed native controls in forced colors", async ({ page }) => {
-  await page.emulateMedia({ forcedColors: "active" });
-  await page.setContent("<!doctype html><html><body></body></html>");
-  await page.addStyleTag({ url: NATIVE_STYLES_URL });
+/* From the reset too, not only `/native`, and on an input with no `type`,
+   which is a text field all the same: it once fell back to the generic ring. */
+for (const [entry, url] of [
+  ["/native", NATIVE_STYLES_URL],
+  ["the reset", "http://localhost:5184/shared/entry-vanilla.css"],
+] as const) {
+  test(`uses visible system-color outlines for unclassed native controls in forced colors from ${entry}`, async ({
+    page,
+  }) => {
+    await page.emulateMedia({ forcedColors: "active" });
+    await page.setContent("<!doctype html><html><body></body></html>");
+    await page.addStyleTag({ url });
 
-  const focusStyles = await page.evaluate(() => {
-    const expectedColorProbe = document.createElement("span");
-    expectedColorProbe.style.color = "Highlight";
-    document.body.append(expectedColorProbe);
-    const expectedOutlineColor = getComputedStyle(expectedColorProbe).color;
-    expectedColorProbe.remove();
+    const focusStyles = await page.evaluate(() => {
+      const expectedColorProbe = document.createElement("span");
+      expectedColorProbe.style.color = "Highlight";
+      document.body.append(expectedColorProbe);
+      const expectedOutlineColor = getComputedStyle(expectedColorProbe).color;
+      expectedColorProbe.remove();
 
-    const controls = [
-      Object.assign(document.createElement("input"), { type: "text" }),
-      document.createElement("select"),
-      document.createElement("textarea"),
-      Object.assign(document.createElement("input"), { type: "checkbox" }),
-      Object.assign(document.createElement("input"), { type: "radio" }),
-    ];
+      const controls = [
+        Object.assign(document.createElement("input"), { type: "text" }),
+        document.createElement("input"),
+        document.createElement("select"),
+        document.createElement("textarea"),
+        Object.assign(document.createElement("input"), { type: "checkbox" }),
+        Object.assign(document.createElement("input"), { type: "radio" }),
+      ];
 
-    return controls.map((control) => {
-      document.body.append(control);
-      control.focus();
-      const styles = getComputedStyle(control);
-      const result = {
-        control: control instanceof HTMLInputElement ? `input[type=${control.type}]` : control.localName,
-        expectedOutlineColor,
-        isFocusVisible: control.matches(":focus-visible"),
-        outlineColor: styles.outlineColor,
-        outlineStyle: styles.outlineStyle,
-        outlineWidth: styles.outlineWidth,
-      };
-      control.remove();
-      return result;
+      return controls.map((control) => {
+        document.body.append(control);
+        control.focus();
+        const styles = getComputedStyle(control);
+        const result = {
+          control:
+            control instanceof HTMLInputElement
+              ? `input[type=${control.getAttribute("type") ?? "(none)"}]`
+              : control.localName,
+          expectedOutlineColor,
+          isFocusVisible: control.matches(":focus-visible"),
+          outlineColor: styles.outlineColor,
+          outlineOffset: styles.outlineOffset,
+          outlineStyle: styles.outlineStyle,
+          outlineWidth: styles.outlineWidth,
+        };
+        control.remove();
+        return result;
+      });
     });
-  });
 
-  for (const styles of focusStyles) {
-    expect(styles.isFocusVisible, styles.control).toBe(true);
-    expect(styles.outlineStyle, styles.control).toBe("solid");
-    expect(Number.parseFloat(styles.outlineWidth), styles.control).toBeGreaterThanOrEqual(2);
-    expect(styles.outlineColor, styles.control).toBe(styles.expectedOutlineColor);
-  }
-});
+    for (const styles of focusStyles) {
+      expect(styles.isFocusVisible, styles.control).toBe(true);
+      expect(styles.outlineStyle, styles.control).toBe("solid");
+      expect(Number.parseFloat(styles.outlineWidth), styles.control).toBeGreaterThanOrEqual(2);
+      expect(styles.outlineColor, styles.control).toBe(styles.expectedOutlineColor);
+      expect(styles.outlineOffset, `${styles.control} sits outside the field`).toBe(focusStyles[0]!.outlineOffset);
+    }
+  });
+}
 
 /* The chevron is two gradients and forced colours drop every gradient, so a
    drop-down once showed no arrow at all and read as a text field. A computed
@@ -847,6 +863,65 @@ test("separates the focus ring from a filled control with a line of the page col
 
   expect(ghost.focused).toBe(true);
   expect(ghost.shadow, "an unfilled control takes no separator").not.toContain(`${ghost.page} 0px 0px 0px 2px inset`);
+});
+
+/* On a solid surface, the ring is drawn over a fill of its own colour, or one
+   close to it: a ghost button focused in a `.card.solid.primary` showed no
+   ring at all (1.0:1), and other intents 1.9 to 3:1. A neutral control there
+   prints in the plate's ink, so the line inside the ring takes that ink. */
+test("shows a focused control on a solid surface", async ({ page }) => {
+  await page.setContent("<!doctype html><html><body></body></html>");
+  await page.addStyleTag({ url: "http://localhost:5184/shared/entry-vanilla.css" });
+
+  const cases = [];
+
+  for (const scheme of ["light", "dark"] as const) {
+    for (const intent of ["primary", "secondary", "success", "destructive", "info", "warning"]) {
+      for (const control of [
+        '<button class="btn ghost">Go</button>',
+        '<button class="btn soft">Go</button>',
+        '<button class="btn ghost edged">Go</button>',
+        '<input class="ipt" />',
+      ]) {
+        cases.push({ scheme, intent, control });
+      }
+    }
+  }
+
+  for (const { scheme, intent, control } of cases) {
+    // oxlint-disable-next-line no-await-in-loop -- one control holds focus at a time.
+    await page.emulateMedia({ colorScheme: scheme });
+    // oxlint-disable-next-line no-await-in-loop -- one control holds focus at a time.
+    await page.evaluate(
+      ([markup, name]) => {
+        document.body.innerHTML = `<button id="before">.</button><div class="card solid ${name}" id="plate">${markup}</div>`;
+        document.querySelector("#plate > *")!.id = "control";
+      },
+      [control, intent],
+    );
+    // oxlint-disable-next-line no-await-in-loop -- one control holds focus at a time.
+    await page.locator("#before").focus();
+    // oxlint-disable-next-line no-await-in-loop -- one control holds focus at a time.
+    await page.keyboard.press("Tab");
+    // oxlint-disable-next-line no-await-in-loop -- the ring fades in.
+    await page.waitForTimeout(400);
+    // oxlint-disable-next-line no-await-in-loop -- one control holds focus at a time.
+    const read = await page.evaluate(() => {
+      const element = document.getElementById("control")!;
+
+      return {
+        focused: element.matches(":focus-visible"),
+        shadow: getComputedStyle(element).boxShadow,
+        plate: getComputedStyle(document.getElementById("plate")!).backgroundColor,
+      };
+    });
+    const label = `${scheme} ${control} in .card.solid.${intent}`;
+    const line = /((?:rgba?|oklab|oklch|color|lab|lch)\([^)]*\)) 0px 0px 0px 2px inset/.exec(read.shadow)?.[1];
+
+    expect(read.focused, label).toBe(true);
+    expect(line, `${label} draws a line inside its ring`).toBeDefined();
+    expect(getContrastRatio(line!, read.plate), `${label} line against the plate`).toBeGreaterThanOrEqual(3);
+  }
 });
 
 /* `.interactive` set the pointer at 0-2-0, above the 0-1-1 of `box`'s disabled

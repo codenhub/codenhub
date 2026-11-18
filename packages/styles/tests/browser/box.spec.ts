@@ -1,5 +1,5 @@
 import { expect, test } from "./fixtures";
-import { expectSameColor, getColorDistance } from "./test-utils";
+import { expectSameColor, flattenColor, getColorDistance, getContrastRatio } from "./test-utils";
 
 const BUTTONS_URL = "http://localhost:5184/buttons/?env=vanilla";
 
@@ -149,6 +149,25 @@ test("a neutral box with no plate prints in the ink of the plate it sits on", as
 
   expectSameColor(edged.child.line, edged.plate.color, "a neutral line on a plate is drawn in its ink");
 
+  /* Hovered too: the hover line fades toward the hover tone, but on a plate it
+     keeps the plate's ink, or the edge drops to the hover tint on the fill. */
+  const plateFill = await page.evaluate(
+    () => getComputedStyle(document.querySelector("[data-plate]")!).backgroundColor,
+  );
+
+  await page.hover("[data-child]");
+  /* Once the line has faded into its hover tone. */
+  await page.waitForTimeout(600);
+  const hoveredLine = await page.evaluate(
+    () => getComputedStyle(document.querySelector("[data-child]")!).borderTopColor,
+  );
+
+  expect(
+    getContrastRatio(hoveredLine, plateFill),
+    "a hovered neutral line on a plate keeps the plate's ink",
+  ).toBeGreaterThanOrEqual(3);
+  await page.mouse.move(0, 0);
+
   const ownInk = [
     /* An intent keeps its own ink: intent does not cascade, either way. */
     [
@@ -180,6 +199,50 @@ test("a neutral box with no plate prints in the ink of the plate it sits on", as
       2,
     );
   }
+});
+
+/* A held neutral box tints the plate with the plate's ink, and the tint lowers
+   the contrast of that ink: a soft button or a solid field in a dark
+   `.card.solid.success` read at 3.6 to 4.2:1, on a plate whose own text read
+   at 5.1:1. */
+test("a neutral box on a plate keeps its text legible", async ({ page }) => {
+  await page.setContent("<!doctype html><html><body></body></html>");
+  await page.addStyleTag({ url: "http://localhost:5184/shared/entry-vanilla.css" });
+
+  /* oxlint-disable no-await-in-loop -- one fixture on the page at a time. */
+  for (const scheme of ["light", "dark"] as const) {
+    await page.emulateMedia({ colorScheme: scheme });
+
+    for (const intent of ["primary", "secondary", "success", "destructive", "info", "warning"]) {
+      for (const child of [
+        '<button class="btn soft">Go</button>',
+        '<button class="btn soft edged">Go</button>',
+        '<span class="badge soft">3</span>',
+        '<input class="ipt solid" value="Text" />',
+      ]) {
+        const read = await page.evaluate(
+          ([markup, name]) => {
+            document.body.innerHTML = `<div class="card solid ${name}" id="plate">${markup}</div>`;
+
+            const plate = getComputedStyle(document.getElementById("plate")!);
+            const box = getComputedStyle(document.querySelector("#plate > *")!);
+
+            return { ground: plate.backgroundColor, ink: plate.color, fill: box.backgroundColor, text: box.color };
+          },
+          [child, intent],
+        );
+        const fill = flattenColor(read.fill, read.ground);
+
+        if (getContrastRatio(read.ink, read.ground) >= 4.5) {
+          expect(
+            getContrastRatio(read.text, fill),
+            `${scheme} ${intent} ${child} reads as the plate does`,
+          ).toBeGreaterThanOrEqual(4.5);
+        }
+      }
+    }
+  }
+  /* oxlint-enable no-await-in-loop */
 });
 
 /* A touch screen has no pointer to rest on an element, yet a tap leaves the

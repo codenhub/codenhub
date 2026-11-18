@@ -1,7 +1,7 @@
 ---
 title: Introducción
 description: Para qué sirve @codenhub/styles, qué cuesta y en qué orden leer esta documentación.
-source: 3910a00d68996649836959bfa1e9cb0891bfce4d
+source: 9572c05b6ba48d91df1e1a2f98583d129c477ca1
 ---
 
 # @codenhub/styles
@@ -61,7 +61,7 @@ El paquete ofrece las mismas clases de dos formas:
 Conoce estos costes antes de adoptarlo:
 
 - **Los nombres de clase son cortos y no llevan prefijo.** `.primary`, `.success`, `.dark`, `.label`, `.field`, `.section`, `.stack`, `.flat` y `.ghost` son nombres globales. Otra hoja de estilos en la misma página que los use choca con esta. El paquete está en [capas de cascada](./setup.md#capas-de-cascada), así que tu propio CSS sin capa gana en caso de choque, pero las reglas de una librería de terceros para el mismo nombre se siguen aplicando junto a las del paquete.
-- **Las hojas de estilos completas son grandes antes de comprimir.** Minificada, la hoja de estilos completa ocupa unos 198 KB, `/native` unos 295 KB y `/components` unos 159 KB. Servidas con gzip ocupan unos 17 KB, 22 KB y 13 KB. Los archivos específicos son mucho más pequeños: `/theme` ocupa unos 12 KB (3 KB con gzip) y una estética, de 4 a 14 KB (de 1 a 2 KB con gzip). La mayor parte del tamaño es composición que cada componente repite, y por eso la compresión elimina tanto. Un archivo compilado incluye todas las clases, las use una página o no. Para incluir solo las clases que usan tus páginas, compila el paquete en tu propio build: con [Tailwind CSS v4](./integrating/tailwind.md) cuando el proyecto lo usa, o con el [comando `build`](./integrating/without-a-bundler.md#generar-solo-las-clases-que-usas) del paquete en cualquier otro proyecto. Así, una página con un botón recibe de 26 a 28 KB minificados, y unos 6 KB con gzip. Si no, importa el punto de entrada más reducido que cubra una página; consulta [Configuración inicial → Todos los puntos de entrada](./setup.md#todos-los-puntos-de-entrada).
+- **Las hojas de estilos completas son grandes antes de comprimir.** Minificada, la hoja de estilos completa ocupa unos 214 KB, `/native` unos 319 KB y `/components` unos 172 KB. Servidas con gzip ocupan unos 19 KB, 24 KB y 15 KB. Los archivos específicos son mucho más pequeños: `/theme` ocupa unos 13 KB (3 KB con gzip) y una estética, de 5 a 15 KB (de 1 a 2 KB con gzip). La mayor parte del tamaño es composición que cada componente repite, y por eso la compresión elimina tanto. Un archivo compilado incluye todas las clases, las use una página o no. Para incluir solo las clases que usan tus páginas, compila el paquete en tu propio build: con [Tailwind CSS v4](./integrating/tailwind.md) cuando el proyecto lo usa, o con el [comando `build`](./integrating/without-a-bundler.md#generar-solo-las-clases-que-usas) del paquete en cualquier otro proyecto. Así, una página con un botón recibe de 26 a 31 KB minificados, y de 6 a 7 KB con gzip. Si no, importa el punto de entrada más reducido que cubra una página; consulta [Configuración inicial → Todos los puntos de entrada](./setup.md#todos-los-puntos-de-entrada).
 - **`--color-foreground` es un fondo, no un color de texto.** Es el tono un paso por encima de la página sobre el que se apoya una tarjeta o un panel discreto. El color de texto es `--color-text`.
 - **Cuatro colores de hover son valores fijos.** `--color-success-hover`, `--color-warning-hover`, `--color-destructive-hover` y `--color-info-hover` están precalculados, porque mezclarlos en vivo hacía fallar WebKit. Si sobrescribes solo `--color-success`, su hover conserva el tono anterior, así que reemplaza la familia completa; consulta [Temas → Tokens de color](./usage/theming.md#tokens-de-color).
 - **Solo navegadores modernos.** Chrome 123, Safari 17.5 o Firefox 128 y posteriores. No hay una capa de respaldo para navegadores antiguos.
@@ -79,7 +79,7 @@ El paquete está por debajo de 1.0 y sigue la [regla del versionado semántico p
 - Una versión menor, como de 0.7.0 a 0.8.0, puede romper la compatibilidad. Puede renombrar o eliminar una clase o un token, o cambiar un valor por defecto. Cada cambio incompatible aparece en **Changed** o **Removed** en la página del [changelog](../changelog/index.md) de esa versión, con lo que debes usar en su lugar.
 - Una versión de parche, como de 0.7.0 a 0.7.1, nunca rompe la compatibilidad.
 
-El rango por defecto de npm para una nueva dependencia, `^0.10.0`, ya acepta solo parches, porque por debajo de 1.0 un rango con caret no pasa a la siguiente versión menor. Lee el changelog antes de subirlo. Cuando enlaces un archivo desde un CDN, pon la versión exacta en la URL; consulta [Sin bundler](./integrating/without-a-bundler.md).
+El rango por defecto de npm para una nueva dependencia, `^0.11.0`, ya acepta solo parches, porque por debajo de 1.0 un rango con caret no pasa a la siguiente versión menor. Lee el changelog antes de subirlo. Cuando enlaces un archivo desde un CDN, pon la versión exacta en la URL; consulta [Sin bundler](./integrating/without-a-bundler.md).
 
 Los cambios incompatibles no se suavizan con alias porque el modelo todavía se está asentando, y mantener cada nombre antiguo junto a su reemplazo haría crecer la superficie en cada versión. Un cambio de nombre o una eliminación suele costar un buscar y reemplazar al actualizar; un valor por defecto que cambia puede requerir que reajustes tu propio CSS.
 

@@ -2,7 +2,7 @@
 title: Accesibilidad
 description: Lo que hace el CSS con el foco, los estados, el movimiento, el contraste, los colores forzados y el texto de derecha a izquierda, y lo que tu aplicación todavía les debe a sus usuarios.
 order: 5
-source: 27e48c4c47792486999293331b47c886c30596c3
+source: f64651fdbac2ac1d35ecdfdf79e7da5e2f609a81
 ---
 
 # Accesibilidad
@@ -120,13 +120,13 @@ Una página no puede cambiar lo que informa una media query, por muy amablemente
 </html>
 ```
 
-| Atributo        | Valor      | Lo que hace el paquete                                                                                                                               |
-| --------------- | ---------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `data-contrast` | `more`     | Dibuja los bordes de [contraste aumentado](#contraste-aumentado), pida lo que pida el sistema.                                                       |
-| `data-contrast` | `standard` | Los deja fuera, aunque el sistema pida más contraste.                                                                                                |
-| `data-motion`   | `full`     | Se mueve como sin preferencia, aunque el sistema pida movimiento reducido.                                                                           |
-| `data-motion`   | `reduce`   | Hace lo que hace el ajuste de movimiento reducido del sistema: lo que se mueve se detiene, y lo que hace un fundido lo sigue haciendo.               |
-| `data-motion`   | `none`     | Termina al instante cada animación y transición, también los fundidos. La duración casi nula mantiene `transitionend` y `animationend` disparándose. |
+| Atributo        | Valor      | Lo que hace el paquete                                                                                                                                                                                                    |
+| --------------- | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `data-contrast` | `more`     | Dibuja los bordes de [contraste aumentado](#contraste-aumentado), pida lo que pida el sistema.                                                                                                                            |
+| `data-contrast` | `standard` | Los deja fuera, aunque el sistema pida más contraste.                                                                                                                                                                     |
+| `data-motion`   | `full`     | Se mueve como sin preferencia, aunque el sistema pida movimiento reducido.                                                                                                                                                |
+| `data-motion`   | `reduce`   | Hace lo que hace el ajuste de movimiento reducido del sistema: lo que se mueve se detiene, y lo que hace un fundido lo sigue haciendo.                                                                                    |
+| `data-motion`   | `none`     | Termina al instante cada animación y transición, también los fundidos, después del retraso que tenga, así que un tooltip todavía se demora. La duración casi nula mantiene `transitionend` y `animationend` disparándose. |
 
 Una pantalla de ajustes con "Sistema / Estándar / Más" quita `data-contrast` para Sistema y lo pone para las otras dos, como un [selector de tema](./usage/theming.md#claro-y-oscuro). El movimiento tiene un nivel más, porque el ajuste del sistema tiene solo uno: "Sistema / Todo / Reducido / Ninguno".
 

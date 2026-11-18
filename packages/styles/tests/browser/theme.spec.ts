@@ -333,3 +333,62 @@ test("prints a filled quotation with its plate", async ({ page }) => {
   expect(quote.plate, "the solid quotation has a plate").not.toMatch(/^(transparent|rgba\(0, 0, 0, 0\))$/);
   expect(quote.adjust).toBe("exact");
 });
+
+/* Inside a shadow root, the sheet's `:root` matches nothing, so every token
+   block names `:host` beside it: with one missing, a button lost its height and
+   a focused control its ring. The page loads the sheet too, as
+   docs/setup.md asks, because a browser ignores `@property` in a shadow root,
+   and without those registrations a card lost its line. */
+test("styles components inside a shadow root", async ({ page }) => {
+  await page.emulateMedia({ colorScheme: "dark" });
+  await page.setContent(
+    '<!doctype html><html><head><link rel="stylesheet" href="http://localhost:5184/shared/entry-vanilla.css" /></head><body><div data-host></div></body></html>',
+  );
+  await page.waitForLoadState("load");
+
+  const read = await page.evaluate(async () => {
+    const root = document.querySelector("[data-host]")!.attachShadow({ mode: "open" });
+    const link = document.createElement("link");
+
+    link.rel = "stylesheet";
+    link.href = "http://localhost:5184/shared/entry-vanilla.css";
+    const loaded = new Promise((resolve) => link.addEventListener("load", resolve));
+
+    root.append(link);
+    const body = document.createElement("div");
+
+    body.innerHTML = '<div class="card raised">Card</div><button class="btn primary">Go</button>';
+    root.append(body);
+    await loaded;
+
+    const card = getComputedStyle(root.querySelector(".card")!);
+    const button = root.querySelector<HTMLButtonElement>(".btn")!;
+    const host = getComputedStyle(root.host);
+
+    return {
+      colorScheme: host.colorScheme,
+      intent: host.getPropertyValue("--intent-color").trim(),
+      press: host.getPropertyValue("--ui-active-transform").trim(),
+      cardLine: card.borderTopWidth,
+      cardShadow: card.boxShadow,
+      buttonHeight: getComputedStyle(button).minHeight,
+    };
+  });
+
+  expect(read.colorScheme, "the host follows the system scheme").toBe("light dark");
+  expect(read.intent, "the neutral intent").not.toBe("");
+  expect(read.press, "the press").not.toBe("");
+  expect(read.cardLine, "the card's line").not.toBe("0px");
+  expect(read.cardShadow, "the card's depth").not.toBe("none");
+  expect(read.buttonHeight, "the button's height").not.toBe("0px");
+
+  await page.keyboard.press("Tab");
+  const ring = await page.evaluate(() => {
+    const button = document.querySelector("[data-host]")!.shadowRoot!.querySelector(".btn")!;
+
+    return { focused: button.matches(":focus-visible"), outline: getComputedStyle(button).outlineStyle };
+  });
+
+  expect(ring.focused).toBe(true);
+  expect(ring.outline, "the focus ring").not.toBe("none");
+});
