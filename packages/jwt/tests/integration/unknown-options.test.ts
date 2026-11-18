@@ -37,9 +37,21 @@ const CALLS: readonly (readonly [string, string, () => unknown])[] = [
   ["importKeySet", "options.algoritms", () => importKeySet({ keys: [] }, { algoritms: ["ES256"] } as never)],
   ["generateKeyPair", "options.extractible", () => generateKeyPair({ alg: "ES256", extractible: true } as never)],
   ["generateSecretKey", "options.extractible", () => generateSecretKey({ alg: "HS256", extractible: true } as never)],
-  ["importPublicKey", "options.kid", () => importPublicKey(RSA_PUBLIC_JWK, { alg: "RS256", kid: "k" } as never)],
-  ["importPrivateKey", "options.kid", () => importPrivateKey(RFC7515_A2_JWK, { alg: "RS256", kid: "k" } as never)],
-  ["importKeyPair", "options.kid", () => importKeyPair(RFC7515_A2_JWK, { alg: "RS256", kid: "k" } as never)],
+  [
+    "importPublicKey",
+    "options.extractable",
+    () => importPublicKey(RSA_PUBLIC_JWK, { alg: "RS256", extractable: true } as never),
+  ],
+  [
+    "importPrivateKey",
+    "options.algorithm",
+    () => importPrivateKey(RFC7515_A2_JWK, { alg: "RS256", algorithm: "RS256" } as never),
+  ],
+  [
+    "importKeyPair",
+    "options.algorithm",
+    () => importKeyPair(RFC7515_A2_JWK, { alg: "RS256", algorithm: "RS256" } as never),
+  ],
   [
     "importSecretKey",
     "options.extractible",

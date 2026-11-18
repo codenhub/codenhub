@@ -188,6 +188,52 @@ const PUBLIC_MEMBERS: Readonly<Record<(typeof ASYMMETRIC)[number], readonly stri
   PS512: ["n"],
 };
 
+/** Web Crypto parameters for each algorithm's key type, for making PEM keys outside the package. */
+const keyParams = (alg: (typeof ASYMMETRIC)[number]): RsaHashedKeyGenParams | EcKeyGenParams | { name: string } => {
+  if (alg.startsWith("ES")) {
+    return { name: "ECDSA", namedCurve: { ES256: "P-256", ES384: "P-384" }[alg as "ES256" | "ES384"] ?? "P-521" };
+  }
+  if (alg.startsWith("RS") || alg.startsWith("PS")) {
+    return {
+      name: alg.startsWith("RS") ? "RSASSA-PKCS1-v1_5" : "RSA-PSS",
+      hash: `SHA-${alg.slice(2)}`,
+      modulusLength: 2048,
+      publicExponent: new Uint8Array([1, 0, 1]),
+    };
+  }
+  return { name: "Ed25519" };
+};
+
+const pemOf = (label: string, der: ArrayBuffer): string => {
+  const base64 = btoa(String.fromCharCode(...new Uint8Array(der)));
+  const lines = base64.match(/.{1,64}/g) ?? [];
+  return [`-----BEGIN ${label}-----`, ...lines, `-----END ${label}-----`, ""].join("\n");
+};
+
+// Each runtime's Web Crypto parses the DER, so a PEM key that imports in Node.js may not elsewhere.
+const pemImports = Object.fromEntries(
+  ASYMMETRIC.map((alg): [string, Scenario] => [
+    `${alg} PEM SPKI and PKCS#8 import, sign and verify`,
+    async (module) => {
+      const pair = (await crypto.subtle.generateKey(keyParams(alg), true, ["sign", "verify"])) as CryptoKeyPair;
+      const spki = pemOf("PUBLIC KEY", await crypto.subtle.exportKey("spki", pair.publicKey));
+      const pkcs8 = pemOf("PRIVATE KEY", await crypto.subtle.exportKey("pkcs8", pair.privateKey));
+      const publicKey = await module.importPublicKey(spki, { alg, kid: "pem" });
+      const keyPair = await module.importKeyPair(pkcs8, { alg, kid: "pem" });
+      check(publicKey.ok, "SPKI import failed", publicKey);
+      check(keyPair.ok, "PKCS#8 import failed", keyPair);
+      if (publicKey.ok && keyPair.ok) {
+        await expectVerified(
+          module,
+          await module.sign({ payload: PAYLOAD, key: keyPair.value.privateKey }),
+          publicKey.value,
+          alg,
+        );
+      }
+    },
+  ]),
+);
+
 const keyPairImports = Object.fromEntries(
   ASYMMETRIC.map((alg): [string, Scenario] => [
     `${alg} key pair import from one private JWK, refusing mismatched halves`,
@@ -283,6 +329,7 @@ export const scenarios: Readonly<Record<string, Scenario>> = {
   ...tamperedSignatures,
   ...leadingZeroImports,
   ...keyPairImports,
+  ...pemImports,
   "alg none is refused": async (module, options) => {
     const { verifying } = await keysFor(module, "HS256", options);
     const token = `${encodeSegment('{"alg":"none"}')}.${encodeSegment('{"sub":"admin"}')}.AAAA`;

@@ -2,6 +2,7 @@ import { fail, ok } from "../core";
 import type {
   AsymmetricAlgorithm,
   JwsAlgorithm,
+  JwtIssue,
   JwtResult,
   PrivateKey,
   PublicKey,
@@ -12,18 +13,31 @@ import { ALGORITHM_PARAMS } from "./algorithms";
 import type { KeyPair } from "./generate";
 import { checkJwk, type KeyRole } from "./jwk";
 import { readExtractable, readKid, requireAsymmetricAlg, requireOptions, requireSymmetricAlg } from "./options";
+import { pemToJwk } from "./pem";
 import { kidMember, registerKey } from "./registry";
 
 /** How {@link importPublicKey} binds the imported key. */
 export interface ImportPublicKeyOptions {
-  /** The one algorithm the key will verify with. The JWK's `kty` and `crv` must fit it. */
+  /** The one algorithm the key will verify with. The key's type and curve must fit it. */
   readonly alg: AsymmetricAlgorithm;
+  /**
+   * Key identifier for a key given as PEM, which has no place for one. Ignored for a JWK, whose own `kid` is used.
+   *
+   * @defaultValue no `kid`
+   */
+  readonly kid?: string;
 }
 
 /** How {@link importPrivateKey} binds the imported key. */
 export interface ImportPrivateKeyOptions {
-  /** The one algorithm the key will sign with. The JWK's `kty` and `crv` must fit it. */
+  /** The one algorithm the key will sign with. The key's type and curve must fit it. */
   readonly alg: AsymmetricAlgorithm;
+  /**
+   * Key identifier for a key given as PEM, which has no place for one. Ignored for a JWK, whose own `kid` is used.
+   *
+   * @defaultValue no `kid`
+   */
+  readonly kid?: string;
   /**
    * Whether {@link exportPrivateJwk} may later export the key's material.
    *
@@ -32,8 +46,12 @@ export interface ImportPrivateKeyOptions {
   readonly extractable?: boolean;
 }
 
-const PUBLIC_KEY_OPTIONS: Readonly<Record<keyof ImportPublicKeyOptions, true>> = { alg: true };
-const PRIVATE_KEY_OPTIONS: Readonly<Record<keyof ImportPrivateKeyOptions, true>> = { alg: true, extractable: true };
+const PUBLIC_KEY_OPTIONS: Readonly<Record<keyof ImportPublicKeyOptions, true>> = { alg: true, kid: true };
+const PRIVATE_KEY_OPTIONS: Readonly<Record<keyof ImportPrivateKeyOptions, true>> = {
+  alg: true,
+  kid: true,
+  extractable: true,
+};
 
 /** How {@link importSecretKey} binds the imported secret. */
 export interface ImportSecretKeyOptions {
@@ -66,9 +84,14 @@ const USAGES: Readonly<Record<KeyRole, KeyUsage[]>> = {
 };
 
 /**
- * Imports an untrusted public JWK as a verification key bound to one algorithm.
+ * Imports an untrusted public JWK, or a PEM `PUBLIC KEY` (SPKI), as a verification key bound to one
+ * algorithm.
  *
  * @remarks
+ * A PEM string is read into the JWK of its material, and every check below runs on that JWK. It must be
+ * one block of at most 16384 characters, with only whitespace around it; anything else is `invalid_key`,
+ * and a `PRIVATE KEY` block is `unexpected_private_key`.
+ *
  * The JWK's `kty` and `crv` must fit `options.alg`; a JWK `alg`, `use` or `key_ops` member, when
  * present, must agree with it. RSA moduli must be 2048 to 8192 bits. Private members are refused
  * rather than ignored.
@@ -79,21 +102,26 @@ const USAGES: Readonly<Record<KeyRole, KeyUsage[]>> = {
  * if (!result.ok) console.warn(result.error.issues);
  * ```
  *
- * @param jwk - The JWK, typically parsed from JSON. Any value is accepted.
- * @param options - The algorithm to bind the key to.
+ * @param key - The JWK, typically parsed from JSON, or a PEM string. Any value is accepted.
+ * @param options - The algorithm to bind the key to, and a `kid` for a PEM key.
  * @returns The frozen key, or a failure with one issue: `invalid_key` for a non-object, a missing or
  * ill-typed member, invalid base64url, wrong coordinate lengths, or material Web Crypto rejects (such
  * as a point not on the curve); `unsupported_key` for a `kty`/`crv` that does not fit `alg` or a
  * modulus over 8192 bits; `alg_mismatch` for a JWK `alg` naming another algorithm; `wrong_use` for a
  * `use` other than `sig` or `key_ops` without `verify`; `unexpected_private_key` for any private
- * member; `weak_key` for a modulus under 2048 bits. Issues never contain JWK values. Never throws for
- * any `jwk`.
- * @throws TypeError when `options` is not an object or `options.alg` is not an asymmetric algorithm.
+ * member; `weak_key` for a modulus under 2048 bits. Issues never contain key values. Never throws for
+ * any `key`.
+ * @throws TypeError when `options` is not an object, has a member that is not an option, `options.alg` is
+ * not an asymmetric algorithm, or `options.kid` is not a string.
  */
-export async function importPublicKey(jwk: unknown, options: ImportPublicKeyOptions): Promise<JwtResult<PublicKey>> {
+export async function importPublicKey(key: unknown, options: ImportPublicKeyOptions): Promise<JwtResult<PublicKey>> {
   const checked = requireOptions(options, PUBLIC_KEY_OPTIONS, "importPublicKey");
   const alg = requireAsymmetricAlg(checked, "importPublicKey");
-  return importJwk(jwk, { alg, role: "public", isExtractable: true }, (kid) => ({
+  const jwk = await sourceJwk(key, alg, "public", readKid(checked, "importPublicKey"));
+  if (!jwk.ok) {
+    return fail(jwk.issue);
+  }
+  return importJwk(jwk.value, { alg, role: "public", isExtractable: true }, (kid) => ({
     kind: "public",
     alg,
     ...kidMember(kid),
@@ -101,26 +129,37 @@ export async function importPublicKey(jwk: unknown, options: ImportPublicKeyOpti
 }
 
 /**
- * Imports an untrusted private JWK as a signing key bound to one algorithm.
+ * Imports an untrusted private JWK, or a PEM `PRIVATE KEY` (PKCS#8), as a signing key bound to one
+ * algorithm.
  *
  * @remarks
  * The same checks as {@link importPublicKey} apply, except that private members are required: `d`
  * for EC and OKP keys, and `d`, `p`, `q`, `dp`, `dq` and `qi` for RSA keys. `key_ops`, when present,
- * must include `sign`.
+ * must include `sign`. A PEM string is read as for {@link importPublicKey}, and must be a `PRIVATE KEY`
+ * block: `RSA PRIVATE KEY` (PKCS#1) and `EC PRIVATE KEY` (SEC 1) are `invalid_key`.
  *
- * @param jwk - The JWK, typically parsed from JSON. Any value is accepted.
- * @param options - The algorithm to bind the key to, and whether it may be exported again.
+ * @example
+ * ```ts
+ * const result = await importPrivateKey(env.SIGNING_KEY_PEM, { alg: "RS256", kid: "2026-11" });
+ * ```
+ *
+ * @param key - The JWK, typically parsed from JSON, or a PEM string. Any value is accepted.
+ * @param options - The algorithm to bind the key to, a `kid` for a PEM key, and whether it may be exported again.
  * @returns The frozen key, or a failure with one issue: `invalid_key`, `unsupported_key` (also for
  * multi-prime RSA keys with `oth`), `alg_mismatch`, `wrong_use` or `weak_key`, as described for
- * {@link importPublicKey}. Issues never contain JWK values. Never throws for any `jwk`.
- * @throws TypeError when `options` is not an object, `options.alg` is not an asymmetric algorithm, or
- * `options.extractable` is not a boolean.
+ * {@link importPublicKey}. Issues never contain key values. Never throws for any `key`.
+ * @throws TypeError when `options` is not an object, has a member that is not an option, `options.alg` is
+ * not an asymmetric algorithm, `options.kid` is not a string, or `options.extractable` is not a boolean.
  */
-export async function importPrivateKey(jwk: unknown, options: ImportPrivateKeyOptions): Promise<JwtResult<PrivateKey>> {
+export async function importPrivateKey(key: unknown, options: ImportPrivateKeyOptions): Promise<JwtResult<PrivateKey>> {
   const checked = requireOptions(options, PRIVATE_KEY_OPTIONS, "importPrivateKey");
   const alg = requireAsymmetricAlg(checked, "importPrivateKey");
   const isExtractable = readExtractable(checked, "importPrivateKey");
-  return importJwk(jwk, { alg, role: "private", isExtractable }, (kid) => ({
+  const jwk = await sourceJwk(key, alg, "private", readKid(checked, "importPrivateKey"));
+  if (!jwk.ok) {
+    return fail(jwk.issue);
+  }
+  return importJwk(jwk.value, { alg, role: "private", isExtractable }, (kid) => ({
     kind: "private",
     alg,
     ...kidMember(kid),
@@ -129,8 +168,8 @@ export async function importPrivateKey(jwk: unknown, options: ImportPrivateKeyOp
 }
 
 /**
- * Imports an untrusted private JWK as a key pair bound to one algorithm: the private key, and the public
- * key taken from the same JWK's public members.
+ * Imports an untrusted private JWK, or a PEM `PRIVATE KEY` (PKCS#8), as a key pair bound to one algorithm:
+ * the private key, and the public key taken from the same key's public members.
  *
  * @remarks
  * The checks of {@link importPrivateKey} apply. The pair is proved to match before it is returned: the
@@ -145,19 +184,24 @@ export async function importPrivateKey(jwk: unknown, options: ImportPrivateKeyOp
  * const { privateKey, publicKey } = result.value;
  * ```
  *
- * @param jwk - The private JWK, typically parsed from JSON. Any value is accepted.
- * @param options - The algorithm to bind both keys to, and whether the private key may be exported again.
- * @returns The frozen pair, both keys carrying the JWK's `kid`, or a failure with one issue: the issues
+ * @param key - The private JWK, typically parsed from JSON, or a PEM string. Any value is accepted.
+ * @param options - The algorithm to bind both keys to, a `kid` for a PEM key, and whether the private key
+ * may be exported again.
+ * @returns The frozen pair, both keys carrying the key's `kid`, or a failure with one issue: the issues
  * {@link importPrivateKey} returns, and `invalid_key` without a path when the public members do not
- * belong to the private key. Issues never contain JWK values. Never throws for any `jwk`.
- * @throws TypeError when `options` is not an object, `options.alg` is not an asymmetric algorithm, or
- * `options.extractable` is not a boolean.
+ * belong to the private key. Issues never contain key values. Never throws for any `key`.
+ * @throws TypeError when `options` is not an object, has a member that is not an option, `options.alg` is
+ * not an asymmetric algorithm, `options.kid` is not a string, or `options.extractable` is not a boolean.
  */
-export async function importKeyPair(jwk: unknown, options: ImportPrivateKeyOptions): Promise<JwtResult<KeyPair>> {
+export async function importKeyPair(key: unknown, options: ImportPrivateKeyOptions): Promise<JwtResult<KeyPair>> {
   const checked = requireOptions(options, PRIVATE_KEY_OPTIONS, "importKeyPair");
   const alg = requireAsymmetricAlg(checked, "importKeyPair");
   const isExtractable = readExtractable(checked, "importKeyPair");
-  const material = checkJwk(jwk, alg, "private");
+  const jwk = await sourceJwk(key, alg, "private", readKid(checked, "importKeyPair"));
+  if (!jwk.ok) {
+    return fail(jwk.issue);
+  }
+  const material = checkJwk(jwk.value, alg, "private");
   if ("code" in material) {
     return fail(material);
   }
@@ -274,6 +318,19 @@ function isUint8Array(value: unknown): value is Uint8Array {
   } catch {
     return false;
   }
+}
+
+/**
+ * The JWK to check: a PEM string read into the JWK of its material, any other value as given. The caller's
+ * object is passed through untouched, so it is never frozen or copied here.
+ */
+async function sourceJwk(
+  key: unknown,
+  alg: AsymmetricAlgorithm,
+  role: "public" | "private",
+  kid: string | undefined,
+): Promise<{ readonly ok: true; readonly value: unknown } | { readonly ok: false; readonly issue: JwtIssue }> {
+  return typeof key === "string" ? pemToJwk(key, alg, role, kid) : { ok: true, value: key };
 }
 
 interface ImportPlan {
