@@ -95,6 +95,7 @@ The end-session endpoint never redirects a failed request, so the app renders ea
 | An ID token presented as an access token                            | `401`, `WWW-Authenticate: Bearer error="invalid_token"`. ID tokens are never in the access token table. |
 | A refresh token presented as an access token                        | `401`, `invalid_token`, for the same reason.                                                            |
 | An expired access token, or one whose grant was revoked             | `401`, `invalid_token`.                                                                                 |
+| An access token whose client the store no longer finds              | `401`, `invalid_token`. Removing a client cuts off its tokens at once.                                  |
 | An access token restricted to a resource server with `resource`     | Answered like any other access token: userinfo does not check the audience.                             |
 
 ## Provider: authenticate
@@ -106,6 +107,7 @@ The end-session endpoint never redirects a failed request, so the app renders ea
 | An oversized token                                                                                         | Not found, so `access_token_unknown`: `401`, `error="invalid_token"`. The request body is never read.                  |
 | An ID token, a refresh token or a code presented as an access token                                        | `access_token_unknown`, `401`, `invalid_token`. Only access tokens are looked up.                                      |
 | An expired access token, or one whose grant was revoked                                                    | `access_token_expired` or `access_token_unknown`, `401`, `invalid_token`.                                              |
+| An access token whose client the store no longer finds                                                     | `access_token_client_unknown`, `401`, `invalid_token`, naming the client.                                              |
 | An access token for another resource server, or for none, when `audience` is given                         | `access_token_audience_mismatch`, `401`, `invalid_token`. Checked before the scopes, so the challenge names none.      |
 | An access token without one of the required `scopes`                                                       | `access_token_scope_insufficient`, `403`, `error="insufficient_scope"` and the required scopes, each once, in `scope`. |
 | Malformed `options` from the app                                                                           | Rejects with `TypeError` before the store is read. No request input can cause it.                                      |

@@ -172,6 +172,17 @@ The `key` and `keys` values are `@codenhub/jwt` objects, not JSON. A plain objec
 
 A remote key set is the exception: never rebuild it on each read. Its cached keys and its limit on fetches live in the object, so a new one for every `findClient` call starts empty, and each token request that presents a client assertion for that client, whoever signed it, makes the provider fetch the client's JWKS. Create one per client and keep it, such as in a map keyed by the client identifier and the JWKS URL, and replace it only when the URL changes.
 
+### Removing or disabling a client
+
+The contract has no flag that disables a client: to disable one, make `findClient` return `undefined` for it, and to enable it again, return the record. The provider reads the record on every request that involves the client, so the change takes effect at once:
+
+- Its token requests, authorization requests and logout requests fail as for an unknown client.
+- An interaction it started cannot be completed: `completeAuthorization` returns `interaction_not_found`.
+- Userinfo and `authenticate` refuse its access tokens with `invalid_token`; `authenticate` names the reason `access_token_client_unknown`.
+- Its refresh tokens cannot be redeemed, since the token endpoint authenticates the client first.
+
+What it cannot reach is a JWT access token a resource server verifies offline, which stays valid until it expires. The tokens' rows stay in the store until they expire; revoke each grant with `revokeGrant` when the rows must go sooner, or when the client could come back before they expire and must not find its old tokens working.
+
 ## createMemoryStore
 
 `createMemoryStore` in `@codenhub/oidc/testing` is the reference implementation of this contract. It keeps everything in the memory of one process, and it is for tests and examples:

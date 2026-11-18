@@ -460,6 +460,7 @@ export type ProviderDiagnosticReason =
   | "access_token_malformed"
   | "access_token_unknown"
   | "access_token_expired"
+  | "access_token_client_unknown"
   | "access_token_without_openid"
   // Revocation
   | "token_missing"
@@ -747,6 +748,7 @@ export type AuthenticationFailureReason =
   | "access_token_malformed"
   | "access_token_unknown"
   | "access_token_expired"
+  | "access_token_client_unknown"
   | "access_token_audience_mismatch"
   | "access_token_scope_insufficient";
 

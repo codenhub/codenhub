@@ -1,4 +1,5 @@
 import { digestKey } from "../shared/encoding";
+import { findClientRecord } from "./client-record";
 import type { ResolvedOptions } from "./options";
 import type { AccessTokenRecord } from "./types";
 
@@ -17,7 +18,8 @@ export type BearerFailure =
   | "access_token_missing"
   | "access_token_malformed"
   | "access_token_unknown"
-  | "access_token_expired";
+  | "access_token_expired"
+  | "access_token_client_unknown";
 
 /** Outcome of {@link findBearerAccessToken}: the live record, or why there is none, with the record when one was found. */
 export type BearerLookup =
@@ -36,12 +38,14 @@ export type BearerLookup =
  * The token travels only in the `Authorization` header. A token in the body or query is not read, so a credential
  * never lands in a URL that a proxy or log would keep. It is looked up by digest in the access-token table only: an
  * ID token or refresh token presented here is never found, which is what stops one kind of token from being used as
- * another.
+ * another. A token whose client the store no longer finds is refused too, so removing a client cuts off every token
+ * it holds at once, without waiting for them to expire.
  *
  * @param options - The resolved provider options.
  * @param request - The request carrying the token.
- * @returns The record, or why there is none. `clientId` comes with `access_token_expired`, from the store's record.
- * Rejects only when the store does.
+ * @returns The record, or why there is none. `clientId` comes with `access_token_expired` and
+ * `access_token_client_unknown`, from the store's record. Rejects only when the store does, or with a `TypeError`
+ * when it returns a malformed client record.
  */
 export async function findBearerAccessToken(options: ResolvedOptions, request: Request): Promise<BearerLookup> {
   const header = request.headers.get("authorization");
@@ -62,6 +66,13 @@ export async function findBearerAccessToken(options: ResolvedOptions, request: R
     return {
       ok: false,
       reason: "access_token_expired",
+      clientId: record.clientId,
+    };
+  }
+  if ((await findClientRecord(options.store, record.clientId, options.publicKeys)) === undefined) {
+    return {
+      ok: false,
+      reason: "access_token_client_unknown",
       clientId: record.clientId,
     };
   }

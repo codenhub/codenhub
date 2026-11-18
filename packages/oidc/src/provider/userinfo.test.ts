@@ -27,7 +27,16 @@ const setUp = async (
     name: "Ada",
   }),
 ): Promise<Fixture> => {
-  const store = createMemoryStore();
+  const store = createMemoryStore({
+    clients: [
+      {
+        clientId: CLIENT_ID,
+        redirectUris: ["https://rp.example/cb"],
+        scopes: ["openid", "email"],
+        auth: { method: "none" },
+      },
+    ],
+  });
   const requests: ClaimsRequest[] = [];
   const pair = await generateKeyPair({ alg: "ES256", kid: "2026-10" });
   const options = resolveOptions({
@@ -249,6 +258,22 @@ describe("handleUserinfo", () => {
   it("shouldRespond401InvalidTokenWhenTheTokenIsExpired", async () => {
     const { options, store } = await setUp();
     await saveAccessToken(store, ACCESS_TOKEN, NOW_S);
+
+    const response = await handleUserinfo(options, getWithToken(ACCESS_TOKEN));
+
+    expect(response.status).toBe(401);
+    expect(response.headers.get("www-authenticate")).toBe('Bearer error="invalid_token"');
+  });
+
+  it("shouldRespond401InvalidTokenWhenTheTokensClientIsNoLongerInTheStore", async () => {
+    const { options, store } = await setUp();
+    await store.saveAccessToken(await digestKey(ACCESS_TOKEN), {
+      grantId: "grant-1",
+      clientId: "removed-client",
+      subject: SUBJECT,
+      scopes: ["openid", "email"],
+      expiresAt: NOW_S + 600,
+    });
 
     const response = await handleUserinfo(options, getWithToken(ACCESS_TOKEN));
 
