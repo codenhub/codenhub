@@ -434,6 +434,39 @@ describe("initializeBrowserI18n subscribe", () => {
     expect(disconnected).toHaveBeenCalledTimes(1);
   });
 
+  it("calls no other listener once one calls disconnect()", async () => {
+    setNavigatorLocales(["fr"]);
+    const i18n = createManager();
+    const binding = await bind({ i18n });
+    const later = vi.fn();
+    binding.subscribe(() => binding.disconnect());
+    binding.subscribe(later);
+
+    await i18n.setLocale("ar");
+    await flushPromises();
+
+    expect(later).not.toHaveBeenCalled();
+  });
+
+  it("calls a function subscribed twice twice, and skips a listener unsubscribed during a notification", async () => {
+    setNavigatorLocales(["fr"]);
+    const i18n = createManager();
+    const binding = await bind({ i18n });
+    const twice = vi.fn();
+    const skipped = vi.fn();
+    binding.subscribe(twice);
+    binding.subscribe(twice);
+    let unsubscribeSkipped = (): void => undefined;
+    binding.subscribe(() => unsubscribeSkipped());
+    unsubscribeSkipped = binding.subscribe(skipped);
+
+    await i18n.setLocale("ar");
+    await flushPromises();
+
+    expect(twice).toHaveBeenCalledTimes(2);
+    expect(skipped).not.toHaveBeenCalled();
+  });
+
   it("calls every listener when one throws", async () => {
     setNavigatorLocales(["fr"]);
     const i18n = createManager();
