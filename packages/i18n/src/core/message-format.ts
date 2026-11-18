@@ -635,14 +635,17 @@ const readTime = (value: unknown): number | undefined => {
 };
 
 /**
- * Formats the value of a plain `{name}`: text and numbers as written, a valid `Date` as a medium date, and anything else
- * as `undefined`, for the argument to stay as written.
+ * Formats the value of a plain `{name}` as ICU does: text as written, a number as `{name, number}`, a valid `Date` as a
+ * medium date, and anything else as `undefined`, for the argument to stay as written.
  *
  * @internal
  */
 export const formatPlainValue = (value: unknown, locale: string, timeZone: string | undefined): string | undefined => {
-  if (typeof value === "string" || typeof value === "number") {
-    return String(value);
+  if (typeof value === "string") {
+    return value;
+  }
+  if (typeof value === "number") {
+    return getNumberFormat(locale).format(value);
   }
   const time = readDateTime(value);
   return time !== undefined && Math.abs(time) <= MAX_TIME

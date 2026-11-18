@@ -267,8 +267,8 @@ export interface I18n<TLocale extends string = string, TKey extends string = str
    *
    * @param key - Translation key, or the key of a plural group when `params.count` is a number.
    * @param params - Argument values, read from own properties. An argument without a usable value, such as a string
-   * for `{n, number}`, is left as written. A string or number in `{name}` is inserted as JavaScript writes it, and a
-   * date as `{name, date}` would format it. A numeric `count` also selects a plural form.
+   * for `{n, number}`, is left as written. A string in `{name}` is inserted as written, a number as `{name, number}`
+   * would format it, and a date as `{name, date}` would. A numeric `count` also selects a plural form.
    * @returns The translated text, or the trimmed key when no dictionary has it. A miss calls `onMissingKey`, or
    * warns once per recent locale/key pair unless silent.
    * @throws {Error} When called before successful initialization.

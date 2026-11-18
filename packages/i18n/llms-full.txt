@@ -529,7 +529,7 @@ A few details:
 
 - A placeholder with no matching value stays as written, so a missing value shows up as `{name}` on screen rather than disappearing.
 - One `t()` call fills at most 100 arguments, counting those inside plural and select forms, and leaves the rest as written. A UI sentence never gets close; the limit keeps a huge fetched message from costing one formatting step per placeholder.
-- Numbers in a plain `{name}` are inserted as JavaScript writes them: `1234.5`. Write `{name, number}` to format them for the reader, as the next section shows.
+- A number in a plain `{name}` is formatted for the reader, as `{name, number}` does: `1234.5` reads "1,234.5" in English and "1.234,5" in Portuguese. Write `{name, number, integer}` or another style, as the next section shows, to format it differently.
 - Braces and apostrophes are message syntax, so text that shows them literally needs quoting; see [Literal braces and apostrophes](#literal-braces-and-apostrophes).
 
 ### Format numbers and dates in the text
@@ -664,27 +664,6 @@ Three things to watch for:
 - **`count` must be a number.** A string such as `"5"` does not select a form; the group is then treated as a missing key. Convert it where it comes in, such as `Number(params.get("count"))`. The manager doesn't guess, since `"1,5"` is one and a half in Portuguese and not a number at all to JavaScript.
 - **A plain string under the same key wins over forms.** If `cart.items` is a string, `count` only fills `{count}`.
 - **Without `other`, it is not a plural group.** `{ "one": "…", "two": "…" }` works only for counts whose form happens to be there; any other count shows the key. `has()` says such a group is not a key, and typed keys don't offer it. Add `other`.
-
-### Show a formatted count
-
-A plain `{count}` writes the number as JavaScript does, so 1234 items reads "1234 items" rather than "1,234 items", or "1.234 itens" in Portuguese. Write `{count, number}` in the forms instead:
-
-```json
-{
-  "cart": {
-    "items": {
-      "one": "{count, number} item",
-      "other": "{count, number} items"
-    }
-  }
-}
-```
-
-```ts
-t("cart.items", { count: 1234 }); // "1,234 items"
-```
-
-That is a lot of tea, but the comma is right.
 
 ### Plurals inside a sentence
 
@@ -2025,12 +2004,13 @@ The [reference](docs/reference/index.md) documents every export, option, and the
 - **The guide's language switcher and `hreflang` tags read `route.alternates`** instead of calling `localize()` on a path from the request. Do the same in yours. The `x-default` tag is left out when the default locale has no URL for the page. A static build still uses `localizeAll()`, which throws on a clash, so the build finds it.
 - **`localize()`'s "would be read as" `RangeError` names the URL it would build**, such as `"/pt/produtos/novo"`, and no longer tells you to pass `parse().pathname` when that is what you passed. Code that matches the text after the `;` needs updating.
 - **Paths have at most 100 segments.** `parse()` returns `undefined` for a longer one, and `localize()` throws a `TypeError` for one, or a `RangeError` when its prefix or translated words take it past 100, as for 8,192 characters. A request made of thousands of one-letter segments, such as `/a/a/a/…`, cost about 40 ms a `parse()` with 20 locales, so anyone could keep a server busy with it. The `RangeError` reads "would be longer than 8,192 characters or 100 segments".
+- **A number in a plain `{name}` is formatted for the reader**, as `{name, number}` does and as ICU MessageFormat does, so `"{count} items"` with `1234` reads "1,234 items", or "1.234 itens" in Portuguese, where it read "1234 items" in every language. A message that wants the digits as written, such as an order number, takes a string: `t("order", { id: String(id) })`. A number in a message that is not valid ICU syntax is formatted too.
 - **`loadLocale` must accept every configured locale.** A loader typed for fewer, such as `(locale: keyof typeof dictionaries)` before every dictionary exists, no longer compiles, where `init()` rejected at runtime.
 - **`initializeBrowserI18n`'s `locale` must be a configured locale.** `initializeBrowserI18n({ i18n, locale: "fr" })` on a manager without `fr` no longer compiles, where it rejected at runtime.
 - **`t()` accepts any values for a message it prints as written**: one with an unknown style, such as `{n, number, currency}`, a `plural` or `select` without `other`, or `'#` quoting a brace inside a plural. The types required values the runtime never filled in.
 - **`t()` takes any key when the loader returns `Record<string, unknown>`**, where no key compiled.
 - **`t(key, values)` throws a `TypeError` when `values` is `null` or a primitive.** `null` failed with a native error from inside the package, and a string was ignored.
-- **Errors that name a dictionary key, a locale, or a configuration property quote it**, with line breaks escaped, and cut it after 100 characters. A test that matches such a message for an unusual key or locale may need updating; ordinary ones read the same.
+- **Errors that name a dictionary key, a locale, a path, or a configuration property quote it**, with line breaks escaped, and cut it after 100 characters. A test that matches such a message for an unusual key or locale may need updating; ordinary ones read the same.
 - **`formatRelativeTime()` and `formatList()` reuse their `Intl` formatters**, several times faster in a list of "3 days ago" labels.
 - **Creating a manager and `matchLocale()` are about 5 times faster with many locales**, since locale data is computed once per process.
 

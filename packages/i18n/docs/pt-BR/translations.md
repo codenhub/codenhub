@@ -139,7 +139,7 @@ Alguns detalhes:
 
 - Um placeholder sem valor correspondente fica como foi escrito, então um valor que falta aparece como `{name}` na tela em vez de sumir.
 - Uma chamada de `t()` preenche no máximo 100 argumentos, contando os que ficam dentro de formas de plural e de select, e deixa o resto como foi escrito. Uma frase de interface nunca chega nem perto; o limite impede que uma mensagem enorme vinda da rede custe um passo de formatação por placeholder.
-- Números num `{name}` simples entram do jeito que o JavaScript os escreve: `1234.5`. Escreva `{name, number}` para formatá-los para o leitor, como mostra a próxima seção.
+- Um número num `{name}` simples é formatado para o leitor, como `{name, number}` faz: `1234.5` aparece como "1,234.5" em inglês e "1.234,5" em português. Escreva `{name, number, integer}` ou outro estilo, como mostra a próxima seção, para formatá-lo de outro jeito.
 - Chaves (`{` e `}`) e apóstrofos são sintaxe de mensagem, então um texto que os mostra literalmente precisa de aspas; veja [Chaves literais e apóstrofos](#chaves-literais-e-apóstrofos).
 
 ### Formate números e datas no texto
@@ -274,27 +274,6 @@ Três coisas a observar:
 - **`count` precisa ser um número.** Uma string como `"5"` não escolhe forma nenhuma; o grupo então é tratado como chave que falta. Converta o valor onde ele entra, como `Number(params.get("count"))`. O gerenciador não adivinha, já que `"1,5"` é um e meio em português e não é número nenhum para o JavaScript.
 - **Uma string simples na mesma chave ganha das formas.** Se `cart.items` for uma string, `count` só preenche `{count}`.
 - **Sem `other`, não é um grupo de plural.** `{ "one": "…", "two": "…" }` só funciona para as quantidades cuja forma por acaso esteja ali; qualquer outra quantidade mostra a chave. `has()` diz que um grupo assim não é uma chave, e as chaves tipadas não o oferecem. Acrescente `other`.
-
-### Mostre uma contagem formatada
-
-Um `{count}` simples escreve o número do jeito do JavaScript, então 1234 itens aparece como "1234 items" em vez de "1,234 items", ou "1.234 itens" em português. Escreva `{count, number}` nas formas:
-
-```json
-{
-  "cart": {
-    "items": {
-      "one": "{count, number} item",
-      "other": "{count, number} items"
-    }
-  }
-}
-```
-
-```ts
-t("cart.items", { count: 1234 }); // "1,234 items"
-```
-
-É muito chá, mas pelo menos a vírgula está certa.
 
 ### Plurais no meio da frase
 

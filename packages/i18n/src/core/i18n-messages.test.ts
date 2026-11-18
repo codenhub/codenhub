@@ -64,6 +64,19 @@ describe("ICU messages", () => {
     expect(i18n.t("whole", { amount: 1234 })).toBe("1,234 units");
   });
 
+  it("should format a number in a plain argument as {name, number} does", async () => {
+    const i18n = create({ pt: { hello: "Olá, {name}!", broken: "Olá {name} }" } });
+    await i18n.init();
+
+    expect(i18n.t("hello", { name: 1234.5 })).toBe("Hello, 1,234.5!");
+    expect(i18n.t("hello", { name: "1234.5" })).toBe("Hello, 1234.5!");
+
+    await i18n.setLocale("pt");
+    expect(i18n.t("hello", { name: 1234.5 })).toBe("Olá, 1.234,5!");
+    // A message that is not valid ICU syntax fills its arguments the same way.
+    expect(i18n.t("broken", { name: 1234.5 })).toBe("Olá 1.234,5 }");
+  });
+
   it("should format dates and times as Intl does", async () => {
     const i18n = create();
     await i18n.init();
