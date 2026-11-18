@@ -821,6 +821,14 @@ type Digit = "0" | "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9";
 
 Not exported; declared in `src/core/message-params.ts`.
 
+### DropDigits
+
+```ts
+type DropDigits<S> = S extends `${Digit}${infer R}` ? DropDigits<R> : S;
+```
+
+Not exported; declared in `src/core/message-params.ts`.
+
 ### FlattenedKey
 
 ```ts
@@ -939,6 +947,14 @@ type NextBrace<S extends string> = S extends `${infer A}{${infer B}` ? A extends
 
 Not exported; declared in `src/core/message-params.ts`.
 
+### OptionName
+
+```ts
+type OptionName<B> = B extends `offset:${infer R}` ? DropDigits<Trim<R>> extends infer O extends string ? Trim<O> : B : B;
+```
+
+Not exported; declared in `src/core/message-params.ts`.
+
 ### ParamsFor
 
 ```ts
@@ -1000,7 +1016,7 @@ Not exported; declared in `src/core/message-params.ts`.
 ### Scan
 
 ```ts
-type Scan<S extends string, Stack extends readonly Frame[], Acc, TSteps extends Steps> = TSteps["length"] extends MaxSteps ? Unreadable : NextBrace<S> extends [infer Brace, infer Before extends string, infer Rest extends string] ? Stack extends readonly [...infer Up extends readonly Frame[], infer Top extends Frame] ? Brace extends "{" ? Top extends "m" ? ReadArgument<Rest, Stack, Acc, Next<TSteps>> : Scan<Rest, [...Up, Trim<Before> extends "other" ? "O" : Top, "m"], Acc, Next<TSteps>> : Up extends readonly [] ? Unreadable : Top extends "o" ? Unreadable : Scan<Rest, Up, Acc, Next<TSteps>> : Unreadable : Stack extends readonly ["m"] ? Acc : Unreadable;
+type Scan<S extends string, Stack extends readonly Frame[], Acc, TSteps extends Steps> = TSteps["length"] extends MaxSteps ? Unreadable : NextBrace<S> extends [infer Brace, infer Before extends string, infer Rest extends string] ? Stack extends readonly [...infer Up extends readonly Frame[], infer Top extends Frame] ? Brace extends "{" ? Top extends "m" ? ReadArgument<Rest, Stack, Acc, Next<TSteps>> : Scan<Rest, [...Up, OptionName<Trim<Before>> extends "other" ? "O" : Top, "m"], Acc, Next<TSteps>> : Up extends readonly [] ? Unreadable : Top extends "o" ? Unreadable : Scan<Rest, Up, Acc, Next<TSteps>> : Unreadable : Stack extends readonly ["m"] ? Acc : Unreadable;
 ```
 
 Not exported; declared in `src/core/message-params.ts`.

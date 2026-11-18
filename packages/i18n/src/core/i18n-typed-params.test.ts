@@ -102,6 +102,13 @@ describe("typed placeholder values", () => {
     >();
   });
 
+  it("should require the values of a plural whose first option, after an offset, is other", () => {
+    type ParamsOf<M extends string> = NonNullable<TranslateParams<{ readonly m: M }, "m">[0]>;
+    expectTypeOf<{ n: 1; name: "Ana" }>().toExtend<ParamsOf<"{n, plural, offset:1 other {# {name}}}">>();
+    expectTypeOf<{ n: 1 }>().not.toExtend<ParamsOf<"{n, plural, offset:1 other {# {name}}}">>();
+    expectTypeOf<{ n: 1 }>().not.toExtend<ParamsOf<"{n, plural, offset: 12 other {# {name}}}">>();
+  });
+
   it("should accept any values for a message the runtime refuses, which it prints as written", () => {
     type Loose = [params?: Readonly<Record<string, string | number | Date>>];
     type ParamsOf<M extends string> = TranslateParams<{ readonly m: M }, "m">;

@@ -169,6 +169,14 @@ type IsName<N, TSteps extends Steps = []> = TSteps["length"] extends MaxSteps
 // and "O" is those options once an `other` option has been read, which the runtime requires.
 type Frame = "m" | "o" | "O";
 
+// A plural's first option name follows its `offset:N`, if any.
+type OptionName<B> = B extends `offset:${infer R}`
+  ? DropDigits<Trim<R>> extends infer O extends string
+    ? Trim<O>
+    : B
+  : B;
+type DropDigits<S> = S extends `${Digit}${infer R}` ? DropDigits<R> : S;
+
 type Scan<
   S extends string,
   Stack extends readonly Frame[],
@@ -181,7 +189,7 @@ type Scan<
       ? Brace extends "{"
         ? Top extends "m"
           ? ReadArgument<Rest, Stack, Acc, Next<TSteps>>
-          : Scan<Rest, [...Up, Trim<Before> extends "other" ? "O" : Top, "m"], Acc, Next<TSteps>>
+          : Scan<Rest, [...Up, OptionName<Trim<Before>> extends "other" ? "O" : Top, "m"], Acc, Next<TSteps>>
         : Up extends readonly []
           ? Unreadable
           : Top extends "o"
