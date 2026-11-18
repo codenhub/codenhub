@@ -1,4 +1,4 @@
-import { mkdir, mkdtemp, readFile, rm, stat, writeFile } from "node:fs/promises";
+import { chmod, mkdir, mkdtemp, readFile, rm, stat, writeFile } from "node:fs/promises";
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import path from "node:path";
@@ -328,6 +328,31 @@ describe("failures", () => {
     );
     expect(await readOutput()).toBe(".mine { color: red; }\n");
   });
+
+  it("refuses a file whose first bytes are only whitespace", async () => {
+    await writeFile(path.join(project, "app.css"), `${" ".repeat(2048)}.mine { color: red; }`);
+
+    expect(await failureOf("build", "-c", "app/views/**/*.erb", "-o", "app.css")).toMatch(/did not write/);
+  });
+
+  /* Renaming over a file needs the directory's permission, not the file's, so
+     a file the command cannot read could still be replaced unchecked. POSIX
+     modes only: Windows ignores them, and root reads the file anyway. */
+  it.skipIf(process.platform === "win32" || process.getuid?.() === 0)(
+    "refuses a file it cannot read, and leaves it",
+    async () => {
+      const file = path.join(project, "app.css");
+
+      await writeFile(file, ".mine { color: red; }");
+      await chmod(file, 0o200);
+
+      expect(await failureOf("build", "-c", "app/views/**/*.erb", "-o", "app.css")).toMatch(
+        /^chs: cannot read --output app\.css to check/,
+      );
+      await chmod(file, 0o600);
+      expect(await readOutput()).toBe(".mine { color: red; }");
+    },
+  );
 
   it("replaces a stylesheet it wrote, and an empty file", async () => {
     await writeFile(path.join(project, "empty.css"), "");

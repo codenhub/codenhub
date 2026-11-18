@@ -25,6 +25,8 @@ const AESTHETIC_EXPORT = /^\.\/aesthetics\/(?!tw$)([^/]+)$/;
    variants this command offers, and the class names it may drop from one. */
 const PURGE_SOURCE = "dist/purge/index.css";
 const PURGE_CLASSES = "dist/purge/classes.json";
+/* How much of an existing output is read to tell whether this command wrote it. */
+const HEAD_BYTES = 1024;
 
 const USAGE = `Usage: ${BIN} build --content <glob> [--content <glob> ...] --output <file> [options]
 
@@ -204,8 +206,9 @@ async function build(options: BuildOptions, io: CliIo): Promise<string> {
    `--content index.html --output index.html`, or a stylesheet written by hand.
    What it writes starts with Tailwind's `/*!` banner, and a stylesheet built
    another way with a banner or a layer statement is taken as one built to be
-   replaced. An empty file is replaced too. What is not a file is left to the
-   write, which reports it. */
+   replaced. An empty file, of no bytes, is replaced too. What is not a file is
+   left to the write, which reports it. A file that cannot be read is refused:
+   a directory can let a file be renamed over that it does not let be read. */
 async function assertReplaceable(options: BuildOptions, cwd: string, output: string): Promise<void> {
   if (options.contentGlobs.some((entry) => path.relative(path.resolve(cwd, entry), output) === "")) {
     throw new Error(`--output ${options.output} is also a --content file; name a stylesheet to write.`);
@@ -214,26 +217,33 @@ async function assertReplaceable(options: BuildOptions, cwd: string, output: str
   let head: string;
 
   try {
-    if (!(await fs.stat(output)).isFile()) {
+    const stats = await fs.stat(output);
+
+    if (!stats.isFile() || stats.size === 0) {
       return;
     }
 
     const handle = await fs.open(output);
 
     try {
-      const { buffer, bytesRead } = await handle.read(Buffer.alloc(64), 0, 64, 0);
+      const { buffer, bytesRead } = await handle.read(Buffer.alloc(HEAD_BYTES), 0, HEAD_BYTES, 0);
 
       head = buffer.toString("utf8", 0, bytesRead);
     } finally {
       await handle.close();
     }
-  } catch {
-    // A missing file is written; any other failure is the write's to report.
-    return;
+  } catch (error) {
+    if ((error as { code?: string }).code === "ENOENT") {
+      return;
+    }
+
+    throw new Error(
+      `cannot read --output ${options.output} to check it is a stylesheet this command wrote: ${error instanceof Error ? error.message : String(error)}`,
+    );
   }
 
-  // `\s` takes a byte order mark too.
-  if (!/^\s*(?:\/\*!|@layer\b|$)/.test(head)) {
+  // `\s` takes a byte order mark too. A marker past the bytes read is not found, and the file is refused.
+  if (!/^\s*(?:\/\*!|@layer\b)/.test(head)) {
     throw new Error(
       `--output ${options.output} holds something this command did not write; move it or name another file.`,
     );
