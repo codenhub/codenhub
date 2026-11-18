@@ -494,21 +494,21 @@ describe("time claims", () => {
     expect(result.ok).toBe(true);
   });
 
-  it("should report not_yet_valid for nbf one second ahead", async () => {
-    expect(await hmacVerifier()(await timeToken({ nbf: NOW_SECONDS + 1 }))).toEqual(
+  it("should report not_yet_valid for nbf 61 seconds ahead, past the 60-second floor", async () => {
+    expect(await hmacVerifier()(await timeToken({ nbf: NOW_SECONDS + 61 }))).toEqual(
       failure({ code: "not_yet_valid", path: ["payload", "nbf"] }),
     );
   });
 
-  it("should report issued_in_future for iat one second ahead", async () => {
-    expect(await hmacVerifier()(await timeToken({ iat: NOW_SECONDS + 1 }))).toEqual(
+  it("should report issued_in_future for iat 61 seconds ahead, past the 60-second floor", async () => {
+    expect(await hmacVerifier()(await timeToken({ iat: NOW_SECONDS + 61 }))).toEqual(
       failure({ code: "issued_in_future", path: ["payload", "iat"] }),
     );
   });
 
   it("should report every failing time claim at once", async () => {
     expect(
-      await hmacVerifier()(await timeToken({ exp: NOW_SECONDS - 1, nbf: NOW_SECONDS + 1, iat: NOW_SECONDS + 1 })),
+      await hmacVerifier()(await timeToken({ exp: NOW_SECONDS - 1, nbf: NOW_SECONDS + 61, iat: NOW_SECONDS + 61 })),
     ).toEqual(
       failure(
         { code: "expired", path: ["payload", "exp"] },

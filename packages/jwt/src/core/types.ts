@@ -261,6 +261,11 @@ export interface VerifierOptions<TSchema extends StandardSchemaV1 | undefined = 
   /**
    * Seconds of clock skew allowed on `exp`, `nbf`, `iat` and `maxAge`. An integer from 0 through 300.
    *
+   * @remarks
+   * `nbf` and `iat` may always lie up to 60 seconds in the future, or `clockTolerance` seconds when that is
+   * more, so a fresh token from an issuer whose clock runs a little ahead still verifies. `exp` and `maxAge`
+   * get only `clockTolerance`.
+   *
    * @defaultValue 0
    */
   readonly clockTolerance?: number;
