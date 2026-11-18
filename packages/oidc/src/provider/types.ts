@@ -811,10 +811,11 @@ export interface Provider {
    * Finishes an interaction: issues a code, or sends the denial, as a `302` to the client's redirect URI.
    *
    * @returns The response, or `interaction_not_found` when the interaction does not exist, was already
-   * completed, or expired, or, for a grant, when its client is no longer in the store: the code's lifetime can be
-   * the client's own ({@link ClientRecord.ttl}), so a grant reads the client's record. Rejects when the store does,
+   * completed, or expired, or, for a grant or a denial, when its client is no longer in the store, no longer lists
+   * the interaction's redirect URI, or no longer has the `authorization_code` grant type: the provider redirects
+   * only to a URI the client's record lists now. Rejects when the store does,
    * or with a `TypeError` when it returns a malformed client record.
-   * @throws {TypeError} When `outcome` is malformed, such as an empty `subject`, `scopes` that is not an array of
+   * @throws {TypeError} When `outcome` is malformed, such as a `subject` that is not 1 to 255 characters of visible ASCII, `scopes` that is not an array of
    * strings, or a denial with other members; the interaction is left in place, so a corrected retry works. Also
    * when a well-formed grant does not fit the request: scopes outside the request or without `openid`, an
    * `authTime` before the interaction under `prompt=login`, an `authTime` in the future, or more than the

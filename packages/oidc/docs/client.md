@@ -125,7 +125,9 @@ await client.authorize({ loginHint: "\uD800" });
 - `maxAge`, present only when you requested one.
 - `requestedAt`, present exactly when `maxAge` is: the time of the request, in whole seconds since the Unix epoch. The callback compares the user's `auth_time` with it.
 
-It is plain JSON, so `JSON.stringify` and `structuredClone` preserve it. Keep it where the user's browser cannot read or change it: a server-side session, or an encrypted, `HttpOnly` cookie. Treat it as a secret, because the verifier redeems the code. Discard it after the callback, whether the callback succeeded or failed, so a second callback cannot use the same values.
+It is plain JSON, so `JSON.stringify` and `structuredClone` preserve it. Keep it where the user's browser cannot read or change it: a server-side session, or an encrypted, `HttpOnly` cookie. Treat it as a secret, because the verifier redeems the code. Take it out of the session before calling `callback`, in one step, whether the callback then succeeds or fails, so a second callback, such as from a double-clicked link or a second tab, cannot use the same values.
+
+An app that signs users in with more than one provider gives each provider its own `redirectUri`, and keeps `pending` with the provider it was made for. The callback then always runs with the client of the provider the user was sent to, which is what stops a provider from collecting a code another provider issued (the mix-up attack of RFC 9700 §4.4). The `iss` check catches a provider that sends its issuer, and the separate redirect URI covers one that does not.
 
 The callback checks the shape of `pending`, and a malformed value throws `TypeError`, since the application stored it and a bad value is a bug in the application. A `pending` with a `maxAge` but no non-negative integer `requestedAt` is malformed in the same way.
 
@@ -190,7 +192,7 @@ A successful callback returns the claims as the verifier read them, after these 
 const refreshed = await client.refresh({ refreshToken, subject: claims.sub });
 if (refreshed.ok) {
   // Store the new refresh token. The one you sent is spent.
-  await save(refreshed.value.tokens.refreshToken);
+  await save(refreshed.value.tokens.refreshToken ?? refreshToken);
 }
 ```
 
@@ -201,7 +203,7 @@ if (refreshed.ok) {
 | `scope`        | A narrower set of scopes to request, as a non-empty array of at most 100 scope tokens, at most 4096 characters when joined with spaces. It must be within the original grant; a wider set is refused by the provider.  |
 | `resource`     | The resource servers the new access token is for, under the same rules as `authorize`. Each must be one the sign-in asked for. Without it, this package's provider issues the token for every resource of the sign-in. |
 
-The provider rotates refresh tokens. Each exchange spends the one you sent and returns a new one in `tokens.refreshToken`, so **store the new refresh token and discard the old one**. Presenting a spent refresh token again is treated as theft: the provider refuses it with `provider_error` and `invalid_grant`, and it revokes every token issued from that sign-in. [The token endpoint](provider.md#refresh-tokens) describes the rotation in detail.
+The provider rotates refresh tokens. Each exchange spends the one you sent and returns a new one in `tokens.refreshToken`, so **store the new refresh token and discard the old one**. A provider that does not rotate sends no new one, so keep the one you sent when `tokens.refreshToken` is absent, as the example does. Run one refresh at a time for each refresh token: two concurrent refreshes present the same token, and the second one is a replay. Presenting a spent refresh token again is treated as theft: the provider refuses it with `provider_error` and `invalid_grant`, and it revokes every token issued from that sign-in. [The token endpoint](provider.md#refresh-tokens) describes the rotation in detail.
 
 A refresh response need not carry an ID token. When it does, `claims` is the validated ID token's claims, checked against `subject` and the access token as described above, but without a nonce, because a refresh has none. When it carries none, `claims` is absent.
 
