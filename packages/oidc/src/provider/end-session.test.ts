@@ -80,6 +80,61 @@ describe("endSession", () => {
     expect(Object.isFrozen(result.value)).toBe(true);
   });
 
+  it("names the session of a hint that carries sid", async () => {
+    const { op, pair } = await setup();
+
+    const result = await op.endSession(logout({ id_token_hint: await idToken(pair, { sid: "session-1" }) }));
+
+    expect(result.ok && result.value).toMatchObject({
+      clientId: "web",
+      subject: "user-1",
+      sessionId: "session-1",
+    });
+  });
+
+  it("leaves sessionId out for a hint without sid", async () => {
+    const { op, pair } = await setup();
+
+    const result = await op.endSession(logout({ id_token_hint: await idToken(pair) }));
+
+    expect(result.ok && Object.hasOwn(result.value, "sessionId")).toBe(false);
+  });
+
+  // An ID token carrying many claims is longer than the 4096-character parameter cap, so the hint alone is exempt
+  // from it. A GET is still bounded by the 8192-character URL cap, a POST by MAX_FRONT_CHANNEL_BODY_BYTES.
+  it.each([
+    ["GET", 4000],
+    ["POST", 40_000],
+  ])("accepts an id_token_hint longer than 4096 characters by %s", async (method, padding) => {
+    const { op, pair } = await setup();
+    const hint = await idToken(pair, { profile_blob: "x".repeat(padding) });
+    const parameters = new URLSearchParams({ id_token_hint: hint });
+    const request =
+      method === "GET"
+        ? new Request(`${LOGOUT}?${parameters.toString()}`)
+        : new Request(LOGOUT, {
+            method: "POST",
+            headers: { "content-type": "application/x-www-form-urlencoded" },
+            body: parameters.toString(),
+          });
+
+    const result = await op.endSession(request);
+
+    expect(hint.length).toBeGreaterThan(4096);
+    expect(result.ok && result.value).toMatchObject({
+      clientId: "web",
+      subject: "user-1",
+    });
+  });
+
+  it("refuses another parameter longer than 4096 characters", async () => {
+    const { op } = await setup();
+
+    const result = await op.endSession(logout({ state: "s".repeat(4097) }));
+
+    expect(result.ok).toBe(false);
+  });
+
   it("reads a POST form as well as a query", async () => {
     const { op, pair } = await setup();
     const body = new URLSearchParams({ id_token_hint: await idToken(pair), post_logout_redirect_uri: AFTER_LOGOUT });

@@ -1,8 +1,8 @@
-import { generateKeyPair, type KeyPair } from "@codenhub/jwt";
+import { generateKeyPair, type KeyPair, sign } from "@codenhub/jwt";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { digestKey } from "../shared/encoding";
-import { MAX_BODY_BYTES, MAX_PARAMETER_LENGTH, MAX_URL_LENGTH } from "../shared/limits";
+import { MAX_FRONT_CHANNEL_BODY_BYTES, MAX_PARAMETER_LENGTH, MAX_URL_LENGTH } from "../shared/limits";
 import { computeCodeChallenge } from "../shared/pkce";
 import type { OidcResult } from "../shared/types";
 import { createMemoryStore, type MemoryStore } from "../testing/memory-store";
@@ -410,7 +410,7 @@ describe("beginAuthorization", () => {
 
     it("shouldRenderInvalidRequestForOversizedBody", async () => {
       const failure = failureOf(
-        await beginAuthorization(options, postRequest(`${query()}&pad=${"a".repeat(MAX_BODY_BYTES)}`)),
+        await beginAuthorization(options, postRequest(`${query()}&pad=${"a".repeat(MAX_FRONT_CHANNEL_BODY_BYTES)}`)),
       );
       expect(failure.issues).toEqual([{ code: "invalid_request" }]);
     });
@@ -470,6 +470,81 @@ describe("beginAuthorization", () => {
         expect(serialized).not.toContain(value);
       }
     });
+  });
+});
+
+/** An ID token as this provider issues it, with `overrides` applied, signed with `key`. */
+function idTokenHint(overrides: Record<string, unknown> = {}, key = keyPair): Promise<string> {
+  return sign({
+    payload: {
+      iss: ISSUER,
+      sub: "user-1",
+      aud: CLIENT_ID,
+      iat: NOW_SECONDS - 60,
+      exp: NOW_SECONDS + 540,
+      ...overrides,
+    },
+    key: key.privateKey,
+    header: { typ: "JWT" },
+  });
+}
+
+describe("beginAuthorization with id_token_hint", () => {
+  it("names the user and session of a verified hint, frozen", async () => {
+    const interaction = await beginOk(query({ id_token_hint: await idTokenHint({ sid: "session-1" }) }));
+
+    expect(interaction.idTokenHint).toEqual({
+      subject: "user-1",
+      sessionId: "session-1",
+    });
+    expect(Object.isFrozen(interaction.idTokenHint)).toBe(true);
+  });
+
+  it("names the user of an expired hint, which still says who the client thinks is signed in", async () => {
+    const hint = await idTokenHint({
+      iat: NOW_SECONDS - 1200,
+      exp: NOW_SECONDS - 600,
+    });
+
+    const interaction = await beginOk(query({ id_token_hint: hint }));
+
+    expect(interaction.idTokenHint).toEqual({ subject: "user-1" });
+  });
+
+  it("accepts a hint naming the client among several audiences as azp", async () => {
+    const hint = await idTokenHint({
+      aud: ["other", CLIENT_ID],
+      azp: CLIENT_ID,
+    });
+
+    const interaction = await beginOk(query({ id_token_hint: hint }));
+
+    expect(interaction.idTokenHint).toEqual({ subject: "user-1" });
+  });
+
+  it("redirects with invalid_request for a hint issued to another client", async () => {
+    const hint = await idTokenHint({ aud: "other" });
+
+    const failure = failureOf(await beginAuthorization(options, getRequest(query({ id_token_hint: hint }))));
+
+    expectErrorRedirect(failure.redirect, "invalid_request");
+    expect(failure.issues).toEqual([{ code: "invalid_request", path: ["id_token_hint"] }]);
+  });
+
+  it.each([
+    ["is not a JWT", async () => "not-a-jwt"],
+    ["is signed by an unknown key", async () => idTokenHint({}, await generateKeyPair({ alg: "ES256", kid: "k9" }))],
+    ["is from another issuer", async () => idTokenHint({ iss: "https://evil.example" })],
+  ])("ignores a hint that %s, as OpenID Connect Core §3.1.2.1 allows", async (_label, makeHint) => {
+    const interaction = await beginOk(query({ id_token_hint: await makeHint() }));
+
+    expect(Object.hasOwn(interaction, "idTokenHint")).toBe(false);
+  });
+
+  it("leaves idTokenHint out when the request sent none", async () => {
+    const interaction = await beginOk();
+
+    expect(Object.hasOwn(interaction, "idTokenHint")).toBe(false);
   });
 });
 

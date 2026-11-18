@@ -19,6 +19,7 @@ import {
   resourcesOfClient,
 } from "./client-record";
 import { readFrontChannelParameters } from "./front-channel";
+import { verifyIdTokenHint } from "./id-token-hint";
 import { type ResolvedOptions, SUBJECT } from "./options";
 import { redirectResponse } from "./responses";
 import type {
@@ -29,6 +30,7 @@ import type {
   ClientRecord,
   CodeRecord,
   Display,
+  IdTokenHintClaims,
   InteractionRecord,
 } from "./types";
 
@@ -136,7 +138,38 @@ export async function beginAuthorization(
   if (!checked.ok) {
     return checked;
   }
-  return saveInteraction(options, checked.value);
+  const hint = await readIdTokenHint(options, client.value.clientId, parameters, target);
+  if (!hint.ok) {
+    return hint;
+  }
+  return saveInteraction(options, checked.value, hint.value);
+}
+
+/**
+ * The user and session an `id_token_hint` names (OpenID Connect Core §3.1.2.1), for the app to compare with its own
+ * session. A hint that does not verify as this provider's ID token is ignored, as one that names a key since rotated
+ * out would be. One issued to another client fails with `invalid_request`: it is that client's, not this one's.
+ */
+async function readIdTokenHint(
+  options: ResolvedOptions,
+  clientId: string,
+  parameters: ParameterMap,
+  target: RedirectTarget,
+): Promise<Checked<IdTokenHintClaims | undefined>> {
+  const hint = await verifyIdTokenHint(options, parameters.get("id_token_hint"));
+  if (hint === undefined) {
+    return { ok: true, value: undefined };
+  }
+  if (!hint.audiences.includes(clientId)) {
+    return redirectFailure(target, "invalid_request", ["id_token_hint"]);
+  }
+  return {
+    ok: true,
+    value: Object.freeze({
+      subject: hint.subject,
+      ...optionalMember("sessionId", hint.sessionId),
+    }),
+  };
 }
 
 /**
@@ -456,6 +489,7 @@ function readDisplay(parameters: ParameterMap): Display | undefined {
 async function saveInteraction(
   options: ResolvedOptions,
   request: ValidatedRequest,
+  idTokenHint: IdTokenHintClaims | undefined,
 ): Promise<OidcResult<AuthorizationInteraction, AuthorizationFailure>> {
   const createdAt = options.now();
   const record: InteractionRecord = {
@@ -493,6 +527,7 @@ async function saveInteraction(
     ...optionalMember("claimsLocales", request.claimsLocales),
     ...optionalMember("display", request.display),
     ...optionalMember("resources", request.resources),
+    ...optionalMember("idTokenHint", idTokenHint),
   });
 }
 

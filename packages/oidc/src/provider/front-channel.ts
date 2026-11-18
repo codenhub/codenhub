@@ -1,6 +1,6 @@
 import { assertBodyUnread, readBody } from "../shared/body";
 import { isFormContentType } from "../shared/content-type";
-import { MAX_BODY_BYTES, MAX_URL_LENGTH } from "../shared/limits";
+import { MAX_FRONT_CHANNEL_BODY_BYTES, MAX_URL_LENGTH } from "../shared/limits";
 import { type ParameterFailure, parseParameters } from "../shared/parameters";
 
 /** Outcome of {@link readFrontChannelParameters}. */
@@ -16,7 +16,9 @@ export type FrontChannelParameters =
  * Reads the parameters of a request the browser sends, such as authorization or logout: from the query for `GET`,
  * from the form body for `POST`. An oversized URL, another method or media type, or an unreadable body fails with
  * no reason; a parameter string that breaks a rule fails with that rule. A body already read throws `TypeError`
- * naming `operation`. A name in `repeatable` may repeat, and its values come back in `lists`.
+ * naming `operation`. A name in `repeatable` may repeat, and its values come back in `lists`. `id_token_hint` is
+ * exempt from the length cap of one value: an ID token this provider issued with scope claims (`idTokenClaims`) can
+ * be longer, and refusing it would fail the logout of exactly those users. The URL and body caps still bound it.
  */
 export async function readFrontChannelParameters(
   request: Request,
@@ -31,7 +33,7 @@ export async function readFrontChannelParameters(
   if (text === undefined) {
     return { ok: false, reason: undefined };
   }
-  const parsed = parseParameters(text, repeatable);
+  const parsed = parseParameters(text, repeatable, ["id_token_hint"]);
   return parsed.ok ? parsed : { ok: false, reason: parsed.reason };
 }
 
@@ -47,6 +49,6 @@ async function readRequestText(request: Request): Promise<string | undefined> {
   if (request.method !== "POST" || !isFormContentType(request.headers.get("content-type"))) {
     return undefined;
   }
-  const body = await readBody(request, MAX_BODY_BYTES);
+  const body = await readBody(request, MAX_FRONT_CHANNEL_BODY_BYTES);
   return body.ok ? body.text : undefined;
 }

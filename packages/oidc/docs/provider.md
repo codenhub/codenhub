@@ -285,25 +285,26 @@ declare function showLogin(interaction: AuthorizationInteraction): Response; // 
 
 The checks run in this order, and the first failure is the one reported. Failures before the client and its redirect URI are verified render an error; failures after are redirected to the client's registered redirect URI with `error`, `state` and `iss`, so the client can see why.
 
-| Check                                                                                                                                                  | Failure                                                                                        | `redirect` |
-| ------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------- | ---------- |
-| The URL is at most 8192 characters.                                                                                                                    | `invalid_request`                                                                              | `null`     |
-| The method is `GET`, or `POST` with a form body. The body is at most 16384 bytes.                                                                      | `invalid_request`                                                                              | `null`     |
-| The parameters parse: no duplicate except `resource`, at most 32, none longer than 4096 characters, and no percent-escape that is not valid UTF-8.     | `invalid_request`, with `params.reason` of `duplicate`, `too_many`, `too_long` or `malformed`  | `null`     |
-| `client_id` is present.                                                                                                                                | `invalid_request`, path `["client_id"]`                                                        | `null`     |
-| The client is registered.                                                                                                                              | `unknown_client`                                                                               | `null`     |
-| `redirect_uri` is present and is one of the client's registered URIs, byte for byte.                                                                   | `invalid_redirect_uri`                                                                         | `null`     |
-| The client is registered with `authorization_code` in its `grantTypes`. A client registered only for `client_credentials` signs no users in.           | `unauthorized_client`                                                                          | Redirect   |
-| No `request`, `request_uri` or `registration` parameter is present.                                                                                    | `request_not_supported`, `request_uri_not_supported` or `registration_not_supported`           | Redirect   |
-| `response_type` is present and is `code`.                                                                                                              | `invalid_request` with path `["response_type"]` when missing, else `unsupported_response_type` | Redirect   |
-| `response_mode`, when present, is `query`.                                                                                                             | `invalid_request`, path `["response_mode"]`                                                    | Redirect   |
-| `scope` contains `openid`, and every scope is a scope token that the client's record lists.                                                            | `invalid_scope`                                                                                | Redirect   |
-| Each `resource`, when present, is one of the client's [`resources`](#resource-indicators), byte for byte.                                              | `invalid_target`                                                                               | Redirect   |
-| `code_challenge` is present and has the shape of an S256 challenge. A client with [`requirePkce: false`](#clients-that-send-no-pkce) may leave it out. | `invalid_request`, path `["code_challenge"]`                                                   | Redirect   |
-| `code_challenge_method` is `S256`. `plain` is refused.                                                                                                 | `invalid_request`, path `["code_challenge_method"]`                                            | Redirect   |
-| A client with `requirePkce: false` that sent no `code_challenge` sent a non-empty `nonce`.                                                             | `invalid_request`, path `["nonce"]`                                                            | Redirect   |
-| `prompt`, when present, is one or more of `none`, `login`, `consent` and `select_account`, and `none` stands alone. A repeated value counts once.      | `invalid_request`, path `["prompt"]`                                                           | Redirect   |
-| `max_age`, when present, is at most nine digits.                                                                                                       | `invalid_request`, path `["max_age"]`                                                          | Redirect   |
+| Check                                                                                                                                                                      | Failure                                                                                        | `redirect` |
+| -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- | ---------- |
+| The URL is at most 8192 characters.                                                                                                                                        | `invalid_request`                                                                              | `null`     |
+| The method is `GET`, or `POST` with a form body. The body is at most 81920 bytes, so an `id_token_hint` fits.                                                              | `invalid_request`                                                                              | `null`     |
+| The parameters parse: no duplicate except `resource`, at most 32, none but `id_token_hint` longer than 4096 characters, and no percent-escape that is not valid UTF-8.     | `invalid_request`, with `params.reason` of `duplicate`, `too_many`, `too_long` or `malformed`  | `null`     |
+| `client_id` is present.                                                                                                                                                    | `invalid_request`, path `["client_id"]`                                                        | `null`     |
+| The client is registered.                                                                                                                                                  | `unknown_client`                                                                               | `null`     |
+| `redirect_uri` is present and is one of the client's registered URIs, byte for byte.                                                                                       | `invalid_redirect_uri`                                                                         | `null`     |
+| The client is registered with `authorization_code` in its `grantTypes`. A client registered only for `client_credentials` signs no users in.                               | `unauthorized_client`                                                                          | Redirect   |
+| No `request`, `request_uri` or `registration` parameter is present.                                                                                                        | `request_not_supported`, `request_uri_not_supported` or `registration_not_supported`           | Redirect   |
+| `response_type` is present and is `code`.                                                                                                                                  | `invalid_request` with path `["response_type"]` when missing, else `unsupported_response_type` | Redirect   |
+| `response_mode`, when present, is `query`.                                                                                                                                 | `invalid_request`, path `["response_mode"]`                                                    | Redirect   |
+| `scope` contains `openid`, and every scope is a scope token that the client's record lists.                                                                                | `invalid_scope`                                                                                | Redirect   |
+| Each `resource`, when present, is one of the client's [`resources`](#resource-indicators), byte for byte.                                                                  | `invalid_target`                                                                               | Redirect   |
+| `code_challenge` is present and has the shape of an S256 challenge. A client with [`requirePkce: false`](#clients-that-send-no-pkce) may leave it out.                     | `invalid_request`, path `["code_challenge"]`                                                   | Redirect   |
+| `code_challenge_method` is `S256`. `plain` is refused.                                                                                                                     | `invalid_request`, path `["code_challenge_method"]`                                            | Redirect   |
+| A client with `requirePkce: false` that sent no `code_challenge` sent a non-empty `nonce`.                                                                                 | `invalid_request`, path `["nonce"]`                                                            | Redirect   |
+| `prompt`, when present, is one or more of `none`, `login`, `consent` and `select_account`, and `none` stands alone. A repeated value counts once.                          | `invalid_request`, path `["prompt"]`                                                           | Redirect   |
+| `max_age`, when present, is at most nine digits.                                                                                                                           | `invalid_request`, path `["max_age"]`                                                          | Redirect   |
+| An `id_token_hint` that verifies, expired or not, names this client among its audiences. One that does not verify is ignored. See [The id_token_hint](#the-id_token_hint). | `invalid_request`, path `["id_token_hint"]`                                                    | Redirect   |
 
 On success the result carries the interaction:
 
@@ -311,6 +312,7 @@ On success the result carries the interaction:
 - `clientId`, `redirectUri`, `scopes` and `prompt`, as validated.
 - `maxAge`, `loginHint` and `uiLocales`, when the request carried them. `loginHint` is passed through as sent. `uiLocales` has its empty entries, from repeated or trailing spaces, dropped; no entries left means absent. Both are within the length limit.
 - `acrValues`, `claimsLocales` and `display`, when the request carried them. See [Hints for the login pages](#hints-for-the-login-pages).
+- `idTokenHint`, when the request carried an `id_token_hint` that verified: the `subject` and `sessionId` of the user the client believes is signed in. See [The id_token_hint](#the-id_token_hint).
 - `resources`, when the request carried `resource`: the resource servers the client asks for tokens to, each once, in the order sent. See [Resource indicators](#resource-indicators).
 - `createdAt`, in seconds since the Unix epoch.
 
@@ -325,6 +327,32 @@ Three more parameters reach the app so it can shape its pages and its login. The
 - `display`, as `display`: one of `page`, `popup`, `touch` or `wap`, which asks the app to show its pages as a full page, a popup window, for a touch device or for a small-screen device. A value the provider does not know is ignored, as Core allows, so the interaction has no `display`, and the request is not refused.
 
 A list is absent when it has no entries, as for `uiLocales`. Each parameter is within the usual limits, at most 4096 characters, and every list is a frozen array of strings on the interaction, saved in the store with the rest of the request. The `claims` parameter, which would ask for individual claims, remains unsupported: the provider ignores it, and claims are released by scope.
+
+### The id_token_hint
+
+A client sends `id_token_hint`, an ID token this provider issued it, to say which user it believes is signed in, typically with `prompt=none`. The hint is verified as at [Ending sessions](#ending-sessions): signed by one of the provider's keys, with its issuer, typed `JWT`, and, when it has several audiences, naming one in `azp`. An expired hint is accepted when expiry is its only fault, since the ID token a client holds has usually expired by the time it asks again.
+
+A hint that verifies but was issued to another client fails the request with `invalid_request`, redirected. A hint that does not verify is ignored, as OpenID Connect Core §3.1.2.1 allows, and the interaction has no `idTokenHint`.
+
+The provider does not enforce the hint, since it keeps no sessions: it hands `idTokenHint` to the app, which knows who is signed in. Core asks the provider to answer `login_required` when that user is not the one the hint names, and to ask the user otherwise:
+
+```ts
+import type { AuthorizationInteraction, Provider } from "@codenhub/oidc/provider";
+
+declare const provider: Provider;
+declare function sessionSubject(): Promise<string | undefined>; // the app's own session
+
+async function checkHint(interaction: AuthorizationInteraction): Promise<Response | undefined> {
+  const hinted = interaction.idTokenHint?.subject;
+  if (hinted === undefined || hinted === (await sessionSubject())) {
+    return undefined; // carry on with the login or consent pages
+  }
+  const result = await provider.completeAuthorization(interaction.id, { error: "login_required" });
+  return result.ok ? result.value : undefined;
+}
+```
+
+`idTokenHint` is not saved with the interaction in the store, so keep it with the interaction in the user's session.
 
 ### Clients that send no PKCE
 
@@ -434,7 +462,7 @@ The provider implements RP-initiated logout. Its end-session endpoint is `endpoi
 - A verified `id_token_hint` issued to another client than `client_id`: `invalid_request`, path `["id_token_hint"]`.
 - A `post_logout_redirect_uri` that is not, byte for byte, one of the client's `postLogoutRedirectUris`, or that comes with no client known from `client_id` or the hint: `invalid_redirect_uri`, path `["post_logout_redirect_uri"]`.
 
-A success carries `clientId` when a client is known, `subject` when the hint verified, `logoutHint` and `uiLocales` when given, and `redirect`. `redirect` is a `302` to `post_logout_redirect_uri`, with `state` appended when the request had one, or `null` when the request named no `post_logout_redirect_uri`.
+A success carries `clientId` when a client is known, `subject` when the hint verified, `sessionId` when that hint carried a `sid`, `logoutHint` and `uiLocales` when given, and `redirect`. `redirect` is a `302` to `post_logout_redirect_uri`, with `state` appended when the request had one, or `null` when the request named no `post_logout_redirect_uri`.
 
 The `id_token_hint` is verified as an ID token this provider issued: signed by one of its keys, with its issuer, typed `JWT`, and with `sub`, `aud`, `exp` and `iat`. The type keeps a JWT access token (`at+jwt`) from passing as a hint. A hint with several audiences must name one of them in `azp`.
 

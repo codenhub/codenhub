@@ -53,9 +53,14 @@ export type ParseParametersResult =
  * duplicates. The pair count is checked while parsing, so an oversized input never builds a map.
  *
  * A name in `repeatable` may appear more than once, as RFC 8707 §2 lets `resource` do. Its values go to `lists`
- * rather than `parameters`, with a repeated value kept once.
+ * rather than `parameters`, with a repeated value kept once. A name in `unbounded` is exempt from the length cap of
+ * one value, as an `id_token_hint` is: the provider issued it, and only the length of the text bounds it.
  */
-export function parseParameters(text: string, repeatable: readonly string[] = []): ParseParametersResult {
+export function parseParameters(
+  text: string,
+  repeatable: readonly string[] = [],
+  unbounded: readonly string[] = [],
+): ParseParametersResult {
   if (hasInvalidUtf8Escape(text)) {
     return { ok: false, reason: "malformed" };
   }
@@ -73,7 +78,7 @@ export function parseParameters(text: string, repeatable: readonly string[] = []
   const lists = new Map<string, string[]>();
   const names = new Set<string>();
   for (const [name, value] of entries) {
-    if (name.length > MAX_PARAMETER_LENGTH || value.length > MAX_PARAMETER_LENGTH) {
+    if (name.length > MAX_PARAMETER_LENGTH || (value.length > MAX_PARAMETER_LENGTH && !unbounded.includes(name))) {
       return { ok: false, reason: "too_long" };
     }
     if (repeatable.includes(name)) {

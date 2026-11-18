@@ -1,6 +1,12 @@
 /** Bytes a provider reads from a request body; a client assertion signed with RSA-4096 is about 1 KB. */
 export const MAX_BODY_BYTES = 16384;
 
+/**
+ * Bytes a provider reads from the form body of a request the browser sends, such as authorization or logout. It is
+ * larger than {@link MAX_BODY_BYTES} so an `id_token_hint` as long as the ID tokens a client accepts fits.
+ */
+export const MAX_FRONT_CHANNEL_BODY_BYTES = 81920;
+
 /** Parameters in one query string or form body; the largest legitimate request uses about a dozen. */
 export const MAX_PARAMETERS = 32;
 

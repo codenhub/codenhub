@@ -680,8 +680,24 @@ export interface AuthorizationInteraction {
    * `resources`. Show them on the consent page: the grant covers every one, and the app cannot narrow it.
    */
   readonly resources?: readonly string[];
+  /**
+   * The user and session a verified `id_token_hint` names: an ID token this provider issued to this client, which
+   * may have expired. OpenID Connect Core §3.1.2.1 asks that the user who signs in be this one: when the user of the
+   * app's session is someone else, and the app does not sign this user in, answer with the denial `login_required`
+   * (always so under `prompt=none`). Absent without a hint, or with one that does not verify, which is ignored. A
+   * verified hint issued to another client fails the request with `invalid_request` instead.
+   */
+  readonly idTokenHint?: IdTokenHintClaims;
   /** When the request was validated, in seconds since the Unix epoch. A `prompt=login` login must happen at or after it. */
   readonly createdAt: number;
+}
+
+/** What a verified `id_token_hint` names: the user, and the app's session when the ID token carries `sid`. */
+export interface IdTokenHintClaims {
+  /** The token's `sub`: the subject the app gave this client, pairwise or not. */
+  readonly subject: string;
+  /** The token's `sid`, the {@link AuthorizationGrant.sessionId} the app gave when the user signed in. */
+  readonly sessionId?: string;
 }
 
 /** Why an authorization request failed, and how to answer it. */
@@ -894,6 +910,12 @@ export interface EndSession {
    * signs them out.
    */
   readonly subject?: string;
+  /**
+   * The `sid` of a verified `id_token_hint`: the app's session the sign-in belonged to, as the app gave it in
+   * {@link AuthorizationGrant.sessionId}. End that session, rather than every session of the user. Absent when the
+   * hint is absent or unverified, or its ID token has no `sid`.
+   */
+  readonly sessionId?: string;
   /** `logout_hint`, passed through as sent. */
   readonly logoutHint?: string;
   /** `ui_locales`, with empty entries dropped. */
