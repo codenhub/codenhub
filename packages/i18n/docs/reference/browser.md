@@ -70,7 +70,7 @@ disconnect(): void;
 
 Stops locale-change handling and mutation observation.
 
-Existing DOM text, document attributes, persisted state, and core i18n state are unchanged. Manager ownership is released, so a new browser binding may then be initialized.
+Existing DOM text, document attributes, persisted state, and core i18n state are unchanged. A switch to a detected locale still loading is dropped; a `setLocale()` call still loading is not. Manager ownership is released, so a new browser binding may then be initialized.
 
 #### BrowserI18nBinding › followSystem
 

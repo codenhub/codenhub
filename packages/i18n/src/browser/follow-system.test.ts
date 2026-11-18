@@ -1,16 +1,31 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { initializeBrowserI18n } from "../browser";
+import { type BrowserI18nBinding, type BrowserI18nOptions, initializeBrowserI18n } from "../browser";
 import { I18nError } from "../index";
 import {
   createDeferred,
   createManager,
   dictionaries,
+  type Locale,
   setNavigatorLocales,
   setupBrowserTestHooks,
 } from "./test-helpers";
 
 setupBrowserTestHooks();
+
+// Each binding listens on the shared window, so one left connected would answer a later test's languagechange.
+const bindings: BrowserI18nBinding[] = [];
+const bind = async (options: BrowserI18nOptions<Locale>) => {
+  const binding = await initializeBrowserI18n(options);
+  bindings.push(binding);
+  return binding;
+};
+
+afterEach(() => {
+  for (const binding of bindings.splice(0)) {
+    binding.disconnect();
+  }
+});
 
 const changeLanguages = (languages: readonly string[]) => {
   setNavigatorLocales(languages);
@@ -24,15 +39,15 @@ const flushPromises = async () => {
 describe("initializeBrowserI18n followsSystem", () => {
   it("follows the system after a detected start", async () => {
     setNavigatorLocales(["fr-CA"]);
-    const binding = await initializeBrowserI18n({ i18n: createManager() });
+    const binding = await bind({ i18n: createManager() });
 
     expect(binding.followsSystem).toBe(true);
   });
 
   it("does not follow the system after a saved or an explicit start", async () => {
     localStorage.setItem("i18n", JSON.stringify({ locale: "fr" }));
-    const saved = await initializeBrowserI18n({ i18n: createManager() });
-    const explicit = await initializeBrowserI18n({ i18n: createManager(), locale: "ar", persistLocale: false });
+    const saved = await bind({ i18n: createManager() });
+    const explicit = await bind({ i18n: createManager(), locale: "ar", persistLocale: false });
 
     expect(saved.followsSystem).toBe(false);
     expect(explicit.followsSystem).toBe(false);
@@ -45,7 +60,7 @@ describe("initializeBrowserI18n followsSystem", () => {
       loadLocale: (locale) => (locale === "fr" ? Promise.reject(new Error("503")) : dictionaries[locale]),
     });
 
-    const binding = await initializeBrowserI18n({ i18n });
+    const binding = await bind({ i18n });
 
     expect(binding.followsSystem).toBe(false);
   });
@@ -53,7 +68,7 @@ describe("initializeBrowserI18n followsSystem", () => {
   it.each([true, false])("stops following the system after setLocale() with persistLocale %s", async (persist) => {
     setNavigatorLocales(["en-US"]);
     const i18n = createManager();
-    const binding = await initializeBrowserI18n({ i18n, persistLocale: persist });
+    const binding = await bind({ i18n, persistLocale: persist });
 
     await i18n.setLocale("fr");
 
@@ -63,7 +78,7 @@ describe("initializeBrowserI18n followsSystem", () => {
   it("saves a choice of the locale already detected", async () => {
     setNavigatorLocales(["en-US"]);
     const i18n = createManager();
-    const binding = await initializeBrowserI18n({ i18n });
+    const binding = await bind({ i18n });
 
     await i18n.setLocale("en");
 
@@ -73,7 +88,7 @@ describe("initializeBrowserI18n followsSystem", () => {
 
   it("stops following the system after init() on the bound manager", async () => {
     const i18n = createManager();
-    const binding = await initializeBrowserI18n({ i18n });
+    const binding = await bind({ i18n });
 
     await i18n.init({ locale: "ar" });
 
@@ -87,7 +102,7 @@ describe("initializeBrowserI18n followSystem()", () => {
     localStorage.setItem("i18n", JSON.stringify({ locale: "fr" }));
     setNavigatorLocales(["pt-PT"]);
     const i18n = createManager();
-    const binding = await initializeBrowserI18n({ i18n });
+    const binding = await bind({ i18n });
 
     await binding.followSystem();
 
@@ -100,7 +115,7 @@ describe("initializeBrowserI18n followSystem()", () => {
   it("forgets the saved locale when the detected locale is already active", async () => {
     setNavigatorLocales(["fr"]);
     const i18n = createManager();
-    const binding = await initializeBrowserI18n({ i18n });
+    const binding = await bind({ i18n });
     await i18n.setLocale("fr");
 
     await binding.followSystem();
@@ -113,7 +128,7 @@ describe("initializeBrowserI18n followSystem()", () => {
   it("uses the default locale when no navigator preference matches", async () => {
     setNavigatorLocales(["de"]);
     const i18n = createManager();
-    const binding = await initializeBrowserI18n({ i18n, locale: "fr" });
+    const binding = await bind({ i18n, locale: "fr" });
 
     await binding.followSystem();
 
@@ -125,7 +140,7 @@ describe("initializeBrowserI18n followSystem()", () => {
     localStorage.setItem("i18n", JSON.stringify({ locale: "ar" }));
     setNavigatorLocales(["pt-BR"]);
     const i18n = createManager();
-    const binding = await initializeBrowserI18n({ i18n, locale: "fr", persistLocale: false });
+    const binding = await bind({ i18n, locale: "fr", persistLocale: false });
 
     await binding.followSystem();
 
@@ -138,7 +153,7 @@ describe("initializeBrowserI18n followSystem()", () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
     setNavigatorLocales(["pt-BR"]);
     const i18n = createManager();
-    const binding = await initializeBrowserI18n({ i18n, locale: "fr" });
+    const binding = await bind({ i18n, locale: "fr" });
     vi.spyOn(Storage.prototype, "removeItem").mockImplementation(() => {
       throw new Error("blocked");
     });
@@ -154,7 +169,7 @@ describe("initializeBrowserI18n followSystem()", () => {
     const i18n = createManager({
       loadLocale: (locale) => (locale === "pt-BR" ? Promise.reject(new Error("503")) : dictionaries[locale]),
     });
-    const binding = await initializeBrowserI18n({ i18n, locale: "fr" });
+    const binding = await bind({ i18n, locale: "fr" });
 
     await expect(binding.followSystem()).rejects.toBeInstanceOf(I18nError);
 
@@ -168,7 +183,7 @@ describe("initializeBrowserI18n followSystem()", () => {
     const i18n = createManager({
       loadLocale: (locale) => (locale === "pt-BR" ? ptBr.promise : dictionaries[locale]),
     });
-    const binding = await initializeBrowserI18n({ i18n, locale: "fr" });
+    const binding = await bind({ i18n, locale: "fr" });
 
     const following = binding.followSystem();
     await i18n.setLocale("ar");
@@ -181,7 +196,7 @@ describe("initializeBrowserI18n followSystem()", () => {
   });
 
   it("rejects after disconnect()", async () => {
-    const binding = await initializeBrowserI18n({ i18n: createManager() });
+    const binding = await bind({ i18n: createManager() });
     binding.disconnect();
 
     await expect(binding.followSystem()).rejects.toThrow("requires a connected browser binding");
@@ -192,7 +207,7 @@ describe("initializeBrowserI18n languagechange", () => {
   it("switches to the newly detected locale while following the system, without saving it", async () => {
     setNavigatorLocales(["en-US"]);
     const i18n = createManager();
-    await initializeBrowserI18n({ i18n });
+    await bind({ i18n });
 
     changeLanguages(["fr-FR"]);
     await flushPromises();
@@ -204,7 +219,7 @@ describe("initializeBrowserI18n languagechange", () => {
 
   it("ignores the event once a locale is chosen", async () => {
     const i18n = createManager();
-    await initializeBrowserI18n({ i18n });
+    await bind({ i18n });
     await i18n.setLocale("ar");
 
     changeLanguages(["fr"]);
@@ -215,7 +230,7 @@ describe("initializeBrowserI18n languagechange", () => {
 
   it("follows the event again after followSystem()", async () => {
     const i18n = createManager();
-    const binding = await initializeBrowserI18n({ i18n, locale: "ar" });
+    const binding = await bind({ i18n, locale: "ar" });
     await binding.followSystem();
 
     changeLanguages(["pt-BR"]);
@@ -229,7 +244,7 @@ describe("initializeBrowserI18n languagechange", () => {
     const i18n = createManager({
       loadLocale: (locale) => (locale === "fr" ? Promise.reject(new Error("503")) : dictionaries[locale]),
     });
-    await initializeBrowserI18n({ i18n });
+    await bind({ i18n });
 
     changeLanguages(["fr"]);
     await flushPromises();
@@ -238,9 +253,57 @@ describe("initializeBrowserI18n languagechange", () => {
     expect(warn).toHaveBeenCalledWith("[I18n] Could not switch to the detected locale.", expect.any(I18nError));
   });
 
+  it("does not apply a detected locale still loading at disconnect()", async () => {
+    const fr = createDeferred<unknown>();
+    const i18n = createManager({ loadLocale: (locale) => (locale === "fr" ? fr.promise : dictionaries[locale]) });
+    const binding = await bind({ i18n });
+
+    changeLanguages(["fr"]);
+    binding.disconnect();
+    fr.resolve(dictionaries.fr);
+    await flushPromises();
+
+    expect(i18n.locale).toBe("en");
+  });
+
+  it("keeps an application request still loading at disconnect()", async () => {
+    const fr = createDeferred<unknown>();
+    const i18n = createManager({ loadLocale: (locale) => (locale === "fr" ? fr.promise : dictionaries[locale]) });
+    const binding = await bind({ i18n });
+
+    const choosing = i18n.setLocale("fr");
+    binding.disconnect();
+    fr.resolve(dictionaries.fr);
+    await choosing;
+
+    expect(i18n.locale).toBe("fr");
+  });
+
+  it("switches to a language the browser changed to while the start was loading", async () => {
+    const en = createDeferred<unknown>();
+    let isFirstLoad = true;
+    const i18n = createManager({
+      loadLocale: (locale) => {
+        if (locale === "en" && isFirstLoad) {
+          isFirstLoad = false;
+          return en.promise;
+        }
+        return dictionaries[locale];
+      },
+    });
+
+    const starting = bind({ i18n });
+    changeLanguages(["fr"]);
+    en.resolve(dictionaries.en);
+    await starting;
+    await flushPromises();
+
+    expect(i18n.locale).toBe("fr");
+  });
+
   it("stops listening after disconnect()", async () => {
     const i18n = createManager();
-    const binding = await initializeBrowserI18n({ i18n });
+    const binding = await bind({ i18n });
     binding.disconnect();
 
     changeLanguages(["fr"]);

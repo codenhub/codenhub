@@ -161,6 +161,11 @@ class I18nInstance<TLocale extends string, TKey extends string = string>
       setApplyListener: (listener) => {
         this.applyListener = listener;
       },
+      supersede: (requestId) => {
+        if (this.isLatestRequest(requestId)) {
+          this.createRequest();
+        }
+      },
       lookup: (key) => {
         const found = this.lookup("translate", key);
         return found === undefined ? undefined : this.format(key, found, {});

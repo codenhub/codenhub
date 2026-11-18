@@ -155,7 +155,9 @@ A stored locale the application no longer configures exactly, such as `pt-PT` af
 
 **Choosing the active locale is a choice.** `setLocale()` for the locale already active dispatches no event, so the binding learns of every applied request through an internal hook in core, and saves it. Otherwise a visitor who picks English while English was detected would save nothing and still see "System" selected.
 
-**A failed switch keeps the current locale.** `followSystem()` rejects with the loader's error, and a failure after `languagechange` warns. Neither falls back to the default as a start does: the page already shows a language, and the start falls back only because it has none. The saved locale is forgotten before loading, so a visitor who asked for the system gets it at the next start even when this load failed.
+**A failed switch keeps the current locale.** `followSystem()` rejects with the loader's error, and a failure after `languagechange` warns. Neither falls back to the default as a start does: the page already shows a language, and the start falls back only because it has none. The saved locale is forgotten before loading, so a visitor who asked for the system gets it at the next start even when this load failed, unless storage refused the removal, which warns.
+
+**The binding's own switches end with it.** `disconnect()` supersedes a detected locale still loading, so it does not apply to a manager nobody binds; an application request still loading is left to apply. A browser language change during the start's loading, before the listener exists, is caught by comparing the detected locale once the start ends.
 
 **The manager stays runtime-neutral.** Rejected: `setLocale("system")` or `setLocale(undefined)` on the manager, which knows nothing of the browser or of storage.
 

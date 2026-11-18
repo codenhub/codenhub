@@ -75,7 +75,8 @@ export interface BrowserI18nBinding {
   /**
    * Stops locale-change handling and mutation observation.
    *
-   * Existing DOM text, document attributes, persisted state, and core i18n state are unchanged.
+   * Existing DOM text, document attributes, persisted state, and core i18n state are unchanged. A switch to a detected
+   * locale still loading is dropped; a `setLocale()` call still loading is not.
    * Manager ownership is released, so a new browser binding may then be initialized.
    */
   disconnect(): void;
@@ -396,6 +397,10 @@ export async function initializeBrowserI18n<TLocale extends string>(
     if (isLanguageChangeListenerAdded) {
       globalThis.removeEventListener(LANGUAGE_CHANGE_EVENT, handleLanguageChange);
     }
+    // A detected locale still loading was the binding's request, not the application's, so it must not apply unbound.
+    if (detectedRequestId !== undefined) {
+      internals.supersede(detectedRequestId);
+    }
     observer?.disconnect();
     observer = undefined;
     root = undefined;
@@ -405,6 +410,7 @@ export async function initializeBrowserI18n<TLocale extends string>(
   try {
     let candidates: TLocale[];
     let persistedLocale: TLocale | undefined;
+    let startDetectedLocale: TLocale | undefined;
 
     if (locale !== undefined) {
       if (typeof locale !== "string") {
@@ -414,7 +420,8 @@ export async function initializeBrowserI18n<TLocale extends string>(
     } else {
       // Stored, then detected, then the default, each tried once.
       persistedLocale = shouldPersistLocale ? readPersistedLocale(i18n, storageKey) : undefined;
-      const preferences = [persistedLocale, i18n.matchLocale(getNavigatorPreferences()), i18n.defaultLocale].filter(
+      startDetectedLocale = i18n.matchLocale(getNavigatorPreferences());
+      const preferences = [persistedLocale, startDetectedLocale, i18n.defaultLocale].filter(
         (candidate): candidate is TLocale => candidate !== undefined,
       );
       candidates = [...new Set(preferences)];
@@ -479,6 +486,10 @@ export async function initializeBrowserI18n<TLocale extends string>(
     isFollowingSystem = locale === undefined && persistedLocale === undefined;
     globalThis.addEventListener(LANGUAGE_CHANGE_EVENT, handleLanguageChange);
     isLanguageChangeListenerAdded = true;
+    // A language change during the start's loading came before the listener.
+    if (isFollowingSystem && i18n.matchLocale(getNavigatorPreferences()) !== startDetectedLocale) {
+      void handleLanguageChange();
+    }
 
     return {
       get followsSystem() {
