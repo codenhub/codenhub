@@ -40,7 +40,7 @@ describe("catalogPackages", () => {
 
   it("is ordered by label, matching buildPublicPackageSummaries", () => {
     // The summary builder orders with plain `<`/`>` comparison, not
-    // `localeCompare`, so a lowercase name like "i18n" sorts after "Vite Icons".
+    // `localeCompare`, so a lowercase name like "i18n" sorts after "Vite Deferred CSS".
     const labels = catalogPackages.map((entry) => entry.label);
     expect(labels).toEqual([...labels].sort((left, right) => (left < right ? -1 : left > right ? 1 : 0)));
   });

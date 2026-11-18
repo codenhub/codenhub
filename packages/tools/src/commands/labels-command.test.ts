@@ -42,10 +42,10 @@ describe("deriveWorkspaceLabels", () => {
     const labels = deriveWorkspaceLabels([
       createPackage("apps/docs", "@codenhub/docs"),
       createPackage("packages/error", "@codenhub/error"),
-      createPackage("packages/plugins/vite/icons", "@codenhub/vite-plugin-icons"),
+      createPackage("packages/plugins/vite/defer-css", "@codenhub/vite-plugin-defer-css"),
     ]);
 
-    expect(labels.map(({ name }) => name)).toEqual(["app:docs", "pkg:error", "pkg:vite-plugin-icons"]);
+    expect(labels.map(({ name }) => name)).toEqual(["app:docs", "pkg:error", "pkg:vite-plugin-defer-css"]);
   });
 
   it("gives packages nested inside another package no label", () => {

@@ -224,10 +224,13 @@ describe("buildPublishedSnapshot", () => {
   it("fails the build when a released package is no longer where its tag put it", async () => {
     const repoRoot = await createTempDir();
     const snapshotRoot = await createTempDir();
-    const deps = createDeps([createPackage(repoRoot, "packages/plugins/vite/icons", "@codenhub/vite-plugin-icons")], {
-      materializeTreeAtRef: vi.fn().mockResolvedValue(false),
-      resolveLatestPublishedTag: vi.fn().mockReturnValue("@codenhub/vite-plugin-icons@0.0.1"),
-    });
+    const deps = createDeps(
+      [createPackage(repoRoot, "packages/plugins/vite/defer-css", "@codenhub/vite-plugin-defer-css")],
+      {
+        materializeTreeAtRef: vi.fn().mockResolvedValue(false),
+        resolveLatestPublishedTag: vi.fn().mockReturnValue("@codenhub/vite-plugin-defer-css@0.0.1"),
+      },
+    );
 
     await expect(buildPublishedSnapshot({ repoRoot, snapshotRoot }, deps)).rejects.toThrow(
       "the package moved after its last release",

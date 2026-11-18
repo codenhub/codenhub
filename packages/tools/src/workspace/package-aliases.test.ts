@@ -18,26 +18,34 @@ function createPackage(name: string, location: string): WorkspacePackage {
 }
 
 const icons = createPackage("@codenhub/icons", "packages/icons");
-const vitePluginIcons = createPackage("@codenhub/vite-plugin-icons", "packages/plugins/vite/icons");
+const vitePluginDeferCss = createPackage("@codenhub/vite-plugin-defer-css", "packages/plugins/vite/defer-css");
+const demo = createPackage("@codenhub/demo", "apps/demo");
+const themeDemo = createPackage("@codenhub/theme-demo", "packages/theme/demo");
 const iconsDev = createPackage("@codenhub/icons-dev", "packages/icons/dev");
 const themeDev = createPackage("@codenhub/theme-dev", "packages/theme/dev");
-const index = createAliasIndex([icons, vitePluginIcons, iconsDev, themeDev]);
+const index = createAliasIndex([icons, vitePluginDeferCss, demo, themeDemo, iconsDev, themeDev]);
 
 describe("lookupPackage", () => {
   it("shouldMatchTheFullPackageName", () => {
-    expect(lookupPackage(index, "@codenhub/vite-plugin-icons")).toEqual({ kind: "match", package: vitePluginIcons });
+    expect(lookupPackage(index, "@codenhub/vite-plugin-defer-css")).toEqual({
+      kind: "match",
+      package: vitePluginDeferCss,
+    });
   });
 
   it("shouldMatchTheUnscopedPackageName", () => {
-    expect(lookupPackage(index, "vite-plugin-icons")).toEqual({ kind: "match", package: vitePluginIcons });
+    expect(lookupPackage(index, "vite-plugin-defer-css")).toEqual({ kind: "match", package: vitePluginDeferCss });
   });
 
   it("shouldMatchTheWorkspaceLocation", () => {
-    expect(lookupPackage(index, "packages/plugins/vite/icons")).toEqual({ kind: "match", package: vitePluginIcons });
+    expect(lookupPackage(index, "packages/plugins/vite/defer-css")).toEqual({
+      kind: "match",
+      package: vitePluginDeferCss,
+    });
   });
 
   it("shouldPreferAPackageNameOverANestedDirectoryName", () => {
-    expect(lookupPackage(index, "icons")).toEqual({ kind: "match", package: icons });
+    expect(lookupPackage(index, "demo")).toEqual({ kind: "match", package: demo });
   });
 
   it("shouldReportAmbiguityBetweenCollidingDirectoryNames", () => {
