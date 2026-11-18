@@ -391,12 +391,12 @@ test("allows document-level horizontal overflow instead of clipping it", async (
 
 /* `/components` carries no reset, so every component that moves stops on its
    own under reduced motion, whether the reader's system asks for it or the
-   app does through `data-motion`. Under `reduced` a component may still fade:
+   app does through `data-motion`. Under `reduce` a component may still fade:
    what keeps a duration is a colour, opacity, or visibility change, never a
    transform, a slide, or a size. Under `none` nothing keeps one. */
 const MOTION_CASES = [
   { name: "the system asks for reduced motion", media: "reduce", motion: null, fades: true },
-  { name: 'data-motion="reduced"', media: "no-preference", motion: "reduced", fades: true },
+  { name: 'data-motion="reduce"', media: "no-preference", motion: "reduce", fades: true },
   { name: 'data-motion="none"', media: "no-preference", motion: "none", fades: false },
   { name: 'data-motion="none" over the system', media: "reduce", motion: "none", fades: false },
 ] as const;
@@ -484,6 +484,36 @@ test('keeps component motion under data-motion="full" when the system asks for l
   };
 
   expect(await read("reduce", ' data-motion="full"')).toEqual(await read("no-preference", ""));
+});
+
+/* A radio's dot grows in with no motion preference, and reduced motion stops the
+   growth and keeps the fade. The dot is sized with `scale`, a property of its
+   own that a transition of `transform` does not cover: the dot once named
+   `transform`, so it popped in at full size in every engine. */
+test("grows a radio's dot with no preference, and only fades it under reduced motion", async ({ page }) => {
+  const read = async (media: "reduce" | "no-preference") => {
+    await page.emulateMedia({ reducedMotion: media });
+    await page.setContent('<!doctype html><html><body><input type="radio" class="radio"></body></html>');
+    await page.addStyleTag({ url: COMPONENT_STYLES_URL });
+
+    return page.evaluate(() => {
+      const radio = document.querySelector("input")!;
+      // Resolve the unchecked style first, so checking starts a transition from it.
+      getComputedStyle(radio, "::after").getPropertyValue("scale");
+      radio.checked = true;
+
+      // `getAnimations()` flushes the style change itself, so the transitions are
+      // read before any frame passes and none can have finished yet.
+      return radio
+        .getAnimations({ subtree: true })
+        .map((animation) => (animation as CSSTransition).transitionProperty)
+        .filter((property) => property === "scale" || property === "opacity")
+        .sort();
+    });
+  };
+
+  expect(await read("no-preference")).toEqual(["opacity", "scale"]);
+  expect(await read("reduce")).toEqual(["opacity"]);
 });
 
 /* The user agent hides a closed `<dialog>` and centres an open one, but both

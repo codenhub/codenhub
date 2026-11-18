@@ -286,8 +286,8 @@
     }
   }
   &:where(
-    :root:is([data-motion="reduced"], [data-motion="none"]),
-    :root:is([data-motion="reduced"], [data-motion="none"]) *
+    :root:is([data-motion="reduce"], [data-motion="none"]),
+    :root:is([data-motion="reduce"], [data-motion="none"]) *
   ) {
     transition-duration: 0.01ms;
   }

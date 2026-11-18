@@ -183,7 +183,7 @@
         animation: none;
       }
     }
-    &:where(:root:is([data-motion="reduced"], [data-motion="none"]) *) {
+    &:where(:root:is([data-motion="reduce"], [data-motion="none"]) *) {
       animation: none;
     }
 
@@ -356,12 +356,12 @@
       }
     }
 
-    &:where(:root:is([data-motion="reduced"], [data-motion="none"]) *)::after {
+    &:where(:root:is([data-motion="reduce"], [data-motion="none"]) *)::after {
       transition-duration: 0.01ms;
     }
 
-    &:where(:root:is([data-motion="reduced"], [data-motion="none"]) *)::before,
-    &:where(:root:is([data-motion="reduced"], [data-motion="none"]) *)::after {
+    &:where(:root:is([data-motion="reduce"], [data-motion="none"]) *)::before,
+    &:where(:root:is([data-motion="reduce"], [data-motion="none"]) *)::after {
       animation: none;
     }
 

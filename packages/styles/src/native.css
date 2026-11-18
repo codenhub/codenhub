@@ -258,7 +258,7 @@
     }
   }
 
-  progress:indeterminate:where(:root:is([data-motion="reduced"], [data-motion="none"]) *) {
+  progress:indeterminate:where(:root:is([data-motion="reduce"], [data-motion="none"]) *) {
     animation: none;
   }
 }
