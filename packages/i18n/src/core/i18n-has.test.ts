@@ -99,7 +99,11 @@ describe("has", () => {
 
   it("should apply the length limit to the trimmed key", async () => {
     const key = "x".repeat(995);
-    const i18n = createI18n({ defaultLocale: "en", locales: ["en"], loadLocale: () => ({ [key]: "Long" }) });
+    const i18n = createI18n({
+      defaultLocale: "en",
+      locales: ["en"],
+      loadLocale: () => ({ [key]: "Long" }),
+    });
     await i18n.init();
 
     expect(i18n.has(`${" ".repeat(10)}${key}`)).toBe(true);
@@ -110,9 +114,25 @@ describe("has", () => {
     expect(i18n.has(`\n${key}`)).toBe(false);
   });
 
+  it("should name the untrimmed limit for a key refused before it is trimmed", async () => {
+    const i18n = createI18n({
+      defaultLocale: "en",
+      locales: ["en"],
+      loadLocale: (): Record<string, string> => ({ day: "Day" }),
+    });
+    await i18n.init();
+
+    expect(() => i18n.t(`${" ".repeat(10_000)}day`)).toThrow(/10000 before/);
+    expect(() => i18n.t(" ".repeat(10_001))).toThrow(/10000 before/);
+  });
+
   it("should find a loaded key of exactly 1,000 characters", async () => {
     const key = "x".repeat(1_000);
-    const i18n = createI18n({ defaultLocale: "en", locales: ["en"], loadLocale: () => ({ [key]: "Long" }) });
+    const i18n = createI18n({
+      defaultLocale: "en",
+      locales: ["en"],
+      loadLocale: () => ({ [key]: "Long" }),
+    });
     await i18n.init();
 
     expect(i18n.has(key)).toBe(true);
