@@ -142,50 +142,65 @@ test("uses visible system-color outlines for form controls in forced colors", as
   }
 });
 
-test("uses visible system-color outlines for unclassed native controls in forced colors", async ({ page }) => {
-  await page.emulateMedia({ forcedColors: "active" });
-  await page.setContent("<!doctype html><html><body></body></html>");
-  await page.addStyleTag({ url: NATIVE_STYLES_URL });
+/* From the reset too, not only `/native`, and on an input with no `type`,
+   which is a text field all the same: it once fell back to the generic ring. */
+for (const [entry, url] of [
+  ["/native", NATIVE_STYLES_URL],
+  ["the reset", "http://localhost:5184/shared/entry-vanilla.css"],
+] as const) {
+  test(`uses visible system-color outlines for unclassed native controls in forced colors from ${entry}`, async ({
+    page,
+  }) => {
+    await page.emulateMedia({ forcedColors: "active" });
+    await page.setContent("<!doctype html><html><body></body></html>");
+    await page.addStyleTag({ url });
 
-  const focusStyles = await page.evaluate(() => {
-    const expectedColorProbe = document.createElement("span");
-    expectedColorProbe.style.color = "Highlight";
-    document.body.append(expectedColorProbe);
-    const expectedOutlineColor = getComputedStyle(expectedColorProbe).color;
-    expectedColorProbe.remove();
+    const focusStyles = await page.evaluate(() => {
+      const expectedColorProbe = document.createElement("span");
+      expectedColorProbe.style.color = "Highlight";
+      document.body.append(expectedColorProbe);
+      const expectedOutlineColor = getComputedStyle(expectedColorProbe).color;
+      expectedColorProbe.remove();
 
-    const controls = [
-      Object.assign(document.createElement("input"), { type: "text" }),
-      document.createElement("select"),
-      document.createElement("textarea"),
-      Object.assign(document.createElement("input"), { type: "checkbox" }),
-      Object.assign(document.createElement("input"), { type: "radio" }),
-    ];
+      const controls = [
+        Object.assign(document.createElement("input"), { type: "text" }),
+        document.createElement("input"),
+        document.createElement("select"),
+        document.createElement("textarea"),
+        Object.assign(document.createElement("input"), { type: "checkbox" }),
+        Object.assign(document.createElement("input"), { type: "radio" }),
+      ];
 
-    return controls.map((control) => {
-      document.body.append(control);
-      control.focus();
-      const styles = getComputedStyle(control);
-      const result = {
-        control: control instanceof HTMLInputElement ? `input[type=${control.type}]` : control.localName,
-        expectedOutlineColor,
-        isFocusVisible: control.matches(":focus-visible"),
-        outlineColor: styles.outlineColor,
-        outlineStyle: styles.outlineStyle,
-        outlineWidth: styles.outlineWidth,
-      };
-      control.remove();
-      return result;
+      return controls.map((control) => {
+        document.body.append(control);
+        control.focus();
+        const styles = getComputedStyle(control);
+        const result = {
+          control:
+            control instanceof HTMLInputElement
+              ? `input[type=${control.getAttribute("type") ?? "(none)"}]`
+              : control.localName,
+          expectedOutlineColor,
+          isFocusVisible: control.matches(":focus-visible"),
+          outlineColor: styles.outlineColor,
+          outlineOffset: styles.outlineOffset,
+          outlineStyle: styles.outlineStyle,
+          outlineWidth: styles.outlineWidth,
+        };
+        control.remove();
+        return result;
+      });
     });
-  });
 
-  for (const styles of focusStyles) {
-    expect(styles.isFocusVisible, styles.control).toBe(true);
-    expect(styles.outlineStyle, styles.control).toBe("solid");
-    expect(Number.parseFloat(styles.outlineWidth), styles.control).toBeGreaterThanOrEqual(2);
-    expect(styles.outlineColor, styles.control).toBe(styles.expectedOutlineColor);
-  }
-});
+    for (const styles of focusStyles) {
+      expect(styles.isFocusVisible, styles.control).toBe(true);
+      expect(styles.outlineStyle, styles.control).toBe("solid");
+      expect(Number.parseFloat(styles.outlineWidth), styles.control).toBeGreaterThanOrEqual(2);
+      expect(styles.outlineColor, styles.control).toBe(styles.expectedOutlineColor);
+      expect(styles.outlineOffset, `${styles.control} sits outside the field`).toBe(focusStyles[0]!.outlineOffset);
+    }
+  });
+}
 
 /* The chevron is two gradients and forced colours drop every gradient, so a
    drop-down once showed no arrow at all and read as a text field. A computed
