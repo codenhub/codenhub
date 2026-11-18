@@ -2,7 +2,7 @@
 title: Solución de problemas
 description: Qué significa cada error y cada advertencia, y cómo solucionarlo.
 order: 5
-source: 18b05ed5ec3b2b03bb2a6e3c174bfdd4a2ce31ed
+source: 3d629046a8f8dfdb3bfb2935ab74e9dbe22ac421
 ---
 
 # Solución de problemas

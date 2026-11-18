@@ -2,7 +2,7 @@
 title: Escreva as suas traduções
 description: Dicionários, arquivos JSON, placeholders, mensagens ICU, plurais, formatadores, chaves e valores tipados, verificação de chaves não traduzidas e limites de tamanho.
 order: 1
-source: 55f456d0203eb702013f215da3809fa351eeae13
+source: a8b0d6abf96e30f6be2b4b849879f3b683550f35
 ---
 
 # Escreva as suas traduções

@@ -2,7 +2,7 @@
 title: URLs localizadas
 description: Coloque o locale no caminho, traduza o próprio caminho, leia os dois de volta, crie links para outros idiomas, gere todas as páginas localizadas e mande os visitantes para o idioma deles num site estático.
 order: 4
-source: 96dbb0ea76425bf405c7dc011065fd8bb754e176
+source: a43c58749f399ac05075733394821e59515b0048
 ---
 
 # URLs localizadas
