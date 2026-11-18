@@ -15,6 +15,7 @@ import {
   isTranslationLocale,
   parseTranslationPath,
   translatedPathOf,
+  type TranslationLocale,
   type TranslationPath,
 } from "./translation-paths.ts";
 
@@ -120,6 +121,52 @@ function untranslatableArea(translation: TranslationFile): string | undefined {
   }
   const area = UNTRANSLATABLE_AREAS.find((name) => translation.englishPath.startsWith(`docs/${name}/`));
   return area === undefined ? undefined : `docs/${translation.locale}/${area}/`;
+}
+
+/** An English README or public document with no translation in a listed locale. */
+export interface MissingTranslation {
+  /** Package-relative path of the English file. */
+  englishPath: string;
+  /** Listed locale the translation is missing in. */
+  locale: TranslationLocale;
+  /** Package-relative path the translation would have. */
+  packagePath: string;
+}
+
+/**
+ * Whether an English file is one the spec's "What is translated" covers: the
+ * README, or a hand-authored public Markdown document under `docs/`.
+ */
+function isTranslatedEnglish(packagePath: string): boolean {
+  if (packagePath === "README.md") {
+    return true;
+  }
+  return (
+    packagePath.startsWith("docs/") &&
+    packagePath.endsWith(".md") &&
+    !packagePath.startsWith("docs/plans/") &&
+    parseTranslationPath(packagePath) === undefined &&
+    !UNTRANSLATABLE_AREAS.some((area) => packagePath.startsWith(`docs/${area}/`))
+  );
+}
+
+/**
+ * Lists the translations a package people use still owes: every listed locale
+ * for its README and every public document.
+ * @param files Package-relative POSIX paths.
+ * @returns Missing translations in English path order, then locale order.
+ */
+export function findMissingTranslations(files: Iterable<string>): MissingTranslation[] {
+  const present = new Set(files);
+  return [...present]
+    .filter(isTranslatedEnglish)
+    .sort(compareText)
+    .flatMap((englishPath) =>
+      TRANSLATION_LOCALES.flatMap((locale): MissingTranslation[] => {
+        const packagePath = translatedPathOf(englishPath, locale);
+        return packagePath === undefined || present.has(packagePath) ? [] : [{ englishPath, locale, packagePath }];
+      }),
+    );
 }
 
 function localeArea(translation: TranslationFile): string {

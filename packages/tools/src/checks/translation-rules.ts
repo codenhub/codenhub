@@ -3,8 +3,10 @@ import { join } from "node:path";
 
 import { createDocumentGraph, isValidationSurface } from "../documentation/document-graph.ts";
 import { listPackageFiles } from "../documentation/package-documentation.ts";
+import { parsePackageMetadata } from "../documentation/package-metadata.ts";
 import {
   describeStaleTranslation,
+  findMissingTranslations,
   findStaleTranslations,
   hashBlobs,
   listSourcedTranslations,
@@ -16,10 +18,39 @@ import type { WorkspacePackage } from "../workspace/discover.ts";
 import { isDocumentedPackage } from "../workspace/package-policy.ts";
 import type { CheckRule, Finding } from "./rule.ts";
 
+function isActive(workspacePackage: WorkspacePackage): boolean {
+  try {
+    return (
+      parsePackageMetadata(workspacePackage.manifest, `${workspacePackage.location}/package.json`)?.status === "active"
+    );
+  } catch {
+    // A malformed manifest is already reported by the documentation rule.
+    return false;
+  }
+}
+
+/**
+ * Reports what an `active` package has not translated. Whether people use an
+ * experimental package is a judgment, so only `active` is checked for certain,
+ * as "Leaving experimental" in `docs/specs/packages-lifecycle.md` asks.
+ */
+function checkCompleteness(workspacePackage: WorkspacePackage, files: readonly string[]): Finding[] {
+  if (!isActive(workspacePackage)) {
+    return [];
+  }
+  return findMissingTranslations(files).map((missing): Finding => ({
+    code: "translation/missing",
+    location: missing.englishPath,
+    message: `No ${missing.locale} translation at ${missing.packagePath}; an active package translates its README and every public document into every listed locale.`,
+    severity: "error",
+  }));
+}
+
 async function run(workspacePackage: WorkspacePackage, hash: BlobHasher): Promise<Finding[]> {
   const files = await listPackageFiles(workspacePackage.directory);
+  const missing = checkCompleteness(workspacePackage, files);
   if (listTranslations(files).length === 0) {
-    return [];
+    return missing;
   }
   const sources = Object.fromEntries(
     await Promise.all(
@@ -41,6 +72,7 @@ async function run(workspacePackage: WorkspacePackage, hash: BlobHasher): Promis
   );
   const issues = validateTranslations(graph, sources, new Set(stale.map(({ packagePath }) => packagePath)));
   return [
+    ...missing,
     ...issues.map((issue): Finding => ({
       code: `translation/${issue.code}`,
       location: issue.sourcePath,
@@ -72,7 +104,8 @@ export function createTranslationRules(hash: BlobHasher = hashBlobs): CheckRule[
       appliesTo: isDocumentedPackage,
       name: "translation",
       run: ({ package: workspacePackage }) => run(workspacePackage, hash),
-      summary: "Translations mirror an English file in a listed locale, record a current source, and keep its shape.",
+      summary:
+        "Translations mirror an English file in a listed locale, record a current source, and keep its shape; an active package translates everything.",
     },
   ];
 }
