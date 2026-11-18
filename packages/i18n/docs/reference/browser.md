@@ -103,7 +103,7 @@ Calls `listener` after each change to what a language picker shows: the active l
 ```ts
 export interface BrowserI18nOptions<TLocale extends string> {
     i18n: I18n<TLocale>;
-    locale?: TLocale | undefined;
+    locale?: NoInfer<TLocale> | undefined;
     storageKey?: string | undefined;
     persistLocale?: boolean | undefined;
     syncDocument?: boolean | undefined;
@@ -129,7 +129,7 @@ Manager to initialize; it must not have another initializing or active browser b
 #### BrowserI18nOptions › locale
 
 ```ts
-locale?: TLocale | undefined;
+locale?: NoInfer<TLocale> | undefined;
 ```
 
 Authoritative locale, which takes precedence over persisted and browser preferences, and is persisted when `persistLocale` is on. Only `undefined` omits this input; other non-string runtime values reject initialization.
