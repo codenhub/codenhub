@@ -131,13 +131,18 @@
     transform-origin: var(--_tooltip-origin);
 
     /* The bubble appears without growing under reduced motion, for the entries
-       without the reset; see `box.css`. */
+       without the reset; see `box.css`. It also rests at full size, hidden by
+       its fade alone: a `transform` left out of the transition lands at once,
+       ignoring the linger, so a bubble that shrank on close would be gone from
+       under the pointer before it could cross the gap (WCAG 1.4.13). */
     @media (prefers-reduced-motion: reduce) {
       &:not(:where(:root[data-motion="full"] *)) {
+        transform: var(--_tooltip-transform) scale(1);
         transition-property: opacity, visibility;
       }
     }
     &:where(:root:is([data-motion="reduce"], [data-motion="none"]) *) {
+      transform: var(--_tooltip-transform) scale(1);
       transition-property: opacity, visibility;
     }
     &:where(:root[data-motion="none"] *) {
