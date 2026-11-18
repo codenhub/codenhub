@@ -2,7 +2,7 @@
 title: Acessibilidade
 description: O que o CSS faz por foco, estados, movimento, contraste, cores forçadas e texto da direita para a esquerda, e o que a sua aplicação ainda deve aos seus usuários.
 order: 5
-source: 27e48c4c47792486999293331b47c886c30596c3
+source: f64651fdbac2ac1d35ecdfdf79e7da5e2f609a81
 ---
 
 # Acessibilidade
@@ -120,13 +120,13 @@ Uma página não consegue mudar o que uma media query informa, por mais educado 
 </html>
 ```
 
-| Atributo        | Valor      | O que o pacote faz                                                                                                                          |
-| --------------- | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
-| `data-contrast` | `more`     | Desenha as bordas de [contraste aumentado](#contraste-aumentado), seja o que for que o sistema peça.                                        |
-| `data-contrast` | `standard` | Deixa essas bordas de fora, mesmo quando o sistema pede mais contraste.                                                                     |
-| `data-motion`   | `full`     | Se move como sem preferência, mesmo quando o sistema pede movimento reduzido.                                                               |
-| `data-motion`   | `reduce`   | Faz o que a configuração de movimento reduzido do sistema faz: o que se move para, e o que faz fade continua fazendo.                       |
-| `data-motion`   | `none`     | Termina de imediato toda animação e transição, inclusive os fades. A duração quase nula mantém `transitionend` e `animationend` disparando. |
+| Atributo        | Valor      | O que o pacote faz                                                                                                                                                                                              |
+| --------------- | ---------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `data-contrast` | `more`     | Desenha as bordas de [contraste aumentado](#contraste-aumentado), seja o que for que o sistema peça.                                                                                                            |
+| `data-contrast` | `standard` | Deixa essas bordas de fora, mesmo quando o sistema pede mais contraste.                                                                                                                                         |
+| `data-motion`   | `full`     | Se move como sem preferência, mesmo quando o sistema pede movimento reduzido.                                                                                                                                   |
+| `data-motion`   | `reduce`   | Faz o que a configuração de movimento reduzido do sistema faz: o que se move para, e o que faz fade continua fazendo.                                                                                           |
+| `data-motion`   | `none`     | Termina de imediato toda animação e transição, inclusive os fades, depois do atraso que tiver, então um tooltip ainda demora a fechar. A duração quase nula mantém `transitionend` e `animationend` disparando. |
 
 Uma tela de configurações com "Sistema / Padrão / Mais" remove `data-contrast` para Sistema e o define para as outras duas opções, como um [seletor de tema](./usage/theming.md#claro-e-escuro). O movimento tem um nível a mais, porque a configuração do sistema tem só um: "Sistema / Tudo / Reduzido / Nenhum".
 

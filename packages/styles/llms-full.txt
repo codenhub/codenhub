@@ -3451,13 +3451,13 @@ A page cannot change what a media query reports, however politely it asks, so an
 </html>
 ```
 
-| Attribute       | Value      | What the package does                                                                                                                |
-| --------------- | ---------- | ------------------------------------------------------------------------------------------------------------------------------------ |
-| `data-contrast` | `more`     | Draws the [increased-contrast](#increased-contrast) borders, whatever the system asks for.                                           |
-| `data-contrast` | `standard` | Leaves them out, even when the system asks for more contrast.                                                                        |
-| `data-motion`   | `full`     | Moves as with no preference, even when the system asks for reduced motion.                                                           |
-| `data-motion`   | `reduce`   | Does what the system's reduced-motion setting does: what moves stops, and what fades still fades.                                    |
-| `data-motion`   | `none`     | Ends every animation and transition at once, fades included. The near-zero duration keeps `transitionend` and `animationend` firing. |
+| Attribute       | Value      | What the package does                                                                                                                                                                    |
+| --------------- | ---------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `data-contrast` | `more`     | Draws the [increased-contrast](#increased-contrast) borders, whatever the system asks for.                                                                                               |
+| `data-contrast` | `standard` | Leaves them out, even when the system asks for more contrast.                                                                                                                            |
+| `data-motion`   | `full`     | Moves as with no preference, even when the system asks for reduced motion.                                                                                                               |
+| `data-motion`   | `reduce`   | Does what the system's reduced-motion setting does: what moves stops, and what fades still fades.                                                                                        |
+| `data-motion`   | `none`     | Ends every animation and transition at once, fades included, after any delay it has, so a tooltip still lingers. The near-zero duration keeps `transitionend` and `animationend` firing. |
 
 A settings screen with "System / Standard / More" removes `data-contrast` for System and sets it for the other two, the way a [theme selector](docs/usage/theming.md#light-and-dark) works. Motion has one more level, since the system's setting has only one: "System / All / Reduced / None".
 
@@ -3537,23 +3537,24 @@ That completes the reading path. The [Introduction](docs/index.md) links every p
 
 # 0.11.0
 
-An app with its own contrast and motion settings can now pass them to the package with `data-contrast` and `data-motion` on `<html>`. Under the system's reduced-motion setting, what moves still stops at once, but colour and opacity now fade as before.
+An app with its own contrast and motion settings can now pass them to the package with `data-contrast` and `data-motion` on `<html>`. Under the system's reduced-motion setting, what moves still stops at once, but color and opacity now fade as before.
 
 ## Added
 
-- **`data-contrast` and `data-motion` on `<html>`.** A page cannot change what `prefers-contrast` or `prefers-reduced-motion` reports, so an app's own settings had no way to reach the package. When one of these attributes is set, it decides in place of the matching media query, and with neither set the query decides, as before. `data-contrast="more"` draws the increased-contrast borders and `"standard"` leaves them out. `data-motion="full"` moves as with no preference, `"reduce"` does what the system's reduced-motion setting does, and `"none"` ends every animation and transition at once. Forced colors and reduced transparency still follow the system, and rules inside a shadow root cannot see the attributes. See [Accessibility → App settings](docs/accessibility.md#app-settings). ([#582](https://github.com/codenhub/codenhub/issues/582))
+- **`data-contrast` and `data-motion` on `<html>`.** A page cannot change what `prefers-contrast` or `prefers-reduced-motion` reports, so an app's own settings had no way to reach the package. When one of these attributes is set, it decides in place of the matching media query, and with neither set the query decides, as before. `data-contrast="more"` draws the increased-contrast borders and `"standard"` leaves them out. `data-motion="full"` moves as with no preference, `"reduce"` does what the system's reduced-motion setting does, and `"none"` ends every animation and transition at once, after any delay it has. Forced colors and reduced transparency still follow the system, and rules inside a shadow root cannot see the attributes. See [Accessibility → App settings](docs/accessibility.md#app-settings). ([#582](https://github.com/codenhub/codenhub/issues/582))
 
 ## Changed
 
-- **Reduced motion keeps colour and opacity fades.** Under `prefers-reduced-motion: reduce`, components and the reset stop what moves (a transform, a slide, a change of size), and what changes colour or opacity still fades. Before, every transition and animation ended at once, which is now `data-motion="none"`. Set `data-motion="none"` on `<html>` to keep the old behavior. See [Accessibility → Motion and transparency](docs/accessibility.md#motion-and-transparency).
-- **A transition the reset removes fires no `transitionend`.** Under reduced motion, a transition of a transform, a position, or a size no longer runs, so code that waits for its `transitionend`, such as a drawer that removes itself once it has slid away, waits forever. Check whether the element still has a transition to run, or remove it after a timeout too. Under `data-motion="none"`, every transition still runs for 0.01ms, and the event fires.
-- **The reset keeps your durations, in the order you wrote them.** It replaces the properties a transition names with colour, opacity, and visibility, and the browser reuses the durations in order. So `transition: transform 200ms, opacity 1s` fades the opacity over 200ms, and what used to change at once now fades too: a background color over 1s, and a text color over 200ms. Give a transition one duration when the length of its fade matters.
+- **Breaking: reduced motion keeps color and opacity fades.** Under `prefers-reduced-motion: reduce`, components and the reset stop what moves (a transform, a slide, a change of size), and what changes color or opacity still fades. Before, every transition and animation ended at once for those readers. `data-motion="none"` does that now, but for every reader, whatever the system asks: to keep the old behavior, set it from a script only while `matchMedia("(prefers-reduced-motion: reduce)").matches` is true, and update it on the query's `change` event. See [Accessibility → Motion and transparency](docs/accessibility.md#motion-and-transparency).
+- **Breaking: a transition the reset removes fires no `transitionend`.** Under reduced motion, a transition of a transform, a position, or a size no longer runs, so code that waits for its `transitionend`, such as a drawer that removes itself once it has slid away, waits forever. Check whether the element still has a transition to run, or remove it after a timeout too. Under `data-motion="none"`, every transition still runs for 0.01ms, and the event fires.
+- **The reset keeps your durations, in the order you wrote them.** It replaces the properties a transition names with color, opacity, and visibility, and the browser reuses the durations in order. So `transition: transform 200ms, opacity 1s` fades the opacity over 200ms, and what used to change at once now fades too: a background color over 1s, and a text color over 200ms. Give a transition one duration when the length of its fade matters.
 - **An essential animation kept with a layer before `base` also needs the app's attribute.** A rule written under `@media (prefers-reduced-motion: reduce)` alone does not apply when the app sets `data-motion="reduce"` or `"none"`. Write it again under `:root:is([data-motion="reduce"], [data-motion="none"])`, as the example in [Accessibility](docs/accessibility.md#motion-and-transparency) shows.
 
 ## Fixed
 
 - **A radio's dot grows in.** The dot is sized with `scale`, and its transition named `transform`, which does not cover `scale`, so a checked radio's dot appeared at full size at once and only faded. It now grows over the same duration as its fade, and under reduced motion it only fades, as [Accessibility → Motion and transparency](docs/accessibility.md#motion-and-transparency) says.
 - **A hovered neutral edge on a solid surface keeps the surface's ink.** A `.btn.ghost.edged` in a `.card.solid.primary` drew its border in the parent's ink at rest, but on hover the border faded to the hover tint of the fill it sat on, under 2:1 against it. It now keeps the parent's ink on hover too.
+- **An `<input>` with no `type` gets the forced-colors focus ring.** In forced colors, the reset drew its `Highlight` ring outside a focused text field, but an `<input>` with no `type` attribute, which is a text field all the same, fell back to the generic ring drawn over its edge. It now gets the same ring as `type="text"`.
 
 <!-- Source: docs/changelog/0.10.0.md -->
 
