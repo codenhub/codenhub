@@ -224,6 +224,8 @@ describe("backchannelLogout", () => {
       ["a null sessionId", { sessionId: null }],
       ["an empty sessionId beside a valid subject", { subject: "user-1", sessionId: "" }],
       ["an empty subject beside a valid sessionId", { subject: "", sessionId: "sid-1" }],
+      ["a subject of 256 characters", { subject: "u".repeat(256) }],
+      ["a subject with a control character", { subject: `user${String.fromCharCode(10)}1` }],
     ])("throws TypeError for %s", async (_name, identifiers) => {
       const { op } = await setup();
 

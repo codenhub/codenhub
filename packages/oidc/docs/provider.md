@@ -383,7 +383,7 @@ await provider.completeAuthorization(id, {
 await provider.completeAuthorization(id, { error: "access_denied" });
 ```
 
-`sessionId` identifies the app's own session for the sign-in. It is a non-empty string of visible ASCII, with no space, control character or non-ASCII character, and the provider never interprets it. The provider saves it with the code and with every access and refresh token of the grant, and every ID token of that grant, from the code exchange and from each refresh, carries it as the `sid` claim. That lets the app find the grants that belong to one session, such as to revoke them when the session ends, and it lets back-channel logout name the session it ends. Use a random identifier that is stable for the session, and not the session cookie itself, since the client receives it in the ID token. A grant without a `sessionId` has no `sid`, and a session id is never added later: a refresh carries the one the code exchange started with.
+`subject` is 1 to 255 characters of visible ASCII, the limit OpenID Connect Core §2 sets for `sub`, with no space, control character or non-ASCII character, since every client compares it byte for byte. `sessionId` identifies the app's own session for the sign-in. It is a non-empty string of visible ASCII, with no space, control character or non-ASCII character, and the provider never interprets it. The provider saves it with the code and with every access and refresh token of the grant, and every ID token of that grant, from the code exchange and from each refresh, carries it as the `sid` claim. That lets the app find the grants that belong to one session, such as to revoke them when the session ends, and it lets back-channel logout name the session it ends. Use a random identifier that is stable for the session, and not the session cookie itself, since the client receives it in the ID token. A grant without a `sessionId` has no `sid`, and a session id is never added later: a refresh carries the one the code exchange started with.
 
 A denial's `error` is one of `access_denied`, `login_required`, `consent_required`, `interaction_required` or `account_selection_required`, and it is the only other member the object may hold.
 
@@ -395,7 +395,7 @@ A code lasts `ttl.code` seconds, 60 by default, or the client's own `ttl.code`, 
 
 The method throws `TypeError` in two cases, and they are different:
 
-- **The outcome is the wrong shape**, such as a non-empty `subject` missing, an `authTime` that is not a non-negative integer, a `sessionId` that is empty or not visible ASCII, or a denial with extra members. This is checked before the interaction is taken, so the interaction is still usable and the app can fix the call and retry.
+- **The outcome is the wrong shape**, such as a `subject` that is missing or not 1 to 255 characters of visible ASCII, an `authTime` that is not a non-negative integer, a `sessionId` that is empty or not visible ASCII, or a denial with extra members. This is checked before the interaction is taken, so the interaction is still usable and the app can fix the call and retry.
 - **The outcome contradicts the request**: scopes the client did not request or no `openid`, an `authTime` in the future, an `authTime` before the interaction under `prompt=login`, or an `authTime` more than the requested `max_age` seconds before the request. The interaction has already been taken at this point, so it is gone. The app must restart the sign-in. These are bugs in the login flow, and the package refuses them rather than issue a code that would skip the step the client asked for.
 
 ### Pairwise subjects
@@ -487,7 +487,7 @@ A client takes part by registering a [`backchannelLogout`](store.md#client-recor
 
 - `null` when the client is unknown, or its record has no `backchannelLogout`. There is nothing to send, so the app skips it.
 - Otherwise a `POST` `Request` to the client's `uri`, with `Content-Type: application/x-www-form-urlencoded` and the body `logout_token=<token>`.
-- A `TypeError` when the call itself is wrong, which is a bug in the app: `clientId` is not a non-empty string, `subject` and `sessionId` are both absent, either is present and is not a non-empty string, or the client's `sessionRequired` is `true` and there is no `sessionId`. The call is checked before the store is read, so these throw whether or not the client exists, except `sessionRequired`, which needs the record. A store that returns a malformed record makes it reject with `TypeError`, like every other method.
+- A `TypeError` when the call itself is wrong, which is a bug in the app: `clientId` is not a non-empty string, `subject` and `sessionId` are both absent, `subject` is present and is not 1 to 255 characters of visible ASCII, `sessionId` is present and is not a non-empty string, or the client's `sessionRequired` is `true` and there is no `sessionId`. The call is checked before the store is read, so these throw whether or not the client exists, except `sessionRequired`, which needs the record. A store that returns a malformed record makes it reject with `TypeError`, like every other method.
 
 Give `subject`, `sessionId` or both. A client that registered `sessionRequired: true` needs the `sessionId`, since it finds the session to end by `sid`. Giving both is the most useful when the client keeps sessions by either.
 

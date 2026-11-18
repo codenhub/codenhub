@@ -29,8 +29,9 @@ export type CheckedClient = ClientRecord & { readonly grantTypes: readonly Grant
 
 const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === "object" && value !== null;
 
+/** `every` skips the holes of a sparse array, so each index is read, a hole as `undefined`. */
 const isStringArray = (value: unknown): value is readonly string[] =>
-  Array.isArray(value) && value.every((entry) => typeof entry === "string" && entry !== "");
+  Array.isArray(value) && Array.from(value).every((entry) => typeof entry === "string" && entry !== "");
 
 const invalid = (requirement: string): never => {
   throw new TypeError(`OidcStore.findClient: a client record ${requirement}`);
@@ -58,7 +59,7 @@ export function checkClientRecord(
   if (
     !isStringArray(record.redirectUris) ||
     (signsUsersIn && record.redirectUris.length === 0) ||
-    !record.redirectUris.every(isRedirectUri)
+    !Array.from(record.redirectUris).every(isRedirectUri)
   ) {
     return invalid(
       "must list redirect URIs, at least one for authorization_code, each absolute, of visible ASCII, without fragment or credentials, and not javascript:, data:, vbscript: or file:",
@@ -211,7 +212,7 @@ function readGrantTypes(grantTypes: unknown): readonly GrantType[] {
   if (
     !Array.isArray(grantTypes) ||
     grantTypes.length === 0 ||
-    !grantTypes.every((grantType) => GRANT_TYPES.has(grantType)) ||
+    !Array.from(grantTypes).every((grantType) => GRANT_TYPES.has(grantType)) ||
     new Set(grantTypes).size !== grantTypes.length
   ) {
     return invalid("must list grantTypes as authorization_code or client_credentials, at least one, without repeats");

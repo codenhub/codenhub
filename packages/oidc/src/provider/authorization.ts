@@ -19,7 +19,7 @@ import {
   resourcesOfClient,
 } from "./client-record";
 import { readFrontChannelParameters } from "./front-channel";
-import type { ResolvedOptions } from "./options";
+import { type ResolvedOptions, SUBJECT } from "./options";
 import { redirectResponse } from "./responses";
 import type {
   AuthorizationDenial,
@@ -205,7 +205,7 @@ const optionalMember = <K extends string, V>(key: K, value: V | undefined): Part
 const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === "object" && value !== null;
 
 const isStringArray = (value: unknown): value is string[] =>
-  Array.isArray(value) && value.every((item) => typeof item === "string");
+  Array.isArray(value) && Array.from(value).every((item) => typeof item === "string");
 
 const isNonNegativeInteger = (value: unknown): value is number =>
   typeof value === "number" && Number.isInteger(value) && value >= 0;
@@ -509,8 +509,8 @@ function assertOutcomeShape(outcome: unknown): asserts outcome is AuthorizationG
     }
     return;
   }
-  if (typeof outcome.subject !== "string" || outcome.subject === "") {
-    throw new TypeError("completeAuthorization: outcome.subject must be a non-empty string");
+  if (typeof outcome.subject !== "string" || !SUBJECT.test(outcome.subject)) {
+    throw new TypeError("completeAuthorization: outcome.subject must be 1 to 255 characters of visible ASCII");
   }
   if (!isNonNegativeInteger(outcome.authTime)) {
     throw new TypeError("completeAuthorization: outcome.authTime must be a non-negative integer");

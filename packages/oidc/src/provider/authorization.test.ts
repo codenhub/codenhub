@@ -776,6 +776,18 @@ describe("completeAuthorization", () => {
     ["an unknown denial", { error: "not_a_denial" }, "outcome.error"],
     ["a denial with other members", { error: "access_denied", subject: "user-1" }, "outcome.error"],
     ["an empty subject", { ...GRANT, subject: "" }, "outcome.subject"],
+    ["a subject of 256 characters", { ...GRANT, subject: "u".repeat(256) }, "outcome.subject"],
+    ["a subject with a space", { ...GRANT, subject: "user 1" }, "outcome.subject"],
+    ["a subject outside ASCII", { ...GRANT, subject: "usér" }, "outcome.subject"],
+    ["a sparse amr", { ...GRANT, amr: Object.assign(["pwd"], { length: 2 }) }, "outcome.amr"],
+    [
+      "a sparse scopes list",
+      {
+        ...GRANT,
+        scopes: Object.assign(["openid"], { length: 2 }),
+      },
+      "outcome.scopes",
+    ],
     ["a negative authTime", { ...GRANT, authTime: -1 }, "outcome.authTime"],
     ["a fractional authTime", { ...GRANT, authTime: 1.5 }, "outcome.authTime"],
     ["scopes that are not an array", { ...GRANT, scopes: "openid" }, "outcome.scopes"],
@@ -786,6 +798,17 @@ describe("completeAuthorization", () => {
     await expect(
       completeAuthorization(options, interaction.id, outcome as unknown as AuthorizationGrant),
     ).rejects.toThrow(member);
+  });
+
+  it("accepts a subject of 255 visible ASCII characters", async () => {
+    const interaction = await beginOk();
+
+    const result = await completeAuthorization(options, interaction.id, {
+      ...GRANT,
+      subject: "~".repeat(255),
+    });
+
+    expect(result.ok).toBe(true);
   });
 
   it("shouldNotEchoOutcomeValueInTypeError", async () => {

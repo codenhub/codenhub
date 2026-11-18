@@ -40,6 +40,12 @@ export const PROTOCOL_SCOPES: readonly string[] = ["openid", "offline_access"];
 /** A scope token (RFC 6749 §3.3): printable ASCII except space, `"` and `\`. */
 export const SCOPE_TOKEN = /^[\x21\x23-\x5B\x5D-\x7E]+$/;
 
+/**
+ * A subject identifier: 1 to 255 characters of visible ASCII. OpenID Connect Core §2 caps `sub` at 255 ASCII
+ * characters; a space or control character is refused too, since every relying party compares `sub` byte for byte.
+ */
+export const SUBJECT = /^[!-~]{1,255}$/;
+
 const SECONDS_PER_DAY = 86_400;
 
 interface TtlRule {
