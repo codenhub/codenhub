@@ -10,6 +10,7 @@ import {
 import { beforeAll, describe, expect, it, vi } from "vitest";
 
 import { createProvider, generateClientSecret, hashClientSecret, type ClientAuthentication } from "../provider";
+import { MAX_URL_LENGTH } from "../shared/limits";
 import { computeTokenHash } from "../shared/token-hash";
 import type { OidcIssue, OidcResult, ProviderMetadata } from "../shared/types";
 import { createMemoryStore } from "../testing";
@@ -440,12 +441,34 @@ describe("callback", () => {
     expect(issuesOf(result)).toEqual([{ code: "invalid_callback", path: ["callback"] }]);
   });
 
-  it("refuses a string that is not a URL", async () => {
+  // A relative URL is the app's mistake, such as passing a path from a framework, not the browser's input.
+  it.each([["not a url"], ["/callback?code=abc&state=xyz"]])(
+    "throws TypeError for %j, which is not absolute",
+    async (url) => {
+      const op = createFakeOp();
+      const rp = clientFor(op);
+      const { pending } = await begin(op, rp);
+
+      await expect(rp.callback(url, pending)).rejects.toThrow(
+        new TypeError("callback: url must be an absolute URL, such as request.url of a Fetch API request"),
+      );
+    },
+  );
+
+  it("throws TypeError for a url that is neither a string nor a URL", async () => {
     const op = createFakeOp();
     const rp = clientFor(op);
     const { pending } = await begin(op, rp);
 
-    const result = await rp.callback("not a url", pending);
+    await expect(rp.callback(42 as never, pending)).rejects.toThrow(TypeError);
+  });
+
+  it("refuses a callback URL longer than the URL limit as invalid_callback", async () => {
+    const op = createFakeOp();
+    const rp = clientFor(op);
+    const { pending } = await begin(op, rp);
+
+    const result = await rp.callback(`https://rp.example/cb?pad=${"a".repeat(MAX_URL_LENGTH)}`, pending);
 
     expect(issuesOf(result)).toEqual([{ code: "invalid_callback", path: ["callback"] }]);
   });

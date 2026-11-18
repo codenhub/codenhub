@@ -83,9 +83,17 @@ const invalidCallback = (path: readonly string[], params?: Readonly<Record<strin
  * because this client uses the `query` response mode.
  */
 function readCallbackParameters(url: string | URL): OidcResult<ReadonlyMap<string, string>> {
+  if (typeof url !== "string" && !(url instanceof URL)) {
+    throw new TypeError("callback: url must be a string or a URL");
+  }
   const text = url instanceof URL ? url.href : url;
-  if (text.length > MAX_URL_LENGTH || !URL.canParse(text)) {
+  if (text.length > MAX_URL_LENGTH) {
     return invalidCallback(["callback"]);
+  }
+  // A browser cannot make the URL relative: only the calling code can, such as by passing Node.js's `req.url`, which
+  // is a path. Answering it with an issue would make every sign-in fail and invite the app to start another.
+  if (!URL.canParse(text)) {
+    throw new TypeError("callback: url must be an absolute URL, such as request.url of a Fetch API request");
   }
   const parsed = parseParameters(new URL(text).search.slice(1));
   return parsed.ok ? ok(parsed.parameters) : invalidCallback(["callback"], { reason: parsed.reason });

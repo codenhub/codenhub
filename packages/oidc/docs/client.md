@@ -151,17 +151,19 @@ if (signedIn.ok) {
 The checks run in this order, and each one that fails ends the callback with its issue, so a request that fails `state` never reaches the token endpoint:
 
 1. The URL is a string or `URL`, and `pending` has the right shape, including `requestedAt` when `maxAge` is set. Otherwise `TypeError`.
-2. The URL is at most 8192 characters and parses. Its query has no duplicated parameter, at most 32 parameters, and no parameter longer than 4096 characters. Otherwise `invalid_callback` with path `["callback"]`. For the parameter checks, `params.reason` is `duplicate`, `too_many`, `too_long`, or `malformed` for a percent-escape that is not valid UTF-8, such as `%E9`. A `%zz`, which is not an escape, is kept as it is.
-3. The `state` parameter is present. Otherwise `invalid_callback` with path `["callback", "state"]`.
-4. The `state` equals `pending.state`, compared in constant time. Otherwise `state_mismatch` with path `["callback", "state"]`.
-5. The `iss` parameter equals the issuer. When it is absent and the provider advertises `authorization_response_iss_parameter_supported: true`, that is also a failure. Either way the issue is `iss_mismatch` with path `["callback", "iss"]` (RFC 9207).
-6. The `error` parameter is absent. Otherwise `provider_error`, described below.
-7. The `code` parameter is present. Otherwise `invalid_callback` with path `["callback", "code"]`.
-8. The code is redeemed at the token endpoint. The failures are described under [Token requests](#token-requests).
-9. The response has an `id_token`. Otherwise `invalid_token_response` with path `["response", "id_token"]`.
-10. The ID token is validated, as described under [ID token checks](#id-token-checks).
+2. The URL is at most 8192 characters. Otherwise `invalid_callback` with path `["callback"]`.
+3. The URL is absolute, such as `request.url` of a Fetch API request. A relative URL, such as the path a framework hands over, is the app's mistake, not the browser's, so it throws `TypeError` whose message says so.
+4. The query has no duplicated parameter, at most 32 parameters, and no parameter longer than 4096 characters. Otherwise `invalid_callback` with path `["callback"]`. For the parameter checks, `params.reason` is `duplicate`, `too_many`, `too_long`, or `malformed` for a percent-escape that is not valid UTF-8, such as `%E9`. A `%zz`, which is not an escape, is kept as it is.
+5. The `state` parameter is present. Otherwise `invalid_callback` with path `["callback", "state"]`.
+6. The `state` equals `pending.state`, compared in constant time. Otherwise `state_mismatch` with path `["callback", "state"]`.
+7. The `iss` parameter equals the issuer. When it is absent and the provider advertises `authorization_response_iss_parameter_supported: true`, that is also a failure. Either way the issue is `iss_mismatch` with path `["callback", "iss"]` (RFC 9207).
+8. The `error` parameter is absent. Otherwise `provider_error`, described below.
+9. The `code` parameter is present. Otherwise `invalid_callback` with path `["callback", "code"]`.
+10. The code is redeemed at the token endpoint. The failures are described under [Token requests](#token-requests).
+11. The response has an `id_token`. Otherwise `invalid_token_response` with path `["response", "id_token"]`.
+12. The ID token is validated, as described under [ID token checks](#id-token-checks).
 
-When the provider sends an OAuth error to the redirect URI, the callback returns `provider_error` with `params.endpoint` of `authorization` and `params.error` set to the error code: one of the OAuth codes, such as `access_denied`, or `unknown` for any other text. The provider's own description is never returned. Because check 5 runs first, an error that arrives with a missing `iss` is reported as `iss_mismatch` when the provider advertises the parameter.
+When the provider sends an OAuth error to the redirect URI, the callback returns `provider_error` with `params.endpoint` of `authorization` and `params.error` set to the error code: one of the OAuth codes, such as `access_denied`, or `unknown` for any other text. The provider's own description is never returned. Because check 7 runs first, an error that arrives with a missing `iss` is reported as `iss_mismatch` when the provider advertises the parameter.
 
 The callback matches the response on `state` and `iss` only. It does not compare the URL's origin and path with `redirectUri`: a proxy in front of the app may show it another URL, and `state` already binds the response to the request.
 
@@ -430,6 +432,6 @@ The client sends the token request for a sign-in, a refresh, a client credential
 
 - `provider_error` with `params.endpoint` of `token` and `params.error` set to the OAuth code the provider sent, such as `invalid_grant` for a spent or expired code, `invalid_client` for rejected credentials, `invalid_scope` for a refresh or client credentials request that asked for more than the grant holds, `unauthorized_client` for a grant the client is not registered for, or `invalid_target` for a `resource` the provider refuses. Any other code is `unknown`.
 - `request_failed` with `params.endpoint` of `token` for a non-`200` response that carries no OAuth error, and for the network, timeout, size and content-type failures described under [Discovering the provider](#discovering-the-provider).
-- `invalid_token_response` with path `["response", <member>]` when a `200` response is not a valid token response. The members checked are `access_token` (a non-empty string of printable ASCII, as RFC 6749 §A.12 defines it), `token_type` (`Bearer`, in any letter case), `expires_in` (a non-negative number, when present), `refresh_token` and `id_token` (non-empty strings, when present), and `scope` (a string, when present). Every bad member is reported in one result.
+- `invalid_token_response` with path `["response", <member>]` when a `200` response is not a valid token response. The members checked are `access_token` (a non-empty string of printable ASCII, as RFC 6749 §A.12 defines it), `token_type` (`Bearer`, in any letter case), `expires_in` (a non-negative number, or a string of one to ten digits, which some providers send instead, when present), `refresh_token` and `id_token` (non-empty strings, when present), and `scope` (a string, when present). Every bad member is reported in one result.
 
 `expiresAt` in a token set is computed from `expires_in` at the moment the response is received, in seconds since the Unix epoch. When the provider does not send `expires_in`, the field is absent.
