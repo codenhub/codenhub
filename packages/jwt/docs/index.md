@@ -88,13 +88,23 @@ That closes the best-known class of JWT attacks. In the "`alg: none`" attack a f
 | Algorithm | Signature                             | Key                         |
 | --------- | ------------------------------------- | --------------------------- |
 | `ES256`   | ECDSA on P-256 with SHA-256           | `EC` JWK, curve `P-256`     |
+| `ES384`   | ECDSA on P-384 with SHA-384           | `EC` JWK, curve `P-384`     |
+| `ES512`   | ECDSA on P-521 with SHA-512           | `EC` JWK, curve `P-521`     |
 | `EdDSA`   | Ed25519                               | `OKP` JWK, curve `Ed25519`  |
 | `Ed25519` | Ed25519                               | `OKP` JWK, curve `Ed25519`  |
 | `RS256`   | RSASSA-PKCS1-v1_5 with SHA-256        | `RSA` JWK, 2048 to 8192 bit |
+| `RS384`   | RSASSA-PKCS1-v1_5 with SHA-384        | `RSA` JWK, 2048 to 8192 bit |
+| `RS512`   | RSASSA-PKCS1-v1_5 with SHA-512        | `RSA` JWK, 2048 to 8192 bit |
 | `PS256`   | RSASSA-PSS with SHA-256, 32-byte salt | `RSA` JWK, 2048 to 8192 bit |
+| `PS384`   | RSASSA-PSS with SHA-384, 48-byte salt | `RSA` JWK, 2048 to 8192 bit |
+| `PS512`   | RSASSA-PSS with SHA-512, 64-byte salt | `RSA` JWK, 2048 to 8192 bit |
 | `HS256`   | HMAC with SHA-256                     | secret of at least 32 bytes |
+| `HS384`   | HMAC with SHA-384                     | secret of at least 48 bytes |
+| `HS512`   | HMAC with SHA-512                     | secret of at least 64 bytes |
 
 `EdDSA` and `Ed25519` produce identical signatures. RFC 9864 replaces the older, curve-agnostic `EdDSA` identifier with `Ed25519`, and issuers still use both, so both are supported, but a key is bound to one of them: a key bound to `Ed25519` does not verify a token whose header says `EdDSA`.
+
+Asymmetric keys can also be imported from PEM. The list of algorithms may grow in a minor release, which widens `JwsAlgorithm` and the types built on it, so give a `switch` over an `alg` a default branch.
 
 [Keys](keys.md) covers key kinds, importing, generating and exporting.
 

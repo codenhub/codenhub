@@ -59,7 +59,7 @@ Fetches are `GET` requests with `accept: application/json` that do not follow re
 
 **Returns** — A frozen key set. Its `select` never rejects for a fetch problem or a token: a failed fetch gives `key_fetch_failed` with `params.reason` of `timeout`, `network` (the fetch rejected), `status` (with `params.status`, also for a redirect), `too_large` (`Content-Length` or body over `maxResponseBytes`) or `invalid_response` (not a strict JSON object, or not a JWKS). Issues never contain anything from the response. `select` rejects with a `TypeError` only when `options.now` returns something other than a finite number, which is a bug in the caller's clock; a verifier that calls such a key set reports `key_fetch_failed` with `{ reason: "key_set_error" }` instead.
 
-**Throws** — TypeError when `options` is not an object; `options` has a member that is not an option; `url` is not an absolute `https:` URL or carries credentials; `fetch` or `now` is not a function; `algorithms` is not a non-empty array of asymmetric algorithms; or `cacheTtl`, `cooldown`, `maxStale`, `timeout` or `maxResponseBytes` is out of range.
+**Throws** — TypeError when `options` is not an object; `options` has a member that is not an option; `url` is not an absolute `https:` URL, or `http:` URL on a loopback host, or carries credentials; `fetch` or `now` is not a function; `algorithms` is not a non-empty array of asymmetric algorithms; or `cacheTtl`, `cooldown`, `maxStale`, `timeout` or `maxResponseBytes` is out of range.
 
 **Example**
 
@@ -184,7 +184,7 @@ const { privateKey, publicKey } = await generateKeyPair({ alg: "ES256", kid: "20
 export declare function generateSecretKey(options: GenerateSecretKeyOptions): Promise<SecretKey>;
 ```
 
-Generates a random 32-byte HMAC secret bound to one algorithm.
+Generates a random HMAC secret bound to one algorithm, as long as its hash output: 32 bytes for `HS256`, 48 for `HS384` and 64 for `HS512`.
 
 **Parameters**
 
@@ -192,26 +192,26 @@ Generates a random 32-byte HMAC secret bound to one algorithm.
 
 **Returns** — The frozen key.
 
-**Throws** — TypeError when `options` is not an object, `options.alg` is not `HS256`, `options.kid` is not a string, or `options.extractable` is not a boolean.
+**Throws** — TypeError when `options` is not an object, `options.alg` is not `HS256`, `HS384` or `HS512`, `options.kid` is not a string, or `options.extractable` is not a boolean.
 
 ### importKeyPair
 
 ```ts
-export declare function importKeyPair(jwk: unknown, options: ImportPrivateKeyOptions): Promise<JwtResult<KeyPair>>;
+export declare function importKeyPair(key: unknown, options: ImportPrivateKeyOptions): Promise<JwtResult<KeyPair>>;
 ```
 
-Imports an untrusted private JWK as a key pair bound to one algorithm: the private key, and the public key taken from the same JWK's public members.
+Imports an untrusted private JWK, or a PEM `PRIVATE KEY` (PKCS#8), as a key pair bound to one algorithm: the private key, and the public key taken from the same key's public members.
 
 The checks of [`importPrivateKey`](#importprivatekey) apply. The pair is proved to match before it is returned: the private key signs a fixed message and the public key must verify it, so a JWK whose public members belong to another key fails. Use it to load a signing key stored with [`exportPrivateJwk`](#exportprivatejwk), and publish `exportPublicJwk(pair.publicKey)` without storing a second JWK.
 
 **Parameters**
 
-- `jwk` — The private JWK, typically parsed from JSON. Any value is accepted.
-- `options` — The algorithm to bind both keys to, and whether the private key may be exported again.
+- `key` — The private JWK, typically parsed from JSON, or a PEM string. Any value is accepted.
+- `options` — The algorithm to bind both keys to, a `kid` for a PEM key, and whether the private key may be exported again.
 
-**Returns** — The frozen pair, both keys carrying the JWK's `kid`, or a failure with one issue: the issues [`importPrivateKey`](#importprivatekey) returns, and `invalid_key` without a path when the public members do not belong to the private key. Issues never contain JWK values. Never throws for any `jwk`.
+**Returns** — The frozen pair, both keys carrying the key's `kid`, or a failure with one issue: the issues [`importPrivateKey`](#importprivatekey) returns, and `invalid_key` without a path when the public members do not belong to the private key. Issues never contain key values. Never throws for any `key`.
 
-**Throws** — TypeError when `options` is not an object, `options.alg` is not an asymmetric algorithm, or `options.extractable` is not a boolean.
+**Throws** — TypeError when `options` is not an object, has a member that is not an option, `options.alg` is not an asymmetric algorithm, `options.kid` is not a string, or `options.extractable` is not a boolean.
 
 **Example**
 
@@ -229,7 +229,7 @@ export declare function importKeySet(jwks: unknown, options?: ImportKeySetOption
 
 Imports the public keys of an untrusted JWKS, such as an issuer's `jwks_uri` document, as a key set.
 
-A JWK with an `alg` is bound to that algorithm when it is allowed; a JWK without one is bound to every allowed algorithm its `kty` and `crv` fit, so an RSA key may become both an `RS256` and a `PS256` key. JWKs that cannot be used are skipped rather than failing the import: `oct` keys and `HS256` (secrets never come from a JWKS), keys for encryption, keys carrying private members, weak or malformed keys, and keys whose `alg` is not allowed. A JWKS with no usable key gives an empty set, whose `select` always fails. Two usable keys with the same `kid` and `alg` are kept; selecting them fails with `ambiguous_key` rather than picking one.
+A JWK with an `alg` is bound to that algorithm when it is allowed; a JWK without one is bound to every allowed algorithm its `kty` and `crv` fit, so an RSA key may become an `RS256`, `RS384`, `RS512`, `PS256`, `PS384` and `PS512` key. JWKs that cannot be used are skipped rather than failing the import: `oct` keys and the HMAC algorithms (secrets never come from a JWKS), keys for encryption, keys carrying private members, weak or malformed keys, and keys whose `alg` is not allowed. A JWKS with no usable key gives an empty set, whose `select` always fails. Two usable keys with the same `kid` and `alg` are kept; selecting them fails with `ambiguous_key` rather than picking one.
 
 **Parameters**
 
@@ -250,40 +250,48 @@ if (result.ok) verify = createVerifier({ keys: result.value });
 ### importPrivateKey
 
 ```ts
-export declare function importPrivateKey(jwk: unknown, options: ImportPrivateKeyOptions): Promise<JwtResult<PrivateKey>>;
+export declare function importPrivateKey(key: unknown, options: ImportPrivateKeyOptions): Promise<JwtResult<PrivateKey>>;
 ```
 
-Imports an untrusted private JWK as a signing key bound to one algorithm.
+Imports an untrusted private JWK, or a PEM `PRIVATE KEY` (PKCS#8), as a signing key bound to one algorithm.
 
-The same checks as [`importPublicKey`](#importpublickey) apply, except that private members are required: `d` for EC and OKP keys, and `d`, `p`, `q`, `dp`, `dq` and `qi` for RSA keys. `key_ops`, when present, must include `sign`.
+The same checks as [`importPublicKey`](#importpublickey) apply, except that private members are required: `d` for EC and OKP keys, and `d`, `p`, `q`, `dp`, `dq` and `qi` for RSA keys. `key_ops`, when present, must include `sign`. A PEM string is read as for [`importPublicKey`](#importpublickey), and must be a `PRIVATE KEY` block: `RSA PRIVATE KEY` (PKCS#1) and `EC PRIVATE KEY` (SEC 1) are `invalid_key`.
 
 **Parameters**
 
-- `jwk` — The JWK, typically parsed from JSON. Any value is accepted.
-- `options` — The algorithm to bind the key to, and whether it may be exported again.
+- `key` — The JWK, typically parsed from JSON, or a PEM string. Any value is accepted.
+- `options` — The algorithm to bind the key to, a `kid` for a PEM key, and whether it may be exported again.
 
-**Returns** — The frozen key, or a failure with one issue: `invalid_key`, `unsupported_key` (also for multi-prime RSA keys with `oth`), `alg_mismatch`, `wrong_use` or `weak_key`, as described for [`importPublicKey`](#importpublickey). Issues never contain JWK values. Never throws for any `jwk`.
+**Returns** — The frozen key, or a failure with one issue: `invalid_key`, `unsupported_key` (also for multi-prime RSA keys with `oth`), `alg_mismatch`, `wrong_use` or `weak_key`, as described for [`importPublicKey`](#importpublickey). Issues never contain key values. Never throws for any `key`.
 
-**Throws** — TypeError when `options` is not an object, `options.alg` is not an asymmetric algorithm, or `options.extractable` is not a boolean.
+**Throws** — TypeError when `options` is not an object, has a member that is not an option, `options.alg` is not an asymmetric algorithm, `options.kid` is not a string, or `options.extractable` is not a boolean.
+
+**Example**
+
+```ts
+const result = await importPrivateKey(env.SIGNING_KEY_PEM, { alg: "RS256", kid: "2026-11" });
+```
 
 ### importPublicKey
 
 ```ts
-export declare function importPublicKey(jwk: unknown, options: ImportPublicKeyOptions): Promise<JwtResult<PublicKey>>;
+export declare function importPublicKey(key: unknown, options: ImportPublicKeyOptions): Promise<JwtResult<PublicKey>>;
 ```
 
-Imports an untrusted public JWK as a verification key bound to one algorithm.
+Imports an untrusted public JWK, or a PEM `PUBLIC KEY` (SPKI), as a verification key bound to one algorithm.
+
+A PEM string is read into the JWK of its material, and every check below runs on that JWK. It must be one block of at most 16384 characters, with only whitespace around it; anything else is `invalid_key`, and a `PRIVATE KEY` block is `unexpected_private_key`.
 
 The JWK's `kty` and `crv` must fit `options.alg`; a JWK `alg`, `use` or `key_ops` member, when present, must agree with it. RSA moduli must be 2048 to 8192 bits. Private members are refused rather than ignored.
 
 **Parameters**
 
-- `jwk` — The JWK, typically parsed from JSON. Any value is accepted.
-- `options` — The algorithm to bind the key to.
+- `key` — The JWK, typically parsed from JSON, or a PEM string. Any value is accepted.
+- `options` — The algorithm to bind the key to, and a `kid` for a PEM key.
 
-**Returns** — The frozen key, or a failure with one issue: `invalid_key` for a non-object, a missing or ill-typed member, invalid base64url, wrong coordinate lengths, or material Web Crypto rejects (such as a point not on the curve); `unsupported_key` for a `kty`/`crv` that does not fit `alg` or a modulus over 8192 bits; `alg_mismatch` for a JWK `alg` naming another algorithm; `wrong_use` for a `use` other than `sig` or `key_ops` without `verify`; `unexpected_private_key` for any private member; `weak_key` for a modulus under 2048 bits. Issues never contain JWK values. Never throws for any `jwk`.
+**Returns** — The frozen key, or a failure with one issue: `invalid_key` for a non-object, a missing or ill-typed member, invalid base64url, wrong coordinate lengths, or material Web Crypto rejects (such as a point not on the curve); `unsupported_key` for a `kty`/`crv` that does not fit `alg` or a modulus over 8192 bits; `alg_mismatch` for a JWK `alg` naming another algorithm; `wrong_use` for a `use` other than `sig` or `key_ops` without `verify`; `unexpected_private_key` for any private member; `weak_key` for a modulus under 2048 bits. Issues never contain key values. Never throws for any `key`.
 
-**Throws** — TypeError when `options` is not an object or `options.alg` is not an asymmetric algorithm.
+**Throws** — TypeError when `options` is not an object, has a member that is not an option, `options.alg` is not an asymmetric algorithm, or `options.kid` is not a string.
 
 **Example**
 
@@ -300,16 +308,41 @@ export declare function importSecretKey(input: Uint8Array | object, options: Imp
 
 Imports an HMAC secret, given as raw bytes or as an untrusted `oct` JWK, bound to one algorithm.
 
-The secret must be at least 32 bytes. For a JWK, `alg`, `use` and `key_ops` (which must include `sign` or `verify`) are checked as in [`importPublicKey`](#importpublickey), and the JWK's own `kid` is used. `key_ops` does not restrict the key: a secret imported with `key_ops: ["verify"]` can still sign.
+The secret must be at least as long as the algorithm's hash output: 32 bytes for `HS256`, 48 for `HS384`, 64 for `HS512` (RFC 7518 §3.2). For a JWK, `alg`, `use` and `key_ops` (which must include `sign` or `verify`) are checked as in [`importPublicKey`](#importpublickey), and the JWK's own `kid` is used. `key_ops` does not restrict the key: a secret imported with `key_ops: ["verify"]` can still sign.
 
 **Parameters**
 
 - `input` — The secret's bytes, or an `oct` JWK (untrusted, so any object is accepted). A string is a compile error, because a string secret is ambiguous; at runtime any other value, a string included, still returns `invalid_key`.
 - `options` — The algorithm, the `kid` for raw bytes, and whether the secret may be exported again.
 
-**Returns** — The frozen key, or a failure with one issue: `weak_key` with `{ minimum: 32 }` for a short secret, `invalid_key` for an input that is neither bytes nor a well-formed JWK, and the JWK issues described for [`importPublicKey`](#importpublickey). Issues never contain the secret. Never throws for any `input`.
+**Returns** — The frozen key, or a failure with one issue: `weak_key` with `{ minimum }` in bytes for a short secret, `invalid_key` for an input that is neither bytes nor a well-formed JWK, and the JWK issues described for [`importPublicKey`](#importpublickey). Issues never contain the secret. Never throws for any `input`.
 
-**Throws** — TypeError when `options` is not an object, `options.alg` is not `HS256`, `options.kid` is not a string, or `options.extractable` is not a boolean.
+**Throws** — TypeError when `options` is not an object, `options.alg` is not `HS256`, `HS384` or `HS512`, `options.kid` is not a string, or `options.extractable` is not a boolean.
+
+### jwkThumbprint
+
+```ts
+export declare function jwkThumbprint(key: PublicKey): Promise<string>;
+```
+
+Computes a public key's JWK SHA-256 Thumbprint (RFC 7638), base64url-encoded without padding.
+
+The thumbprint names the key by its material alone: `alg`, `kid` and `use` do not change it, so the same key imported for two algorithms has one thumbprint. It is what DPoP binds a token to (RFC 9449 §6.1, the `jkt` of a `cnf` claim), and it makes a stable `kid`.
+
+**Parameters**
+
+- `key` — A public key from [`importPublicKey`](#importpublickey), [`importKeyPair`](#importkeypair) or [`generateKeyPair`](#generatekeypair).
+
+**Returns** — The 43-character thumbprint.
+
+**Throws** — TypeError when `key` is not a public key created by this package.
+
+**Example**
+
+```ts
+const { publicKey } = await generateKeyPair({ alg: "ES256" });
+const jkt = await jwkThumbprint(publicKey); // 43 base64url characters
+```
 
 ### readHeader
 
@@ -328,7 +361,7 @@ The header is untrusted until a verifier accepts the token. The token is checked
 
 **Returns** — The frozen header, or a failure with the first issue found: `too_large` with `{ limit: "length", maximum }`, `malformed`, `duplicate_key`, `too_large` with `{ limit: "depth", maximum: 32 }`, `unsupported_alg` (including `none` in any casing), or `unsupported_crit`. It reports a bad token by its result and never throws for one.
 
-**Throws** — `TypeError` — When `options` is not an object, or `maxLength` is not an integer from 1 through 65536.
+**Throws** — `TypeError` — When `options` is not an object, holds a member that is not an option, or has a `maxLength` that is not an integer from 1 through 65536.
 
 **Example**
 
@@ -347,15 +380,15 @@ export declare function sign(input: SignInput): Promise<string>;
 
 Signs a payload into a compact JWS (a JWT) with a key's own algorithm.
 
-The header's `alg` always comes from the key, so a key can never sign under another algorithm. The header is written as `alg`, then `kid`, `typ` and `cty` when present, then the other parameters in the order given. The payload is signed exactly as given: no claim, such as `iat`, is added.
+The header's `alg` always comes from the key, so a key can never sign under another algorithm. The header is written as `alg`, then `kid`, `typ` and `cty` when present, then `jwk` for an `embedKey`, then the other parameters in the order given. The payload is signed exactly as given: no claim, such as `iat`, is added.
 
 **Parameters**
 
-- `input` — The payload, the signing key, and optional header parameters.
+- `input` — The payload, the signing key, optional header parameters, and an optional public key to embed.
 
 **Returns** — The compact token, `<header>.<payload>.<signature>` in base64url.
 
-**Throws** — TypeError, as a rejected promise, when `input` is not an object; `input.key` is not a private or secret key this package created; `input.header` is not a plain object, names an `alg` other than the key's, holds `crit`, `b64`, `jwk`, `jku`, `x5u` or `x5c`, or a `kid`, `typ` or `cty` that is not a string; `input.payload` is not a plain object; the header or payload holds a value JSON cannot carry exactly (`undefined`, a function, a symbol, a bigint, a non-finite number or `-0`, a non-plain object, an accessor) or nests deeper than 32 levels; or a registered claim has the wrong type (`exp`, `nbf`, `iat` not finite numbers; `iss`, `sub`, `jti` not strings; `aud` neither a string nor an array of strings).
+**Throws** — TypeError, as a rejected promise, when `input` is not an object; `input.key` is not a private or secret key this package created; `input.header` is not a plain object, names an `alg` other than the key's, holds `crit`, `b64`, `jwk`, `jku`, `x5u` or `x5c`, or a `kid`, `typ` or `cty` that is not a string; `input.payload` is not a plain object; the header or payload holds a value JSON cannot carry exactly (`undefined`, a function, a symbol, a bigint, a non-finite number or `-0`, a non-plain object, an accessor) or nests deeper than 32 levels; or a registered claim has the wrong type (`exp`, `nbf`, `iat` not finite numbers; `iss`, `sub`, `jti` not strings; `aud` neither a string nor an array of strings); `input` has a member other than `payload`, `key`, `header` and `embedKey`; or `input.embedKey` is not a public key this package created, `input.key` is not a private key, or the two are not one key pair bound to one algorithm.
 
 **Example**
 
@@ -417,7 +450,7 @@ Key identifier given to both keys.
 readonly modulusLength?: RsaModulusLength;
 ```
 
-RSA modulus length in bits. Only for `RS256` and `PS256`.
+RSA modulus length in bits. Only for the `RS*` and `PS*` algorithms.
 
 **Default** — 2048
 
@@ -479,13 +512,14 @@ readonly algorithms?: readonly AsymmetricAlgorithm[];
 
 Algorithms keys may be bound to. A JWK naming another algorithm in its `alg` is skipped, and a JWK without `alg` is bound only to the listed algorithms its `kty` and `crv` allow. Non-empty.
 
-**Default** — every asymmetric algorithm: `ES256`, `EdDSA`, `Ed25519`, `RS256`, `PS256`
+**Default** — every asymmetric algorithm: `ES256`, `ES384`, `ES512`, `EdDSA`, `Ed25519`, `RS256`, `RS384`, `RS512`, `PS256`, `PS384`, `PS512`
 
 ### ImportPrivateKeyOptions
 
 ```ts
 export interface ImportPrivateKeyOptions {
     readonly alg: AsymmetricAlgorithm;
+    readonly kid?: string;
     readonly extractable?: boolean;
 }
 ```
@@ -498,7 +532,7 @@ How [`importPrivateKey`](#importprivatekey) binds the imported key.
 readonly alg: AsymmetricAlgorithm;
 ```
 
-The one algorithm the key will sign with. The JWK's `kty` and `crv` must fit it.
+The one algorithm the key will sign with. The key's type and curve must fit it.
 
 #### ImportPrivateKeyOptions › extractable
 
@@ -510,11 +544,22 @@ Whether [`exportPrivateJwk`](#exportprivatejwk) may later export the key's mater
 
 **Default** — false
 
+#### ImportPrivateKeyOptions › kid
+
+```ts
+readonly kid?: string;
+```
+
+Key identifier for a key given as PEM, which has no place for one. Ignored for a JWK, whose own `kid` is used.
+
+**Default** — no `kid`
+
 ### ImportPublicKeyOptions
 
 ```ts
 export interface ImportPublicKeyOptions {
     readonly alg: AsymmetricAlgorithm;
+    readonly kid?: string;
 }
 ```
 
@@ -526,7 +571,17 @@ How [`importPublicKey`](#importpublickey) binds the imported key.
 readonly alg: AsymmetricAlgorithm;
 ```
 
-The one algorithm the key will verify with. The JWK's `kty` and `crv` must fit it.
+The one algorithm the key will verify with. The key's type and curve must fit it.
+
+#### ImportPublicKeyOptions › kid
+
+```ts
+readonly kid?: string;
+```
+
+Key identifier for a key given as PEM, which has no place for one. Ignored for a JWK, whose own `kid` is used.
+
+**Default** — no `kid`
 
 ### ImportSecretKeyOptions
 
@@ -576,7 +631,7 @@ export interface Jwk {
     readonly alg: JwsAlgorithm;
     readonly use: "sig";
     readonly kid?: string;
-    readonly crv?: "P-256" | "Ed25519";
+    readonly crv?: "P-256" | "P-384" | "P-521" | "Ed25519";
     readonly x?: string;
     readonly y?: string;
     readonly n?: string;
@@ -602,7 +657,7 @@ readonly alg: JwsAlgorithm;
 #### Jwk › crv
 
 ```ts
-readonly crv?: "P-256" | "Ed25519";
+readonly crv?: "P-256" | "P-384" | "P-521" | "Ed25519";
 ```
 
 #### Jwk › d
@@ -1102,7 +1157,7 @@ readonly algorithms?: readonly AsymmetricAlgorithm[];
 
 Algorithms keys may be bound to, as for `ImportKeySetOptions.algorithms`. Non-empty.
 
-**Default** — every asymmetric algorithm: `ES256`, `EdDSA`, `Ed25519`, `RS256`, `PS256`
+**Default** — every asymmetric algorithm: `ES256`, `ES384`, `ES512`, `EdDSA`, `Ed25519`, `RS256`, `RS384`, `RS512`, `PS256`, `PS384`, `PS512`
 
 #### RemoteKeySetOptions › cacheTtl
 
@@ -1180,7 +1235,7 @@ Seconds a fetch, body included, may take before it is abandoned. Greater than 0 
 readonly url: string | URL;
 ```
 
-Absolute `https:` URL of the JWKS, such as an issuer's `jwks_uri`. Credentials in the URL are refused.
+Absolute `https:` URL of the JWKS, such as an issuer's `jwks_uri`. Plain `http:` is accepted only on a loopback host (`localhost`, `127.0.0.0/8` or `[::1]`), for a development issuer on the same machine. Credentials in the URL are refused.
 
 ### SecretKey
 
@@ -1292,10 +1347,21 @@ export interface SignInput {
     readonly payload: JwtPayload;
     readonly key: SigningKey;
     readonly header?: SignHeader;
+    readonly embedKey?: PublicKey;
 }
 ```
 
 What [`sign`](#sign) turns into a token.
+
+#### SignInput › embedKey
+
+```ts
+readonly embedKey?: PublicKey;
+```
+
+A public key to embed in the header as `jwk`, so the token carries the key that verifies it, as a DPoP proof does (RFC 9449 §4.2). It must be the public half of `key`, bound to the same algorithm; the signature is checked with it before the token is returned. Only its material is written: no `alg`, `use` or `kid`.
+
+**Default** — no `jwk` header
 
 #### SignInput › header
 
@@ -1648,6 +1714,8 @@ readonly clockTolerance?: number;
 
 Seconds of clock skew allowed on `exp`, `nbf`, `iat` and `maxAge`. An integer from 0 through 300.
 
+`nbf` and `iat` may always lie up to 60 seconds in the future, or `clockTolerance` seconds when that is more, so a fresh token from an issuer whose clock runs a little ahead still verifies. `exp` and `maxAge` get only `clockTolerance`.
+
 **Default** — 0
 
 #### VerifierOptions › issuer
@@ -1715,10 +1783,12 @@ Required `typ` header value, such as `JWT` or `at+jwt`. Compared case-insensitiv
 ### AsymmetricAlgorithm
 
 ```ts
-export type AsymmetricAlgorithm = "ES256" | "EdDSA" | "Ed25519" | "RS256" | "PS256";
+export type AsymmetricAlgorithm = "ES256" | "ES384" | "ES512" | "EdDSA" | "Ed25519" | "RS256" | "RS384" | "RS512" | "PS256" | "PS384" | "PS512";
 ```
 
 Asymmetric JWS algorithms this package signs and verifies with.
+
+A minor release may add an algorithm to this union, so code that switches over it keeps a default branch. An algorithm is removed or renamed only in a major release.
 
 ### JwsAlgorithm
 
@@ -1726,7 +1796,7 @@ Asymmetric JWS algorithms this package signs and verifies with.
 export type JwsAlgorithm = AsymmetricAlgorithm | SymmetricAlgorithm;
 ```
 
-Every JWS algorithm this package supports. `none` is never one of them.
+Every JWS algorithm this package supports. `none` is never one of them. A minor release may add one.
 
 ### JwtIssueCode
 
@@ -1773,10 +1843,10 @@ A key that can sign.
 ### SymmetricAlgorithm
 
 ```ts
-export type SymmetricAlgorithm = "HS256";
+export type SymmetricAlgorithm = "HS256" | "HS384" | "HS512";
 ```
 
-Symmetric (HMAC) JWS algorithms this package signs and verifies with.
+Symmetric (HMAC) JWS algorithms this package signs and verifies with. A minor release may add one.
 
 ### VerificationKey
 

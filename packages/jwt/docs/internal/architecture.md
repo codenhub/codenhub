@@ -1,6 +1,6 @@
 ---
 status: IMPLEMENTED
-last_updated: 2026-10-16
+last_updated: 2026-11-18
 scope: How `@codenhub/jwt` is built and why, for whoever changes it next.
 ---
 
@@ -31,7 +31,7 @@ Out of scope, and documented rather than defended:
 | `core/`     | The public type contract (`types.ts`), limits, and the internal `ok`/`fail` helpers that deep-freeze results. |
 | `encoding/` | Strict base64url, the strict JSON object parser, and UTF-8 helpers.                                           |
 | `jws/`      | Compact parsing (`checkSegments`, `parseCompact`, `parsePayload`) and the public `readHeader`.                |
-| `keys/`     | The algorithm table, the key registry, JWK checks, import, generation and export.                             |
+| `keys/`     | The algorithm table, the key registry, JWK and PEM checks, import, generation, export and thumbprints.        |
 | `keysets/`  | Selection, local key sets, JWKS import, and the remote key set.                                               |
 | `sign/`     | `sign`.                                                                                                       |
 | `verify/`   | Option resolution, claim checks, and `createVerifier`.                                                        |
@@ -48,7 +48,7 @@ A key's `alg` is fixed when the key object is created and is the only algorithm 
 - Supported algorithms are compared case-sensitively against a fixed list (`JWS_ALGORITHMS`), so `none`, `NONE` and `es256` are `unsupported_alg` before any key is looked at.
 - `EdDSA` and `Ed25519` share a row's parameters but are separate identifiers, and a key is bound to one, so a key never answers to two `alg` values (decision 2).
 
-`PS256` uses a salt of 32 bytes, the hash length, as RFC 7518 §3.5 requires. ES256 signatures are the 64-byte `r ‖ s` form that JWS and Web Crypto both use, so no DER conversion is needed.
+`PS256`, `PS384` and `PS512` use a salt of the hash length, 32, 48 or 64 bytes, as RFC 7518 §3.5 requires. ECDSA signatures are the fixed-length `r ‖ s` form that JWS and Web Crypto both use, 64, 96 or 132 bytes for P-256, P-384 and P-521, so no DER conversion is needed.
 
 ## Key objects and the registry
 
@@ -62,9 +62,11 @@ Rejected: a class with private fields. It gives the same protection, but its ins
 
 The registry is per module instance. Two copies of the package in one program do not recognize each other's keys, and a key from the other copy throws the same `TypeError` as a look-alike. This is the price of unforgeable keys and is not worth working around.
 
+A PEM key is read by importing its DER into Web Crypto as SPKI or PKCS#8, extractable, and exporting it as a JWK; the JWK then goes through the same checks as one given directly, so a PEM cannot reach a key the JWK path would refuse, such as a 1024-bit modulus (decision 31). Web Crypto's DER parser is the platform's, so the package carries no ASN.1 code of its own; the price is that PKCS#1 and SEC 1 blocks, which Web Crypto cannot read, are refused.
+
 Imported public keys are created extractable, because `exportPublicJwk` must work for any public key and public material is not secret. Private and secret keys are extractable only with `extractable: true`, and their export functions check the key's own `extractable` field before asking Web Crypto.
 
-The expected signature length (64 bytes for ES256 and Ed25519, the modulus length for RSA, 32 for HS256) is recorded at import or generation, from the material, so the verifier can reject a wrongly sized signature before calling Web Crypto.
+The expected signature length (64 bytes for ES256 and Ed25519, 96 for ES384, 132 for ES512, the modulus length for RSA, the hash length for HMAC) is recorded at import or generation, from the material, so the verifier can reject a wrongly sized signature before calling Web Crypto.
 
 ## Strict parsing
 
@@ -105,11 +107,17 @@ Rejected: `JSON.parse` with a reviver. A reviver sees the object after duplicate
 
 Steps 1 to 6 stop at the first failure because each depends on the one before: there is no key to report on without a header, and no claim to report on without a verified signature.
 
-Time is `now() / 1000`, fractional seconds, compared with the numeric date claims without rounding, so a test clock set to the millisecond behaves exactly as written. `exp` fails when now is greater than or equal to `exp` plus the tolerance, per RFC 7519 §4.1.4 ("on or after").
+Time is `now() / 1000`, fractional seconds, compared with the numeric date claims without rounding, so a test clock set to the millisecond behaves exactly as written. `exp` fails when now is greater than or equal to `exp` plus the tolerance, per RFC 7519 §4.1.4 ("on or after"). `nbf` and `iat` are compared with a tolerance of at least 60 seconds, whatever `clockTolerance` says, because they come from the issuer's clock and a verifier slightly behind it would otherwise refuse tokens the moment they are issued (decision 26).
 
 `typ` is normalized for comparison per RFC 7515 §4.1.9: lowercased, with a leading `application/` removed, on both the option (once, at creation) and the header.
 
 The verified result is `ok({ header, payload, key })`, deep-frozen; header and payload are already frozen by the parser.
+
+## Embedded keys and thumbprints
+
+A DPoP proof (RFC 9449) carries its public key in a `jwk` header. `sign` writes that member only from `embedKey`, a registered public key, never from `header`: it requires a private signing key of the same `alg`, writes the public members of the key's type in a fixed order, and verifies the signature it just made with `embedKey`, so a proof can never carry a key that does not verify it. The verifier still ignores `jwk`; a server that accepts a proof imports `header.jwk` itself, which keeps trusting a token's own key a choice the caller writes out (decision 30).
+
+`jwkThumbprint` exports the key's JWK and hashes only the members RFC 7638 §3.2 requires, in lexicographic order. Those members are base64url strings and fixed names, so `JSON.stringify` already writes the canonical form.
 
 ## Key selection
 
@@ -154,7 +162,7 @@ The TTL counts from when a fetch completes. Stale keys are served under the boun
 ### Fetching
 
 - **`GET` with `accept: application/json`, `redirect: "manual"`.** A redirect is a `status` failure: following one would let whoever controls the redirect target supply keys, and the URL is what the consumer configured. `credentials` and `cache` are not passed, because Cloudflare Workers rejects some of their values, and neither is needed for a public JWKS.
-- **HTTPS only, no credentials in the URL**, checked at creation. A URL with a user name or password would put a secret where logs and error trackers print URLs.
+- **HTTPS only, no credentials in the URL**, checked at creation. `http:` is accepted on a loopback host, `localhost`, `127.0.0.0/8` or `[::1]`, matched on the parsed URL's `hostname` so that spellings such as `127.1` normalize first (decision 29). A URL with a user name or password would put a secret where logs and error trackers print URLs.
 - **`fetch` is looked up at each call** when not injected, so test stubs and polyfills installed after creation are used, and it is called through a local so a browser's `fetch` never runs with a foreign `this`.
 - **Timeout** by racing the request against a timer that aborts the `AbortController`. The race, not the abort signal alone, bounds the time: a `fetch` or body stream that ignores the signal still cannot hold the caller past `timeout`.
 - **Size cap.** A `Content-Length` over the cap fails before the body is read. The body is read from its stream, and the read stops and the stream is cancelled as soon as the total passes the cap, so a server that lies about or omits `Content-Length` still cannot make the package buffer more than the cap plus one chunk. A response without a body stream falls back to `arrayBuffer()` and is checked after.
@@ -168,8 +176,9 @@ The TTL counts from when a fetch completes. Stale keys are served under the boun
 | JSON depth                    | 32                         | no                                 | JWT claims are shallow; 32 leaves room for nested custom claims. The parser keeps open containers on its own stack, so depth never threatens the call stack; the limit bounds what consumers walking the payload recursively must handle. |
 | Keys in a JWKS                | 100                        | no                                 | Issuers publish a handful; each key costs an import.                                                                                                                                                                                      |
 | RSA modulus                   | 2048 to 8192 bit           | no                                 | NIST minimum below; above, verification cost grows with no security need.                                                                                                                                                                 |
-| HMAC secret                   | at least 32 bytes          | no                                 | RFC 7518 §3.2 requires a key at least as long as the hash output.                                                                                                                                                                         |
-| Clock tolerance               | 0 s, at most 300 s         | `clockTolerance`                   | Decision 6.                                                                                                                                                                                                                               |
+| HMAC secret                   | 32, 48 or 64 bytes minimum | no                                 | RFC 7518 §3.2 requires a key at least as long as the hash output of `HS256`, `HS384` or `HS512`.                                                                                                                                          |
+| PEM text                      | 16384 characters           | no                                 | A PKCS#8 RSA-8192 key, the largest imported, is about 6.4 KB; the cap bounds the scan before any decoding.                                                                                                                                |
+| Clock tolerance               | 0 s, at most 300 s         | `clockTolerance`                   | Decision 6. `nbf` and `iat` use at least 60 s (decision 26).                                                                                                                                                                              |
 | Remote TTL / cooldown / stale | 600 s / 30 s / 3600 s      | `cacheTtl`, `cooldown`, `maxStale` | Typical issuer rotation windows; decision 5 for stale.                                                                                                                                                                                    |
 | Remote timeout                | 5 s, at most 60 s          | `timeout`                          | A JWKS is small; a slow issuer should fail a request, not hold it.                                                                                                                                                                        |
 | Remote response               | 65536 bytes, at most 1 MiB | `maxResponseBytes`                 | A typical JWKS is a few kilobytes; the 1 MiB ceiling holds 100 RSA-8192 JWKs with room to spare.                                                                                                                                          |
@@ -177,7 +186,7 @@ The TTL counts from when a fetch completes. Stale keys are served under the boun
 ## Error model
 
 - **Untrusted input returns a result.** Tokens, JWKs, JWKS documents and responses, and headers given to `select`. The result type is package-local (`JwtResult`), shaped like `@codenhub/validation`'s, with no runtime dependency on either `@codenhub/error` or `@codenhub/validation` (decision 21).
-- **Programmer error throws `TypeError`, as early as possible.** Options are checked when a verifier or key set is created, so a misconfiguration fails at startup. `sign`'s input is the caller's own data, so it throws too.
+- **Programmer error throws `TypeError`, as early as possible.** Options are checked when a verifier or key set is created, so a misconfiguration fails at startup, and every function refuses a member it does not know as an option (decisions 22 and 28). `sign`'s input is the caller's own data, so it throws too.
 - **Issues carry no input.** `params` only ever hold values from the caller's configuration or the package's limits (`maximum`, `minimum`, `claim`, `maxAge`, `limit`, `reason`, `status`). `TypeError` messages name the option or member, never its value. Web Crypto's own error messages are never forwarded, since they can describe the rejected material.
 - **Results are deep-frozen** by `ok` and `fail`, which walk with their own stack and do not run getters.
 

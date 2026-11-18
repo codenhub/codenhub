@@ -37,7 +37,7 @@ Every option is checked when `createVerifier` runs, and an invalid one throws a 
 | `issuer`         | none       | A string or a non-empty array of strings. When set, `iss` is required and must equal one of them exactly.                                                     |
 | `audience`       | none       | A string or a non-empty array of strings. When set, `aud` is required and must contain at least one of them.                                                  |
 | `type`           | none       | The required `typ` header, such as `JWT` or `at+jwt`. When set, `typ` is required.                                                                            |
-| `clockTolerance` | `0`        | Seconds of clock skew allowed on `exp`, `nbf`, `iat` and `maxAge`. An integer from 0 through 300.                                                             |
+| `clockTolerance` | `0`        | Seconds of clock skew allowed on `exp`, `nbf`, `iat` and `maxAge`, with at least 60 on `nbf` and `iat`. An integer from 0 through 300.                        |
 | `maxAge`         | none       | Most seconds since `iat`. When set, `iat` is required. A positive integer.                                                                                    |
 | `maxLength`      | `8192`     | Longest token accepted, in characters, checked before anything is decoded. An integer from 1 through 65536.                                                   |
 | `requiredClaims` | `[]`       | Claims that must be present, whatever their value.                                                                                                            |
@@ -73,13 +73,13 @@ The verifier reads the current time as `now() / 1000`, a fractional number of se
 | Claim    | Fails when                                | Issue              |
 | -------- | ----------------------------------------- | ------------------ |
 | `exp`    | now ≥ `exp` + `clockTolerance`            | `expired`          |
-| `nbf`    | now + `clockTolerance` < `nbf`            | `not_yet_valid`    |
-| `iat`    | `iat` > now + `clockTolerance`            | `issued_in_future` |
+| `nbf`    | now + max(`clockTolerance`, 60) < `nbf`   | `not_yet_valid`    |
+| `iat`    | `iat` > now + max(`clockTolerance`, 60)   | `issued_in_future` |
 | `maxAge` | now − `iat` > `maxAge` + `clockTolerance` | `too_old`          |
 
 A token is expired at the very second its `exp` names, as RFC 7519 §4.1.4 requires. With `maxAge` set and no `iat`, the result is `missing_claim` with `{ claim: "iat" }`; `too_old` carries `{ maxAge }`.
 
-`clockTolerance` exists because the issuer's clock and yours never agree exactly. It defaults to 0, so skew is something you opt into. A tolerance of 30 to 60 seconds is common for tokens from another server; the cap of 300 seconds keeps a typo from turning a five-minute token into a much longer one.
+`clockTolerance` exists because the issuer's clock and yours never agree exactly. It defaults to 0 for `exp` and `maxAge`, so a token never lives longer than it says unless you opt in. `nbf` and `iat` always allow at least 60 seconds: they come from the issuer's clock, and with no leeway a verifier a fraction of a second behind refuses a token the moment it is issued. Accepting a token early does not extend its life, which `exp` still bounds. A tolerance of 30 to 60 seconds is common for tokens from another server; the cap of 300 seconds keeps a typo from turning a five-minute token into a much longer one.
 
 ### Issuer
 

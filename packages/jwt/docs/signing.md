@@ -42,13 +42,15 @@ The header's `alg` always comes from the key. You may repeat it in `header.alg`,
 
 Other header parameters are written as given, with the same JSON rules as the payload, except these, which throw:
 
-| Parameter                  | Why it is refused                                                                                                                                          |
-| -------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `crit`                     | It asks the verifier to understand an extension. This package implements none, and its own verifier rejects every token with `crit`.                       |
-| `b64`                      | Unencoded payloads (RFC 7797) are not supported.                                                                                                           |
-| `jwk`, `jku`, `x5u`, `x5c` | They tell the verifier where to find the key. A verifier that trusts them lets the token choose its own key, so this package neither emits nor reads them. |
+| Parameter                  | Why it is refused                                                                                                                                                                     |
+| -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `crit`                     | It asks the verifier to understand an extension. This package implements none, and its own verifier rejects every token with `crit`.                                                  |
+| `b64`                      | Unencoded payloads (RFC 7797) are not supported.                                                                                                                                      |
+| `jwk`, `jku`, `x5u`, `x5c` | They tell the verifier where to find the key. A verifier that trusts them lets the token choose its own key, so this package never reads them, and writes `jwk` only from `embedKey`. |
 
-The header is written in a fixed order: `alg`, then `kid`, `typ` and `cty` when present, then the other parameters in the order you gave them.
+The header is written in a fixed order: `alg`, then `kid`, `typ` and `cty` when present, then `jwk` for an `embedKey`, then the other parameters in the order you gave them.
+
+`sign`'s input takes only `payload`, `key`, `header` and `embedKey`; any other member throws (`sign: input.headers is not an option.`).
 
 ## Which key signs
 
@@ -67,3 +69,39 @@ const signingKey = imported.value;
 
 export const issue = (sub: string) => sign({ payload: { sub, exp: Math.floor(Date.now() / 1000) + 300 }, key: signingKey });
 ```
+
+## DPoP proofs
+
+A DPoP proof (RFC 9449) is a token that carries the public key it was signed with, in a `jwk` header, so a server can bind an access token to the client's key. Sign one with `embedKey`, the public half of the signing key:
+
+```ts
+import { generateKeyPair, sign } from "@codenhub/jwt";
+
+const { privateKey, publicKey } = await generateKeyPair({ alg: "ES256" });
+
+const proof = await sign({
+  payload: { jti: crypto.randomUUID(), htm: "POST", htu: "https://issuer.example/token", iat: Math.floor(Date.now() / 1000) },
+  key: privateKey,
+  header: { typ: "dpop+jwt" },
+  embedKey: publicKey,
+});
+```
+
+`embedKey` must be a public key this package created, bound to the same `alg` as `key`, and its pair: `sign` verifies the signature with it before returning, and throws otherwise. Only the key's material is written, never a private member, `alg`, `use` or `kid`.
+
+A verifier never uses the key a token carries. On the server, trust the proof's key explicitly, for that one proof:
+
+```ts
+import { createKeySet, createVerifier, importPublicKey, jwkThumbprint, readHeader } from "@codenhub/jwt";
+
+async function verifyProof(proof: string) {
+  const header = readHeader(proof);
+  if (!header.ok || header.value.alg !== "ES256") return undefined;
+  const key = await importPublicKey(header.value.jwk, { alg: "ES256" });
+  if (!key.ok) return undefined;
+  const verified = await createVerifier({ keys: createKeySet([key.value]), type: "dpop+jwt", maxAge: 60 })(proof);
+  return verified.ok ? { payload: verified.value.payload, jkt: await jwkThumbprint(key.value) } : undefined;
+}
+```
+
+Limit `alg` to the algorithms you accept, as above. `jkt` is the value an access token's `cnf.jkt` must equal. Checking `htm`, `htu`, `ath`, `nonce` and that each `jti` is used once is the protocol's job, above this package.
