@@ -36,7 +36,7 @@ export interface BrowserI18nOptions<TLocale extends string> {
    * Authoritative locale, which takes precedence over persisted and browser preferences, and is persisted when
    * `persistLocale` is on. Only `undefined` omits this input; other non-string runtime values reject initialization.
    */
-  locale?: TLocale | undefined;
+  locale?: NoInfer<TLocale> | undefined;
   /** Local storage key used for the JSON locale preference. Defaults to `"i18n"`. Storage is best-effort: a failed read or write warns and is skipped. */
   storageKey?: string | undefined;
   /**

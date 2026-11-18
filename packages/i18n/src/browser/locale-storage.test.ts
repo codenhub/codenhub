@@ -190,6 +190,18 @@ describe("initializeBrowserI18n locale resolution", () => {
       binding.disconnect();
     },
   );
+
+  it("does not compile an explicit locale the manager does not support", async () => {
+    const i18n = createManager();
+
+    await expect(
+      initializeBrowserI18n({
+        i18n,
+        // @ts-expect-error -- "xx" is not a configured locale, so it must not widen the manager's locales.
+        locale: "xx",
+      }),
+    ).rejects.toBeInstanceOf(RangeError);
+  });
 });
 
 describe("initializeBrowserI18n storage integration", () => {
