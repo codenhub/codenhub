@@ -2,7 +2,7 @@
 title: Traduce una app de navegador
 description: Detecta y recuerda el idioma del visitante, mantén sincronizados lang y dir, vuelve a renderizar un framework, traduce HTML y ejecuta en un Web Worker.
 order: 2
-source: 5046d70e0e8660a8f66d8bcf7d6ef127932d23bb
+source: 827c566373d47bfbc5d175cd813663615e2e9e14
 ---
 
 # Traduce una app de navegador
@@ -109,6 +109,37 @@ picker.addEventListener("change", async () => {
 `followsSystem` dice qué opción mostrar seleccionada. Es `true` cuando el binding arrancó sin nada elegido y después de `followSystem()`. Pasa a `false` cuando tu app aplica un locale con `setLocale()` o `init()`, incluido el que ya se muestra: un visitante que elige inglés mientras se detectó inglés lo ha elegido.
 
 Mientras `followsSystem` es `true`, el binding también escucha el evento `languagechange` del navegador, así que un visitante que cambia el idioma del navegador en mitad de la visita recibe el nuevo sin recargar. Un idioma que el visitante acaba de elegir y que aún está cargando se mantiene, no se pisa.
+
+En un framework, renderiza el selector desde `binding.subscribe()` en lugar de `i18n.subscribe()`. Elegir el idioma que ya se muestra, o "Sistema" mientras el idioma detectado es el que se muestra, cambia la selección sin cambiar el idioma, así que el gestor no tiene nada que avisar. El binding avisa de ambos casos, y de cada cambio de idioma. En React:
+
+```tsx
+import { useSyncExternalStore } from "react";
+import type { BrowserI18nBinding } from "@codenhub/i18n/browser";
+import { i18n } from "./i18n";
+
+export function LanguagePicker({ binding }: { binding: BrowserI18nBinding }) {
+  const selected = useSyncExternalStore(binding.subscribe, () => (binding.followsSystem ? "system" : i18n.locale));
+
+  return (
+    <select
+      value={selected}
+      onChange={(event) => {
+        const value = event.target.value;
+        const switching = value === "system" ? binding.followSystem() : i18n.setLocale(value as (typeof i18n.locales)[number]);
+        // La selección se vuelve a renderizar desde el binding en cualquier caso; un fallo de carga solo hay que reportarlo.
+        switching.catch((error: unknown) => console.error(error));
+      }}
+    >
+      <option value="system">System</option>
+      {i18n.locales.map((locale) => (
+        <option key={locale} value={locale}>
+          {locale}
+        </option>
+      ))}
+    </select>
+  );
+}
+```
 
 Cuando el idioma detectado no carga, `followSystem()` rechaza con el `I18nError` del loader, y la página mantiene su idioma actual; la elección guardada ya está olvidada. Aun así `followsSystem` es `true`, así que el selector muestra "System" sobre el idioma anterior: es lo que eligió el visitante, y la próxima visita o el próximo `languagechange` vuelve a intentar el idioma detectado. Un fallo tras un `languagechange` advierte y mantiene el idioma actual. Ninguno cae al idioma por defecto como hace el arranque, porque la página ya tiene un idioma que mostrar.
 
@@ -249,7 +280,7 @@ Un worker tampoco tiene `localStorage`, así que el guardado advierte y se omite
 
   El gestor se queda con el resultado de la llamada posterior, según [la regla de la última llamada](index.md#gana-la-última-llamada), y el binding no queda conectado. Sobre un gestor que todavía no estaba inicializado, `setLocale()` simplemente falla con su propio error y el binding sigue adelante. Llamar a `init()` o a `setLocale()` después de que la promesa del binding se resolvió no es problema.
 
-- **`disconnect()` deja de reaccionar pero no deshace nada.** Deja de guardar, de sincronizar, de traducir y de seguir el idioma del navegador, pero deja el texto, los atributos y la elección guardada tal como están. Un cambio a un idioma detectado que aún está cargando se descarta, y `followSystem()` rechaza después. Después puedes arrancar un binding nuevo.
+- **`disconnect()` deja de reaccionar pero no deshace nada.** Deja de guardar, de sincronizar, de traducir, de seguir el idioma del navegador y de llamar a los listeners de `binding.subscribe()`, pero deja el texto, los atributos y la elección guardada tal como están. Un cambio a un idioma detectado que aún está cargando se descarta, y `followSystem()` rechaza después. Después puedes arrancar un binding nuevo.
 
 La [referencia del navegador](../reference/browser.md) (en inglés) documenta cada opción y cada fallo, y [Solución de problemas](troubleshooting.md#el-binding-del-navegador-advierte-o-rechaza) enumera cada advertencia que registra el binding.
 

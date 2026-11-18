@@ -2,7 +2,7 @@
 title: Escribe tus traducciones
 description: Diccionarios, archivos JSON, placeholders, mensajes ICU, plurales, formateadores, claves y valores tipados, cómo detectar claves sin traducir y límites de tamaño.
 order: 1
-source: 468c90153d892ed9334ee03986ef8e5a9116106a
+source: 55f456d0203eb702013f215da3809fa351eeae13
 ---
 
 # Escribe tus traducciones
@@ -351,9 +351,9 @@ const message = i18n.has(key) ? i18n.t(key) : i18n.t("errors.unknown");
 
 `has()` busca en los mismos diccionarios que `t()`:
 
-- Un grupo de plurales cuenta como clave cuando tiene una forma `other`, sea cual sea el idioma activo.
+- Un grupo de plurales cuenta como clave cuando tiene una forma `other`, sea cual sea el idioma activo. `t()` solo lee un grupo con un `count` numérico, así que, cuando la clave puede ser uno, pásalo, como en `i18n.t(key, { count })`; sin él, `t()` no la encuentra y llama a `onMissingKey`.
 - Una clave no encontrada no llama a `onMissingKey` ni advierte, porque una clave que esperas que a veces falte no es un hueco en las traducciones.
-- Un string que ningún diccionario puede contener, como uno con un salto de línea o de más de 1000 caracteres, tampoco se encuentra, así que `code` puede venir de una respuesta o de un query string.
+- Un string que ningún diccionario puede contener, como uno con un salto de línea o de más de 1000 caracteres sin contar los espacios de los extremos, tampoco se encuentra, así que `code` puede venir de una respuesta o de un query string.
 
 Cuando sabes que las claves están, haz un cast:
 

@@ -741,9 +741,9 @@ const message = i18n.has(key) ? i18n.t(key) : i18n.t("errors.unknown");
 
 `has()` looks through the same dictionaries `t()` does:
 
-- A plural group counts as a key when it has an `other` form, whatever language is active.
+- A plural group counts as a key when it has an `other` form, whatever language is active. `t()` reads a group only with a numeric `count`, so when the key may be one, pass it, as in `i18n.t(key, { count })`; without it, `t()` misses and calls `onMissingKey`.
 - A miss neither calls `onMissingKey` nor warns, since a key you expect to be missing sometimes is not a gap in the translations.
-- A string no dictionary can hold, such as one with a line break or longer than 1,000 characters, is a miss too, so `code` can come from a response or a query string.
+- A string no dictionary can hold, such as one with a line break or longer than 1,000 characters once trimmed, is a miss too, so `code` can come from a response or a query string.
 
 When you know the keys are there, cast it instead:
 
@@ -1026,6 +1026,37 @@ picker.addEventListener("change", async () => {
 
 While `followsSystem` is `true`, the binding also listens for the browser's `languagechange` event, so a visitor who changes their browser's language mid-visit gets the new one without a reload. A language the visitor just picked and that is still loading is kept, not overtaken.
 
+In a framework, render the picker from `binding.subscribe()` rather than `i18n.subscribe()`. Picking the language already showing, or "System" while the detected language is the one showing, changes the selection without changing the language, so the manager has nothing to report. The binding reports both, and every language change. In React:
+
+```tsx
+import { useSyncExternalStore } from "react";
+import type { BrowserI18nBinding } from "@codenhub/i18n/browser";
+import { i18n } from "./i18n";
+
+export function LanguagePicker({ binding }: { binding: BrowserI18nBinding }) {
+  const selected = useSyncExternalStore(binding.subscribe, () => (binding.followsSystem ? "system" : i18n.locale));
+
+  return (
+    <select
+      value={selected}
+      onChange={(event) => {
+        const value = event.target.value;
+        const switching = value === "system" ? binding.followSystem() : i18n.setLocale(value as (typeof i18n.locales)[number]);
+        // The selection re-renders from the binding either way; a failed load only needs reporting.
+        switching.catch((error: unknown) => console.error(error));
+      }}
+    >
+      <option value="system">System</option>
+      {i18n.locales.map((locale) => (
+        <option key={locale} value={locale}>
+          {locale}
+        </option>
+      ))}
+    </select>
+  );
+}
+```
+
 When the detected language fails to load, `followSystem()` rejects with the loader's `I18nError`, and the page keeps its current language; the saved choice is already forgotten. `followsSystem` is `true` all the same, so the picker shows "System" over the old language: that is what the visitor chose, and the next visit or `languagechange` tries the detected language again. A failure after a `languagechange` warns and keeps the current language. Neither falls back to the default the way a start does, because the page already has a language to show.
 
 ## Re-render a framework
@@ -1165,7 +1196,7 @@ A worker has no `localStorage` either, so saving warns and is skipped. Add `pers
 
   The manager keeps the later call's result, under [the latest-call rule](docs/index.md#the-latest-call-wins), and the binding is not connected. On a manager that was not initialized yet, `setLocale()` just fails with its own error and the binding carries on. Calling `init()` or `setLocale()` after the binding's promise has resolved is fine.
 
-- **`disconnect()` stops reacting but undoes nothing.** It stops saving, syncing, translating, and following the browser's language, but leaves the current text, attributes, and saved choice as they are. A switch to a detected language still loading is dropped, and `followSystem()` rejects after it. You can then start a new binding.
+- **`disconnect()` stops reacting but undoes nothing.** It stops saving, syncing, translating, following the browser's language, and calling `binding.subscribe()` listeners, but leaves the current text, attributes, and saved choice as they are. A switch to a detected language still loading is dropped, and `followSystem()` rejects after it. You can then start a new binding.
 
 The [browser reference](docs/reference/browser.md) documents every option and failure, and [Troubleshooting](docs/troubleshooting.md#the-browser-binding-warns-or-rejects) lists each warning the binding logs.
 
@@ -1420,12 +1451,12 @@ routing.localize("/", "en"); // "/"
 `parse()` splits a path into its locale and the rest:
 
 ```ts
-routing.parse("/pt/about"); // { locale: "pt", pathname: "/about" }
-routing.parse("/about"); // { locale: "en", pathname: "/about" }
-routing.parse("/PT/about"); // { locale: "pt", pathname: "/about" }
+routing.parse("/pt/about"); // { locale: "pt", pathname: "/about", alternates: […] }
+routing.parse("/about"); // { locale: "en", pathname: "/about", alternates: […] }
+routing.parse("/PT/about"); // { locale: "pt", pathname: "/about", alternates: […] }
 ```
 
-The `pathname` it returns is the **canonical path**: the path your application routes on, the same in every language. Hold on to that idea; it matters once paths are translated.
+The `pathname` it returns is the **canonical path**: the path your application routes on, the same in every language. Hold on to that idea; it matters once paths are translated. `alternates` is the page's URL in each language, for [links to other languages](#link-to-another-language).
 
 `parse()` returns `undefined` for a path that is not a page in any locale, such as `/pt/en/about`. Once its prefix is removed it starts with another locale, so no link ever leads there. Answer it with a 404.
 
@@ -1501,24 +1532,31 @@ A path that already starts with a locale is read as that locale's URL, so the pr
 routing.localize("/pt/about", "en"); // "/about"
 ```
 
-On a localized site, switching language is a navigation, not just `setLocale()`: `setLocale()` changes the text but never the URL. So the shop's language picker reads the current page with `parse()`, builds its path in the new language, keeps the query string and fragment, and lets your router go there:
+On a localized site, switching language is a navigation, not just `setLocale()`: `setLocale()` changes the text but never the URL. So the shop's language picker reads the current page with `parse()`, takes its path in the new language from `alternates`, keeps the query string and fragment, and lets your router go there:
 
 ```ts
 const route = routing.parse(window.location.pathname);
-if (route !== undefined) {
-  await navigate(routing.localize(route.pathname, "pt") + window.location.search + window.location.hash);
+const target = route?.alternates.find((alternate) => alternate.locale === "pt");
+if (target !== undefined) {
+  await navigate(target.pathname + window.location.search + window.location.hash);
 }
 ```
 
 Going through `parse()` matters once paths are translated: `/sobre` is a Portuguese URL, not a canonical path, and only `parse()` knows to read it as `/about`.
 
-Use the same call for the `<link rel="alternate" hreflang>` tags that tell search engines about each language. Add an `x-default` tag for readers whose language you don't offer, pointing at the default locale's page:
+`alternates` lists the page in every language that has a URL for it, in the order of `locales`, the current one included. A language can be missing: with `/products/:id` and `/products/new` both translated, an English product called `novo` has no Portuguese URL, because `/pt/produtos/novo` is the new-product page. Build the picker from `alternates`, so it offers only the languages it can go to, or send a missing one to that language's home page. `localize()` throws for such a page instead, as [The risk you take on](#the-risk-you-take-on) explains, so don't call it with a path read from a request.
+
+Use the same list for the `<link rel="alternate" hreflang>` tags that tell search engines about each language. Add an `x-default` tag for readers whose language you don't offer, pointing at the default locale's page, when it has one:
 
 ```ts
 const defaultLocale = "en"; // the defaultLocale you configured
 const link = (hreflang: string, pathname: string) => `<link rel="alternate" hreflang="${escapeHtml(hreflang)}" href="${escapeHtml(new URL(pathname, "https://example.com").href)}">`;
 
-const alternates = [...routing.localizeAll(route.pathname).map((page) => link(page.locale, page.pathname)), link("x-default", routing.localize(route.pathname, defaultLocale))];
+const tags = route.alternates.map((page) => link(page.locale, page.pathname));
+const fallback = route.alternates.find((page) => page.locale === defaultLocale);
+if (fallback !== undefined) {
+  tags.push(link("x-default", fallback.pathname));
+}
 ```
 
 Escape both values as you would any text in HTML, or let your framework create the tags. A path can contain characters, such as `"` or `&`, that are allowed in a URL but not raw inside an attribute.
@@ -1545,7 +1583,7 @@ export const routing = createLocaleRouting({
 routing.localize("/about", "pt"); // "/pt/sobre"
 routing.localize("/cart", "es"); // "/es/carrito"
 routing.localize("/products/42", "pt"); // "/pt/produtos/42"
-routing.parse("/pt/produtos/42"); // { locale: "pt", pathname: "/products/42" }
+routing.parse("/pt/produtos/42"); // { locale: "pt", pathname: "/products/42", alternates: […] }
 ```
 
 Your application keeps routing on `/products/42`, whatever the language. Only the URL changes.
@@ -1618,7 +1656,7 @@ export const routing = createLocaleRouting({
 });
 
 routing.localize("/about", "pt"); // "/sobre"
-routing.parse("/sobre"); // { locale: "pt", pathname: "/about" }
+routing.parse("/sobre"); // { locale: "pt", pathname: "/about", alternates: […] }
 routing.localize("/", "pt"); // "/pt"
 routing.localize("/blog", "pt"); // "/pt/blog"
 ```
@@ -1644,7 +1682,7 @@ routing.localize("/sobre", "en");
 // RangeError: [I18n] "/sobre" in "en" would be read as "/about" in "pt"; …
 ```
 
-A static build that localizes every page it renders finds every clash at build time. A server only finds one when it builds that page's links. So if your URLs come from anywhere outside the table, such as a CMS, check new slugs against `parse()`, or keep the prefix with `"except-default"`.
+A static build that localizes every page it renders, with `localizeAll()` as in [Generate every localized page](#generate-every-localized-page), finds every clash at build time. A server only finds one when it builds a link to that page with `localize()`. The links it builds from a request's `parse().alternates` leave a clashing language out rather than fail, so nothing tells you there. So if your URLs come from anywhere outside the table, such as a CMS, run new slugs through `localizeAll()` when you publish them, or keep the prefix with `"except-default"`.
 
 The same error tells you when you passed a URL where `localize()` wants a canonical path, such as `localize("/sobre", "en")` when you meant the page at `/sobre`. Pass `parse("/sobre").pathname` instead.
 
@@ -1975,13 +2013,29 @@ The [reference](docs/reference/index.md) documents every export, option, and the
 
 - **`binding.followSystem()`** forgets the saved locale and switches to the one detected from the browser right now, without saving it, so a "System" entry in your picker can undo a visitor's choice. When the detected locale fails to load, it rejects with the loader's `I18nError` and the page keeps its language; the saved choice is already forgotten, so the next visit detects again. See [Offer a "System" choice](docs/browser.md#offer-a-system-choice).
 - **`binding.followsSystem`** says whether to show "System" selected: `true` after a start with nothing chosen and after `followSystem()`, `false` once your app applies a locale with `setLocale()` or `init()`.
-- If your code implements `BrowserI18nBinding` itself, as a test double might, add the two members, or build the double from a real binding.
+- **`binding.subscribe()`** calls your function once after each change to what a picker shows, the language or `followsSystem`, including a pick of the language already showing, which `i18n.subscribe()` doesn't report. Render a framework picker from it, as the [React example](docs/browser.md#offer-a-system-choice) does.
+- **`parse()` returns `alternates`**, the page's URL in every language that has one, for language switchers and `hreflang` tags. A language whose URL would open another page is left out, where `localize()` throws, so an English product `/products/novo` next to a translated `/products/new` no longer makes the guide's switcher answer 500. See [Link to another language](docs/localized-urls.md#link-to-another-language).
+- If your code implements `BrowserI18nBinding` or `LocaleRouting`, or builds `parse()` results, as a test double might, add the new members, or build the double from the real thing. A test that compares a `parse()` result with `toEqual({ locale, pathname })` now needs `alternates` too, or `toMatchObject`.
 
 ## Changed
 
 - **A visitor who never chose a language follows the browser mid-visit.** While `followsSystem` is `true`, a `languagechange` event switches to the newly detected locale without saving it, where the page kept its language until a reload. A visitor's pick still loading when the event arrives is kept. A load that fails warns, "Could not switch to the detected locale", and keeps the current language. You need do nothing; a visitor who chose a language, or a start with an explicit `locale`, is not affected.
 - **A `setLocale()` to the language already showing is saved**, like any other choice, where nothing was saved. A visitor who picks English while English was detected has chosen it, and keeps it after changing their browser's language.
-- `disconnect()` also stops following the browser's language, and drops a switch to a detected locale still loading. A `setLocale()` still loading still applies.
+- `disconnect()` also stops following the browser's language and calling `binding.subscribe()` listeners, and drops a switch to a detected locale still loading. A `setLocale()` still loading still applies.
+- **The guide's language switcher and `hreflang` tags read `route.alternates`** instead of calling `localize()` on a path from the request. Do the same in yours. The `x-default` tag is left out when the default locale has no URL for the page. A static build still uses `localizeAll()`, which throws on a clash, so the build finds it.
+- **`localize()`'s "would be read as" `RangeError` names the URL it would build**, such as `"/pt/produtos/novo"`, and no longer tells you to pass `parse().pathname` when that is what you passed. Code that matches the text after the `;` needs updating.
+- **`loadLocale` must accept every configured locale.** A loader typed for fewer, such as `(locale: keyof typeof dictionaries)` before every dictionary exists, no longer compiles, where `init()` rejected at runtime.
+- **`t(key, values)` throws a `TypeError` when `values` is `null` or a primitive.** `null` failed with a native error from inside the package, and a string was ignored.
+- **Errors that name a dictionary key, a locale, or a configuration property quote it**, with line breaks escaped, and cut it after 100 characters. A test that matches such a message for an unusual key or locale may need updating; ordinary ones read the same.
+- **`formatRelativeTime()` and `formatList()` reuse their `Intl` formatters**, several times faster in a list of "3 days ago" labels.
+- **Creating a manager and `matchLocale()` are about 5 times faster with many locales**, since locale data is computed once per process.
+
+## Fixed
+
+- **The shared message cache counts what each message keeps in memory**, not only its length, so a dictionary of messages full of placeholders or `#` can no longer keep hundreds of megabytes alive on a server.
+- **A key with surrounding whitespace is no longer refused** by `t()`, `has()`, or `data-i18n` when it is within 1,000 characters once trimmed.
+- **Creating a routing with `localePrefix: "when-ambiguous"` takes linear time** in tables whose translated paths start with a parameter: 20,000 such routes took about 17 s and take about 0.4 s. Which paths drop the prefix is unchanged.
+- The docs say that a plural group `has()` finds needs `count` in `t()`.
 
 <!-- Source: docs/changelog/0.4.0.md -->
 

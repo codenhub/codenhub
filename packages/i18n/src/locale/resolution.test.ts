@@ -111,6 +111,13 @@ describe("validateI18nConfig", () => {
       createConfig({ dictionaryLimits: { maxTranslation: 1 } as unknown as I18nConfig<string>["dictionaryLimits"] }),
       "dictionaryLimits.maxTranslation: Is not a recognized limit",
     ],
+    [
+      "dictionary limit whose name holds a line break",
+      createConfig({
+        dictionaryLimits: { "max\u2028[ERROR] forged": 1 } as unknown as I18nConfig<string>["dictionaryLimits"],
+      }),
+      'dictionaryLimits["max\\u2028[ERROR] forged"]: Is not a recognized limit',
+    ],
   ])("rejects %s", (_name, input, message) => {
     const validate = () => validateI18nConfig(input as I18nConfig<string>);
 

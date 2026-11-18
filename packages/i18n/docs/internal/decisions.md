@@ -87,12 +87,12 @@ Every text is read as an ICU message: `{name}`, `number` (`integer`, `percent`),
 - **Our own parser, not `intl-messageformat`.** That library is about 10 KB gzipped plus its parser, against a core of about 4.4 KB, and the package has no runtime dependencies. The subset covers what UI text uses; skeletons (`::currency/EUR`) and `{n, number, currency}` were left out, because currency needs a code the message can't know, and `formatNumber` covers it in code.
 - **Format in the dictionary's locale**, as plural groups choose rules, so English fallback text is never written with Portuguese separators.
 - **Invalid syntax warns and falls back to `{name}` filling**, rather than failing `init()`. Checking every message at load would parse all of them up front and make one translator's typo stop the application from starting. Parsed messages are cached.
-- **The parse cache is bounded by characters as well as entries**: 10,000 messages and 5,000,000 characters, the default `maxTotalLength`, least recently used first. Every manager in the process shares it, so a server that loads changing dictionaries, such as from a CMS, would otherwise keep up to 10,000 texts of 100,000 characters each. Measured on Node.js 26.13 before the bound, and before the parser stopped building text one character at a time, 400 cached messages of 100,000 characters held 1.3 GB and 2,000 exhausted the heap; after both, 2,000 hold about 4 MB.
+- **The parse cache is bounded by what it keeps, not by characters**: 10,000 messages, and a budget of 5,000,000, the default `maxTotalLength`, that each message spends as its length plus a fixed cost per parsed node, option map, and option, least recently used first. Every manager in the process shares it, so a server that loads changing dictionaries, such as from a CMS, would otherwise keep up to 10,000 texts of 100,000 characters each. Measured on Node.js 26.13 before the first bound, and before the parser stopped building text one character at a time, 400 cached messages of 100,000 characters held 1.3 GB and 2,000 exhausted the heap. A bound of characters alone (0.2.0 to 0.4.0) held 211 MB for 50 messages of 100,000 `#` in a plural, 166 MB for repeated `x{a}`, and 92 MB for repeated `{a,select,other{}}`, because each character there is a node; with the per-node costs, measured at 47 to 330 bytes on the same engine, they hold under 6 MB. Invalid syntax is cached as its reason, not its `Error`, whose stack kept 49 MB alive per 20,000. Rejected: skipping messages above a density threshold, which leaves those just under it uncounted, and measuring the heap, which no engine exposes portably. Trade-off: a message that costs more than the whole budget is parsed on every call, 5 ms for 100,000 `#`.
 - **`{name}` stays compatible**: a text without `{` or `'` is returned as is, and an argument without a usable value is left as written, as placeholders were. The one difference is that `'` before a brace and `''` quote, which a plain placeholder text rarely contains.
 - **One call fills at most 100 arguments**, counted across nested plural and select forms, and leaves the rest as written. A message is fetched data in many applications, and a 100,000-character text of repeated `{a}` would otherwise run one formatter call per argument on every render, the `{name}` fallback for invalid syntax included. 100 is far above what a UI sentence uses. Rejected: limiting arguments per message at parse time, because the fallback for invalid syntax fills placeholders without parsing.
 - **A `Date` is a value**, formatted as `{name, date}`, so a plain `{when}` shows a readable date rather than `Date.prototype.toString()`.
 - **Plural groups stay**: they keep each form an ordinary key, which some translation tools need.
-- **Formatter options are copied by name.** Formatters are cached per process. A key of `JSON.stringify(options)` would see only own properties while `Intl` also reads inherited ones, so `formatNumber(x, Object.create({ style: "percent" }))` would turn every later call, in every manager, into a percentage. The options `Intl` reads are copied by name, inherited ones included, and that copy is both the cache key and what `Intl` receives, so the two cannot disagree. Values that are not primitives are never cached, so `Intl` validates them on every call. Trade-off: an `Intl` option newer than ES2025 is ignored until it is added to the list.
+- **Formatter options are copied by name.** Formatters are cached per process. A key of `JSON.stringify(options)` would see only own properties while `Intl` also reads inherited ones, so `formatNumber(x, Object.create({ style: "percent" }))` would turn every later call, in every manager, into a percentage. The options `Intl` reads are copied by name, inherited ones included, and that copy is both the cache key and what `Intl` receives, so the two cannot disagree. Values that are not primitives are never cached, so `Intl` validates them on every call. Trade-off: an `Intl` option newer than ES2025 is ignored until it is added to the list. `formatRelativeTime` and `formatList` are cached the same way; until 0.5.0 they built a formatter per call.
 - **`#` is the number only in a plural's own forms**, as ICU's `MessagePattern` defines it: a `select` nested in a form shows `#` as written, and an apostrophe before `#` quotes only in a plural. Rejected: printing the number there too, as `messageformat` does, which disagrees with ICU and `intl-messageformat`.
 - **Exact plural values compare as numbers**, as in ICU, so `=1.0` and `=01` select 1, and two spellings of one value are a repeated option. Compared as text, they would silently never match. `offset` still matches the raw value.
 
@@ -108,6 +108,24 @@ Every text is read as an ICU message: `{name}`, `number` (`integer`, `percent`),
 ### Optional options accept `undefined`
 
 Every optional option of `createI18n`, `init`, `dictionaryLimits`, `I18nError`, and `initializeBrowserI18n` is typed `?: T | undefined`, as the routing options already were, and the package compiles with `exactOptionalPropertyTypes`. Without it, a consumer who enables that flag could not compile the guide's `initializeBrowserI18n({ i18n, locale: route?.locale })`, although the runtime reads an explicit `undefined` as an omitted option. `getLocaleDirection` and `onMissingKey` are function-typed properties, since a method can't be `| undefined`, so their parameters are checked contravariantly: a callback whose `locale` parameter is narrower than the configured locales, which the runtime would call with a locale it doesn't accept, does not compile. Rejected: documenting a spread such as `...(route && { locale: route.locale })`, which every strict consumer would have to find and repeat.
+
+`loadLocale` is a function-typed property too (0.5.0). As a method its parameter was bivariant, so a loader typed `(locale: keyof typeof dictionaries)` compiled after a locale was added to `locales` without a dictionary, and `init()` rejected at runtime.
+
+### Errors quote what they name (0.5.0)
+
+Every error and warning that embeds text from input, such as a dictionary key, a locale, or a configuration property name, quotes it with `quoteKey`, with line breaks and other controls escaped, and cuts it after 100 characters. Dictionaries are fetched data in many applications, and apps log `init()` rejections, so a key holding U+2028 or NEL could forge a log line. 0.4.0 did this for the missing-key and invalid-message warnings; 0.5.0 covers the rest. Rejected: escaping only the messages an audit found, which is how three were missed.
+
+### `t()` rejects values that are not an object (0.5.0)
+
+`t(key, values)` throws an `[I18n]` `TypeError` when `values` is neither `undefined` nor an object, a mistake in the calling code, as `has()` throws for a key that isn't a string. `null` used to fail inside `Object.hasOwn` with a native message, and a string was silently ignored. Rejected: reading `null` as no values, which hides a call that meant to pass some.
+
+### The key limit applies once trimmed (0.5.0)
+
+The 1,000-character key limit applies to the trimmed key, which lookup uses, in `t()`, `has()`, and DOM translation alike, which share one rule. A string over 10,000 characters is refused before it is trimmed or scanned, so the cost stays bounded.
+
+### Likely subtags are cached per process (0.5.0)
+
+`Intl.Locale.prototype.maximize()` results are cached by tag and shared by fallback chains, matching, and every manager, so creating a manager and matching a request no longer maximize every configured locale. With 50 locales that cost 0.4 ms per request, against the docs' "creating a manager is cheap". The cache holds 1,000 tags of up to 64 characters, least recently used first, because `matchLocale` receives tags from `Accept-Language`. Rejected: caching per configured list only, which leaves the request's tags uncached.
 
 ### `timeZone` is a manager option (0.2.0)
 
@@ -160,6 +178,8 @@ A stored locale the application no longer configures exactly, such as `pt-PT` af
 **The binding's own switches end with it.** `disconnect()` supersedes a detected locale still loading, so it does not apply to a manager nobody binds; an application request still loading is left to apply. A browser language change during the start's loading, before the listener exists, is caught by comparing the detected locale once the start ends.
 
 **A visitor's pick is not overtaken.** A `languagechange` while an application request is still loading is ignored, so the pick applies and is saved; the latest-call rule would otherwise let the binding's detection replace it. Core tells the binding whether the latest request is loading, rather than the binding remembering which request last applied, so a pick that failed does not stop the binding from following later changes.
+
+**The binding reports what a picker shows.** `binding.subscribe()` calls its listeners once after each change to the active locale or to `followsSystem`. `i18n.subscribe()` can't serve a picker: a pick of the locale already showing, or a `followSystem()` that keeps the locale, changes the selection but not the manager, so a framework picker rendered from the manager kept the old entry. Changes made together, such as a pick that changes the locale and ends following the system, are reported once, from a microtask, so a listener never runs inside the manager's request handling. Listeners are dispatched through an `EventTarget`, so one that throws is reported as `i18n.subscribe()` listeners are, and the others still run. Rejected: making `i18n.subscribe()` fire for a request that changes nothing, which re-renders every subscriber for a selection only the picker shows; and documenting a re-read after each `await`, which a framework's store can't do.
 
 **The manager stays runtime-neutral.** Rejected: `setLocale("system")` or `setLocale(undefined)` on the manager, which knows nothing of the browser or of storage.
 
@@ -238,6 +258,23 @@ Rejected:
 - Catching the `RangeError` in the guide's examples, because every application would have to remember it, and a forgotten catch is a 500 on any typed URL.
 - Reading such a path as the nearest page, such as `/pt/en/sobre` as the about page, because it gives one page more addresses and hides broken links.
 - A `hasLocalePrefix` helper to tell the two `undefined` cases apart under `"always"`, because the guide's second `parse` does it without new API.
+
+### `parse` lists the page in every locale that has a URL (0.5.0)
+
+A path `parse` accepts can have no URL in another locale: with `/products/:id` and `/products/new` translated as `/produtos/:id` and `/produtos/novo`, the English product `novo` is `/products/novo`, and its Portuguese URL would open the "new" page. The guide built its switcher and `hreflang` tags with `localize`, which throws a `RangeError` for that locale, so the page answered 500. `parse` returns `alternates`, the page's URL in each locale that has one, in `locales` order, the parsed locale always included, leaving out each locale where `localize` would throw. Every alternate is exactly what `localize` returns, since both go through one check. `localize` and `localizeAll` stay strict, the net a static build that localizes its page list relies on.
+
+Rejected:
+
+- `localizeAll` leaving clashing locales out, which silently drops the static build's net.
+- `parse` refusing a path with no URL in every locale, which 404s a real English product.
+- Catching in the guide, for the reason the decisions above give: a forgotten catch is a 500.
+- A lazy getter for `alternates`, which saves its cost, one `localize` per locale, about 0.1 ms with 20 locales, for callers that don't read it, but makes the result more than plain data, which frameworks serialize.
+
+**The clash error names the URL and the page it opens.** `localize`'s `RangeError` said "pass a canonical path, such as parse().pathname" even when that is what the caller passed. It names the URL it would build and the page that URL opens, gives advice for both causes, a URL passed as a canonical path and a canonical path whose URL belongs to another page, and points request-time links to `alternates`. It keeps its `… would be read as "X" in "Y"; …` start.
+
+### Overlap is found by segment shape (0.5.0)
+
+Under `"when-ambiguous"`, routing groups patterns by the kinds of their segments and compares each pair of groups once, through a map of the fixed words they share. Two patterns overlap exactly when their words agree wherever both have a fixed segment and their lengths allow it, catch-alls included. The earlier walk compared each form with every branch a parameter could take, so 20,000 forms starting with a parameter took 17 s to create, now 0.4 s, with the same result, which a test against the definition checks over 400 random tables. Rejected: a reversed trie, which catch-alls misalign and a middle parameter still fans out. Remaining cost: thousands of different parameter layouts of one length still cost one comparison per pair of groups.
 
 ### `parse` returns `undefined` for a request path routing refuses (0.2.1)
 

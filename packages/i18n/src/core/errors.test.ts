@@ -16,6 +16,12 @@ describe("I18nError", () => {
     expect(error.cause).toBe(cause);
   });
 
+  it("quotes the locale with line breaks escaped", () => {
+    expect(new I18nError({ locale: "pt\n[ERROR] forged\u2028" }).message).toBe(
+      'Failed to load translations for locale "pt\\n[ERROR] forged\\u2028".',
+    );
+  });
+
   it("exports deterministic safe feedback for loader failures", () => {
     expect(i18nErrors).toEqual({
       "i18n.locale_load_failed": {

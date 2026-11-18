@@ -1,8 +1,7 @@
-import { hasAsciiControlCharacter } from "../core/string-validation";
+import { normalizeTranslationKey } from "../core/string-validation";
 
 const TRANSLATION_ATTRIBUTE = "data-i18n";
 const ELEMENT_NODE = 1;
-const MAX_TRANSLATION_KEY_LENGTH = 1_000;
 const BLOCKED_ELEMENT_NAMES = new Set(["noscript", "script", "style", "template"]);
 
 /**
@@ -98,8 +97,8 @@ const collectElements = (root: ParentNode, isTracked: (element: Element) => bool
     : descendants;
 };
 
-const isValidDomKey = (rawKey: string): boolean =>
-  rawKey.trim().length > 0 && rawKey.length <= MAX_TRANSLATION_KEY_LENGTH && !hasAsciiControlCharacter(rawKey);
+// The same rule as `t()`, so an element is skipped exactly when its key could never be in a dictionary.
+const isValidDomKey = (rawKey: string): boolean => normalizeTranslationKey(rawKey) !== undefined;
 
 // Kept per element rather than per binding: a binding started after another's disconnect() would otherwise take the
 // first binding's translations for the page's original text.

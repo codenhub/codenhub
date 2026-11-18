@@ -341,3 +341,125 @@ describe("initializeBrowserI18n languagechange", () => {
     expect(i18n.locale).toBe("en");
   });
 });
+
+describe("initializeBrowserI18n subscribe", () => {
+  const snapshot = (binding: BrowserI18nBinding, i18n: { readonly locale: string }) =>
+    binding.followsSystem ? "system" : i18n.locale;
+
+  it("notifies when a pick of the locale already showing ends following the system", async () => {
+    setNavigatorLocales(["fr"]);
+    const i18n = createManager();
+    const binding = await bind({ i18n });
+    const seen: string[] = [];
+    binding.subscribe(() => seen.push(snapshot(binding, i18n)));
+
+    await i18n.setLocale("fr");
+    await flushPromises();
+
+    expect(seen).toEqual(["fr"]);
+  });
+
+  it("notifies when followSystem() changes nothing but the selection", async () => {
+    setNavigatorLocales(["fr"]);
+    localStorage.setItem("i18n", JSON.stringify({ locale: "fr" }));
+    const i18n = createManager();
+    const binding = await bind({ i18n });
+    const seen: string[] = [];
+    binding.subscribe(() => seen.push(snapshot(binding, i18n)));
+
+    await binding.followSystem();
+    await flushPromises();
+
+    expect(i18n.locale).toBe("fr");
+    expect(seen).toEqual(["system"]);
+  });
+
+  it("notifies once for a pick that changes the locale and ends following the system", async () => {
+    setNavigatorLocales(["fr"]);
+    const i18n = createManager();
+    const binding = await bind({ i18n });
+    const seen: string[] = [];
+    binding.subscribe(() => seen.push(snapshot(binding, i18n)));
+
+    await i18n.setLocale("ar");
+    await flushPromises();
+
+    expect(seen).toEqual(["ar"]);
+  });
+
+  it("notifies when the browser's language changes the locale while following the system", async () => {
+    setNavigatorLocales(["fr"]);
+    const i18n = createManager();
+    const binding = await bind({ i18n });
+    const seen: string[] = [];
+    binding.subscribe(() => seen.push(`${snapshot(binding, i18n)}:${i18n.locale}`));
+
+    changeLanguages(["ar"]);
+    await flushPromises();
+
+    expect(seen).toEqual(["system:ar"]);
+  });
+
+  it("does not notify for a request that changes nothing", async () => {
+    localStorage.setItem("i18n", JSON.stringify({ locale: "fr" }));
+    const i18n = createManager();
+    const binding = await bind({ i18n });
+    const listener = vi.fn();
+    binding.subscribe(listener);
+
+    await i18n.setLocale("fr");
+    await flushPromises();
+
+    expect(listener).not.toHaveBeenCalled();
+  });
+
+  it("stops after its unsubscribe function or disconnect()", async () => {
+    setNavigatorLocales(["fr"]);
+    const i18n = createManager();
+    const binding = await bind({ i18n });
+    const unsubscribed = vi.fn();
+    const disconnected = vi.fn();
+    const unsubscribe = binding.subscribe(unsubscribed);
+    binding.subscribe(disconnected);
+
+    unsubscribe();
+    unsubscribe();
+    await i18n.setLocale("ar");
+    await flushPromises();
+    binding.disconnect();
+    await i18n.setLocale("fr");
+    await flushPromises();
+
+    expect(unsubscribed).not.toHaveBeenCalled();
+    expect(disconnected).toHaveBeenCalledTimes(1);
+  });
+
+  it("calls every listener when one throws", async () => {
+    setNavigatorLocales(["fr"]);
+    const i18n = createManager();
+    const binding = await bind({ i18n });
+    const failure = new Error("listener");
+    const errors: unknown[] = [];
+    const onError = (event: ErrorEvent) => {
+      errors.push(event.error);
+      event.preventDefault();
+    };
+    window.addEventListener("error", onError);
+    const later = vi.fn();
+    binding.subscribe(() => {
+      throw failure;
+    });
+    binding.subscribe(later);
+
+    try {
+      await i18n.setLocale("ar");
+      await flushPromises();
+    } finally {
+      window.removeEventListener("error", onError);
+    }
+
+    expect(i18n.locale).toBe("ar");
+    expect(later).toHaveBeenCalledTimes(1);
+    expect(errors).toEqual([failure]);
+  });
+});

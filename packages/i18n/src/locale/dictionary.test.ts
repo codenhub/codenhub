@@ -135,6 +135,21 @@ describe("normalizeDictionary", () => {
     expect(() => normalizeDictionary({ "about.title": "Flat", about: { title: "Nested" } })).toThrow(TypeError);
   });
 
+  it("escapes and truncates the key a collision or a value error names", () => {
+    const forged = "a\u2028[ERROR] forged\u0085";
+    const long = `${forged}${"x".repeat(500)}`;
+
+    expect(() => normalizeDictionary({ [`${forged}.b`]: "Flat", [forged]: { b: "Nested" } })).toThrow(
+      '[I18n] Locale dictionary key collision at "a\\u2028[ERROR] forged\\u0085.b".',
+    );
+    expect(() => normalizeDictionary({ [forged]: 1 })).toThrow(
+      '[I18n] Locale dictionary value at "a\\u2028[ERROR] forged\\u0085" must be a string.',
+    );
+    expect(() => normalizeDictionary({ [long]: 1 })).toThrow(
+      `[I18n] Locale dictionary value at "a\\u2028[ERROR] forged\\u0085${"x".repeat(83)}"... must be a string.`,
+    );
+  });
+
   it("rejects accessors without invoking them", () => {
     const getter = vi.fn(() => "value");
     const input = Object.defineProperty({}, "key", { enumerable: true, get: getter });

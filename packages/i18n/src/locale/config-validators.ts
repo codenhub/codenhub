@@ -1,5 +1,6 @@
 import { isPlainObject } from "../core/plain-object";
 import { resolveConfiguredLocale } from "./configured-locale";
+import { formatReportedKey } from "./dictionary";
 import { isValidLocaleIdentifier } from "./identifier";
 
 /**
@@ -49,6 +50,13 @@ const readObject = (path: string, value: unknown): Record<string, unknown> => {
   }
   return value as Record<string, unknown>;
 };
+
+/**
+ * The path to a property, as `.name` for a plain identifier and quoted otherwise, since the name is the consumer's and
+ * may hold a line break or be any length.
+ */
+const propertyPath = (path: string, name: string): string =>
+  /^[A-Za-z_$][\w$-]{0,99}$/.test(name) ? `${path}.${name}` : `${path}[${formatReportedKey(name)}]`;
 
 /** Reads an own property only, so a value inherited from a polluted `Object.prototype` is never taken. */
 const own = (object: Record<string, unknown>, name: string): unknown =>
@@ -149,11 +157,11 @@ const readPathnames = (value: unknown, locales: readonly string[]): CheckedPathn
 
   const table = readObject("pathnames", value);
   return Object.keys(table).map((pathname) => {
-    const path = `pathnames[${JSON.stringify(pathname)}]`;
+    const path = `pathnames[${formatReportedKey(pathname)}]`;
     const entry = readObject(path, table[pathname]);
     const seen = new Set<string>();
     const forms = Object.keys(entry).map((key): CheckedPathnameForm => {
-      const formPath = `${path}.${key}`;
+      const formPath = propertyPath(path, key);
       const form = entry[key];
       if (typeof form !== "string") {
         return expectType(formPath, "string", form);
@@ -182,7 +190,7 @@ const readDictionaryLimits = (value: unknown): Record<string, number> | undefine
   // Own names, enumerable or not, and each value read once, so the value used is the value checked.
   for (const name of Object.getOwnPropertyNames(limits)) {
     if (!DICTIONARY_LIMIT_NAMES.includes(name)) {
-      fail(`dictionaryLimits.${name}`, "Is not a recognized limit");
+      fail(propertyPath("dictionaryLimits", name), "Is not a recognized limit");
     }
     const limit = limits[name];
     if (limit === undefined) {

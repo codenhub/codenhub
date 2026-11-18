@@ -52,7 +52,7 @@ export const { t } = i18n;
 export declare class I18nError extends Error
 ```
 
-Operational locale-loader failure named `I18nError`, with a stable code and deterministic message. The optional locale appears in the message and the original rejection remains available as `cause`.
+Operational locale-loader failure named `I18nError`, with a stable code and deterministic message. The optional locale appears in the message, quoted with line breaks escaped and truncated after 100 characters, and the original rejection remains available as `cause`.
 
 #### I18nError › constructor
 
@@ -227,14 +227,14 @@ Joins strings into a list, such as "a, b, and c", for the active locale with `In
 **Parameters**
 
 - `values` — Strings to join, in order.
-- `options` — `Intl.ListFormat` options, such as `{ type: "disjunction" }` for "a, b, or c".
+- `options` — `Intl.ListFormat` options, such as `{ type: "disjunction" }` for "a, b, or c", read by name, including inherited properties, as `Intl` reads them; other properties are ignored.
 
 **Returns** — The joined list, or an empty string for no values.
 
 **Throws**
 
 - `RangeError` — When `options` is invalid, as `Intl.ListFormat` throws.
-- `TypeError` — When a value is not a string, as `Intl.ListFormat` throws.
+- `TypeError` — When `options` is `null` or a value is not a string, as `Intl.ListFormat` throws.
 
 #### I18n › formatNumber
 
@@ -268,11 +268,14 @@ Formats a relative time, such as `-1, "day"` for "1 day ago", for the active loc
 
 - `value` — Amount of `unit`, negative for the past.
 - `unit` — Unit of `value`, such as `"day"` or `"hours"`.
-- `options` — `Intl.RelativeTimeFormat` options, such as `{ numeric: "auto" }` for "yesterday".
+- `options` — `Intl.RelativeTimeFormat` options, such as `{ numeric: "auto" }` for "yesterday", read by name, including inherited properties, as `Intl` reads them; other properties are ignored.
 
 **Returns** — The formatted relative time.
 
-**Throws** — `RangeError` — When `value`, `unit`, or `options` is invalid, as `Intl.RelativeTimeFormat` throws.
+**Throws**
+
+- `RangeError` — When `value`, `unit`, or `options` is invalid, as `Intl.RelativeTimeFormat` throws.
+- `TypeError` — When `options` is `null`, as `Intl.RelativeTimeFormat` throws.
 
 #### I18n › has
 
@@ -281,13 +284,13 @@ has(key: TKey): boolean;
 has(key: string): key is TKey;
 ```
 
-Whether a key has a text, or is a plural group, in a dictionary the active locale falls back to. Unlike `t()`, a miss neither calls `onMissingKey` nor warns, so a key built at runtime can be checked before it is used, and the check narrows it to a key `t()` accepts. A key that is already typed is not narrowed, since it can still be missing, as from a locale that has not translated it.
+Whether a key has a text, or is a plural group, in a dictionary the active locale falls back to. Unlike `t()`, a miss neither calls `onMissingKey` nor warns, so a key built at runtime can be checked before it is used, and the check narrows it to a key `t()` accepts. A key that is already typed is not narrowed, since it can still be missing, as from a locale that has not translated it. A plural group counts as a key, but `t()` reads it only with a numeric `count`, so pass one when the key may be a group; without it, `t()` misses and calls `onMissingKey`.
 
 **Parameters**
 
 - `key` — Translation key, trimmed as `t()` trims it.
 
-**Returns** — `true` when a dictionary has a text at `key`, or a plural group, one with an `other` form, and `false` otherwise, including for a group without an `other` form, whichever forms it has, and for a string no dictionary can hold, such as one that is blank, longer than 1,000 characters, or contains ASCII controls.
+**Returns** — `true` when a dictionary has a text at `key`, or a plural group, one with an `other` form, and `false` otherwise, including for a group without an `other` form, whichever forms it has, and for a string no dictionary can hold, such as one that is blank, longer than 1,000 characters once trimmed or 10,000 before, or contains ASCII controls.
 
 **Throws**
 
@@ -457,7 +460,8 @@ When `params.count` is a number and the key is a group of plural forms rather th
 **Throws**
 
 - `Error` — When called before successful initialization.
-- `TypeError` — When the key is empty, not a string, longer than 1,000 characters, or contains ASCII controls.
+- `TypeError` — When the key is empty, not a string, longer than 1,000 characters once trimmed or 10,000 before, or contains ASCII controls.
+- `TypeError` — When `params` is neither `undefined` nor an object, such as `null` passed from plain JavaScript.
 
 **Example**
 
@@ -471,7 +475,7 @@ t("cart.items", { count: 3 }); // "3 items"
 export interface I18nConfig<TLocale extends string = string, TMessages = unknown> {
     defaultLocale: NoInfer<TLocale>;
     locales: readonly TLocale[];
-    loadLocale(locale: NoInfer<TLocale>): TMessages | Promise<TMessages>;
+    loadLocale: (locale: NoInfer<TLocale>) => TMessages | Promise<TMessages>;
     getLocaleDirection?: ((locale: NoInfer<TLocale>) => LocaleDirection) | undefined;
     onMissingKey?: ((key: string, locale: NoInfer<TLocale>) => void) | undefined;
     isSilent?: boolean | undefined;
@@ -521,6 +525,14 @@ isSilent?: boolean | undefined;
 
 Suppresses optional diagnostics, including the default missing-key warning, without suppressing failures. Defaults to `false`.
 
+#### I18nConfig › loadLocale
+
+```ts
+loadLocale: (locale: NoInfer<TLocale>) => TMessages | Promise<TMessages>;
+```
+
+Loads a flat or nested dictionary through a consumer-selected transport; callback failures become `I18nError`. Its declared return type, such as an `as const` object or an imported JSON module, types translation keys; an `unknown` or `any` return accepts any string key. It is called for every configured locale, so a loader whose `locale` parameter is narrower than `locales` does not compile.
+
 #### I18nConfig › locales
 
 ```ts
@@ -548,14 +560,6 @@ timeZone?: string | undefined;
 IANA time zone, such as `"America/Sao_Paulo"` or `"UTC"`, for `{d, date}`, `{d, time}`, and `{d}` in messages, and the default of `formatDate`. Set it on a server, where the runtime's time zone is the server's, not the reader's, so a date shows the same day as in the reader's browser. Checked at creation.
 
 **Default** — The runtime's time zone.
-
-#### I18nConfig › loadLocale
-
-```ts
-loadLocale(locale: NoInfer<TLocale>): TMessages | Promise<TMessages>;
-```
-
-Loads a flat or nested dictionary through a consumer-selected transport; callback failures become `I18nError`. Its declared return type, such as an `as const` object or an imported JSON module, types translation keys; an `unknown` or `any` return accepts any string key.
 
 ### I18nErrorOptions
 

@@ -2,7 +2,7 @@
 title: Escreva as suas traduções
 description: Dicionários, arquivos JSON, placeholders, mensagens ICU, plurais, formatadores, chaves e valores tipados, verificação de chaves não traduzidas e limites de tamanho.
 order: 1
-source: 468c90153d892ed9334ee03986ef8e5a9116106a
+source: 55f456d0203eb702013f215da3809fa351eeae13
 ---
 
 # Escreva as suas traduções
@@ -351,9 +351,9 @@ const message = i18n.has(key) ? i18n.t(key) : i18n.t("errors.unknown");
 
 `has()` procura nos mesmos dicionários que `t()`:
 
-- Um grupo de plural conta como chave quando tem uma forma `other`, seja qual for o idioma ativo.
+- Um grupo de plural conta como chave quando tem uma forma `other`, seja qual for o idioma ativo. `t()` só lê um grupo com um `count` numérico, então, quando a chave pode ser um grupo, passe-o, como em `i18n.t(key, { count })`; sem ele, `t()` não encontra a chave e chama `onMissingKey`.
 - Uma falta não chama `onMissingKey` nem avisa, já que uma chave que você espera que às vezes falte não é uma lacuna nas traduções.
-- Uma string que nenhum dicionário consegue guardar, como uma com quebra de linha ou com mais de 1.000 caracteres, também é uma falta, então `code` pode vir de uma resposta ou de uma query string.
+- Uma string que nenhum dicionário consegue guardar, como uma com quebra de linha ou com mais de 1.000 caracteres sem contar os espaços das pontas, também é uma falta, então `code` pode vir de uma resposta ou de uma query string.
 
 Quando você sabe que as chaves estão lá, faça um cast:
 

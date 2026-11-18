@@ -2,7 +2,7 @@
 title: URLs localizadas
 description: Pon el locale en la ruta, traduce la propia ruta, lee ambas de vuelta, enlaza a otros idiomas, genera cada página localizada y lleva a cada visitante a su propio idioma en un sitio estático.
 order: 4
-source: 7f2d510d044e80a72facb8f8055ec69c38a8d55a
+source: 96dbb0ea76425bf405c7dc011065fd8bb754e176
 ---
 
 # URLs localizadas
@@ -74,12 +74,12 @@ routing.localize("/", "en"); // "/"
 `parse()` separa una ruta en su locale y el resto:
 
 ```ts
-routing.parse("/pt/about"); // { locale: "pt", pathname: "/about" }
-routing.parse("/about"); // { locale: "en", pathname: "/about" }
-routing.parse("/PT/about"); // { locale: "pt", pathname: "/about" }
+routing.parse("/pt/about"); // { locale: "pt", pathname: "/about", alternates: […] }
+routing.parse("/about"); // { locale: "en", pathname: "/about", alternates: […] }
+routing.parse("/PT/about"); // { locale: "pt", pathname: "/about", alternates: […] }
 ```
 
-El `pathname` que devuelve es la **ruta canónica**: la ruta sobre la que enruta tu aplicación, la misma en todos los idiomas. No pierdas de vista esa idea; importa cuando las rutas se traducen.
+El `pathname` que devuelve es la **ruta canónica**: la ruta sobre la que enruta tu aplicación, la misma en todos los idiomas. No pierdas de vista esa idea; importa cuando las rutas se traducen. `alternates` es la URL de la página en cada idioma, para [enlazar a otros idiomas](#enlaza-a-otro-idioma).
 
 `parse()` devuelve `undefined` para una ruta que no es una página en ningún locale, como `/pt/en/about`. Una vez quitado su prefijo, empieza con otro locale, así que ningún enlace lleva nunca ahí. Respóndele con un 404.
 
@@ -155,24 +155,31 @@ Una ruta que ya empieza con un locale se lee como la URL de ese locale, así que
 routing.localize("/pt/about", "en"); // "/about"
 ```
 
-En un sitio localizado, cambiar de idioma es una navegación, no solo un `setLocale()`: `setLocale()` cambia el texto, pero nunca la URL. Así que el selector de idioma de la tienda lee la página actual con `parse()`, construye su ruta en el nuevo idioma, conserva el query string y el fragmento, y deja que tu router vaya ahí:
+En un sitio localizado, cambiar de idioma es una navegación, no solo un `setLocale()`: `setLocale()` cambia el texto, pero nunca la URL. Así que el selector de idioma de la tienda lee la página actual con `parse()`, toma su ruta en el nuevo idioma de `alternates`, conserva el query string y el fragmento, y deja que tu router vaya ahí:
 
 ```ts
 const route = routing.parse(window.location.pathname);
-if (route !== undefined) {
-  await navigate(routing.localize(route.pathname, "pt") + window.location.search + window.location.hash);
+const target = route?.alternates.find((alternate) => alternate.locale === "pt");
+if (target !== undefined) {
+  await navigate(target.pathname + window.location.search + window.location.hash);
 }
 ```
 
 Pasar por `parse()` importa cuando las rutas se traducen: `/sobre` es una URL en portugués, no una ruta canónica, y solo `parse()` sabe leerla como `/about`.
 
-Usa la misma llamada para las etiquetas `<link rel="alternate" hreflang>` que les cuentan a los buscadores sobre cada idioma. Agrega una etiqueta `x-default` para los lectores cuyo idioma no ofreces, que apunte a la página del locale por defecto:
+`alternates` enumera la página en cada idioma que tiene una URL para ella, en el orden de `locales`, incluido el actual. Puede faltar un idioma: con `/products/:id` y `/products/new` traducidas, un producto en inglés llamado `novo` no tiene URL en portugués, porque `/pt/produtos/novo` es la página de producto nuevo. Construye el selector a partir de `alternates`, para que ofrezca solo los idiomas a los que puede ir, o manda un idioma que falta a la página de inicio de ese idioma. En cambio, `localize()` lanza un error para una página así, como explica [El riesgo que asumes](#el-riesgo-que-asumes), así que no lo llames con una ruta leída de una solicitud.
+
+Usa la misma lista para las etiquetas `<link rel="alternate" hreflang>` que les cuentan a los buscadores sobre cada idioma. Agrega una etiqueta `x-default` para los lectores cuyo idioma no ofreces, que apunte a la página del locale por defecto, cuando la tenga:
 
 ```ts
 const defaultLocale = "en"; // el defaultLocale que configuraste
 const link = (hreflang: string, pathname: string) => `<link rel="alternate" hreflang="${escapeHtml(hreflang)}" href="${escapeHtml(new URL(pathname, "https://example.com").href)}">`;
 
-const alternates = [...routing.localizeAll(route.pathname).map((page) => link(page.locale, page.pathname)), link("x-default", routing.localize(route.pathname, defaultLocale))];
+const tags = route.alternates.map((page) => link(page.locale, page.pathname));
+const fallback = route.alternates.find((page) => page.locale === defaultLocale);
+if (fallback !== undefined) {
+  tags.push(link("x-default", fallback.pathname));
+}
 ```
 
 Escapa los dos valores como harías con cualquier texto en HTML, o deja que tu framework cree las etiquetas. Una ruta puede contener caracteres, como `"` o `&`, que están permitidos en una URL pero no tal cual dentro de un atributo.
@@ -199,7 +206,7 @@ export const routing = createLocaleRouting({
 routing.localize("/about", "pt"); // "/pt/sobre"
 routing.localize("/cart", "es"); // "/es/carrito"
 routing.localize("/products/42", "pt"); // "/pt/produtos/42"
-routing.parse("/pt/produtos/42"); // { locale: "pt", pathname: "/products/42" }
+routing.parse("/pt/produtos/42"); // { locale: "pt", pathname: "/products/42", alternates: […] }
 ```
 
 Tu aplicación sigue enrutando sobre `/products/42`, sea cual sea el idioma. Solo cambia la URL.
@@ -272,7 +279,7 @@ export const routing = createLocaleRouting({
 });
 
 routing.localize("/about", "pt"); // "/sobre"
-routing.parse("/sobre"); // { locale: "pt", pathname: "/about" }
+routing.parse("/sobre"); // { locale: "pt", pathname: "/about", alternates: […] }
 routing.localize("/", "pt"); // "/pt"
 routing.localize("/blog", "pt"); // "/pt/blog"
 ```
@@ -298,7 +305,7 @@ routing.localize("/sobre", "en");
 // RangeError: [I18n] "/sobre" in "en" would be read as "/about" in "pt"; …
 ```
 
-Un build estático que localiza cada página que renderiza encuentra todos los choques en tiempo de build. Un servidor solo encuentra uno cuando construye los enlaces de esa página. Así que si tus URLs vienen de cualquier lugar fuera de la tabla, como un CMS, comprueba los slugs nuevos con `parse()`, o conserva el prefijo con `"except-default"`.
+Un build estático que localiza cada página que renderiza, con `localizeAll()` como en [Genera cada página localizada](#genera-cada-página-localizada), encuentra todos los choques en tiempo de build. Un servidor solo encuentra uno cuando construye un enlace a esa página con `localize()`. Los enlaces que construye a partir del `parse().alternates` de una solicitud dejan fuera un idioma en conflicto en lugar de fallar, así que ahí nada te avisa. Así que si tus URLs vienen de cualquier lugar fuera de la tabla, como un CMS, pasa los slugs nuevos por `localizeAll()` cuando los publiques, o conserva el prefijo con `"except-default"`.
 
 El mismo error te avisa cuando pasaste una URL donde `localize()` espera una ruta canónica, como `localize("/sobre", "en")` cuando querías decir la página que está en `/sobre`. Pasa `parse("/sobre").pathname` en su lugar.
 

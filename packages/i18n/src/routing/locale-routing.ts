@@ -62,6 +62,14 @@ export interface ParsedLocalePath<TLocale extends string> {
    * as written.
    */
   pathname: string;
+  /**
+   * This page's URL pathname in each locale that has one, in `locales` order, as `localize(pathname, locale)` builds
+   * it: for a language switcher and `hreflang` tags. The parsed locale is always included. A locale is left out where
+   * this page's URL would be read as another page or locale, or be longer than 8,192 characters, which is where
+   * `localize` throws, such as Portuguese for an English product `/products/novo` when `/products/new` is the
+   * Portuguese `/pt/produtos/novo`.
+   */
+  alternates: readonly LocalizedPath<TLocale>[];
 }
 
 /** A generated pathname paired with its canonical configured locale. */
@@ -71,6 +79,9 @@ export interface LocalizedPath<TLocale extends string> {
   /** The absolute localized application pathname. */
   pathname: string;
 }
+
+/** A path's locale and canonical path, before its alternates are built. */
+type CanonicalRoute<TLocale extends string> = Omit<ParsedLocalePath<TLocale>, "alternates">;
 
 /** Pure operations for parsing and generating localized application pathnames. */
 export interface LocaleRouting<TLocale extends string> {
@@ -83,7 +94,7 @@ export interface LocaleRouting<TLocale extends string> {
    * path read, such as `/pt/en/sobre`, or `/en/sobre` when `/sobre` is the Portuguese about page, or when the path is one
    * routing refuses, such as `//wp-login.php`, a dot segment, an encoded slash, or one longer than 8,192 characters, or
    * when its canonical path or URL would be longer than that. A result always has a canonical URL that `localize`
-   * builds.
+   * builds, and lists the page's URL in every locale that has one, so a request never needs `localize`'s errors caught.
    * @throws {TypeError} When `pathname` is not a string, does not start with `/`, or contains `?` or `#`, which a URL's
    * pathname never does.
    */
@@ -99,7 +110,9 @@ export interface LocaleRouting<TLocale extends string> {
    * @throws {TypeError} When `pathname` is not a valid application pathname.
    * @throws {RangeError} When `locale` is unsupported or is not a string at runtime, when the result would be longer
    * than 8,192 characters, or when the result would be parsed as another page or locale, such as a page the table
-   * doesn't list whose path is another locale's translated path.
+   * doesn't list whose path is another locale's translated path. A static build that localizes its page list finds
+   * those clashes at build time; links built for a request can use `parse(url.pathname).alternates`, which leaves out
+   * the locales where `localize` throws.
    */
   localize(pathname: string, locale: TLocale): string;
 
@@ -109,7 +122,8 @@ export interface LocaleRouting<TLocale extends string> {
    * @param pathname - A canonical application pathname, read as `localize` reads it.
    * @returns Localized pathnames paired with their canonical locales.
    * @throws {TypeError} When `pathname` is not a valid application pathname.
-   * @throws {RangeError} When a result would be too long or be parsed as another page or locale, as with `localize`.
+   * @throws {RangeError} When a result would be too long or be parsed as another page or locale, as with `localize`;
+   * `parse().alternates` lists the locales that have a URL instead.
    */
   localizeAll(pathname: string): readonly LocalizedPath<TLocale>[];
 }
@@ -208,7 +222,7 @@ export const createLocaleRouting = <TLocale extends string>(
   };
 
   /** Reads a valid pathname's locale and canonical path, whether or not any URL leads there. */
-  const read = (pathname: string, normalize: Normalize): ParsedLocalePath<TLocale> | undefined => {
+  const read = (pathname: string, normalize: Normalize): CanonicalRoute<TLocale> | undefined => {
     const { segments, hasTrailingSlash } = splitPathname(pathname);
     const prefixLocale = findLocale(segments[0]);
 
@@ -244,7 +258,7 @@ export const createLocaleRouting = <TLocale extends string>(
     isRootSlashed: trailingSlash === "always",
   });
 
-  const parseWith = (pathname: string, normalize: Normalize): ParsedLocalePath<TLocale> | undefined => {
+  const parseWith = (pathname: string, normalize: Normalize): CanonicalRoute<TLocale> | undefined => {
     // A value `url.pathname` never is, such as a full URL or a path with its query, is a mistake in the calling code.
     if (typeof pathname !== "string" || !pathname.startsWith("/") || pathname.includes("?") || pathname.includes("#")) {
       validatePathname(pathname);
@@ -284,7 +298,59 @@ export const createLocaleRouting = <TLocale extends string>(
       : { locale: route.locale, pathname: canonicalPathname };
   };
 
-  const parse = (pathname: string): ParsedLocalePath<TLocale> | undefined => parseWith(pathname, memoizeNormalize());
+  /**
+   * Builds the URL of canonical segments in `locale` and checks that it reads back as them: `problem` says why
+   * `localize` refuses it, with what the URL would be read as.
+   */
+  const localizeCanonical = (
+    canonical: readonly string[],
+    hasTrailingSlash: boolean,
+    locale: TLocale,
+    normalize: Normalize,
+  ):
+    | { readonly url: string; readonly problem?: undefined }
+    | { readonly url: string; readonly problem: "too-long" }
+    | {
+        readonly url: string;
+        readonly problem: "clash";
+        readonly readBack: CanonicalRoute<TLocale> | undefined;
+      } => {
+    const url = buildUrl({
+      canonical,
+      ...slashPolicy(hasTrailingSlash),
+      locale,
+      normalize,
+    });
+
+    if (url.length > MAX_PATHNAME_LENGTH) {
+      return { url, problem: "too-long" };
+    }
+    // A page the table doesn't list can have the path of a translated one; a link to it would open that page instead.
+    const readBack = parseWith(url, normalize);
+    if (
+      readBack?.locale !== locale ||
+      !isSameCanonical(splitPathname(readBack.pathname).segments, canonical, normalize)
+    ) {
+      return { url, problem: "clash", readBack };
+    }
+    return { url };
+  };
+
+  const parse = (pathname: string): ParsedLocalePath<TLocale> | undefined => {
+    const normalize = memoizeNormalize();
+    const route = parseWith(pathname, normalize);
+
+    if (route === undefined) {
+      return undefined;
+    }
+    // One localize() per locale, sharing the normalized segments, so the cost grows with the number of locales only.
+    const { segments, hasTrailingSlash } = splitPathname(route.pathname);
+    const alternates = locales.flatMap((locale) => {
+      const built = localizeCanonical(segments, hasTrailingSlash, locale, normalize);
+      return built.problem === undefined ? [{ locale, pathname: built.url }] : [];
+    });
+    return { locale: route.locale, pathname: route.pathname, alternates };
+  };
 
   const localize = (pathname: string, locale: TLocale): string => {
     validatePathname(pathname);
@@ -299,35 +365,31 @@ export const createLocaleRouting = <TLocale extends string>(
     const { segments, hasTrailingSlash } = splitPathname(pathname);
     const prefixLocale = findLocale(segments[0]);
     const canonical = prefixLocale === undefined ? segments : readPath(segments.slice(1), prefixLocale, normalize);
-    const result = buildUrl({
-      canonical,
-      ...slashPolicy(hasTrailingSlash),
-      locale: canonicalLocale,
-      normalize,
-    });
+    const built = localizeCanonical(canonical, hasTrailingSlash, canonicalLocale, normalize);
 
-    if (result.length > MAX_PATHNAME_LENGTH) {
+    if (built.problem === "too-long") {
       throw new RangeError(
         `[I18n] the path in ${JSON.stringify(canonicalLocale)} would be longer than 8,192 characters`,
       );
     }
-
-    // A page the table doesn't list can have the path of a translated one; a link to it would open that page instead.
-    const readBack = parseWith(result, normalize);
-    const canonicalPathname = joinPathname(canonical, hasTrailingSlash);
-
-    if (
-      readBack?.locale !== canonicalLocale ||
-      !isSameCanonical(splitPathname(readBack.pathname).segments, canonical, normalize)
-    ) {
+    if (built.problem === "clash") {
+      // The path may be a URL passed for a canonical path, or a canonical path whose URL is another page's, such as
+      // parse().pathname for an English product `/products/novo` in Portuguese when `/products/new` is listed.
+      const path = JSON.stringify(joinPathname(canonical, hasTrailingSlash));
+      const { readBack } = built;
+      const target =
+        readBack === undefined
+          ? `no page; its URL there, ${JSON.stringify(built.url)}, leads nowhere`
+          : `${JSON.stringify(readBack.pathname)} in ${JSON.stringify(readBack.locale)}; its URL there, ` +
+            `${JSON.stringify(built.url)}, is that page's`;
       throw new RangeError(
-        `[I18n] ${JSON.stringify(canonicalPathname)} in ${JSON.stringify(canonicalLocale)} would be read as ` +
-          `${JSON.stringify(readBack?.pathname)} in ${JSON.stringify(readBack?.locale)}; pass a canonical path, such as ` +
-          "parse().pathname, or list the page in pathnames",
+        `[I18n] ${path} in ${JSON.stringify(canonicalLocale)} would be read as ${target}. If ${path} is a URL, pass ` +
+          `parse(url).pathname instead; if it is a canonical path, give one of the pages other words or list ${path} ` +
+          "in pathnames, and build a request's links from parse(url).alternates, which leaves such a locale out",
       );
     }
 
-    return result;
+    return built.url;
   };
 
   return {

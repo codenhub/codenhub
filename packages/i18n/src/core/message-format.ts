@@ -18,6 +18,12 @@ const NAME_PATTERN = /[A-Za-z0-9_]/;
 const SELECT_KEY_PATTERN = /[A-Za-z0-9_-]/;
 const EXACT_VALUE_PATTERN = /^=-?[0-9]+(\.[0-9]+)?$/;
 const MAX_NESTING = 10;
+// What a parsed message keeps, in characters of its text, which V8 keeps at about 2 bytes each. Measured on Node.js
+// 26.13: a node, such as `{a}` or `#`, keeps 47 to 140 bytes, and a plural or select keeps about 330 bytes with one
+// option, its node, option map, and option list, each option after the first about 70.
+const NODE_COST = 64;
+const OPTIONS_COST = 128;
+const OPTION_COST = 64;
 
 type MessageNode =
   | { readonly kind: "text"; readonly text: string }
@@ -58,6 +64,8 @@ export class MessageSyntaxError extends Error {}
 
 class Parser {
   private index = 0;
+  /** The memory the parsed nodes keep, in characters, for the cache to count; see `NODE_COST`. */
+  cost = 0;
   private readonly message: string;
 
   constructor(message: string) {
@@ -151,6 +159,7 @@ class Parser {
 
     endRun();
     flush();
+    this.cost += nodes.length * NODE_COST;
     return nodes;
   }
 
@@ -283,6 +292,7 @@ class Parser {
     readKey: (key: string) => string,
   ): Map<string, readonly MessageNode[]> {
     const options = new Map<string, readonly MessageNode[]>();
+    this.cost += OPTIONS_COST;
 
     for (;;) {
       this.skipSpace();
@@ -307,6 +317,7 @@ class Parser {
       }
       this.expect("{");
       options.set(key, this.parseNodes(depth + 1, isInPlural));
+      this.cost += OPTION_COST;
       this.expect("}");
     }
 
@@ -326,45 +337,75 @@ export const parseMessage = (message: string): Message => new Parser(message).pa
 
 const MAX_CACHED_MESSAGES = 10_000;
 // The cache is shared by every manager in the process, so a server that loads changing dictionaries, such as from a
-// CMS, must not keep them all. This is the default dictionary's maxTotalLength.
-const MAX_CACHED_CHARACTERS = 5_000_000;
-const parsedMessages = new Map<string, Message | MessageSyntaxError>();
-let cachedCharacters = 0;
+// CMS, must not keep them all. This is the default dictionary's maxTotalLength, counted as `cachedCost` counts it.
+const MAX_CACHED_COST = 5_000_000;
+// A cached entry, about 130 bytes on Node.js 26.13.
+const ENTRY_COST = 64;
 
 /**
- * Parses a message once, keeping the most recently used results, since dictionary texts repeat across lookups and
- * managers.
+ * A parsed message, or for invalid syntax, the reason, such as `Expected } at character 5`. The cache keeps the reason
+ * rather than the error, since an error's stack keeps each frame's receiver, such as the manager that parsed it, with
+ * its dictionaries.
  *
  * @internal
  */
-export const parseCachedMessage = (message: string): Message | MessageSyntaxError => {
-  let parsed = parsedMessages.get(message);
+export type CachedParse = Message | string;
 
-  if (parsed !== undefined) {
+interface CachedMessage {
+  readonly parsed: CachedParse;
+  readonly cost: number;
+}
+
+const parsedMessages = new Map<string, CachedMessage>();
+let cachedCost = 0;
+
+/**
+ * What a parsed message keeps in memory, in characters: its text, which the cache holds as its key, plus a fixed cost
+ * for every node and option it parsed into, since a text of `#` or `{a}` keeps far more per character than plain text.
+ *
+ * @internal
+ */
+export const parseMessageWithCost = (message: string): CachedMessage => {
+  const parser = new Parser(message);
+  try {
+    const parsed = parser.parse();
+    return { parsed, cost: ENTRY_COST + message.length + parser.cost };
+  } catch (error) {
+    if (!(error instanceof MessageSyntaxError)) {
+      throw error;
+    }
+    // The nodes parsed before the error are not kept.
+    return { parsed: error.message, cost: ENTRY_COST + message.length + error.message.length };
+  }
+};
+
+/**
+ * Parses a message once, keeping the most recently used results, since dictionary texts repeat across lookups and
+ * managers. Returns the parsed message, or for invalid syntax, the reason as a string.
+ *
+ * @internal
+ */
+export const parseCachedMessage = (message: string): CachedParse => {
+  let cached = parsedMessages.get(message);
+
+  if (cached !== undefined) {
     // Re-inserting moves a hit to the newest end, so eviction drops the least recently used message.
     parsedMessages.delete(message);
-    parsedMessages.set(message, parsed);
+    parsedMessages.set(message, cached);
   } else {
-    try {
-      parsed = parseMessage(message);
-    } catch (error) {
-      if (!(error instanceof MessageSyntaxError)) {
-        throw error;
-      }
-      parsed = error;
-    }
-    if (message.length <= MAX_CACHED_CHARACTERS) {
-      while (parsedMessages.size >= MAX_CACHED_MESSAGES || cachedCharacters + message.length > MAX_CACHED_CHARACTERS) {
+    cached = parseMessageWithCost(message);
+    if (cached.cost <= MAX_CACHED_COST) {
+      while (parsedMessages.size >= MAX_CACHED_MESSAGES || cachedCost + cached.cost > MAX_CACHED_COST) {
         const oldest = parsedMessages.keys().next().value!;
+        cachedCost -= parsedMessages.get(oldest)!.cost;
         parsedMessages.delete(oldest);
-        cachedCharacters -= oldest.length;
       }
-      parsedMessages.set(message, parsed);
-      cachedCharacters += message.length;
+      parsedMessages.set(message, cached);
+      cachedCost += cached.cost;
     }
   }
 
-  return parsed;
+  return cached.parsed;
 };
 
 /**
@@ -377,10 +418,16 @@ export const isPlainMessage = (message: string): boolean =>
   !message.includes("{") && !message.includes("}") && !message.includes("'");
 
 const MAX_CACHED_FORMATTERS = 500;
-const formatters = new Map<string, Intl.NumberFormat | Intl.DateTimeFormat | Intl.PluralRules | undefined>();
+type CachedFormatter =
+  | Intl.NumberFormat
+  | Intl.DateTimeFormat
+  | Intl.PluralRules
+  | Intl.RelativeTimeFormat
+  | Intl.ListFormat;
+const formatters = new Map<string, CachedFormatter>();
 
-// Every option `Intl.NumberFormat` and `Intl.DateTimeFormat` read, as of ES2025, in the order they read them, so a getter
-// that depends on an earlier read sees the same state as with `Intl` alone.
+// Every option each `Intl` constructor reads, as of ES2025, in the order it reads them, so a getter that depends on an
+// earlier read sees the same state as with `Intl` alone.
 const NUMBER_FORMAT_OPTIONS = [
   "localeMatcher",
   "numberingSystem",
@@ -426,6 +473,8 @@ const DATE_TIME_FORMAT_OPTIONS = [
   "dateStyle",
   "timeStyle",
 ];
+const RELATIVE_TIME_FORMAT_OPTIONS = ["localeMatcher", "numberingSystem", "style", "numeric"];
+const LIST_FORMAT_OPTIONS = ["localeMatcher", "type", "style"];
 
 /**
  * Copies the options `Intl` reads, by name and through the prototype chain as `Intl` reads them, so the copy both keys
@@ -467,10 +516,7 @@ const optionsKey = (copy: Readonly<Record<string, unknown>>): string | undefined
 export const copyDateTimeFormatOptions = (options: Intl.DateTimeFormatOptions = {}): Intl.DateTimeFormatOptions =>
   copyOptions(options, DATE_TIME_FORMAT_OPTIONS);
 
-const cachedFormatter = <T extends Intl.NumberFormat | Intl.DateTimeFormat | Intl.PluralRules>(
-  key: string | undefined,
-  create: () => T,
-): T => {
+const cachedFormatter = <T extends CachedFormatter>(key: string | undefined, create: () => T): T => {
   if (key === undefined) {
     return create();
   }
@@ -531,6 +577,33 @@ export const getDateTimeFormat = (locale: string, options: Intl.DateTimeFormatOp
   return cachedFormatter(
     prefixKey(`d\0${locale}`, optionsKey(copy)),
     () => new Intl.DateTimeFormat(intlLocale(locale), copy),
+  );
+};
+
+/** @internal */
+export const getRelativeTimeFormat = (
+  locale: string,
+  options: Intl.RelativeTimeFormatOptions = {},
+): Intl.RelativeTimeFormat => {
+  if (!isOptionsObject(options)) {
+    return new Intl.RelativeTimeFormat(intlLocale(locale), options);
+  }
+  const copy = copyOptions(options, RELATIVE_TIME_FORMAT_OPTIONS);
+  return cachedFormatter(
+    prefixKey(`r\0${locale}`, optionsKey(copy)),
+    () => new Intl.RelativeTimeFormat(intlLocale(locale), copy),
+  );
+};
+
+/** @internal */
+export const getListFormat = (locale: string, options: Intl.ListFormatOptions = {}): Intl.ListFormat => {
+  if (!isOptionsObject(options)) {
+    return new Intl.ListFormat(intlLocale(locale), options);
+  }
+  const copy = copyOptions(options, LIST_FORMAT_OPTIONS);
+  return cachedFormatter(
+    prefixKey(`l\0${locale}`, optionsKey(copy)),
+    () => new Intl.ListFormat(intlLocale(locale), copy),
   );
 };
 

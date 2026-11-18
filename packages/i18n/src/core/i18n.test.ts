@@ -175,6 +175,19 @@ describe("createI18n", () => {
     await expect(i18n.init({ locale: "fr" as Locale })).rejects.toBeInstanceOf(RangeError);
   });
 
+  it("quotes and truncates an unsupported locale, so it cannot forge log lines", async () => {
+    const i18n = createI18n(createConfig());
+    const forged = `fr\n[ERROR] forged\u2028\u0085${"x".repeat(100_000)}`;
+    const rejection = i18n.init({ locale: forged as Locale });
+
+    await expect(rejection).rejects.toThrow(
+      `[I18n] Unsupported locale "fr\\n[ERROR] forged\\u2028\\u0085${"x".repeat(81)}"....`,
+    );
+    await expect(i18n.loadLocale(Symbol("fr") as unknown as Locale)).rejects.toThrow(
+      "[I18n] Unsupported locale of type symbol.",
+    );
+  });
+
   it("treats only undefined init locale as omitted", async () => {
     const i18n = createI18n(createConfig());
 

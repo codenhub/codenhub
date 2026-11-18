@@ -97,6 +97,19 @@ describe("has", () => {
     warn.mockRestore();
   });
 
+  it("should apply the length limit to the trimmed key", async () => {
+    const key = "x".repeat(995);
+    const i18n = createI18n({ defaultLocale: "en", locales: ["en"], loadLocale: () => ({ [key]: "Long" }) });
+    await i18n.init();
+
+    expect(i18n.has(`${" ".repeat(10)}${key}`)).toBe(true);
+    expect(i18n.t(`${" ".repeat(10)}${key}`)).toBe("Long");
+    // Far past the limit, a string is refused before it is trimmed.
+    expect(i18n.has(`${" ".repeat(10_000)}${key}`)).toBe(false);
+    expect(() => i18n.t(`${" ".repeat(10_000)}${key}`)).toThrow(TypeError);
+    expect(i18n.has(`\n${key}`)).toBe(false);
+  });
+
   it("should find a loaded key of exactly 1,000 characters", async () => {
     const key = "x".repeat(1_000);
     const i18n = createI18n({ defaultLocale: "en", locales: ["en"], loadLocale: () => ({ [key]: "Long" }) });
@@ -117,6 +130,16 @@ describe("has", () => {
 
     expect(i18n.has("step")).toBe(false);
     expect(i18n.has("step.one")).toBe(true);
+  });
+
+  it("should need count to read a plural group it reports", async () => {
+    const { i18n, onMissingKey } = create();
+    await i18n.init();
+
+    expect(i18n.has("cart")).toBe(true);
+    expect(i18n.t("cart", { count: 2 })).toBe("# items");
+    expect(i18n.t("cart" as never)).toBe("cart");
+    expect(onMissingKey).toHaveBeenCalledWith("cart", "en");
   });
 
   it("should still throw for a key that is not a string", async () => {
