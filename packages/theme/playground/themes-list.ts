@@ -40,14 +40,14 @@ function buildCard(theme: StoredTheme, index: number, isActive: boolean, handler
   editButton.className = "btn secondary sm icon";
   editButton.dataset.editTheme = String(index);
   editButton.ariaLabel = `Edit ${theme.name}`;
-  editButton.innerHTML = '<i class="ic-pencil size-3.5"></i>';
+  editButton.innerHTML = '<i class="ic-pencil ic-sm"></i>';
 
   const deleteButton = document.createElement("button");
   deleteButton.type = "button";
   deleteButton.className = "btn destructive sm icon";
   deleteButton.dataset.deleteTheme = String(index);
   deleteButton.ariaLabel = `Delete ${theme.name}`;
-  deleteButton.innerHTML = '<i class="ic-trash-2 size-3.5"></i>';
+  deleteButton.innerHTML = '<i class="ic-trash-2 ic-sm"></i>';
 
   actions.append(editButton, deleteButton);
   header.append(info, actions);

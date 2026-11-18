@@ -59,7 +59,7 @@ export function createSchemaDialog(handlers: SchemaDialogHandlers): SchemaDialog
         deleteButton.className = "btn destructive sm icon";
         deleteButton.dataset.deleteSchema = key;
         deleteButton.ariaLabel = `Delete ${key}`;
-        deleteButton.innerHTML = '<i class="ic-trash-2 size-3.5"></i>';
+        deleteButton.innerHTML = '<i class="ic-trash-2 ic-sm"></i>';
         deleteButton.addEventListener("click", () => {
           handlers.onDelete(key);
         });

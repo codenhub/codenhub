@@ -3,7 +3,6 @@ import { fileURLToPath } from "node:url";
 
 import type { IconFamilyData } from "@codenhub/icons";
 import { viteIcons } from "@codenhub/icons/vite";
-import { iconsPlugin } from "@codenhub/vite-plugin-icons";
 import tailwindcss from "@tailwindcss/vite";
 import { defineConfig, type Plugin } from "vite";
 
@@ -69,14 +68,13 @@ export default defineConfig({
   root: playgroundRoot,
   publicDir: resolve(__dirname, "public"),
   plugins: [
-    /* Draws the playground's own `ic-*` glyphs (settings, plus, x, contrast,
-       trash, pencil), matching what `dev`/`debug` register. */
-    iconsPlugin(),
-    /* Draws the chrome's `ic-lucide-*` glyphs (nav arrow, theme-switch sun/moon). */
+    /* Draws the playground's bare `ic-*` glyphs (settings, plus, x, contrast,
+       trash, pencil), as `dev`/`debug` do, and the chrome's `ic-lucide-*`
+       ones (nav arrow, theme-switch sun/moon). */
     viteIcons({
       families: [lucide as IconFamilyData],
       defaultPrefix: "lucide",
-      content: [chromeEntry],
+      content: ["index.html", "*.ts", chromeEntry],
     }),
     tailwindcss(),
     demoChrome(),

@@ -13,7 +13,6 @@
     "@codenhub/icons": "workspace:*",
     "@codenhub/styles": "workspace:*",
     "@codenhub/theme": "workspace:*",
-    "@codenhub/vite-plugin-icons": "workspace:*",
     "@tailwindcss/vite": "catalog:",
     "tailwindcss": "catalog:",
     "vite": "catalog:"
