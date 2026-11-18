@@ -3,6 +3,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { expect, test } from "./fixtures";
+import { getContrastRatio } from "./test-utils";
 
 const FEEDBACK_URL = "http://localhost:5184/feedback/?env=vanilla";
 const NATIVE_URL = "http://localhost:5184/native/?env=vanilla";
@@ -862,6 +863,65 @@ test("separates the focus ring from a filled control with a line of the page col
 
   expect(ghost.focused).toBe(true);
   expect(ghost.shadow, "an unfilled control takes no separator").not.toContain(`${ghost.page} 0px 0px 0px 2px inset`);
+});
+
+/* On a solid surface, the ring is drawn over a fill of its own colour, or one
+   close to it: a ghost button focused in a `.card.solid.primary` showed no
+   ring at all (1.0:1), and other intents 1.9 to 3:1. A neutral control there
+   prints in the plate's ink, so the line inside the ring takes that ink. */
+test("shows a focused control on a solid surface", async ({ page }) => {
+  await page.setContent("<!doctype html><html><body></body></html>");
+  await page.addStyleTag({ url: "http://localhost:5184/shared/entry-vanilla.css" });
+
+  const cases = [];
+
+  for (const scheme of ["light", "dark"] as const) {
+    for (const intent of ["primary", "secondary", "success", "destructive", "info", "warning"]) {
+      for (const control of [
+        '<button class="btn ghost">Go</button>',
+        '<button class="btn soft">Go</button>',
+        '<button class="btn ghost edged">Go</button>',
+        '<input class="ipt" />',
+      ]) {
+        cases.push({ scheme, intent, control });
+      }
+    }
+  }
+
+  for (const { scheme, intent, control } of cases) {
+    // oxlint-disable-next-line no-await-in-loop -- one control holds focus at a time.
+    await page.emulateMedia({ colorScheme: scheme });
+    // oxlint-disable-next-line no-await-in-loop -- one control holds focus at a time.
+    await page.evaluate(
+      ([markup, name]) => {
+        document.body.innerHTML = `<button id="before">.</button><div class="card solid ${name}" id="plate">${markup}</div>`;
+        document.querySelector("#plate > *")!.id = "control";
+      },
+      [control, intent],
+    );
+    // oxlint-disable-next-line no-await-in-loop -- one control holds focus at a time.
+    await page.locator("#before").focus();
+    // oxlint-disable-next-line no-await-in-loop -- one control holds focus at a time.
+    await page.keyboard.press("Tab");
+    // oxlint-disable-next-line no-await-in-loop -- the ring fades in.
+    await page.waitForTimeout(400);
+    // oxlint-disable-next-line no-await-in-loop -- one control holds focus at a time.
+    const read = await page.evaluate(() => {
+      const element = document.getElementById("control")!;
+
+      return {
+        focused: element.matches(":focus-visible"),
+        shadow: getComputedStyle(element).boxShadow,
+        plate: getComputedStyle(document.getElementById("plate")!).backgroundColor,
+      };
+    });
+    const label = `${scheme} ${control} in .card.solid.${intent}`;
+    const line = /((?:rgba?|oklab|oklch|color|lab|lch)\([^)]*\)) 0px 0px 0px 2px inset/.exec(read.shadow)?.[1];
+
+    expect(read.focused, label).toBe(true);
+    expect(line, `${label} draws a line inside its ring`).toBeDefined();
+    expect(getContrastRatio(line!, read.plate), `${label} line against the plate`).toBeGreaterThanOrEqual(3);
+  }
 });
 
 /* `.interactive` set the pointer at 0-2-0, above the 0-1-1 of `box`'s disabled

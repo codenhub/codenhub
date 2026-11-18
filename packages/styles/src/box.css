@@ -270,11 +270,15 @@
        two-pixel line that left one pixel of ring, which neobrutalism's slab
        covered on two sides. Stepped from the capped fill, so only a box filled
        past half takes it: on an unfilled one the ring already reads against the
-       page, and a line of the page colour inside a soft field is a stray mark. */
+       page, and a line of the page colour inside a soft field is a stray mark.
+       A neutral box on a plate takes the plate's ink instead: there the ring is
+       drawn over a fill of its own colour, or close to it, so a ghost button
+       focused in a `.card.solid.primary` showed no ring at all, and the ink is
+       what reads against that fill. */
     --_focus-gap: color-mix(
       in oklab,
-      var(--color-background) clamp(0%, calc((var(--_capped) - 50%) * 1000), 100%),
-      transparent
+      var(--_held-ink) var(--_through),
+      color-mix(in oklab, var(--color-background) clamp(0%, calc((var(--_capped) - 50%) * 1000), 100%), transparent)
     );
 
     /* Every box sizes itself as `min-height`/`min-width: var(--control-height)`
