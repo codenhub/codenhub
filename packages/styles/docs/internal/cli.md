@@ -39,7 +39,7 @@ The command imports nothing beyond Node.js built-ins, which `tests/integration/c
 
 Cost accepted: every consumer installs `dist/purge/`, about 273 KB (22 KB gzipped) for `index.css` and 7 KB for `classes.json`, whether or not they run the command. That is far less than the 19 MB that `@tailwindcss/cli` and `tailwindcss` as regular `dependencies` would cost every consumer to make the bare `npx` work, which is rejected for that size.
 
-Rejected: a fork of Tailwind's compiler or scanner inside the package. It would make this package maintain a CSS compiler to keep Tailwind's output, utilities included, for consumers who can run Tailwind themselves through `/tw`. Tailwind stays the authoring tool and the `/tw` integration, and nothing else. [Roadmap](./roadmap.md#a-build-the-package-owns-with-tailwind-as-an-adapter) plans to end the first of those roles with a build of this package's own, which is not the fork rejected here: it compiles this package's source and no Tailwind utility.
+Rejected: a fork of Tailwind's compiler or scanner inside the package. It would make this package maintain a CSS compiler to keep Tailwind's output, utilities included, for consumers who can run Tailwind themselves through `/tw`. Since 0.10.0, [a build of this package's own](./roadmap.md#a-build-the-package-owns-with-tailwind-as-an-adapter) compiles its source, and Tailwind is the `/tw` integration and the compiler of the variants in `dist/purge/`, and nothing else. That build is not the fork rejected here: it compiles this package's source and no Tailwind utility.
 
 ## No Tailwind utilities, ten variants
 
