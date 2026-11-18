@@ -3,7 +3,9 @@ import { join } from "node:path";
 
 import { BrandUnreachableError, type BrandSource } from "../assets/brand-source.ts";
 import { parseAssetEntries } from "../assets/manifest.ts";
+import { parsePackageMetadata } from "../documentation/package-metadata.ts";
 import type { WorkspacePackage } from "../workspace/discover.ts";
+import { expectedHomepage, type ExpectedHomepage } from "../workspace/package-homepage.ts";
 import { hasDocumentationMetadata } from "../workspace/package-policy.ts";
 import { readPackageTimeoutMs } from "../workspace/package-timeout.ts";
 import type { CheckRule, Finding } from "./rule.ts";
@@ -30,7 +32,7 @@ const PLAYWRIGHT_CONFIGS = [
   "playwright.config.js",
   "playwright.config.mjs",
 ];
-const RECOMMENDED_FIELDS = ["description", "license", "repository"];
+const RECOMMENDED_FIELDS = ["description", "license", "repository", "homepage", "keywords"];
 // A browser suite reached from a unit script is what makes `pnpm test` slow, so
 // both ways of reaching it are read: the runner directly and the script that owns it.
 const PLAYWRIGHT_INVOCATION = /\bplaywright\b/;
@@ -55,6 +57,23 @@ async function isFile(path: string): Promise<boolean> {
 
 async function hasFile(workspacePackage: WorkspacePackage, name: string): Promise<boolean> {
   return isFile(join(workspacePackage.directory, name));
+}
+
+/**
+ * Reads the homepage a package is expected to declare from its documentation metadata.
+ * @param workspacePackage Package to inspect.
+ * @returns The expected homepage, or `undefined` when the metadata is absent or malformed,
+ * which the documentation rule reports.
+ */
+function readExpectedHomepage(workspacePackage: WorkspacePackage): ExpectedHomepage | undefined {
+  try {
+    const metadata = parsePackageMetadata(workspacePackage.manifest, `${workspacePackage.location}/package.json`);
+    return metadata === null
+      ? undefined
+      : expectedHomepage({ listed: metadata.listed, location: workspacePackage.location, slug: metadata.slug });
+  } catch {
+    return undefined;
+  }
 }
 
 async function checkMetadata(workspacePackage: WorkspacePackage): Promise<Finding[]> {
@@ -91,7 +110,11 @@ async function checkMetadata(workspacePackage: WorkspacePackage): Promise<Findin
     fail("docs", `"codenhub.docs" must opt the package into public documentation.`);
   }
   for (const field of RECOMMENDED_FIELDS) {
-    if (manifest[field] === undefined) {
+    const value = manifest[field];
+    // A list with no usable keyword helps npm search no more than a missing one.
+    const isUnusableList =
+      Array.isArray(value) && !value.some((entry) => typeof entry === "string" && entry.trim() !== "");
+    if (value === undefined || isUnusableList) {
       findings.push({
         code: `metadata/${field}`,
         location: MANIFEST_LOCATION,
@@ -99,6 +122,15 @@ async function checkMetadata(workspacePackage: WorkspacePackage): Promise<Findin
         severity: "warning",
       });
     }
+  }
+  const homepage = readExpectedHomepage(workspacePackage);
+  if (homepage !== undefined && manifest.homepage !== undefined && manifest.homepage !== homepage.url) {
+    findings.push({
+      code: "metadata/homepage-mismatch",
+      location: MANIFEST_LOCATION,
+      message: `"homepage" should be "${homepage.url}", the ${homepage.describes}.`,
+      severity: "warning",
+    });
   }
   // A `license` field names the terms; the file is what a consumer receives, and
   // npm packs it whether or not `files` lists it.

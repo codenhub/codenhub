@@ -148,7 +148,8 @@ describe("hub check", () => {
   it("waives the registered undocumented-export rule through the exception register", async () => {
     const pkg = createPackage("@codenhub/example", {
       name: "@codenhub/example",
-      codenhub: { label: "Example", status: "active", docs: {} },
+      // Experimental, so the fixture owes no translations.
+      codenhub: { label: "Example", status: "experimental", docs: {} },
       exports: { ".": { types: "./dist/index.d.ts" } },
     });
     pkg.directory = await mkdtemp(join(tmpdir(), "codenhub-check-export-"));
@@ -157,7 +158,7 @@ describe("hub check", () => {
     await mkdir(join(pkg.directory, "docs"));
     await Promise.all(
       Object.entries({
-        "README.md": "# @codenhub/example\n\n[Docs](docs/index.md)\n",
+        "README.md": "# @codenhub/example\n\n> **Experimental:** the API may change.\n\n[Docs](docs/index.md)\n",
         "docs/index.md": "---\ntitle: Example\n---\n\n# Example\n",
         "llms.txt": "# @codenhub/example\n\n> Example package.\n\n## Docs\n\n- [Index](docs/index.md): Entrypoint.\n",
       }).map(([path, contents]) => writeFile(join(pkg.directory, path), contents)),

@@ -24,7 +24,7 @@ function translatedDocument(fields: string, body: string): string {
   return `---\n${fields}\n---\n\n${body}`;
 }
 
-async function createPackage(files: Record<string, string>): Promise<WorkspacePackage> {
+async function createPackage(files: Record<string, string>, status = "experimental"): Promise<WorkspacePackage> {
   const directory = await mkdtemp(join(tmpdir(), "codenhub-translation-rule-"));
   const all = { "README.md": README, "docs/index.md": INDEX, "docs/start.md": START, ...files };
   await Promise.all(
@@ -38,7 +38,10 @@ async function createPackage(files: Record<string, string>): Promise<WorkspacePa
     directoryName: "example",
     isPrivate: false,
     location: "packages/example",
-    manifest: { codenhub: { docs: {}, label: "Example", status: "active" }, name: "@codenhub/example" },
+    manifest: {
+      codenhub: { docs: {}, label: "Example", status },
+      name: "@codenhub/example",
+    },
     name: "@codenhub/example",
     scripts: {},
     unscopedName: "example",
@@ -46,9 +49,12 @@ async function createPackage(files: Record<string, string>): Promise<WorkspacePa
   };
 }
 
-async function check(files: Record<string, string>): Promise<Finding[]> {
+async function check(files: Record<string, string>, status?: string): Promise<Finding[]> {
   const [rule] = createTranslationRules();
-  return rule!.run({ includePack: false, package: await createPackage(files) });
+  return rule!.run({
+    includePack: false,
+    package: await createPackage(files, status),
+  });
 }
 
 describe("translation rule", () => {
@@ -66,6 +72,77 @@ describe("translation rule", () => {
       "docs/pt-BR/start.md": translatedDocument(`title: Início\norder: 1\nsource: ${blobId(START)}`, "# Início\n"),
     });
     expect(findings).toEqual([]);
+  });
+
+  it("accepts an active package translated into every listed locale", async () => {
+    const locales = [
+      ["pt-BR", "Exemplo", "Início"],
+      ["es", "Ejemplo", "Inicio"],
+    ] as const;
+    const files = Object.fromEntries(
+      locales.flatMap(([locale, index, start]) => [
+        [
+          `README.${locale}.md`,
+          `<!-- source: ${blobId(README)} -->\n\n# @codenhub/example\n\n[Docs](docs/${locale}/index.md)\n`,
+        ],
+        [
+          `docs/${locale}/index.md`,
+          translatedDocument(`title: ${index}\nsource: ${blobId(INDEX)}`, `# ${index}\n\n[${start}](./start.md)\n`),
+        ],
+        [
+          `docs/${locale}/start.md`,
+          translatedDocument(`title: ${start}\norder: 1\nsource: ${blobId(START)}`, `# ${start}\n`),
+        ],
+      ]),
+    );
+
+    expect(await check(files, "active")).toEqual([]);
+  });
+
+  it("errors on each README and public document an active package has not translated", async () => {
+    const findings = await check(
+      {
+        "docs/pt-BR/start.md": translatedDocument(`title: Início\norder: 1\nsource: ${blobId(START)}`, "# Início\n"),
+      },
+      "active",
+    );
+
+    expect(
+      findings.filter(({ code }) => code === "translation/missing").map(({ location, message }) => [location, message]),
+    ).toEqual([
+      ["README.md", expect.stringContaining("No pt-BR translation at README.pt-BR.md;")],
+      ["README.md", expect.stringContaining("No es translation at README.es.md;")],
+      ["docs/index.md", expect.stringContaining("No pt-BR translation at docs/pt-BR/index.md;")],
+      ["docs/index.md", expect.stringContaining("No es translation at docs/es/index.md;")],
+      ["docs/start.md", expect.stringContaining("No es translation at docs/es/start.md;")],
+    ]);
+    expect(findings.find(({ code }) => code === "translation/missing")?.severity).toBe("error");
+  });
+
+  it("does not ask an active package to translate areas that are never translated", async () => {
+    const findings = await check(
+      {
+        "docs/changelog/1.0.0.md": "# 1.0.0\n",
+        "docs/internal/notes.md": "# Notes\n",
+        "docs/plans/next.md": "# Next\n",
+        "docs/reference/index.md": "# Reference\n",
+        "docs/logo.svg": "<svg/>",
+      },
+      "active",
+    );
+
+    expect(findings.filter(({ code }) => code === "translation/missing").map(({ location }) => location)).toEqual([
+      "README.md",
+      "README.md",
+      "docs/index.md",
+      "docs/index.md",
+      "docs/start.md",
+      "docs/start.md",
+    ]);
+  });
+
+  it("does not ask an experimental package for missing translations", async () => {
+    expect((await check({})).map(({ code }) => code)).not.toContain("translation/missing");
   });
 
   it("warns about a stale translation and names the diff that updates it", async () => {
