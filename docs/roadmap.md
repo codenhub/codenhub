@@ -1,6 +1,6 @@
 ---
 status: APPROVED
-last_updated: 2026-11-16
+last_updated: 2026-11-18
 scope: repo-wide direction for the workspace's packages and deploy surfaces
 ---
 
@@ -26,7 +26,7 @@ Durable direction for the workspace: what is being worked on now, what is intend
 
 - **Repository governance.** `SECURITY.md`, the issue forms, the label list, and the pull-request template have landed. `CODEOWNERS` pays off once more than one person reviews here.
 - **Backfill package demos.** `apps/demo` aggregates `packages/*/demo/`, and only `icons`, `styles`, `theme`, and `toaster` have one; every other public package is missing from the deployed surface.
-- **Bootstrap the unpublished packages.** `components`, `kbd`, `tauri-plugin-webview`, `tauri-plugin-window`, and `vite-plugin-icons` have never been published; each needs one manual `hub publish` from a maintainer's machine before its trusted publisher can be configured on npm.
+- **Bootstrap the unpublished packages.** `components`, `kbd`, and `vite-plugin-icons` have never been published; each needs one manual `hub publish` from a maintainer's machine before its trusted publisher can be configured on npm.
 
 ## Later / Possible
 

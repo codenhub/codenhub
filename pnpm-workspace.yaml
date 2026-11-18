@@ -17,7 +17,6 @@ catalog:
   "@codenhub/styles": ^0.6.0
   "@codenhub/theme": ^0.2.2
   "@codenhub/validation": ^0.3.0
-  "@tauri-apps/api": ^2.0.0
   "@tailwindcss/cli": ^4.3.4
   "@tailwindcss/node": ^4.3.4
   "@tailwindcss/vite": ^4.3.4

@@ -39,8 +39,6 @@ Shared packages, apps, and project standards for and by [coden.agency](https://c
 
 ### Plugins
 
-- `packages/plugins/tauri/webview`: TypeScript plugin for spawning and controlling Tauri v2 WebViews.
-- `packages/plugins/tauri/window`: TypeScript plugin for controlling Tauri v2 window state, chrome, and placement.
 - `packages/plugins/vite/add-loader`: Vite plugin that injects a full-screen page-loader overlay into every HTML entry point.
 - `packages/plugins/vite/defer-css`: Vite plugin that defers loading of CSS stylesheets to prevent render blocking.
 - `packages/plugins/vite/icons`: Vite plugin that replaces inline SVG icons at build time.
