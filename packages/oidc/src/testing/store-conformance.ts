@@ -555,6 +555,26 @@ const cases: StoreConformanceCase[] = [
     );
   }),
 
+  defineCase("findClient matches the identifier byte for byte", async (createStore) => {
+    const clientId = `conformance-${newKey().toLowerCase()}`;
+    const store = await createStore({
+      clients: [
+        {
+          clientId,
+          redirectUris: ["https://app.example/callback"],
+          scopes: ["openid"],
+          auth: { method: "none" },
+        },
+      ],
+    });
+    const lookalikes = [clientId.toUpperCase(), `${clientId} `, ` ${clientId}`];
+    const found = await Promise.all(lookalikes.map((lookalike) => store.findClient(lookalike)));
+    assert(
+      found.every((record) => record === undefined),
+      "findClient must match the identifier byte for byte, without ignoring case or trimming spaces",
+    );
+  }),
+
   defineCase("findClient returns every optional field a client was registered with", async (createStore) => {
     const client: ClientRecord = {
       clientId: `conformance-${newKey()}`,

@@ -13,7 +13,7 @@ import type {
 import {
   areResourcesOfClient,
   type CheckedClient,
-  checkClientRecord,
+  findClientRecord,
   isScopeOfClient,
   lifetimesOf,
   resourcesOfClient,
@@ -184,12 +184,10 @@ async function currentClient(
   options: ResolvedOptions,
   interaction: InteractionRecord,
 ): Promise<CheckedClient | undefined> {
-  const record = await options.store.findClient(interaction.clientId);
-  if (record === undefined) {
-    return undefined;
-  }
-  const client = checkClientRecord(record, interaction.clientId, options.publicKeys);
-  return client.grantTypes.includes("authorization_code") && client.redirectUris.includes(interaction.redirectUri)
+  const client = await findClientRecord(options.store, interaction.clientId, options.publicKeys);
+  return client !== undefined &&
+    client.grantTypes.includes("authorization_code") &&
+    client.redirectUris.includes(interaction.redirectUri)
     ? client
     : undefined;
 }
@@ -261,11 +259,11 @@ async function lookupClient(options: ResolvedOptions, parameters: ParameterMap):
   if (clientId === undefined) {
     return renderError(issueOf("invalid_request", ["client_id"]));
   }
-  const record = await options.store.findClient(clientId);
-  if (record === undefined) {
+  const client = await findClientRecord(options.store, clientId, options.publicKeys);
+  if (client === undefined) {
     return renderError(issueOf("unknown_client"));
   }
-  return { ok: true, value: checkClientRecord(record, clientId, options.publicKeys) };
+  return { ok: true, value: client };
 }
 
 /** The redirect URI must match a registered one byte for byte: normalizing it would let a near miss through. */

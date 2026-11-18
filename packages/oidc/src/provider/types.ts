@@ -283,7 +283,11 @@ export type Consumption<TRecord> =
  * it got at the code exchange, and an access token keeps its own.
  */
 export interface OidcStore {
-  /** Looks up a registered client. `undefined` when none has this identifier. */
+  /**
+   * Looks up a registered client. `undefined` when none has this identifier. Identifiers match byte for byte: a
+   * lookup that ignores case, trims spaces or normalizes Unicode would let `APP` reach the record of `app`. A record
+   * whose `clientId` differs from the one asked for is treated as no client.
+   */
   findClient(clientId: string): Promise<ClientRecord | undefined>;
 
   /** Saves a validated authorization request under a new key. */

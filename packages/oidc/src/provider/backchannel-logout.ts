@@ -1,7 +1,7 @@
 import { sign } from "@codenhub/jwt";
 
 import { randomToken } from "../shared/encoding";
-import { checkClientRecord } from "./client-record";
+import { findClientRecord } from "./client-record";
 import { type ResolvedOptions, SUBJECT, selectIdTokenKey } from "./options";
 
 /** The event a logout token names (OpenID Connect Back-Channel Logout 1.0 §2.4). Its value is always `{}`. */
@@ -63,11 +63,10 @@ function readRequest(request: unknown): { readonly clientId: string } & Target {
  */
 export async function backchannelLogout(options: ResolvedOptions, request: unknown): Promise<Request | null> {
   const { clientId, subject, sessionId } = readRequest(request);
-  const record = await options.store.findClient(clientId);
-  if (record === undefined) {
+  const client = await findClientRecord(options.store, clientId, options.publicKeys);
+  if (client === undefined) {
     return null;
   }
-  const client = checkClientRecord(record, clientId, options.publicKeys);
   const registration = client.backchannelLogout;
   if (registration === undefined) {
     return null;

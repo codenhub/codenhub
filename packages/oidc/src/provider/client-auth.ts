@@ -1,6 +1,6 @@
 import { type KeySet, createKeySet, createVerifier } from "@codenhub/jwt";
 
-import { type CheckedClient, checkClientRecord } from "./client-record";
+import { type CheckedClient, findClientRecord } from "./client-record";
 import { refuse } from "./diagnostics";
 import type { ResolvedOptions } from "./options";
 import { tokenErrorResponse } from "./responses";
@@ -90,11 +90,10 @@ export async function authenticateClient(
     return extracted;
   }
   const { presented } = extracted;
-  const record = await options.store.findClient(presented.clientId);
-  if (record === undefined) {
+  const client = await findClientRecord(options.store, presented.clientId, options.publicKeys);
+  if (client === undefined) {
     return rejectClient(presented, "client_unknown");
   }
-  const client = checkClientRecord(record, presented.clientId, options.publicKeys);
   const proof = await proves(options, client, presented);
   return proof === "proven" ? { ok: true, client } : rejectClient(presented, proof, client.clientId);
 }

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { checkClientRecord, lifetimesOf } from "./client-record";
+import { checkClientRecord, findClientRecord, lifetimesOf } from "./client-record";
 import type { ClientRecord } from "./types";
 
 const KEYS = [{ alg: "ES256" }, { alg: "RS256" }];
@@ -386,6 +386,43 @@ describe("checkClientRecord", () => {
         /^(?!.*12345678)/,
       );
     });
+  });
+});
+
+describe("findClientRecord", () => {
+  // A store whose lookup ignores case, as a SQL collation might, answers `APP` with the record of `app`.
+  const caseInsensitiveStore = {
+    findClient: async (id: string) => ({ ...valid(), clientId: id.toLowerCase() }) as unknown as ClientRecord,
+  };
+
+  it("returns the checked record of the client asked for", async () => {
+    expect(await findClientRecord(caseInsensitiveStore, "client-a", KEYS)).toMatchObject({ clientId: "client-a" });
+  });
+
+  it("treats a record of another identifier as no client", async () => {
+    expect(await findClientRecord(caseInsensitiveStore, "CLIENT-A", KEYS)).toBeUndefined();
+  });
+
+  it("returns undefined when the store finds no client", async () => {
+    expect(await findClientRecord({ findClient: async () => undefined }, "client-a", KEYS)).toBeUndefined();
+  });
+
+  it("throws TypeError for a malformed record of the client asked for", async () => {
+    await expect(
+      findClientRecord({ findClient: async () => valid({ scopes: "openid" }) as never }, "client-a", KEYS),
+    ).rejects.toThrow(TypeError);
+  });
+
+  it("refuses a sparse list of grant types", async () => {
+    const grantTypes = Object.assign(["authorization_code"], { length: 2 });
+
+    expect(() => checkClientRecord(valid({ grantTypes }), "client-a", KEYS)).toThrow(TypeError);
+  });
+
+  it("refuses a sparse list of redirect URIs", async () => {
+    const redirectUris = Object.assign(["https://app.example/callback"], { length: 2 });
+
+    expect(() => checkClientRecord(valid({ redirectUris }), "client-a", KEYS)).toThrow(TypeError);
   });
 });
 

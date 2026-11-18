@@ -18,7 +18,7 @@ import type { OidcStore } from "@codenhub/oidc/provider";
 
 Every key the provider passes to the store for a code, a token or an interaction is a SHA-256 digest of the value, encoded as base64url. The provider computes the digest before it calls the store, so the store never holds a value that could be used. A leaked store therefore holds no code, token or interaction a client or user can present. Client records are different: a `client_secret_jwt` client's record holds its HMAC secret, which can forge that client's assertions, so client authentication keys need the protection any credential store gets.
 
-The one key that is not a digest is the client identifier, which `findClient` receives as the client sent it.
+The one key that is not a digest is the client identifier, which `findClient` receives as the client sent it. Match it byte for byte: a lookup that ignores case, trims spaces or normalizes Unicode, such as a SQL column with a case-insensitive collation, would let `APP` reach the record of `app`. The provider treats a record whose `clientId` differs from the one it asked for as no client, so such a store fails closed, but the conformance cases flag it.
 
 Records are plain JSON, with two exceptions. Times are whole seconds since the Unix epoch, under the names `expiresAt`, `createdAt` and `authTime`. A client record for `client_secret_jwt` holds a `SecretKey` and a record for `private_key_jwt` holds a `KeySet`, both objects from `@codenhub/jwt`; see [Client records](#client-records).
 
@@ -212,6 +212,7 @@ The cases cover:
 - `findAccessToken` is not single-use.
 - `revokeGrant` hides the grant's access and refresh tokens, including tokens saved after the call, and leaves other grants alone. A refresh token consumed before the revocation then gives `undefined`, not `replayed`.
 - `findClient` gives `undefined` for unknown identifiers, including `__proto__`, `constructor` and `toString`.
+- `findClient` matches the identifier byte for byte: a different letter case or a surrounding space finds nothing.
 - `findClient` returns a registered client with the values it was registered with, including every optional field, such as `ttl`, `idTokenSigningAlg`, `requirePkce`, `backchannelLogout` and `idTokenClaims`.
 - `findClient` returns a `client_secret_jwt` client whose key still verifies what the registered key signed. The seeded key is extractable, so an adapter that persists it can export it with `exportSecretJwk`. No case seeds a `private_key_jwt` client, since a `KeySet` cannot be exported; test that your adapter rebuilds one with `importKeySet` yourself.
 - A record saved without `codeChallenge`, `resources` or `audience` comes back without it.

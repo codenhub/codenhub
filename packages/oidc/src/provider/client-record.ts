@@ -2,7 +2,7 @@ import type { AsymmetricAlgorithm } from "@codenhub/jwt";
 
 import { isHttpsUrl, isRedirectUri, isResourceUri } from "../shared/urls";
 import { CLIENT_TTL_NAMES, describeTtlRange, isTtlInRange, type ResolvedTtl, SCOPE_TOKEN } from "./options";
-import type { ClientRecord, GrantType } from "./types";
+import type { ClientRecord, GrantType, OidcStore } from "./types";
 
 /** Every algorithm a signing key may have; a `Record`, so a new `@codenhub/jwt` algorithm fails to compile here. */
 const ID_TOKEN_ALGORITHMS: Readonly<Record<AsymmetricAlgorithm, true>> = {
@@ -121,6 +121,30 @@ export function checkClientRecord(
   checkBackchannelLogout(record.backchannelLogout);
   // Resolved here, so every endpoint reads the list and the flag without repeating the default.
   return { ...(record as unknown as ClientRecord), grantTypes, requirePkce: requirePkce ?? true };
+}
+
+/**
+ * Finds a client in the store and checks its record, or returns `undefined` when the store has none.
+ *
+ * @remarks
+ * A record for another client identifier is treated as none. A store whose lookup ignores case or trailing spaces,
+ * as a case-insensitive SQL collation does, returns `svc` for `SVC`; refusing it as unknown keeps that adapter bug
+ * from becoming a `TypeError` any request could trigger (invariant 8), and keeps one client from answering for
+ * another. Any other malformed record still throws.
+ */
+export async function findClientRecord(
+  store: Pick<OidcStore, "findClient">,
+  clientId: string,
+  signingKeys: readonly { readonly alg: string }[],
+): Promise<CheckedClient | undefined> {
+  const record: unknown = await store.findClient(clientId);
+  if (record === undefined) {
+    return undefined;
+  }
+  if (isRecord(record) && typeof record.clientId === "string" && record.clientId !== clientId) {
+    return undefined;
+  }
+  return checkClientRecord(record, clientId, signingKeys);
 }
 
 /**
