@@ -428,7 +428,7 @@ Esta é a parte chata da página. Também é a parte que decide se uma URL forja
 - **Segmentos de ponto**, `.` e `..`, como em `/help/../admin`, e as formas codificadas deles, como `/help/%2e%2e/admin`. O navegador os resolve antes de mandar a requisição, então uma requisição que ainda tem um foi escrita à mão para escapar da página que nomeia. Resolva o caminho antes; `new URL(path, "https://example.com").pathname` faz isso.
 - **Uma barra, barra invertida, `%` ou caractere de controle codificado**: `%2F`, `%5C`, `%25`, ou de `%00` a `%1F` e `%7F`, como em `/files/a%2Fb`. Uma barra ou barra invertida codificada faz os servidores discordarem sobre onde os segmentos começam e terminam, um vendo um segmento onde outro vê dois. Um `%` codificado convida a uma segunda rodada de decodificação, então `%252F` vira `%2F` e depois `/`. Um caractere de controle codificado passa pela verificação dos crus. Mantenha uma barra dentro de um valor fora do caminho, como na query string.
 - **Um escape malformado**, um `%` que não é seguido por dois dígitos hexadecimais, como em `/50%off`. Escreva `%25` para um `%` literal… que também é recusado, pela regra anterior, então tire o `%` do caminho.
-- **Mais de 8.192 caracteres**, ou um caminho cujo caminho canônico teria mais do que isso, como pode acontecer com um caminho traduzido curto quando a entrada dele na tabela é longa. Servidores e proxies cortam as URLs por volta desse tamanho de qualquer jeito.
+- **Mais de 8.192 caracteres ou 100 segmentos**, ou um caminho cujo caminho canônico teria mais do que isso, como pode acontecer com um caminho traduzido curto quando a entrada dele na tabela é longa. Servidores e proxies cortam as URLs por volta desse tamanho de qualquer jeito, e nenhuma página fica 100 pastas abaixo; um pedido com milhares de segmentos de uma letra custaria trabalho em cada locale.
 
 Uma requisição pode trazer qualquer um desses, como um scanner pedindo `//wp-login.php`, então `parse()` devolve `undefined` para eles, e o mesmo 404 os responde como a qualquer outro caminho que não é página. `localize()` e `localizeAll()` montam links a partir dos seus próprios caminhos, em vez de ler requisições, então, para os mesmos caminhos, eles lançam um `TypeError`, como `TypeError: [I18n] pathname must not contain dot segments`, e você corrige o caminho no seu código.
 
@@ -441,7 +441,7 @@ Isso é um erro no código que chama, e não uma requisição a responder, entã
 
 Escapes comuns, como `%20` e `%C3%A7`, não têm problema, e uma barra final é mantida: `/pt/sobre/` vira `/about/` no parse.
 
-`localize()` lança um `RangeError` quando o caminho que ele monta passaria de 8.192 caracteres, como pode acontecer com um caminho logo abaixo do limite depois que o prefixo ou as palavras traduzidas são acrescentados.
+`localize()` lança um `RangeError` quando o caminho que ele monta passaria de 8.192 caracteres ou 100 segmentos, como pode acontecer com um caminho logo abaixo do limite depois que o prefixo ou as palavras traduzidas são acrescentados.
 
 ## O que o roteamento deixa para o seu framework
 

@@ -285,7 +285,7 @@ Under `"when-ambiguous"`, routing groups patterns by the kinds of their segments
 
 Routing refuses some paths a request carries: `new URL("https://example.com//wp-login.php").pathname` is `//wp-login.php`, and scanners send such paths all day. The guide's handlers call `parse(url.pathname)` without a catch, so a `TypeError` for each would answer 500. The decision above rejects catching in the guide because a forgotten catch is a 500 on any typed URL, and the same reasoning holds for a `TypeError` as for the `RangeError`.
 
-- **`undefined` for what a request can carry**: `//`, `\`, control characters, dot segments, encoded slashes, backslashes, `%` and controls, malformed escapes, and paths over 8,192 characters. Every caller already answers `undefined` with a 404.
+- **`undefined` for what a request can carry**: `//`, `\`, control characters, dot segments, encoded slashes, backslashes, `%` and controls, malformed escapes, and paths over 8,192 characters or, since 0.5.0, 100 segments. Every caller already answers `undefined` with a 404.
 - **Still a `TypeError` for what `url.pathname` never is**: a non-string, a value not starting with `/`, such as a full URL, or one with `?` or `#`, such as Node's `request.url` with its query. Returning `undefined` there would turn a mistake in the calling code into a 404 on every URL with a query string.
 - **`localize` and `localizeAll` still throw** for every refused path, since they build links from the application's own paths.
 
@@ -297,6 +297,12 @@ Rejected:
 ### `parse` checks the canonical path's length too
 
 `parse` returns `undefined` when the canonical path, not only its URL, would be longer than 8,192 characters. A short translated URL can read back to a longer canonical path, such as `/pt/b/…` for `/aaaa…/:id`, and `localize` refuses an input that long, so checking the URL alone lets such a request answer 500 through the guide's redirect. Rejected: raising the limit for canonical paths, which would let `localize` accept what no request can carry.
+
+### Paths have at most 100 segments (0.5.0)
+
+Every limit on a path's length also caps its segments at 100: a request over it is `undefined` from `parse`, an input over it is a `TypeError` from `localize`, and a URL or canonical path that would pass it is treated as one over 8,192 characters. Reading a path costs work per segment in every locale, and `parse` reads each locale's URL back to build `alternates`, so `/docs/a/a/…`, 4,000 one-letter segments within 8,192 characters, took 39 ms a call with 20 locales against 0.3 ms for `/docs/a`, and 90 ms with a catch-all under `"when-ambiguous"`. Anyone can send that path, so a few dozen requests a second kept a core busy. At 100 segments the worst case is a few milliseconds with 20 locales. No page is 100 folders deep; a catch-all for documentation trees stays far within it.
+
+Rejected: only cutting the repeated work per locale, which a profile put at about half the cost, so it leaves the cost growing with segments times locales; and building `alternates` lazily, rejected before for making the result more than plain data.
 
 ### A listed page comes back in one spelling
 

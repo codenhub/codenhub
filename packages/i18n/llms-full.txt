@@ -1805,7 +1805,7 @@ This is the boring part of the page. It is also the part that decides whether a 
 - **Dot segments**, `.` and `..`, as in `/help/../admin`, and their encoded forms, such as `/help/%2e%2e/admin`. A browser resolves them before sending a request, so a request that still has one was written by hand to climb out of the page it names. Resolve the path first; `new URL(path, "https://example.com").pathname` does it.
 - **An encoded slash, backslash, `%`, or control character**: `%2F`, `%5C`, `%25`, or `%00` to `%1F` and `%7F`, as in `/files/a%2Fb`. An encoded slash or backslash makes servers disagree about where segments start and end, one seeing one segment where another sees two. An encoded `%` invites a second round of decoding, so `%252F` turns into `%2F` and then `/`. An encoded control character gets past the check on raw ones. Keep a slash in a value out of the path, such as in the query string.
 - **A malformed escape**, a `%` not followed by two hex digits, as in `/50%off`. Write `%25` for a literal `%`… which is also refused, per the previous rule, so take the `%` out of the path.
-- **More than 8,192 characters**, or a path whose canonical path would be longer than that, as a short translated path can be when its table entry is long. Servers and proxies cut off URLs around this length anyway.
+- **More than 8,192 characters or 100 segments**, or a path whose canonical path would be longer than that, as a short translated path can be when its table entry is long. Servers and proxies cut off URLs around this length anyway, and no page is 100 folders deep; a request of thousands of one-letter segments would otherwise cost work in every locale.
 
 A request can carry any of these, such as a scanner asking for `//wp-login.php`, so `parse()` returns `undefined` for them, and the same 404 answers them as any other path that is no page. `localize()` and `localizeAll()` build links from your own paths rather than read requests, so for the same paths they throw a `TypeError`, such as `TypeError: [I18n] pathname must not contain dot segments`, and you fix the path in your code.
 
@@ -1818,7 +1818,7 @@ That is a mistake in the calling code, not a request to answer, so it fails loud
 
 Ordinary escapes, such as `%20` and `%C3%A7`, are fine, and a trailing slash is kept: `/pt/sobre/` parses to `/about/`.
 
-`localize()` throws a `RangeError` instead when the path it builds would be longer than 8,192 characters, as a path just under the limit can be once its prefix or translated words are added.
+`localize()` throws a `RangeError` instead when the path it builds would be longer than 8,192 characters or 100 segments, as a path just under the limit can be once its prefix or translated words are added.
 
 ## What routing leaves to your framework
 
@@ -1973,7 +1973,7 @@ The path `localize()` would build opens a different page, or the same page in an
 - **You passed a URL, not a canonical path.** `localize("/sobre", "en")` takes `/sobre` as the canonical path of an English page. If `/sobre` is the Portuguese about page's URL, read it first: `localize(routing.parse("/sobre").pathname, "en")`.
 - **A page the table doesn't list has another page's translated path.** With `"/contact": { es: "/about" }` and no `/about` entry, `localize("/about", "es")` throws `RangeError: [I18n] "/about" in "es" would be read as "/contact" in "es"; …`. With `localePrefix: "when-ambiguous"`, an English page at `/sobre` clashes with a Portuguese `/sobre` the same way. Rename one of them, list the page in `pathnames`, or keep the prefix with `"except-default"`. [The risk you take on](docs/localized-urls.md#the-risk-you-take-on) explains why routing can't catch this sooner.
 
-## `localize()` throws `RangeError`: "would be longer than 8,192 characters"
+## `localize()` throws `RangeError`: "would be longer than 8,192 characters or 100 segments"
 
 The path you passed is valid, but the locale prefix or the translated words make the result longer than `parse()` accepts. Shorten the path; a link that long is also likely to be cut off by servers and proxies long before anyone reads it.
 
@@ -2024,6 +2024,7 @@ The [reference](docs/reference/index.md) documents every export, option, and the
 - `disconnect()` also stops following the browser's language and calling `binding.subscribe()` listeners, and drops a switch to a detected locale still loading. A `setLocale()` still loading still applies.
 - **The guide's language switcher and `hreflang` tags read `route.alternates`** instead of calling `localize()` on a path from the request. Do the same in yours. The `x-default` tag is left out when the default locale has no URL for the page. A static build still uses `localizeAll()`, which throws on a clash, so the build finds it.
 - **`localize()`'s "would be read as" `RangeError` names the URL it would build**, such as `"/pt/produtos/novo"`, and no longer tells you to pass `parse().pathname` when that is what you passed. Code that matches the text after the `;` needs updating.
+- **Paths have at most 100 segments.** `parse()` returns `undefined` for a longer one, and `localize()` throws a `TypeError` for one, or a `RangeError` when its prefix or translated words take it past 100, as for 8,192 characters. A request made of thousands of one-letter segments, such as `/a/a/a/…`, cost about 40 ms a `parse()` with 20 locales, so anyone could keep a server busy with it. The `RangeError` reads "would be longer than 8,192 characters or 100 segments".
 - **`loadLocale` must accept every configured locale.** A loader typed for fewer, such as `(locale: keyof typeof dictionaries)` before every dictionary exists, no longer compiles, where `init()` rejected at runtime.
 - **`initializeBrowserI18n`'s `locale` must be a configured locale.** `initializeBrowserI18n({ i18n, locale: "fr" })` on a manager without `fr` no longer compiles, where it rejected at runtime.
 - **`t()` accepts any values for a message it prints as written**: one with an unknown style, such as `{n, number, currency}`, a `plural` or `select` without `other`, or `'#` quoting a brace inside a plural. The types required values the runtime never filled in.

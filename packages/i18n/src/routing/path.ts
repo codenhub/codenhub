@@ -2,8 +2,34 @@ import { hasAsciiControlCharacter } from "../core/string-validation";
 
 /** The longest pathname accepted. @internal */
 export const MAX_PATHNAME_LENGTH = 8_192;
+/**
+ * The most segments a pathname may have. Reading a path costs work per segment in every locale, so 4,000 one-letter
+ * segments, which fit in 8,192 characters, took about 39 ms a `parse()` with 20 locales. @internal
+ */
+export const MAX_PATHNAME_SEGMENTS = 100;
 const DISALLOWED_ESCAPE_PATTERN = /%(?![0-9a-f]{2})|%(?:0[0-9a-f]|1[0-9a-f]|25|2f|5c|7f)/i;
 const PERCENT_ESCAPE_PATTERN = /%[0-9a-f]{2}/gi;
+
+/**
+ * Whether a pathname is longer than 8,192 characters or has more than 100 segments, which routing refuses.
+ *
+ * @internal
+ */
+export const isPathnameTooLong = (pathname: string): boolean => {
+  if (pathname.length > MAX_PATHNAME_LENGTH) {
+    return true;
+  }
+  // Each segment follows a slash; a trailing slash, or `/` itself, starts none.
+  const maxSlashes = pathname.endsWith("/") ? MAX_PATHNAME_SEGMENTS + 1 : MAX_PATHNAME_SEGMENTS;
+  let slashes = 0;
+  for (let index = pathname.indexOf("/"); index !== -1; index = pathname.indexOf("/", index + 1)) {
+    slashes += 1;
+    if (slashes > maxSlashes) {
+      return true;
+    }
+  }
+  return false;
+};
 
 /**
  * Says why a value is not an absolute application pathname, or returns `undefined` when it is one.
@@ -14,7 +40,7 @@ export const findPathnameProblem = (pathname: unknown): "invalid" | "dot-segment
   if (
     typeof pathname !== "string" ||
     pathname.length === 0 ||
-    pathname.length > MAX_PATHNAME_LENGTH ||
+    isPathnameTooLong(pathname) ||
     !pathname.startsWith("/") ||
     pathname.includes("//") ||
     pathname.includes("?") ||

@@ -1,5 +1,5 @@
 import { assertConfig, localeRoutingConfig } from "../locale/config-validators";
-import { findPathnameProblem, joinPathname, MAX_PATHNAME_LENGTH, normalizeSegment, splitPathname } from "./path";
+import { findPathnameProblem, isPathnameTooLong, joinPathname, normalizeSegment, splitPathname } from "./path";
 import { buildPattern, compilePathnames, type ShapeIndex } from "./pathnames";
 
 /** Normalizes a segment as {@link normalizeSegment} does. */
@@ -65,7 +65,7 @@ export interface ParsedLocalePath<TLocale extends string> {
   /**
    * This page's URL pathname in each locale that has one, in `locales` order, as `localize(pathname, locale)` builds
    * it: for a language switcher and `hreflang` tags. The parsed locale is always included. A locale is left out where
-   * this page's URL would be read as another page or locale, or be longer than 8,192 characters, which is where
+   * this page's URL would be read as another page or locale, or be longer than 8,192 characters or 100 segments, which is where
    * `localize` throws, such as Portuguese for an English product `/products/novo` when `/products/new` is the
    * Portuguese `/pt/produtos/novo`.
    */
@@ -92,8 +92,8 @@ export interface LocaleRouting<TLocale extends string> {
    * @param pathname - A URL's pathname, such as `url.pathname`: it starts with `/` and has no query or fragment.
    * @returns The locale and canonical pathname, or `undefined` when a required prefix is absent, when no URL leads to the
    * path read, such as `/pt/en/sobre`, or `/en/sobre` when `/sobre` is the Portuguese about page, or when the path is one
-   * routing refuses, such as `//wp-login.php`, a dot segment, an encoded slash, or one longer than 8,192 characters, or
-   * when its canonical path or URL would be longer than that. A result always has a canonical URL that `localize`
+   * routing refuses, such as `//wp-login.php`, a dot segment, an encoded slash, or one longer than 8,192 characters or
+   * 100 segments, or when its canonical path or URL would be longer than that. A result always has a canonical URL that `localize`
    * builds, and lists the page's URL in every locale that has one, so a request never needs `localize`'s errors caught.
    * @throws {TypeError} When `pathname` is not a string, does not start with `/`, or contains `?` or `#`, which a URL's
    * pathname never does.
@@ -103,13 +103,14 @@ export interface LocaleRouting<TLocale extends string> {
   /**
    * Generates the canonical URL pathname of a page for one supported locale.
    *
-   * @param pathname - A canonical application pathname of at most 8,192 characters without a URL, query, or fragment.
+   * @param pathname - A canonical application pathname of at most 8,192 characters and 100 segments, without a URL,
+   * query, or fragment.
    * A path that starts with a locale is read as that locale's URL, as `parse` reads it.
    * @param locale - A supported locale, trimmed and matched case-insensitively.
    * @returns The pathname in the locale's words, with the configured locale-prefix and trailing-slash policies applied.
    * @throws {TypeError} When `pathname` is not a valid application pathname.
    * @throws {RangeError} When `locale` is unsupported or is not a string at runtime, when the result would be longer
-   * than 8,192 characters, or when the result would be parsed as another page or locale, such as a page the table
+   * than 8,192 characters or 100 segments, or when the result would be parsed as another page or locale, such as a page the table
    * doesn't list whose path is another locale's translated path. A static build that localizes its page list finds
    * those clashes at build time; links built for a request can use `parse(url.pathname).alternates`, which leaves out
    * the locales where `localize` throws.
@@ -272,7 +273,7 @@ export const createLocaleRouting = <TLocale extends string>(
     }
     const route = read(pathname, normalize);
     // A canonical path longer than the limit can't be passed to localize(), though a shorter translation led to it.
-    if (route === undefined || route.pathname.length > MAX_PATHNAME_LENGTH) {
+    if (route === undefined || isPathnameTooLong(route.pathname)) {
       return undefined;
     }
 
@@ -283,7 +284,7 @@ export const createLocaleRouting = <TLocale extends string>(
       return undefined;
     }
     const url = buildUrl({ canonical: segments, ...slashPolicy(hasTrailingSlash), locale: route.locale, normalize });
-    const readBack = url.length > MAX_PATHNAME_LENGTH ? undefined : read(url, normalize);
+    const readBack = isPathnameTooLong(url) ? undefined : read(url, normalize);
 
     if (readBack?.locale !== route.locale) {
       return undefined;
@@ -296,9 +297,7 @@ export const createLocaleRouting = <TLocale extends string>(
     }
     // That spelling can be longer than the path checked above, since `url.pathname` leaves characters such as `|` raw.
     const canonicalPathname = joinPathname(canonical, hasTrailingSlash);
-    return canonicalPathname.length > MAX_PATHNAME_LENGTH
-      ? undefined
-      : { locale: route.locale, pathname: canonicalPathname };
+    return isPathnameTooLong(canonicalPathname) ? undefined : { locale: route.locale, pathname: canonicalPathname };
   };
 
   /**
@@ -325,7 +324,7 @@ export const createLocaleRouting = <TLocale extends string>(
       normalize,
     });
 
-    if (url.length > MAX_PATHNAME_LENGTH) {
+    if (isPathnameTooLong(url)) {
       return { url, problem: "too-long" };
     }
     // A page the table doesn't list can have the path of a translated one; a link to it would open that page instead.
@@ -372,7 +371,7 @@ export const createLocaleRouting = <TLocale extends string>(
 
     if (built.problem === "too-long") {
       throw new RangeError(
-        `[I18n] the path in ${JSON.stringify(canonicalLocale)} would be longer than 8,192 characters`,
+        `[I18n] the path in ${JSON.stringify(canonicalLocale)} would be longer than 8,192 characters or 100 segments`,
       );
     }
     if (built.problem === "clash") {

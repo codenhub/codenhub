@@ -427,7 +427,7 @@ This is the boring part of the page. It is also the part that decides whether a 
 - **Dot segments**, `.` and `..`, as in `/help/../admin`, and their encoded forms, such as `/help/%2e%2e/admin`. A browser resolves them before sending a request, so a request that still has one was written by hand to climb out of the page it names. Resolve the path first; `new URL(path, "https://example.com").pathname` does it.
 - **An encoded slash, backslash, `%`, or control character**: `%2F`, `%5C`, `%25`, or `%00` to `%1F` and `%7F`, as in `/files/a%2Fb`. An encoded slash or backslash makes servers disagree about where segments start and end, one seeing one segment where another sees two. An encoded `%` invites a second round of decoding, so `%252F` turns into `%2F` and then `/`. An encoded control character gets past the check on raw ones. Keep a slash in a value out of the path, such as in the query string.
 - **A malformed escape**, a `%` not followed by two hex digits, as in `/50%off`. Write `%25` for a literal `%`… which is also refused, per the previous rule, so take the `%` out of the path.
-- **More than 8,192 characters**, or a path whose canonical path would be longer than that, as a short translated path can be when its table entry is long. Servers and proxies cut off URLs around this length anyway.
+- **More than 8,192 characters or 100 segments**, or a path whose canonical path would be longer than that, as a short translated path can be when its table entry is long. Servers and proxies cut off URLs around this length anyway, and no page is 100 folders deep; a request of thousands of one-letter segments would otherwise cost work in every locale.
 
 A request can carry any of these, such as a scanner asking for `//wp-login.php`, so `parse()` returns `undefined` for them, and the same 404 answers them as any other path that is no page. `localize()` and `localizeAll()` build links from your own paths rather than read requests, so for the same paths they throw a `TypeError`, such as `TypeError: [I18n] pathname must not contain dot segments`, and you fix the path in your code.
 
@@ -440,7 +440,7 @@ That is a mistake in the calling code, not a request to answer, so it fails loud
 
 Ordinary escapes, such as `%20` and `%C3%A7`, are fine, and a trailing slash is kept: `/pt/sobre/` parses to `/about/`.
 
-`localize()` throws a `RangeError` instead when the path it builds would be longer than 8,192 characters, as a path just under the limit can be once its prefix or translated words are added.
+`localize()` throws a `RangeError` instead when the path it builds would be longer than 8,192 characters or 100 segments, as a path just under the limit can be once its prefix or translated words are added.
 
 ## What routing leaves to your framework
 
