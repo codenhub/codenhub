@@ -177,6 +177,40 @@ describe("initializeBrowserI18n followSystem()", () => {
     expect(localStorage.getItem("i18n")).toBeNull();
   });
 
+  it("keeps System selected and notifies when the detected locale fails to load", async () => {
+    setNavigatorLocales(["pt-BR"]);
+    const i18n = createManager({
+      loadLocale: (locale) => (locale === "pt-BR" ? Promise.reject(new Error("503")) : dictionaries[locale]),
+    });
+    const binding = await bind({ i18n, locale: "fr" });
+    const seen: string[] = [];
+    binding.subscribe(() => seen.push(binding.followsSystem ? "system" : i18n.locale));
+
+    await expect(binding.followSystem()).rejects.toBeInstanceOf(I18nError);
+    await flushPromises();
+
+    expect(binding.followsSystem).toBe(true);
+    expect(seen).toEqual(["system"]);
+  });
+
+  it("supersedes a setLocale() still loading, without saving", async () => {
+    setNavigatorLocales(["pt-BR"]);
+    const ar = createDeferred<unknown>();
+    const i18n = createManager({
+      loadLocale: (locale) => (locale === "ar" ? ar.promise : dictionaries[locale]),
+    });
+    const binding = await bind({ i18n, locale: "fr" });
+
+    const choosing = i18n.setLocale("ar");
+    await binding.followSystem();
+    ar.resolve(dictionaries.ar);
+    await Promise.allSettled([choosing]);
+
+    expect(i18n.locale).toBe("pt-BR");
+    expect(binding.followsSystem).toBe(true);
+    expect(localStorage.getItem("i18n")).toBeNull();
+  });
+
   it("resolves when a later setLocale() supersedes it, keeping the later choice", async () => {
     setNavigatorLocales(["pt-BR"]);
     const ptBr = createDeferred<unknown>();
@@ -432,6 +466,39 @@ describe("initializeBrowserI18n subscribe", () => {
 
     expect(unsubscribed).not.toHaveBeenCalled();
     expect(disconnected).toHaveBeenCalledTimes(1);
+  });
+
+  it("calls no other listener once one calls disconnect()", async () => {
+    setNavigatorLocales(["fr"]);
+    const i18n = createManager();
+    const binding = await bind({ i18n });
+    const later = vi.fn();
+    binding.subscribe(() => binding.disconnect());
+    binding.subscribe(later);
+
+    await i18n.setLocale("ar");
+    await flushPromises();
+
+    expect(later).not.toHaveBeenCalled();
+  });
+
+  it("calls a function subscribed twice twice, and skips a listener unsubscribed during a notification", async () => {
+    setNavigatorLocales(["fr"]);
+    const i18n = createManager();
+    const binding = await bind({ i18n });
+    const twice = vi.fn();
+    const skipped = vi.fn();
+    binding.subscribe(twice);
+    binding.subscribe(twice);
+    let unsubscribeSkipped = (): void => undefined;
+    binding.subscribe(() => unsubscribeSkipped());
+    unsubscribeSkipped = binding.subscribe(skipped);
+
+    await i18n.setLocale("ar");
+    await flushPromises();
+
+    expect(twice).toHaveBeenCalledTimes(2);
+    expect(skipped).not.toHaveBeenCalled();
   });
 
   it("calls every listener when one throws", async () => {

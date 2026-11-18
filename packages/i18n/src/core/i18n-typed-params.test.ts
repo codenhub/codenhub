@@ -91,6 +91,41 @@ describe("typed placeholder values", () => {
     expectTypeOf<{}>().not.toExtend<NonNullable<TranslateParams<{ readonly m: "'{it''s}' {x}" }, "m">[0]>>();
   });
 
+  it("should not require an argument the runtime prints as text quoted by an apostrophe before #", () => {
+    type Loose = [params?: Readonly<Record<string, string | number | Date>>];
+    expectTypeOf<TranslateParams<{ readonly m: "{n, plural, other {'# {name}' ok}}" }, "m">>().toEqualTypeOf<Loose>();
+    expectTypeOf<TranslateParams<{ readonly m: "{n, plural, other {'# {name}}}" }, "m">>().toEqualTypeOf<Loose>();
+    expectTypeOf<TranslateParams<{ readonly m: "{n, plural, other {'# it''s {x}'}}" }, "m">>().toEqualTypeOf<Loose>();
+    // Without a brace in the quoted run, the message reads as usual.
+    expectTypeOf<{}>().not.toExtend<
+      NonNullable<TranslateParams<{ readonly m: "{n, plural, other {'#' {x}}}" }, "m">[0]>
+    >();
+  });
+
+  it("should require the values of a plural whose first option, after an offset, is other", () => {
+    type ParamsOf<M extends string> = NonNullable<TranslateParams<{ readonly m: M }, "m">[0]>;
+    expectTypeOf<{ n: 1; name: "Ana" }>().toExtend<ParamsOf<"{n, plural, offset:1 other {# {name}}}">>();
+    expectTypeOf<{ n: 1 }>().not.toExtend<ParamsOf<"{n, plural, offset:1 other {# {name}}}">>();
+    expectTypeOf<{ n: 1 }>().not.toExtend<ParamsOf<"{n, plural, offset: 12 other {# {name}}}">>();
+  });
+
+  it("should accept any values for a message the runtime refuses, which it prints as written", () => {
+    type Loose = [params?: Readonly<Record<string, string | number | Date>>];
+    type ParamsOf<M extends string> = TranslateParams<{ readonly m: M }, "m">;
+    expectTypeOf<ParamsOf<"{n, number, currency}">>().toEqualTypeOf<Loose>();
+    expectTypeOf<ParamsOf<"{d, date, bogus}">>().toEqualTypeOf<Loose>();
+    expectTypeOf<ParamsOf<"{d, time, integer}">>().toEqualTypeOf<Loose>();
+    expectTypeOf<ParamsOf<"{n, plural}">>().toEqualTypeOf<Loose>();
+    expectTypeOf<ParamsOf<"{g, select}">>().toEqualTypeOf<Loose>();
+    expectTypeOf<ParamsOf<"{n, plural, one {#}}">>().toEqualTypeOf<Loose>();
+    expectTypeOf<ParamsOf<"{g, select, female {She}}">>().toEqualTypeOf<Loose>();
+    expectTypeOf<ParamsOf<"{n, plural, other {{g, select, a {x}}}}">>().toEqualTypeOf<Loose>();
+    // Valid styles and forms still require their values.
+    expectTypeOf<ParamsOf<"{n, number, percent}">["length"]>().toEqualTypeOf<1>();
+    expectTypeOf<ParamsOf<"{d, date, full} {t, time, medium}">["length"]>().toEqualTypeOf<1>();
+    expectTypeOf<ParamsOf<"{n, plural, one {#} other {# {x}}}">["length"]>().toEqualTypeOf<1>();
+  });
+
   it("should accept any values for an argument name the runtime can't read", () => {
     type Loose = [params?: Readonly<Record<string, string | number | Date>>];
     expectTypeOf<TranslateParams<{ readonly m: "{first-name}" }, "m">>().toEqualTypeOf<Loose>();

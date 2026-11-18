@@ -72,8 +72,24 @@ type StripQuotes<
       ? StripQuotes<C, `${Out}${A}`, Next<TSteps>>
       : B extends `{${string}` | `}${string}`
         ? SkipQuoted<B, `${Out}${A}`, Next<TSteps>>
-        : StripQuotes<B, `${Out}${A}`, Next<TSteps>>
+        : B extends `#${string}`
+          ? QuotesBrace<B> extends true
+            ? Unreadable
+            : StripQuotes<B, `${Out}${A}`, Next<TSteps>>
+          : StripQuotes<B, `${Out}${A}`, Next<TSteps>>
     : `${Out}${S}`;
+
+// In a plural, an apostrophe before `#` quotes text too, and only there; these types don't track where they are, so
+// a message whose `'#` run holds a brace, or a `''` that might sit inside it, is left unread.
+type QuotesBrace<S extends string> = S extends `${infer Quoted}'${infer After}`
+  ? Quoted extends `${string}${"{" | "}"}${string}`
+    ? true
+    : After extends `'${string}`
+      ? true
+      : false
+  : S extends `${string}${"{" | "}"}${string}`
+    ? true
+    : false;
 
 // Quoted text runs to the end of the message when its closing apostrophe is missing, as at runtime.
 type SkipQuoted<S extends string, Out extends string, TSteps extends Steps> = TSteps["length"] extends MaxSteps
@@ -100,6 +116,13 @@ type ValueOfType<T> = T extends "number" | "plural" | "selectordinal"
     : T extends "select"
       ? string | number
       : Unreadable;
+
+// The styles the runtime reads; another, such as `{n, number, currency}`, is invalid syntax.
+type StyleOf<T> = T extends "number"
+  ? "integer" | "percent"
+  : T extends "date" | "time"
+    ? "short" | "medium" | "long" | "full"
+    : never;
 
 type Digit = "0" | "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9";
 type Letter =
@@ -142,8 +165,17 @@ type IsName<N, TSteps extends Steps = []> = TSteps["length"] extends MaxSteps
       : false
     : false;
 
-// "m" is message text, where `{` starts an argument; "o" is a plural or select's options, where `{` starts a message.
-type Frame = "m" | "o";
+// "m" is message text, where `{` starts an argument; "o" is a plural or select's options, where `{` starts a message,
+// and "O" is those options once an `other` option has been read, which the runtime requires.
+type Frame = "m" | "o" | "O";
+
+// A plural's first option name follows its `offset:N`, if any.
+type OptionName<B> = B extends `offset:${infer R}`
+  ? DropDigits<Trim<R>> extends infer O extends string
+    ? Trim<O>
+    : B
+  : B;
+type DropDigits<S> = S extends `${Digit}${infer R}` ? DropDigits<R> : S;
 
 type Scan<
   S extends string,
@@ -152,15 +184,17 @@ type Scan<
   TSteps extends Steps,
 > = TSteps["length"] extends MaxSteps
   ? Unreadable
-  : NextBrace<S> extends [infer Brace, string, infer Rest extends string]
-    ? Stack extends readonly [...infer Up extends readonly Frame[], infer Top]
+  : NextBrace<S> extends [infer Brace, infer Before extends string, infer Rest extends string]
+    ? Stack extends readonly [...infer Up extends readonly Frame[], infer Top extends Frame]
       ? Brace extends "{"
         ? Top extends "m"
           ? ReadArgument<Rest, Stack, Acc, Next<TSteps>>
-          : Scan<Rest, [...Stack, "m"], Acc, Next<TSteps>>
+          : Scan<Rest, [...Up, OptionName<Trim<Before>> extends "other" ? "O" : Top, "m"], Acc, Next<TSteps>>
         : Up extends readonly []
           ? Unreadable
-          : Scan<Rest, Up, Acc, Next<TSteps>>
+          : Top extends "o"
+            ? Unreadable
+            : Scan<Rest, Up, Acc, Next<TSteps>>
       : Unreadable
     : Stack extends readonly ["m"]
       ? Acc
@@ -197,13 +231,24 @@ type ReadTypedArgument<
               ? Unreadable
               : Trim<T2> extends "plural" | "selectordinal" | "select"
                 ? Scan<Style, [...Stack, "o"], Acc & { readonly [P in Trim<N>]: ValueOfType<Trim<T2>> }, Next<TSteps>>
-                : Style extends `${string}}${infer After2}`
-                  ? Scan<After2, Stack, Acc & { readonly [P in Trim<N>]: ValueOfType<Trim<T2>> }, Next<TSteps>>
+                : Style extends `${infer Written}}${infer After2}`
+                  ? Trim<Written> extends StyleOf<Trim<T2>>
+                    ? Scan<
+                        After2,
+                        Stack,
+                        Acc & {
+                          readonly [P in Trim<N>]: ValueOfType<Trim<T2>>;
+                        },
+                        Next<TSteps>
+                      >
+                    : Unreadable
                   : Unreadable
             : Unreadable
           : ValueOfType<Trim<T>> extends Unreadable
             ? Unreadable
-            : Scan<After, Stack, Acc & { readonly [P in Trim<N>]: ValueOfType<Trim<T>> }, Next<TSteps>>
+            : Trim<T> extends "plural" | "selectordinal" | "select"
+              ? Unreadable
+              : Scan<After, Stack, Acc & { readonly [P in Trim<N>]: ValueOfType<Trim<T>> }, Next<TSteps>>
         : Unreadable
       : Unreadable
     : Unreadable;

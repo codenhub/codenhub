@@ -821,6 +821,14 @@ type Digit = "0" | "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9";
 
 Not exported; declared in `src/core/message-params.ts`.
 
+### DropDigits
+
+```ts
+type DropDigits<S> = S extends `${Digit}${infer R}` ? DropDigits<R> : S;
+```
+
+Not exported; declared in `src/core/message-params.ts`.
+
 ### FlattenedKey
 
 ```ts
@@ -844,7 +852,7 @@ Not exported; declared in `src/core/message-params.ts`.
 ### Frame
 
 ```ts
-type Frame = "m" | "o";
+type Frame = "m" | "o" | "O";
 ```
 
 Not exported; declared in `src/core/message-params.ts`.
@@ -939,6 +947,14 @@ type NextBrace<S extends string> = S extends `${infer A}{${infer B}` ? A extends
 
 Not exported; declared in `src/core/message-params.ts`.
 
+### OptionName
+
+```ts
+type OptionName<B> = B extends `offset:${infer R}` ? DropDigits<Trim<R>> extends infer O extends string ? Trim<O> : B : B;
+```
+
+Not exported; declared in `src/core/message-params.ts`.
+
 ### ParamsFor
 
 ```ts
@@ -958,12 +974,20 @@ Not exported; declared in `src/core/message-params.ts`.
 ### PropertyKeyPath
 
 ```ts
-type PropertyKeyPath<K extends string, TValue> = TValue extends string ? K : TValue extends undefined ? never : `${K}.${FlattenedKey<TValue>}` | (TValue extends {
+type PropertyKeyPath<K extends string, TValue> = unknown extends TValue ? K | `${K}.${string}` : TValue extends string ? K : TValue extends undefined ? never : `${K}.${FlattenedKey<TValue>}` | (TValue extends {
     readonly other: string;
 } ? K : never);
 ```
 
 Not exported; declared in `src/core/types.ts`.
+
+### QuotesBrace
+
+```ts
+type QuotesBrace<S extends string> = S extends `${infer Quoted}'${infer After}` ? Quoted extends `${string}${"{" | "}"}${string}` ? true : After extends `'${string}` ? true : false : S extends `${string}${"{" | "}"}${string}` ? true : false;
+```
+
+Not exported; declared in `src/core/message-params.ts`.
 
 ### ReadArgument
 
@@ -980,9 +1004,9 @@ Not exported; declared in `src/core/message-params.ts`.
 ```ts
 type ReadTypedArgument<S extends string, Stack extends readonly Frame[], Acc, TSteps extends Steps> = TSteps["length"] extends MaxSteps ? Unreadable : S extends `${infer N},${infer R}` ? IsName<Trim<N>> extends true ? R extends `${infer T}}${infer After}` ? T extends `${string}${"," | "{"}${string}` ? R extends `${infer T2},${infer Style}` ? ValueOfType<Trim<T2>> extends Unreadable ? Unreadable : Trim<T2> extends "plural" | "selectordinal" | "select" ? Scan<Style, [...Stack, "o"], Acc & {
     readonly [P in Trim<N>]: ValueOfType<Trim<T2>>;
-}, Next<TSteps>> : Style extends `${string}}${infer After2}` ? Scan<After2, Stack, Acc & {
+}, Next<TSteps>> : Style extends `${infer Written}}${infer After2}` ? Trim<Written> extends StyleOf<Trim<T2>> ? Scan<After2, Stack, Acc & {
     readonly [P in Trim<N>]: ValueOfType<Trim<T2>>;
-}, Next<TSteps>> : Unreadable : Unreadable : ValueOfType<Trim<T>> extends Unreadable ? Unreadable : Scan<After, Stack, Acc & {
+}, Next<TSteps>> : Unreadable : Unreadable : Unreadable : ValueOfType<Trim<T>> extends Unreadable ? Unreadable : Trim<T> extends "plural" | "selectordinal" | "select" ? Unreadable : Scan<After, Stack, Acc & {
     readonly [P in Trim<N>]: ValueOfType<Trim<T>>;
 }, Next<TSteps>> : Unreadable : Unreadable : Unreadable;
 ```
@@ -992,7 +1016,7 @@ Not exported; declared in `src/core/message-params.ts`.
 ### Scan
 
 ```ts
-type Scan<S extends string, Stack extends readonly Frame[], Acc, TSteps extends Steps> = TSteps["length"] extends MaxSteps ? Unreadable : NextBrace<S> extends [infer Brace, string, infer Rest extends string] ? Stack extends readonly [...infer Up extends readonly Frame[], infer Top] ? Brace extends "{" ? Top extends "m" ? ReadArgument<Rest, Stack, Acc, Next<TSteps>> : Scan<Rest, [...Stack, "m"], Acc, Next<TSteps>> : Up extends readonly [] ? Unreadable : Scan<Rest, Up, Acc, Next<TSteps>> : Unreadable : Stack extends readonly ["m"] ? Acc : Unreadable;
+type Scan<S extends string, Stack extends readonly Frame[], Acc, TSteps extends Steps> = TSteps["length"] extends MaxSteps ? Unreadable : NextBrace<S> extends [infer Brace, infer Before extends string, infer Rest extends string] ? Stack extends readonly [...infer Up extends readonly Frame[], infer Top extends Frame] ? Brace extends "{" ? Top extends "m" ? ReadArgument<Rest, Stack, Acc, Next<TSteps>> : Scan<Rest, [...Up, OptionName<Trim<Before>> extends "other" ? "O" : Top, "m"], Acc, Next<TSteps>> : Up extends readonly [] ? Unreadable : Top extends "o" ? Unreadable : Scan<Rest, Up, Acc, Next<TSteps>> : Unreadable : Stack extends readonly ["m"] ? Acc : Unreadable;
 ```
 
 Not exported; declared in `src/core/message-params.ts`.
@@ -1034,7 +1058,15 @@ Not exported; declared in `src/core/message-params.ts`.
 ### StripQuotes
 
 ```ts
-type StripQuotes<S extends string, Out extends string = "", TSteps extends Steps = []> = TSteps["length"] extends MaxSteps ? Unreadable : S extends `${infer A}'${infer B}` ? B extends `'${infer C}` ? StripQuotes<C, `${Out}${A}`, Next<TSteps>> : B extends `{${string}` | `}${string}` ? SkipQuoted<B, `${Out}${A}`, Next<TSteps>> : StripQuotes<B, `${Out}${A}`, Next<TSteps>> : `${Out}${S}`;
+type StripQuotes<S extends string, Out extends string = "", TSteps extends Steps = []> = TSteps["length"] extends MaxSteps ? Unreadable : S extends `${infer A}'${infer B}` ? B extends `'${infer C}` ? StripQuotes<C, `${Out}${A}`, Next<TSteps>> : B extends `{${string}` | `}${string}` ? SkipQuoted<B, `${Out}${A}`, Next<TSteps>> : B extends `#${string}` ? QuotesBrace<B> extends true ? Unreadable : StripQuotes<B, `${Out}${A}`, Next<TSteps>> : StripQuotes<B, `${Out}${A}`, Next<TSteps>> : `${Out}${S}`;
+```
+
+Not exported; declared in `src/core/message-params.ts`.
+
+### StyleOf
+
+```ts
+type StyleOf<T> = T extends "number" ? "integer" | "percent" : T extends "date" | "time" ? "short" | "medium" | "long" | "full" : never;
 ```
 
 Not exported; declared in `src/core/message-params.ts`.

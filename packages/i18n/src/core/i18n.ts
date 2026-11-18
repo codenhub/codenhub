@@ -17,7 +17,7 @@ import {
   type MessageValues,
   parseCachedMessage,
 } from "./message-format";
-import { MAX_TRANSLATION_KEY_LENGTH, normalizeTranslationKey } from "./string-validation";
+import { MAX_TRANSLATION_KEY_LENGTH, MAX_UNTRIMMED_KEY_LENGTH, normalizeTranslationKey } from "./string-validation";
 import type {
   I18n,
   I18nConfig,
@@ -407,14 +407,15 @@ class I18nInstance<TLocale extends string, TKey extends string = string>
       throw new Error(`[I18n] ${caller}() requires successful initialization.`);
     }
 
-    if (typeof key !== "string" || key.trim().length === 0) {
+    // A string past the untrimmed limit is refused before it is trimmed, so a blank one names the limit too.
+    if (typeof key !== "string" || (key.length <= MAX_UNTRIMMED_KEY_LENGTH && key.trim().length === 0)) {
       throw new TypeError("[I18n] A translation key must be a non-empty string.");
     }
 
     const normalizedKey = normalizeTranslationKey(key);
     if (normalizedKey === undefined) {
       throw new TypeError(
-        `[I18n] A translation key must not contain ASCII control characters or exceed ${MAX_TRANSLATION_KEY_LENGTH} characters once trimmed.`,
+        `[I18n] A translation key must not contain ASCII control characters or exceed ${MAX_TRANSLATION_KEY_LENGTH} characters once trimmed or ${MAX_UNTRIMMED_KEY_LENGTH} before.`,
       );
     }
 

@@ -50,6 +50,16 @@ describe("validateI18nConfig", () => {
     ],
     ["empty locales", createConfig({ locales: [] }), "locales: Must contain at least 1 item"],
     [
+      "non-function onMissingKey",
+      createConfig({ onMissingKey: "warn" as unknown as () => void }),
+      "onMissingKey: Must be a function",
+    ],
+    [
+      "non-object dictionaryLimits",
+      createConfig({ dictionaryLimits: null as unknown as undefined }),
+      "dictionaryLimits: Expected object, received null",
+    ],
+    [
       "non-string locale",
       createConfig({ locales: ["en-US", 1 as unknown as string] }),
       "locales[1]: Expected string, received number",

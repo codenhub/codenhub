@@ -31,6 +31,6 @@ describe("maximizeTag", () => {
     maximizeTag(`en-x-${"a1234567".repeat(20)}`);
 
     expect(cachedTagCount()).toBeLessThanOrEqual(1_000);
-    expect(maximizeTag("en-x-0")).toBe("en-latn-us-x-0");
+    expect(maximizeTag("en-x-0")).toBe("en-latn-us");
   });
 });

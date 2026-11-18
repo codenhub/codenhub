@@ -1,4 +1,6 @@
 // @vitest-environment node
+import { runInNewContext } from "node:vm";
+
 import { describe, expect, it, vi } from "vitest";
 
 import { createI18n } from "../index";
@@ -75,6 +77,26 @@ describe("ICU messages", () => {
     expect(i18n.t("hello", { name: when })).toBe(
       `Hello, ${new Intl.DateTimeFormat("en", { dateStyle: "medium" }).format(when)}!`,
     );
+  });
+
+  it("should leave a date argument as written for a timestamp outside the range a Date holds", async () => {
+    const i18n = create();
+    await i18n.init();
+
+    expect(i18n.t("day", { when: 8_640_000_000_000_001 })).toBe("On {when, date}");
+    expect(i18n.t("at", { when: -1e16 })).toBe("At {when, time, short}");
+    expect(i18n.t("day", { when: 8_640_000_000_000_000 })).not.toBe("On {when, date}");
+  });
+
+  it("should format a Date from another realm as formatDate() does", async () => {
+    const i18n = create();
+    await i18n.init();
+    const when = runInNewContext("new Date(2026, 10, 2, 15, 30)") as Date;
+    const local = new Date(2026, 10, 2, 15, 30);
+
+    expect(i18n.t("day", { when })).toBe(i18n.t("day", { when: local }));
+    expect(i18n.t("hello", { name: when })).toBe(i18n.t("hello", { name: local }));
+    expect(i18n.t("day", { when: runInNewContext("new Date(NaN)") as Date })).toBe("On {when, date}");
   });
 
   it("should choose plural options by exact value, then category", async () => {

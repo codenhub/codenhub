@@ -124,6 +124,19 @@ describe("translated pathnames", () => {
       });
     });
 
+    it.each(["except-default", "when-ambiguous", "always"] as const)(
+      "should read a percent-encoded locale prefix as the locale it spells, with localePrefix %s",
+      (localePrefix) => {
+        const routing = create({ localePrefix });
+
+        expect(routing.parse("/%70t/sobre")).toMatchObject({ locale: "pt", pathname: "/about" });
+        expect(routing.localize("/%70t/sobre", "es")).toBe(routing.localize("/about", "es"));
+        // A leading locale after the prefix is refused, written plainly or percent-encoded.
+        expect(routing.parse("/pt/en/about")).toBeUndefined();
+        expect(routing.parse("/pt/%65n/about")).toBeUndefined();
+      },
+    );
+
     it("should match Unicode entries against percent-encoded paths and build encoded paths", () => {
       const routing = create({
         pathnames: { "/settings": { pt: "/configurações" } },

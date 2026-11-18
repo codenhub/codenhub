@@ -155,6 +155,9 @@ export const createLocaleRouting = <TLocale extends string>(
 
   const findLocale = (value: string | undefined, shouldTrim = false): TLocale | undefined =>
     value === undefined ? undefined : localeLookup.get((shouldTrim ? value.trim() : value).toLowerCase());
+  // A prefix is read as a URL's pathname writes it, as table entries are, so `/%70t` is the `/pt` a server decodes.
+  const findPrefixLocale = (segment: string | undefined, normalize: Normalize): TLocale | undefined =>
+    segment === undefined ? undefined : findLocale(normalize(segment));
   const defaultLocale = findLocale(validated.defaultLocale, true)!;
   const pathnames = assertConfig(
     (entries: unknown) =>
@@ -224,7 +227,7 @@ export const createLocaleRouting = <TLocale extends string>(
   /** Reads a valid pathname's locale and canonical path, whether or not any URL leads there. */
   const read = (pathname: string, normalize: Normalize): CanonicalRoute<TLocale> | undefined => {
     const { segments, hasTrailingSlash } = splitPathname(pathname);
-    const prefixLocale = findLocale(segments[0]);
+    const prefixLocale = findPrefixLocale(segments[0], normalize);
 
     if (prefixLocale !== undefined) {
       return {
@@ -276,7 +279,7 @@ export const createLocaleRouting = <TLocale extends string>(
     // A path no URL leads to, such as `/pt/en/sobre` or, with `when-ambiguous`, `/en/sobre`, is not a page: its
     // canonical URL would open another page, would be too long, or localize() would read its leading locale as a prefix.
     const { segments, hasTrailingSlash } = splitPathname(route.pathname);
-    if (findLocale(segments[0]) !== undefined) {
+    if (findPrefixLocale(segments[0], normalize) !== undefined) {
       return undefined;
     }
     const url = buildUrl({ canonical: segments, ...slashPolicy(hasTrailingSlash), locale: route.locale, normalize });
@@ -363,7 +366,7 @@ export const createLocaleRouting = <TLocale extends string>(
     // An unprefixed path is canonical; a prefixed one is read as a path in its locale, so a URL can switch language.
     const normalize = memoizeNormalize();
     const { segments, hasTrailingSlash } = splitPathname(pathname);
-    const prefixLocale = findLocale(segments[0]);
+    const prefixLocale = findPrefixLocale(segments[0], normalize);
     const canonical = prefixLocale === undefined ? segments : readPath(segments.slice(1), prefixLocale, normalize);
     const built = localizeCanonical(canonical, hasTrailingSlash, canonicalLocale, normalize);
 

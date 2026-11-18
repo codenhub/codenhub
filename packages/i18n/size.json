@@ -5,7 +5,7 @@
       "exports": {
         "I18nError": {
           "files": {
-            "dist/dictionary-Cfa-Wbl5.js": {
+            "dist/dictionary-ChWBGFxA.js": {
               "bytes": 284,
               "declarations": {
                 "DEFAULT_DICTIONARY_LIMITS": 106,
@@ -15,7 +15,7 @@
                 "(top level)": 6
               }
             },
-            "dist/internals-D4pJ0Mu6.js": {
+            "dist/internals-DzqTr6jB.js": {
               "bytes": 271,
               "declarations": {
                 "I18nError": 267,
@@ -32,36 +32,38 @@
         "createI18n": {
           "files": {
             "dist/index.js": {
-              "bytes": 18710,
+              "bytes": 18934,
               "declarations": {
-                "I18nInstance": 7285,
+                "I18nInstance": 7316,
                 "Parser": 3503,
-                "formatNodes": 1020,
+                "formatNodes": 1039,
                 "matchConfiguredLocale": 815,
                 "validateI18nConfig": 464,
                 "createLocaleLoader": 454,
                 "NUMBER_FORMAT_OPTIONS": 369,
                 "createFallbackChains": 369,
-                "maximizeTag": 245,
+                "maximizeTag": 243,
                 "RTL_SCRIPTS": 242,
                 "DATE_TIME_FORMAT_OPTIONS": 235,
-                "parseCachedMessage": 211,
+                "parseCachedMessage": 212,
                 "getDefaultLocaleDirection": 203,
                 "CoreCustomEvent": 200,
                 "optionsKey": 186,
-                "parseMessageWithCost": 174,
+                "parseMessageWithCost": 175,
                 "RTL_LANGUAGES": 173,
+                "formatPlainValue": 171,
                 "interpolate": 164,
                 "getRelativeTimeFormat": 149,
                 "getDateTimeFormat": 139,
-                "formatPlainValue": 138,
                 "cachedFormatter": 136,
                 "getNumberFormat": 136,
                 "getListFormat": 133,
                 "createCustomEvent": 99,
-                "isDateValue": 91,
                 "getPluralRules": 90,
+                "readDateTime": 88,
+                "languageAndScript": 86,
                 "getLikelyScript": 85,
+                "readTime": 83,
                 "aliasLanguage": 77,
                 "copyOptions": 77,
                 "formatMessage": 75,
@@ -71,10 +73,9 @@
                 "(top level)": 58,
                 "RELATIVE_TIME_FORMAT_OPTIONS": 57,
                 "isOptionsObject": 51,
+                "likelyScript": 49,
                 "maximizeLocale": 48,
-                "likelyScript": 44,
                 "LANGUAGE_ALIASES": 42,
-                "getLanguageAndScript": 39,
                 "prefixKey": 38,
                 "DATE_STYLES": 36,
                 "LIST_FORMAT_OPTIONS": 36,
@@ -92,11 +93,12 @@
                 "copyDateTimeFormatOptions": 18,
                 "SCRIPT_SUBTAG_PATTERN": 16,
                 "PLURAL_FALLBACK_FORM": 10,
+                "MAX_TIME": 9,
                 "MAX_CACHED_COST": 6,
                 "cachedCost": 4
               }
             },
-            "dist/dictionary-Cfa-Wbl5.js": {
+            "dist/dictionary-ChWBGFxA.js": {
               "bytes": 3135,
               "declarations": {
                 "normalizeDictionary": 2159,
@@ -115,7 +117,7 @@
                 "isObject": 4
               }
             },
-            "dist/config-validators-DGZLN7Pr.js": {
+            "dist/config-validators-BMAPm0e1.js": {
               "bytes": 2754,
               "declarations": {
                 "readLocales": 512,
@@ -141,7 +143,7 @@
                 "(top level)": 22
               }
             },
-            "dist/internals-D4pJ0Mu6.js": {
+            "dist/internals-DzqTr6jB.js": {
               "bytes": 329,
               "declarations": {
                 "I18nError": 267,
@@ -154,12 +156,12 @@
               "bytes": 25
             }
           },
-          "gzip": 8225,
-          "minified": 24953
+          "gzip": 8313,
+          "minified": 25177
         },
         "i18nErrors": {
           "files": {
-            "dist/internals-D4pJ0Mu6.js": {
+            "dist/internals-DzqTr6jB.js": {
               "bytes": 173,
               "declarations": {
                 "i18nErrors": 167,
@@ -176,17 +178,17 @@
       },
       "files": {
         "dist/index.js": {
-          "bytes": 18712,
+          "bytes": 18937,
           "declarations": {
-            "I18nInstance": 7285,
+            "I18nInstance": 7318,
             "Parser": 3503,
-            "formatNodes": 1020,
+            "formatNodes": 1039,
             "matchConfiguredLocale": 815,
             "validateI18nConfig": 464,
             "createLocaleLoader": 454,
             "NUMBER_FORMAT_OPTIONS": 369,
             "createFallbackChains": 369,
-            "maximizeTag": 245,
+            "maximizeTag": 243,
             "RTL_SCRIPTS": 242,
             "DATE_TIME_FORMAT_OPTIONS": 235,
             "parseCachedMessage": 212,
@@ -195,17 +197,19 @@
             "optionsKey": 186,
             "parseMessageWithCost": 175,
             "RTL_LANGUAGES": 173,
+            "formatPlainValue": 171,
             "interpolate": 164,
             "getRelativeTimeFormat": 149,
             "getDateTimeFormat": 139,
-            "formatPlainValue": 138,
             "cachedFormatter": 136,
             "getNumberFormat": 136,
             "getListFormat": 133,
-            "createCustomEvent": 99,
-            "isDateValue": 91,
+            "createCustomEvent": 100,
             "getPluralRules": 90,
+            "readDateTime": 88,
+            "languageAndScript": 86,
             "getLikelyScript": 85,
+            "readTime": 83,
             "aliasLanguage": 77,
             "copyOptions": 77,
             "formatMessage": 75,
@@ -215,10 +219,9 @@
             "(top level)": 58,
             "RELATIVE_TIME_FORMAT_OPTIONS": 57,
             "isOptionsObject": 51,
+            "likelyScript": 49,
             "maximizeLocale": 48,
-            "likelyScript": 44,
             "LANGUAGE_ALIASES": 42,
-            "getLanguageAndScript": 39,
             "prefixKey": 38,
             "DATE_STYLES": 36,
             "LIST_FORMAT_OPTIONS": 36,
@@ -236,11 +239,12 @@
             "copyDateTimeFormatOptions": 18,
             "SCRIPT_SUBTAG_PATTERN": 16,
             "PLURAL_FALLBACK_FORM": 10,
+            "MAX_TIME": 9,
             "MAX_CACHED_COST": 6,
             "cachedCost": 4
           }
         },
-        "dist/dictionary-Cfa-Wbl5.js": {
+        "dist/dictionary-ChWBGFxA.js": {
           "bytes": 3135,
           "declarations": {
             "normalizeDictionary": 2159,
@@ -259,7 +263,7 @@
             "isObject": 4
           }
         },
-        "dist/config-validators-DGZLN7Pr.js": {
+        "dist/config-validators-BMAPm0e1.js": {
           "bytes": 2754,
           "declarations": {
             "readLocales": 512,
@@ -285,7 +289,7 @@
             "(top level)": 22
           }
         },
-        "dist/internals-D4pJ0Mu6.js": {
+        "dist/internals-DzqTr6jB.js": {
           "bytes": 496,
           "declarations": {
             "I18nError": 267,
@@ -299,19 +303,19 @@
           "bytes": 56
         }
       },
-      "gzip": 8317,
-      "minified": 25153,
-      "sha256": "8a06bdc6cf2ffa1e65319d6a75fcc7285e92f12b92e9df320be170534e324e36"
+      "gzip": 8407,
+      "minified": 25378,
+      "sha256": "ba5fb58985c29d2fa31f83090cbe3d43a5b421a0639111c28bbd2abea6f9e870"
     },
     "./browser": {
       "exports": {
         "initializeBrowserI18n": {
           "files": {
             "dist/browser.js": {
-              "bytes": 7042,
+              "bytes": 7094,
               "declarations": {
-                "initializeBrowserI18n": 3661,
-                "createDomTranslator": 1626,
+                "initializeBrowserI18n": 3713,
+                "createDomTranslator": 1627,
                 "readPersistedLocale": 244,
                 "TRANSLATED_ATTRIBUTES": 131,
                 "isInsideCustomElement": 127,
@@ -325,7 +329,7 @@
                 "BLOCKED_ELEMENT_NAMES": 68,
                 "isForeignChange": 61,
                 "warn": 43,
-                "PARENT_NODE_TYPES": 37,
+                "PARENT_NODE_TYPES": 36,
                 "hasTranslationKey": 34,
                 "TRANSLATION_KEY_ATTRIBUTES": 31,
                 "TRANSLATION_KEY_SELECTOR": 31,
@@ -344,7 +348,7 @@
                 "(top level)": 6
               }
             },
-            "dist/dictionary-Cfa-Wbl5.js": {
+            "dist/dictionary-ChWBGFxA.js": {
               "bytes": 485,
               "declarations": {
                 "DEFAULT_DICTIONARY_LIMITS": 106,
@@ -356,7 +360,7 @@
                 "(top level)": 12
               }
             },
-            "dist/internals-D4pJ0Mu6.js": {
+            "dist/internals-DzqTr6jB.js": {
               "bytes": 423,
               "declarations": {
                 "I18nError": 267,
@@ -369,16 +373,16 @@
               "bytes": 35
             }
           },
-          "gzip": 3340,
-          "minified": 7985
+          "gzip": 3369,
+          "minified": 8037
         }
       },
       "files": {
         "dist/browser.js": {
-          "bytes": 7042,
+          "bytes": 7094,
           "declarations": {
-            "initializeBrowserI18n": 3661,
-            "createDomTranslator": 1626,
+            "initializeBrowserI18n": 3713,
+            "createDomTranslator": 1627,
             "readPersistedLocale": 244,
             "TRANSLATED_ATTRIBUTES": 131,
             "isInsideCustomElement": 127,
@@ -392,7 +396,7 @@
             "BLOCKED_ELEMENT_NAMES": 68,
             "isForeignChange": 61,
             "warn": 43,
-            "PARENT_NODE_TYPES": 37,
+            "PARENT_NODE_TYPES": 36,
             "hasTranslationKey": 34,
             "TRANSLATION_KEY_ATTRIBUTES": 31,
             "TRANSLATION_KEY_SELECTOR": 31,
@@ -411,7 +415,7 @@
             "(top level)": 6
           }
         },
-        "dist/dictionary-Cfa-Wbl5.js": {
+        "dist/dictionary-ChWBGFxA.js": {
           "bytes": 485,
           "declarations": {
             "DEFAULT_DICTIONARY_LIMITS": 106,
@@ -423,7 +427,7 @@
             "(top level)": 12
           }
         },
-        "dist/internals-D4pJ0Mu6.js": {
+        "dist/internals-DzqTr6jB.js": {
           "bytes": 423,
           "declarations": {
             "I18nError": 267,
@@ -436,18 +440,18 @@
           "bytes": 35
         }
       },
-      "gzip": 3340,
-      "minified": 7985,
-      "sha256": "6be5317cbb503f847424612985fd4bf6b869496ac215181eaa137c86ad2bb839"
+      "gzip": 3369,
+      "minified": 8037,
+      "sha256": "857fbc5df600cfd41b386beab3f4336d806f0bba716777f1e3e6c1b67c5d43a5"
     },
     "./routing": {
       "exports": {
         "createLocaleRouting": {
           "files": {
             "dist/routing.js": {
-              "bytes": 9196,
+              "bytes": 9237,
               "declarations": {
-                "createLocaleRouting": 3427,
+                "createLocaleRouting": 3468,
                 "compilePathnames": 1575,
                 "indexByShape": 625,
                 "findOverlapped": 609,
@@ -475,7 +479,7 @@
                 "(top level)": 6
               }
             },
-            "dist/config-validators-DGZLN7Pr.js": {
+            "dist/config-validators-BMAPm0e1.js": {
               "bytes": 2425,
               "declarations": {
                 "readLocales": 511,
@@ -500,7 +504,7 @@
                 "(top level)": 16
               }
             },
-            "dist/dictionary-Cfa-Wbl5.js": {
+            "dist/dictionary-ChWBGFxA.js": {
               "bytes": 570,
               "declarations": {
                 "isPlainObject": 185,
@@ -516,15 +520,15 @@
               "bytes": 33
             }
           },
-          "gzip": 4690,
-          "minified": 12224
+          "gzip": 4705,
+          "minified": 12265
         }
       },
       "files": {
         "dist/routing.js": {
-          "bytes": 9196,
+          "bytes": 9237,
           "declarations": {
-            "createLocaleRouting": 3427,
+            "createLocaleRouting": 3468,
             "compilePathnames": 1575,
             "indexByShape": 625,
             "findOverlapped": 609,
@@ -552,7 +556,7 @@
             "(top level)": 6
           }
         },
-        "dist/config-validators-DGZLN7Pr.js": {
+        "dist/config-validators-BMAPm0e1.js": {
           "bytes": 2425,
           "declarations": {
             "readLocales": 511,
@@ -577,7 +581,7 @@
             "(top level)": 16
           }
         },
-        "dist/dictionary-Cfa-Wbl5.js": {
+        "dist/dictionary-ChWBGFxA.js": {
           "bytes": 570,
           "declarations": {
             "isPlainObject": 185,
@@ -593,9 +597,9 @@
           "bytes": 33
         }
       },
-      "gzip": 4690,
-      "minified": 12224,
-      "sha256": "72be22cfe8efbc32e2ea32cc2c0a50c3b100846d96ba7708b07b112fff401b29"
+      "gzip": 4705,
+      "minified": 12265,
+      "sha256": "dbf521b15e1a87388e6b076d0169959f01a02cd8c227b047d29de233d35c6a31"
     }
   }
 }

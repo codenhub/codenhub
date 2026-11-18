@@ -1,10 +1,13 @@
-import { maximizeTag } from "./likely-subtags";
+import { languageAndScript, maximizeTag } from "./likely-subtags";
 
 /**
  * The language and script of a locale with likely subtags added, such as `zh-hant` for `zh-TW`. A tag `Intl.Locale`
  * rejects, such as private-use `x-test`, has no likely script to compare.
  */
-const likelyScript = (locale: string): string | undefined => maximizeTag(locale)?.split("-").slice(0, 2).join("-");
+const likelyScript = (locale: string): string | undefined => {
+  const maximized = maximizeTag(locale);
+  return maximized === undefined ? undefined : languageAndScript(maximized);
+};
 
 /**
  * Lists the locales whose dictionaries a locale reads, in order: itself, each configured parent made by dropping

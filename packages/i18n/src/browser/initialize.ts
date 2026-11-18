@@ -36,7 +36,7 @@ export interface BrowserI18nOptions<TLocale extends string> {
    * Authoritative locale, which takes precedence over persisted and browser preferences, and is persisted when
    * `persistLocale` is on. Only `undefined` omits this input; other non-string runtime values reject initialization.
    */
-  locale?: TLocale | undefined;
+  locale?: NoInfer<TLocale> | undefined;
   /** Local storage key used for the JSON locale preference. Defaults to `"i18n"`. Storage is best-effort: a failed read or write warns and is skipped. */
   storageKey?: string | undefined;
   /**
@@ -393,7 +393,9 @@ export async function initializeBrowserI18n<TLocale extends string>(
     await requestDetectedLocale();
   };
   // An event target gives listeners the error handling `i18n.subscribe()` has, which dispatches the manager's events.
+  // Aborting at disconnect() removes every listener, so one that disconnects stops the rest and none is kept.
   const changes = new EventTarget();
+  const subscriptions = new AbortController();
   let notifiedState: string | undefined;
   let isNotificationQueued = false;
   const pickerState = (): string => `${i18n.locale} ${isFollowingSystem}`;
@@ -418,7 +420,7 @@ export async function initializeBrowserI18n<TLocale extends string>(
     const notify = (): void => listener();
     let isSubscribed = !isCleaned;
     if (isSubscribed) {
-      changes.addEventListener(CHANGE_EVENT, notify);
+      changes.addEventListener(CHANGE_EVENT, notify, { signal: subscriptions.signal });
     }
     return () => {
       if (isSubscribed) {
@@ -456,6 +458,7 @@ export async function initializeBrowserI18n<TLocale extends string>(
     if (detectedRequestId !== undefined) {
       internals.supersede(detectedRequestId);
     }
+    subscriptions.abort();
     observer?.disconnect();
     observer = undefined;
     root = undefined;

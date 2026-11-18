@@ -13,9 +13,11 @@ export function hasAsciiControlCharacter(value: string): boolean {
 
 /** The longest translation key, once trimmed. @internal */
 export const MAX_TRANSLATION_KEY_LENGTH = 1_000;
-// Surrounding whitespace is trimmed before the limit applies, as from a template or a form; a longer string is refused
-// before it is trimmed or scanned.
-const MAX_UNTRIMMED_KEY_LENGTH = 10 * MAX_TRANSLATION_KEY_LENGTH;
+/**
+ * The longest translation key before trimming. Surrounding whitespace is trimmed before the limit applies, as from a
+ * template or a form; a longer string is refused before it is trimmed or scanned. @internal
+ */
+export const MAX_UNTRIMMED_KEY_LENGTH = 10 * MAX_TRANSLATION_KEY_LENGTH;
 
 /**
  * Trims a string that can name a dictionary entry: not blank, within the length limit once trimmed, and free of ASCII
