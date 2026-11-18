@@ -116,8 +116,16 @@
     line-height: inherit;
     letter-spacing: normal;
 
+    /* The page's secondary ink, which a fill lowers: on a dark `.ipt.solid`
+       it read at 4.4:1, so it leans toward the field's own ink as the fill
+       grows. A field held by a plate prints in the plate's ink, as its text
+       does: the page's grey on a `.card.solid` read at 1 to 3:1. */
     &::placeholder {
-      color: var(--color-text-secondary);
+      color: color-mix(
+        in oklab,
+        var(--_fg) max(var(--_through), calc(var(--_capped) * 0.75)),
+        var(--color-text-secondary)
+      );
     }
 
     /* The last exclusion is `.input-group`'s: a group whose control is disabled
