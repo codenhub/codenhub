@@ -2,7 +2,7 @@
 title: Accesibilidad
 description: Lo que hace el CSS con el foco, los estados, el movimiento, el contraste, los colores forzados y el texto de derecha a izquierda, y lo que tu aplicación todavía les debe a sus usuarios.
 order: 5
-source: 65598572c1d646053e9a0204f4753eb6c9f89dba
+source: ddbbd8dfc2f005b08420be5a3c9b9d514b8f0486
 ---
 
 # Accesibilidad
@@ -70,7 +70,7 @@ La regla de movimiento reducido de cada componente viene con el componente, así
 
 Una transición que el reset quita no se ejecuta, así que no dispara `transitionend`. Un cajón que se desliza y se elimina a sí mismo con ese evento se queda en la página con movimiento reducido. Comprueba si el elemento todavía tiene una transición que ejecutar antes de esperar el evento, o elimínalo también tras un tiempo de espera. Con `data-motion="none"`, cada transición sigue ejecutándose, durante 0.01ms, así que el evento se dispara.
 
-El reset cambia las propiedades que nombra una transición y conserva sus duraciones, y un navegador reutiliza una lista de duraciones en orden cuando la lista de propiedades es más larga. Así, `transition: transform 200ms, opacity 1s` funde la opacidad en 200ms, no en 1s, y un color de fondo o de texto que antes cambiaba al instante ahora se funde en 1s. Dale a una transición una sola duración cuando importe cuánto dura su fundido: cada propiedad que el reset conserva se funde entonces durante ese tiempo.
+El reset cambia las propiedades que nombra una transición y conserva sus duraciones, y un navegador reutiliza una lista de duraciones en orden cuando la lista de propiedades es más larga. Así, `transition: transform 200ms, opacity 1s` funde la opacidad en 200ms, no en 1s, y lo que antes cambiaba al instante ahora también se funde: un color de fondo en 1s y un color de texto en 200ms. Dale a una transición una sola duración cuando importe cuánto dura su fundido: cada propiedad que el reset conserva se funde entonces durante ese tiempo.
 
 La regla del reset es `!important` dentro de la capa `base`, y un `!important` con capa gana a uno sin capa, así que tu propio `!important` no puede volver a activar una animación. Para mantener una en marcha para los usuarios que piden movimiento reducido, como un spinner de subida que consideres esencial, declárala `!important` en una capa ordenada antes de `base`, tanto con el ajuste del sistema como con el de la app. La primera sentencia `@layer` que lee el navegador fija el orden, así que la tuya va antes del paquete:
 

@@ -236,8 +236,8 @@ test.describe("data-motion", () => {
 
   /* The reset swaps the transition's properties and keeps its durations, and
      the browser reuses that list in order, as docs/accessibility.md says. So
-     with two durations, opacity takes the first one, and a background the
-     author left without a transition takes the second one. */
+     with two durations, opacity and a text color take the first one, and a
+     background the author left without a transition takes the second one. */
   for (const [label, attributes, reducedMotion] of [
     ["the system's reduced motion", "", "reduce"],
     ['data-motion="reduced"', 'data-motion="reduced"', "no-preference"],
@@ -254,6 +254,7 @@ test.describe("data-motion", () => {
         element.style.transform = "translateX(100px)";
         element.style.opacity = "0.5";
         element.style.backgroundColor = "blue";
+        element.style.color = "green";
 
         return Object.fromEntries(
           element
@@ -265,7 +266,7 @@ test.describe("data-motion", () => {
         );
       });
 
-      expect(running).toEqual({ opacity: 200, "background-color": 1000 });
+      expect(running).toEqual({ opacity: 200, color: 200, "background-color": 1000 });
     });
   }
 });

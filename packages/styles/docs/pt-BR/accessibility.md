@@ -2,7 +2,7 @@
 title: Acessibilidade
 description: O que o CSS faz por foco, estados, movimento, contraste, cores forçadas e texto da direita para a esquerda, e o que a sua aplicação ainda deve aos seus usuários.
 order: 5
-source: 65598572c1d646053e9a0204f4753eb6c9f89dba
+source: ddbbd8dfc2f005b08420be5a3c9b9d514b8f0486
 ---
 
 # Acessibilidade
@@ -70,7 +70,7 @@ A regra de movimento reduzido de cada componente vem com o componente, então to
 
 Uma transição que o reset remove não roda, então não dispara `transitionend`. Uma gaveta que desliza e se remove nesse evento fica na página com movimento reduzido. Verifique se o elemento ainda tem uma transição para rodar antes de esperar o evento, ou remova-o também depois de um tempo limite. Com `data-motion="none"`, toda transição ainda roda, por 0.01ms, então o evento dispara.
 
-O reset troca as propriedades que uma transição nomeia e mantém suas durações, e um navegador reutiliza uma lista de durações em ordem quando a lista de propriedades é mais longa. Assim, `transition: transform 200ms, opacity 1s` faz o fade da opacidade em 200ms, não em 1s, e uma cor de fundo ou de texto que antes mudava de imediato agora faz fade em 1s. Dê uma única duração a uma transição quando a duração do fade importar: toda propriedade que o reset mantém faz fade por esse tempo.
+O reset troca as propriedades que uma transição nomeia e mantém suas durações, e um navegador reutiliza uma lista de durações em ordem quando a lista de propriedades é mais longa. Assim, `transition: transform 200ms, opacity 1s` faz o fade da opacidade em 200ms, não em 1s, e o que antes mudava de imediato agora também faz fade: uma cor de fundo em 1s e uma cor de texto em 200ms. Dê uma única duração a uma transição quando a duração do fade importar: toda propriedade que o reset mantém faz fade por esse tempo.
 
 A regra do reset é `!important` dentro da camada `base`, e um `!important` com camada vence um sem camada, então o seu próprio `!important` não consegue religar uma animação. Para manter uma rodando para usuários que pedem movimento reduzido, como um spinner de upload que você considera essencial, declare-a `!important` numa camada ordenada antes de `base`, tanto com a configuração do sistema quanto com a do app. A primeira declaração `@layer` que o navegador lê define a ordem, então a sua vem antes do pacote:
 
