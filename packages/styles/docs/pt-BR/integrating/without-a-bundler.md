@@ -2,7 +2,7 @@
 title: Sem bundler
 description: Como referenciar as folhas de estilos compiladas a partir de HTML puro, Rails, Laravel, Django ou qualquer aplicação renderizada no servidor, e o build por linha de comando.
 order: 6
-source: 41b82b20cc609ae20945918f3ff7c65885d77835
+source: c63004af41be77f0f38729ab9b4d409717f4c463
 ---
 
 # Sem bundler
@@ -38,8 +38,8 @@ O jsDelivr e o unpkg servem todos os arquivos de todas as versões publicadas no
 
 ```html
 <head>
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@codenhub/styles@0.10.0/dist/index.css" />
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@codenhub/styles@0.10.0/dist/aesthetics/pixel.css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@codenhub/styles@0.11.0/dist/index.css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@codenhub/styles@0.11.0/dist/aesthetics/pixel.css" />
 </head>
 ```
 

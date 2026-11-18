@@ -1,7 +1,7 @@
 ---
 title: Introducción
 description: Para qué sirve @codenhub/styles, qué cuesta y en qué orden leer esta documentación.
-source: 3910a00d68996649836959bfa1e9cb0891bfce4d
+source: 6b662097b0185a10a526ad943b5c1776b31b918d
 ---
 
 # @codenhub/styles
@@ -79,7 +79,7 @@ El paquete está por debajo de 1.0 y sigue la [regla del versionado semántico p
 - Una versión menor, como de 0.7.0 a 0.8.0, puede romper la compatibilidad. Puede renombrar o eliminar una clase o un token, o cambiar un valor por defecto. Cada cambio incompatible aparece en **Changed** o **Removed** en la página del [changelog](../changelog/index.md) de esa versión, con lo que debes usar en su lugar.
 - Una versión de parche, como de 0.7.0 a 0.7.1, nunca rompe la compatibilidad.
 
-El rango por defecto de npm para una nueva dependencia, `^0.10.0`, ya acepta solo parches, porque por debajo de 1.0 un rango con caret no pasa a la siguiente versión menor. Lee el changelog antes de subirlo. Cuando enlaces un archivo desde un CDN, pon la versión exacta en la URL; consulta [Sin bundler](./integrating/without-a-bundler.md).
+El rango por defecto de npm para una nueva dependencia, `^0.11.0`, ya acepta solo parches, porque por debajo de 1.0 un rango con caret no pasa a la siguiente versión menor. Lee el changelog antes de subirlo. Cuando enlaces un archivo desde un CDN, pon la versión exacta en la URL; consulta [Sin bundler](./integrating/without-a-bundler.md).
 
 Los cambios incompatibles no se suavizan con alias porque el modelo todavía se está asentando, y mantener cada nombre antiguo junto a su reemplazo haría crecer la superficie en cada versión. Un cambio de nombre o una eliminación suele costar un buscar y reemplazar al actualizar; un valor por defecto que cambia puede requerir que reajustes tu propio CSS.
 

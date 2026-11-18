@@ -2,7 +2,7 @@
 title: Sin bundler
 description: Enlazar las hojas de estilos compiladas desde HTML simple, Rails, Laravel, Django o cualquier aplicación renderizada en el servidor, y el build por línea de comandos.
 order: 6
-source: 41b82b20cc609ae20945918f3ff7c65885d77835
+source: c63004af41be77f0f38729ab9b4d409717f4c463
 ---
 
 # Sin bundler
@@ -38,8 +38,8 @@ jsDelivr y unpkg sirven todos los archivos de cada versión publicada en npm, as
 
 ```html
 <head>
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@codenhub/styles@0.10.0/dist/index.css" />
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@codenhub/styles@0.10.0/dist/aesthetics/pixel.css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@codenhub/styles@0.11.0/dist/index.css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@codenhub/styles@0.11.0/dist/aesthetics/pixel.css" />
 </head>
 ```
 
