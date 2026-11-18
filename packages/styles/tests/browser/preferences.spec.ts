@@ -233,4 +233,40 @@ test.describe("data-motion", () => {
     expect(full.property).toBe("transform, opacity");
     expect(full.scroll).toBe("smooth");
   });
+
+  /* The reset swaps the transition's properties and keeps its durations, and
+     the browser reuses that list in order, as docs/accessibility.md says. So
+     with two durations, opacity and a text color take the first one, and a
+     background the author left without a transition takes the second one. */
+  for (const [label, attributes, reducedMotion] of [
+    ["the system's reduced motion", "", "reduce"],
+    ['data-motion="reduced"', 'data-motion="reduced"', "no-preference"],
+  ] as const) {
+    test(`under ${label}, the reset reuses the durations in order`, async ({ page }) => {
+      await page.emulateMedia({ reducedMotion });
+      await page.setContent(
+        `<!doctype html><html ${attributes}><body><div data-testid="drawer" style="transition: transform 200ms, opacity 1s; background-color: red"></div></body></html>`,
+      );
+      await page.addStyleTag({ content: await built("index.css") });
+
+      const running = await page.getByTestId("drawer").evaluate(async (element) => {
+        await Promise.allSettled(document.getAnimations().map((animation) => animation.finished));
+        element.style.transform = "translateX(100px)";
+        element.style.opacity = "0.5";
+        element.style.backgroundColor = "blue";
+        element.style.color = "green";
+
+        return Object.fromEntries(
+          element
+            .getAnimations()
+            .map((animation) => [
+              (animation as CSSTransition).transitionProperty,
+              animation.effect?.getTiming().duration,
+            ]),
+        );
+      });
+
+      expect(running).toEqual({ opacity: 200, color: 200, "background-color": 1000 });
+    });
+  }
 });
