@@ -200,8 +200,6 @@ export interface CodeRecord {
   readonly acr?: string;
   /** The app's session identifier from the grant, carried to every token of the grant. */
   readonly sessionId?: string;
-  /** Whether the request carried `max_age`, which makes `auth_time` required in the ID token. */
-  readonly maxAgeRequested: boolean;
   /** The resource servers the grant covers (RFC 8707): the authorization request's `resource` values. */
   readonly resources?: readonly string[];
   /** In seconds since the Unix epoch. */

@@ -630,7 +630,6 @@ async function issueCode(
     ...optionalMember("amr", grant.amr),
     ...optionalMember("acr", grant.acr),
     ...optionalMember("sessionId", grant.sessionId),
-    maxAgeRequested: interaction.maxAge !== undefined,
     ...optionalMember("resources", resourcesOfClient(client, interaction.resources)),
     expiresAt: options.now() + ttl,
   };

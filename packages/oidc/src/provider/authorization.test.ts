@@ -595,7 +595,6 @@ describe("completeAuthorization", () => {
         scopes: ["openid", "profile"],
         subject: "user-1",
         authTime: NOW_SECONDS,
-        maxAgeRequested: false,
         expiresAt: NOW_SECONDS + DEFAULT_CODE_TTL,
         grantId: expect.any(String),
       }),
@@ -736,13 +735,6 @@ describe("completeAuthorization", () => {
     store.addClient(client);
     await completeAuthorization(options, interaction.id, GRANT);
     expect("resources" in (saveSpy.mock.calls[0]?.[1] ?? {})).toBe(false);
-  });
-
-  it("shouldSetMaxAgeRequestedWhenMaxAgeWasSent", async () => {
-    const saveSpy = vi.spyOn(store, "saveCode");
-    const interaction = await beginOk(query({ max_age: "300" }));
-    await completeAuthorization(options, interaction.id, GRANT);
-    expect(saveSpy.mock.calls[0]?.[1]).toMatchObject({ maxAgeRequested: true });
   });
 
   it("shouldSaveGrantedScopesDeduplicated", async () => {

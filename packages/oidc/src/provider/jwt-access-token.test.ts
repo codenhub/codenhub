@@ -92,7 +92,6 @@ async function signIn({ op, store }: Setup): Promise<Record<string, unknown>> {
     authTime: NOW_SECONDS - 30,
     amr: ["pwd"],
     acr: "urn:loa:1",
-    maxAgeRequested: false,
     expiresAt: NOW_SECONDS + 60,
   });
   return json(
