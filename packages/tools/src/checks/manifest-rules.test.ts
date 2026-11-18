@@ -14,6 +14,8 @@ const COMPLIANT_MANIFEST = {
   description: "An example package.",
   exports: { ".": "./dist/index.js" },
   files: ["dist"],
+  homepage: "https://codenhub.dev/packages/example/",
+  keywords: ["example"],
   license: "Apache-2.0",
   main: "./dist/index.js",
   module: "./dist/index.js",
@@ -105,7 +107,88 @@ describe("manifest rules", () => {
       "metadata/description",
       "metadata/license",
       "metadata/repository",
+      "metadata/homepage",
+      "metadata/keywords",
     ]);
+  });
+
+  it.each([[[]], [[null, " "]]])("shouldTreatKeywordsWithNoUsableEntryAsMissing %j", async (keywords) => {
+    const manifest = { ...COMPLIANT_MANIFEST, keywords, scripts: COMPLIANT_SCRIPTS };
+    const findings = await runRules(createPackage({ directory: await createPackageDirectory(), manifest }));
+
+    expect(findings).toEqual([
+      {
+        code: "metadata/keywords",
+        location: "package.json",
+        message: `Should declare "keywords".`,
+        severity: "warning",
+      },
+    ]);
+  });
+
+  it("shouldWarnWhenAListedPackageHomepageIsNotItsPackagePage", async () => {
+    const manifest = {
+      ...COMPLIANT_MANIFEST,
+      homepage: "https://github.com/codenhub/codenhub/tree/main/packages/example",
+      scripts: COMPLIANT_SCRIPTS,
+    };
+    const findings = await runRules(createPackage({ directory: await createPackageDirectory(), manifest }));
+
+    expect(findings).toEqual([
+      {
+        code: "metadata/homepage-mismatch",
+        location: "package.json",
+        message: `"homepage" should be "https://codenhub.dev/packages/example/", the package page of a listed package.`,
+        severity: "warning",
+      },
+    ]);
+  });
+
+  it("shouldExpectTheDeclaredSlugInAListedPackageHomepage", async () => {
+    const manifest = {
+      ...COMPLIANT_MANIFEST,
+      codenhub: { ...COMPLIANT_MANIFEST.codenhub, slug: "sample" },
+      homepage: "https://codenhub.dev/packages/sample/",
+      scripts: COMPLIANT_SCRIPTS,
+    };
+
+    await expect(runRules(createPackage({ directory: await createPackageDirectory(), manifest }))).resolves.toEqual([]);
+  });
+
+  it("shouldExpectTheGitHubDirectoryAsAnUnlistedPackageHomepage", async () => {
+    const codenhub = { ...COMPLIANT_MANIFEST.codenhub, listed: false };
+    const directory = await createPackageDirectory();
+    const mismatched = {
+      ...COMPLIANT_MANIFEST,
+      codenhub,
+      scripts: COMPLIANT_SCRIPTS,
+    };
+    const matching = {
+      ...mismatched,
+      homepage: "https://github.com/codenhub/codenhub/tree/main/packages/example",
+    };
+
+    expect(await runRules(createPackage({ directory, manifest: mismatched }))).toEqual([
+      {
+        code: "metadata/homepage-mismatch",
+        location: "package.json",
+        message: `"homepage" should be "https://github.com/codenhub/codenhub/tree/main/packages/example", the GitHub directory of an unlisted package.`,
+        severity: "warning",
+      },
+    ]);
+    await expect(runRules(createPackage({ directory, manifest: matching }))).resolves.toEqual([]);
+  });
+
+  it("shouldLeaveTheHomepageValueUncheckedWithoutReadableDocumentationMetadata", async () => {
+    const manifest = {
+      ...COMPLIANT_MANIFEST,
+      codenhub: { label: "Example", status: "bogus", docs: {} },
+      homepage: "https://example.com/",
+      scripts: COMPLIANT_SCRIPTS,
+    };
+    const findings = await runRules(createPackage({ directory: await createPackageDirectory(), manifest }));
+
+    expect(findings.map(({ code }) => code)).not.toContain("metadata/homepage-mismatch");
   });
 
   it("shouldRejectAnEmptyExportsObject", async () => {
