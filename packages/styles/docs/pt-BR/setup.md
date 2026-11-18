@@ -2,7 +2,7 @@
 title: Configuração
 description: Instale o pacote, escolha entre CSS compilado ou código-fonte do Tailwind e renderize a estrutura da página de configurações.
 order: 1
-source: 05bd830303c51d016f42f1f81baf26bbc7257aec
+source: 1626380ec1fa14148f5b8aa1e5c4d39e63ab7a17
 ---
 
 # Configuração
@@ -85,6 +85,7 @@ A ordem dos dois imports não importa, porque todo entrypoint declara as [camada
 - **Um caminho `/tw` é carregado sem Tailwind.** Os arquivos `/tw` são código-fonte do Tailwind: eles contêm `@theme`, `@utility` e `@apply`, que os navegadores não entendem. O seu build do Tailwind precisa compilá-los; veja [Tailwind CSS v4](./integrating/tailwind.md).
 - **Um entrypoint `/tw` específico é importado sem o Tailwind antes.** `@codenhub/styles/button/tw` e os outros arquivos de um componente específico não importam o Tailwind. Importados sozinhos, eles compilam sem erro, mas não produzem nenhuma regra de componente. Coloque `@import "tailwindcss";` antes; veja [Tailwind CSS v4 → Usando um entrypoint específico](./integrating/tailwind.md#usando-um-entrypoint-específico).
 - **Falta uma classe montada em tempo de execução (só com código-fonte do Tailwind).** O Tailwind só gera uma classe utilitária, incluindo os componentes do pacote como `.btn`, quando encontra o nome nos seus arquivos de código. Um nome montado a partir de strings, como `` `btn ${tone}` ``, é invisível para essa varredura. Escreva os nomes de classe completos, ou liste-os como descrito em [Tailwind CSS v4](./integrating/tailwind.md).
+- **Um shadow root tem a folha de estilos e a página não.** Dentro de um shadow root, os cards perdem a linha e outras partes ficam meio estilizadas: o navegador ignora `@property` num shadow root, e o pacote registra propriedades das quais depende. Carregue a folha de estilos também na página, e depois em cada shadow root que usa as classes, por exemplo adotando a mesma `CSSStyleSheet` nos dois.
 
 ### CSS crítico inline
 
