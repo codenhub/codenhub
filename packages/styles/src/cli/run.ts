@@ -158,6 +158,9 @@ async function build(options: BuildOptions, io: CliIo): Promise<string> {
   }
 
   const output = path.resolve(io.cwd, options.output);
+
+  await assertReplaceable(options, io.cwd, output);
+
   const contents = readContent(options.contentGlobs, io.cwd, output);
 
   const droppable = new Set(JSON.parse(await readPackageFile(PURGE_CLASSES)) as string[]);
@@ -194,6 +197,47 @@ async function build(options: BuildOptions, io: CliIo): Promise<string> {
   }
 
   return output;
+}
+
+/* The output is replaced whole, so a file this command did not write is
+   refused rather than lost: a template named as the output by mistake, as in
+   `--content index.html --output index.html`, or a stylesheet written by hand.
+   What it writes starts with Tailwind's `/*!` banner, and a stylesheet built
+   another way with a banner or a layer statement is taken as one built to be
+   replaced. An empty file is replaced too. What is not a file is left to the
+   write, which reports it. */
+async function assertReplaceable(options: BuildOptions, cwd: string, output: string): Promise<void> {
+  if (options.contentGlobs.some((entry) => path.relative(path.resolve(cwd, entry), output) === "")) {
+    throw new Error(`--output ${options.output} is also a --content file; name a stylesheet to write.`);
+  }
+
+  let head: string;
+
+  try {
+    if (!(await fs.stat(output)).isFile()) {
+      return;
+    }
+
+    const handle = await fs.open(output);
+
+    try {
+      const { buffer, bytesRead } = await handle.read(Buffer.alloc(64), 0, 64, 0);
+
+      head = buffer.toString("utf8", 0, bytesRead);
+    } finally {
+      await handle.close();
+    }
+  } catch {
+    // A missing file is written; any other failure is the write's to report.
+    return;
+  }
+
+  // `\s` takes a byte order mark too.
+  if (!/^\s*(?:\/\*!|@layer\b|$)/.test(head)) {
+    throw new Error(
+      `--output ${options.output} holds something this command did not write; move it or name another file.`,
+    );
+  }
 }
 
 /* Every entry has to name a file and every file has to be readable, so a build

@@ -1,6 +1,6 @@
 ---
 status: IMPLEMENTED
-last_updated: 2026-11-16
+last_updated: 2026-11-18
 scope: Design decisions, limits, and failure modes of the `chs` build command that ships in `@codenhub/styles`.
 ---
 
@@ -83,4 +83,4 @@ Each `--content` entry has to name at least one file, and each file it names has
 
 ## Failure modes
 
-Every failure the command handles prints one line, `chs: <reason>`, to stderr and exits with status 1 without writing the output file. The reasons, each tested: a missing `--content` or `--output` (an `--output` of only spaces counts as missing); a `--content` glob that matches no file, naming the glob and the folder; an extra positional argument, almost always an unquoted glob the shell expanded; an unknown flag, or a flag missing its value or given one it does not take, worded from `parseArgs`'s error rather than passed through, since Node words those for programmers; an unknown aesthetic, listing the valid ones; a missing or unknown command; a Node.js older than 26, naming both versions; a file that cannot be read, with Node.js's own message, or with its path added when Node.js leaves it out, as for a file too large for a string; and a failed write, with Node.js's own message, such as `EISDIR` when `--output` names a folder, or `EPERM` for the same mistake on Windows.
+Every failure the command handles prints one line, `chs: <reason>`, to stderr and exits with status 1 without writing the output file. The reasons, each tested: a missing `--content` or `--output` (an `--output` of only spaces counts as missing); a `--content` glob that matches no file, naming the glob and the folder; an extra positional argument, almost always an unquoted glob the shell expanded; an unknown flag, or a flag missing its value or given one it does not take, worded from `parseArgs`'s error rather than passed through, since Node words those for programmers; an unknown aesthetic, listing the valid ones; a missing or unknown command; a Node.js older than 26, naming both versions; an `--output` that a `--content` entry names, or an existing file that does not start with a `/*!` comment or `@layer` and is not empty, which the command did not write and would replace whole, so a template or a hand-written stylesheet named by mistake is kept (a stylesheet built another way with a banner or a layer statement is taken as one built to be replaced, since reading further would not tell them apart); a file that cannot be read, with Node.js's own message, or with its path added when Node.js leaves it out, as for a file too large for a string; and a failed write, with Node.js's own message, such as `EISDIR` when `--output` names a folder, or `EPERM` for the same mistake on Windows.
