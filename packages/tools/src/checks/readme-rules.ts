@@ -1,4 +1,4 @@
-import { readFile } from "node:fs/promises";
+import { readFile, stat } from "node:fs/promises";
 import { join } from "node:path";
 
 import { parsePackageMetadata, type PackageStatus } from "../documentation/package-metadata.ts";
@@ -9,6 +9,10 @@ import type { CheckRule, Finding } from "./rule.ts";
 const README = "README.md";
 const SECTION_HEADING = /^##\s/m;
 const NOTICED_STATUSES: PackageStatus[] = ["deprecated", "experimental"];
+const LICENSE = "LICENSE";
+const LICENSE_HEADING = /^##[ \t]+License[ \t]*\r?$/im;
+const INLINE_LINK_TARGET = /\]\(\s*<?([^)\s>]+)/g;
+const REFERENCE_LINK_TARGET = /^[ \t]*\[[^\]]+\]:[ \t]*<?([^\s>]+)/gm;
 
 /**
  * Extracts the status notices a reader sees before the first README section.
@@ -28,7 +32,7 @@ function readStatusNotices(readme: string): string {
     .toLowerCase();
 }
 
-async function checkReadmeStatus(workspacePackage: WorkspacePackage): Promise<Finding[]> {
+function checkReadmeStatus(workspacePackage: WorkspacePackage, readme: string): Finding[] {
   let status: PackageStatus;
   try {
     // A malformed manifest is already reported by the documentation rule.
@@ -38,11 +42,6 @@ async function checkReadmeStatus(workspacePackage: WorkspacePackage): Promise<Fi
     }
     status = metadata.status;
   } catch {
-    return [];
-  }
-
-  const readme = await readFile(join(workspacePackage.directory, README), "utf8").catch(() => undefined);
-  if (readme === undefined) {
     return [];
   }
 
@@ -74,6 +73,58 @@ async function checkReadmeStatus(workspacePackage: WorkspacePackage): Promise<Fi
 }
 
 /**
+ * Reads the `License` section of a README, up to the next section heading.
+ * @param readme Authored README contents.
+ * @returns The section body, or `undefined` when the README has no `License` section.
+ */
+function readLicenseSection(readme: string): string | undefined {
+  const heading = LICENSE_HEADING.exec(readme);
+  if (heading === null) {
+    return undefined;
+  }
+  const rest = readme.slice(heading.index + heading[0].length);
+  return rest.split(SECTION_HEADING, 1)[0];
+}
+
+function linksLicense(section: string): boolean {
+  const targets = [...section.matchAll(INLINE_LINK_TARGET), ...section.matchAll(REFERENCE_LINK_TARGET)].map(
+    (match) => match[1] ?? "",
+  );
+  return targets.some((target) => target.split("#", 1)[0]?.replace(/^\.\//, "") === LICENSE);
+}
+
+async function shipsLicense(workspacePackage: WorkspacePackage): Promise<boolean> {
+  try {
+    return (await stat(join(workspacePackage.directory, LICENSE))).isFile();
+  } catch {
+    return false;
+  }
+}
+
+async function checkLicenseLink(workspacePackage: WorkspacePackage, readme: string): Promise<Finding[]> {
+  const section = readLicenseSection(readme);
+  if ((section !== undefined && linksLicense(section)) || !(await shipsLicense(workspacePackage))) {
+    return [];
+  }
+  return [
+    {
+      code: "readme/license-link",
+      location: README,
+      message: "The package ships a LICENSE file, so the README License section should link it.",
+      severity: "warning",
+    },
+  ];
+}
+
+async function checkReadme(workspacePackage: WorkspacePackage): Promise<Finding[]> {
+  const readme = await readFile(join(workspacePackage.directory, README), "utf8").catch(() => undefined);
+  if (readme === undefined) {
+    return [];
+  }
+  return [...checkReadmeStatus(workspacePackage, readme), ...(await checkLicenseLink(workspacePackage, readme))];
+}
+
+/**
  * Creates the rules that check README content against the README spec.
  * @returns README rules ready for registration.
  */
@@ -82,8 +133,8 @@ export function createReadmeRules(): CheckRule[] {
     {
       appliesTo: isDocumentedPackage,
       name: "readme",
-      run: ({ package: workspacePackage }) => checkReadmeStatus(workspacePackage),
-      summary: "README status notices agree with the declared documentation status.",
+      run: ({ package: workspacePackage }) => checkReadme(workspacePackage),
+      summary: "README status notices agree with the declared status, and the License section links a shipped LICENSE.",
     },
   ];
 }
