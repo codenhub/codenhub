@@ -55,6 +55,19 @@ export interface GenerateSecretKeyOptions {
   readonly extractable?: boolean;
 }
 
+const KEY_PAIR_OPTIONS: Readonly<Record<keyof GenerateKeyPairOptions, true>> = {
+  alg: true,
+  kid: true,
+  extractable: true,
+  modulusLength: true,
+};
+
+const SECRET_KEY_OPTIONS: Readonly<Record<keyof GenerateSecretKeyOptions, true>> = {
+  alg: true,
+  kid: true,
+  extractable: true,
+};
+
 /** A generated key pair. Frozen. */
 export interface KeyPair {
   /** Signs tokens. */
@@ -84,7 +97,7 @@ const BITS_PER_BYTE = 8;
  * is given for a non-RSA algorithm or is not 2048, 3072 or 4096.
  */
 export async function generateKeyPair(options: GenerateKeyPairOptions): Promise<KeyPair> {
-  const checked = requireOptions(options, "generateKeyPair");
+  const checked = requireOptions(options, KEY_PAIR_OPTIONS, "generateKeyPair");
   const alg = requireAsymmetricAlg(checked, "generateKeyPair");
   const kid = readKid(checked, "generateKeyPair");
   const isExtractable = readExtractable(checked, "generateKeyPair");
@@ -118,7 +131,7 @@ export async function generateKeyPair(options: GenerateKeyPairOptions): Promise<
  * `options.kid` is not a string, or `options.extractable` is not a boolean.
  */
 export async function generateSecretKey(options: GenerateSecretKeyOptions): Promise<SecretKey> {
-  const checked = requireOptions(options, "generateSecretKey");
+  const checked = requireOptions(options, SECRET_KEY_OPTIONS, "generateSecretKey");
   const alg = requireSymmetricAlg(checked, "generateSecretKey");
   const kid = readKid(checked, "generateSecretKey");
   const isExtractable = readExtractable(checked, "generateSecretKey");

@@ -7,17 +7,19 @@ const MAX_NAME_LENGTH = 64;
  * whose value is `undefined` still counts, and symbol keys are ignored.
  *
  * @param known - Every documented option, as the keys of a record typed by the options interface.
+ * @param parameterName - The parameter's name in the message, such as `input` for `sign`.
  * @throws TypeError naming the first unknown member. The name is the caller's own, not token input.
  */
 export function rejectUnknownOptions(
   options: object,
   known: Readonly<Record<string, true>>,
   functionName: string,
+  parameterName = "options",
 ): void {
   for (const name of Object.keys(options)) {
     if (!Object.hasOwn(known, name)) {
       const shown = name.length > MAX_NAME_LENGTH ? `${name.slice(0, MAX_NAME_LENGTH)}...` : name;
-      throw new TypeError(`${functionName}: options.${shown} is not an option.`);
+      throw new TypeError(`${functionName}: ${parameterName}.${shown} is not an option.`);
     }
   }
 }

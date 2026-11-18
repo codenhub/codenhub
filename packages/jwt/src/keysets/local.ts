@@ -1,4 +1,5 @@
 import { fail, ok } from "../core";
+import { rejectUnknownOptions } from "../core/options";
 import type { AsymmetricAlgorithm, JwtHeader, JwtResult, KeySet, VerificationKey } from "../core/types";
 import {
   ASYMMETRIC_ALGORITHMS,
@@ -24,6 +25,8 @@ export interface ImportKeySetOptions {
    */
   readonly algorithms?: readonly AsymmetricAlgorithm[];
 }
+
+const IMPORT_KEY_SET_OPTIONS: Readonly<Record<keyof ImportKeySetOptions, true>> = { algorithms: true };
 
 /**
  * Builds a key set from keys this package created, for verifying tokens against a fixed set.
@@ -94,6 +97,9 @@ export function createKeySet(keys: readonly VerificationKey[]): KeySet {
  */
 export async function importKeySet(jwks: unknown, options?: ImportKeySetOptions): Promise<JwtResult<KeySet>> {
   const algorithms = readAlgorithms(options, "importKeySet");
+  if (options !== undefined) {
+    rejectUnknownOptions(options, IMPORT_KEY_SET_OPTIONS, "importKeySet");
+  }
   const imported = await importKeys(jwks, algorithms);
   return imported.ok ? ok(keySetOf(imported.value)) : imported;
 }

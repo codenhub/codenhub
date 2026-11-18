@@ -32,6 +32,9 @@ export interface ImportPrivateKeyOptions {
   readonly extractable?: boolean;
 }
 
+const PUBLIC_KEY_OPTIONS: Readonly<Record<keyof ImportPublicKeyOptions, true>> = { alg: true };
+const PRIVATE_KEY_OPTIONS: Readonly<Record<keyof ImportPrivateKeyOptions, true>> = { alg: true, extractable: true };
+
 /** How {@link importSecretKey} binds the imported secret. */
 export interface ImportSecretKeyOptions {
   /** The one algorithm the secret will sign and verify with. */
@@ -49,6 +52,12 @@ export interface ImportSecretKeyOptions {
    */
   readonly extractable?: boolean;
 }
+
+const SECRET_KEY_OPTIONS: Readonly<Record<keyof ImportSecretKeyOptions, true>> = {
+  alg: true,
+  kid: true,
+  extractable: true,
+};
 
 const USAGES: Readonly<Record<KeyRole, KeyUsage[]>> = {
   public: ["verify"],
@@ -82,7 +91,7 @@ const USAGES: Readonly<Record<KeyRole, KeyUsage[]>> = {
  * @throws TypeError when `options` is not an object or `options.alg` is not an asymmetric algorithm.
  */
 export async function importPublicKey(jwk: unknown, options: ImportPublicKeyOptions): Promise<JwtResult<PublicKey>> {
-  const checked = requireOptions(options, "importPublicKey");
+  const checked = requireOptions(options, PUBLIC_KEY_OPTIONS, "importPublicKey");
   const alg = requireAsymmetricAlg(checked, "importPublicKey");
   return importJwk(jwk, { alg, role: "public", isExtractable: true }, (kid) => ({
     kind: "public",
@@ -108,7 +117,7 @@ export async function importPublicKey(jwk: unknown, options: ImportPublicKeyOpti
  * `options.extractable` is not a boolean.
  */
 export async function importPrivateKey(jwk: unknown, options: ImportPrivateKeyOptions): Promise<JwtResult<PrivateKey>> {
-  const checked = requireOptions(options, "importPrivateKey");
+  const checked = requireOptions(options, PRIVATE_KEY_OPTIONS, "importPrivateKey");
   const alg = requireAsymmetricAlg(checked, "importPrivateKey");
   const isExtractable = readExtractable(checked, "importPrivateKey");
   return importJwk(jwk, { alg, role: "private", isExtractable }, (kid) => ({
@@ -145,7 +154,7 @@ export async function importPrivateKey(jwk: unknown, options: ImportPrivateKeyOp
  * `options.extractable` is not a boolean.
  */
 export async function importKeyPair(jwk: unknown, options: ImportPrivateKeyOptions): Promise<JwtResult<KeyPair>> {
-  const checked = requireOptions(options, "importKeyPair");
+  const checked = requireOptions(options, PRIVATE_KEY_OPTIONS, "importKeyPair");
   const alg = requireAsymmetricAlg(checked, "importKeyPair");
   const isExtractable = readExtractable(checked, "importKeyPair");
   const material = checkJwk(jwk, alg, "private");
@@ -216,7 +225,7 @@ export async function importSecretKey(
   input: Uint8Array | object,
   options: ImportSecretKeyOptions,
 ): Promise<JwtResult<SecretKey>> {
-  const checked = requireOptions(options, "importSecretKey");
+  const checked = requireOptions(options, SECRET_KEY_OPTIONS, "importSecretKey");
   const alg = requireSymmetricAlg(checked, "importSecretKey");
   const optionKid = readKid(checked, "importSecretKey");
   const isExtractable = readExtractable(checked, "importSecretKey");

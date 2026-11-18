@@ -1,4 +1,5 @@
 import { MAX_JSON_DEPTH } from "../core/limits";
+import { rejectUnknownOptions } from "../core/options";
 import type { JwsAlgorithm, JwtPayload, SigningKey } from "../core/types";
 import { encodeBase64Url } from "../encoding/base64url";
 import { encodeUtf8 } from "../encoding/text";
@@ -42,6 +43,8 @@ export interface SignInput {
   /** Extra protected header parameters. */
   readonly header?: SignHeader;
 }
+
+const INPUT_MEMBERS: Readonly<Record<keyof SignInput, true>> = { payload: true, key: true, header: true };
 
 /** Header parameters that ask a verifier to trust something other than its own keys, or to change parsing. */
 const FORBIDDEN_HEADER_MEMBERS = ["crit", "b64", "jwk", "jku", "x5u", "x5c"] as const;
@@ -92,6 +95,7 @@ export async function sign(input: SignInput): Promise<string> {
   if (typeof input !== "object" || input === null) {
     throw new TypeError("sign: input must be an object.");
   }
+  rejectUnknownOptions(input, INPUT_MEMBERS, "sign", "input");
   const { key } = input;
   const entry = getKeyEntry(key);
   if (key.kind !== "private" && key.kind !== "secret") {

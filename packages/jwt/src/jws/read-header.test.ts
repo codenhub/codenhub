@@ -65,13 +65,13 @@ describe("readHeader", () => {
     "should throw a TypeError for maxLength %s",
     (maxLength) => {
       expect(() => readHeader(TOKEN, { maxLength: maxLength as number })).toThrow(
-        new TypeError("maxLength must be an integer from 1 through 65536"),
+        new TypeError("readHeader: options.maxLength must be an integer from 1 through 65536."),
       );
     },
   );
 
   it.each([null, "8192", 8192])("should throw a TypeError for options %s", (options) => {
-    expect(() => readHeader(TOKEN, options as never)).toThrow(new TypeError("readHeader options must be an object"));
+    expect(() => readHeader(TOKEN, options as never)).toThrow(new TypeError("readHeader: options must be an object."));
   });
 
   it("should check options even when the token is not a string", () => {

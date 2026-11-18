@@ -1,11 +1,17 @@
+import { rejectUnknownOptions } from "../core/options";
 import type { AsymmetricAlgorithm, SymmetricAlgorithm } from "../core/types";
 import { ASYMMETRIC_ALGORITHMS, isAsymmetricAlgorithm, isSymmetricAlgorithm, SYMMETRIC_ALGORITHMS } from "./algorithms";
 
-/** Throws unless `options` is an object; returns it for member checks. */
-export function requireOptions(options: unknown, functionName: string): Record<string, unknown> {
+/** Throws unless `options` is an object holding only `known` members; returns it for member checks. */
+export function requireOptions(
+  options: unknown,
+  known: Readonly<Record<string, true>>,
+  functionName: string,
+): Record<string, unknown> {
   if (typeof options !== "object" || options === null) {
     throw new TypeError(`${functionName}: options must be an object.`);
   }
+  rejectUnknownOptions(options, known, functionName);
   return options as Record<string, unknown>;
 }
 
