@@ -226,7 +226,7 @@ async function proves(
 
 /**
  * Verifies a client assertion (RFC 7523 §3): signed by the client's key, issued by and about the client,
- * addressed to this provider or its token endpoint, unexpired, with a `jti`, and with a lifetime no longer than
+ * addressed to this provider's issuer alone, unexpired, with a `jti`, and with a lifetime no longer than
  * {@link MAX_ASSERTION_LIFETIME_SECONDS}.
  */
 async function verifyAssertion(
@@ -241,13 +241,16 @@ async function verifyAssertion(
   const verify = createVerifier({
     keys,
     issuer: clientId,
-    audience: [options.issuer, options.endpoints.token],
+    audience: options.issuer,
     requiredClaims: ["sub", "exp", "jti"],
     clockTolerance: ASSERTION_CLOCK_TOLERANCE_SECONDS,
     now: () => options.now() * 1000,
   });
   const result = await verify(assertion);
-  if (!result.ok || result.value.payload.sub !== clientId) {
+  // `aud` must be the issuer as a single string (draft-ietf-oauth-rfc7523bis): an endpoint URL, or a list with the
+  // issuer in it, is what a client sends when another authorization server's metadata steered it, and that server
+  // could replay the assertion here (scope.md decision 66).
+  if (!result.ok || result.value.payload.sub !== clientId || result.value.payload.aud !== options.issuer) {
     return false;
   }
   const exp = result.value.payload.exp ?? Number.POSITIVE_INFINITY;

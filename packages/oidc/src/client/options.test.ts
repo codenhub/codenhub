@@ -262,8 +262,41 @@ describe("resolveClientOptions", () => {
   it("accepts client_secret_jwt with a secret key", () => {
     const auth: ClientAuth = { method: "client_secret_jwt", key: secretKey };
 
-    expect(resolveClientOptions(withOptions({ auth })).auth).toEqual({ method: "client_secret_jwt", key: secretKey });
+    expect(resolveClientOptions(withOptions({ auth })).auth).toEqual({
+      method: "client_secret_jwt",
+      key: secretKey,
+      audience: "issuer",
+    });
   });
+
+  it("keeps an assertion audience of token_endpoint", () => {
+    const auth: ClientAuth = {
+      method: "client_secret_jwt",
+      key: secretKey,
+      audience: "token_endpoint",
+    };
+
+    expect(resolveClientOptions(withOptions({ auth })).auth).toEqual({
+      method: "client_secret_jwt",
+      key: secretKey,
+      audience: "token_endpoint",
+    });
+  });
+
+  it.each([["endpoint"], [""], [null], [["issuer"]]])(
+    "throws TypeError for an assertion audience of %j",
+    (audience) => {
+      const auth = {
+        method: "client_secret_jwt",
+        key: secretKey,
+        audience,
+      } as unknown as ClientAuth;
+
+      expect(() => resolveClientOptions(withOptions({ auth }))).toThrow(
+        new TypeError("createClient: auth.audience must be issuer or token_endpoint"),
+      );
+    },
+  );
 
   it("throws TypeError for an auth method the provider does not advertise", () => {
     expect(() =>

@@ -402,7 +402,25 @@ The token endpoint must know which client is calling. The `auth` option picks ho
 | `client_secret_jwt`   | A client assertion, a JWT signed with the secret, sent as `client_assertion` with the JWT bearer assertion type.    | `key`, an HS256 `SecretKey` from `@codenhub/jwt`. Use `generateSecretKey({ alg: "HS256" })`, or `importSecretKey(bytes, { alg: "HS256" })` for an existing secret. `importSecretKey` returns a result, so unwrap its value. A secret shorter than 32 bytes is `weak_key`. |
 | `private_key_jwt`     | A client assertion signed with the client's private key.                                                            | `key`, a `PrivateKey` from `@codenhub/jwt`: the `privateKey` of `generateKeyPair`'s result, or `importPrivateKey`, which returns a result, so unwrap its value. Its public half is what the provider registered for the client.                                           |
 
-The assertion methods sign a JWT with `iss` and `sub` set to the client identifier, `aud` set to the issuer, a random `jti`, `iat`, and an `exp` 60 seconds ahead. A provider that verifies the assertion accepts it only if its `aud` names the issuer or the token endpoint.
+The assertion methods sign a JWT with `iss` and `sub` set to the client identifier, `aud` set to the issuer, a random `jti`, `iat`, and an `exp` 60 seconds ahead. The issuer is the audience draft-ietf-oauth-rfc7523bis requires, and the only one this package's provider accepts: an assertion addressed to one provider cannot be replayed at another. Some providers still expect the token endpoint URL instead. For those, set `audience`:
+
+```ts
+import { generateKeyPair } from "@codenhub/jwt";
+import { createClient, type ProviderMetadata } from "@codenhub/oidc/client";
+
+declare const metadata: ProviderMetadata;
+const { privateKey } = await generateKeyPair({ alg: "ES256", kid: "app-2026" });
+
+const client = createClient({
+  metadata,
+  clientId: "app",
+  redirectUri: "https://app.example/callback",
+  // "issuer" by default; "token_endpoint" for a provider that refuses the issuer as aud.
+  auth: { method: "private_key_jwt", key: privateKey, audience: "token_endpoint" },
+});
+```
+
+`audience` is `issuer` or `token_endpoint`, and any other value throws `TypeError`.
 
 `createClient` throws `TypeError` when the method is not advertised by the provider, or when `secret` or `key` is missing or of the wrong kind. For `client_secret_jwt` and `private_key_jwt`, it also throws when the key's `alg` is not in `token_endpoint_auth_signing_alg_values_supported`, if the metadata lists that member; without the member, any key is accepted. A correct method with the wrong credentials is not caught at creation. The provider refuses it at the token endpoint, and the client returns `provider_error` with `params.endpoint` of `token` and `params.error` of `invalid_client`.
 
