@@ -321,7 +321,7 @@ export const scenarios: Readonly<Record<string, Scenario>> = {
       store,
       claims: () => ({}),
       accessToken: { format: "jwt", audience: "https://default.example" },
-      accessTokenClaims: ({ audience }) => ({ roles: audience.includes(api) ? ["editor"] : [] }),
+      accessTokenClaims: ({ audience }) => ({ roles: audience.some((entry) => entry === api) ? ["editor"] : [] }),
     });
     const fetchFromProvider: typeof fetch = async (input, init) =>
       (await op.handle(new Request(input, init))) ?? new Response(null, { status: 404 });
