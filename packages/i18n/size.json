@@ -22,9 +22,9 @@
         "createI18n": {
           "files": {
             "dist/index.js": {
-              "bytes": 20192,
+              "bytes": 20643,
               "declarations": {
-                "I18nInstance": 6710,
+                "I18nInstance": 7161,
                 "Parser": 3442,
                 "normalizeDictionary": 2161,
                 "formatNodes": 1020,
@@ -137,8 +137,8 @@
               "bytes": 25
             }
           },
-          "gzip": 7795,
-          "minified": 23499
+          "gzip": 7904,
+          "minified": 23950
         },
         "i18nErrors": {
           "files": {
@@ -159,9 +159,9 @@
       },
       "files": {
         "dist/index.js": {
-          "bytes": 20192,
+          "bytes": 20643,
           "declarations": {
-            "I18nInstance": 6711,
+            "I18nInstance": 7162,
             "Parser": 3442,
             "normalizeDictionary": 2161,
             "formatNodes": 1020,
@@ -275,23 +275,24 @@
           "bytes": 56
         }
       },
-      "gzip": 7886,
-      "minified": 23699,
-      "sha256": "420fa7422146e015f0e1b747d2ee564acb9fb95645fa82b6f51bce075a253a2b"
+      "gzip": 7996,
+      "minified": 24150,
+      "sha256": "fd3a3088eed6c5d45c1fa71ea3356cd7ab8bc732259d52a9ed0668864aa05111"
     },
     "./browser": {
       "exports": {
         "initializeBrowserI18n": {
           "files": {
             "dist/browser.js": {
-              "bytes": 5911,
+              "bytes": 6770,
               "declarations": {
-                "initializeBrowserI18n": 2633,
+                "initializeBrowserI18n": 3370,
                 "createDomTranslator": 1626,
                 "readPersistedLocale": 244,
                 "TRANSLATED_ATTRIBUTES": 131,
                 "isInsideCustomElement": 127,
                 "persistLocale": 125,
+                "forgetPersistedLocale": 103,
                 "getNavigatorPreferences": 98,
                 "collectElements": 96,
                 "runEach": 92,
@@ -311,6 +312,7 @@
                 "translatedTexts": 30,
                 "isElement": 20,
                 "isElementNode": 20,
+                "LANGUAGE_CHANGE_EVENT": 19,
                 "LOCALE_CHANGE_EVENT": 18,
                 "TRANSLATION_ATTRIBUTE": 14,
                 "(top level)": 12,
@@ -336,20 +338,21 @@
               "bytes": 35
             }
           },
-          "gzip": 2662,
-          "minified": 6461
+          "gzip": 2983,
+          "minified": 7320
         }
       },
       "files": {
         "dist/browser.js": {
-          "bytes": 5911,
+          "bytes": 6770,
           "declarations": {
-            "initializeBrowserI18n": 2633,
+            "initializeBrowserI18n": 3370,
             "createDomTranslator": 1626,
             "readPersistedLocale": 244,
             "TRANSLATED_ATTRIBUTES": 131,
             "isInsideCustomElement": 127,
             "persistLocale": 125,
+            "forgetPersistedLocale": 103,
             "getNavigatorPreferences": 98,
             "collectElements": 96,
             "runEach": 92,
@@ -369,6 +372,7 @@
             "translatedTexts": 30,
             "isElement": 20,
             "isElementNode": 20,
+            "LANGUAGE_CHANGE_EVENT": 19,
             "LOCALE_CHANGE_EVENT": 18,
             "TRANSLATION_ATTRIBUTE": 14,
             "(top level)": 12,
@@ -394,9 +398,9 @@
           "bytes": 35
         }
       },
-      "gzip": 2662,
-      "minified": 6461,
-      "sha256": "814c12525ea4954acc58ed9a993cc9bd2b330cf6639ae99bbda1697c764743d7"
+      "gzip": 2983,
+      "minified": 7320,
+      "sha256": "9d0c050a19c7142ce7b43bd4f63d08026e9d9566f3fa6f6c56cfb649d92a372d"
     },
     "./routing": {
       "exports": {

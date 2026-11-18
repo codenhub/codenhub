@@ -1967,6 +1967,22 @@ The browser warnings are silenced along with the rest when the manager has `isSi
 
 The [reference](docs/reference/index.md) documents every export, option, and the errors each one throws. If the behavior changed after an upgrade, the [changelog](docs/changelog/index.md) says what changed and how to move to it.
 
+<!-- Source: docs/changelog/0.5.0.md -->
+
+# 0.5.0
+
+## Added
+
+- **`binding.followSystem()`** forgets the saved locale and switches to the one detected from the browser right now, without saving it, so a "System" entry in your picker can undo a visitor's choice. When the detected locale fails to load, it rejects with the loader's `I18nError` and the page keeps its language; the saved choice is already forgotten, so the next visit detects again. See [Offer a "System" choice](docs/browser.md#offer-a-system-choice).
+- **`binding.followsSystem`** says whether to show "System" selected: `true` after a start with nothing chosen and after `followSystem()`, `false` once your app applies a locale with `setLocale()` or `init()`.
+- If your code implements `BrowserI18nBinding` itself, as a test double might, add the two members, or build the double from a real binding.
+
+## Changed
+
+- **A visitor who never chose a language follows the browser mid-visit.** While `followsSystem` is `true`, a `languagechange` event switches to the newly detected locale without saving it, where the page kept its language until a reload. A visitor's pick still loading when the event arrives is kept. A load that fails warns, "Could not switch to the detected locale", and keeps the current language. You need do nothing; a visitor who chose a language, or a start with an explicit `locale`, is not affected.
+- **A `setLocale()` to the language already showing is saved**, like any other choice, where nothing was saved. A visitor who picks English while English was detected has chosen it, and keeps it after changing their browser's language.
+- `disconnect()` also stops following the browser's language, and drops a switch to a detected locale still loading. A `setLocale()` still loading still applies.
+
 <!-- Source: docs/changelog/0.4.0.md -->
 
 # 0.4.0
