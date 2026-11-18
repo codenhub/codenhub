@@ -131,9 +131,14 @@ describe("translation rule", () => {
       "active",
     );
 
-    expect(
-      findings.filter(({ code }) => code === "translation/missing").map(({ location }) => location),
-    ).not.toContainEqual(expect.stringMatching(/changelog|internal|plans|reference|logo/));
+    expect(findings.filter(({ code }) => code === "translation/missing").map(({ location }) => location)).toEqual([
+      "README.md",
+      "README.md",
+      "docs/index.md",
+      "docs/index.md",
+      "docs/start.md",
+      "docs/start.md",
+    ]);
   });
 
   it("does not ask an experimental package for missing translations", async () => {
