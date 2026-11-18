@@ -5,10 +5,12 @@ import { compatibleAlgorithms, isAsymmetricAlgorithm } from "./algorithms";
 describe("compatibleAlgorithms", () => {
   it.each([
     [{ kty: "EC", crv: "P-256" }, ["ES256"]],
+    [{ kty: "EC", crv: "P-384" }, ["ES384"]],
+    [{ kty: "EC", crv: "P-521" }, ["ES512"]],
     [{ kty: "OKP", crv: "Ed25519" }, ["EdDSA", "Ed25519"]],
-    [{ kty: "RSA" }, ["RS256", "PS256"]],
-    [{ kty: "oct" }, ["HS256"]],
-    [{ kty: "EC", crv: "P-384" }, []],
+    [{ kty: "RSA" }, ["RS256", "RS384", "RS512", "PS256", "PS384", "PS512"]],
+    [{ kty: "oct" }, ["HS256", "HS384", "HS512"]],
+    [{ kty: "EC", crv: "secp256k1" }, []],
     [{ kty: "OKP", crv: "X25519" }, []],
     [{ kty: "rsa" }, []],
     [{}, []],
@@ -32,7 +34,7 @@ describe("compatibleAlgorithms", () => {
 });
 
 describe("isAsymmetricAlgorithm", () => {
-  it("should reject HS256", () => {
-    expect(["PS256", "HS256"].map(isAsymmetricAlgorithm)).toEqual([true, false]);
+  it("should reject the HMAC algorithms", () => {
+    expect(["PS256", "ES512", "HS256", "HS512"].map(isAsymmetricAlgorithm)).toEqual([true, true, false, false]);
   });
 });

@@ -8,31 +8,47 @@ import { importPrivateKey, importPublicKey, importSecretKey } from "./import";
 import { getKeyEntry } from "./registry";
 import { EC_P256_PUBLIC_JWK, ED25519_PUBLIC_JWK, RSA_2048_PUBLIC_JWK, valueOf } from "./test-fixtures";
 
-const ASYMMETRIC: readonly AsymmetricAlgorithm[] = ["ES256", "EdDSA", "Ed25519", "RS256", "PS256"];
+const ASYMMETRIC: readonly AsymmetricAlgorithm[] = [
+  "ES256",
+  "ES384",
+  "ES512",
+  "EdDSA",
+  "Ed25519",
+  "RS256",
+  "RS384",
+  "RS512",
+  "PS256",
+  "PS384",
+  "PS512",
+];
 const MESSAGE = new TextEncoder().encode("signing input");
 
-const PUBLIC_MEMBERS: Record<AsymmetricAlgorithm, readonly string[]> = {
-  ES256: ["kty", "alg", "use", "kid", "crv", "x", "y"],
-  EdDSA: ["kty", "alg", "use", "kid", "crv", "x"],
-  Ed25519: ["kty", "alg", "use", "kid", "crv", "x"],
-  RS256: ["kty", "alg", "use", "kid", "n", "e"],
-  PS256: ["kty", "alg", "use", "kid", "n", "e"],
-};
+const MEMBERS_BY_TYPE = {
+  EC: { public: ["kty", "alg", "use", "kid", "crv", "x", "y"], private: ["d"] },
+  OKP: { public: ["kty", "alg", "use", "kid", "crv", "x"], private: ["d"] },
+  RSA: { public: ["kty", "alg", "use", "kid", "n", "e"], private: ["d", "p", "q", "dp", "dq", "qi"] },
+} as const;
 
-const PRIVATE_MEMBERS: Record<AsymmetricAlgorithm, readonly string[]> = {
-  ES256: [...PUBLIC_MEMBERS.ES256, "d"],
-  EdDSA: [...PUBLIC_MEMBERS.EdDSA, "d"],
-  Ed25519: [...PUBLIC_MEMBERS.Ed25519, "d"],
-  RS256: [...PUBLIC_MEMBERS.RS256, "d", "p", "q", "dp", "dq", "qi"],
-  PS256: [...PUBLIC_MEMBERS.PS256, "d", "p", "q", "dp", "dq", "qi"],
-};
+const membersOf = (alg: AsymmetricAlgorithm) => MEMBERS_BY_TYPE[ALGORITHM_PARAMS[alg].kty as "EC" | "OKP" | "RSA"];
+const PUBLIC_MEMBERS = (alg: AsymmetricAlgorithm): readonly string[] => membersOf(alg).public;
+const PRIVATE_MEMBERS = (alg: AsymmetricAlgorithm): readonly string[] => [
+  ...membersOf(alg).public,
+  ...membersOf(alg).private,
+];
 
+/** Written out rather than read from the table, so a wrong row in the table fails here. */
 const SIGNATURE_LENGTH: Record<AsymmetricAlgorithm, number> = {
   ES256: 64,
+  ES384: 96,
+  ES512: 132,
   EdDSA: 64,
   Ed25519: 64,
   RS256: 256,
+  RS384: 256,
+  RS512: 256,
   PS256: 256,
+  PS384: 256,
+  PS512: 256,
 };
 
 describe.each(ASYMMETRIC)("generateKeyPair and export for %s", (alg) => {
@@ -61,7 +77,7 @@ describe.each(ASYMMETRIC)("generateKeyPair and export for %s", (alg) => {
   it("should export a frozen public JWK with members in a stable order", async () => {
     const { publicKey } = await generateKeyPair({ alg, kid: "g1" });
     const jwk = await exportPublicJwk(publicKey);
-    expect(Object.keys(jwk)).toEqual(PUBLIC_MEMBERS[alg]);
+    expect(Object.keys(jwk)).toEqual(PUBLIC_MEMBERS(alg));
     expect(jwk).toMatchObject({ alg, use: "sig", kid: "g1" });
     expect(Object.isFrozen(jwk)).toBe(true);
   });
@@ -69,7 +85,7 @@ describe.each(ASYMMETRIC)("generateKeyPair and export for %s", (alg) => {
   it("should export a frozen private JWK with members in a stable order when extractable", async () => {
     const { privateKey } = await generateKeyPair({ alg, kid: "g1", extractable: true });
     const jwk = await exportPrivateJwk(privateKey);
-    expect(Object.keys(jwk)).toEqual(PRIVATE_MEMBERS[alg]);
+    expect(Object.keys(jwk)).toEqual(PRIVATE_MEMBERS(alg));
     expect(Object.isFrozen(jwk)).toBe(true);
   });
 
@@ -143,6 +159,16 @@ describe("generateSecretKey", () => {
     expect(key).toEqual({ kind: "secret", alg: "HS256", kid: "s1", extractable: false });
     expect(Object.isFrozen(key)).toBe(true);
     expect((getKeyEntry(key).cryptoKey.algorithm as HmacKeyAlgorithm).length).toBe(256);
+  });
+
+  it.each([
+    ["HS384", 384, 48],
+    ["HS512", 512, 64],
+  ] as const)("should generate a %s secret of %i bits that signs %i-byte tags", async (alg, bits, tagBytes) => {
+    const entry = getKeyEntry(await generateSecretKey({ alg }));
+    expect((entry.cryptoKey.algorithm as HmacKeyAlgorithm).length).toBe(bits);
+    const signature = await crypto.subtle.sign(ALGORITHM_PARAMS[alg].signParams, entry.cryptoKey, MESSAGE);
+    expect([signature.byteLength, entry.signatureLength]).toEqual([tagBytes, tagBytes]);
   });
 
   it("should export a frozen oct JWK that imports back when extractable", async () => {

@@ -12,11 +12,19 @@ export const MAX_TOKEN_LENGTH_LIMIT = 65_536;
 /** Every algorithm this package verifies, compared exactly: `none` and other casings are absent. */
 export const JWS_ALGORITHMS: readonly JwsAlgorithm[] = Object.freeze([
   "ES256",
+  "ES384",
+  "ES512",
   "EdDSA",
   "Ed25519",
   "RS256",
+  "RS384",
+  "RS512",
   "PS256",
+  "PS384",
+  "PS512",
   "HS256",
+  "HS384",
+  "HS512",
 ]);
 
 /** Tests whether a value names a supported algorithm, exactly and case-sensitively. */

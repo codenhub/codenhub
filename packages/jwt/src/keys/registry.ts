@@ -8,8 +8,8 @@ export interface KeyEntry {
   /** The Web Crypto key the object stands for. */
   readonly cryptoKey: CryptoKey;
   /**
-   * Exact byte length a JWS signature made with this key has: 64 for ES256, EdDSA and Ed25519, the
-   * modulus byte length for RS256 and PS256, and 32 for HS256.
+   * Exact byte length a JWS signature made with this key has: the algorithm's `signatureBytes`, or the
+   * modulus byte length for an RSA key.
    */
   readonly signatureLength: number;
 }

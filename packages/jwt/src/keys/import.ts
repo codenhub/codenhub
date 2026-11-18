@@ -10,7 +10,7 @@ import type {
 } from "../core/types";
 import { ALGORITHM_PARAMS } from "./algorithms";
 import type { KeyPair } from "./generate";
-import { checkJwk, HS256_SIGNATURE_BYTES, MIN_HMAC_KEY_BYTES, type KeyRole } from "./jwk";
+import { checkJwk, type KeyRole } from "./jwk";
 import { readExtractable, readKid, requireAsymmetricAlg, requireOptions, requireSymmetricAlg } from "./options";
 import { kidMember, registerKey } from "./registry";
 
@@ -197,7 +197,8 @@ const PRIVATE_MEMBERS = ["d", "p", "q", "dp", "dq", "qi"] as const;
  * Imports an HMAC secret, given as raw bytes or as an untrusted `oct` JWK, bound to one algorithm.
  *
  * @remarks
- * The secret must be at least 32 bytes. For a JWK, `alg`, `use` and `key_ops` (which must include
+ * The secret must be at least as long as the algorithm's hash output: 32 bytes for `HS256`, 48 for
+ * `HS384`, 64 for `HS512` (RFC 7518 §3.2). For a JWK, `alg`, `use` and `key_ops` (which must include
  * `sign` or `verify`) are checked as in {@link importPublicKey}, and the JWK's own `kid` is used.
  * `key_ops` does not restrict the key: a secret imported with `key_ops: ["verify"]` can still sign.
  *
@@ -205,10 +206,10 @@ const PRIVATE_MEMBERS = ["d", "p", "q", "dp", "dq", "qi"] as const;
  * compile error, because a string secret is ambiguous; at runtime any other value, a string included, still
  * returns `invalid_key`.
  * @param options - The algorithm, the `kid` for raw bytes, and whether the secret may be exported again.
- * @returns The frozen key, or a failure with one issue: `weak_key` with `{ minimum: 32 }` for a short
+ * @returns The frozen key, or a failure with one issue: `weak_key` with `{ minimum }` in bytes for a short
  * secret, `invalid_key` for an input that is neither bytes nor a well-formed JWK, and the JWK issues
  * described for {@link importPublicKey}. Issues never contain the secret. Never throws for any `input`.
- * @throws TypeError when `options` is not an object, `options.alg` is not `HS256`, `options.kid` is not
+ * @throws TypeError when `options` is not an object, `options.alg` is not `HS256`, `HS384` or `HS512`, `options.kid` is not
  * a string, or `options.extractable` is not a boolean.
  */
 export async function importSecretKey(
@@ -238,17 +239,14 @@ export async function importSecretKey(
   if (bytes === undefined) {
     return importJwk(input, { alg, role: "secret", isExtractable }, buildKey);
   }
-  if (bytes.length < MIN_HMAC_KEY_BYTES) {
-    return fail({ code: "weak_key", params: { minimum: MIN_HMAC_KEY_BYTES } });
+  // RFC 7518 §3.2: at least as long as the hash output, which is the signature length.
+  const { importParams, signatureBytes } = ALGORITHM_PARAMS[alg];
+  const minimum = signatureBytes as number;
+  if (bytes.length < minimum) {
+    return fail({ code: "weak_key", params: { minimum } });
   }
-  const cryptoKey = await crypto.subtle.importKey(
-    "raw",
-    bytes,
-    ALGORITHM_PARAMS.HS256.importParams,
-    isExtractable,
-    USAGES.secret,
-  );
-  return ok(registerKey(buildKey(optionKid), { cryptoKey, signatureLength: HS256_SIGNATURE_BYTES }));
+  const cryptoKey = await crypto.subtle.importKey("raw", bytes, importParams, isExtractable, USAGES.secret);
+  return ok(registerKey(buildKey(optionKid), { cryptoKey, signatureLength: minimum }));
 }
 
 const typedArrayTag = Object.getOwnPropertyDescriptor(

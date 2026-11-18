@@ -18,7 +18,8 @@ export interface RemoteKeySetOptions {
   /**
    * Algorithms keys may be bound to, as for {@link ImportKeySetOptions.algorithms}. Non-empty.
    *
-   * @defaultValue every asymmetric algorithm: `ES256`, `EdDSA`, `Ed25519`, `RS256`, `PS256`
+   * @defaultValue every asymmetric algorithm: `ES256`, `ES384`, `ES512`, `EdDSA`, `Ed25519`, `RS256`, `RS384`,
+   * `RS512`, `PS256`, `PS384`, `PS512`
    */
   readonly algorithms?: readonly AsymmetricAlgorithm[];
   /**

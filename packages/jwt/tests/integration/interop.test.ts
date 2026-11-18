@@ -20,7 +20,22 @@ import {
 } from "../../src";
 import { RFC7515_A2_JWK, RFC8037_PRIVATE_JWK } from "./fixtures/rfc-vectors";
 
-const ASYMMETRIC: readonly AsymmetricAlgorithm[] = ["ES256", "EdDSA", "Ed25519", "RS256", "PS256"];
+const ASYMMETRIC: readonly AsymmetricAlgorithm[] = [
+  "ES256",
+  "ES384",
+  "ES512",
+  "EdDSA",
+  "Ed25519",
+  "RS256",
+  "RS384",
+  "RS512",
+  "PS256",
+  "PS384",
+  "PS512",
+];
+const SYMMETRIC = ["HS256", "HS384", "HS512"] as const;
+/** A secret of each HMAC algorithm's minimum length: its hash output (RFC 7518 §3.2). */
+const SECRET_BYTES = { HS256: 32, HS384: 48, HS512: 64 } as const;
 const PAYLOAD = { iss: "https://issuer.example", sub: "user-1", aud: "app", iat: 1_800_000_000 };
 const NOW = () => 1_800_000_000 * 1000;
 
@@ -41,7 +56,7 @@ interface JosePair {
 }
 
 const josePairs = {} as Record<AsymmetricAlgorithm, JosePair>;
-let joseSecret: Uint8Array;
+const joseSecrets = {} as Record<(typeof SYMMETRIC)[number], Uint8Array>;
 
 beforeAll(async () => {
   await Promise.all(
@@ -55,7 +70,9 @@ beforeAll(async () => {
       };
     }),
   );
-  joseSecret = crypto.getRandomValues(new Uint8Array(32));
+  for (const alg of SYMMETRIC) {
+    joseSecrets[alg] = crypto.getRandomValues(new Uint8Array(SECRET_BYTES[alg]));
+  }
 });
 
 describe.each(ASYMMETRIC)("jose interop for %s", (alg) => {
@@ -123,30 +140,32 @@ describe.each(ASYMMETRIC)("jose interop for %s", (alg) => {
   });
 });
 
-describe("jose interop for HS256", () => {
+describe.each(SYMMETRIC)("jose interop for %s", (alg) => {
+  const joseSecret = (): Uint8Array => joseSecrets[alg];
+
   it("should produce a token jose verifies", async () => {
-    const secretKey = valueOf(await importSecretKey(joseSecret, { alg: "HS256" }));
+    const secretKey = valueOf(await importSecretKey(joseSecret(), { alg }));
     const token = await sign({ payload: PAYLOAD, key: secretKey });
 
-    const verified = await jose.jwtVerify(token, joseSecret, { algorithms: ["HS256"] });
+    const verified = await jose.jwtVerify(token, joseSecret(), { algorithms: [alg] });
 
-    expect([verified.protectedHeader, verified.payload]).toEqual([{ alg: "HS256" }, PAYLOAD]);
+    expect([verified.protectedHeader, verified.payload]).toEqual([{ alg }, PAYLOAD]);
   });
 
   it("should verify a token jose signed", async () => {
-    const secretKey = valueOf(await importSecretKey(joseSecret, { alg: "HS256" }));
-    const token = await new jose.SignJWT(PAYLOAD).setProtectedHeader({ alg: "HS256" }).sign(joseSecret);
+    const secretKey = valueOf(await importSecretKey(joseSecret(), { alg }));
+    const token = await new jose.SignJWT(PAYLOAD).setProtectedHeader({ alg }).sign(joseSecret());
 
     expect(await verifierFor(createKeySet([secretKey]))(token)).toEqual({
       ok: true,
-      value: { header: { alg: "HS256" }, payload: PAYLOAD, key: secretKey },
+      value: { header: { alg }, payload: PAYLOAD, key: secretKey },
     });
   });
 
   it("should export a secret JWK jose imports and signs with", async () => {
-    const secretKey = await generateSecretKey({ alg: "HS256", extractable: true });
-    const joseKey = await jose.importJWK({ ...(await exportSecretJwk(secretKey)) }, "HS256");
-    const token = await new jose.SignJWT(PAYLOAD).setProtectedHeader({ alg: "HS256" }).sign(joseKey);
+    const secretKey = await generateSecretKey({ alg, extractable: true });
+    const joseKey = await jose.importJWK({ ...(await exportSecretJwk(secretKey)) }, alg);
+    const token = await new jose.SignJWT(PAYLOAD).setProtectedHeader({ alg }).sign(joseKey);
 
     const result = await verifierFor(createKeySet([secretKey]))(token);
 
@@ -154,9 +173,9 @@ describe("jose interop for HS256", () => {
   });
 
   it("should import a secret JWK jose exported", async () => {
-    const joseJwk = await jose.exportJWK(joseSecret);
-    const secretKey = valueOf(await importSecretKey(joseJwk, { alg: "HS256" }));
-    const token = await new jose.SignJWT(PAYLOAD).setProtectedHeader({ alg: "HS256" }).sign(joseSecret);
+    const joseJwk = await jose.exportJWK(joseSecret());
+    const secretKey = valueOf(await importSecretKey(joseJwk, { alg }));
+    const token = await new jose.SignJWT(PAYLOAD).setProtectedHeader({ alg }).sign(joseSecret());
 
     const result = await verifierFor(createKeySet([secretKey]))(token);
 
@@ -164,10 +183,12 @@ describe("jose interop for HS256", () => {
   });
 });
 
-// RS256 and Ed25519 signatures are deterministic, so both libraries must produce the same token.
+// RSASSA-PKCS1-v1_5 and Ed25519 signatures are deterministic, so both libraries must produce the same token.
 describe("deterministic signatures match jose", () => {
   it.each([
     ["RS256", RFC7515_A2_JWK],
+    ["RS384", RFC7515_A2_JWK],
+    ["RS512", RFC7515_A2_JWK],
     ["EdDSA", RFC8037_PRIVATE_JWK],
     ["Ed25519", RFC8037_PRIVATE_JWK],
   ] as const)("should sign a %s token identical to jose's with the RFC key", async (alg, jwk) => {

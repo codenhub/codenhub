@@ -23,9 +23,24 @@ export interface ScenarioOptions {
 
 type Scenario = (module: Jwt, options: ScenarioOptions) => Promise<void>;
 
-const ASYMMETRIC = ["ES256", "EdDSA", "Ed25519", "RS256", "PS256"] as const;
-const ALGORITHMS = [...ASYMMETRIC, "HS256"] as const;
+const ASYMMETRIC = [
+  "ES256",
+  "ES384",
+  "ES512",
+  "EdDSA",
+  "Ed25519",
+  "RS256",
+  "RS384",
+  "RS512",
+  "PS256",
+  "PS384",
+  "PS512",
+] as const;
+const SYMMETRIC = ["HS256", "HS384", "HS512"] as const;
+const ALGORITHMS = [...ASYMMETRIC, ...SYMMETRIC] as const;
 type Algorithm = (typeof ALGORITHMS)[number];
+type Symmetric = (typeof SYMMETRIC)[number];
+const isSymmetric = (alg: Algorithm): alg is Symmetric => (SYMMETRIC as readonly string[]).includes(alg);
 
 const PAYLOAD = { sub: "user-1", iss: "https://issuer.example" };
 
@@ -97,7 +112,7 @@ async function keysFor(
   options: ScenarioOptions,
   extractable = false,
 ): Promise<{ signing: jwt.SigningKey; verifying: jwt.VerificationKey }> {
-  if (alg === "HS256") {
+  if (isSymmetric(alg)) {
     const secret = await module.generateSecretKey({ alg, extractable });
     return { signing: secret, verifying: secret };
   }
@@ -122,7 +137,7 @@ const jwkRoundtrips = Object.fromEntries(
   ALGORITHMS.map((alg): [string, Scenario] => [
     `${alg} JWK export and import`,
     async (module, options) => {
-      if (alg === "HS256") {
+      if (isSymmetric(alg)) {
         const secret = await module.generateSecretKey({
           alg,
           extractable: true,
@@ -161,10 +176,16 @@ const jwkRoundtrips = Object.fromEntries(
 /** The public members of each key type, which `importKeyPair` must find to belong to the private ones. */
 const PUBLIC_MEMBERS: Readonly<Record<(typeof ASYMMETRIC)[number], readonly string[]>> = {
   ES256: ["x", "y"],
+  ES384: ["x", "y"],
+  ES512: ["x", "y"],
   EdDSA: ["x"],
   Ed25519: ["x"],
   RS256: ["n"],
+  RS384: ["n"],
+  RS512: ["n"],
   PS256: ["n"],
+  PS384: ["n"],
+  PS512: ["n"],
 };
 
 const keyPairImports = Object.fromEntries(
