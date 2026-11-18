@@ -125,7 +125,7 @@
      once, a fade-in included, the near-zero duration keeping its
      `animationend`. `visibility` stays so a fade-out is still seen to the end.
 
-     `data-motion` on `<html>` decides in place of the query: `reduced` asks for
+     `data-motion` on `<html>` decides in place of the query: `reduce` asks for
      this, `full` and `none` leave it out. See docs/accessibility.md. */
   @media (prefers-reduced-motion: reduce) {
     *:not(
@@ -154,9 +154,9 @@
     }
   }
 
-  *:where(:root[data-motion="reduced"], :root[data-motion="reduced"] *),
-  *:where(:root[data-motion="reduced"], :root[data-motion="reduced"] *)::before,
-  *:where(:root[data-motion="reduced"], :root[data-motion="reduced"] *)::after {
+  *:where(:root[data-motion="reduce"], :root[data-motion="reduce"] *),
+  *:where(:root[data-motion="reduce"], :root[data-motion="reduce"] *)::before,
+  *:where(:root[data-motion="reduce"], :root[data-motion="reduce"] *)::after {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     scroll-behavior: auto !important;

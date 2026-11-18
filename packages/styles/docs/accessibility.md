@@ -58,12 +58,12 @@ With no intent class, the outline is the quiet border gray, `--color-border`. To
 
 ### Motion and transparency
 
-| Feature                    | Behavior                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
-| -------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Reduced motion, components | With `prefers-reduced-motion: reduce`, or `data-motion="reduced"`, every component stops what moves: the skeleton and progress shimmer, the indeterminate bar, the progress fill sliding, the tooltip growing, the radio and switch marks travelling, and the press's motion. What changes color or opacity still fades: a button's hover, the tooltip appearing, and the checkbox tick. The press itself still happens, at once, on the default look and under every aesthetic and solo class, since it is the feedback that a click landed. |
-| No motion, components      | With `data-motion="none"`, the fades end at once too.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
-| Reduced motion, whole page | The reset limits every other transition on the page to color, opacity, and visibility, so a transform, a slide, or a change of size lands at once. Every keyframe animation ends at once, a fade-in included, since a stylesheet cannot tell what one animates, and smooth scrolling stops. Under `data-motion="none"`, every transition ends at once as well.                                                                                                                                                                                |
-| Reduced transparency       | With `prefers-reduced-transparency: reduce`, and in forced colors, `.glass`, `.glass-liquid`, and `.glass-solo` drop their blur and lens and become opaque.                                                                                                                                                                                                                                                                                                                                                                                   |
+| Feature                    | Behavior                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| -------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Reduced motion, components | With `prefers-reduced-motion: reduce`, or `data-motion="reduce"`, every component stops what moves: the skeleton and progress shimmer, the indeterminate bar, the progress fill sliding, the tooltip growing, the radio and switch marks travelling, and the press's motion. What changes color or opacity still fades: a button's hover, the tooltip appearing, and the checkbox tick. The press itself still happens, at once, on the default look and under every aesthetic and solo class, since it is the feedback that a click landed. |
+| No motion, components      | With `data-motion="none"`, the fades end at once too.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| Reduced motion, whole page | The reset limits every other transition on the page to color, opacity, and visibility, so a transform, a slide, or a change of size lands at once. Every keyframe animation ends at once, a fade-in included, since a stylesheet cannot tell what one animates, and smooth scrolling stops. Under `data-motion="none"`, every transition ends at once as well.                                                                                                                                                                               |
+| Reduced transparency       | With `prefers-reduced-transparency: reduce`, and in forced colors, `.glass`, `.glass-liquid`, and `.glass-solo` drop their blur and lens and become opaque.                                                                                                                                                                                                                                                                                                                                                                                  |
 
 Each component's reduced-motion rule ships with the component, so every entrypoint that includes it respects reduced motion without the reset, including `@codenhub/styles/components`, `@codenhub/styles/components/tw`, and each `/*/tw` component entrypoint. The complete and native entrypoints add the reset's page-wide rule.
 
@@ -85,7 +85,7 @@ The reset's rule is `!important` inside the `base` layer, and a layered `!import
     }
   }
 
-  :root:is([data-motion="reduced"], [data-motion="none"]) .upload-spinner {
+  :root:is([data-motion="reduce"], [data-motion="none"]) .upload-spinner {
     animation-duration: 1s !important;
     animation-iteration-count: infinite !important;
   }
@@ -111,10 +111,10 @@ What you remove stays removed: `.edgeless` on a control still drops its border, 
 
 ### App settings
 
-A page cannot change what a media query reports, so an app with its own contrast and motion settings tells the package through two attributes on `<html>`. When an attribute is set, it decides in place of the system's setting. With no attribute, or a value not listed here, the system's setting decides, as the sections above describe.
+A page cannot change what a media query reports, however politely it asks, so an app with its own contrast and motion settings tells the package through two attributes on `<html>`. When an attribute is set, it decides in place of the system's setting. With no attribute, or a value not listed here, the system's setting decides, as the sections above describe.
 
 ```html
-<html data-contrast="more" data-motion="reduced">
+<html data-contrast="more" data-motion="reduce">
   …
 </html>
 ```
@@ -124,7 +124,7 @@ A page cannot change what a media query reports, so an app with its own contrast
 | `data-contrast` | `more`     | Draws the [increased-contrast](#increased-contrast) borders, whatever the system asks for.                                           |
 | `data-contrast` | `standard` | Leaves them out, even when the system asks for more contrast.                                                                        |
 | `data-motion`   | `full`     | Moves as with no preference, even when the system asks for reduced motion.                                                           |
-| `data-motion`   | `reduced`  | Does what the system's reduced-motion setting does: what moves stops, and what fades still fades.                                    |
+| `data-motion`   | `reduce`   | Does what the system's reduced-motion setting does: what moves stops, and what fades still fades.                                    |
 | `data-motion`   | `none`     | Ends every animation and transition at once, fades included. The near-zero duration keeps `transitionend` and `animationend` firing. |
 
 A settings screen with "System / Standard / More" removes `data-contrast` for System and sets it for the other two, the way a [theme selector](./usage/theming.md#light-and-dark) works. Motion has one more level, since the system's setting has only one: "System / All / Reduced / None".

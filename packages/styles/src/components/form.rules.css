@@ -1094,7 +1094,7 @@
         transition-property: opacity;
       }
     }
-    &:where(:root:is([data-motion="reduced"], [data-motion="none"]) *)::after {
+    &:where(:root:is([data-motion="reduce"], [data-motion="none"]) *)::after {
       transition-property: opacity;
     }
     &:where(:root[data-motion="none"] *)::after {
@@ -1238,7 +1238,7 @@
         transition-property: background-color;
       }
     }
-    &:where(:root:is([data-motion="reduced"], [data-motion="none"]) *)::after {
+    &:where(:root:is([data-motion="reduce"], [data-motion="none"]) *)::after {
       transition-property: background-color;
     }
     &:where(:root[data-motion="none"] *)::after {

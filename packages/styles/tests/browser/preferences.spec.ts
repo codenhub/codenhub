@@ -151,9 +151,9 @@ for (const theme of ["light", "dark"] as const) {
 
 test.describe("data-motion", () => {
   for (const sheet of ["components.css", "native.css"] as const) {
-    test(`data-motion="reduced" moves as prefers-reduced-motion: reduce does, ${sheet}`, async ({ page }) => {
+    test(`data-motion="reduce" moves as prefers-reduced-motion: reduce does, ${sheet}`, async ({ page }) => {
       const system = await snapshot(page, { reducedMotion: "reduce", sheet }, MOTION_PROPERTIES);
-      const attribute = await snapshot(page, { attributes: 'data-motion="reduced"', sheet }, MOTION_PROPERTIES);
+      const attribute = await snapshot(page, { attributes: 'data-motion="reduce"', sheet }, MOTION_PROPERTIES);
       const full = await snapshot(page, { sheet }, MOTION_PROPERTIES);
 
       expect(attribute).toEqual(system);
@@ -178,7 +178,7 @@ test.describe("data-motion", () => {
         { reducedMotion: "reduce", attributes: 'data-motion="none"', sheet },
         MOTION_PROPERTIES,
       );
-      const reduced = await snapshot(page, { attributes: 'data-motion="reduced"', sheet }, MOTION_PROPERTIES);
+      const reduced = await snapshot(page, { attributes: 'data-motion="reduce"', sheet }, MOTION_PROPERTIES);
 
       expect(withSystem).toEqual(alone);
       expect(alone, "none differs from reduced").not.toEqual(reduced);
@@ -186,7 +186,7 @@ test.describe("data-motion", () => {
   }
 
   /* What the reset does to an element the package does not style. Under
-     `reduced` a fade keeps its duration and a transform loses its transition;
+     `reduce` a fade keeps its duration and a transform loses its transition;
      under `none` every duration is near zero. Both end every animation at
      once and stop smooth scrolling. */
   test("the reset keeps a fade under reduced and nothing under none", async ({ page }) => {
@@ -210,7 +210,7 @@ test.describe("data-motion", () => {
       });
     };
 
-    const reduced = await read('data-motion="reduced"');
+    const reduced = await read('data-motion="reduce"');
 
     expect(reduced.property).not.toMatch(/\b(transform|all)\b/);
     expect(reduced.property).toMatch(/\bopacity\b/);
@@ -240,7 +240,7 @@ test.describe("data-motion", () => {
      background the author left without a transition takes the second one. */
   for (const [label, attributes, reducedMotion] of [
     ["the system's reduced motion", "", "reduce"],
-    ['data-motion="reduced"', 'data-motion="reduced"', "no-preference"],
+    ['data-motion="reduce"', 'data-motion="reduce"', "no-preference"],
   ] as const) {
     test(`under ${label}, the reset reuses the durations in order`, async ({ page }) => {
       await page.emulateMedia({ reducedMotion });

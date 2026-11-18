@@ -391,12 +391,12 @@ test("allows document-level horizontal overflow instead of clipping it", async (
 
 /* `/components` carries no reset, so every component that moves stops on its
    own under reduced motion, whether the reader's system asks for it or the
-   app does through `data-motion`. Under `reduced` a component may still fade:
+   app does through `data-motion`. Under `reduce` a component may still fade:
    what keeps a duration is a colour, opacity, or visibility change, never a
    transform, a slide, or a size. Under `none` nothing keeps one. */
 const MOTION_CASES = [
   { name: "the system asks for reduced motion", media: "reduce", motion: null, fades: true },
-  { name: 'data-motion="reduced"', media: "no-preference", motion: "reduced", fades: true },
+  { name: 'data-motion="reduce"', media: "no-preference", motion: "reduce", fades: true },
   { name: 'data-motion="none"', media: "no-preference", motion: "none", fades: false },
   { name: 'data-motion="none" over the system', media: "reduce", motion: "none", fades: false },
 ] as const;

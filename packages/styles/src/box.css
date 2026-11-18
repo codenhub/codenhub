@@ -331,7 +331,7 @@
        transition or animation of their own beside it.
 
        Two levels. Reduced -- the query, unless `data-motion="full"` is set on
-       `<html>`, or `data-motion="reduced"` -- drops what moves, the press's
+       `<html>`, or `data-motion="reduce"` -- drops what moves, the press's
        transform and travel and its shadow, and keeps the colour and opacity
        fades. None -- `data-motion="none"` -- ends the fades too, at the
        near-zero duration the reset uses, so a `transitionend` still fires.
@@ -342,7 +342,7 @@
         transition-property: background-color, border-color, color, opacity;
       }
     }
-    &:where(:root:is([data-motion="reduced"], [data-motion="none"]) *) {
+    &:where(:root:is([data-motion="reduce"], [data-motion="none"]) *) {
       transition-property: background-color, border-color, color, opacity;
     }
     &:where(:root[data-motion="none"] *) {

@@ -2,7 +2,7 @@
 title: Acessibilidade
 description: O que o CSS faz por foco, estados, movimento, contraste, cores forçadas e texto da direita para a esquerda, e o que a sua aplicação ainda deve aos seus usuários.
 order: 5
-source: ddbbd8dfc2f005b08420be5a3c9b9d514b8f0486
+source: 27e48c4c47792486999293331b47c886c30596c3
 ---
 
 # Acessibilidade
@@ -59,12 +59,12 @@ Sem classe de intenção, o contorno é o cinza de borda discreto, `--color-bord
 
 ### Movimento e transparência
 
-| Recurso                            | Comportamento                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
-| ---------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Movimento reduzido, componentes    | Com `prefers-reduced-motion: reduce`, ou `data-motion="reduced"`, todo componente para o que se move: o brilho do skeleton e do progresso, a barra indeterminada, o deslizar do preenchimento do progresso, o crescimento do tooltip, o deslocamento das marcas do radio e do switch, e o movimento do clique. O que muda de cor ou opacidade ainda faz fade: o hover de um botão, o surgimento do tooltip e a marca do checkbox. O clique em si ainda acontece, de imediato, no visual padrão e sob toda estética e classe solo, porque é o sinal de que ele foi registrado. |
-| Sem movimento, componentes         | Com `data-motion="none"`, os fades também terminam de imediato.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
-| Movimento reduzido, página inteira | O reset limita todas as outras transições da página a cor, opacidade e visibilidade, então uma transformação, um deslizamento ou uma mudança de tamanho chega de imediato. Toda animação com keyframes termina de imediato, inclusive um fade de entrada, porque uma folha de estilos não consegue saber o que ela anima, e a rolagem suave para. Com `data-motion="none"`, toda transição também termina de imediato.                                                                                                                                                        |
-| Transparência reduzida             | Com `prefers-reduced-transparency: reduce`, e em cores forçadas, `.glass`, `.glass-liquid` e `.glass-solo` perdem o desfoque e a lente e ficam opacos.                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| Recurso                            | Comportamento                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| ---------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Movimento reduzido, componentes    | Com `prefers-reduced-motion: reduce`, ou `data-motion="reduce"`, todo componente para o que se move: o brilho do skeleton e do progresso, a barra indeterminada, o deslizar do preenchimento do progresso, o crescimento do tooltip, o deslocamento das marcas do radio e do switch, e o movimento do clique. O que muda de cor ou opacidade ainda faz fade: o hover de um botão, o surgimento do tooltip e a marca do checkbox. O clique em si ainda acontece, de imediato, no visual padrão e sob toda estética e classe solo, porque é o sinal de que ele foi registrado. |
+| Sem movimento, componentes         | Com `data-motion="none"`, os fades também terminam de imediato.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| Movimento reduzido, página inteira | O reset limita todas as outras transições da página a cor, opacidade e visibilidade, então uma transformação, um deslizamento ou uma mudança de tamanho chega de imediato. Toda animação com keyframes termina de imediato, inclusive um fade de entrada, porque uma folha de estilos não consegue saber o que ela anima, e a rolagem suave para. Com `data-motion="none"`, toda transição também termina de imediato.                                                                                                                                                       |
+| Transparência reduzida             | Com `prefers-reduced-transparency: reduce`, e em cores forçadas, `.glass`, `.glass-liquid` e `.glass-solo` perdem o desfoque e a lente e ficam opacos.                                                                                                                                                                                                                                                                                                                                                                                                                       |
 
 A regra de movimento reduzido de cada componente vem com o componente, então todo entrypoint que o inclui respeita o movimento reduzido sem o reset, incluindo `@codenhub/styles/components`, `@codenhub/styles/components/tw` e cada entrypoint de componente `/*/tw`. Os entrypoints completos e nativos adicionam a regra do reset para a página inteira.
 
@@ -86,7 +86,7 @@ A regra do reset é `!important` dentro da camada `base`, e um `!important` com 
     }
   }
 
-  :root:is([data-motion="reduced"], [data-motion="none"]) .upload-spinner {
+  :root:is([data-motion="reduce"], [data-motion="none"]) .upload-spinner {
     animation-duration: 1s !important;
     animation-iteration-count: infinite !important;
   }
@@ -112,10 +112,10 @@ O que você remove continua removido: `.edgeless` num controle continua tirando 
 
 ### Configurações do app
 
-Uma página não consegue mudar o que uma media query informa, então um app com as suas próprias configurações de contraste e movimento avisa o pacote por dois atributos no `<html>`. Quando um atributo está definido, ele decide no lugar da configuração do sistema. Sem atributo, ou com um valor fora desta lista, decide a configuração do sistema, como as seções acima descrevem.
+Uma página não consegue mudar o que uma media query informa, por mais educado que seja o pedido, então um app com as suas próprias configurações de contraste e movimento avisa o pacote por dois atributos no `<html>`. Quando um atributo está definido, ele decide no lugar da configuração do sistema. Sem atributo, ou com um valor fora desta lista, decide a configuração do sistema, como as seções acima descrevem.
 
 ```html
-<html data-contrast="more" data-motion="reduced">
+<html data-contrast="more" data-motion="reduce">
   …
 </html>
 ```
@@ -125,7 +125,7 @@ Uma página não consegue mudar o que uma media query informa, então um app com
 | `data-contrast` | `more`     | Desenha as bordas de [contraste aumentado](#contraste-aumentado), seja o que for que o sistema peça.                                        |
 | `data-contrast` | `standard` | Deixa essas bordas de fora, mesmo quando o sistema pede mais contraste.                                                                     |
 | `data-motion`   | `full`     | Se move como sem preferência, mesmo quando o sistema pede movimento reduzido.                                                               |
-| `data-motion`   | `reduced`  | Faz o que a configuração de movimento reduzido do sistema faz: o que se move para, e o que faz fade continua fazendo.                       |
+| `data-motion`   | `reduce`   | Faz o que a configuração de movimento reduzido do sistema faz: o que se move para, e o que faz fade continua fazendo.                       |
 | `data-motion`   | `none`     | Termina de imediato toda animação e transição, inclusive os fades. A duração quase nula mantém `transitionend` e `animationend` disparando. |
 
 Uma tela de configurações com "Sistema / Padrão / Mais" remove `data-contrast` para Sistema e o define para as outras duas opções, como um [seletor de tema](./usage/theming.md#claro-e-escuro). O movimento tem um nível a mais, porque a configuração do sistema tem só um: "Sistema / Tudo / Reduzido / Nenhum".
