@@ -1,4 +1,4 @@
-<!-- source: 009dff440e348e18f3f8bbc41999fab7c50a910a -->
+<!-- source: 1314d1a05d15aa23229207613ed71375b5f0bb41 -->
 
 # @codenhub/styles
 
@@ -59,4 +59,4 @@ Este paquete no tiene comportamiento en JavaScript. No incluye alias de compatib
 
 ## Licencia
 
-Este proyecto tiene licencia [Apache-2.0](LICENSE). Los valores del tema, el Preflight y los registros de propiedades de Tailwind, incluidos en las hojas de estilos compiladas de `dist/`, y los registros de propiedades de `tw/theme.css` provienen de [Tailwind CSS](https://tailwindcss.com) (MIT). Las marcas de checkbox incrustadas derivan de los iconos `check` y `minus` de [Lucide](https://lucide.dev) (ISC), que Lucide deriva de [Feather](https://github.com/feathericons/feather) (MIT). Consulta [NOTICE](NOTICE) para los avisos obligatorios.
+Este proyecto tiene licencia [Apache-2.0](LICENSE). Los valores del tema, el Preflight y los registros de propiedades de Tailwind, incluidos en las hojas de estilos compiladas de `dist/`, y los registros de propiedades de `tw/theme.css` provienen de [Tailwind CSS](https://tailwindcss.com) (MIT). Las marcas de checkbox incrustadas derivan de los iconos `check` y `minus` de [Lucide](https://lucide.dev) (ISC), que Lucide deriva de [Feather](https://github.com/feathericons/feather) (MIT). Consulta [NOTICE](NOTICE) para los avisos obligatorios. Cada hoja de estilos de `dist/` y de `tw/` que contiene las marcas los lleva en un comentario `/*!`, pero el minificador de una compilación de `/tw` puede quitar un comentario que no esté al principio de su salida, como hace el propio `--minify` de Tailwind, así que una compilación que incluya el checkbox debe conservar los avisos por otra vía.

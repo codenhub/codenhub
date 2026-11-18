@@ -104,7 +104,8 @@ describe("a /tw consumer build", { timeout: 60_000 }, () => {
       name: "a page with one primary button, through /button/tw",
       imports: [tailwindCss, twEntry("components/button.css")],
       candidates: ["btn", "primary"],
-      ceiling: 21_800,
+      /* 21,800 until 0.11.0 capped a held neutral box's fill, 18 bytes more. */
+      ceiling: 21_850,
     },
     {
       name: "a page that names no package class, through /button/tw",
