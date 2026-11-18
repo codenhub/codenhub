@@ -9,6 +9,15 @@ export interface I18nInternals {
   init(options: I18nInitOptions): Promise<boolean>;
   /** Looks a key up like `translate()`, reporting a miss, but returns undefined for it rather than the key. */
   lookup(key: string): string | undefined;
+  /** The id of the latest `init()` or `setLocale()` request, which a request takes synchronously when it starts. */
+  latestRequestId(): number;
+  /**
+   * Sets the one listener called with a request's id when that request takes effect, before its event, if any. A
+   * `setLocale()` to the active locale takes effect at once and dispatches no event. `undefined` removes it.
+   */
+  setApplyListener(listener: ((requestId: number) => void) | undefined): void;
+  /** Makes the request stale when it is still the latest, so a pending load resolves without applying. */
+  supersede(requestId: number): void;
 }
 
 const internals = new WeakMap<object, I18nInternals>();

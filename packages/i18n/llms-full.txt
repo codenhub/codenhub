@@ -945,7 +945,7 @@ With no other options, this:
 2. Sets `<html lang="pt" dir="ltr">` to match, so screen readers pronounce text correctly and [right-to-left languages](docs/index.md#right-to-left-languages) lay out correctly.
 3. Saves the language your app chooses, and reads it back on the visitor's next visit.
 
-It returns a binding with a `disconnect()` method. You only need it when you tear the app down, as in tests or micro-frontends.
+It returns a binding. Keep it if your language picker has a "System" entry, as [Offer a "System" choice](#offer-a-system-choice) shows. Its `disconnect()` method is only needed when you tear the app down, as in tests or micro-frontends.
 
 ### How the locale is chosen
 
@@ -962,7 +962,7 @@ On a localized site, that means every page view saves the language in its URL. U
 
 It also means a visitor who follows one shared Portuguese link to a tea has Portuguese saved from then on, until they read a page in another language, even if their browser asks for English. One link from a Brazilian friend, and the shop speaks Portuguese to them.
 
-If you would rather save only what the visitor picks in your language picker, turn saving off with `persistLocale: false` and store the picker's choice yourself. That option also stops the binding from reading the saved choice, so read your own back and pass it as `locale`.
+If you would rather save only what the visitor picks in your language picker, turn saving off with `persistLocale: false` and store the picker's choice yourself. That option also stops the binding from reading the saved choice, so read your own back and pass it as `locale`. If your picker also has [a "System" entry](#offer-a-system-choice), delete your stored choice when the visitor picks it, and start without `locale` while nothing is stored, so the binding detects again.
 
 #### When a loader fails during start
 
@@ -996,6 +996,37 @@ Only choices your app makes are saved: the `locale` option, and every applied `s
 A visitor who never picked one keeps following their browser settings, including when you add their language later.
 
 The choice is stored in `localStorage` as `{"locale":"pt"}` under the key `"i18n"`. Change the key with `storageKey`, or turn saving off with `persistLocale: false`. If storage is unavailable, as in some private browsing modes, the binding warns and carries on without it.
+
+### Offer a "System" choice
+
+Once a visitor picks a language, it sticks, which is the point. A "System" entry in the picker lets them undo that and go back to following their browser. Keep the binding that `initializeBrowserI18n()` returns; this replaces the start and the picker above:
+
+```ts
+const binding = await initializeBrowserI18n({ i18n });
+const picker = document.querySelector<HTMLSelectElement>("#language")!;
+
+picker.value = binding.followsSystem ? "system" : i18n.locale;
+picker.addEventListener("change", async () => {
+  try {
+    if (picker.value === "system") {
+      await binding.followSystem();
+    } else {
+      await i18n.setLocale(picker.value as (typeof i18n.locales)[number]);
+    }
+  } finally {
+    // Show what applied, even when the switch failed or a later one overtook it.
+    picker.value = binding.followsSystem ? "system" : i18n.locale;
+  }
+});
+```
+
+`followSystem()` forgets the saved choice and switches to the language the binding detects right now, from the browser settings, then the default locale. That language is not saved, so the next visit detects again. If storage can't be cleared, the binding warns, and the next visit still finds the old choice.
+
+`followsSystem` says which entry to show selected. It is `true` when the binding started with nothing chosen, and after `followSystem()`. It turns `false` when your app applies a locale with `setLocale()` or `init()`, including the one already showing: a visitor who picks English while English was detected has chosen it.
+
+While `followsSystem` is `true`, the binding also listens for the browser's `languagechange` event, so a visitor who changes their browser's language mid-visit gets the new one without a reload.
+
+When the detected language fails to load, `followSystem()` rejects with the loader's `I18nError`, and the page keeps its current language; the saved choice is already forgotten. A failure after a `languagechange` warns and keeps the current language. Neither falls back to the default the way a start does, because the page already has a language to show.
 
 ## Re-render a framework
 
@@ -1134,7 +1165,7 @@ A worker has no `localStorage` either, so saving warns and is skipped. Add `pers
 
   The manager keeps the later call's result, under [the latest-call rule](docs/index.md#the-latest-call-wins), and the binding is not connected. On a manager that was not initialized yet, `setLocale()` just fails with its own error and the binding carries on. Calling `init()` or `setLocale()` after the binding's promise has resolved is fine.
 
-- **`disconnect()` stops reacting but undoes nothing.** It stops saving, syncing, and translating, but leaves the current text, attributes, and saved choice as they are. You can then start a new binding.
+- **`disconnect()` stops reacting but undoes nothing.** It stops saving, syncing, translating, and following the browser's language, but leaves the current text, attributes, and saved choice as they are. A switch to a detected language still loading is dropped, and `followSystem()` rejects after it. You can then start a new binding.
 
 The [browser reference](docs/reference/browser.md) documents every option and failure, and [Troubleshooting](docs/troubleshooting.md#the-browser-binding-warns-or-rejects) lists each warning the binding logs.
 
@@ -1920,7 +1951,9 @@ You see `Ouvrir l{app}` where you expected `Ouvrir l'éditeur`, and the console 
 - **"Browser observation requires a root"**: `observe: true` needs a `root` to watch.
 - **"root must be an element, a document, or a shadow root, such as document.body."**: `root` was something else, usually the `null` that `document.querySelector("#app")` returns on a page without `#app`. The binding throws before starting the manager. Check that the element exists on every page that runs the script, or pass `document`.
 - **`onMissingKey` threw**: the binding still translates every other element, then rejects with the first error on the first initialization, or reports it as an uncaught error after a later language switch. Only the text or attribute whose key was missing keeps its value. A first initialization that rejects this way leaves the manager started but the binding disconnected, so later language switches don't translate the page; fix the callback and call `initializeBrowserI18n()` again.
-- **"Could not read persisted locale" or "Could not persist locale"**: `localStorage` is unavailable, as in some private browsing modes or a Web Worker. The visitor's choice is not saved; everything else works. Pass `persistLocale: false` where there is no storage to start quietly.
+- **"Could not read persisted locale", "Could not persist locale", or "Could not forget persisted locale"**: `localStorage` is unavailable, as in some private browsing modes or a Web Worker. The visitor's choice is not saved, or after `followSystem()`, not forgotten; everything else works. Pass `persistLocale: false` where there is no storage to start quietly.
+- **"Could not switch to the detected locale"**: the browser's language changed while the binding [followed the system](docs/browser.md#offer-a-system-choice), and the loader failed for the newly detected locale. The page keeps its current language. Fix the loader.
+- **"followSystem() requires a connected browser binding"**: you called `followSystem()` after `disconnect()`. Call it on the binding that is connected.
 - **`Could not load locale "pt"; using "es".`** or **`Could not load locale "pt"; using the default locale.`**: the loader failed for a saved or detected locale other than the default, so the visitor got the next one instead: the locale detected from the browser after a saved one, then the default. Fix the loader; the saved choice is kept for next time. If the default locale itself fails to load, there is nothing left to fall back to, and initialization rejects with `Failed to load translations for locale "en".`
 - **"Skipping translation on <p> because translated elements must be leaves"**: the element with `data-i18n` has child elements. Put the key on an element that contains only text, or translate it with `t()`.
 - **"Skipping translation on <style> because the element can activate or hide translated content"**: a `data-i18n` key is on a `<script>`, `<style>`, `<noscript>`, or `<template>` element, whose text runs as code or decides what shows. Move the key to an ordinary element.

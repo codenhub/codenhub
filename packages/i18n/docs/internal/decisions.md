@@ -1,6 +1,6 @@
 ---
 status: IMPLEMENTED
-last_updated: 2026-11-17
+last_updated: 2026-11-18
 scope: Why `@codenhub/i18n` behaves as it does, with the alternatives each decision rejected, for whoever changes it next.
 ---
 
@@ -146,6 +146,20 @@ When the loader rejects for a stored or detected locale, the binding warns and s
 ### A stored locale is matched
 
 A stored locale the application no longer configures exactly, such as `pt-PT` after only `pt-BR` remains, goes through `matchLocale()` like a browser preference, and the stored value is left as it is. It still names the visitor's choice, which serves them better than their browser's languages. Rejected: discarding it, which sends a visitor who chose Portuguese back to detection, and rewriting it to the match, which would lose the choice if the application adds `pt-PT` back.
+
+### The binding can follow the system again
+
+`followSystem()` removes the saved locale and switches to the locale detected now, without saving it, and `followsSystem` tells a picker whether to show a "System" entry as selected. While it is `true`, a `languagechange` event switches to the newly detected locale. Requested in #588, so an application with a "System" entry need not keep its own copy of the choice beside the binding's storage.
+
+**A flag, not the saved locale.** `followsSystem` is `false` after any locale the application applies, whether or not `persistLocale` saves it. Rejected: exposing the saved locale, as #588 proposed, which is always `undefined` with `persistLocale: false`, so a picker would show "System" for an explicit `locale` the application chose.
+
+**Choosing the active locale is a choice.** `setLocale()` for the locale already active dispatches no event, so the binding learns of every applied request through an internal hook in core, and saves it. Otherwise a visitor who picks English while English was detected would save nothing and still see "System" selected.
+
+**A failed switch keeps the current locale.** `followSystem()` rejects with the loader's error, and a failure after `languagechange` warns. Neither falls back to the default as a start does: the page already shows a language, and the start falls back only because it has none. The saved locale is forgotten before loading, so a visitor who asked for the system gets it at the next start even when this load failed, unless storage refused the removal, which warns.
+
+**The binding's own switches end with it.** `disconnect()` supersedes a detected locale still loading, so it does not apply to a manager nobody binds; an application request still loading is left to apply. A browser language change during the start's loading, before the listener exists, is caught by comparing the detected locale once the start ends.
+
+**The manager stays runtime-neutral.** Rejected: `setLocale("system")` or `setLocale(undefined)` on the manager, which knows nothing of the browser or of storage.
 
 ### One data attribute per translated attribute
 

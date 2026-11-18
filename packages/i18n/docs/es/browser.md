@@ -2,7 +2,7 @@
 title: Traduce una app de navegador
 description: Detecta y recuerda el idioma del visitante, mantén sincronizados lang y dir, vuelve a renderizar un framework, traduce HTML y ejecuta en un Web Worker.
 order: 2
-source: 47ec5e4ac567622358289c8e0751f6f4b215c6a3
+source: f16d67e7adf1b757362c94025264aa3aa0f701b7
 ---
 
 # Traduce una app de navegador
@@ -29,7 +29,7 @@ Sin ninguna otra opción, esto:
 2. Asigna `<html lang="pt" dir="ltr">` para que coincida, así los lectores de pantalla pronuncian bien el texto y los [idiomas de derecha a izquierda](index.md#idiomas-de-derecha-a-izquierda) se maquetan bien.
 3. Guarda el idioma que elige tu app y lo vuelve a leer en la siguiente visita.
 
-Devuelve un binding con un método `disconnect()`. Solo lo necesitas cuando desmontas la app, como en los tests o en los micro-frontends.
+Devuelve un binding. Guárdalo si tu selector de idioma tiene una opción "Sistema", como muestra [Ofrece una opción "Sistema"](#ofrece-una-opción-sistema). Su método `disconnect()` solo hace falta cuando desmontas la app, como en los tests o en los micro-frontends.
 
 ### Cómo se elige el locale
 
@@ -46,7 +46,7 @@ En un sitio localizado, eso significa que cada vista de página guarda el idioma
 
 También significa que un visitante que sigue un enlace compartido en portugués hacia un té tiene el portugués guardado desde ese momento, hasta que lea una página en otro idioma, aunque su navegador pida inglés. Basta un enlace de un amigo brasileño para que la tienda le hable en portugués.
 
-Si prefieres guardar solo lo que el visitante elige en tu selector de idioma, desactiva el guardado con `persistLocale: false` y guarda tú la elección del selector. Esa opción también hace que el binding deje de leer la elección guardada, así que lee la tuya y pásala como `locale`.
+Si prefieres guardar solo lo que el visitante elige en tu selector de idioma, desactiva el guardado con `persistLocale: false` y guarda tú la elección del selector. Esa opción también hace que el binding deje de leer la elección guardada, así que lee la tuya y pásala como `locale`. Si tu selector también tiene [una opción "Sistema"](#ofrece-una-opción-sistema), borra la elección que guardaste cuando el visitante la elija, y arranca sin `locale` mientras no haya nada guardado, para que el binding vuelva a detectar.
 
 #### Cuando un loader falla durante el arranque
 
@@ -80,6 +80,37 @@ Solo se guardan las elecciones que hace tu app: la opción `locale` y cada `setL
 Un visitante que nunca eligió uno sigue la configuración de su navegador, también cuando agregas su idioma más adelante.
 
 La elección se guarda en `localStorage` como `{"locale":"pt"}` bajo la clave `"i18n"`. Cambia la clave con `storageKey`, o desactiva el guardado con `persistLocale: false`. Si el almacenamiento no está disponible, como en algunos modos de navegación privada, el binding advierte y sigue sin él.
+
+### Ofrece una opción "Sistema"
+
+Cuando un visitante elige un idioma, se queda, y esa es la idea. Una opción "Sistema" en el selector le permite deshacerlo y volver a seguir a su navegador. Guarda el binding que devuelve `initializeBrowserI18n()`; esto sustituye el arranque y el selector de arriba:
+
+```ts
+const binding = await initializeBrowserI18n({ i18n });
+const picker = document.querySelector<HTMLSelectElement>("#language")!;
+
+picker.value = binding.followsSystem ? "system" : i18n.locale;
+picker.addEventListener("change", async () => {
+  try {
+    if (picker.value === "system") {
+      await binding.followSystem();
+    } else {
+      await i18n.setLocale(picker.value as (typeof i18n.locales)[number]);
+    }
+  } finally {
+    // Muestra lo que se aplicó, aunque el cambio fallara o uno posterior lo adelantara.
+    picker.value = binding.followsSystem ? "system" : i18n.locale;
+  }
+});
+```
+
+`followSystem()` olvida la elección guardada y cambia al idioma que el binding detecta ahora, por la configuración del navegador y después por el locale por defecto. Ese idioma no se guarda, así que la próxima visita vuelve a detectar. Si no se puede limpiar el almacenamiento, el binding advierte, y la próxima visita aún encuentra la elección anterior.
+
+`followsSystem` dice qué opción mostrar seleccionada. Es `true` cuando el binding arrancó sin nada elegido y después de `followSystem()`. Pasa a `false` cuando tu app aplica un locale con `setLocale()` o `init()`, incluido el que ya se muestra: un visitante que elige inglés mientras se detectó inglés lo ha elegido.
+
+Mientras `followsSystem` es `true`, el binding también escucha el evento `languagechange` del navegador, así que un visitante que cambia el idioma del navegador en mitad de la visita recibe el nuevo sin recargar.
+
+Cuando el idioma detectado no carga, `followSystem()` rechaza con el `I18nError` del loader, y la página mantiene su idioma actual; la elección guardada ya está olvidada. Un fallo tras un `languagechange` advierte y mantiene el idioma actual. Ninguno cae al idioma por defecto como hace el arranque, porque la página ya tiene un idioma que mostrar.
 
 ## Vuelve a renderizar un framework
 
@@ -218,7 +249,7 @@ Un worker tampoco tiene `localStorage`, así que el guardado advierte y se omite
 
   El gestor se queda con el resultado de la llamada posterior, según [la regla de la última llamada](index.md#gana-la-última-llamada), y el binding no queda conectado. Sobre un gestor que todavía no estaba inicializado, `setLocale()` simplemente falla con su propio error y el binding sigue adelante. Llamar a `init()` o a `setLocale()` después de que la promesa del binding se resolvió no es problema.
 
-- **`disconnect()` deja de reaccionar pero no deshace nada.** Deja de guardar, de sincronizar y de traducir, pero deja el texto, los atributos y la elección guardada tal como están. Después puedes arrancar un binding nuevo.
+- **`disconnect()` deja de reaccionar pero no deshace nada.** Deja de guardar, de sincronizar, de traducir y de seguir el idioma del navegador, pero deja el texto, los atributos y la elección guardada tal como están. Un cambio a un idioma detectado que aún está cargando se descarta, y `followSystem()` rechaza después. Después puedes arrancar un binding nuevo.
 
 La [referencia del navegador](../reference/browser.md) (en inglés) documenta cada opción y cada fallo, y [Solución de problemas](troubleshooting.md#el-binding-del-navegador-advierte-o-rechaza) enumera cada advertencia que registra el binding.
 
