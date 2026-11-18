@@ -54,11 +54,15 @@ const tailwindExportContracts: Record<string, TailwindExportContract> = {
      single candidate has to prove both are present rather than just that the
      variant exists at all. */
   "./theme/tw": {
-    candidates: "dark:hidden",
+    candidates: "dark:hidden contrast-less:hidden",
     patterns: [
       /--color-primary:/,
       /\.dark\\:hidden:where\(\.dark,\.dark \*,\.theme-dark,\.theme-dark \*,\[data-theme=dark\],\[data-theme=dark\] \*\)/,
       /@media \(prefers-color-scheme:dark\)\{\.dark\\:hidden:not\(:where\(\.light,\.light \*,\.theme-light,\.theme-light \*,\[data-theme=light\],\[data-theme=light\] \*\)\)/,
+      /* No attribute value asks for less contrast, so the attribute only takes
+         the query away. Playwright cannot emulate `prefers-contrast: less`, so
+         `tw-consumer.spec.ts` checks the other three variants in a browser. */
+      /@media \(prefers-contrast:less\)\{\.contrast-less\\:hidden:not\(:where\(:root:is\(\[data-contrast=more\],\[data-contrast=standard\]\),:root:is\(\[data-contrast=more\],\[data-contrast=standard\]\) \*\)\)\{display:none/,
     ],
   },
   "./components/tw": {

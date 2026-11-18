@@ -36,3 +36,69 @@
     }
   }
 }
+
+/* Tailwind's own preference variants read only the media query, so beside the
+   package's components, which follow `data-contrast` and `data-motion` on
+   `<html>` in place of it (docs/accessibility.md#app-settings), a consumer's
+   `contrast-more:` and `motion-reduce:` utilities answered the system while the
+   components answered the app's setting. Each is redefined as `dark:` is: the
+   attribute when it is set, and the query when no attribute names a value. The
+   first arm matches `<html>` itself too, for a utility written on it. */
+@custom-variant contrast-more {
+  &:where(:root[data-contrast="more"], :root[data-contrast="more"] *) {
+    @slot;
+  }
+
+  @media (prefers-contrast: more) {
+    &:not(:where(:root[data-contrast="standard"], :root[data-contrast="standard"] *)) {
+      @slot;
+    }
+  }
+}
+
+/* The attribute has no `less`, so it only takes the query away: an app that
+   chose a contrast level chose it in place of the system's. */
+@custom-variant contrast-less {
+  @media (prefers-contrast: less) {
+    &:not(
+      :where(
+        :root:is([data-contrast="more"], [data-contrast="standard"]),
+        :root:is([data-contrast="more"], [data-contrast="standard"]) *
+      )
+    ) {
+      @slot;
+    }
+  }
+}
+
+@custom-variant motion-safe {
+  &:where(:root[data-motion="full"], :root[data-motion="full"] *) {
+    @slot;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    &:not(
+      :where(
+        :root:is([data-motion="reduce"], [data-motion="none"]),
+        :root:is([data-motion="reduce"], [data-motion="none"]) *
+      )
+    ) {
+      @slot;
+    }
+  }
+}
+
+@custom-variant motion-reduce {
+  &:where(
+    :root:is([data-motion="reduce"], [data-motion="none"]),
+    :root:is([data-motion="reduce"], [data-motion="none"]) *
+  ) {
+    @slot;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    &:not(:where(:root[data-motion="full"], :root[data-motion="full"] *)) {
+      @slot;
+    }
+  }
+}

@@ -2,7 +2,7 @@
 title: Tailwind CSS v4
 description: Usar los puntos de entrada de código fuente /tw en un proyecto con Tailwind CSS v4.
 order: 1
-source: f22779f7f4682d22b3c79d6efd617fb9d2ae5916
+source: ef00ca87165cdeee7ef26bf1f287e89cc9a52836
 ---
 
 # Tailwind CSS v4
@@ -143,6 +143,19 @@ Todos los puntos de entrada `/tw` requieren Tailwind CSS 4.3.2 o posterior, por 
 ## La variante `dark:`
 
 Los puntos de entrada `/tw` definen su propia variante `dark:`, así que tus utilidades cambian con los mismos selectores claro y oscuro que usan los tokens del paquete. Tiene una diferencia conocida respecto a los tokens cuando los temas están anidados; consulta [Temas → La variante dark:](../usage/theming.md#la-variante-dark).
+
+## Variantes de contraste y movimiento
+
+Los puntos de entrada `/tw` también reemplazan `contrast-more:`, `contrast-less:`, `motion-safe:` y `motion-reduce:` de Tailwind, así que tus utilidades siguen los ajustes de la app que siguen los componentes del paquete: `data-contrast` y `data-motion` en `<html>` deciden cuando están puestos, y el ajuste del sistema decide cuando no, como describe [Accesibilidad → Ajustes de la app](../accessibility.md#ajustes-de-la-app).
+
+| Variante         | Se aplica                                                                                                               |
+| ---------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| `contrast-more:` | Con `data-contrast="more"`, o con `prefers-contrast: more` salvo que esté puesto `data-contrast="standard"`.            |
+| `contrast-less:` | Con `prefers-contrast: less`, salvo que `data-contrast` sea `more` o `standard`.                                        |
+| `motion-safe:`   | Con `data-motion="full"`, o sin preferencia de movimiento reducido salvo que `data-motion` sea `reduce` o `none`.       |
+| `motion-reduce:` | Con `data-motion` `reduce` o `none`, o con `prefers-reduced-motion: reduce` salvo que esté puesto `data-motion="full"`. |
+
+`data-motion="none"` cuenta como movimiento reducido, así que `motion-reduce:` se aplica con él. Como con las reglas del propio paquete, los atributos se leen solo en `<html>` y no desde dentro de un shadow root.
 
 ## Siguiente paso
 

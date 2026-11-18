@@ -143,6 +143,19 @@ Every `/tw` entrypoint requires Tailwind CSS 4.3.2 or newer, below 5 (`>=4.3.2 <
 
 The `/tw` entrypoints define their own `dark:` variant, so your utilities switch with the same light and dark selectors the package's tokens use. It has one known difference from the tokens when themes are nested; see [Theming → The dark: variant](../usage/theming.md#the-dark-variant).
 
+## Contrast and motion variants
+
+The `/tw` entrypoints also replace Tailwind's `contrast-more:`, `contrast-less:`, `motion-safe:`, and `motion-reduce:`, so your utilities follow the app settings the package's components follow: `data-contrast` and `data-motion` on `<html>` decide when they are set, and the system's setting decides when they are not, as [Accessibility → App settings](../accessibility.md#app-settings) describes.
+
+| Variant          | Applies                                                                                                               |
+| ---------------- | --------------------------------------------------------------------------------------------------------------------- |
+| `contrast-more:` | Under `data-contrast="more"`, or under `prefers-contrast: more` unless `data-contrast="standard"` is set.             |
+| `contrast-less:` | Under `prefers-contrast: less`, unless `data-contrast` is `more` or `standard`.                                       |
+| `motion-safe:`   | Under `data-motion="full"`, or with no reduced-motion preference unless `data-motion` is `reduce` or `none`.          |
+| `motion-reduce:` | Under `data-motion` `reduce` or `none`, or under `prefers-reduced-motion: reduce` unless `data-motion="full"` is set. |
+
+`data-motion="none"` counts as reduced motion, so `motion-reduce:` applies under it. As with the package's own rules, the attributes are read only on `<html>` and not from inside a shadow root.
+
 ## Next
 
 Return to the main path: [Building a screen](../concepts.md) adds the first card and form to the settings page. Everything it shows works the same on `/tw`.
