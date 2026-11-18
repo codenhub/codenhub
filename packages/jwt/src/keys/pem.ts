@@ -1,6 +1,7 @@
 import type { AsymmetricAlgorithm, JwtIssue } from "../core/types";
 import { decodeBase64Url } from "../encoding";
 import { ALGORITHM_PARAMS } from "./algorithms";
+import { exportWebCryptoJwk } from "./exported-jwk";
 
 /**
  * Longest PEM text read, in characters. A PKCS#8 RSA 8192-bit key, the largest this package imports, is
@@ -69,7 +70,7 @@ export async function pemToJwk(
     const cryptoKey = await crypto.subtle.importKey(format, der, importParams, true, [
       role === "public" ? "verify" : "sign",
     ]);
-    const jwk: Record<string, unknown> = { ...(await crypto.subtle.exportKey("jwk", cryptoKey)) };
+    const jwk: Record<string, unknown> = { ...(await exportWebCryptoJwk(cryptoKey, alg)) };
     for (const name of EXPORT_METADATA) {
       delete jwk[name];
     }

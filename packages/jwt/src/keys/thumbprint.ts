@@ -1,6 +1,7 @@
 import type { Jwk, PublicKey } from "../core/types";
 import { encodeBase64Url, encodeUtf8 } from "../encoding";
 import { ALGORITHM_PARAMS } from "./algorithms";
+import { exportWebCryptoJwk } from "./exported-jwk";
 import { getKeyEntryOfKind } from "./registry";
 
 /** RFC 7638 §3.2: the required members of each key type, in lexicographic order. */
@@ -32,7 +33,7 @@ const THUMBPRINT_MEMBERS: Readonly<
  */
 export async function jwkThumbprint(key: PublicKey): Promise<string> {
   const entry = getKeyEntryOfKind(key, "public");
-  const exported = await crypto.subtle.exportKey("jwk", entry.cryptoKey);
+  const exported = await exportWebCryptoJwk(entry.cryptoKey, key.alg);
   const kty = ALGORITHM_PARAMS[key.alg].kty as keyof typeof THUMBPRINT_MEMBERS;
   const material: Record<string, unknown> = { ...exported, kty };
   // Every required member is a base64url string or a fixed name, so JSON.stringify writes the RFC 7638 form:
