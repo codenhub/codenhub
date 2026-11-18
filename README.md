@@ -28,7 +28,6 @@ Shared packages, apps, and project standards for and by [coden.agency](https://c
 - `packages/styles`: Build a consistent, themeable interface by writing class names on plain HTML, with one stylesheet of tokens, a reset, layout and type helpers, and component classes, and no JavaScript.
 - `packages/theme`: Zero-dependency browser theme preference helper for TypeScript apps.
 - `packages/toaster`: Instance-based browser toast and native dialog manager with accessible semantic, loading, and custom notifications.
-- `packages/ui-kit`: Browser UI utilities for feedback, internationalization, themes, toasts, and global styles.
 - `packages/validation`: Zero-dependency validation of untrusted input for TypeScript: formats that return what a parser read, a bounded cost for input that fails, issues that never hold a value of the input, and tree-shakable validators.
 
 ### Tooling
