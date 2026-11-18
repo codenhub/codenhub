@@ -398,7 +398,7 @@ export async function initializeBrowserI18n<TLocale extends string>(
   const subscriptions = new AbortController();
   let notifiedState: string | undefined;
   let isNotificationQueued = false;
-  const pickerState = (): string => `${i18n.locale} ${isFollowingSystem}`;
+  const pickerState = (): string => `${i18n.locale}\0${isFollowingSystem}`;
   // Queued, so a locale change and the selection it ends are reported once, and a listener never runs inside core.
   const queueNotification = (): void => {
     if (isNotificationQueued || isCleaned) {
