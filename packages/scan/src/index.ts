@@ -96,22 +96,28 @@ function namingFile(error: unknown, file: string): unknown {
   return new Error(`${file}: ${error.message}`, { cause: error });
 }
 
-const splitters = new Map<string, RegExp>();
+const matchers = new Map<string, RegExp>();
 
 /**
- * Splits text into words: the runs of characters a word may hold.
+ * Yields the words in text, one at a time: the runs of characters a word may hold. Lazy, so a
+ * large file is never held as an array of every word in it, beside the text itself.
  *
  * @param wordCharacters - The body of a regular expression character class, such as `\w:-`.
+ * @yields Each word, in the order it appears.
  */
-export function splitWords(text: string, wordCharacters: string): string[] {
-  let splitter = splitters.get(wordCharacters);
+export function* splitWords(text: string, wordCharacters: string): Generator<string, void, undefined> {
+  let matcher = matchers.get(wordCharacters);
 
-  if (splitter === undefined) {
-    splitter = new RegExp(`[^${wordCharacters}]+`);
-    splitters.set(wordCharacters, splitter);
+  if (matcher === undefined) {
+    // A leading `^` is one of the characters, not a negation.
+    matcher = new RegExp(`[${wordCharacters.startsWith("^") ? "\\" : ""}${wordCharacters}]+`, "g");
+    matchers.set(wordCharacters, matcher);
   }
 
-  return text.split(splitter).filter((word) => word !== "");
+  // `matchAll` iterates a copy of the expression, so the shared one keeps no position.
+  for (const [word] of text.matchAll(matcher)) {
+    yield word;
+  }
 }
 
 function resolveEntry(entry: string, cwd: string, isStrict: boolean): string[] {

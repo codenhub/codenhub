@@ -263,10 +263,14 @@ function readContent(entries: readonly string[], cwd: string, output: string): G
    class this package defines. A word that is not one is read again by its
    parts around each colon, so Svelte's `class:primary={isPrimary}` and a Ruby
    `btn: true` are found. */
-function findClasses(content: string, known: ReadonlySet<string>): string[] {
-  return splitWords(content, String.raw`\w:-`)
-    .flatMap((word) => (known.has(word) ? [word] : word.split(":")))
-    .filter((word) => known.has(word));
+function* findClasses(content: string, known: ReadonlySet<string>): Generator<string, void, undefined> {
+  for (const word of splitWords(content, String.raw`\w:-`)) {
+    if (known.has(word)) {
+      yield word;
+    } else if (word.includes(":")) {
+      yield* word.split(":").filter((part) => known.has(part));
+    }
+  }
 }
 
 // Read from this package's own manifest, so the list follows its `exports` instead of drifting from them.

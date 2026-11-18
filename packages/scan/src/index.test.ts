@@ -180,7 +180,7 @@ describe("readFiles", () => {
 
 describe("splitWords", () => {
   it("splits on every character outside the set", () => {
-    expect(splitWords('<a class="btn primary md:lg">x/1.5</a>', String.raw`\w:-`)).toEqual([
+    expect([...splitWords('<a class="btn primary md:lg">x/1.5</a>', String.raw`\w:-`)]).toEqual([
       "a",
       "class",
       "btn",
@@ -194,11 +194,34 @@ describe("splitWords", () => {
   });
 
   it("keeps the characters the caller adds", () => {
-    expect(splitWords("ic-heart/1.5, ic-star", String.raw`\w/.-`)).toEqual(["ic-heart/1.5", "ic-star"]);
+    expect([...splitWords("ic-heart/1.5, ic-star", String.raw`\w/.-`)]).toEqual(["ic-heart/1.5", "ic-star"]);
   });
 
   it("returns no empty word", () => {
-    expect(splitWords("  ", String.raw`\w`)).toEqual([]);
-    expect(splitWords("", String.raw`\w`)).toEqual([]);
+    expect([...splitWords("  ", String.raw`\w`)]).toEqual([]);
+    expect([...splitWords("", String.raw`\w`)]).toEqual([]);
+  });
+
+  /* A file of a few hundred megabytes split into an array held every word
+     beside the text, several times the file's size. */
+  it("yields one word at a time", () => {
+    const words = splitWords("btn primary", String.raw`\w`);
+
+    expect(Array.isArray(words)).toBe(false);
+    expect(words.next().value).toBe("btn");
+    expect(words.next().value).toBe("primary");
+    expect(words.next().done).toBe(true);
+  });
+
+  it("starts again on every call with the same characters", () => {
+    const first = splitWords("a b", String.raw`\w`);
+
+    first.next();
+    expect([...splitWords("c d", String.raw`\w`)]).toEqual(["c", "d"]);
+    expect([...first]).toEqual(["b"]);
+  });
+
+  it("takes a leading caret as a character", () => {
+    expect([...splitWords("a^b c", "^\\w")]).toEqual(["a^b", "c"]);
   });
 });
