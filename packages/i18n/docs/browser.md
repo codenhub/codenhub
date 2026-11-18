@@ -45,7 +45,7 @@ On a localized site, that means every page view saves the language in its URL. U
 
 It also means a visitor who follows one shared Portuguese link to a tea has Portuguese saved from then on, until they read a page in another language, even if their browser asks for English. One link from a Brazilian friend, and the shop speaks Portuguese to them.
 
-If you would rather save only what the visitor picks in your language picker, turn saving off with `persistLocale: false` and store the picker's choice yourself. That option also stops the binding from reading the saved choice, so read your own back and pass it as `locale`. A visitor who wants their browser's language back doesn't need either: give them [a "System" choice](#offer-a-system-choice).
+If you would rather save only what the visitor picks in your language picker, turn saving off with `persistLocale: false` and store the picker's choice yourself. That option also stops the binding from reading the saved choice, so read your own back and pass it as `locale`. If your picker also has [a "System" entry](#offer-a-system-choice), delete your stored choice when the visitor picks it, and start without `locale` while nothing is stored, so the binding detects again.
 
 #### When a loader fails during start
 
@@ -82,7 +82,7 @@ The choice is stored in `localStorage` as `{"locale":"pt"}` under the key `"i18n
 
 ### Offer a "System" choice
 
-Once a visitor picks a language, it sticks, which is the point. A "System" entry in the picker lets them undo that and go back to following their browser:
+Once a visitor picks a language, it sticks, which is the point. A "System" entry in the picker lets them undo that and go back to following their browser. Keep the binding that `initializeBrowserI18n()` returns; this replaces the start and the picker above:
 
 ```ts
 const binding = await initializeBrowserI18n({ i18n });
@@ -90,15 +90,20 @@ const picker = document.querySelector<HTMLSelectElement>("#language")!;
 
 picker.value = binding.followsSystem ? "system" : i18n.locale;
 picker.addEventListener("change", async () => {
-  if (picker.value === "system") {
-    await binding.followSystem();
-  } else {
-    await i18n.setLocale(picker.value as (typeof i18n.locales)[number]);
+  try {
+    if (picker.value === "system") {
+      await binding.followSystem();
+    } else {
+      await i18n.setLocale(picker.value as (typeof i18n.locales)[number]);
+    }
+  } finally {
+    // Show what applied, even when the switch failed or a later one overtook it.
+    picker.value = binding.followsSystem ? "system" : i18n.locale;
   }
 });
 ```
 
-`followSystem()` forgets the saved choice and switches to the language the binding detects right now, from the browser settings, then the default locale. That language is not saved, so the next visit detects again.
+`followSystem()` forgets the saved choice and switches to the language the binding detects right now, from the browser settings, then the default locale. That language is not saved, so the next visit detects again. If storage can't be cleared, the binding warns, and the next visit still finds the old choice.
 
 `followsSystem` says which entry to show selected. It is `true` when the binding started with nothing chosen, and after `followSystem()`. It turns `false` when your app applies a locale with `setLocale()` or `init()`, including the one already showing: a visitor who picks English while English was detected has chosen it.
 
@@ -243,7 +248,7 @@ A worker has no `localStorage` either, so saving warns and is skipped. Add `pers
 
   The manager keeps the later call's result, under [the latest-call rule](index.md#the-latest-call-wins), and the binding is not connected. On a manager that was not initialized yet, `setLocale()` just fails with its own error and the binding carries on. Calling `init()` or `setLocale()` after the binding's promise has resolved is fine.
 
-- **`disconnect()` stops reacting but undoes nothing.** It stops saving, syncing, translating, and following the browser's language, but leaves the current text, attributes, and saved choice as they are. `followSystem()` rejects after it. You can then start a new binding.
+- **`disconnect()` stops reacting but undoes nothing.** It stops saving, syncing, translating, and following the browser's language, but leaves the current text, attributes, and saved choice as they are. A switch to a detected language still loading is dropped, and `followSystem()` rejects after it. You can then start a new binding.
 
 The [browser reference](reference/browser.md) documents every option and failure, and [Troubleshooting](troubleshooting.md#the-browser-binding-warns-or-rejects) lists each warning the binding logs.
 
