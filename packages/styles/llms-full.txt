@@ -3549,6 +3549,10 @@ An app with its own contrast and motion settings can now pass them to the packag
 - **The reset keeps your durations, in the order you wrote them.** It replaces the properties a transition names with colour, opacity, and visibility, and the browser reuses the durations in order. So `transition: transform 200ms, opacity 1s` fades the opacity over 200ms, and what used to change at once now fades too: a background color over 1s, and a text color over 200ms. Give a transition one duration when the length of its fade matters.
 - **An essential animation kept with a layer before `base` also needs the app's attribute.** A rule written under `@media (prefers-reduced-motion: reduce)` alone does not apply when the app sets `data-motion="reduce"` or `"none"`. Write it again under `:root:is([data-motion="reduce"], [data-motion="none"])`, as the example in [Accessibility](docs/accessibility.md#motion-and-transparency) shows.
 
+## Fixed
+
+- **A radio's dot grows in.** The dot is sized with `scale`, and its transition named `transform`, which does not cover `scale`, so a checked radio's dot appeared at full size at once and only faded. It now grows over the same duration as its fade, and under reduced motion it only fades, as [Accessibility → Motion and transparency](docs/accessibility.md#motion-and-transparency) says.
+
 <!-- Source: docs/changelog/0.10.0.md -->
 
 # 0.10.0

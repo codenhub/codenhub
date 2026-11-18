@@ -486,6 +486,35 @@ test('keeps component motion under data-motion="full" when the system asks for l
   expect(await read("reduce", ' data-motion="full"')).toEqual(await read("no-preference", ""));
 });
 
+/* A radio's dot grows in with no motion preference, and reduced motion stops the
+   growth and keeps the fade. The dot is sized with `scale`, a property of its
+   own that a transition of `transform` does not cover: the dot once named
+   `transform`, so it popped in at full size in every engine. */
+test("grows a radio's dot with no preference, and only fades it under reduced motion", async ({ page }) => {
+  const read = async (media: "reduce" | "no-preference") => {
+    await page.emulateMedia({ reducedMotion: media });
+    await page.setContent('<!doctype html><html><body><input type="radio" class="radio"></body></html>');
+    await page.addStyleTag({ url: COMPONENT_STYLES_URL });
+
+    return page.evaluate(async () => {
+      const radio = document.querySelector("input")!;
+      // Resolve the unchecked style first, so checking starts a transition from it.
+      getComputedStyle(radio, "::after").getPropertyValue("scale");
+      radio.checked = true;
+      await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+
+      return radio
+        .getAnimations({ subtree: true })
+        .map((animation) => (animation as CSSTransition).transitionProperty)
+        .filter((property) => property === "scale" || property === "opacity")
+        .sort();
+    });
+  };
+
+  expect(await read("no-preference")).toEqual(["opacity", "scale"]);
+  expect(await read("reduce")).toEqual(["opacity"]);
+});
+
 /* The user agent hides a closed `<dialog>` and centres an open one, but both
    rules lose to any author rule, and `.card`'s own `display` and a margin reset
    beat them. The fix travels with the components it exists for, so it holds on

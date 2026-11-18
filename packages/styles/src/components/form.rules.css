@@ -1047,7 +1047,7 @@
       scale: var(--tw-scale-x) var(--tw-scale-y);
       border-radius: calc(infinity * 1px);
       opacity: 0%;
-      transition-property: transform, opacity;
+      transition-property: scale, opacity;
       transition-timing-function: var(--tw-ease, var(--default-transition-timing-function));
       transition-duration: var(--tw-duration, var(--default-transition-duration));
       --tw-duration: var(--motion-duration-normal);
