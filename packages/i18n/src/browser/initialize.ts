@@ -6,6 +6,7 @@ import { createDomTranslator, runEach, TRANSLATION_KEY_ATTRIBUTES } from "./dom-
 const DEFAULT_STORAGE_KEY = "i18n";
 const LOCALE_CHANGE_EVENT = "locale-change";
 const READY_EVENT = "ready";
+const LANGUAGE_CHANGE_EVENT = "languagechange";
 const BOUND_MANAGERS = new WeakSet<object>();
 const ELEMENT_NODE = 1;
 /** Element, document, and document fragment, which includes a shadow root. */
@@ -53,6 +54,25 @@ export interface BrowserI18nOptions<TLocale extends string> {
 /** Browser effects exclusively owned for one i18n manager after successful initialization. */
 export interface BrowserI18nBinding {
   /**
+   * Whether the locale follows the browser's languages rather than a choice: `true` after a start with no explicit or
+   * usable saved locale and after `followSystem()`, and `false` once the application applies a locale through
+   * `setLocale()` or `init()`. While it is `true`, a `languagechange` event switches to the newly detected locale.
+   */
+  readonly followsSystem: boolean;
+  /**
+   * Forgets the saved locale and switches to the locale detected now from navigator preferences, then the default
+   * locale, without saving it. The binding then follows the system until the application applies a locale again.
+   *
+   * The saved locale is removed only when `persistLocale` is on; a failed removal warns unless the manager is silent.
+   * The switch follows the latest-call rule of `setLocale()`: a later call supersedes it, and it then resolves.
+   *
+   * @throws {Error} When the binding is disconnected.
+   * @throws {I18nError} When the loader rejects for the detected locale. The saved locale is already forgotten and the
+   * active locale is unchanged.
+   * Other exceptions `setLocale()` throws propagate unchanged.
+   */
+  followSystem(): Promise<void>;
+  /**
    * Stops locale-change handling and mutation observation.
    *
    * Existing DOM text, document attributes, persisted state, and core i18n state are unchanged.
@@ -97,6 +117,14 @@ const persistLocale = <TLocale extends string>(i18n: I18n<TLocale>, storageKey: 
     localStorage.setItem(storageKey, JSON.stringify({ locale: i18n.locale }));
   } catch (cause) {
     warn(i18n, "[I18n] Could not persist locale.", cause);
+  }
+};
+
+const forgetPersistedLocale = (i18n: I18n, storageKey: string): void => {
+  try {
+    localStorage.removeItem(storageKey);
+  } catch (cause) {
+    warn(i18n, "[I18n] Could not forget persisted locale.", cause);
   }
 };
 
@@ -295,9 +323,57 @@ export async function initializeBrowserI18n<TLocale extends string>(
       });
     });
   };
-  // Later core changes are choices the application made, so they persist when enabled.
-  const applyBrowserEffects = (): void => applyEffects(shouldPersistLocale);
+  const applyBrowserEffects = (): void => applyEffects(false);
+  const detectLocale = (): TLocale => i18n.matchLocale(getNavigatorPreferences()) ?? i18n.defaultLocale;
+  /** The binding's own latest request, which switches to a detected locale and is neither saved nor a choice. */
+  let detectedRequestId: number | undefined;
+  let isRequestingDetectedLocale = false;
+  let isFollowingSystem = false;
+  const requestDetectedLocale = (): Promise<void> => {
+    // A request for the active locale takes effect inside the call, before its id can be read.
+    isRequestingDetectedLocale = true;
+    try {
+      const request = i18n.setLocale(detectLocale());
+      detectedRequestId = internals.latestRequestId();
+      return request;
+    } finally {
+      isRequestingDetectedLocale = false;
+    }
+  };
+  // Every other request that takes effect is a choice the application made, so it persists when enabled, including one
+  // for the locale already active, which dispatches no event.
+  const handleApply = (requestId: number): void => {
+    if (isRequestingDetectedLocale || requestId === detectedRequestId) {
+      return;
+    }
+    isFollowingSystem = false;
+    if (shouldPersistLocale) {
+      persistLocale(i18n, storageKey);
+    }
+  };
+  const handleLanguageChange = async (): Promise<void> => {
+    if (!isFollowingSystem) {
+      return;
+    }
+    try {
+      await requestDetectedLocale();
+    } catch (cause) {
+      warn(i18n, "[I18n] Could not switch to the detected locale.", cause);
+    }
+  };
+  const followSystem = async (): Promise<void> => {
+    if (isCleaned) {
+      throw new Error("[I18n] followSystem() requires a connected browser binding.");
+    }
+    if (shouldPersistLocale) {
+      forgetPersistedLocale(i18n, storageKey);
+    }
+    isFollowingSystem = true;
+    await requestDetectedLocale();
+  };
   let observer: MutationObserver | undefined;
+  let isApplyListenerSet = false;
+  let isLanguageChangeListenerAdded = false;
   let isReadyListenerAdded = false;
   let isLocaleChangeListenerAdded = false;
   let isCleaned = false;
@@ -314,6 +390,12 @@ export async function initializeBrowserI18n<TLocale extends string>(
     if (isLocaleChangeListenerAdded) {
       i18n.removeEventListener(LOCALE_CHANGE_EVENT, applyBrowserEffects);
     }
+    if (isApplyListenerSet) {
+      internals.setApplyListener(undefined);
+    }
+    if (isLanguageChangeListenerAdded) {
+      globalThis.removeEventListener(LANGUAGE_CHANGE_EVENT, handleLanguageChange);
+    }
     observer?.disconnect();
     observer = undefined;
     root = undefined;
@@ -322,6 +404,7 @@ export async function initializeBrowserI18n<TLocale extends string>(
 
   try {
     let candidates: TLocale[];
+    let persistedLocale: TLocale | undefined;
 
     if (locale !== undefined) {
       if (typeof locale !== "string") {
@@ -330,11 +413,10 @@ export async function initializeBrowserI18n<TLocale extends string>(
       candidates = [locale];
     } else {
       // Stored, then detected, then the default, each tried once.
-      const preferences = [
-        shouldPersistLocale ? readPersistedLocale(i18n, storageKey) : undefined,
-        i18n.matchLocale(getNavigatorPreferences()),
-        i18n.defaultLocale,
-      ].filter((candidate): candidate is TLocale => candidate !== undefined);
+      persistedLocale = shouldPersistLocale ? readPersistedLocale(i18n, storageKey) : undefined;
+      const preferences = [persistedLocale, i18n.matchLocale(getNavigatorPreferences()), i18n.defaultLocale].filter(
+        (candidate): candidate is TLocale => candidate !== undefined,
+      );
       candidates = [...new Set(preferences)];
     }
 
@@ -391,8 +473,20 @@ export async function initializeBrowserI18n<TLocale extends string>(
     isReadyListenerAdded = true;
     i18n.addEventListener(LOCALE_CHANGE_EVENT, applyBrowserEffects);
     isLocaleChangeListenerAdded = true;
+    internals.setApplyListener(handleApply);
+    isApplyListenerSet = true;
+    // A saved locale that failed to load and fell back is still the visitor's choice, so it does not follow the system.
+    isFollowingSystem = locale === undefined && persistedLocale === undefined;
+    globalThis.addEventListener(LANGUAGE_CHANGE_EVENT, handleLanguageChange);
+    isLanguageChangeListenerAdded = true;
 
-    return { disconnect: cleanup };
+    return {
+      get followsSystem() {
+        return isFollowingSystem;
+      },
+      followSystem,
+      disconnect: cleanup,
+    };
   } catch (error) {
     cleanup();
     throw error;

@@ -46,11 +46,21 @@ Locale selection uses explicit input, valid persisted state, navigator preferenc
 
 ```ts
 export interface BrowserI18nBinding {
+    readonly followsSystem: boolean;
+    followSystem(): Promise<void>;
     disconnect(): void;
 }
 ```
 
 Browser effects exclusively owned for one i18n manager after successful initialization.
+
+#### BrowserI18nBinding › followsSystem
+
+```ts
+readonly followsSystem: boolean;
+```
+
+Whether the locale follows the browser's languages rather than a choice: `true` after a start with no explicit or usable saved locale and after `followSystem()`, and `false` once the application applies a locale through `setLocale()` or `init()`. While it is `true`, a `languagechange` event switches to the newly detected locale.
 
 #### BrowserI18nBinding › disconnect
 
@@ -61,6 +71,21 @@ disconnect(): void;
 Stops locale-change handling and mutation observation.
 
 Existing DOM text, document attributes, persisted state, and core i18n state are unchanged. Manager ownership is released, so a new browser binding may then be initialized.
+
+#### BrowserI18nBinding › followSystem
+
+```ts
+followSystem(): Promise<void>;
+```
+
+Forgets the saved locale and switches to the locale detected now from navigator preferences, then the default locale, without saving it. The binding then follows the system until the application applies a locale again.
+
+The saved locale is removed only when `persistLocale` is on; a failed removal warns unless the manager is silent. The switch follows the latest-call rule of `setLocale()`: a later call supersedes it, and it then resolves.
+
+**Throws**
+
+- `Error` — When the binding is disconnected.
+- `I18nError` — When the loader rejects for the detected locale. The saved locale is already forgotten and the active locale is unchanged. Other exceptions `setLocale()` throws propagate unchanged.
 
 ### BrowserI18nOptions
 

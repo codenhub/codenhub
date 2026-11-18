@@ -2,7 +2,7 @@
 title: Solución de problemas
 description: Qué significa cada error y cada advertencia, y cómo solucionarlo.
 order: 5
-source: 74b636f0d42f9cdd936caae3a60a4ec79bb8505e
+source: 18b05ed5ec3b2b03bb2a6e3c174bfdd4a2ce31ed
 ---
 
 # Solución de problemas
@@ -162,7 +162,9 @@ Ves `Ouvrir l{app}` donde esperabas `Ouvrir l'éditeur`, y la consola está en s
 - **"Browser observation requires a root"**: `observe: true` necesita un `root` que observar.
 - **"root must be an element, a document, or a shadow root, such as document.body."**: `root` era otra cosa, normalmente el `null` que devuelve `document.querySelector("#app")` en una página sin `#app`. El binding lanza la excepción antes de arrancar el gestor. Comprueba que el elemento exista en cada página que ejecuta el script, o pasa `document`.
 - **`onMissingKey` lanzó una excepción**: el binding igual traduce todos los demás elementos, y después se rechaza con el primer error en la primera inicialización, o lo informa como un error no capturado después de un cambio de idioma posterior. Solo el texto o el atributo cuya clave faltaba conserva su valor. Una primera inicialización que se rechaza de esta forma deja el gestor arrancado pero el binding desconectado, así que los cambios de idioma posteriores no traducen la página; corrige el callback y vuelve a llamar a `initializeBrowserI18n()`.
-- **"Could not read persisted locale" o "Could not persist locale"**: `localStorage` no está disponible, como en algunos modos de navegación privada o en un Web Worker. La elección del visitante no se guarda; todo lo demás funciona. Pasa `persistLocale: false` donde no hay almacenamiento, para arrancar sin ruido.
+- **"Could not read persisted locale", "Could not persist locale" o "Could not forget persisted locale"**: `localStorage` no está disponible, como en algunos modos de navegación privada o en un Web Worker. La elección del visitante no se guarda o, tras `followSystem()`, no se olvida; todo lo demás funciona. Pasa `persistLocale: false` donde no hay almacenamiento, para arrancar sin ruido.
+- **"Could not switch to the detected locale"**: el idioma del navegador cambió mientras el binding [seguía al sistema](browser.md#ofrece-una-opción-sistema), y el loader falló para el locale detectado. La página mantiene su idioma actual. Arregla el loader.
+- **"followSystem() requires a connected browser binding"**: llamaste a `followSystem()` después de `disconnect()`. Llámalo en el binding que está conectado.
 - **`Could not load locale "pt"; using "es".`** o **`Could not load locale "pt"; using the default locale.`**: el loader falló con un locale guardado o detectado distinto del por defecto, así que el visitante recibió el siguiente: el locale detectado a partir del navegador después de uno guardado, y después el por defecto. Corrige el loader; la elección guardada se conserva para la próxima vez. Si el propio locale por defecto no carga, no queda nada a lo que recurrir, y la inicialización se rechaza con `Failed to load translations for locale "en".`
 - **"Skipping translation on <p> because translated elements must be leaves"**: el elemento con `data-i18n` tiene elementos hijos. Pon la clave en un elemento que contenga solo texto, o tradúcelo con `t()`.
 - **"Skipping translation on <style> because the element can activate or hide translated content"**: hay una clave `data-i18n` en un elemento `<script>`, `<style>`, `<noscript>` o `<template>`, cuyo texto se ejecuta como código o decide qué se muestra. Mueve la clave a un elemento normal.

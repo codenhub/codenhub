@@ -115,6 +115,7 @@ class I18nInstance<TLocale extends string, TKey extends string = string>
   private dictionaries: readonly ChainDictionary<TLocale>[] | undefined;
   private readonly fallbackChains: ReadonlyMap<TLocale, readonly TLocale[]>;
   private requestId = 0;
+  private applyListener: ((requestId: number) => void) | undefined;
   private readonly warnedMissingKeys = new Map<string, undefined>();
   private readonly pluralRules = new Map<TLocale, Intl.PluralRules | undefined>();
   private readonly localeLookup: ReadonlyMap<string, TLocale>;
@@ -156,6 +157,10 @@ class I18nInstance<TLocale extends string, TKey extends string = string>
     });
     registerI18nInternals(this, {
       init: (options) => this.applyInit(options as I18nInitOptions<TLocale>),
+      latestRequestId: () => this.requestId,
+      setApplyListener: (listener) => {
+        this.applyListener = listener;
+      },
       lookup: (key) => {
         const found = this.lookup("translate", key);
         return found === undefined ? undefined : this.format(key, found, {});
@@ -335,6 +340,7 @@ class I18nInstance<TLocale extends string, TKey extends string = string>
     this.currentDirection = direction;
     this.dictionaries = dictionaries;
     this.isReadyState = true;
+    this.applyListener?.(requestId);
     this.dispatchEvent(createCustomEvent<I18nReadyEventDetail<TLocale>>("ready", { locale }));
     return true;
   }
@@ -348,6 +354,8 @@ class I18nInstance<TLocale extends string, TKey extends string = string>
     const requestId = this.createRequest();
 
     if (nextLocale === this.currentLocale) {
+      // Nothing loads, but the request still takes effect: it supersedes pending ones and is the locale chosen.
+      this.applyListener?.(requestId);
       return;
     }
 
@@ -373,6 +381,7 @@ class I18nInstance<TLocale extends string, TKey extends string = string>
     this.currentLocale = nextLocale;
     this.currentDirection = direction;
     this.dictionaries = dictionaries;
+    this.applyListener?.(requestId);
     this.dispatchEvent(
       createCustomEvent<I18nLocaleChangeEventDetail<TLocale>>("locale-change", {
         locale: nextLocale,

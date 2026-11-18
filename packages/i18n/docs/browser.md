@@ -28,7 +28,7 @@ With no other options, this:
 2. Sets `<html lang="pt" dir="ltr">` to match, so screen readers pronounce text correctly and [right-to-left languages](index.md#right-to-left-languages) lay out correctly.
 3. Saves the language your app chooses, and reads it back on the visitor's next visit.
 
-It returns a binding with a `disconnect()` method. You only need it when you tear the app down, as in tests or micro-frontends.
+It returns a binding. Keep it if your language picker has a "System" entry, as [Offer a "System" choice](#offer-a-system-choice) shows. Its `disconnect()` method is only needed when you tear the app down, as in tests or micro-frontends.
 
 ### How the locale is chosen
 
@@ -45,7 +45,7 @@ On a localized site, that means every page view saves the language in its URL. U
 
 It also means a visitor who follows one shared Portuguese link to a tea has Portuguese saved from then on, until they read a page in another language, even if their browser asks for English. One link from a Brazilian friend, and the shop speaks Portuguese to them.
 
-If you would rather save only what the visitor picks in your language picker, turn saving off with `persistLocale: false` and store the picker's choice yourself. That option also stops the binding from reading the saved choice, so read your own back and pass it as `locale`.
+If you would rather save only what the visitor picks in your language picker, turn saving off with `persistLocale: false` and store the picker's choice yourself. That option also stops the binding from reading the saved choice, so read your own back and pass it as `locale`. A visitor who wants their browser's language back doesn't need either: give them [a "System" choice](#offer-a-system-choice).
 
 #### When a loader fails during start
 
@@ -79,6 +79,32 @@ Only choices your app makes are saved: the `locale` option, and every applied `s
 A visitor who never picked one keeps following their browser settings, including when you add their language later.
 
 The choice is stored in `localStorage` as `{"locale":"pt"}` under the key `"i18n"`. Change the key with `storageKey`, or turn saving off with `persistLocale: false`. If storage is unavailable, as in some private browsing modes, the binding warns and carries on without it.
+
+### Offer a "System" choice
+
+Once a visitor picks a language, it sticks, which is the point. A "System" entry in the picker lets them undo that and go back to following their browser:
+
+```ts
+const binding = await initializeBrowserI18n({ i18n });
+const picker = document.querySelector<HTMLSelectElement>("#language")!;
+
+picker.value = binding.followsSystem ? "system" : i18n.locale;
+picker.addEventListener("change", async () => {
+  if (picker.value === "system") {
+    await binding.followSystem();
+  } else {
+    await i18n.setLocale(picker.value as (typeof i18n.locales)[number]);
+  }
+});
+```
+
+`followSystem()` forgets the saved choice and switches to the language the binding detects right now, from the browser settings, then the default locale. That language is not saved, so the next visit detects again.
+
+`followsSystem` says which entry to show selected. It is `true` when the binding started with nothing chosen, and after `followSystem()`. It turns `false` when your app applies a locale with `setLocale()` or `init()`, including the one already showing: a visitor who picks English while English was detected has chosen it.
+
+While `followsSystem` is `true`, the binding also listens for the browser's `languagechange` event, so a visitor who changes their browser's language mid-visit gets the new one without a reload.
+
+When the detected language fails to load, `followSystem()` rejects with the loader's `I18nError`, and the page keeps its current language; the saved choice is already forgotten. A failure after a `languagechange` warns and keeps the current language. Neither falls back to the default the way a start does, because the page already has a language to show.
 
 ## Re-render a framework
 
@@ -217,7 +243,7 @@ A worker has no `localStorage` either, so saving warns and is skipped. Add `pers
 
   The manager keeps the later call's result, under [the latest-call rule](index.md#the-latest-call-wins), and the binding is not connected. On a manager that was not initialized yet, `setLocale()` just fails with its own error and the binding carries on. Calling `init()` or `setLocale()` after the binding's promise has resolved is fine.
 
-- **`disconnect()` stops reacting but undoes nothing.** It stops saving, syncing, and translating, but leaves the current text, attributes, and saved choice as they are. You can then start a new binding.
+- **`disconnect()` stops reacting but undoes nothing.** It stops saving, syncing, translating, and following the browser's language, but leaves the current text, attributes, and saved choice as they are. `followSystem()` rejects after it. You can then start a new binding.
 
 The [browser reference](reference/browser.md) documents every option and failure, and [Troubleshooting](troubleshooting.md#the-browser-binding-warns-or-rejects) lists each warning the binding logs.
 
