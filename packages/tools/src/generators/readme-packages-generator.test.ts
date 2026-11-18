@@ -54,7 +54,7 @@ describe("readme packages generator", () => {
     const contents = await generate([
       createPackage("apps/docs", { description: "Documentation site.", isPrivate: true }),
       createPackage("packages/error", { description: "Typed errors." }),
-      createPackage("packages/plugins/vite/icons", { description: "Icon plugin." }),
+      createPackage("packages/plugins/vite/defer-css", { description: "CSS plugin." }),
       createPackage("packages/tools", { description: "Repository tooling.", isPrivate: true }),
     ]);
 
@@ -74,7 +74,7 @@ describe("readme packages generator", () => {
         "",
         "### Plugins",
         "",
-        "- `packages/plugins/vite/icons`: Icon plugin.",
+        "- `packages/plugins/vite/defer-css`: CSS plugin.",
       ].join("\n"),
     );
   });

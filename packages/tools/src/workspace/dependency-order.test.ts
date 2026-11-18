@@ -60,12 +60,12 @@ describe("withWorkspaceDependencies", () => {
   });
 
   it("shouldAddWhatANestedDevEnvironmentNeedsBuilt", () => {
-    const plugin = createPackage("vite-plugin-icons");
-    const themeDev = { ...createPackage("theme-dev", ["theme", "vite-plugin-icons"]), location: "packages/theme/dev" };
-    const expanded = withWorkspaceDependencies([theme], [plugin, styles, theme, themeDev]).map(({ name }) => name);
+    const icons = createPackage("icons");
+    const themeDev = { ...createPackage("theme-dev", ["theme", "icons"]), location: "packages/theme/dev" };
+    const expanded = withWorkspaceDependencies([theme], [icons, styles, theme, themeDev]).map(({ name }) => name);
 
-    expect(expanded).toContain("vite-plugin-icons");
-    expect(expanded.indexOf("vite-plugin-icons")).toBeLessThan(expanded.indexOf("theme-dev"));
+    expect(expanded).toContain("icons");
+    expect(expanded.indexOf("icons")).toBeLessThan(expanded.indexOf("theme-dev"));
   });
 
   it("shouldNotPullInAnUnrelatedPackageThatSharesANamePrefix", () => {

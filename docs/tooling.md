@@ -71,7 +71,7 @@ Every command takes the same selectors, resolved through one fallback chain:
 
 Tokens are resolved in that order: alias, then existing path, then glob, then a path relative to an already selected package. This is why `hub test error src/bucket.test.ts` works after `error` is selected.
 
-Manifest names and workspace locations always outrank directory names. `icons` selects `@codenhub/icons`, never the nested `packages/plugins/vite/icons`. A selector that matches several packages at the same rank fails and lists the candidates instead of guessing; an unrecognized selector fails with suggestions.
+Manifest names and workspace locations always outrank directory names. `demo` selects `@codenhub/demo`, never the nested `packages/theme/demo`. A selector that matches several packages at the same rank fails and lists the candidates instead of guessing; an unrecognized selector fails with suggestions.
 
 Only file paths are forwarded to the underlying tool, and only for commands that accept them (`test`, `test:browser`, `test:browser:watch`, `test:coverage`, `test:watch`). Other commands treat a path as a way to name its package.
 

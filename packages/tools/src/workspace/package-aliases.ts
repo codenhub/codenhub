@@ -65,8 +65,8 @@ export function createAliasIndex(packages: readonly WorkspacePackage[]): AliasIn
  * Resolves one selector token to a package.
  *
  * A manifest name or workspace location always wins over a directory name, so a
- * nested package such as `packages/plugins/vite/icons` never shadows the
- * package actually published as `@codenhub/icons`.
+ * nested package such as `packages/theme/demo` never shadows the package
+ * actually named `@codenhub/demo`.
  * @param index Alias index to search.
  * @param token Selector typed by the caller.
  * @returns Whether the token matched exactly one package, several, or none.

@@ -83,7 +83,7 @@ This table resolves the _displayed_ name only. Whether the npm package name and 
 | `toaster`    | Neutral, plain  | `Toaster`         | Singular concrete noun; reads as a name unfused, same reasoning as `Kbd`. Package and folder already renamed to match. |
 | `validation` | Neutral, kit    | `ValidationKit`   |                                                                                                                        |
 
-Plugins (`plugins/vite/add-loader`, `plugins/vite/defer-css`, `plugins/vite/icons`) are exceptions to this table: their npm names already follow their host ecosystem's own plugin-naming convention (`vite-plugin-*`), which takes precedence over the vocabulary above. Their existing `codenhub.label` values (`Vite Add Loader`, `Vite Deferred CSS`, `Vite Icons`) already follow that convention and stay unchanged.
+Plugins (`plugins/vite/add-loader`, `plugins/vite/defer-css`) are exceptions to this table: their npm names already follow their host ecosystem's own plugin-naming convention (`vite-plugin-*`), which takes precedence over the vocabulary above. Their existing `codenhub.label` values (`Vite Add Loader`, `Vite Deferred CSS`) already follow that convention and stay unchanged.
 
 ## New packages
 
