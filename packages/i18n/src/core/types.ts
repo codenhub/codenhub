@@ -30,12 +30,15 @@ export interface LocaleDictionaryLimits {
 }
 
 // Distributes over the property type so an optional leaf (`string | undefined`) still counts as a key. A group with an
-// `other` form is a plural, so the group itself is a key as well as each of its forms.
-type PropertyKeyPath<K extends string, TValue> = TValue extends string
-  ? K
-  : TValue extends undefined
-    ? never
-    : `${K}.${FlattenedKey<TValue>}` | (TValue extends { readonly other: string } ? K : never);
+// `other` form is a plural, so the group itself is a key as well as each of its forms. An `unknown` value can be a text
+// or a group, so it is a key and so is anything under it.
+type PropertyKeyPath<K extends string, TValue> = unknown extends TValue
+  ? K | `${K}.${string}`
+  : TValue extends string
+    ? K
+    : TValue extends undefined
+      ? never
+      : `${K}.${FlattenedKey<TValue>}` | (TValue extends { readonly other: string } ? K : never);
 
 type FlattenedKey<TMessages> = TMessages extends string
   ? never

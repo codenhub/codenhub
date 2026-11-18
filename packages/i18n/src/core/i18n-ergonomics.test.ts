@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, expectTypeOf, it, vi } from "vitest";
 
 import { createI18n, type TranslationKey } from "../index";
 
@@ -57,6 +57,22 @@ describe("missing keys", () => {
     const text: string = i18n.t(key);
 
     expect(text).toBe("absent.key");
+  });
+
+  it("should take any key for a loader typed with unknown values", async () => {
+    expectTypeOf<TranslationKey<Record<string, unknown>>>().toEqualTypeOf<string>();
+    expectTypeOf<TranslationKey<{ title: string; group: unknown }>>().toEqualTypeOf<
+      "title" | "group" | `group.${string}`
+    >();
+    const i18n = createI18n({
+      defaultLocale: "en",
+      locales: ["en"] as const,
+      loadLocale: (): Record<string, unknown> => ({ hello: "world" }),
+    });
+    await i18n.init();
+
+    expect(i18n.t("hello")).toBe("world");
+    expect(i18n.has("hello")).toBe(true);
   });
 
   it("should report every miss through onMissingKey instead of warning", async () => {
