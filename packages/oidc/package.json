@@ -3,7 +3,21 @@
   "version": "0.0.1",
   "private": false,
   "description": "OpenID Connect for both sides: a relying-party client and an OpenID Provider on the Fetch API, built on @codenhub/jwt.",
-  "homepage": "https://github.com/codenhub/codenhub/tree/main/packages/oidc",
+  "keywords": [
+    "authorization-server",
+    "cloudflare-workers",
+    "fetch-api",
+    "jwt",
+    "oauth",
+    "oauth2",
+    "oidc",
+    "openid-connect",
+    "openid-provider",
+    "pkce",
+    "relying-party",
+    "sso"
+  ],
+  "homepage": "https://codenhub.dev/packages/oidc/",
   "license": "Apache-2.0",
   "repository": {
     "type": "git",

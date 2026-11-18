@@ -378,6 +378,7 @@ export interface AuthorizationInteraction {
     readonly claimsLocales?: readonly string[];
     readonly display?: Display;
     readonly resources?: readonly string[];
+    readonly idTokenHint?: IdTokenHintClaims;
     readonly createdAt: number;
 }
 ```
@@ -429,6 +430,14 @@ readonly id: string;
 ```
 
 Pass this to `Provider.completeAuthorization`. Keep it where the user's browser cannot swap it for another user's, such as the app's session.
+
+#### AuthorizationInteraction › idTokenHint
+
+```ts
+readonly idTokenHint?: IdTokenHintClaims;
+```
+
+The user and session a verified `id_token_hint` names: an ID token this provider issued to this client, which may have expired. OpenID Connect Core §3.1.2.1 asks that the user who signs in be this one: when the user of the app's session is someone else, and the app does not sign this user in, answer with the denial `login_required` (always so under `prompt=none`). Absent without a hint, or with one that does not verify, which is ignored. A verified hint issued to another client fails the request with `invalid_request` instead.
 
 #### AuthorizationInteraction › loginHint
 
@@ -740,7 +749,6 @@ export interface CodeRecord {
     readonly amr?: readonly string[];
     readonly acr?: string;
     readonly sessionId?: string;
-    readonly maxAgeRequested: boolean;
     readonly resources?: readonly string[];
     readonly expiresAt: number;
 }
@@ -798,14 +806,6 @@ readonly grantId: string;
 
 Identifies every token issued from this code, so they can be revoked together.
 
-#### CodeRecord › maxAgeRequested
-
-```ts
-readonly maxAgeRequested: boolean;
-```
-
-Whether the request carried `max_age`, which makes `auth_time` required in the ID token.
-
 #### CodeRecord › nonce
 
 ```ts
@@ -854,6 +854,7 @@ readonly subject: string;
 export interface EndSession {
     readonly clientId?: string;
     readonly subject?: string;
+    readonly sessionId?: string;
     readonly logoutHint?: string;
     readonly uiLocales?: readonly string[];
     readonly redirect: Response | null;
@@ -886,6 +887,14 @@ readonly redirect: Response | null;
 
 A `302` to the client's registered `post_logout_redirect_uri`, carrying `state`, or `null` when the request named no URI.
 
+#### EndSession › sessionId
+
+```ts
+readonly sessionId?: string;
+```
+
+The `sid` of a verified `id_token_hint`: the app's session the sign-in belonged to, as the app gave it in `AuthorizationGrant.sessionId`. End that session, rather than every session of the user. Absent when the hint is absent or unverified, or its ID token has no `sid`.
+
 #### EndSession › subject
 
 ```ts
@@ -901,6 +910,33 @@ readonly uiLocales?: readonly string[];
 ```
 
 `ui_locales`, with empty entries dropped.
+
+### IdTokenHintClaims
+
+```ts
+export interface IdTokenHintClaims {
+    readonly subject: string;
+    readonly sessionId?: string;
+}
+```
+
+What a verified `id_token_hint` names: the user, and the app's session when the ID token carries `sid`.
+
+#### IdTokenHintClaims › sessionId
+
+```ts
+readonly sessionId?: string;
+```
+
+The token's `sid`, the `AuthorizationGrant.sessionId` the app gave when the user signed in.
+
+#### IdTokenHintClaims › subject
+
+```ts
+readonly subject: string;
+```
+
+The token's `sub`: the subject the app gave this client, pairwise or not.
 
 ### InteractionRecord
 
@@ -1206,7 +1242,7 @@ Returns an access token's record. `undefined` when it does not exist or its gran
 findClient(clientId: string): Promise<ClientRecord | undefined>;
 ```
 
-Looks up a registered client. `undefined` when none has this identifier.
+Looks up a registered client. `undefined` when none has this identifier. Identifiers match byte for byte: a lookup that ignores case, trims spaces or normalizes Unicode would let `APP` reach the record of `app`. A record whose `clientId` differs from the one asked for is treated as no client.
 
 #### OidcStore › revokeGrant
 
@@ -1335,9 +1371,9 @@ completeAuthorization(interactionId: string, outcome: AuthorizationGrant | Autho
 
 Finishes an interaction: issues a code, or sends the denial, as a `302` to the client's redirect URI.
 
-**Returns** — The response, or `interaction_not_found` when the interaction does not exist, was already completed, or expired, or, for a grant, when its client is no longer in the store: the code's lifetime can be the client's own (`ClientRecord.ttl`), so a grant reads the client's record. Rejects when the store does, or with a `TypeError` when it returns a malformed client record.
+**Returns** — The response, or `interaction_not_found` when the interaction does not exist, was already completed, or expired, or, for a grant or a denial, when its client is no longer in the store, no longer lists the interaction's redirect URI, or no longer has the `authorization_code` grant type: the provider redirects only to a URI the client's record lists now. Rejects when the store does, or with a `TypeError` when it returns a malformed client record.
 
-**Throws** — `TypeError` — When `outcome` is malformed, such as an empty `subject`, `scopes` that is not an array of strings, or a denial with other members; the interaction is left in place, so a corrected retry works. Also when a well-formed grant does not fit the request: scopes outside the request or without `openid`, an `authTime` before the interaction under `prompt=login`, an `authTime` in the future, or more than the requested `max_age` before the request. The interaction is consumed before these checks, so after one of these a retry gets `interaction_not_found` and the user must start over.
+**Throws** — `TypeError` — When `outcome` is malformed, such as a `subject` that is not 1 to 255 characters of visible ASCII, `scopes` that is not an array of strings, or a denial with other members; the interaction is left in place, so a corrected retry works. Also when a well-formed grant does not fit the request: scopes outside the request or without `openid`, an `authTime` before the interaction under `prompt=login`, an `authTime` in the future, or more than the requested `max_age` before the request. The interaction is consumed before these checks, so after one of these a retry gets `interaction_not_found` and the user must start over.
 
 #### Provider › endSession
 
@@ -2044,7 +2080,7 @@ How access tokens are issued. See `ProviderOptions.accessToken`.
 ### AuthenticationFailureReason
 
 ```ts
-export type AuthenticationFailureReason = "access_token_missing" | "access_token_malformed" | "access_token_unknown" | "access_token_expired" | "access_token_audience_mismatch" | "access_token_scope_insufficient";
+export type AuthenticationFailureReason = "access_token_missing" | "access_token_malformed" | "access_token_unknown" | "access_token_expired" | "access_token_client_unknown" | "access_token_audience_mismatch" | "access_token_scope_insufficient";
 ```
 
 Why `Provider.authenticate` refused a request, for the app's logs.
@@ -2163,7 +2199,7 @@ A `prompt` value (OpenID Connect Core §3.1.2.1).
 ### ProviderDiagnosticReason
 
 ```ts
-export type ProviderDiagnosticReason = "content_type" | "body" | "parameters" | "client_credentials_missing" | "client_credentials_ambiguous" | "client_credentials_malformed" | "client_unknown" | "client_method_mismatch" | "client_credentials_wrong" | "grant_type_missing" | "grant_type_unsupported" | "grant_type_unauthorized" | "parameter_missing" | "code_verifier_malformed" | "code_verifier_missing" | "code_verifier_unexpected" | "code_unknown" | "code_replayed" | "code_expired" | "code_client_mismatch" | "redirect_uri_mismatch" | "code_verifier_mismatch" | "scope_invalid" | "refresh_token_unknown" | "refresh_token_replayed" | "refresh_token_expired" | "refresh_token_client_mismatch" | "scope_not_granted" | "refresh_refused" | "resource_invalid" | "resource_not_granted" | "access_token_missing" | "access_token_malformed" | "access_token_unknown" | "access_token_expired" | "access_token_without_openid" | "token_missing" | "token_of_another_client";
+export type ProviderDiagnosticReason = "content_type" | "body" | "parameters" | "client_credentials_missing" | "client_credentials_ambiguous" | "client_credentials_malformed" | "client_unknown" | "client_method_mismatch" | "client_credentials_wrong" | "grant_type_missing" | "grant_type_unsupported" | "grant_type_unauthorized" | "parameter_missing" | "code_verifier_malformed" | "code_verifier_missing" | "code_verifier_unexpected" | "code_unknown" | "code_replayed" | "code_expired" | "code_client_mismatch" | "redirect_uri_mismatch" | "code_verifier_mismatch" | "scope_invalid" | "refresh_token_unknown" | "refresh_token_replayed" | "refresh_token_expired" | "refresh_token_client_mismatch" | "scope_not_granted" | "refresh_refused" | "resource_invalid" | "resource_not_granted" | "access_token_missing" | "access_token_malformed" | "access_token_unknown" | "access_token_expired" | "access_token_client_unknown" | "access_token_without_openid" | "token_missing" | "token_of_another_client";
 ```
 
 Why the provider refused a request at the token, userinfo, or revocation endpoint. The client is sent only the OAuth error code, so this is what an operator debugs with.
