@@ -1,4 +1,5 @@
 import { type CheckedPathnameEntry, fail } from "../locale/config-validators";
+import { formatReportedKey } from "../locale/dictionary";
 import { findPathnameProblem, normalizeSegment, splitPathname } from "./path";
 
 const PARAMETER_NAME_PATTERN = /^[A-Za-z0-9_]+$/;
@@ -396,7 +397,7 @@ export const compilePathnames = <TLocale extends string>({
       if (otherPathname !== undefined) {
         fail(
           paths.get(locale)!,
-          `Must not have the same path as ${JSON.stringify(otherPathname)} in ${JSON.stringify(locale)}`,
+          `Must not have the same path as ${formatReportedKey(otherPathname)} in ${formatReportedKey(locale)}`,
         );
       }
       shapes.set(key, entry.pathname);
@@ -404,7 +405,7 @@ export const compilePathnames = <TLocale extends string>({
     const canonicalKey = shapeKey(canonical);
     const otherPathname = canonicalShapes.get(canonicalKey);
     if (otherPathname !== undefined) {
-      fail(entry.path, `Must not be the same path as ${JSON.stringify(otherPathname)}`);
+      fail(entry.path, `Must not be the same path as ${formatReportedKey(otherPathname)}`);
     }
     canonicalShapes.set(canonicalKey, entry.pathname);
 

@@ -404,6 +404,21 @@ describe("translated pathnames", () => {
         ),
       );
     });
+
+    it("should escape line separators and cut long paths in the message", () => {
+      const words = ` ${"x".repeat(150)}`;
+      const routing = create({ localePrefix: "when-ambiguous", pathnames: { "/about": { pt: `/${words}` } } });
+      let message = "";
+      try {
+        routing.localize(`/${words}`, "en");
+      } catch (error) {
+        message = (error as Error).message;
+      }
+
+      expect(message).toMatch(/^\[I18n\] "\/(%E2%80%A8|\\u2028)x+"\.\.\. in "en" would be read as "\/about" in "pt"/);
+      expect(message).not.toContain(" ");
+      expect(message).not.toContain("x".repeat(100));
+    });
   });
 
   describe("alternates", () => {
@@ -989,6 +1004,19 @@ describe("translated pathnames", () => {
           "/products/:slug": { en: "/goods/:slug", pt: "/bens/:slug", es: "/bienes/:slug" },
         }),
       ).toThrow('pathnames["/products/:slug"]: Must not be the same path as "/products/:id"');
+    });
+
+    it("should escape line separators and cut a long path in the clash message", () => {
+      const long = `/a ${"b".repeat(150)}`;
+      let message = "";
+      try {
+        invalid({ [long]: { pt: "/sobre" }, "/company": { pt: "/sobre" } })();
+      } catch (error) {
+        message = (error as Error).message;
+      }
+
+      expect(message).toContain(`Must not have the same path as "/a\\u2028${"b".repeat(97)}"... in "pt"`);
+      expect(message).not.toContain(" ");
     });
 
     it("should reject parameters in a form when the canonical path has none", () => {

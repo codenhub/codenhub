@@ -1,4 +1,5 @@
 import { assertConfig, localeRoutingConfig } from "../locale/config-validators";
+import { formatReportedKey } from "../locale/dictionary";
 import { findPathnameProblem, isPathnameTooLong, joinPathname, normalizeSegment, splitPathname } from "./path";
 import { buildPattern, compilePathnames, type ShapeIndex } from "./pathnames";
 
@@ -371,21 +372,21 @@ export const createLocaleRouting = <TLocale extends string>(
 
     if (built.problem === "too-long") {
       throw new RangeError(
-        `[I18n] the path in ${JSON.stringify(canonicalLocale)} would be longer than 8,192 characters or 100 segments`,
+        `[I18n] the path in ${formatReportedKey(canonicalLocale)} would be longer than 8,192 characters or 100 segments`,
       );
     }
     if (built.problem === "clash") {
       // The path may be a URL passed for a canonical path, or a canonical path whose URL is another page's, such as
       // parse().pathname for an English product `/products/novo` in Portuguese when `/products/new` is listed.
-      const path = JSON.stringify(joinPathname(canonical, hasTrailingSlash));
+      const path = formatReportedKey(joinPathname(canonical, hasTrailingSlash));
       const { readBack } = built;
       const target =
         readBack === undefined
-          ? `no page; its URL there, ${JSON.stringify(built.url)}, leads nowhere`
-          : `${JSON.stringify(readBack.pathname)} in ${JSON.stringify(readBack.locale)}; its URL there, ` +
-            `${JSON.stringify(built.url)}, is that page's`;
+          ? `no page; its URL there, ${formatReportedKey(built.url)}, leads nowhere`
+          : `${formatReportedKey(readBack.pathname)} in ${formatReportedKey(readBack.locale)}; its URL there, ` +
+            `${formatReportedKey(built.url)}, is that page's`;
       throw new RangeError(
-        `[I18n] ${path} in ${JSON.stringify(canonicalLocale)} would be read as ${target}. If ${path} is a URL, pass ` +
+        `[I18n] ${path} in ${formatReportedKey(canonicalLocale)} would be read as ${target}. If ${path} is a URL, pass ` +
           `parse(url).pathname instead; if it is a canonical path, give one of the pages other words or list ${path} ` +
           "in pathnames, and build a request's links from parse(url).alternates, which leaves such a locale out",
       );
