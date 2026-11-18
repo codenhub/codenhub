@@ -2,7 +2,7 @@
 title: Acessibilidade
 description: O que o CSS faz por foco, estados, movimento, contraste, cores forçadas e texto da direita para a esquerda, e o que a sua aplicação ainda deve aos seus usuários.
 order: 5
-source: 6cf1b372ca62105b24ec2d38a2f9986b24632272
+source: a93b566e3c981f8885c1b4466e7f85e8cceed3d5
 ---
 
 # Acessibilidade
@@ -59,15 +59,18 @@ Sem classe de intenção, o contorno é o cinza de borda discreto, `--color-bord
 
 ### Movimento e transparência
 
-| Recurso                            | Comportamento                                                                                                                                                                                                                                                                                                                                                         |
-| ---------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Movimento reduzido, componentes    | Com `prefers-reduced-motion: reduce`, todo componente para as suas próprias transições e animações: o brilho do skeleton e do progresso, a barra indeterminada, o tooltip, as marcas dos toggles e o movimento do clique. O clique em si ainda acontece, de imediato, no visual padrão e sob toda estética e classe solo, porque é o sinal de que ele foi registrado. |
-| Movimento reduzido, página inteira | O reset também encurta todas as outras animações e transições da página.                                                                                                                                                                                                                                                                                              |
-| Transparência reduzida             | Com `prefers-reduced-transparency: reduce`, e em cores forçadas, `.glass`, `.glass-liquid` e `.glass-solo` perdem o desfoque e a lente e ficam opacos.                                                                                                                                                                                                                |
+| Recurso                            | Comportamento                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| ---------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Movimento reduzido, componentes    | Com `prefers-reduced-motion: reduce`, ou `data-motion="reduced"`, todo componente para o que se move: o brilho do skeleton e do progresso, a barra indeterminada, o deslizar do preenchimento do progresso, o crescimento do tooltip, o deslocamento das marcas do radio e do switch, e o movimento do clique. O que muda de cor ou opacidade ainda faz fade: o hover de um botão, o surgimento do tooltip e a marca do checkbox. O clique em si ainda acontece, de imediato, no visual padrão e sob toda estética e classe solo, porque é o sinal de que ele foi registrado. |
+| Sem movimento, componentes         | Com `data-motion="none"`, os fades também terminam de imediato.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| Movimento reduzido, página inteira | O reset limita todas as outras transições da página a cor, opacidade e visibilidade, com a duração que você deu a elas, então uma transformação, um deslizamento ou uma mudança de tamanho chega de imediato. Toda animação com keyframes termina de imediato, inclusive um fade de entrada, porque uma folha de estilos não consegue saber o que ela anima, e a rolagem suave para. Com `data-motion="none"`, toda transição também termina de imediato.                                                                                                                     |
+| Transparência reduzida             | Com `prefers-reduced-transparency: reduce`, e em cores forçadas, `.glass`, `.glass-liquid` e `.glass-solo` perdem o desfoque e a lente e ficam opacos.                                                                                                                                                                                                                                                                                                                                                                                                                        |
 
 A regra de movimento reduzido de cada componente vem com o componente, então todo entrypoint que o inclui respeita o movimento reduzido sem o reset, incluindo `@codenhub/styles/components`, `@codenhub/styles/components/tw` e cada entrypoint de componente `/*/tw`. Os entrypoints completos e nativos adicionam a regra do reset para a página inteira.
 
-A regra do reset é `!important` dentro da camada `base`, e um `!important` com camada vence um sem camada, então o seu próprio `!important` não consegue religar uma animação. Para manter uma rodando para usuários que pedem movimento reduzido, como um spinner de upload que você considera essencial, declare-a `!important` numa camada ordenada antes de `base`. A primeira declaração `@layer` que o navegador lê define a ordem, então a sua vem antes do pacote:
+Uma transição que o reset remove não roda, então não dispara `transitionend`. Uma gaveta que desliza e se remove nesse evento fica na página com movimento reduzido. Verifique se o elemento ainda tem uma transição para rodar antes de esperar o evento, ou remova-o também depois de um tempo limite. Com `data-motion="none"`, toda transição ainda roda, por 0.01ms, então o evento dispara.
+
+A regra do reset é `!important` dentro da camada `base`, e um `!important` com camada vence um sem camada, então o seu próprio `!important` não consegue religar uma animação. Para manter uma rodando para usuários que pedem movimento reduzido, como um spinner de upload que você considera essencial, declare-a `!important` numa camada ordenada antes de `base`, tanto com a configuração do sistema quanto com a do app. A primeira declaração `@layer` que o navegador lê define a ordem, então a sua vem antes do pacote:
 
 ```css
 @layer essential-motion, theme, base, components, utilities;
@@ -80,6 +83,11 @@ A regra do reset é `!important` dentro da camada `base`, e um `!important` com 
       animation-iteration-count: infinite !important;
     }
   }
+
+  :root:is([data-motion="reduced"], [data-motion="none"]) .upload-spinner {
+    animation-duration: 1s !important;
+    animation-iteration-count: infinite !important;
+  }
 }
 ```
 
@@ -87,7 +95,7 @@ Respeitar o movimento reduzido não é o requisito inteiro. Um movimento que con
 
 ### Contraste aumentado
 
-Com `prefers-contrast: more`, as bordas que o pacote desenha abaixo de 3:1 por escolha são desenhadas a 3:1 ou mais em relação ao que está ao lado, nos dois temas. O texto, os preenchimentos sólidos e os anéis de foco já atendem às suas proporções e não mudam. `prefers-contrast: less` não é lido.
+Com `prefers-contrast: more`, ou `data-contrast="more"`, as bordas que o pacote desenha abaixo de 3:1 por escolha são desenhadas a 3:1 ou mais em relação ao que está ao lado, nos dois temas. O texto, os preenchimentos sólidos e os anéis de foco já atendem às suas proporções e não mudam. `prefers-contrast: less` não é lido.
 
 | Recurso             | Comportamento                                                                                                                                                                                                                                                                         |
 | ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -99,6 +107,30 @@ Com `prefers-contrast: more`, as bordas que o pacote desenha abaixo de 3:1 por e
 | Chunky tile         | `.chunky-tile` desenha as peças e as superfícies com o cinza mais forte que os seus controles usam.                                                                                                                                                                                   |
 
 O que você remove continua removido: `.edgeless` num controle continua tirando a borda dele, e um `.panel` continua sem borda a menos que você adicione `.edged`.
+
+### Configurações do app
+
+Uma página não consegue mudar o que uma media query informa, então um app com as suas próprias configurações de contraste e movimento avisa o pacote por dois atributos no `<html>`. Quando um atributo está definido, ele decide no lugar da configuração do sistema. Sem atributo, ou com um valor fora desta lista, decide a configuração do sistema, como as seções acima descrevem.
+
+```html
+<html data-contrast="more" data-motion="reduced">
+  …
+</html>
+```
+
+| Atributo        | Valor      | O que o pacote faz                                                                                                                          |
+| --------------- | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| `data-contrast` | `more`     | Desenha as bordas de [contraste aumentado](#contraste-aumentado), seja o que for que o sistema peça.                                        |
+| `data-contrast` | `standard` | Deixa essas bordas de fora, mesmo quando o sistema pede mais contraste.                                                                     |
+| `data-motion`   | `full`     | Se move como sem preferência, mesmo quando o sistema pede movimento reduzido.                                                               |
+| `data-motion`   | `reduced`  | Faz o que a configuração de movimento reduzido do sistema faz: o que se move para, e o que faz fade continua fazendo.                       |
+| `data-motion`   | `none`     | Termina de imediato toda animação e transição, inclusive os fades. A duração quase nula mantém `transitionend` e `animationend` disparando. |
+
+Uma tela de configurações com "Sistema / Padrão / Mais" remove `data-contrast` para Sistema e o define para as outras duas opções, como um [seletor de tema](./usage/theming.md#claro-e-escuro). O movimento tem um nível a mais, porque a configuração do sistema tem só um: "Sistema / Tudo / Reduzido / Nenhum".
+
+- **Só no `<html>`.** Diferente de um seletor de tema, o atributo não delimita uma região: em qualquer outro elemento, ele não faz nada.
+- **Não dentro de um shadow root.** As regras do pacote dentro de um shadow root não enxergam um atributo no `<html>` da página, então seguem só a configuração do sistema.
+- **As cores forçadas continuam com o sistema.** `forced-colors: active` é o modo de alto contraste do sistema, e nenhum dos dois atributos o liga ou desliga. A transparência reduzida também não tem atributo; `data-contrast="more"` ainda deixa o glass opaco, como a configuração de mais contraste do sistema faz.
 
 ### Cor e contraste
 

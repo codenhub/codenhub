@@ -149,13 +149,20 @@
    follows: surfaces, dividers, table rules, a neutral button's edge.
    `--color-border` reads this slot first, so a consumer's own value for the
    token replaces both and still wins.
-   See docs/accessibility.md. */
+
+   `data-contrast` on `<html>` decides in place of the query: `more` sets the
+   slot, `standard` leaves it out. `:host` follows the query alone, since a
+   shadow root cannot see the page's `<html>`. See docs/accessibility.md. */
 @layer theme {
   @media (prefers-contrast: more) {
-    :root,
+    :root:not(:where([data-contrast="standard"])),
     :host {
       --_contrast-border: light-dark(var(--color-neutral-600), var(--color-neutral-400));
     }
+  }
+
+  :root:where([data-contrast="more"]) {
+    --_contrast-border: light-dark(var(--color-neutral-600), var(--color-neutral-400));
   }
 }
 

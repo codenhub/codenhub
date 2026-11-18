@@ -118,15 +118,62 @@
     }
   }
 
+  /* Reduced motion: what moves stops, and what fades still fades. A transition
+     keeps only the properties that change colour or opacity, at the duration
+     it was given; a transform, a size, or a position lands at once. A keyframe
+     animation cannot be told apart by what it animates, so every one ends at
+     once, a fade-in included, the near-zero duration keeping its
+     `animationend`. `visibility` stays so a fade-out is still seen to the end.
+
+     `data-motion` on `<html>` decides in place of the query: `reduced` asks for
+     this, `full` and `none` leave it out. See docs/accessibility.md. */
   @media (prefers-reduced-motion: reduce) {
-    *,
-    *::before,
-    *::after {
+    *:not(
+      :where(
+        :root:is([data-motion="full"], [data-motion="none"]),
+        :root:is([data-motion="full"], [data-motion="none"]) *
+      )
+    ),
+    *:not(
+        :where(
+          :root:is([data-motion="full"], [data-motion="none"]),
+          :root:is([data-motion="full"], [data-motion="none"]) *
+        )
+      )::before,
+    *:not(
+        :where(
+          :root:is([data-motion="full"], [data-motion="none"]),
+          :root:is([data-motion="full"], [data-motion="none"]) *
+        )
+      )::after {
       animation-duration: 0.01ms !important;
       animation-iteration-count: 1 !important;
       scroll-behavior: auto !important;
-      transition-duration: 0.01ms !important;
+      transition-property:
+        opacity, visibility, color, background-color, border-color, outline-color, text-decoration-color, fill, stroke !important;
     }
+  }
+
+  *:where(:root[data-motion="reduced"], :root[data-motion="reduced"] *),
+  *:where(:root[data-motion="reduced"], :root[data-motion="reduced"] *)::before,
+  *:where(:root[data-motion="reduced"], :root[data-motion="reduced"] *)::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-property:
+      opacity, visibility, color, background-color, border-color, outline-color, text-decoration-color, fill, stroke !important;
+  }
+
+  /* No motion, asked for by the app: every animation and transition ends at
+     once. The near-zero duration rather than `none`, so a `transitionend` or
+     `animationend` still fires. */
+  *:where(:root[data-motion="none"], :root[data-motion="none"] *),
+  *:where(:root[data-motion="none"], :root[data-motion="none"] *)::before,
+  *:where(:root[data-motion="none"], :root[data-motion="none"] *)::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
   }
 }
 

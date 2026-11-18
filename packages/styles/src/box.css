@@ -328,9 +328,24 @@
     /* Reduced motion stops here as well as in `reset.css`: `/components` and the
        focused `/<name>/tw` entries carry no reset, so each component that moves says
        so itself -- this for everything `box` paints, and the components with a
-       transition or animation of their own beside it. The same near-zero
-       duration the reset uses, so a `transitionend` still fires. */
+       transition or animation of their own beside it.
+
+       Two levels. Reduced -- the query, unless `data-motion="full"` is set on
+       `<html>`, or `data-motion="reduced"` -- drops what moves, the press's
+       transform and travel and its shadow, and keeps the colour and opacity
+       fades. None -- `data-motion="none"` -- ends the fades too, at the
+       near-zero duration the reset uses, so a `transitionend` still fires.
+       The guards sit in `:where()`, so each rule keeps the specificity of the
+       plain `&`. See docs/accessibility.md#app-settings. */
     @media (prefers-reduced-motion: reduce) {
+      &:not(:where(:root[data-motion="full"] *)) {
+        transition-property: background-color, border-color, color, opacity;
+      }
+    }
+    &:where(:root:is([data-motion="reduced"], [data-motion="none"]) *) {
+      transition-property: background-color, border-color, color, opacity;
+    }
+    &:where(:root[data-motion="none"] *) {
       transition-duration: 0.01ms;
     }
 

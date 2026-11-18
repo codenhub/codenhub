@@ -35,20 +35,20 @@ const twEntry = (file: string) => pathToFileURL(path.join(packageRoot, "tw", fil
 
 // Minified bytes, measured with Tailwind 4.3.4 on the dates `docs/internal/tests.md` records.
 const COMPILED_CEILINGS: Record<string, number> = {
-  "dist/index.css": 204_000,
-  "dist/components.css": 163_500,
-  "dist/native.css": 304_000,
-  "dist/theme.css": 12_200,
+  "dist/index.css": 217_500,
+  "dist/components.css": 174_500,
+  "dist/native.css": 324_000,
+  "dist/theme.css": 13_200,
   "dist/palette.css": 26_800,
-  "dist/aesthetics/index.css": 45_200,
-  "dist/aesthetics/chunky-tile.css": 4_700,
-  "dist/aesthetics/cyber.css": 4_500,
-  "dist/aesthetics/glass.css": 11_400,
-  "dist/aesthetics/neobrutalism.css": 4_350,
+  "dist/aesthetics/index.css": 49_750,
+  "dist/aesthetics/chunky-tile.css": 5_600,
+  "dist/aesthetics/cyber.css": 4_900,
+  "dist/aesthetics/glass.css": 14_500,
+  "dist/aesthetics/neobrutalism.css": 4_750,
   "dist/aesthetics/pixel.css": 4_950,
   "dist/aesthetics/sketch.css": 15_350,
   /* Read by `chs build`, never served, but every consumer installs it. */
-  "dist/purge/index.css": 282_000,
+  "dist/purge/index.css": 306_000,
   "dist/purge/classes.json": 7_100,
 };
 
@@ -116,7 +116,7 @@ describe("a /tw consumer build", { timeout: 60_000 }, () => {
       name: "a page with one primary button, through /tw",
       imports: [twEntry("index.css")],
       candidates: ["btn", "primary"],
-      ceiling: 25_750,
+      ceiling: 27_550,
     },
   ];
 

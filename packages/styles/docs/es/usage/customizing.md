@@ -2,7 +2,7 @@
 title: Personalización
 description: Consulta de los tokens de presentación y de material, los controles de las estéticas, las variables públicas de componente, la paleta generada y los helpers para construir tus propios componentes.
 order: 9
-source: bbbce0739bf5070955b0e2a96bdda84090c37195
+source: 57296b90438d78d821003e3cfa9438ffa0ed9dad
 ---
 
 # Personalización
@@ -239,7 +239,7 @@ Los valores claros se definen en `:root`. Los oscuros se aplican bajo `.dark`, `
 
 El archivo no sigue `prefers-color-scheme`. El código que usa la paleta por sí sola ya cambia de tema por su cuenta, así que define una de esas clases o atributos.
 
-Tampoco sigue `prefers-contrast: more`. Con esa preferencia, el paquete dibuja el borde de cada intención en su tono fuerte, así que un valor `-edge` es más tenue que el borde que dibuja el componente. El código que tiene que respetar la preferencia elige un color más fuerte por su cuenta.
+Tampoco sigue `prefers-contrast: more` ni `data-contrast="more"`. Con esa preferencia, el paquete dibuja el borde de cada intención en su tono fuerte, así que un valor `-edge` es más tenue que el borde que dibuja el componente. El código que tiene que respetar la preferencia elige un color más fuerte por su cuenta.
 
 Otros tres tokens no tienen intención, presentación, fondo ni hover: `--palette-border`, `--palette-surface` y `--palette-text`, valores fijos de `--color-border`, `--color-surface` y `--color-text`. Son para lo que no tiene color de intención, como el borde de un contenedor, el fondo de un diálogo y su texto.
 

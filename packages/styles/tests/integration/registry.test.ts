@@ -363,11 +363,14 @@ test("every component's default names a presentation that exists", () => {
    invalid at computed-value time and silently drops the declaration -- so the
    component renders as nothing rather than as an error. */
 const whereSelectors = (source: string): Set<string> => {
-  const open = source.indexOf(":where(") + ":where(".length;
+  /* The first `:where(` that opens a selector, at the start of its line: one
+     inside a selector, such as a `data-contrast` guard, is not the reset. */
+  const open = source.search(/^\s*:where\(/m);
+  const start = source.indexOf(":where(", open) + ":where(".length;
 
   return new Set(
     source
-      .slice(open, source.indexOf(")", open))
+      .slice(start, source.indexOf(")", start))
       .split(",")
       .map((selector) => selector.trim()),
   );

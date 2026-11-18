@@ -121,8 +121,9 @@ test.describe("aesthetics", () => {
      feedback that a click landed, so it lands at once. Every look is pressed
      for real, since `:active` is what `box-active` keys on, and read once, two
      frames in, without polling: a press still animating over the normal
-     duration would read part of the way there. The near-zero duration keeps a
-     `transitionend` firing. */
+     duration would read part of the way there. What still transitions is a
+     colour or opacity change, never the press's transform, travel, or
+     shadow. */
   test("presses at once under reduced motion, in every look", async ({ page }) => {
     await page.emulateMedia({ reducedMotion: "reduce" });
 
@@ -155,7 +156,7 @@ test.describe("aesthetics", () => {
           const styles = getComputedStyle(node);
 
           return {
-            durations: styles.transitionDuration,
+            properties: styles.transitionProperty,
             transform: styles.transform,
             translate: styles.translate,
             shadow: styles.boxShadow,
@@ -167,9 +168,9 @@ test.describe("aesthetics", () => {
           expect(pressed.translate, `${label} travels`).toBe(slab.travel);
           expect(pressed.shadow, `${label} slab collapses`).toMatch(/\b0px 0px 0px 0px\b/);
         }
-        for (const duration of pressed.durations.split(",")) {
-          expect(Number.parseFloat(duration), `${label} transition ${pressed.durations}`).toBeLessThan(0.001);
-        }
+        expect(pressed.properties, `${label} transitions`).not.toMatch(
+          /\b(all|transform|translate|scale|box-shadow)\b/,
+        );
       } finally {
         // oxlint-disable-next-line no-await-in-loop -- one press at a time.
         await page.mouse.up();

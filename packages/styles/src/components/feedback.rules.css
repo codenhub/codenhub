@@ -179,6 +179,11 @@
     /* Reduced motion stops the shimmer here, for the entries without the reset;
        see `box.css`. The gradient stays, so the placeholder still reads. */
     @media (prefers-reduced-motion: reduce) {
+      &:not(:where(:root[data-motion="full"] *)) {
+        animation: none;
+      }
+    }
+    &:where(:root:is([data-motion="reduced"], [data-motion="none"]) *) {
       animation: none;
     }
 
@@ -244,6 +249,11 @@
        for it is outlined, so where the bar ends is not left to the tint. An edge
        class still decides: `--ui-border` is read before this. */
     @media (prefers-contrast: more) {
+      &:not(:where(:root[data-contrast="standard"] *)) {
+        --_d-border: 100%;
+      }
+    }
+    &:where(:root[data-contrast="more"] *) {
       --_d-border: 100%;
     }
     --_d-elevation: 0;
@@ -336,14 +346,23 @@
        value moves without sliding, and the shimmer and the indeterminate sweep
        stop where the reset would stop them: the fill rests at the start. */
     @media (prefers-reduced-motion: reduce) {
-      &::after {
+      &:not(:where(:root[data-motion="full"] *))::after {
         transition-duration: 0.01ms;
       }
 
-      &::before,
-      &::after {
+      &:not(:where(:root[data-motion="full"] *))::before,
+      &:not(:where(:root[data-motion="full"] *))::after {
         animation: none;
       }
+    }
+
+    &:where(:root:is([data-motion="reduced"], [data-motion="none"]) *)::after {
+      transition-duration: 0.01ms;
+    }
+
+    &:where(:root:is([data-motion="reduced"], [data-motion="none"]) *)::before,
+    &:where(:root:is([data-motion="reduced"], [data-motion="none"]) *)::after {
+      animation: none;
     }
 
     /* Forced colours, carried for an applied bar, as the toggles carry theirs.

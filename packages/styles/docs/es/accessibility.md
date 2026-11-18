@@ -2,7 +2,7 @@
 title: Accesibilidad
 description: Lo que hace el CSS con el foco, los estados, el movimiento, el contraste, los colores forzados y el texto de derecha a izquierda, y lo que tu aplicación todavía les debe a sus usuarios.
 order: 5
-source: 6cf1b372ca62105b24ec2d38a2f9986b24632272
+source: a93b566e3c981f8885c1b4466e7f85e8cceed3d5
 ---
 
 # Accesibilidad
@@ -59,15 +59,18 @@ Sin clase de intención, el contorno es el gris discreto de los bordes, `--color
 
 ### Movimiento y transparencia
 
-| Característica                      | Comportamiento                                                                                                                                                                                                                                                                                                                                                                                            |
-| ----------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Movimiento reducido, componentes    | Con `prefers-reduced-motion: reduce`, cada componente detiene sus propias transiciones y animaciones: el brillo del skeleton y del progreso, la barra indeterminada, el tooltip, las marcas de los toggles y el movimiento de la pulsación. La pulsación en sí sigue ocurriendo, al instante, con el aspecto por defecto y con cada estética y clase solo, porque es la señal de que un clic se registró. |
-| Movimiento reducido, toda la página | El reset también acorta todas las demás animaciones y transiciones de la página.                                                                                                                                                                                                                                                                                                                          |
-| Transparencia reducida              | Con `prefers-reduced-transparency: reduce`, y con colores forzados, `.glass`, `.glass-liquid` y `.glass-solo` pierden su desenfoque y su lente y se vuelven opacos.                                                                                                                                                                                                                                       |
+| Característica                      | Comportamiento                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Movimiento reducido, componentes    | Con `prefers-reduced-motion: reduce`, o `data-motion="reduced"`, cada componente detiene lo que se mueve: el brillo del skeleton y del progreso, la barra indeterminada, el deslizamiento del relleno del progreso, el crecimiento del tooltip, el desplazamiento de las marcas del radio y del switch, y el movimiento de la pulsación. Lo que cambia de color u opacidad sigue haciendo un fundido: el hover de un botón, la aparición del tooltip y la marca del checkbox. La pulsación en sí sigue ocurriendo, al instante, con el aspecto por defecto y con cada estética y clase solo, porque es la señal de que un clic se registró. |
+| Sin movimiento, componentes         | Con `data-motion="none"`, los fundidos también terminan al instante.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| Movimiento reducido, toda la página | El reset limita todas las demás transiciones de la página al color, la opacidad y la visibilidad, con la duración que les diste, así que una transformación, un deslizamiento o un cambio de tamaño llega al instante. Cada animación con keyframes termina al instante, también un fundido de entrada, porque una hoja de estilos no puede saber qué anima, y el desplazamiento suave se detiene. Con `data-motion="none"`, cada transición también termina al instante.                                                                                                                                                                   |
+| Transparencia reducida              | Con `prefers-reduced-transparency: reduce`, y con colores forzados, `.glass`, `.glass-liquid` y `.glass-solo` pierden su desenfoque y su lente y se vuelven opacos.                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
 
 La regla de movimiento reducido de cada componente viene con el componente, así que cada punto de entrada que lo incluye respeta el movimiento reducido sin el reset, incluidos `@codenhub/styles/components`, `@codenhub/styles/components/tw` y cada punto de entrada de componente `/*/tw`. Los puntos de entrada completo y native añaden la regla del reset para toda la página.
 
-La regla del reset es `!important` dentro de la capa `base`, y un `!important` con capa gana a uno sin capa, así que tu propio `!important` no puede volver a activar una animación. Para mantener una en marcha para los usuarios que piden movimiento reducido, como un spinner de subida que consideres esencial, declárala `!important` en una capa ordenada antes de `base`. La primera sentencia `@layer` que lee el navegador fija el orden, así que la tuya va antes del paquete:
+Una transición que el reset quita no se ejecuta, así que no dispara `transitionend`. Un cajón que se desliza y se elimina a sí mismo con ese evento se queda en la página con movimiento reducido. Comprueba si el elemento todavía tiene una transición que ejecutar antes de esperar el evento, o elimínalo también tras un tiempo de espera. Con `data-motion="none"`, cada transición sigue ejecutándose, durante 0.01ms, así que el evento se dispara.
+
+La regla del reset es `!important` dentro de la capa `base`, y un `!important` con capa gana a uno sin capa, así que tu propio `!important` no puede volver a activar una animación. Para mantener una en marcha para los usuarios que piden movimiento reducido, como un spinner de subida que consideres esencial, declárala `!important` en una capa ordenada antes de `base`, tanto con el ajuste del sistema como con el de la app. La primera sentencia `@layer` que lee el navegador fija el orden, así que la tuya va antes del paquete:
 
 ```css
 @layer essential-motion, theme, base, components, utilities;
@@ -80,6 +83,11 @@ La regla del reset es `!important` dentro de la capa `base`, y un `!important` c
       animation-iteration-count: infinite !important;
     }
   }
+
+  :root:is([data-motion="reduced"], [data-motion="none"]) .upload-spinner {
+    animation-duration: 1s !important;
+    animation-iteration-count: infinite !important;
+  }
 }
 ```
 
@@ -87,7 +95,7 @@ Respetar el movimiento reducido no es todo lo que se pide. El movimiento que sig
 
 ### Contraste aumentado
 
-Con `prefers-contrast: more`, los bordes que el paquete dibuja por debajo de 3:1 a propósito se dibujan a 3:1 o más frente a lo que tienen al lado, en ambos temas. El texto, los rellenos sólidos y los anillos de foco ya cumplen sus proporciones y no cambian. `prefers-contrast: less` no se lee.
+Con `prefers-contrast: more`, o `data-contrast="more"`, los bordes que el paquete dibuja por debajo de 3:1 a propósito se dibujan a 3:1 o más frente a lo que tienen al lado, en ambos temas. El texto, los rellenos sólidos y los anillos de foco ya cumplen sus proporciones y no cambian. `prefers-contrast: less` no se lee.
 
 | Característica      | Comportamiento                                                                                                                                                                                                                                                                           |
 | ------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -99,6 +107,30 @@ Con `prefers-contrast: more`, los bordes que el paquete dibuja por debajo de 3:1
 | Chunky tile         | `.chunky-tile` dibuja las piezas y las superficies con el gris más intenso que usan sus controles.                                                                                                                                                                                       |
 
 Lo que quitas sigue quitado: `.edgeless` en un control sigue eliminando su borde, y un `.panel` sigue sin tenerlo salvo que añadas `.edged`.
+
+### Ajustes de la app
+
+Una página no puede cambiar lo que informa una media query, así que una app con sus propios ajustes de contraste y movimiento se lo dice al paquete con dos atributos en `<html>`. Cuando un atributo está puesto, decide en lugar del ajuste del sistema. Sin atributo, o con un valor que no está en esta lista, decide el ajuste del sistema, como describen las secciones anteriores.
+
+```html
+<html data-contrast="more" data-motion="reduced">
+  …
+</html>
+```
+
+| Atributo        | Valor      | Lo que hace el paquete                                                                                                                               |
+| --------------- | ---------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `data-contrast` | `more`     | Dibuja los bordes de [contraste aumentado](#contraste-aumentado), pida lo que pida el sistema.                                                       |
+| `data-contrast` | `standard` | Los deja fuera, aunque el sistema pida más contraste.                                                                                                |
+| `data-motion`   | `full`     | Se mueve como sin preferencia, aunque el sistema pida movimiento reducido.                                                                           |
+| `data-motion`   | `reduced`  | Hace lo que hace el ajuste de movimiento reducido del sistema: lo que se mueve se detiene, y lo que hace un fundido lo sigue haciendo.               |
+| `data-motion`   | `none`     | Termina al instante cada animación y transición, también los fundidos. La duración casi nula mantiene `transitionend` y `animationend` disparándose. |
+
+Una pantalla de ajustes con "Sistema / Estándar / Más" quita `data-contrast` para Sistema y lo pone para las otras dos, como un [selector de tema](./usage/theming.md#claro-y-oscuro). El movimiento tiene un nivel más, porque el ajuste del sistema tiene solo uno: "Sistema / Todo / Reducido / Ninguno".
+
+- **Solo en `<html>`.** A diferencia de un selector de tema, el atributo no delimita una región: en cualquier otro elemento no hace nada.
+- **No dentro de un shadow root.** Las reglas del paquete dentro de un shadow root no pueden ver un atributo en el `<html>` de la página, así que siguen solo el ajuste del sistema.
+- **Los colores forzados siguen siendo del sistema.** `forced-colors: active` es el modo de alto contraste del sistema, y ninguno de los dos atributos lo activa ni lo desactiva. La transparencia reducida tampoco tiene atributo; `data-contrast="more"` sigue volviendo opaco el glass, como lo hace el ajuste de más contraste del sistema.
 
 ### Color y contraste
 

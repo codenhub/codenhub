@@ -133,6 +133,14 @@
     /* The bubble appears without growing under reduced motion, for the entries
        without the reset; see `box.css`. */
     @media (prefers-reduced-motion: reduce) {
+      &:not(:where(:root[data-motion="full"] *)) {
+        transition-property: opacity, visibility;
+      }
+    }
+    &:where(:root:is([data-motion="reduced"], [data-motion="none"]) *) {
+      transition-property: opacity, visibility;
+    }
+    &:where(:root[data-motion="none"] *) {
       transition-duration: 0.01ms;
     }
 

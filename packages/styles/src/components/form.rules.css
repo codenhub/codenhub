@@ -69,6 +69,11 @@
        and focus then change nothing in the tone, which is the trade the
        preference asks for. See docs/accessibility.md. */
     @media (prefers-contrast: more) {
+      &:not(:where(:root[data-contrast="standard"] *)) {
+        --_line-rest: 100%;
+      }
+    }
+    &:where(:root[data-contrast="more"] *) {
       --_line-rest: 100%;
     }
     /* Two seams rather than one composed result. `--_line-tone` is what colour
@@ -964,10 +969,8 @@
 
     /* The mark appears without moving under reduced motion, for the entries
        without the reset; see `box.css`. */
-    @media (prefers-reduced-motion: reduce) {
-      &::after {
-        transition-duration: 0.01ms;
-      }
+    &:where(:root[data-motion="none"] *)::after {
+      transition-duration: 0.01ms;
     }
 
     /* The toggle's cap is its own (`--_fill-cap`), whatever the intent: a
@@ -1087,9 +1090,15 @@
     /* The mark appears without moving under reduced motion, for the entries
        without the reset; see `box.css`. */
     @media (prefers-reduced-motion: reduce) {
-      &::after {
-        transition-duration: 0.01ms;
+      &:not(:where(:root[data-motion="full"] *))::after {
+        transition-property: opacity;
       }
+    }
+    &:where(:root:is([data-motion="reduced"], [data-motion="none"]) *)::after {
+      transition-property: opacity;
+    }
+    &:where(:root[data-motion="none"] *)::after {
+      transition-duration: 0.01ms;
     }
 
     /* The toggle's cap is its own (`--_fill-cap`), whatever the intent: a
@@ -1225,9 +1234,15 @@
     /* The mark appears without moving under reduced motion, for the entries
        without the reset; see `box.css`. */
     @media (prefers-reduced-motion: reduce) {
-      &::after {
-        transition-duration: 0.01ms;
+      &:not(:where(:root[data-motion="full"] *))::after {
+        transition-property: background-color;
       }
+    }
+    &:where(:root:is([data-motion="reduced"], [data-motion="none"]) *)::after {
+      transition-property: background-color;
+    }
+    &:where(:root[data-motion="none"] *)::after {
+      transition-duration: 0.01ms;
     }
 
     /* `.ghost.edgeless` would leave the track neither a line nor a plate, so the
