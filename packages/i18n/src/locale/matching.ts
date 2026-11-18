@@ -1,4 +1,5 @@
 import { resolveConfiguredLocale } from "./configured-locale";
+import { maximizeTag } from "./likely-subtags";
 
 // Languages compared as one. `no` is the Norwegian macrolanguage, and browsers and content use it for Bokmål, `nb`,
 // as CLDR does; `Intl.Locale` keeps them apart. Nynorsk, `nn`, is a separate written standard and stays apart.
@@ -17,11 +18,8 @@ const aliasLanguage = (tag: string): string => {
  * returns undefined for a tag `Intl.Locale` rejects.
  */
 const maximizeLocale = (value: string): string | undefined => {
-  try {
-    return aliasLanguage(new Intl.Locale(value).maximize().toString());
-  } catch {
-    return undefined;
-  }
+  const maximized = maximizeTag(value);
+  return maximized === undefined ? undefined : aliasLanguage(maximized);
 };
 
 const getLanguageAndScript = (maximizedLocale: string): string => maximizedLocale.split("-").slice(0, 2).join("-");

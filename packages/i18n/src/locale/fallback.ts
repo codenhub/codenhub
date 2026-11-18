@@ -1,12 +1,10 @@
-/** The language and script of a locale with likely subtags added, such as `zh-hant` for `zh-TW`. */
-const likelyScript = (locale: string): string | undefined => {
-  try {
-    return new Intl.Locale(locale).maximize().toString().toLowerCase().split("-").slice(0, 2).join("-");
-  } catch {
-    // A tag `Intl.Locale` rejects, such as private-use `x-test`, has no likely script to compare.
-    return undefined;
-  }
-};
+import { maximizeTag } from "./likely-subtags";
+
+/**
+ * The language and script of a locale with likely subtags added, such as `zh-hant` for `zh-TW`. A tag `Intl.Locale`
+ * rejects, such as private-use `x-test`, has no likely script to compare.
+ */
+const likelyScript = (locale: string): string | undefined => maximizeTag(locale)?.split("-").slice(0, 2).join("-");
 
 /**
  * Lists the locales whose dictionaries a locale reads, in order: itself, each configured parent made by dropping
@@ -21,15 +19,17 @@ export const createFallbackChains = <TLocale extends string>(
 ): ReadonlyMap<TLocale, readonly TLocale[]> => {
   const lookup = new Map(locales.map((locale) => [locale.toLowerCase(), locale]));
 
+  const scripts = new Map(locales.map((locale) => [locale, likelyScript(locale)]));
+
   return new Map(
     locales.map((locale) => {
       const chain = [locale];
-      const script = likelyScript(locale);
+      const script = scripts.get(locale);
       const subtags = locale.split("-");
 
       for (let length = subtags.length - 1; length > 0; length -= 1) {
         const parent = lookup.get(subtags.slice(0, length).join("-").toLowerCase());
-        const parentScript = parent === undefined ? undefined : likelyScript(parent);
+        const parentScript = parent === undefined ? undefined : scripts.get(parent);
 
         if (parent !== undefined && (script === undefined || parentScript === undefined || parentScript === script)) {
           chain.push(parent);
