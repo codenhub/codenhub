@@ -40,7 +40,7 @@ Cómo elegir:
 
 Usa los mismos `locales` y `defaultLocale` que tu gestor. El routing es independiente del gestor, así que también funciona donde no hay nada que traducir, como en la lógica de redirección de un servidor.
 
-Si guardas la configuración en una variable antes de pasarla, escribe `localePrefix: "except-default" as const`. Sin `as const`, TypeScript amplía el valor a `string`, y `createLocaleRouting` lo rechaza en tiempo de compilación.
+Si guardas la configuración en una variable antes de pasarla, pon `as const` después del objeto entero: `const config = { … } as const`. Sin eso, TypeScript amplía `localePrefix` a `string`, y `createLocaleRouting` lo rechaza en tiempo de compilación. `as const` solo en `localePrefix` compila, pero tipa cada locale como `string`, así que `localize("/about", "fr")` también compila.
 
 ### Barras finales
 

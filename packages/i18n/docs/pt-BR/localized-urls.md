@@ -40,7 +40,7 @@ Como escolher:
 
 Use os mesmos `locales` e `defaultLocale` do seu gerenciador. O roteamento é separado do gerenciador, então funciona também onde não há tradução nenhuma, como na lógica de redirecionamento de um servidor.
 
-Se você guardar a configuração numa variável antes de passá-la, escreva `localePrefix: "except-default" as const`. Sem `as const`, o TypeScript alarga o valor para `string`, e `createLocaleRouting` o rejeita em tempo de compilação.
+Se você guardar a configuração numa variável antes de passá-la, ponha `as const` depois do objeto inteiro: `const config = { … } as const`. Sem isso, o TypeScript alarga `localePrefix` para `string`, e `createLocaleRouting` o rejeita em tempo de compilação. `as const` só em `localePrefix` compila, mas tipa todo locale como `string`, então `localize("/about", "fr")` também compila.
 
 ### Barras finais
 
