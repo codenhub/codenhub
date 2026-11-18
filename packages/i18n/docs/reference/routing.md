@@ -60,7 +60,7 @@ Generates the canonical URL pathname of a page for one supported locale.
 **Throws**
 
 - `TypeError` — When `pathname` is not a valid application pathname.
-- `RangeError` — When `locale` is unsupported or is not a string at runtime, when the result would be longer than 8,192 characters, or when the result would be parsed as another page or locale, such as a page the table doesn't list whose path is another locale's translated path.
+- `RangeError` — When `locale` is unsupported or is not a string at runtime, when the result would be longer than 8,192 characters, or when the result would be parsed as another page or locale, such as a page the table doesn't list whose path is another locale's translated path. A static build that localizes its page list finds those clashes at build time; links built for a request can use `parse(url.pathname).alternates`, which leaves out the locales where `localize` throws.
 
 #### LocaleRouting › localizeAll
 
@@ -79,7 +79,7 @@ Generates localized pathnames for every locale in configuration order.
 **Throws**
 
 - `TypeError` — When `pathname` is not a valid application pathname.
-- `RangeError` — When a result would be too long or be parsed as another page or locale, as with `localize`.
+- `RangeError` — When a result would be too long or be parsed as another page or locale, as with `localize`; `parse().alternates` lists the locales that have a URL instead.
 
 #### LocaleRouting › parse
 
@@ -93,7 +93,7 @@ Parses a URL's pathname into its locale and canonical pathname. Locale prefixes 
 
 - `pathname` — A URL's pathname, such as `url.pathname`: it starts with `/` and has no query or fragment.
 
-**Returns** — The locale and canonical pathname, or `undefined` when a required prefix is absent, when no URL leads to the path read, such as `/pt/en/sobre`, or `/en/sobre` when `/sobre` is the Portuguese about page, or when the path is one routing refuses, such as `//wp-login.php`, a dot segment, an encoded slash, or one longer than 8,192 characters, or when its canonical path or URL would be longer than that. A result always has a canonical URL that `localize` builds.
+**Returns** — The locale and canonical pathname, or `undefined` when a required prefix is absent, when no URL leads to the path read, such as `/pt/en/sobre`, or `/en/sobre` when `/sobre` is the Portuguese about page, or when the path is one routing refuses, such as `//wp-login.php`, a dot segment, an encoded slash, or one longer than 8,192 characters, or when its canonical path or URL would be longer than that. A result always has a canonical URL that `localize` builds, and lists the page's URL in every locale that has one, so a request never needs `localize`'s errors caught.
 
 **Throws** — `TypeError` — When `pathname` is not a string, does not start with `/`, or contains `?` or `#`, which a URL's pathname never does.
 
@@ -184,10 +184,19 @@ The absolute localized application pathname.
 export interface ParsedLocalePath<TLocale extends string> {
     locale: TLocale;
     pathname: string;
+    alternates: readonly LocalizedPath<TLocale>[];
 }
 ```
 
 A pathname resolved to its canonical configured locale.
+
+#### ParsedLocalePath › alternates
+
+```ts
+alternates: readonly LocalizedPath<TLocale>[];
+```
+
+This page's URL pathname in each locale that has one, in `locales` order, as `localize(pathname, locale)` builds it: for a language switcher and `hreflang` tags. The parsed locale is always included. A locale is left out where this page's URL would be read as another page or locale, or be longer than 8,192 characters, which is where `localize` throws, such as Portuguese for an English product `/products/novo` when `/products/new` is the Portuguese `/pt/produtos/novo`.
 
 #### ParsedLocalePath › locale
 
