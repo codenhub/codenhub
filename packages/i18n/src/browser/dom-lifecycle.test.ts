@@ -78,7 +78,7 @@ describe("initializeBrowserI18n document integration", () => {
     rootBinding.disconnect();
   });
 
-  it("does not include rejected DOM translation keys in diagnostics", async () => {
+  it("quotes a rejected DOM translation key in diagnostics, with line breaks escaped", async () => {
     document.body.innerHTML = '<p data-i18n="key&#10;forged">Keep <strong>markup</strong></p>';
     const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
     const i18n = createManager();
@@ -86,7 +86,10 @@ describe("initializeBrowserI18n document integration", () => {
     const binding = await initializeBrowserI18n({ i18n, root: document.body });
     binding.disconnect();
 
-    expect(warn).toHaveBeenCalledWith("[I18n] Skipping translation on <p> because translated elements must be leaves.");
+    expect(warn).toHaveBeenCalledWith(
+      '[I18n] Skipping translation on <p> because translated elements must be leaves; its data-i18n is "key\\nforged".',
+      document.querySelector("p"),
+    );
     for (const [message] of warn.mock.calls) {
       expect(String(message)).not.toContain("key\nforged");
       expect(String(message)).not.toContain("\n");
@@ -151,7 +154,10 @@ describe("initializeBrowserI18n document integration", () => {
 
       expect(invalid.textContent).toBe("Invalid fallback");
       expect(valid.textContent).toBe("Bonjour");
-      expect(warn).toHaveBeenCalledWith("[I18n] Skipping translation because data-i18n contains an invalid key.");
+      expect(warn).toHaveBeenCalledWith(
+        expect.stringMatching(/^\[I18n\] Skipping translation because data-i18n contains an invalid key, "/),
+        invalid,
+      );
       binding.disconnect();
     },
   );
@@ -286,7 +292,10 @@ describe("initializeBrowserI18n document integration", () => {
     try {
       expect(section.children[0]?.textContent).toBe("Invalid fallback");
       expect(section.children[1]?.textContent).toBe("Bonjour");
-      expect(warn).toHaveBeenCalledWith("[I18n] Skipping translation because data-i18n contains an invalid key.");
+      expect(warn).toHaveBeenCalledWith(
+        '[I18n] Skipping translation because data-i18n contains an invalid key, "key\\nforged".',
+        section.children[0],
+      );
     } finally {
       binding.disconnect();
     }

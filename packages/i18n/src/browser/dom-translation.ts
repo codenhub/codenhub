@@ -1,4 +1,5 @@
 import { normalizeTranslationKey } from "../core/string-validation";
+import { formatReportedKey } from "../locale/dictionary";
 
 const TRANSLATION_ATTRIBUTE = "data-i18n";
 const ELEMENT_NODE = 1;
@@ -108,9 +109,13 @@ const attributeStates = new WeakMap<Element, Map<string, AttributeState>>();
 
 /** Creates the DOM translator of one browser binding. @internal */
 export function createDomTranslator(options: DomTranslatorOptions): DomTranslator {
-  const warnInvalidKey = (keyAttribute: string): void => {
+  // The element is passed too, so a browser console can point to it.
+  const warnInvalidKey = (element: Element, keyAttribute: string, rawKey: string): void => {
     if (!options.isSilent) {
-      console.warn(`[I18n] Skipping translation because ${keyAttribute} contains an invalid key.`);
+      console.warn(
+        `[I18n] Skipping translation because ${keyAttribute} contains an invalid key, ${formatReportedKey(rawKey)}.`,
+        element,
+      );
     }
   };
 
@@ -134,7 +139,7 @@ export function createDomTranslator(options: DomTranslatorOptions): DomTranslato
     translate: (key: string) => string | undefined,
   ): void => {
     if (!isValidDomKey(rawKey)) {
-      warnInvalidKey(`${TRANSLATION_ATTRIBUTE}-${attribute}`);
+      warnInvalidKey(element, `${TRANSLATION_ATTRIBUTE}-${attribute}`, rawKey);
       return;
     }
 
@@ -209,14 +214,16 @@ export function createDomTranslator(options: DomTranslatorOptions): DomTranslato
     if (element.childElementCount > 0) {
       if (!options.isSilent) {
         console.warn(
-          `[I18n] Skipping translation on <${element.tagName.toLowerCase()}> because translated elements must be leaves.`,
+          `[I18n] Skipping translation on <${element.tagName.toLowerCase()}> because translated elements must be leaves; ` +
+            `its ${TRANSLATION_ATTRIBUTE} is ${formatReportedKey(rawKey)}.`,
+          element,
         );
       }
       return;
     }
 
     if (!isValidDomKey(rawKey)) {
-      warnInvalidKey(TRANSLATION_ATTRIBUTE);
+      warnInvalidKey(element, TRANSLATION_ATTRIBUTE, rawKey);
       return;
     }
 
