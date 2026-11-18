@@ -228,6 +228,35 @@ describe("initializeBrowserI18n languagechange", () => {
     expect(i18n.locale).toBe("ar");
   });
 
+  it("keeps an application request still loading when the event arrives", async () => {
+    const ar = createDeferred<unknown>();
+    const i18n = createManager({ loadLocale: (locale) => (locale === "ar" ? ar.promise : dictionaries[locale]) });
+    const binding = await bind({ i18n });
+
+    const choosing = i18n.setLocale("ar");
+    changeLanguages(["fr"]);
+    ar.resolve(dictionaries.ar);
+    await choosing;
+    await flushPromises();
+
+    expect(i18n.locale).toBe("ar");
+    expect(binding.followsSystem).toBe(false);
+    expect(localStorage.getItem("i18n")).toBe(JSON.stringify({ locale: "ar" }));
+  });
+
+  it("follows the event after an application request failed", async () => {
+    const i18n = createManager({
+      loadLocale: (locale) => (locale === "ar" ? Promise.reject(new Error("503")) : dictionaries[locale]),
+    });
+    await bind({ i18n });
+    await expect(i18n.setLocale("ar")).rejects.toThrow(I18nError);
+
+    changeLanguages(["fr"]);
+    await flushPromises();
+
+    expect(i18n.locale).toBe("fr");
+  });
+
   it("follows the event again after followSystem()", async () => {
     const i18n = createManager();
     const binding = await bind({ i18n, locale: "ar" });

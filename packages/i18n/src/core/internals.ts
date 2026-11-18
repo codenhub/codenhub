@@ -11,6 +11,8 @@ export interface I18nInternals {
   lookup(key: string): string | undefined;
   /** The id of the latest `init()` or `setLocale()` request, which a request takes synchronously when it starts. */
   latestRequestId(): number;
+  /** Whether the latest `init()` or `setLocale()` request is still loading its dictionaries. */
+  isLatestRequestLoading(): boolean;
   /**
    * Sets the one listener called with a request's id when that request takes effect, before its event, if any. A
    * `setLocale()` to the active locale takes effect at once and dispatches no event. `undefined` removes it.
