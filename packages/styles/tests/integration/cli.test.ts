@@ -1,4 +1,4 @@
-import { chmod, mkdir, mkdtemp, readFile, rm, stat, writeFile } from "node:fs/promises";
+import { chmod, lstat, mkdir, mkdtemp, readFile, rm, stat, symlink, writeFile } from "node:fs/promises";
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import path from "node:path";
@@ -16,6 +16,21 @@ let project: string;
 let stdout: string[];
 let stderr: string[];
 let nodeVersion: string;
+
+/* Windows lets only an administrator or developer mode create a symbolic link. */
+const canSymlink = await (async () => {
+  const folder = await mkdtemp(path.join(tmpdir(), "chs-cli-link-"));
+
+  try {
+    await symlink(path.join(folder, "target"), path.join(folder, "link"), "file");
+
+    return true;
+  } catch {
+    return false;
+  } finally {
+    await rm(folder, { force: true, recursive: true });
+  }
+})();
 
 beforeEach(async () => {
   root = await mkdtemp(path.join(tmpdir(), "chs-cli-test-"));
@@ -221,6 +236,26 @@ describe("build", () => {
     expect(await build(...argv)).toBe(0);
     expect(await readOutput("app/views/app.css")).toBe(first);
   });
+
+  it.skipIf(!canSymlink)("does not read its own output through a link a glob matches", async () => {
+    const argv = ["build", "-c", "app/views/*", "-o", "app.css"];
+
+    expect(await build(...argv)).toBe(0);
+    const first = await readOutput();
+
+    await symlink(path.join(project, "app.css"), path.join(project, "app", "views", "alias.css"), "file");
+    expect(await build(...argv)).toBe(0);
+    expect(await readOutput()).toBe(first);
+  });
+
+  it.skipIf(!canSymlink)("writes through an --output that is a link, and keeps the link", async () => {
+    await writeFile(path.join(project, "real.css"), "");
+    await symlink(path.join(project, "real.css"), path.join(project, "app.css"), "file");
+
+    expect(await build("build", "-c", "app/views/**/*.erb", "-o", "app.css")).toBe(0);
+    expect((await lstat(path.join(project, "app.css"))).isSymbolicLink()).toBe(true);
+    expect(await readOutput("real.css")).toMatch(ruleFor("btn"));
+  });
 });
 
 describe("failures", () => {
@@ -300,13 +335,13 @@ describe("failures", () => {
 
   // The temporary file is the one write that can fail partway; a directory in its place makes it fail.
   it("leaves the previous stylesheet whole when the write fails", async () => {
-    await writeFile(path.join(project, "app.css"), "/*! previous */");
+    await writeFile(path.join(project, "app.css"), "/*! @codenhub/styles | previous */");
     await mkdir(path.join(project, `app.css.${process.pid}.tmp`));
 
     expect(await failureOf("build", "-c", "app/views/**/*.erb", "-o", "app.css")).toMatch(
       /^chs: cannot write the stylesheet: /,
     );
-    expect(await readFile(path.join(project, "app.css"), "utf8")).toBe("/*! previous */");
+    expect(await readFile(path.join(project, "app.css"), "utf8")).toBe("/*! @codenhub/styles | previous */");
   });
 
   /* The output is replaced whole, so naming a template or a hand-written
@@ -327,6 +362,27 @@ describe("failures", () => {
       "chs: --output app.css holds something this command did not write; move it or name another file.",
     );
     expect(await readOutput()).toBe(".mine { color: red; }\n");
+  });
+
+  /* A stylesheet written by hand often opens with a layer order, and a vendor
+     file with its own `/*!` banner; what this command writes carries the
+     package's notice after Tailwind's banner. */
+  it.each([
+    ["a layer order", "@layer reset, theme, base, components, utilities;\n@layer reset { .mine { color: red; } }\n"],
+    ["another banner", "/*! normalize.css v8.0.1 | MIT License */\nhtml { line-height: 1.15; }\n"],
+    ["a rule before the notice", "/*! vendor */\n.mine { color: red; }\n/*! @codenhub/styles | Apache-2.0 */\n"],
+  ])("refuses a stylesheet written by hand that starts with %s, and leaves it", async (_, css) => {
+    await writeFile(path.join(project, "app.css"), css);
+
+    expect(await failureOf("build", "-c", "app/views/**/*.erb", "-o", "app.css")).toMatch(/did not write/);
+    expect(await readOutput()).toBe(css);
+  });
+
+  // Tailwind's CLI reads `-` as standard output; this command writes only a file.
+  it("refuses - as the output, which would name a file -", async () => {
+    expect(await failureOf("build", "-c", "app/views/**/*.erb", "-o", "-")).toBe(
+      "chs: --output - would write a file named -; this command writes no standard output, so name a stylesheet, as in --output public/app.css.",
+    );
   });
 
   it("refuses a file whose first bytes are only whitespace", async () => {
@@ -361,6 +417,20 @@ describe("failures", () => {
     expect(await build("build", "-c", "app/views/**/*.erb", "-o", "app.css", "--no-minify")).toBe(0);
     expect(await build("build", "-c", "app/views/**/*.erb", "-o", "empty.css")).toBe(0);
     expect(await readOutput("empty.css")).toMatch(ruleFor("btn"));
+  });
+
+  it("replaces a file that holds only whitespace", async () => {
+    await writeFile(path.join(project, "app.css"), "﻿\r\n  \n");
+
+    expect(await build("build", "-c", "app/views/**/*.erb", "-o", "app.css")).toBe(0);
+    expect(await readOutput()).toMatch(ruleFor("btn"));
+  });
+
+  // The compiled stylesheets carry the notice too, so a copy of one is replaced as before.
+  it("replaces a copy of a compiled stylesheet", async () => {
+    await writeFile(path.join(project, "app.css"), await readFile(path.join(packageRoot, "dist", "index.css"), "utf8"));
+
+    expect(await build("build", "-c", "app/views/**/*.erb", "-o", "app.css")).toBe(0);
   });
 });
 

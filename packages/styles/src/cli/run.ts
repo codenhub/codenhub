@@ -1,4 +1,4 @@
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync, realpathSync } from "node:fs";
 import * as fs from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -27,6 +27,9 @@ const PURGE_SOURCE = "dist/purge/index.css";
 const PURGE_CLASSES = "dist/purge/classes.json";
 /* How much of an existing output is read to tell whether this command wrote it. */
 const HEAD_BYTES = 1024;
+/* What every stylesheet this command has written starts with: the package's
+   notice, after Tailwind's banner. The compiled stylesheets carry it too. */
+const WRITTEN_HEAD = /^\s*(?:\/\*! tailwindcss [^*]*\*\/\s*)?\/\*! @codenhub\/styles\b/;
 
 const USAGE = `Usage: ${BIN} build --content <glob> [--content <glob> ...] --output <file> [options]
 
@@ -108,6 +111,11 @@ function parseCommandLine(argv: readonly string[]): BuildOptions | "help" | "ver
   if (!output) {
     throw new Error("missing --output; name the stylesheet to write, as in --output public/app.css.");
   }
+  if (output === "-") {
+    throw new Error(
+      "--output - would write a file named -; this command writes no standard output, so name a stylesheet, as in --output public/app.css.",
+    );
+  }
 
   return {
     contentGlobs: values.content,
@@ -163,7 +171,9 @@ async function build(options: BuildOptions, io: CliIo): Promise<string> {
 
   await assertReplaceable(options, io.cwd, output);
 
-  const contents = readContent(options.contentGlobs, io.cwd, output);
+  // Through a link, the file it leads to is the one written, and the one no glob may read.
+  const target = await realPathOf(output);
+  const contents = readContent(options.contentGlobs, io.cwd, target);
 
   const droppable = new Set(JSON.parse(await readPackageFile(PURGE_CLASSES)) as string[]);
   const found = new Set<string>();
@@ -186,12 +196,12 @@ async function build(options: BuildOptions, io: CliIo): Promise<string> {
   /* Written beside the output and renamed over it, so a write that fails
      partway, on a full disk say, leaves the previous stylesheet whole rather
      than a truncated one a deploy would ship. */
-  const temporary = `${output}.${process.pid}.tmp`;
+  const temporary = `${target}.${process.pid}.tmp`;
 
   try {
-    await fs.mkdir(path.dirname(output), { recursive: true });
+    await fs.mkdir(path.dirname(target), { recursive: true });
     await fs.writeFile(temporary, css);
-    await fs.rename(temporary, output);
+    await fs.rename(temporary, target);
   } catch (error) {
     // Best effort: the error worth reporting is the one above.
     await fs.rm(temporary, { force: true }).catch(() => undefined);
@@ -204,9 +214,10 @@ async function build(options: BuildOptions, io: CliIo): Promise<string> {
 /* The output is replaced whole, so a file this command did not write is
    refused rather than lost: a template named as the output by mistake, as in
    `--content index.html --output index.html`, or a stylesheet written by hand.
-   What it writes starts with Tailwind's `/*!` banner, and a stylesheet built
-   another way with a banner or a layer statement is taken as one built to be
-   replaced. An empty file, of no bytes, is replaced too. What is not a file is
+   What it writes starts with the package's notice, after Tailwind's banner, so
+   a file that does is replaced; another banner or a layer order does not tell
+   a stylesheet written by hand from a built one. A file of no bytes, or of
+   whitespace alone, holds nothing to lose and is replaced too. What is not a file is
    left to the write, which reports it. A file that cannot be read is refused:
    a directory can let a file be renamed over that it does not let be read. */
 async function assertReplaceable(options: BuildOptions, cwd: string, output: string): Promise<void> {
@@ -215,6 +226,7 @@ async function assertReplaceable(options: BuildOptions, cwd: string, output: str
   }
 
   let head: string;
+  let size: number;
 
   try {
     const stats = await fs.stat(output);
@@ -222,6 +234,7 @@ async function assertReplaceable(options: BuildOptions, cwd: string, output: str
     if (!stats.isFile() || stats.size === 0) {
       return;
     }
+    size = stats.size;
 
     const handle = await fs.open(output);
 
@@ -242,8 +255,11 @@ async function assertReplaceable(options: BuildOptions, cwd: string, output: str
     );
   }
 
-  // `\s` takes a byte order mark too. A marker past the bytes read is not found, and the file is refused.
-  if (!/^\s*(?:\/\*!|@layer\b)/.test(head)) {
+  // `\s` takes a byte order mark too. A notice past the bytes read is not found, and the file is refused.
+  if (head.trim() === "" && Buffer.byteLength(head) === size) {
+    return;
+  }
+  if (!WRITTEN_HEAD.test(head)) {
     throw new Error(
       `--output ${options.output} holds something this command did not write; move it or name another file.`,
     );
@@ -259,7 +275,7 @@ async function assertReplaceable(options: BuildOptions, cwd: string, output: str
 function readContent(entries: readonly string[], cwd: string, output: string): Generator<string> {
   try {
     const files = findFiles(entries, { cwd, failOnUnmatched: true }).filter(
-      (file) => path.relative(file, output) !== "",
+      (file) => path.relative(realPathSyncOf(file), output) !== "",
     );
 
     return readFiles(files, { cwd, failOnUnreadable: true });
@@ -324,5 +340,27 @@ function readPackageFile(relativePath: string): Promise<string> {
 function assertNodeVersion(nodeVersion: string): void {
   if (Number.parseInt(nodeVersion, 10) < MIN_NODE_MAJOR) {
     throw new Error(`this command needs Node.js ${MIN_NODE_MAJOR} or newer; this is Node.js ${nodeVersion}.`);
+  }
+}
+
+/* The file a link leads to, or the path itself while nothing is there yet. */
+async function realPathOf(file: string): Promise<string> {
+  try {
+    return await fs.realpath(file);
+  } catch (error) {
+    if ((error as { code?: string }).code === "ENOENT") {
+      return file;
+    }
+
+    throw error;
+  }
+}
+
+function realPathSyncOf(file: string): string {
+  try {
+    return realpathSync(file);
+  } catch {
+    // The read that follows reports a file it cannot reach.
+    return file;
   }
 }
