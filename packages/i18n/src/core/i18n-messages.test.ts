@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import { createI18n } from "../index";
 import { getI18nInternals } from "./internals";
-import { MessageSyntaxError, parseCachedMessage, parseMessage } from "./message-format";
+import { MessageSyntaxError, parseCachedMessage, parseMessage, parseMessageWithCost } from "./message-format";
 
 const messages = {
   hello: "Hello, {name}!",
@@ -405,6 +405,61 @@ describe("formatters", () => {
     expect(() => i18n.formatDate(0, nullOptions)).toThrow(
       intlError(() => new Intl.DateTimeFormat("en", nullOptions)) as Error,
     );
+    expect(() => i18n.formatRelativeTime(1, "day", nullOptions)).toThrow(
+      intlError(() => new Intl.RelativeTimeFormat("en", nullOptions)) as Error,
+    );
+    expect(() => i18n.formatList(["a"], nullOptions)).toThrow(
+      intlError(() => new Intl.ListFormat("en", nullOptions)) as Error,
+    );
+  });
+
+  it("should reuse relative time and list formatters", async () => {
+    const i18n = create();
+    await i18n.init();
+    const { RelativeTimeFormat, ListFormat } = Intl;
+    // `Intl`'s constructors are writable at runtime, though typed read-only.
+    const intl = Intl as { -readonly [K in "RelativeTimeFormat" | "ListFormat"]: (typeof Intl)[K] };
+    const created = { relativeTime: 0, list: 0 };
+    intl.RelativeTimeFormat = class extends RelativeTimeFormat {
+      constructor(...args: ConstructorParameters<typeof RelativeTimeFormat>) {
+        super(...args);
+        created.relativeTime += 1;
+      }
+    };
+    intl.ListFormat = class extends ListFormat {
+      constructor(...args: ConstructorParameters<typeof ListFormat>) {
+        super(...args);
+        created.list += 1;
+      }
+    };
+
+    try {
+      for (let index = 0; index < 3; index += 1) {
+        expect(i18n.formatRelativeTime(index, "day", { numeric: "auto", style: "narrow" })).toBeTypeOf("string");
+        expect(i18n.formatList(["a", String(index)], { type: "unit", style: "narrow" })).toBeTypeOf("string");
+      }
+
+      expect(created).toEqual({ relativeTime: 1, list: 1 });
+    } finally {
+      intl.RelativeTimeFormat = RelativeTimeFormat;
+      intl.ListFormat = ListFormat;
+    }
+  });
+
+  it("should read inherited relative time and list options without changing later calls", async () => {
+    const i18n = create();
+    const other = create();
+    await i18n.init();
+    await other.init();
+    const auto = Object.create({ numeric: "auto" }) as Intl.RelativeTimeFormatOptions;
+    const or = Object.create({ type: "disjunction" }) as Intl.ListFormatOptions;
+
+    expect(i18n.formatRelativeTime(-1, "day", auto)).toBe("yesterday");
+    expect(i18n.formatRelativeTime(-1, "day")).toBe("1 day ago");
+    expect(other.formatRelativeTime(-1, "day")).toBe("1 day ago");
+    expect(i18n.formatList(["a", "b"], or)).toBe("a or b");
+    expect(i18n.formatList(["a", "b"])).toBe("a and b");
+    expect(other.formatList(["a", "b"])).toBe("a and b");
   });
 
   it("should read formatter options in the order Intl reads them", async () => {
@@ -421,6 +476,12 @@ describe("formatters", () => {
     );
     expect(recordReads((options) => i18n.formatDate(0, options))).toEqual(
       recordReads((options) => new Intl.DateTimeFormat("en", options)),
+    );
+    expect(recordReads((options) => i18n.formatRelativeTime(1, "day", options))).toEqual(
+      recordReads((options) => new Intl.RelativeTimeFormat("en", options)),
+    );
+    expect(recordReads((options) => i18n.formatList([], options))).toEqual(
+      recordReads((options) => new Intl.ListFormat("en", options)),
     );
   });
 
@@ -506,6 +567,31 @@ describe("parseCachedMessage", () => {
 
     expect(parseCachedMessage(first)).not.toBe(parsed);
     expect(parseCachedMessage(first)).toEqual(parsed);
+  });
+
+  it("should count what parsed nodes keep, not only characters", () => {
+    const plain = parseMessageWithCost(`'${"x".repeat(9_999)}`).cost;
+    // A node keeps at least 47 bytes, about 24 characters' worth, measured on Node.js 26.13.
+    expect(parseMessageWithCost("x{a}".repeat(2_500)).cost).toBeGreaterThan(plain + 5_000 * 24);
+    expect(parseMessageWithCost(`{n, plural, other {${"#".repeat(9_980)}}}`).cost).toBeGreaterThan(plain + 9_980 * 24);
+    expect(parseMessageWithCost("{a,select,other{}}".repeat(556)).cost).toBeGreaterThan(plain + 556 * 3 * 24);
+    expect(plain).toBeLessThan(10_200);
+  });
+
+  it("should bound the cache by what node-dense messages keep", () => {
+    const first = "{first} message";
+    const parsed = parseCachedMessage(first);
+
+    // 20 messages of 10,000 characters are 200,000 characters, but 100,000 nodes.
+    for (let index = 0; index < 20; index += 1) {
+      parseCachedMessage(`${index}${"x{a}".repeat(2_500)}`);
+    }
+
+    expect(parseCachedMessage(first)).not.toBe(parsed);
+  });
+
+  it("should keep only the reason for invalid syntax", () => {
+    expect(parseCachedMessage("Hello {name")).toBe("Expected , at character 12");
   });
 
   it("should parse quoted text with doubled apostrophes into the same text", () => {

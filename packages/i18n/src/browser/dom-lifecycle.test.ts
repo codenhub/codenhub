@@ -156,6 +156,19 @@ describe("initializeBrowserI18n document integration", () => {
     },
   );
 
+  it("translates a key within the length limit once trimmed, as t() does", async () => {
+    const key = "k".repeat(1_000);
+    const i18n = createManager({
+      loadLocale: (locale) => (locale === "fr" ? { [key]: "Long" } : dictionaries[locale]),
+    });
+    document.body.innerHTML = `<p data-i18n="  ${key}  ">Fallback</p>`;
+
+    const binding = await initializeBrowserI18n({ i18n, locale: "fr", root: document.body });
+
+    expect(document.querySelector("p")!.textContent).toBe("Long");
+    binding.disconnect();
+  });
+
   it("restores the original fallback when a later locale lacks the key", async () => {
     document.body.innerHTML = '<p data-i18n="frOnly">Original fallback</p>';
     const i18n = createManager();

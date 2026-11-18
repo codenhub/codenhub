@@ -1,4 +1,4 @@
-import { quoteKey } from "../locale/dictionary";
+import { formatReportedKey, quoteKey } from "../locale/dictionary";
 import { createFallbackChains } from "../locale/fallback";
 import { createLocaleLoader, type LocaleLoader } from "../locale/loader";
 import { matchConfiguredLocale } from "../locale/matching";
@@ -9,15 +9,15 @@ import {
   formatMessage,
   formatPlainValue,
   getDateTimeFormat,
+  getListFormat,
   getNumberFormat,
-  intlLocale,
+  getRelativeTimeFormat,
   isPlainMessage,
   MAX_FILLED_ARGUMENTS,
-  MessageSyntaxError,
   type MessageValues,
   parseCachedMessage,
 } from "./message-format";
-import { hasAsciiControlCharacter } from "./string-validation";
+import { MAX_TRANSLATION_KEY_LENGTH, normalizeTranslationKey } from "./string-validation";
 import type {
   I18n,
   I18nConfig,
@@ -38,14 +38,9 @@ interface ChainDictionary<TLocale extends string> {
 
 const MAX_MISSING_KEY_DIAGNOSTICS = 1_000;
 const MAX_MESSAGE_DIAGNOSTICS = 1_000;
-const MAX_TRANSLATION_KEY_LENGTH = 1_000;
 const PLACEHOLDER_PATTERN = /{([A-Za-z0-9_]+)}/g;
 // The form every plural group has, used when the count's category has none.
 const PLURAL_FALLBACK_FORM = "other";
-
-/** Whether a string can name a dictionary entry: not blank, within the length limit, and free of ASCII controls. */
-const isValidTranslationKey = (key: string): boolean =>
-  key.trim().length > 0 && key.length <= MAX_TRANSLATION_KEY_LENGTH && !hasAsciiControlCharacter(key);
 
 /** A translation found in the fallback chain, with the locale of the dictionary that has it. */
 interface FoundTranslation<TLocale extends string> {
@@ -213,6 +208,10 @@ class I18nInstance<TLocale extends string, TKey extends string = string>
   }
 
   translate(key: string, params?: MessageValues): string {
+    // `null` or a primitive is a mistake in the calling code, such as plain JavaScript passing a missing value through.
+    if (params !== undefined && (typeof params !== "object" || params === null)) {
+      throw new TypeError("[I18n] Translation values must be an object or undefined.");
+    }
     const count = params !== undefined && Object.hasOwn(params, "count") ? params["count"] : undefined;
     const found = this.lookup("translate", key, typeof count === "number" ? count : undefined);
 
@@ -229,14 +228,15 @@ class I18nInstance<TLocale extends string, TKey extends string = string>
       throw new TypeError("[I18n] A translation key must be a non-empty string.");
     }
     // A key built from outside input, such as `errors.${code}`, can be one no dictionary holds; that is a miss.
-    if (!isValidTranslationKey(key)) {
+    const normalizedKey = normalizeTranslationKey(key);
+    if (normalizedKey === undefined) {
       return false;
     }
     // Only a group with an `other` form is a plural group. Choosing a form by count would make a group without one, such
     // as `{ one, two }`, a key in a locale where the count's category is a form it has, and not in others.
     return (
-      this.lookup("has", key) !== undefined ||
-      this.dictionaries!.some(({ dictionary }) => dictionary[`${key.trim()}.${PLURAL_FALLBACK_FORM}`] !== undefined)
+      this.lookup("has", normalizedKey) !== undefined ||
+      this.dictionaries!.some(({ dictionary }) => dictionary[`${normalizedKey}.${PLURAL_FALLBACK_FORM}`] !== undefined)
     );
   }
 
@@ -263,11 +263,11 @@ class I18nInstance<TLocale extends string, TKey extends string = string>
     unit: Intl.RelativeTimeFormatUnit,
     options?: Intl.RelativeTimeFormatOptions,
   ): string {
-    return new Intl.RelativeTimeFormat(intlLocale(this.currentLocale), options).format(value, unit);
+    return getRelativeTimeFormat(this.currentLocale, options).format(value, unit);
   }
 
   formatList(values: Iterable<string>, options?: Intl.ListFormatOptions): string {
-    return new Intl.ListFormat(intlLocale(this.currentLocale), options).format(values);
+    return getListFormat(this.currentLocale, options).format(values);
   }
 
   /** Formats a found text as an ICU message in its dictionary's locale, falling back to `{name}` for invalid syntax. */
@@ -277,7 +277,7 @@ class I18nInstance<TLocale extends string, TKey extends string = string>
     }
 
     const message = parseCachedMessage(found.text);
-    if (message instanceof MessageSyntaxError) {
+    if (typeof message === "string") {
       this.reportInvalidMessage(key, found, message);
       return interpolate({ text: found.text, params, locale: found.locale, timeZone: this.config.timeZone });
     }
@@ -285,7 +285,7 @@ class I18nInstance<TLocale extends string, TKey extends string = string>
     return formatMessage(message, params, found.locale, this.config.timeZone);
   }
 
-  private reportInvalidMessage(key: string, found: FoundTranslation<TLocale>, error: MessageSyntaxError): void {
+  private reportInvalidMessage(key: string, found: FoundTranslation<TLocale>, reason: string): void {
     const warningKey = `${found.locale}\0${found.text}`;
 
     if (this.isSilent || this.warnedMessages.has(warningKey)) {
@@ -296,7 +296,7 @@ class I18nInstance<TLocale extends string, TKey extends string = string>
     }
     this.warnedMessages.add(warningKey);
     console.warn(
-      `[I18n] Invalid message for ${quoteKey(key.trim())} in locale "${found.locale}": ${error.message}; only {name} ` +
+      `[I18n] Invalid message for ${quoteKey(key.trim())} in locale "${found.locale}": ${reason}; only {name} ` +
         "placeholders are filled. " +
         quoteKey(found.text.slice(0, 200)),
     );
@@ -411,13 +411,12 @@ class I18nInstance<TLocale extends string, TKey extends string = string>
       throw new TypeError("[I18n] A translation key must be a non-empty string.");
     }
 
-    if (!isValidTranslationKey(key)) {
+    const normalizedKey = normalizeTranslationKey(key);
+    if (normalizedKey === undefined) {
       throw new TypeError(
-        `[I18n] A translation key must not contain ASCII control characters or exceed ${MAX_TRANSLATION_KEY_LENGTH} characters.`,
+        `[I18n] A translation key must not contain ASCII control characters or exceed ${MAX_TRANSLATION_KEY_LENGTH} characters once trimmed.`,
       );
     }
-
-    const normalizedKey = key.trim();
 
     for (const { locale, dictionary } of this.dictionaries) {
       const translation = this.findTranslation(dictionary, locale, normalizedKey, count);
@@ -538,7 +537,10 @@ class I18nInstance<TLocale extends string, TKey extends string = string>
     const locale = this.resolveLocale(value);
 
     if (locale === undefined) {
-      throw new RangeError(`[I18n] Unsupported locale "${String(value)}".`);
+      // The value is calling code's, often from a URL or a header, so it is quoted and truncated, as rejected keys are.
+      throw new RangeError(
+        `[I18n] Unsupported locale ${typeof value === "string" ? formatReportedKey(value) : `of type ${typeof value}`}.`,
+      );
     }
 
     return locale;

@@ -88,6 +88,19 @@ describe("typed locales", () => {
     await expect(i18n.setLocale("fr")).rejects.toThrow('Unsupported locale "fr"');
   });
 
+  it("should reject a loader whose locale parameter is narrower than the configured locales", async () => {
+    const i18n = createI18n({
+      defaultLocale: "en",
+      locales: ["en", "pt"],
+      // @ts-expect-error - the manager also loads "pt", which this loader does not accept
+      loadLocale: (locale: "en") => dictionaries[locale],
+    });
+    await i18n.init();
+
+    // Keys are still inferred from the loader's return type.
+    expect(i18n.t("home.title")).toBe("Welcome");
+  });
+
   it("should reject a widened default locale instead of widening every locale to string", () => {
     const config = {
       defaultLocale: "en",
@@ -98,6 +111,22 @@ describe("typed locales", () => {
     // @ts-expect-error - a `string` default locale would otherwise make `locale` and `setLocale()` accept any string
     expect(createI18n(config).locale).toBe("en");
   });
+});
+
+describe("translation values", () => {
+  it.each([null, "count", 5, true])(
+    "should throw an [I18n] TypeError for values %s from plain JavaScript",
+    async (values) => {
+      const i18n = createTypedI18n();
+      await i18n.init();
+      const t = i18n.t as (key: string, values?: unknown) => string;
+
+      expect(() => t("footer", values)).toThrow(
+        new TypeError("[I18n] Translation values must be an object or undefined."),
+      );
+      expect(t("footer", undefined)).toBe("Bye");
+    },
+  );
 });
 
 describe("typed translation keys", () => {

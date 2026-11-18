@@ -62,8 +62,11 @@ export const quoteKey = (key: string): string =>
     (character) => `\\u${character.charCodeAt(0).toString(16).padStart(4, "0")}`,
   );
 
-/** Quotes a rejected key, escaping control characters so it cannot forge log lines, and truncates a long one. */
-const formatReportedKey = (key: string): string =>
+/**
+ * Quotes text from input for an error or warning, such as a rejected key or locale, escaping control characters so it
+ * cannot forge log lines, and truncates it after 100 characters. @internal
+ */
+export const formatReportedKey = (key: string): string =>
   key.length > MAX_REPORTED_KEY_LENGTH ? `${quoteKey(key.slice(0, MAX_REPORTED_KEY_LENGTH))}...` : quoteKey(key);
 
 /** How a payload is checked, and the locale its rejections name. @internal */
@@ -84,8 +87,8 @@ export interface NormalizeDictionaryOptions {
  * @param options - Resource limits, which exclude the fixed 1,000-character flattened-key limit, and the locale the
  * payload was loaded for, named in every rejection message.
  * @returns A frozen, null-prototype dictionary with dot-separated keys.
- * @throws {TypeError} When the payload cannot safely represent translations or exceeds a resource limit; an invalid
- * key is named by its quoted flattened path, truncated after 100 characters.
+ * @throws {TypeError} When the payload cannot safely represent translations or exceeds a resource limit; a key is
+ * named by its quoted flattened path, with line breaks escaped and truncated after 100 characters.
  * @internal
  */
 export function normalizeDictionary(input: unknown, options: NormalizeDictionaryOptions = {}): LocaleDictionary {
@@ -179,7 +182,7 @@ export function normalizeDictionary(input: unknown, options: NormalizeDictionary
         }
 
         if (Object.hasOwn(dictionary, flattenedKey)) {
-          throw invalid(`Locale dictionary key collision at "${flattenedKey}"`);
+          throw invalid(`Locale dictionary key collision at ${formatReportedKey(flattenedKey)}`);
         }
 
         translationCount += 1;
@@ -192,7 +195,7 @@ export function normalizeDictionary(input: unknown, options: NormalizeDictionary
       } else if (isObject(nestedValue)) {
         visit(nestedValue, flattenedKey, depth + 1);
       } else {
-        throw invalid(`Locale dictionary value at "${flattenedKey}" must be a string`);
+        throw invalid(`Locale dictionary value at ${formatReportedKey(flattenedKey)} must be a string`);
       }
     }
   };

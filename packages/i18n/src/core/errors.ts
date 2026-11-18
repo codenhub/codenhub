@@ -1,5 +1,7 @@
 import type { ErrorFeedback } from "@codenhub/error";
 
+import { formatReportedKey } from "../locale/dictionary";
+
 /** Stable code for an operational i18n failure. */
 export type I18nErrorCode = "i18n.locale_load_failed";
 
@@ -13,7 +15,8 @@ export interface I18nErrorOptions {
 
 /**
  * Operational locale-loader failure named `I18nError`, with a stable code and deterministic message.
- * The optional locale appears in the message and the original rejection remains available as `cause`.
+ * The optional locale appears in the message, quoted with line breaks escaped and truncated after 100 characters, and
+ * the original rejection remains available as `cause`.
  */
 export class I18nError extends Error {
   /** Stable identifier for consumer classification. */
@@ -29,7 +32,7 @@ export class I18nError extends Error {
    * @param options - Locale and original loader failure.
    */
   constructor(options: I18nErrorOptions) {
-    const localeSuffix = options.locale === undefined ? "" : ` for locale "${options.locale}"`;
+    const localeSuffix = options.locale === undefined ? "" : ` for locale ${formatReportedKey(String(options.locale))}`;
     super(`Failed to load translations${localeSuffix}.`, { cause: options.cause });
     this.name = "I18nError";
     this.locale = options.locale;

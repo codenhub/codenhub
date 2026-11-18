@@ -77,9 +77,10 @@ export interface I18nConfig<TLocale extends string = string, TMessages = unknown
   /**
    * Loads a flat or nested dictionary through a consumer-selected transport; callback failures become `I18nError`.
    * Its declared return type, such as an `as const` object or an imported JSON module, types translation keys;
-   * an `unknown` or `any` return accepts any string key.
+   * an `unknown` or `any` return accepts any string key. It is called for every configured locale, so a loader whose
+   * `locale` parameter is narrower than `locales` does not compile.
    */
-  loadLocale(locale: NoInfer<TLocale>): TMessages | Promise<TMessages>;
+  loadLocale: (locale: NoInfer<TLocale>) => TMessages | Promise<TMessages>;
   /**
    * Resolves `ltr` or `rtl`; called during creation and state changes, with failures propagated unchanged.
    *
@@ -268,7 +269,10 @@ export interface I18n<TLocale extends string = string, TKey extends string = str
    * @returns The translated text, or the trimmed key when no dictionary has it. A miss calls `onMissingKey`, or
    * warns once per recent locale/key pair unless silent.
    * @throws {Error} When called before successful initialization.
-   * @throws {TypeError} When the key is empty, not a string, longer than 1,000 characters, or contains ASCII controls.
+   * @throws {TypeError} When the key is empty, not a string, longer than 1,000 characters once trimmed or 10,000
+   * before, or contains ASCII controls.
+   * @throws {TypeError} When `params` is neither `undefined` nor an object, such as `null` passed from plain
+   * JavaScript.
    */
   translate<K extends TKey>(key: K, ...params: TranslateParams<TMessages, K>): string;
 
@@ -276,7 +280,8 @@ export interface I18n<TLocale extends string = string, TKey extends string = str
    * Whether a key has a text, or is a plural group, in a dictionary the active locale falls back to. Unlike `t()`, a
    * miss neither calls `onMissingKey` nor warns, so a key built at runtime can be checked before it is used, and the
    * check narrows it to a key `t()` accepts. A key that is already typed is not narrowed, since it can still be missing,
-   * as from a locale that has not translated it.
+   * as from a locale that has not translated it. A plural group counts as a key, but `t()` reads it only with a numeric
+   * `count`, so pass one when the key may be a group; without it, `t()` misses and calls `onMissingKey`.
    *
    * @example
    * ```ts
@@ -287,7 +292,8 @@ export interface I18n<TLocale extends string = string, TKey extends string = str
    * @param key - Translation key, trimmed as `t()` trims it.
    * @returns `true` when a dictionary has a text at `key`, or a plural group, one with an `other` form, and `false`
    * otherwise, including for a group without an `other` form, whichever forms it has, and for a string no dictionary
-   * can hold, such as one that is blank, longer than 1,000 characters, or contains ASCII controls.
+   * can hold, such as one that is blank, longer than 1,000 characters once trimmed or 10,000 before, or contains ASCII
+   * controls.
    * @throws {Error} When called before successful initialization.
    * @throws {TypeError} When the key is not a string.
    */
@@ -331,9 +337,11 @@ export interface I18n<TLocale extends string = string, TKey extends string = str
    *
    * @param value - Amount of `unit`, negative for the past.
    * @param unit - Unit of `value`, such as `"day"` or `"hours"`.
-   * @param options - `Intl.RelativeTimeFormat` options, such as `{ numeric: "auto" }` for "yesterday".
+   * @param options - `Intl.RelativeTimeFormat` options, such as `{ numeric: "auto" }` for "yesterday", read by name,
+   * including inherited properties, as `Intl` reads them; other properties are ignored.
    * @returns The formatted relative time.
    * @throws {RangeError} When `value`, `unit`, or `options` is invalid, as `Intl.RelativeTimeFormat` throws.
+   * @throws {TypeError} When `options` is `null`, as `Intl.RelativeTimeFormat` throws.
    */
   formatRelativeTime(
     value: number,
@@ -345,10 +353,11 @@ export interface I18n<TLocale extends string = string, TKey extends string = str
    * Joins strings into a list, such as "a, b, and c", for the active locale with `Intl.ListFormat`.
    *
    * @param values - Strings to join, in order.
-   * @param options - `Intl.ListFormat` options, such as `{ type: "disjunction" }` for "a, b, or c".
+   * @param options - `Intl.ListFormat` options, such as `{ type: "disjunction" }` for "a, b, or c", read by name,
+   * including inherited properties, as `Intl` reads them; other properties are ignored.
    * @returns The joined list, or an empty string for no values.
    * @throws {RangeError} When `options` is invalid, as `Intl.ListFormat` throws.
-   * @throws {TypeError} When a value is not a string, as `Intl.ListFormat` throws.
+   * @throws {TypeError} When `options` is `null` or a value is not a string, as `Intl.ListFormat` throws.
    */
   formatList(values: Iterable<string>, options?: Intl.ListFormatOptions): string;
 
