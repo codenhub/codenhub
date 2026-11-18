@@ -1,11 +1,11 @@
 import { getThemeClass } from "./class-resolver";
 import { applyTheme, createThemeEvent, readComputedTokens, removeAppliedTheme } from "./dom";
-import { resolveOptions, toTokenValues } from "./options";
+import { getOppositePair, resolveOptions, toTokenValues } from "./options";
 import { buildPrePaintScript } from "./pre-paint";
-import { createPreferenceStorage } from "./storage";
-import { readSystemTheme, registerStorageListener, registerSystemListener } from "./system";
+import { createPreferenceStorage, type StoredChoice } from "./storage";
+import { readPrefersDark, readSystemTheme, registerStorageListener, registerSystemListener } from "./system";
 import type { ActiveTheme, Theme, ThemeChangeListener, ThemeChangeSource, ThemeOptions } from "./types";
-import { assertRuntimeTokens } from "./validation";
+import { assertRuntimeTokens, assertSetOptions } from "./validation";
 
 /**
  * Creates a theme preference manager. Nothing touches the DOM, storage, or listeners until a method is called.
@@ -54,7 +54,7 @@ export function createTheme<
   // The themechange event being dispatched, stopped when a window listener starts a newer change.
   let dispatchingEvent: Event | null = null;
   // Kept in memory as well as storage, so an explicit choice still wins over OS changes when storage is unavailable.
-  let hasExplicitChoice = false;
+  let memoryChoice: StoredChoice<TName> | null = null;
   // Whether a theme has been applied since construction or destroy(); until then setTokens() only records overrides,
   // so it cannot replace the theme the pre-paint script applied with defaultTheme.
   let hasApplied = false;
@@ -82,7 +82,24 @@ export function createTheme<
     return definition;
   };
 
-  const readPreference = (): TName | null => storage.read();
+  // A stored choice whose theme lost its opposite pair, as after a config change, stays fixed on that theme.
+  const readPreference = (): StoredChoice<TName> | null => {
+    const stored = storage.read();
+    return stored?.followSystem === true && getOppositePair(config.themes, stored.name) === null
+      ? { name: stored.name, followSystem: false }
+      : stored;
+  };
+
+  const readChoice = (): StoredChoice<TName> | null => readPreference() ?? memoryChoice;
+
+  // The theme of a choice's pair with the OS's color scheme, or the chosen theme when matchMedia is unavailable.
+  const resolveChoice = (choice: StoredChoice<TName>, prefersDark = readPrefersDark()): TName => {
+    const pair = choice.followSystem ? getOppositePair(config.themes, choice.name) : null;
+    if (pair === null || prefersDark === null) {
+      return choice.name;
+    }
+    return getDefinition(choice.name).colorScheme === (prefersDark ? "dark" : "light") ? choice.name : pair;
+  };
 
   const readSystem = (): TName => readSystemTheme(config);
 
@@ -139,25 +156,35 @@ export function createTheme<
     return active;
   };
 
-  const activate = (name: TName, source: ThemeChangeSource, shouldStore: boolean): ActiveTheme<TName, TSchema> => {
+  const activate = (
+    name: TName,
+    source: ThemeChangeSource,
+    choice: StoredChoice<TName> | null,
+  ): ActiveTheme<TName, TSchema> => {
     const { name: nextName } = getDefinition(name);
     // Resolved before any state changes, so a throwing class resolver leaves state, storage, and the DOM as they were.
     getClasses();
     activeName = nextName;
-    if (shouldStore) {
-      hasExplicitChoice = true;
-      storage.write(activeName);
+    if (choice !== null) {
+      memoryChoice = choice;
+      storage.write(choice);
     }
     return apply(source);
   };
 
   const handleSystemChange = (event: MediaQueryListEvent): void => {
-    if (hasExplicitChoice || readPreference() !== null) {
+    const choice = readChoice();
+    if (choice !== null && !choice.followSystem) {
       return;
     }
-    const name = event.matches ? config.systemTheme.dark : config.systemTheme.light;
+    const name =
+      choice === null
+        ? event.matches
+          ? config.systemTheme.dark
+          : config.systemTheme.light
+        : resolveChoice(choice, event.matches);
     if (name !== activeName) {
-      activate(name, "system", false);
+      activate(name, "system", null);
     }
   };
 
@@ -170,8 +197,8 @@ export function createTheme<
       return;
     }
     const preference = readPreference();
-    hasExplicitChoice = preference !== null;
-    activate(preference ?? readSystem(), "storage", false);
+    memoryChoice = preference;
+    activate(preference === null ? readSystem() : resolveChoice(preference), "storage", null);
   };
 
   const theme: Theme<TName, TSchema> = {
@@ -179,7 +206,10 @@ export function createTheme<
       return activeName;
     },
     get preference() {
-      return readPreference();
+      return readPreference()?.name ?? null;
+    },
+    get followsSystem() {
+      return readPreference()?.followSystem ?? false;
     },
     get system() {
       return readSystem();
@@ -194,25 +224,35 @@ export function createTheme<
           stopStorage();
         };
         // A choice made before init() stands when storage could not keep it.
-        activate(readPreference() ?? (hasExplicitChoice ? activeName : readSystem()), "init", false);
+        const choice = readChoice();
+        activate(choice === null ? readSystem() : resolveChoice(choice), "init", null);
       }
       return theme;
     },
     get,
-    set(name) {
-      return activate(name, "set", true);
+    set(name, setOptions) {
+      assertSetOptions(setOptions);
+      const { name: chosen } = getDefinition(name);
+      const followSystem = setOptions?.followSystem === true;
+      if (followSystem && getOppositePair(config.themes, chosen) === null) {
+        throw new Error(
+          `Theme "${String(chosen)}" cannot follow the system: it needs a pairedTheme with the opposite colorScheme.`,
+        );
+      }
+      const choice = { name: chosen, followSystem };
+      return activate(resolveChoice(choice), "set", choice);
     },
     toggle() {
       const current = getDefinition(activeName);
       const next =
         current.pairedTheme ?? (current.colorScheme === "dark" ? config.systemTheme.light : config.systemTheme.dark);
-      return activate(next, "toggle", true);
+      return activate(next, "toggle", { name: next, followSystem: false });
     },
     clearPreference() {
       getClasses();
-      hasExplicitChoice = false;
+      memoryChoice = null;
       storage.remove();
-      return activate(readSystem(), "clearPreference", false);
+      return activate(readSystem(), "clearPreference", null);
     },
     setTokens(tokens) {
       assertRuntimeTokens(tokens, config.tokenSchema);
@@ -249,7 +289,7 @@ export function createTheme<
       listeners.clear();
       runtimeTokens = noTokens;
       activeName = config.defaultTheme;
-      hasExplicitChoice = false;
+      memoryChoice = null;
       hasApplied = false;
       snapshot = null;
       classes = null;

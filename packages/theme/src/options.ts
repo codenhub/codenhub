@@ -51,6 +51,22 @@ export const toTokenValues = <TKey extends PropertyKey>(
   ) as Partial<Record<TKey, string>>;
 
 /**
+ * Returns the `pairedTheme` a theme can follow the system with: one whose `colorScheme` is the opposite of its own.
+ *
+ * @returns The paired theme's name, or `null` when the theme is not configured, has no `pairedTheme`, or its pair
+ *   has the same `colorScheme`.
+ * @internal
+ */
+export const getOppositePair = <TName extends string>(
+  themes: ReadonlyMap<TName, { name: TName; colorScheme: "light" | "dark"; pairedTheme?: TName }>,
+  name: TName,
+): TName | null => {
+  const theme = themes.get(name);
+  const pair = theme?.pairedTheme === undefined ? undefined : themes.get(theme.pairedTheme);
+  return theme !== undefined && pair !== undefined && pair.colorScheme !== theme.colorScheme ? pair.name : null;
+};
+
+/**
  * Applies defaults to `createTheme()` options and validates them.
  *
  * @throws {Error} When the options are invalid; see `assertThemeConfig`.

@@ -12,9 +12,11 @@ The theme switch already remembers the user's choice and follows the operating s
 
 `set()` and `toggle()` save the chosen theme's name in `localStorage`, under the key `"app-theme-preference"` unless you set `storageKey`. On the next visit, `init()` finds it and applies it. `clearPreference()` deletes it and returns to the operating system's setting.
 
+A choice made with `set(name, { followSystem: true })` is saved as a small JSON object instead, such as `{"name":"ocean-light","followSystem":true}`. A version of this package from before `followSystem` reads that value as a theme name it does not know, so it ignores it, as described next, rather than misreading it.
+
 Only a name that matches a configured theme counts. If the saved value names a theme you have since removed, the package ignores it, as if nothing were saved. Renaming `sepia` to `parchment` is safe; the users who picked it fall back to their system theme.
 
-While a choice is saved, changes to the operating system's light or dark mode are ignored: the user said what they want. They apply again once `clearPreference()` runs.
+While a choice is saved, changes to the operating system's light or dark mode are ignored: the user said what they want. They apply again once `clearPreference()` runs. A choice that [follows the system within a pair](themes.md#follow-the-system-within-a-pair) is the exception: it switches between its two themes as the operating system changes.
 
 ## When storage fails
 

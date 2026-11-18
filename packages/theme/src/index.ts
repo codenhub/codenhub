@@ -18,4 +18,5 @@ export type {
   ThemeChangeEvent,
   ThemeChangeListener,
   ThemeOptions,
+  ThemeSetOptions,
 } from "./types";
