@@ -1,3 +1,5 @@
+import { expectedHomepage } from "../workspace/package-homepage.ts";
+
 /** What a new public package needs to be named and described. */
 export interface PackageTemplateOptions {
   /** npm scope, such as `@codenhub`. */
@@ -51,7 +53,8 @@ function createManifest(options: PackageTemplateOptions, fullName: string): stri
     version: "0.0.1",
     private: false,
     description: options.description,
-    homepage: `https://github.com/codenhub/codenhub/tree/main/${options.location}`,
+    // The package is listed by default, so its home is its package list page.
+    homepage: expectedHomepage({ listed: true, location: options.location, slug: options.name }).url,
     license: "Apache-2.0",
     repository: {
       type: "git",
