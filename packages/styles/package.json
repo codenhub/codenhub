@@ -3,6 +3,19 @@
   "version": "0.10.0",
   "private": false,
   "description": "Build a consistent, themeable interface by writing class names on plain HTML, with one stylesheet of tokens, a reset, layout and type helpers, and component classes, and no JavaScript.",
+  "keywords": [
+    "accessibility",
+    "components",
+    "css",
+    "css-framework",
+    "dark-mode",
+    "design-system",
+    "design-tokens",
+    "no-javascript",
+    "tailwindcss",
+    "theme",
+    "ui-kit"
+  ],
   "homepage": "https://codenhub.dev/packages/styles/",
   "license": "Apache-2.0",
   "repository": {
