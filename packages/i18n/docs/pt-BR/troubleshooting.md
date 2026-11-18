@@ -2,7 +2,7 @@
 title: Solução de problemas
 description: O que cada erro e aviso quer dizer, e como resolver.
 order: 5
-source: 3d629046a8f8dfdb3bfb2935ab74e9dbe22ac421
+source: ab391d7b4840624cbcb92f5eebd7f0e74567a689
 ---
 
 # Solução de problemas
@@ -118,7 +118,7 @@ Type 'string' is not assignable to type '"en" | "pt"'.
 
 O locale padrão perdeu o tipo exato, normalmente porque a configuração mora numa variável separada. Marque-o com `as const`, como em [Chaves tipadas](translations.md#chaves-tipadas). Os locales vêm só de `locales`, então um padrão `string` simples não consegue alargá-los.
 
-O mesmo vale para `localePrefix` numa configuração de roteamento guardada numa variável, onde a mensagem cita `"always" | "except-default" | "when-ambiguous"`: escreva `localePrefix: "except-default" as const`.
+O mesmo vale para `localePrefix` numa configuração de roteamento guardada numa variável, onde a mensagem cita `"always" | "except-default" | "when-ambiguous"`: ponha `as const` depois do objeto inteiro, como em [URLs localizadas](localized-urls.md). Só em `localePrefix` compila, mas tipa todo locale como `string`.
 
 ## Uma mensagem aparece com o texto cru
 

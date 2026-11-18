@@ -126,7 +126,7 @@ Write `{name}` where a value goes, and pass the value to `t()`:
 ```
 
 ```ts
-t("order.confirmed", { name: "Ana", orderId: 1042 });
+t("order.confirmed", { name: "Ana", orderId: "1042" });
 // "Thanks, Ana. Order 1042 ships tomorrow."
 ```
 

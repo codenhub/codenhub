@@ -117,7 +117,7 @@ Type 'string' is not assignable to type '"en" | "pt"'.
 
 The default locale lost its exact type, usually because the configuration lives in a separate variable. Mark it `as const`, as in [Typed keys](translations.md#typed-keys). Locales are taken from `locales` only, so a plain `string` default can't widen them.
 
-The same goes for `localePrefix` in a routing configuration kept in a variable, where the message names `"always" | "except-default" | "when-ambiguous"`: write `localePrefix: "except-default" as const`.
+The same goes for `localePrefix` in a routing configuration kept in a variable, where the message names `"always" | "except-default" | "when-ambiguous"`: put `as const` after the whole object, as in [Localized URLs](localized-urls.md). On `localePrefix` alone it compiles, but types every locale as `string`.
 
 ## A message shows its raw text
 

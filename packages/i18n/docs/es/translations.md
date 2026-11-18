@@ -2,7 +2,7 @@
 title: Escribe tus traducciones
 description: Diccionarios, archivos JSON, placeholders, mensajes ICU, plurales, formateadores, claves y valores tipados, cómo detectar claves sin traducir y límites de tamaño.
 order: 1
-source: a8b0d6abf96e30f6be2b4b849879f3b683550f35
+source: 453c6f576b7ed2e7ad6bbacd4b94425da7b261a9
 ---
 
 # Escribe tus traducciones
@@ -127,7 +127,7 @@ Escribe `{name}` donde va un valor, y pásale el valor a `t()`:
 ```
 
 ```ts
-t("order.confirmed", { name: "Ana", orderId: 1042 });
+t("order.confirmed", { name: "Ana", orderId: "1042" });
 // "Thanks, Ana. Order 1042 ships tomorrow."
 ```
 

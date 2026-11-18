@@ -2,7 +2,7 @@
 title: Solución de problemas
 description: Qué significa cada error y cada advertencia, y cómo solucionarlo.
 order: 5
-source: 3d629046a8f8dfdb3bfb2935ab74e9dbe22ac421
+source: ab391d7b4840624cbcb92f5eebd7f0e74567a689
 ---
 
 # Solución de problemas
@@ -118,7 +118,7 @@ Type 'string' is not assignable to type '"en" | "pt"'.
 
 El locale por defecto perdió su tipo exacto, normalmente porque la configuración vive en una variable aparte. Márcalo `as const`, como en [Claves tipadas](translations.md#claves-tipadas). Los locales se toman solo de `locales`, así que un valor por defecto `string` simple no puede ampliarlos.
 
-Lo mismo pasa con `localePrefix` en una configuración de routing guardada en una variable, donde el mensaje nombra `"always" | "except-default" | "when-ambiguous"`: escribe `localePrefix: "except-default" as const`.
+Lo mismo pasa con `localePrefix` en una configuración de routing guardada en una variable, donde el mensaje nombra `"always" | "except-default" | "when-ambiguous"`: pon `as const` después del objeto entero, como en [URLs localizadas](localized-urls.md). Solo en `localePrefix` compila, pero tipa cada locale como `string`.
 
 ## Un mensaje muestra su texto sin procesar
 

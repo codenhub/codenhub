@@ -2,7 +2,7 @@
 title: Escreva as suas traduções
 description: Dicionários, arquivos JSON, placeholders, mensagens ICU, plurais, formatadores, chaves e valores tipados, verificação de chaves não traduzidas e limites de tamanho.
 order: 1
-source: a8b0d6abf96e30f6be2b4b849879f3b683550f35
+source: 453c6f576b7ed2e7ad6bbacd4b94425da7b261a9
 ---
 
 # Escreva as suas traduções
@@ -127,7 +127,7 @@ Escreva `{name}` onde vai um valor e passe o valor para `t()`:
 ```
 
 ```ts
-t("order.confirmed", { name: "Ana", orderId: 1042 });
+t("order.confirmed", { name: "Ana", orderId: "1042" });
 // "Thanks, Ana. Order 1042 ships tomorrow."
 ```
 
