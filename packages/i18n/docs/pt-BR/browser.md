@@ -2,7 +2,7 @@
 title: Traduza um app no navegador
 description: Detecte e lembre o idioma do visitante, mantenha lang e dir em sincronia, renderize de novo um framework, traduza HTML e rode num Web Worker.
 order: 2
-source: f16d67e7adf1b757362c94025264aa3aa0f701b7
+source: 5046d70e0e8660a8f66d8bcf7d6ef127932d23bb
 ---
 
 # Traduza um app no navegador
@@ -98,7 +98,7 @@ picker.addEventListener("change", async () => {
       await i18n.setLocale(picker.value as (typeof i18n.locales)[number]);
     }
   } finally {
-    // Mostra o que foi aplicado, mesmo quando a troca falhou ou outra mais nova passou na frente.
+    // Mostra a escolha do visitante, mesmo quando a troca falhou ou outra mais nova passou na frente.
     picker.value = binding.followsSystem ? "system" : i18n.locale;
   }
 });
@@ -108,9 +108,9 @@ picker.addEventListener("change", async () => {
 
 `followsSystem` diz qual opção mostrar selecionada. Ele é `true` quando o binding começou sem nada escolhido e depois de `followSystem()`. Ele vira `false` quando o seu app aplica um locale com `setLocale()` ou `init()`, inclusive o que já está na tela: um visitante que escolhe inglês enquanto inglês foi detectado escolheu inglês.
 
-Enquanto `followsSystem` é `true`, o binding também escuta o evento `languagechange` do navegador, então um visitante que troca o idioma do navegador no meio da visita recebe o novo sem recarregar.
+Enquanto `followsSystem` é `true`, o binding também escuta o evento `languagechange` do navegador, então um visitante que troca o idioma do navegador no meio da visita recebe o novo sem recarregar. Um idioma que o visitante acabou de escolher e que ainda está carregando é mantido, não atropelado.
 
-Quando o idioma detectado não carrega, `followSystem()` rejeita com o `I18nError` do loader, e a página mantém o idioma atual; a escolha salva já foi esquecida. Uma falha depois de um `languagechange` avisa e mantém o idioma atual. Nenhum dos dois cai para o padrão como o início faz, porque a página já tem um idioma para mostrar.
+Quando o idioma detectado não carrega, `followSystem()` rejeita com o `I18nError` do loader, e a página mantém o idioma atual; a escolha salva já foi esquecida. Mesmo assim `followsSystem` é `true`, então o seletor mostra "System" sobre o idioma antigo: é o que o visitante escolheu, e a próxima visita ou o próximo `languagechange` tenta de novo o idioma detectado. Uma falha depois de um `languagechange` avisa e mantém o idioma atual. Nenhum dos dois cai para o padrão como o início faz, porque a página já tem um idioma para mostrar.
 
 ## Renderize de novo com um framework
 
