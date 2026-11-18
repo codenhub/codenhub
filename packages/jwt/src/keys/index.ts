@@ -9,6 +9,7 @@ export {
   type AlgorithmParams,
 } from "./algorithms";
 export { exportPrivateJwk, exportPublicJwk, exportSecretJwk } from "./export";
+export { jwkThumbprint } from "./thumbprint";
 export {
   generateKeyPair,
   generateSecretKey,

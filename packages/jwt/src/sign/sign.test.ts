@@ -2,7 +2,13 @@ import { beforeAll, describe, expect, it } from "vitest";
 
 import type { PrivateKey, PublicKey, SecretKey } from "../core/types";
 import { decodeBase64Url } from "../encoding/base64url";
+import { readHeader } from "../jws/read-header";
+import { exportPublicJwk } from "../keys/export";
 import { generateKeyPair, generateSecretKey } from "../keys/generate";
+import { importPublicKey } from "../keys/import";
+import { jwkThumbprint } from "../keys/thumbprint";
+import { createKeySet } from "../keysets/local";
+import { createVerifier } from "../verify/create-verifier";
 import { sign, type SignHeader } from "./sign";
 
 const textOf = (segment: string): string => new TextDecoder().decode(decodeBase64Url(segment));
@@ -275,3 +281,87 @@ describe("sign TypeError", () => {
     );
   });
 });
+
+// RFC 9449 §4.2: a DPoP proof carries the public key that verifies it in its `jwk` header.
+describe("sign embedKey", () => {
+  it("should write the public key's material as jwk after alg, kid, typ and cty", async () => {
+    const pair = await generateKeyPair({ alg: "ES256", kid: "client-key" });
+    const token = await sign({
+      payload: { htm: "POST" },
+      key: pair.privateKey,
+      embedKey: pair.publicKey,
+      header: { typ: "dpop+jwt", nonce: "n1" },
+    });
+
+    const header = JSON.parse(headerTextOf(token)) as Record<string, unknown>;
+    expect(Object.keys(header)).toEqual(["alg", "kid", "typ", "jwk", "nonce"]);
+    // Only the material: no alg, use or kid on the embedded key, and never a private member.
+    expect(Object.keys(header.jwk as object)).toEqual(["kty", "crv", "x", "y"]);
+  });
+
+  it.each(["ES256", "ES512", "EdDSA", "RS384", "PS256"] as const)(
+    "should produce a %s proof a verifier accepts with the key read from its own header",
+    async (alg) => {
+      const pair = await generateKeyPair({ alg });
+      const token = await sign({ payload: { jti: "j1" }, key: pair.privateKey, embedKey: pair.publicKey });
+
+      const header = readHeader(token);
+      if (!header.ok || header.value.jwk === undefined) {
+        throw new Error("expected a header with jwk");
+      }
+      const embedded = await importPublicKey(header.value.jwk, { alg: header.value.alg as typeof alg });
+      if (!embedded.ok) {
+        throw new Error("expected the embedded key to import");
+      }
+      const verified = await createVerifier({ keys: createKeySet([embedded.value]) })(token);
+      expect(verified.ok && verified.value.payload).toEqual({ jti: "j1" });
+      expect(await jwkThumbprint(embedded.value)).toBe(await jwkThumbprint(pair.publicKey));
+    },
+  );
+
+  it("should throw when embedKey is not the public half of key", async () => {
+    const other = await generateKeyPair({ alg: "ES256" });
+
+    await expect(sign({ payload: {}, key: privateKey, embedKey: other.publicKey })).rejects.toThrow(
+      new TypeError("sign: input.embedKey must be the public key of input.key."),
+    );
+  });
+
+  it("should throw when embedKey is bound to another algorithm", async () => {
+    const rsa = await generateKeyPair({ alg: "RS256" });
+    const material = { ...(await exportPublicJwk(rsa.publicKey)), alg: undefined };
+    const pss = valueOrThrow(await importPublicKey(material, { alg: "PS256" }));
+
+    await expect(sign({ payload: {}, key: rsa.privateKey, embedKey: pss })).rejects.toThrow(
+      new TypeError("sign: input.embedKey must have the same alg as input.key."),
+    );
+  });
+
+  it.each([
+    ["a private key", () => privateKey],
+    ["a look-alike", () => ({ kind: "public", alg: "ES256" })],
+  ])("should throw when embedKey is %s", async (_, embedKey) => {
+    await expect(sign({ payload: {}, key: privateKey, embedKey: embedKey() as never })).rejects.toThrow(
+      new TypeError("sign: input.embedKey must be a public key this package created."),
+    );
+  });
+
+  it("should throw when the signing key is a secret, which has no public key to embed", async () => {
+    await expect(sign({ payload: {}, key: secretKey, embedKey: publicKey })).rejects.toThrow(
+      new TypeError("sign: input.embedKey needs a private input.key."),
+    );
+  });
+
+  it("should still refuse a jwk given in the header", async () => {
+    await expect(
+      sign({ payload: {}, key: privateKey, embedKey: publicKey, header: { jwk: {} } as never }),
+    ).rejects.toThrow(new TypeError("sign: input.header.jwk is not supported."));
+  });
+});
+
+const valueOrThrow = <T>(result: { ok: true; value: T } | { ok: false }): T => {
+  if (!result.ok) {
+    throw new Error("expected ok");
+  }
+  return result.value;
+};

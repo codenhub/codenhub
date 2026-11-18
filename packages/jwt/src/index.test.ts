@@ -18,6 +18,7 @@ describe("package entrypoint", () => {
       "importPrivateKey",
       "importPublicKey",
       "importSecretKey",
+      "jwkThumbprint",
       "readHeader",
       "sign",
     ]);

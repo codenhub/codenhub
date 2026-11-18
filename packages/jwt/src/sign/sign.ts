@@ -1,10 +1,11 @@
 import { MAX_JSON_DEPTH } from "../core/limits";
 import { rejectUnknownOptions } from "../core/options";
-import type { JwsAlgorithm, JwtPayload, SigningKey } from "../core/types";
+import type { JwsAlgorithm, JwtPayload, PublicKey, SigningKey } from "../core/types";
 import { encodeBase64Url } from "../encoding/base64url";
 import { encodeUtf8 } from "../encoding/text";
 import { ALGORITHM_PARAMS } from "../keys/algorithms";
-import { getKeyEntry } from "../keys/registry";
+import { exportPublicJwk } from "../keys/export";
+import { getKeyEntry, isRegisteredKey } from "../keys/registry";
 
 /** Header parameters a caller may set when signing. `alg` always comes from the key. */
 export interface SignHeader {
@@ -42,9 +43,26 @@ export interface SignInput {
   readonly key: SigningKey;
   /** Extra protected header parameters. */
   readonly header?: SignHeader;
+  /**
+   * A public key to embed in the header as `jwk`, so the token carries the key that verifies it, as a DPoP
+   * proof does (RFC 9449 §4.2). It must be the public half of `key`, bound to the same algorithm; the
+   * signature is checked with it before the token is returned. Only its material is written: no `alg`,
+   * `use` or `kid`.
+   *
+   * @defaultValue no `jwk` header
+   */
+  readonly embedKey?: PublicKey;
 }
 
-const INPUT_MEMBERS: Readonly<Record<keyof SignInput, true>> = { payload: true, key: true, header: true };
+const INPUT_MEMBERS: Readonly<Record<keyof SignInput, true>> = {
+  payload: true,
+  key: true,
+  header: true,
+  embedKey: true,
+};
+
+/** The members of an embedded public key, in the order {@link exportPublicJwk} writes them. */
+const EMBEDDED_MEMBERS = ["kty", "crv", "x", "y", "n", "e"] as const;
 
 /** Header parameters that ask a verifier to trust something other than its own keys, or to change parsing. */
 const FORBIDDEN_HEADER_MEMBERS = ["crit", "b64", "jwk", "jku", "x5u", "x5c"] as const;
@@ -68,8 +86,8 @@ const isPlainObject = (value: unknown): value is Record<string, unknown> => {
  *
  * @remarks
  * The header's `alg` always comes from the key, so a key can never sign under another algorithm. The
- * header is written as `alg`, then `kid`, `typ` and `cty` when present, then the other parameters in
- * the order given. The payload is signed exactly as given: no claim, such as `iat`, is added.
+ * header is written as `alg`, then `kid`, `typ` and `cty` when present, then `jwk` for an `embedKey`,
+ * then the other parameters in the order given. The payload is signed exactly as given: no claim, such as `iat`, is added.
  *
  * @example
  * ```ts
@@ -81,7 +99,7 @@ const isPlainObject = (value: unknown): value is Record<string, unknown> => {
  * });
  * ```
  *
- * @param input - The payload, the signing key, and optional header parameters.
+ * @param input - The payload, the signing key, optional header parameters, and an optional public key to embed.
  * @returns The compact token, `<header>.<payload>.<signature>` in base64url.
  * @throws TypeError, as a rejected promise, when `input` is not an object; `input.key` is not a private
  * or secret key this package created; `input.header` is not a plain object, names an `alg` other than the
@@ -89,7 +107,10 @@ const isPlainObject = (value: unknown): value is Record<string, unknown> => {
  * string; `input.payload` is not a plain object; the header or payload holds a value JSON cannot carry
  * exactly (`undefined`, a function, a symbol, a bigint, a non-finite number or `-0`, a non-plain object, an
  * accessor) or nests deeper than 32 levels; or a registered claim has the wrong type (`exp`, `nbf`, `iat`
- * not finite numbers; `iss`, `sub`, `jti` not strings; `aud` neither a string nor an array of strings).
+ * not finite numbers; `iss`, `sub`, `jti` not strings; `aud` neither a string nor an array of strings);
+ * `input` has a member other than `payload`, `key`, `header` and `embedKey`; or `input.embedKey` is not a
+ * public key this package created, `input.key` is not a private key, or the two are not one key pair bound to
+ * one algorithm.
  */
 export async function sign(input: SignInput): Promise<string> {
   if (typeof input !== "object" || input === null) {
@@ -101,19 +122,48 @@ export async function sign(input: SignInput): Promise<string> {
   if (key.kind !== "private" && key.kind !== "secret") {
     throw new TypeError("sign: input.key must be a private or secret key.");
   }
-  const headerJson = serializeHeader(input.header, key);
+  const embedded = input.embedKey === undefined ? undefined : await embeddedJwk(input.embedKey, key);
+  const headerJson = serializeHeader(input.header, key, embedded?.jwk);
   const payloadJson = serializePayload(input.payload);
   const signingInput = `${encodeBase64Url(encodeUtf8(headerJson))}.${encodeBase64Url(encodeUtf8(payloadJson))}`;
-  const signature = await crypto.subtle.sign(
-    ALGORITHM_PARAMS[key.alg].signParams,
-    entry.cryptoKey,
-    encodeUtf8(signingInput),
-  );
+  const signedBytes = encodeUtf8(signingInput);
+  const { signParams } = ALGORITHM_PARAMS[key.alg];
+  const signature = await crypto.subtle.sign(signParams, entry.cryptoKey, signedBytes);
+  // Matching algorithms do not make a pair: a token embedding another key would never verify, so the
+  // pairing is proven on the signature itself.
+  if (embedded !== undefined && !(await crypto.subtle.verify(signParams, embedded.cryptoKey, signature, signedBytes))) {
+    throw new TypeError("sign: input.embedKey must be the public key of input.key.");
+  }
   return `${signingInput}.${encodeBase64Url(new Uint8Array(signature))}`;
 }
 
+/** Checks `embedKey` against the signing key and reads the public members it embeds. */
+async function embeddedJwk(
+  embedKey: unknown,
+  key: SigningKey,
+): Promise<{ readonly jwk: Record<string, string>; readonly cryptoKey: CryptoKey }> {
+  if (!isRegisteredKey(embedKey) || embedKey.kind !== "public") {
+    throw new TypeError("sign: input.embedKey must be a public key this package created.");
+  }
+  if (key.kind !== "private") {
+    throw new TypeError("sign: input.embedKey needs a private input.key.");
+  }
+  if (embedKey.alg !== key.alg) {
+    throw new TypeError("sign: input.embedKey must have the same alg as input.key.");
+  }
+  const exported = await exportPublicJwk(embedKey);
+  const jwk: Record<string, string> = {};
+  for (const name of EMBEDDED_MEMBERS) {
+    const value = exported[name];
+    if (value !== undefined) {
+      jwk[name] = value;
+    }
+  }
+  return { jwk, cryptoKey: getKeyEntry(embedKey).cryptoKey };
+}
+
 /** Validates the caller's header and writes it as JSON with `alg`, `kid`, `typ`, `cty` first. */
-function serializeHeader(header: unknown, key: SigningKey): string {
+function serializeHeader(header: unknown, key: SigningKey, jwk: Record<string, string> | undefined): string {
   if (header !== undefined && !isPlainObject(header)) {
     throw new TypeError("sign: input.header must be a plain object.");
   }
@@ -139,6 +189,9 @@ function serializeHeader(header: unknown, key: SigningKey): string {
     if (Object.hasOwn(given, name)) {
       members.push([name, given[name]]);
     }
+  }
+  if (jwk !== undefined) {
+    members.push(["jwk", jwk]);
   }
   const leading: readonly string[] = ["alg", ...TEXT_HEADER_MEMBERS];
   for (const [name, value] of Object.entries(given)) {

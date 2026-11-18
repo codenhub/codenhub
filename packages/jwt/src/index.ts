@@ -40,6 +40,7 @@ export {
   importPrivateKey,
   importPublicKey,
   importSecretKey,
+  jwkThumbprint,
   type GenerateKeyPairOptions,
   type GenerateSecretKeyOptions,
   type ImportPrivateKeyOptions,

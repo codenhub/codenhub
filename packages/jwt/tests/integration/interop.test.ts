@@ -12,6 +12,7 @@ import {
   importKeySet,
   importPrivateKey,
   importPublicKey,
+  jwkThumbprint,
   importSecretKey,
   sign,
   type AsymmetricAlgorithm,
@@ -76,6 +77,20 @@ beforeAll(async () => {
 });
 
 describe.each(ASYMMETRIC)("jose interop for %s", (alg) => {
+  it("should compute the thumbprint jose computes", async () => {
+    const publicKey = valueOf(await importPublicKey(josePairs[alg].publicJwk, { alg }));
+
+    expect(await jwkThumbprint(publicKey)).toBe(await jose.calculateJwkThumbprint(josePairs[alg].publicJwk, "sha256"));
+  });
+
+  it("should embed a jwk that jose verifies the token with, as a DPoP proof", async () => {
+    const pair = await generateKeyPair({ alg });
+    const token = await sign({ payload: PAYLOAD, key: pair.privateKey, embedKey: pair.publicKey });
+
+    const verified = await jose.jwtVerify(token, jose.EmbeddedJWK, { algorithms: [alg] });
+
+    expect(verified.payload).toEqual(PAYLOAD);
+  });
   it("should produce a token jose verifies", async () => {
     const privateKey = valueOf(await importPrivateKey(josePairs[alg].privateJwk, { alg }));
     const token = await sign({ payload: PAYLOAD, key: privateKey });
