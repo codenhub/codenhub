@@ -496,13 +496,14 @@ test("grows a radio's dot with no preference, and only fades it under reduced mo
     await page.setContent('<!doctype html><html><body><input type="radio" class="radio"></body></html>');
     await page.addStyleTag({ url: COMPONENT_STYLES_URL });
 
-    return page.evaluate(async () => {
+    return page.evaluate(() => {
       const radio = document.querySelector("input")!;
       // Resolve the unchecked style first, so checking starts a transition from it.
       getComputedStyle(radio, "::after").getPropertyValue("scale");
       radio.checked = true;
-      await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
 
+      // `getAnimations()` flushes the style change itself, so the transitions are
+      // read before any frame passes and none can have finished yet.
       return radio
         .getAnimations({ subtree: true })
         .map((animation) => (animation as CSSTransition).transitionProperty)
