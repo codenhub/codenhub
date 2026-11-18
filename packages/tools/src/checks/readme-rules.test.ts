@@ -14,13 +14,14 @@ async function runRule(
   readme: string,
   codenhubFields: Record<string, unknown> = {},
   files: readonly string[] = [],
+  isPrivate = false,
 ): Promise<Finding[]> {
   const directory = await mkdtemp(join(tmpdir(), "codenhub-readme-rule-"));
   await writeFile(join(directory, "README.md"), readme, "utf8");
   await Promise.all(files.map(async (file) => writeFile(join(directory, file), "")));
   const workspacePackage = {
     directory,
-    isPrivate: false,
+    isPrivate,
     location: "packages/example",
     manifest: {
       codenhub: { label: "Example", status: "active", docs: {}, ...codenhubFields },
@@ -112,6 +113,8 @@ describe("readme license link rule", () => {
     ["an inline link", "Licensed under the [Apache-2.0](LICENSE) license."],
     ["a dot-relative link", "Licensed under Apache-2.0. See [LICENSE](./LICENSE)."],
     ["a reference link", "Licensed under [Apache-2.0][license].\n\n[license]: ./LICENSE"],
+    ["a link with a redundant path", "Licensed under the [Apache-2.0](././LICENSE) license."],
+    ["a link after a fenced heading", "```md\n## Example\n```\n\nSee [LICENSE](LICENSE)."],
   ])("accepts a License section with %s", async (_name, section) => {
     expect(await runRule(withLicense(section), {}, ["LICENSE"])).toEqual([]);
   });
@@ -131,6 +134,31 @@ describe("readme license link rule", () => {
     const readme = `${ACTIVE_README}\nSee [LICENSE](LICENSE).\n\n## License\n\nApache-2.0.\n\n## Contributing\n\n[LICENSE](LICENSE)\n`;
 
     expect((await runRule(readme, {}, ["LICENSE"])).map(({ code }) => code)).toEqual(["readme/license-link"]);
+  });
+
+  it("accepts a reworded License heading", async () => {
+    const readme = `${ACTIVE_README}\n## License and notices\n\nSee [the terms](LICENSE).\n`;
+
+    expect(await runRule(readme, {}, ["LICENSE"])).toEqual([]);
+  });
+
+  it("resolves a reference link defined after the License section", async () => {
+    const readme = `${ACTIVE_README}\n## License\n\nSee [the terms][terms].\n\n## Contributing\n\n[terms]: ./LICENSE\n`;
+
+    expect(await runRule(readme, {}, ["LICENSE"])).toEqual([]);
+  });
+
+  it.each([
+    ["a link written in code", "Licensed under Apache-2.0: `[Terms](LICENSE)`."],
+    ["an unused definition", "Licensed under Apache-2.0.\n\n[terms]: ./LICENSE"],
+  ])("does not count %s as a link", async (_name, section) => {
+    expect((await runRule(withLicense(section), {}, ["LICENSE"])).map(({ code }) => code)).toEqual([
+      "readme/license-link",
+    ]);
+  });
+
+  it("stays quiet for a private package, which ships nothing", async () => {
+    expect(await runRule(withLicense("Licensed under Apache-2.0."), {}, ["LICENSE"], true)).toEqual([]);
   });
 
   it("reports a README with no License section", async () => {

@@ -1,6 +1,10 @@
-import { readFile, stat } from "node:fs/promises";
+import { lstat, readFile } from "node:fs/promises";
 import { join } from "node:path";
 
+import remarkParse from "remark-parse";
+import { unified } from "unified";
+
+import { resolveLocalPath } from "../documentation/document-graph.ts";
 import { parsePackageMetadata, type PackageStatus } from "../documentation/package-metadata.ts";
 import type { WorkspacePackage } from "../workspace/discover.ts";
 import { isDocumentedPackage } from "../workspace/package-policy.ts";
@@ -10,9 +14,18 @@ const README = "README.md";
 const SECTION_HEADING = /^##\s/m;
 const NOTICED_STATUSES: PackageStatus[] = ["deprecated", "experimental"];
 const LICENSE = "LICENSE";
-const LICENSE_HEADING = /^##[ \t]+License[ \t]*\r?$/im;
-const INLINE_LINK_TARGET = /\]\(\s*<?([^)\s>]+)/g;
-const REFERENCE_LINK_TARGET = /^[ \t]*\[[^\]]+\]:[ \t]*<?([^\s>]+)/gm;
+// The README spec allows small wording changes to a heading, such as
+// "License and notices", as long as the section stays recognizable.
+const LICENSE_HEADING = /^licen[cs]/i;
+
+interface MarkdownNode {
+  children?: MarkdownNode[];
+  depth?: number;
+  identifier?: string;
+  type: string;
+  url?: string;
+  value?: string;
+}
 
 /**
  * Extracts the status notices a reader sees before the first README section.
@@ -72,38 +85,72 @@ function checkReadmeStatus(workspacePackage: WorkspacePackage, readme: string): 
   });
 }
 
+function textOf(node: MarkdownNode): string {
+  return node.value ?? node.children?.map(textOf).join("") ?? "";
+}
+
+function visit(node: MarkdownNode, callback: (node: MarkdownNode) => void): void {
+  callback(node);
+  node.children?.forEach((child) => visit(child, callback));
+}
+
 /**
- * Reads the `License` section of a README, up to the next section heading.
+ * Reports whether the README `License` section links the package's `LICENSE` file.
+ *
+ * The README is parsed rather than scanned, so a link written in code is not
+ * counted, a heading inside a code fence does not end the section, and a
+ * reference link resolves through its definition wherever the README places it.
  * @param readme Authored README contents.
- * @returns The section body, or `undefined` when the README has no `License` section.
+ * @returns True when a link in the section resolves to `LICENSE`.
  */
-function readLicenseSection(readme: string): string | undefined {
-  const heading = LICENSE_HEADING.exec(readme);
-  if (heading === null) {
-    return undefined;
-  }
-  const rest = readme.slice(heading.index + heading[0].length);
-  return rest.split(SECTION_HEADING, 1)[0];
-}
-
-function linksLicense(section: string): boolean {
-  const targets = [...section.matchAll(INLINE_LINK_TARGET), ...section.matchAll(REFERENCE_LINK_TARGET)].map(
-    (match) => match[1] ?? "",
+function linksLicense(readme: string): boolean {
+  const tree = unified().use(remarkParse).parse(readme) as MarkdownNode;
+  const definitions = new Map<string, string>();
+  visit(tree, (node) => {
+    if (node.type === "definition" && node.identifier !== undefined && node.url !== undefined) {
+      definitions.set(node.identifier.toLowerCase(), node.url);
+    }
+  });
+  const blocks = tree.children ?? [];
+  const start = blocks.findIndex(
+    (node) => node.type === "heading" && node.depth === 2 && LICENSE_HEADING.test(textOf(node).trim()),
   );
-  return targets.some((target) => target.split("#", 1)[0]?.replace(/^\.\//, "") === LICENSE);
+  if (start === -1) {
+    return false;
+  }
+  const end = blocks.findIndex((node, index) => index > start && node.type === "heading" && (node.depth ?? 1) <= 2);
+  const targets: string[] = [];
+  for (const block of blocks.slice(start + 1, end === -1 ? undefined : end)) {
+    visit(block, (node) => {
+      if (node.type === "link" && node.url !== undefined) {
+        targets.push(node.url);
+      }
+      const referenced = node.identifier === undefined ? undefined : definitions.get(node.identifier.toLowerCase());
+      if (node.type === "linkReference" && referenced !== undefined) {
+        targets.push(referenced);
+      }
+    });
+  }
+  return targets.some((target) => resolveLocalPath(README, target).path === LICENSE);
 }
 
+/**
+ * Reports whether a package ships a `LICENSE` file. A private package ships
+ * nothing, and npm leaves a symlink out of the tarball, so neither counts.
+ */
 async function shipsLicense(workspacePackage: WorkspacePackage): Promise<boolean> {
+  if (workspacePackage.isPrivate) {
+    return false;
+  }
   try {
-    return (await stat(join(workspacePackage.directory, LICENSE))).isFile();
+    return (await lstat(join(workspacePackage.directory, LICENSE))).isFile();
   } catch {
     return false;
   }
 }
 
 async function checkLicenseLink(workspacePackage: WorkspacePackage, readme: string): Promise<Finding[]> {
-  const section = readLicenseSection(readme);
-  if ((section !== undefined && linksLicense(section)) || !(await shipsLicense(workspacePackage))) {
+  if (!(await shipsLicense(workspacePackage)) || linksLicense(readme)) {
     return [];
   }
   return [
