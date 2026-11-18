@@ -1,6 +1,6 @@
 ---
 status: IMPLEMENTED
-last_updated: 2026-11-16
+last_updated: 2026-11-18
 scope: Generated API reference documentation for public workspace packages.
 ---
 
@@ -74,7 +74,7 @@ docs/
 - Each documented entrypoint maps to exactly one page, unless `pages` splits it (see "Split pages"). A leaf entrypoint becomes `<name>.md`; an entrypoint that also has child entrypoints or split pages becomes a folder with an `index.md`. The `.` entrypoint is always `docs/reference/index.md`.
 - Page and folder names are the `exports` subpath segments verbatim. `"./registries/browser"` is `reference/registries/browser.md`. Every documented entrypoint's subpath segments MUST already be kebab-case, matching the filename rule in `docs/specs/packages-documentation.md`. The generator does not normalize a segment: rewriting `./fooBar` to `foo-bar` could silently collide with a real `./foo-bar` entrypoint. A documented entrypoint whose segment is not kebab-case, or whose page path would collide with another's, is a `reference/entrypoint` finding and stops generation for that package.
 - `docs/reference/index.md` is an ordinary public document, not a `curated: true` router. It documents the `.` entrypoint and, by being the area's `index.md`, is placed first by publishing tools per `docs/specs/packages-documentation.md`. Sibling order is controlled by a generated `order` value on each page.
-- The generated area is `docs/reference/` and only `docs/reference/`. Once a package opts in, a hand-authored `docs/reference.md`, or any file under `docs/reference/` the generator did not produce, is invalid; the generator owns the whole directory. A package that has not opted in may keep its hand-authored `docs/reference.md`, because nothing changes for a package until it opts in. Alternatives weighed and rejected: prohibiting a hand-authored reference in every package, which breaks that promise; converting the existing hand-authored references in `kbd`, `router`, and the Tauri `window` and `webview` plugins now, because adoption is a separate package choice. Because `hub generate` writes but never deletes, a page left behind by a removed or renamed entrypoint MUST be deleted in the same change — `reference/unexpected-file` (see "Validation") fails the run until it is.
+- The generated area is `docs/reference/` and only `docs/reference/`. Once a package opts in, a hand-authored `docs/reference.md`, or any file under `docs/reference/` the generator did not produce, is invalid; the generator owns the whole directory. A package that has not opted in may keep its hand-authored `docs/reference.md`, because nothing changes for a package until it opts in. Alternatives weighed and rejected: prohibiting a hand-authored reference in every package, which breaks that promise; converting the existing hand-authored references in `kbd` and `router` now, because adoption is a separate package choice. Because `hub generate` writes but never deletes, a page left behind by a removed or renamed entrypoint MUST be deleted in the same change — `reference/unexpected-file` (see "Validation") fails the run until it is.
 
 ### Split pages
 

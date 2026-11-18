@@ -1,12 +1,12 @@
 ---
 status: DRAFT
-last_updated: 2026-11-13
-scope: How to deploy apps/oidc-conformance, run the OpenID conformance suite's Basic OP and Config OP plans against it, read the results, and record them.
+last_updated: 2026-11-18
+scope: How to deploy packages/oidc/conformance, run the OpenID conformance suite's Basic OP and Config OP plans against it, read the results, and record them.
 ---
 
 # Conformance host runbook
 
-`apps/oidc-conformance` is a Cloudflare Worker that serves `@codenhub/oidc` for the [OpenID Foundation's conformance suite](https://www.certification.openid.net). The plans need an OpenID Provider reachable from the suite's runner, and `packages/oidc/docs/internal/roadmap.md` ("The OpenID conformance suite") and `packages/oidc/docs/internal/scope.md` decisions 30, 39 and 52 say why the run is the 0.1 criterion. Nothing here is deployed by the repository: the maintainer runs the steps below, because a deploy is outward-facing.
+`packages/oidc/conformance` is a Cloudflare Worker that serves `@codenhub/oidc` for the [OpenID Foundation's conformance suite](https://www.certification.openid.net). The plans need an OpenID Provider reachable from the suite's runner, and `packages/oidc/docs/internal/roadmap.md` ("The OpenID conformance suite") and `packages/oidc/docs/internal/scope.md` decisions 30, 39 and 52 say why the run is the 0.1 criterion. Nothing here is deployed by the repository: the maintainer runs the steps below, because a deploy is outward-facing.
 
 ## What the host is
 
@@ -45,23 +45,23 @@ The host hashes each secret with `hashClientSecret` when it starts, so the store
 Run these from the repository root. They create resources in your Cloudflare account, which is why an agent does not run them.
 
 1. Build the provider, which the Worker bundles from `packages/oidc/dist`: `pnpm build oidc`.
-2. Pick the public URL. A `workers.dev` URL works, and it is printed by the first deploy. Put it in `ISSUER` and choose a `SUITE_ALIAS` in `apps/oidc-conformance/wrangler.jsonc`. If you do not know the URL yet, deploy once, then edit `ISSUER` and deploy again.
+2. Pick the public URL. A `workers.dev` URL works, and it is printed by the first deploy. Put it in `ISSUER` and choose a `SUITE_ALIAS` in `packages/oidc/conformance/wrangler.jsonc`. If you do not know the URL yet, deploy once, then edit `ISSUER` and deploy again.
 3. Generate four secrets, one per client, and set them. Each one is 256 random bits; keep them out of the repository, shell history shared with others, and logs. Run the generator once before each `wrangler secret put` and paste its output at that prompt, so no two clients share a secret; the plan configurations need the same values later:
 
 ```sh
 # Once per secret below: a new value each time.
 node -e "console.log(require('node:crypto').randomBytes(32).toString('base64url'))"
-cd apps/oidc-conformance
+cd packages/oidc/conformance
 pnpm exec wrangler secret put CLIENT_SECRET_1
 pnpm exec wrangler secret put CLIENT_SECRET_2
 pnpm exec wrangler secret put CLIENT_SECRET_POST
 pnpm exec wrangler secret put CLIENT_SECRET_CONTROL
 ```
 
-4. Deploy: `pnpm exec wrangler deploy` from `apps/oidc-conformance`. The first deploy applies the `v1` migration, which creates the SQLite-backed `ConformanceHost` class.
+4. Deploy: `pnpm exec wrangler deploy` from `packages/oidc/conformance`. The first deploy applies the `v1` migration, which creates the SQLite-backed `ConformanceHost` class.
 5. Check that it started: `curl https://<issuer>/self-check` answers `{"ok":true,"controlClient":"conformance-control","requiresPkce":true}`, and `https://<issuer>/.well-known/openid-configuration` lists `RS256` under `id_token_signing_alg_values_supported`. `pnpm exec wrangler tail` shows the provider's diagnostics (`OIDC token 400 code_verifier_unexpected conformance-1`): the endpoint, status, reason and client, never a value the request carried.
 
-To tear it down, run `pnpm exec wrangler delete` from `apps/oidc-conformance`. The secrets exist only on the Worker and in the suite's plan configurations, so deleting both leaves nothing to rotate.
+To tear it down, run `pnpm exec wrangler delete` from `packages/oidc/conformance`. The secrets exist only on the Worker and in the suite's plan configurations, so deleting both leaves nothing to rotate.
 
 ## Run the plans
 

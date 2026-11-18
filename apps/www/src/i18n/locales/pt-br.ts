@@ -75,7 +75,7 @@ export const ptBR: Dictionary = {
       },
       tooling: {
         title: "Ferramentas",
-        body: "Plugins para Vite e Tauri, e as skills de agente que a Coden usa todos os dias.",
+        body: "Plugins para Vite e as skills de agente que a Coden usa todos os dias.",
       },
       more: {
         title: "Mais",

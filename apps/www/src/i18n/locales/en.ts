@@ -78,7 +78,7 @@ export const en = {
       },
       tooling: {
         title: "Tooling",
-        body: "Vite and Tauri plugins, and the agent skills Coden works with every day.",
+        body: "Vite plugins and the agent skills Coden works with every day.",
       },
       more: {
         title: "More",

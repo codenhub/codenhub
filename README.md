@@ -10,7 +10,6 @@ Shared packages, apps, and project standards for and by [coden.agency](https://c
 
 - `apps/demo`: Deployed app aggregating every package's demo/ output into one surface.
 - `apps/docs`: Documentation site that publishes every package README, public docs, and assets.
-- `apps/oidc-conformance`: Cloudflare Worker that hosts @codenhub/oidc for the OpenID Foundation conformance suite.
 - `apps/www`: The CodenHub site: landing page, package list and package pages, and search across the docs.
 
 ### Libraries & Primitives
@@ -28,7 +27,6 @@ Shared packages, apps, and project standards for and by [coden.agency](https://c
 - `packages/styles`: Build a consistent, themeable interface by writing class names on plain HTML, with one stylesheet of tokens, a reset, layout and type helpers, and component classes, and no JavaScript.
 - `packages/theme`: Zero-dependency browser theme preference helper for TypeScript apps.
 - `packages/toaster`: Instance-based browser toast and native dialog manager with accessible semantic, loading, and custom notifications.
-- `packages/ui-kit`: Browser UI utilities for feedback, internationalization, themes, toasts, and global styles.
 - `packages/validation`: Zero-dependency validation of untrusted input for TypeScript: formats that return what a parser read, a bounded cost for input that fails, issues that never hold a value of the input, and tree-shakable validators.
 
 ### Tooling
@@ -39,8 +37,6 @@ Shared packages, apps, and project standards for and by [coden.agency](https://c
 
 ### Plugins
 
-- `packages/plugins/tauri/webview`: TypeScript plugin for spawning and controlling Tauri v2 WebViews.
-- `packages/plugins/tauri/window`: TypeScript plugin for controlling Tauri v2 window state, chrome, and placement.
 - `packages/plugins/vite/add-loader`: Vite plugin that injects a full-screen page-loader overlay into every HTML entry point.
 - `packages/plugins/vite/defer-css`: Vite plugin that defers loading of CSS stylesheets to prevent render blocking.
 - `packages/plugins/vite/icons`: Vite plugin that replaces inline SVG icons at build time.

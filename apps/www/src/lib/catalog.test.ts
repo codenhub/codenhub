@@ -30,7 +30,7 @@ describe("catalogPackages", () => {
 
   it("omits private and unlisted packages", () => {
     expect(catalogPackages.some((entry) => entry.name === "@codenhub/tools")).toBe(false);
-    expect(catalogPackages.some((entry) => entry.name === "@codenhub/ui-kit")).toBe(false);
+    expect(catalogPackages.some((entry) => entry.name === "@codenhub/components")).toBe(false);
   });
 
   it("counts only packages that publish documentation", () => {

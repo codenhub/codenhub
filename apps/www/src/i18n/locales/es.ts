@@ -75,7 +75,7 @@ export const es: Dictionary = {
       },
       tooling: {
         title: "Herramientas",
-        body: "Plugins para Vite y Tauri, y las skills de agente con las que Coden trabaja a diario.",
+        body: "Plugins para Vite y las skills de agente con las que Coden trabaja a diario.",
       },
       more: {
         title: "Más",
