@@ -35,6 +35,13 @@
        specificity, so restating it here is what keeps a nested box reading its
        own presentation instead of the container's reinterpretation of one. */
     --_fill-cap: 100%;
+    /* A component's own lift of the intent's cap, which bounds the fill as
+       `--intent-fill-max` does without saying the intent is not neutral. A
+       neutral toggle fills to its own cap, but it is still neutral: lifting
+       `--intent-fill-max` instead made it read as an intent, so on a solid
+       surface it kept the page's ink and its line read at 1.03 to 2.3:1 against
+       the surface. Restated here for the reason `--_fill-cap` is. */
+    --_cap-lift: 0%;
     /* What a box rests as when nothing above `@apply box` says otherwise: no
        fill, no line, the ordinary depth. Stated on the element, not left to
        the `var()` fallbacks: `--_d-*` inherit like any custom property, so a
@@ -52,7 +59,11 @@
        Inherited, so everything inside keeps its paint too. */
     print-color-adjust: exact;
 
-    --_capped: min(var(--ui-fill, var(--_d-fill)), var(--_fill-cap, 100%), var(--intent-fill-max, 100%));
+    --_capped: min(
+      var(--ui-fill, var(--_d-fill)),
+      var(--_fill-cap, 100%),
+      max(var(--intent-fill-max, 100%), var(--_cap-lift, 0%))
+    );
     /* Whether the intent's cap stopped the fill short, as 0% or 100%. A capped
        fill is a plate the presentation asked to be full, so it rests on the page
        background rather than on nothing: 20% of the page's ink over nothing
@@ -120,8 +131,10 @@
        fill is a plate hands its own ink down; one with no plate declares these
        invalid, which for a registered property means it inherits them, so the
        ink passes through an input group to the field inside it. `--_through`
-       is 100% for a neutral box (its cap is below 100%) that was handed an ink
-       and holds none: an intent keeps its own ink, as it keeps its own colour.
+       is 100% for a neutral box (its cap is below 100%) that was handed an ink,
+       holds none, and is filled less than half: an intent keeps its own ink, as
+       it keeps its own colour, and so does a checked toggle, whose full plate
+       is its own.
        A component that rests on a ground of its own restates all three after
        `@apply box`. See docs/internal/model.md#the-ink-of-the-plate-beneath. */
     --_held-ink: var(--_holds-ink, var(--_d-holds-ink)) var(--_fg-own);
@@ -130,7 +143,8 @@
     --_through: min(
       var(--_held-on),
       calc(100% - var(--_own-hold)),
-      clamp(0%, calc((100% - var(--intent-fill-max, 100%)) * 1000), 100%)
+      clamp(0%, calc((100% - var(--intent-fill-max, 100%)) * 1000), 100%),
+      clamp(0%, calc((50% - var(--_capped)) * 1000), 100%)
     );
     --_fg: color-mix(in oklab, var(--_held-ink) var(--_through), var(--_fg-own));
     /* P3: the line fades out as the fill fills in, so a filled box has a seamless

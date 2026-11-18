@@ -888,6 +888,65 @@ test.describe("forms", () => {
     }
   });
 
+  /* A toggle lifted the intent's cap to fill to its own, which also read as an
+     intent, so on a solid surface it kept the page's ink: an unchecked box drew
+     its line at 1.03 to 2.3:1 against the surface, focused it changed to the
+     page's ink again, and a switch's knob was the page's grey. */
+  test("draws an unchecked toggle in a solid surface's ink, at rest and focused", async ({ page }) => {
+    await page.setContent('<!doctype html><html data-motion="none"><body></body></html>');
+    await page.addStyleTag({
+      url: "http://localhost:5184/shared/entry-vanilla.css",
+    });
+
+    /* oxlint-disable no-await-in-loop -- one fixture on the page at a time. */
+    for (const scheme of ["light", "dark"] as const) {
+      await page.emulateMedia({ colorScheme: scheme });
+
+      for (const intent of ["primary", "secondary", "success", "destructive", "info", "warning"]) {
+        for (const component of ["checkbox", "radio", "switch"]) {
+          const label = `${scheme} ${intent} ${component}`;
+          await page.evaluate(
+            ([name, type]) => {
+              document.body.innerHTML = `<div class="card solid ${name}" id="plate"><input type="${type === "radio" ? "radio" : "checkbox"}" class="${type}" /></div>`;
+            },
+            [intent, component],
+          );
+          const read = () =>
+            page.evaluate(async () => {
+              await new Promise(requestAnimationFrame);
+              await new Promise(requestAnimationFrame);
+              const plate = getComputedStyle(document.getElementById("plate")!);
+              const toggle = getComputedStyle(document.querySelector("#plate > input")!);
+
+              return {
+                ground: plate.backgroundColor,
+                fill: toggle.backgroundColor,
+                line: toggle.borderTopColor,
+                knob: getComputedStyle(document.querySelector("#plate > input")!, "::after").backgroundColor,
+              };
+            });
+          const ratio = (state: Awaited<ReturnType<typeof read>>, color: string) => {
+            const fill = flattenColor(state.fill, state.ground);
+            const ink = flattenColor(color, fill);
+
+            return Math.min(getContrastRatio(ink, state.ground), getContrastRatio(ink, fill));
+          };
+
+          const rest = await read();
+          expect(ratio(rest, rest.line), `${label} line at rest`).toBeGreaterThanOrEqual(3);
+          if (component === "switch") {
+            expect(ratio(rest, rest.knob), `${label} knob`).toBeGreaterThanOrEqual(3);
+          }
+
+          await page.keyboard.press("Tab");
+          const focused = await read();
+          expect(ratio(focused, focused.line), `${label} line focused`).toBeGreaterThanOrEqual(3);
+        }
+      }
+    }
+    /* oxlint-enable no-await-in-loop */
+  });
+
   /* The same affordance against the other half of the axis. `text-control`
      floors the edge, so a container's `.edgeless` reaches the toggle and the
      boundary survives it -- which is the whole reason the three toggles are on

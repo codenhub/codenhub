@@ -206,7 +206,7 @@ const compiledExportContracts: Record<string, CompiledExportContract> = {
   },
 };
 const aggregateExportTargets = ["dist/components.css", "dist/index.css"];
-const representativePublicRules = [".box{--_fill-cap:100%;--_d-fill:0%;"];
+const representativePublicRules = [".box{--_fill-cap:100%;--_cap-lift:0%;--_d-fill:0%;"];
 
 test("every declared package export target exists after build", async () => {
   await Promise.all(

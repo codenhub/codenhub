@@ -35,9 +35,9 @@ const twEntry = (file: string) => pathToFileURL(path.join(packageRoot, "tw", fil
 
 // Minified bytes, measured with Tailwind 4.3.4 on the dates `docs/internal/tests.md` records.
 const COMPILED_CEILINGS: Record<string, number> = {
-  "dist/index.css": 217_500,
-  "dist/components.css": 174_500,
-  "dist/native.css": 324_000,
+  "dist/index.css": 225_000,
+  "dist/components.css": 181_000,
+  "dist/native.css": 335_250,
   "dist/theme.css": 13_200,
   "dist/palette.css": 26_800,
   "dist/aesthetics/index.css": 49_750,
@@ -104,8 +104,9 @@ describe("a /tw consumer build", { timeout: 60_000 }, () => {
       name: "a page with one primary button, through /button/tw",
       imports: [tailwindCss, twEntry("components/button.css")],
       candidates: ["btn", "primary"],
-      /* 21,800 until 0.11.0 capped a held neutral box's fill, 18 bytes more. */
-      ceiling: 21_850,
+      /* 21,800 until 0.11.0 capped a held neutral box's fill, 18 bytes more;
+         22,600 since its held boxes and toggles drew a surface's ink. */
+      ceiling: 22_600,
     },
     {
       name: "a page that names no package class, through /button/tw",

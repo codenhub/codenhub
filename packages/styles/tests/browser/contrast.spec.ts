@@ -169,6 +169,48 @@ for (const theme of THEMES) {
   });
 }
 
+/* On a solid surface a field's line was the page's control border, which the
+   preference raised to 1.0 to 1.6:1 against the surface on every intent but
+   primary. The app's attribute stands in for the query, as everywhere. */
+for (const theme of THEMES) {
+  test(`rests a text control's line at 3:1 on a solid surface under increased contrast, ${theme}`, async ({ page }) => {
+    await load(
+      page,
+      theme,
+      INTENTS.filter((intent) => intent !== "neutral")
+        .map(
+          (intent) =>
+            `<div class="card solid ${intent}" data-testid="card-${intent}">
+               <input data-testid="ipt-${intent}" class="ipt" />
+               <div data-testid="group-${intent}" class="input-group"><input class="ipt" /></div>
+             </div>`,
+        )
+        .join(""),
+    );
+    await page.evaluate(() => {
+      document.documentElement.setAttribute("data-contrast", "more");
+
+      return Promise.allSettled(document.getAnimations().map((animation) => animation.finished));
+    });
+
+    for (const intent of INTENTS.filter((name) => name !== "neutral")) {
+      // oxlint-disable-next-line no-await-in-loop -- one page, read in turn.
+      const ground = flattenColor(await style(page, `card-${intent}`, "background-color"), await pageColor(page));
+
+      for (const testId of [`ipt-${intent}`, `group-${intent}`]) {
+        // oxlint-disable-next-line no-await-in-loop -- one page, read in turn.
+        const fill = flattenColor(await style(page, testId, "background-color"), ground);
+        // oxlint-disable-next-line no-await-in-loop -- one page, read in turn.
+        const line = flattenColor(await style(page, testId, "border-top-color"), fill);
+
+        expect(Math.min(getContrastRatio(line, ground), getContrastRatio(line, fill)), testId).toBeGreaterThanOrEqual(
+          MINIMUM,
+        );
+      }
+    }
+  });
+}
+
 test("leaves a text control's resting line quiet without the preference", async ({ page }) => {
   await load(page, "light", `<input data-testid="ipt" class="ipt" />`);
 
