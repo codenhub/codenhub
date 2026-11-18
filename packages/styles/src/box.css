@@ -68,7 +68,12 @@
       calc((min(var(--ui-fill, var(--_d-fill)), var(--_fill-cap, 100%)) - var(--_capped)) * 1000),
       100%
     );
-    --_fill: calc(var(--_capped) * var(--ui-bg-alpha, 1));
+    /* A neutral box held by a plate tints that plate with the plate's own ink,
+       which lowers the contrast of the ink printed on it: a soft button or a
+       solid field in a dark `.card.solid.success` read at 3.6 to 4.2:1. Held,
+       it fills at most 6%, enough to mark its area, and its text stays at
+       4.5:1 wherever the plate's own does (`box.spec.ts`). */
+    --_fill: calc(min(var(--_capped), calc(100% - var(--_through) * 0.94)) * var(--ui-bg-alpha, 1));
     --_hover-fill: calc(min(100%, var(--_capped) + var(--hover-step)) * var(--ui-bg-alpha, 1));
     /* How much of the foreground is the contrast ink: what the presentation asks
        for, gated by how much the plate can carry. The second term ramps in past a
