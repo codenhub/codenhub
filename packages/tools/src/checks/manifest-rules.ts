@@ -111,8 +111,10 @@ async function checkMetadata(workspacePackage: WorkspacePackage): Promise<Findin
   }
   for (const field of RECOMMENDED_FIELDS) {
     const value = manifest[field];
-    // An empty list helps npm search no more than a missing one.
-    if (value === undefined || (Array.isArray(value) && value.length === 0)) {
+    // A list with no usable keyword helps npm search no more than a missing one.
+    const isUnusableList =
+      Array.isArray(value) && !value.some((entry) => typeof entry === "string" && entry.trim() !== "");
+    if (value === undefined || isUnusableList) {
       findings.push({
         code: `metadata/${field}`,
         location: MANIFEST_LOCATION,

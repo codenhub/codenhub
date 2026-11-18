@@ -112,12 +112,8 @@ describe("manifest rules", () => {
     ]);
   });
 
-  it("shouldTreatEmptyKeywordsAsMissing", async () => {
-    const manifest = {
-      ...COMPLIANT_MANIFEST,
-      keywords: [],
-      scripts: COMPLIANT_SCRIPTS,
-    };
+  it.each([[[]], [[null, " "]]])("shouldTreatKeywordsWithNoUsableEntryAsMissing %j", async (keywords) => {
+    const manifest = { ...COMPLIANT_MANIFEST, keywords, scripts: COMPLIANT_SCRIPTS };
     const findings = await runRules(createPackage({ directory: await createPackageDirectory(), manifest }));
 
     expect(findings).toEqual([
