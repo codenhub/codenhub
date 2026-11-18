@@ -14,7 +14,6 @@ catalog:
   "@codenhub/error": ^0.3.0
   "@codenhub/jwt": ^0.0.1
   "@codenhub/styles": ^0.6.0
-  "@codenhub/validation": ^0.3.0
   "@tailwindcss/cli": ^4.3.4
   "@tailwindcss/node": ^4.3.4
   "@tailwindcss/vite": ^4.3.4
@@ -78,10 +77,6 @@ allowBuilds:
 # a change of default cannot start linking them silently.
 linkWorkspacePackages: false
 
-minimumReleaseAgeExclude:
-  - "@codenhub/validation@0.3.0"
-  - "@codenhub/jwt@0.0.1"
-  - "@codenhub/error@0.3.0"
 patchedDependencies:
   typedoc@0.28.20: patches/typedoc@0.28.20.patch
 

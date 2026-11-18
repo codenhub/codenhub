@@ -32,7 +32,6 @@
   "devDependencies": {
     "@codenhub/tools": "workspace:*",
     "@vitest/coverage-v8": "catalog:",
-    "esbuild": "catalog:",
     "oxfmt": "catalog:",
     "oxlint": "catalog:",
     "prettier": "catalog:",
