@@ -2,7 +2,7 @@
 title: Guardar y sincronizar
 description: Cómo se guarda la elección, qué pasa cuando falla el almacenamiento, cómo se mantienen de acuerdo las pestañas y cómo reaccionar a los cambios de tema.
 order: 4
-source: eb1875a05ca133e656b658636da57ad7a47cc408
+source: 245715937679f2121508ba1cefebffc20f345a48
 ---
 
 # Guardar y sincronizar
@@ -13,9 +13,11 @@ El cambio de tema ya recuerda la elección del usuario y sigue al sistema operat
 
 `set()` y `toggle()` guardan el nombre del tema elegido en `localStorage`, con la clave `"app-theme-preference"` salvo que definas `storageKey`. En la siguiente visita, `init()` lo encuentra y lo aplica. `clearPreference()` lo borra y vuelve a la configuración del sistema operativo.
 
+Una elección hecha con `set(name, { followSystem: true })` se guarda en cambio como un pequeño objeto JSON, como `{"name":"ocean-light","followSystem":true}`. Una versión de este paquete anterior a `followSystem` lee ese valor como un nombre de tema que no conoce, así que lo ignora, como se describe a continuación, en lugar de malinterpretarlo.
+
 Solo cuenta un nombre que coincide con un tema configurado. Si el valor guardado nombra un tema que quitaste después, el paquete lo ignora, como si no hubiera nada guardado. Renombrar `sepia` a `parchment` es seguro; los usuarios que lo eligieron vuelven al tema de su sistema.
 
-Mientras hay una elección guardada, los cambios del modo claro u oscuro del sistema operativo se ignoran: el usuario ya dijo lo que quiere. Vuelven a aplicarse una vez que se ejecuta `clearPreference()`.
+Mientras hay una elección guardada, los cambios del modo claro u oscuro del sistema operativo se ignoran: el usuario ya dijo lo que quiere. Vuelven a aplicarse una vez que se ejecuta `clearPreference()`. Una elección que [sigue al sistema dentro de un par](themes.md#sigue-al-sistema-dentro-de-un-par) es la excepción: alterna entre sus dos temas a medida que cambia el sistema operativo.
 
 ## Cuando falla el almacenamiento
 

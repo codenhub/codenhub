@@ -113,7 +113,7 @@ const theme = createTheme({
 theme.set("ocean-light", { followSystem: true });
 ```
 
-The active theme is now `ocean-light` or `ocean-dark`, whichever has the operating system's color scheme, and it switches when the operating system does, reporting `source: "system"`. Either variant names the same choice. Without `matchMedia`, the theme you passed applies. The choice is saved, so it survives a reload and reaches other tabs, and [the pre-paint script](preventing-the-flash.md) applies the right variant before the first paint.
+The active theme is now `ocean-light` or `ocean-dark`, whichever has the operating system's color scheme, and it switches when the operating system does, reporting `source: "system"`. Either variant names the same choice, but `theme.preference` keeps the one you passed, whichever is active, so a menu that marks the selected family should match both of its variants. Without `matchMedia`, the theme you passed applies. The choice is saved, so it survives a reload and reaches other tabs, and [the pre-paint script](preventing-the-flash.md) applies the right variant before the first paint.
 
 `followSystem` needs a theme whose `pairedTheme` has the opposite `colorScheme`; for any other theme, `set()` throws and changes nothing. A plain `set()` or `toggle()` saves a fixed choice again, and `clearPreference()` goes back to `systemTheme`. If you later remove the pair from a saved choice's theme, that theme stays applied as a fixed choice.
 

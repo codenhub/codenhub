@@ -2,7 +2,7 @@
 title: Salvar e sincronizar
 description: Como a escolha é salva, o que acontece quando o armazenamento falha, como as abas ficam de acordo e como reagir a mudanças de tema.
 order: 4
-source: eb1875a05ca133e656b658636da57ad7a47cc408
+source: 245715937679f2121508ba1cefebffc20f345a48
 ---
 
 # Salvar e sincronizar
@@ -13,9 +13,11 @@ A troca de tema já lembra a escolha do usuário e segue o sistema operacional. 
 
 `set()` e `toggle()` salvam o nome do tema escolhido no `localStorage`, sob a chave `"app-theme-preference"`, a menos que você defina `storageKey`. Na próxima visita, `init()` o encontra e o aplica. `clearPreference()` o apaga e volta à configuração do sistema operacional.
 
+Uma escolha feita com `set(name, { followSystem: true })` é salva, em vez disso, como um pequeno objeto JSON, como `{"name":"ocean-light","followSystem":true}`. Uma versão deste pacote anterior a `followSystem` lê esse valor como um nome de tema que não conhece, então o ignora, como descrito a seguir, em vez de interpretá-lo errado.
+
 Só conta um nome que corresponda a um tema configurado. Se o valor salvo nomeia um tema que você removeu nesse meio-tempo, o pacote o ignora, como se nada estivesse salvo. Renomear `sepia` para `parchment` é seguro; os usuários que o tinham escolhido voltam para o tema do sistema.
 
-Enquanto houver uma escolha salva, as mudanças no modo claro ou escuro do sistema operacional são ignoradas: o usuário já disse o que quer. Elas voltam a valer depois que `clearPreference()` roda.
+Enquanto houver uma escolha salva, as mudanças no modo claro ou escuro do sistema operacional são ignoradas: o usuário já disse o que quer. Elas voltam a valer depois que `clearPreference()` roda. Uma escolha que [segue o sistema dentro de um par](themes.md#siga-o-sistema-dentro-de-um-par) é a exceção: ela alterna entre os seus dois temas conforme o sistema operacional muda.
 
 ## Quando o armazenamento falha
 

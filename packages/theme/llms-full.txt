@@ -347,7 +347,7 @@ const theme = createTheme({
 theme.set("ocean-light", { followSystem: true });
 ```
 
-The active theme is now `ocean-light` or `ocean-dark`, whichever has the operating system's color scheme, and it switches when the operating system does, reporting `source: "system"`. Either variant names the same choice. Without `matchMedia`, the theme you passed applies. The choice is saved, so it survives a reload and reaches other tabs, and [the pre-paint script](docs/preventing-the-flash.md) applies the right variant before the first paint.
+The active theme is now `ocean-light` or `ocean-dark`, whichever has the operating system's color scheme, and it switches when the operating system does, reporting `source: "system"`. Either variant names the same choice, but `theme.preference` keeps the one you passed, whichever is active, so a menu that marks the selected family should match both of its variants. Without `matchMedia`, the theme you passed applies. The choice is saved, so it survives a reload and reaches other tabs, and [the pre-paint script](docs/preventing-the-flash.md) applies the right variant before the first paint.
 
 `followSystem` needs a theme whose `pairedTheme` has the opposite `colorScheme`; for any other theme, `set()` throws and changes nothing. A plain `set()` or `toggle()` saves a fixed choice again, and `clearPreference()` goes back to `systemTheme`. If you later remove the pair from a saved choice's theme, that theme stays applied as a fixed choice.
 
@@ -896,6 +896,19 @@ Your TypeScript version is older than 5.4, which added `NoInfer`. Update TypeScr
 React found the `data-theme`, class, or `style` the pre-paint script added. That difference is expected; add `suppressHydrationWarning` to your `<html>` element, as shown in [Preventing the flash](docs/preventing-the-flash.md#in-a-server-rendered-app).
 
 Still stuck? The [API reference](docs/reference/index.md) lists every rule each method enforces, and every error it throws.
+
+<!-- Source: docs/changelog/0.3.0.md -->
+
+# 0.3.0
+
+## Added
+
+- `set(name, { followSystem: true })` saves a choice that applies `name` or its `pairedTheme`, whichever has the operating system's color scheme, and switches between them when the operating system does. Apps with theme families no longer need a second store and a rebuilt manager to follow the system. The pre-paint script and other tabs apply the same variant. ([#583](https://github.com/codenhub/codenhub/issues/583))
+- `theme.followsSystem` reports whether the saved choice follows the system, and `ThemeSetOptions` types the new `set()` options.
+
+## Changed
+
+- A choice that follows the system is saved in `localStorage` as `{"name":"…","followSystem":true}` instead of a bare theme name. Fixed choices are still saved as bare names. A version before 0.3.0 ignores the new form and falls back to the system theme, so rolling an app back after users chose a following theme loses those users' choice.
 
 <!-- Source: docs/changelog/0.2.3.md -->
 
