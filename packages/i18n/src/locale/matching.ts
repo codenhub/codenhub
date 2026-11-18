@@ -1,5 +1,5 @@
 import { resolveConfiguredLocale } from "./configured-locale";
-import { maximizeTag } from "./likely-subtags";
+import { languageAndScript, maximizeTag } from "./likely-subtags";
 
 // Languages compared as one. `no` is the Norwegian macrolanguage, and browsers and content use it for Bokmål, `nb`,
 // as CLDR does; `Intl.Locale` keeps them apart. Nynorsk, `nn`, is a separate written standard and stays apart.
@@ -21,8 +21,6 @@ const maximizeLocale = (value: string): string | undefined => {
   const maximized = maximizeTag(value);
   return maximized === undefined ? undefined : aliasLanguage(maximized);
 };
-
-const getLanguageAndScript = (maximizedLocale: string): string => maximizedLocale.split("-").slice(0, 2).join("-");
 
 /**
  * Matches ordered locale preferences, such as `navigator.languages` or a parsed `Accept-Language`, to a configured
@@ -78,7 +76,7 @@ export function matchConfiguredLocale<TLocale extends string>(
         .filter(
           ({ locale, maximized }) =>
             toTag(normalizedPreference).startsWith(`${toTag(locale)}-`) &&
-            (maximized === undefined || getLanguageAndScript(maximized) === getLanguageAndScript(maximizedPreference)),
+            (maximized === undefined || languageAndScript(maximized) === languageAndScript(maximizedPreference)),
         )
         .map(({ locale }) => locale)
         .reduce<TLocale | undefined>(
@@ -95,7 +93,7 @@ export function matchConfiguredLocale<TLocale extends string>(
       maximizedLocales.find(({ maximized }) => maximized === maximizedPreference) ??
       maximizedLocales.find(
         ({ maximized }) =>
-          maximized !== undefined && getLanguageAndScript(maximized) === getLanguageAndScript(maximizedPreference),
+          maximized !== undefined && languageAndScript(maximized) === languageAndScript(maximizedPreference),
       );
 
     if (likelyLocale !== undefined) {
@@ -104,7 +102,7 @@ export function matchConfiguredLocale<TLocale extends string>(
 
     // The same language in another likely script, such as `zh-Hant` for `zh`, reads worse than the next preference.
     // A locale `Intl.Locale` rejects has no likely script, so only the script it names, if any, is compared.
-    const [language, script] = getLanguageAndScript(maximizedPreference).split("-");
+    const [language, script] = languageAndScript(maximizedPreference).split("-");
     const subtagLocale = maximizedLocales.find(({ locale, maximized }) => {
       if (maximized !== undefined) {
         return false;

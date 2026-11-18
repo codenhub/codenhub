@@ -58,4 +58,20 @@ describe("matchConfiguredLocale", () => {
   it.each(["und", "UND", "und-US", "und-Latn"])("skips %s, which names no language, for the next preference", (tag) => {
     expect(matchConfiguredLocale(["en", "fr"], [tag, "fr"])).toBe("fr");
   });
+
+  it.each([
+    [["en", "es-419", "es-ES"], ["es-u-hc-h23"], "es-ES"],
+    [["en-GB", "en-US"], ["en-u-hc-h23"], "en-US"],
+    [["zh-HK", "zh-TW"], ["zh-Hant-u-ca-roc"], "zh-TW"],
+    [["en", "es-419", "es-ES"], ["es-x-private"], "es-ES"],
+  ] as const)("matches %j to %j by likely region, ignoring extensions", (locales, preferences, expected) => {
+    expect(matchConfiguredLocale(locales, preferences)).toBe(expected);
+  });
+
+  it.each([
+    [["nah"], ["nah-MX"], "nah"],
+    [["en", "nah-MX"], ["nah-US"], "nah-MX"],
+  ] as const)("matches %j to %j in a language with no likely script", (locales, preferences, expected) => {
+    expect(matchConfiguredLocale(locales, preferences)).toBe(expected);
+  });
 });

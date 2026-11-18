@@ -8,9 +8,9 @@ const MAX_CACHED_TAG_LENGTH = 64;
 const maximizedTags = new Map<string, string | null>();
 
 /**
- * Adds likely subtags to a tag, lowercased, such as `zh-hant-tw` for `zh-TW`, or returns `undefined` for a tag
- * `Intl.Locale` rejects, such as private-use `x-test`. Results are shared by every manager, least recently used first
- * out.
+ * Adds likely subtags to a tag and drops its extensions, lowercased, such as `zh-hant-tw` for `zh-TW` or `es-latn-es` for
+ * `es-u-hc-h23`, or returns `undefined` for a tag `Intl.Locale` rejects, such as private-use `x-test`. Results are shared
+ * by every manager, least recently used first out.
  *
  * @internal
  */
@@ -25,7 +25,7 @@ export const maximizeTag = (tag: string): string | undefined => {
 
   let maximized: string | null;
   try {
-    maximized = new Intl.Locale(tag).maximize().toString().toLowerCase();
+    maximized = new Intl.Locale(tag).maximize().baseName.toLowerCase();
   } catch {
     maximized = null;
   }
@@ -36,6 +36,17 @@ export const maximizeTag = (tag: string): string | undefined => {
     maximizedTags.set(tag, maximized);
   }
   return maximized ?? undefined;
+};
+
+/**
+ * The language and script of a tag {@link maximizeTag} returned, such as `zh-hant` for `zh-hant-tw`, or the language
+ * alone when likely subtags name no script, such as `nah` for `nah-mx`.
+ *
+ * @internal
+ */
+export const languageAndScript = (maximized: string): string => {
+  const [language = "", second] = maximized.split("-");
+  return second !== undefined && /^[a-z]{4}$/.test(second) ? `${language}-${second}` : language;
 };
 
 /**

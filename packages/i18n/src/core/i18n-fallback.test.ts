@@ -43,6 +43,15 @@ describe("regional fallback", () => {
     expect(i18n.t("bye")).toBe("Bye");
   });
 
+  it("should fall back to a parent in a language with no likely script", async () => {
+    const i18n = create(["en", "nah", "nah-MX"], (locale) =>
+      locale === "nah" ? { hello: "Niltze" } : locale === "nah-MX" ? {} : dictionaries[locale],
+    );
+    await i18n.init({ locale: "nah-MX" });
+
+    expect(i18n.t("hello")).toBe("Niltze");
+  });
+
   it("should load the whole chain together and not load an unrelated locale", async () => {
     const loadLocale = vi.fn((locale: string) => dictionaries[locale]!);
     const i18n = create(["en", "pt", "pt-BR", "zh"], loadLocale);
