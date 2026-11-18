@@ -2,7 +2,7 @@
 title: Definir temas
 description: Adicione os seus próprios temas, escolha o que a configuração do sistema e o toggle selecionam, leia o estado atual e veja cada opção com o seu padrão.
 order: 2
-source: 33111d74e440174063a0af3b662a9a0fcf4efc8a
+source: a1e19884b57c904f7e3f6b86300e1849e1765b66
 ---
 
 # Definir temas
@@ -97,16 +97,38 @@ const theme = createTheme({
 
 Agora `sepia` alterna para `dim`, e `dim` alterna de volta para `light`. Um par é de mão única: dê a cada tema o próprio `pairedTheme` quando o toggle tiver que voltar para onde estava.
 
+## Siga o sistema dentro de um par
+
+Alguns apps oferecem famílias de temas, cada uma com uma variante clara e uma escura, e deixam o usuário escolher a família enquanto o sistema operacional continua escolhendo entre claro e escuro. Forme um par com as variantes e passe `followSystem` para `set()`:
+
+```ts
+const theme = createTheme({
+  themes: {
+    light: { colorScheme: "light" },
+    dark: { colorScheme: "dark" },
+    "ocean-light": { colorScheme: "light", pairedTheme: "ocean-dark" },
+    "ocean-dark": { colorScheme: "dark", pairedTheme: "ocean-light" },
+  },
+}).init();
+
+theme.set("ocean-light", { followSystem: true });
+```
+
+Agora o tema ativo é `ocean-light` ou `ocean-dark`, o que tiver o color scheme do sistema operacional, e ele troca quando o sistema operacional troca, informando `source: "system"`. Qualquer uma das duas variantes nomeia a mesma escolha, mas `theme.preference` guarda a que você passou, seja qual for a ativa, então um menu que marca a família selecionada deve reconhecer as duas variantes dela. Sem `matchMedia`, vale o tema que você passou. A escolha é salva, então sobrevive a um recarregamento e chega às outras abas, e [o script de pré-pintura](preventing-the-flash.md) aplica a variante certa antes da primeira pintura.
+
+`followSystem` precisa de um tema cujo `pairedTheme` tenha o `colorScheme` oposto; com qualquer outro tema, `set()` lança um erro e não muda nada. Um `set()` comum ou um `toggle()` voltam a salvar uma escolha fixa, e `clearPreference()` volta para `systemTheme`. Se mais tarde você tirar o par do tema de uma escolha salva, esse tema continua aplicado como escolha fixa.
+
 ## Leia o estado atual
 
-O menu de temas precisa mostrar qual opção está selecionada. O gerenciador responde a quatro perguntas:
+O menu de temas precisa mostrar qual opção está selecionada. O gerenciador responde a cinco perguntas:
 
-| Membro             | Responde                                                                                                                                      |
-| ------------------ | --------------------------------------------------------------------------------------------------------------------------------------------- |
-| `theme.name`       | Qual tema está ativo, como `"dim"`.                                                                                                           |
-| `theme.get()`      | Tudo sobre o tema ativo: `name`, `colorScheme`, `tokens` e `pairedTheme`.                                                                     |
-| `theme.preference` | Qual tema o usuário salvou, ou `null` quando nada está salvo, o armazenamento não pode ser lido ou o nome salvo não é mais um dos seus temas. |
-| `theme.system`     | Para qual tema a configuração do sistema operacional aponta agora, esteja ele à mostra ou não.                                                |
+| Membro                | Responde                                                                                                                                      |
+| --------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| `theme.name`          | Qual tema está ativo, como `"dim"`.                                                                                                           |
+| `theme.get()`         | Tudo sobre o tema ativo: `name`, `colorScheme`, `tokens` e `pairedTheme`.                                                                     |
+| `theme.preference`    | Qual tema o usuário salvou, ou `null` quando nada está salvo, o armazenamento não pode ser lido ou o nome salvo não é mais um dos seus temas. |
+| `theme.followsSystem` | Se a escolha salva segue o sistema operacional dentro do par, como `set(name, { followSystem: true })` a salva.                               |
+| `theme.system`        | Para qual tema a configuração do sistema operacional aponta agora, esteja ele à mostra ou não.                                                |
 
 `preference` é o que torna possível a opção "Automático": o menu mostra "Automático" como selecionado enquanto ele for `null`. Rode isso também a cada mudança, para o menu acompanhar quando o toggle ou outra aba trocam o tema pelas costas dele:
 
