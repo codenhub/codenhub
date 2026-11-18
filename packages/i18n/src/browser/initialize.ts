@@ -7,6 +7,7 @@ const DEFAULT_STORAGE_KEY = "i18n";
 const LOCALE_CHANGE_EVENT = "locale-change";
 const READY_EVENT = "ready";
 const LANGUAGE_CHANGE_EVENT = "languagechange";
+const CHANGE_EVENT = "change";
 const BOUND_MANAGERS = new WeakSet<object>();
 const ELEMENT_NODE = 1;
 /** Element, document, and document fragment, which includes a shadow root. */
@@ -74,7 +75,17 @@ export interface BrowserI18nBinding {
    */
   followSystem(): Promise<void>;
   /**
-   * Stops locale-change handling and mutation observation.
+   * Calls `listener` after each change to what a language picker shows: the active locale or `followsSystem`. That
+   * includes a `setLocale()` to the locale already showing, which ends following the system without an `i18n.subscribe()`
+   * call, and a `followSystem()` that keeps the locale. Changes made together are reported once, after the current
+   * task's synchronous work. A listener that throws is reported like an event listener's error, and the others still
+   * run.
+   *
+   * @returns A function that stops the calls; calling it again does nothing. `disconnect()` stops every listener.
+   */
+  subscribe(listener: () => void): () => void;
+  /**
+   * Stops locale-change handling, mutation observation, and `subscribe()` calls.
    *
    * Existing DOM text, document attributes, persisted state, and core i18n state are unchanged. A switch to a detected
    * locale still loading is dropped; a `setLocale()` call still loading is not.
@@ -325,7 +336,10 @@ export async function initializeBrowserI18n<TLocale extends string>(
       });
     });
   };
-  const applyBrowserEffects = (): void => applyEffects(false);
+  const applyBrowserEffects = (): void => {
+    queueNotification();
+    applyEffects(false);
+  };
   const detectLocale = (): TLocale => i18n.matchLocale(getNavigatorPreferences()) ?? i18n.defaultLocale;
   /** The binding's own latest request, which switches to a detected locale and is neither saved nor a choice. */
   let detectedRequestId: number | undefined;
@@ -349,6 +363,7 @@ export async function initializeBrowserI18n<TLocale extends string>(
       return;
     }
     isFollowingSystem = false;
+    queueNotification();
     if (shouldPersistLocale) {
       persistLocale(i18n, storageKey);
     }
@@ -374,7 +389,43 @@ export async function initializeBrowserI18n<TLocale extends string>(
       forgetPersistedLocale(i18n, storageKey);
     }
     isFollowingSystem = true;
+    queueNotification();
     await requestDetectedLocale();
+  };
+  // An event target gives listeners the error handling `i18n.subscribe()` has, which dispatches the manager's events.
+  const changes = new EventTarget();
+  let notifiedState: string | undefined;
+  let isNotificationQueued = false;
+  const pickerState = (): string => `${i18n.locale} ${isFollowingSystem}`;
+  // Queued, so a locale change and the selection it ends are reported once, and a listener never runs inside core.
+  const queueNotification = (): void => {
+    if (isNotificationQueued || isCleaned) {
+      return;
+    }
+    isNotificationQueued = true;
+    queueMicrotask(() => {
+      isNotificationQueued = false;
+      const state = pickerState();
+      if (isCleaned || state === notifiedState) {
+        return;
+      }
+      notifiedState = state;
+      changes.dispatchEvent(new Event(CHANGE_EVENT));
+    });
+  };
+  const subscribe = (listener: () => void): (() => void) => {
+    // A wrapper per call, so subscribing one function twice gives two subscriptions, as `i18n.subscribe()` does.
+    const notify = (): void => listener();
+    let isSubscribed = !isCleaned;
+    if (isSubscribed) {
+      changes.addEventListener(CHANGE_EVENT, notify);
+    }
+    return () => {
+      if (isSubscribed) {
+        isSubscribed = false;
+        changes.removeEventListener(CHANGE_EVENT, notify);
+      }
+    };
   };
   let observer: MutationObserver | undefined;
   let isApplyListenerSet = false;
@@ -488,6 +539,7 @@ export async function initializeBrowserI18n<TLocale extends string>(
     isApplyListenerSet = true;
     // A saved locale that failed to load and fell back is still the visitor's choice, so it does not follow the system.
     isFollowingSystem = locale === undefined && persistedLocale === undefined;
+    notifiedState = pickerState();
     globalThis.addEventListener(LANGUAGE_CHANGE_EVENT, handleLanguageChange);
     isLanguageChangeListenerAdded = true;
     // A language change during the start's loading came before the listener.
@@ -500,6 +552,7 @@ export async function initializeBrowserI18n<TLocale extends string>(
         return isFollowingSystem;
       },
       followSystem,
+      subscribe,
       disconnect: cleanup,
     };
   } catch (error) {

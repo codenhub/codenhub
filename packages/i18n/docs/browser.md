@@ -109,6 +109,37 @@ picker.addEventListener("change", async () => {
 
 While `followsSystem` is `true`, the binding also listens for the browser's `languagechange` event, so a visitor who changes their browser's language mid-visit gets the new one without a reload. A language the visitor just picked and that is still loading is kept, not overtaken.
 
+In a framework, render the picker from `binding.subscribe()` rather than `i18n.subscribe()`. Picking the language already showing, or "System" while the detected language is the one showing, changes the selection without changing the language, so the manager has nothing to report. The binding reports both, and every language change. In React:
+
+```tsx
+import { useSyncExternalStore } from "react";
+import type { BrowserI18nBinding } from "@codenhub/i18n/browser";
+import { i18n } from "./i18n";
+
+export function LanguagePicker({ binding }: { binding: BrowserI18nBinding }) {
+  const selected = useSyncExternalStore(binding.subscribe, () => (binding.followsSystem ? "system" : i18n.locale));
+
+  return (
+    <select
+      value={selected}
+      onChange={(event) => {
+        const value = event.target.value;
+        const switching = value === "system" ? binding.followSystem() : i18n.setLocale(value as (typeof i18n.locales)[number]);
+        // The selection re-renders from the binding either way; a failed load only needs reporting.
+        switching.catch((error: unknown) => console.error(error));
+      }}
+    >
+      <option value="system">System</option>
+      {i18n.locales.map((locale) => (
+        <option key={locale} value={locale}>
+          {locale}
+        </option>
+      ))}
+    </select>
+  );
+}
+```
+
 When the detected language fails to load, `followSystem()` rejects with the loader's `I18nError`, and the page keeps its current language; the saved choice is already forgotten. `followsSystem` is `true` all the same, so the picker shows "System" over the old language: that is what the visitor chose, and the next visit or `languagechange` tries the detected language again. A failure after a `languagechange` warns and keeps the current language. Neither falls back to the default the way a start does, because the page already has a language to show.
 
 ## Re-render a framework
@@ -248,7 +279,7 @@ A worker has no `localStorage` either, so saving warns and is skipped. Add `pers
 
   The manager keeps the later call's result, under [the latest-call rule](index.md#the-latest-call-wins), and the binding is not connected. On a manager that was not initialized yet, `setLocale()` just fails with its own error and the binding carries on. Calling `init()` or `setLocale()` after the binding's promise has resolved is fine.
 
-- **`disconnect()` stops reacting but undoes nothing.** It stops saving, syncing, translating, and following the browser's language, but leaves the current text, attributes, and saved choice as they are. A switch to a detected language still loading is dropped, and `followSystem()` rejects after it. You can then start a new binding.
+- **`disconnect()` stops reacting but undoes nothing.** It stops saving, syncing, translating, following the browser's language, and calling `binding.subscribe()` listeners, but leaves the current text, attributes, and saved choice as they are. A switch to a detected language still loading is dropped, and `followSystem()` rejects after it. You can then start a new binding.
 
 The [browser reference](reference/browser.md) documents every option and failure, and [Troubleshooting](troubleshooting.md#the-browser-binding-warns-or-rejects) lists each warning the binding logs.
 
