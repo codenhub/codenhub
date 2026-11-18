@@ -56,7 +56,8 @@ export interface BrowserI18nBinding {
   /**
    * Whether the locale follows the browser's languages rather than a choice: `true` after a start with no explicit or
    * usable saved locale and after `followSystem()`, and `false` once the application applies a locale through
-   * `setLocale()` or `init()`. While it is `true`, a `languagechange` event switches to the newly detected locale.
+   * `setLocale()` or `init()`. While it is `true`, a `languagechange` event switches to the newly detected locale, unless
+   * an application request is still loading.
    */
   readonly followsSystem: boolean;
   /**
@@ -353,7 +354,10 @@ export async function initializeBrowserI18n<TLocale extends string>(
     }
   };
   const handleLanguageChange = async (): Promise<void> => {
-    if (!isFollowingSystem) {
+    // An application request still loading is a choice about to apply, so a detected locale must not supersede it.
+    const isApplicationRequestLoading =
+      internals.isLatestRequestLoading() && internals.latestRequestId() !== detectedRequestId;
+    if (!isFollowingSystem || isApplicationRequestLoading) {
       return;
     }
     try {

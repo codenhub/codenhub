@@ -60,7 +60,7 @@ Browser effects exclusively owned for one i18n manager after successful initiali
 readonly followsSystem: boolean;
 ```
 
-Whether the locale follows the browser's languages rather than a choice: `true` after a start with no explicit or usable saved locale and after `followSystem()`, and `false` once the application applies a locale through `setLocale()` or `init()`. While it is `true`, a `languagechange` event switches to the newly detected locale.
+Whether the locale follows the browser's languages rather than a choice: `true` after a start with no explicit or usable saved locale and after `followSystem()`, and `false` once the application applies a locale through `setLocale()` or `init()`. While it is `true`, a `languagechange` event switches to the newly detected locale, unless an application request is still loading.
 
 #### BrowserI18nBinding › disconnect
 

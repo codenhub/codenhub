@@ -159,6 +159,8 @@ A stored locale the application no longer configures exactly, such as `pt-PT` af
 
 **The binding's own switches end with it.** `disconnect()` supersedes a detected locale still loading, so it does not apply to a manager nobody binds; an application request still loading is left to apply. A browser language change during the start's loading, before the listener exists, is caught by comparing the detected locale once the start ends.
 
+**A visitor's pick is not overtaken.** A `languagechange` while an application request is still loading is ignored, so the pick applies and is saved; the latest-call rule would otherwise let the binding's detection replace it. Core tells the binding whether the latest request is loading, rather than the binding remembering which request last applied, so a pick that failed does not stop the binding from following later changes.
+
 **The manager stays runtime-neutral.** Rejected: `setLocale("system")` or `setLocale(undefined)` on the manager, which knows nothing of the browser or of storage.
 
 ### One data attribute per translated attribute

@@ -115,6 +115,8 @@ class I18nInstance<TLocale extends string, TKey extends string = string>
   private dictionaries: readonly ChainDictionary<TLocale>[] | undefined;
   private readonly fallbackChains: ReadonlyMap<TLocale, readonly TLocale[]>;
   private requestId = 0;
+  /** The request whose dictionaries are loading, until its load settles. */
+  private loadingRequestId: number | undefined;
   private applyListener: ((requestId: number) => void) | undefined;
   private readonly warnedMissingKeys = new Map<string, undefined>();
   private readonly pluralRules = new Map<TLocale, Intl.PluralRules | undefined>();
@@ -158,6 +160,7 @@ class I18nInstance<TLocale extends string, TKey extends string = string>
     registerI18nInternals(this, {
       init: (options) => this.applyInit(options as I18nInitOptions<TLocale>),
       latestRequestId: () => this.requestId,
+      isLatestRequestLoading: () => this.loadingRequestId === this.requestId,
       setApplyListener: (listener) => {
         this.applyListener = listener;
       },
@@ -328,7 +331,7 @@ class I18nInstance<TLocale extends string, TKey extends string = string>
     let direction: LocaleDirection;
 
     try {
-      dictionaries = await this.loadRequiredDictionaries(locale);
+      dictionaries = await this.loadRequest(requestId, locale);
       direction = this.resolveLocaleDirection(locale);
     } catch (error) {
       if (!this.isLatestRequest(requestId)) {
@@ -368,7 +371,7 @@ class I18nInstance<TLocale extends string, TKey extends string = string>
     let direction: LocaleDirection;
 
     try {
-      dictionaries = await this.loadRequiredDictionaries(nextLocale);
+      dictionaries = await this.loadRequest(requestId, nextLocale);
       direction = this.resolveLocaleDirection(nextLocale);
     } catch (error) {
       // A later call decides the language, so this one's failure no longer matters.
@@ -556,6 +559,17 @@ class I18nInstance<TLocale extends string, TKey extends string = string>
     const chain = this.fallbackChains.get(locale)!;
     const dictionaries = await Promise.all(chain.map((chainLocale) => this.loader.loadLocale(chainLocale)));
     return chain.map((chainLocale, index) => ({ locale: chainLocale, dictionary: dictionaries[index]! }));
+  }
+
+  private async loadRequest(requestId: number, locale: TLocale): Promise<readonly ChainDictionary<TLocale>[]> {
+    this.loadingRequestId = requestId;
+    try {
+      return await this.loadRequiredDictionaries(locale);
+    } finally {
+      if (this.loadingRequestId === requestId) {
+        this.loadingRequestId = undefined;
+      }
+    }
   }
 
   private createRequest(): number {
