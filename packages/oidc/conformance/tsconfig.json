@@ -8,6 +8,6 @@
     "skipLibCheck": true,
     "types": ["node"]
   },
-  "extends": "../../tsconfig.json",
+  "extends": "../../../tsconfig.json",
   "include": ["src/**/*", "tests/**/*.ts", "vitest.config.ts"]
 }

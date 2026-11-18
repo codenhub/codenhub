@@ -2,6 +2,7 @@ packages:
   - "apps/*"
   - "packages/*"
   - "packages/*/{dev,debug,demo}"
+  - "packages/*/conformance"
   - "packages/*/{dev,debug}/*"
   - "packages/plugins/**"
 
