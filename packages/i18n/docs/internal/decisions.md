@@ -189,6 +189,14 @@ A stored locale the application no longer configures exactly, such as `pt-PT` af
 
 **The manager stays runtime-neutral.** Rejected: `setLocale("system")` or `setLocale(undefined)` on the manager, which knows nothing of the browser or of storage.
 
+### Tabs do not follow each other's choice (0.5.0)
+
+A pick saved in one tab is not applied to the others: the binding listens for `languagechange`, not for the `storage` event, and each tab reads the saved locale at its start. A tab's text changing under a visitor who is reading it, because they picked a language in another tab, is a surprise; the next load, or the next tab, uses the choice. `languagechange` is different: it reports a change to what the visitor asked for everywhere, and applies only while a tab follows the system. Rejected: applying `storage` events, which also reports the writes of any other script that uses the same key, and an option for it, which no application has asked for. An application that wants it can listen for `storage` itself and call `i18n.setLocale()`.
+
+### The default `storageKey` is `"i18n"`
+
+The saved locale lives under `localStorage["i18n"]` unless `storageKey` says otherwise. The name is short and could collide with another library's, but every visitor's saved choice lives under it since 0.1.0, so a new default would send each of them back to detection once, with no way for the application to tell. An application that shares its origin with other code that uses the key sets `storageKey`. Rejected: a namespaced default, such as `"codenhub-i18n"`, which costs every existing visitor their choice to avoid a collision no one has reported, and migrating the old key, which reads storage the application may have given to someone else.
+
 ### One data attribute per translated attribute
 
 `data-i18n-<attribute>` is used rather than a single list attribute, such as `data-i18n-attrs="placeholder:search.hint"`, because it needs no parsing and a `MutationObserver` can watch exactly those names. Attributes are limited to text read by people or assistive technology, so a translation can never set a URL, a style, or an event handler.
