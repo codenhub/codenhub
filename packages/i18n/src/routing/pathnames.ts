@@ -37,12 +37,12 @@ export interface ShapeIndex<T> {
     keys: readonly string[],
     segments: readonly string[],
   ): { readonly item: T; readonly parameters: Parameters } | undefined;
-  /** Whether an item whose pattern matches some path that `pattern` matches satisfies `predicate`. */
-  someOverlapping(pattern: Pattern, predicate: (item: T) => boolean): boolean;
 }
 
 /** The compiled table. Indexes keep a fixed segment ahead of a parameter. @internal */
 export interface Pathnames<TLocale extends string> {
+  /** Every route, in table order. */
+  readonly routes: readonly Route<TLocale>[];
   /** Every route, to find one by its canonical path. */
   readonly byCanonical: ShapeIndex<Route<TLocale>>;
   /** Each locale's routes, to read a path in that locale. */
@@ -102,9 +102,6 @@ interface ShapeNode<T> {
 
 const createShapeNode = <T>(): ShapeNode<T> => ({ byValue: new Map(), param: undefined, ends: [], rests: [] });
 
-const childrenOf = <T>(node: ShapeNode<T>): ShapeNode<T>[] =>
-  node.param === undefined ? [...node.byValue.values()] : [...node.byValue.values(), node.param];
-
 const indexByShape = <T>(items: readonly T[], patternOf: (item: T) => Pattern): ShapeIndex<T> => {
   const root = createShapeNode<T>();
 
@@ -127,21 +124,8 @@ const indexByShape = <T>(items: readonly T[], patternOf: (item: T) => Pattern): 
     (isRest ? node.rests : node.ends).push({ item, order });
   }
 
-  // The walks below keep their own stack: a pattern may have about 4,000 segments, and a call per segment overflows the
+  // The walk below keeps its own stack: a pattern may have about 4,000 segments, and a call per segment overflows the
   // call stack.
-  const isAnyBelow = (start: ShapeNode<T>, predicate: (item: T) => boolean): boolean => {
-    const pending = [start];
-    for (let node = pending.pop(); node !== undefined; node = pending.pop()) {
-      if (node.ends.some((entry) => predicate(entry.item)) || node.rests.some((entry) => predicate(entry.item))) {
-        return true;
-      }
-      for (const child of childrenOf(node)) {
-        pending.push(child);
-      }
-    }
-    return false;
-  };
-
   return {
     find(keys, segments) {
       // The first item of each matching node, since items at one node match the same paths.
@@ -166,39 +150,123 @@ const indexByShape = <T>(items: readonly T[], patternOf: (item: T) => Pattern): 
       );
       return found && { item: found.item, parameters: readParameters(patternOf(found.item), segments) };
     },
+  };
+};
 
-    someOverlapping(pattern, predicate) {
-      const pending: [ShapeNode<T> | undefined, number][] = [[root, 0]];
-      for (let next = pending.pop(); next !== undefined; next = pending.pop()) {
-        const [node, depth] = next;
-        if (node === undefined) {
-          continue;
-        }
-        const segment = pattern.segments[depth];
-        if (segment === undefined) {
-          if (node.ends.some((entry) => predicate(entry.item))) {
-            return true;
-          }
-          continue;
-        }
-        if (node.rests.some((entry) => predicate(entry.item))) {
-          return true; // Another catch-all takes this segment and the rest.
-        }
-        if (segment.kind === "rest") {
-          if (childrenOf(node).some((child) => isAnyBelow(child, predicate))) {
-            return true;
-          }
-          continue;
-        }
-        const children = segment.kind === "param" ? childrenOf(node) : [node.byValue.get(segment.value), node.param];
-        for (const child of children) {
-          pending.push([child, depth + 1]);
-        }
+/** One locale's form of a route. */
+interface LocaleForm<TLocale extends string> {
+  readonly locale: TLocale;
+  readonly pattern: Pattern;
+}
+
+/** Patterns whose segments are of the same kinds, so that two of them differ only in their fixed segments' words. */
+interface PatternClass<T> {
+  readonly length: number;
+  readonly isRest: boolean;
+  /** Whether each segment before a catch-all is fixed. */
+  readonly isFixed: readonly boolean[];
+  readonly items: T[];
+  /** Each item's locale by its words at some positions, keyed by those positions, built once per set of positions. */
+  readonly byWords: Map<string, Map<string, { readonly locale: string; isMixed: boolean }>>;
+}
+
+const classify = <T>(items: readonly T[], patternOf: (item: T) => Pattern): PatternClass<T>[] => {
+  const classes = new Map<string, PatternClass<T>>();
+  for (const item of items) {
+    const { segments } = patternOf(item);
+    const isRest = hasRest(patternOf(item));
+    const isFixed = (isRest ? segments.slice(0, -1) : segments).map((segment) => segment.kind === "static");
+    const key = `${isRest ? "*" : ""}${isFixed.map((fixed) => (fixed ? "s" : "p")).join("")}`;
+    let found = classes.get(key);
+    if (found === undefined) {
+      found = {
+        length: segments.length,
+        isRest,
+        isFixed,
+        items: [],
+        byWords: new Map(),
+      };
+      classes.set(key, found);
+    }
+    found.items.push(item);
+  }
+  return [...classes.values()];
+};
+
+/**
+ * How many leading segments two classes' patterns must agree on to match a common path, or `undefined` when their
+ * lengths rule one out: a catch-all matches one or more segments, and agrees with whatever it covers.
+ */
+const comparedLength = <T>(a: PatternClass<T>, b: PatternClass<T>): number | undefined => {
+  if (a.isRest && b.isRest) {
+    return Math.min(a.length, b.length) - 1;
+  }
+  if (a.isRest) {
+    return b.length >= a.length ? a.length - 1 : undefined;
+  }
+  if (b.isRest) {
+    return a.length >= b.length ? b.length - 1 : undefined;
+  }
+  return a.length === b.length ? a.length : undefined;
+};
+
+/** A pattern's words at `positions`, which are fixed segments; a word never contains `/`. */
+const wordsAt = (pattern: Pattern, positions: readonly number[]): string =>
+  positions.map((index) => (pattern.segments[index] as { readonly value: string }).value).join("/");
+
+/**
+ * The queries that match some path an item of another locale matches. Two patterns of given classes match a common path
+ * exactly when their words agree where both have a fixed segment, so each pair of classes is compared once, through a
+ * map of one class's words. Walking an index of the items for each query instead visited every branch a parameter
+ * could take, which made a table of forms starting with a parameter take quadratic time to create.
+ */
+const findOverlapped = <TLocale extends string>(
+  items: readonly LocaleForm<TLocale>[],
+  queries: readonly LocaleForm<TLocale>[],
+): Set<LocaleForm<TLocale>> => {
+  const overlapped = new Set<LocaleForm<TLocale>>();
+  const itemClasses = classify(items, (item) => item.pattern);
+
+  for (const queryClass of classify(queries, (query) => query.pattern)) {
+    for (const itemClass of itemClasses) {
+      const compared = comparedLength(queryClass, itemClass);
+      const pending = queryClass.items.filter((query) => !overlapped.has(query));
+      if (compared === undefined || pending.length === 0) {
+        continue;
       }
 
-      return false;
-    },
-  };
+      const positions: number[] = [];
+      for (let index = 0; index < compared; index += 1) {
+        if (queryClass.isFixed[index] === true && itemClass.isFixed[index] === true) {
+          positions.push(index);
+        }
+      }
+      const positionsKey = positions.join();
+      let byWords = itemClass.byWords.get(positionsKey);
+      if (byWords === undefined) {
+        byWords = new Map();
+        for (const item of itemClass.items) {
+          const words = wordsAt(item.pattern, positions);
+          const found = byWords.get(words);
+          if (found === undefined) {
+            byWords.set(words, { locale: item.locale, isMixed: false });
+          } else if (found.locale !== item.locale) {
+            found.isMixed = true;
+          }
+        }
+        itemClass.byWords.set(positionsKey, byWords);
+      }
+
+      for (const query of pending) {
+        const found = byWords.get(wordsAt(query.pattern, positions));
+        if (found !== undefined && (found.isMixed || found.locale !== query.locale)) {
+          overlapped.add(query);
+        }
+      }
+    }
+  }
+
+  return overlapped;
 };
 
 /** A key that two patterns share exactly when they match the same paths. */
@@ -351,21 +419,19 @@ export const compilePathnames = <TLocale extends string>({
   // Under `when-ambiguous`, a translated form drops the prefix only when it has a fixed segment and no other locale's
   // path could match it. No other policy reads the decision, so it is not made.
   if (localePrefix === "when-ambiguous") {
-    const allForms = indexByShape(
-      routes.flatMap((route) => locales.map((locale) => ({ locale, pattern: route.forms.get(locale)! }))),
-      (form) => form.pattern,
+    const allForms = routes.flatMap((route) =>
+      locales.map((locale) => ({ route, locale, pattern: route.forms.get(locale)! })),
     );
-    for (const route of routes) {
-      for (const locale of translated.get(route)!) {
-        const form = route.forms.get(locale)!;
-        const isUnambiguous =
-          locale !== defaultLocale &&
-          form.segments.some((segment) => segment.kind === "static") &&
-          !allForms.someOverlapping(form, (other) => other.locale !== locale);
-
-        if (isUnambiguous) {
-          (route.unprefixed as Set<TLocale>).add(locale);
-        }
+    const candidates = allForms.filter(
+      ({ route, locale, pattern }) =>
+        locale !== defaultLocale &&
+        translated.get(route)!.includes(locale) &&
+        pattern.segments.some((segment) => segment.kind === "static"),
+    );
+    const overlapped = findOverlapped(allForms, candidates);
+    for (const candidate of candidates) {
+      if (!overlapped.has(candidate)) {
+        (candidate.route.unprefixed as Set<TLocale>).add(candidate.locale);
       }
     }
   }
@@ -377,6 +443,7 @@ export const compilePathnames = <TLocale extends string>({
     .sort((a, b) => bySpecificity(a.route.forms.get(a.locale)!, b.route.forms.get(b.locale)!));
 
   return {
+    routes,
     byCanonical: indexByShape(
       sortRoutes([...routes], (route) => route.canonical),
       (route) => route.canonical,
