@@ -248,6 +248,14 @@
   /* Reduced motion keeps the press and drops its motion: the element gives at
      once. The near-zero duration `box` uses, so a `transitionend` still fires. */
   @media (prefers-reduced-motion: reduce) {
+    &:not(:where(:root[data-motion="full"], :root[data-motion="full"] *)) {
+      transition-duration: 0.01ms;
+    }
+  }
+  &:where(
+    :root:is([data-motion="reduced"], [data-motion="none"]),
+    :root:is([data-motion="reduced"], [data-motion="none"]) *
+  ) {
     transition-duration: 0.01ms;
   }
 }

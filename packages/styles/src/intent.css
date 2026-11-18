@@ -74,6 +74,11 @@
          on a soft fill the resting tone drew at 2.4:1 for warning in light and
          2.9:1 for success in dark. See docs/accessibility.md. */
       @media (prefers-contrast: more) {
+        &:not(:where(:root[data-contrast="standard"] *)) {
+          --intent-border: var(--color-primary-strong);
+        }
+      }
+      &:where(:root[data-contrast="more"] *) {
         --intent-border: var(--color-primary-strong);
       }
     }
@@ -89,6 +94,11 @@
       --intent-border: var(--color-accent);
       --intent-fill-max: 100%;
       @media (prefers-contrast: more) {
+        &:not(:where(:root[data-contrast="standard"] *)) {
+          --intent-border: var(--color-accent-strong);
+        }
+      }
+      &:where(:root[data-contrast="more"] *) {
         --intent-border: var(--color-accent-strong);
       }
     }
@@ -104,6 +114,11 @@
       --intent-border: var(--color-success);
       --intent-fill-max: 100%;
       @media (prefers-contrast: more) {
+        &:not(:where(:root[data-contrast="standard"] *)) {
+          --intent-border: var(--color-success-strong);
+        }
+      }
+      &:where(:root[data-contrast="more"] *) {
         --intent-border: var(--color-success-strong);
       }
     }
@@ -119,6 +134,11 @@
       --intent-border: var(--color-warning);
       --intent-fill-max: 100%;
       @media (prefers-contrast: more) {
+        &:not(:where(:root[data-contrast="standard"] *)) {
+          --intent-border: var(--color-warning-strong);
+        }
+      }
+      &:where(:root[data-contrast="more"] *) {
         --intent-border: var(--color-warning-strong);
       }
     }
@@ -134,6 +154,11 @@
       --intent-border: var(--color-destructive);
       --intent-fill-max: 100%;
       @media (prefers-contrast: more) {
+        &:not(:where(:root[data-contrast="standard"] *)) {
+          --intent-border: var(--color-destructive-strong);
+        }
+      }
+      &:where(:root[data-contrast="more"] *) {
         --intent-border: var(--color-destructive-strong);
       }
     }
@@ -149,6 +174,11 @@
       --intent-border: var(--color-info);
       --intent-fill-max: 100%;
       @media (prefers-contrast: more) {
+        &:not(:where(:root[data-contrast="standard"] *)) {
+          --intent-border: var(--color-info-strong);
+        }
+      }
+      &:where(:root[data-contrast="more"] *) {
         --intent-border: var(--color-info-strong);
       }
     }

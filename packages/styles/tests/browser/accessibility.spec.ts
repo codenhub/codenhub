@@ -390,48 +390,100 @@ test("allows document-level horizontal overflow instead of clipping it", async (
 });
 
 /* `/components` carries no reset, so every component that moves stops on its
-   own under reduced motion. */
-test("stops component motion under reduced motion without the reset", async ({ page }) => {
-  await page.setContent("<!doctype html><html><body></body></html>");
-  await page.addStyleTag({ url: COMPONENT_STYLES_URL });
-  await page.emulateMedia({ reducedMotion: "reduce" });
+   own under reduced motion, whether the reader's system asks for it or the
+   app does through `data-motion`. Under `reduced` a component may still fade:
+   what keeps a duration is a colour, opacity, or visibility change, never a
+   transform, a slide, or a size. Under `none` nothing keeps one. */
+const MOTION_CASES = [
+  { name: "the system asks for reduced motion", media: "reduce", motion: null, fades: true },
+  { name: 'data-motion="reduced"', media: "no-preference", motion: "reduced", fades: true },
+  { name: 'data-motion="none"', media: "no-preference", motion: "none", fades: false },
+  { name: 'data-motion="none" over the system', media: "reduce", motion: "none", fades: false },
+] as const;
 
-  const motion = await page.evaluate(() => {
-    document.body.innerHTML = [
-      '<button class="btn">Button</button>',
-      '<div class="skeleton"></div>',
-      '<div class="progress active" style="--progress-value: 40%"></div>',
-      '<div class="progress indeterminate"></div>',
-      '<span class="tooltip"><button>Trigger</button><span class="tooltip-bubble">Bubble</span></span>',
-      '<input type="checkbox" class="checkbox"><input type="radio" class="radio"><input type="checkbox" class="switch">',
-    ].join("");
-    const longest = (value: string) => Math.max(...value.split(",").map((part) => Number.parseFloat(part) || 0));
-    const transition = (selector: string, pseudo?: string) =>
-      longest(getComputedStyle(document.querySelector(selector)!, pseudo).transitionDuration);
-    const animation = (selector: string, pseudo?: string) =>
-      getComputedStyle(document.querySelector(selector)!, pseudo).animationName;
+for (const { name, media, motion: level, fades } of MOTION_CASES) {
+  test(`stops component motion without the reset when ${name}`, async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: media });
+    await page.setContent(`<!doctype html><html${level ? ` data-motion="${level}"` : ""}><body></body></html>`);
+    await page.addStyleTag({ url: COMPONENT_STYLES_URL });
 
-    return {
-      animations: [
-        animation(".skeleton"),
-        animation(".progress.active", "::before"),
-        animation(".progress.indeterminate", "::after"),
-      ],
-      transitions: [
-        transition(".btn"),
-        transition(".progress.active", "::after"),
-        transition(".tooltip-bubble"),
-        transition(".checkbox", "::after"),
-        transition(".radio", "::after"),
-        transition(".switch", "::after"),
-      ],
-    };
+    const motion = await page.evaluate(() => {
+      document.body.innerHTML = [
+        '<button class="btn">Button</button>',
+        '<div class="skeleton"></div>',
+        '<div class="progress active" style="--progress-value: 40%"></div>',
+        '<div class="progress indeterminate"></div>',
+        '<span class="tooltip"><button>Trigger</button><span class="tooltip-bubble">Bubble</span></span>',
+        '<input type="checkbox" class="checkbox"><input type="radio" class="radio"><input type="checkbox" class="switch">',
+      ].join("");
+      /* Each transitioned property with the duration it pairs with: the
+         duration list repeats when it is the shorter one. */
+      const transitioned = (selector: string, pseudo?: string) => {
+        const styles = getComputedStyle(document.querySelector(selector)!, pseudo);
+        const durations = styles.transitionDuration.split(",").map((part) => Number.parseFloat(part) || 0);
+
+        return styles.transitionProperty
+          .split(",")
+          .map((property, index) => ({ property: property.trim(), duration: durations[index % durations.length]! }))
+          .filter(({ duration }) => duration > 0.001)
+          .map(({ property }) => `${selector}${pseudo ?? ""} ${property}`);
+      };
+      const animation = (selector: string, pseudo?: string) =>
+        getComputedStyle(document.querySelector(selector)!, pseudo).animationName;
+
+      return {
+        animations: [
+          animation(".skeleton"),
+          animation(".progress.active", "::before"),
+          animation(".progress.indeterminate", "::after"),
+        ],
+        running: [
+          ...transitioned(".btn"),
+          ...transitioned(".progress.active", "::after"),
+          ...transitioned(".tooltip-bubble"),
+          ...transitioned(".checkbox", "::after"),
+          ...transitioned(".radio", "::after"),
+          ...transitioned(".switch", "::after"),
+        ],
+      };
+    });
+
+    expect(motion.animations).toEqual(["none", "none", "none"]);
+    if (fades) {
+      for (const running of motion.running) {
+        expect(running, "only a fade keeps its duration").toMatch(
+          / (opacity|visibility|color|background-color|border-color)$/,
+        );
+      }
+      expect(motion.running, "the button still fades its colours").toContain(".btn background-color");
+    } else {
+      expect(motion.running).toEqual([]);
+    }
   });
+}
 
-  expect(motion.animations).toEqual(["none", "none", "none"]);
-  for (const duration of motion.transitions) {
-    expect(duration).toBeLessThanOrEqual(0.001);
-  }
+/* The app's `data-motion="full"` wins over the system's request: the
+   components move as they do with no preference. */
+test('keeps component motion under data-motion="full" when the system asks for less', async ({ page }) => {
+  const read = async (media: "reduce" | "no-preference", attribute: string) => {
+    await page.emulateMedia({ reducedMotion: media });
+    await page.setContent(`<!doctype html><html${attribute}><body></body></html>`);
+    await page.addStyleTag({ url: COMPONENT_STYLES_URL });
+
+    return page.evaluate(() => {
+      document.body.innerHTML =
+        '<button class="btn">Button</button><div class="skeleton"></div><input type="checkbox" class="switch">';
+      const styles = (selector: string, pseudo?: string) => {
+        const computed = getComputedStyle(document.querySelector(selector)!, pseudo);
+
+        return [computed.transitionProperty, computed.transitionDuration, computed.animationName].join(" | ");
+      };
+
+      return [styles(".btn"), styles(".skeleton"), styles(".switch", "::after")];
+    });
+  };
+
+  expect(await read("reduce", ' data-motion="full"')).toEqual(await read("no-preference", ""));
 });
 
 /* The user agent hides a closed `<dialog>` and centres an open one, but both

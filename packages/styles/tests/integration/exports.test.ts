@@ -903,14 +903,9 @@ const declarationsIn = (css: string): string[] => {
    declarations in `dist/index.css` were repeats of one already in the same
    rule. A repeat changes nothing a browser computes, so nothing else failed.
 
-   One repeat is the source's own: `box` shortens its transition under reduced
-   motion, and the tooltip bubble, which replaces that transition after applying
-   `box`, has to shorten its own. The other is Tailwind's: Preflight's link
-   rule comes out of its minifier with the prefixed declaration twice. */
-const RESTATED_DECLARATIONS = [
-  "@layer base > a > -webkit-text-decoration:inherit",
-  "@layer utilities > @media (prefers-reduced-motion:reduce) > .tooltip-bubble > transition-duration:.01ms",
-];
+   The one repeat is Tailwind's: Preflight's link rule comes out of its
+   minifier with the prefixed declaration twice. */
+const RESTATED_DECLARATIONS = ["@layer base > a > -webkit-text-decoration:inherit"];
 
 test("aggregate exports state each declaration once", async () => {
   for (const target of [...aggregateExportTargets, "dist/native.css"]) {

@@ -2,7 +2,7 @@
 title: Temas
 description: Modo claro y oscuro, reemplazar la paleta con los colores de marca, definir una intención propia, y cada token de color, intención, base y fuente con su valor por defecto.
 order: 5
-source: a186dbf5bc4db8e56427da1f0a420518d9c8a102
+source: e4ecd755cc2e249fe99284d6b43244d908ac13e1
 ---
 
 # Temas
@@ -27,6 +27,8 @@ Para que el usuario elija, pon un selector de tema en el elemento raíz:
 | Oscuro | `.dark`, `.theme-dark`, `[data-theme="dark"]`    |
 
 Una pantalla de ajustes con la opción "Sistema / Claro / Oscuro" quita el atributo para Sistema y lo pone para las otras dos.
+
+Los ajustes de contraste y movimiento funcionan igual, con `data-contrast` y `data-motion` en `<html>`; consulta [Accesibilidad → Ajustes de la app](../accessibility.md#ajustes-de-la-app).
 
 Cómo se resuelve:
 

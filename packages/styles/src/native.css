@@ -253,9 +253,13 @@
 
   /* The sweep rests at the start, as `.progress.indeterminate`'s does. */
   @media (prefers-reduced-motion: reduce) {
-    progress:indeterminate {
+    progress:indeterminate:not(:where(:root[data-motion="full"] *)) {
       animation: none;
     }
+  }
+
+  progress:indeterminate:where(:root:is([data-motion="reduced"], [data-motion="none"]) *) {
+    animation: none;
   }
 }
 

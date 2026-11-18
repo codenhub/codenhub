@@ -27,6 +27,8 @@ To let the user choose, put a theme selector on the root element:
 
 A settings screen with a "System / Light / Dark" choice removes the attribute for System and sets it for the other two.
 
+Contrast and motion settings work the same way, through `data-contrast` and `data-motion` on `<html>`; see [Accessibility → App settings](../accessibility.md#app-settings).
+
 How it resolves:
 
 - A theme selector sets the CSS `color-scheme` property, and the element's text color to `--color-text`. Every color token holds its light and its dark value at once, through `light-dark()`, and the element's `color-scheme` picks one.
