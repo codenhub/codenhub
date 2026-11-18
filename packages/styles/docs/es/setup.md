@@ -2,7 +2,7 @@
 title: Configuración inicial
 description: Instala el paquete, elige entre CSS compilado o código fuente de Tailwind y renderiza la estructura base de la página de ajustes.
 order: 1
-source: 1626380ec1fa14148f5b8aa1e5c4d39e63ab7a17
+source: 6c3027b30bbb7ef0aedc157cab4b1f6fb58b0a4a
 ---
 
 # Configuración inicial
@@ -175,7 +175,7 @@ Cada punto de entrada pone su CSS en las cuatro capas de cascada de Tailwind y d
 | `base`       | El reset y los estilos de elementos sin clases.                                                                                                                                                                                                                                  |
 | `components` | Las clases de estética y los valores de intención neutros de los que parte cada componente.                                                                                                                                                                                      |
 | `utilities`  | Todos los componentes (`.btn`, `.card`, `.ipt`, etc.), junto a tus propias utilidades de Tailwind. Las clases de intención, presentación, borde, elevación, esquina y tamaño están en `utilities.families`, una subcapa que pierde frente a cualquier otra regla de `utilities`. |
-| _sin capa_   | Las sobrescrituras de colores forzados y de movimiento reducido, la corrección para `<dialog>` cerrado y las clases `-solo`.                                                                                                                                                     |
+| _sin capa_   | Las sobrescrituras de colores forzados, la corrección para `<dialog>` cerrado y las clases `-solo` con sus reglas de movimiento reducido. Las reglas de movimiento reducido del reset y de los componentes están en `base` y `utilities`.                                        |
 
 Lo que eso significa cuando escribes tu propio CSS:
 

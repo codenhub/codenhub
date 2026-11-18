@@ -174,7 +174,7 @@ Every entrypoint puts its CSS into Tailwind's four cascade layers and declares t
 | `base`       | The reset and the classless element styles.                                                                                                                                                                                                           |
 | `components` | The aesthetic classes and the neutral intent values every component starts from.                                                                                                                                                                      |
 | `utilities`  | Every component (`.btn`, `.card`, `.ipt`, and so on), next to your own Tailwind utilities. The intent, presentation, edge, elevation, corner, and size classes sit in `utilities.families`, a sublayer that loses to every other rule in `utilities`. |
-| _unlayered_  | The forced-colors and reduced-motion overrides, the closed-`<dialog>` fix, and the `-solo` classes.                                                                                                                                                   |
+| _unlayered_  | The forced-colors overrides, the closed-`<dialog>` fix, and the `-solo` classes with their reduced-motion rules. The reset's and the components' reduced-motion rules are in `base` and `utilities`.                                                  |
 
 What that means when you write your own CSS:
 
