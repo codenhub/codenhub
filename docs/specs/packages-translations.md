@@ -188,6 +188,7 @@ The main site's package page in a locale shows `README.<locale>.md` when the rel
 - A file under `docs/<locale>/` with no English counterpart at the mirrored path, or a `README.<locale>.md` beside no `README.md`.
 - A `docs/<locale>/` or `README.<locale>.md` for a locale not listed under "Languages".
 - A `docs/<locale>/reference/`, `docs/<locale>/changelog/`, or `docs/<locale>/internal/` area.
+- For an `active` package, a README or public document with no translation in a listed locale. This is what makes leaving `experimental` the point where the requirement is checked for certain.
 - A translation whose `source` is missing or is not a 40-character hexadecimal blob ID.
 - A translated document whose `order` or `curated` differs from its English counterpart's.
 - A translated document whose headings differ from its English counterpart's in number or in level at any position, unless the translation is stale.
