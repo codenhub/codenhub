@@ -390,8 +390,14 @@
         --_bg: color-mix(in oklab, var(--intent-hover) var(--_hover-fill), var(--_ground));
         /* P3 again, against the hover tone: the line still fades as the fill fills
            in, but toward the hover ink. Without this the edge keeps the resting ink
-           -- a ring of the colour the box just left. */
-        --_line: color-mix(in oklab, transparent var(--ui-fill, var(--_d-fill)), var(--intent-hover));
+           -- a ring of the colour the box just left. On a plate the held ink
+           still comes first, as at rest, or a neutral edge on a solid card
+           drops to the hover tint of the fill it sits on. */
+        --_line: color-mix(
+          in oklab,
+          transparent var(--ui-fill, var(--_d-fill)),
+          color-mix(in oklab, var(--_held-ink) var(--_through), var(--intent-hover))
+        );
         --_sx: calc(var(--ui-hover-shadow-x, var(--ui-shadow-x, var(--_d-shadow-x, 0px))) * var(--_depth));
         --_sy: calc(
           var(--ui-hover-shadow-y, var(--ui-shadow-y, var(--_d-shadow-y, var(--_elevation-y, 0px)))) * var(--_depth)

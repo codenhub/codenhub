@@ -1,5 +1,5 @@
 import { expect, test } from "./fixtures";
-import { expectSameColor, getColorDistance } from "./test-utils";
+import { expectSameColor, getColorDistance, getContrastRatio } from "./test-utils";
 
 const BUTTONS_URL = "http://localhost:5184/buttons/?env=vanilla";
 
@@ -148,6 +148,25 @@ test("a neutral box with no plate prints in the ink of the plate it sits on", as
   );
 
   expectSameColor(edged.child.line, edged.plate.color, "a neutral line on a plate is drawn in its ink");
+
+  /* Hovered too: the hover line fades toward the hover tone, but on a plate it
+     keeps the plate's ink, or the edge drops to the hover tint on the fill. */
+  const plateFill = await page.evaluate(
+    () => getComputedStyle(document.querySelector("[data-plate]")!).backgroundColor,
+  );
+
+  await page.hover("[data-child]");
+  /* Once the line has faded into its hover tone. */
+  await page.waitForTimeout(600);
+  const hoveredLine = await page.evaluate(
+    () => getComputedStyle(document.querySelector("[data-child]")!).borderTopColor,
+  );
+
+  expect(
+    getContrastRatio(hoveredLine, plateFill),
+    "a hovered neutral line on a plate keeps the plate's ink",
+  ).toBeGreaterThanOrEqual(3);
+  await page.mouse.move(0, 0);
 
   const ownInk = [
     /* An intent keeps its own ink: intent does not cascade, either way. */
