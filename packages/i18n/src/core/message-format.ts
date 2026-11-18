@@ -613,8 +613,26 @@ const getPluralRules = (locale: string, isOrdinal: boolean): Intl.PluralRules =>
     () => new Intl.PluralRules(intlLocale(locale), { type: isOrdinal ? "ordinal" : "cardinal" }),
   );
 
-const isDateValue = (value: unknown): value is Date | number =>
-  (value instanceof Date && !Number.isNaN(value.getTime())) || (typeof value === "number" && Number.isFinite(value));
+// The largest time a `Date` holds, in milliseconds either side of the epoch. `Intl` throws past it.
+const MAX_TIME = 8_640_000_000_000_000;
+
+// A `Date` from any realm, such as an iframe or `node:vm`, which `instanceof` misses, read by its internal slot.
+const readDateTime = (value: unknown): number | undefined => {
+  if (typeof value !== "object" || value === null) {
+    return undefined;
+  }
+  try {
+    return Date.prototype.getTime.call(value);
+  } catch {
+    return undefined;
+  }
+};
+
+// The time a date argument formats, or `undefined` for a value that leaves it as written.
+const readTime = (value: unknown): number | undefined => {
+  const time = typeof value === "number" ? value : readDateTime(value);
+  return time !== undefined && Math.abs(time) <= MAX_TIME ? time : undefined;
+};
 
 /**
  * Formats the value of a plain `{name}`: text and numbers as written, a valid `Date` as a medium date, and anything else
@@ -626,8 +644,9 @@ export const formatPlainValue = (value: unknown, locale: string, timeZone: strin
   if (typeof value === "string" || typeof value === "number") {
     return String(value);
   }
-  return value instanceof Date && isDateValue(value)
-    ? getDateTimeFormat(locale, { dateStyle: "medium", timeZone }).format(value)
+  const time = readDateTime(value);
+  return time !== undefined && Math.abs(time) <= MAX_TIME
+    ? getDateTimeFormat(locale, { dateStyle: "medium", timeZone }).format(time)
     : undefined;
 };
 
@@ -688,14 +707,17 @@ const formatNodes = (nodes: Message, state: FormatState, pound: number | undefin
             : node.source;
         break;
       case "date":
-      case "time":
-        result += isDateValue(value)
-          ? getDateTimeFormat(
-              locale,
-              node.kind === "date" ? { dateStyle: node.style, timeZone } : { timeStyle: node.style, timeZone },
-            ).format(value)
-          : node.source;
+      case "time": {
+        const time = readTime(value);
+        result +=
+          time === undefined
+            ? node.source
+            : getDateTimeFormat(
+                locale,
+                node.kind === "date" ? { dateStyle: node.style, timeZone } : { timeStyle: node.style, timeZone },
+              ).format(time);
         break;
+      }
       case "plural": {
         if (typeof value !== "number") {
           result += node.source;
