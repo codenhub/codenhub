@@ -56,7 +56,7 @@ const randomTable = (next: () => number, size: number): CheckedPathnameEntry[] =
     if (rest !== undefined) {
       slots.push(`:${rest}*`);
     }
-    return `/${slots.join("/")}`.replace(/^\/$/, "/");
+    return `/${slots.join("/")}`;
   };
 
   return Array.from({ length: size }, () => {
