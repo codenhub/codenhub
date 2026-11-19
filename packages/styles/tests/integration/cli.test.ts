@@ -295,6 +295,26 @@ describe("failures", () => {
     return stderr[0] ?? "";
   }
 
+  // POSIX refuses a `..` out of a folder that does not exist; collapsing it instead named an authored file.
+  it.skipIf(!canSymlink || process.platform === "win32")(
+    "refuses an --output link that leads out of a missing folder",
+    async () => {
+      const authored = "a { color: red; }";
+
+      await mkdir(path.join(project, "nested", "dir"), { recursive: true });
+      await symlink(path.join(project, "nested", "dir"), path.join(project, "alias"), "dir");
+      await writeFile(path.join(project, "real.css"), authored);
+      await writeFile(path.join(project, "nested", "real.css"), authored);
+      await symlink("alias/../missing/../real.css", path.join(project, "app.css"), "file");
+
+      expect(await failureOf("build", "-c", "app/views/**/*.erb", "-o", "app.css")).toMatch(
+        /leads out of a folder that does not exist/,
+      );
+      expect(await readOutput("real.css")).toBe(authored);
+      expect(await readOutput("nested/real.css")).toBe(authored);
+    },
+  );
+
   it("rejects a build without --content", async () => {
     expect(await failureOf("build", "-o", "app.css")).toMatch(/--content/);
   });

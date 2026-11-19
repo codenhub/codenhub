@@ -368,14 +368,7 @@ function assertNodeVersion(nodeVersion: string): void {
 
 /* The file a link leads to, or the path itself while nothing is there yet. A
    link whose target does not exist yet still leads there: the stylesheet is
-   written where it points rather than over the link.
-
-   The target's folder is resolved by the filesystem, not by `path.resolve`,
-   which drops a `..` before the link in front of it is followed: on POSIX a
-   link to `alias/../real.css`, with `alias` a link into another folder, named
-   a different `real.css` than the one the link leads to, and the build
-   overwrote it unchecked. A folder that does not exist yet has no links to
-   follow, so it is taken as written. */
+   written where it points rather than over the link. */
 async function realPathOf(file: string): Promise<string> {
   try {
     return await fs.realpath(file);
@@ -384,18 +377,80 @@ async function realPathOf(file: string): Promise<string> {
       throw error;
     }
 
-    const link = await fs.readlink(file).catch(() => undefined);
+    return process.platform === "win32" ? windowsTargetOf(file) : posixTargetOf(file);
+  }
+}
 
-    if (link === undefined) {
-      return file;
+/* Windows collapses a `..` before it follows any link, as `path.resolve` does. */
+async function windowsTargetOf(file: string): Promise<string> {
+  const link = await fs.readlink(file).catch(() => undefined);
+
+  return link === undefined ? file : realPathOf(path.resolve(path.dirname(file), link));
+}
+
+/* POSIX follows each name in turn, a link included, before the `..` after it,
+   so `alias/../real.css` with `alias` a link into another folder is a
+   `real.css` there. `path.resolve` collapses the `..` first and named another
+   file, which the build overwrote without checking it. The walk does what the
+   system does: a link's target replaces it, and a `..` steps out of the folder
+   reached so far. A folder that does not exist yet is created by the write, so
+   the names after it are taken as written; a `..` after one has no folder to
+   step out of, and the system refuses the path, so this does too. */
+async function posixTargetOf(file: string): Promise<string> {
+  const names = (value: string) => value.split("/").filter((name) => name !== "" && name !== ".");
+  const pending = names(file);
+  let current = "/";
+  let missing = false;
+  let links = 0;
+
+  for (let name = pending.shift(); name !== undefined; name = pending.shift()) {
+    if (name === "..") {
+      if (missing) {
+        throw new Error(`cannot follow the --output link at ${file}: it leads out of a folder that does not exist.`);
+      }
+      current = path.dirname(current);
+      continue;
     }
 
-    // Joined as written, so no `..` is collapsed before the filesystem sees it.
-    const target = path.isAbsolute(link) ? link : `${path.dirname(file)}${path.sep}${link}`;
-    const folder = await fs.realpath(path.dirname(target)).catch(() => path.resolve(path.dirname(target)));
+    const next = path.join(current, name);
 
-    return realPathOf(path.join(folder, path.basename(target)));
+    if (missing) {
+      current = next;
+      continue;
+    }
+
+    let link: string | undefined;
+
+    try {
+      // oxlint-disable-next-line no-await-in-loop -- each name is read from the folder the one before it reached
+      link = await fs.readlink(next);
+    } catch (error) {
+      const { code } = error as { code?: string };
+
+      if (code === "ENOENT") {
+        missing = true;
+      } else if (code !== "EINVAL") {
+        throw error;
+      }
+    }
+
+    if (link === undefined) {
+      current = next;
+      continue;
+    }
+
+    // The system's own limit is 40 on Linux; past it, a chain of links is a loop.
+    links += 1;
+    if (links > 40) {
+      throw new Error(`cannot follow the --output link at ${file}: its links lead in a loop.`);
+    }
+    if (path.isAbsolute(link)) {
+      current = "/";
+    }
+    pending.unshift(...names(link));
   }
+
+  return current;
 }
 
 /* The native resolver, as `fs.realpath` above uses: on Windows the JavaScript
