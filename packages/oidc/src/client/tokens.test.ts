@@ -176,6 +176,30 @@ describe("requestTokens", () => {
     expect(issues).toEqual([{ code: "invalid_token_response", path: ["response", "token_type"] }]);
   });
 
+  // Some providers send `expires_in` as a JSON string; a digit string is read as the number it spells.
+  it("reads an expires_in of decimal digits sent as a string", async () => {
+    const result = await requestTokens(
+      options(stubFetch(() => jsonResponse(validBody({ expires_in: "3600" })))),
+      grantForm(),
+    );
+
+    expect(result).toMatchObject({
+      ok: true,
+      value: { expiresAt: NOW_MS / 1000 + 3600 },
+    });
+  });
+
+  it.each([["-1"], ["1e3"], ["3600.5"], [" 3600"], [""], ["12345678901"]])(
+    "reports an expires_in string of %j as an invalid token response",
+    async (expiresIn) => {
+      const issues = issuesOf(
+        await requestTokens(options(stubFetch(() => jsonResponse(validBody({ expires_in: expiresIn })))), grantForm()),
+      );
+
+      expect(issues).toEqual([{ code: "invalid_token_response", path: ["response", "expires_in"] }]);
+    },
+  );
+
   it("reports a negative expires_in as an invalid token response", async () => {
     const issues = issuesOf(
       await requestTokens(options(stubFetch(() => jsonResponse(validBody({ expires_in: -1 })))), grantForm()),

@@ -200,8 +200,6 @@ export interface CodeRecord {
   readonly acr?: string;
   /** The app's session identifier from the grant, carried to every token of the grant. */
   readonly sessionId?: string;
-  /** Whether the request carried `max_age`, which makes `auth_time` required in the ID token. */
-  readonly maxAgeRequested: boolean;
   /** The resource servers the grant covers (RFC 8707): the authorization request's `resource` values. */
   readonly resources?: readonly string[];
   /** In seconds since the Unix epoch. */
@@ -283,7 +281,11 @@ export type Consumption<TRecord> =
  * it got at the code exchange, and an access token keeps its own.
  */
 export interface OidcStore {
-  /** Looks up a registered client. `undefined` when none has this identifier. */
+  /**
+   * Looks up a registered client. `undefined` when none has this identifier. Identifiers match byte for byte: a
+   * lookup that ignores case, trims spaces or normalizes Unicode would let `APP` reach the record of `app`. A record
+   * whose `clientId` differs from the one asked for is treated as no client.
+   */
   findClient(clientId: string): Promise<ClientRecord | undefined>;
 
   /** Saves a validated authorization request under a new key. */
@@ -456,6 +458,7 @@ export type ProviderDiagnosticReason =
   | "access_token_malformed"
   | "access_token_unknown"
   | "access_token_expired"
+  | "access_token_client_unknown"
   | "access_token_without_openid"
   // Revocation
   | "token_missing"
@@ -675,8 +678,24 @@ export interface AuthorizationInteraction {
    * `resources`. Show them on the consent page: the grant covers every one, and the app cannot narrow it.
    */
   readonly resources?: readonly string[];
+  /**
+   * The user and session a verified `id_token_hint` names: an ID token this provider issued to this client, which
+   * may have expired. OpenID Connect Core §3.1.2.1 asks that the user who signs in be this one: when the user of the
+   * app's session is someone else, and the app does not sign this user in, answer with the denial `login_required`
+   * (always so under `prompt=none`). Absent without a hint, or with one that does not verify, which is ignored. A
+   * verified hint issued to another client fails the request with `invalid_request` instead.
+   */
+  readonly idTokenHint?: IdTokenHintClaims;
   /** When the request was validated, in seconds since the Unix epoch. A `prompt=login` login must happen at or after it. */
   readonly createdAt: number;
+}
+
+/** What a verified `id_token_hint` names: the user, and the app's session when the ID token carries `sid`. */
+export interface IdTokenHintClaims {
+  /** The token's `sub`: the subject the app gave this client, pairwise or not. */
+  readonly subject: string;
+  /** The token's `sid`, the {@link AuthorizationGrant.sessionId} the app gave when the user signed in. */
+  readonly sessionId?: string;
 }
 
 /** Why an authorization request failed, and how to answer it. */
@@ -743,6 +762,7 @@ export type AuthenticationFailureReason =
   | "access_token_malformed"
   | "access_token_unknown"
   | "access_token_expired"
+  | "access_token_client_unknown"
   | "access_token_audience_mismatch"
   | "access_token_scope_insufficient";
 
@@ -791,10 +811,11 @@ export interface Provider {
    * Finishes an interaction: issues a code, or sends the denial, as a `302` to the client's redirect URI.
    *
    * @returns The response, or `interaction_not_found` when the interaction does not exist, was already
-   * completed, or expired, or, for a grant, when its client is no longer in the store: the code's lifetime can be
-   * the client's own ({@link ClientRecord.ttl}), so a grant reads the client's record. Rejects when the store does,
+   * completed, or expired, or, for a grant or a denial, when its client is no longer in the store, no longer lists
+   * the interaction's redirect URI, or no longer has the `authorization_code` grant type: the provider redirects
+   * only to a URI the client's record lists now. Rejects when the store does,
    * or with a `TypeError` when it returns a malformed client record.
-   * @throws {TypeError} When `outcome` is malformed, such as an empty `subject`, `scopes` that is not an array of
+   * @throws {TypeError} When `outcome` is malformed, such as a `subject` that is not 1 to 255 characters of visible ASCII, `scopes` that is not an array of
    * strings, or a denial with other members; the interaction is left in place, so a corrected retry works. Also
    * when a well-formed grant does not fit the request: scopes outside the request or without `openid`, an
    * `authTime` before the interaction under `prompt=login`, an `authTime` in the future, or more than the
@@ -888,6 +909,12 @@ export interface EndSession {
    * signs them out.
    */
   readonly subject?: string;
+  /**
+   * The `sid` of a verified `id_token_hint`: the app's session the sign-in belonged to, as the app gave it in
+   * {@link AuthorizationGrant.sessionId}. End that session, rather than every session of the user. Absent when the
+   * hint is absent or unverified, or its ID token has no `sid`.
+   */
+  readonly sessionId?: string;
   /** `logout_hint`, passed through as sent. */
   readonly logoutHint?: string;
   /** `ui_locales`, with empty entries dropped. */

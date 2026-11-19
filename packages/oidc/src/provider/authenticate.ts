@@ -67,7 +67,8 @@ function readRequirements(requirements: unknown): Requirements {
   const { scopes, audience } = requirements as AuthenticateOptions;
   if (
     scopes !== undefined &&
-    (!Array.isArray(scopes) || !scopes.every((scope) => typeof scope === "string" && SCOPE_TOKEN.test(scope)))
+    (!Array.isArray(scopes) ||
+      !Array.from(scopes).every((scope) => typeof scope === "string" && SCOPE_TOKEN.test(scope)))
   ) {
     throw new TypeError("authenticate: options.scopes must be an array of scope tokens");
   }

@@ -22,8 +22,21 @@ const isNonEmptyString = (value: unknown): value is string => typeof value === "
  */
 const isAccessToken = (value: unknown): value is string => isNonEmptyString(value) && /^[\x20-\x7E]+$/.test(value);
 
-const isNonNegativeNumber = (value: unknown): value is number =>
-  typeof value === "number" && Number.isFinite(value) && value >= 0;
+/** Digits only, at most 10: a sign, a decimal point, an exponent or whitespace would let `Number` read more. */
+const EXPIRES_IN_TEXT = /^[0-9]{1,10}$/;
+
+/**
+ * Reads `expires_in` as seconds, or `undefined` when it is not a non-negative number. RFC 6749 §5.1 makes it a JSON
+ * number, but some providers, such as the Microsoft identity platform's v1 endpoint, send it as a string of digits.
+ * The code is already spent when the response arrives, so refusing that string would fail the sign-in for good
+ * over a lifetime the client only uses to decide when to refresh.
+ */
+function readExpiresIn(value: unknown): number | undefined {
+  if (typeof value === "number") {
+    return Number.isFinite(value) && value >= 0 ? value : undefined;
+  }
+  return typeof value === "string" && EXPIRES_IN_TEXT.test(value) ? Number(value) : undefined;
+}
 
 /** One `invalid_token_response` issue, naming the member that is missing or invalid. */
 const invalidMember = (name: string): OidcIssue => ({ code: "invalid_token_response", path: ["response", name] });
@@ -43,7 +56,7 @@ function tokenResponseIssues(body: Readonly<Record<string, unknown>>): OidcIssue
   if (typeof tokenType !== "string" || tokenType.toLowerCase() !== BEARER) {
     issues.push(invalidMember("token_type"));
   }
-  if (Object.hasOwn(body, "expires_in") && !isNonNegativeNumber(member(body, "expires_in"))) {
+  if (Object.hasOwn(body, "expires_in") && readExpiresIn(member(body, "expires_in")) === undefined) {
     issues.push(invalidMember("expires_in"));
   }
   if (Object.hasOwn(body, "refresh_token") && !isNonEmptyString(member(body, "refresh_token"))) {
@@ -76,7 +89,7 @@ const splitScope = (scope: string): string[] => scope.split(SPACE).filter((token
  */
 function toTokenSet(body: Readonly<Record<string, unknown>>, now: () => number): TokenSet {
   const accessToken = body.access_token as string;
-  const expiresIn = member(body, "expires_in") as number | undefined;
+  const expiresIn = readExpiresIn(member(body, "expires_in"));
   const refreshToken = member(body, "refresh_token") as string | undefined;
   const idToken = member(body, "id_token") as string | undefined;
   const scope = member(body, "scope") as string | undefined;

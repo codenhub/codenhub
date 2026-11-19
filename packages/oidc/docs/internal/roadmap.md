@@ -32,6 +32,8 @@ The target is that the provider passes the Basic OP and Config OP plans; no plan
 - **What the SSO application finds next.** 0.0.1 aimed to be the last release before a breaking change (`docs/specs/packages-lifecycle.md`, "Versioning"). What the first look at the consumer found is built, as scope.md decisions 47 to 61 record; a change building it shows the public API needs ships in the release that makes it, as a breaking change if it is one. 0.1.0 is the judgment that the SSO application builds on the package without such changes.
 - **A changelog from 0.1.0**, opened by `hub release --cut` with the release, per `docs/specs/packages-changelog.md`.
 
+- **The 0.1 release review.** Its fixes and the contracts it settled are built, as scope.md decisions 66 to 75 record. Two release steps remain outside the repository: `@codenhub/jwt` 0.1.0 must be published before the peer range can move to `^0.1.0`, and the conformance plans above have not run.
+
 ## Later / Possible
 
 None at present. Pairwise subject identifiers, the last item here, shipped as the `subjectTypes` option (scope.md decision 60).

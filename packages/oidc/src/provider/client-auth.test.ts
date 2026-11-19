@@ -277,10 +277,16 @@ describe("authenticateClient: successful methods", () => {
     expect(result.ok && result.client.clientId).toBe("keyed");
   });
 
-  it("authenticates private_key_jwt with an assertion addressed to the token endpoint", async () => {
+  // scope.md decision 66: draft-ietf-oauth-rfc7523bis makes the issuer the only audience, so an assertion
+  // addressed to the token endpoint, or to the issuer among others, is refused.
+  it.each([
+    ["the token endpoint", TOKEN_ENDPOINT],
+    ["an array holding the issuer", [ISSUER]],
+    ["the issuer and another audience", [ISSUER, "https://other.example"]],
+  ])("refuses a private_key_jwt assertion addressed to %s", async (_label, aud) => {
     const { clients, clientKey } = await fixtures();
     const options = await setup(clients);
-    const token = await assertion(clientKey.privateKey, { aud: TOKEN_ENDPOINT });
+    const token = await assertion(clientKey.privateKey, { aud });
 
     const result = await authenticate(options, {
       client_id: "keyed",
@@ -288,7 +294,10 @@ describe("authenticateClient: successful methods", () => {
       client_assertion: token,
     });
 
-    expect(result.ok).toBe(true);
+    expect(await errorOf(result)).toEqual({
+      status: 401,
+      body: { error: "invalid_client" },
+    });
   });
 });
 

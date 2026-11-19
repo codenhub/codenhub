@@ -108,7 +108,9 @@ function interactionFixture(): InteractionRecord {
     state: "conformance-state",
     nonce: "conformance-nonce",
     codeChallenge: "conformance-challenge",
-    prompt: [],
+    prompt: ["login", "consent"],
+    maxAge: 0,
+    loginHint: "ada@example.test",
     uiLocales: ["en", "pt-BR"],
     acrValues: ["conformance-acr"],
     claimsLocales: ["en"],
@@ -130,8 +132,9 @@ function codeFixture(grantId: string): CodeRecord {
     scopes: ["openid", "profile"],
     subject: "conformance-user",
     authTime: now,
+    amr: ["pwd", "otp"],
+    acr: "urn:example:loa2",
     sessionId: "conformance-session",
-    maxAgeRequested: false,
     resources: ["https://api.example/", "urn:example:data"],
     expiresAt: now + LIFETIME_SECONDS,
   };
@@ -157,6 +160,8 @@ function refreshTokenFixture(grantId: string): RefreshTokenRecord {
     subject: "conformance-user",
     scopes: ["openid", "profile"],
     authTime: now,
+    amr: ["pwd", "otp"],
+    acr: "urn:example:loa2",
     sessionId: "conformance-session",
     resources: ["https://api.example/", "urn:example:data"],
     expiresAt: now + LIFETIME_SECONDS,
@@ -552,6 +557,26 @@ const cases: StoreConformanceCase[] = [
     assert(
       sameRecord(await store.findClient(client.clientId), client),
       "findClient must return a registered client with the values it was registered with",
+    );
+  }),
+
+  defineCase("findClient matches the identifier byte for byte", async (createStore) => {
+    const clientId = `conformance-${newKey().toLowerCase()}`;
+    const store = await createStore({
+      clients: [
+        {
+          clientId,
+          redirectUris: ["https://app.example/callback"],
+          scopes: ["openid"],
+          auth: { method: "none" },
+        },
+      ],
+    });
+    const lookalikes = [clientId.toUpperCase(), `${clientId} `, ` ${clientId}`];
+    const found = await Promise.all(lookalikes.map((lookalike) => store.findClient(lookalike)));
+    assert(
+      found.every((record) => record === undefined),
+      "findClient must match the identifier byte for byte, without ignoring case or trimming spaces",
     );
   }),
 

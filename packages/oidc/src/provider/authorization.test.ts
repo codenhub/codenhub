@@ -1,8 +1,8 @@
-import { generateKeyPair, type KeyPair } from "@codenhub/jwt";
+import { generateKeyPair, type KeyPair, sign } from "@codenhub/jwt";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { digestKey } from "../shared/encoding";
-import { MAX_BODY_BYTES, MAX_PARAMETER_LENGTH, MAX_URL_LENGTH } from "../shared/limits";
+import { MAX_FRONT_CHANNEL_BODY_BYTES, MAX_PARAMETER_LENGTH, MAX_URL_LENGTH } from "../shared/limits";
 import { computeCodeChallenge } from "../shared/pkce";
 import type { OidcResult } from "../shared/types";
 import { createMemoryStore, type MemoryStore } from "../testing/memory-store";
@@ -410,7 +410,7 @@ describe("beginAuthorization", () => {
 
     it("shouldRenderInvalidRequestForOversizedBody", async () => {
       const failure = failureOf(
-        await beginAuthorization(options, postRequest(`${query()}&pad=${"a".repeat(MAX_BODY_BYTES)}`)),
+        await beginAuthorization(options, postRequest(`${query()}&pad=${"a".repeat(MAX_FRONT_CHANNEL_BODY_BYTES)}`)),
       );
       expect(failure.issues).toEqual([{ code: "invalid_request" }]);
     });
@@ -473,6 +473,81 @@ describe("beginAuthorization", () => {
   });
 });
 
+/** An ID token as this provider issues it, with `overrides` applied, signed with `key`. */
+function idTokenHint(overrides: Record<string, unknown> = {}, key = keyPair): Promise<string> {
+  return sign({
+    payload: {
+      iss: ISSUER,
+      sub: "user-1",
+      aud: CLIENT_ID,
+      iat: NOW_SECONDS - 60,
+      exp: NOW_SECONDS + 540,
+      ...overrides,
+    },
+    key: key.privateKey,
+    header: { typ: "JWT" },
+  });
+}
+
+describe("beginAuthorization with id_token_hint", () => {
+  it("names the user and session of a verified hint, frozen", async () => {
+    const interaction = await beginOk(query({ id_token_hint: await idTokenHint({ sid: "session-1" }) }));
+
+    expect(interaction.idTokenHint).toEqual({
+      subject: "user-1",
+      sessionId: "session-1",
+    });
+    expect(Object.isFrozen(interaction.idTokenHint)).toBe(true);
+  });
+
+  it("names the user of an expired hint, which still says who the client thinks is signed in", async () => {
+    const hint = await idTokenHint({
+      iat: NOW_SECONDS - 1200,
+      exp: NOW_SECONDS - 600,
+    });
+
+    const interaction = await beginOk(query({ id_token_hint: hint }));
+
+    expect(interaction.idTokenHint).toEqual({ subject: "user-1" });
+  });
+
+  it("accepts a hint naming the client among several audiences as azp", async () => {
+    const hint = await idTokenHint({
+      aud: ["other", CLIENT_ID],
+      azp: CLIENT_ID,
+    });
+
+    const interaction = await beginOk(query({ id_token_hint: hint }));
+
+    expect(interaction.idTokenHint).toEqual({ subject: "user-1" });
+  });
+
+  it("redirects with invalid_request for a hint issued to another client", async () => {
+    const hint = await idTokenHint({ aud: "other" });
+
+    const failure = failureOf(await beginAuthorization(options, getRequest(query({ id_token_hint: hint }))));
+
+    expectErrorRedirect(failure.redirect, "invalid_request");
+    expect(failure.issues).toEqual([{ code: "invalid_request", path: ["id_token_hint"] }]);
+  });
+
+  it.each([
+    ["is not a JWT", async () => "not-a-jwt"],
+    ["is signed by an unknown key", async () => idTokenHint({}, await generateKeyPair({ alg: "ES256", kid: "k9" }))],
+    ["is from another issuer", async () => idTokenHint({ iss: "https://evil.example" })],
+  ])("ignores a hint that %s, as OpenID Connect Core §3.1.2.1 allows", async (_label, makeHint) => {
+    const interaction = await beginOk(query({ id_token_hint: await makeHint() }));
+
+    expect(Object.hasOwn(interaction, "idTokenHint")).toBe(false);
+  });
+
+  it("leaves idTokenHint out when the request sent none", async () => {
+    const interaction = await beginOk();
+
+    expect(Object.hasOwn(interaction, "idTokenHint")).toBe(false);
+  });
+});
+
 describe("completeAuthorization", () => {
   it("shouldRedirectGrantWithCodeStateAndIssuer", async () => {
     const interaction = await beginOk();
@@ -520,7 +595,6 @@ describe("completeAuthorization", () => {
         scopes: ["openid", "profile"],
         subject: "user-1",
         authTime: NOW_SECONDS,
-        maxAgeRequested: false,
         expiresAt: NOW_SECONDS + DEFAULT_CODE_TTL,
         grantId: expect.any(String),
       }),
@@ -663,13 +737,6 @@ describe("completeAuthorization", () => {
     expect("resources" in (saveSpy.mock.calls[0]?.[1] ?? {})).toBe(false);
   });
 
-  it("shouldSetMaxAgeRequestedWhenMaxAgeWasSent", async () => {
-    const saveSpy = vi.spyOn(store, "saveCode");
-    const interaction = await beginOk(query({ max_age: "300" }));
-    await completeAuthorization(options, interaction.id, GRANT);
-    expect(saveSpy.mock.calls[0]?.[1]).toMatchObject({ maxAgeRequested: true });
-  });
-
   it("shouldSaveGrantedScopesDeduplicated", async () => {
     const saveSpy = vi.spyOn(store, "saveCode");
     const interaction = await beginOk();
@@ -776,6 +843,18 @@ describe("completeAuthorization", () => {
     ["an unknown denial", { error: "not_a_denial" }, "outcome.error"],
     ["a denial with other members", { error: "access_denied", subject: "user-1" }, "outcome.error"],
     ["an empty subject", { ...GRANT, subject: "" }, "outcome.subject"],
+    ["a subject of 256 characters", { ...GRANT, subject: "u".repeat(256) }, "outcome.subject"],
+    ["a subject with a space", { ...GRANT, subject: "user 1" }, "outcome.subject"],
+    ["a subject outside ASCII", { ...GRANT, subject: "usér" }, "outcome.subject"],
+    ["a sparse amr", { ...GRANT, amr: Object.assign(["pwd"], { length: 2 }) }, "outcome.amr"],
+    [
+      "a sparse scopes list",
+      {
+        ...GRANT,
+        scopes: Object.assign(["openid"], { length: 2 }),
+      },
+      "outcome.scopes",
+    ],
     ["a negative authTime", { ...GRANT, authTime: -1 }, "outcome.authTime"],
     ["a fractional authTime", { ...GRANT, authTime: 1.5 }, "outcome.authTime"],
     ["scopes that are not an array", { ...GRANT, scopes: "openid" }, "outcome.scopes"],
@@ -786,6 +865,17 @@ describe("completeAuthorization", () => {
     await expect(
       completeAuthorization(options, interaction.id, outcome as unknown as AuthorizationGrant),
     ).rejects.toThrow(member);
+  });
+
+  it("accepts a subject of 255 visible ASCII characters", async () => {
+    const interaction = await beginOk();
+
+    const result = await completeAuthorization(options, interaction.id, {
+      ...GRANT,
+      subject: "~".repeat(255),
+    });
+
+    expect(result.ok).toBe(true);
   });
 
   it("shouldNotEchoOutcomeValueInTypeError", async () => {

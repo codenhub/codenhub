@@ -46,7 +46,6 @@ function makeCode(overrides: Partial<CodeRecord> = {}): CodeRecord {
     scopes: ["openid"],
     subject: "user-1",
     authTime: 1_000,
-    maxAgeRequested: false,
     expiresAt: LATER_EXPIRY_SECONDS,
     ...overrides,
   };

@@ -2,6 +2,7 @@ import { type SigningKey, sign } from "@codenhub/jwt";
 
 import { encodeBase64Url, randomToken } from "../shared/encoding";
 import type { ResolvedClientOptions } from "./options";
+import type { AssertionAudience } from "./types";
 
 /** The client assertion type of RFC 7523 §2.2, the only one a provider accepts. */
 const CLIENT_ASSERTION_TYPE = "urn:ietf:params:oauth:client-assertion-type:jwt-bearer";
@@ -32,17 +33,22 @@ function toStandardBase64(text: string): string {
 }
 
 /**
- * Signs the client assertion of `client_secret_jwt` and `private_key_jwt` (OpenID Connect Core §9). `aud`
- * is the issuer identifier, the audience the current recommendation names, so an assertion meant for one
- * provider cannot be replayed at another that happens to accept the same token endpoint URL.
+ * Signs the client assertion of `client_secret_jwt` and `private_key_jwt` (OpenID Connect Core §9). `aud` is the
+ * issuer identifier by default, the audience draft-ietf-oauth-rfc7523bis requires, so an assertion meant for one
+ * provider cannot be replayed at another that happens to accept the same token endpoint URL. A client whose provider
+ * refuses the issuer names the token endpoint instead, through `auth.audience`.
  */
-function signAssertion(options: ResolvedClientOptions, key: SigningKey): Promise<string> {
+function signAssertion(
+  options: ResolvedClientOptions,
+  key: SigningKey,
+  audience: AssertionAudience | undefined,
+): Promise<string> {
   const nowSeconds = Math.floor(options.now() / MILLISECONDS_PER_SECOND);
   return sign({
     payload: {
       iss: options.clientId,
       sub: options.clientId,
-      aud: options.metadata.issuer,
+      aud: audience === "token_endpoint" ? options.metadata.token_endpoint : options.metadata.issuer,
       jti: randomToken(),
       iat: nowSeconds,
       exp: nowSeconds + ASSERTION_LIFETIME_SECONDS,
@@ -84,7 +90,7 @@ export async function authenticate(
     case "private_key_jwt":
       form.set("client_id", clientId);
       form.set("client_assertion_type", CLIENT_ASSERTION_TYPE);
-      form.set("client_assertion", await signAssertion(options, auth.key));
+      form.set("client_assertion", await signAssertion(options, auth.key, auth.audience));
       return {};
   }
 }

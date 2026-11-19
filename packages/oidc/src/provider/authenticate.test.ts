@@ -237,6 +237,18 @@ describe("authenticate", () => {
     expect(failure.response.status).toBe(401);
   });
 
+  it("refuses a token whose client is no longer in the store, naming the client", async () => {
+    const { op, store } = await setup();
+    await seed(store, record({ clientId: "removed-client" }));
+
+    const failure = failureOf(await op.authenticate(apiRequest(`Bearer ${TOKEN}`)));
+
+    expect(failure.reason).toBe("access_token_client_unknown");
+    expect(failure.issues).toEqual([{ code: "invalid_token" }]);
+    expect(failure.clientId).toBe("removed-client");
+    expect(failure.response.status).toBe(401);
+  });
+
   it("refuses a token whose audience is another resource", async () => {
     const { op, store } = await setup();
     await seed(store, record({ audience: [DATA] }));

@@ -1,7 +1,7 @@
 import type { ProviderMetadata } from "../shared/types";
 import { isHttpsUrl, isRedirectUri } from "../shared/urls";
 import { checkMetadata, ID_TOKEN_ALGORITHMS, type IdTokenAlgorithm } from "./metadata";
-import type { ClientAuth, ClientOptions } from "./types";
+import type { AssertionAudience, ClientAuth, ClientOptions } from "./types";
 
 /** Every error this module throws starts with this, so a caller can tell which factory refused. */
 const PREFIX = "createClient:";
@@ -185,12 +185,30 @@ function readAuth(auth: ClientAuth, metadata: ProviderMetadata): ClientAuth {
     case "client_secret_jwt":
       checkKeyKind(auth.key, "secret");
       checkAssertionAlgorithm(metadata, auth.key);
-      return Object.freeze({ method: auth.method, key: auth.key });
+      return Object.freeze({
+        method: auth.method,
+        key: auth.key,
+        audience: readAssertionAudience(auth.audience),
+      });
     case "private_key_jwt":
       checkKeyKind(auth.key, "private");
       checkAssertionAlgorithm(metadata, auth.key);
-      return Object.freeze({ method: auth.method, key: auth.key });
+      return Object.freeze({
+        method: auth.method,
+        key: auth.key,
+        audience: readAssertionAudience(auth.audience),
+      });
   }
+}
+
+function readAssertionAudience(audience: unknown): AssertionAudience {
+  if (audience === undefined) {
+    return "issuer";
+  }
+  if (audience !== "issuer" && audience !== "token_endpoint") {
+    throw new TypeError(`${PREFIX} auth.audience must be issuer or token_endpoint`);
+  }
+  return audience;
 }
 
 function readOptionalFunction<TFunction extends (...args: never[]) => unknown>(

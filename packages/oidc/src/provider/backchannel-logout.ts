@@ -1,8 +1,8 @@
 import { sign } from "@codenhub/jwt";
 
 import { randomToken } from "../shared/encoding";
-import { checkClientRecord } from "./client-record";
-import { type ResolvedOptions, selectIdTokenKey } from "./options";
+import { findClientRecord } from "./client-record";
+import { type ResolvedOptions, SUBJECT, selectIdTokenKey } from "./options";
 
 /** The event a logout token names (OpenID Connect Back-Channel Logout 1.0 §2.4). Its value is always `{}`. */
 const BACKCHANNEL_LOGOUT_EVENT = "http://schemas.openid.net/event/backchannel-logout";
@@ -36,11 +36,11 @@ function readRequest(request: unknown): { readonly clientId: string } & Target {
   if (!isNonEmptyString(clientId)) {
     return invalid("clientId must be a non-empty string");
   }
-  if (
-    (subject !== undefined && !isNonEmptyString(subject)) ||
-    (sessionId !== undefined && !isNonEmptyString(sessionId))
-  ) {
-    return invalid("subject and sessionId, when given, must be non-empty strings");
+  if (sessionId !== undefined && !isNonEmptyString(sessionId)) {
+    return invalid("sessionId, when given, must be a non-empty string");
+  }
+  if (subject !== undefined && (typeof subject !== "string" || !SUBJECT.test(subject))) {
+    return invalid("subject, when given, must be 1 to 255 characters of visible ASCII");
   }
   if (subject === undefined && sessionId === undefined) {
     return invalid("the request must give a subject, a sessionId, or both");
@@ -63,11 +63,10 @@ function readRequest(request: unknown): { readonly clientId: string } & Target {
  */
 export async function backchannelLogout(options: ResolvedOptions, request: unknown): Promise<Request | null> {
   const { clientId, subject, sessionId } = readRequest(request);
-  const record = await options.store.findClient(clientId);
-  if (record === undefined) {
+  const client = await findClientRecord(options.store, clientId, options.publicKeys);
+  if (client === undefined) {
     return null;
   }
-  const client = checkClientRecord(record, clientId, options.publicKeys);
   const registration = client.backchannelLogout;
   if (registration === undefined) {
     return null;

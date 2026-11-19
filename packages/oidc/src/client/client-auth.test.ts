@@ -160,6 +160,23 @@ describe("authenticate", () => {
     });
   });
 
+  it("names the token endpoint as audience when auth.audience is token_endpoint", async () => {
+    const form = new URLSearchParams();
+
+    await authenticate(
+      resolve({
+        method: "private_key_jwt",
+        key: clientKeys.privateKey,
+        audience: "token_endpoint",
+      }),
+      form,
+    );
+
+    expect(payloadOf(form.get("client_assertion") ?? "")).toMatchObject({
+      aud: `${ISSUER}/token`,
+    });
+  });
+
   it("gives the assertion a 60 second lifetime from the clock", async () => {
     const form = new URLSearchParams();
 

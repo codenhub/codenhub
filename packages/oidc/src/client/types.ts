@@ -12,9 +12,30 @@ export type ClientAuth =
   | { readonly method: "client_secret_basic"; readonly secret: string }
   | { readonly method: "client_secret_post"; readonly secret: string }
   /** An HS256 secret key from `importSecretKey`, which needs a secret of at least 32 bytes. */
-  | { readonly method: "client_secret_jwt"; readonly key: SecretKey }
+  | {
+      readonly method: "client_secret_jwt";
+      readonly key: SecretKey;
+      readonly audience?: AssertionAudience;
+    }
   /** A private key whose public half the provider has registered for this client. */
-  | { readonly method: "private_key_jwt"; readonly key: PrivateKey };
+  | {
+      readonly method: "private_key_jwt";
+      readonly key: PrivateKey;
+      readonly audience?: AssertionAudience;
+    };
+
+/**
+ * What a client assertion names as its `aud`.
+ *
+ * - `issuer`: the provider's issuer identifier, which draft-ietf-oauth-rfc7523bis requires and this package's
+ *   provider alone accepts. An assertion addressed to it cannot be replayed at a provider with another issuer.
+ * - `token_endpoint`: the provider's token endpoint URL, for a provider that refuses the issuer, as some do. Use it
+ *   only for such a provider: an authorization server whose metadata names another's token endpoint as its own
+ *   could then replay the assertion there.
+ *
+ * @defaultValue `"issuer"`
+ */
+export type AssertionAudience = "issuer" | "token_endpoint";
 
 /** Options of {@link discover}. */
 export interface DiscoverOptions {

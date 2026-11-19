@@ -25,6 +25,7 @@ export type {
   Display,
   EndSession,
   GrantType,
+  IdTokenHintClaims,
   InteractionRecord,
   OidcStore,
   Provider,

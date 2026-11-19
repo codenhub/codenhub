@@ -2,7 +2,7 @@ import type { AsymmetricAlgorithm } from "@codenhub/jwt";
 
 import { isHttpsUrl, isRedirectUri, isResourceUri } from "../shared/urls";
 import { CLIENT_TTL_NAMES, describeTtlRange, isTtlInRange, type ResolvedTtl, SCOPE_TOKEN } from "./options";
-import type { ClientRecord, GrantType } from "./types";
+import type { ClientRecord, GrantType, OidcStore } from "./types";
 
 /** Every algorithm a signing key may have; a `Record`, so a new `@codenhub/jwt` algorithm fails to compile here. */
 const ID_TOKEN_ALGORITHMS: Readonly<Record<AsymmetricAlgorithm, true>> = {
@@ -29,8 +29,9 @@ export type CheckedClient = ClientRecord & { readonly grantTypes: readonly Grant
 
 const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === "object" && value !== null;
 
+/** `every` skips the holes of a sparse array, so each index is read, a hole as `undefined`. */
 const isStringArray = (value: unknown): value is readonly string[] =>
-  Array.isArray(value) && value.every((entry) => typeof entry === "string" && entry !== "");
+  Array.isArray(value) && Array.from(value).every((entry) => typeof entry === "string" && entry !== "");
 
 const invalid = (requirement: string): never => {
   throw new TypeError(`OidcStore.findClient: a client record ${requirement}`);
@@ -58,7 +59,7 @@ export function checkClientRecord(
   if (
     !isStringArray(record.redirectUris) ||
     (signsUsersIn && record.redirectUris.length === 0) ||
-    !record.redirectUris.every(isRedirectUri)
+    !Array.from(record.redirectUris).every(isRedirectUri)
   ) {
     return invalid(
       "must list redirect URIs, at least one for authorization_code, each absolute, of visible ASCII, without fragment or credentials, and not javascript:, data:, vbscript: or file:",
@@ -120,6 +121,30 @@ export function checkClientRecord(
   checkBackchannelLogout(record.backchannelLogout);
   // Resolved here, so every endpoint reads the list and the flag without repeating the default.
   return { ...(record as unknown as ClientRecord), grantTypes, requirePkce: requirePkce ?? true };
+}
+
+/**
+ * Finds a client in the store and checks its record, or returns `undefined` when the store has none.
+ *
+ * @remarks
+ * A record for another client identifier is treated as none. A store whose lookup ignores case or trailing spaces,
+ * as a case-insensitive SQL collation does, returns `svc` for `SVC`; refusing it as unknown keeps that adapter bug
+ * from becoming a `TypeError` any request could trigger (invariant 8), and keeps one client from answering for
+ * another. Any other malformed record still throws.
+ */
+export async function findClientRecord(
+  store: Pick<OidcStore, "findClient">,
+  clientId: string,
+  signingKeys: readonly { readonly alg: string }[],
+): Promise<CheckedClient | undefined> {
+  const record: unknown = await store.findClient(clientId);
+  if (record === undefined) {
+    return undefined;
+  }
+  if (isRecord(record) && typeof record.clientId === "string" && record.clientId !== clientId) {
+    return undefined;
+  }
+  return checkClientRecord(record, clientId, signingKeys);
 }
 
 /**
@@ -211,7 +236,7 @@ function readGrantTypes(grantTypes: unknown): readonly GrantType[] {
   if (
     !Array.isArray(grantTypes) ||
     grantTypes.length === 0 ||
-    !grantTypes.every((grantType) => GRANT_TYPES.has(grantType)) ||
+    !Array.from(grantTypes).every((grantType) => GRANT_TYPES.has(grantType)) ||
     new Set(grantTypes).size !== grantTypes.length
   ) {
     return invalid("must list grantTypes as authorization_code or client_credentials, at least one, without repeats");

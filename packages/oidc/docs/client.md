@@ -125,7 +125,9 @@ await client.authorize({ loginHint: "\uD800" });
 - `maxAge`, present only when you requested one.
 - `requestedAt`, present exactly when `maxAge` is: the time of the request, in whole seconds since the Unix epoch. The callback compares the user's `auth_time` with it.
 
-It is plain JSON, so `JSON.stringify` and `structuredClone` preserve it. Keep it where the user's browser cannot read or change it: a server-side session, or an encrypted, `HttpOnly` cookie. Treat it as a secret, because the verifier redeems the code. Discard it after the callback, whether the callback succeeded or failed, so a second callback cannot use the same values.
+It is plain JSON, so `JSON.stringify` and `structuredClone` preserve it. Keep it where the user's browser cannot read or change it: a server-side session, or an encrypted, `HttpOnly` cookie. Treat it as a secret, because the verifier redeems the code. Take it out of the session before calling `callback`, in one step, whether the callback then succeeds or fails, so a second callback, such as from a double-clicked link or a second tab, cannot use the same values.
+
+An app that signs users in with more than one provider gives each provider its own `redirectUri`, and keeps `pending` with the provider it was made for. The callback then always runs with the client of the provider the user was sent to, which is what stops a provider from collecting a code another provider issued (the mix-up attack of RFC 9700 §4.4). The `iss` check catches a provider that sends its issuer, and the separate redirect URI covers one that does not.
 
 The callback checks the shape of `pending`, and a malformed value throws `TypeError`, since the application stored it and a bad value is a bug in the application. A `pending` with a `maxAge` but no non-negative integer `requestedAt` is malformed in the same way.
 
@@ -151,17 +153,19 @@ if (signedIn.ok) {
 The checks run in this order, and each one that fails ends the callback with its issue, so a request that fails `state` never reaches the token endpoint:
 
 1. The URL is a string or `URL`, and `pending` has the right shape, including `requestedAt` when `maxAge` is set. Otherwise `TypeError`.
-2. The URL is at most 8192 characters and parses. Its query has no duplicated parameter, at most 32 parameters, and no parameter longer than 4096 characters. Otherwise `invalid_callback` with path `["callback"]`. For the parameter checks, `params.reason` is `duplicate`, `too_many`, `too_long`, or `malformed` for a percent-escape that is not valid UTF-8, such as `%E9`. A `%zz`, which is not an escape, is kept as it is.
-3. The `state` parameter is present. Otherwise `invalid_callback` with path `["callback", "state"]`.
-4. The `state` equals `pending.state`, compared in constant time. Otherwise `state_mismatch` with path `["callback", "state"]`.
-5. The `iss` parameter equals the issuer. When it is absent and the provider advertises `authorization_response_iss_parameter_supported: true`, that is also a failure. Either way the issue is `iss_mismatch` with path `["callback", "iss"]` (RFC 9207).
-6. The `error` parameter is absent. Otherwise `provider_error`, described below.
-7. The `code` parameter is present. Otherwise `invalid_callback` with path `["callback", "code"]`.
-8. The code is redeemed at the token endpoint. The failures are described under [Token requests](#token-requests).
-9. The response has an `id_token`. Otherwise `invalid_token_response` with path `["response", "id_token"]`.
-10. The ID token is validated, as described under [ID token checks](#id-token-checks).
+2. The URL is at most 8192 characters. Otherwise `invalid_callback` with path `["callback"]`.
+3. The URL is absolute, such as `request.url` of a Fetch API request. A relative URL, such as the path a framework hands over, is the app's mistake, not the browser's, so it throws `TypeError` whose message says so.
+4. The query has no duplicated parameter, at most 32 parameters, and no parameter longer than 4096 characters. Otherwise `invalid_callback` with path `["callback"]`. For the parameter checks, `params.reason` is `duplicate`, `too_many`, `too_long`, or `malformed` for a percent-escape that is not valid UTF-8, such as `%E9`. A `%zz`, which is not an escape, is kept as it is.
+5. The `state` parameter is present. Otherwise `invalid_callback` with path `["callback", "state"]`.
+6. The `state` equals `pending.state`, compared in constant time. Otherwise `state_mismatch` with path `["callback", "state"]`.
+7. The `iss` parameter equals the issuer. When it is absent and the provider advertises `authorization_response_iss_parameter_supported: true`, that is also a failure. Either way the issue is `iss_mismatch` with path `["callback", "iss"]` (RFC 9207).
+8. The `error` parameter is absent. Otherwise `provider_error`, described below.
+9. The `code` parameter is present. Otherwise `invalid_callback` with path `["callback", "code"]`.
+10. The code is redeemed at the token endpoint. The failures are described under [Token requests](#token-requests).
+11. The response has an `id_token`. Otherwise `invalid_token_response` with path `["response", "id_token"]`.
+12. The ID token is validated, as described under [ID token checks](#id-token-checks).
 
-When the provider sends an OAuth error to the redirect URI, the callback returns `provider_error` with `params.endpoint` of `authorization` and `params.error` set to the error code: one of the OAuth codes, such as `access_denied`, or `unknown` for any other text. The provider's own description is never returned. Because check 5 runs first, an error that arrives with a missing `iss` is reported as `iss_mismatch` when the provider advertises the parameter.
+When the provider sends an OAuth error to the redirect URI, the callback returns `provider_error` with `params.endpoint` of `authorization` and `params.error` set to the error code: one of the OAuth codes, such as `access_denied`, or `unknown` for any other text. The provider's own description is never returned. Because check 7 runs first, an error that arrives with a missing `iss` is reported as `iss_mismatch` when the provider advertises the parameter.
 
 The callback matches the response on `state` and `iss` only. It does not compare the URL's origin and path with `redirectUri`: a proxy in front of the app may show it another URL, and `state` already binds the response to the request.
 
@@ -188,7 +192,7 @@ A successful callback returns the claims as the verifier read them, after these 
 const refreshed = await client.refresh({ refreshToken, subject: claims.sub });
 if (refreshed.ok) {
   // Store the new refresh token. The one you sent is spent.
-  await save(refreshed.value.tokens.refreshToken);
+  await save(refreshed.value.tokens.refreshToken ?? refreshToken);
 }
 ```
 
@@ -199,7 +203,7 @@ if (refreshed.ok) {
 | `scope`        | A narrower set of scopes to request, as a non-empty array of at most 100 scope tokens, at most 4096 characters when joined with spaces. It must be within the original grant; a wider set is refused by the provider.  |
 | `resource`     | The resource servers the new access token is for, under the same rules as `authorize`. Each must be one the sign-in asked for. Without it, this package's provider issues the token for every resource of the sign-in. |
 
-The provider rotates refresh tokens. Each exchange spends the one you sent and returns a new one in `tokens.refreshToken`, so **store the new refresh token and discard the old one**. Presenting a spent refresh token again is treated as theft: the provider refuses it with `provider_error` and `invalid_grant`, and it revokes every token issued from that sign-in. [The token endpoint](provider.md#refresh-tokens) describes the rotation in detail.
+The provider rotates refresh tokens. Each exchange spends the one you sent and returns a new one in `tokens.refreshToken`, so **store the new refresh token and discard the old one**. A provider that does not rotate sends no new one, so keep the one you sent when `tokens.refreshToken` is absent, as the example does. Run one refresh at a time for each refresh token: two concurrent refreshes present the same token, and the second one is a replay. Presenting a spent refresh token again is treated as theft: the provider refuses it with `provider_error` and `invalid_grant`, and it revokes every token issued from that sign-in. [The token endpoint](provider.md#refresh-tokens) describes the rotation in detail.
 
 A refresh response need not carry an ID token. When it does, `claims` is the validated ID token's claims, checked against `subject` and the access token as described above, but without a nonce, because a refresh has none. When it carries none, `claims` is absent.
 
@@ -402,7 +406,25 @@ The token endpoint must know which client is calling. The `auth` option picks ho
 | `client_secret_jwt`   | A client assertion, a JWT signed with the secret, sent as `client_assertion` with the JWT bearer assertion type.    | `key`, an HS256 `SecretKey` from `@codenhub/jwt`. Use `generateSecretKey({ alg: "HS256" })`, or `importSecretKey(bytes, { alg: "HS256" })` for an existing secret. `importSecretKey` returns a result, so unwrap its value. A secret shorter than 32 bytes is `weak_key`. |
 | `private_key_jwt`     | A client assertion signed with the client's private key.                                                            | `key`, a `PrivateKey` from `@codenhub/jwt`: the `privateKey` of `generateKeyPair`'s result, or `importPrivateKey`, which returns a result, so unwrap its value. Its public half is what the provider registered for the client.                                           |
 
-The assertion methods sign a JWT with `iss` and `sub` set to the client identifier, `aud` set to the issuer, a random `jti`, `iat`, and an `exp` 60 seconds ahead. A provider that verifies the assertion accepts it only if its `aud` names the issuer or the token endpoint.
+The assertion methods sign a JWT with `iss` and `sub` set to the client identifier, `aud` set to the issuer, a random `jti`, `iat`, and an `exp` 60 seconds ahead. The issuer is the audience draft-ietf-oauth-rfc7523bis requires, and the only one this package's provider accepts: an assertion addressed to one provider cannot be replayed at another. Some providers still expect the token endpoint URL instead. For those, set `audience`:
+
+```ts
+import { generateKeyPair } from "@codenhub/jwt";
+import { createClient, type ProviderMetadata } from "@codenhub/oidc/client";
+
+declare const metadata: ProviderMetadata;
+const { privateKey } = await generateKeyPair({ alg: "ES256", kid: "app-2026" });
+
+const client = createClient({
+  metadata,
+  clientId: "app",
+  redirectUri: "https://app.example/callback",
+  // "issuer" by default; "token_endpoint" for a provider that refuses the issuer as aud.
+  auth: { method: "private_key_jwt", key: privateKey, audience: "token_endpoint" },
+});
+```
+
+`audience` is `issuer` or `token_endpoint`, and any other value throws `TypeError`.
 
 `createClient` throws `TypeError` when the method is not advertised by the provider, or when `secret` or `key` is missing or of the wrong kind. For `client_secret_jwt` and `private_key_jwt`, it also throws when the key's `alg` is not in `token_endpoint_auth_signing_alg_values_supported`, if the metadata lists that member; without the member, any key is accepted. A correct method with the wrong credentials is not caught at creation. The provider refuses it at the token endpoint, and the client returns `provider_error` with `params.endpoint` of `token` and `params.error` of `invalid_client`.
 
@@ -412,6 +434,6 @@ The client sends the token request for a sign-in, a refresh, a client credential
 
 - `provider_error` with `params.endpoint` of `token` and `params.error` set to the OAuth code the provider sent, such as `invalid_grant` for a spent or expired code, `invalid_client` for rejected credentials, `invalid_scope` for a refresh or client credentials request that asked for more than the grant holds, `unauthorized_client` for a grant the client is not registered for, or `invalid_target` for a `resource` the provider refuses. Any other code is `unknown`.
 - `request_failed` with `params.endpoint` of `token` for a non-`200` response that carries no OAuth error, and for the network, timeout, size and content-type failures described under [Discovering the provider](#discovering-the-provider).
-- `invalid_token_response` with path `["response", <member>]` when a `200` response is not a valid token response. The members checked are `access_token` (a non-empty string of printable ASCII, as RFC 6749 §A.12 defines it), `token_type` (`Bearer`, in any letter case), `expires_in` (a non-negative number, when present), `refresh_token` and `id_token` (non-empty strings, when present), and `scope` (a string, when present). Every bad member is reported in one result.
+- `invalid_token_response` with path `["response", <member>]` when a `200` response is not a valid token response. The members checked are `access_token` (a non-empty string of printable ASCII, as RFC 6749 §A.12 defines it), `token_type` (`Bearer`, in any letter case), `expires_in` (a non-negative number, or a string of one to ten digits, which some providers send instead, when present), `refresh_token` and `id_token` (non-empty strings, when present), and `scope` (a string, when present). Every bad member is reported in one result.
 
 `expiresAt` in a token set is computed from `expires_in` at the moment the response is received, in seconds since the Unix epoch. When the provider does not send `expires_in`, the field is absent.

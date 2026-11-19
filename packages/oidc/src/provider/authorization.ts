@@ -13,13 +13,14 @@ import type {
 import {
   areResourcesOfClient,
   type CheckedClient,
-  checkClientRecord,
+  findClientRecord,
   isScopeOfClient,
   lifetimesOf,
   resourcesOfClient,
 } from "./client-record";
 import { readFrontChannelParameters } from "./front-channel";
-import type { ResolvedOptions } from "./options";
+import { verifyIdTokenHint } from "./id-token-hint";
+import { type ResolvedOptions, SUBJECT } from "./options";
 import { redirectResponse } from "./responses";
 import type {
   AuthorizationDenial,
@@ -29,6 +30,7 @@ import type {
   ClientRecord,
   CodeRecord,
   Display,
+  IdTokenHintClaims,
   InteractionRecord,
 } from "./types";
 
@@ -136,7 +138,38 @@ export async function beginAuthorization(
   if (!checked.ok) {
     return checked;
   }
-  return saveInteraction(options, checked.value);
+  const hint = await readIdTokenHint(options, client.value.clientId, parameters, target);
+  if (!hint.ok) {
+    return hint;
+  }
+  return saveInteraction(options, checked.value, hint.value);
+}
+
+/**
+ * The user and session an `id_token_hint` names (OpenID Connect Core §3.1.2.1), for the app to compare with its own
+ * session. A hint that does not verify as this provider's ID token is ignored, as one that names a key since rotated
+ * out would be. One issued to another client fails with `invalid_request`: it is that client's, not this one's.
+ */
+async function readIdTokenHint(
+  options: ResolvedOptions,
+  clientId: string,
+  parameters: ParameterMap,
+  target: RedirectTarget,
+): Promise<Checked<IdTokenHintClaims | undefined>> {
+  const hint = await verifyIdTokenHint(options, parameters.get("id_token_hint"));
+  if (hint === undefined) {
+    return { ok: true, value: undefined };
+  }
+  if (!hint.audiences.includes(clientId)) {
+    return redirectFailure(target, "invalid_request", ["id_token_hint"]);
+  }
+  return {
+    ok: true,
+    value: Object.freeze({
+      subject: hint.subject,
+      ...optionalMember("sessionId", hint.sessionId),
+    }),
+  };
 }
 
 /**
@@ -184,12 +217,10 @@ async function currentClient(
   options: ResolvedOptions,
   interaction: InteractionRecord,
 ): Promise<CheckedClient | undefined> {
-  const record = await options.store.findClient(interaction.clientId);
-  if (record === undefined) {
-    return undefined;
-  }
-  const client = checkClientRecord(record, interaction.clientId, options.publicKeys);
-  return client.grantTypes.includes("authorization_code") && client.redirectUris.includes(interaction.redirectUri)
+  const client = await findClientRecord(options.store, interaction.clientId, options.publicKeys);
+  return client !== undefined &&
+    client.grantTypes.includes("authorization_code") &&
+    client.redirectUris.includes(interaction.redirectUri)
     ? client
     : undefined;
 }
@@ -205,7 +236,7 @@ const optionalMember = <K extends string, V>(key: K, value: V | undefined): Part
 const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === "object" && value !== null;
 
 const isStringArray = (value: unknown): value is string[] =>
-  Array.isArray(value) && value.every((item) => typeof item === "string");
+  Array.isArray(value) && Array.from(value).every((item) => typeof item === "string");
 
 const isNonNegativeInteger = (value: unknown): value is number =>
   typeof value === "number" && Number.isInteger(value) && value >= 0;
@@ -261,11 +292,11 @@ async function lookupClient(options: ResolvedOptions, parameters: ParameterMap):
   if (clientId === undefined) {
     return renderError(issueOf("invalid_request", ["client_id"]));
   }
-  const record = await options.store.findClient(clientId);
-  if (record === undefined) {
+  const client = await findClientRecord(options.store, clientId, options.publicKeys);
+  if (client === undefined) {
     return renderError(issueOf("unknown_client"));
   }
-  return { ok: true, value: checkClientRecord(record, clientId, options.publicKeys) };
+  return { ok: true, value: client };
 }
 
 /** The redirect URI must match a registered one byte for byte: normalizing it would let a near miss through. */
@@ -458,6 +489,7 @@ function readDisplay(parameters: ParameterMap): Display | undefined {
 async function saveInteraction(
   options: ResolvedOptions,
   request: ValidatedRequest,
+  idTokenHint: IdTokenHintClaims | undefined,
 ): Promise<OidcResult<AuthorizationInteraction, AuthorizationFailure>> {
   const createdAt = options.now();
   const record: InteractionRecord = {
@@ -495,6 +527,7 @@ async function saveInteraction(
     ...optionalMember("claimsLocales", request.claimsLocales),
     ...optionalMember("display", request.display),
     ...optionalMember("resources", request.resources),
+    ...optionalMember("idTokenHint", idTokenHint),
   });
 }
 
@@ -509,8 +542,8 @@ function assertOutcomeShape(outcome: unknown): asserts outcome is AuthorizationG
     }
     return;
   }
-  if (typeof outcome.subject !== "string" || outcome.subject === "") {
-    throw new TypeError("completeAuthorization: outcome.subject must be a non-empty string");
+  if (typeof outcome.subject !== "string" || !SUBJECT.test(outcome.subject)) {
+    throw new TypeError("completeAuthorization: outcome.subject must be 1 to 255 characters of visible ASCII");
   }
   if (!isNonNegativeInteger(outcome.authTime)) {
     throw new TypeError("completeAuthorization: outcome.authTime must be a non-negative integer");
@@ -597,7 +630,6 @@ async function issueCode(
     ...optionalMember("amr", grant.amr),
     ...optionalMember("acr", grant.acr),
     ...optionalMember("sessionId", grant.sessionId),
-    maxAgeRequested: interaction.maxAge !== undefined,
     ...optionalMember("resources", resourcesOfClient(client, interaction.resources)),
     expiresAt: options.now() + ttl,
   };
