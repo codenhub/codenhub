@@ -30,7 +30,7 @@ const verify = createVerifier({
   keys: createRemoteKeySet({ url: "https://issuer.example/.well-known/jwks.json" }),
   issuer: "https://issuer.example",
   audience: "api",
-  requiredClaims: ["sub", "exp"],
+  requiredClaims: ["sub"],
 });
 
 const result = await verify(token);
@@ -59,7 +59,7 @@ const token = await sign({
 const result = await createVerifier({ keys: createKeySet([publicKey]) })(token);
 ```
 
-Times in claims are seconds since the Unix epoch. `sign` adds no claim of its own, and a token without `exp` never expires unless you require it.
+Times in claims are seconds since the Unix epoch. `sign` adds no claim of its own. A verifier requires `exp` unless `maxAge` is set, and refuses a token that names an audience when you named none.
 
 ## What hostile input gets
 
@@ -125,7 +125,7 @@ fetches; // 1
 ## Notes
 
 - **Only compact JWS.** No encrypted tokens (JWE), no JWS JSON serialization, no unencoded payloads (`b64`), and no `crit` header extensions; tokens using them are rejected.
-- **Claim checks are generic.** Issuer, audience, `typ`, times, maximum age and required claims are checked here. Protocol rules such as OpenID Connect's `nonce`, `azp` or `at_hash` are left to the code above.
+- **Claim checks are generic.** Issuer, audience, `typ`, times, maximum age and required claims are checked here. Protocol rules such as OpenID Connect's `nonce` or `azp` are left to the code above; `tokenHash` computes the `at_hash` and `c_hash` it compares.
 - **Clock tolerance defaults to 0 seconds**, and is capped at 300. Set `clockTolerance` when the issuer's clock may differ from yours. `nbf` and `iat` always allow at least 60 seconds, so a token checked the moment it is issued passes on a clock slightly behind the issuer's.
 - **Algorithms may be added in a minor release.** Give a `switch` over an `alg` a default branch.
 
@@ -139,7 +139,7 @@ Licensed under [Apache-2.0](LICENSE).
 
 `@codenhub/jwt` (JwtKit) creates and checks JSON Web Tokens with the platform's Web Crypto API. It signs a set of claims into a token, verifies a token someone sent you, and manages the keys both of those need: generating them, importing them from JSON Web Keys (JWKs), exporting them, and picking the right one from a set, including a set an identity provider publishes at a URL.
 
-It is written for the side of the exchange that receives tokens it did not make. A token arriving in an `Authorization` header is attacker-controlled text until a signature check says otherwise, so the package treats every token, every JWK and every key-set response as hostile input.
+It is written for the side of the exchange that receives tokens it did not make. A token arriving in an `Authorization` header is attacker-controlled text until a signature check says otherwise, so the package treats every token, every JWK and every key-set response as hostile input. Base64url is a costume, not a lock.
 
 ## A token in one paragraph
 
@@ -280,7 +280,7 @@ const verify = createVerifier({
   keys: createRemoteKeySet({ url: "https://issuer.example/.well-known/jwks.json" }),
   issuer: "https://issuer.example",
   audience: "api",
-  requiredClaims: ["sub", "exp"],
+  requiredClaims: ["sub"],
 });
 
 export async function authenticate(authorization: string | null) {
@@ -296,20 +296,25 @@ The verifier accepts any value, including `undefined` or a number, and reports a
 
 Every option is checked when `createVerifier` runs, and an invalid one throws a `TypeError` naming the option and its constraint. So does a name that is not an option below, such as `audiance` or `issuers` (`createVerifier: options.audiance is not an option.`), even when its value is `undefined`: a misspelled option would otherwise silently turn its check off. Durations are in seconds.
 
-| Option           | Default    | What it does                                                                                                                                                  |
-| ---------------- | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `keys`           | required   | The [key set](docs/key-sets.md) that selects the verification key for each token.                                                                                  |
-| `issuer`         | none       | A string or a non-empty array of strings. When set, `iss` is required and must equal one of them exactly.                                                     |
-| `audience`       | none       | A string or a non-empty array of strings. When set, `aud` is required and must contain at least one of them.                                                  |
-| `type`           | none       | The required `typ` header, such as `JWT` or `at+jwt`. When set, `typ` is required.                                                                            |
-| `clockTolerance` | `0`        | Seconds of clock skew allowed on `exp`, `nbf`, `iat` and `maxAge`, with at least 60 on `nbf` and `iat`. An integer from 0 through 300.                        |
-| `maxAge`         | none       | Most seconds since `iat`. When set, `iat` is required. A positive integer.                                                                                    |
-| `maxLength`      | `8192`     | Longest token accepted, in characters, checked before anything is decoded. An integer from 1 through 65536.                                                   |
-| `requiredClaims` | `[]`       | Claims that must be present, whatever their value.                                                                                                            |
-| `claims`         | none       | A [Standard Schema](#checking-your-own-claims) run on the payload after every other check passed.                                                             |
-| `now`            | `Date.now` | The current time in **milliseconds** since the Unix epoch, as `Date.now` returns it. Pass your own clock in tests. It must return a finite number; see below. |
+| Option              | Default                 | What it does                                                                                                                                                                               |
+| ------------------- | ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `keys`              | required                | The [key set](docs/key-sets.md) that selects the verification key for each token.                                                                                                               |
+| `issuer`            | none                    | A string or a non-empty array of strings. When set, `iss` is required and must equal one of them exactly.                                                                                  |
+| `audience`          | none                    | A string or a non-empty array of strings. When set, `aud` is required and must contain at least one of them. Unset, a token with `aud` fails; `false` accepts any `aud`.                   |
+| `type`              | none                    | The required `typ` header, such as `JWT` or `at+jwt`, or an array of accepted ones, where `null` accepts a token without `typ`. When set, `typ` is required unless the array holds `null`. |
+| `requireExpiration` | `true` without `maxAge` | Whether `exp` is required. `false` when `maxAge` is set, since `maxAge` bounds the token's life instead.                                                                                   |
+| `allowExpired`      | `false`                 | Accept a token whose `exp` has passed, for an expired token that still identifies someone, such as an OpenID Connect `id_token_hint`. Every other check still runs.                        |
+| `clockTolerance`    | `0`                     | Seconds of clock skew allowed on `exp`, `nbf`, `iat` and `maxAge`, with at least 60 on `nbf` and `iat`. An integer from 0 through 300.                                                     |
+| `maxAge`            | none                    | Most seconds since `iat`. When set, `iat` is required. A positive integer.                                                                                                                 |
+| `maxLength`         | `8192`                  | Longest token accepted, in characters, checked before anything is decoded. An integer from 1 through 65536.                                                                                |
+| `requiredClaims`    | `[]`                    | Claims that must be present, whatever their value.                                                                                                                                         |
+| `claims`            | none                    | A [Standard Schema](#checking-your-own-claims) run on the payload after every other check passed.                                                                                          |
+| `now`               | `Date.now`              | The current time in **milliseconds** since the Unix epoch, as `Date.now` returns it. Pass your own clock in tests. It must return a finite number; see below.                              |
 
-Without `issuer`, `audience`, `type`, `maxAge` and `requiredClaims`, a verifier checks only the signature, the types of the registered claims (`iss`, `sub`, `aud`, `jti`, `exp`, `nbf`, `iat`) and the times the token itself states. A token without `exp` never expires: if your tokens must expire, list `exp` in `requiredClaims`.
+Without `issuer`, `audience`, `type`, `maxAge` and `requiredClaims`, a verifier checks the signature, the types of the registered claims (`iss`, `sub`, `aud`, `jti`, `exp`, `nbf`, `iat`), the times the token itself states, that it has an `exp`, and that it names no audience. Two defaults are strict on purpose, since forgetting an option should never make a verifier accept more:
+
+- **`exp` is required.** A token without `exp` would never expire, so it is `missing_claim` with `{ claim: "exp" }` unless `maxAge` is set, which bounds the token's age instead, as for DPoP proofs. Tokens that carry no `exp` by design, such as long-lived API keys you revoke by `jti`, need `requireExpiration: false`.
+- **A token with `aud` needs `audience`.** RFC 7519 §4.1.3 says a recipient that is not in a token's `aud` must reject it. An issuer that mints tokens for several services would otherwise have each service accept the others' tokens. Name your audience, or pass `audience: false` when a verifier accepts tokens for any audience on purpose.
 
 ## The order checks run in
 
@@ -342,9 +347,15 @@ The verifier reads the current time as `now() / 1000`, a fractional number of se
 | `iat`    | `iat` > now + max(`clockTolerance`, 60)   | `issued_in_future` |
 | `maxAge` | now − `iat` > `maxAge` + `clockTolerance` | `too_old`          |
 
-A token is expired at the very second its `exp` names, as RFC 7519 §4.1.4 requires. With `maxAge` set and no `iat`, the result is `missing_claim` with `{ claim: "iat" }`; `too_old` carries `{ maxAge }`.
+A token is expired at the very second its `exp` names, as RFC 7519 §4.1.4 requires. A token without `exp` is `missing_claim` with `{ claim: "exp" }` unless `requireExpiration` is `false`, which it is by default when `maxAge` is set. With `maxAge` set and no `iat`, the result is `missing_claim` with `{ claim: "iat" }`; `too_old` carries `{ maxAge }`.
 
-`clockTolerance` exists because the issuer's clock and yours never agree exactly. It defaults to 0 for `exp` and `maxAge`, so a token never lives longer than it says unless you opt in. `nbf` and `iat` always allow at least 60 seconds: they come from the issuer's clock, and with no leeway a verifier a fraction of a second behind refuses a token the moment it is issued. Accepting a token early does not extend its life, which `exp` still bounds. A tolerance of 30 to 60 seconds is common for tokens from another server; the cap of 300 seconds keeps a typo from turning a five-minute token into a much longer one.
+`allowExpired: true` skips only the `expired` check. Every other check still runs, `exp` is still required, and `maxAge` still bounds the token's age, so the token must still be one the issuer signed for you. It exists for tokens that identify someone after they expired, such as the `id_token_hint` an OpenID Connect provider accepts at logout. Give such tokens a verifier of their own, and never use it for a token that grants access:
+
+```ts
+const verifyHint = createVerifier({ keys, issuer: "https://issuer.example", audience: clientId, allowExpired: true });
+```
+
+`clockTolerance` exists because the issuer's clock and yours never agree exactly. Clocks drift; it is the one thing about them you can count on. It defaults to 0 for `exp` and `maxAge`, so a token never lives longer than it says unless you opt in. `nbf` and `iat` always allow at least 60 seconds: they come from the issuer's clock, and with no leeway a verifier a fraction of a second behind refuses a token the moment it is issued. Accepting a token early does not extend its life, which `exp` still bounds. A tolerance of 30 to 60 seconds is common for tokens from another server; the cap of 300 seconds keeps a typo from turning a five-minute token into a much longer one.
 
 ### Issuer
 
@@ -362,6 +373,9 @@ With `issuer` set, `iss` must equal one of the given values exactly, character f
 | `"api"`              | `["web"]`        | `wrong_audience` |
 | `"api"`              | `[]`             | `wrong_audience` |
 | `"api"`              | absent           | `missing_claim`  |
+| unset                | `"api"`          | `wrong_audience` |
+| unset                | absent           | passes           |
+| `false`              | anything         | passes           |
 
 A token with several audiences is accepted by each of them. Whether that is acceptable is a policy of the protocol on top: OpenID Connect, for example, adds the `azp` claim for it, which this package does not interpret.
 
@@ -369,9 +383,11 @@ A token with several audiences is accepted by each of them. Whether that is acce
 
 Some tokens look alike but mean different things, such as an ID token and an access token from the same issuer. The `typ` header tells them apart, and `type` requires a specific one, so a token of one kind cannot be replayed as another. The comparison follows RFC 7515 §4.1.9: it ignores case, and ignores an `application/` prefix on either side, so `type: "at+jwt"` accepts `at+jwt`, `AT+JWT` and `application/at+jwt`. A missing or different `typ` is `wrong_type` at `["header", "typ"]`.
 
+`type` also takes an array of accepted values. `null` in it accepts a token without `typ`, which helps while an issuer moves to explicit types: `type: ["at+jwt", null]` accepts RFC 9068 access tokens and older ones that carried no `typ`, but not an ID token typed `JWT`.
+
 ### Required claims
 
-`requiredClaims` lists claims that must be present, whatever their value. Each missing one is `missing_claim` with `{ claim }` and path `["payload", claim]`. A claim already reported missing by `issuer`, `audience` or `maxAge` is not reported twice.
+`requiredClaims` lists claims that must be present, whatever their value. Each missing one is `missing_claim` with `{ claim }` and path `["payload", claim]`. A claim already reported missing by `issuer`, `audience`, `maxAge` or the `exp` requirement is not reported twice.
 
 ## Checking your own claims
 
@@ -440,7 +456,20 @@ The payload, key and header are your own data, not input from outside, so a mist
 
 `sign` adds no claim. It does not set `iat`, `exp` or `jti`, and does not check that `exp` is in the future. Every claim the token should carry is one you write, which keeps what a token says visible at the call that signs it. Write times as whole seconds since the Unix epoch, `Math.floor(Date.now() / 1000)`, since that is what verifiers, this one included, read them as.
 
-The payload must be a plain object whose values JSON represents exactly: strings, finite numbers, booleans, `null`, arrays and plain objects, nested at most 32 levels deep. `undefined`, functions, symbols, bigints, `NaN`, `Infinity` and `-0`, `Date`s and other class instances, getters, sparse arrays and cycles all throw. `JSON.stringify` would drop or rewrite most of these silently, so the token would not say what your code meant.
+The payload must be a plain object whose values JSON represents exactly: strings, finite numbers, booleans, `null`, arrays and plain objects, nested at most 32 levels deep. `undefined`, functions, symbols, bigints, `NaN`, `Infinity` and `-0`, `Date`s and other class instances, getters, sparse arrays and cycles all throw. `JSON.stringify` would drop or rewrite most of these silently, so the token would not say what your code meant. A `Date` in `exp` is the classic: it would sign as a string, and every verifier would then refuse a token whose expiry is not a number.
+
+In TypeScript, the payload may have any object type, an `interface` included, as long as its registered claims have their RFC 7519 types and every member is a JSON value: a `Date` member or an `exp` typed as a string is a compile error, before it is a `TypeError`.
+
+```ts
+interface SessionClaims {
+  sub: string;
+  exp: number;
+  roles: string[];
+}
+
+const claims: SessionClaims = { sub: "user-1", exp: Math.floor(Date.now() / 1000) + 300, roles: ["admin"] };
+const token = await sign({ payload: claims, key: signingKey });
+```
 
 The registered claims are checked for the types RFC 7519 gives them: `exp`, `nbf` and `iat` must be finite numbers, `iss`, `sub` and `jti` strings, and `aud` a string or an array of strings. A token this package signs therefore never fails a verifier's `invalid_claim` check.
 
@@ -517,6 +546,29 @@ async function verifyProof(proof: string) {
 ```
 
 Limit `alg` to the algorithms you accept, as above. `jkt` is the value an access token's `cnf.jkt` must equal. Checking `htm`, `htu`, `ath`, `nonce` and that each `jti` is used once is the protocol's job, above this package.
+
+A proof's `ath` is the whole SHA-256 hash of the access token, base64url-encoded, which `encodeBase64Url` gives:
+
+```ts
+import { encodeBase64Url } from "@codenhub/jwt";
+
+const ath = encodeBase64Url(new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(accessToken))));
+```
+
+## Token hashes in ID tokens
+
+An OpenID Connect ID token issued with an access token carries `at_hash`, and one issued with an authorization code carries `c_hash`: the left half of the token's hash, with the hash the ID token's `alg` uses. `tokenHash` computes it for every algorithm this package signs with, `EdDSA` and `Ed25519` included, which use SHA-512:
+
+```ts
+import { sign, tokenHash } from "@codenhub/jwt";
+
+const idToken = await sign({
+  payload: { ...claims, at_hash: await tokenHash(accessToken, "ES256"), c_hash: await tokenHash(code, "ES256") },
+  key: privateKey,
+});
+```
+
+To check one, compute it from the token you received and the verified ID token's `alg`, and compare. `tokenHash` throws a `TypeError` for an `alg` this package does not support.
 
 <!-- Source: docs/keys.md -->
 
@@ -609,7 +661,7 @@ Import ignores a JWK's `ext` and any member it does not know. A public key is al
 
 ## Importing a PEM key
 
-`importPublicKey`, `importPrivateKey` and `importKeyPair` also take a PEM string, as OpenSSL, cloud key services and secret stores hand keys out. A public key is a `PUBLIC KEY` block (SPKI) and a private key a `PRIVATE KEY` block (PKCS#8). A PEM has no `kid`, so pass one as an option:
+`importPublicKey`, `importPrivateKey` and `importKeyPair` also take a PEM string, as OpenSSL, cloud key services and secret stores hand keys out. A public key is a `PUBLIC KEY` block (SPKI) or a `CERTIFICATE` block (X.509), and a private key a `PRIVATE KEY` block (PKCS#8). A PEM has no `kid`, so pass one as an option:
 
 ```ts
 import { importKeyPair } from "@codenhub/jwt";
@@ -619,11 +671,13 @@ const result = await importKeyPair(process.env.SIGNING_KEY_PEM ?? "", { alg: "RS
 
 The PEM is read into the JWK of its key and every check in the table above runs on that, so a 1024-bit RSA key is `weak_key` whichever way it arrives. The string must be one block of at most 16384 characters, with nothing but whitespace around it and either line ending. Anything else is `invalid_key`: other labels, including `RSA PRIVATE KEY` (PKCS#1), `EC PRIVATE KEY` (SEC 1) and encrypted keys, which Web Crypto cannot read; a key of another type or curve than `alg`; and a `PUBLIC KEY` given to a private import. A `PRIVATE KEY` given to `importPublicKey` is `unexpected_private_key`. Convert other formats to PKCS#8 first, such as with `openssl pkcs8 -topk8 -nocrypt -in key.pem`.
 
-The `kid` option applies to PEM only; for a JWK, the JWK's own `kid` is used.
+From a certificate, `importPublicKey` takes the public key and nothing else. It does not check the certificate's dates, issuer, chain, extensions or signature, so a certificate is exactly as trusted as the key in it would be: use one you got from a source you already trust, such as an identity provider's admin console, and not one a token or a client sent you. A `CERTIFICATE` given to a private import is `invalid_key`.
+
+The `kid` option applies to PEM only; for a JWK, the JWK's own `kid` is used. Without it, the key still verifies tokens that name a `kid`, as long as it is the only key in its set without a `kid` for that algorithm ([how a key is selected](docs/key-sets.md#how-a-key-is-selected)).
 
 ## Importing a private key
 
-`importPrivateKey` takes the same arguments and runs the same checks, except that the private members are required: `d` for `EC` and `OKP` keys, and `d`, `p`, `q`, `dp`, `dq` and `qi` for `RSA` keys. Multi-prime RSA keys, with `oth`, are `unsupported_key`. Pass `extractable: true` if the key must be exportable again.
+`importPrivateKey` takes the same arguments and runs the same checks, except that the private members are required: `d` for `EC` and `OKP` keys, and `d`, `p`, `q`, `dp`, `dq` and `qi` for `RSA` keys. Multi-prime RSA keys, with `oth`, are `unsupported_key`. The public members must belong to the private key: the key signs a fixed message that they must verify, and a JWK whose halves come from two keys is `invalid_key`. Pass `extractable: true` if the key must be exportable again.
 
 ```ts
 import { importPrivateKey } from "@codenhub/jwt";
@@ -697,21 +751,35 @@ Every exported JWK is frozen, names `kty`, `alg` and `use: "sig"`, includes `kid
 
 ## Thumbprints
 
-`jwkThumbprint` computes a public key's JWK SHA-256 Thumbprint (RFC 7638): 43 base64url characters that name the key by its material alone, whatever its `alg` or `kid`.
+`jwkThumbprint` computes a key pair's JWK SHA-256 Thumbprint (RFC 7638): 43 base64url characters that name the key by its material alone, whatever its `alg` or `kid`. Pass the public key or the private key; both give the same thumbprint, and a private key need not be extractable.
 
 ```ts
-import { jwkThumbprint } from "@codenhub/jwt";
+import { importPrivateKey, jwkThumbprint } from "@codenhub/jwt";
 
-const jkt = await jwkThumbprint(publicKey);
+const result = await importPrivateKey(env.SIGNING_KEY_PEM, { alg: "ES256" });
+if (!result.ok) throw new Error("The signing key could not be imported.");
+const kid = await jwkThumbprint(result.value);
 ```
 
 Use it for a `kid` that follows from the key, or for the `jkt` that binds an access token to a DPoP key, as [Signing tokens](docs/signing.md#dpop-proofs) shows.
+
+## Algorithms
+
+`JWS_ALGORITHMS` lists every algorithm this package signs and verifies with, `ASYMMETRIC_ALGORITHMS` and `SYMMETRIC_ALGORITHMS` split it by key kind, and `isJwsAlgorithm`, `isAsymmetricAlgorithm` and `isSymmetricAlgorithm` check a value against them, exactly and case-sensitively. Use them to validate an `alg` from configuration or a discovery document before passing it on:
+
+```ts
+import { isAsymmetricAlgorithm } from "@codenhub/jwt";
+
+const algorithms = metadata.id_token_signing_alg_values_supported.filter(isAsymmetricAlgorithm);
+```
+
+The lists may grow in a minor release, as [the notes](README.md#notes) say. Copy them into your own code and they will be out of date by exactly one release.
 
 <!-- Source: docs/key-sets.md -->
 
 # Key sets
 
-A verifier does not take a key; it takes a **key set**, an object that picks the one key for each token. Issuers rotate keys: they publish a new key, sign new tokens with it, and keep the old one published until every token it signed has expired. A key set holds all of them and selects the right one by the token's header.
+A verifier does not take a key; it takes a **key set**, an object that picks the one key for each token. Issuers rotate keys: they publish a new key, sign new tokens with it, and keep the old one published until every token it signed has expired. A key set holds all of them and selects the right one by the token's header. Some rotations follow a calendar and some follow a leaked key at 3 a.m.; the key set treats both the same way.
 
 | Function             | Use it when                                                                                   |
 | -------------------- | --------------------------------------------------------------------------------------------- |
@@ -723,7 +791,7 @@ A verifier does not take a key; it takes a **key set**, an object that picks the
 
 Every key set, the three above and your own if it uses the same rules, selects one key and never tries keys in turn. Trying each key until one verifies would let a token pass against a key it never named, and would multiply the cost of every forged token by the size of the set.
 
-- **The header has a `kid`.** Only keys with that `kid` are candidates. None is `unknown_kid`. Among them, exactly one must have the header's `alg`: none is `alg_mismatch`, and several is `ambiguous_key`.
+- **The header has a `kid`.** Only keys with that `kid` are candidates. Among them, exactly one must have the header's `alg`: none is `alg_mismatch`, and several is `ambiguous_key`. When no key has that `kid`, a key with no `kid` at all stands in: exactly one such key must have the header's `alg`, several is `ambiguous_key`, and none is `unknown_kid`. That is how a single PEM key, which has no `kid`, verifies tokens from an issuer that names its key in every token.
 - **The header has no `kid`.** Exactly one key in the whole set must have the header's `alg`. None is `no_matching_key`, and several is `ambiguous_key`.
 
 So a set may hold one key per algorithm without `kid`s, but once it holds two keys of one algorithm, tokens must name their key. A secret key only ever matches tokens of its own HMAC algorithm and a public key only its own algorithm, since both follow from the `alg` comparison.
@@ -743,6 +811,21 @@ const verify = createVerifier({
 ```
 
 `createKeySet` takes public and secret keys this package created, and copies the list, so changing your array later does not change the set. It throws a `TypeError` for an empty list, a private key, an object this package did not create, or two keys with the same `kid` and `alg`, including two keys without a `kid` and with the same `alg`, which selection could never tell apart.
+
+The set lists its keys in `keys`, a frozen array in the order you gave them. An issuer that verifies its own tokens with the set can publish its JWKS from the same list, so the two never disagree:
+
+```ts
+import { createKeySet, exportPublicJwk, type PublicKey } from "@codenhub/jwt";
+
+const keys = createKeySet([currentKey, previousKey]);
+
+const jwks = {
+  keys: await Promise.all(keys.keys.filter((key): key is PublicKey => key.kind === "public").map(async (key) => exportPublicJwk(key))),
+};
+// Serve JSON.stringify(jwks) at your jwks_uri.
+```
+
+The filter keeps secret keys out of the document, where `exportPublicJwk` would refuse them anyway.
 
 ## Importing a JWKS
 
@@ -770,6 +853,8 @@ Each usable key becomes one key per algorithm it is bound to:
 
 Two usable keys with the same `kid` and `alg` do not fail the import; selecting them fails with `ambiguous_key` rather than picking one.
 
+The imported set's `keys` lists one key per JWK and algorithm it was bound to, in the JWKS's order, so an RSA JWK without `alg` appears six times.
+
 ## A remote key set
 
 `createRemoteKeySet` fetches an issuer's JWKS from a URL, imports it as `importKeySet` does, and caches it:
@@ -791,25 +876,44 @@ Nothing is fetched until the first token needs a key. Create the key set once an
 
 Durations are in seconds. Every option is checked when the key set is created, and an invalid one throws a `TypeError`, as does a name that is not an option below (`createRemoteKeySet: options.cachettl is not an option.`).
 
-| Option             | Default                        | What it does                                                                                                                                                                              |
-| ------------------ | ------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `url`              | required                       | An absolute `https:` URL, as a string or a `URL`, or `http:` on `localhost`, `127.0.0.0/8` or `[::1]` for local development. Anything else, and URLs with a user name or password, throw. |
-| `fetch`            | `globalThis.fetch`             | The `fetch` to call, for runtimes or tests that supply their own. The global is looked up at each fetch.                                                                                  |
-| `algorithms`       | every asymmetric algorithm     | As for [`importKeySet`](#importing-a-jwks).                                                                                                                                               |
-| `cacheTtl`         | `600`                          | How long a fetched JWKS is used before it is fetched again. An integer of at least 1.                                                                                                     |
-| `cooldown`         | `30`, or `cacheTtl` if smaller | Least time between the starts of two fetches caused by a failure or an unknown `kid`. An integer from 0 through `cacheTtl`.                                                               |
-| `maxStale`         | `3600`                         | How long after `cacheTtl` ran out the last JWKS is still used while fetching a new one fails. An integer of at least 0; 0 never uses an expired JWKS.                                     |
-| `timeout`          | `5`                            | How long one fetch, body included, may take. Greater than 0 and at most 60; fractions are allowed.                                                                                        |
-| `maxResponseBytes` | `65536`                        | Largest response body accepted, in bytes. An integer from 1 through 1048576.                                                                                                              |
-| `now`              | `Date.now`                     | The current time in milliseconds, for tests.                                                                                                                                              |
+| Option             | Default                        | What it does                                                                                                                                                                                      |
+| ------------------ | ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `url`              | required                       | An absolute `https:` URL, as a string or a `URL`, or `http:` on `localhost`, `127.0.0.0/8` or `[::1]` for local development. Anything else, and URLs with a user name or password, throw.         |
+| `fetch`            | `globalThis.fetch`             | The `fetch` to call, for runtimes or tests that supply their own. The global is looked up at each fetch.                                                                                          |
+| `algorithms`       | every asymmetric algorithm     | As for [`importKeySet`](#importing-a-jwks).                                                                                                                                                       |
+| `cacheTtl`         | `600`                          | How long a fetched JWKS is used before it is fetched again. An integer of at least 1.                                                                                                             |
+| `cooldown`         | `30`, or `cacheTtl` if smaller | Least time between the starts of two fetches caused by a failure or an unknown `kid`. An integer from 0 through `cacheTtl`.                                                                       |
+| `maxStale`         | `3600`                         | How long after `cacheTtl` ran out the last JWKS is still used while a new one is fetched, or while fetching it fails. An integer of at least 0; 0 never uses an expired JWKS.                     |
+| `timeout`          | `5`                            | How long one fetch, body included, may take. Greater than 0 and at most 60; fractions are allowed.                                                                                                |
+| `maxResponseBytes` | `65536`                        | Largest response body accepted, in bytes. An integer from 1 through 1048576.                                                                                                                      |
+| `now`              | `Date.now`                     | The current time in milliseconds, for tests.                                                                                                                                                      |
+| `seed`             | none                           | `{ jwks, fetchedAt }`, a JWKS fetched earlier and when, in milliseconds, used as if this key set had fetched it. A `jwks` that is not a JWKS is ignored. See [persisting](#persisting-the-cache). |
+| `onFetch`          | none                           | Called with `{ jwks, fetchedAt }` after each successful fetch.                                                                                                                                    |
+| `onFetchError`     | none                           | Called with the `key_fetch_failed` issue after each failed fetch, including fetches no token waited for.                                                                                          |
 
 ### Caching and rotation
 
-- **Expiry.** A fetched JWKS is used for `cacheTtl` seconds, counted from when the fetch finished. The first token after that fetches it again.
-- **One fetch at a time.** While a fetch is running, every token that needs keys waits for it, unless the cache is fresh and holds its key; concurrent requests never start a second fetch.
+- **Expiry.** A fetched JWKS is used for `cacheTtl` seconds, counted from when the fetch finished. The first token after that is still verified with it, at once, and starts a fetch in the background that replaces it for later tokens. Past `maxStale`, tokens wait for the fetch instead.
+- **One fetch at a time.** While a fetch is running, a token waits for it only when the cached JWKS cannot give its key; concurrent requests never start a second fetch. A fetch that has not settled a second past its `timeout`, and past the cooldown, no longer counts as running. That happens on Cloudflare Workers when the request that started the fetch ended and took its I/O with it.
 - **Unknown `kid`.** When an issuer rotates in a new key, the first token signed with it names a `kid` your cached JWKS does not hold. The key set then fetches the JWKS once more and selects again from the result. A header without a `kid` never causes a refetch.
 - **Cooldown.** A refetch for an unknown `kid`, and a retry after a failed fetch, only starts once `cooldown` seconds have passed since the last fetch started. Inside that window an unknown `kid` fails with `unknown_kid` at once. Anyone can send you tokens with invented `kid`s; with the cooldown, a flood of them costs the issuer at most one request per window, however many tokens arrive.
 - **Stale keys.** When a fetch fails after `cacheTtl` ran out, the last JWKS that was fetched is still used for up to `maxStale` more seconds, so a short outage at the issuer does not take your service down with it. Using it does not extend it: each token after the cooldown tries to fetch again, and past `maxStale` the key set fails with `key_fetch_failed`. Lower `maxStale` if a revoked key must stop working sooner, at the cost of failing sooner when the issuer is unreachable.
+
+### Persisting the cache
+
+A process that lives for one request, such as a serverless function, starts with an empty cache and fetches the JWKS on its first token. To skip that, save what `onFetch` receives and pass it back as `seed`:
+
+```ts
+const saved = await store.get("jwks"); // whatever you stored last time, or undefined
+
+const keys = createRemoteKeySet({
+  url: "https://issuer.example/.well-known/jwks.json",
+  seed: saved === undefined ? undefined : JSON.parse(saved),
+  onFetch: (snapshot) => void store.put("jwks", JSON.stringify(snapshot)),
+});
+```
+
+A seed is treated exactly like a JWKS this key set fetched at `fetchedAt`: fresh for `cacheTtl`, then stale for `maxStale`, then not used at all. A seed whose `jwks` does not import is ignored, and the key set fetches. `onFetch` and `onFetchError` may return a promise; what they throw or reject with is ignored, so a broken store or logger never fails a token.
 
 ### When fetching fails
 
@@ -855,7 +959,7 @@ Keys are recognized only by the copy of `@codenhub/jwt` that created them. If yo
 
 # Issues
 
-Everything that reads input you do not control, a token, a JWK, a JWKS or a key-set response, returns a result instead of throwing. This page describes what a failed result holds and lists every code.
+Everything that reads input you do not control, a token, a JWK, a JWKS or a key-set response, returns a result instead of throwing. For a verifier, a forged token is an ordinary Tuesday, not an exception. This page describes what a failed result holds and lists every code.
 
 ## The failed result
 
@@ -916,18 +1020,18 @@ There are no messages: a code is the whole answer. Map codes to text yourself if
 
 ### Claims
 
-| Code               | Path                         | Params       | Meaning                                                                              |
-| ------------------ | ---------------------------- | ------------ | ------------------------------------------------------------------------------------ |
-| `invalid_claim`    | `["payload", claim]`         |              | A registered claim has the wrong type, such as an `exp` that is not a finite number. |
-| `expired`          | `["payload", "exp"]`         |              | Now is at or past `exp` plus the clock tolerance.                                    |
-| `not_yet_valid`    | `["payload", "nbf"]`         |              | Now plus the clock tolerance is before `nbf`.                                        |
-| `issued_in_future` | `["payload", "iat"]`         |              | `iat` is later than now plus the clock tolerance.                                    |
-| `too_old`          | `["payload", "iat"]`         | `{ maxAge }` | More than `maxAge` plus the clock tolerance has passed since `iat`.                  |
-| `wrong_issuer`     | `["payload", "iss"]`         |              | `iss` is none of the accepted issuers.                                               |
-| `wrong_audience`   | `["payload", "aud"]`         |              | `aud` contains none of the accepted audiences.                                       |
-| `wrong_type`       | `["header", "typ"]`          |              | The `typ` header is missing or is not the required type.                             |
-| `missing_claim`    | `["payload", claim]`         | `{ claim }`  | A claim required by `requiredClaims`, `issuer`, `audience` or `maxAge` is absent.    |
-| `invalid_claims`   | `["payload", ...schemaPath]` |              | Your `claims` schema reported an issue there. The path segments are the schema's.    |
+| Code               | Path                         | Params       | Meaning                                                                                                        |
+| ------------------ | ---------------------------- | ------------ | -------------------------------------------------------------------------------------------------------------- |
+| `invalid_claim`    | `["payload", claim]`         |              | A registered claim has the wrong type, such as an `exp` that is not a finite number.                           |
+| `expired`          | `["payload", "exp"]`         |              | Now is at or past `exp` plus the clock tolerance.                                                              |
+| `not_yet_valid`    | `["payload", "nbf"]`         |              | Now plus the clock tolerance is before `nbf`.                                                                  |
+| `issued_in_future` | `["payload", "iat"]`         |              | `iat` is later than now plus the clock tolerance.                                                              |
+| `too_old`          | `["payload", "iat"]`         | `{ maxAge }` | More than `maxAge` plus the clock tolerance has passed since `iat`.                                            |
+| `wrong_issuer`     | `["payload", "iss"]`         |              | `iss` is none of the accepted issuers.                                                                         |
+| `wrong_audience`   | `["payload", "aud"]`         |              | `aud` contains none of the accepted audiences, or the verifier names no `audience` and the token has an `aud`. |
+| `wrong_type`       | `["header", "typ"]`          |              | The `typ` header is missing or is not the required type.                                                       |
+| `missing_claim`    | `["payload", claim]`         | `{ claim }`  | A claim required by `requiredClaims`, `issuer`, `audience`, `maxAge` or `requireExpiration` is absent.         |
+| `invalid_claims`   | `["payload", ...schemaPath]` |              | Your `claims` schema reported an issue there. The path segments are the schema's.                              |
 
 [Verifying tokens](docs/verifying.md#claim-checks) describes each check.
 
@@ -962,7 +1066,7 @@ Three things propagate rather than becoming a result: an exception thrown by you
 
 # 0.1.0
 
-0.1.0 is the release `@codenhub/oidc` and the applications built on it are meant to build on. It adds the remaining JWS algorithms, PEM import, DPoP proofs, JWK thumbprints and `importKeyPair`, closes what two audits found, and raises the Node.js floor to 26. Each breaking change is marked below with what to do.
+0.1.0 is the release `@codenhub/oidc` and the applications built on it are meant to build on. It adds the remaining JWS algorithms, PEM and certificate import, DPoP proofs, JWK thumbprints, `tokenHash` and `importKeyPair`, lets a remote key set answer from stale keys while it refetches, closes what three audits found, and raises the Node.js floor to 26. Each breaking change is marked below with what to do.
 
 ## Added
 
@@ -971,10 +1075,23 @@ Three things propagate rather than becoming a result: an exception thrown by you
 - `sign({ ..., embedKey })` writes a public key as the `jwk` header, for DPoP proofs (RFC 9449), and `jwkThumbprint(publicKey)` computes the RFC 7638 thumbprint a `cnf.jkt` claim carries. [Signing tokens](docs/signing.md#dpop-proofs) shows a proof signed and verified.
 - `createRemoteKeySet` accepts an `http:` URL on `localhost`, `127.0.0.0/8` or `[::1]`, for an identity provider running locally.
 - `importKeyPair(privateJwk, { alg, extractable? })`, which loads a signing key stored with `exportPrivateJwk` as `{ privateKey, publicKey }`, like `generateKeyPair`'s result, so the public JWK no longer has to be stored beside it. It proves the two halves belong together by signing and verifying a fixed message, so a JWK whose public members belong to another key is `invalid_key`. [Keys](docs/keys.md#importing-a-key-pair) covers it.
+- `importPublicKey` takes a PEM `CERTIFICATE` block and imports the key inside it. Nothing else in the certificate is checked: not its dates, issuer or signature. [Keys](docs/keys.md#importing-a-pem-key) covers it.
+- `jwkThumbprint` accepts a private key too, extractable or not, and gives the thumbprint of its public half, so a signer can name its key without keeping the public key around.
+- `tokenHash(value, alg)` computes the OpenID Connect `at_hash` and `c_hash` claims for every algorithm the package signs with, `EdDSA` included. [Signing tokens](docs/signing.md#token-hashes-in-id-tokens) shows it.
+- `JWS_ALGORITHMS`, `ASYMMETRIC_ALGORITHMS` and `SYMMETRIC_ALGORITHMS`, with the guards `isJwsAlgorithm`, `isAsymmetricAlgorithm` and `isSymmetricAlgorithm`, and `encodeBase64Url` and `decodeBase64Url`, so a caller no longer copies them. [Keys](docs/keys.md#algorithms) lists them.
+- `createKeySet` and `importKeySet` return a `LocalKeySet`, whose `keys` lists the set's keys, so an issuer can publish its JWKS from the set it verifies with.
+- `createVerifier` options: `allowExpired`, which accepts an expired token whose other checks pass, for an OpenID Connect `id_token_hint`; `audience: false` and `requireExpiration: false`, which waive the new defaults below; and `type` as an array, where `null` accepts a token without `typ`. [Verifying tokens](docs/verifying.md) covers them.
+- `createRemoteKeySet` options: `seed`, to start from a JWKS saved earlier instead of fetching on the first token, and `onFetch` and `onFetchError`, to save each fetched JWKS and log failures. [Key sets](docs/key-sets.md#persisting-the-cache) shows a cache saved between requests.
+- `sign` is generic over the payload type, so claims declared as an `interface` compile, while a member that is not a JSON value, such as a `Date`, no longer does. `JwtRegisteredClaims` and `JsonCompatible` are exported for it.
 - An [API reference](docs/reference/index.md) generated from the package's TSDoc.
 
 ## Changed
 
+- **Breaking.** A verifier without `audience` refuses a token that has an `aud` claim with `wrong_audience`, as RFC 7519 §4.1.3 requires; in 0.0.1 it accepted a token meant for any other service of the same issuer. Set `audience` to your own, or pass `audience: false` to accept any audience on purpose.
+- **Breaking.** A token without `exp` is `missing_claim` with `{ claim: "exp" }`, unless `maxAge` is set; in 0.0.1 such a token never expired. Pass `requireExpiration: false` for tokens that carry no `exp` by design.
+- **Breaking.** `importPrivateKey` proves a JWK's public members belong to its private key, as `importKeyPair` does, by signing and verifying a fixed message. A JWK mixing two keys is `invalid_key`, and each import costs one signature and one verification.
+- When no key in a set has the token's `kid`, the one key without a `kid` that has the token's `alg` is selected, instead of `unknown_kid`. A PEM key has no `kid`, and issuers such as Clerk and Supabase name one in every token, so a set holding just that key refused every token.
+- Within `maxStale` after `cacheTtl`, a remote key set answers from the expired JWKS at once and refetches in the background; only a `kid` the cache lacks waits for the fetch. A fetch still unsettled after `timeoutMs` and the cooldown no longer blocks a new one, as happens when a Cloudflare Workers request ends mid-fetch. A key removed from the JWKS stays trusted until the background fetch replaces the cache.
 - **Breaking.** `engines.node` is `>=26`, so Yarn 1, and npm with `engine-strict`, refuse the install on Node.js 24 or 25. Upgrade Node.js to 26. Browsers, Deno, Bun and Cloudflare Workers are unaffected. ([#553](https://github.com/codenhub/codenhub/issues/553))
 - **Breaking.** Every function that takes options, and `sign`'s input, throws a `TypeError` naming any member it does not know, even one set to `undefined`. In 0.0.1 a typo such as `audiance` was ignored, which turned the audience check off without a sign, and one such as `extractible` silently gave a key that could not be exported. Fix the name the error gives.
 - `nbf` and `iat` allow at least 60 seconds of clock skew whatever `clockTolerance` says, so a token checked the moment it is issued no longer fails on a verifier whose clock is slightly behind the issuer's. `exp` and `maxAge` still use `clockTolerance` alone. A token whose `nbf` or `iat` is less than 60 seconds ahead now verifies.
