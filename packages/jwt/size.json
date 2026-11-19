@@ -189,24 +189,24 @@
         "createRemoteKeySet": {
           "files": {
             "dist/index.js": {
-              "bytes": 20938,
+              "bytes": 20931,
               "declarations": {
                 "StrictJsonParser": 2804,
-                "createRemoteKeySet": 1551,
+                "createRemoteKeySet": 1610,
                 "checkHeaderMembers": 867,
                 "pemToJwk": 731,
                 "readRemoteOptions": 673,
                 "rsaMaterial": 594,
                 "requestJson": 422,
                 "encodeBase64Url": 412,
-                "readUrl": 378,
+                "readUrl": 379,
                 "subjectPublicKeyInfo": 350,
                 "readCappedBody": 338,
                 "readAlgorithms": 335,
                 "selectKey$1": 320,
                 "readSeed": 310,
                 "ALGORITHM_PARAMS": 304,
-                "fetchJson": 302,
+                "fetchJson": 301,
                 "importJwk": 294,
                 "readInteger": 294,
                 "isPlainObject$1": 279,
@@ -229,15 +229,15 @@
                 "secretMaterial": 177,
                 "bindableAlgorithms": 161,
                 "materialFor": 161,
-                "fetchKeys": 158,
                 "KNOWN_OPTIONS$1": 157,
+                "fetchKeys": 157,
                 "readFunction": 144,
                 "PEM_PATTERN": 142,
                 "ecdsa": 141,
                 "isPlainContainer": 140,
                 "JWS_ALGORITHMS": 133,
                 "readKid": 132,
-                "lacksKid": 124,
+                "lacksKid": 125,
                 "requireAsymmetricAlg": 121,
                 "requireOptions": 115,
                 "(top level)": 114,
@@ -258,13 +258,12 @@
                 "registerKey": 81,
                 "sourceJwk": 81,
                 "notify": 80,
+                "isLoopbackHost": 79,
                 "hexValue": 78,
-                "isLoopbackHost": 78,
                 "issue": 78,
                 "BASE64_PATTERN": 70,
                 "ALPHABET": 69,
                 "isUint8Array": 67,
-                "isUnknownKid": 67,
                 "SHORT_ESCAPES": 66,
                 "REQUIRED_OPERATION": 65,
                 "USAGES": 65,
@@ -314,8 +313,8 @@
               "bytes": 36
             }
           },
-          "gzip": 7455,
-          "minified": 20974
+          "gzip": 7441,
+          "minified": 20967
         },
         "createVerifier": {
           "files": {
@@ -1652,10 +1651,10 @@
       },
       "files": {
         "dist/index.js": {
-          "bytes": 39601,
+          "bytes": 39594,
           "declarations": {
             "StrictJsonParser": 2808,
-            "createRemoteKeySet": 1561,
+            "createRemoteKeySet": 1620,
             "resolveOptions": 1141,
             "checkHeaderMembers": 867,
             "serializeHeader": 839,
@@ -1746,7 +1745,7 @@
             "JWS_ALGORITHMS": 133,
             "readKid": 131,
             "isPlainObject": 130,
-            "lacksKid": 125,
+            "lacksKid": 126,
             "requireSymmetricAlg": 122,
             "requireAsymmetricAlg": 121,
             "requireOptions": 114,
@@ -1780,7 +1779,6 @@
             "ALPHABET": 69,
             "keySetOf": 69,
             "isUint8Array": 67,
-            "isUnknownKid": 67,
             "readHeader": 67,
             "SHORT_ESCAPES": 66,
             "missing": 66,
@@ -1864,9 +1862,9 @@
           "bytes": 548
         }
       },
-      "gzip": 12685,
-      "minified": 40149,
-      "sha256": "e6ae819161e7a5aaaa4eeb80af3907c516d618ddcd770ec2a73d8f91cbcff738"
+      "gzip": 12667,
+      "minified": 40142,
+      "sha256": "fa7be9f177378b6028dc80ae759715b9fbfd6cd6a8611b0f64f9647c2d7c0b4d"
     }
   }
 }
