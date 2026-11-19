@@ -17,13 +17,15 @@ import {
   lifetimesOf,
   resourcesOfClient,
 } from "./client-record";
-import { refuse } from "./diagnostics";
+import { type GrantOfRecord, refuse } from "./diagnostics";
 import { PROTOCOL_SCOPES, type ResolvedOptions, type ResolvedTtl, selectIdTokenKey } from "./options";
+import { readCodeRecord, readRefreshTokenRecord } from "./records";
 import { jsonResponse, methodNotAllowed, preflightResponse, tokenErrorResponse } from "./responses";
 import type {
   AccessTokenClaimsRequest,
   ClientRecord,
   CodeRecord,
+  GrantType,
   ProviderDiagnosticReason,
   RefreshTokenRecord,
 } from "./types";
@@ -191,8 +193,8 @@ async function exchangeCode(
   const code = parameters.get("code");
   const redirectUri = parameters.get("redirect_uri");
   const verifier = parameters.get("code_verifier");
-  const refused = (error: OAuthErrorCode, reason: ProviderDiagnosticReason): Response =>
-    refuse(tokenErrorResponse(error), reason, client.clientId);
+  const refused = (error: OAuthErrorCode, reason: ProviderDiagnosticReason, grant?: GrantOfRecord): Response =>
+    refuse(tokenErrorResponse(error), reason, client.clientId, grant);
   // A client that may skip PKCE can hold a code issued without a challenge, and only the record says which, so for
   // it the verifier's presence is checked after consumption, against the record.
   if (code === undefined || redirectUri === undefined || (verifier === undefined && client.requirePkce)) {
@@ -212,15 +214,16 @@ async function exchangeCode(
   }
   if (consumption.status === "replayed") {
     await options.store.revokeGrant(consumption.grantId);
-    return refused("invalid_grant", "code_replayed");
+    return refused("invalid_grant", "code_replayed", { grantId: consumption.grantId });
   }
-  const record = consumption.record;
+  const record = readCodeRecord(consumption.record);
+  const grantOfRecord = { grantId: record.grantId, subject: record.subject };
   const unredeemable = await whyUnredeemable(options, client, record, redirectUri, verifier);
   if (unredeemable !== undefined) {
-    return refused("invalid_grant", unredeemable);
+    return refused("invalid_grant", unredeemable, grantOfRecord);
   }
   if (!isWithinGrant(resources, record.resources)) {
-    return refused("invalid_target", "resource_not_granted");
+    return refused("invalid_target", "resource_not_granted", grantOfRecord);
   }
   return issueFromCode(options, client, record, resources);
 }
@@ -292,7 +295,7 @@ async function issueFromCode(
   const accessToken = await issueAccessToken(
     options,
     ttl,
-    grant,
+    { ...grant, grantType: "authorization_code" },
     scopes,
     resources ?? resourcesOfClient(client, grant.resources),
     now,
@@ -315,6 +318,7 @@ async function issueFromCode(
     await options.store.saveRefreshToken(await digestKey(refreshToken), {
       ...grantRecord(grant),
       scopes: record.scopes,
+      issuedAt: now,
       // Counted from this exchange, and never extended by rotation.
       expiresAt: now + ttl.refreshToken,
     });
@@ -332,8 +336,8 @@ async function refreshTokens(
   parameters: ReadonlyMap<string, string>,
   resources: RequestedResources,
 ): Promise<Response> {
-  const refused = (error: OAuthErrorCode, reason: ProviderDiagnosticReason): Response =>
-    refuse(tokenErrorResponse(error), reason, client.clientId);
+  const refused = (error: OAuthErrorCode, reason: ProviderDiagnosticReason, grant?: GrantOfRecord): Response =>
+    refuse(tokenErrorResponse(error), reason, client.clientId, grant);
   const refreshToken = parameters.get("refresh_token");
   if (refreshToken === undefined) {
     return refused("invalid_request", "parameter_missing");
@@ -353,20 +357,21 @@ async function refreshTokens(
   }
   if (consumption.status === "replayed") {
     await options.store.revokeGrant(consumption.grantId);
-    return refused("invalid_grant", "refresh_token_replayed");
+    return refused("invalid_grant", "refresh_token_replayed", { grantId: consumption.grantId });
   }
-  const record = consumption.record;
+  const record = readRefreshTokenRecord(consumption.record);
+  const grantOfRecord = { grantId: record.grantId, subject: record.subject };
   if (record.expiresAt <= options.now()) {
-    return refused("invalid_grant", "refresh_token_expired");
+    return refused("invalid_grant", "refresh_token_expired", grantOfRecord);
   }
   if (record.clientId !== client.clientId) {
-    return refused("invalid_grant", "refresh_token_client_mismatch");
+    return refused("invalid_grant", "refresh_token_client_mismatch", grantOfRecord);
   }
   if (requested !== undefined && !requested.every((scope) => record.scopes.includes(scope))) {
-    return refused("invalid_scope", "scope_not_granted");
+    return refused("invalid_scope", "scope_not_granted", grantOfRecord);
   }
   if (!isWithinGrant(resources, record.resources)) {
-    return refused("invalid_target", "resource_not_granted");
+    return refused("invalid_target", "resource_not_granted", grantOfRecord);
   }
   // Narrowed to what the client's record lists now, so a scope an admin removed stops being issued on the next
   // refresh, and comes back once it is listed again. A requested scope was already checked against the record.
@@ -376,7 +381,7 @@ async function refreshTokens(
     // The family ends with this refusal, not only this request: a user who lost the entitlement must not
     // keep a token that could be refreshed again once the check passes.
     await options.store.revokeGrant(record.grantId);
-    return refused("invalid_grant", "refresh_refused");
+    return refused("invalid_grant", "refresh_refused", grantOfRecord);
   }
   const now = options.now();
   const ttl = lifetimesOf(options.ttl, client);
@@ -384,7 +389,7 @@ async function refreshTokens(
   const accessToken = await issueAccessToken(
     options,
     ttl,
-    grant,
+    { ...grant, grantType: "authorization_code" },
     scopes,
     resources ?? resourcesOfClient(client, grant.resources),
     now,
@@ -398,6 +403,7 @@ async function refreshTokens(
     // The family keeps its original scopes and resources, even when the request or the client's record narrowed
     // this response.
     scopes: record.scopes,
+    issuedAt: now,
     expiresAt: record.expiresAt,
   });
   return tokenResponse(ttl, { accessToken, scopes, idToken, refreshToken: nextRefreshToken });
@@ -420,6 +426,12 @@ async function isRefreshAllowed(
       scopes: Object.freeze([...scopes]),
       grantId: record.grantId,
       ...optionalSessionId(record),
+      authTime: record.authTime,
+      ...(record.amr === undefined ? {} : { amr: Object.freeze([...record.amr]) }),
+      ...(record.acr === undefined ? {} : { acr: record.acr }),
+      ...(record.resources === undefined ? {} : { resources: Object.freeze([...record.resources]) }),
+      ...(record.issuedAt === undefined ? {} : { issuedAt: record.issuedAt }),
+      expiresAt: record.expiresAt,
     }),
   );
   if (typeof allowed !== "boolean") {
@@ -470,7 +482,7 @@ async function issueForClient(
   const accessToken = await issueAccessToken(
     options,
     ttl,
-    { grantId: randomToken(), clientId: client.clientId, subject: client.clientId },
+    { grantId: randomToken(), clientId: client.clientId, subject: client.clientId, grantType: "client_credentials" },
     scopes,
     resources,
     now,
@@ -503,7 +515,7 @@ function readClientScopes(requested: string | undefined, client: ClientRecord): 
  * a client credentials token has none.
  */
 type AccessTokenGrant = Pick<Grant, "grantId" | "clientId" | "subject"> &
-  Partial<Pick<Grant, "authTime" | "amr" | "acr" | "sessionId">>;
+  Partial<Pick<Grant, "authTime" | "amr" | "acr" | "sessionId">> & { readonly grantType: GrantType };
 
 /**
  * Saves a new access token for a grant and returns the token value; only its digest is stored, whatever its
@@ -532,6 +544,9 @@ async function issueAccessToken(
     clientId: grant.clientId,
     subject: grant.subject,
     scopes,
+    grantType: grant.grantType,
+    ...(grant.authTime === undefined ? {} : { authTime: grant.authTime }),
+    ...optionalAuthContext(grant),
     ...optionalSessionId(grant),
     ...(audience === undefined ? {} : { audience }),
     expiresAt: now + ttl.accessToken,
@@ -573,6 +588,7 @@ async function signAccessToken(
           scopes,
           audience,
           grantId: grant.grantId,
+          ...optionalSessionId(grant),
         });
   return sign({ payload: { ...extra, ...payload }, key: options.signingKey.privateKey, header: { typ: "at+jwt" } });
 }
@@ -631,7 +647,7 @@ async function releasedForIdToken(
   grant: Grant,
   scopes: readonly string[],
 ): Promise<Record<string, unknown>> {
-  const released = await releaseClaims(options, { subject: grant.subject, clientId: grant.clientId, scopes });
+  const released = await releaseClaims(options, { ...grant, scopes });
   return Object.fromEntries(Object.entries(released).filter(([name]) => !PROTOCOL_CLAIMS.has(name)));
 }
 

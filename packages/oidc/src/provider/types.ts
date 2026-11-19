@@ -1,4 +1,4 @@
-import type { AsymmetricAlgorithm, KeyPair, KeySet, SecretKey } from "@codenhub/jwt";
+import type { AsymmetricAlgorithm, KeyPair, KeySet, PublicKey, SecretKey } from "@codenhub/jwt";
 
 import type { OidcFailure, OidcResult, Prompt, ProviderMetadata } from "../shared/types";
 
@@ -14,6 +14,10 @@ import type { OidcFailure, OidcResult, Prompt, ProviderMetadata } from "../share
  * client, then remove the old hash. The list must be non-empty and each entry a non-empty string, or the
  * provider throws `TypeError` when it reads the record.
  *
+ * A `client_secret_jwt` client's `keys` work the same way: the provider tries every key, and an assertion that
+ * any of them verifies authenticates, so its HMAC secret rotates as a hashed secret does. The list must be
+ * non-empty and hold only `SecretKey` objects, or the provider throws `TypeError` when it reads the record.
+ *
  * A remote key set given as `keys` must be one object per client, reused across `findClient` calls: its cache and
  * its limit on fetches live in the object, so a new one for each read lets every token request that presents an
  * assertion for that client make the provider fetch the client's JWKS.
@@ -22,8 +26,8 @@ export type ClientAuthentication =
   | { readonly method: "none" }
   | { readonly method: "client_secret_basic"; readonly secretHashes: readonly string[] }
   | { readonly method: "client_secret_post"; readonly secretHashes: readonly string[] }
-  /** The client's HS256 secret, from `importSecretKey`. */
-  | { readonly method: "client_secret_jwt"; readonly key: SecretKey }
+  /** The client's HS256 secrets, from `generateSecretKey` or `importSecretKey`; any one of them verifies. */
+  | { readonly method: "client_secret_jwt"; readonly keys: readonly SecretKey[] }
   /** The client's public keys, from `createKeySet`, `importKeySet`, or `createRemoteKeySet`. */
   | { readonly method: "private_key_jwt"; readonly keys: KeySet };
 
@@ -176,11 +180,24 @@ export interface InteractionRecord {
   readonly display?: Display;
   /** The `resource` values the client asked for (RFC 8707), each one of the client's `resources`. */
   readonly resources?: readonly string[];
+  /**
+   * How the response goes back to the client: `form_post` for a form the browser posts to the redirect URI. Absent
+   * means `query`, so a record saved before this member existed completes as it always did.
+   */
+  readonly responseMode?: ResponseMode;
+  /** The request's parameters the provider does not recognize; see {@link AuthorizationInteraction.extensions}. */
+  readonly extensions?: Readonly<Record<string, string>>;
   /** When the request was validated, in seconds since the Unix epoch. */
   readonly createdAt: number;
   /** When the interaction expires, in seconds since the Unix epoch. */
   readonly expiresAt: number;
 }
+
+/**
+ * How the authorization response reaches the client's redirect URI: `query` adds its parameters to the URI's query
+ * (RFC 6749 §4.1.2), and `form_post` has the browser post them as a form (OAuth 2.0 Form Post Response Mode).
+ */
+export type ResponseMode = "query" | "form_post";
 
 /** What an authorization code stands for. */
 export interface CodeRecord {
@@ -210,8 +227,21 @@ export interface CodeRecord {
 export interface AccessTokenRecord {
   readonly grantId: string;
   readonly clientId: string;
+  /** The user the token is for, or the client identifier for `client_credentials`. */
   readonly subject: string;
   readonly scopes: readonly string[];
+  /**
+   * The grant that issued the token: `authorization_code` for a code exchange and every refresh of its family, or
+   * `client_credentials`. The provider always writes it; it is optional so that a row saved before it existed
+   * still reads.
+   */
+  readonly grantType?: GrantType;
+  /** When the user authenticated, in seconds since the Unix epoch. Absent for `client_credentials`. */
+  readonly authTime?: number;
+  /** The authentication methods of the sign-in (RFC 8176), as the app reported them. */
+  readonly amr?: readonly string[];
+  /** The authentication context class of the sign-in, as the app reported it. */
+  readonly acr?: string;
   /** The app's session identifier from the grant. */
   readonly sessionId?: string;
   /**
@@ -237,6 +267,12 @@ export interface RefreshTokenRecord {
   readonly sessionId?: string;
   /** The resource servers the family covers (RFC 8707), from the authorization request. Rotation keeps it. */
   readonly resources?: readonly string[];
+  /**
+   * When this refresh token was issued, by the code exchange or by the refresh that rotated to it, in seconds since
+   * the Unix epoch. Rotation sets it anew, so it is when the family was last used. The provider always writes it;
+   * it is optional so that a row saved before it existed still reads.
+   */
+  readonly issuedAt?: number;
   /** When the whole token family expires, in seconds since the Unix epoch. Rotation keeps it. */
   readonly expiresAt: number;
 }
@@ -254,9 +290,15 @@ export type Consumption<TRecord> =
  *
  * Every key the provider passes for a code, token, or interaction is a SHA-256 digest of the value, never
  * the value itself, so a leaked store holds no usable code, token or interaction. A client record is different:
- * it may hold a `client_secret_jwt` HMAC key, which the provider needs in full, so a client record's credentials
+ * it may hold `client_secret_jwt` HMAC keys, which the provider needs in full, so a client record's credentials
  * still need protection. Interaction, code and token records are plain JSON; a client record may hold
- * `@codenhub/jwt` keys, which the app rebuilds from what it persists. Methods may throw or
+ * `@codenhub/jwt` keys, which the app rebuilds from what it persists.
+ *
+ * An optional field the provider saved without a value may come back missing, `undefined` or `null`: the provider
+ * reads `null` as absent in every interaction, code, access token and refresh token record, so a SQL column that
+ * returns `NULL` for an empty value works. Any other value, such as `""`, `[]`, `0` or `false`, is a value, and an
+ * adapter must not return one for an absent field. A required field is never `null`, and a client record is held to
+ * its own rules: a `null` there is a malformed record. Methods may throw or
  * reject on infrastructure failure; the provider lets that propagate rather than answering as if the
  * value were invalid.
  *
@@ -329,6 +371,14 @@ export interface ClaimsRequest {
   readonly scopes: readonly string[];
   /** The claim names those scopes release. Other returned claims are dropped. */
   readonly claims: readonly string[];
+  /** The grant the claims are released for: the access token's at userinfo, or the grant of the ID token being signed. */
+  readonly grantId: string;
+  /**
+   * The app's session the grant was issued during, when `completeAuthorization` was given one. An app that has ended
+   * that session can release nothing for it at once, by returning `{}` (only `sub` is then sent) or by throwing, which
+   * makes `handle` reject, rather than waiting for the access token to expire.
+   */
+  readonly sessionId?: string;
 }
 
 /** Token lifetimes, in seconds. */
@@ -462,11 +512,14 @@ export type ProviderDiagnosticReason =
   | "access_token_without_openid"
   // Revocation
   | "token_missing"
-  | "token_of_another_client";
+  | "token_of_another_client"
+  /** Not a refusal: a revocation request revoked a grant, and was answered `200`. */
+  | "token_revoked";
 
 /**
- * One refused request, for the operator's logs. It never holds a value the request carried: no token, code,
- * secret, verifier, or unverified client identifier.
+ * One refused request, or one security event, for the operator's logs: every refusal of the token, userinfo and
+ * revocation endpoints, and each revocation request that revoked a grant (`token_revoked`, status `200`). It never
+ * holds a value the request carried: no token, code, secret, verifier, or unverified client identifier. Frozen.
  */
 export interface ProviderDiagnostic {
   readonly endpoint: "token" | "userinfo" | "revocation";
@@ -479,20 +532,34 @@ export interface ProviderDiagnostic {
    * named a client.
    */
   readonly clientId?: string;
+  /**
+   * The grant the presented code or token belongs to, from the store's record, when the provider read one: a
+   * replayed code or refresh token, whose grant is then revoked, a refusal after the record was found, such as
+   * `code_expired`, `refresh_refused` or `access_token_expired`, and `token_revoked`. Never read from the request.
+   */
+  readonly grantId?: string;
+  /**
+   * The user the grant was issued to, or the client for a `client_credentials` token, from the store's record, when
+   * the provider read the whole record. Absent for a replay, whose store answer names only the grant. A
+   * user's subject identifies a person, so log it where the app may keep personal data.
+   */
+  readonly subject?: string;
 }
 
 /** How {@link createProvider} runs. Invalid options throw `TypeError` at creation. */
 export interface ProviderOptions {
   /**
    * The issuer identifier: an `https` URL of visible ASCII, with no query, fragment or credentials, used byte for
-   * byte everywhere.
+   * byte everywhere. It must be written as the URL parser serializes it, with a lowercase scheme and host, no
+   * default port and no dot segments, so `https://OP.example` or `https://op.example:443` is refused;
+   * `https://op.example`, which the parser reads with an empty path, is accepted as written.
    */
   readonly issuer: string;
   /**
    * Key pairs from `generateKeyPair` or `importPrivateKey`/`importPublicKey`, each with a unique `kid`.
    * A client's ID tokens are signed with the first key of the algorithm its `idTokenSigningAlg` names, or without
    * one with the first `RS256` key when there is one and otherwise the first key. The first key signs JWT access
-   * tokens. Every public key is published, so a retiring key stays verifiable.
+   * tokens. Every public key is published, then each of {@link ProviderOptions.verificationKeys}.
    *
    * Each pair's private and public keys must be the two halves of one key pair. Only their algorithm and
    * `kid` are checked, so a mismatched pair issues ID tokens nobody can verify. The keys must come from the
@@ -501,6 +568,16 @@ export interface ProviderOptions {
    * token from the client-credentials grant signs nothing, so it is still issued.
    */
   readonly signingKeys: readonly KeyPair[];
+  /**
+   * Public keys published in the JWKS after the signing keys, which never sign: a new key published ahead of its use
+   * so caches learn it first, or a retired key kept until the tokens it signed expire. They are accepted wherever the
+   * provider verifies its own tokens, such as an `id_token_hint`. Each needs a `kid` that no signing key and no
+   * other verification key has, and at most 16 may be given. Their algorithms are not added to
+   * `id_token_signing_alg_values_supported`, since no ID token is signed with them.
+   *
+   * @defaultValue `[]`
+   */
+  readonly verificationKeys?: readonly PublicKey[];
   /** Where clients, codes, tokens, and interactions are kept. */
   readonly store: OidcStore;
   /**
@@ -538,9 +615,10 @@ export interface ProviderOptions {
    */
   readonly now?: () => number;
   /**
-   * Called with the reason each time the token, userinfo, or revocation endpoint refuses a request, after the
-   * response is built and before `handle` resolves. The client only ever sees the OAuth error code, so this
-   * is how an operator tells an expired code from a wrong verifier. Like the store and the `claims` callback,
+   * Called with the reason each time the token, userinfo, or revocation endpoint refuses a request, and each time
+   * a revocation request revokes a grant (`token_revoked`, status `200`), after the response is built and before
+   * `handle` resolves. The client only ever sees the OAuth error code, so this is how an operator tells an expired
+   * code from a wrong verifier, and which user's grant a replay or a revocation ended. Like the store and the `claims` callback,
    * an exception it throws makes `handle` reject. Authorization failures are not reported here, since
    * `beginAuthorization` and `completeAuthorization` already return their issues.
    *
@@ -604,6 +682,20 @@ export interface ProviderOptions {
    * @defaultValue `["public"]`
    */
   readonly subjectTypes?: readonly ("public" | "pairwise")[];
+  /**
+   * Extra members for the discovery document, merged after the ones the provider computes, such as
+   * `acr_values_supported`, `ui_locales_supported`, `op_policy_uri` or `service_documentation`. The provider does
+   * not act on them: they state what the app does, as `subjectTypes` does.
+   *
+   * A member the provider computes, such as `issuer`, an endpoint URL or `response_modes_supported`, makes
+   * `createProvider` throw `TypeError`, so the document cannot contradict what the endpoints enforce. So does a value
+   * that is not JSON data (`null`, a boolean, a finite number, a well-formed string, a dense array or a plain object,
+   * with no accessor), one nested more than 16 levels deep, or members longer than 16384 characters as JSON. The
+   * provider keeps a deep-frozen copy.
+   *
+   * @defaultValue `{}`
+   */
+  readonly metadata?: Readonly<Record<string, unknown>>;
 }
 
 /** What {@link ProviderOptions.accessTokenClaims} is asked about: the JWT access token about to be signed. Frozen. */
@@ -617,9 +709,11 @@ export interface AccessTokenClaimsRequest {
   readonly audience: readonly string[];
   /** The grant the token belongs to; for `client_credentials`, a new one per token. */
   readonly grantId: string;
+  /** The app's session the grant was issued during, when `completeAuthorization` was given one. */
+  readonly sessionId?: string;
 }
 
-/** What {@link ProviderOptions.onRefresh} is asked about: the refresh that is about to issue tokens. */
+/** What {@link ProviderOptions.onRefresh} is asked about: the refresh that is about to issue tokens. Frozen. */
 export interface RefreshCheck {
   /** The user the family was issued to. */
   readonly subject: string;
@@ -633,6 +727,22 @@ export interface RefreshCheck {
   readonly grantId: string;
   /** The app's session the grant was issued during, when `completeAuthorization` was given one. */
   readonly sessionId?: string;
+  /** When the user signed in, in seconds since the Unix epoch: the grant's `authTime`, which a refresh never changes. */
+  readonly authTime: number;
+  /** How the user signed in (RFC 8176), as the app reported it for the grant. */
+  readonly amr?: readonly string[];
+  /** The authentication context class of the sign-in, as the app reported it for the grant. */
+  readonly acr?: string;
+  /** The resource servers the family covers (RFC 8707), from the authorization request. */
+  readonly resources?: readonly string[];
+  /**
+   * When the presented refresh token was issued, in seconds since the Unix epoch: at the code exchange, or at the
+   * refresh that rotated to it. The time since then is how long the family went unused, for an idle timeout. Absent
+   * for a token saved before the provider recorded it ({@link RefreshTokenRecord.issuedAt}).
+   */
+  readonly issuedAt?: number;
+  /** When the whole family expires, in seconds since the Unix epoch. */
+  readonly expiresAt: number;
 }
 
 /**
@@ -646,9 +756,11 @@ export interface AuthorizationInteraction {
   readonly redirectUri: string;
   readonly scopes: readonly string[];
   /**
-   * `login` means authenticate again; `consent` means ask again; `none` means show nothing. The app performs the
-   * login or consent step itself; the provider checks the outcome the app reports to
-   * {@link Provider.completeAuthorization}, such as the `authTime` under `prompt=login`.
+   * `login` means authenticate again; `consent` means ask again; `select_account` means let the user choose an
+   * account; `create` means show the sign-up page rather than the login page (Initiating User Registration via
+   * OpenID Connect 1.0); `none` means show nothing, and stands alone. The app performs the login, sign-up or consent
+   * step itself; the provider checks the outcome the app reports to {@link Provider.completeAuthorization}, such as
+   * the `authTime` under `prompt=login`.
    */
   readonly prompt: readonly Prompt[];
   /** Maximum seconds since the user last authenticated. */
@@ -686,6 +798,13 @@ export interface AuthorizationInteraction {
    * verified hint issued to another client fails the request with `invalid_request` instead.
    */
   readonly idTokenHint?: IdTokenHintClaims;
+  /**
+   * The request's parameters the provider does not recognize, by name, such as `screen_hint` or a parameter of the
+   * app's own. The provider does not act on them; the app may, after treating each value as untrusted input from
+   * the browser. Bounded like every other parameter: the request carries at most 32 parameters, each value at most
+   * 4096 characters, and none repeated. A parameter named `__proto__` is an ordinary member. Absent when there are none.
+   */
+  readonly extensions?: Readonly<Record<string, string>>;
   /** When the request was validated, in seconds since the Unix epoch. A `prompt=login` login must happen at or after it. */
   readonly createdAt: number;
 }
@@ -701,9 +820,9 @@ export interface IdTokenHintClaims {
 /** Why an authorization request failed, and how to answer it. */
 export interface AuthorizationFailure extends OidcFailure {
   /**
-   * A `302` to the client's verified redirect URI carrying the error, to return as is; or `null` when the
-   * client or its redirect URI could not be verified, in which case the app must render its own error
-   * page and must not redirect anywhere.
+   * The response that carries the error to the client's verified redirect URI, to return as is: a `302`, or under
+   * `response_mode=form_post` a `200` HTML page that posts it there. `null` when the client or its redirect URI could
+   * not be verified, in which case the app must render its own error page and must not redirect anywhere.
    */
   readonly redirect: Response | null;
 }
@@ -731,14 +850,30 @@ export interface AuthorizationGrant {
   readonly sessionId?: string;
 }
 
-/** Why the app is not granting the request. Sent to the client as the OAuth error. */
+/**
+ * Why the app is not granting the request. Sent to the client as the OAuth error.
+ *
+ * @remarks
+ * - `access_denied`: the user, or the app's policy, refused.
+ * - `login_required`, `consent_required`, `account_selection_required`, `interaction_required`: the step is needed
+ *   but `prompt=none` forbids showing it, or the user of the app's session is not the one `idTokenHint` names.
+ * - `unmet_authentication_requirements`: the app cannot authenticate the user as the request requires, such as
+ *   an `acr_values` class it cannot meet when the request makes it essential (OpenID Connect Core Unmet
+ *   Authentication Requirements 1.0).
+ * - `temporarily_unavailable`: the app cannot handle the request now, such as during maintenance or overload, and the
+ *   client may retry later.
+ * - `server_error`: the app failed unexpectedly while handling the request, so the client is not left waiting.
+ */
 export interface AuthorizationDenial {
   readonly error:
     | "access_denied"
     | "login_required"
     | "consent_required"
     | "interaction_required"
-    | "account_selection_required";
+    | "account_selection_required"
+    | "unmet_authentication_requirements"
+    | "temporarily_unavailable"
+    | "server_error";
 }
 
 /** What {@link Provider.authenticate} requires of a token, beyond being a live access token. */
@@ -802,13 +937,15 @@ export interface Provider {
   /**
    * Validates an authorization request and saves it as an interaction for the app's login and consent pages.
    *
-   * @returns The interaction, or a failure whose `redirect` is the response to send, or `null` when the app
-   * must render an error itself. Never throws for any request; rejects only when the store does, or with a
+   * @returns The interaction, or a failure whose `redirect` is the response to send (a `302`, or the `form_post`
+   * page), or `null` when the app must render an error itself. Never throws for any request; rejects only when the store does, or with a
    * `TypeError` when the store returns a malformed client record or a `POST`'s body was already read.
    */
   beginAuthorization(request: Request): Promise<OidcResult<AuthorizationInteraction, AuthorizationFailure>>;
   /**
-   * Finishes an interaction: issues a code, or sends the denial, as a `302` to the client's redirect URI.
+   * Finishes an interaction: issues a code, or sends the denial, to the client's redirect URI: as a `302`, or, when
+   * the request asked for `response_mode=form_post`, as a `200` HTML page that posts it there. Either way, return the
+   * response as is: the page's headers forbid framing, caching and any script but its own.
    *
    * @returns The response, or `interaction_not_found` when the interaction does not exist, was already
    * completed, or expired, or, for a grant or a denial, when its client is no longer in the store, no longer lists

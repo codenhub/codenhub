@@ -333,6 +333,32 @@ describe("checkClientRecord", () => {
     );
   });
 
+  it.each([
+    ["a single key instead of a list", { key: { kind: "secret" } }],
+    ["an empty list", { keys: [] }],
+    ["a public key in the list", { keys: [{ kind: "secret" }, { kind: "public" }] }],
+    ["a null entry", { keys: [null] }],
+  ])("shouldRejectClientSecretJwtWith %s", (_name, auth) => {
+    expect(() =>
+      checkClientRecord(valid({ auth: { method: "client_secret_jwt", ...auth } }), "client-a", KEYS),
+    ).toThrow(
+      expect.objectContaining({
+        name: "TypeError",
+        message: expect.stringContaining("non-empty auth.keys list of secret keys for client_secret_jwt"),
+      }),
+    );
+  });
+
+  it("shouldAcceptClientSecretJwtWithSeveralSecretKeys", () => {
+    expect(() =>
+      checkClientRecord(
+        valid({ auth: { method: "client_secret_jwt", keys: [{ kind: "secret" }, { kind: "secret" }] } }),
+        "client-a",
+        KEYS,
+      ),
+    ).not.toThrow();
+  });
+
   it("shouldRejectPrivateKeyJwtWithKeysLackingSelect", () => {
     expect(() => checkClientRecord(valid({ auth: { method: "private_key_jwt", keys: {} } }), "client-a", KEYS)).toThrow(
       TypeError,

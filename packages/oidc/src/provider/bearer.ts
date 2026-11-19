@@ -1,6 +1,7 @@
 import { digestKey } from "../shared/encoding";
 import { findClientRecord } from "./client-record";
 import type { ResolvedOptions } from "./options";
+import { readAccessTokenRecord } from "./records";
 import type { AccessTokenRecord } from "./types";
 
 /**
@@ -28,6 +29,8 @@ export type BearerLookup =
       readonly ok: false;
       readonly reason: BearerFailure;
       readonly clientId?: string;
+      /** The token's grant and subject, from the store's record, when one was found. */
+      readonly grant?: { readonly grantId: string; readonly subject: string };
     };
 
 /**
@@ -43,8 +46,8 @@ export type BearerLookup =
  *
  * @param options - The resolved provider options.
  * @param request - The request carrying the token.
- * @returns The record, or why there is none. `clientId` comes with `access_token_expired` and
- * `access_token_client_unknown`, from the store's record. Rejects only when the store does, or with a `TypeError`
+ * @returns The record, without `null` optional fields, or why there is none. `clientId` and `grant` come with
+ * `access_token_expired` and `access_token_client_unknown`, from the store's record. Rejects only when the store does, or with a `TypeError`
  * when it returns a malformed client record.
  */
 export async function findBearerAccessToken(options: ResolvedOptions, request: Request): Promise<BearerLookup> {
@@ -58,23 +61,17 @@ export async function findBearerAccessToken(options: ResolvedOptions, request: R
   if (token === undefined) {
     return { ok: false, reason: "access_token_malformed" };
   }
-  const record = await options.store.findAccessToken(await digestKey(token));
-  if (record === undefined) {
+  const found = await options.store.findAccessToken(await digestKey(token));
+  if (found === undefined) {
     return { ok: false, reason: "access_token_unknown" };
   }
+  const record = readAccessTokenRecord(found);
+  const grant = { grantId: record.grantId, subject: record.subject };
   if (record.expiresAt <= options.now()) {
-    return {
-      ok: false,
-      reason: "access_token_expired",
-      clientId: record.clientId,
-    };
+    return { ok: false, reason: "access_token_expired", clientId: record.clientId, grant };
   }
   if ((await findClientRecord(options.store, record.clientId, options.publicKeys)) === undefined) {
-    return {
-      ok: false,
-      reason: "access_token_client_unknown",
-      clientId: record.clientId,
-    };
+    return { ok: false, reason: "access_token_client_unknown", clientId: record.clientId, grant };
   }
   return { ok: true, record };
 }

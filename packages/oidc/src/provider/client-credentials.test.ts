@@ -94,8 +94,10 @@ describe("client_credentials", () => {
       clientId: "machine",
       subject: "machine",
       scopes: ["orders:read", "orders:write"],
+      grantType: "client_credentials",
       expiresAt: NOW_SECONDS + 600,
     });
+    expect(record).not.toHaveProperty("authTime");
   });
 
   it("leaves the protocol scopes out of the default for a client that also signs users in", async () => {

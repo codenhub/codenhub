@@ -65,7 +65,7 @@ function tokenRequest(body: Readonly<Record<string, string>>): Request {
 }
 
 /** Signs the user in for `resource`, when given, and returns the code exchange's token request. */
-async function codeRequest(op: Provider, resource?: string): Promise<Request> {
+async function codeRequest(op: Provider, resource?: string, sessionId?: string): Promise<Request> {
   const parameters = new URLSearchParams({
     response_type: "code",
     client_id: "web",
@@ -84,6 +84,7 @@ async function codeRequest(op: Provider, resource?: string): Promise<Request> {
     subject: "user-1",
     authTime: NOW_SECONDS - 10,
     scopes: ["openid", "offline_access", "data:read"],
+    ...(sessionId === undefined ? {} : { sessionId }),
   });
   if (!completed.ok) {
     throw new Error("expected the grant to complete");
@@ -144,6 +145,18 @@ describe("accessTokenClaims", () => {
     expect(Object.isFrozen(request)).toBe(true);
     expect(Object.isFrozen(request?.scopes)).toBe(true);
     expect(Object.isFrozen(request?.audience)).toBe(true);
+  });
+
+  it("names the sign-in's session, when it has one", async () => {
+    const requests: AccessTokenClaimsRequest[] = [];
+    const { op } = await setup((request) => {
+      requests.push(request);
+      return {};
+    });
+
+    await tokens(op, await codeRequest(op, API, "session-1"));
+
+    expect(requests).toEqual([expect.objectContaining({ sessionId: "session-1" })]);
   });
 
   it("asks with the provider's audience when the sign-in named no resource", async () => {

@@ -1,4 +1,4 @@
-import { type KeySet, createKeySet, createVerifier } from "@codenhub/jwt";
+import { type KeySet, type SecretKey, createKeySet, createVerifier } from "@codenhub/jwt";
 
 import { type CheckedClient, findClientRecord } from "./client-record";
 import { refuse } from "./diagnostics";
@@ -210,9 +210,7 @@ async function proves(
       proven = "secret" in presented && (await verifyClientSecret(presented.secret, auth.secretHashes));
       break;
     case "client_secret_jwt":
-      proven =
-        "assertion" in presented &&
-        (await verifyAssertion(options, presented.clientId, presented.assertion, createKeySet([auth.key])));
+      proven = "assertion" in presented && (await verifyWithAnyKey(options, presented, auth.keys));
       break;
     case "private_key_jwt":
       proven =
@@ -221,6 +219,22 @@ async function proves(
       break;
   }
   return proven ? "proven" : "client_credentials_wrong";
+}
+
+/**
+ * Verifies a `client_secret_jwt` assertion against each of the client's secrets, so a secret rotates as a hashed one
+ * does (decision 48). A key set without `kid`s selects a key only when it holds one key of the header's algorithm, and
+ * never tries keys in turn, so each key gets its own. Every key is tried, without stopping at the first that verifies.
+ */
+async function verifyWithAnyKey(
+  options: ResolvedOptions,
+  presented: { readonly clientId: string; readonly assertion: string },
+  keys: readonly SecretKey[],
+): Promise<boolean> {
+  const results = await Promise.all(
+    keys.map((key) => verifyAssertion(options, presented.clientId, presented.assertion, createKeySet([key]))),
+  );
+  return results.includes(true);
 }
 
 /**

@@ -150,6 +150,27 @@ describe("authenticate", () => {
     expect(stored?.scopes).not.toBe(value.scopes);
   });
 
+  it("returns the grant type and authentication context of the record", async () => {
+    const { op, store } = await setup();
+    const context = { grantType: "authorization_code", authTime: NOW_SECONDS - 30, amr: ["pwd", "otp"], acr: "loa2" };
+    await seed(store, { ...record(), ...context } as AccessTokenRecord);
+
+    const value = valueOf(await op.authenticate(apiRequest(`Bearer ${TOKEN}`)));
+
+    expect(value).toMatchObject(context);
+    expect(Object.isFrozen(value.amr)).toBe(true);
+  });
+
+  it("reads null optional fields of the record as absent", async () => {
+    const { op, store } = await setup();
+    const nulls = { grantType: null, authTime: null, amr: null, acr: null, sessionId: null };
+    await seed(store, { ...record(), ...nulls } as unknown as AccessTokenRecord);
+
+    const value = valueOf(await op.authenticate(apiRequest(`Bearer ${TOKEN}`)));
+
+    expect(value).toEqual(record());
+  });
+
   it("keeps only the record's contract fields", async () => {
     const { op, store } = await setup();
     await seed(store, { ...record(), extra: "from-the-store" } as AccessTokenRecord);

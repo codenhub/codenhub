@@ -141,3 +141,80 @@ export function redirectResponse(
   const location = search === "" ? redirectUri : `${redirectUri}${separator}${search}`;
   return new Response(null, { status: 302, headers: { location, "cache-control": "no-store" } });
 }
+
+/** The one script a form post page runs, which submits its form. The policy allows it by its hash alone. */
+export const FORM_POST_SCRIPT = "document.forms[0].submit();";
+
+/** The base64 SHA-256 of {@link FORM_POST_SCRIPT}, as `script-src` names it; a test checks it against the script. */
+const FORM_POST_SCRIPT_HASH = "sha256-8lDeP0UDwCO6/RhblgeH/ctdBzjVpJxrXizsnIk3cEQ=";
+
+/**
+ * An origin `form-action` can name as written: a scheme, and for a URL with a host, `//`, a host of letters, digits,
+ * dots, hyphens or an IPv6 literal, and a port. A registered redirect URI may hold a host the URL parser accepts
+ * but a policy cannot, such as one with `;`, which would end the directive and start another.
+ */
+const POLICY_SOURCE = /^[a-z][a-z0-9+.-]*:(?:\/\/(?:[a-z0-9.-]+|\[[0-9a-f:.]+\])(?::\d+)?)?$/;
+
+/** Escapes text for an HTML attribute value in double quotes, or for text content. */
+const escapeHtml = (text: string): string =>
+  text
+    .replaceAll("&", "&amp;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;");
+
+/**
+ * The `form-action` source of a redirect URI: its origin, or its scheme alone for a URL without a host, such as a
+ * native app's `com.example.app:/callback`; `undefined` when the policy syntax cannot hold it.
+ */
+function formActionSource(redirectUri: string): string | undefined {
+  const url = new URL(redirectUri);
+  const source = url.host === "" ? url.protocol : `${url.protocol}//${url.host}`;
+  return POLICY_SOURCE.test(source) ? source : undefined;
+}
+
+/**
+ * The authorization response for `response_mode=form_post` (OAuth 2.0 Form Post Response Mode §2): a `200` HTML page
+ * whose form the browser posts to the verified redirect URI, carrying the parameters as hidden fields.
+ *
+ * @remarks
+ * This page is the one exception to "the provider never renders HTML": a protocol artifact with no text but a
+ * `noscript` button, no styles and no app markup. Every value, the URI's own query included, is HTML-escaped. The
+ * Content-Security-Policy allows no resource but its one script, by hash, limits the form's target to the redirect
+ * URI's origin when the policy syntax can name it, and with `X-Frame-Options` forbids framing, so another site
+ * cannot capture a code by embedding the page. It is never cached and sends no referrer.
+ */
+export function formPostResponse(
+  redirectUri: string,
+  parameters: Readonly<Record<string, string | undefined>>,
+): Response {
+  const fields = Object.entries(parameters)
+    .filter((entry): entry is [string, string] => entry[1] !== undefined)
+    .map(([name, value]) => `<input type="hidden" name="${escapeHtml(name)}" value="${escapeHtml(value)}">`)
+    .join("");
+  const html =
+    '<!DOCTYPE html><html><head><meta charset="utf-8"><title>Submit</title></head><body>' +
+    `<form method="post" action="${escapeHtml(redirectUri)}">${fields}` +
+    '<noscript><button type="submit">Continue</button></noscript></form>' +
+    `<script>${FORM_POST_SCRIPT}</script></body></html>`;
+  const formAction = formActionSource(redirectUri);
+  const policy = [
+    "default-src 'none'",
+    `script-src '${FORM_POST_SCRIPT_HASH}'`,
+    ...(formAction === undefined ? [] : [`form-action ${formAction}`]),
+    "frame-ancestors 'none'",
+    "base-uri 'none'",
+  ].join("; ");
+  return new Response(html, {
+    status: 200,
+    headers: {
+      "content-type": "text/html; charset=utf-8",
+      "content-security-policy": policy,
+      "x-frame-options": "DENY",
+      "x-content-type-options": "nosniff",
+      "referrer-policy": "no-referrer",
+      ...NO_STORE_HEADERS,
+    },
+  });
+}

@@ -5,6 +5,7 @@ import type { MemoryStore } from "../../src/testing";
 import {
   answer,
   authorizationUrl,
+  basicHeader,
   CONFIDENTIAL_CLIENT,
   codeForm,
   DISCOVERY_URL,
@@ -233,6 +234,27 @@ beforeAll(async () => {
   }
   rememberTokens("first", tokens);
 
+  // The success path under response_mode=form_post, whose page carries the code by design.
+  const posted = await setup.provider.beginAuthorization(new Request(authorizationUrl({ response_mode: "form_post" })));
+  if (!posted.ok) {
+    throw new Error("the form_post request was refused");
+  }
+  seen.never["form_post interaction id"] = posted.value.id;
+  const postedGrant = await setup.provider.completeAuthorization(posted.value.id, {
+    subject: SUBJECT,
+    authTime: Math.floor(setup.now.ms / 1000),
+    scopes: posted.value.scopes,
+  });
+  if (!postedGrant.ok) {
+    throw new Error("the form_post grant was refused");
+  }
+  const page = await observe("form_post page", "success-redirect", postedGrant.value);
+  const postedCode = /name="code" value="([A-Za-z0-9_-]{43})"/.exec(page.text)?.[1];
+  if (postedCode === undefined) {
+    throw new Error("the form_post page carries no code");
+  }
+  seen.codes["form_post authorization code"] = postedCode;
+
   await observe("userinfo", "other", await answer(setup.provider, userinfoRequest(tokens.access_token)));
   const rotated = await observe(
     "refresh rotation",
@@ -255,6 +277,9 @@ beforeAll(async () => {
     ["scope without openid", authorizationUrl({ scope: "profile" })],
     ["prompt=none login", authorizationUrl({ prompt: "none login" })],
     ["a request object", authorizationUrl({ request: "eyJhbGciOiJub25lIn0.e30." })],
+    ["form_post with a scope without openid", authorizationUrl({ response_mode: "form_post", scope: "profile" })],
+    ["response_mode=fragment", authorizationUrl({ response_mode: "fragment" })],
+    ["prompt=none create", authorizationUrl({ prompt: "none create" })],
   ];
   await Promise.all(
     refusals.map(async ([label, url]) => {
@@ -376,6 +401,47 @@ beforeAll(async () => {
     await answer(setup.provider, userinfoRequest(tokens.refresh_token)),
   );
 
+  // Revocation, each reported with the grant and subject of record, which must carry no token value.
+  const revokeRequest = (token: string, authorization?: string): Request =>
+    new Request(`${ISSUER}/revoke`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/x-www-form-urlencoded",
+        ...(authorization === undefined ? {} : { authorization }),
+      },
+      body: new URLSearchParams(
+        authorization === undefined ? { token, client_id: PUBLIC_CLIENT } : { token },
+      ).toString(),
+    });
+  await Promise.all(
+    (
+      [
+        ["access token revocation", (body: TokenBody) => body.access_token],
+        ["refresh token revocation", (body: TokenBody) => body.refresh_token ?? ""],
+      ] as const
+    ).map(async ([label, pick]) => {
+      const revoking = await signIn(setup, { scope: "openid profile offline_access" });
+      const exchange = await observe(
+        `${label} exchange`,
+        "token-success",
+        await redeem(setup, codeForm(revoking, PUBLIC_CLIENT)),
+      );
+      rememberTokens(label, tokensOf(exchange));
+      await observe(label, "other", await answer(setup.provider, revokeRequest(pick(tokensOf(exchange)))));
+    }),
+  );
+  await observe(
+    "revocation of another client's token",
+    "other",
+    await answer(
+      setup.provider,
+      revokeRequest(
+        tokensOf(rotated).access_token,
+        basicHeader({ clientId: CONFIDENTIAL_CLIENT, secret: setup.secret }),
+      ),
+    ),
+  );
+
   // Expiry last, because it moves the clock past the lifetimes of everything above.
   const expiring = await signIn(setup);
   setup.now.ms += 61_000;
@@ -392,6 +458,11 @@ beforeAll(async () => {
     ["claims that is a secret", { claims: setup.secret as unknown as ProviderOptions["claims"] }],
     ["scope claims that are a verifier", { scopes: { "read:x": [VERIFIER, 42] as unknown as string[] } }],
     ["now that is a secret", { now: setup.secret as unknown as () => number }],
+    ["an unknown option holding a secret", { tokenTtl: setup.secret } as Partial<ProviderOptions>],
+    ["a non-canonical issuer with a verifier in it", { issuer: `https://OP.example/${VERIFIER}` }],
+    ["an endpoint with a dot segment and a verifier", { endpoints: { token: `${ISSUER}/a/../${VERIFIER}` } }],
+    ["metadata overriding issuer with a secret", { metadata: { issuer: setup.secret } }],
+    ["verificationKeys that is a secret", { verificationKeys: setup.secret as unknown as [] }],
   ];
   await Promise.all(
     badOptions.map(async ([label, override]) => {
@@ -438,6 +509,18 @@ describe("the store", () => {
 });
 
 describe("diagnostics", () => {
+  it("names the grant and subject of record on refusals and revocations", () => {
+    const parsed = seen.diagnostics.map((diagnostic) => JSON.parse(diagnostic) as Record<string, unknown>);
+    const reasons = new Set(
+      parsed.filter((diagnostic) => typeof diagnostic.grantId === "string").map(({ reason }) => reason),
+    );
+
+    for (const reason of ["token_revoked", "code_verifier_mismatch", "code_replayed", "refresh_token_replayed"]) {
+      expect(reasons).toContain(reason);
+    }
+    expect(parsed.some(({ reason, subject }) => reason === "token_revoked" && subject === SUBJECT)).toBe(true);
+  });
+
   it("carries no value in any diagnostic", () => {
     expect(seen.diagnostics.length).toBeGreaterThan(0);
     const leaks = seen.diagnostics.flatMap((diagnostic, index) =>
@@ -507,7 +590,7 @@ describe("issue lists and TypeError messages", () => {
   });
 
   it("throws TypeError for every bad option and bad outcome", () => {
-    expect(seen.thrown).toHaveLength(10);
+    expect(seen.thrown).toHaveLength(15);
     expect(seen.thrown.filter((error) => error.name !== "TypeError")).toEqual([]);
   });
 });

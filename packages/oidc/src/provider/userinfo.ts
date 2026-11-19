@@ -36,12 +36,15 @@ async function answerWithAccessToken(options: ResolvedOptions, request: Request)
       lookup.reason === "access_token_missing"
         ? bearerErrorResponse()
         : bearerErrorResponse(lookup.reason === "access_token_malformed" ? "invalid_request" : "invalid_token");
-    return refuse(response, lookup.reason, lookup.clientId);
+    return refuse(response, lookup.reason, lookup.clientId, lookup.grant);
   }
   const { record } = lookup;
   // OpenID Connect Core §5.3: the endpoint serves only tokens obtained with `openid`.
   if (!record.scopes.includes("openid")) {
-    return refuse(bearerErrorResponse("insufficient_scope"), "access_token_without_openid", record.clientId);
+    return refuse(bearerErrorResponse("insufficient_scope"), "access_token_without_openid", record.clientId, {
+      grantId: record.grantId,
+      subject: record.subject,
+    });
   }
 
   return jsonResponse(await releaseClaims(options, record), {

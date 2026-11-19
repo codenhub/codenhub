@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from "vitest";
 
-import type { Provider } from "../../src/provider";
+import type { Provider, ProviderDiagnostic } from "../../src/provider";
 import {
   answer,
   authorizationUrl,
@@ -20,6 +20,7 @@ import {
   refreshForm,
   setUpProvider,
   STATE,
+  SUBJECT,
   summarizeRedirect,
   TOKEN_URL,
   tokenRequest,
@@ -215,6 +216,109 @@ describe("authorization request: every redirect error carries iss and the reques
   ])("%s", async (_label, params, error) => {
     const failure = await beginFailure(setup.provider, authorizationUrl(params));
     expect(summarizeRedirect(failure.redirect)?.params).toEqual({ error, state: STATE, iss: ISSUER });
+  });
+});
+
+/** The status, form target and posted fields of a `form_post` page, for exact comparison. */
+async function summarizeFormPost(response: Response | null) {
+  if (response === null) {
+    return null;
+  }
+  const html = await response.text();
+  const unescape = (value: string): string =>
+    value
+      .replaceAll("&quot;", '"')
+      .replaceAll("&#39;", "'")
+      .replaceAll("&lt;", "<")
+      .replaceAll("&gt;", ">")
+      .replaceAll("&amp;", "&");
+  const fields = [...html.matchAll(/<input type="hidden" name="([^"]*)" value="([^"]*)">/g)].map(
+    ([, name = "", value = ""]) => [unescape(name), unescape(value)] as const,
+  );
+  return {
+    status: response.status,
+    target: unescape(/<form method="post" action="([^"]*)">/.exec(html)?.[1] ?? ""),
+    params: Object.fromEntries(fields),
+    scripts: html.match(/<script>/g)?.length ?? 0,
+  };
+}
+
+describe("authorization request: response_mode", () => {
+  it("posts an error back to the redirect URI under form_post", async () => {
+    const failure = await beginFailure(
+      setup.provider,
+      authorizationUrl({ response_mode: "form_post", scope: "profile" }),
+    );
+    expect(await summarizeFormPost(failure.redirect)).toEqual({
+      status: 200,
+      target: REDIRECT_URI,
+      params: { error: "invalid_scope", state: STATE, iss: ISSUER },
+      scripts: 1,
+    });
+  });
+
+  it.each([
+    ['"><script>alert(1)</script>'],
+    ["</form><form action=https://evil.example>"],
+    ["' onfocus='alert(1)"],
+    ["&lt;script&gt;&amp;"],
+    ["\u2028\u00e9\ud83d\ude00 line\nbreak"],
+  ])("posts the hostile state %j back unchanged, with no script but its own", async (state) => {
+    const failure = await beginFailure(
+      setup.provider,
+      authorizationUrl({ response_mode: "form_post", scope: "profile", state }),
+    );
+    expect(await summarizeFormPost(failure.redirect)).toEqual({
+      status: 200,
+      target: REDIRECT_URI,
+      params: { error: "invalid_scope", state, iss: ISSUER },
+      scripts: 1,
+    });
+  });
+
+  it.each([["fragment"], ["jwt"], ["query.jwt"], ["form_post.jwt"], ["fragment.jwt"], ["Form_Post"]])(
+    "refuses response_mode=%s in the query",
+    async (responseMode) => {
+      expect(await refusal(setup.provider, authorizationUrl({ response_mode: responseMode }))).toEqual({
+        issues: [{ code: "invalid_request", path: ["response_mode"] }],
+        redirect: redirectedWith("invalid_request"),
+      });
+    },
+  );
+});
+
+describe("authorization request: prompt=create and extensions", () => {
+  it("redirects invalid_request for prompt=none combined with create", async () => {
+    expect(await refusal(setup.provider, authorizationUrl({ prompt: "create none" }))).toEqual({
+      issues: [{ code: "invalid_request", path: ["prompt"] }],
+      redirect: redirectedWith("invalid_request"),
+    });
+  });
+
+  it("hands hostile extension names to the app as own members of a frozen plain object", async () => {
+    const url = `${authorizationUrl({ screen_hint: "signup" })}&__proto__=x&constructor=y&toString=z`;
+    const begun = await setup.provider.beginAuthorization(new Request(url));
+    if (!begun.ok) {
+      throw new Error("the request was refused");
+    }
+    const { extensions } = begun.value;
+    expect(Object.getPrototypeOf(extensions)).toBe(Object.prototype);
+    expect(Object.isFrozen(extensions)).toBe(true);
+    expect(Object.entries(extensions ?? {})).toEqual([
+      ["screen_hint", "signup"],
+      ["__proto__", "x"],
+      ["constructor", "y"],
+      ["toString", "z"],
+    ]);
+    expect(({} as Record<string, unknown>).x).toBeUndefined();
+  });
+
+  it("renders invalid_request for 33 parameters, extensions among them", async () => {
+    const extra = Object.fromEntries(Array.from({ length: 25 }, (_, index) => [`ext${index}`, "1"]));
+    expect(await refusal(setup.provider, authorizationUrl(extra))).toEqual({
+      issues: [{ code: "invalid_request", params: { reason: "too_many" } }],
+      redirect: null,
+    });
   });
 });
 
@@ -613,5 +717,60 @@ describe("HTTP hygiene", () => {
   it("sends no CORS header on an authorization error redirect", async () => {
     const failure = await beginFailure(setup.provider, authorizationUrl({ response_type: "token" }));
     expect(failure.redirect?.headers.get("access-control-allow-origin")).toBeNull();
+  });
+});
+
+describe("diagnostics of hostile requests", () => {
+  let seen: ProviderDiagnostic[];
+
+  beforeEach(async () => {
+    seen = [];
+    setup = await setUpProvider({
+      onDiagnostic: (diagnostic) => {
+        seen.push(diagnostic);
+      },
+    });
+  });
+
+  /** The diagnostics seen so far as text, checked for the presented values. */
+  const text = (): string => JSON.stringify(seen);
+
+  it("names the grant and subject of the code another client redeemed, and not the code", async () => {
+    const issued = await issueCode(setup);
+    await redeem(setup, codeForm(issued, CONFIDENTIAL_CLIENT), { clientId: CONFIDENTIAL_CLIENT, secret: setup.secret });
+
+    expect(seen).toEqual([
+      expect.objectContaining({ clientId: CONFIDENTIAL_CLIENT, grantId: expect.any(String), subject: SUBJECT }),
+    ]);
+    expect(text()).not.toContain(issued.code);
+    expect(text()).not.toContain(setup.secret);
+  });
+
+  it("names the family a reused refresh token belongs to, and no token value", async () => {
+    const issued = await issueTokens(setup);
+    const refreshToken = refreshTokenOf(issued.tokens);
+    const rotated = await redeem(setup, refreshForm(refreshToken, PUBLIC_CLIENT));
+    const rotatedTokens = (await rotated.json()) as { access_token: string; refresh_token: string };
+    await redeem(setup, refreshForm(refreshToken, PUBLIC_CLIENT));
+
+    expect(seen).toEqual([expect.objectContaining({ reason: "refresh_token_replayed", grantId: expect.any(String) })]);
+    for (const value of [
+      refreshToken,
+      issued.tokens.access_token,
+      rotatedTokens.refresh_token,
+      rotatedTokens.access_token,
+    ]) {
+      expect(text()).not.toContain(value);
+    }
+  });
+
+  it("names no grant for a token the store does not know, such as an access token sent as a refresh token", async () => {
+    const issued = await issueTokens(setup);
+    await redeem(setup, refreshForm(issued.tokens.access_token, PUBLIC_CLIENT));
+
+    expect(seen).toHaveLength(1);
+    expect(seen[0]).not.toHaveProperty("grantId");
+    expect(seen[0]).not.toHaveProperty("subject");
+    expect(text()).not.toContain(issued.tokens.access_token);
   });
 });

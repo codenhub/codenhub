@@ -50,10 +50,16 @@ function listClaimsSupported(options: ResolvedOptions): string[] {
   return unique([...ID_TOKEN_CLAIMS, ...scopeClaims]);
 }
 
-/** The signing algorithms of every published key, which is what a client may expect in an ID token. */
+/**
+ * The algorithms of the signing keys, which is what a client may expect in an ID token. A verification key's
+ * algorithm is left out, since no ID token is signed with it.
+ */
 function listSigningAlgs(options: ResolvedOptions): string[] {
   return unique(options.publicKeys.map((key) => key.alg));
 }
+
+/** The `prompt` values the authorization endpoint accepts (OpenID Connect Prompt Create 1.0 §4.1). */
+const PROMPT_VALUES: readonly string[] = ["none", "login", "consent", "select_account", "create"];
 
 /**
  * Builds the OpenID Provider metadata this provider publishes at its discovery endpoint.
@@ -62,13 +68,24 @@ function listSigningAlgs(options: ResolvedOptions): string[] {
  * Every value comes from the resolved options, so the document cannot drift from what the endpoints
  * enforce. The flags for features this package does not implement (`claims` and `request` parameters) are
  * published as unsupported, so a client never tries them. `subject_types_supported` is the app's `subjectTypes`,
- * since the app derives the subjects.
+ * since the app derives the subjects. The app's `metadata` members follow the computed ones.
  *
  * @param options - Validated provider options.
  * @returns A deep-frozen metadata document.
+ * @throws {TypeError} When the `metadata` option names a member computed here.
  */
 export function buildMetadata(options: ResolvedOptions): ProviderMetadata {
-  return deepFreeze({
+  const computed = computeMetadata(options);
+  for (const name of Object.keys(options.metadata)) {
+    if (Object.hasOwn(computed, name)) {
+      throw new TypeError(`createProvider: metadata.${name} is a member the provider computes`);
+    }
+  }
+  return deepFreeze({ ...computed, ...options.metadata });
+}
+
+function computeMetadata(options: ResolvedOptions): ProviderMetadata {
+  return {
     issuer: options.issuer,
     authorization_endpoint: options.endpoints.authorization,
     token_endpoint: options.endpoints.token,
@@ -76,7 +93,7 @@ export function buildMetadata(options: ResolvedOptions): ProviderMetadata {
     jwks_uri: options.endpoints.jwks,
     scopes_supported: [...options.scopeClaims.keys()],
     response_types_supported: ["code"],
-    response_modes_supported: ["query"],
+    response_modes_supported: ["query", "form_post"],
     grant_types_supported: ["authorization_code", "refresh_token", "client_credentials"],
     subject_types_supported: options.subjectTypes,
     id_token_signing_alg_values_supported: listSigningAlgs(options),
@@ -94,12 +111,13 @@ export function buildMetadata(options: ResolvedOptions): ProviderMetadata {
     claims_parameter_supported: false,
     request_parameter_supported: false,
     request_uri_parameter_supported: false,
-  });
+    prompt_values_supported: PROMPT_VALUES,
+  };
 }
 
 /** Exports the public keys, and returns the frozen JWKS document holding them. */
 async function exportJwks(options: ResolvedOptions): Promise<JwksDocument> {
-  const keys = await Promise.all(options.publicKeys.map((key) => exportPublicJwk(key)));
+  const keys = await Promise.all(options.publishedKeys.map((key) => exportPublicJwk(key)));
   return deepFreeze({ keys });
 }
 
