@@ -136,9 +136,15 @@ function referenceComposed(root, file) {
 
   const first = root.nodes.find((node) => node.type === "atrule" && node.name === "import");
 
-  for (const definition of [...defining].filter((member) => !imported.has(member)).sort()) {
-    const specifier = path.relative(path.dirname(file), definition).replaceAll("\\", "/");
+  /* Sorted by the specifier written, not the native path: `\` and `/` sort
+     apart from digits and capitals, so a native sort ordered the same files
+     differently on Windows and POSIX. */
+  const specifiers = [...defining]
+    .filter((member) => !imported.has(member))
+    .map((member) => path.relative(path.dirname(file), member).replaceAll("\\", "/"))
+    .sort();
 
+  for (const specifier of specifiers) {
     first.before(
       postcss.atRule({ name: "reference", params: `"${specifier.startsWith(".") ? specifier : `./${specifier}`}"` }),
     );
