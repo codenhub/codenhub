@@ -2,7 +2,7 @@
 title: Tailwind CSS v4
 description: Como usar os entrypoints de código-fonte /tw num projeto com Tailwind CSS v4.
 order: 1
-source: ef00ca87165cdeee7ef26bf1f287e89cc9a52836
+source: edba47101bea9d5a24d7cf881035a4c3ffc22d3a
 ---
 
 # Tailwind CSS v4
@@ -156,6 +156,8 @@ Os entrypoints `/tw` também substituem `contrast-more:`, `contrast-less:`, `mot
 | `motion-reduce:` | Com `data-motion` `reduce` ou `none`, ou com `prefers-reduced-motion: reduce` a menos que `data-motion="full"` esteja definido. |
 
 `data-motion="none"` conta como movimento reduzido, então `motion-reduce:` se aplica com ele. Como nas regras do próprio pacote, os atributos são lidos só no `<html>` e não de dentro de um shadow root.
+
+O Tailwind não consegue negar uma variante que é ao mesmo tempo um seletor e uma media query, então com um entrypoint `/tw` `not-motion-safe:`, `not-motion-reduce:`, `not-contrast-more:` e `not-dark:` não compilam para nada, e o Tailwind não avisa. Escreva a variante oposta: `motion-reduce:` no lugar de `not-motion-safe:` e `motion-safe:` no lugar de `not-motion-reduce:`, que são opostas exatas. Para as outras, escreva o utilitário sem prefixo e desfaça-o com a variante positiva: `border-4 contrast-more:border-2` no lugar de `not-contrast-more:border-4`, e `bg-white dark:bg-black` no lugar de `not-dark:bg-white`. `not-contrast-less:` compila normalmente.
 
 ## A seguir
 

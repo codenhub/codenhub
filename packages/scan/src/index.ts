@@ -16,6 +16,11 @@ export interface ScanOptions {
    * the file, or one naming the file with Node.js's error as its `cause` when it does not.
    */
   failOnUnreadable?: boolean;
+  /**
+   * Keep a glob out of every `node_modules` folder, unless the entry itself names `node_modules`.
+   * A literal path is read wherever it is.
+   */
+  skipNodeModules?: boolean;
 }
 
 /** An entry that names no file, thrown when {@link ScanOptions.failOnUnmatched} is on. */
@@ -33,6 +38,8 @@ export class UnmatchedEntryError extends Error {
 
 // `(` starts every extglob, such as `@(a|b)`, the one glob form with none of the other characters.
 const GLOB_CHARACTERS = /[*?[\]{}(]/;
+// A brace or extglob alternative names a folder too, as in `{src,node_modules/ui}/**`.
+const NODE_MODULES_SEGMENT = /(^|[\\/{,(|])node_modules([\\/},)|]|$)/;
 
 /**
  * Resolves entries into the files they name, as absolute paths, each listed once.
@@ -46,7 +53,10 @@ export function findFiles(entries: Iterable<string>, options: ScanOptions = {}):
   const files = new Set<string>();
 
   for (const entry of entries) {
-    const named = resolveEntry(entry, cwd, options.failOnUnmatched === true);
+    const named = resolveEntry(entry, cwd, {
+      isStrict: options.failOnUnmatched === true,
+      skipNodeModules: options.skipNodeModules === true && !NODE_MODULES_SEGMENT.test(entry),
+    });
 
     if (named.length === 0 && options.failOnUnmatched) {
       throw new UnmatchedEntryError(entry, cwd);
@@ -60,7 +70,8 @@ export function findFiles(entries: Iterable<string>, options: ScanOptions = {}):
 }
 
 /**
- * Yields the UTF-8 text of each file the entries name.
+ * Yields the text of each file the entries name: UTF-16 after a UTF-16 byte order mark, and UTF-8
+ * otherwise, without the mark.
  *
  * Every entry is resolved when this is called, so an entry that names no file fails before any
  * reading. Files are then read one at a time, as they are asked for, so a glob that matches
@@ -75,7 +86,7 @@ function* readEach(files: readonly string[], failOnUnreadable: boolean): Generat
     let text: string;
 
     try {
-      text = fs.readFileSync(file, "utf8");
+      text = decode(fs.readFileSync(file));
     } catch (error) {
       if (failOnUnreadable) {
         throw namingFile(error, file);
@@ -84,6 +95,24 @@ function* readEach(files: readonly string[], failOnUnreadable: boolean): Generat
     }
     yield text;
   }
+}
+
+/* A file is UTF-8 unless it starts with a UTF-16 byte order mark, which
+   Windows PowerShell 5.1 writes for `"card" > safelist.txt`: read as UTF-8,
+   every other byte of that is a NUL, and no word in it is found. The mark is
+   dropped, as UTF-8's is. Without one, a file is UTF-8. */
+function decode(bytes: Buffer): string {
+  if (bytes[0] === 0xff && bytes[1] === 0xfe) {
+    return bytes.toString("utf16le", 2);
+  }
+  if (bytes[0] === 0xfe && bytes[1] === 0xff) {
+    // Node.js has no UTF-16 BE decoder, so the pairs are swapped to LE; an odd last byte is dropped, as LE drops it.
+    const body = Buffer.from(bytes.subarray(2, bytes.length - (bytes.length % 2)));
+
+    return body.swap16().toString("utf16le");
+  }
+
+  return bytes.toString("utf8", bytes[0] === 0xef && bytes[1] === 0xbb && bytes[2] === 0xbf ? 3 : 0);
 }
 
 /* Node.js names the path in a system error, such as ENOENT or EACCES, but not
@@ -120,7 +149,11 @@ export function* splitWords(text: string, wordCharacters: string): Generator<str
   }
 }
 
-function resolveEntry(entry: string, cwd: string, isStrict: boolean): string[] {
+function resolveEntry(
+  entry: string,
+  cwd: string,
+  { isStrict, skipNodeModules }: { isStrict: boolean; skipNodeModules: boolean },
+): string[] {
   try {
     const literal = path.resolve(cwd, entry);
 
@@ -132,7 +165,7 @@ function resolveEntry(entry: string, cwd: string, isStrict: boolean): string[] {
     }
 
     return fs
-      .globSync(entry, { cwd })
+      .globSync(entry, { cwd, exclude: skipNodeModules ? isNodeModules : undefined })
       .map((match) => path.resolve(cwd, match))
       .filter(isFileOrUnknown);
   } catch (error) {
@@ -142,6 +175,11 @@ function resolveEntry(entry: string, cwd: string, isStrict: boolean): string[] {
     }
     return [];
   }
+}
+
+// Called for each folder the walk would enter too, so it never descends into one.
+function isNodeModules(match: string): boolean {
+  return path.basename(match) === "node_modules";
 }
 
 /* A link is followed, so a linked file is read and a linked folder is not, and

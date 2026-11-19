@@ -85,9 +85,23 @@
      when a consumer sets it, still wins.
 
      A component drawing no line at rest loses nothing: the outline moves inward
-     over its own fill by a hairline, which is not a visible change. */
+     over its own fill by a hairline, which is not a visible change.
+
+     On a solid surface the default ring takes the surface's ink, as the text
+     there does: the primary colour drew over a fill of its own colour or close
+     to it, at 1.0 to 2.9:1. Only an element that does not hold the ink itself,
+     such as a bare link, a summary or a `[tabindex]` region; a consumer's
+     `--focus-ring` is left as set. */
   :focus-visible {
-    outline: var(--focus-ring-width) solid var(--focus-ring, color-mix(in srgb, var(--color-primary) 64%, transparent));
+    outline: var(--focus-ring-width) solid
+      var(
+        --focus-ring,
+        color-mix(
+          in srgb,
+          var(--_held-ink) min(var(--_held-on), calc(100% - var(--_own-hold))),
+          color-mix(in srgb, var(--color-primary) 64%, transparent)
+        )
+      );
     outline-offset: var(--focus-ring-offset, calc(-1 * var(--ui-border-width, var(--border-width))));
   }
 

@@ -67,6 +67,47 @@ describe("findFiles", () => {
     ]);
   });
 
+  describe("skipNodeModules", () => {
+    beforeEach(() => {
+      for (const folder of ["node_modules/dep", "app/node_modules/dep"]) {
+        fs.mkdirSync(path.join(root, folder), { recursive: true });
+        fs.writeFileSync(path.join(root, folder, "demo.html"), "dependency");
+      }
+    });
+
+    it("keeps a wildcard out of every node_modules folder", () => {
+      expect(relative(findFiles(["**/*.html"], { cwd: root, skipNodeModules: true }))).toEqual([
+        "app/views/a.html",
+        "app/views/nested/b.html",
+      ]);
+    });
+
+    it("reads node_modules when the entry names it", () => {
+      expect(relative(findFiles(["node_modules/**/*.html"], { cwd: root, skipNodeModules: true }))).toEqual([
+        "node_modules/dep/demo.html",
+      ]);
+    });
+
+    it.each(["{app/views,node_modules/dep}/**/*.html", "@(app|node_modules)/**/*.html"])(
+      "reads node_modules when an alternative of %s names it",
+      (entry) => {
+        expect(relative(findFiles([entry], { cwd: root, skipNodeModules: true }))).toEqual(
+          expect.arrayContaining(["app/views/a.html", "node_modules/dep/demo.html"]),
+        );
+      },
+    );
+
+    it("reads node_modules without it", () => {
+      expect(relative(findFiles(["**/*.html"], { cwd: root }))).toContain("node_modules/dep/demo.html");
+    });
+
+    it("fails on an entry that matches only files in node_modules", () => {
+      expect(() => findFiles(["**/demo.html"], { cwd: root, skipNodeModules: true, failOnUnmatched: true })).toThrow(
+        UnmatchedEntryError,
+      );
+    });
+  });
+
   it("follows a link a glob matches to the file it names", (context) => {
     try {
       fs.symlinkSync(path.join(root, "app", "views", "a.html"), path.join(root, "app", "linked.html"), "file");
@@ -124,6 +165,26 @@ describe("readFiles", () => {
     fs.writeFileSync(path.join(root, "app", "views", "a.html"), "café ✓");
 
     expect([...readFiles(["app/views/a.html"], { cwd: root })]).toEqual(["café ✓"]);
+  });
+
+  /* Windows PowerShell 5.1 writes UTF-16 LE with a byte order mark, as in
+     `"card" > safelist.txt`, and read as UTF-8 every other byte is a NUL, so
+     no word was found in it. */
+  it.each([
+    ["UTF-16 LE", Buffer.concat([Buffer.from([0xff, 0xfe]), Buffer.from("café ✓\r\n", "utf16le")])],
+    ["UTF-16 BE", Buffer.concat([Buffer.from([0xfe, 0xff]), Buffer.from("café ✓\r\n", "utf16le").swap16()])],
+    ["UTF-8", Buffer.concat([Buffer.from([0xef, 0xbb, 0xbf]), Buffer.from("café ✓\r\n")])],
+  ])("decodes a file that starts with a %s byte order mark, and drops the mark", (_, bytes) => {
+    fs.writeFileSync(path.join(root, "app", "views", "a.html"), bytes);
+
+    expect([...readFiles(["app/views/a.html"], { cwd: root })]).toEqual(["café ✓\r\n"]);
+  });
+
+  // Without a mark, a file is UTF-8 even when it could be read otherwise.
+  it("reads a file without a byte order mark as UTF-8", () => {
+    fs.writeFileSync(path.join(root, "app", "views", "a.html"), Buffer.from("ab", "utf16le"));
+
+    expect([...readFiles(["app/views/a.html"], { cwd: root })]).toEqual(["a\0b\0"]);
   });
 
   it("reads one file at a time", () => {

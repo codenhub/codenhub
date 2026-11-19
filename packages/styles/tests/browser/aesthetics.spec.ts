@@ -3261,3 +3261,100 @@ test("pulls the focus ring in by the aesthetic's line width", async ({ page }) =
   expect(read.neo.offset).toBe("-2px");
   expect(read.set.offset).toBe("4px");
 });
+
+/* `.pixel`'s inset focus layers reach seven pixels in, then two more of the
+   page colour, whatever the box. On a `.p-xs` icon button, about 19px a side,
+   that left a two-pixel hole, and the icon drawn over a ring of its own ink
+   all but vanished. */
+test("keeps a small icon button's icon in sight when focused under pixel", async ({ page }) => {
+  await page.goto(withAesthetic(FORMS_URL, "pixel"));
+  await stopTransitions(page);
+  await page.evaluate(() => {
+    const host = document.querySelector('[data-testid="preview-root"]') ?? document.body;
+    const region = document.createElement("div");
+    const icon = '<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M2 2h12v12H2z"/></svg>';
+
+    region.id = "icon-probe";
+    region.innerHTML =
+      `<div class="input-group"><input class="ipt" /><button class="btn icon ghost p-xs" data-case="group">${icon}</button></div>` +
+      `<button class="btn icon ghost p-xs" data-case="lone">${icon}</button>` +
+      `<button class="btn icon p-xs" data-case="edged">${icon}</button>`;
+    host.prepend(region);
+  });
+
+  /* The icon's pixels are those that stand at 3:1 against what the button
+     paints under them, read with the icon hidden. */
+  const iconPixels = async (name: string) => {
+    const button = page.locator(`#icon-probe [data-case="${name}"]`);
+    const shot = async () => (await button.screenshot({ animations: "disabled" })).toString("base64");
+    const shown = await shot();
+
+    await button.evaluate((element) => element.querySelector("svg")!.style.setProperty("visibility", "hidden"));
+
+    const hidden = await shot();
+
+    await button.evaluate((element) => element.querySelector("svg")!.style.removeProperty("visibility"));
+
+    return page.evaluate(
+      async (sources) => {
+        const decode = async (source: string) => {
+          const image = new Image();
+
+          image.src = `data:image/png;base64,${source}`;
+          await image.decode();
+
+          const canvas = document.createElement("canvas");
+
+          canvas.width = image.width;
+          canvas.height = image.height;
+
+          const context = canvas.getContext("2d")!;
+
+          context.drawImage(image, 0, 0);
+
+          return context.getImageData(0, 0, image.width, image.height).data;
+        };
+        const [left, right] = await Promise.all(sources.map(decode));
+        const luminance = (data: Uint8ClampedArray, index: number) => {
+          const [red, green, blue] = [0, 1, 2].map((offset) => {
+            const ratio = data[index + offset]! / 255;
+
+            return ratio <= 0.03928 ? ratio / 12.92 : ((ratio + 0.055) / 1.055) ** 2.4;
+          });
+
+          return 0.2126 * red! + 0.7152 * green! + 0.0722 * blue!;
+        };
+        let pixels = 0;
+
+        for (let index = 0; index < left!.length; index += 4) {
+          const [lighter, darker] = [luminance(left!, index), luminance(right!, index)].sort((a, b) => b - a);
+
+          if ((lighter! + 0.05) / (darker! + 0.05) >= 3) {
+            pixels += 1;
+          }
+        }
+
+        return pixels;
+      },
+      [shown, hidden],
+    );
+  };
+
+  for (const name of ["group", "lone", "edged"]) {
+    /* oxlint-disable no-await-in-loop -- one button holds focus at a time. */
+    await page.locator("body").focus();
+
+    const resting = await iconPixels(name);
+
+    await page.keyboard.press("Tab");
+    await page.locator(`#icon-probe [data-case="${name}"]`).focus();
+
+    const focused = await iconPixels(name);
+    /* oxlint-enable no-await-in-loop */
+
+    expect(resting, `${name} draws an icon at rest`).toBeGreaterThan(20);
+    expect
+      .soft(focused / resting, `${name}: share of the icon still in sight when focused`)
+      .toBeGreaterThanOrEqual(0.5);
+  }
+});

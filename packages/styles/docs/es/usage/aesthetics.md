@@ -2,7 +2,7 @@
 title: Estéticas
 description: Los seis aspectos opcionales, lo que cada uno cambia en un componente, sus controles y sus límites.
 order: 6
-source: 52678f7a4588460f836ce64909526d77e73aa4c6
+source: d10fa0628ac9627856be765250bbc4c24682793c
 ---
 
 # Estéticas
@@ -159,7 +159,7 @@ Un botón es un cristal liquid cuando él mismo lleva `.glass-liquid`, dentro de
 - Las tablas, las barras de progreso y los skeletons también son cuadrados. Una tabla no recibe recorte porque en Chromium y WebKit su caja incluye el caption, y el recorte caería en el caption en lugar de en las filas. Las barras de progreso y los skeletons solo toman la esquina cuadrada.
 - Un bloque de código `.pre` es escalonado como un botón. No tiene borde por defecto, así que el recorte se ve sin contorno alrededor.
 - El contorno es un anillo interior, porque un recorte elimina un borde real; por el mismo motivo, el anillo de foco es una segunda capa interior en lugar de un outline. Los dos son el propio borde del elemento y no una sombra, así que el borde responde a `.edged` y `.edgeless` como lo hace un borde: un badge `.edgeless` y un botón `.solid` no dibujan ninguno, una tarjeta `.edged` dibuja uno, y un campo conserva el suyo pida lo que pida un contenedor.
-- El anillo de foco interior lleva dentro una línea de 2px del color de la página. El anillo es del color principal, así que en un botón `.solid.primary` se dibujaría sobre su propio color; la línea es lo que se ve ahí.
+- El anillo de foco interior es más fino en una caja más pequeña, `.sm`, `.p-sm` o `.p-xs`, para que un botón de icono pequeño no pierda de vista su icono. Lleva dentro una línea de 2px del color de la página. El anillo es del color principal, así que en un botón `.solid.primary` se dibujaría sobre su propio color; la línea es lo que se ve ahí.
 - Con colores forzados desaparecen tanto el anillo como el recorte, porque el sistema elimina todas las sombras de caja: los componentes dibujan un borde real de 2px y esquinas rectas, y `.pixel-solo` un outline hacia dentro.
 - `.radio` y `.tooltip-icon` nunca son escalonados. El círculo es lo que distingue a simple vista un radio de un checkbox, así que un radio sigue siendo redondo. Un disparador de tooltip escalonado de 20px parecería mordido, así que es un cuadrado simple.
 - La `--font-pixel` la aportas tú. El paquete no incluye ningún archivo de fuente, así que la estética no tiene efectos secundarios de red y recurre a la pila monoespaciada.

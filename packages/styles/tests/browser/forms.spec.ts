@@ -1769,6 +1769,69 @@ test.describe("forms", () => {
     }
   });
 
+  /* Helper text kept the page's secondary grey on a solid surface, where the
+     placeholder already took the surface's ink: a hint, and a group's text
+     affix and icon, read at 1.0 to 3.24:1 on `.card.solid.<intent>`. */
+  test("prints a hint and a group's adornments at 4.5:1 on a solid surface", async ({ page }) => {
+    await page.goto(FORMS_URL);
+
+    for (const theme of ["light", "dark"]) {
+      // oxlint-disable-next-line no-await-in-loop -- one theme, then the other, on one page.
+      const samples = await page.evaluate((name) => {
+        document.documentElement.classList.remove("light", "dark");
+        document.documentElement.classList.add(name);
+        const host = document.querySelector('[data-testid="preview-root"]') ?? document.body;
+        const probe = document.createElement("div");
+
+        probe.style.backgroundColor = "var(--color-background)";
+        host.append(probe);
+        const page = getComputedStyle(probe).backgroundColor;
+        probe.remove();
+        const plates = ["", "neutral", "primary", "secondary", "success", "warning", "destructive", "info"];
+
+        return plates.flatMap((plate) => {
+          const card = document.createElement("div");
+
+          card.className = `card solid ${plate}`;
+          card.innerHTML = `
+            <span class="hint">Helper text</span>
+            <span class="hint neutral">Helper text</span>
+            <div class="input-group"><span>https://</span><input class="ipt" /><svg width="16" height="16" fill="currentColor"><rect width="16" height="16" /></svg></div>`;
+          host.append(card);
+
+          const group = card.querySelector(".input-group")!;
+          const read = (element: Element, label: string, ground: Element) => ({
+            label: `${name} ${label} on .card.solid${plate ? `.${plate}` : ""}`,
+            color: getComputedStyle(element).color,
+            ground: getComputedStyle(ground).backgroundColor,
+            card: getComputedStyle(card).backgroundColor,
+            page,
+          });
+          const [hint, neutral] = card.querySelectorAll(".hint");
+          const result = [
+            read(hint, ".hint", card),
+            read(neutral, ".hint.neutral", card),
+            read(group.querySelector("span")!, "group text affix", group),
+            read(group.querySelector("svg")!, "group icon", group),
+          ];
+
+          card.remove();
+
+          return result;
+        });
+      }, theme);
+
+      for (const sample of samples) {
+        const card = flattenColor(sample.card, sample.page);
+        const ground = flattenColor(sample.ground, card);
+
+        expect
+          .soft(getContrastRatio(flattenColor(sample.color, ground), ground), sample.label)
+          .toBeGreaterThanOrEqual(4.5);
+      }
+    }
+  });
+
   /* The group reads intent the way a lone field does, typed text included. The
      control inside resets its own intent to neutral at its root, like every
      component, so an `.input-group.success` once drew a success line around
@@ -1876,6 +1939,103 @@ test.describe("forms", () => {
       }
     }
   });
+
+  /* The invalid state wrote the destructive slots but not the cap, so the
+     control stayed neutral under the reset's 20% and, on a solid surface, took
+     the surface's ink in place of the red: an invalid field's line read
+     159,147,147 against a valid one's 143,143,143 on `.card.solid.primary`.
+     Held to `.destructive` on every solid surface, by class, in a group, and
+     on the bare elements `/native` styles. */
+  for (const [route, fixtures] of [
+    [
+      FORMS_URL,
+      [
+        ['<input class="ipt" ATTR />', "ipt"],
+        ['<textarea class="textarea" ATTR></textarea>', "textarea"],
+        ['<select class="select" ATTR><option>A</option></select>', "select"],
+        ['<input class="checkbox" type="checkbox" ATTR />', "checkbox"],
+        ['<input class="checkbox" type="checkbox" checked ATTR />', "checkbox:checked"],
+        ['<input class="radio" type="radio" ATTR />', "radio"],
+        ['<input class="switch" type="checkbox" role="switch" ATTR />', "switch"],
+        ['<input class="switch" type="checkbox" role="switch" checked ATTR />', "switch:checked"],
+        ['<div class="input-group GROUP"><input class="ipt" ATTR /></div>', "input-group"],
+      ],
+    ],
+    [
+      `${ORIGIN}/native/?env=vanilla`,
+      [
+        ["<input ATTR />", "input"],
+        ["<textarea ATTR></textarea>", "textarea"],
+        ['<input type="checkbox" ATTR />', "checkbox"],
+        ['<input type="checkbox" checked ATTR />', "checkbox:checked"],
+      ],
+    ],
+  ] as const) {
+    test(`draws an invalid control as a destructive one on a solid surface, ${route.includes("native") ? "bare" : "by class"}`, async ({
+      page,
+    }) => {
+      await page.goto(route);
+
+      for (const theme of ["light", "dark"]) {
+        // oxlint-disable-next-line no-await-in-loop -- one theme, then the other, on one page.
+        const pairs = await page.evaluate(
+          ([name, list]) => {
+            document.documentElement.classList.remove("light", "dark");
+            document.documentElement.classList.add(name);
+            const host = document.querySelector('[data-testid="preview-root"]') ?? document.body;
+            const plates = ["", "neutral", "primary", "secondary", "success", "warning", "destructive", "info"];
+            const read = (plate: string, html: string) => {
+              const wrapper = document.createElement("div");
+
+              wrapper.className = `card solid ${plate}`;
+              wrapper.innerHTML = html;
+              host.append(wrapper);
+
+              const control = wrapper.firstElementChild!;
+              const field = control.querySelector("input") ?? control;
+              const styles = getComputedStyle(control);
+              const values = {
+                background: styles.backgroundColor,
+                border: styles.borderTopColor,
+                color: getComputedStyle(field).color,
+                mark: getComputedStyle(control, "::after").backgroundColor,
+              };
+
+              wrapper.remove();
+
+              return values;
+            };
+
+            return plates.flatMap((plate) =>
+              list.map(([html, label]) => {
+                /* A group takes its intent on the group, and its invalid state
+                   from the control inside: that is the pair the docs promise. */
+                const invalid = html.replace("ATTR", 'aria-invalid="true"').replace(" GROUP", "");
+                const destructive = html.includes("GROUP")
+                  ? html.replace("ATTR", "").replace("GROUP", "destructive")
+                  : html.includes("class=")
+                    ? html.replace("ATTR", "").replace(/class="([^"]+)"/u, 'class="$1 destructive"')
+                    : html.replace("ATTR", 'class="destructive"');
+
+                return {
+                  label: `${name} ${label} on .card.solid${plate ? `.${plate}` : ""}`,
+                  invalid: read(plate, invalid),
+                  destructive: read(plate, destructive),
+                };
+              }),
+            );
+          },
+          [theme, fixtures] as const,
+        );
+
+        for (const { label, invalid, destructive } of pairs) {
+          for (const part of ["background", "border", "color", "mark"] as const) {
+            expectSameColor(invalid[part], destructive[part], `${label} invalid ${part}`);
+          }
+        }
+      }
+    });
+  }
 
   /* A group is a field, so it is a field's height and lines up with the fields
      and buttons beside it. The control inside once kept its own
@@ -2073,6 +2233,50 @@ test.describe("forms", () => {
     expect(forced.focused).toBe(true);
     expect(forced.group, "forced colours: the group drops the field's ring").toBe("none");
     expect(forced.toggleOutline, "forced colours: and the toggle keeps its own").toBe("solid");
+  });
+
+  /* Forced colours ring a focused lone field in Highlight, two pixels outside
+     its border. The group kept its layered ring, drawn over its own border
+     in the forced text colour, so a focused group read as a resting one. */
+  test("rings a focused group in forced colours as it rings a lone field", async ({ page }) => {
+    await page.emulateMedia({ forcedColors: "active" });
+    await page.goto(FORMS_URL);
+    test.skip(
+      !(await page.evaluate(() => matchMedia("(forced-colors: active)").matches)),
+      "engine cannot emulate forced colors",
+    );
+    await stopTransitions(page);
+    await page.evaluate(() => {
+      const host = document.querySelector('[data-testid="preview-root"]') ?? document.body;
+
+      host.insertAdjacentHTML(
+        "afterbegin",
+        `<button data-ring="before">.</button><input class="ipt" data-ring="lone" />
+         <div class="input-group" data-ring="group"><span>@</span><input class="ipt" /></div>`,
+      );
+    });
+
+    const ring = async (selector: string, target: string) => {
+      await page.locator(selector).focus();
+      await page.keyboard.press("Tab");
+
+      return page.locator(target).evaluate((element) => {
+        const styles = getComputedStyle(element);
+
+        return {
+          focused: element.matches(":focus-visible, :focus-within"),
+          style: styles.outlineStyle,
+          width: styles.outlineWidth,
+          offset: styles.outlineOffset,
+          color: styles.outlineColor,
+        };
+      });
+    };
+    const lone = await ring('[data-ring="before"]', '[data-ring="lone"]');
+    const group = await ring('[data-ring="lone"]', '[data-ring="group"]');
+
+    expect(lone).toMatchObject({ focused: true, style: "solid", width: "2px", offset: "2px" });
+    expect(group, "the group rings as the lone field does").toEqual(lone);
   });
 
   /* The text controls take the button's size steps, so a `.btn.sm` and an

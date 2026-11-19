@@ -303,6 +303,73 @@ test("keeps a row with its own intent readable on a solid table", async ({ page 
   /* oxlint-enable no-await-in-loop */
 });
 
+/* A caption sits outside its table's plate, on whatever is behind the table,
+   and an inline quote is text on its container: both kept the page's secondary
+   grey on a solid surface, at 1.0 to 3.24:1. A caption under a solid table is
+   still on the page, so the table's own ink does not reach it. */
+test("prints a caption and an inline quote at 4.5:1 on a solid surface", async ({ page }) => {
+  await page.goto(TYPOGRAPHY_URL);
+
+  /* oxlint-disable no-await-in-loop -- one theme, then the other, on one page. */
+  for (const theme of ["light", "dark"]) {
+    const samples = await page.evaluate((name) => {
+      document.documentElement.classList.remove("light", "dark");
+      document.documentElement.classList.add(name);
+      const probe = document.createElement("div");
+
+      probe.style.backgroundColor = "var(--color-background)";
+      document.body.append(probe);
+      const page = getComputedStyle(probe).backgroundColor;
+      probe.remove();
+      const plates = ["", "card solid", "neutral", "primary", "secondary", "success", "warning", "destructive", "info"];
+
+      return plates.flatMap((plate) => {
+        const host = document.createElement("div");
+
+        host.className = plate === "" || plate === "card solid" ? plate : `card solid ${plate}`;
+        host.innerHTML = ["", "ghost", "solid primary"]
+          .map(
+            (table) =>
+              `<table class="data-table ${table}"><caption>Caption</caption><tbody><tr><td>Cell</td></tr></tbody></table>`,
+          )
+          .join("");
+        host.insertAdjacentHTML("beforeend", '<p>Text with <span class="quote-inline">a quote</span>.</p>');
+        document.body.prepend(host);
+
+        const where = plate ? `.${host.className.replaceAll(" ", ".")}` : "the page";
+        const ground = getComputedStyle(host).backgroundColor;
+        const result = [
+          ...[...host.querySelectorAll("caption")].map((caption, index) => ({
+            label: `${name} caption of a ${["quiet", "ghost", "solid primary"][index]} table on ${where}`,
+            color: getComputedStyle(caption).color,
+            ground,
+            page,
+          })),
+          {
+            label: `${name} .quote-inline on ${where}`,
+            color: getComputedStyle(host.querySelector(".quote-inline")!).color,
+            ground,
+            page,
+          },
+        ];
+
+        host.remove();
+
+        return result;
+      });
+    }, theme);
+
+    for (const sample of samples) {
+      const ground = flattenColor(sample.ground, sample.page);
+
+      expect
+        .soft(getContrastRatio(flattenColor(sample.color, ground), ground), sample.label)
+        .toBeGreaterThanOrEqual(4.5);
+    }
+  }
+  /* oxlint-enable no-await-in-loop */
+});
+
 /* Three positions from one token, and the point of the switch is that none of
    them arrives by implication: a table nobody classed draws the boundaries that
    separate its parts and nothing else, and both of the other answers are asked

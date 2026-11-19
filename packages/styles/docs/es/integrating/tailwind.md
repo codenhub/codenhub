@@ -2,7 +2,7 @@
 title: Tailwind CSS v4
 description: Usar los puntos de entrada de código fuente /tw en un proyecto con Tailwind CSS v4.
 order: 1
-source: ef00ca87165cdeee7ef26bf1f287e89cc9a52836
+source: edba47101bea9d5a24d7cf881035a4c3ffc22d3a
 ---
 
 # Tailwind CSS v4
@@ -156,6 +156,8 @@ Los puntos de entrada `/tw` también reemplazan `contrast-more:`, `contrast-less
 | `motion-reduce:` | Con `data-motion` `reduce` o `none`, o con `prefers-reduced-motion: reduce` salvo que esté puesto `data-motion="full"`. |
 
 `data-motion="none"` cuenta como movimiento reducido, así que `motion-reduce:` se aplica con él. Como con las reglas del propio paquete, los atributos se leen solo en `<html>` y no desde dentro de un shadow root.
+
+Tailwind no puede negar una variante que es a la vez un selector y una media query, así que con un punto de entrada `/tw` `not-motion-safe:`, `not-motion-reduce:`, `not-contrast-more:` y `not-dark:` no compilan a nada, y Tailwind no dice nada. Escribe la variante opuesta: `motion-reduce:` en lugar de `not-motion-safe:` y `motion-safe:` en lugar de `not-motion-reduce:`, que son opuestas exactas. Para las demás, pon la utilidad sin prefijo y deshazla con la variante positiva: `border-4 contrast-more:border-2` en lugar de `not-contrast-more:border-4`, y `bg-white dark:bg-black` en lugar de `not-dark:bg-white`. `not-contrast-less:` compila como siempre.
 
 ## Siguiente paso
 

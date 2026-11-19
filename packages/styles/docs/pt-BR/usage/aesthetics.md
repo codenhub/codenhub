@@ -2,7 +2,7 @@
 title: Estéticas
 description: Os seis visuais opcionais, o que cada um muda num componente, os seus ajustes e os seus limites.
 order: 6
-source: 52678f7a4588460f836ce64909526d77e73aa4c6
+source: d10fa0628ac9627856be765250bbc4c24682793c
 ---
 
 # Estéticas
@@ -159,7 +159,7 @@ Um botão é uma placa liquid quando ele mesmo tem `.glass-liquid`, dentro de um
 - Tabelas, barras de progresso e skeletons também são quadrados. Uma tabela não recebe corte porque, no Chromium e no WebKit, a caixa dela inclui a legenda, e o corte cairia na legenda em vez de nas linhas. Barras de progresso e skeletons recebem só o canto quadrado.
 - Um bloco de código `.pre` é escalonado como um botão. Ele não tem borda por padrão, então o corte aparece sem contorno em volta.
 - O contorno é um anel interno, porque um recorte remove uma borda de verdade — e o anel de foco, pelo mesmo motivo, é uma segunda camada interna, e não um outline. Os dois são a própria borda do elemento, e não uma sombra, então a borda responde a `.edged` e `.edgeless` como uma borda responde: um badge `.edgeless` e um botão `.solid` não desenham nenhuma, um card `.edged` desenha uma, e um campo mantém a sua, peça o contêiner o que pedir.
-- O anel de foco interno carrega uma linha de 2px na cor da página por dentro. O anel é da cor primária, então num botão `.solid.primary` ele seria desenhado sobre a sua própria cor; é a linha que aparece ali.
+- O anel de foco interno é mais fino numa caixa menor, `.sm`, `.p-sm` ou `.p-xs`, para que um botão de ícone pequeno continue mostrando o ícone. Ele carrega uma linha de 2px na cor da página por dentro. O anel é da cor primária, então num botão `.solid.primary` ele seria desenhado sobre a sua própria cor; é a linha que aparece ali.
 - Em cores forçadas, o anel e o corte somem, porque o sistema remove todas as box shadows: os componentes desenham uma borda real de 2px e cantos quadrados, e o `.pixel-solo` um outline para dentro.
 - `.radio` e `.tooltip-icon` nunca são escalonados. O círculo é o que diferencia um radio de um checkbox num relance, então um radio continua redondo. Um gatilho de tooltip de 20px escalonado pareceria mordido, então ele é um quadrado simples.
 - A `--font-pixel` fica por sua conta. O pacote não entrega nenhum arquivo de fonte, então a estética não tem efeito colateral de rede e cai na pilha monoespaçada.

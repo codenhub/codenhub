@@ -2,7 +2,7 @@
 title: Formularios
 description: Campos con etiqueta, pistas y errores, iconos y prefijos fijos, selects y toggles de checkbox, radio y switch.
 order: 2
-source: 6f92be07a240da16dfa5dc835b36a6981985bea9
+source: f91a53bc38fba0047f74d883388a36f2bc3d22ae
 ---
 
 # Formularios
@@ -23,7 +23,7 @@ Un campo es una etiqueta, un control y una pista opcional, apilados:
 
 - `.field` apila sus hijos con una separación pequeña (0.35rem) y ocupa todo el ancho.
 - `.label` define el texto de la etiqueta: 1rem, peso medio.
-- `.hint` es un texto de ayuda más pequeño y en color secundario. Mantenlo fuera del `<label>` y apunta `aria-describedby` a él, para que un lector de pantalla lo anuncie como descripción en lugar de leerlo como parte del nombre del campo.
+- `.hint` es un texto de ayuda más pequeño y en color secundario, y en el color de texto de la superficie sobre una superficie sólida. Mantenlo fuera del `<label>` y apunta `aria-describedby` a él, para que un lector de pantalla lo anuncie como descripción en lugar de leerlo como parte del nombre del campo.
 - `.ipt` da estilo a un `<input>`. Usa `.textarea` para un `<textarea>` y `.select` para un `<select>`.
 
 Un control de texto mide al menos 2.5rem de alto (`--control-height`), la misma altura que un botón por defecto, así que un campo y un botón quedan alineados en una fila. Su aspecto por defecto es sin relleno y con borde. Un `.textarea` mide al menos 7rem de alto y se puede redimensionar en vertical.
@@ -59,9 +59,9 @@ Marca el control como inválido con `aria-invalid="true"` y dale al mensaje de e
 </div>
 ```
 
-Un control inválido dibuja su borde, su anillo de foco y el texto escrito en el color destructivo, tenga la clase de intención que tenga. El texto usa el tono legible de ese color, `--intent-strong`, para que siga siendo legible sobre la página. El paquete solo pinta el estado: decidir que el valor es inválido, poner y quitar `aria-invalid` y escribir el mensaje es cosa de tu código. Quita `aria-invalid` en cuanto el valor vuelva a ser válido; si lo dejas puesto, el campo sigue en rojo. En un checkbox, un radio o un switch, `aria-invalid="true"` dibuja el toggle exactamente igual que `.destructive`, marca de activado incluida.
+Un control inválido dibuja su borde y el texto escrito en el color destructivo, tenga la clase de intención que tenga y esté sobre la superficie que esté, así que en una `.card.solid` se dibuja como su versión `.destructive`. Ahí, un campo dentro de un `.input-group` inválido muestra el texto en el color de texto de la superficie, como en un `.input-group.destructive`. Su anillo de foco es el mismo que dibuja un control válido, definido por [`--focus-ring`](./theming.md#tokens-base). El texto usa el tono legible de ese color, `--intent-strong`, para que siga siendo legible sobre la página. El paquete solo pinta el estado: decidir que el valor es inválido, poner y quitar `aria-invalid` y escribir el mensaje es cosa de tu código. Quita `aria-invalid` en cuanto el valor vuelva a ser válido; si lo dejas puesto, el campo sigue en rojo. En un checkbox, un radio o un switch, `aria-invalid="true"` dibuja el toggle exactamente igual que `.destructive`, marca de activado incluida.
 
-Un `.hint` acepta cualquiera de las seis intenciones incorporadas, no solo `.destructive`: `.hint.success` confirma que se aceptó un valor, y `.hint.warning` señala uno que está permitido pero es inusual. Cada uno se muestra en el tono legible de su intención, `--intent-strong`, que mantiene 4.5:1 frente a la página en los dos temas. Un `.hint` sin intención, con `.neutral` o con una [intención que definiste tú](./theming.md#tu-propia-intención), se queda en el color secundario. Solo lo colorea una clase en el propio `.hint`; una intención en el campo o en un contenedor que lo rodee no lo hace.
+Un `.hint` acepta cualquiera de las seis intenciones incorporadas, no solo `.destructive`: `.hint.success` confirma que se aceptó un valor, y `.hint.warning` señala uno que está permitido pero es inusual. Cada uno se muestra en el tono legible de su intención, `--intent-strong`, que mantiene 4.5:1 frente a la página en los dos temas. Un `.hint` sin intención, con `.neutral` o con una [intención que definiste tú](./theming.md#tu-propia-intención), se queda en el color secundario, y sobre una superficie sólida toma el color de texto de la superficie, como el prefijo de un grupo, el título de una tabla y `.quote-inline`. Solo lo colorea una clase en el propio `.hint`; una intención en el campo o en un contenedor que lo rodee no lo hace.
 
 ```html
 <input class="ipt success" id="username" value="ada" aria-describedby="username-hint" /> <span class="hint success" id="username-hint">That username is available.</span>
@@ -219,7 +219,7 @@ Una estética que dibuja su borde como sombra interior, como `.pixel`, no puede 
 
 ## Relleno y borde en los controles de texto
 
-Los controles de texto aceptan intención, que colorea el borde, el anillo de foco y el texto escrito, este último en el tono legible de la intención (`--intent-strong`). También aceptan los dos ejes de presentación. Su relleno tiene un tope bajo, para que el texto escrito siga siendo legible:
+Los controles de texto aceptan intención, que colorea el borde y el texto escrito, este último en el tono legible de la intención (`--intent-strong`). También aceptan los dos ejes de presentación. Su relleno tiene un tope bajo, para que el texto escrito siga siendo legible:
 
 | En un control de texto                                  | Relleno |
 | ------------------------------------------------------- | ------- |

@@ -293,8 +293,11 @@
        `--intent-contrast` and `--intent-subtle` go with them, so an invalid
        toggle is a destructive one in every part: left neutral, a checked invalid
        checkbox in the dark theme drew the near-black neutral mark on a red plate
-       (3.28:1). The bare elements and the `.input-group` bridge are below the
-       utility, since they name no class `@apply` could carry. */
+       (3.28:1). `--intent-fill-max` goes too, so the control is no longer
+       neutral: left at the reset's 20%, an invalid field or toggle on a solid
+       surface took the surface's ink as a neutral one does, and its red line
+       read as the valid grey. The bare elements and the `.input-group` bridge
+       are below the utility, since they name no class `@apply` could carry. */
     &[aria-invalid="true"] {
       --intent-color: var(--color-destructive);
       --intent-contrast: var(--color-destructive-contrast);
@@ -302,6 +305,7 @@
       --intent-border: var(--color-destructive);
       --intent-strong: var(--color-destructive-strong);
       --intent-subtle: var(--color-destructive-subtle);
+      --intent-fill-max: 100%;
     }
 
     /* S1, P6: `:checked` is a state, so it re-declares the presentation inputs --
@@ -459,6 +463,7 @@
     --intent-border: var(--color-destructive);
     --intent-strong: var(--color-destructive-strong);
     --intent-subtle: var(--color-destructive-subtle);
+    --intent-fill-max: 100%;
   }
 }
 
@@ -535,7 +540,9 @@
     font-size: var(--text-sm);
     line-height: var(--tw-leading, var(--text-sm--line-height));
 
-    color: var(--color-text-secondary);
+    /* The page's secondary ink, or a plate's ink on a solid surface, as a
+       placeholder takes it: the page's grey read at 1.0 to 3.24:1 there. */
+    color: color-mix(in oklab, var(--_held-ink, transparent) var(--_held-on, 0%), var(--color-text-secondary));
     font-weight: 400;
     letter-spacing: 0.05em;
 
@@ -683,7 +690,7 @@
   }
 
   /* A wrapper that owns the field box so a control can carry adornments beside it
-     -- a leading or trailing icon today, an affix or an in-field button later. It
+     -- a leading or trailing icon, a text affix, or an in-field button. It
      composes `text-control` for the border, radius, fill cap, aesthetic shape,
      and the invalid and disabled handling a lone field carries; `:focus-within`
      stands in for the `:focus-visible` a wrapper cannot have. The control inside
@@ -755,6 +762,16 @@
         var(--focus-ring, color-mix(in srgb, var(--color-primary) 64%, transparent));
       outline-offset: var(--focus-ring-offset, calc(-1 * var(--ui-border-width, var(--border-width))));
       box-shadow: var(--_focus-stack, var(--_shadow), inset 0 0 0 2px var(--_focus-gap));
+
+      /* Forced colours ring it as they ring a lone field: Highlight, two
+         pixels outside the border. The ring above lay over the group's own
+         border in the forced text colour, so a focused group read as a
+         resting one. */
+      @media (forced-colors: active) {
+        outline: 2px solid Highlight;
+        outline-offset: 2px;
+        box-shadow: none;
+      }
     }
 
     /* Hovered while focused, the line keeps the focus tone, as a lone field's
@@ -852,7 +869,15 @@
        alone inherits, and an invalid group -- by its own `aria-invalid` or the
        control's, through the `:has()` arm -- prints destructive text the way a
        lone invalid field does. The group owns the field, so an intent class on
-       the control inside does not colour its text. */
+       the control inside does not colour its text.
+
+       Its cap stays neutral's for the same reason, whatever the control says:
+       its own `aria-invalid` lifts the cap a lone field needs to be read as
+       destructive, which on a solid surface printed the red tone on the
+       surface where `.input-group.destructive` prints the surface's ink. The
+       group is what is invalid, and it draws the red line. Restated on the
+       invalid control at 0-3-0, since Tailwind emits the control's own state
+       after this rule. */
     &
       > :is(.ipt, .textarea, .select, .text-control, input, textarea, select):where(
         :not(
@@ -881,6 +906,10 @@
       border: none;
       background-color: transparent;
       box-shadow: none;
+
+      &[aria-invalid="true"] {
+        --intent-fill-max: 20%;
+      }
 
       &:focus-visible {
         outline: none;
@@ -940,13 +969,14 @@
        reads as secondary. A button, a link button, and any `<input>` keep their
        own styling. Zero specificity: it is a default for unstyled content, and at
        the 0-2-0 it had, a badge or a text utility on the adornment lost its
-       colour to this grey. */
+       colour to this grey. On a solid surface it takes the surface's ink, as
+       the field's placeholder does: the grey read at 1.0 to 2.9:1 there. */
     :where(& > :not(.ipt, .textarea, .select, .text-control, input, textarea, select, button, .btn)) {
       display: inline-flex;
       flex: none;
       align-items: center;
 
-      color: var(--color-text-secondary);
+      color: color-mix(in oklab, var(--_held-ink) var(--_held-on), var(--color-text-secondary));
     }
 
     /* The group is destructive when its control is invalid. Carried here for an
@@ -977,6 +1007,7 @@
       --intent-border: var(--color-destructive);
       --intent-strong: var(--color-destructive-strong);
       --intent-subtle: var(--color-destructive-subtle);
+      --intent-fill-max: 100%;
     }
   }
 

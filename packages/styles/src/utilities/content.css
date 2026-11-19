@@ -146,9 +146,21 @@
     /* A table rests on a plate of its own at every fill but `.ghost`, so no
        ink from above passes through it, as on `surface`. A ghost table on a
        filled parent therefore prints the page's ink on that fill: a toggle
-       cannot be stepped from the fill. */
-    --_held-ink: var(--_fg-own);
-    --_held-on: var(--_own-hold);
+       cannot be stepped from the fill.
+       The table stops that ink for itself and for its sections, but not for
+       its caption, which is laid out beside the plate, on the ground the table
+       stands on, and so takes that ground's ink. The table passes the pair
+       from above through unchanged, where `box` would hold it, and
+       `--_own-hold` at 100% keeps the table's own text off that ink. */
+    --_held-ink: inherit;
+    --_held-on: inherit;
+    --_own-hold: 100%;
+    --_table-hold: var(--_holds-ink, var(--_d-holds-ink)) 100%;
+
+    & > :not(caption) {
+      --_held-ink: var(--_fg-own);
+      --_held-on: var(--_table-hold, 0%);
+    }
 
     /* The blur behind the glass plate. A filter cannot be stepped from a
        percentage, so this one part stays keyed on the class: a table under a
@@ -288,7 +300,9 @@
       padding-bottom: calc(var(--spacing) * 2);
       text-align: start;
       @compose text-label;
-      color: var(--color-text-secondary);
+      /* The secondary ink, or the ink of the solid surface the table stands
+         on, where the page's grey read at 1.0 to 3.24:1. */
+      color: color-mix(in oklab, var(--_held-ink) var(--_held-on), var(--color-text-secondary));
     }
 
     /* The head's plate is painted on its cells rather than on the section, so the
@@ -727,8 +741,10 @@
     }
   }
 
+  /* The page's secondary ink, or a plate's ink on a solid surface, where the
+     grey read at 1.0 to 3.24:1. */
   .quote-inline {
-    color: var(--color-text-secondary);
+    color: color-mix(in oklab, var(--_held-ink, transparent) var(--_held-on, 0%), var(--color-text-secondary));
     font-style: italic;
   }
 }

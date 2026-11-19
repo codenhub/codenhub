@@ -201,14 +201,107 @@ async function build(options: BuildOptions, io: CliIo): Promise<string> {
   try {
     await fs.mkdir(path.dirname(target), { recursive: true });
     await fs.writeFile(temporary, css);
+    await keepOwnership(temporary, target, options.output, io);
     await replaceFile(temporary, target);
   } catch (error) {
     // Best effort: the error worth reporting is the one above.
     await fs.rm(temporary, { force: true }).catch(() => undefined);
-    throw new Error(`cannot write the stylesheet: ${error instanceof Error ? error.message : String(error)}`);
+    throw new Error(`cannot write --output ${options.output}: ${describeWriteError(error)}`);
   }
 
   return output;
+}
+
+/* The stylesheet is renamed over the output, so it would come out with the mode
+   and owner of a new file: a `0640` file of the web server's group would come
+   back `0644` and the runner's. The temporary file takes the permission bits,
+   owner, and group of the file it replaces first. Only root can give a file to
+   another user, and only to a group its owner is in, so a runner without that
+   right keeps the group when it is in it, and says what changed on stderr
+   rather than fail a build that wrote the stylesheet. Windows keeps neither:
+   its mode is only the read-only attribute, which a rename over the file
+   refuses, and a new file takes its folder's permissions. */
+async function keepOwnership(temporary: string, target: string, output: string, io: CliIo): Promise<void> {
+  if (process.platform === "win32") {
+    return;
+  }
+
+  const previous = await fs.stat(target).catch((error: unknown) => {
+    if ((error as { code?: string }).code === "ENOENT") {
+      return undefined;
+    }
+    throw error;
+  });
+
+  if (previous === undefined) {
+    return;
+  }
+
+  const created = await fs.stat(temporary);
+
+  if (previous.uid !== created.uid || previous.gid !== created.gid) {
+    const kept = await chownAllowed(temporary, previous.uid, previous.gid);
+
+    if (kept === "group") {
+      io.stderr(
+        `${BIN}: warning: --output ${output} now belongs to user ${created.uid}, not ${previous.uid}, since only root can give a file to another user; its group and mode are kept.`,
+      );
+    } else if (kept === "neither") {
+      io.stderr(
+        `${BIN}: warning: --output ${output} now belongs to user ${created.uid} and group ${created.gid}, not ${previous.uid} and ${previous.gid}, since only root can give a file to another user or to a group you are not in; its mode is kept.`,
+      );
+    }
+  }
+  // After the owner: changing it can clear the set-user-ID and set-group-ID bits.
+  await fs.chmod(temporary, previous.mode & 0o777);
+}
+
+/* Gives the file to the user and group, or to the group alone when only root
+   could give it to the user. Any failure but that refusal is thrown. */
+async function chownAllowed(file: string, uid: number, gid: number): Promise<"both" | "group" | "neither"> {
+  const isRefused = (error: unknown) => (error as { code?: string }).code === "EPERM";
+
+  try {
+    await fs.chown(file, uid, gid);
+    return "both";
+  } catch (error) {
+    if (!isRefused(error)) {
+      throw error;
+    }
+  }
+  try {
+    await fs.chown(file, -1, gid);
+    return "group";
+  } catch (error) {
+    if (!isRefused(error)) {
+      throw error;
+    }
+  }
+
+  return "neither";
+}
+
+/* Node.js names the path a system call failed on, and here that is mostly the
+   temporary file, a name the user never gave and cannot find afterwards. The
+   message keeps Node.js's reason and code, drops the paths, and says what to do. */
+function describeWriteError(error: unknown): string {
+  const { code } = error as { code?: unknown };
+
+  if (!(error instanceof Error) || typeof code !== "string" || !error.message.startsWith(`${code}: `)) {
+    return error instanceof Error ? error.message : String(error);
+  }
+
+  // As in "EACCES: permission denied, open '/srv/app.css.42.tmp'".
+  const reason = error.message.slice(code.length + 2).replace(/, \w+ '.*$/s, "");
+  let advice = "fix that, or name another file";
+
+  if (["EACCES", "EPERM", "EROFS"].includes(code)) {
+    advice = "check that you can write to it and to its folder, or name another file";
+  } else if (["ENOSPC", "EDQUOT"].includes(code)) {
+    advice = "free some space, or name a file on another disk";
+  }
+
+  return `${reason} (${code}); ${advice}.`;
 }
 
 /* The output is replaced whole, so a file this command did not write is
@@ -217,9 +310,11 @@ async function build(options: BuildOptions, io: CliIo): Promise<string> {
    What it writes starts with the package's notice, after Tailwind's banner, so
    a file that does is replaced; another banner or a layer order does not tell
    a stylesheet written by hand from a built one. A file of no bytes, or of
-   whitespace alone, holds nothing to lose and is replaced too. What is not a file is
-   left to the write, which reports it. A file that cannot be read is refused:
-   a directory can let a file be renamed over that it does not let be read. */
+   whitespace alone, holds nothing to lose and is replaced too. What is not a
+   file, after any link, is refused: renaming over a pipe, or as root over a
+   device such as `/dev/null`, would replace it with the stylesheet. A file that
+   cannot be read is refused: a directory can let a file be renamed over that it
+   does not let be read. */
 async function assertReplaceable(options: BuildOptions, cwd: string, output: string): Promise<void> {
   if (options.contentGlobs.some((entry) => path.relative(path.resolve(cwd, entry), output) === "")) {
     throw new Error(`--output ${options.output} is also a --content file; name a stylesheet to write.`);
@@ -231,7 +326,12 @@ async function assertReplaceable(options: BuildOptions, cwd: string, output: str
   try {
     const stats = await fs.stat(output);
 
-    if (!stats.isFile() || stats.size === 0) {
+    if (!stats.isFile()) {
+      throw new NotAFileError(
+        `--output ${options.output} is ${kindOf(stats)}, not a file; name a stylesheet to write.`,
+      );
+    }
+    if (stats.size === 0) {
       return;
     }
     size = stats.size;
@@ -248,6 +348,9 @@ async function assertReplaceable(options: BuildOptions, cwd: string, output: str
   } catch (error) {
     if ((error as { code?: string }).code === "ENOENT") {
       return;
+    }
+    if (error instanceof NotAFileError) {
+      throw error;
     }
 
     throw new Error(
@@ -266,15 +369,30 @@ async function assertReplaceable(options: BuildOptions, cwd: string, output: str
   }
 }
 
+class NotAFileError extends Error {}
+
+function kindOf(stats: { isDirectory(): boolean; isFIFO(): boolean; isSocket(): boolean }): string {
+  if (stats.isDirectory()) {
+    return "a folder";
+  }
+  if (stats.isFIFO()) {
+    return "a pipe";
+  }
+
+  return stats.isSocket() ? "a socket" : "a device";
+}
+
 /* Every entry has to name a file and every file has to be readable, so a build
    from missing content fails rather than writing a stylesheet without its
    classes. The output is left out: it names every class it keeps, so a glob
    that matches it would keep last build's classes, and the stylesheet would
    grow with each build instead of following the templates. `path.relative` is
-   empty for the same file, in the case Windows ignores. */
+   empty for the same file, in the case Windows ignores. A wildcard stays out
+   of `node_modules` unless the entry names it: a dependency's demo page, or
+   this package's own list of every class, would keep classes no template uses. */
 function readContent(entries: readonly string[], cwd: string, output: string): Generator<string> {
   try {
-    const files = findFiles(entries, { cwd, failOnUnmatched: true }).filter(
+    const files = findFiles(entries, { cwd, failOnUnmatched: true, skipNodeModules: true }).filter(
       (file) => path.relative(realPathSyncOf(file), output) !== "",
     );
 
