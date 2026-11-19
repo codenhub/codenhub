@@ -16,6 +16,11 @@ export interface ScanOptions {
    * the file, or one naming the file with Node.js's error as its `cause` when it does not.
    */
   failOnUnreadable?: boolean;
+  /**
+   * Keep a glob out of every `node_modules` folder, unless the entry itself names `node_modules`.
+   * A literal path is read wherever it is.
+   */
+  skipNodeModules?: boolean;
 }
 
 /** An entry that names no file, thrown when {@link ScanOptions.failOnUnmatched} is on. */
@@ -33,6 +38,7 @@ export class UnmatchedEntryError extends Error {
 
 // `(` starts every extglob, such as `@(a|b)`, the one glob form with none of the other characters.
 const GLOB_CHARACTERS = /[*?[\]{}(]/;
+const NODE_MODULES_SEGMENT = /(^|[\\/])node_modules([\\/]|$)/;
 
 /**
  * Resolves entries into the files they name, as absolute paths, each listed once.
@@ -46,7 +52,10 @@ export function findFiles(entries: Iterable<string>, options: ScanOptions = {}):
   const files = new Set<string>();
 
   for (const entry of entries) {
-    const named = resolveEntry(entry, cwd, options.failOnUnmatched === true);
+    const named = resolveEntry(entry, cwd, {
+      isStrict: options.failOnUnmatched === true,
+      skipNodeModules: options.skipNodeModules === true && !NODE_MODULES_SEGMENT.test(entry),
+    });
 
     if (named.length === 0 && options.failOnUnmatched) {
       throw new UnmatchedEntryError(entry, cwd);
@@ -139,7 +148,11 @@ export function* splitWords(text: string, wordCharacters: string): Generator<str
   }
 }
 
-function resolveEntry(entry: string, cwd: string, isStrict: boolean): string[] {
+function resolveEntry(
+  entry: string,
+  cwd: string,
+  { isStrict, skipNodeModules }: { isStrict: boolean; skipNodeModules: boolean },
+): string[] {
   try {
     const literal = path.resolve(cwd, entry);
 
@@ -151,7 +164,7 @@ function resolveEntry(entry: string, cwd: string, isStrict: boolean): string[] {
     }
 
     return fs
-      .globSync(entry, { cwd })
+      .globSync(entry, { cwd, exclude: skipNodeModules ? isNodeModules : undefined })
       .map((match) => path.resolve(cwd, match))
       .filter(isFileOrUnknown);
   } catch (error) {
@@ -161,6 +174,11 @@ function resolveEntry(entry: string, cwd: string, isStrict: boolean): string[] {
     }
     return [];
   }
+}
+
+// Called for each folder the walk would enter too, so it never descends into one.
+function isNodeModules(match: string): boolean {
+  return path.basename(match) === "node_modules";
 }
 
 /* A link is followed, so a linked file is read and a linked folder is not, and

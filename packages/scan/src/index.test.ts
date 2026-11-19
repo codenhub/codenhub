@@ -67,6 +67,38 @@ describe("findFiles", () => {
     ]);
   });
 
+  describe("skipNodeModules", () => {
+    beforeEach(() => {
+      for (const folder of ["node_modules/dep", "app/node_modules/dep"]) {
+        fs.mkdirSync(path.join(root, folder), { recursive: true });
+        fs.writeFileSync(path.join(root, folder, "demo.html"), "dependency");
+      }
+    });
+
+    it("keeps a wildcard out of every node_modules folder", () => {
+      expect(relative(findFiles(["**/*.html"], { cwd: root, skipNodeModules: true }))).toEqual([
+        "app/views/a.html",
+        "app/views/nested/b.html",
+      ]);
+    });
+
+    it("reads node_modules when the entry names it", () => {
+      expect(relative(findFiles(["node_modules/**/*.html"], { cwd: root, skipNodeModules: true }))).toEqual([
+        "node_modules/dep/demo.html",
+      ]);
+    });
+
+    it("reads node_modules without it", () => {
+      expect(relative(findFiles(["**/*.html"], { cwd: root }))).toContain("node_modules/dep/demo.html");
+    });
+
+    it("fails on an entry that matches only files in node_modules", () => {
+      expect(() => findFiles(["**/demo.html"], { cwd: root, skipNodeModules: true, failOnUnmatched: true })).toThrow(
+        UnmatchedEntryError,
+      );
+    });
+  });
+
   it("follows a link a glob matches to the file it names", (context) => {
     try {
       fs.symlinkSync(path.join(root, "app", "views", "a.html"), path.join(root, "app", "linked.html"), "file");

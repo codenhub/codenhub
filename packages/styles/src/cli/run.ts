@@ -387,10 +387,12 @@ function kindOf(stats: { isDirectory(): boolean; isFIFO(): boolean; isSocket(): 
    classes. The output is left out: it names every class it keeps, so a glob
    that matches it would keep last build's classes, and the stylesheet would
    grow with each build instead of following the templates. `path.relative` is
-   empty for the same file, in the case Windows ignores. */
+   empty for the same file, in the case Windows ignores. A wildcard stays out
+   of `node_modules` unless the entry names it: a dependency's demo page, or
+   this package's own list of every class, would keep classes no template uses. */
 function readContent(entries: readonly string[], cwd: string, output: string): Generator<string> {
   try {
-    const files = findFiles(entries, { cwd, failOnUnmatched: true }).filter(
+    const files = findFiles(entries, { cwd, failOnUnmatched: true, skipNodeModules: true }).filter(
       (file) => path.relative(realPathSyncOf(file), output) !== "",
     );
 

@@ -238,6 +238,21 @@ describe("build", () => {
     expect(await readOutput()).not.toMatch(ruleFor("data-table"));
   });
 
+  // A dependency's demo page, or this package's own list of every class, would keep classes no template uses.
+  it("keeps a wildcard out of node_modules unless the glob names it", async () => {
+    await mkdir(path.join(project, "node_modules", "dep"), { recursive: true });
+    await writeFile(path.join(project, "node_modules", "dep", "demo.html"), '<div class="data-table"></div>\n');
+
+    expect(await build("build", "-c", "**/*.erb", "-c", "**/*.html", "-o", "skipped.css")).toBe(1);
+    expect(stderr.join("\n")).toContain('"**/*.html" matches no file');
+
+    expect(await build("build", "-c", "**/*.erb", "-o", "skipped.css")).toBe(0);
+    expect(await readOutput("skipped.css")).not.toMatch(ruleFor("data-table"));
+
+    expect(await build("build", "-c", "**/*.erb", "-c", "node_modules/**/*.html", "-o", "named.css")).toBe(0);
+    expect(await readOutput("named.css")).toMatch(ruleFor("data-table"));
+  });
+
   // The stylesheet names every class it keeps, `data-table` among them in the `neutral` rules, so read back it would keep them.
   it("does not read its own output as content when a glob matches it", async () => {
     const argv = ["build", "-c", "app/views/**/*", "-o", "app/views/app.css"];
