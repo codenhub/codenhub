@@ -27,7 +27,13 @@ const liveTw: Plugin = {
     server.watcher.add(sourceRoot);
     server.watcher.on("all", (_event, changed) => {
       if (changed.startsWith(sourceRoot) && changed.endsWith(".css")) {
-        buildTw();
+        /* A stylesheet saved half-typed fails the build; the server stays up
+           and the next save builds again. `build-tw.mjs` has printed why. */
+        try {
+          buildTw();
+        } catch {
+          server.config.logger.error("styles: tw/ was not rebuilt; see the error above.");
+        }
       }
     });
   },
