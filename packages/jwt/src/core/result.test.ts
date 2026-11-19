@@ -90,6 +90,8 @@ describe("isJwsAlgorithm", () => {
   });
 
   it("should reject none in any casing and other casings of supported algorithms", () => {
-    expect(["none", "NONE", "None", "hs256", "es256", "HS384", "", 256].some(isJwsAlgorithm)).toBe(false);
+    expect(["none", "NONE", "None", "hs256", "es256", "ps512", "ES256K", "HS1", "", 256].some(isJwsAlgorithm)).toBe(
+      false,
+    );
   });
 });

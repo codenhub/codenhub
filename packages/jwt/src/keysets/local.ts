@@ -1,4 +1,5 @@
 import { fail, ok } from "../core";
+import { rejectUnknownOptions } from "../core/options";
 import type { AsymmetricAlgorithm, JwtHeader, JwtResult, KeySet, VerificationKey } from "../core/types";
 import {
   ASYMMETRIC_ALGORITHMS,
@@ -19,10 +20,13 @@ export interface ImportKeySetOptions {
    * Algorithms keys may be bound to. A JWK naming another algorithm in its `alg` is skipped, and a JWK
    * without `alg` is bound only to the listed algorithms its `kty` and `crv` allow. Non-empty.
    *
-   * @defaultValue every asymmetric algorithm: `ES256`, `EdDSA`, `Ed25519`, `RS256`, `PS256`
+   * @defaultValue every asymmetric algorithm: `ES256`, `ES384`, `ES512`, `EdDSA`, `Ed25519`, `RS256`, `RS384`,
+   * `RS512`, `PS256`, `PS384`, `PS512`
    */
   readonly algorithms?: readonly AsymmetricAlgorithm[];
 }
+
+const IMPORT_KEY_SET_OPTIONS: Readonly<Record<keyof ImportKeySetOptions, true>> = { algorithms: true };
 
 /**
  * Builds a key set from keys this package created, for verifying tokens against a fixed set.
@@ -70,10 +74,10 @@ export function createKeySet(keys: readonly VerificationKey[]): KeySet {
  *
  * @remarks
  * A JWK with an `alg` is bound to that algorithm when it is allowed; a JWK without one is bound to every
- * allowed algorithm its `kty` and `crv` fit, so an RSA key may become both an `RS256` and a `PS256` key.
- * JWKs that cannot be used are skipped rather than failing the import: `oct` keys and `HS256` (secrets
- * never come from a JWKS), keys for encryption, keys carrying private members, weak or malformed keys,
- * and keys whose `alg` is not allowed. A JWKS with no usable key gives an empty set, whose `select`
+ * allowed algorithm its `kty` and `crv` fit, so an RSA key may become an `RS256`, `RS384`, `RS512`,
+ * `PS256`, `PS384` and `PS512` key. JWKs that cannot be used are skipped rather than failing the import:
+ * `oct` keys and the HMAC algorithms (secrets never come from a JWKS), keys for encryption, keys carrying
+ * private members, weak or malformed keys, and keys whose `alg` is not allowed. A JWKS with no usable key gives an empty set, whose `select`
  * always fails. Two usable keys with the same `kid` and `alg` are kept; selecting them fails with
  * `ambiguous_key` rather than picking one.
  *
@@ -93,6 +97,9 @@ export function createKeySet(keys: readonly VerificationKey[]): KeySet {
  */
 export async function importKeySet(jwks: unknown, options?: ImportKeySetOptions): Promise<JwtResult<KeySet>> {
   const algorithms = readAlgorithms(options, "importKeySet");
+  if (options !== undefined) {
+    rejectUnknownOptions(options, IMPORT_KEY_SET_OPTIONS, "importKeySet");
+  }
   const imported = await importKeys(jwks, algorithms);
   return imported.ok ? ok(keySetOf(imported.value)) : imported;
 }
@@ -123,7 +130,7 @@ export function readAlgorithms(options: unknown, functionName: string): Readonly
   }
   if (!Array.isArray(algorithms) || algorithms.length === 0 || !algorithms.every(isAsymmetricAlgorithm)) {
     throw new TypeError(
-      `${functionName}: options.algorithms must be a non-empty array of ES256, EdDSA, Ed25519, RS256, PS256.`,
+      `${functionName}: options.algorithms must be a non-empty array of ${ASYMMETRIC_ALGORITHMS.join(", ")}.`,
     );
   }
   return new Set(algorithms);

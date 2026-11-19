@@ -1,26 +1,32 @@
+import { rejectUnknownOptions } from "../core/options";
 import type { AsymmetricAlgorithm, SymmetricAlgorithm } from "../core/types";
-import { isAsymmetricAlgorithm } from "./algorithms";
+import { ASYMMETRIC_ALGORITHMS, isAsymmetricAlgorithm, isSymmetricAlgorithm, SYMMETRIC_ALGORITHMS } from "./algorithms";
 
-/** Throws unless `options` is an object; returns it for member checks. */
-export function requireOptions(options: unknown, functionName: string): Record<string, unknown> {
+/** Throws unless `options` is an object holding only `known` members; returns it for member checks. */
+export function requireOptions(
+  options: unknown,
+  known: Readonly<Record<string, true>>,
+  functionName: string,
+): Record<string, unknown> {
   if (typeof options !== "object" || options === null) {
     throw new TypeError(`${functionName}: options must be an object.`);
   }
+  rejectUnknownOptions(options, known, functionName);
   return options as Record<string, unknown>;
 }
 
 export function requireAsymmetricAlg(options: Record<string, unknown>, functionName: string): AsymmetricAlgorithm {
   const alg = ownMember(options, "alg");
   if (!isAsymmetricAlgorithm(alg)) {
-    throw new TypeError(`${functionName}: options.alg must be one of ES256, EdDSA, Ed25519, RS256, PS256.`);
+    throw new TypeError(`${functionName}: options.alg must be one of ${ASYMMETRIC_ALGORITHMS.join(", ")}.`);
   }
   return alg;
 }
 
 export function requireSymmetricAlg(options: Record<string, unknown>, functionName: string): SymmetricAlgorithm {
   const alg = ownMember(options, "alg");
-  if (alg !== "HS256") {
-    throw new TypeError(`${functionName}: options.alg must be HS256.`);
+  if (!isSymmetricAlgorithm(alg)) {
+    throw new TypeError(`${functionName}: options.alg must be one of ${SYMMETRIC_ALGORITHMS.join(", ")}.`);
   }
   return alg;
 }

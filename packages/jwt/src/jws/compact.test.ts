@@ -106,7 +106,7 @@ describe("parseCompact", () => {
   });
 
   it.each([
-    ["an unknown algorithm", '{"alg":"HS512"}'],
+    ["an unknown algorithm", '{"alg":"ES256K"}'],
     ["another casing of a supported algorithm", '{"alg":"es256"}'],
     ["a missing alg", '{"kid":"k1"}'],
     ["an alg that is not a string", '{"alg":["ES256"]}'],

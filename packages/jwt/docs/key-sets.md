@@ -21,7 +21,7 @@ Every key set, the three above and your own if it uses the same rules, selects o
 - **The header has a `kid`.** Only keys with that `kid` are candidates. None is `unknown_kid`. Among them, exactly one must have the header's `alg`: none is `alg_mismatch`, and several is `ambiguous_key`.
 - **The header has no `kid`.** Exactly one key in the whole set must have the header's `alg`. None is `no_matching_key`, and several is `ambiguous_key`.
 
-So a set may hold one key per algorithm without `kid`s, but once it holds two keys of one algorithm, tokens must name their key. A secret key only ever matches `HS256` tokens and a public key only its own algorithm, since both follow from the `alg` comparison.
+So a set may hold one key per algorithm without `kid`s, but once it holds two keys of one algorithm, tokens must name their key. A secret key only ever matches tokens of its own HMAC algorithm and a public key only its own algorithm, since both follow from the `alg` comparison.
 
 ## A local key set
 
@@ -59,9 +59,9 @@ Individual keys that cannot be used are skipped, not fatal, because an issuer's 
 Each usable key becomes one key per algorithm it is bound to:
 
 - A JWK with an `alg` member is bound to that algorithm, if `algorithms` allows it.
-- A JWK without `alg` is bound to every allowed algorithm its `kty` and `crv` fit. An `RSA` key becomes an `RS256` key and a `PS256` key; an `OKP` `Ed25519` key becomes an `EdDSA` key and an `Ed25519` key. The token's `alg` then picks between them, which is safe because both are the same family of signature on the same key.
+- A JWK without `alg` is bound to every allowed algorithm its `kty` and `crv` fit. An `RSA` key becomes one key for each of `RS256`, `RS384`, `RS512`, `PS256`, `PS384` and `PS512`; an `EC` key one for the algorithm of its curve; an `OKP` `Ed25519` key an `EdDSA` key and an `Ed25519` key. The token's `alg` then picks between them, which is safe because both are the same family of signature on the same key.
 
-`algorithms` defaults to every asymmetric algorithm. Narrow it to what your issuer actually uses, so a key the issuer meant only for `RS256` is never used to check a `PS256` token.
+`algorithms` defaults to every asymmetric algorithm, a list that may grow in a minor release. Narrow it to what your issuer actually uses, so a key the issuer meant only for `RS256` is never used to check a `PS256` token.
 
 Two usable keys with the same `kid` and `alg` do not fail the import; selecting them fails with `ambiguous_key` rather than picking one.
 
@@ -86,17 +86,17 @@ Nothing is fetched until the first token needs a key. Create the key set once an
 
 Durations are in seconds. Every option is checked when the key set is created, and an invalid one throws a `TypeError`, as does a name that is not an option below (`createRemoteKeySet: options.cachettl is not an option.`).
 
-| Option             | Default                        | What it does                                                                                                                                          |
-| ------------------ | ------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `url`              | required                       | An absolute `https:` URL, as a string or a `URL`. Other schemes, and URLs with a user name or password, throw.                                        |
-| `fetch`            | `globalThis.fetch`             | The `fetch` to call, for runtimes or tests that supply their own. The global is looked up at each fetch.                                              |
-| `algorithms`       | every asymmetric algorithm     | As for [`importKeySet`](#importing-a-jwks).                                                                                                           |
-| `cacheTtl`         | `600`                          | How long a fetched JWKS is used before it is fetched again. An integer of at least 1.                                                                 |
-| `cooldown`         | `30`, or `cacheTtl` if smaller | Least time between the starts of two fetches caused by a failure or an unknown `kid`. An integer from 0 through `cacheTtl`.                           |
-| `maxStale`         | `3600`                         | How long after `cacheTtl` ran out the last JWKS is still used while fetching a new one fails. An integer of at least 0; 0 never uses an expired JWKS. |
-| `timeout`          | `5`                            | How long one fetch, body included, may take. Greater than 0 and at most 60; fractions are allowed.                                                    |
-| `maxResponseBytes` | `65536`                        | Largest response body accepted, in bytes. An integer from 1 through 1048576.                                                                          |
-| `now`              | `Date.now`                     | The current time in milliseconds, for tests.                                                                                                          |
+| Option             | Default                        | What it does                                                                                                                                                                              |
+| ------------------ | ------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `url`              | required                       | An absolute `https:` URL, as a string or a `URL`, or `http:` on `localhost`, `127.0.0.0/8` or `[::1]` for local development. Anything else, and URLs with a user name or password, throw. |
+| `fetch`            | `globalThis.fetch`             | The `fetch` to call, for runtimes or tests that supply their own. The global is looked up at each fetch.                                                                                  |
+| `algorithms`       | every asymmetric algorithm     | As for [`importKeySet`](#importing-a-jwks).                                                                                                                                               |
+| `cacheTtl`         | `600`                          | How long a fetched JWKS is used before it is fetched again. An integer of at least 1.                                                                                                     |
+| `cooldown`         | `30`, or `cacheTtl` if smaller | Least time between the starts of two fetches caused by a failure or an unknown `kid`. An integer from 0 through `cacheTtl`.                                                               |
+| `maxStale`         | `3600`                         | How long after `cacheTtl` ran out the last JWKS is still used while fetching a new one fails. An integer of at least 0; 0 never uses an expired JWKS.                                     |
+| `timeout`          | `5`                            | How long one fetch, body included, may take. Greater than 0 and at most 60; fractions are allowed.                                                                                        |
+| `maxResponseBytes` | `65536`                        | Largest response body accepted, in bytes. An integer from 1 through 1048576.                                                                                                              |
+| `now`              | `Date.now`                     | The current time in milliseconds, for tests.                                                                                                                                              |
 
 ### Caching and rotation
 

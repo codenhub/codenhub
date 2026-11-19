@@ -23,6 +23,8 @@ import {
   RFC7520_HMAC_JWK,
   RFC7520_HS256_TOKEN,
   RFC7520_PS384_TOKEN,
+  RFC7520_EC_PRIVATE_JWK,
+  RFC7520_ES512_TOKEN,
   RFC7520_RS256_TOKEN,
   RFC7520_RSA_PRIVATE_JWK,
   RFC7520_RSA_PUBLIC_JWK,
@@ -166,19 +168,47 @@ describe("RFC 7520 Section 4.1 (RS256)", () => {
   });
 });
 
-// RFC 7520 Section 4.2 signs with PS384, which this package does not support; there is no PS256 vector.
-// PSS is randomized, so PS256 is covered by the interop suite instead.
+// PSS and ECDSA are randomized, so these vectors are verified, not reproduced.
 describe("RFC 7520 Section 4.2 (PS384)", () => {
-  it("should reject the 4.2 PS384 token as an unsupported algorithm", async () => {
+  it("should verify the 4.2 signature, then reject its plain-text payload as malformed", async () => {
+    const key = valueOf(await importPublicKey(RFC7520_RSA_PUBLIC_JWK, { alg: "PS384" }));
+
+    expect(await verifierFor(key)(RFC7520_PS384_TOKEN)).toEqual(failure({ code: "malformed", path: ["payload"] }));
+  });
+
+  it("should report bad_signature for the 4.2 token with one signature bit flipped", async () => {
+    const key = valueOf(await importPublicKey(RFC7520_RSA_PUBLIC_JWK, { alg: "PS384" }));
+
+    expect(await verifierFor(key)(flipSignatureBit(RFC7520_PS384_TOKEN))).toEqual(failure({ code: "bad_signature" }));
+  });
+
+  it("should report alg_mismatch for the 4.2 token under the same kid imported as PS256", async () => {
     const key = valueOf(await importPublicKey(RFC7520_RSA_PUBLIC_JWK, { alg: "PS256" }));
 
     expect(await verifierFor(key)(RFC7520_PS384_TOKEN)).toEqual(
-      failure({ code: "unsupported_alg", path: ["header", "alg"] }),
+      failure({ code: "alg_mismatch", path: ["header", "alg"] }),
     );
   });
 });
 
-// RFC 7520 Section 4.3 signs with ES512 over P-521, which this package does not support: not covered.
+describe("RFC 7520 Section 4.3 (ES512)", () => {
+  it("should verify the 4.3 signature over P-521, then reject its plain-text payload as malformed", async () => {
+    const key = await publicKeyOf(RFC7520_EC_PRIVATE_JWK, "ES512");
+
+    expect(await verifierFor(key)(RFC7520_ES512_TOKEN)).toEqual(failure({ code: "malformed", path: ["payload"] }));
+  });
+
+  it("should report bad_signature for the 4.3 token with one signature bit flipped", async () => {
+    const key = await publicKeyOf(RFC7520_EC_PRIVATE_JWK, "ES512");
+
+    expect(await verifierFor(key)(flipSignatureBit(RFC7520_ES512_TOKEN))).toEqual(failure({ code: "bad_signature" }));
+  });
+
+  it("should import the Figure 2 private key as ES512 and refuse it as ES256", async () => {
+    expect(await importPrivateKey(RFC7520_EC_PRIVATE_JWK, { alg: "ES512" })).toMatchObject({ ok: true });
+    expect(await importPrivateKey(RFC7520_EC_PRIVATE_JWK, { alg: "ES256" })).toMatchObject({ ok: false });
+  });
+});
 
 describe("RFC 7520 Section 4.4 (HS256)", () => {
   it("should verify the 4.4 signature, then reject its plain-text payload as malformed", async () => {

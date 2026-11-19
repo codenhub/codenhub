@@ -7,7 +7,7 @@ JwtKit signs and verifies JSON Web Tokens with Web Crypto, imports and exports J
 - **Bad input is cheap and never throws.** A token's length is capped before it is decoded, JSON is parsed strictly and to a bounded depth, and a remote JWKS is fetched with a timeout, a size cap and a cooldown.
 - **Issues never hold a value of the input**, so logging a failed verification cannot log a token or a key.
 
-ES256, EdDSA, Ed25519, RS256, PS256 and HS256 are supported, with no dependencies.
+ES256, ES384, ES512, EdDSA, Ed25519, RS256, RS384, RS512, PS256, PS384, PS512, HS256, HS384 and HS512 are supported, keys are imported as JWK or PEM, and DPoP proofs can be signed, with no dependencies.
 
 > **Experimental:** no real application has run on this API yet. Function names, option names, issue codes and their `params` are meant to hold, but a real consumer may still show that one of them must change; a breaking change ships in a new minor version, and the [changelog](docs/changelog/index.md) lists it with its migration. The security behavior above will not be weakened.
 
@@ -124,8 +124,9 @@ fetches; // 1
 
 - **Only compact JWS.** No encrypted tokens (JWE), no JWS JSON serialization, no unencoded payloads (`b64`), and no `crit` header extensions; tokens using them are rejected.
 - **Claim checks are generic.** Issuer, audience, `typ`, times, maximum age and required claims are checked here. Protocol rules such as OpenID Connect's `nonce`, `azp` or `at_hash` are left to the code above.
-- **Clock tolerance defaults to 0 seconds**, and is capped at 300. Set `clockTolerance` when the issuer's clock may differ from yours.
+- **Clock tolerance defaults to 0 seconds**, and is capped at 300. Set `clockTolerance` when the issuer's clock may differ from yours. `nbf` and `iat` always allow at least 60 seconds, so a token checked the moment it is issued passes on a clock slightly behind the issuer's.
+- **Algorithms may be added in a minor release.** Give a `switch` over an `alg` a default branch.
 
 ## License
 
-Licensed under Apache-2.0.
+Licensed under [Apache-2.0](LICENSE).

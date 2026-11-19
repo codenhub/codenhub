@@ -29,9 +29,17 @@ export const flipSignatureBit = (token: string): string => {
 /** Web Crypto parameters for each algorithm, as an attacker holding the key material would use them. */
 const RAW_ALGORITHMS = {
   HS256: { import: { name: "HMAC", hash: "SHA-256" }, sign: { name: "HMAC" } },
+  HS384: { import: { name: "HMAC", hash: "SHA-384" }, sign: { name: "HMAC" } },
+  HS512: { import: { name: "HMAC", hash: "SHA-512" }, sign: { name: "HMAC" } },
   RS256: { import: { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" }, sign: { name: "RSASSA-PKCS1-v1_5" } },
+  RS384: { import: { name: "RSASSA-PKCS1-v1_5", hash: "SHA-384" }, sign: { name: "RSASSA-PKCS1-v1_5" } },
+  RS512: { import: { name: "RSASSA-PKCS1-v1_5", hash: "SHA-512" }, sign: { name: "RSASSA-PKCS1-v1_5" } },
   PS256: { import: { name: "RSA-PSS", hash: "SHA-256" }, sign: { name: "RSA-PSS", saltLength: 32 } },
+  PS384: { import: { name: "RSA-PSS", hash: "SHA-384" }, sign: { name: "RSA-PSS", saltLength: 48 } },
+  PS512: { import: { name: "RSA-PSS", hash: "SHA-512" }, sign: { name: "RSA-PSS", saltLength: 64 } },
   ES256: { import: { name: "ECDSA", namedCurve: "P-256" }, sign: { name: "ECDSA", hash: "SHA-256" } },
+  ES384: { import: { name: "ECDSA", namedCurve: "P-384" }, sign: { name: "ECDSA", hash: "SHA-384" } },
+  ES512: { import: { name: "ECDSA", namedCurve: "P-521" }, sign: { name: "ECDSA", hash: "SHA-512" } },
   Ed25519: { import: { name: "Ed25519" }, sign: { name: "Ed25519" } },
 } as const;
 

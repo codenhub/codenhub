@@ -1,6 +1,6 @@
 ---
 status: DRAFT
-last_updated: 2026-11-16
+last_updated: 2026-11-18
 scope: What `@codenhub/jwt` needs before its 0.1.0 release.
 ---
 
@@ -16,7 +16,7 @@ This records what stands between the implemented 0.0.1 and a 0.1.0 that `@codenh
 
 - **An audit has found no blocker.** A review of the package against scope.md section 3, with the hostile-input, leak, vector, interop, browser and workerd suites passing, and any finding that breaks an invariant fixed. Met: the audit's one blocker, unknown verifier options that silently turned a check off, is closed by decision 22, and its other defects are fixed with tests. What it left open is under "Later / Possible".
 
-Of what the SSO application plans, only `importKeyPair` (decision 25) needs a change here, and it is in. Its needs found so far land in `@codenhub/oidc` ([oidc's roadmap](../../../oidc/docs/internal/roadmap.md)). Should one of those designs need a primitive this package lacks, the change is proposed here rather than worked around there (oidc scope.md section 1).
+Of what the SSO application plans, `importKeyPair` (decision 25) and DPoP support (decision 30) need changes here, and both are in. A release review before 0.1.0 also added the remaining algorithms (decision 27), PEM import (decision 31), loopback `http:` JWKS URLs (decision 29), a 60-second floor of future leeway for `nbf` and `iat` (decision 26), and unknown options refused everywhere (decision 28). Its needs found so far land in `@codenhub/oidc` ([oidc's roadmap](../../../oidc/docs/internal/roadmap.md)). Should one of those designs need a primitive this package lacks, the change is proposed here rather than worked around there (oidc scope.md section 1).
 
 ## Planned
 
@@ -25,7 +25,6 @@ None at present. The changelog starts at 0.1.0 ([docs/changelog](../changelog/in
 ## Later / Possible
 
 - **JWE**, if encrypted ID tokens turn out to be needed (scope.md section 2).
-- **More algorithms**, such as `ES384`, `ES512` or `RS512`, if `@codenhub/oidc` must verify tokens from an issuer that signs with one, or the SSO application must accept `private_key_jwt` assertions from a client that signs with one. Each is a row in the algorithm table plus vectors, and a breaking change: it widens `AsymmetricAlgorithm` and the JWK and header types `@codenhub/oidc` builds on, as decision 1 says of `HS256`, and it widens what every key set accepts under the default `algorithms` (decision 12).
 - **Serving stale keys while a refetch is in flight**: today, requests that arrive while a refetch hangs wait up to `timeout` even when stale keys within `maxStale` are usable, once per cooldown window (with `cooldown: 0`, after every failed fetch); this stays as it is for 0.1.
 
 ## Not Planned
@@ -37,4 +36,4 @@ None at present. The changelog starts at 0.1.0 ([docs/changelog](../changelog/in
 ## Notes
 
 - **`@codenhub/oidc` is not a release criterion.** It is built on `KeySet`, `VerifiedJwt`, the key unions and the issue codes without needing a breaking change here.
-- **The SSO application's signing keys** are generated with `generateKeyPair`, persisted with `exportPrivateJwk`, loaded again with `importKeyPair` (decision 25), and encrypted at rest by the application with Web Crypto directly, so no JWE is needed for it. It chooses its own `kid` values; an RFC 7638 thumbprint helper is not needed for that.
+- **The SSO application's signing keys** are generated with `generateKeyPair`, persisted with `exportPrivateJwk`, loaded again with `importKeyPair` (decision 25), and encrypted at rest by the application with Web Crypto directly, so no JWE is needed for it. It chooses its own `kid` values, or uses `jwkThumbprint` for them; the same helper gives the `jkt` a DPoP-bound token carries (decision 30).

@@ -535,6 +535,20 @@ describe("importSecretKey", () => {
     ]);
   });
 
+  it.each([
+    ["HS384", 48],
+    ["HS512", 64],
+  ] as const)("should hold a %s secret to its hash length of %i bytes", async (alg, minimum) => {
+    expect(issuesOf(await importSecretKey(new Uint8Array(minimum - 1), { alg }))).toEqual([
+      { code: "weak_key", params: { minimum } },
+    ]);
+    const jwk = { kty: "oct", k: encodeBase64Url(new Uint8Array(minimum - 1)) };
+    expect(issuesOf(await importSecretKey(jwk, { alg }))).toEqual([
+      { code: "weak_key", path: ["k"], params: { minimum } },
+    ]);
+    expect((await importSecretKey(new Uint8Array(minimum).fill(9), { alg })).ok).toBe(true);
+  });
+
   it("should accept a 32-byte oct JWK", async () => {
     const jwk = { kty: "oct", k: encodeBase64Url(new Uint8Array(32).fill(9)) };
     expect((await importSecretKey(jwk, { alg: "HS256" })).ok).toBe(true);

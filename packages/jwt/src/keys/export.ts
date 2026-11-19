@@ -1,5 +1,6 @@
 import type { Jwk, PrivateKey, PublicKey, SecretKey } from "../core/types";
 import { ALGORITHM_PARAMS } from "./algorithms";
+import { exportWebCryptoJwk } from "./exported-jwk";
 import { getKeyEntryOfKind } from "./registry";
 
 type MaterialMember = "crv" | "x" | "y" | "n" | "e" | "d" | "p" | "q" | "dp" | "dq" | "qi" | "k";
@@ -28,7 +29,7 @@ const PRIVATE_MEMBERS: Readonly<Record<Jwk["kty"], readonly MaterialMember[]>> =
  */
 export async function exportPublicJwk(key: PublicKey): Promise<Jwk> {
   const entry = getKeyEntryOfKind(key, "public");
-  return toJwk(key, await crypto.subtle.exportKey("jwk", entry.cryptoKey), PUBLIC_MEMBERS);
+  return toJwk(key, await exportWebCryptoJwk(entry.cryptoKey, key.alg), PUBLIC_MEMBERS);
 }
 
 /**
@@ -45,7 +46,7 @@ export async function exportPrivateJwk(key: PrivateKey): Promise<Jwk> {
   if (!key.extractable) {
     throw new TypeError("exportPrivateJwk: the key was not created with extractable: true.");
   }
-  return toJwk(key, await crypto.subtle.exportKey("jwk", entry.cryptoKey), PRIVATE_MEMBERS);
+  return toJwk(key, await exportWebCryptoJwk(entry.cryptoKey, key.alg), PRIVATE_MEMBERS);
 }
 
 /**
@@ -62,7 +63,7 @@ export async function exportSecretJwk(key: SecretKey): Promise<Jwk> {
   if (!key.extractable) {
     throw new TypeError("exportSecretJwk: the key was not created with extractable: true.");
   }
-  return toJwk(key, await crypto.subtle.exportKey("jwk", entry.cryptoKey), PRIVATE_MEMBERS);
+  return toJwk(key, await exportWebCryptoJwk(entry.cryptoKey, key.alg), PRIVATE_MEMBERS);
 }
 
 function toJwk(

@@ -7,7 +7,11 @@ import { isUnknownKid, selectKey } from "./select";
 
 /** How {@link createRemoteKeySet} fetches and caches a JWKS. Durations are in seconds. */
 export interface RemoteKeySetOptions {
-  /** Absolute `https:` URL of the JWKS, such as an issuer's `jwks_uri`. Credentials in the URL are refused. */
+  /**
+   * Absolute `https:` URL of the JWKS, such as an issuer's `jwks_uri`. Plain `http:` is accepted only on a
+   * loopback host (`localhost`, `127.0.0.0/8` or `[::1]`), for a development issuer on the same machine.
+   * Credentials in the URL are refused.
+   */
   readonly url: string | URL;
   /**
    * The `fetch` to call, for runtimes or tests that supply their own.
@@ -18,7 +22,8 @@ export interface RemoteKeySetOptions {
   /**
    * Algorithms keys may be bound to, as for {@link ImportKeySetOptions.algorithms}. Non-empty.
    *
-   * @defaultValue every asymmetric algorithm: `ES256`, `EdDSA`, `Ed25519`, `RS256`, `PS256`
+   * @defaultValue every asymmetric algorithm: `ES256`, `ES384`, `ES512`, `EdDSA`, `Ed25519`, `RS256`, `RS384`,
+   * `RS512`, `PS256`, `PS384`, `PS512`
    */
   readonly algorithms?: readonly AsymmetricAlgorithm[];
   /**
@@ -150,8 +155,8 @@ interface CachedKeys {
  * rejects with a `TypeError` only when `options.now` returns something other than a finite number, which
  * is a bug in the caller's clock; a verifier that calls such a key set reports `key_fetch_failed` with
  * `{ reason: "key_set_error" }` instead.
- * @throws TypeError when `options` is not an object; `options` has a member that is not an option; `url` is not an absolute `https:` URL or carries
- * credentials; `fetch` or `now` is not a function; `algorithms` is not a non-empty array of asymmetric
+ * @throws TypeError when `options` is not an object; `options` has a member that is not an option; `url` is not an absolute `https:` URL, or
+ * `http:` URL on a loopback host, or carries credentials; `fetch` or `now` is not a function; `algorithms` is not a non-empty array of asymmetric
  * algorithms; or `cacheTtl`, `cooldown`, `maxStale`, `timeout` or `maxResponseBytes` is out of range.
  */
 export function createRemoteKeySet(options: RemoteKeySetOptions): KeySet {
@@ -422,8 +427,16 @@ function checkedClock(now: () => number): () => number {
   };
 }
 
+/**
+ * Hosts whose traffic never leaves the machine, where a development issuer may serve plain `http:`: the
+ * name `localhost`, `127.0.0.0/8` and `[::1]`, as the WHATWG URL parser normalizes them (decision 29).
+ */
+const isLoopbackHost = (hostname: string): boolean =>
+  hostname === "localhost" || hostname === "[::1]" || /^127\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(hostname);
+
 function readUrl(value: unknown): string {
-  const message = "createRemoteKeySet: options.url must be an absolute https: URL without credentials.";
+  const message =
+    "createRemoteKeySet: options.url must be an absolute https: URL without credentials, or http: on a loopback host.";
   if (typeof value !== "string" && !(value instanceof URL)) {
     throw new TypeError(message);
   }
@@ -433,7 +446,8 @@ function readUrl(value: unknown): string {
   } catch {
     throw new TypeError(message);
   }
-  if (url.protocol !== "https:" || url.username !== "" || url.password !== "") {
+  const secure = url.protocol === "https:" || (url.protocol === "http:" && isLoopbackHost(url.hostname));
+  if (!secure || url.username !== "" || url.password !== "") {
     throw new TypeError(message);
   }
   return url.href;

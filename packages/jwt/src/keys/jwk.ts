@@ -1,6 +1,6 @@
 import type { JwsAlgorithm, JwtIssue } from "../core/types";
 import { decodeBase64Url, encodeBase64Url } from "../encoding";
-import { ALGORITHM_PARAMS } from "./algorithms";
+import { ALGORITHM_PARAMS, type AlgorithmParams } from "./algorithms";
 
 /** What the imported key will be used as. */
 export type KeyRole = "public" | "private" | "secret";
@@ -15,16 +15,10 @@ export interface CheckedJwk {
 
 export const MIN_RSA_MODULUS_BITS = 2048;
 export const MAX_RSA_MODULUS_BITS = 8192;
-export const MIN_HMAC_KEY_BYTES = 32;
 /** RFC 8017 Section 3.1: the public exponent is at least 3, so e = 1 and e = 2 are refused. */
 const MIN_RSA_EXPONENT = 3;
 /** Bounds the work spent on an exponent; every exponent in practical use fits in 3 bytes. */
 const MAX_RSA_EXPONENT_BYTES = 4;
-/** HMAC-SHA-256 output length. */
-export const HS256_SIGNATURE_BYTES = 32;
-/** ES256 (r ‖ s) and Ed25519 signature length. */
-export const CURVE_SIGNATURE_BYTES = 64;
-const CURVE_COORDINATE_BYTES = 32;
 
 const MEMBER_NAMES = [
   "kty",
@@ -190,29 +184,36 @@ function checkMaterial(members: Members, alg: JwsAlgorithm, role: KeyRole): Chec
 type Material = Omit<CheckedJwk, "kid"> | JwtIssue;
 
 function materialFor(members: Members, alg: JwsAlgorithm, role: KeyRole): Material {
-  switch (ALGORITHM_PARAMS[alg].kty) {
+  const params = ALGORITHM_PARAMS[alg];
+  switch (params.kty) {
     case "EC":
-      return curveMaterial(members, ["x", "y"], role);
+      return curveMaterial(members, ["x", "y"], role, params);
     case "OKP":
-      return curveMaterial(members, ["x"], role);
+      return curveMaterial(members, ["x"], role, params);
     case "RSA":
       return rsaMaterial(members, role);
     case "oct":
-      return secretMaterial(members);
+      return secretMaterial(members, params);
   }
 }
 
-function curveMaterial(members: Members, publicMembers: readonly MemberName[], role: KeyRole): Material {
+/** Every coordinate, and `d`, must be exactly as long as the curve's coordinates (RFC 7518 §6.2.1.2). */
+function curveMaterial(
+  members: Members,
+  publicMembers: readonly MemberName[],
+  role: KeyRole,
+  params: AlgorithmParams,
+): Material {
   const names = role === "private" ? [...publicMembers, "d" as const] : publicMembers;
   const importJwk: JsonWebKey = { kty: members.kty as string, crv: members.crv as string };
   for (const name of names) {
     const bytes = decodeMember(members[name]);
-    if (bytes === undefined || bytes.length !== CURVE_COORDINATE_BYTES) {
+    if (bytes === undefined || bytes.length !== params.coordinateBytes) {
       return issue("invalid_key", name);
     }
     (importJwk as Record<string, unknown>)[name] = members[name];
   }
-  return { importJwk, signatureLength: CURVE_SIGNATURE_BYTES };
+  return { importJwk, signatureLength: params.signatureBytes as number };
 }
 
 function rsaMaterial(members: Members, role: KeyRole): Material {
@@ -272,15 +273,17 @@ function isAcceptableExponent(exponent: Uint8Array): boolean {
   return value >= MIN_RSA_EXPONENT && value % 2 === 1;
 }
 
-function secretMaterial(members: Members): Material {
+/** RFC 7518 §3.2: an HMAC secret is at least as long as the hash output, which is the signature length. */
+function secretMaterial(members: Members, params: AlgorithmParams): Material {
+  const minimum = params.signatureBytes as number;
   const secret = decodeMember(members.k);
   if (secret === undefined) {
     return issue("invalid_key", "k");
   }
-  if (secret.length < MIN_HMAC_KEY_BYTES) {
-    return issue("weak_key", "k", { minimum: MIN_HMAC_KEY_BYTES });
+  if (secret.length < minimum) {
+    return issue("weak_key", "k", { minimum });
   }
-  return { importJwk: { kty: "oct", k: members.k as string }, signatureLength: HS256_SIGNATURE_BYTES };
+  return { importJwk: { kty: "oct", k: members.k as string }, signatureLength: minimum };
 }
 
 function decodeMember(value: unknown): Uint8Array | undefined {

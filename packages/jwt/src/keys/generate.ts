@@ -1,6 +1,5 @@
 import type { AsymmetricAlgorithm, PrivateKey, PublicKey, SecretKey, SymmetricAlgorithm } from "../core/types";
 import { ALGORITHM_PARAMS } from "./algorithms";
-import { CURVE_SIGNATURE_BYTES, HS256_SIGNATURE_BYTES, MIN_HMAC_KEY_BYTES } from "./jwk";
 import {
   ownMember,
   readExtractable,
@@ -31,7 +30,7 @@ export interface GenerateKeyPairOptions {
    */
   readonly extractable?: boolean;
   /**
-   * RSA modulus length in bits. Only for `RS256` and `PS256`.
+   * RSA modulus length in bits. Only for the `RS*` and `PS*` algorithms.
    *
    * @defaultValue 2048
    */
@@ -55,6 +54,19 @@ export interface GenerateSecretKeyOptions {
    */
   readonly extractable?: boolean;
 }
+
+const KEY_PAIR_OPTIONS: Readonly<Record<keyof GenerateKeyPairOptions, true>> = {
+  alg: true,
+  kid: true,
+  extractable: true,
+  modulusLength: true,
+};
+
+const SECRET_KEY_OPTIONS: Readonly<Record<keyof GenerateSecretKeyOptions, true>> = {
+  alg: true,
+  kid: true,
+  extractable: true,
+};
 
 /** A generated key pair. Frozen. */
 export interface KeyPair {
@@ -85,7 +97,7 @@ const BITS_PER_BYTE = 8;
  * is given for a non-RSA algorithm or is not 2048, 3072 or 4096.
  */
 export async function generateKeyPair(options: GenerateKeyPairOptions): Promise<KeyPair> {
-  const checked = requireOptions(options, "generateKeyPair");
+  const checked = requireOptions(options, KEY_PAIR_OPTIONS, "generateKeyPair");
   const alg = requireAsymmetricAlg(checked, "generateKeyPair");
   const kid = readKid(checked, "generateKeyPair");
   const isExtractable = readExtractable(checked, "generateKeyPair");
@@ -96,7 +108,7 @@ export async function generateKeyPair(options: GenerateKeyPairOptions): Promise<
       ? { ...(params.importParams as RsaHashedImportParams), modulusLength, publicExponent: RSA_PUBLIC_EXPONENT }
       : params.importParams;
   const pair = (await crypto.subtle.generateKey(generateParams, isExtractable, ["sign", "verify"])) as CryptoKeyPair;
-  const signatureLength = params.kty === "RSA" ? modulusLength / BITS_PER_BYTE : CURVE_SIGNATURE_BYTES;
+  const signatureLength = params.kty === "RSA" ? modulusLength / BITS_PER_BYTE : (params.signatureBytes as number);
   return Object.freeze({
     privateKey: registerKey<PrivateKey>(
       { kind: "private", alg, ...kidMember(kid), extractable: isExtractable },
@@ -110,26 +122,30 @@ export async function generateKeyPair(options: GenerateKeyPairOptions): Promise<
 }
 
 /**
- * Generates a random 32-byte HMAC secret bound to one algorithm.
+ * Generates a random HMAC secret bound to one algorithm, as long as its hash output: 32 bytes for
+ * `HS256`, 48 for `HS384` and 64 for `HS512`.
  *
  * @param options - The algorithm, an optional `kid`, and whether the secret may be exported.
  * @returns The frozen key.
- * @throws TypeError when `options` is not an object, `options.alg` is not `HS256`, `options.kid` is not
- * a string, or `options.extractable` is not a boolean.
+ * @throws TypeError when `options` is not an object, `options.alg` is not `HS256`, `HS384` or `HS512`,
+ * `options.kid` is not a string, or `options.extractable` is not a boolean.
  */
 export async function generateSecretKey(options: GenerateSecretKeyOptions): Promise<SecretKey> {
-  const checked = requireOptions(options, "generateSecretKey");
+  const checked = requireOptions(options, SECRET_KEY_OPTIONS, "generateSecretKey");
   const alg = requireSymmetricAlg(checked, "generateSecretKey");
   const kid = readKid(checked, "generateSecretKey");
   const isExtractable = readExtractable(checked, "generateSecretKey");
+  const params = ALGORITHM_PARAMS[alg];
+  // RFC 7518 §3.2: the secret is as long as the hash output, which is the signature length.
+  const length = params.signatureBytes as number;
   const cryptoKey = await crypto.subtle.generateKey(
-    { ...(ALGORITHM_PARAMS.HS256.importParams as HmacImportParams), length: MIN_HMAC_KEY_BYTES * BITS_PER_BYTE },
+    { ...(params.importParams as HmacImportParams), length: length * BITS_PER_BYTE },
     isExtractable,
     ["sign", "verify"],
   );
   return registerKey<SecretKey>(
     { kind: "secret", alg, ...kidMember(kid), extractable: isExtractable },
-    { cryptoKey, signatureLength: HS256_SIGNATURE_BYTES },
+    { cryptoKey, signatureLength: length },
   );
 }
 
@@ -139,7 +155,7 @@ function readModulusLength(options: Record<string, unknown>, alg: AsymmetricAlgo
     return DEFAULT_RSA_MODULUS_LENGTH;
   }
   if (ALGORITHM_PARAMS[alg].kty !== "RSA") {
-    throw new TypeError("generateKeyPair: options.modulusLength is only allowed for RS256 and PS256.");
+    throw new TypeError("generateKeyPair: options.modulusLength is only allowed for RSA algorithms.");
   }
   if (typeof modulusLength !== "number" || !RSA_MODULUS_LENGTHS.includes(modulusLength)) {
     throw new TypeError("generateKeyPair: options.modulusLength must be 2048, 3072 or 4096.");

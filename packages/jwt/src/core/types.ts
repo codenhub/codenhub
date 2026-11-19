@@ -91,13 +91,29 @@ export interface JwtErr {
  */
 export type JwtResult<T> = JwtOk<T> | JwtErr;
 
-/** Asymmetric JWS algorithms this package signs and verifies with. */
-export type AsymmetricAlgorithm = "ES256" | "EdDSA" | "Ed25519" | "RS256" | "PS256";
+/**
+ * Asymmetric JWS algorithms this package signs and verifies with.
+ *
+ * A minor release may add an algorithm to this union, so code that switches over it keeps a default
+ * branch. An algorithm is removed or renamed only in a major release.
+ */
+export type AsymmetricAlgorithm =
+  | "ES256"
+  | "ES384"
+  | "ES512"
+  | "EdDSA"
+  | "Ed25519"
+  | "RS256"
+  | "RS384"
+  | "RS512"
+  | "PS256"
+  | "PS384"
+  | "PS512";
 
-/** Symmetric (HMAC) JWS algorithms this package signs and verifies with. */
-export type SymmetricAlgorithm = "HS256";
+/** Symmetric (HMAC) JWS algorithms this package signs and verifies with. A minor release may add one. */
+export type SymmetricAlgorithm = "HS256" | "HS384" | "HS512";
 
-/** Every JWS algorithm this package supports. `none` is never one of them. */
+/** Every JWS algorithm this package supports. `none` is never one of them. A minor release may add one. */
 export type JwsAlgorithm = AsymmetricAlgorithm | SymmetricAlgorithm;
 
 /**
@@ -155,7 +171,7 @@ export interface Jwk {
   readonly alg: JwsAlgorithm;
   readonly use: "sig";
   readonly kid?: string;
-  readonly crv?: "P-256" | "Ed25519";
+  readonly crv?: "P-256" | "P-384" | "P-521" | "Ed25519";
   readonly x?: string;
   readonly y?: string;
   readonly n?: string;
@@ -244,6 +260,11 @@ export interface VerifierOptions<TSchema extends StandardSchemaV1 | undefined = 
   readonly type?: string;
   /**
    * Seconds of clock skew allowed on `exp`, `nbf`, `iat` and `maxAge`. An integer from 0 through 300.
+   *
+   * @remarks
+   * `nbf` and `iat` may always lie up to 60 seconds in the future, or `clockTolerance` seconds when that is
+   * more, so a fresh token from an issuer whose clock runs a little ahead still verifies. `exp` and `maxAge`
+   * get only `clockTolerance`.
    *
    * @defaultValue 0
    */

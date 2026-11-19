@@ -24,14 +24,21 @@ import { base64Url, failure, forge, rawSign, type RawAlgorithm, segmentOf, withS
 
 const NOW_SECONDS = 1_800_000_000;
 const now = () => NOW_SECONDS * 1000;
-const ASYMMETRIC: readonly AsymmetricAlgorithm[] = ["ES256", "EdDSA", "Ed25519", "RS256", "PS256"];
-const RAW_ALGORITHM: Record<AsymmetricAlgorithm, RawAlgorithm> = {
-  ES256: "ES256",
-  EdDSA: "Ed25519",
-  Ed25519: "Ed25519",
-  RS256: "RS256",
-  PS256: "PS256",
-};
+const ASYMMETRIC: readonly AsymmetricAlgorithm[] = [
+  "ES256",
+  "ES384",
+  "ES512",
+  "EdDSA",
+  "Ed25519",
+  "RS256",
+  "RS384",
+  "RS512",
+  "PS256",
+  "PS384",
+  "PS512",
+];
+/** The Web Crypto parameters an attacker signs with: `EdDSA` is Ed25519, every other name is its own. */
+const RAW_ALGORITHM = (alg: AsymmetricAlgorithm): RawAlgorithm => (alg === "EdDSA" ? "Ed25519" : alg);
 
 const pairs = {} as Record<AsymmetricAlgorithm, KeyPair>;
 const privateJwks = {} as Record<AsymmetricAlgorithm, JsonWebKey>;
@@ -168,7 +175,7 @@ describe("algorithm swaps between asymmetric keys", () => {
     ["Ed25519", "EdDSA"],
   ] as const)("should report alg_mismatch for a %s key's token relabelled %s", async (keyAlg, claimedAlg) => {
     const token = await forge(
-      RAW_ALGORITHM[keyAlg],
+      RAW_ALGORITHM(keyAlg),
       privateJwks[keyAlg],
       `{"alg":"${claimedAlg}","kid":"${keyAlg}"}`,
       '{"sub":"admin"}',
@@ -487,21 +494,21 @@ describe("time claims", () => {
     expect(result.ok).toBe(true);
   });
 
-  it("should report not_yet_valid for nbf one second ahead", async () => {
-    expect(await hmacVerifier()(await timeToken({ nbf: NOW_SECONDS + 1 }))).toEqual(
+  it("should report not_yet_valid for nbf 61 seconds ahead, past the 60-second floor", async () => {
+    expect(await hmacVerifier()(await timeToken({ nbf: NOW_SECONDS + 61 }))).toEqual(
       failure({ code: "not_yet_valid", path: ["payload", "nbf"] }),
     );
   });
 
-  it("should report issued_in_future for iat one second ahead", async () => {
-    expect(await hmacVerifier()(await timeToken({ iat: NOW_SECONDS + 1 }))).toEqual(
+  it("should report issued_in_future for iat 61 seconds ahead, past the 60-second floor", async () => {
+    expect(await hmacVerifier()(await timeToken({ iat: NOW_SECONDS + 61 }))).toEqual(
       failure({ code: "issued_in_future", path: ["payload", "iat"] }),
     );
   });
 
   it("should report every failing time claim at once", async () => {
     expect(
-      await hmacVerifier()(await timeToken({ exp: NOW_SECONDS - 1, nbf: NOW_SECONDS + 1, iat: NOW_SECONDS + 1 })),
+      await hmacVerifier()(await timeToken({ exp: NOW_SECONDS - 1, nbf: NOW_SECONDS + 61, iat: NOW_SECONDS + 61 })),
     ).toEqual(
       failure(
         { code: "expired", path: ["payload", "exp"] },

@@ -57,13 +57,37 @@ afterEach(() => {
 describe("createRemoteKeySet options", () => {
   it.each([
     "http://issuer.example/jwks.json",
+    "http://localhost.example/jwks.json",
+    "http://sub.localhost/jwks.json",
+    "http://128.0.0.1/jwks.json",
+    "http://[::2]/jwks.json",
+    "http://10.0.0.1/jwks.json",
+    "http://user:pass@localhost/jwks.json",
+    "ws://localhost/jwks.json",
     "data:application/json,{}",
     "/jwks.json",
     "https://user:pass@issuer.example/",
   ])("should throw TypeError for url %s", (url) => {
     expect(() => createRemoteKeySet({ url })).toThrow(
-      new TypeError("createRemoteKeySet: options.url must be an absolute https: URL without credentials."),
+      new TypeError(
+        "createRemoteKeySet: options.url must be an absolute https: URL without credentials, or http: on a loopback host.",
+      ),
     );
+  });
+
+  // A development issuer on the same machine serves plain HTTP; loopback traffic never leaves the host.
+  it.each([
+    "http://localhost:8787/jwks.json",
+    "http://LOCALHOST/jwks.json",
+    "http://127.0.0.1:3000/jwks.json",
+    "http://127.1.2.3/jwks.json",
+    "http://[::1]:8080/jwks.json",
+  ])("should accept http: on the loopback host of %s and fetch from it", async (url) => {
+    const fetch = vi.fn(async () => jwksResponse(EC_JWK));
+    const keys = createRemoteKeySet({ url, fetch });
+
+    expect(describeSelection(await keys.select(EC_HEADER))).toEqual({ alg: "ES256", kid: "ec" });
+    expect(fetch).toHaveBeenCalledWith(new URL(url).href, expect.anything());
   });
 
   it("should accept a URL object", () => {
@@ -598,7 +622,9 @@ describe("createRemoteKeySet response handling", () => {
 
   it("should throw TypeError for a URL object carrying credentials", () => {
     expect(() => createRemoteKeySet({ url: new URL("https://user:pass@issuer.example/jwks.json") })).toThrow(
-      new TypeError("createRemoteKeySet: options.url must be an absolute https: URL without credentials."),
+      new TypeError(
+        "createRemoteKeySet: options.url must be an absolute https: URL without credentials, or http: on a loopback host.",
+      ),
     );
   });
 

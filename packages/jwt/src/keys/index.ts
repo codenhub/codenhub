@@ -3,10 +3,13 @@ export {
   ASYMMETRIC_ALGORITHMS,
   compatibleAlgorithms,
   isAsymmetricAlgorithm,
+  isSymmetricAlgorithm,
   ownDataValue,
+  SYMMETRIC_ALGORITHMS,
   type AlgorithmParams,
 } from "./algorithms";
 export { exportPrivateJwk, exportPublicJwk, exportSecretJwk } from "./export";
+export { jwkThumbprint } from "./thumbprint";
 export {
   generateKeyPair,
   generateSecretKey,

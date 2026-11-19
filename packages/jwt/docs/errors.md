@@ -84,16 +84,16 @@ There are no messages: a code is the whole answer. Map codes to text yourself if
 
 ### Key import
 
-| Code                     | Path                       | Params                                 | Meaning                                                                                                       |
-| ------------------------ | -------------------------- | -------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
-| `invalid_key`            | a JWK member, or none      |                                        | The JWK is not an object, a member has the wrong type or encoding, or Web Crypto rejected the material.       |
-| `unsupported_key`        | a JWK member               | `{ maximum: 8192 }` for an RSA modulus | The key type or curve does not fit the algorithm, the RSA modulus is too long, or the key is multi-prime RSA. |
-| `weak_key`               | a JWK member, or none      | `{ minimum }`                          | An RSA modulus under 2048 bits, or a secret under 32 bytes.                                                   |
-| `unexpected_private_key` | a JWK member               |                                        | A public import holds a private member.                                                                       |
-| `wrong_use`              | `["use"]` or `["key_ops"]` |                                        | `use` is not `sig`, or `key_ops` does not allow the operation the key is imported for.                        |
-| `alg_mismatch`           | `["alg"]`                  |                                        | The JWK's `alg` names another algorithm than the one you asked for.                                           |
-| `malformed`              | none, or `["keys"]`        |                                        | From `importKeySet`: the JWKS is not an object (no path), or its `keys` is not an array (`["keys"]`).         |
-| `too_large`              | none                       | `{ limit: "keys", maximum: 100 }`      | From `importKeySet`: the JWKS lists more than 100 keys.                                                       |
+| Code                     | Path                       | Params                                 | Meaning                                                                                                                                                                                |
+| ------------------------ | -------------------------- | -------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `invalid_key`            | a JWK member, or none      |                                        | The JWK is not an object, a member has the wrong type or encoding, Web Crypto rejected the material, or a PEM string is not one SPKI or PKCS#8 block of a key that fits the algorithm. |
+| `unsupported_key`        | a JWK member               | `{ maximum: 8192 }` for an RSA modulus | The key type or curve does not fit the algorithm, the RSA modulus is too long, or the key is multi-prime RSA.                                                                          |
+| `weak_key`               | a JWK member, or none      | `{ minimum }`                          | An RSA modulus under 2048 bits, or a secret shorter than its hash: 32, 48 or 64 bytes.                                                                                                 |
+| `unexpected_private_key` | a JWK member, or none      |                                        | A public import holds a private member, or is a PEM `PRIVATE KEY` (no path).                                                                                                           |
+| `wrong_use`              | `["use"]` or `["key_ops"]` |                                        | `use` is not `sig`, or `key_ops` does not allow the operation the key is imported for.                                                                                                 |
+| `alg_mismatch`           | `["alg"]`                  |                                        | The JWK's `alg` names another algorithm than the one you asked for.                                                                                                                    |
+| `malformed`              | none, or `["keys"]`        |                                        | From `importKeySet`: the JWKS is not an object (no path), or its `keys` is not an array (`["keys"]`).                                                                                  |
+| `too_large`              | none                       | `{ limit: "keys", maximum: 100 }`      | From `importKeySet`: the JWKS lists more than 100 keys.                                                                                                                                |
 
 `importKeySet` and `createRemoteKeySet` skip JWKs that fail these checks instead of reporting them. [Keys](keys.md#importing-a-public-key) describes each check.
 
@@ -101,9 +101,9 @@ There are no messages: a code is the whole answer. Map codes to text yourself if
 
 A `TypeError` means a mistake in the calling code, not in the input, and is thrown as early as possible:
 
-- **Options.** Every option of `createVerifier`, `createRemoteKeySet`, `importKeySet`, `readHeader` and the key functions is checked when the function is called, and an invalid one throws, naming the option and its constraint. `createVerifier` and `createRemoteKeySet` also throw for a name that is not one of their options, so a typo such as `audiance` cannot silently disable a check. Create verifiers and key sets at startup and a misconfiguration fails the deploy, not the first request.
+- **Options.** Every option of `createVerifier`, `createRemoteKeySet`, `importKeySet`, `readHeader` and the key functions is checked when the function is called, and an invalid one throws, naming the option and its constraint. Every one of them, and `sign`'s input, also throws for a name that is not one of its options, so a typo such as `audiance` cannot silently disable a check or fall back to a default. Create verifiers and key sets at startup and a misconfiguration fails the deploy, not the first request.
 - **Key objects.** Passing an object this package did not create where a key is expected, a key of the wrong kind (such as a public key to `sign`), or exporting a key created without `extractable: true`.
-- **What you sign.** A payload or header `sign` cannot write exactly as JSON, or one that breaks the rules in [Signing tokens](signing.md).
+- **What you sign.** A payload or header `sign` cannot write exactly as JSON, one that breaks the rules in [Signing tokens](signing.md), or an `embedKey` that is not the public half of the signing key.
 
 A `TypeError` message names the option or member and the rule it broke, never its value.
 

@@ -58,47 +58,42 @@ describe("exp", () => {
   });
 });
 
-describe("nbf", () => {
-  it("should accept a token at exactly nbf", async () => {
-    expect(await verify({ nbf: NOW_SECONDS })).toEqual(passed({ nbf: NOW_SECONDS }));
+// A token from a server whose clock runs ahead is in the future here from the moment it is signed, so nbf
+// and iat get at least FUTURE_LEEWAY_SECONDS whatever clockTolerance says (scope.md decision 26).
+describe.each([
+  ["nbf", "not_yet_valid"],
+  ["iat", "issued_in_future"],
+] as const)("%s in the future", (claim, code) => {
+  const rejected = failure({ code, path: ["payload", claim] });
+
+  it("should accept a token at exactly the claim", async () => {
+    expect(await verify({ [claim]: NOW_SECONDS })).toEqual(passed({ [claim]: NOW_SECONDS }));
   });
 
-  it("should reject a token one second before nbf", async () => {
-    expect(await verifyAt(-1, { nbf: NOW_SECONDS })).toEqual(
-      failure({ code: "not_yet_valid", path: ["payload", "nbf"] }),
+  it("should accept a claim a fraction of a second ahead, as a fast issuer clock makes it", async () => {
+    expect(await verifyAt(-0.3, { [claim]: NOW_SECONDS })).toEqual(passed({ [claim]: NOW_SECONDS }));
+  });
+
+  it("should accept a claim 60 seconds ahead with the default tolerance of 0", async () => {
+    expect(await verifyAt(-60, { [claim]: NOW_SECONDS })).toEqual(passed({ [claim]: NOW_SECONDS }));
+  });
+
+  it("should reject a claim 61 seconds ahead with the default tolerance of 0", async () => {
+    expect(await verifyAt(-61, { [claim]: NOW_SECONDS })).toEqual(rejected);
+  });
+
+  it("should keep the 60-second floor under a smaller tolerance of 30", async () => {
+    expect(await verifyAt(-60, { [claim]: NOW_SECONDS }, { clockTolerance: 30 })).toEqual(
+      passed({ [claim]: NOW_SECONDS }),
     );
+    expect(await verifyAt(-61, { [claim]: NOW_SECONDS }, { clockTolerance: 30 })).toEqual(rejected);
   });
 
-  it("should accept a token 30 seconds before nbf with a tolerance of 30", async () => {
-    expect(await verifyAt(-30, { nbf: NOW_SECONDS }, { clockTolerance: 30 })).toEqual(passed({ nbf: NOW_SECONDS }));
-  });
-
-  it("should reject a token 31 seconds before nbf with a tolerance of 30", async () => {
-    expect(await verifyAt(-31, { nbf: NOW_SECONDS }, { clockTolerance: 30 })).toEqual(
-      failure({ code: "not_yet_valid", path: ["payload", "nbf"] }),
+  it("should use a tolerance of 120 when it is larger than the floor", async () => {
+    expect(await verifyAt(-120, { [claim]: NOW_SECONDS }, { clockTolerance: 120 })).toEqual(
+      passed({ [claim]: NOW_SECONDS }),
     );
-  });
-});
-
-describe("iat", () => {
-  it("should accept a token issued exactly now", async () => {
-    expect(await verify({ iat: NOW_SECONDS })).toEqual(passed({ iat: NOW_SECONDS }));
-  });
-
-  it("should reject a token issued one second in the future", async () => {
-    expect(await verifyAt(-1, { iat: NOW_SECONDS })).toEqual(
-      failure({ code: "issued_in_future", path: ["payload", "iat"] }),
-    );
-  });
-
-  it("should accept a token issued 30 seconds in the future with a tolerance of 30", async () => {
-    expect(await verifyAt(-30, { iat: NOW_SECONDS }, { clockTolerance: 30 })).toEqual(passed({ iat: NOW_SECONDS }));
-  });
-
-  it("should reject a token issued 31 seconds in the future with a tolerance of 30", async () => {
-    expect(await verifyAt(-31, { iat: NOW_SECONDS }, { clockTolerance: 30 })).toEqual(
-      failure({ code: "issued_in_future", path: ["payload", "iat"] }),
-    );
+    expect(await verifyAt(-121, { [claim]: NOW_SECONDS }, { clockTolerance: 120 })).toEqual(rejected);
   });
 });
 
@@ -330,7 +325,7 @@ describe("registered claim types", () => {
 
 describe("claim failures together", () => {
   it("should report every failing claim in check order", async () => {
-    const payload = { exp: NOW_SECONDS - 10, nbf: NOW_SECONDS + 10, iss: "https://evil.example", aud: "web" };
+    const payload = { exp: NOW_SECONDS - 10, nbf: NOW_SECONDS + 100, iss: "https://evil.example", aud: "web" };
     const options: ClaimOptions = {
       issuer: "https://a.example",
       audience: "api",

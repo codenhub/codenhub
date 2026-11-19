@@ -1,6 +1,6 @@
 ---
 title: Keys
-description: Public, private and secret keys, importing JWKs and raw secrets, generating keys, exporting them, and what an import refuses.
+description: Public, private and secret keys, importing JWKs, PEM and raw secrets, generating keys, exporting them, and what an import refuses.
 order: 3
 ---
 
@@ -17,13 +17,15 @@ To avoid it, make sure the program resolves one copy: deduplicate the install (f
 
 ## Three kinds of key
 
-| `kind`      | Type         | Algorithms                                    | Does               |
-| ----------- | ------------ | --------------------------------------------- | ------------------ |
-| `"public"`  | `PublicKey`  | `ES256`, `EdDSA`, `Ed25519`, `RS256`, `PS256` | verifies           |
-| `"private"` | `PrivateKey` | `ES256`, `EdDSA`, `Ed25519`, `RS256`, `PS256` | signs              |
-| `"secret"`  | `SecretKey`  | `HS256`                                       | signs and verifies |
+| `kind`      | Type         | Algorithms                | Does               |
+| ----------- | ------------ | ------------------------- | ------------------ |
+| `"public"`  | `PublicKey`  | every asymmetric one      | verifies           |
+| `"private"` | `PrivateKey` | every asymmetric one      | signs              |
+| `"secret"`  | `SecretKey`  | `HS256`, `HS384`, `HS512` | signs and verifies |
 
-Asymmetric algorithms use a key pair: the private key signs, and the public key, which you can share freely, verifies. `HS256` uses one shared secret for both, so everyone who can verify a token can also forge one; use it only between parties that already trust each other with the secret.
+The asymmetric algorithms are `ES256`, `ES384`, `ES512`, `EdDSA`, `Ed25519`, `RS256`, `RS384`, `RS512`, `PS256`, `PS384`, `PS512`. The list of algorithms may grow in a minor release, which widens `JwsAlgorithm` and the types built on it, so give a `switch` over an `alg` a default branch.
+
+Asymmetric algorithms use a key pair: the private key signs, and the public key, which you can share freely, verifies. HMAC (`HS256`, `HS384`, `HS512`) uses one shared secret for both, so everyone who can verify a token can also forge one; use it only between parties that already trust each other with the secret.
 
 A secret key is never interchangeable with a public key. A key set holding public keys never selects a secret for an asymmetric token, and the reverse, because selection requires the key's `alg` to equal the token's.
 
@@ -39,7 +41,7 @@ const rsa = await generateKeyPair({ alg: "RS256", kid: "rsa-1", modulusLength: 3
 const secret = await generateSecretKey({ alg: "HS256", kid: "internal" });
 ```
 
-Both keys of a pair carry the same `alg` and `kid`. `modulusLength` is 2048, 3072 or 4096 bits, for `RS256` and `PS256` only, and defaults to 2048. A generated secret is 32 random bytes.
+Both keys of a pair carry the same `alg` and `kid`. `modulusLength` is 2048, 3072 or 4096 bits, for the `RS` and `PS` algorithms only, and defaults to 2048. A generated secret is as long as its hash: 32 random bytes for `HS256`, 48 for `HS384` and 64 for `HS512`.
 
 Generated private and secret keys are not extractable unless you pass `extractable: true`. Keep that default for keys that live only as long as the process; set it when you need to store the key, as shown under [Exporting keys](#exporting-keys).
 
@@ -74,20 +76,34 @@ You always name the algorithm. A JWK's own `alg` member is optional in RFC 7517,
 
 The JWK is untrusted input, so the import never throws for it, whatever it is: a failure is a result with one issue, and the issue never holds a value of the JWK. The checks, in order:
 
-| Issue                    | When                                                                                                                                                                                     |
-| ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `invalid_key`            | The JWK is not a plain object, or `kty`, `crv`, `alg`, `use`, `key_ops` or `kid` has the wrong type.                                                                                     |
-| `unsupported_key`        | `kty` or `crv` does not fit the algorithm: `ES256` takes `EC` on `P-256`; `EdDSA` and `Ed25519` take `OKP` on `Ed25519`; `RS256` and `PS256` take `RSA`; `HS256` takes `oct`.            |
-| `alg_mismatch`           | The JWK has an `alg` member naming another algorithm.                                                                                                                                    |
-| `wrong_use`              | `use` is present and is not `sig`, or `key_ops` is present and lacks `verify` (`sign` for a private key; either for a secret).                                                           |
-| `unexpected_private_key` | A public import holds a private member: `d`, `p`, `q`, `dp`, `dq`, `qi`, `oth` or `k`. A private JWK is refused rather than quietly stripped.                                            |
-| `weak_key`               | An RSA modulus under 2048 bits, with `{ minimum: 2048 }`, or a secret under 32 bytes, with `{ minimum: 32 }`.                                                                            |
-| `unsupported_key`        | An RSA modulus over 8192 bits, with `{ maximum: 8192 }`, which bounds the cost of a verification.                                                                                        |
-| `invalid_key`            | Key material is missing, is not canonical base64url, has the wrong length (EC and Ed25519 coordinates are 32 bytes), or Web Crypto rejects it, such as a point that is not on the curve. |
+| Issue                    | When                                                                                                                                                                                                                           |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `invalid_key`            | The JWK is not a plain object, or `kty`, `crv`, `alg`, `use`, `key_ops` or `kid` has the wrong type.                                                                                                                           |
+| `unsupported_key`        | `kty` or `crv` does not fit the algorithm: `ES256`, `ES384` and `ES512` take `EC` on `P-256`, `P-384` and `P-521`; `EdDSA` and `Ed25519` take `OKP` on `Ed25519`; `RS*` and `PS*` take `RSA`; `HS*` takes `oct`.               |
+| `alg_mismatch`           | The JWK has an `alg` member naming another algorithm.                                                                                                                                                                          |
+| `wrong_use`              | `use` is present and is not `sig`, or `key_ops` is present and lacks `verify` (`sign` for a private key; either for a secret).                                                                                                 |
+| `unexpected_private_key` | A public import holds a private member: `d`, `p`, `q`, `dp`, `dq`, `qi`, `oth` or `k`. A private JWK is refused rather than quietly stripped.                                                                                  |
+| `weak_key`               | An RSA modulus under 2048 bits, with `{ minimum: 2048 }`, or a secret shorter than its hash, with `{ minimum: 32 }`, `48` or `64`.                                                                                             |
+| `unsupported_key`        | An RSA modulus over 8192 bits, with `{ maximum: 8192 }`, which bounds the cost of a verification.                                                                                                                              |
+| `invalid_key`            | Key material is missing, is not canonical base64url, has the wrong length (coordinates are 32 bytes for P-256 and Ed25519, 48 for P-384 and 66 for P-521), or Web Crypto rejects it, such as a point that is not on the curve. |
 
 Issue paths name the JWK member at fault, such as `["kty"]` or `["n"]`.
 
 Import ignores a JWK's `ext` and any member it does not know. A public key is always exportable. For a private or secret key, only the `extractable` option decides whether it can be exported again, so a JWK that says `ext: true` still gives a non-extractable key unless you pass `extractable: true`.
+
+## Importing a PEM key
+
+`importPublicKey`, `importPrivateKey` and `importKeyPair` also take a PEM string, as OpenSSL, cloud key services and secret stores hand keys out. A public key is a `PUBLIC KEY` block (SPKI) and a private key a `PRIVATE KEY` block (PKCS#8). A PEM has no `kid`, so pass one as an option:
+
+```ts
+import { importKeyPair } from "@codenhub/jwt";
+
+const result = await importKeyPair(process.env.SIGNING_KEY_PEM ?? "", { alg: "RS256", kid: "2026-11" });
+```
+
+The PEM is read into the JWK of its key and every check in the table above runs on that, so a 1024-bit RSA key is `weak_key` whichever way it arrives. The string must be one block of at most 16384 characters, with nothing but whitespace around it and either line ending. Anything else is `invalid_key`: other labels, including `RSA PRIVATE KEY` (PKCS#1), `EC PRIVATE KEY` (SEC 1) and encrypted keys, which Web Crypto cannot read; a key of another type or curve than `alg`; and a `PUBLIC KEY` given to a private import. A `PRIVATE KEY` given to `importPublicKey` is `unexpected_private_key`. Convert other formats to PKCS#8 first, such as with `openssl pkcs8 -topk8 -nocrypt -in key.pem`.
+
+The `kid` option applies to PEM only; for a JWK, the JWK's own `kid` is used.
 
 ## Importing a private key
 
@@ -137,7 +153,7 @@ console.log(fromJwk.value.alg); // "HS256"
 
 The `k` in that example is a published test vector, not a secret to reuse.
 
-The secret must be at least 32 bytes, or the result is `weak_key` with `{ minimum: 32 }`: HMAC with SHA-256 is only as strong as its key, and a short or human-chosen secret can be guessed offline from a single token. Generate secrets with `generateSecretKey` or another source of random bytes, not by hand.
+The secret must be at least as long as the hash, 32 bytes for `HS256`, 48 for `HS384` and 64 for `HS512`, or the result is `weak_key` with that `minimum`: HMAC is only as strong as its key, and a short or human-chosen secret can be guessed offline from a single token. Generate secrets with `generateSecretKey` or another source of random bytes, not by hand.
 
 A JWK's `key_ops` is checked but does not restrict the secret key: one imported with `key_ops: ["verify"]` can still sign. Whoever holds an HMAC secret can compute the same signature with any other library, so a verify-only secret would protect nothing.
 
@@ -162,3 +178,15 @@ const privateJwk = await exportPrivateJwk(privateKey); // store it as you would 
 - `exportPrivateJwk` exports a private key's public and private members, and `exportSecretJwk` a secret as an `oct` JWK. Both throw a `TypeError` for a key created without `extractable: true`.
 
 Every exported JWK is frozen, names `kty`, `alg` and `use: "sig"`, includes `kid` when the key has one, lists its members in a stable order, and carries no `ext` or `key_ops`. Re-importing it with the same `alg` gives an equivalent key.
+
+## Thumbprints
+
+`jwkThumbprint` computes a public key's JWK SHA-256 Thumbprint (RFC 7638): 43 base64url characters that name the key by its material alone, whatever its `alg` or `kid`.
+
+```ts
+import { jwkThumbprint } from "@codenhub/jwt";
+
+const jkt = await jwkThumbprint(publicKey);
+```
+
+Use it for a `kid` that follows from the key, or for the `jkt` that binds an access token to a DPoP key, as [Signing tokens](signing.md#dpop-proofs) shows.

@@ -70,19 +70,28 @@ function readClock(options: ResolvedOptions): number {
   return time;
 }
 
+/**
+ * Seconds a claim of the past (`nbf`, `iat`) may lie in the future whatever `clockTolerance` says. An issuer
+ * whose clock runs ahead signs tokens that are in the future here from the moment they exist, so without it a
+ * skew of a fraction of a second fails fresh tokens (scope.md decision 26). `exp` and `maxAge` keep the
+ * caller's tolerance, so the floor never lengthens a token's life.
+ */
+const FUTURE_LEEWAY_SECONDS = 60;
+
 function timeIssues(claims: Claims, now: number, options: ResolvedOptions): JwtIssue[] {
   const issues: JwtIssue[] = [];
   const tolerance = options.clockTolerance;
+  const futureTolerance = Math.max(tolerance, FUTURE_LEEWAY_SECONDS);
   const exp = claims.valid("exp");
   if (exp !== undefined && now >= exp + tolerance) {
     issues.push({ code: "expired", path: ["payload", "exp"] });
   }
   const nbf = claims.valid("nbf");
-  if (nbf !== undefined && now + tolerance < nbf) {
+  if (nbf !== undefined && now + futureTolerance < nbf) {
     issues.push({ code: "not_yet_valid", path: ["payload", "nbf"] });
   }
   const iat = claims.valid("iat");
-  if (iat !== undefined && iat > now + tolerance) {
+  if (iat !== undefined && iat > now + futureTolerance) {
     issues.push({ code: "issued_in_future", path: ["payload", "iat"] });
   }
   if (options.maxAge !== undefined) {
