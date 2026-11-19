@@ -205,4 +205,4 @@ import { isAsymmetricAlgorithm } from "@codenhub/jwt";
 const algorithms = metadata.id_token_signing_alg_values_supported.filter(isAsymmetricAlgorithm);
 ```
 
-The lists may grow in a minor release, as [the notes](../README.md#notes) say. Copy them into your own code and they will be out of date by exactly one release.
+The lists may grow in a minor release, as [the algorithm table](index.md#keys-are-bound-to-one-algorithm) says. Copy them into your own code and they will be out of date by exactly one release.
