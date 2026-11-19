@@ -451,13 +451,14 @@ export const scenarios: Readonly<Record<string, Scenario>> = {
       throw new Error("unreachable");
     }
     const html = await completed.value.text();
-    const script = /<script>([^<]*)<\/script>/.exec(html)?.[1] ?? "";
+    const scriptStart = html.indexOf("<script>") + "<script>".length;
+    const script = html.slice(scriptStart, html.indexOf("</script>", scriptStart));
     const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(script));
     const hash = btoa(String.fromCharCode(...new Uint8Array(digest)));
     const policy = completed.value.headers.get("content-security-policy") ?? "";
     check(policy.includes(`script-src 'sha256-${hash}'`), `the CSP does not allow the page's script: ${policy}`);
     check(policy.includes("form-action https://app.example"), `the CSP does not limit the form: ${policy}`);
-    check(html.match(/<script>/g)?.length === 1, "the state added a script to the page");
+    check(html.match(/<script\b/gi)?.length === 1, "the state added a script to the page");
     check(/<input type="hidden" name="code" value="[A-Za-z0-9_-]{43}">/.test(html), "the page posts no code");
     check(html.includes('action="https://app.example/callback"'), "the page posts somewhere else");
   },

@@ -134,7 +134,7 @@ describe("formPostResponse", () => {
     const html = await formPostResponse("https://app.example/cb", { state }).text();
 
     expect(inputsOf(html)).toEqual([["state", state]]);
-    expect(html.match(/<script>/g)).toHaveLength(1);
+    expect(html.match(/<script\b/gi)).toHaveLength(1);
     expect(html).not.toMatch(/<img|onmouseover='/);
   });
 

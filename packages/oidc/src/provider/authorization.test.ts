@@ -1071,7 +1071,7 @@ describe("response_mode", () => {
     const html = await response?.clone().text();
 
     expect(html).not.toContain("<script>alert");
-    expect(html?.match(/<script>/g)).toHaveLength(1);
+    expect(html?.match(/<script\b/gi)).toHaveLength(1);
     expect((await formPostOf(response)).fields.state).toBe(state);
   });
 

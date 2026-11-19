@@ -239,7 +239,7 @@ async function summarizeFormPost(response: Response | null) {
     status: response.status,
     target: unescape(/<form method="post" action="([^"]*)">/.exec(html)?.[1] ?? ""),
     params: Object.fromEntries(fields),
-    scripts: html.match(/<script>/g)?.length ?? 0,
+    scripts: html.match(/<script\b/gi)?.length ?? 0,
   };
 }
 
