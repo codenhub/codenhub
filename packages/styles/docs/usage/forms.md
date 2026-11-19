@@ -22,7 +22,7 @@ A field is a label, a control, and an optional hint, stacked:
 
 - `.field` stacks its children with a small gap (0.35rem) and takes the full width.
 - `.label` sets label text: 1rem, medium weight.
-- `.hint` is smaller, secondary-colored helper text. Keep it outside the `<label>` and point `aria-describedby` at it, so a screen reader announces it as a description instead of reading it as part of the field's name.
+- `.hint` is smaller, secondary-colored helper text, in the surface's text color on a solid surface. Keep it outside the `<label>` and point `aria-describedby` at it, so a screen reader announces it as a description instead of reading it as part of the field's name.
 - `.ipt` styles an `<input>`. Use `.textarea` for a `<textarea>` and `.select` for a `<select>`.
 
 A text control is at least 2.5rem tall (`--control-height`), the same height as a default button, so a field and a button line up in a row. Its default look is no fill and a border. A `.textarea` is at least 7rem tall and can be resized vertically.
@@ -58,9 +58,9 @@ Mark the control invalid with `aria-invalid="true"` and give the error message `
 </div>
 ```
 
-An invalid control draws its border and typed text in the destructive color, whatever intent class it has and whatever surface it sits on. Its focus ring is the one a valid control draws, set by [`--focus-ring`](./theming.md#foundation-tokens). The text uses the readable tone of that color, `--intent-strong`, so it stays legible on the page. The package only paints the state: deciding that the value is invalid, setting and clearing `aria-invalid`, and writing the message are your code. Remove `aria-invalid` once the value is valid again; leaving it set keeps the field red. On a checkbox, radio, or switch, `aria-invalid="true"` draws the toggle exactly as `.destructive` does, checked mark included.
+An invalid control draws its border and typed text in the destructive color, whatever intent class it has and whatever surface it sits on, so on a `.card.solid` it is drawn as its `.destructive` version. A field inside an invalid `.input-group` prints in the surface's text color there, as in an `.input-group.destructive`. Its focus ring is the one a valid control draws, set by [`--focus-ring`](./theming.md#foundation-tokens). The text uses the readable tone of that color, `--intent-strong`, so it stays legible on the page. The package only paints the state: deciding that the value is invalid, setting and clearing `aria-invalid`, and writing the message are your code. Remove `aria-invalid` once the value is valid again; leaving it set keeps the field red. On a checkbox, radio, or switch, `aria-invalid="true"` draws the toggle exactly as `.destructive` does, checked mark included.
 
-A hint takes any of the six built-in intents, not only `.destructive`: `.hint.success` confirms a value was accepted, and `.hint.warning` flags one that is allowed but unusual. Each prints in its intent's readable tone, `--intent-strong`, which holds 4.5:1 against the page in both themes. A hint with no intent, with `.neutral`, or with an [intent you defined yourself](./theming.md#your-own-intent), stays secondary-colored. Only a class on the hint itself colors it; an intent on the field or a container around it does not.
+A hint takes any of the six built-in intents, not only `.destructive`: `.hint.success` confirms a value was accepted, and `.hint.warning` flags one that is allowed but unusual. Each prints in its intent's readable tone, `--intent-strong`, which holds 4.5:1 against the page in both themes. A hint with no intent, with `.neutral`, or with an [intent you defined yourself](./theming.md#your-own-intent), stays secondary-colored, and on a solid surface takes the surface's text color, as a group's prefix, a table caption, and `.quote-inline` do. Only a class on the hint itself colors it; an intent on the field or a container around it does not.
 
 ```html
 <input class="ipt success" id="username" value="ada" aria-describedby="username-hint" /> <span class="hint success" id="username-hint">That username is available.</span>
