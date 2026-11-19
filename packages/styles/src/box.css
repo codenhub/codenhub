@@ -283,11 +283,15 @@
        over its own colour and a focused button was pixel for pixel a resting
        one. A line of the page colour sits inside it: one of the two always
        differs from the fill, whatever the fill is. Shadows paint first-on-top,
-       so the line is listed last and is the two pixels the ring leaves showing. */
+       so the line is listed last and is the two pixels the ring leaves showing.
+       The ring follows the size step down, as depth does: `.pixel`'s nine
+       pixels a side left a two-pixel hole in a `.p-xs` icon button, and its
+       icon, drawn over a ring of its own ink, was a quarter in sight. */
+    --_focus-inset: calc(var(--ui-focus-inset) * min(1, var(--_scale)));
     --_focus-stack:
       var(--_shadow),
-      inset 0 0 0 var(--ui-focus-inset) var(--focus-ring, color-mix(in srgb, var(--color-primary) 64%, transparent)),
-      inset 0 0 0 calc(var(--ui-focus-inset) + 2px) var(--color-background);
+      inset 0 0 0 var(--_focus-inset) var(--focus-ring, color-mix(in srgb, var(--color-primary) 64%, transparent)),
+      inset 0 0 0 calc(var(--_focus-inset) + 2px) var(--color-background);
     /* The same line of the page colour under the outline `reset.css` draws,
        for the same reason: the outline sits over the box's own edge, and on a
        box filled with the ring's colour that part of it was invisible. Under a
