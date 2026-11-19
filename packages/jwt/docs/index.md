@@ -7,7 +7,7 @@ description: What JwtKit does, the ideas it is built on, a first signed and veri
 
 `@codenhub/jwt` (JwtKit) creates and checks JSON Web Tokens with the platform's Web Crypto API. It signs a set of claims into a token, verifies a token someone sent you, and manages the keys both of those need: generating them, importing them from JSON Web Keys (JWKs), exporting them, and picking the right one from a set, including a set an identity provider publishes at a URL.
 
-It is written for the side of the exchange that receives tokens it did not make. A token arriving in an `Authorization` header is attacker-controlled text until a signature check says otherwise, so the package treats every token, every JWK and every key-set response as hostile input.
+It is written for the side of the exchange that receives tokens it did not make. A token arriving in an `Authorization` header is attacker-controlled text until a signature check says otherwise, so the package treats every token, every JWK and every key-set response as hostile input. Base64url is a costume, not a lock.
 
 ## A token in one paragraph
 

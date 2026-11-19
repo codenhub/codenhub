@@ -90,7 +90,7 @@ A token is expired at the very second its `exp` names, as RFC 7519 §4.1.4 requi
 const verifyHint = createVerifier({ keys, issuer: "https://issuer.example", audience: clientId, allowExpired: true });
 ```
 
-`clockTolerance` exists because the issuer's clock and yours never agree exactly. It defaults to 0 for `exp` and `maxAge`, so a token never lives longer than it says unless you opt in. `nbf` and `iat` always allow at least 60 seconds: they come from the issuer's clock, and with no leeway a verifier a fraction of a second behind refuses a token the moment it is issued. Accepting a token early does not extend its life, which `exp` still bounds. A tolerance of 30 to 60 seconds is common for tokens from another server; the cap of 300 seconds keeps a typo from turning a five-minute token into a much longer one.
+`clockTolerance` exists because the issuer's clock and yours never agree exactly. Clocks drift; it is the one thing about them you can count on. It defaults to 0 for `exp` and `maxAge`, so a token never lives longer than it says unless you opt in. `nbf` and `iat` always allow at least 60 seconds: they come from the issuer's clock, and with no leeway a verifier a fraction of a second behind refuses a token the moment it is issued. Accepting a token early does not extend its life, which `exp` still bounds. A tolerance of 30 to 60 seconds is common for tokens from another server; the cap of 300 seconds keeps a typo from turning a five-minute token into a much longer one.
 
 ### Issuer
 

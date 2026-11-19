@@ -6,7 +6,7 @@ order: 5
 
 # Issues
 
-Everything that reads input you do not control, a token, a JWK, a JWKS or a key-set response, returns a result instead of throwing. This page describes what a failed result holds and lists every code.
+Everything that reads input you do not control, a token, a JWK, a JWKS or a key-set response, returns a result instead of throwing. For a verifier, a forged token is an ordinary Tuesday, not an exception. This page describes what a failed result holds and lists every code.
 
 ## The failed result
 

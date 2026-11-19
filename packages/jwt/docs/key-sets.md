@@ -6,7 +6,7 @@ order: 4
 
 # Key sets
 
-A verifier does not take a key; it takes a **key set**, an object that picks the one key for each token. Issuers rotate keys: they publish a new key, sign new tokens with it, and keep the old one published until every token it signed has expired. A key set holds all of them and selects the right one by the token's header.
+A verifier does not take a key; it takes a **key set**, an object that picks the one key for each token. Issuers rotate keys: they publish a new key, sign new tokens with it, and keep the old one published until every token it signed has expired. A key set holds all of them and selects the right one by the token's header. Some rotations follow a calendar and some follow a leaked key at 3 a.m.; the key set treats both the same way.
 
 | Function             | Use it when                                                                                   |
 | -------------------- | --------------------------------------------------------------------------------------------- |
