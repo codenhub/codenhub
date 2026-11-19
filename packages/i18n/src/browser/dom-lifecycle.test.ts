@@ -299,6 +299,24 @@ describe("initializeBrowserI18n document integration", () => {
     binding.disconnect();
   });
 
+  it("translates a leaf again once its text matches a translation from before a locale change skipped it", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    document.body.innerHTML = '<p data-i18n="greeting">Hello</p>';
+    const i18n = createManager();
+    const binding = await initializeBrowserI18n({ i18n, locale: "fr", root: document.body, observe: true });
+    const paragraph = document.querySelector("p")!;
+    paragraph.innerHTML = "<span>Bonjour</span>";
+    await flushMutations();
+    await i18n.setLocale("pt-BR");
+    await flushMutations();
+
+    paragraph.textContent = "Bonjour";
+    await flushMutations();
+
+    expect(paragraph.textContent).toBe("Ola");
+    binding.disconnect();
+  });
+
   it("translates each observed element once per locale change", async () => {
     document.body.innerHTML = '<p data-i18n="greeting">First</p><p data-i18n="greeting">Second</p>';
     const i18n = createManager();

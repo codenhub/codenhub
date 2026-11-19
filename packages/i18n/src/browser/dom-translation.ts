@@ -237,6 +237,9 @@ export function createDomTranslator(options: DomTranslatorOptions): DomTranslato
 
   const translateText = (element: Element, rawKey: string, translate: (key: string) => string | undefined): void => {
     if (element.childElementCount > 0) {
+      // The application owns its content now, so a translation recorded for an earlier locale no longer describes it.
+      fallbackTexts.delete(element);
+      translatedTexts.delete(element);
       if (!options.isSilent) {
         console.warn(
           "%s",
