@@ -107,10 +107,10 @@ export interface I18n<TLocale extends string = string, TKey extends string = str
     setLocale(locale: TLocale): Promise<void>;
     resolveLocale(value: string): TLocale | undefined;
     matchLocale(preferences: readonly string[]): TLocale | undefined;
-    translate<K extends TKey, TValues extends object = {}>(key: K, ...params: TranslateParams<TMessages, K, TValues>): string;
+    translate<K extends TKey, TValues extends object = Readonly<Record<string, string | number | Date>>>(key: K, ...params: TranslateParams<TMessages, K, TValues>): string;
     has(key: TKey): boolean;
     has(key: string): key is TKey;
-    t<K extends TKey, TValues extends object = {}>(key: K, ...params: TranslateParams<TMessages, K, TValues>): string;
+    t<K extends TKey, TValues extends object = Readonly<Record<string, string | number | Date>>>(key: K, ...params: TranslateParams<TMessages, K, TValues>): string;
     formatNumber(value: number | bigint, options?: Intl.NumberFormatOptions): string;
     formatDate(value: Date | number, options?: Intl.DateTimeFormatOptions): string;
     formatRelativeTime(value: number, unit: Intl.RelativeTimeFormatUnit, options?: Intl.RelativeTimeFormatOptions): string;
@@ -431,7 +431,7 @@ Calls a listener after every applied `init()` and every applied locale change, s
 #### I18n › t
 
 ```ts
-t<K extends TKey, TValues extends object = {}>(key: K, ...params: TranslateParams<TMessages, K, TValues>): string;
+t<K extends TKey, TValues extends object = Readonly<Record<string, string | number | Date>>>(key: K, ...params: TranslateParams<TMessages, K, TValues>): string;
 ```
 
 Short alias of `I18n.translate`, the same bound function.
@@ -439,7 +439,7 @@ Short alias of `I18n.translate`, the same bound function.
 #### I18n › translate
 
 ```ts
-translate<K extends TKey, TValues extends object = {}>(key: K, ...params: TranslateParams<TMessages, K, TValues>): string;
+translate<K extends TKey, TValues extends object = Readonly<Record<string, string | number | Date>>>(key: K, ...params: TranslateParams<TMessages, K, TValues>): string;
 ```
 
 Resolves a trimmed key against the active locale's dictionary, then each configured parent locale's, such as `pt` for `pt-BR`, then the default locale's, and formats it as an ICU message.
