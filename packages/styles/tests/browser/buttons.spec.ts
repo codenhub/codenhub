@@ -1,16 +1,18 @@
 import { expect, test } from "./fixtures";
 import {
   BUTTON_INTENT_TOKENS,
+  type ButtonIntentToken,
   expectSameColor,
   flattenColor,
   getColorDistance,
   getContrastRatio,
   isTransparent,
+  ORIGIN,
   readSrgb,
-  type ButtonIntentToken,
+  stopTransitions,
 } from "./test-utils";
 
-const BUTTONS_URL = "http://localhost:5184/buttons/?env=vanilla";
+const BUTTONS_URL = `${ORIGIN}/buttons/?env=vanilla`;
 
 test("rejects a transparent ground when flattening a color", () => {
   expect(() => flattenColor("rgb(0 0 0 / 50%)", "transparent")).toThrow("Expected an opaque ground");
@@ -571,6 +573,8 @@ test.describe("buttons", () => {
      motion, which the aesthetics suite asserts for every look. */
   test("scales a pressed button on the base look", async ({ page }) => {
     await page.goto(BUTTONS_URL);
+    // The pressed scale itself, read once `:active` holds, not the travel into it.
+    await stopTransitions(page);
 
     const button = page.getByTestId("btn-default-none");
     const pressedScale = async () => {
@@ -582,8 +586,8 @@ test.describe("buttons", () => {
     await button.hover();
     await page.mouse.down();
     try {
-      /* The transform is transitioned, so this polls for the settled value. */
-      await expect.poll(pressedScale, "pressed on the base look").toBeCloseTo(0.97, 2);
+      expect(await button.evaluate((node) => node.matches(":active")), "held").toBe(true);
+      expect(await pressedScale(), "pressed on the base look").toBeCloseTo(0.97, 2);
     } finally {
       await page.mouse.up();
     }

@@ -1,6 +1,7 @@
 import { expect, test } from "./fixtures";
+import { ORIGIN, settleAnimations } from "./test-utils";
 
-const COMPONENTS_URL = "http://localhost:5184/components/?env=vanilla";
+const COMPONENTS_URL = `${ORIGIN}/components/?env=vanilla`;
 
 test.describe("theme", () => {
   test("exposes foundation tokens", async ({ page }) => {
@@ -280,8 +281,8 @@ test("prints a dark page in the light theme, and a filled box with its plate", a
         '<section class="dark"><p id="region">Region</p></section>' +
         '<button class="btn solid primary" id="button">Save</button></body></html>',
     );
-    await page.addStyleTag({ url: "http://localhost:5184/shared/entry-vanilla.css" });
-    await page.evaluate(() => Promise.all(document.getAnimations().map((animation) => animation.finished)));
+    await page.addStyleTag({ url: `${ORIGIN}/shared/entry-vanilla.css` });
+    await settleAnimations(page);
 
     return page.evaluate(() => {
       const style = (id: string) => getComputedStyle(document.getElementById(id)!);
@@ -317,9 +318,9 @@ test("prints a filled quotation with its plate", async ({ page }) => {
     '<!doctype html><html data-theme="light"><body>' +
       '<blockquote class="quote solid primary" id="quote">Quoted</blockquote></body></html>',
   );
-  await page.addStyleTag({ url: "http://localhost:5184/shared/entry-vanilla.css" });
+  await page.addStyleTag({ url: `${ORIGIN}/shared/entry-vanilla.css` });
   await page.emulateMedia({ media: "print" });
-  await page.evaluate(() => Promise.all(document.getAnimations().map((animation) => animation.finished)));
+  await settleAnimations(page);
 
   const quote = await page.evaluate(() => {
     const style = getComputedStyle(document.getElementById("quote")!);
@@ -342,16 +343,16 @@ test("prints a filled quotation with its plate", async ({ page }) => {
 test("styles components inside a shadow root", async ({ page }) => {
   await page.emulateMedia({ colorScheme: "dark" });
   await page.setContent(
-    '<!doctype html><html><head><link rel="stylesheet" href="http://localhost:5184/shared/entry-vanilla.css" /></head><body><div data-host></div></body></html>',
+    `<!doctype html><html><head><link rel="stylesheet" href="${ORIGIN}/shared/entry-vanilla.css" /></head><body><div data-host></div></body></html>`,
   );
   await page.waitForLoadState("load");
 
-  const read = await page.evaluate(async () => {
+  const read = await page.evaluate(async (origin) => {
     const root = document.querySelector("[data-host]")!.attachShadow({ mode: "open" });
     const link = document.createElement("link");
 
     link.rel = "stylesheet";
-    link.href = "http://localhost:5184/shared/entry-vanilla.css";
+    link.href = `${origin}/shared/entry-vanilla.css`;
     const loaded = new Promise((resolve) => link.addEventListener("load", resolve));
 
     root.append(link);
@@ -373,7 +374,7 @@ test("styles components inside a shadow root", async ({ page }) => {
       cardShadow: card.boxShadow,
       buttonHeight: getComputedStyle(button).minHeight,
     };
-  });
+  }, ORIGIN);
 
   expect(read.colorScheme, "the host follows the system scheme").toBe("light dark");
   expect(read.intent, "the neutral intent").not.toBe("");

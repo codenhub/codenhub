@@ -1,9 +1,9 @@
 import { expect, test } from "./fixtures";
-import { expectSameColor } from "./test-utils";
+import { expectSameColor, ORIGIN } from "./test-utils";
 
 /* Contracts that belong to no single component, asserted on elements this spec
    builds itself so it does not depend on which page holds a given fixture. */
-const PLAYGROUND_URL = "http://localhost:5184/?env=vanilla";
+const PLAYGROUND_URL = `${ORIGIN}/?env=vanilla`;
 
 /* A component that reads `--intent-*` without joining the reset list fails
    silently: the undefined property makes every `color-mix()` referencing it
@@ -173,7 +173,7 @@ test("takes each public component token from an ancestor", async ({ page }) => {
       '<blockquote class="quote" id="quote">Quoted</blockquote>' +
       "</div></body></html>",
   );
-  await page.addStyleTag({ url: "http://localhost:5184/shared/entry-vanilla.css" });
+  await page.addStyleTag({ url: `${ORIGIN}/shared/entry-vanilla.css` });
 
   const read = await page.evaluate(() => {
     const style = (id: string) => getComputedStyle(document.getElementById(id)!);
@@ -222,7 +222,7 @@ test("takes the table's padding and row hover from an ancestor", async ({ page }
       '</tbody><tbody style="--table-hover: transparent"><tr><td id="section-cell">Section</td></tr>' +
       "</tbody></table></div></body></html>",
   );
-  await page.addStyleTag({ url: "http://localhost:5184/shared/entry-vanilla.css" });
+  await page.addStyleTag({ url: `${ORIGIN}/shared/entry-vanilla.css` });
   await page.addStyleTag({ content: "td { transition: none !important; }" });
 
   const hoverColor = async (id: string) => {
@@ -248,7 +248,7 @@ test("takes the tooltip's linger from the bubble itself", async ({ page }) => {
       '<button>Trigger</button><span class="tooltip-bubble" id="bubble" style="--tooltip-linger: 800ms">Tip</span>' +
       "</span></body></html>",
   );
-  await page.addStyleTag({ url: "http://localhost:5184/shared/entry-vanilla.css" });
+  await page.addStyleTag({ url: `${ORIGIN}/shared/entry-vanilla.css` });
 
   const delay = await page
     .locator("#bubble")

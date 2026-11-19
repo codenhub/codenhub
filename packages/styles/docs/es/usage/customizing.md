@@ -2,7 +2,7 @@
 title: Personalización
 description: Consulta de los tokens de presentación y de material, los controles de las estéticas, las variables públicas de componente, la paleta generada y los helpers para construir tus propios componentes.
 order: 9
-source: 57296b90438d78d821003e3cfa9438ffa0ed9dad
+source: e1b49dcfe93316935a4587c2a9bc030350b591e1
 ---
 
 # Personalización
@@ -245,7 +245,7 @@ Otros tres tokens no tienen intención, presentación, fondo ni hover: `--palett
 
 ## Variables de componente
 
-Dieciocho variables las lee un único componente y son entradas soportadas. Un componente lee cada una donde se dibuja, así que un valor definido en el componente o en cualquier elemento que lo rodee le llega, y gana el valor más cercano: define `--switch-width` en un formulario y todos los switches que contiene lo toman. Cualquier otra variable que declare un componente, como `--surface-padding` o cualquier nombre que empiece por `--_`, es interna y puede cambiar en cualquier versión.
+Dieciocho variables las lee un único componente y son entradas soportadas. Un componente lee cada una donde se dibuja, así que un valor definido en el componente o en cualquier elemento que lo rodee le llega, y gana el valor más cercano: define `--switch-width` en un formulario y todos los switches que contiene lo toman. Cualquier otra variable que declare un componente, como cualquier nombre que empiece por `--_`, es interna y puede cambiar en cualquier versión.
 
 | Variable                | Elemento                      | Valor                           | Valor por defecto                                                                      | Efecto                                                                                                                              |
 | ----------------------- | ----------------------------- | ------------------------------- | -------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |

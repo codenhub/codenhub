@@ -237,6 +237,14 @@
     --_active-shimmer: var(--_m-active) anim-skeleton calc(var(--motion-duration-slow) * 4) linear infinite;
     --_indeterminate-width: var(--_m-indeterminate) 33%;
     --_indeterminate-sweep: var(--_m-indeterminate) anim-progress-indeterminate 1.5s infinite ease-in-out;
+    /* Under reduced motion the fill takes the whole track, dimmed, so a bar
+       that cannot sweep never reads as a known value: resting at a third, it
+       looked like a bar a third done. Still under `reduce` and `none` alike:
+       a pulse would have to survive the reset's `!important` stop, which can
+       name `.progress` but not a class built with `@apply`, so an applied bar
+       and the class would differ. */
+    --_indeterminate-still: var(--_m-indeterminate) 100%;
+    --_indeterminate-dim: var(--_m-indeterminate) 0.6;
 
     /* Printed as drawn. A browser leaves backgrounds off paper by default, and
        the bar is nothing but two backgrounds: the track and the value. */
@@ -343,11 +351,13 @@
     }
 
     /* Reduced motion, for the entries without the reset; see `box.css`. The
-       value moves without sliding, and the shimmer and the indeterminate sweep
-       stop where the reset would stop them: the fill rests at the start. */
+       value moves without sliding, the shimmer stops, and the indeterminate
+       sweep becomes the full, dimmed fill above. */
     @media (prefers-reduced-motion: reduce) {
       &:not(:where(:root[data-motion="full"] *))::after {
         transition-duration: 0.01ms;
+        width: var(--_indeterminate-still, var(--progress-value, 0%));
+        opacity: var(--_indeterminate-dim, 1);
       }
 
       &:not(:where(:root[data-motion="full"] *))::before,
@@ -358,6 +368,8 @@
 
     &:where(:root:is([data-motion="reduce"], [data-motion="none"]) *)::after {
       transition-duration: 0.01ms;
+      width: var(--_indeterminate-still, var(--progress-value, 0%));
+      opacity: var(--_indeterminate-dim, 1);
     }
 
     &:where(:root:is([data-motion="reduce"], [data-motion="none"]) *)::before,

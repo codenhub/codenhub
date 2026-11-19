@@ -1,7 +1,7 @@
 import { expect, test } from "./fixtures";
-import { expectSameColor } from "./test-utils";
+import { expectSameColor, ORIGIN, settleAnimations, stopTransitions } from "./test-utils";
 
-const NATIVE_URL = "http://localhost:5184/native/?env=vanilla";
+const NATIVE_URL = `${ORIGIN}/native/?env=vanilla`;
 
 test("maps content utilities onto unclassed native elements", async ({ page }) => {
   await page.goto(NATIVE_URL);
@@ -234,7 +234,7 @@ const CONTROLS = {
 
 for (const [environment, markup] of Object.entries(CONTROLS)) {
   test(`keeps every control's tracking normal on the ${environment} entry`, async ({ page }) => {
-    await page.goto(`http://localhost:5184/native/?env=${environment}`);
+    await page.goto(`${ORIGIN}/native/?env=${environment}`);
 
     const tracking = await page.evaluate((html) => {
       const read = (host: HTMLElement) =>
@@ -304,7 +304,7 @@ test("sizes every button label like the text around it", async ({ page }) => {
    as on every other entry. */
 test("sizes component labels like the text around them without the reset", async ({ page }) => {
   await page.setContent("<!doctype html><html><body></body></html>");
-  await page.addStyleTag({ url: "http://localhost:5184/shared/entry-components.css" });
+  await page.addStyleTag({ url: `${ORIGIN}/shared/entry-components.css` });
 
   const sizes = await page.evaluate(() => {
     const host = document.createElement("div");
@@ -338,7 +338,7 @@ test("keeps a tooltip-icon button at its own size on every entry", async ({ page
   expect(await measure(), "under /native").toEqual({ height: 20, width: 20 });
 
   await page.setContent("<!doctype html><html><body></body></html>");
-  await page.addStyleTag({ url: "http://localhost:5184/shared/entry-components.css" });
+  await page.addStyleTag({ url: `${ORIGIN}/shared/entry-components.css` });
   expect(await measure(), "under /components").toEqual({ height: 20, width: 20 });
 });
 
@@ -346,7 +346,7 @@ test("keeps a tooltip-icon button at its own size on every entry", async ({ page
    `/native` styles as those components drew solid lines beside them. */
 test("draws sketch's dashed accents on bare elements as on their classes", async ({ page }) => {
   await page.setContent("<!doctype html><html><body></body></html>");
-  await page.addStyleTag({ url: "http://localhost:5184/native/entry-vanilla.css" });
+  await page.addStyleTag({ url: `${ORIGIN}/native/entry-vanilla.css` });
 
   const styles = await page.evaluate(() => {
     const table = (attributes: string) =>
@@ -384,6 +384,51 @@ test("draws sketch's dashed accents on bare elements as on their classes", async
   expect(styles.bareCell).toBe(styles.classCell);
 });
 
+/* A switch is a checkbox element, so `/native`'s checkbox styling reached it:
+   the knob was the checkbox's mark, hidden until checked and masked to a tick,
+   so an unchecked switch showed no knob and a checked one drew a tick. A mixed
+   switch took the checked plate with its knob still off. It draws as it does
+   under the main entry. */
+test("draws a switch on /native as on the main entry", async ({ page }) => {
+  const draw = async (entry: string) => {
+    await page.setContent(
+      "<!doctype html><html><body>" +
+        '<input type="checkbox" class="switch" id="off" />' +
+        '<input type="checkbox" class="switch" id="on" checked />' +
+        '<input type="checkbox" class="switch" id="mixed" />' +
+        "</body></html>",
+    );
+    await page.addStyleTag({ url: `${ORIGIN}/${entry}` });
+    await stopTransitions(page);
+
+    return page.evaluate(() => {
+      document.querySelector<HTMLInputElement>("#mixed")!.indeterminate = true;
+
+      return Object.fromEntries(
+        ["off", "on", "mixed"].map((id) => {
+          const element = document.getElementById(id)!;
+          const knob = getComputedStyle(element, "::after");
+
+          return [
+            id,
+            {
+              track: getComputedStyle(element).backgroundColor,
+              knob: [knob.opacity, knob.maskImage, knob.width, knob.translate, knob.backgroundColor].join(" | "),
+            },
+          ];
+        }),
+      );
+    });
+  };
+
+  const main = await draw("shared/entry-vanilla.css");
+  const native = await draw("native/entry-vanilla.css");
+
+  expect(main.off?.knob, "the main entry draws an opaque, unmasked knob").toMatch(/^1 \| none \| /);
+  expect(main.mixed, "a mixed switch draws as an unchecked one").toEqual(main.off);
+  expect(native).toEqual(main);
+});
+
 /* `/native` styles elements without classes, and a `<progress>` and a
    `<dialog>` were the two with a component and no mapping: each rendered as
    the user agent draws it, a system-blue bar and a black-bordered box, beside
@@ -395,7 +440,7 @@ test("draws a bare progress element as the progress bar", async ({ page }) => {
       '<div class="progress" id="class" style="width:200px;--progress-value:40%;margin-top:16px"></div>' +
       "</body></html>",
   );
-  await page.addStyleTag({ url: "http://localhost:5184/native/entry-vanilla.css" });
+  await page.addStyleTag({ url: `${ORIGIN}/native/entry-vanilla.css` });
 
   const sample = async (selector: string) => {
     const png = (await page.locator(selector).screenshot({ animations: "disabled" })).toString("base64");
@@ -441,8 +486,8 @@ test("draws a bare progress element in the colour it sits in, as the class does"
       '<div class="progress" id="class" style="width:200px;--progress-value:40%;margin-top:16px"></div>' +
       "</div></body></html>",
   );
-  await page.addStyleTag({ url: "http://localhost:5184/native/entry-vanilla.css" });
-  await page.evaluate(() => Promise.all(document.getAnimations().map((animation) => animation.finished)));
+  await page.addStyleTag({ url: `${ORIGIN}/native/entry-vanilla.css` });
+  await settleAnimations(page);
 
   const filled = async (selector: string) => {
     const png = (await page.locator(selector).screenshot({ animations: "disabled" })).toString("base64");
@@ -489,7 +534,7 @@ test("keeps the checked plate on a bare toggle with a quiet presentation", async
       '<input type="radio" class="soft" id="soft-radio" checked />' +
       "</body></html>",
   );
-  await page.addStyleTag({ url: "http://localhost:5184/native/entry-vanilla.css" });
+  await page.addStyleTag({ url: `${ORIGIN}/native/entry-vanilla.css` });
   // Read once after the change, so WebKit starts the plate's transition
   // before the wait collects the running animations.
   await page.evaluate(() => {
@@ -497,9 +542,8 @@ test("keeps the checked plate on a bare toggle with a quiet presentation", async
 
     mixed.indeterminate = true;
     void getComputedStyle(mixed).backgroundColor;
-
-    return Promise.all(document.getAnimations().map((animation) => animation.finished));
   });
+  await settleAnimations(page);
 
   const plates = await page.evaluate(() =>
     Object.fromEntries(
@@ -525,11 +569,11 @@ test("draws a bare dialog as a floating card, and keeps it closed until opened",
       '<dialog class="card floating" id="class" open>Open</dialog>' +
       "</body></html>",
   );
-  await page.addStyleTag({ url: "http://localhost:5184/native/entry-vanilla.css" });
+  await page.addStyleTag({ url: `${ORIGIN}/native/entry-vanilla.css` });
 
   /* The sheet arrives after the first render, so every value transitions to
      it; Firefox reads them part-way. */
-  await page.evaluate(() => Promise.all(document.getAnimations().map((animation) => animation.finished)));
+  await settleAnimations(page);
 
   const read = (selector: string) =>
     page.evaluate((target) => {
@@ -551,10 +595,10 @@ test("draws a bare dialog as a floating card, and keeps it closed until opened",
   expect(await read("#bare")).toEqual(await read("#class"));
 });
 
-test("sweeps a bare progress element with no value, and rests it under reduced motion", async ({ page }) => {
+test("sweeps a bare progress element with no value, and fills its track under reduced motion", async ({ page }) => {
   const read = async () => {
     await page.setContent('<!doctype html><html><body><progress id="bare"></progress></body></html>');
-    await page.addStyleTag({ url: "http://localhost:5184/native/entry-vanilla.css" });
+    await page.addStyleTag({ url: `${ORIGIN}/native/entry-vanilla.css` });
 
     return page.evaluate(() => {
       const styles = getComputedStyle(document.getElementById("bare")!);
@@ -569,16 +613,21 @@ test("sweeps a bare progress element with no value, and rests it under reduced m
   expect(moving.image).toContain("linear-gradient");
   expect(moving.size).toBe("33% 100%");
 
+  /* No sweep: the whole track, dimmed and still, as `.progress.indeterminate`
+     does; accessibility.spec.ts covers every motion setting. */
   await page.emulateMedia({ reducedMotion: "reduce" });
 
-  expect((await read()).animation).toBe("none");
+  const still = await read();
+
+  expect(still.animation).toBe("none");
+  expect(still.size).toBe("100% 100%");
 });
 
 test("sweeps a bare progress element from the start side under right-to-left text", async ({ page }) => {
   await page.setContent(
     '<!doctype html><html><body><progress id="ltr"></progress><div dir="rtl"><progress id="rtl"></progress></div></body></html>',
   );
-  await page.addStyleTag({ url: "http://localhost:5184/native/entry-vanilla.css" });
+  await page.addStyleTag({ url: `${ORIGIN}/native/entry-vanilla.css` });
 
   const direction = (id: string) =>
     page.evaluate((element) => getComputedStyle(document.getElementById(element)!).animationDirection, id);
@@ -592,7 +641,7 @@ test("draws a bare progress element's track in system colours in forced colours"
   await page.setContent(
     '<!doctype html><html><body><progress id="bare" value="40" max="100"></progress></body></html>',
   );
-  await page.addStyleTag({ url: "http://localhost:5184/native/entry-vanilla.css" });
+  await page.addStyleTag({ url: `${ORIGIN}/native/entry-vanilla.css` });
 
   const supported = await page.evaluate(
     () => matchMedia("(forced-colors: active)").matches && CSS.supports("forced-color-adjust", "none"),

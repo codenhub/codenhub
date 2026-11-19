@@ -91,9 +91,10 @@
     outline-offset: var(--focus-ring-offset, calc(-1 * var(--ui-border-width, var(--border-width))));
   }
 
-  /* Not on a control inside an `.input-group`, which draws the field's ring
+  /* Not on a field inside an `.input-group`, which draws the field's ring
      for it: an important declaration in `base` beats any later one, so the
-     group could not suppress this one and a focused field drew two rings. */
+     group could not suppress this one and a focused field drew two rings. A
+     toggle is never the group's field, and the group drops its ring for one. */
   @media (forced-colors: active) {
     input:is(
         :not([type]),
@@ -108,10 +109,9 @@
         [type="datetime-local"],
         [type="month"],
         [type="week"],
-        [type="time"],
-        [type="checkbox"],
-        [type="radio"]
+        [type="time"]
       ):focus-visible:not(.input-group > *),
+    input:is([type="checkbox"], [type="radio"]):focus-visible,
     textarea:focus-visible:not(.input-group > *),
     select:focus-visible:not(.input-group > *) {
       outline: 2px solid Highlight !important;

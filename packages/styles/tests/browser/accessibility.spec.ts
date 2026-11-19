@@ -3,12 +3,12 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { expect, test } from "./fixtures";
-import { getContrastRatio } from "./test-utils";
+import { getContrastRatio, ORIGIN, settleAnimations, stopTransitions } from "./test-utils";
 
-const FEEDBACK_URL = "http://localhost:5184/feedback/?env=vanilla";
-const NATIVE_URL = "http://localhost:5184/native/?env=vanilla";
-const COMPONENT_STYLES_URL = "http://localhost:5184/shared/entry-components.css";
-const NATIVE_STYLES_URL = "http://localhost:5184/native/entry-vanilla.css";
+const FEEDBACK_URL = `${ORIGIN}/feedback/?env=vanilla`;
+const NATIVE_URL = `${ORIGIN}/native/?env=vanilla`;
+const COMPONENT_STYLES_URL = `${ORIGIN}/shared/entry-components.css`;
+const NATIVE_STYLES_URL = `${ORIGIN}/native/entry-vanilla.css`;
 const CONTROL_CLASSES = ["text-control", "ipt", "textarea", "select", "checkbox", "radio", "switch"] as const;
 
 test("associates every native form label with its control", async ({ page }) => {
@@ -147,7 +147,7 @@ test("uses visible system-color outlines for form controls in forced colors", as
    which is a text field all the same: it once fell back to the generic ring. */
 for (const [entry, url] of [
   ["/native", NATIVE_STYLES_URL],
-  ["the reset", "http://localhost:5184/shared/entry-vanilla.css"],
+  ["the reset", `${ORIGIN}/shared/entry-vanilla.css`],
 ] as const) {
   test(`uses visible system-color outlines for unclassed native controls in forced colors from ${entry}`, async ({
     page,
@@ -478,6 +478,55 @@ for (const { name, media, motion: level, fades } of MOTION_CASES) {
   });
 }
 
+/* Resting at a third of the track, an indeterminate bar that could not sweep
+   read as a bar a third done. Under reduced motion it takes the whole track,
+   dimmed and still, with the reset and without it, and a bare `<progress>`
+   with no value does the same. */
+const STILL_BAR_SHEETS = [
+  { name: "the main entry", url: `${ORIGIN}/shared/entry-vanilla.css` },
+  { name: "/components", url: COMPONENT_STYLES_URL },
+  { name: "/native", url: NATIVE_STYLES_URL },
+] as const;
+
+for (const { name: sheet, url } of STILL_BAR_SHEETS) {
+  for (const { name, media, motion: level } of MOTION_CASES) {
+    test(`fills an indeterminate bar's track instead of a third when ${name}, ${sheet}`, async ({ page }) => {
+      await page.emulateMedia({ reducedMotion: media });
+      await page.setContent(
+        `<!doctype html><html${level ? ` data-motion="${level}"` : ""}><body>` +
+          '<div class="progress indeterminate" style="width: 300px"></div>' +
+          '<progress style="width: 300px"></progress></body></html>',
+      );
+      await page.addStyleTag({ url });
+      await settleAnimations(page);
+
+      const bar = await page.evaluate(() => {
+        const track = document.querySelector(".progress")!;
+        const fill = getComputedStyle(track, "::after");
+        const native = getComputedStyle(document.querySelector("progress")!);
+
+        return {
+          fill: Number.parseFloat(fill.width) / track.clientWidth,
+          name: fill.animationName,
+          opacity: fill.opacity,
+          nativeSize: native.backgroundSize,
+          nativeName: native.animationName,
+          nativeStrength: native.getPropertyValue("--_progress-strength").trim(),
+        };
+      });
+
+      expect(bar.fill, "the fill spans the track").toBeCloseTo(1, 2);
+      expect(bar.name).toBe("none");
+      expect(bar.opacity, "dimmed, so it is not a finished bar").toBe("0.6");
+      if (sheet === "/native") {
+        expect(bar.nativeSize, "a bare <progress> fills its track too").toBe("100% 100%");
+        expect(bar.nativeName).toBe("none");
+        expect(bar.nativeStrength, "and is dimmed the same").toBe("60%");
+      }
+    });
+  }
+}
+
 /* The app's `data-motion="full"` wins over the system's request: the
    components move as they do with no preference. */
 test('keeps component motion under data-motion="full" when the system asks for less', async ({ page }) => {
@@ -598,7 +647,7 @@ test("lets a layer ordered before base keep an animation under reduced motion", 
         @keyframes spin { to { rotate: 1turn; } }
         .essential, .ordinary { animation: spin 1s linear infinite !important; }
       </style>
-      <link rel="stylesheet" href="http://localhost:5184/shared/entry-vanilla.css">
+      <link rel="stylesheet" href="${ORIGIN}/shared/entry-vanilla.css">
     </head><body><div class="essential"></div><div class="ordinary"></div></body></html>`,
     { waitUntil: "load" },
   );
@@ -815,22 +864,15 @@ test("separates the focus ring from a filled control with a line of the page col
       "utf8",
     ),
   });
+  /* The ring fades in. With no transition it is whole the moment focus lands,
+     so a read cannot catch it partway, however slowly the engine paints. */
+  await stopTransitions(page);
 
   const focusedShadow = async (id: string) => {
     /* A real keyboard move from the sibling before it: every engine gates
        `:focus-visible` on its own heuristic, and all three agree on Tab. */
     await page.locator(`#before-${id}`).focus();
     await page.keyboard.press("Tab");
-    await page.evaluate(
-      (elementId) =>
-        Promise.all(
-          document
-            .getElementById(elementId)!
-            .getAnimations()
-            .map((animation) => animation.finished),
-        ),
-      id,
-    );
 
     return page.evaluate((elementId) => {
       const element = document.getElementById(elementId)!;
@@ -871,7 +913,11 @@ test("separates the focus ring from a filled control with a line of the page col
    prints in the plate's ink, so the line inside the ring takes that ink. */
 test("shows a focused control on a solid surface", async ({ page }) => {
   await page.setContent("<!doctype html><html><body></body></html>");
-  await page.addStyleTag({ url: "http://localhost:5184/shared/entry-vanilla.css" });
+  await page.addStyleTag({ url: `${ORIGIN}/shared/entry-vanilla.css` });
+  /* The ring fades in, and a shadow read before the fade ends has no inset
+     line yet: a fixed wait of twice the fade lost to CI's WebKit. With no
+     transition the ring is whole the moment focus lands. */
+  await stopTransitions(page);
 
   const cases = [];
 
@@ -903,17 +949,6 @@ test("shows a focused control on a solid surface", async ({ page }) => {
     await page.locator("#before").focus();
     // oxlint-disable-next-line no-await-in-loop -- one control holds focus at a time.
     await page.keyboard.press("Tab");
-    /* The ring fades in, and a shadow read before the fade ends has no inset
-       line yet. A fixed wait of twice the fade was not enough on CI's WebKit. */
-    // oxlint-disable-next-line no-await-in-loop -- the ring fades in.
-    await page.evaluate(() =>
-      Promise.all(
-        document
-          .getElementById("control")!
-          .getAnimations()
-          .map((animation) => animation.finished),
-      ),
-    );
     // oxlint-disable-next-line no-await-in-loop -- one control holds focus at a time.
     const read = await page.evaluate(() => {
       const element = document.getElementById("control")!;

@@ -2,7 +2,7 @@
 title: Configuración inicial
 description: Instala el paquete, elige entre CSS compilado o código fuente de Tailwind y renderiza la estructura base de la página de ajustes.
 order: 1
-source: 6c3027b30bbb7ef0aedc157cab4b1f6fb58b0a4a
+source: 3054c215b54a165e31d6c9104997150bd837dedc
 ---
 
 # Configuración inicial
@@ -102,7 +102,7 @@ Cada ruta de import resuelve el mismo archivo con las condiciones de exportació
 | Ruta de import                   | Qué contiene y qué cambia                                                                                                                                                                                                                                                                                                                         |
 | -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `@codenhub/styles`               | Hoja de estilos completa compilada: la salida base y de tema de Tailwind, tokens, tipografía, helpers de layout y de contenido, componentes y el reset. Aplica el reset global, el tema raíz y las reglas de foco.                                                                                                                                |
-| `@codenhub/styles/theme`         | Tokens compilados y las clases de intención, presentación, elevación y patrón de esquinas. Define las propiedades del tema raíz y los selectores claro y oscuro. Sin reset ni componentes.                                                                                                                                                        |
+| `@codenhub/styles/theme`         | Tokens compilados y las clases de intención, presentación, elevación, patrón de esquinas y tamaño, además de los modificadores compartidos como `.tight` y `.p-sm`, que solo tienen efecto en un componente que los lee. Define las propiedades del tema raíz y los selectores claro y oscuro. Sin reset ni componentes.                          |
 | `@codenhub/styles/palette`       | Custom properties `--palette-*` generadas: el color de relleno, de texto y de borde de cada combinación de intención y presentación como valor plano, más los colores planos `border`, `surface` y `text`. Para código que no puede usar el propio paquete; consulta [Personalización → Paleta generada](./usage/customizing.md#paleta-generada). |
 | `@codenhub/styles/components`    | Tokens compilados, helpers de tipografía y todas las clases de componentes. Cada componente lleva su propia regla de movimiento reducido, y la corrección para `<dialog>` cerrado viene con `.card`. Sin reset, sin helpers de layout ni de contenido, sin mapeo sin clases.                                                                      |
 | `@codenhub/styles/native`        | Tokens, tipografía, helpers de layout y de contenido, componentes y el reset del paquete compilados, más el [mapeo sin clases](#html-sin-clases) para elementos HTML simples. Sin el Preflight de Tailwind. Aplica el reset y selectores de elemento amplios.                                                                                     |

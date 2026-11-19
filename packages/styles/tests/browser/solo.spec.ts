@@ -3,7 +3,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { expect, test, type Page } from "./fixtures";
-import { drawsCornerShape, expectSameColor, readSrgb } from "./test-utils";
+import { drawsCornerShape, expectSameColor, readSrgb, settleAnimations, stopTransitions } from "./test-utils";
 
 /* A solo class exists for an element this package does not style, on a page
    that may never have loaded the base stylesheet. So unlike the aesthetic
@@ -17,8 +17,7 @@ const built = (file: string) => readFile(path.join(packageRoot, "dist", file), "
    animates in from its initial value, and a class toggled later animates too. A
    consumer's page has the sheet before it renders; waiting the transitions out
    reads what that page shows. */
-const settle = (page: Page) =>
-  page.evaluate(() => Promise.all(document.getAnimations().map((animation) => animation.finished)));
+const settle = (page: Page) => settleAnimations(page);
 
 const load = async (page: Page, files: readonly string[], markup: string, extraCss = "") => {
   await page.setContent(`<!doctype html><html><body>${markup}</body></html>`);
@@ -105,8 +104,8 @@ test.describe("solo utilities", () => {
     expect(neobrutalism["border-top-left-radius"], "neobrutalism corner").toBe("0px");
     expect(neobrutalism["box-shadow"], "neobrutalism slab").toMatch(/\b4px 4px 0px 0px\b/);
 
-    /* The clip removes a border, so the ring replaces it. */
-    expect(pixel["clip-path"], "pixel silhouette").toMatch(/^polygon/);
+    /* The ring replaces the border; the stepped clip is an action's, below. */
+    expect(pixel["clip-path"], "a pixel container is not clipped").toBe("none");
     expect(pixel["border-top-width"], "pixel border").toBe("0px");
     expect(pixel["box-shadow"], "pixel ring").toMatch(/inset|0px 0px 0px 4px/);
     expect(pixel["font-family"], "pixel font falls back to monospace").toContain("monospace");
@@ -245,6 +244,12 @@ test.describe("solo utilities", () => {
        <button id="disabled" class="neobrutalism-solo" style="margin: 40px" disabled>Off</button>`,
     );
 
+    /* The pressed state itself, not a frame of the travel into it: with no
+       transition the value is final once the element matches `:active`, so a
+       press that never comes fails rather than timing out, and one that does
+       is not missed by a slow engine. */
+    await stopTransitions(page);
+
     const pressed = async (selector: string) => {
       const target = page.locator(selector);
 
@@ -252,22 +257,22 @@ test.describe("solo utilities", () => {
       await page.mouse.down();
 
       try {
-        // Transitions run, so this polls for the settled value.
-        return await expect
-          .poll(() => target.evaluate((node) => getComputedStyle(node).translate), { timeout: 2000 })
-          .toBe("4px 4px")
-          .then(
-            () => true,
-            () => false,
-          );
+        return await target.evaluate((node) => ({
+          active: node.matches(":active"),
+          translate: getComputedStyle(node).translate,
+        }));
       } finally {
         await page.mouse.up();
       }
     };
 
-    expect(await pressed("#action"), "action").toBe(true);
-    expect(await pressed("#container"), "container").toBe(false);
-    expect(await pressed("#disabled"), "disabled action").toBe(false);
+    const action = await pressed("#action");
+    const container = await pressed("#container");
+
+    expect(action, "action").toEqual({ active: true, translate: "4px 4px" });
+    expect(container.active, "the container is held").toBe(true);
+    expect(container.translate, "container").not.toBe("4px 4px");
+    expect((await pressed("#disabled")).translate, "disabled action").not.toBe("4px 4px");
   });
 
   /* `.disabled` and `[data-disabled]` are the documented ways to disable what
@@ -463,6 +468,38 @@ test.describe("solo utilities", () => {
 
     expect((await read(page, "#action", ["font-weight"]))["font-weight"], "action").toBe("800");
     expect((await read(page, "#container", ["font-weight"]))["font-weight"], "container").toBe("400");
+  });
+
+  /* `clip-path` cuts everything outside the shape, so on a container it cut
+     off what the element holds: a menu, a pinned badge, a child's focus ring.
+     As under `.pixel`, only an action takes the stepped corner. */
+  test("clip only a pixel action, so a pixel container keeps what it holds", async ({ page }) => {
+    await load(
+      page,
+      ["aesthetics/pixel.css"],
+      `<div id="pane" class="pixel-solo" style="position: relative; width: 120px; height: 60px">
+         <span id="pinned" style="position: absolute; top: -8px; right: -8px; width: 16px; height: 16px; background: red"></span>
+       </div>
+       <button id="action" class="pixel-solo">Go</button>
+       <a id="link" class="pixel-solo" href="#">Go</a>`,
+    );
+
+    const pane = await read(page, "#pane", ["clip-path", "border-top-width", "box-shadow"]);
+
+    expect(pane["clip-path"], "a container takes no clip").toBe("none");
+    expect(pane["border-top-width"], "and the ring for its edge").toBe("0px");
+    expect(pane["box-shadow"]).toMatch(/inset/);
+    expect((await read(page, "#action", ["clip-path"]))["clip-path"], "a button").toMatch(/^polygon/);
+    expect((await read(page, "#link", ["clip-path"]))["clip-path"], "a link").toMatch(/^polygon/);
+
+    /* The pinned corner past the edge paints: the topmost element there is it. */
+    const hit = await page.evaluate(() => {
+      const box = document.querySelector("#pane")!.getBoundingClientRect();
+
+      return document.elementFromPoint(box.right + 4, box.top - 4)?.id;
+    });
+
+    expect(hit).toBe("pinned");
   });
 
   /* The clip takes the focus outline with it, so a focused pixel element draws

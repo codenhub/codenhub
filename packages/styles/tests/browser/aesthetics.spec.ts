@@ -5,18 +5,20 @@ import {
   flattenColor,
   getColorDistance,
   isTransparent,
+  ORIGIN,
   readSrgb,
+  stopTransitions,
 } from "./test-utils";
 
 /* An aesthetic is a cascading class the playground puts on the preview root, so
    these read the ordinary component fixtures under a chosen aesthetic rather
    than a separate set that could drift from them. */
-const BUTTONS_URL = "http://localhost:5184/buttons/?env=vanilla";
-const FEEDBACK_URL = "http://localhost:5184/feedback/?env=vanilla";
-const FORMS_URL = "http://localhost:5184/forms/?env=vanilla";
-const SURFACES_URL = "http://localhost:5184/surfaces/?env=vanilla";
-const TYPOGRAPHY_URL = "http://localhost:5184/typography/?env=vanilla";
-const NATIVE_URL = "http://localhost:5184/native/?env=vanilla";
+const BUTTONS_URL = `${ORIGIN}/buttons/?env=vanilla`;
+const FEEDBACK_URL = `${ORIGIN}/feedback/?env=vanilla`;
+const FORMS_URL = `${ORIGIN}/forms/?env=vanilla`;
+const SURFACES_URL = `${ORIGIN}/surfaces/?env=vanilla`;
+const TYPOGRAPHY_URL = `${ORIGIN}/typography/?env=vanilla`;
+const NATIVE_URL = `${ORIGIN}/native/?env=vanilla`;
 
 const withAesthetic = (url: string, aesthetic: string) => `${url}&aesthetic=${aesthetic}`;
 
@@ -422,35 +424,35 @@ test.describe("aesthetics", () => {
         /* Hover keeps the resting offset slab and does not move the element:
            `box-hover`'s derived fill tint is the whole hover response. */
         await element.hover();
-        await expect
-          .poll(() => element.evaluate((node) => getComputedStyle(node).transform), `${testId} hover`)
-          .toBe("none");
-        await expect
-          .poll(() => element.evaluate((node) => getComputedStyle(node).boxShadow), `${testId} hover`)
-          .toMatch(/\b4px 4px 0px 0px\b/);
+        expect(await element.evaluate((node) => node.matches(":hover")), `${testId} hovered`).toBe(true);
+        expect(await element.evaluate((node) => getComputedStyle(node).transform), `${testId} hover`).toBe("none");
+        expect(await element.evaluate((node) => getComputedStyle(node).boxShadow), `${testId} hover`).toMatch(
+          /\b4px 4px 0px 0px\b/,
+        );
 
         /* The press travels the offset and collapses the shadow. A held pointer is
-           what drives `:active`, which no keyboard move can. Both properties are
-           transitioned, so these poll for the settled value. */
+           what drives `:active`, which no keyboard move can. Transitions are
+           off, so each state reads final at once. */
         await page.mouse.down();
         try {
-          await expect
-            .poll(() => element.evaluate((node) => getComputedStyle(node).translate), `${testId} press`)
-            .toBe("4px 4px");
-          await expect
-            .poll(() => element.evaluate((node) => getComputedStyle(node).boxShadow), `${testId} press`)
-            .toMatch(/\b0px 0px 0px 0px\b/);
+          expect(await element.evaluate((node) => node.matches(":active")), `${testId} held`).toBe(true);
+          expect(await element.evaluate((node) => getComputedStyle(node).translate), `${testId} press`).toBe("4px 4px");
+          expect(await element.evaluate((node) => getComputedStyle(node).boxShadow), `${testId} press`).toMatch(
+            /\b0px 0px 0px 0px\b/,
+          );
         } finally {
           await page.mouse.up();
         }
       };
 
       await page.goto(withAesthetic(BUTTONS_URL, "neobrutalism"));
+      await stopTransitions(page);
       await expectHeldThenPressed("btn-default-none");
 
       /* A card responds only when it opts in with `.interactive`: a plain card is
          a container, not a control. */
       await page.goto(withAesthetic(SURFACES_URL, "neobrutalism"));
+      await stopTransitions(page);
       await expectHeldThenPressed("card-default-none-interactive");
     });
 
@@ -1928,17 +1930,20 @@ test.describe("aesthetics", () => {
 
       const card = page.getByTestId("card-default-none-interactive");
 
+      // The pressed state itself, read once `:active` holds.
+      await stopTransitions(page);
       await card.hover();
       await page.mouse.down();
 
       try {
-        /* Both properties are transitioned, so these poll for the settled value. */
-        await expect
-          .poll(() => card.evaluate((node) => getComputedStyle(node).translate), "the tile travels the bar's depth")
-          .toBe("0px 4px");
-        await expect
-          .poll(() => card.evaluate((node) => getComputedStyle(node).boxShadow), "the bar collapses under it")
-          .toMatch(/\b0px 0px 0px 0px\b/);
+        expect(await card.evaluate((node) => node.matches(":active")), "held").toBe(true);
+        expect(
+          await card.evaluate((node) => getComputedStyle(node).translate),
+          "the tile travels the bar's depth",
+        ).toBe("0px 4px");
+        expect(await card.evaluate((node) => getComputedStyle(node).boxShadow), "the bar collapses under it").toMatch(
+          /\b0px 0px 0px 0px\b/,
+        );
       } finally {
         await page.mouse.up();
       }

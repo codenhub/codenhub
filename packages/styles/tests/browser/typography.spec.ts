@@ -5,10 +5,11 @@ import {
   getColorDistance,
   getContrastRatio,
   isTransparent,
+  ORIGIN,
   readSrgb,
 } from "./test-utils";
 
-const TYPOGRAPHY_URL = "http://localhost:5184/typography/?env=vanilla";
+const TYPOGRAPHY_URL = `${ORIGIN}/typography/?env=vanilla`;
 
 test("styles complete quiet tables while preserving table layout", async ({ page }) => {
   await page.goto(TYPOGRAPHY_URL);
@@ -220,7 +221,7 @@ test("paints a table row's own intent while other rows keep the table's", async 
 
     await target.hover();
     const hover = await target.evaluate(async (element) => {
-      await Promise.all(element.getAnimations().map((animation) => animation.finished));
+      await Promise.allSettled(element.getAnimations().map((animation) => animation.finished));
       return getComputedStyle(element).backgroundColor;
     });
     await page.mouse.move(0, 0);
@@ -762,7 +763,7 @@ test("draws a table's rules under an aesthetic that caps its border", async ({ p
    head while the table kept the quiet plate. */
 test("renders a container's fill class on a table or a chip as the element's own", async ({ page }) => {
   await page.setContent("<!doctype html><html><body></body></html>");
-  await page.addStyleTag({ url: "http://localhost:5184/shared/entry-vanilla.css" });
+  await page.addStyleTag({ url: `${ORIGIN}/shared/entry-vanilla.css` });
 
   const pairs = await page.evaluate(() => {
     const read = (html: string) => {

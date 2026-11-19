@@ -3,7 +3,7 @@ title: Visión general
 description: Cómo se carga la hoja de estilos en el build de un framework, y qué guía seguir.
 group: Integración
 order: 2
-source: 91d8e680c143e0d93722ea31cb97dfe1c9ff1ece
+source: 90c207e467034bfeb56dba5cfdfa6ad749158af7
 ---
 
 # Integración
@@ -15,7 +15,7 @@ Esta sección es un desvío del orden de lectura principal, para proyectos cuyo 
 Todos los stacks hacen los mismos dos imports, desde el mismo tipo de lugar: un layout raíz, un archivo de entrada de la aplicación o un archivo CSS global, nunca una página o un componente más abajo en el árbol:
 
 1. Un [punto de entrada](../setup.md#todos-los-puntos-de-entrada): el compilado `@codenhub/styles` para cualquier build, o `@codenhub/styles/tw` cuando el proyecto ya usa Tailwind CSS v4.
-2. `@codenhub/styles/aesthetics` (o `/aesthetics/tw`) después, solo si el proyecto usa una [estética](../usage/aesthetics.md).
+2. `@codenhub/styles/aesthetics` (o `/aesthetics/tw`), solo si el proyecto usa una [estética](../usage/aesthetics.md). Puede ir antes o después del punto de entrada, porque cada punto de entrada declara las [capas de cascada](../setup.md#capas-de-cascada) antes de usar una.
 
 Importar desde un solo lugar importa por dos motivos. Algunos frameworks solo _permiten_ CSS global desde un archivo raíz designado y, si no, el build falla; el Pages Router de Next.js es uno de ellos, consulta [Next.js → Solución de problemas](./nextjs.md#solución-de-problemas). Donde un framework lo permite de forma más amplia, como hace el App Router de Next.js, importar desde la raíz sigue siendo la opción recomendada para que el orden del CSS sea predecible; además, importar en cada componente cargaría las mismas reglas de reset y de tokens una vez por componente en lugar de una vez por aplicación.
 

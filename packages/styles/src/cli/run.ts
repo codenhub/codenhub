@@ -201,7 +201,7 @@ async function build(options: BuildOptions, io: CliIo): Promise<string> {
   try {
     await fs.mkdir(path.dirname(target), { recursive: true });
     await fs.writeFile(temporary, css);
-    await fs.rename(temporary, target);
+    await replaceFile(temporary, target);
   } catch (error) {
     // Best effort: the error worth reporting is the one above.
     await fs.rm(temporary, { force: true }).catch(() => undefined);
@@ -337,28 +337,128 @@ function readPackageFile(relativePath: string): Promise<string> {
   return fs.readFile(path.resolve(packageRoot, relativePath), "utf8");
 }
 
+/* Windows refuses to rename over a file another process holds open without
+   delete sharing, which an antivirus scan or a dev server does for a moment
+   after a write. The rename is retried briefly there; elsewhere it is atomic
+   and fails only for a reason a retry does not fix. */
+async function replaceFile(from: string, to: string): Promise<void> {
+  const busy = new Set(["EACCES", "EBUSY", "EPERM"]);
+
+  for (let attempt = 1; ; attempt += 1) {
+    try {
+      // oxlint-disable-next-line no-await-in-loop -- each attempt waits on the one before
+      await fs.rename(from, to);
+      return;
+    } catch (error) {
+      if (process.platform !== "win32" || attempt === 10 || !busy.has((error as { code?: string }).code ?? "")) {
+        throw error;
+      }
+
+      // oxlint-disable-next-line no-await-in-loop -- the backoff between attempts
+      await new Promise((resolve) => setTimeout(resolve, attempt * 20));
+    }
+  }
+}
+
 function assertNodeVersion(nodeVersion: string): void {
   if (Number.parseInt(nodeVersion, 10) < MIN_NODE_MAJOR) {
     throw new Error(`this command needs Node.js ${MIN_NODE_MAJOR} or newer; this is Node.js ${nodeVersion}.`);
   }
 }
 
-/* The file a link leads to, or the path itself while nothing is there yet. */
+/* The file a link leads to, or the path itself while nothing is there yet. A
+   link whose target does not exist yet still leads there: the stylesheet is
+   written where it points rather than over the link. */
 async function realPathOf(file: string): Promise<string> {
   try {
     return await fs.realpath(file);
   } catch (error) {
-    if ((error as { code?: string }).code === "ENOENT") {
-      return file;
+    if ((error as { code?: string }).code !== "ENOENT") {
+      throw error;
     }
 
-    throw error;
+    return process.platform === "win32" ? windowsTargetOf(file) : posixTargetOf(file);
   }
 }
 
+/* Windows collapses a `..` before it follows any link, as `path.resolve` does. */
+async function windowsTargetOf(file: string): Promise<string> {
+  const link = await fs.readlink(file).catch(() => undefined);
+
+  return link === undefined ? file : realPathOf(path.resolve(path.dirname(file), link));
+}
+
+/* POSIX follows each name in turn, a link included, before the `..` after it,
+   so `alias/../real.css` with `alias` a link into another folder is a
+   `real.css` there. `path.resolve` collapses the `..` first and named another
+   file, which the build overwrote without checking it. The walk does what the
+   system does: a link's target replaces it, and a `..` steps out of the folder
+   reached so far. A folder that does not exist yet is created by the write, so
+   the names after it are taken as written; a `..` after one has no folder to
+   step out of, and the system refuses the path, so this does too. */
+async function posixTargetOf(file: string): Promise<string> {
+  const names = (value: string) => value.split("/").filter((name) => name !== "" && name !== ".");
+  const pending = names(file);
+  let current = "/";
+  let missing = false;
+  let links = 0;
+
+  for (let name = pending.shift(); name !== undefined; name = pending.shift()) {
+    if (name === "..") {
+      if (missing) {
+        throw new Error(`cannot follow the --output link at ${file}: it leads out of a folder that does not exist.`);
+      }
+      current = path.dirname(current);
+      continue;
+    }
+
+    const next = path.join(current, name);
+
+    if (missing) {
+      current = next;
+      continue;
+    }
+
+    let link: string | undefined;
+
+    try {
+      // oxlint-disable-next-line no-await-in-loop -- each name is read from the folder the one before it reached
+      link = await fs.readlink(next);
+    } catch (error) {
+      const { code } = error as { code?: string };
+
+      if (code === "ENOENT") {
+        missing = true;
+      } else if (code !== "EINVAL") {
+        throw error;
+      }
+    }
+
+    if (link === undefined) {
+      current = next;
+      continue;
+    }
+
+    // The system's own limit is 40 on Linux; past it, a chain of links is a loop.
+    links += 1;
+    if (links > 40) {
+      throw new Error(`cannot follow the --output link at ${file}: its links lead in a loop.`);
+    }
+    if (path.isAbsolute(link)) {
+      current = "/";
+    }
+    pending.unshift(...names(link));
+  }
+
+  return current;
+}
+
+/* The native resolver, as `fs.realpath` above uses: on Windows the JavaScript
+   one keeps an 8.3 short name or a `subst` drive as written, so the output and
+   a content file naming it compared unequal and the output was read back. */
 function realPathSyncOf(file: string): string {
   try {
-    return realpathSync(file);
+    return realpathSync.native(file);
   } catch {
     // The read that follows reports a file it cannot reach.
     return file;

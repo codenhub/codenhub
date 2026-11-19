@@ -6,10 +6,12 @@ import {
   getColorDistance,
   getContrastRatio,
   isTransparent,
+  ORIGIN,
   readSrgb,
+  stopTransitions,
 } from "./test-utils";
 
-const FORMS_URL = "http://localhost:5184/forms/?env=vanilla";
+const FORMS_URL = `${ORIGIN}/forms/?env=vanilla`;
 
 /* Matrix rows name a fill and an edge, and the test id joins them with a dash the
    way `playground/shared/matrix.js` does. */
@@ -813,6 +815,9 @@ test.describe("forms", () => {
      `--intent-hover` was the one the state does not set. */
   test("resolves an intent on a bare text control at rest and on hover", async ({ page }) => {
     await page.goto(FORMS_URL);
+    /* The hovered line itself: a line that faded to `none` on hover would
+       still move off the resting value for the length of the fade. */
+    await stopTransitions(page);
 
     /* One pointer, so the two controls are measured one after the other rather
        than in parallel. */
@@ -826,7 +831,10 @@ test.describe("forms", () => {
       expect(isTransparent(resting), `${testId} resting border`).toBe(false);
 
       await control.hover();
-      await expect.poll(read, { message: `${testId} hovered border` }).not.toBe(resting);
+      const hovered = await read();
+
+      expect(hovered, `${testId} hovered border`).not.toBe(resting);
+      expect(isTransparent(hovered), `${testId} hovered border is drawn`).toBe(false);
     };
 
     await expectALine("text-control");
@@ -888,6 +896,51 @@ test.describe("forms", () => {
     }
   });
 
+  /* A toggle's ring is a shadow, and the reset's outline was drawn over it a
+     pixel apart, so the two blotched into one band. Under `.pixel` the inset
+     focus layers -- a seven-pixel ring and a two-pixel line inside it -- covered
+     all but a dot of a 16px box, so a focused unchecked box read as a filled
+     one. The inset is capped two pixels past the edge, as the edge is capped. */
+  test("rings a focused toggle once, and leaves its face showing under pixel", async ({ page }) => {
+    await page.setContent("<!doctype html><html><body></body></html>");
+    await page.addStyleTag({ url: `${ORIGIN}/shared/entry-vanilla.css` });
+    await stopTransitions(page);
+
+    const read = (wrapper: string) =>
+      page.evaluate(async (className) => {
+        document.body.innerHTML = `<div class="${className}"><button>start</button><input type="checkbox" class="checkbox" /><input type="radio" class="radio" /><input type="checkbox" class="switch" /></div>`;
+
+        return [...document.querySelectorAll<HTMLInputElement>("input")].map((control) => {
+          control.focus({ focusVisible: true } as FocusOptions);
+          const styles = getComputedStyle(control);
+          const insets = [...styles.boxShadow.matchAll(/(\d+(?:\.\d+)?)px inset/g)].map((match) =>
+            Number.parseFloat(match[1]!),
+          );
+
+          return {
+            control: control.className,
+            focusVisible: control.matches(":focus-visible"),
+            outline: styles.outlineStyle,
+            deepestInset: Math.max(0, ...insets),
+            half: Math.min(control.offsetWidth, control.offsetHeight) / 2,
+          };
+        });
+      }, wrapper);
+
+    for (const toggle of await read("")) {
+      expect(toggle.focusVisible, toggle.control).toBe(true);
+      expect(toggle.outline, `${toggle.control}: the ring is the shadow alone`).toBe("none");
+    }
+
+    for (const toggle of await read("pixel")) {
+      expect(toggle.focusVisible, toggle.control).toBe(true);
+      expect(toggle.deepestInset, `${toggle.control}: the pixel focus layers stop short of the centre`).toBeLessThan(
+        toggle.half - 1,
+      );
+      expect(toggle.deepestInset, `${toggle.control}: and are still drawn`).toBeGreaterThan(0);
+    }
+  });
+
   /* A toggle lifted the intent's cap to fill to its own, which also read as an
      intent, so on a solid surface it kept the page's ink: an unchecked box drew
      its line at 1.03 to 2.3:1 against the surface, focused it changed to the
@@ -895,7 +948,7 @@ test.describe("forms", () => {
   test("draws an unchecked toggle in a solid surface's ink, at rest and focused", async ({ page }) => {
     await page.setContent('<!doctype html><html data-motion="none"><body></body></html>');
     await page.addStyleTag({
-      url: "http://localhost:5184/shared/entry-vanilla.css",
+      url: `${ORIGIN}/shared/entry-vanilla.css`,
     });
 
     /* oxlint-disable no-await-in-loop -- one fixture on the page at a time. */
@@ -1020,6 +1073,8 @@ test.describe("forms", () => {
 
   test("stops a disabled toggle reacting to hover", async ({ page }) => {
     await page.goto(FORMS_URL);
+    // Read after any change would have landed, not on the first frame of one.
+    await stopTransitions(page);
 
     const expectUnmoved = async (testId: string) => {
       const element = page.getByTestId(testId);
@@ -1283,7 +1338,7 @@ test.describe("forms", () => {
       const element = page.locator(`[data-hover-probe="${probe}"]`);
       const settled = () =>
         element.evaluate(async (node) => {
-          await Promise.all(node.getAnimations().map((animation) => animation.finished));
+          await Promise.allSettled(node.getAnimations().map((animation) => animation.finished));
           return getComputedStyle(node).borderTopColor;
         });
 
@@ -1916,6 +1971,110 @@ test.describe("forms", () => {
     expect(forced.input, "forced colours: the field draws none of its own").toBe("none");
   });
 
+  /* A checkbox is an `<input>`, and four of the group's rules took any
+     `<input>` for its field where the rest named only the text fields: a
+     focused checkbox drew its ring inside the group's, an invalid one reddened
+     the group's line around neutral text, and a disabled one stopped the group
+     answering the pointer without dimming it. A toggle beside the field is the
+     group's other content, as a button is. */
+  /* A lone field hovered while focused keeps its focus line; the group's hover
+     tone outweighed its focus one, so pointing at the field being typed in
+     faded the line to the hover tone. */
+  test("keeps a focused group's line through a hover, as a lone field's", async ({ page }) => {
+    await page.goto(FORMS_URL);
+    await stopTransitions(page);
+    await page.evaluate(() => {
+      const host = document.querySelector('[data-testid="preview-root"]') ?? document.body;
+
+      host.insertAdjacentHTML(
+        "beforeend",
+        '<div class="input-group" data-box="group"><input class="ipt" /></div><input class="ipt" data-box="lone" />',
+      );
+    });
+
+    const read = async (name: string) => {
+      const box = page.locator(`[data-box="${name}"]`);
+      const field = name === "group" ? box.locator(".ipt") : box;
+      const line = () => box.evaluate((element) => getComputedStyle(element).borderTopColor);
+
+      await field.focus();
+      const focused = await line();
+      await field.hover();
+
+      return { focused, hovered: await line(), hover: await box.evaluate((element) => element.matches(":hover")) };
+    };
+
+    const group = await read("group");
+    await page.mouse.move(0, 0);
+    const lone = await read("lone");
+
+    expect(lone.hover && group.hover).toBe(true);
+    expect(lone.hovered, "a hovered lone field keeps its focus line").toBe(lone.focused);
+    expect(group.hovered, "and so does a hovered group").toBe(group.focused);
+  });
+
+  test("keeps a toggle in a group apart from the group's field", async ({ page }) => {
+    const setUp = async () => {
+      await page.goto(FORMS_URL);
+      await stopTransitions(page);
+      await page.evaluate(() => {
+        const host = document.querySelector('[data-testid="preview-root"]') ?? document.body;
+
+        host.insertAdjacentHTML(
+          "beforeend",
+          `<div class="input-group" data-group="focus"><input class="ipt" /><input class="checkbox" type="checkbox" /></div>
+           <div class="input-group" data-group="plain"><input class="ipt" /><input class="checkbox" type="checkbox" /></div>
+           <div class="input-group" data-group="invalid"><input class="ipt" /><input class="checkbox" type="checkbox" aria-invalid="true" /></div>
+           <div class="input-group" data-group="disabled"><input class="ipt" /><input class="checkbox" type="checkbox" disabled /></div>`,
+        );
+      });
+      await page.locator('[data-group="focus"] .ipt').focus();
+      await page.keyboard.press("Tab");
+    };
+    const readRings = () =>
+      page.evaluate(() => {
+        const group = document.querySelector('[data-group="focus"]')!;
+        const toggle = group.querySelector(".checkbox")!;
+
+        /* A toggle draws its ring as a shadow, a spread of the ring width; under
+           forced colours, which drop shadows, as the important outline. */
+        const width = getComputedStyle(document.documentElement).getPropertyValue("--focus-ring-width").trim();
+        const styles = getComputedStyle(toggle);
+
+        return {
+          focused: document.activeElement === toggle,
+          group: getComputedStyle(group).outlineStyle,
+          toggleRing: new RegExp(String.raw`0px 0px 0px ${width}(?! inset)`).test(styles.boxShadow),
+          toggleOutline: styles.outlineStyle,
+        };
+      });
+    const line = (name: string) =>
+      page.locator(`[data-group="${name}"]`).evaluate((element) => getComputedStyle(element).borderTopColor);
+
+    await setUp();
+    expect(await readRings()).toEqual({ focused: true, group: "none", toggleRing: true, toggleOutline: "none" });
+    expectSameColor(await line("invalid"), await line("plain"), "an invalid toggle leaves the group's line neutral");
+
+    const disabled = page.locator('[data-group="disabled"]');
+    const rest = await line("disabled");
+
+    expect(
+      await disabled.evaluate((element) => Number.parseFloat(getComputedStyle(element).opacity)),
+      "a disabled toggle does not dim the group",
+    ).toBe(1);
+    await disabled.locator(".ipt").hover();
+    expect(await disabled.evaluate((element) => element.matches(":hover"))).toBe(true);
+    expect(await line("disabled"), "so the group still answers the pointer").not.toBe(rest);
+
+    await page.emulateMedia({ forcedColors: "active" });
+    await setUp();
+    const forced = await readRings();
+
+    expect(forced.focused).toBe(true);
+    expect(forced.group, "forced colours: the group drops the field's ring").toBe("none");
+    expect(forced.toggleOutline, "forced colours: and the toggle keeps its own").toBe("solid");
+  });
+
   /* The text controls take the button's size steps, so a `.btn.sm` and an
      `.ipt.sm` line up in a row: height, text size, and the corner the size
      step scales. */
@@ -1989,7 +2148,7 @@ test.describe("forms", () => {
    printed secondary text; a badge's own colour lost to the adornment grey. */
 test("an input group leaves what is not a text field alone", async ({ page }) => {
   await page.setContent("<!doctype html><html><body></body></html>");
-  await page.addStyleTag({ url: "http://localhost:5184/shared/entry-components.css" });
+  await page.addStyleTag({ url: `${ORIGIN}/shared/entry-components.css` });
 
   const read = () =>
     page.evaluate(() =>

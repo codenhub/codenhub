@@ -261,7 +261,13 @@ test.describe("data-motion", () => {
       await page.addStyleTag({ content: await built("index.css") });
 
       const running = await page.getByTestId("drawer").evaluate(async (element) => {
-        await Promise.allSettled(document.getAnimations().map((animation) => animation.finished));
+        /* Finite only: an endless animation never settles. */
+        await Promise.allSettled(
+          document
+            .getAnimations()
+            .filter((animation) => animation.effect?.getComputedTiming().endTime !== Infinity)
+            .map((animation) => animation.finished),
+        );
         element.style.transform = "translateX(100px)";
         element.style.opacity = "0.5";
         element.style.backgroundColor = "blue";

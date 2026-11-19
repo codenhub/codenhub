@@ -174,7 +174,11 @@
     @compose select;
   }
 
-  input[type="checkbox"] {
+  /* Not a switch: it is a checkbox element drawn as `.switch`, and the
+     checkbox's mark -- hidden until checked, masked to a tick or a dash --
+     left its knob invisible when off and drew it as a tick when on. In
+     `:where()`, so the selector weighs what the bare element does. */
+  input[type="checkbox"]:where(:not(.switch)) {
     @compose checkbox;
   }
 
@@ -228,8 +232,8 @@
      paints its pseudo-element empty or full, and neither can be moved. */
   progress:indeterminate {
     background-image: linear-gradient(
-      var(--progress-color, var(--intent-color)),
-      var(--progress-color, var(--intent-color))
+      color-mix(in srgb, var(--progress-color, var(--intent-color)) var(--_progress-strength, 100%), transparent),
+      color-mix(in srgb, var(--progress-color, var(--intent-color)) var(--_progress-strength, 100%), transparent)
     );
     background-repeat: no-repeat;
     background-size: 33% 100%;
@@ -251,14 +255,23 @@
     background-color: transparent;
   }
 
-  /* The sweep rests at the start, as `.progress.indeterminate`'s does. */
+  /* Under reduced motion, the full, dimmed fill `.progress.indeterminate`
+     takes. The fill is the background image, so it dims through
+     `--_progress-strength` rather than `opacity`, which would dim the track
+     and its line with it. */
   @media (prefers-reduced-motion: reduce) {
     progress:indeterminate:not(:where(:root[data-motion="full"] *)) {
+      --_progress-strength: 60%;
+
+      background-size: 100% 100%;
       animation: none;
     }
   }
 
   progress:indeterminate:where(:root:is([data-motion="reduce"], [data-motion="none"]) *) {
+    --_progress-strength: 60%;
+
+    background-size: 100% 100%;
     animation: none;
   }
 }
@@ -291,8 +304,13 @@
     background-color: CanvasText;
   }
 
+  /* Dimmed under reduced motion as `.progress`'s fill is by its opacity: a
+     full, solid bar would read as a finished one. */
   progress:indeterminate {
-    background-image: linear-gradient(CanvasText, CanvasText);
+    background-image: linear-gradient(
+      color-mix(in srgb, CanvasText var(--_progress-strength, 100%), transparent),
+      color-mix(in srgb, CanvasText var(--_progress-strength, 100%), transparent)
+    );
   }
 
   input[type="checkbox"],
@@ -307,7 +325,7 @@
   /* A checked radio is the filled disc and dot it draws with forced colours
      off, as `.radio` is in `form.css`: one look on both entrypoints. */
   input[type="checkbox"]:checked,
-  input[type="checkbox"]:indeterminate,
+  input[type="checkbox"]:indeterminate:where(:not(.switch)),
   input[type="radio"]:checked {
     background-color: Highlight;
     border-color: Highlight;

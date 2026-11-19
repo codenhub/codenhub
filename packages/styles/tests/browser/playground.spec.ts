@@ -1,7 +1,8 @@
 import { expect, test } from "./fixtures";
+import { ORIGIN } from "./test-utils";
 
-const PLAYGROUND_URL = "http://localhost:5184/";
-const BUTTONS_URL = "http://localhost:5184/buttons/?env=vanilla";
+const PLAYGROUND_URL = `${ORIGIN}/`;
+const BUTTONS_URL = `${ORIGIN}/buttons/?env=vanilla`;
 
 test("links to each focused playground route", async ({ page }) => {
   await page.goto(PLAYGROUND_URL);
@@ -40,7 +41,7 @@ test("puts the chosen aesthetic on the preview root and leaves the chrome alone"
 });
 
 test("aligns narrow sections with the left edge every other section shares", async ({ page }) => {
-  await page.goto("http://localhost:5184/forms/?env=vanilla");
+  await page.goto(`${ORIGIN}/forms/?env=vanilla`);
 
   const edges = await page.evaluate(() => {
     const sections = [...document.querySelectorAll(".sect-inn")];

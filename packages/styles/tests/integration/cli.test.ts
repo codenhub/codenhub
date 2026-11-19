@@ -1,4 +1,4 @@
-import { chmod, lstat, mkdir, mkdtemp, readFile, rm, stat, symlink, writeFile } from "node:fs/promises";
+import { chmod, lstat, mkdir, mkdtemp, readdir, readFile, rm, stat, symlink, writeFile } from "node:fs/promises";
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import path from "node:path";
@@ -256,6 +256,32 @@ describe("build", () => {
     expect((await lstat(path.join(project, "app.css"))).isSymbolicLink()).toBe(true);
     expect(await readOutput("real.css")).toMatch(ruleFor("btn"));
   });
+
+  it.skipIf(!canSymlink)("writes where an --output link points before its target exists", async () => {
+    await symlink(path.join(project, "build", "real.css"), path.join(project, "app.css"), "file");
+
+    expect(await build("build", "-c", "app/views/**/*.erb", "-o", "app.css")).toBe(0);
+    expect((await lstat(path.join(project, "app.css"))).isSymbolicLink()).toBe(true);
+    expect(await readOutput("build/real.css")).toMatch(ruleFor("btn"));
+  });
+
+  /* POSIX follows `alias` before its `..`; Windows collapses the `..` first, so the case does not arise there. */
+  it.skipIf(!canSymlink || process.platform === "win32")(
+    "writes where an --output link points when its target climbs out of another link",
+    async () => {
+      const authored = "a { color: red; }";
+
+      await mkdir(path.join(project, "nested", "dir"), { recursive: true });
+      await symlink(path.join(project, "nested", "dir"), path.join(project, "alias"), "dir");
+      await writeFile(path.join(project, "real.css"), authored);
+      // Written whole: `path.join` would collapse the `..` this test is about.
+      await symlink("alias/../real.css", path.join(project, "app.css"), "file");
+
+      expect(await build("build", "-c", "app/views/**/*.erb", "-o", "app.css")).toBe(0);
+      expect(await readOutput("real.css")).toBe(authored);
+      expect(await readOutput("nested/real.css")).toMatch(ruleFor("btn"));
+    },
+  );
 });
 
 describe("failures", () => {
@@ -269,12 +295,40 @@ describe("failures", () => {
     return stderr[0] ?? "";
   }
 
+  // POSIX refuses a `..` out of a folder that does not exist; collapsing it instead named an authored file.
+  it.skipIf(!canSymlink || process.platform === "win32")(
+    "refuses an --output link that leads out of a missing folder",
+    async () => {
+      const authored = "a { color: red; }";
+
+      await mkdir(path.join(project, "nested", "dir"), { recursive: true });
+      await symlink(path.join(project, "nested", "dir"), path.join(project, "alias"), "dir");
+      await writeFile(path.join(project, "real.css"), authored);
+      await writeFile(path.join(project, "nested", "real.css"), authored);
+      await symlink("alias/../missing/../real.css", path.join(project, "app.css"), "file");
+
+      expect(await failureOf("build", "-c", "app/views/**/*.erb", "-o", "app.css")).toMatch(
+        /leads out of a folder that does not exist/,
+      );
+      expect(await readOutput("real.css")).toBe(authored);
+      expect(await readOutput("nested/real.css")).toBe(authored);
+    },
+  );
+
   it("rejects a build without --content", async () => {
     expect(await failureOf("build", "-o", "app.css")).toMatch(/--content/);
   });
 
   it("rejects a build without --output", async () => {
     expect(await failureOf("build", "-c", "app/views/**/*.erb")).toMatch(/--output/);
+  });
+
+  // A quoted variable left empty by a script; written as given, it names a file of spaces.
+  it("takes an --output of only spaces as missing", async () => {
+    expect(await failureOf("build", "-c", "app/views/**/*.erb", "-o", "  ")).toBe(
+      "chs: missing --output; name the stylesheet to write, as in --output public/app.css.",
+    );
+    expect(await readdir(project)).not.toContain("  ");
   });
 
   it("rejects an unknown flag by name", async () => {

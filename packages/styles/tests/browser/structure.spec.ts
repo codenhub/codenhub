@@ -3,7 +3,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { expect, test, type Page } from "./fixtures";
-import { expectSameColor, getColorDistance } from "./test-utils";
+import { expectSameColor, getColorDistance, settleAnimations, stopTransitions } from "./test-utils";
 
 /* The promises docs/internal/model.md#material-tokens makes, one test each, on a blank page
    built from the files a consumer links -- the way the layer suite reads them,
@@ -18,7 +18,7 @@ const load = async (page: Page, markup: string, consumerCss = "") => {
   if (consumerCss) {
     await page.addStyleTag({ content: consumerCss });
   }
-  await page.evaluate(() => Promise.all(document.getAnimations().map((animation) => animation.finished)));
+  await settleAnimations(page);
 };
 
 const read = (page: Page, testId: string, property: string) =>
@@ -96,12 +96,18 @@ test("a press travels exactly the depth it lands on", async ({ page }) => {
 
   const button = page.getByTestId("tile-tight");
 
+  // The pressed travel itself, read once `:active` holds.
+  await stopTransitions(page);
   await button.hover();
   await page.mouse.down();
   try {
-    await expect
-      .poll(() => button.evaluate((node) => getComputedStyle(node).translate), "half the lift, like the bar")
-      .toBe("0px 2px");
+    expect(
+      await button.evaluate((node) => ({
+        active: node.matches(":active"),
+        translate: getComputedStyle(node).translate,
+      })),
+      "half the lift, like the bar",
+    ).toEqual({ active: true, translate: "0px 2px" });
   } finally {
     await page.mouse.up();
   }
