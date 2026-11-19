@@ -279,7 +279,7 @@ export interface I18n<TLocale extends string = string, TKey extends string = str
    * @throws {TypeError} When `params` is neither `undefined` nor an object, such as `null` passed from plain
    * JavaScript.
    */
-  translate<K extends TKey, TValues extends object = {}>(
+  translate<K extends TKey, TValues extends object = Readonly<Record<string, string | number | Date>>>(
     key: K,
     ...params: TranslateParams<TMessages, K, TValues>
   ): string;
@@ -309,7 +309,10 @@ export interface I18n<TLocale extends string = string, TKey extends string = str
   has(key: string): key is TKey;
 
   /** Short alias of {@link I18n.translate}, the same bound function. */
-  t<K extends TKey, TValues extends object = {}>(key: K, ...params: TranslateParams<TMessages, K, TValues>): string;
+  t<K extends TKey, TValues extends object = Readonly<Record<string, string | number | Date>>>(
+    key: K,
+    ...params: TranslateParams<TMessages, K, TValues>
+  ): string;
 
   /**
    * Formats a number for the active locale with `Intl.NumberFormat`.

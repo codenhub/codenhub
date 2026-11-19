@@ -99,6 +99,21 @@ describe("typed placeholder values", () => {
     expectTypeOf<{ count: 1 }>().toExtend<NonNullable<TranslateParams<Regional, "group">[0]>>();
   });
 
+  it("should take extra values when the key's type is passed", async () => {
+    const typed = createI18n({
+      locales: ["en"] as const,
+      defaultLocale: "en",
+      loadLocale: () => ({ greeting: "Hello, {name}!" }) as const,
+      isSilent: true,
+    });
+    await typed.init();
+
+    expect(typed.t<"greeting">("greeting", { name: "Ana", title: "Dr." })).toBe("Hello, Ana!");
+    expect(typed.translate<"greeting">("greeting", { name: "Ana", title: "Dr." })).toBe("Hello, Ana!");
+    // @ts-expect-error -- `name` is required.
+    typed.t<"greeting">("greeting", { title: "Dr." });
+  });
+
   it("should take values typed by an interface, and still check each value", async () => {
     interface User {
       name: string;
