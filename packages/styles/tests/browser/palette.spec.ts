@@ -96,14 +96,14 @@ test("the subtle ground covers every component the registry grounds on --intent-
 
 test.describe("generated palette", () => {
   test.beforeEach(async ({ page }) => {
-    // `box` transitions `background-color`/`border-color` on hover, and
-    // reading mid-transition is a flaky test waiting to happen -- the same
-    // reason `scripts/generate-palette.mjs` sets this before it reads hover.
-    await page.emulateMedia({ reducedMotion: "reduce" });
     await page.goto(SURFACES_URL);
 
     const paletteCss = await readFile(path.join(packageRoot, "dist", "palette.css"), "utf8");
     await page.addStyleTag({ content: paletteCss });
+    /* No transition runs, as in `scripts/generate-palette.mjs`: `box` fades
+       its fill and line on hover, reduced motion keeps colour fades, and a
+       read taken mid-fade lands on an eased frame (codenhub/codenhub#605). */
+    await page.addStyleTag({ content: "*, *::before, *::after { transition: none !important; }" });
   });
 
   for (const theme of ["light", "dark"] as const) {
@@ -133,56 +133,19 @@ test.describe("generated palette", () => {
       }, probes);
 
       /* oxlint-disable no-await-in-loop -- one page, hovered in turn: a real
-         :hover, one element at a time, matches how a person's cursor would
-         trigger it, and each read has to settle before the next moves the
-         mouse away from the probe it just read. */
+         :hover, one element at a time, as a person's cursor triggers it. */
       for (const probe of probes.filter((entry) => entry.readsBg)) {
-        await page.locator(`[data-key="${probe.key}"]`).hover();
-        /* `:hover` matches immediately, but `background-color: var(--_bg)` on
-           `.box` does not visibly repaint to `.box-hover`'s new, winning
-           `--_bg` until the browser's next style flush, and that flush can
-           take more than one animation frame under load. A fixed wait raced
-           it and read the still-resting value back; two consecutive equal
-           samples can race it too, since two frames can both land before the
-           repaint and agree on the stale resting value. Waiting for the read
-           to actually move off the already-known resting value first, then
-           for it to stop moving, is what actually settles on the real one --
-           the same two-phase settling `scripts/generate-palette.mjs` polls
-           for before its own hover read. */
-        const hovered = await page.evaluate(
-          ({ key, restingBg, restingEdge }) => {
-            const element = document.querySelector(`[data-key="${key}"]`)!;
-            const read = () => {
-              const styles = getComputedStyle(element);
-              return { bg: styles.backgroundColor, edge: styles.borderTopColor };
-            };
-            const nextFrame = () => new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+        const element = page.locator(`[data-key="${probe.key}"]`);
 
-            return (async () => {
-              let current = read();
-
-              for (let frame = 0; frame < 60 && current.bg === restingBg && current.edge === restingEdge; frame += 1) {
-                await nextFrame();
-                current = read();
-              }
-
-              let previous = current;
-
-              for (let frame = 0; frame < 60; frame += 1) {
-                await nextFrame();
-                current = read();
-
-                if (current.bg === previous.bg && current.edge === previous.edge) {
-                  return current;
-                }
-                previous = current;
-              }
-
-              return previous;
-            })();
-          },
-          { key: probe.key, restingBg: rest[probe.key].bg, restingEdge: rest[probe.key].edge },
-        );
+        await element.hover();
+        // With no transition, the value is final once the element matches `:hover`.
+        const hovered = await element.evaluate((node) => {
+          if (!node.matches(":hover")) {
+            throw new Error(`${(node as HTMLElement).dataset.key} is not hovered after hover().`);
+          }
+          const styles = getComputedStyle(node);
+          return { bg: styles.backgroundColor, edge: styles.borderTopColor };
+        });
 
         rest[probe.key].bgHover = hovered.bg;
         rest[probe.key].edgeHover = hovered.edge;
