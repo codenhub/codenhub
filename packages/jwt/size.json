@@ -6,7 +6,7 @@
         "ASYMMETRIC_ALGORITHMS": {
           "files": {
             "dist/index.js": {
-              "bytes": 2440,
+              "bytes": 2446,
               "declarations": {
                 "ALGORITHM_PARAMS": 304,
                 "deepFreeze": 275,
@@ -30,11 +30,11 @@
                 "fail": 38,
                 "MALFORMED_KEYS": 36,
                 "DUPLICATE_KEY": 30,
+                "(top level)": 28,
                 "NO_MATCHING_KEY": 28,
                 "AMBIGUOUS_KEY": 26,
                 "MALFORMED": 26,
                 "RSA_PUBLIC_EXPONENT": 24,
-                "(top level)": 22,
                 "MALFORMED_JWKS": 22,
                 "ENCODER": 16,
                 "encoder": 16
@@ -45,12 +45,12 @@
             }
           },
           "gzip": 1079,
-          "minified": 2475
+          "minified": 2481
         },
         "JWS_ALGORITHMS": {
           "files": {
             "dist/index.js": {
-              "bytes": 2438,
+              "bytes": 2444,
               "declarations": {
                 "ALGORITHM_PARAMS": 304,
                 "deepFreeze": 275,
@@ -74,11 +74,11 @@
                 "fail": 38,
                 "MALFORMED_KEYS": 36,
                 "DUPLICATE_KEY": 30,
+                "(top level)": 28,
                 "NO_MATCHING_KEY": 28,
                 "AMBIGUOUS_KEY": 26,
                 "MALFORMED": 26,
                 "RSA_PUBLIC_EXPONENT": 24,
-                "(top level)": 22,
                 "MALFORMED_JWKS": 22,
                 "ENCODER": 16,
                 "encoder": 16
@@ -89,12 +89,12 @@
             }
           },
           "gzip": 1070,
-          "minified": 2466
+          "minified": 2472
         },
         "SYMMETRIC_ALGORITHMS": {
           "files": {
             "dist/index.js": {
-              "bytes": 2446,
+              "bytes": 2452,
               "declarations": {
                 "ALGORITHM_PARAMS": 304,
                 "deepFreeze": 275,
@@ -117,8 +117,8 @@
                 "JsonRejection": 44,
                 "fail": 38,
                 "MALFORMED_KEYS": 36,
+                "(top level)": 34,
                 "DUPLICATE_KEY": 30,
-                "(top level)": 28,
                 "NO_MATCHING_KEY": 28,
                 "AMBIGUOUS_KEY": 26,
                 "MALFORMED": 26,
@@ -132,13 +132,13 @@
               "bytes": 34
             }
           },
-          "gzip": 1080,
-          "minified": 2480
+          "gzip": 1079,
+          "minified": 2486
         },
         "createKeySet": {
           "files": {
             "dist/index.js": {
-              "bytes": 3638,
+              "bytes": 3644,
               "declarations": {
                 "createKeySet": 491,
                 "selectKey$1": 319,
@@ -164,9 +164,9 @@
                 "ASYMMETRIC_ALGORITHMS": 45,
                 "SYMMETRIC_ALGORITHMS": 45,
                 "JsonRejection": 44,
+                "(top level)": 40,
                 "fail": 38,
                 "MALFORMED_KEYS": 36,
-                "(top level)": 34,
                 "DUPLICATE_KEY": 30,
                 "NO_MATCHING_KEY": 30,
                 "registry": 30,
@@ -183,23 +183,23 @@
               "bytes": 26
             }
           },
-          "gzip": 1555,
-          "minified": 3664
+          "gzip": 1557,
+          "minified": 3670
         },
         "createRemoteKeySet": {
           "files": {
             "dist/index.js": {
-              "bytes": 20714,
+              "bytes": 20938,
               "declarations": {
-                "StrictJsonParser": 2803,
-                "createRemoteKeySet": 1510,
+                "StrictJsonParser": 2804,
+                "createRemoteKeySet": 1551,
                 "checkHeaderMembers": 867,
-                "pemToJwk": 730,
+                "pemToJwk": 731,
                 "readRemoteOptions": 673,
-                "rsaMaterial": 593,
-                "encodeBase64Url": 433,
+                "rsaMaterial": 594,
                 "requestJson": 422,
-                "readUrl": 379,
+                "encodeBase64Url": 412,
+                "readUrl": 378,
                 "subjectPublicKeyInfo": 350,
                 "readCappedBody": 338,
                 "readAlgorithms": 335,
@@ -207,13 +207,13 @@
                 "readSeed": 310,
                 "ALGORITHM_PARAMS": 304,
                 "fetchJson": 302,
+                "importJwk": 294,
                 "readInteger": 294,
-                "importJwk": 293,
                 "isPlainObject$1": 279,
                 "deepFreeze": 275,
                 "readMembers": 250,
                 "DIGESTS": 243,
-                "exportWebCryptoJwk": 242,
+                "exportWebCryptoJwk": 243,
                 "importPublicKey": 241,
                 "curveMaterial": 240,
                 "readEntries": 232,
@@ -237,35 +237,37 @@
                 "isPlainContainer": 140,
                 "JWS_ALGORITHMS": 133,
                 "readKid": 132,
+                "lacksKid": 124,
                 "requireAsymmetricAlg": 121,
                 "requireOptions": 115,
+                "(top level)": 114,
                 "ED25519": 109,
-                "(top level)": 108,
                 "isAcceptableExponent": 105,
                 "ownDataValue$1": 105,
                 "sextet": 105,
                 "rsaPkcs1": 104,
+                "typedArrayTag": 103,
                 "rsaPss": 101,
                 "stripLeadingZeros": 101,
-                "typedArrayTag": 101,
                 "hmac": 99,
                 "MEMBER_NAMES": 98,
                 "decodeUtf8": 98,
-                "checkMaterial": 94,
+                "checkMaterial": 93,
                 "checkJwk": 87,
                 "fetchFailure": 83,
                 "registerKey": 81,
                 "sourceJwk": 81,
                 "notify": 80,
-                "isLoopbackHost": 79,
                 "hexValue": 78,
+                "isLoopbackHost": 78,
                 "issue": 78,
                 "BASE64_PATTERN": 70,
                 "ALPHABET": 69,
-                "isUnknownKid": 66,
+                "isUint8Array": 67,
+                "isUnknownKid": 67,
+                "SHORT_ESCAPES": 66,
                 "REQUIRED_OPERATION": 65,
-                "SHORT_ESCAPES": 65,
-                "USAGES": 64,
+                "USAGES": 65,
                 "TOO_DEEP": 62,
                 "single": 62,
                 "KEY_SET_ERROR": 61,
@@ -312,8 +314,8 @@
               "bytes": 36
             }
           },
-          "gzip": 7391,
-          "minified": 20750
+          "gzip": 7455,
+          "minified": 20974
         },
         "createVerifier": {
           "files": {
@@ -406,7 +408,7 @@
               "bytes": 32
             }
           },
-          "gzip": 5188,
+          "gzip": 5186,
           "minified": 14823
         },
         "decodeBase64Url": {
@@ -454,15 +456,15 @@
               "bytes": 29
             }
           },
-          "gzip": 1319,
+          "gzip": 1325,
           "minified": 2991
         },
         "encodeBase64Url": {
           "files": {
             "dist/index.js": {
-              "bytes": 2946,
+              "bytes": 3000,
               "declarations": {
-                "encodeBase64Url": 433,
+                "encodeBase64Url": 412,
                 "ALGORITHM_PARAMS": 304,
                 "deepFreeze": 275,
                 "DIGESTS": 243,
@@ -471,10 +473,11 @@
                 "JWS_ALGORITHMS": 133,
                 "ED25519": 109,
                 "rsaPkcs1": 104,
+                "typedArrayTag": 103,
                 "rsaPss": 101,
-                "typedArrayTag": 101,
                 "hmac": 99,
                 "ALPHABET": 69,
+                "isUint8Array": 67,
                 "KEY_SET_ERROR": 61,
                 "TOO_DEEP": 60,
                 "TOO_MANY_KEYS": 56,
@@ -485,8 +488,8 @@
                 "JsonRejection": 44,
                 "fail": 38,
                 "MALFORMED_KEYS": 36,
+                "(top level)": 34,
                 "DUPLICATE_KEY": 30,
-                "(top level)": 28,
                 "NO_MATCHING_KEY": 28,
                 "AMBIGUOUS_KEY": 26,
                 "MALFORMED": 26,
@@ -500,15 +503,15 @@
               "bytes": 29
             }
           },
-          "gzip": 1292,
-          "minified": 2975
+          "gzip": 1316,
+          "minified": 3029
         },
         "exportPrivateJwk": {
           "files": {
             "dist/index.js": {
-              "bytes": 4488,
+              "bytes": 4542,
               "declarations": {
-                "encodeBase64Url": 433,
+                "encodeBase64Url": 412,
                 "ALGORITHM_PARAMS": 304,
                 "deepFreeze": 275,
                 "DIGESTS": 243,
@@ -524,17 +527,18 @@
                 "ED25519": 109,
                 "sextet": 105,
                 "rsaPkcs1": 104,
+                "typedArrayTag": 103,
                 "rsaPss": 101,
-                "typedArrayTag": 101,
                 "hmac": 99,
                 "PRIVATE_MEMBERS$1": 98,
                 "getKeyEntryOfKind": 90,
                 "ALPHABET": 69,
+                "isUint8Array": 67,
                 "KEY_SET_ERROR": 61,
                 "TOO_DEEP": 60,
                 "TOO_MANY_KEYS": 56,
+                "(top level)": 52,
                 "ALG_MISMATCH": 47,
-                "(top level)": 46,
                 "UNKNOWN_KID": 46,
                 "ASYMMETRIC_ALGORITHMS": 45,
                 "SYMMETRIC_ALGORITHMS": 45,
@@ -557,15 +561,15 @@
               "bytes": 30
             }
           },
-          "gzip": 1996,
-          "minified": 4518
+          "gzip": 2018,
+          "minified": 4572
         },
         "exportPublicJwk": {
           "files": {
             "dist/index.js": {
-              "bytes": 4338,
+              "bytes": 4392,
               "declarations": {
-                "encodeBase64Url": 433,
+                "encodeBase64Url": 412,
                 "ALGORITHM_PARAMS": 304,
                 "deepFreeze": 275,
                 "DIGESTS": 243,
@@ -580,18 +584,19 @@
                 "ED25519": 109,
                 "sextet": 105,
                 "rsaPkcs1": 104,
+                "typedArrayTag": 103,
                 "rsaPss": 101,
-                "typedArrayTag": 101,
                 "hmac": 99,
                 "getKeyEntryOfKind": 90,
                 "exportPublicJwk": 73,
                 "ALPHABET": 69,
+                "isUint8Array": 67,
                 "KEY_SET_ERROR": 61,
                 "PUBLIC_MEMBERS": 60,
                 "TOO_DEEP": 60,
                 "TOO_MANY_KEYS": 56,
+                "(top level)": 52,
                 "ALG_MISMATCH": 47,
-                "(top level)": 46,
                 "UNKNOWN_KID": 46,
                 "ASYMMETRIC_ALGORITHMS": 45,
                 "SYMMETRIC_ALGORITHMS": 45,
@@ -614,15 +619,15 @@
               "bytes": 29
             }
           },
-          "gzip": 1938,
-          "minified": 4367
+          "gzip": 1958,
+          "minified": 4421
         },
         "exportSecretJwk": {
           "files": {
             "dist/index.js": {
-              "bytes": 4486,
+              "bytes": 4540,
               "declarations": {
-                "encodeBase64Url": 433,
+                "encodeBase64Url": 412,
                 "ALGORITHM_PARAMS": 304,
                 "deepFreeze": 275,
                 "DIGESTS": 243,
@@ -638,17 +643,18 @@
                 "ED25519": 109,
                 "sextet": 105,
                 "rsaPkcs1": 104,
+                "typedArrayTag": 103,
                 "rsaPss": 101,
-                "typedArrayTag": 101,
                 "hmac": 99,
                 "PRIVATE_MEMBERS$1": 98,
                 "getKeyEntryOfKind": 90,
                 "ALPHABET": 69,
+                "isUint8Array": 67,
                 "KEY_SET_ERROR": 61,
                 "TOO_DEEP": 60,
                 "TOO_MANY_KEYS": 56,
+                "(top level)": 52,
                 "ALG_MISMATCH": 47,
-                "(top level)": 46,
                 "UNKNOWN_KID": 46,
                 "ASYMMETRIC_ALGORITHMS": 45,
                 "SYMMETRIC_ALGORITHMS": 45,
@@ -671,13 +677,13 @@
               "bytes": 29
             }
           },
-          "gzip": 1995,
-          "minified": 4515
+          "gzip": 2016,
+          "minified": 4569
         },
         "generateKeyPair": {
           "files": {
             "dist/index.js": {
-              "bytes": 4355,
+              "bytes": 4361,
               "declarations": {
                 "generateKeyPair": 559,
                 "readModulusLength": 316,
@@ -710,9 +716,9 @@
                 "SYMMETRIC_ALGORITHMS": 45,
                 "JsonRejection": 44,
                 "kidMember": 43,
+                "(top level)": 40,
                 "fail": 38,
                 "MALFORMED_KEYS": 36,
-                "(top level)": 34,
                 "DUPLICATE_KEY": 30,
                 "registry": 30,
                 "NO_MATCHING_KEY": 28,
@@ -729,13 +735,13 @@
               "bytes": 29
             }
           },
-          "gzip": 1759,
-          "minified": 4384
+          "gzip": 1758,
+          "minified": 4390
         },
         "generateSecretKey": {
           "files": {
             "dist/index.js": {
-              "bytes": 3780,
+              "bytes": 3786,
               "declarations": {
                 "generateSecretKey": 332,
                 "ALGORITHM_PARAMS": 304,
@@ -762,11 +768,11 @@
                 "ownMember": 54,
                 "ALG_MISMATCH": 47,
                 "SYMMETRIC_ALGORITHMS": 47,
+                "(top level)": 46,
                 "UNKNOWN_KID": 46,
                 "ASYMMETRIC_ALGORITHMS": 45,
                 "JsonRejection": 44,
                 "kidMember": 43,
-                "(top level)": 40,
                 "fail": 38,
                 "MALFORMED_KEYS": 36,
                 "SECRET_KEY_OPTIONS$1": 33,
@@ -785,20 +791,20 @@
               "bytes": 31
             }
           },
-          "gzip": 1573,
-          "minified": 3811
+          "gzip": 1568,
+          "minified": 3817
         },
         "importKeyPair": {
           "files": {
             "dist/index.js": {
-              "bytes": 10694,
+              "bytes": 10752,
               "declarations": {
                 "checkHeaderMembers": 864,
                 "importPair": 826,
-                "pemToJwk": 726,
+                "pemToJwk": 727,
                 "rsaMaterial": 591,
-                "encodeBase64Url": 433,
-                "subjectPublicKeyInfo": 349,
+                "encodeBase64Url": 412,
+                "subjectPublicKeyInfo": 350,
                 "ALGORITHM_PARAMS": 304,
                 "isPlainObject$1": 278,
                 "deepFreeze": 275,
@@ -824,19 +830,20 @@
                 "sextet": 105,
                 "isAcceptableExponent": 104,
                 "rsaPkcs1": 104,
+                "typedArrayTag": 103,
                 "rsaPss": 101,
                 "stripLeadingZeros": 101,
-                "typedArrayTag": 101,
                 "hmac": 99,
                 "MEMBER_NAMES": 97,
                 "checkMaterial": 92,
                 "checkJwk": 83,
+                "sourceJwk": 81,
                 "registerKey": 80,
-                "sourceJwk": 80,
                 "issue": 78,
-                "(top level)": 70,
+                "(top level)": 76,
                 "ALPHABET": 69,
                 "BASE64_PATTERN": 69,
+                "isUint8Array": 67,
                 "REQUIRED_OPERATION": 64,
                 "KEY_SET_ERROR": 61,
                 "TOO_DEEP": 60,
@@ -868,8 +875,8 @@
                 "ok": 24,
                 "MALFORMED_JWKS": 22,
                 "ASYMMETRIC_PRIVATE_MEMBERS": 19,
+                "FIELDS_BEFORE_KEY": 17,
                 "ENCODER": 16,
-                "FIELDS_BEFORE_KEY": 16,
                 "encoder": 16,
                 "SPARE_BITS_MASK": 13
               }
@@ -878,18 +885,18 @@
               "bytes": 28
             }
           },
-          "gzip": 3983,
-          "minified": 10722
+          "gzip": 4004,
+          "minified": 10780
         },
         "importKeySet": {
           "files": {
             "dist/index.js": {
-              "bytes": 12053,
+              "bytes": 12111,
               "declarations": {
-                "checkHeaderMembers": 865,
-                "pemToJwk": 727,
+                "checkHeaderMembers": 866,
+                "pemToJwk": 728,
                 "rsaMaterial": 591,
-                "encodeBase64Url": 433,
+                "encodeBase64Url": 412,
                 "subjectPublicKeyInfo": 350,
                 "readAlgorithms": 335,
                 "selectKey$1": 321,
@@ -905,7 +912,7 @@
                 "readEntries": 232,
                 "readElement": 224,
                 "decodeBase64Url": 216,
-                "importKeys": 189,
+                "importKeys": 188,
                 "compatibleAlgorithms": 179,
                 "isBase64Url": 178,
                 "rejectUnknownOptions": 178,
@@ -925,22 +932,23 @@
                 "sextet": 105,
                 "isAcceptableExponent": 104,
                 "rsaPkcs1": 104,
+                "typedArrayTag": 103,
                 "rsaPss": 101,
                 "stripLeadingZeros": 101,
-                "typedArrayTag": 101,
                 "hmac": 99,
                 "MEMBER_NAMES": 98,
                 "checkMaterial": 92,
+                "(top level)": 88,
                 "checkJwk": 83,
-                "(top level)": 82,
-                "sourceJwk": 80,
+                "sourceJwk": 81,
                 "registerKey": 79,
                 "issue": 78,
+                "keySetOf": 70,
                 "ALPHABET": 69,
                 "BASE64_PATTERN": 69,
-                "keySetOf": 69,
+                "isUint8Array": 67,
+                "REQUIRED_OPERATION": 65,
                 "USAGES": 65,
-                "REQUIRED_OPERATION": 64,
                 "single": 62,
                 "KEY_SET_ERROR": 61,
                 "TOO_DEEP": 60,
@@ -981,20 +989,20 @@
               "bytes": 27
             }
           },
-          "gzip": 4407,
-          "minified": 12080
+          "gzip": 4425,
+          "minified": 12138
         },
         "importPrivateKey": {
           "files": {
             "dist/index.js": {
-              "bytes": 10738,
+              "bytes": 10796,
               "declarations": {
                 "checkHeaderMembers": 864,
                 "importPair": 826,
-                "pemToJwk": 726,
+                "pemToJwk": 727,
                 "rsaMaterial": 591,
-                "encodeBase64Url": 433,
-                "subjectPublicKeyInfo": 349,
+                "encodeBase64Url": 412,
+                "subjectPublicKeyInfo": 350,
                 "ALGORITHM_PARAMS": 304,
                 "isPlainObject$1": 278,
                 "deepFreeze": 275,
@@ -1020,20 +1028,21 @@
                 "sextet": 105,
                 "isAcceptableExponent": 104,
                 "rsaPkcs1": 104,
+                "typedArrayTag": 103,
                 "rsaPss": 101,
                 "stripLeadingZeros": 101,
-                "typedArrayTag": 101,
                 "hmac": 99,
                 "importPrivateKey": 98,
                 "MEMBER_NAMES": 97,
                 "checkMaterial": 92,
                 "checkJwk": 83,
+                "sourceJwk": 81,
                 "registerKey": 80,
-                "sourceJwk": 80,
                 "issue": 78,
-                "(top level)": 70,
+                "(top level)": 76,
                 "ALPHABET": 69,
                 "BASE64_PATTERN": 69,
+                "isUint8Array": 67,
                 "REQUIRED_OPERATION": 64,
                 "KEY_SET_ERROR": 61,
                 "TOO_DEEP": 60,
@@ -1064,8 +1073,8 @@
                 "ok": 24,
                 "MALFORMED_JWKS": 22,
                 "ASYMMETRIC_PRIVATE_MEMBERS": 19,
+                "FIELDS_BEFORE_KEY": 17,
                 "ENCODER": 16,
-                "FIELDS_BEFORE_KEY": 16,
                 "encoder": 16,
                 "SPARE_BITS_MASK": 13
               }
@@ -1074,21 +1083,21 @@
               "bytes": 31
             }
           },
-          "gzip": 3999,
-          "minified": 10769
+          "gzip": 4021,
+          "minified": 10827
         },
         "importPublicKey": {
           "files": {
             "dist/index.js": {
-              "bytes": 10200,
+              "bytes": 10258,
               "declarations": {
                 "checkHeaderMembers": 864,
-                "pemToJwk": 725,
+                "pemToJwk": 726,
                 "rsaMaterial": 591,
-                "encodeBase64Url": 433,
-                "subjectPublicKeyInfo": 348,
+                "encodeBase64Url": 412,
+                "subjectPublicKeyInfo": 349,
                 "ALGORITHM_PARAMS": 304,
-                "importJwk": 292,
+                "importJwk": 293,
                 "isPlainObject$1": 278,
                 "deepFreeze": 275,
                 "readMembers": 246,
@@ -1113,20 +1122,21 @@
                 "sextet": 105,
                 "isAcceptableExponent": 104,
                 "rsaPkcs1": 104,
+                "typedArrayTag": 103,
                 "rsaPss": 101,
                 "stripLeadingZeros": 101,
-                "typedArrayTag": 101,
                 "hmac": 99,
                 "MEMBER_NAMES": 97,
                 "checkMaterial": 92,
                 "checkJwk": 83,
+                "registerKey": 80,
                 "sourceJwk": 80,
-                "registerKey": 79,
                 "issue": 78,
+                "(top level)": 70,
                 "ALPHABET": 69,
                 "BASE64_PATTERN": 69,
+                "isUint8Array": 67,
                 "USAGES": 65,
-                "(top level)": 64,
                 "REQUIRED_OPERATION": 64,
                 "KEY_SET_ERROR": 61,
                 "TOO_DEEP": 60,
@@ -1166,18 +1176,18 @@
               "bytes": 30
             }
           },
-          "gzip": 3858,
-          "minified": 10230
+          "gzip": 3875,
+          "minified": 10288
         },
         "importSecretKey": {
           "files": {
             "dist/index.js": {
-              "bytes": 8848,
+              "bytes": 8827,
               "declarations": {
                 "checkHeaderMembers": 864,
                 "rsaMaterial": 591,
                 "importSecretKey": 531,
-                "encodeBase64Url": 433,
+                "encodeBase64Url": 412,
                 "ALGORITHM_PARAMS": 304,
                 "importJwk": 290,
                 "isPlainObject$1": 278,
@@ -1251,13 +1261,13 @@
               "bytes": 29
             }
           },
-          "gzip": 3275,
-          "minified": 8877
+          "gzip": 3267,
+          "minified": 8856
         },
         "isAsymmetricAlgorithm": {
           "files": {
             "dist/index.js": {
-              "bytes": 2495,
+              "bytes": 2501,
               "declarations": {
                 "ALGORITHM_PARAMS": 304,
                 "deepFreeze": 275,
@@ -1282,11 +1292,11 @@
                 "fail": 38,
                 "MALFORMED_KEYS": 36,
                 "DUPLICATE_KEY": 30,
+                "(top level)": 28,
                 "NO_MATCHING_KEY": 28,
                 "AMBIGUOUS_KEY": 26,
                 "MALFORMED": 26,
                 "RSA_PUBLIC_EXPONENT": 24,
-                "(top level)": 22,
                 "MALFORMED_JWKS": 22,
                 "ENCODER": 16,
                 "encoder": 16
@@ -1297,12 +1307,12 @@
             }
           },
           "gzip": 1099,
-          "minified": 2530
+          "minified": 2536
         },
         "isJwsAlgorithm": {
           "files": {
             "dist/index.js": {
-              "bytes": 2477,
+              "bytes": 2483,
               "declarations": {
                 "ALGORITHM_PARAMS": 304,
                 "deepFreeze": 275,
@@ -1327,11 +1337,11 @@
                 "fail": 38,
                 "MALFORMED_KEYS": 36,
                 "DUPLICATE_KEY": 30,
+                "(top level)": 28,
                 "NO_MATCHING_KEY": 28,
                 "AMBIGUOUS_KEY": 26,
                 "MALFORMED": 26,
                 "RSA_PUBLIC_EXPONENT": 24,
-                "(top level)": 22,
                 "MALFORMED_JWKS": 22,
                 "ENCODER": 16,
                 "encoder": 16
@@ -1341,13 +1351,13 @@
               "bytes": 28
             }
           },
-          "gzip": 1087,
-          "minified": 2505
+          "gzip": 1088,
+          "minified": 2511
         },
         "isSymmetricAlgorithm": {
           "files": {
             "dist/index.js": {
-              "bytes": 2501,
+              "bytes": 2507,
               "declarations": {
                 "ALGORITHM_PARAMS": 304,
                 "deepFreeze": 275,
@@ -1371,8 +1381,8 @@
                 "JsonRejection": 44,
                 "fail": 38,
                 "MALFORMED_KEYS": 36,
+                "(top level)": 34,
                 "DUPLICATE_KEY": 30,
-                "(top level)": 28,
                 "NO_MATCHING_KEY": 28,
                 "AMBIGUOUS_KEY": 26,
                 "MALFORMED": 26,
@@ -1386,15 +1396,15 @@
               "bytes": 34
             }
           },
-          "gzip": 1100,
-          "minified": 2535
+          "gzip": 1099,
+          "minified": 2541
         },
         "jwkThumbprint": {
           "files": {
             "dist/index.js": {
-              "bytes": 4437,
+              "bytes": 4491,
               "declarations": {
-                "encodeBase64Url": 433,
+                "encodeBase64Url": 412,
                 "jwkThumbprint": 412,
                 "ALGORITHM_PARAMS": 304,
                 "deepFreeze": 275,
@@ -1409,16 +1419,17 @@
                 "ED25519": 109,
                 "sextet": 105,
                 "rsaPkcs1": 104,
+                "typedArrayTag": 103,
                 "rsaPss": 101,
-                "typedArrayTag": 101,
                 "hmac": 99,
                 "THUMBPRINT_MEMBERS": 71,
                 "ALPHABET": 69,
+                "isUint8Array": 67,
                 "KEY_SET_ERROR": 61,
                 "TOO_DEEP": 60,
                 "TOO_MANY_KEYS": 56,
+                "(top level)": 52,
                 "ALG_MISMATCH": 47,
-                "(top level)": 46,
                 "UNKNOWN_KID": 46,
                 "ASYMMETRIC_ALGORITHMS": 45,
                 "SYMMETRIC_ALGORITHMS": 45,
@@ -1442,8 +1453,8 @@
               "bytes": 27
             }
           },
-          "gzip": 1985,
-          "minified": 4464
+          "gzip": 2004,
+          "minified": 4518
         },
         "readHeader": {
           "files": {
@@ -1509,20 +1520,20 @@
               "bytes": 27
             }
           },
-          "gzip": 3006,
+          "gzip": 3003,
           "minified": 7941
         },
         "sign": {
           "files": {
             "dist/index.js": {
-              "bytes": 8685,
+              "bytes": 8739,
               "declarations": {
                 "serializeHeader": 833,
                 "sign": 617,
                 "serializePayload": 515,
                 "childrenOf": 463,
-                "encodeBase64Url": 433,
                 "embeddedJwk": 425,
+                "encodeBase64Url": 412,
                 "assertJsonPrimitive": 340,
                 "ALGORITHM_PARAMS": 304,
                 "deepFreeze": 275,
@@ -1542,17 +1553,18 @@
                 "ED25519": 109,
                 "sextet": 105,
                 "rsaPkcs1": 104,
+                "typedArrayTag": 103,
                 "rsaPss": 101,
-                "typedArrayTag": 101,
                 "hmac": 99,
                 "isAudience": 95,
                 "getKeyEntryOfKind": 90,
                 "exportPublicJwk": 73,
                 "ALPHABET": 69,
+                "isUint8Array": 67,
+                "(top level)": 64,
                 "KEY_SET_ERROR": 61,
                 "PUBLIC_MEMBERS": 60,
                 "TOO_DEEP": 60,
-                "(top level)": 58,
                 "TOO_MANY_KEYS": 56,
                 "isRegisteredKey": 55,
                 "ALG_MISMATCH": 47,
@@ -1585,15 +1597,15 @@
               "bytes": 18
             }
           },
-          "gzip": 3310,
-          "minified": 8703
+          "gzip": 3332,
+          "minified": 8757
         },
         "tokenHash": {
           "files": {
             "dist/index.js": {
-              "bytes": 3273,
+              "bytes": 3327,
               "declarations": {
-                "encodeBase64Url": 433,
+                "encodeBase64Url": 412,
                 "ALGORITHM_PARAMS": 304,
                 "tokenHash": 278,
                 "deepFreeze": 275,
@@ -1603,10 +1615,11 @@
                 "JWS_ALGORITHMS": 133,
                 "ED25519": 109,
                 "rsaPkcs1": 104,
+                "typedArrayTag": 103,
                 "rsaPss": 101,
-                "typedArrayTag": 101,
                 "hmac": 99,
                 "ALPHABET": 69,
+                "isUint8Array": 67,
                 "KEY_SET_ERROR": 61,
                 "TOO_DEEP": 60,
                 "TOO_MANY_KEYS": 56,
@@ -1615,10 +1628,10 @@
                 "ASYMMETRIC_ALGORITHMS": 45,
                 "SYMMETRIC_ALGORITHMS": 45,
                 "JsonRejection": 44,
+                "(top level)": 40,
                 "isJwsAlgorithm": 39,
                 "fail": 38,
                 "MALFORMED_KEYS": 36,
-                "(top level)": 34,
                 "DUPLICATE_KEY": 30,
                 "NO_MATCHING_KEY": 28,
                 "AMBIGUOUS_KEY": 26,
@@ -1633,20 +1646,20 @@
               "bytes": 23
             }
           },
-          "gzip": 1435,
-          "minified": 3296
+          "gzip": 1460,
+          "minified": 3350
         }
       },
       "files": {
         "dist/index.js": {
-          "bytes": 39454,
+          "bytes": 39601,
           "declarations": {
             "StrictJsonParser": 2808,
-            "createRemoteKeySet": 1517,
+            "createRemoteKeySet": 1561,
             "resolveOptions": 1141,
             "checkHeaderMembers": 867,
             "serializeHeader": 839,
-            "importPair": 827,
+            "importPair": 828,
             "pemToJwk": 730,
             "readRemoteOptions": 673,
             "createVerifier": 669,
@@ -1654,17 +1667,17 @@
             "rsaMaterial": 597,
             "checkClaims": 586,
             "timeIssues": 578,
-            "generateKeyPair": 563,
-            "importSecretKey": 537,
+            "generateKeyPair": 564,
+            "importSecretKey": 536,
             "serializePayload": 521,
             "identityIssues": 510,
             "createKeySet": 493,
-            "checkSegments": 469,
+            "checkSegments": 468,
             "childrenOf": 467,
-            "encodeBase64Url": 433,
             "embeddedJwk": 429,
-            "requestJson": 424,
+            "requestJson": 423,
             "jwkThumbprint": 414,
+            "encodeBase64Url": 412,
             "readUrl": 379,
             "resolveMaxLength": 376,
             "headerIssue": 367,
@@ -1674,11 +1687,11 @@
             "generateSecretKey": 335,
             "readAlgorithms": 335,
             "CLAIM_TYPES": 325,
-            "selectKey$1": 325,
             "readTypes": 322,
+            "selectKey$1": 322,
             "readModulusLength": 318,
-            "ALGORITHM_PARAMS": 315,
             "selectKey": 315,
+            "ALGORITHM_PARAMS": 312,
             "readSchema": 311,
             "readSeed": 310,
             "fetchJson": 304,
@@ -1694,7 +1707,7 @@
             "DIGESTS": 246,
             "exportWebCryptoJwk": 242,
             "curveMaterial": 241,
-            "importPublicKey": 237,
+            "importPublicKey": 238,
             "readEntries": 234,
             "ownDataValue": 231,
             "schemaIssues": 230,
@@ -1702,15 +1715,15 @@
             "(top level)": 216,
             "decodeBase64Url": 216,
             "parseCompact": 204,
-            "parseJsonObject": 191,
+            "parseJsonObject": 190,
+            "exportPrivateJwk": 189,
             "importKeys": 189,
             "readRequiredClaims": 188,
-            "exportPrivateJwk": 187,
+            "exportSecretJwk": 187,
             "getKeyEntry": 187,
             "checkedClock": 185,
-            "exportSecretJwk": 185,
             "readTimeout": 184,
-            "toJwk": 180,
+            "toJwk": 181,
             "compatibleAlgorithms": 179,
             "isBase64Url": 178,
             "rejectUnknownOptions": 178,
@@ -1726,22 +1739,23 @@
             "pathOf": 146,
             "readFunction": 144,
             "PEM_PATTERN": 142,
-            "ecdsa": 142,
             "hasStringCode": 142,
+            "ecdsa": 141,
             "isPlainContainer": 140,
             "importKeySet": 134,
             "JWS_ALGORITHMS": 133,
             "readKid": 131,
             "isPlainObject": 130,
+            "lacksKid": 125,
             "requireSymmetricAlg": 122,
-            "requireAsymmetricAlg": 120,
+            "requireAsymmetricAlg": 121,
             "requireOptions": 114,
             "ED25519": 110,
             "isAcceptableExponent": 105,
             "ownDataValue$1": 105,
             "sextet": 105,
             "rsaPkcs1": 104,
-            "typedArrayTag": 104,
+            "typedArrayTag": 103,
             "rsaPss": 102,
             "stripLeadingZeros": 102,
             "hmac": 100,
@@ -1751,21 +1765,21 @@
             "importPrivateKey": 98,
             "isAudience": 96,
             "checkMaterial": 94,
-            "getKeyEntryOfKind": 90,
+            "getKeyEntryOfKind": 91,
             "checkJwk": 87,
             "fetchFailure": 83,
+            "notify": 81,
             "sourceJwk": 81,
-            "notify": 80,
             "hexValue": 79,
             "isLoopbackHost": 79,
             "registerKey": 79,
             "issue": 78,
-            "exportPublicJwk": 75,
+            "exportPublicJwk": 77,
             "THUMBPRINT_MEMBERS": 72,
             "BASE64_PATTERN": 70,
             "ALPHABET": 69,
-            "isUint8Array": 69,
             "keySetOf": 69,
+            "isUint8Array": 67,
             "isUnknownKid": 67,
             "readHeader": 67,
             "SHORT_ESCAPES": 66,
@@ -1774,11 +1788,11 @@
             "USAGES": 65,
             "KEY_SET_ERROR": 63,
             "TOO_DEEP": 63,
-            "single": 63,
+            "single": 62,
             "PUBLIC_MEMBERS": 61,
             "discardBody": 61,
             "TOO_MANY_KEYS": 59,
-            "parsePayload": 58,
+            "parsePayload": 57,
             "isNonEmptyMember": 56,
             "isRegisteredKey": 56,
             "isSymmetricAlgorithm": 56,
@@ -1831,14 +1845,14 @@
             "isTypeValue": 23,
             "ASYMMETRIC_PRIVATE_MEMBERS": 21,
             "RSA_MODULUS_LENGTHS": 20,
+            "ENCODER": 19,
             "IMPORT_KEY_SET_OPTIONS": 19,
             "PUBLIC_KEY_OPTIONS": 19,
             "encoder": 19,
             "isDigit": 19,
-            "ENCODER": 18,
             "KNOWN_OPTIONS$2": 18,
+            "encodeUtf8": 18,
             "FIELDS_BEFORE_KEY": 17,
-            "encodeUtf8": 17,
             "SPARE_BITS_MASK": 13,
             "MAX_TOKEN_LENGTH_LIMIT": 8,
             "ABANDONED_FETCH_GRACE_MS": 7,
@@ -1850,9 +1864,9 @@
           "bytes": 548
         }
       },
-      "gzip": 12642,
-      "minified": 40002,
-      "sha256": "c61273860b229bb76a4eda27bc8be711b2d7756458dfa09a3c824e02f7a585c7"
+      "gzip": 12685,
+      "minified": 40149,
+      "sha256": "e6ae819161e7a5aaaa4eeb80af3907c516d618ddcd770ec2a73d8f91cbcff738"
     }
   }
 }
