@@ -8,7 +8,6 @@ export const MAX_PATHNAME_LENGTH = 8_192;
  */
 export const MAX_PATHNAME_SEGMENTS = 100;
 const DISALLOWED_ESCAPE_PATTERN = /%(?![0-9a-f]{2})|%(?:0[0-9a-f]|1[0-9a-f]|25|2f|5c|7f)/i;
-const PERCENT_ESCAPE_PATTERN = /%[0-9a-f]{2}/gi;
 
 /**
  * Whether a pathname is longer than 8,192 characters or has more than 100 segments, which routing refuses.
@@ -76,26 +75,36 @@ export const splitPathname = (pathname: string): SplitPathname => {
 export const joinPathname = (segments: readonly string[], hasTrailingSlash: boolean): string =>
   segments.length === 0 ? "/" : `/${segments.join("/")}${hasTrailingSlash ? "/" : ""}`;
 
+// A segment of only these characters is written as a URL writes it already: unreserved and reserved ASCII that
+// `encodeURI` leaves as they are.
+const NORMAL_SEGMENT_PATTERN = /^[A-Za-z0-9\-._~!$&'()*+,;=:@]*$/;
+const UNRESERVED_PATTERN = /^[A-Za-z0-9\-._~]$/;
+// An escape, or one code point that is not `%`, so a surrogate pair is encoded as one character.
+const SEGMENT_PART_PATTERN = /%[0-9a-f]{2}|[^%]/giu;
+// The escape a URL writes for a lone surrogate, which is not text: that of U+FFFD, the replacement character.
+const REPLACEMENT_CHARACTER_ESCAPE = "%EF%BF%BD";
+
 /**
- * Writes a segment the way a URL's pathname does, so `configurações`, `configura%c3%a7%c3%b5es` and
- * `configura%C3%A7%C3%B5es` compare equal and a Unicode table entry is emitted percent-encoded.
+ * Writes a segment as RFC 3986 normalizes it: an escape of an unreserved character, such as `%61`, becomes the
+ * character, every other escape is written in upper case, and a character a URL encodes is encoded. So `café`,
+ * `caf%c3%a9` and `caf%C3%A9` compare equal, while `c%2B%2B` and `c++` stay apart, since a server may read an escaped
+ * reserved character, such as `%3B` or `%2B`, differently from the character.
  *
  * @internal
  */
 export const normalizeSegment = (segment: string): string => {
-  try {
-    return encodeURI(decodeURIComponent(segment)).replaceAll("?", "%3F").replaceAll("#", "%23");
-  } catch {
-    // Escapes that are not UTF-8, such as a lone `%C3`, can't be decoded; keep them, in one letter case, and encode
-    // the rest as a browser would.
-    return segment
-      .replace(PERCENT_ESCAPE_PATTERN, (escape) => escape.toUpperCase())
-      .replace(/[^%]/gu, (character) => {
-        try {
-          return encodeURI(character).replaceAll("?", "%3F").replaceAll("#", "%23");
-        } catch {
-          return character; // A lone surrogate can't be encoded.
-        }
-      });
+  if (NORMAL_SEGMENT_PATTERN.test(segment)) {
+    return segment;
   }
+  return segment.replace(SEGMENT_PART_PATTERN, (part) => {
+    if (part.startsWith("%")) {
+      const character = String.fromCharCode(Number.parseInt(part.slice(1), 16));
+      return UNRESERVED_PATTERN.test(character) ? character : part.toUpperCase();
+    }
+    try {
+      return encodeURI(part).replaceAll("?", "%3F").replaceAll("#", "%23");
+    } catch {
+      return REPLACEMENT_CHARACTER_ESCAPE;
+    }
+  });
 };

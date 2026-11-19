@@ -83,6 +83,38 @@ describe("translated pathnames", () => {
       });
     });
 
+    it.each([
+      ["/products/c%2B%2B", "/products/c%2B%2B"],
+      ["/products/a%3bb", "/products/a%3Bb"],
+      ["/products/%40%3D%2C%26%24", "/products/%40%3D%2C%26%24"],
+      ["/products/%3Aid", "/products/%3Aid"],
+      ["/products/c++", "/products/c++"],
+      ["/products/%61%7E%2D%2E%5F", "/products/a~-._"],
+    ])("should keep an escaped reserved character escaped, as a URL does: %s", (path, pathname) => {
+      const routing = create();
+
+      expect(new URL(path, "https://example.com").pathname.toUpperCase()).toBe(path.toUpperCase());
+      expect(routing.parse(path)).toMatchObject({ locale: "en", pathname });
+      expect(routing.localize(path, "en")).toBe(pathname);
+    });
+
+    it("should not read an escaped reserved character as the character, so c%2B%2B and c++ are two pages", () => {
+      const routing = create();
+
+      expect(routing.parse("/products/c%2B%2B")?.pathname).not.toBe(routing.parse("/products/c++")?.pathname);
+      expect(routing.parse("/pt/produtos/%3Aid")?.pathname).toBe("/products/%3Aid");
+    });
+
+    it("should write a lone surrogate as the replacement character's escape, as a URL does", () => {
+      const routing = create();
+      const url = new URL("https://example.com/");
+      url.pathname = "/products/\uD800";
+
+      expect(url.pathname).toBe("/products/%EF%BF%BD");
+      expect(routing.localize("/products/\uD800", "pt")).toBe("/pt/produtos/%EF%BF%BD");
+      expect(routing.parse("/products/\uDC00x")?.pathname).toBe("/products/%EF%BF%BDx");
+    });
+
     it("should keep one trailing slash", () => {
       const routing = create();
 
@@ -676,6 +708,8 @@ describe("translated pathnames", () => {
       }
     });
 
+    // About 1,200 paths in 18 configurations take about 2 s alone, and twice that under a parallel run, near the 5 s
+    // default.
     it("should settle the guide's canonical redirect in one hop, and read every alternate back as the same page", () => {
       const pathnames = {
         ...PATHNAMES,
@@ -779,7 +813,7 @@ describe("translated pathnames", () => {
           }
         }
       }
-    });
+    }, 30_000);
   });
 
   describe("with a large table", () => {

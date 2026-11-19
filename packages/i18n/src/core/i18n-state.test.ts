@@ -205,6 +205,18 @@ describe("I18n state", () => {
     expect(silentI18n.isSilent).toBe(true);
   });
 
+  it("warns once per missing locale key across managers, as a server with a manager per request has", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+
+    const requests = [createI18n(createConfig()), createI18n(createConfig()), createI18n(createConfig())];
+    await Promise.all(requests.map((i18n) => i18n.init()));
+    for (const i18n of requests) {
+      i18n.translate("missing-per-request");
+    }
+
+    expect(warn).toHaveBeenCalledTimes(1);
+  });
+
   it("retains only the 1,000 most recent missing-key diagnostics", async () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
     const i18n = createI18n(createConfig());

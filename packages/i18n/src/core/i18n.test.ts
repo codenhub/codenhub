@@ -131,6 +131,14 @@ describe("createI18n", () => {
     expect(i18n.resolveLocale(" ")).toBeUndefined();
   });
 
+  it("resolves a locale written with an underscore, as POSIX and Java write one", () => {
+    const i18n = createI18n({ defaultLocale: "en", locales: ["en", "pt-BR"], loadLocale: () => ({}) });
+
+    expect(i18n.resolveLocale("pt_BR")).toBe("pt-BR");
+    expect(i18n.resolveLocale(" PT_br ")).toBe("pt-BR");
+    expect(i18n.resolveLocale("pt_PT")).toBeUndefined();
+  });
+
   it("loads a public dictionary without changing active state", async () => {
     const i18n = createI18n(createConfig());
     const { onReady, onLocaleChange } = listenForLifecycleEvents(i18n);

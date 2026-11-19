@@ -116,17 +116,12 @@ describe("initializeBrowserI18n attribute translation", () => {
     },
   );
 
-  it("skips attributes on active containers and inside custom elements", async () => {
-    document.body.innerHTML = [
-      '<template data-i18n-title="greeting" title="Template"></template>',
-      '<app-shell><input data-i18n-placeholder="greeting" placeholder="Custom"></app-shell>',
-    ].join("");
-    vi.spyOn(console, "warn").mockImplementation(() => undefined);
+  it("skips attributes inside custom elements", async () => {
+    document.body.innerHTML = '<app-shell><input data-i18n-placeholder="greeting" placeholder="Custom"></app-shell>';
     const i18n = createManager();
 
     const binding = await initializeBrowserI18n({ i18n, locale: "fr", root: document.body });
 
-    expect(document.querySelector("template")?.getAttribute("title")).toBe("Template");
     expect(document.querySelector("app-shell input")?.getAttribute("placeholder")).toBe("Custom");
     binding.disconnect();
   });

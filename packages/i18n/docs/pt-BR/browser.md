@@ -2,7 +2,7 @@
 title: Traduza um app no navegador
 description: Detecte e lembre o idioma do visitante, mantenha lang e dir em sincronia, renderize de novo um framework, traduza HTML e rode num Web Worker.
 order: 2
-source: 9f57dddd98ae0dfd238e21d765a4ad4901ebbc67
+source: 5bc4faa8216bdff685ecfcd53861ec49e2c72561
 ---
 
 # Traduza um app no navegador
@@ -89,26 +89,26 @@ Quando um visitante escolhe um idioma, ele fica, e é essa a ideia. Uma opção 
 const binding = await initializeBrowserI18n({ i18n });
 const picker = document.querySelector<HTMLSelectElement>("#language")!;
 
-picker.value = binding.followsSystem ? "system" : i18n.locale;
+picker.value = binding.isUsingSystemLocale ? "system" : i18n.locale;
 picker.addEventListener("change", async () => {
   try {
     if (picker.value === "system") {
-      await binding.followSystem();
+      await binding.switchToSystemLocale();
     } else {
       await i18n.setLocale(picker.value as (typeof i18n.locales)[number]);
     }
   } finally {
     // Mostra a escolha do visitante, mesmo quando a troca falhou ou outra mais nova passou na frente.
-    picker.value = binding.followsSystem ? "system" : i18n.locale;
+    picker.value = binding.isUsingSystemLocale ? "system" : i18n.locale;
   }
 });
 ```
 
-`followSystem()` esquece a escolha salva e troca para o idioma que o binding detecta agora, pelas configurações do navegador e depois pelo locale padrão. Esse idioma não é salvo, então a próxima visita detecta de novo. Se o armazenamento não puder ser limpo, o binding avisa, e a próxima visita ainda encontra a escolha antiga.
+`switchToSystemLocale()` esquece a escolha salva e troca para o idioma que o binding detecta agora, pelas configurações do navegador e depois pelo locale padrão. Esse idioma não é salvo, então a próxima visita detecta de novo. Se o armazenamento não puder ser limpo, o binding avisa, e a próxima visita ainda encontra a escolha antiga.
 
-`followsSystem` diz qual opção mostrar selecionada. Ele é `true` quando o binding começou sem nada escolhido e depois de `followSystem()`. Ele vira `false` quando o seu app aplica um locale com `setLocale()` ou `init()`, inclusive o que já está na tela: um visitante que escolhe inglês enquanto inglês foi detectado escolheu inglês.
+`isUsingSystemLocale` diz qual opção mostrar selecionada. Ele é `true` quando o binding começou sem nada escolhido e depois de `switchToSystemLocale()`. Ele vira `false` quando o seu app aplica um locale com `setLocale()` ou `init()`, inclusive o que já está na tela: um visitante que escolhe inglês enquanto inglês foi detectado escolheu inglês.
 
-Enquanto `followsSystem` é `true`, o binding também escuta o evento `languagechange` do navegador, então um visitante que troca o idioma do navegador no meio da visita recebe o novo sem recarregar. Um idioma que o visitante acabou de escolher e que ainda está carregando é mantido, não atropelado.
+Enquanto `isUsingSystemLocale` é `true`, o binding também escuta o evento `languagechange` do navegador, então um visitante que troca o idioma do navegador no meio da visita recebe o novo sem recarregar. Um idioma que o visitante acabou de escolher e que ainda está carregando é mantido, não atropelado.
 
 Num framework, renderize o seletor a partir de `binding.subscribe()` em vez de `i18n.subscribe()`. Escolher o idioma que já está na tela, ou "Sistema" enquanto o idioma detectado é o que está na tela, muda a seleção sem mudar o idioma, então o gerenciador não tem nada a informar. O binding informa as duas coisas, e também cada troca de idioma. No React:
 
@@ -118,7 +118,7 @@ import type { BrowserI18nBinding } from "@codenhub/i18n/browser";
 import { i18n } from "./i18n";
 
 export function LanguagePicker({ binding }: { binding: BrowserI18nBinding }) {
-  const selected = useSyncExternalStore(binding.subscribe, () => (binding.followsSystem ? "system" : i18n.locale));
+  const selected = useSyncExternalStore(binding.subscribe, () => (binding.isUsingSystemLocale ? "system" : i18n.locale));
   // A escolha do visitante, mostrada enquanto o idioma dela carrega, para o select não voltar para o antigo.
   const [pending, setPending] = useState<string>();
 
@@ -128,7 +128,7 @@ export function LanguagePicker({ binding }: { binding: BrowserI18nBinding }) {
       onChange={(event) => {
         const value = event.target.value;
         setPending(value);
-        const switching = value === "system" ? binding.followSystem() : i18n.setLocale(value as (typeof i18n.locales)[number]);
+        const switching = value === "system" ? binding.switchToSystemLocale() : i18n.setLocale(value as (typeof i18n.locales)[number]);
         // Depois a seleção volta a vir do binding, mesmo quando a troca falhou ou uma posterior passou na frente dela.
         switching.catch((error: unknown) => console.error(error)).finally(() => setPending((current) => (current === value ? undefined : current)));
       }}
@@ -144,7 +144,7 @@ export function LanguagePicker({ binding }: { binding: BrowserI18nBinding }) {
 }
 ```
 
-Quando o idioma detectado não carrega, `followSystem()` rejeita com o `I18nError` do loader, e a página mantém o idioma atual; a escolha salva já foi esquecida. Mesmo assim `followsSystem` é `true`, então o seletor mostra "System" sobre o idioma antigo: é o que o visitante escolheu, e a próxima visita ou o próximo `languagechange` tenta de novo o idioma detectado. Uma falha depois de um `languagechange` avisa e mantém o idioma atual. Nenhum dos dois cai para o padrão como o início faz, porque a página já tem um idioma para mostrar.
+Quando o idioma detectado não carrega, `switchToSystemLocale()` rejeita com o `I18nError` do loader, e a página mantém o idioma atual; a escolha salva já foi esquecida. Mesmo assim `isUsingSystemLocale` é `true`, então o seletor mostra "System" sobre o idioma antigo: é o que o visitante escolheu, e a próxima visita ou o próximo `languagechange` tenta de novo o idioma detectado. Uma falha depois de um `languagechange` avisa e mantém o idioma atual. Nenhum dos dois cai para o padrão como o início faz, porque a página já tem um idioma para mostrar.
 
 "Sistema" é para um site em que o binding escolhe o idioma. Num site com o idioma nas URLs, quem escolhe é a URL: cada página passa o seu locale para `initializeBrowserI18n()`, como faz [URLs localizadas](localized-urls.md), que o salva e encerra o seguimento do sistema, então uma escolha de "Sistema" só dura até a próxima página. Nesse caso, faça "Sistema" navegar, para a URL da página atual no idioma que `i18n.matchLocale(navigator.languages)` encontra, ou deixe a opção de fora.
 
@@ -190,7 +190,7 @@ Como cada parte se comporta:
 - **Comentários também são substituídos.** Eles não são elementos, então não contam como filhos. Não coloque `data-i18n` num elemento que um framework renderiza ou hidrata, já que os frameworks guardam marcadores em comentários ali; traduza esse texto com `t()`.
 - **`data-i18n-<attribute>` traduz um atributo.** Só são permitidos atributos que guardam texto para pessoas ou para leitores de tela: `alt`, `title`, `placeholder`, `label`, `aria-label`, `aria-description`, `aria-placeholder`, `aria-roledescription` e `aria-valuetext`. Os outros, como `data-i18n-href` ou `data-i18n-onclick`, são ignorados, então uma tradução nunca consegue mudar um link, um estilo ou um event handler.
 - **O texto que já está no HTML é o último fallback.** Uma chave que falta num idioma mostra o texto do próximo locale na cadeia de fallback dele, como `t()` faz: um pai configurado, como `pt` para `pt-BR`, e depois o locale padrão. O texto original só volta quando nenhum dicionário da cadeia tem a chave.
-- **O texto é definido como texto puro, nunca como HTML.** `<script>`, `<style>`, `<noscript>` e `<template>` nunca são tocados.
+- **O texto é definido como texto puro, nunca como HTML.** O texto de `<script>`, `<style>`, `<noscript>`, `<template>`, `<iframe>`, `<noembed>`, `<noframes>`, `<xmp>` e `<plaintext>` nunca é tocado, já que roda como código, decide o que aparece ou é escrito sem escape quando a página é salva como HTML. Os atributos deles são traduzidos como os de qualquer outro, então `<iframe data-i18n-title="video.title">` recebe um nome acessível traduzido.
 - **Placeholders como `{name}` não são preenchidos aqui**, porque não há de onde, no HTML, passar um valor. Renderize textos com valores a partir do seu código, com `t()`.
 - **A página mostra o texto do HTML até o dicionário do visitante carregar** e depois troca no lugar, o que, numa conexão lenta, dá para ver. Há dois jeitos de evitar isso:
   - Renderize uma página por idioma com antecedência, como em [Gere um site estático](server-rendering.md#gere-um-site-estático), e passe o `locale` dela.
@@ -286,7 +286,7 @@ Um worker também não tem `localStorage`, então o salvamento avisa e é pulado
 
   O gerenciador fica com o resultado da chamada posterior, conforme [a regra da última chamada](index.md#a-última-chamada-vence), e o binding não é conectado. Num gerenciador que ainda não tinha sido inicializado, `setLocale()` só falha com o próprio erro, e o binding segue em frente. Chamar `init()` ou `setLocale()` depois que a promise do binding foi resolvida não tem problema.
 
-- **`disconnect()` para de reagir, mas não desfaz nada.** Ele para de salvar, sincronizar, traduzir, seguir o idioma do navegador e chamar os listeners de `binding.subscribe()`, mas deixa o texto atual, os atributos e a escolha salva como estão. Uma troca para um idioma detectado que ainda está carregando é descartada, e `followSystem()` rejeita depois dele. Depois disso você pode iniciar um novo binding.
+- **`disconnect()` para de reagir, mas não desfaz nada.** Ele para de salvar, sincronizar, traduzir, seguir o idioma do navegador e chamar os listeners de `binding.subscribe()`, mas deixa o texto atual, os atributos e a escolha salva como estão. Uma troca para um idioma detectado que ainda está carregando é descartada, e `switchToSystemLocale()` rejeita depois dele. Depois disso você pode iniciar um novo binding.
 
 A [referência do navegador](../reference/browser.md) (em inglês) documenta cada opção e cada falha, e [Solução de problemas](troubleshooting.md#o-binding-do-navegador-avisa-ou-rejeita) lista cada aviso que o binding registra.
 

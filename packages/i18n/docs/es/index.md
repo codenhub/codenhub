@@ -1,7 +1,7 @@
 ---
 title: Visión general
 description: Qué hace @codenhub/i18n, las cuatro ideas en las que se basa, un recorrido de cinco minutos, los idiomas de derecha a izquierda y cómo se comporta el gestor cuando las llamadas se superponen.
-source: 9b516d4841d9d2b93d6c83ddf9f30e5406902f71
+source: 1e936e9462e1f95bef5dcd7db88d7f526dbad33a
 ---
 
 # Traduce tu app
@@ -136,12 +136,14 @@ Las traducciones rara vez se quedan completas. La tienda de té agrega envoltura
 
 En el segundo caso, el gestor también registra una advertencia, como `[I18n] Missing key "home.subtitle" in locale "pt".`. Con qué frecuencia, y adónde va:
 
-- Advierte una vez por cada par de locale y clave, así una clave usada en cada render no inunda la consola.
+- Advierte una vez por cada par de locale y clave, entre todos los gestores del proceso, así una clave usada en cada render, o por un gestor por solicitud, no inunda la consola.
 - Recuerda los 1000 pares más recientes, así que un par que sale de esa lista puede volver a advertir.
 - Un gestor creado con `isSilent: true` nunca la registra.
-- Para mandar las claves faltantes a tu propio logger, pasa `onMissingKey(key, locale)`. Reemplaza la advertencia y se ejecuta en cada clave faltante, no una vez por par.
+- Para mandar las claves faltantes a tu propio logger, pasa `onMissingKey(key, locale)`. Reemplaza la advertencia y se ejecuta en cada clave faltante, no una vez por par. Si lanza un error, `t()` lanza el mismo error, así que una prueba puede fallar en la primera clave faltante; el binding del navegador traduce el resto de la página y luego rechaza con ese error.
 
 `t()` siempre devuelve un string, así que nunca necesitas `?? ""` después.
+
+Un string vacío es una traducción, no un hueco. `""` no muestra nada, no registra nada y no recurre a otro locale, así que un idioma puede omitir lo que otro necesita, como el tooltip de un botón cuya etiqueta ya dice "+ Add" en inglés pero solo "+" en portugués.
 
 ## Idiomas de derecha a izquierda
 
@@ -249,7 +251,7 @@ Los fallos siguen la misma regla. Una llamada que falla se rechaza y deja el idi
 
 `init()` y `setLocale()` lanzan un `RangeError` para un locale que no está en `locales`. Un locale que viene de una cookie, de un query string o de un encabezado de la solicitud es texto no confiable, así que conviértelo primero en un locale configurado. Dos métodos hacen eso, para dos tipos de entrada.
 
-**`resolveLocale(value)`** es para un valor que ya debería ser uno de tus locales, como un parámetro `?lang=` o una cookie que escribió tu app. Acepta solo coincidencias exactas, ignorando mayúsculas y minúsculas y los espacios alrededor, y devuelve el locale escrito como lo escribiste tú, o `undefined`:
+**`resolveLocale(value)`** es para un valor que ya debería ser uno de tus locales, como un parámetro `?lang=` o una cookie que escribió tu app. Acepta solo coincidencias exactas, ignorando mayúsculas y minúsculas y los espacios alrededor y leyendo `_` como `-`, y devuelve el locale escrito como lo escribiste tú, o `undefined`:
 
 ```ts
 const lang = new URL(location.href).searchParams.get("lang") ?? "";
@@ -257,7 +259,7 @@ await i18n.init({ locale: i18n.resolveLocale(lang) ?? i18n.defaultLocale });
 // ?lang=PT arranca en "pt"; ?lang=fr, o sin lang, arranca en el locale por defecto.
 ```
 
-Con `pt-BR` entre tus locales, `?lang=PT-br` arrancaría en `"pt-BR"` de la misma forma.
+Con `pt-BR` entre tus locales, `?lang=PT-br` y `?lang=pt_BR` arrancarían en `"pt-BR"` de la misma forma.
 
 **`matchLocale(preferences)`** es para las preferencias de idioma de un visitante, como `navigator.languages` o los idiomas de un encabezado `Accept-Language`, del más preferido al menos. Encuentra el locale más cercano que soportas. Prueba cada preferencia en orden, y gana la primera que coincide con algo:
 

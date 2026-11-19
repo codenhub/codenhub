@@ -16,6 +16,24 @@ const create = (locales: readonly string[], loadLocale = (locale: string): unkno
   createI18n({ defaultLocale: "en", locales, loadLocale, isSilent: true });
 
 describe("regional fallback", () => {
+  it("should render an empty translation as written, without falling back or reporting a miss", async () => {
+    const onMissingKey = vi.fn();
+    const i18n = createI18n({
+      defaultLocale: "en",
+      locales: ["en", "pt"],
+      // A label that fits in English needs no tooltip, while Portuguese shortens it to "+" and explains it in one.
+      loadLocale: (locale) =>
+        locale === "en" ? { add: "+ Add", addHint: "", label: "Add" } : { add: "+", addHint: "Adicionar", label: "" },
+      onMissingKey,
+    });
+    await i18n.init({ locale: "en" });
+
+    expect(i18n.translate("addHint")).toBe("");
+    await i18n.setLocale("pt");
+    expect(i18n.translate("label")).toBe("");
+    expect(onMissingKey).not.toHaveBeenCalled();
+  });
+
   it("should fall back to a configured parent locale before the default", async () => {
     const i18n = create(["en", "pt", "pt-BR"]);
     await i18n.init({ locale: "pt-BR" });

@@ -136,13 +136,55 @@ describe("initializeBrowserI18n document integration", () => {
       try {
         expect(element.textContent).toBe(fallbackText);
         expect(warn).toHaveBeenCalledWith(
-          `[I18n] Skipping translation on <${tagName}> because the element can run, hide, or reparse its text as HTML.`,
+          "%s",
+          `[I18n] Skipping translation on <${tagName}> because the element can run, hide, or reparse its text as HTML; ` +
+            'its data-i18n is "greeting".',
+          element,
         );
       } finally {
         binding.disconnect();
       }
     },
   );
+
+  it.each(["iframe", "noscript", "template", "xmp"])(
+    "translates the attributes of <%s> without a warning, since an attribute is escaped wherever the page is written",
+    async (tagName) => {
+      const element = document.createElement(tagName);
+      element.setAttribute("data-i18n-title", "greeting");
+      element.setAttribute("title", "Video");
+      document.body.append(element);
+      const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+      const i18n = createManager();
+
+      const binding = await initializeBrowserI18n({ i18n, locale: "fr", root: document.body });
+      try {
+        expect(element.getAttribute("title")).toBe("Bonjour");
+        expect(warn).not.toHaveBeenCalled();
+      } finally {
+        binding.disconnect();
+      }
+    },
+  );
+
+  it("translates an <iframe>'s title while still skipping its text", async () => {
+    document.body.innerHTML = '<iframe data-i18n="greeting" data-i18n-title="greeting" title="Video">Fallback</iframe>';
+    const iframe = document.querySelector("iframe")!;
+    vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const i18n = createManager();
+
+    const binding = await initializeBrowserI18n({ i18n, locale: "fr", root: document.body, observe: true });
+    try {
+      expect(iframe.getAttribute("title")).toBe("Bonjour");
+      expect(iframe.textContent).toBe("Fallback");
+
+      iframe.removeAttribute("data-i18n-title");
+      await flushMutations();
+      expect(iframe.getAttribute("title")).toBe("Video");
+    } finally {
+      binding.disconnect();
+    }
+  });
 
   it("keeps a translation out of the HTML when the page is serialized", async () => {
     const container = document.createElement("div");
@@ -219,7 +261,9 @@ describe("initializeBrowserI18n document integration", () => {
     try {
       expect(element.textContent).toBe("");
       expect(warn).toHaveBeenCalledWith(
-        "[I18n] Skipping translation on <style> because the element can run, hide, or reparse its text as HTML.",
+        "%s",
+        '[I18n] Skipping translation on <style> because the element can run, hide, or reparse its text as HTML; its data-i18n is "greeting".',
+        element,
       );
     } finally {
       binding.disconnect();

@@ -6,7 +6,8 @@ const ELEMENT_NODE = 1;
 /**
  * Elements whose text can run, stay hidden, or be read as HTML. The HTML serializer writes the text of `xmp`, `iframe`,
  * `noembed`, `noframes`, and `plaintext` unescaped, so a page saved through `innerHTML`, as a prerender does, would turn
- * a translation such as `</xmp><img onerror=...>` into markup.
+ * a translation such as `</xmp><img onerror=...>` into markup. Their attributes are still translated, since the
+ * serializer escapes every attribute value.
  */
 const BLOCKED_ELEMENT_NAMES = new Set([
   "iframe",
@@ -266,19 +267,20 @@ export function createDomTranslator(options: DomTranslatorOptions): DomTranslato
   };
 
   const translateElement = (element: Element, translate: (key: string) => string | undefined): void => {
-    if (BLOCKED_ELEMENT_NAMES.has(element.localName)) {
-      if (!options.isSilent) {
-        console.warn(
-          `[I18n] Skipping translation on <${element.tagName.toLowerCase()}> because the element can run, hide, or reparse its text as HTML.`,
-        );
-      }
-      return;
-    }
-
     const translateOwnText = (): void => {
       const rawKey = element.getAttribute(TRANSLATION_ATTRIBUTE);
 
-      if (rawKey !== null) {
+      // Only the text is blocked: the serializer escapes every attribute, so an `<iframe>`'s `title` is translated.
+      if (rawKey !== null && BLOCKED_ELEMENT_NAMES.has(element.localName)) {
+        if (!options.isSilent) {
+          console.warn(
+            "%s",
+            `[I18n] Skipping translation on <${element.tagName.toLowerCase()}> because the element can run, hide, or ` +
+              `reparse its text as HTML; its ${TRANSLATION_ATTRIBUTE} is ${formatReportedKey(rawKey)}.`,
+            element,
+          );
+        }
+      } else if (rawKey !== null) {
         translateText(element, rawKey, translate);
       } else {
         restoreText(element);

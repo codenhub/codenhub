@@ -1,7 +1,7 @@
 ---
 title: Visão geral
 description: O que o @codenhub/i18n faz, as quatro ideias por trás dele, um passo a passo de cinco minutos, idiomas da direita para a esquerda e como o gerenciador se comporta quando as chamadas se sobrepõem.
-source: 9b516d4841d9d2b93d6c83ddf9f30e5406902f71
+source: 1e936e9462e1f95bef5dcd7db88d7f526dbad33a
 ---
 
 # Traduza o seu app
@@ -136,12 +136,14 @@ Traduções raramente ficam completas. A loja de chá passa a oferecer embrulho 
 
 No segundo caso, o gerenciador também registra um aviso, como `[I18n] Missing key "home.subtitle" in locale "pt".`. Com que frequência, e para onde ele vai:
 
-- Ele avisa uma vez para cada par de locale e chave, então uma chave usada em toda renderização não inunda o console.
+- Ele avisa uma vez para cada par de locale e chave, entre todos os gerenciadores do processo, então uma chave usada em toda renderização, ou por um gerenciador por requisição, não inunda o console.
 - Ele lembra os 1.000 pares mais recentes, então um par que sai dessa lista pode avisar de novo.
 - Um gerenciador criado com `isSilent: true` nunca registra esse aviso.
-- Para mandar as faltas para o seu próprio logger, passe `onMissingKey(key, locale)`. Ele substitui o aviso e roda em toda falta, e não uma vez por par.
+- Para mandar as faltas para o seu próprio logger, passe `onMissingKey(key, locale)`. Ele substitui o aviso e roda em toda falta, e não uma vez por par. Se ele lançar um erro, `t()` lança o mesmo erro, então um teste pode falhar na primeira chave que falta; o binding do navegador traduz o resto da página e depois rejeita com esse erro.
 
 `t()` sempre devolve uma string, então você nunca precisa de `?? ""` depois dele.
+
+Uma string vazia é uma tradução, não uma lacuna. `""` não mostra nada, não registra nada e não recorre a outro locale, então um idioma pode deixar de fora o que outro precisa, como o tooltip de um botão cujo rótulo já diz "+ Add" em inglês, mas só "+" em português.
 
 ## Idiomas da direita para a esquerda
 
@@ -249,7 +251,7 @@ As falhas seguem a mesma regra. Uma chamada que falha é rejeitada e deixa o idi
 
 `init()` e `setLocale()` lançam um `RangeError` para um locale que não está em `locales`. Um locale vindo de um cookie, de uma query string ou de um cabeçalho da requisição é texto não confiável, então transforme-o num locale configurado antes. Dois métodos fazem isso, para dois tipos de entrada.
 
-**`resolveLocale(value)`** é para um valor que já deveria ser um dos seus locales, como um parâmetro `?lang=` ou um cookie que o seu app escreveu. Ele só aceita correspondências exatas, ignorando maiúsculas e minúsculas e espaços nas pontas, e devolve o locale do jeito que você o escreveu, ou `undefined`:
+**`resolveLocale(value)`** é para um valor que já deveria ser um dos seus locales, como um parâmetro `?lang=` ou um cookie que o seu app escreveu. Ele só aceita correspondências exatas, ignorando maiúsculas e minúsculas e espaços nas pontas e lendo `_` como `-`, e devolve o locale do jeito que você o escreveu, ou `undefined`:
 
 ```ts
 const lang = new URL(location.href).searchParams.get("lang") ?? "";
@@ -257,7 +259,7 @@ await i18n.init({ locale: i18n.resolveLocale(lang) ?? i18n.defaultLocale });
 // ?lang=PT começa em "pt"; ?lang=fr, ou sem lang, começa no padrão.
 ```
 
-Com `pt-BR` entre os seus locales, `?lang=PT-br` começaria em `"pt-BR"` do mesmo jeito.
+Com `pt-BR` entre os seus locales, `?lang=PT-br` e `?lang=pt_BR` começariam em `"pt-BR"` do mesmo jeito.
 
 **`matchLocale(preferences)`** é para as preferências de idioma de um visitante, como `navigator.languages` ou os idiomas de um cabeçalho `Accept-Language`, do mais preferido para o menos. Ele encontra o locale suportado mais próximo. Cada preferência é testada em ordem, e a primeira que corresponder a qualquer coisa vence:
 

@@ -98,7 +98,8 @@ export interface I18nConfig<TLocale extends string = string, TMessages = unknown
    * warning.
    * Exceptions propagate from the lookup, so a test can throw here to fail on a missing key.
    *
-   * @defaultValue A `console.warn` once for each of the 1,000 most recent locale/key pairs, unless `isSilent`.
+   * @defaultValue A `console.warn` once for each of the 1,000 most recent locale/key pairs, shared by every manager in
+   * the process, unless `isSilent`.
    */
   onMissingKey?: ((key: string, locale: NoInfer<TLocale>) => void) | undefined;
   /** Suppresses optional diagnostics, including the default missing-key warning, without suppressing failures. Defaults to `false`. */
@@ -212,7 +213,8 @@ export interface I18n<TLocale extends string = string, TKey extends string = str
   setLocale(locale: TLocale): Promise<void>;
 
   /**
-   * Canonicalizes an exact configured locale match.
+   * Canonicalizes an exact configured locale match, ignoring letter case and surrounding spaces, and reading `_` as
+   * `-`, so `pt_BR` resolves to a configured `pt-BR`.
    *
    * @param value - Untrusted locale value.
    * @returns The canonical locale or undefined; language subtags are not matched, as {@link I18n.matchLocale} does.

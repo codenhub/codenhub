@@ -384,7 +384,7 @@ Removes a typed lifecycle event listener.
 resolveLocale(value: string): TLocale | undefined;
 ```
 
-Canonicalizes an exact configured locale match.
+Canonicalizes an exact configured locale match, ignoring letter case and surrounding spaces, and reading `_` as `-`, so `pt_BR` resolves to a configured `pt-BR`.
 
 **Parameters**
 
@@ -549,7 +549,7 @@ onMissingKey?: ((key: string, locale: NoInfer<TLocale>) => void) | undefined;
 
 Called for every key missing from every dictionary the active locale falls back to, in place of the default warning. Exceptions propagate from the lookup, so a test can throw here to fail on a missing key.
 
-**Default** — A `console.warn` once for each of the 1,000 most recent locale/key pairs, unless `isSilent`.
+**Default** — A `console.warn` once for each of the 1,000 most recent locale/key pairs, shared by every manager in the process, unless `isSilent`.
 
 #### I18nConfig › timeZone
 

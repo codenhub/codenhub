@@ -2,7 +2,7 @@
 title: URLs localizadas
 description: Pon el locale en la ruta, traduce la propia ruta, lee ambas de vuelta, enlaza a otros idiomas, genera cada página localizada y lleva a cada visitante a su propio idioma en un sitio estático.
 order: 4
-source: 63e651b9c39c7c6228b55693865260c77948a881
+source: 634cc878a98ebcde653e1664e29ee8d1333076b3
 ---
 
 # URLs localizadas
@@ -214,7 +214,7 @@ Cómo se lee la tabla:
 - **Todo lo que la tabla no enumera conserva sus palabras.** `/blog` es `/pt/blog`, y `/products/42` en español es `/es/products/42`, porque solo el portugués la traduce.
 - **Los segmentos fijos distinguen mayúsculas y minúsculas**, como las URLs, así que `/pt/Sobre` no es la página "acerca de". Solo el prefijo del locale ignora las mayúsculas.
 - **Prefiere letras simples en las rutas.** El routing no cambia tus palabras, así que obtienes `/servicos` solo si escribes `/servicos`. La mayoría de los sitios quita los acentos de las URLs, porque una ruta con acentos se muestra codificada con porcentajes dondequiera que se copie como texto, como `/servi%C3%A7os`. Los acentos también funcionan: `"/serviços"` coincide con el `/servi%C3%A7os` que envían los navegadores, y `localize()` devuelve la forma codificada, como hace con cada segmento, como el slug de un producto, y como `parse()` devuelve su `pathname`. Así que un build estático que escribe una carpeta para esa ruta tiene que decodificarla antes, como en [Genera un sitio estático](server-rendering.md#genera-un-sitio-estático).
-- **Una página de la tabla vuelve con una sola escritura.** `parse()` devuelve las palabras fijas de una página de la tabla tal como una URL escribe las palabras de la tabla, en todos los locales. Así que `/%61bout` y `/pt/%73obre`, escrituras raras de `/about` y `/pt/sobre`, dan las dos `pathname: "/about"`. Los parámetros y los segmentos que la tabla no enumera vuelven tal como los escribió la solicitud.
+- **Una página vuelve con una sola escritura.** `parse()` escribe cada segmento, esté en la tabla o no, como RFC 3986 normaliza una URL: un escape de una letra, un dígito o `-._~` se decodifica, cualquier otro escape se escribe en mayúsculas, y un carácter que una URL codifica, como `é`, se codifica. Así que `/%61bout` y `/pt/%73obre`, escrituras raras de `/about` y `/pt/sobre`, dan las dos `pathname: "/about"`, y `/products/caf%c3%a9` da `/products/caf%C3%A9`. Un carácter reservado escapado sigue escapado, así que `/products/c%2B%2B` y `/products/c++` son dos páginas, ya que un servidor puede leer `%2B` de otra forma que `+`. Así que pasa el pathname como lo escribe la URL, como `new URL(request.url).pathname`, no uno que tu framework decodificó: decodificado, `/100%25` se vuelve `/100%`, que `parse()` rechaza.
 - **Un segmento fijo le gana a un parámetro, y un parámetro le gana a un comodín.** Con `/products/new` y `/products/:id` en la tabla, `/products/new` es la página de producto nuevo, en el orden en que sea que la tabla los enumere. Con `/help/contact` y `/help/:path*`, `/help/contact` es la página de contacto y cualquier otra ruta `/help/…` va al comodín.
 - **El locale por defecto también se puede traducir.** Un sitio que se escribe primero en portugués, con el código en inglés, puede usar `defaultLocale: "pt"` y `{ "/about": { pt: "/sobre" } }`, así `/sobre` es la página en portugués y `/en/about`, la página en inglés.
 
