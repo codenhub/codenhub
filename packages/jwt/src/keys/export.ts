@@ -1,7 +1,7 @@
 import type { Jwk, PrivateKey, PublicKey, SecretKey } from "../core/types";
 import { ALGORITHM_PARAMS } from "./algorithms";
 import { exportWebCryptoJwk } from "./exported-jwk";
-import { getKeyEntryOfKind } from "./registry";
+import { getKeyEntryOfKind, isRegisteredKey } from "./registry";
 
 type MaterialMember = "crv" | "x" | "y" | "n" | "e" | "d" | "p" | "q" | "dp" | "dq" | "qi" | "k";
 
@@ -25,9 +25,13 @@ const PRIVATE_MEMBERS: Readonly<Record<Jwk["kty"], readonly MaterialMember[]>> =
  * @param key - A public key from {@link importPublicKey} or {@link generateKeyPair}.
  * @returns A frozen JWK with `kty`, `alg`, `use: "sig"`, `kid` when the key has one, and the public
  * members only, in a stable order. It never carries `ext` or `key_ops`.
- * @throws TypeError when `key` is not a public key created by this package.
+ * @throws TypeError when `key` is not a public key created by this package. For a private key, the message
+ * points to {@link getPublicKey}.
  */
 export async function exportPublicJwk(key: PublicKey): Promise<Jwk> {
+  if (isRegisteredKey(key) && (key as { readonly kind: string }).kind === "private") {
+    throw new TypeError("exportPublicJwk: key is a private key; export its public half with getPublicKey(key).");
+  }
   const entry = getKeyEntryOfKind(key, "public");
   return toJwk(key, await exportWebCryptoJwk(entry.cryptoKey, key.alg), PUBLIC_MEMBERS);
 }

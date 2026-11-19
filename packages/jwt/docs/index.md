@@ -104,7 +104,7 @@ That closes the best-known class of JWT attacks. In the "`alg: none`" attack a f
 
 `EdDSA` and `Ed25519` produce identical signatures. RFC 9864 replaces the older, curve-agnostic `EdDSA` identifier with `Ed25519`, and issuers still use both, so both are supported, but a key is bound to one of them: a key bound to `Ed25519` does not verify a token whose header says `EdDSA`.
 
-Asymmetric keys can also be imported from PEM. The list of algorithms may grow in a minor release, which widens `JwsAlgorithm` and the types built on it, so give a `switch` over an `alg` a default branch.
+Asymmetric keys can also be imported from PEM, and any key from a Web Crypto `CryptoKey`. The list of algorithms may grow in a minor release, which widens `JwsAlgorithm` and the types built on it, so give a `switch` over an `alg` a default branch.
 
 [Keys](keys.md) covers key kinds, importing, generating and exporting.
 

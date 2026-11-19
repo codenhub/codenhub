@@ -17,11 +17,15 @@ const casesOf = (name: string, constraint: string, values: readonly unknown[]): 
 describe("createVerifier options", () => {
   it.each([
     ["options is not an object", null, "createVerifier: options must be an object."],
-    ["keys is missing", {}, "createVerifier: options.keys must be a key set (an object with a select function)."],
+    [
+      "keys is missing",
+      {},
+      "createVerifier: options.keys must be a key set (an object with a select function) or a function returning one.",
+    ],
     [
       "keys has no select function",
       { keys: { select: "x" } },
-      "createVerifier: options.keys must be a key set (an object with a select function).",
+      "createVerifier: options.keys must be a key set (an object with a select function) or a function returning one.",
     ],
   ])("should throw when %s", (_, options, message) => {
     expect(() => createVerifier(options as never)).toThrow(new TypeError(message));

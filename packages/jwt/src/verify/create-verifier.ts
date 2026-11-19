@@ -2,8 +2,10 @@ import { fail, ok } from "../core/result";
 import type {
   JwtHeader,
   JwtIssue,
+  JwtPayload,
   JwtResult,
   KeySet,
+  KeySetResolver,
   VerificationKey,
   VerifiedJwt,
   VerifiedPayload,
@@ -11,13 +13,16 @@ import type {
   VerifierOptions,
 } from "../core/types";
 import type { StandardSchemaV1 } from "../interop/standard-schema";
-import { parseCompact, parsePayload } from "../jws/compact";
+import { parseCompact, parsePayload, type CompactJws } from "../jws/compact";
 import { ALGORITHM_PARAMS } from "../keys/algorithms";
 import { getKeyEntry, isRegisteredKey } from "../keys/registry";
 import { checkClaims, schemaIssues } from "./claims";
 import { resolveOptions } from "./options";
 
 const KEY_SET_ERROR = fail({ code: "key_fetch_failed", params: { reason: "key_set_error" } });
+const MISSING_ISSUER = fail({ code: "missing_claim", path: ["payload", "iss"], params: { claim: "iss" } });
+const INVALID_ISSUER = fail({ code: "invalid_claim", path: ["payload", "iss"] });
+const WRONG_ISSUER = fail({ code: "wrong_issuer", path: ["payload", "iss"] });
 
 /**
  * Creates a verifier that checks a token's structure, signature and claims in one call.
@@ -29,6 +34,9 @@ const KEY_SET_ERROR = fail({ code: "key_fetch_failed", params: { reason: "key_se
  * verifies. Claim checks then run and report every failing claim together: registered claim types,
  * `exp` (expired once now ≥ `exp` + tolerance), `nbf`, `iat`, `maxAge`, issuer, audience, `typ`, and
  * required claims. When all of them pass, `options.claims` runs last.
+ *
+ * When `options.keys` is a {@link KeySetResolver}, the payload's `iss` is read before the signature, only to
+ * ask it for the issuer's key set; nothing else in the payload is used until the signature verifies.
  *
  * Times compare in fractional seconds, `options.now() / 1000`, against the numeric date claims.
  *
@@ -57,7 +65,7 @@ const KEY_SET_ERROR = fail({ code: "key_fetch_failed", params: { reason: "key_se
  * `options.claims` propagates, and so does a `TypeError` when `options.now` returns something other than a
  * finite number, checked once per verification when the claims are checked, after the signature.
  * @throws TypeError when `options` is not an object; `options` has a member that is not an option, such as
- * a misspelled `audiance`; `keys` has no `select` function; `issuer` is neither a non-empty string nor a
+ * a misspelled `audiance`; `keys` is neither a function nor an object with a `select` function; `issuer` is neither a non-empty string nor a
  * non-empty array of them; `audience` is neither `false` nor one of those; `type` is neither a non-empty
  * string other than `application/` nor a non-empty array of such strings and `null`;
  * `requireExpiration` or `allowExpired` is not a boolean; `clockTolerance` is not an integer from 0
@@ -75,7 +83,18 @@ export function createVerifier<TSchema extends StandardSchemaV1 | undefined = un
       return parsed;
     }
     const jws = parsed.value;
-    const selected = await selectKey(resolved.keys, jws.header);
+    let early: JwtPayload | undefined;
+    let keys: KeySet;
+    if (typeof resolved.keys === "function") {
+      const routed = await routeByIssuer(resolved.keys, jws, resolved.issuers);
+      if (!routed.ok) {
+        return routed;
+      }
+      ({ keys, payload: early } = routed.value);
+    } else {
+      keys = resolved.keys;
+    }
+    const selected = await selectKey(keys, jws.header);
     if (!selected.ok) {
       return selected;
     }
@@ -91,7 +110,7 @@ export function createVerifier<TSchema extends StandardSchemaV1 | undefined = un
     if (!(await crypto.subtle.verify(signParams, cryptoKey, jws.signature, jws.signingInput))) {
       return fail({ code: "bad_signature" });
     }
-    const payload = parsePayload(jws);
+    const payload = early === undefined ? parsePayload(jws) : ok(early);
     if (!payload.ok) {
       return payload;
     }
@@ -110,6 +129,52 @@ export function createVerifier<TSchema extends StandardSchemaV1 | undefined = un
     };
     return ok(verified);
   };
+}
+
+/**
+ * Reads the claimed `iss` of a token whose signature is not checked yet, only to ask the caller's resolver for
+ * that issuer's key set (scope.md decision 47). The payload is never returned unless the signature then
+ * verifies; the issuer read here is the one the claim checks see, since both come from the same bytes.
+ */
+async function routeByIssuer(
+  resolver: KeySetResolver,
+  jws: CompactJws,
+  issuers: readonly string[] | undefined,
+): Promise<JwtResult<{ readonly keys: KeySet; readonly payload: JwtPayload }>> {
+  const payload = parsePayload(jws);
+  if (!payload.ok) {
+    return payload;
+  }
+  if (!Object.hasOwn(payload.value, "iss")) {
+    return MISSING_ISSUER;
+  }
+  const iss = payload.value.iss;
+  if (typeof iss !== "string") {
+    return INVALID_ISSUER;
+  }
+  // An issuer the verifier refuses anyway never reaches the resolver.
+  if (issuers !== undefined && !issuers.includes(iss)) {
+    return WRONG_ISSUER;
+  }
+  let keys: unknown;
+  try {
+    keys = await resolver(iss, jws.header);
+  } catch {
+    return KEY_SET_ERROR;
+  }
+  if (keys === undefined) {
+    return WRONG_ISSUER;
+  }
+  if (typeof keys !== "object" || keys === null) {
+    return KEY_SET_ERROR;
+  }
+  let select: unknown;
+  try {
+    select = (keys as { select?: unknown }).select;
+  } catch {
+    return KEY_SET_ERROR;
+  }
+  return typeof select === "function" ? ok({ keys: keys as KeySet, payload: payload.value }) : KEY_SET_ERROR;
 }
 
 /**

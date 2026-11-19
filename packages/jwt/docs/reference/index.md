@@ -80,6 +80,8 @@ Creates a verifier that checks a token's structure, signature and claims in one 
 
 Each token goes through, in order: the length cap, before any decoding; strict parsing of its three segments and header; key selection from `options.keys`; the selected key's algorithm, which must equal the header's `alg`; the signature; and only then the payload, which is never read before its signature verifies. Claim checks then run and report every failing claim together: registered claim types, `exp` (expired once now ≥ `exp` + tolerance), `nbf`, `iat`, `maxAge`, issuer, audience, `typ`, and required claims. When all of them pass, `options.claims` runs last.
 
+When `options.keys` is a [`KeySetResolver`](#keysetresolver), the payload's `iss` is read before the signature, only to ask it for the issuer's key set; nothing else in the payload is used until the signature verifies.
+
 Times compare in fractional seconds, `options.now() / 1000`, against the numeric date claims.
 
 **Parameters**
@@ -92,7 +94,7 @@ Times compare in fractional seconds, `options.now() / 1000`, against the numeric
 
 **Returns** — A [`Verifier`](#verifier). It resolves to the frozen `{ header, payload, key }`, or to a failure and never throws for any token. A key set whose `select` throws or rejects, or returns something other than a result holding a public or secret key this package created, makes the verifier fail with `key_fetch_failed` and `{ reason: "key_set_error" }`, except that a failed result whose issues each have a string `code` is passed through. Caller code is not caught: a rejection from `options.claims` propagates, and so does a `TypeError` when `options.now` returns something other than a finite number, checked once per verification when the claims are checked, after the signature.
 
-**Throws** — TypeError when `options` is not an object; `options` has a member that is not an option, such as a misspelled `audiance`; `keys` has no `select` function; `issuer` is neither a non-empty string nor a non-empty array of them; `audience` is neither `false` nor one of those; `type` is neither a non-empty string other than `application/` nor a non-empty array of such strings and `null`; `requireExpiration` or `allowExpired` is not a boolean; `clockTolerance` is not an integer from 0 through 300; `maxAge` is not a positive integer; `maxLength` is not an integer from 1 through 65536; `requiredClaims` is not an array of non-empty strings; `claims` is not a version 1 Standard Schema; or `now` is not a function.
+**Throws** — TypeError when `options` is not an object; `options` has a member that is not an option, such as a misspelled `audiance`; `keys` is neither a function nor an object with a `select` function; `issuer` is neither a non-empty string nor a non-empty array of them; `audience` is neither `false` nor one of those; `type` is neither a non-empty string other than `application/` nor a non-empty array of such strings and `null`; `requireExpiration` or `allowExpired` is not a boolean; `clockTolerance` is not an integer from 0 through 300; `maxAge` is not a positive integer; `maxLength` is not an integer from 1 through 65536; `requiredClaims` is not an array of non-empty strings; `claims` is not a version 1 Standard Schema; or `now` is not a function.
 
 **Example**
 
@@ -170,7 +172,7 @@ Exports a public key as a JWK, for publishing in a JWKS.
 
 **Returns** — A frozen JWK with `kty`, `alg`, `use: "sig"`, `kid` when the key has one, and the public members only, in a stable order. It never carries `ext` or `key_ops`.
 
-**Throws** — TypeError when `key` is not a public key created by this package.
+**Throws** — TypeError when `key` is not a public key created by this package. For a private key, the message points to [`getPublicKey`](#getpublickey).
 
 ### exportSecretJwk
 
@@ -228,20 +230,48 @@ Generates a random HMAC secret bound to one algorithm, as long as its hash outpu
 
 **Throws** — TypeError when `options` is not an object, `options.alg` is not `HS256`, `HS384` or `HS512`, `options.kid` is not a string, or `options.extractable` is not a boolean.
 
+### getPublicKey
+
+```ts
+export declare function getPublicKey(key: PrivateKey): PublicKey;
+```
+
+Returns the public half of a private key, bound to the same algorithm and carrying the same `kid`.
+
+Every private key this package creates holds its public half, proven to match when the key was generated or imported, also when the private key is not extractable. Use it when only the private key was loaded, such as with [`importPrivateKey`](#importprivatekey), to publish its JWK with [`exportPublicJwk`](#exportpublicjwk), to verify your own tokens, or to embed it in a DPoP proof. Each call for the same private key returns the same public key.
+
+**Parameters**
+
+- `key` — A private key created by this package.
+
+**Returns** — The frozen public key.
+
+**Throws** — TypeError when `key` is not a private key created by this package.
+
+**Example**
+
+```ts
+const result = await importPrivateKey(env.SIGNING_KEY_PEM, { alg: "ES256", kid: "2026-11" });
+if (!result.ok) throw new Error("The signing key could not be imported.");
+const jwks = { keys: [await exportPublicJwk(getPublicKey(result.value))] };
+```
+
 ### importKeyPair
 
 ```ts
 export declare function importKeyPair(key: unknown, options: ImportPrivateKeyOptions): Promise<JwtResult<KeyPair>>;
 ```
 
-Imports an untrusted private JWK, or a PEM `PRIVATE KEY` (PKCS#8), as a key pair bound to one algorithm: the private key, and the public key taken from the same key's public members.
+Imports an untrusted private JWK, a PEM `PRIVATE KEY` (PKCS#8), or a Web Crypto key pair, as a key pair bound to one algorithm: the private key, and the public key taken from the same key's public members.
 
 The checks of [`importPrivateKey`](#importprivatekey) apply. The pair is proved to match before it is returned: the private key signs a fixed message and the public key must verify it, so a JWK whose public members belong to another key fails. Use it to load a signing key stored with [`exportPrivateJwk`](#exportprivatejwk), and publish `exportPublicJwk(pair.publicKey)` without storing a second JWK.
 
+A `CryptoKeyPair`, such as one `crypto.subtle.generateKey` made non-extractable and an application kept in IndexedDB, is used as it is: its private `CryptoKey` is kept, never exported, so it stays non-extractable; its public key must be extractable and passes the JWK checks; and the probe signature proves the private key fits `alg`, its hash and padding included. With `extractable: true`, the private `CryptoKey` must be extractable. An extractable private `CryptoKey` given alone is exported and read as a JWK; a non-extractable one alone is `invalid_key`, since its public half cannot be read from it.
+
 **Parameters**
 
-- `key` — The private JWK, typically parsed from JSON, or a PEM string. Any value is accepted.
-- `options` — The algorithm to bind both keys to, a `kid` for a PEM key, and whether the private key may be exported again.
+- `key` — The private JWK, typically parsed from JSON, a PEM string, a `CryptoKeyPair`, or an extractable private `CryptoKey`. Any value is accepted.
+- `options` — The algorithm to bind both keys to, a `kid` for a PEM key or a `CryptoKey`, and whether the private key may be exported again.
 
 **Returns** — The frozen pair, both keys carrying the key's `kid`, or a failure with one issue: the issues [`importPrivateKey`](#importprivatekey) returns, and `invalid_key` without a path when the public members do not belong to the private key. Issues never contain key values. Never throws for any `key`.
 
@@ -287,14 +317,14 @@ if (result.ok) verify = createVerifier({ keys: result.value });
 export declare function importPrivateKey(key: unknown, options: ImportPrivateKeyOptions): Promise<JwtResult<PrivateKey>>;
 ```
 
-Imports an untrusted private JWK, or a PEM `PRIVATE KEY` (PKCS#8), as a signing key bound to one algorithm.
+Imports an untrusted private JWK, a PEM `PRIVATE KEY` (PKCS#8), or a Web Crypto key pair, as a signing key bound to one algorithm.
 
-The same checks as [`importPublicKey`](#importpublickey) apply, except that private members are required: `d` for EC and OKP keys, and `d`, `p`, `q`, `dp`, `dq` and `qi` for RSA keys. `key_ops`, when present, must include `sign`. A PEM string is read as for [`importPublicKey`](#importpublickey), and must be a `PRIVATE KEY` block: `RSA PRIVATE KEY` (PKCS#1) and `EC PRIVATE KEY` (SEC 1) are `invalid_key`. As for [`importKeyPair`](#importkeypair), the key's public members must belong to it, which a probe signature proves.
+The same checks as [`importPublicKey`](#importpublickey) apply, except that private members are required: `d` for EC and OKP keys, and `d`, `p`, `q`, `dp`, `dq` and `qi` for RSA keys. `key_ops`, when present, must include `sign`. A PEM string is read as for [`importPublicKey`](#importpublickey), and must be a `PRIVATE KEY` block: `RSA PRIVATE KEY` (PKCS#1) and `EC PRIVATE KEY` (SEC 1) are `invalid_key`. As for [`importKeyPair`](#importkeypair), the key's public members must belong to it, which a probe signature proves. A `CryptoKey` is read as [`importKeyPair`](#importkeypair) describes. [`getPublicKey`](#getpublickey) gives the public half.
 
 **Parameters**
 
-- `key` — The JWK, typically parsed from JSON, or a PEM string. Any value is accepted.
-- `options` — The algorithm to bind the key to, a `kid` for a PEM key, and whether it may be exported again.
+- `key` — The JWK, typically parsed from JSON, a PEM string, a `CryptoKeyPair`, or an extractable private `CryptoKey`. Any value is accepted.
+- `options` — The algorithm to bind the key to, a `kid` for a PEM key or a `CryptoKey`, and whether it may be exported again.
 
 **Returns** — The frozen key, or a failure with one issue: `invalid_key`, `unsupported_key` (also for multi-prime RSA keys with `oth`), `alg_mismatch`, `wrong_use` or `weak_key`, as described for [`importPublicKey`](#importpublickey), and `invalid_key` without a path when the public members do not belong to the private key. Issues never contain key values. Never throws for any `key`.
 
@@ -312,16 +342,18 @@ const result = await importPrivateKey(env.SIGNING_KEY_PEM, { alg: "RS256", kid: 
 export declare function importPublicKey(key: unknown, options: ImportPublicKeyOptions): Promise<JwtResult<PublicKey>>;
 ```
 
-Imports an untrusted public JWK, a PEM `PUBLIC KEY` (SPKI), or the public key of a PEM `CERTIFICATE` (X.509), as a verification key bound to one algorithm.
+Imports an untrusted public JWK, a PEM `PUBLIC KEY` (SPKI), the public key of a PEM `CERTIFICATE` (X.509), or a public Web Crypto `CryptoKey`, as a verification key bound to one algorithm.
 
-A PEM string is read into the JWK of its material, and every check below runs on that JWK. It must be one block of at most 16384 characters, with only whitespace around it; anything else is `invalid_key`, and a `PRIVATE KEY` block is `unexpected_private_key`. Only a certificate's key is read: its validity, issuer, extensions and signature are not checked, so trust it as you would a bare public key.
+A `CryptoKey` must be an extractable public key, as every public key Web Crypto generates is. It is exported and checked as a JWK; a private one is `unexpected_private_key`, any other `invalid_key`.
+
+A PEM string is read into the JWK of its material, and every check below runs on that JWK. It must be one block of at most 16384 characters, with only whitespace around it and any whitespace inside it, so a PEM flattened onto one line imports too; anything else is `invalid_key`, and a `PRIVATE KEY` block is `unexpected_private_key`. Only a certificate's key is read: its validity, issuer, extensions and signature are not checked, so trust it as you would a bare public key.
 
 The JWK's `kty` and `crv` must fit `options.alg`; a JWK `alg`, `use` or `key_ops` member, when present, must agree with it. RSA moduli must be 2048 to 8192 bits. Private members are refused rather than ignored.
 
 **Parameters**
 
-- `key` — The JWK, typically parsed from JSON, or a PEM string. Any value is accepted.
-- `options` — The algorithm to bind the key to, and a `kid` for a PEM key.
+- `key` — The JWK, typically parsed from JSON, a PEM string, or a `CryptoKey`. Any value is accepted.
+- `options` — The algorithm to bind the key to, and a `kid` for a PEM key or a `CryptoKey`.
 
 **Returns** — The frozen key, or a failure with one issue: `invalid_key` for a non-object, a missing or ill-typed member, invalid base64url, wrong coordinate lengths, or material Web Crypto rejects (such as a point not on the curve); `unsupported_key` for a `kty`/`crv` that does not fit `alg` or a modulus over 8192 bits; `alg_mismatch` for a JWK `alg` naming another algorithm; `wrong_use` for a `use` other than `sig` or `key_ops` without `verify`; `unexpected_private_key` for any private member; `weak_key` for a modulus under 2048 bits. Issues never contain key values. Never throws for any `key`.
 
@@ -337,17 +369,19 @@ if (!result.ok) console.warn(result.error.issues);
 ### importSecretKey
 
 ```ts
-export declare function importSecretKey(input: Uint8Array | object, options: ImportSecretKeyOptions): Promise<JwtResult<SecretKey>>;
+export declare function importSecretKey(input: Uint8Array | CryptoKey | object, options: ImportSecretKeyOptions): Promise<JwtResult<SecretKey>>;
 ```
 
-Imports an HMAC secret, given as raw bytes or as an untrusted `oct` JWK, bound to one algorithm.
+Imports an HMAC secret, given as raw bytes, as an untrusted `oct` JWK, or as a Web Crypto `CryptoKey`, bound to one algorithm.
 
 The secret must be at least as long as the algorithm's hash output: 32 bytes for `HS256`, 48 for `HS384`, 64 for `HS512` (RFC 7518 §3.2). For a JWK, `alg`, `use` and `key_ops` (which must include `sign` or `verify`) are checked as in [`importPublicKey`](#importpublickey), and the JWK's own `kid` is used. `key_ops` does not restrict the key: a secret imported with `key_ops: ["verify"]` can still sign.
 
+A `CryptoKey` is kept as it is, so a non-extractable one stays so. It must be an HMAC key of the algorithm's hash with both the `sign` and `verify` usages, and extractable when `extractable` is `true`; otherwise it is `invalid_key`, and `weak_key` when shorter than the minimum.
+
 **Parameters**
 
-- `input` — The secret's bytes, or an `oct` JWK (untrusted, so any object is accepted). A string is a compile error, because a string secret is ambiguous; at runtime any other value, a string included, still returns `invalid_key`.
-- `options` — The algorithm, the `kid` for raw bytes, and whether the secret may be exported again.
+- `input` — The secret's bytes, an `oct` JWK (untrusted, so any object is accepted), or a `CryptoKey`. A string is a compile error, because a string secret is ambiguous; at runtime any other value, a string included, still returns `invalid_key`.
+- `options` — The algorithm, the `kid` for raw bytes or a `CryptoKey`, and whether the secret may be exported again.
 
 **Returns** — The frozen key, or a failure with one issue: `weak_key` with `{ minimum }` in bytes for a short secret, `invalid_key` for an input that is neither bytes nor a well-formed JWK, and the JWK issues described for [`importPublicKey`](#importpublickey). Issues never contain the secret. Never throws for any `input`.
 
@@ -662,7 +696,7 @@ Whether [`exportPrivateJwk`](#exportprivatejwk) may later export the key's mater
 readonly kid?: string;
 ```
 
-Key identifier for a key given as PEM, which has no place for one. Ignored for a JWK, whose own `kid` is used.
+Key identifier for a key given as PEM or as a `CryptoKey`, which have no place for one. Ignored for a JWK, whose own `kid` is used.
 
 **Default** — no `kid`
 
@@ -691,7 +725,7 @@ The one algorithm the key will verify with. The key's type and curve must fit it
 readonly kid?: string;
 ```
 
-Key identifier for a key given as PEM, which has no place for one. Ignored for a JWK, whose own `kid` is used.
+Key identifier for a key given as PEM or as a `CryptoKey`, which have no place for one. Ignored for a JWK, whose own `kid` is used.
 
 **Default** — no `kid`
 
@@ -731,7 +765,7 @@ Whether [`exportSecretJwk`](#exportsecretjwk) may later export the secret.
 readonly kid?: string;
 ```
 
-Key identifier for a secret given as raw bytes. Ignored for a JWK, whose own `kid` is used.
+Key identifier for a secret given as raw bytes or as a `CryptoKey`. Ignored for a JWK, whose own `kid` is used.
 
 **Default** — no `kid`
 
@@ -1942,7 +1976,7 @@ The payload, after every configured claim check passed.
 
 ```ts
 export interface VerifierOptions<TSchema extends StandardSchemaV1 | undefined = undefined> {
-    readonly keys: KeySet;
+    readonly keys: KeySet | KeySetResolver;
     readonly issuer?: string | readonly string[];
     readonly audience?: string | readonly string[] | false;
     readonly type?: string | readonly (string | null)[];
@@ -2010,10 +2044,10 @@ Accepted `iss` values. When set, `iss` is required and must equal one exactly.
 #### VerifierOptions › keys
 
 ```ts
-readonly keys: KeySet;
+readonly keys: KeySet | KeySetResolver;
 ```
 
-Where verification keys come from.
+Where verification keys come from: a key set, or a [`KeySetResolver`](#keysetresolver) that picks one by the issuer the token claims.
 
 #### VerifierOptions › maxAge
 
@@ -2126,6 +2160,16 @@ export type JwtResult<T> = JwtOk<T> | JwtErr;
 ```
 
 What every operation on untrusted input returns instead of throwing. The shape matches `@codenhub/validation`'s result, so code that handles one handles the other.
+
+### KeySetResolver
+
+```ts
+export type KeySetResolver = (issuer: string, header: JwtHeader) => KeySet | undefined | Promise<KeySet | undefined>;
+```
+
+Chooses the key set for a token by the issuer it claims, for a verifier that accepts tokens from several issuers or several clients: `createVerifier({ keys: (issuer) => keySets.get(issuer) })`.
+
+The verifier calls it after the token's structure and header passed and before its signature is checked, so `issuer` is the token's `iss` exactly as the token states it, and an attacker chooses it. Look it up in keys you already hold, such as a `Map`; never build a URL or a query from it without an allowlist. The token then verifies only with a key from the returned set, and its verified `iss` is the one passed here.
 
 ### RsaModulusLength
 

@@ -80,6 +80,11 @@ describe("PEM import text", () => {
     for (const pem of [
       `  \r\n${pemOf("PUBLIC KEY", der, "\r\n")}\r\n\n`,
       `-----BEGIN PUBLIC KEY-----\n${base64}\n-----END PUBLIC KEY-----`,
+      // As an environment variable often holds it: line breaks dropped, or turned into spaces.
+      `-----BEGIN PUBLIC KEY-----${base64}-----END PUBLIC KEY-----`,
+      `-----BEGIN PUBLIC KEY----- ${base64.match(/.{1,64}/g)?.join(" ")} -----END PUBLIC KEY-----`,
+      // Trailing spaces on a line, and a blank line inside the block.
+      pemOf("PUBLIC KEY", der, "  \n\n"),
     ]) {
       // oxlint-disable-next-line no-await-in-loop
       expect((await importPublicKey(pem, { alg: "ES256" })).ok).toBe(true);

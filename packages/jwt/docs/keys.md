@@ -1,6 +1,6 @@
 ---
 title: Keys
-description: Public, private and secret keys, importing JWKs, PEM and raw secrets, generating keys, exporting them, and what an import refuses.
+description: Public, private and secret keys, importing JWKs, PEM, Web Crypto keys and raw secrets, generating keys, exporting them, and what an import refuses.
 order: 3
 ---
 
@@ -101,7 +101,7 @@ import { importKeyPair } from "@codenhub/jwt";
 const result = await importKeyPair(process.env.SIGNING_KEY_PEM ?? "", { alg: "RS256", kid: "2026-11" });
 ```
 
-The PEM is read into the JWK of its key and every check in the table above runs on that, so a 1024-bit RSA key is `weak_key` whichever way it arrives. The string must be one block of at most 16384 characters, with nothing but whitespace around it and either line ending. Anything else is `invalid_key`: other labels, including `RSA PRIVATE KEY` (PKCS#1), `EC PRIVATE KEY` (SEC 1) and encrypted keys, which Web Crypto cannot read; a key of another type or curve than `alg`; and a `PUBLIC KEY` given to a private import. A `PRIVATE KEY` given to `importPublicKey` is `unexpected_private_key`. Convert other formats to PKCS#8 first, such as with `openssl pkcs8 -topk8 -nocrypt -in key.pem`.
+The PEM is read into the JWK of its key and every check in the table above runs on that, so a 1024-bit RSA key is `weak_key` whichever way it arrives. The string must be one block of at most 16384 characters, with nothing but whitespace around it. Whitespace inside the block is ignored, so either line ending works, and so does a PEM flattened onto one line, as an environment variable often holds it. Anything else is `invalid_key`: other labels, including `RSA PRIVATE KEY` (PKCS#1), `EC PRIVATE KEY` (SEC 1) and encrypted keys, which Web Crypto cannot read; a key of another type or curve than `alg`; and a `PUBLIC KEY` given to a private import. A `PRIVATE KEY` given to `importPublicKey` is `unexpected_private_key`. Convert other formats to PKCS#8 first, such as with `openssl pkcs8 -topk8 -nocrypt -in key.pem`.
 
 From a certificate, `importPublicKey` takes the public key and nothing else. It does not check the certificate's dates, issuer, chain, extensions or signature, so a certificate is exactly as trusted as the key in it would be: use one you got from a source you already trust, such as an identity provider's admin console, and not one a token or a client sent you. A `CERTIFICATE` given to a private import is `invalid_key`.
 
@@ -116,6 +116,8 @@ import { importPrivateKey } from "@codenhub/jwt";
 
 const result = await importPrivateKey(jwk, { alg: "PS256", extractable: false });
 ```
+
+`getPublicKey(privateKey)` gives the public half of a private key, bound to the same `alg` and carrying the same `kid`, so a key loaded alone can still publish its JWK or verify its own tokens. It works for every private key this package creates, extractable or not, and returns the same public key each time it is called with the same private key.
 
 ## Importing a key pair
 
@@ -161,6 +163,26 @@ A JWK's `key_ops` is checked but does not restrict the secret key: one imported 
 
 `kid` sets the identifier for raw bytes. For a JWK, the JWK's own `kid` is used and the option is ignored.
 
+## Importing a Web Crypto key
+
+Every import function also takes a Web Crypto `CryptoKey`, for keys an application made or keeps with `crypto.subtle` itself. The main case is a browser that must sign without ever being able to read its key, such as a DPoP client: generate the pair non-extractable, keep it in IndexedDB, which stores a `CryptoKey` as it is, and import it each time the page loads:
+
+```ts
+import { importKeyPair } from "@codenhub/jwt";
+
+const pair = await crypto.subtle.generateKey({ name: "ECDSA", namedCurve: "P-256" }, false, ["sign", "verify"]);
+// … store `pair` in IndexedDB, and read it back on a later visit …
+const result = await importKeyPair(pair, { alg: "ES256" });
+if (!result.ok) throw new Error("The device key could not be imported.");
+const { privateKey, publicKey } = result.value;
+```
+
+- `importPublicKey` takes a public `CryptoKey`. It is exported and checked as a JWK, so it must be extractable, as every public key `generateKey` makes is. A private one is `unexpected_private_key`.
+- `importPrivateKey` and `importKeyPair` take a `CryptoKeyPair`. The private `CryptoKey` is kept as it is, never exported, so a non-extractable key stays so; the public one runs through the JWK checks; and a probe signature proves the two belong together and that the private key fits `alg`, its hash and padding included. Anything that does not fit is `invalid_key`. They also take an extractable private `CryptoKey` alone, which is exported and read as a JWK; a non-extractable one alone is `invalid_key`, since its public half cannot be read from it.
+- `importSecretKey` takes an HMAC `CryptoKey`, kept as it is. It must use the algorithm's hash and have both the `sign` and `verify` usages, or it is `invalid_key`, and be at least as long as the hash, or it is `weak_key`.
+
+A `CryptoKey` has no `kid`, so pass one as an option. `extractable: true` needs an extractable `CryptoKey`, or the result is `invalid_key`; without it, the imported key cannot be exported even when the `CryptoKey` could be.
+
 ## Exporting keys
 
 Export functions are separate and named for what they reveal, so code that exports private material says so:
@@ -176,7 +198,7 @@ const publicJwk = await exportPublicJwk(publicKey);
 const privateJwk = await exportPrivateJwk(privateKey); // store it as you would a password
 ```
 
-- `exportPublicJwk` exports any public key, imported or generated, with its public members only. Publish its output in your JWKS as `{ keys: [publicJwk] }`.
+- `exportPublicJwk` exports any public key, imported or generated, with its public members only. Publish its output in your JWKS as `{ keys: [publicJwk] }`. For a private key, export `getPublicKey(privateKey)`; passing the private key itself throws a `TypeError` that says so.
 - `exportPrivateJwk` exports a private key's public and private members, and `exportSecretJwk` a secret as an `oct` JWK. Both throw a `TypeError` for a key created without `extractable: true`.
 
 Every exported JWK is frozen, names `kty`, `alg` and `use: "sig"`, includes `kid` when the key has one, lists its members in a stable order, and carries no `ext` or `key_ops`. Re-importing it with the same `alg` gives an equivalent key.
