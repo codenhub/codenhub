@@ -32,8 +32,9 @@ const IMPORT_KEY_SET_OPTIONS: Readonly<Record<keyof ImportKeySetOptions, true>> 
  * Builds a key set from keys this package created, for verifying tokens against a fixed set.
  *
  * @remarks
- * Selection follows {@link KeySet.select}: with a `kid`, only keys with that `kid` are candidates;
- * without one, the set must hold exactly one key with the header's `alg`. Keys are never tried in turn.
+ * Selection follows {@link KeySet.select}: with a `kid`, only keys with that `kid` are candidates, and
+ * when no key has it, the one key without a `kid` that has the header's `alg` stands in; without a `kid`,
+ * the set must hold exactly one key with the header's `alg`. Keys are never tried in turn.
  *
  * @example
  * ```ts

@@ -147,7 +147,7 @@ const saved = await store.get("jwks"); // whatever you stored last time, or unde
 const keys = createRemoteKeySet({
   url: "https://issuer.example/.well-known/jwks.json",
   seed: saved === undefined ? undefined : JSON.parse(saved),
-  onFetch: (snapshot) => void store.put("jwks", JSON.stringify(snapshot)),
+  onFetch: (snapshot) => store.put("jwks", JSON.stringify(snapshot)),
 });
 ```
 

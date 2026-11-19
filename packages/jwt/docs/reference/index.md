@@ -18,7 +18,7 @@ export declare function createKeySet(keys: readonly VerificationKey[]): LocalKey
 
 Builds a key set from keys this package created, for verifying tokens against a fixed set.
 
-Selection follows `KeySet.select`: with a `kid`, only keys with that `kid` are candidates; without one, the set must hold exactly one key with the header's `alg`. Keys are never tried in turn.
+Selection follows `KeySet.select`: with a `kid`, only keys with that `kid` are candidates, and when no key has it, the one key without a `kid` that has the header's `alg` stands in; without a `kid`, the set must hold exactly one key with the header's `alg`. Keys are never tried in turn.
 
 **Parameters**
 
@@ -91,7 +91,7 @@ Times compare in fractional seconds, `options.now() / 1000`, against the numeric
 
 **Returns** — A [`Verifier`](#verifier). It resolves to the frozen `{ header, payload, key }`, or to a failure and never throws for any token. A key set whose `select` throws or rejects, or returns something other than a result holding a public or secret key this package created, makes the verifier fail with `key_fetch_failed` and `{ reason: "key_set_error" }`, except that a failed result whose issues each have a string `code` is passed through. Caller code is not caught: a rejection from `options.claims` propagates, and so does a `TypeError` when `options.now` returns something other than a finite number, checked once per verification when the claims are checked, after the signature.
 
-**Throws** — TypeError when `options` is not an object; `options` has a member that is not an option, such as a misspelled `audiance`; `keys` has no `select` function; `issuer` or `audience` is neither a non-empty string nor a non-empty array of them; `type` is not a non-empty string; `clockTolerance` is not an integer from 0 through 300; `maxAge` is not a positive integer; `maxLength` is not an integer from 1 through 65536; `requiredClaims` is not an array of non-empty strings; `claims` is not a version 1 Standard Schema; or `now` is not a function.
+**Throws** — TypeError when `options` is not an object; `options` has a member that is not an option, such as a misspelled `audiance`; `keys` has no `select` function; `issuer` is neither a non-empty string nor a non-empty array of them; `audience` is neither `false` nor one of those; `type` is neither a non-empty string other than `application/` nor a non-empty array of such strings and `null`; `requireExpiration` or `allowExpired` is not a boolean; `clockTolerance` is not an integer from 0 through 300; `maxAge` is not a positive integer; `maxLength` is not an integer from 1 through 65536; `requiredClaims` is not an array of non-empty strings; `claims` is not a version 1 Standard Schema; or `now` is not a function.
 
 **Example**
 
