@@ -38,6 +38,8 @@ interface ChainDictionary<TLocale extends string> {
 
 const MAX_MISSING_KEY_DIAGNOSTICS = 1_000;
 const MAX_MESSAGE_DIAGNOSTICS = 1_000;
+// Shared by every manager, since a server creates one per request and would otherwise log a miss once per visitor.
+const warnedMissingKeys = new Map<string, undefined>();
 const PLACEHOLDER_PATTERN = /{([A-Za-z0-9_]+)}/g;
 // The form every plural group has, used when the count's category has none.
 const PLURAL_FALLBACK_FORM = "other";
@@ -114,7 +116,6 @@ class I18nInstance<TLocale extends string, TKey extends string = string>
   private loadingRequestId: number | undefined;
   private loadingRequest: Promise<unknown> | undefined;
   private applyListener: ((requestId: number) => void) | undefined;
-  private readonly warnedMissingKeys = new Map<string, undefined>();
   private readonly pluralRules = new Map<TLocale, Intl.PluralRules | undefined>();
   private readonly localeLookup: ReadonlyMap<string, TLocale>;
   private readonly config: ValidatedI18nConfig<TLocale>;
@@ -490,18 +491,18 @@ class I18nInstance<TLocale extends string, TKey extends string = string>
     const warningKey = `${this.currentLocale}\0${key}`;
 
     if (!this.isSilent) {
-      if (this.warnedMissingKeys.delete(warningKey)) {
-        this.warnedMissingKeys.set(warningKey, undefined);
+      if (warnedMissingKeys.delete(warningKey)) {
+        warnedMissingKeys.set(warningKey, undefined);
         return;
       }
 
-      this.warnedMissingKeys.set(warningKey, undefined);
+      warnedMissingKeys.set(warningKey, undefined);
 
-      if (this.warnedMissingKeys.size > MAX_MISSING_KEY_DIAGNOSTICS) {
-        const oldestWarningKey = this.warnedMissingKeys.keys().next().value;
+      if (warnedMissingKeys.size > MAX_MISSING_KEY_DIAGNOSTICS) {
+        const oldestWarningKey = warnedMissingKeys.keys().next().value;
 
         if (oldestWarningKey !== undefined) {
-          this.warnedMissingKeys.delete(oldestWarningKey);
+          warnedMissingKeys.delete(oldestWarningKey);
         }
       }
 
