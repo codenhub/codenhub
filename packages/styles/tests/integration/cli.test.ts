@@ -1,4 +1,4 @@
-import { chmod, lstat, mkdir, mkdtemp, readFile, rm, stat, symlink, writeFile } from "node:fs/promises";
+import { chmod, lstat, mkdir, mkdtemp, readdir, readFile, rm, stat, symlink, writeFile } from "node:fs/promises";
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import path from "node:path";
@@ -283,6 +283,14 @@ describe("failures", () => {
 
   it("rejects a build without --output", async () => {
     expect(await failureOf("build", "-c", "app/views/**/*.erb")).toMatch(/--output/);
+  });
+
+  // A quoted variable left empty by a script; written as given, it names a file of spaces.
+  it("takes an --output of only spaces as missing", async () => {
+    expect(await failureOf("build", "-c", "app/views/**/*.erb", "-o", "  ")).toBe(
+      "chs: missing --output; name the stylesheet to write, as in --output public/app.css.",
+    );
+    expect(await readdir(project)).not.toContain("  ");
   });
 
   it("rejects an unknown flag by name", async () => {

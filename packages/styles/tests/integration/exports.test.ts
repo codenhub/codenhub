@@ -966,7 +966,11 @@ test("aggregate exports state each declaration once", async () => {
 /* Compiles the given package exports the way a Tailwind consumer does, as the
    Tailwind guide tells them to: their own `@import "tailwindcss"` first, then
    each export in order -- except with `./tw`, which imports Tailwind itself
-   and replaces that line. */
+   and replaces that line. It runs in an empty directory, so the only classes
+   in play are the `candidates`: run in the package root, Tailwind's automatic
+   detection scanned this whole package on every call, which made the output
+   depend on whatever the checkout held and the run slow enough to near the
+   test timeout. */
 const compileAsConsumer = async (exportNames: readonly string[], candidates?: string, { minify = true } = {}) => {
   const temporaryRoot = await mkdtemp(path.join(tmpdir(), "codenhub-styles-export-"));
   const inputPath = path.join(temporaryRoot, "input.css");
@@ -994,9 +998,7 @@ const compileAsConsumer = async (exportNames: readonly string[], candidates?: st
     await executeFile(
       process.execPath,
       [tailwindCliPath, "-i", inputPath, "-o", outputPath, ...(minify ? ["--minify"] : [])],
-      {
-        cwd: packageRoot,
-      },
+      { cwd: temporaryRoot },
     );
 
     return await readFile(outputPath, "utf8");
@@ -1038,9 +1040,8 @@ test("the /tw source safelists nothing", async () => {
   expect(stylesheets.filter((_, index) => /@source\s+inline\(/.test(stripComments(outputs[index]!)))).toEqual([]);
 });
 
-/* `compileAsConsumer` runs in the package root, where Tailwind's automatic
-   detection scans this package's own `src/` and would find every class. A
-   tree-shaking check needs a consumer that owns nothing but its page. */
+/* A consumer with a page of its own, which Tailwind's automatic detection
+   finds, for the checks that a page's classes decide what is emitted. */
 const compileIsolatedConsumer = async (css: string, html: string) => {
   const temporaryRoot = await mkdtemp(path.join(tmpdir(), "codenhub-styles-consumer-"));
 
