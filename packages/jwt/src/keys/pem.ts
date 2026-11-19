@@ -1,7 +1,7 @@
 import type { AsymmetricAlgorithm, JwtIssue } from "../core/types";
 import { decodeBase64Url } from "../encoding";
 import { ALGORITHM_PARAMS } from "./algorithms";
-import { exportWebCryptoJwk } from "./exported-jwk";
+import { exportMaterialJwk } from "./exported-jwk";
 
 /**
  * Longest PEM text read, in characters. A PKCS#8 RSA 8192-bit key, the largest this package imports, is
@@ -11,12 +11,13 @@ import { exportWebCryptoJwk } from "./exported-jwk";
 export const MAX_PEM_LENGTH = 16_384;
 
 /**
- * One PEM block (RFC 7468 §2) and nothing else around it but whitespace: its label, then base64 lines.
- * The label must match on both ends, and only the two key labels Web Crypto reads, and `CERTIFICATE`,
- * are recognized.
+ * One PEM block (RFC 7468 §2) and nothing else around it but whitespace: its label, then base64 with any
+ * whitespace inside it, as RFC 7468 §3's lax parsing reads it. A PEM kept in an environment variable often
+ * arrives on one line, its line breaks turned into spaces or dropped. The label must match on both ends, and
+ * only the two key labels Web Crypto reads, and `CERTIFICATE`, are recognized.
  */
 const PEM_PATTERN =
-  /^-----BEGIN (PUBLIC KEY|PRIVATE KEY|CERTIFICATE)-----\r?\n((?:[A-Za-z0-9+/=]+\r?\n)+)-----END (PUBLIC KEY|PRIVATE KEY|CERTIFICATE)-----$/;
+  /^-----BEGIN (PUBLIC KEY|PRIVATE KEY|CERTIFICATE)-----([A-Za-z0-9+/=\s]+)-----END (PUBLIC KEY|PRIVATE KEY|CERTIFICATE)-----$/;
 
 /** Standard base64 with canonical padding (RFC 4648 §4). */
 const BASE64_PATTERN = /^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/;
@@ -25,9 +26,6 @@ const BASE64_PATTERN = /^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/
 export type PemResult =
   | { readonly ok: true; readonly value: Readonly<Record<string, unknown>> }
   | { readonly ok: false; readonly issue: JwtIssue };
-
-/** The JWK members Web Crypto adds on export that say nothing about the material. */
-const EXPORT_METADATA = ["alg", "ext", "key_ops", "use"] as const;
 
 /**
  * Reads a PEM `PUBLIC KEY` (SPKI), `CERTIFICATE` (the SPKI inside it) or `PRIVATE KEY` (PKCS#8) as the JWK
@@ -59,7 +57,7 @@ export async function pemToJwk(
   if (label !== "PRIVATE KEY" && role === "private") {
     return invalid;
   }
-  const base64 = body.replace(/\r?\n/g, "");
+  const base64 = body.replace(/\s/g, "");
   const decoded = BASE64_PATTERN.test(base64)
     ? decodeBase64Url(base64.replaceAll("+", "-").replaceAll("/", "_").replace(/=+$/, ""))
     : undefined;
@@ -73,11 +71,7 @@ export async function pemToJwk(
     const cryptoKey = await crypto.subtle.importKey(format, der, importParams, true, [
       role === "public" ? "verify" : "sign",
     ]);
-    const jwk: Record<string, unknown> = { ...(await exportWebCryptoJwk(cryptoKey, alg)) };
-    for (const name of EXPORT_METADATA) {
-      delete jwk[name];
-    }
-    return { ok: true, value: kid === undefined ? jwk : { ...jwk, kid } };
+    return { ok: true, value: await exportMaterialJwk(cryptoKey, alg, kid) };
   } catch {
     // Web Crypto rejects DER it cannot read or a key of another type or curve; its message may quote it.
     return invalid;

@@ -1,6 +1,6 @@
 ---
 title: Key sets
-description: How a verifier picks a key, local key sets, importing a JWKS document, fetching an issuer's JWKS with caching, cooldown and stale keys, and writing your own key set.
+description: How a verifier picks a key, local key sets, importing a JWKS document, choosing a key set by issuer, fetching an issuer's JWKS with caching, cooldown and stale keys, and writing your own key set.
 order: 4
 ---
 
@@ -94,6 +94,22 @@ Each key the set hands out is then bound to that issuer, and its `issuer` member
 
 `createKeySet` binds copies of the keys you give it and leaves the originals unbound; a copy works wherever the original does. A key already bound to the same issuer is kept as it is, and one bound to another issuer throws a `TypeError`, since a key cannot speak for two issuers.
 
+### Choosing the key set by issuer
+
+To reach those sets from one verifier, give `createVerifier` a function as `keys`. It is called with the issuer the token claims and the token's header, and returns that issuer's key set, or `undefined` for an issuer it does not know:
+
+```ts
+import { createRemoteKeySet, createVerifier, type KeySet } from "@codenhub/jwt";
+
+const tenants = new Map<string, KeySet>(["https://a.issuer.example", "https://b.issuer.example"].map((issuer) => [issuer, createRemoteKeySet({ url: `${issuer}/jwks.json`, issuer })]));
+
+const verify = createVerifier({ keys: (issuer) => tenants.get(issuer), audience: "https://api.example" });
+```
+
+The verifier reads `iss` from the payload before the signature is checked, only to route the token: a token without `iss` is `missing_claim` with `{ claim: "iss" }`, one whose `iss` is not a string is `invalid_claim`, and an `iss` the function returns `undefined` for is `wrong_issuer`. When the verifier also has an `issuer` option, an `iss` it does not list is `wrong_issuer` before the function is called. The function may be `async`. If it throws, rejects, or returns something other than a key set, the token fails with `key_fetch_failed` and `{ reason: "key_set_error" }`.
+
+The `iss` is chosen by whoever sent the token. Look it up among issuers you already hold, as the `Map` above does, and never build a JWKS URL or a database query from it without checking it against a list first: otherwise anyone can make your server fetch from an address they pick. Still give each set its `issuer`: the function picks the set by a claim the signature has not yet covered, and the binding is what then refuses a token whose key belongs to another issuer.
+
 ## A remote key set
 
 `createRemoteKeySet` fetches an issuer's JWKS from a URL, imports it as `importKeySet` does, and caches it:
@@ -184,7 +200,7 @@ The issue holds nothing from the response. `select` never throws and never rejec
 
 ## Your own key set
 
-`KeySet` is an interface with one method, `select(header)`, which returns a promise of a result holding a key. You can implement it, for example to choose an issuer's key set by a prefix in the `kid`:
+`KeySet` is an interface with one method, `select(header)`, which returns a promise of a result holding a key. You can implement it, for example to choose an issuer's key set by a prefix in the `kid`, when the tokens name their tenant that way rather than by `iss` as [choosing the key set by issuer](#choosing-the-key-set-by-issuer) does:
 
 ```ts
 import { createRemoteKeySet, type KeySet } from "@codenhub/jwt";

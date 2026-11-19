@@ -1,6 +1,6 @@
 import { DEFAULT_MAX_TOKEN_LENGTH, MAX_TOKEN_LENGTH_LIMIT } from "../core/limits";
 import { rejectUnknownOptions } from "../core/options";
-import type { KeySet, VerifierOptions } from "../core/types";
+import type { KeySet, KeySetResolver, VerifierOptions } from "../core/types";
 import type { StandardSchemaV1 } from "../interop/standard-schema";
 
 /** Largest `clockTolerance`, in seconds. */
@@ -8,7 +8,7 @@ export const MAX_CLOCK_TOLERANCE = 300;
 
 /** Verifier options after validation, with defaults applied and lists copied. */
 export interface ResolvedOptions {
-  readonly keys: KeySet;
+  readonly keys: KeySet | KeySetResolver;
   readonly issuers?: readonly string[];
   /** The accepted audiences; `false` skips the check, and unset rejects every token that has `aud`. */
   readonly audiences?: readonly string[] | false;
@@ -88,8 +88,8 @@ export function resolveOptions(options: VerifierOptions<StandardSchemaV1 | undef
     claims,
     now,
   } = options;
-  if (typeof keys !== "object" || keys === null || typeof keys.select !== "function") {
-    throwInvalid("options.keys must be a key set (an object with a select function).");
+  if (typeof keys !== "function" && (typeof keys !== "object" || keys === null || typeof keys.select !== "function")) {
+    throwInvalid("options.keys must be a key set (an object with a select function) or a function returning one.");
   }
   for (const [name, value] of [
     ["requireExpiration", requireExpiration],

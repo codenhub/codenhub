@@ -24,3 +24,44 @@ export async function exportWebCryptoJwk(cryptoKey: CryptoKey, alg: JwsAlgorithm
   padded.set(scalar, coordinateBytes - scalar.length);
   return { ...exported, d: encodeBase64Url(padded) };
 }
+
+/** The JWK members Web Crypto adds on export that say nothing about the material. */
+const EXPORT_METADATA = ["alg", "ext", "key_ops", "use"] as const;
+
+/**
+ * Exports a key from Web Crypto as the JWK of its material alone, for the JWK checks to run on as on a JWK
+ * given directly: without the members Web Crypto adds on export, and with `kid` when one is given.
+ *
+ * @param cryptoKey - The key to export; it must be extractable.
+ * @param alg - The algorithm the key will be bound to, which fixes the length of `d`.
+ * @param kid - The key identifier to add.
+ */
+export async function exportMaterialJwk(
+  cryptoKey: CryptoKey,
+  alg: JwsAlgorithm,
+  kid: string | undefined,
+): Promise<Record<string, unknown>> {
+  const jwk: Record<string, unknown> = { ...(await exportWebCryptoJwk(cryptoKey, alg)) };
+  for (const name of EXPORT_METADATA) {
+    delete jwk[name];
+  }
+  return kid === undefined ? jwk : { ...jwk, kid };
+}
+
+/**
+ * Whether `value` is a genuine Web Crypto key of this realm; never throws. `instanceof` alone also passes
+ * `Object.create(CryptoKey.prototype)` or a proxy of a key, whose `type` getter then throws, so the native
+ * getter is called on it as the brand check.
+ */
+export function isCryptoKey(value: unknown): value is CryptoKey {
+  try {
+    if (typeof CryptoKey !== "function" || !(value instanceof CryptoKey)) {
+      return false;
+    }
+    Object.getOwnPropertyDescriptor(CryptoKey.prototype, "type")?.get?.call(value);
+    return true;
+  } catch {
+    // A revoked proxy throws on the prototype lookup, and an impostor in the native getter; neither is a key.
+    return false;
+  }
+}

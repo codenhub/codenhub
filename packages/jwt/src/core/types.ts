@@ -267,6 +267,25 @@ export interface KeySet {
   select(header: JwtHeader): Promise<JwtResult<VerificationKey>>;
 }
 
+/**
+ * Chooses the key set for a token by the issuer it claims, for a verifier that accepts tokens from several
+ * issuers or several clients: `createVerifier({ keys: (issuer) => keySets.get(issuer) })`.
+ *
+ * The verifier calls it after the token's structure and header passed and before its signature is checked,
+ * so `issuer` is the token's `iss` exactly as the token states it, and an attacker chooses it. Look it up in
+ * keys you already hold, such as a `Map`; never build a URL or a query from it without an allowlist. The token
+ * then verifies only with a key from the returned set, and its verified `iss` is the one passed here.
+ *
+ * @param issuer - The token's `iss` claim, a string. A token without one fails with `missing_claim` before
+ * this is called, one whose `iss` is not a string with `invalid_claim`, and one the verifier's `issuer` option
+ * does not accept with `wrong_issuer`.
+ * @param header - The token's header, as {@link readHeader} returns it.
+ * @returns The issuer's key set, or `undefined` for an issuer you do not accept, which fails the token with
+ * `wrong_issuer`. Throwing, rejecting or returning anything else fails it with `key_fetch_failed` and
+ * `{ reason: "key_set_error" }`.
+ */
+export type KeySetResolver = (issuer: string, header: JwtHeader) => KeySet | undefined | Promise<KeySet | undefined>;
+
 /** A key set over a fixed list of keys, from {@link createKeySet} or {@link importKeySet}. Frozen. */
 export interface LocalKeySet extends KeySet {
   /**
@@ -289,8 +308,11 @@ export interface VerifiedJwt<TPayload extends JwtPayload = JwtPayload> {
 
 /** How {@link createVerifier} checks a token. Invalid options throw `TypeError` when the verifier is created. */
 export interface VerifierOptions<TSchema extends StandardSchemaV1 | undefined = undefined> {
-  /** Where verification keys come from. */
-  readonly keys: KeySet;
+  /**
+   * Where verification keys come from: a key set, or a {@link KeySetResolver} that picks one by the issuer the
+   * token claims.
+   */
+  readonly keys: KeySet | KeySetResolver;
   /** Accepted `iss` values. When set, `iss` is required and must equal one exactly. */
   readonly issuer?: string | readonly string[];
   /**

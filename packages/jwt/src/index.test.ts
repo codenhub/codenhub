@@ -18,6 +18,7 @@ describe("package entrypoint", () => {
       "exportSecretJwk",
       "generateKeyPair",
       "generateSecretKey",
+      "getPublicKey",
       "importKeyPair",
       "importKeySet",
       "importPrivateKey",

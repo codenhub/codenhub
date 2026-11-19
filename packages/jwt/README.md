@@ -3,11 +3,11 @@
 JwtKit signs and verifies JSON Web Tokens with Web Crypto, imports and exports JSON Web Keys, and picks verification keys from a local set or from an issuer's JWKS URL. It is written for the side that receives tokens it did not issue:
 
 - **The algorithm comes from the key, never from the token.** Every key is bound to one algorithm when it is generated or imported, and `none` is not an algorithm here in any casing.
-- **Claims are never read from an unverified token.** There is no `decode`; only the header can be read before verification, to choose a key.
+- **Claims are never read from an unverified token.** There is no `decode`; only the header can be read before verification, to choose a key, and, when `keys` is a function, the `iss` it routes by, which stays untrusted until the signature verifies.
 - **Bad input is cheap and never throws.** A token's length is capped before it is decoded, JSON is parsed strictly and to a bounded depth, and a remote JWKS is fetched with a timeout, a size cap and a cooldown.
 - **Issues never hold a value of the input**, so logging a failed verification cannot log a token or a key.
 
-ES256, ES384, ES512, EdDSA, Ed25519, RS256, RS384, RS512, PS256, PS384, PS512, HS256, HS384 and HS512 are supported, keys are imported as JWK or PEM, and DPoP proofs can be signed, with no dependencies.
+ES256, ES384, ES512, EdDSA, Ed25519, RS256, RS384, RS512, PS256, PS384, PS512, HS256, HS384 and HS512 are supported, keys are imported as JWK, PEM or Web Crypto keys, and DPoP proofs can be signed, with no dependencies.
 
 > **Experimental:** no real application has run on this API yet. Function names, option names, issue codes and their `params` are meant to hold, but a real consumer may still show that one of them must change; a breaking change ships in a new minor version, and the [changelog](docs/changelog/index.md) lists it with its migration. The security behavior above will not be weakened.
 
@@ -125,7 +125,7 @@ fetches; // 1
 - **Only compact JWS.** No encrypted tokens (JWE), no JWS JSON serialization, no unencoded payloads (`b64`), and no `crit` header extensions; tokens using them are rejected.
 - **Claim checks are generic.** Issuer, audience, `typ`, times, maximum age and required claims are checked here. Protocol rules such as OpenID Connect's `nonce` or `azp` are left to the code above; `tokenHash` computes the `at_hash` and `c_hash` it compares.
 - **Clock tolerance defaults to 0 seconds**, and is capped at 300. Set `clockTolerance` when the issuer's clock may differ from yours. `nbf` and `iat` always allow at least 60 seconds, so a token checked the moment it is issued passes on a clock slightly behind the issuer's.
-- **One verifier for several issuers needs issuer-bound keys.** Pass `issuer` to each issuer's key set, so one issuer's key cannot verify a token claiming another; [Key sets](docs/key-sets.md#keys-of-several-issuers) explains.
+- **One verifier for several issuers needs issuer-bound keys.** Pass `issuer` to each issuer's key set, so one issuer's key cannot verify a token claiming another, and route tokens to those sets with a function as `keys`; [Key sets](docs/key-sets.md#keys-of-several-issuers) explains.
 - **Algorithms and issue codes may be added in a minor release.** Give a `switch` over an `alg` or a `code` a default branch.
 
 ## License
