@@ -404,6 +404,21 @@ describe("translated pathnames", () => {
         ),
       );
     });
+
+    it("should escape line separators and cut long paths in the message", () => {
+      const words = ` ${"x".repeat(150)}`;
+      const routing = create({ localePrefix: "when-ambiguous", pathnames: { "/about": { pt: `/${words}` } } });
+      let message = "";
+      try {
+        routing.localize(`/${words}`, "en");
+      } catch (error) {
+        message = (error as Error).message;
+      }
+
+      expect(message).toMatch(/^\[I18n\] "\/(%E2%80%A8|\\u2028)x+"\.\.\. in "en" would be read as "\/about" in "pt"/);
+      expect(message).not.toContain(" ");
+      expect(message).not.toContain("x".repeat(100));
+    });
   });
 
   describe("alternates", () => {
@@ -485,6 +500,13 @@ describe("translated pathnames", () => {
         { locale: "es", pathname: `/es/b/${id}` },
       ]);
     });
+
+    it("should leave out a locale whose URL would be more than 100 segments", () => {
+      const routing = create();
+      const pathname = "/x".repeat(100);
+
+      expect(routing.parse(pathname)?.alternates).toEqual([{ locale: "en", pathname }]);
+    });
   });
 
   describe("when no URL leads to the path read", () => {
@@ -555,13 +577,26 @@ describe("translated pathnames", () => {
         localePrefix: "when-ambiguous",
         pathnames: { "/documentation/:path*": { pt: "/d/:path*" } },
       });
-      // Segments `x/…/y` that make the canonical path `length` characters long, an even number.
-      const rest = (length: number) => `${"x/".repeat((length - "/documentation/".length - "y".length) / 2)}y`;
+      // Segments of 200 characters, and a last one, that make the canonical path `length` characters long.
+      const rest = (length: number) => {
+        const restLength = length - "/documentation/".length;
+        return `${`${"x".repeat(199)}/`.repeat(Math.floor(restLength / 200))}${"y".repeat(restLength % 200)}`;
+      };
 
-      expect(routing.parse(`/d/${rest(8_194)}`)).toBeUndefined();
+      expect(routing.parse(`/d/${rest(8_193)}`)).toBeUndefined();
       expect(routing.parse(`/d/${rest(8_192)}`)).toMatchObject({
         locale: "pt",
         pathname: `/documentation/${rest(8_192)}`,
+      });
+    });
+
+    it("should return undefined for a path whose canonical path would be more than 100 segments", () => {
+      const routing = create({ pathnames: { "/a/b/c/:rest*": { pt: "/c/:rest*" } } });
+
+      expect(routing.parse(`/pt/c${"/x".repeat(98)}`)).toBeUndefined();
+      expect(routing.parse(`/pt/c${"/x".repeat(97)}`)).toMatchObject({
+        locale: "pt",
+        pathname: `/a/b/c${"/x".repeat(97)}`,
       });
     });
 
@@ -578,8 +613,13 @@ describe("translated pathnames", () => {
       for (const length of [8_080, 8_089, 8_090, 8_091, 8_150]) {
         paths.push(`/b/${"x".repeat(length)}`, `/pt/b/${"x".repeat(length)}`, `/pt/b/${"x".repeat(length)}/`);
       }
-      for (const count of [4_085, 4_088, 4_089, 4_093]) {
-        paths.push(`/d/${"x/".repeat(count)}y`, `/pt/d/${"x/".repeat(count)}y`);
+      // Catch-all paths around the 100-segment limit, with and without a prefix.
+      for (const count of [96, 97, 98, 99]) {
+        paths.push(
+          `/d/${"x/".repeat(count)}y`,
+          `/pt/d/${"x/".repeat(count)}y`,
+          `/documentation/${"x/".repeat(count)}y`,
+        );
       }
       for (const a of words) {
         paths.push(`/${a}`);
@@ -778,9 +818,8 @@ describe("translated pathnames", () => {
     });
 
     it("should build and read a route as long as a request may be, next to a catch-all it overlaps", () => {
-      // 4,094 segments, so the prefixed request is just within the 8,192-character limit; recursion over them once
-      // overflowed the stack.
-      const long = "/x".repeat(4_094);
+      // 99 segments, so the prefixed request is just within the 100-segment limit.
+      const long = "/x".repeat(99);
       const routing = create({
         localePrefix: "when-ambiguous",
         pathnames: { [long]: { pt: long }, "/a/:rest*": { pt: "/x/:rest*" } },
@@ -965,6 +1004,19 @@ describe("translated pathnames", () => {
           "/products/:slug": { en: "/goods/:slug", pt: "/bens/:slug", es: "/bienes/:slug" },
         }),
       ).toThrow('pathnames["/products/:slug"]: Must not be the same path as "/products/:id"');
+    });
+
+    it("should escape line separators and cut a long path in the clash message", () => {
+      const long = `/a ${"b".repeat(150)}`;
+      let message = "";
+      try {
+        invalid({ [long]: { pt: "/sobre" }, "/company": { pt: "/sobre" } })();
+      } catch (error) {
+        message = (error as Error).message;
+      }
+
+      expect(message).toContain(`Must not have the same path as "/a\\u2028${"b".repeat(97)}"... in "pt"`);
+      expect(message).not.toContain(" ");
     });
 
     it("should reject parameters in a form when the canonical path has none", () => {

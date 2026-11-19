@@ -55,8 +55,8 @@ export interface BrowserI18nOptions<TLocale extends string> {
 /** Browser effects exclusively owned for one i18n manager after successful initialization. */
 export interface BrowserI18nBinding {
   /**
-   * Whether the locale follows the browser's languages rather than a choice: `true` after a start with no explicit or
-   * usable saved locale and after `followSystem()`, and `false` once the application applies a locale through
+   * Whether the locale follows the browser's languages rather than a choice: `true` after a start with no explicit locale
+   * and no saved locale that matches a configured one, and after `followSystem()`, and `false` once the application applies a locale through
    * `setLocale()` or `init()`. While it is `true`, a `languagechange` event switches to the newly detected locale, unless
    * an application request is still loading.
    */
@@ -398,7 +398,7 @@ export async function initializeBrowserI18n<TLocale extends string>(
   const subscriptions = new AbortController();
   let notifiedState: string | undefined;
   let isNotificationQueued = false;
-  const pickerState = (): string => `${i18n.locale} ${isFollowingSystem}`;
+  const pickerState = (): string => `${i18n.locale}\0${isFollowingSystem}`;
   // Queued, so a locale change and the selection it ends are reported once, and a listener never runs inside core.
   const queueNotification = (): void => {
     if (isNotificationQueued || isCleaned) {

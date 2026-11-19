@@ -126,7 +126,7 @@ Write `{name}` where a value goes, and pass the value to `t()`:
 ```
 
 ```ts
-t("order.confirmed", { name: "Ana", orderId: 1042 });
+t("order.confirmed", { name: "Ana", orderId: "1042" });
 // "Thanks, Ana. Order 1042 ships tomorrow."
 ```
 
@@ -138,7 +138,7 @@ A few details:
 
 - A placeholder with no matching value stays as written, so a missing value shows up as `{name}` on screen rather than disappearing.
 - One `t()` call fills at most 100 arguments, counting those inside plural and select forms, and leaves the rest as written. A UI sentence never gets close; the limit keeps a huge fetched message from costing one formatting step per placeholder.
-- Numbers in a plain `{name}` are inserted as JavaScript writes them: `1234.5`. Write `{name, number}` to format them for the reader, as the next section shows.
+- A number in a plain `{name}` is formatted for the reader, as `{name, number}` does: `1234.5` reads "1,234.5" in English and "1.234,5" in Portuguese. Write `{name, number, integer}` or another style, as the next section shows, to format it differently.
 - Braces and apostrophes are message syntax, so text that shows them literally needs quoting; see [Literal braces and apostrophes](#literal-braces-and-apostrophes).
 
 ### Format numbers and dates in the text
@@ -273,27 +273,6 @@ Three things to watch for:
 - **`count` must be a number.** A string such as `"5"` does not select a form; the group is then treated as a missing key. Convert it where it comes in, such as `Number(params.get("count"))`. The manager doesn't guess, since `"1,5"` is one and a half in Portuguese and not a number at all to JavaScript.
 - **A plain string under the same key wins over forms.** If `cart.items` is a string, `count` only fills `{count}`.
 - **Without `other`, it is not a plural group.** `{ "one": "…", "two": "…" }` works only for counts whose form happens to be there; any other count shows the key. `has()` says such a group is not a key, and typed keys don't offer it. Add `other`.
-
-### Show a formatted count
-
-A plain `{count}` writes the number as JavaScript does, so 1234 items reads "1234 items" rather than "1,234 items", or "1.234 itens" in Portuguese. Write `{count, number}` in the forms instead:
-
-```json
-{
-  "cart": {
-    "items": {
-      "one": "{count, number} item",
-      "other": "{count, number} items"
-    }
-  }
-}
-```
-
-```ts
-t("cart.items", { count: 1234 }); // "1,234 items"
-```
-
-That is a lot of tea, but the comma is right.
 
 ### Plurals inside a sentence
 

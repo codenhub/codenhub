@@ -93,6 +93,7 @@ Every text is read as an ICU message: `{name}`, `number` (`integer`, `percent`),
 - **`{name}` stays compatible**: a text without `{` or `'` is returned as is, and an argument without a usable value is left as written, as placeholders were. The one difference is that `'` before a brace and `''` quote, which a plain placeholder text rarely contains.
 - **One call fills at most 100 arguments**, counted across nested plural and select forms, and leaves the rest as written. A message is fetched data in many applications, and a 100,000-character text of repeated `{a}` would otherwise run one formatter call per argument on every render, the `{name}` fallback for invalid syntax included. 100 is far above what a UI sentence uses. Rejected: limiting arguments per message at parse time, because the fallback for invalid syntax fills placeholders without parsing.
 - **A `Date` is a value**, formatted as `{name, date}`, so a plain `{when}` shows a readable date rather than `Date.prototype.toString()`.
+- **A number in `{name}` is formatted as `{name, number}`** (0.5.0), as ICU MessageFormat and `intl-messageformat` do, so the common `"{count} items"` reads "1,234 items" in English and "1.234 itens" in Portuguese. Until 0.5.0 it was written as JavaScript writes it, "1234", which every message with a count had to work around with `{count, number}`; the README's own example did not. A value whose digits must stay as they are, such as an order number or a year, is passed as a string. Rejected: keeping `String(value)`, which is right only for those identifiers and wrong for every quantity, and is not what a translator who knows ICU expects.
 - **Plural groups stay**: they keep each form an ordinary key, which some translation tools need.
 - **Formatter options are copied by name.** Formatters are cached per process. A key of `JSON.stringify(options)` would see only own properties while `Intl` also reads inherited ones, so `formatNumber(x, Object.create({ style: "percent" }))` would turn every later call, in every manager, into a percentage. The options `Intl` reads are copied by name, inherited ones included, and that copy is both the cache key and what `Intl` receives, so the two cannot disagree. Values that are not primitives are never cached, so `Intl` validates them on every call. Trade-off: an `Intl` option newer than ES2025 is ignored until it is added to the list. `formatRelativeTime` and `formatList` are cached the same way; until 0.5.0 they built a formatter per call.
 - **`#` is the number only in a plural's own forms**, as ICU's `MessagePattern` defines it: a `select` nested in a form shows `#` as written, and an apostrophe before `#` quotes only in a plural. Rejected: printing the number there too, as `messageformat` does, which disagrees with ICU and `intl-messageformat`.
@@ -187,6 +188,14 @@ A stored locale the application no longer configures exactly, such as `pt-PT` af
 **The binding reports what a picker shows.** `binding.subscribe()` calls its listeners once after each change to the active locale or to `followsSystem`. `i18n.subscribe()` can't serve a picker: a pick of the locale already showing, or a `followSystem()` that keeps the locale, changes the selection but not the manager, so a framework picker rendered from the manager kept the old entry. Changes made together, such as a pick that changes the locale and ends following the system, are reported once, from a microtask, so a listener never runs inside the manager's request handling. Listeners are dispatched through an `EventTarget`, so one that throws is reported as `i18n.subscribe()` listeners are, and the others still run. Rejected: making `i18n.subscribe()` fire for a request that changes nothing, which re-renders every subscriber for a selection only the picker shows; and documenting a re-read after each `await`, which a framework's store can't do.
 
 **The manager stays runtime-neutral.** Rejected: `setLocale("system")` or `setLocale(undefined)` on the manager, which knows nothing of the browser or of storage.
+
+### Tabs do not follow each other's choice (0.5.0)
+
+A pick saved in one tab is not applied to the others: the binding listens for `languagechange`, not for the `storage` event, and each tab reads the saved locale at its start. A tab's text changing under a visitor who is reading it, because they picked a language in another tab, is a surprise; the next load, or the next tab, uses the choice. `languagechange` is different: it reports a change to what the visitor asked for everywhere, and applies only while a tab follows the system. Rejected: applying `storage` events, which also reports the writes of any other script that uses the same key, and an option for it, which no application has asked for. An application that wants it can listen for `storage` itself and call `i18n.setLocale()`.
+
+### The default `storageKey` is `"i18n"`
+
+The saved locale lives under `localStorage["i18n"]` unless `storageKey` says otherwise. The name is short and could collide with another library's, but every visitor's saved choice lives under it since 0.1.0, so a new default would send each of them back to detection once, with no way for the application to tell. An application that shares its origin with other code that uses the key sets `storageKey`. Rejected: a namespaced default, such as `"codenhub-i18n"`, which costs every existing visitor their choice to avoid a collision no one has reported, and migrating the old key, which reads storage the application may have given to someone else.
 
 ### One data attribute per translated attribute
 
@@ -285,7 +294,7 @@ Under `"when-ambiguous"`, routing groups patterns by the kinds of their segments
 
 Routing refuses some paths a request carries: `new URL("https://example.com//wp-login.php").pathname` is `//wp-login.php`, and scanners send such paths all day. The guide's handlers call `parse(url.pathname)` without a catch, so a `TypeError` for each would answer 500. The decision above rejects catching in the guide because a forgotten catch is a 500 on any typed URL, and the same reasoning holds for a `TypeError` as for the `RangeError`.
 
-- **`undefined` for what a request can carry**: `//`, `\`, control characters, dot segments, encoded slashes, backslashes, `%` and controls, malformed escapes, and paths over 8,192 characters. Every caller already answers `undefined` with a 404.
+- **`undefined` for what a request can carry**: `//`, `\`, control characters, dot segments, encoded slashes, backslashes, `%` and controls, malformed escapes, and paths over 8,192 characters or, since 0.5.0, 100 segments. Every caller already answers `undefined` with a 404.
 - **Still a `TypeError` for what `url.pathname` never is**: a non-string, a value not starting with `/`, such as a full URL, or one with `?` or `#`, such as Node's `request.url` with its query. Returning `undefined` there would turn a mistake in the calling code into a 404 on every URL with a query string.
 - **`localize` and `localizeAll` still throw** for every refused path, since they build links from the application's own paths.
 
@@ -297,6 +306,12 @@ Rejected:
 ### `parse` checks the canonical path's length too
 
 `parse` returns `undefined` when the canonical path, not only its URL, would be longer than 8,192 characters. A short translated URL can read back to a longer canonical path, such as `/pt/b/…` for `/aaaa…/:id`, and `localize` refuses an input that long, so checking the URL alone lets such a request answer 500 through the guide's redirect. Rejected: raising the limit for canonical paths, which would let `localize` accept what no request can carry.
+
+### Paths have at most 100 segments (0.5.0)
+
+Every limit on a path's length also caps its segments at 100: a request over it is `undefined` from `parse`, an input over it is a `TypeError` from `localize`, and a URL or canonical path that would pass it is treated as one over 8,192 characters. Reading a path costs work per segment in every locale, and `parse` reads each locale's URL back to build `alternates`, so `/docs/a/a/…`, 4,000 one-letter segments within 8,192 characters, took 39 ms a call with 20 locales against 0.3 ms for `/docs/a`, and 90 ms with a catch-all under `"when-ambiguous"`. Anyone can send that path, so a few dozen requests a second kept a core busy. At 100 segments the worst case is a few milliseconds with 20 locales. No page is 100 folders deep; a catch-all for documentation trees stays far within it.
+
+Rejected: only cutting the repeated work per locale, which a profile put at about half the cost, so it leaves the cost growing with segments times locales; and building `alternates` lazily, rejected before for making the result more than plain data.
 
 ### A listed page comes back in one spelling
 

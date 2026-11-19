@@ -106,7 +106,11 @@ describe("initializeBrowserI18n attribute translation", () => {
       expect(element.getAttribute("placeholder")).toBe("Invalid fallback");
       expect(element.getAttribute("title")).toBe("Bonjour");
       expect(warn).toHaveBeenCalledWith(
-        "[I18n] Skipping translation because data-i18n-placeholder contains an invalid key.",
+        "%s",
+        expect.stringMatching(
+          /^\[I18n\] Skipping translation because data-i18n-placeholder contains an invalid key, "/,
+        ),
+        element,
       );
       binding.disconnect();
     },

@@ -2,7 +2,7 @@
 title: URLs localizadas
 description: Pon el locale en la ruta, traduce la propia ruta, lee ambas de vuelta, enlaza a otros idiomas, genera cada página localizada y lleva a cada visitante a su propio idioma en un sitio estático.
 order: 4
-source: 96dbb0ea76425bf405c7dc011065fd8bb754e176
+source: a43c58749f399ac05075733394821e59515b0048
 ---
 
 # URLs localizadas
@@ -40,7 +40,7 @@ Cómo elegir:
 
 Usa los mismos `locales` y `defaultLocale` que tu gestor. El routing es independiente del gestor, así que también funciona donde no hay nada que traducir, como en la lógica de redirección de un servidor.
 
-Si guardas la configuración en una variable antes de pasarla, escribe `localePrefix: "except-default" as const`. Sin `as const`, TypeScript amplía el valor a `string`, y `createLocaleRouting` lo rechaza en tiempo de compilación.
+Si guardas la configuración en una variable antes de pasarla, pon `as const` después del objeto entero: `const config = { … } as const`. Sin eso, TypeScript amplía `localePrefix` a `string`, y `createLocaleRouting` lo rechaza en tiempo de compilación. `as const` solo en `localePrefix` compila, pero tipa cada locale como `string`, así que `localize("/about", "fr")` también compila.
 
 ### Barras finales
 
@@ -428,7 +428,7 @@ Esta es la parte aburrida de la página. También es la parte que decide si una 
 - **Segmentos de punto**, `.` y `..`, como en `/help/../admin`, y sus formas codificadas, como `/help/%2e%2e/admin`. Un navegador los resuelve antes de enviar una solicitud, así que una solicitud que todavía tiene uno se escribió a mano para escaparse de la página que nombra. Resuelve la ruta primero; `new URL(path, "https://example.com").pathname` lo hace.
 - **Una barra, una barra invertida, un `%` o un carácter de control codificados**: `%2F`, `%5C`, `%25`, o de `%00` a `%1F` y `%7F`, como en `/files/a%2Fb`. Una barra o una barra invertida codificada hace que los servidores no se pongan de acuerdo sobre dónde empiezan y terminan los segmentos: uno ve un segmento donde otro ve dos. Un `%` codificado invita a una segunda ronda de decodificación, así que `%252F` se convierte en `%2F` y después en `/`. Un carácter de control codificado se salta la comprobación de los que están tal cual. Deja fuera de la ruta una barra que forma parte de un valor, por ejemplo en el query string.
 - **Un escape mal formado**, un `%` que no va seguido de dos dígitos hexadecimales, como en `/50%off`. Escribe `%25` para un `%` literal… que también se rechaza, según la regla anterior, así que saca el `%` de la ruta.
-- **Más de 8192 caracteres**, o una ruta cuya ruta canónica sería más larga que eso, como puede pasar con una ruta traducida corta cuando su entrada en la tabla es larga. De todos modos, los servidores y los proxies cortan las URLs alrededor de esa longitud.
+- **Más de 8192 caracteres o 100 segmentos**, o una ruta cuya ruta canónica sería más larga que eso, como puede pasar con una ruta traducida corta cuando su entrada en la tabla es larga. De todos modos, los servidores y los proxies cortan las URLs alrededor de esa longitud, y ninguna página está 100 carpetas abajo; una petición de miles de segmentos de una letra costaría trabajo en cada locale.
 
 Una solicitud puede traer cualquiera de estas, como un escáner que pide `//wp-login.php`, así que `parse()` devuelve `undefined` para ellas, y el mismo 404 las responde como a cualquier otra ruta que no es una página. `localize()` y `localizeAll()` construyen enlaces a partir de tus propias rutas en lugar de leer solicitudes, así que con esas mismas rutas lanzan un `TypeError`, como `TypeError: [I18n] pathname must not contain dot segments`, y corriges la ruta en tu código.
 
@@ -441,7 +441,7 @@ Eso es un error del código que llama, no una solicitud que haya que responder, 
 
 Los escapes normales, como `%20` y `%C3%A7`, no son problema, y una barra final se conserva: `/pt/sobre/` se parsea como `/about/`.
 
-`localize()` lanza en cambio un `RangeError` cuando la ruta que construye sería más larga que 8192 caracteres, como puede pasar con una ruta apenas por debajo del límite una vez que se le agregan su prefijo o sus palabras traducidas.
+`localize()` lanza en cambio un `RangeError` cuando la ruta que construye sería más larga que 8192 caracteres o 100 segmentos, como puede pasar con una ruta apenas por debajo del límite una vez que se le agregan su prefijo o sus palabras traducidas.
 
 ## Lo que el routing deja a tu framework
 

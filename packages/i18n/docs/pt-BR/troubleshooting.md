@@ -2,7 +2,7 @@
 title: Solução de problemas
 description: O que cada erro e aviso quer dizer, e como resolver.
 order: 5
-source: 18b05ed5ec3b2b03bb2a6e3c174bfdd4a2ce31ed
+source: ab391d7b4840624cbcb92f5eebd7f0e74567a689
 ---
 
 # Solução de problemas
@@ -118,7 +118,7 @@ Type 'string' is not assignable to type '"en" | "pt"'.
 
 O locale padrão perdeu o tipo exato, normalmente porque a configuração mora numa variável separada. Marque-o com `as const`, como em [Chaves tipadas](translations.md#chaves-tipadas). Os locales vêm só de `locales`, então um padrão `string` simples não consegue alargá-los.
 
-O mesmo vale para `localePrefix` numa configuração de roteamento guardada numa variável, onde a mensagem cita `"always" | "except-default" | "when-ambiguous"`: escreva `localePrefix: "except-default" as const`.
+O mesmo vale para `localePrefix` numa configuração de roteamento guardada numa variável, onde a mensagem cita `"always" | "except-default" | "when-ambiguous"`: ponha `as const` depois do objeto inteiro, como em [URLs localizadas](localized-urls.md). Só em `localePrefix` compila, mas tipa todo locale como `string`.
 
 ## Uma mensagem aparece com o texto cru
 
@@ -146,7 +146,7 @@ O caminho que `localize()` montaria abre uma página diferente, ou a mesma pági
 - **Você passou uma URL, e não um caminho canônico.** `localize("/sobre", "en")` toma `/sobre` como o caminho canônico de uma página em inglês. Se `/sobre` é a URL da página "sobre" em português, leia-a antes: `localize(routing.parse("/sobre").pathname, "en")`.
 - **Uma página que a tabela não lista tem o caminho traduzido de outra.** Com `"/contact": { es: "/about" }` e nenhuma entrada `/about`, `localize("/about", "es")` lança `RangeError: [I18n] "/about" in "es" would be read as "/contact" in "es"; …`. Com `localePrefix: "when-ambiguous"`, uma página em inglês em `/sobre` entra em conflito com uma `/sobre` em português do mesmo jeito. Renomeie uma delas, liste a página em `pathnames` ou mantenha o prefixo com `"except-default"`. [O risco que você assume](localized-urls.md#o-risco-que-você-assume) explica por que o roteamento não consegue pegar isso antes.
 
-## `localize()` lança `RangeError`: "would be longer than 8,192 characters"
+## `localize()` lança `RangeError`: "would be longer than 8,192 characters or 100 segments"
 
 O caminho que você passou é válido, mas o prefixo do locale ou as palavras traduzidas deixam o resultado mais longo do que o `parse()` aceita. Encurte o caminho; um link desse tamanho também tende a ser cortado por servidores e proxies muito antes de alguém lê-lo.
 

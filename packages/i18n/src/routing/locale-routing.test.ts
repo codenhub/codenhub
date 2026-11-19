@@ -191,6 +191,8 @@ describe("createLocaleRouting", () => {
       "/about%250ateam",
       "/sale%25off",
       `/${"a".repeat(8_192)}`,
+      "/a".repeat(101),
+      `${"/a".repeat(101)}/`,
     ];
 
     for (const pathname of refusedPathnames) {
@@ -198,6 +200,26 @@ describe("createLocaleRouting", () => {
       expect(() => routing.localize(pathname, "en-US")).toThrow(TypeError);
     }
     expect(routing.parse(`/${"a".repeat(8_191)}`)).toBeDefined();
+    expect(routing.parse("/a".repeat(100))).toBeDefined();
+    expect(routing.parse(`${"/a".repeat(100)}/`)).toBeDefined();
+  });
+
+  it("should refuse a path of thousands of segments quickly", () => {
+    const routing = createLocaleRouting({
+      defaultLocale: "en-US",
+      locales: Array.from({ length: 20 }, (_, index) => (index === 0 ? "en-US" : `x${index}`)),
+      localePrefix: "except-default",
+    });
+    const pathname = `/docs/${"a/".repeat(4_090)}a`;
+
+    routing.parse(pathname);
+    const start = performance.now();
+    for (let index = 0; index < 20; index += 1) {
+      expect(routing.parse(pathname)).toBeUndefined();
+    }
+
+    // Read in full, such a path took about 39 ms a call with 20 locales.
+    expect((performance.now() - start) / 20).toBeLessThan(2);
   });
 
   it("should throw a RangeError when the locale prefix makes a valid path too long", () => {
@@ -210,8 +232,21 @@ describe("createLocaleRouting", () => {
 
     expect(() => routing.localize(pathname, "pt-BR")).toThrow(RangeError);
     expect(() => routing.localize(pathname, "pt-BR")).toThrow(
-      '[I18n] the path in "pt-BR" would be longer than 8,192 characters',
+      '[I18n] the path in "pt-BR" would be longer than 8,192 characters or 100 segments',
     );
+  });
+
+  it("should throw a RangeError when the locale prefix makes a valid path more than 100 segments", () => {
+    const routing = createLocaleRouting({
+      defaultLocale: "en-US",
+      locales: LOCALES,
+      localePrefix: "always",
+    });
+
+    expect(() => routing.localize("/a".repeat(100), "pt-BR")).toThrow(
+      '[I18n] the path in "pt-BR" would be longer than 8,192 characters or 100 segments',
+    );
+    expect(routing.localize("/a".repeat(99), "pt-BR")).toBe(`/pt-BR${"/a".repeat(99)}`);
   });
 
   it("should prefix its errors with the package name", () => {
@@ -351,7 +386,7 @@ describe("createLocaleRouting", () => {
   it("should normalize each distinct segment at most once per parse", () => {
     // Normalizing an escape that isn't UTF-8, such as `%C3`, costs about ten times a plain segment, so a request made
     // of them must not pay that once per lookup. Counting calls bounds the cost without timing the machine.
-    const segments = Array.from({ length: 200 }, (_, index) => `%C3${index}`);
+    const segments = Array.from({ length: 90 }, (_, index) => `%C3${index}`);
     const canonical = ["docs", ...segments];
     const requests = {
       prefixed: `/pt-BR/documentos/${segments.join("/")}`,
