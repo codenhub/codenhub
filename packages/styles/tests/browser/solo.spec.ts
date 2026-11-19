@@ -104,8 +104,8 @@ test.describe("solo utilities", () => {
     expect(neobrutalism["border-top-left-radius"], "neobrutalism corner").toBe("0px");
     expect(neobrutalism["box-shadow"], "neobrutalism slab").toMatch(/\b4px 4px 0px 0px\b/);
 
-    /* The clip removes a border, so the ring replaces it. */
-    expect(pixel["clip-path"], "pixel silhouette").toMatch(/^polygon/);
+    /* The ring replaces the border; the stepped clip is an action's, below. */
+    expect(pixel["clip-path"], "a pixel container is not clipped").toBe("none");
     expect(pixel["border-top-width"], "pixel border").toBe("0px");
     expect(pixel["box-shadow"], "pixel ring").toMatch(/inset|0px 0px 0px 4px/);
     expect(pixel["font-family"], "pixel font falls back to monospace").toContain("monospace");
@@ -468,6 +468,38 @@ test.describe("solo utilities", () => {
 
     expect((await read(page, "#action", ["font-weight"]))["font-weight"], "action").toBe("800");
     expect((await read(page, "#container", ["font-weight"]))["font-weight"], "container").toBe("400");
+  });
+
+  /* `clip-path` cuts everything outside the shape, so on a container it cut
+     off what the element holds: a menu, a pinned badge, a child's focus ring.
+     As under `.pixel`, only an action takes the stepped corner. */
+  test("clip only a pixel action, so a pixel container keeps what it holds", async ({ page }) => {
+    await load(
+      page,
+      ["aesthetics/pixel.css"],
+      `<div id="pane" class="pixel-solo" style="position: relative; width: 120px; height: 60px">
+         <span id="pinned" style="position: absolute; top: -8px; right: -8px; width: 16px; height: 16px; background: red"></span>
+       </div>
+       <button id="action" class="pixel-solo">Go</button>
+       <a id="link" class="pixel-solo" href="#">Go</a>`,
+    );
+
+    const pane = await read(page, "#pane", ["clip-path", "border-top-width", "box-shadow"]);
+
+    expect(pane["clip-path"], "a container takes no clip").toBe("none");
+    expect(pane["border-top-width"], "and the ring for its edge").toBe("0px");
+    expect(pane["box-shadow"]).toMatch(/inset/);
+    expect((await read(page, "#action", ["clip-path"]))["clip-path"], "a button").toMatch(/^polygon/);
+    expect((await read(page, "#link", ["clip-path"]))["clip-path"], "a link").toMatch(/^polygon/);
+
+    /* The pinned corner past the edge paints: the topmost element there is it. */
+    const hit = await page.evaluate(() => {
+      const box = document.querySelector("#pane")!.getBoundingClientRect();
+
+      return document.elementFromPoint(box.right + 4, box.top - 4)?.id;
+    });
+
+    expect(hit).toBe("pinned");
   });
 
   /* The clip takes the focus outline with it, so a focused pixel element draws

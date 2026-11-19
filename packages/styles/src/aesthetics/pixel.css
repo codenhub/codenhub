@@ -180,8 +180,9 @@
      beneath a border, so the line fades to nothing instead of to the fill. */
   --_solo-edge: color-mix(in oklab, var(--_solo-ink) var(--ui-border, 100%), transparent);
 
-  /* The clip removes a border at the straight sides, so the ring draws the
-     edge and the element's own border goes. */
+  /* The ring draws the edge and the element's own border goes: on an action
+     the clip would cut a border at the straight sides, and a container draws
+     the same edge so the two match. */
   /* Printed as drawn; see `.glass-solo`. */
   print-color-adjust: exact;
 
@@ -190,6 +191,24 @@
   box-shadow:
     inset 0 0 0 var(--_pixel-unit) var(--_solo-edge),
     inset 0 0 0 100vmax var(--_solo-fill);
+  font-family: var(--font-pixel, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace);
+}
+
+/* The stepped corner, on an action only, as under `.pixel`, where surfaces
+   take no clip. `clip-path` cuts everything outside the shape, so on a
+   container it cut off what the element holds as well as its corners: an open
+   menu, a badge pinned to the edge, a child's focus ring. A container keeps
+   square corners and the ring. `:where()` keeps it one class deep, so the
+   forced-colours `clip-path: none` below still wins. */
+.pixel-solo:where(
+  button,
+  a[href],
+  [role="button"],
+  summary,
+  input[type="button"],
+  input[type="submit"],
+  input[type="reset"]
+) {
   clip-path: polygon(
     0 var(--_pixel-unit),
     var(--_pixel-unit) var(--_pixel-unit),
@@ -204,7 +223,6 @@
     var(--_pixel-unit) calc(100% - var(--_pixel-unit)),
     0 calc(100% - var(--_pixel-unit))
   );
-  font-family: var(--font-pixel, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace);
 }
 
 /* An intent class on the element colours it, as on a component. Named rather
@@ -236,8 +254,8 @@
   color: var(--_solo-fg);
 }
 
-/* The clip takes the focus outline too, so focus is a second inset layer under
-   the ring, wider than it so it shows -- shadows paint first-on-top. A line of
+/* On an action the clip takes the focus outline too, so focus is a second
+   inset layer under the ring, on every solo element alike, wider than it so it shows -- shadows paint first-on-top. A line of
    the page colour sits inside that one, as in `box`: the ring is the ink, and
    on an element filled with the ink it would not show. */
 .pixel-solo:focus-visible {
