@@ -13,7 +13,7 @@ group: "Reference"
 ### createKeySet
 
 ```ts
-export declare function createKeySet(keys: readonly VerificationKey[]): LocalKeySet;
+export declare function createKeySet(keys: readonly VerificationKey[], options?: CreateKeySetOptions): LocalKeySet;
 ```
 
 Builds a key set from keys this package created, for verifying tokens against a fixed set.
@@ -23,10 +23,11 @@ Selection follows `KeySet.select`: with a `kid`, only keys with that `kid` are c
 **Parameters**
 
 - `keys` — Public and secret keys from `import*` or `generate*`. No two may share both `kid` and `alg`, and two keys without a `kid` may not share an `alg`.
+- `options` — The issuer the keys belong to.
 
-**Returns** — A frozen key set holding a copy of `keys`, which its `keys` lists.
+**Returns** — A frozen key set holding a copy of `keys`, which its `keys` lists; with `issuer`, each key bound to it.
 
-**Throws** — TypeError when `keys` is not a non-empty array, holds a value that is not a public or secret key created by this package, or holds two keys with the same `kid` and `alg`.
+**Throws** — TypeError when `keys` is not a non-empty array, holds a value that is not a public or secret key created by this package, or holds two keys with the same `kid` and `alg`; when `options` is not an object or has a member that is not an option; when `options.issuer` is not a non-empty string; or when a key is already bound to another issuer.
 
 **Example**
 
@@ -60,7 +61,7 @@ Fetches are `GET` requests with `accept: application/json` that do not follow re
 
 **Returns** — A frozen key set. Its `select` never rejects for a fetch problem or a token: a failed fetch gives `key_fetch_failed` with `params.reason` of `timeout`, `network` (the fetch rejected), `status` (with `params.status`, also for a redirect), `too_large` (`Content-Length` or body over `maxResponseBytes`) or `invalid_response` (not a strict JSON object, or not a JWKS). Issues never contain anything from the response. `select` rejects with a `TypeError` only when `options.now` returns something other than a finite number, which is a bug in the caller's clock; a verifier that calls such a key set reports `key_fetch_failed` with `{ reason: "key_set_error" }` instead.
 
-**Throws** — TypeError when `options` is not an object; `options` has a member that is not an option; `url` is not an absolute `https:` URL, or `http:` URL on a loopback host, or carries credentials; `fetch`, `now`, `onFetch`, `onFetchError` or `waitUntil` is not a function; `seed` has no finite `fetchedAt`; `algorithms` is not a non-empty array of asymmetric algorithms; or `cacheTtl`, `cooldown`, `maxStale`, `timeout` or `maxResponseBytes` is out of range.
+**Throws** — TypeError when `options` is not an object; `options` has a member that is not an option; `url` is not an absolute `https:` URL, or `http:` URL on a loopback host, or carries credentials; `fetch`, `now`, `onFetch`, `onFetchError` or `waitUntil` is not a function; `seed` has no finite `fetchedAt`; `algorithms` is not a non-empty array of asymmetric algorithms; `issuer` is not a non-empty string; or `cacheTtl`, `cooldown`, `maxStale`, `timeout` or `maxResponseBytes` is out of range.
 
 **Example**
 
@@ -195,6 +196,8 @@ export declare function generateKeyPair(options: GenerateKeyPairOptions): Promis
 
 Generates a key pair bound to one asymmetric algorithm.
 
+For `EdDSA` and `Ed25519`, a generation that Web Crypto rejects with `OperationError` is retried up to three times, since Linux WebKit fails about 1 in 128 at random.
+
 **Parameters**
 
 - `options` — The algorithm, an optional `kid`, whether the private key may be exported, and the RSA modulus length.
@@ -265,11 +268,11 @@ A JWK with an `alg` is bound to that algorithm when it is allowed; a JWK without
 **Parameters**
 
 - `jwks` — The JWKS, an object with a `keys` array. Any value is accepted.
-- `options` — Which algorithms keys may be bound to.
+- `options` — Which algorithms keys may be bound to, and the issuer they belong to.
 
 **Returns** — The frozen key set, or a failure with one issue: `malformed` when `jwks` is not an object (path omitted) or its `keys` is not an array (path `["keys"]`), or `too_large` with `{ limit: "keys", maximum: 100 }` for more than 100 keys. Never throws for any `jwks`.
 
-**Throws** — TypeError when `options` is not an object or `options.algorithms` is not a non-empty array of asymmetric algorithms.
+**Throws** — TypeError when `options` is not an object, `options.algorithms` is not a non-empty array of asymmetric algorithms, or `options.issuer` is not a non-empty string.
 
 **Example**
 
@@ -443,7 +446,7 @@ The header's `alg` always comes from the key, so a key can never sign under anot
 
 **Returns** — The compact token, `<header>.<payload>.<signature>` in base64url.
 
-**Throws** — TypeError, as a rejected promise, when `input` is not an object; `input.key` is not a private or secret key this package created; `input.header` is not a plain object, names an `alg` other than the key's, holds `crit`, `b64`, `jwk`, `jku`, `x5u` or `x5c`, or a `kid`, `typ` or `cty` that is not a string; `input.payload` is not a plain object; the header or payload holds a value JSON cannot carry exactly (`undefined`, a function, a symbol, a bigint, a non-finite number or `-0`, a non-plain object, an accessor) or nests deeper than 32 levels; or a registered claim has the wrong type (`exp`, `nbf`, `iat` not finite numbers; `iss`, `sub`, `jti` not strings; `aud` neither a string nor an array of strings); `input` has a member other than `payload`, `key`, `header` and `embedKey`; or `input.embedKey` is not a public key this package created, `input.key` is not a private key, or the two are not one key pair bound to one algorithm.
+**Throws** — TypeError, as a rejected promise, when `input` is not an object; `input.key` is not a private or secret key this package created; `input.header` is not a plain object, names an `alg` other than the key's, holds `crit`, `b64`, `jwk`, `jku`, `x5u` or `x5c`, or a `kid`, `typ` or `cty` that is not a string; `input.payload` is not a plain object; the header or payload holds a value JSON cannot carry exactly (`undefined`, a function, a symbol, a bigint, a non-finite number or `-0`, a non-plain object, an accessor) or nests deeper than 32 levels; or a registered claim has the wrong type (`exp`, `nbf`, `iat` not finite numbers, or past 253402300799, the end of year 9999, as a time in milliseconds is; `iss`, `sub`, `jti` not strings; `aud` neither a string nor an array of strings); `input` has a member other than `payload`, `key`, `header` and `embedKey`; or `input.embedKey` is not a public key this package created, `input.key` is not a private key, or the two are not one key pair bound to one algorithm.
 
 **Example**
 
@@ -480,6 +483,26 @@ const idToken = await sign({ payload: { ...claims, at_hash: await tokenHash(acce
 ```
 
 ## Interfaces
+
+### CreateKeySetOptions
+
+```ts
+export interface CreateKeySetOptions {
+    readonly issuer?: string;
+}
+```
+
+How [`createKeySet`](#createkeyset) builds its set.
+
+#### CreateKeySetOptions › issuer
+
+```ts
+readonly issuer?: string;
+```
+
+The issuer whose keys these are, as for `ImportKeySetOptions.issuer`. The set holds copies of the keys bound to it.
+
+**Default** — the keys as given
 
 ### GenerateKeyPairOptions
 
@@ -577,6 +600,7 @@ Key identifier.
 ```ts
 export interface ImportKeySetOptions {
     readonly algorithms?: readonly AsymmetricAlgorithm[];
+    readonly issuer?: string;
 }
 ```
 
@@ -591,6 +615,16 @@ readonly algorithms?: readonly AsymmetricAlgorithm[];
 Algorithms keys may be bound to. A JWK naming another algorithm in its `alg` is skipped, and a JWK without `alg` is bound only to the listed algorithms its `kty` and `crv` allow. Non-empty.
 
 **Default** — every asymmetric algorithm: `ES256`, `ES384`, `ES512`, `EdDSA`, `Ed25519`, `RS256`, `RS384`, `RS512`, `PS256`, `PS384`, `PS512`
+
+#### ImportKeySetOptions › issuer
+
+```ts
+readonly issuer?: string;
+```
+
+The issuer whose keys these are. Each key is bound to it (see `PublicKey.issuer`), so a token verified with one of them must carry this `iss`. Give it whenever keys of several issuers can reach one verifier.
+
+**Default** — keys bound to no issuer
 
 ### ImportPrivateKeyOptions
 
@@ -1159,7 +1193,7 @@ A key set over a fixed list of keys, from [`createKeySet`](#createkeyset) or [`i
 readonly keys: readonly VerificationKey[];
 ```
 
-The keys the set selects from, frozen. For [`createKeySet`](#createkeyset), the keys given, in order; for [`importKeySet`](#importkeyset), one key per JWK and algorithm it was bound to, in JWKS order.
+The keys the set selects from, frozen. For [`createKeySet`](#createkeyset), the keys given, in order; for [`importKeySet`](#importkeyset), one key per JWK and algorithm it was bound to, in JWKS order. With an `issuer` option, each is a copy of its key bound to that issuer, which works wherever the original does.
 
 #### LocalKeySet › select
 
@@ -1217,6 +1251,7 @@ export interface PublicKey {
     readonly kind: "public";
     readonly alg: AsymmetricAlgorithm;
     readonly kid?: string;
+    readonly issuer?: string;
 }
 ```
 
@@ -1231,6 +1266,14 @@ readonly alg: AsymmetricAlgorithm;
 ```
 
 The one algorithm this key verifies with. A token whose header names another fails.
+
+#### PublicKey › issuer
+
+```ts
+readonly issuer?: string;
+```
+
+The issuer this key verifies tokens for, when a key set bound it with its `issuer` option. A verifier that selects the key then requires the token's `iss` to equal it, whatever its own `issuer` option says.
 
 #### PublicKey › kid
 
@@ -1275,6 +1318,7 @@ export interface RemoteKeySetOptions {
     readonly url: string | URL;
     readonly fetch?: typeof fetch;
     readonly algorithms?: readonly AsymmetricAlgorithm[];
+    readonly issuer?: string;
     readonly cacheTtl?: number;
     readonly cooldown?: number;
     readonly maxStale?: number;
@@ -1329,6 +1373,16 @@ readonly fetch?: typeof fetch;
 The `fetch` to call, for runtimes or tests that supply their own.
 
 **Default** — `globalThis.fetch`, looked up at each fetch
+
+#### RemoteKeySetOptions › issuer
+
+```ts
+readonly issuer?: string;
+```
+
+The issuer whose JWKS this is, as for `ImportKeySetOptions.issuer`: each key is bound to it, so a token verified with one must carry this `iss`.
+
+**Default** — keys bound to no issuer
 
 #### RemoteKeySetOptions › maxResponseBytes
 
@@ -1445,6 +1499,7 @@ export interface SecretKey {
     readonly alg: SymmetricAlgorithm;
     readonly kid?: string;
     readonly extractable: boolean;
+    readonly issuer?: string;
 }
 ```
 
@@ -1465,6 +1520,14 @@ readonly extractable: boolean;
 ```
 
 Whether [`exportSecretJwk`](#exportsecretjwk) may export this key's material.
+
+#### SecretKey › issuer
+
+```ts
+readonly issuer?: string;
+```
+
+The issuer this key verifies tokens for, when a key set bound it with its `issuer` option. A verifier that selects the key then requires the token's `iss` to equal it, whatever its own `issuer` option says.
 
 #### SecretKey › kid
 
@@ -1589,7 +1652,7 @@ A private or secret key this package created. It fixes the token's `alg`.
 readonly payload: TPayload & JwtRegisteredClaims & JsonCompatible<TPayload>;
 ```
 
-The claims. A plain object of JSON values: strings, finite numbers, booleans, `null`, arrays and plain objects, nested at most 32 deep. `exp`, `nbf` and `iat` are seconds since the Unix epoch.
+The claims. A plain object of JSON values: strings, finite numbers, booleans, `null`, arrays and plain objects, nested at most 32 deep. `exp`, `nbf` and `iat` are seconds since the Unix epoch, at most 253402300799, so a time in milliseconds throws.
 
 ### StandardSchemaV1
 
@@ -2045,6 +2108,8 @@ export type JwtIssueCode = "malformed" | "too_large" | "duplicate_key" | "unsupp
 Stable category of a failure that callers can branch on without parsing messages.
 
 Token codes come from [`Verifier`](#verifier) and [`readHeader`](#readheader); key codes from the `import*` functions and key sets; `key_fetch_failed` from any key set that fails, remote or custom.
+
+A minor release may add codes, and values of `params.reason`, when a new check or failure needs its own name; an existing one never changes meaning. Handle an unknown code as a failure like any other.
 
 ### JwtPathSegment
 

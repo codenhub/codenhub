@@ -1,4 +1,4 @@
-import type { JwtHeader, JwtIssue, JwtPathSegment, JwtPayload } from "../core/types";
+import type { JwtHeader, JwtIssue, JwtPathSegment, JwtPayload, VerificationKey } from "../core/types";
 import type { StandardSchemaV1 } from "../interop/standard-schema";
 import { normalizeType, type ResolvedOptions } from "./options";
 
@@ -29,7 +29,12 @@ const missing = (claim: string): JwtIssue => ({ code: "missing_claim", path: ["p
  * check order: registered claim types, `exp`, `nbf`, `iat`, `maxAge`, issuer, audience, `typ`, then
  * required claims. A claim with the wrong type is reported once and skipped by the later checks.
  */
-export function checkClaims(header: JwtHeader, payload: JwtPayload, options: ResolvedOptions): JwtIssue[] {
+export function checkClaims(
+  header: JwtHeader,
+  payload: JwtPayload,
+  options: ResolvedOptions,
+  key: VerificationKey,
+): JwtIssue[] {
   const issues: JwtIssue[] = [];
   const invalid = new Set<string>();
   for (const [name, isValid] of CLAIM_TYPES) {
@@ -43,7 +48,7 @@ export function checkClaims(header: JwtHeader, payload: JwtPayload, options: Res
     valid: (name) => (Object.hasOwn(payload, name) && !invalid.has(name) ? payload[name] : undefined),
   };
   const now = readClock(options) / MILLISECONDS_PER_SECOND;
-  issues.push(...timeIssues(claims, now, options), ...identityIssues(claims, options));
+  issues.push(...timeIssues(claims, now, options), ...identityIssues(claims, options, key.issuer));
   const typ = header.typ === undefined ? null : normalizeType(header.typ);
   if (options.types !== undefined && !options.types.includes(typ)) {
     issues.push({ code: "wrong_type", path: ["header", "typ"] });
@@ -107,13 +112,22 @@ function timeIssues(claims: Claims, now: number, options: ResolvedOptions): JwtI
   return issues;
 }
 
-function identityIssues(claims: Claims, options: ResolvedOptions): JwtIssue[] {
+/**
+ * The issuer and audience checks. `keyIssuer` is the issuer the selected key is bound to: a token must
+ * carry it as `iss` whatever `options.issuers` allows, so one tenant's key never verifies another's token
+ * (scope.md decision 43). Either check failing gives one issue.
+ */
+function identityIssues(claims: Claims, options: ResolvedOptions, keyIssuer: string | undefined): JwtIssue[] {
   const issues: JwtIssue[] = [];
-  if (options.issuers !== undefined) {
+  const { issuers } = options;
+  if (issuers !== undefined || keyIssuer !== undefined) {
     const iss = claims.valid("iss");
     if (!claims.present("iss")) {
       issues.push(missing("iss"));
-    } else if (iss !== undefined && !options.issuers.includes(iss)) {
+    } else if (
+      iss !== undefined &&
+      ((issuers !== undefined && !issuers.includes(iss)) || (keyIssuer !== undefined && iss !== keyIssuer))
+    ) {
       issues.push({ code: "wrong_issuer", path: ["payload", "iss"] });
     }
   }

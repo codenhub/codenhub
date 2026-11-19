@@ -28,4 +28,12 @@ export {
   type ImportPublicKeyOptions,
   type ImportSecretKeyOptions,
 } from "./import";
-export { getKeyEntry, getKeyEntryOfKind, isRegisteredKey, type AnyKey, type KeyEntry } from "./registry";
+export {
+  bindIssuer,
+  getKeyEntry,
+  getKeyEntryOfKind,
+  isRegisteredKey,
+  readIssuer,
+  type AnyKey,
+  type KeyEntry,
+} from "./registry";

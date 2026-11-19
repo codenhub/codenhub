@@ -63,6 +63,7 @@ export {
   createKeySet,
   createRemoteKeySet,
   importKeySet,
+  type CreateKeySetOptions,
   type ImportKeySetOptions,
   type RemoteKeySetOptions,
   type RemoteKeySetSnapshot,

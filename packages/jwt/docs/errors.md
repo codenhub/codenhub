@@ -39,6 +39,8 @@ An issue this package creates never holds a value taken from the input: no token
 
 Two kinds of issue come from your code, and hold only what it puts in them: an `invalid_claims` path is your schema's path, so a schema over a record can name a payload's own property names there, and a custom key set's failure issues are returned as it gave them. Keep both free of input values if you log them.
 
+Codes and `params.reason` values may gain members in a minor release, when a new check or failure needs its own name; existing ones keep their meaning. Treat an unknown code as a failure like any other, and give a `switch` over codes a `default` branch rather than relying on TypeScript's exhaustiveness check.
+
 There are no messages: a code is the whole answer. Map codes to text yourself if a person needs to read them, and prefer not to tell a client more than "invalid token" when the client may be an attacker.
 
 ## Codes
@@ -74,7 +76,7 @@ There are no messages: a code is the whole answer. Map codes to text yourself if
 | `not_yet_valid`    | `["payload", "nbf"]`         |              | Now plus the clock tolerance is before `nbf`.                                                                  |
 | `issued_in_future` | `["payload", "iat"]`         |              | `iat` is later than now plus the clock tolerance.                                                              |
 | `too_old`          | `["payload", "iat"]`         | `{ maxAge }` | More than `maxAge` plus the clock tolerance has passed since `iat`.                                            |
-| `wrong_issuer`     | `["payload", "iss"]`         |              | `iss` is none of the accepted issuers.                                                                         |
+| `wrong_issuer`     | `["payload", "iss"]`         |              | `iss` is none of the accepted issuers, or is not the issuer the selected key is bound to.                      |
 | `wrong_audience`   | `["payload", "aud"]`         |              | `aud` contains none of the accepted audiences, or the verifier names no `audience` and the token has an `aud`. |
 | `wrong_type`       | `["header", "typ"]`          |              | The `typ` header is missing or is not the required type.                                                       |
 | `missing_claim`    | `["payload", claim]`         | `{ claim }`  | A claim required by `requiredClaims`, `issuer`, `audience`, `maxAge` or `requireExpiration` is absent.         |

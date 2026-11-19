@@ -3,6 +3,7 @@ import { beforeAll, describe, expect, it, vi } from "vitest";
 import type { JwtPayload, SecretKey, VerifierOptions } from "../core/types";
 import type { StandardSchemaV1 } from "../interop/standard-schema";
 import { generateSecretKey } from "../keys/generate";
+import { createKeySet } from "../keysets/local";
 import { sign, type SignHeader } from "../sign/sign";
 import { createVerifier } from "./create-verifier";
 import { clockAt, failure, keySetOf, NOW_SECONDS, signRaw } from "./test-support";
@@ -148,8 +149,12 @@ describe("maxAge with unusual iat", () => {
     );
   });
 
+  // sign refuses such an exp (decision 45), but another issuer's token may carry one.
   it("should accept an exp of 1e308", async () => {
-    expect(await verify({ exp: 1e308 })).toEqual(passed({ exp: 1e308 }));
+    expect(await verifyRaw('{"exp":1e308}', {})).toEqual({
+      ok: true,
+      value: { header: { alg: "HS256" }, payload: { exp: 1e308 }, key },
+    });
   });
 });
 
@@ -182,6 +187,69 @@ describe("issuer", () => {
     expect(await verify({}, { issuer: "https://a.example" })).toEqual(
       failure({ code: "missing_claim", path: ["payload", "iss"], params: { claim: "iss" } }),
     );
+  });
+});
+
+describe("a key bound to an issuer", () => {
+  const TENANT_A = "https://a.example";
+  const TENANT_B = "https://b.example";
+
+  /** Verifies `payload`, signed with the shared key, against that key bound to tenant A. */
+  async function verifyBound(payload: JwtPayload, options: ClaimOptions = {}): Promise<unknown> {
+    const token = await sign({ payload, key });
+    const verified = await createVerifier({
+      keys: createKeySet([key], { issuer: TENANT_A }),
+      now: clockAt(0),
+      requireExpiration: false,
+      ...options,
+    })(token);
+    return verified.ok ? { ok: true, iss: verified.value.payload.iss, issuer: verified.value.key.issuer } : verified;
+  }
+
+  it("should accept a token from the key's issuer with no issuer option", async () => {
+    expect(await verifyBound({ iss: TENANT_A })).toEqual({ ok: true, iss: TENANT_A, issuer: TENANT_A });
+  });
+
+  it("should reject a token claiming another issuer", async () => {
+    expect(await verifyBound({ iss: TENANT_B })).toEqual(failure({ code: "wrong_issuer", path: ["payload", "iss"] }));
+  });
+
+  it("should reject another issuer even when the issuer option allows it", async () => {
+    expect(await verifyBound({ iss: TENANT_B }, { issuer: [TENANT_A, TENANT_B] })).toEqual(
+      failure({ code: "wrong_issuer", path: ["payload", "iss"] }),
+    );
+  });
+
+  it("should report one wrong_issuer when both checks fail", async () => {
+    expect(await verifyBound({ iss: "https://c.example" }, { issuer: TENANT_B })).toEqual(
+      failure({ code: "wrong_issuer", path: ["payload", "iss"] }),
+    );
+  });
+
+  it("should require iss", async () => {
+    expect(await verifyBound({})).toEqual(
+      failure({ code: "missing_claim", path: ["payload", "iss"], params: { claim: "iss" } }),
+    );
+  });
+
+  it("should report a missing iss once with the issuer option and requiredClaims", async () => {
+    expect(await verifyBound({}, { issuer: TENANT_A, requiredClaims: ["iss"] })).toEqual(
+      failure({ code: "missing_claim", path: ["payload", "iss"], params: { claim: "iss" } }),
+    );
+  });
+
+  it("should refuse one tenant's key for a token claiming another tenant in a combined key set", async () => {
+    const tenantA = await generateSecretKey({ alg: "HS256", kid: "a-1" });
+    const tenantB = await generateSecretKey({ alg: "HS256", kid: "b-1" });
+    const sets = [createKeySet([tenantA], { issuer: TENANT_A }), createKeySet([tenantB], { issuer: TENANT_B })];
+    // One verifier for every tenant, over a key set that picks by kid, the way a JWKS of several issuers is.
+    const verifyAny = createVerifier({
+      keys: { select: async (header) => sets[header.kid?.startsWith("a-") === true ? 0 : 1]!.select(header) },
+      now: clockAt(0),
+      requireExpiration: false,
+    });
+    const forged = await sign({ payload: { iss: TENANT_B, sub: "admin" }, key: tenantA });
+    expect(await verifyAny(forged)).toEqual(failure({ code: "wrong_issuer", path: ["payload", "iss"] }));
   });
 });
 

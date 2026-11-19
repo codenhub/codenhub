@@ -82,6 +82,18 @@ Two usable keys with the same `kid` and `alg` do not fail the import; selecting 
 
 The imported set's `keys` lists one key per JWK and algorithm it was bound to, in the JWKS's order, so an RSA JWK without `alg` appears six times.
 
+## Keys of several issuers
+
+A verifier's `issuer` option says which issuers it accepts, but not which issuer each key speaks for. When one verifier holds the keys of several issuers, such as one per tenant, any of those keys would verify a token claiming any accepted `iss`: tenant A's key, or anyone who holds it, could sign a token that says it comes from tenant B. Give each issuer's key set the `issuer` option, which `createKeySet`, `importKeySet` and `createRemoteKeySet` all take:
+
+```ts
+const tenantA = createRemoteKeySet({ url: "https://a.issuer.example/jwks.json", issuer: "https://a.issuer.example" });
+```
+
+Each key the set hands out is then bound to that issuer, and its `issuer` member says so. A verifier that selects a bound key requires the token's `iss` to equal it, whatever its own `issuer` option allows: a missing `iss` is `missing_claim` with `{ claim: "iss" }`, and a different one is `wrong_issuer`. The binding travels with the key, so it holds in a key set built from other key sets, as in [your own key set](#your-own-key-set).
+
+`createKeySet` binds copies of the keys you give it and leaves the originals unbound; a copy works wherever the original does. A key already bound to the same issuer is kept as it is, and one bound to another issuer throws a `TypeError`, since a key cannot speak for two issuers.
+
 ## A remote key set
 
 `createRemoteKeySet` fetches an issuer's JWKS from a URL, imports it as `importKeySet` does, and caches it:
@@ -118,6 +130,7 @@ Durations are in seconds. Every option is checked when the key set is created, a
 | `url`              | required                       | An absolute `https:` URL, as a string or a `URL`, or `http:` on `localhost`, `127.0.0.0/8` or `[::1]` for local development. Anything else, and URLs with a user name or password, throw.         |
 | `fetch`            | `globalThis.fetch`             | The `fetch` to call, for runtimes or tests that supply their own. The global is looked up at each fetch.                                                                                          |
 | `algorithms`       | every asymmetric algorithm     | As for [`importKeySet`](#importing-a-jwks).                                                                                                                                                       |
+| `issuer`           | none                           | The issuer whose JWKS this is. Each key is bound to it, so a token it verifies must carry that `iss`. See [keys of several issuers](#keys-of-several-issuers).                                    |
 | `cacheTtl`         | `600`                          | How long a fetched JWKS is used before it is fetched again. An integer of at least 1.                                                                                                             |
 | `cooldown`         | `30`, or `cacheTtl` if smaller | Least time between the starts of two fetches caused by a failure or an unknown `kid`. An integer from 0 through `cacheTtl`.                                                                       |
 | `maxStale`         | `3600`                         | How long after `cacheTtl` ran out the last JWKS is still used while a new one is fetched, or while fetching it fails. An integer of at least 0; 0 never uses an expired JWKS.                     |
@@ -177,8 +190,8 @@ The issue holds nothing from the response. `select` never throws and never rejec
 import { createRemoteKeySet, type KeySet } from "@codenhub/jwt";
 
 const tenants = new Map<string, KeySet>([
-  ["a", createRemoteKeySet({ url: "https://a.issuer.example/jwks.json" })],
-  ["b", createRemoteKeySet({ url: "https://b.issuer.example/jwks.json" })],
+  ["a", createRemoteKeySet({ url: "https://a.issuer.example/jwks.json", issuer: "https://a.issuer.example" })],
+  ["b", createRemoteKeySet({ url: "https://b.issuer.example/jwks.json", issuer: "https://b.issuer.example" })],
 ]);
 
 const keys: KeySet = {
@@ -188,6 +201,8 @@ const keys: KeySet = {
   },
 };
 ```
+
+Each tenant's set has its `issuer`, so tenant A's key verifies only tokens whose `iss` is tenant A's, whichever `kid` the token names. Without it, a token signed with tenant A's key and claiming tenant B's `iss` would pass, as the `kid` alone picks the key. A verifier's `issuer` option still says which issuers it accepts at all.
 
 A verifier treats a custom key set as code that may be wrong. If `select` throws, rejects, or returns anything other than a result holding a public or secret key this package created, the verifier fails with `key_fetch_failed` and `{ reason: "key_set_error" }` instead of throwing or using what it returned. A failed result is passed through as returned, so keep its issues free of token values as this package's own are.
 

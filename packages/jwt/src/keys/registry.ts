@@ -56,6 +56,38 @@ export function getKeyEntryOfKind(key: unknown, kind: AnyKey["kind"]): KeyEntry 
   return entry;
 }
 
+/**
+ * Returns `key` bound to `issuer`: `key` itself when it already is, or else a new frozen copy with an
+ * `issuer` member that shares its material.
+ *
+ * @throws TypeError when `key` is already bound to another issuer.
+ */
+export function bindIssuer<TKey extends PublicKey | SecretKey>(key: TKey, issuer: string, functionName: string): TKey {
+  if (key.issuer === issuer) {
+    return key;
+  }
+  if (key.issuer !== undefined) {
+    throw new TypeError(`${functionName}: a key is already bound to another issuer.`);
+  }
+  return registerKey<TKey>({ ...key, issuer }, getKeyEntry(key));
+}
+
+/**
+ * Reads the `issuer` option of a key set: undefined, or a non-empty string.
+ *
+ * @throws TypeError when it is neither.
+ */
+export function readIssuer(options: unknown, functionName: string): string | undefined {
+  if (typeof options !== "object" || options === null) {
+    return undefined;
+  }
+  const issuer: unknown = Reflect.get(options, "issuer");
+  if (issuer !== undefined && (typeof issuer !== "string" || issuer.length === 0)) {
+    throw new TypeError(`${functionName}: options.issuer must be a non-empty string.`);
+  }
+  return issuer;
+}
+
 /** Spreads a `kid` member only when there is one, so key objects have no `kid: undefined`. */
 export function kidMember(kid: string | undefined): { readonly kid?: string } {
   return kid === undefined ? {} : { kid };

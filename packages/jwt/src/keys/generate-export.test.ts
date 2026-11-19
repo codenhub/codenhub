@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { AsymmetricAlgorithm } from "../core/types";
 import { ALGORITHM_PARAMS } from "./algorithms";
@@ -207,5 +207,43 @@ describe("exporting a look-alike key", () => {
     [exportSecretJwk, { kind: "secret", alg: "HS256", extractable: true }],
   ] as const)("should throw TypeError (%#)", async (exporter, forged) => {
     await expect(exporter(Object.freeze(forged) as never)).rejects.toThrow(TypeError);
+  });
+});
+
+describe("generateKeyPair retries failed Ed25519 generation", () => {
+  /** Makes the next `failures` calls to `crypto.subtle.generateKey` reject as Linux WebKit's do. */
+  function failNextGenerations(failures: number): { calls: () => number } {
+    const original = crypto.subtle.generateKey.bind(crypto.subtle);
+    let calls = 0;
+    vi.spyOn(crypto.subtle, "generateKey").mockImplementation((async (...args: Parameters<typeof original>) => {
+      calls += 1;
+      if (calls <= failures) {
+        throw new DOMException("The operation failed for an operation-specific reason", "OperationError");
+      }
+      return original(...args);
+    }) as typeof crypto.subtle.generateKey);
+    return { calls: () => calls };
+  }
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it.each(["EdDSA", "Ed25519"] as const)("retries %s up to three times", async (alg) => {
+    const spy = failNextGenerations(3);
+    const pair = await generateKeyPair({ alg });
+    expect(pair.publicKey.alg).toBe(alg);
+    expect(spy.calls()).toBe(4);
+  });
+
+  it("rejects with the fourth OperationError in a row", async () => {
+    failNextGenerations(4);
+    await expect(generateKeyPair({ alg: "Ed25519" })).rejects.toMatchObject({ name: "OperationError" });
+  });
+
+  it("does not retry other algorithms", async () => {
+    const spy = failNextGenerations(1);
+    await expect(generateKeyPair({ alg: "ES256" })).rejects.toMatchObject({ name: "OperationError" });
+    expect(spy.calls()).toBe(1);
   });
 });

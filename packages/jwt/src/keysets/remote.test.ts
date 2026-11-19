@@ -1095,3 +1095,30 @@ describe("createRemoteKeySet stale keys after other failures", () => {
     expect(fetch).toHaveBeenCalledTimes(2);
   });
 });
+
+describe("createRemoteKeySet issuer", () => {
+  const ISSUER = "https://issuer.example";
+
+  it("should bind fetched keys to the issuer", async () => {
+    const keys = createSet({ fetch: fetchSequence(() => jwksResponse(EC_JWK)), issuer: ISSUER });
+    const selected = await keys.select(EC_HEADER);
+    expect(selected.ok && selected.value.issuer).toBe(ISSUER);
+  });
+
+  it("should bind seeded keys to the issuer", async () => {
+    const keys = createSet({
+      fetch: fetchSequence(() => jwksResponse(ED_JWK)),
+      issuer: ISSUER,
+      now: () => 0,
+      seed: { jwks: { keys: [EC_JWK] }, fetchedAt: 0 },
+    });
+    const selected = await keys.select(EC_HEADER);
+    expect(selected.ok && selected.value.issuer).toBe(ISSUER);
+  });
+
+  it("should throw for an issuer that is not a non-empty string", () => {
+    expect(() => createSet({ issuer: "" })).toThrow(
+      new TypeError("createRemoteKeySet: options.issuer must be a non-empty string."),
+    );
+  });
+});

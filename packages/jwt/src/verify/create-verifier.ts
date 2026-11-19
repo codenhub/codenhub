@@ -95,7 +95,7 @@ export function createVerifier<TSchema extends StandardSchemaV1 | undefined = un
     if (!payload.ok) {
       return payload;
     }
-    const claimIssues = checkClaims(jws.header, payload.value, resolved);
+    const claimIssues = checkClaims(jws.header, payload.value, resolved, key);
     const issues: JwtIssue[] =
       claimIssues.length === 0 && resolved.claims !== undefined
         ? await schemaIssues(resolved.claims, payload.value)
