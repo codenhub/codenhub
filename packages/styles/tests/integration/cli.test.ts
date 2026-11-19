@@ -100,6 +100,17 @@ describe("build", () => {
     expect(css).toMatch(ruleFor("data-table"));
   });
 
+  // What Windows PowerShell 5.1's `"data-table" > safelist.txt` writes: UTF-16 LE after a byte order mark.
+  it("reads classes from a UTF-16 safelist", async () => {
+    await writeFile(
+      path.join(project, "safelist.txt"),
+      Buffer.concat([Buffer.from([0xff, 0xfe]), Buffer.from("data-table\r\n", "utf16le")]),
+    );
+
+    expect(await build("build", "-c", "app/views/**/*.erb", "-c", "safelist.txt", "-o", "app.css")).toBe(0);
+    expect(await readOutput()).toMatch(ruleFor("data-table"));
+  });
+
   // Read as a glob, `[id]` is a set matching the one letter `i` or `d`, so the file would match nothing.
   it("reads a --content path whose name holds a bracket as that file", async () => {
     await mkdir(path.join(project, "app", "[id]"));

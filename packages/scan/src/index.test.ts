@@ -126,6 +126,26 @@ describe("readFiles", () => {
     expect([...readFiles(["app/views/a.html"], { cwd: root })]).toEqual(["café ✓"]);
   });
 
+  /* Windows PowerShell 5.1 writes UTF-16 LE with a byte order mark, as in
+     `"card" > safelist.txt`, and read as UTF-8 every other byte is a NUL, so
+     no word was found in it. */
+  it.each([
+    ["UTF-16 LE", Buffer.concat([Buffer.from([0xff, 0xfe]), Buffer.from("café ✓\r\n", "utf16le")])],
+    ["UTF-16 BE", Buffer.concat([Buffer.from([0xfe, 0xff]), Buffer.from("café ✓\r\n", "utf16le").swap16()])],
+    ["UTF-8", Buffer.concat([Buffer.from([0xef, 0xbb, 0xbf]), Buffer.from("café ✓\r\n")])],
+  ])("decodes a file that starts with a %s byte order mark, and drops the mark", (_, bytes) => {
+    fs.writeFileSync(path.join(root, "app", "views", "a.html"), bytes);
+
+    expect([...readFiles(["app/views/a.html"], { cwd: root })]).toEqual(["café ✓\r\n"]);
+  });
+
+  // Without a mark, a file is UTF-8 even when it could be read otherwise.
+  it("reads a file without a byte order mark as UTF-8", () => {
+    fs.writeFileSync(path.join(root, "app", "views", "a.html"), Buffer.from("ab", "utf16le"));
+
+    expect([...readFiles(["app/views/a.html"], { cwd: root })]).toEqual(["a\0b\0"]);
+  });
+
   it("reads one file at a time", () => {
     const texts = readFiles(["app/views/**/*.html"], { cwd: root });
 

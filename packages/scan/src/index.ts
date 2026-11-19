@@ -60,7 +60,8 @@ export function findFiles(entries: Iterable<string>, options: ScanOptions = {}):
 }
 
 /**
- * Yields the UTF-8 text of each file the entries name.
+ * Yields the text of each file the entries name: UTF-16 after a UTF-16 byte order mark, and UTF-8
+ * otherwise, without the mark.
  *
  * Every entry is resolved when this is called, so an entry that names no file fails before any
  * reading. Files are then read one at a time, as they are asked for, so a glob that matches
@@ -75,7 +76,7 @@ function* readEach(files: readonly string[], failOnUnreadable: boolean): Generat
     let text: string;
 
     try {
-      text = fs.readFileSync(file, "utf8");
+      text = decode(fs.readFileSync(file));
     } catch (error) {
       if (failOnUnreadable) {
         throw namingFile(error, file);
@@ -84,6 +85,24 @@ function* readEach(files: readonly string[], failOnUnreadable: boolean): Generat
     }
     yield text;
   }
+}
+
+/* A file is UTF-8 unless it starts with a UTF-16 byte order mark, which
+   Windows PowerShell 5.1 writes for `"card" > safelist.txt`: read as UTF-8,
+   every other byte of that is a NUL, and no word in it is found. The mark is
+   dropped, as UTF-8's is. Without one, a file is UTF-8. */
+function decode(bytes: Buffer): string {
+  if (bytes[0] === 0xff && bytes[1] === 0xfe) {
+    return bytes.toString("utf16le", 2);
+  }
+  if (bytes[0] === 0xfe && bytes[1] === 0xff) {
+    // Node.js has no UTF-16 BE decoder, so the pairs are swapped to LE; an odd last byte is dropped, as LE drops it.
+    const body = Buffer.from(bytes.subarray(2, bytes.length - (bytes.length % 2)));
+
+    return body.swap16().toString("utf16le");
+  }
+
+  return bytes.toString("utf8", bytes[0] === 0xef && bytes[1] === 0xbb && bytes[2] === 0xbf ? 3 : 0);
 }
 
 /* Node.js names the path in a system error, such as ENOENT or EACCES, but not
