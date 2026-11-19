@@ -2,6 +2,9 @@ import { test as base, type BrowserContext, type Page } from "@playwright/test";
 
 import { settleAnimations } from "./test-utils";
 
+// Where each document keeps the stylesheet links that finished loading or failed.
+const SHEETS_FINISHED = "__stylesheetsFinished";
+
 /* Playwright gives every test its own browser context, which is the right
    default when tests carry state: cookies, storage, and permissions cannot
    leak between them. These tests carry none. They open a playground page,
@@ -41,12 +44,35 @@ export const test = base.extend<Record<string, unknown>, { sharedContext: Browse
        animation and transition ended, so a test reads the page as a visitor
        sees it once it has loaded. A late sheet animates each transitioned
        property in from its initial value, which a read straight after `load`
-       could catch partway. Infinite animations are left running. */
+       could catch partway. Infinite animations are left running.
+
+       A link that failed has no sheet either, and its `error` may have fired
+       before this runs, so a listener added now would wait out the test's
+       timeout. Each document records the links that finished, either way, from
+       its start; only a link still loading is waited on. */
+    await page.addInitScript((key) => {
+      const finished = new WeakSet<EventTarget>();
+
+      (window as unknown as Record<string, WeakSet<EventTarget>>)[key] = finished;
+      for (const type of ["load", "error"]) {
+        document.addEventListener(
+          type,
+          (event) => {
+            if (event.target instanceof HTMLLinkElement) {
+              finished.add(event.target);
+            }
+          },
+          true,
+        );
+      }
+    }, SHEETS_FINISHED);
     const settle = async () => {
-      await page.evaluate(async () => {
+      await page.evaluate(async (key) => {
+        const finished = (window as unknown as Record<string, WeakSet<EventTarget> | undefined>)[key];
+
         await Promise.all(
           [...document.querySelectorAll<HTMLLinkElement>('link[rel="stylesheet"]')]
-            .filter((link) => link.sheet === null)
+            .filter((link) => link.sheet === null && finished?.has(link) !== true)
             .map(
               (link) =>
                 new Promise((resolve) => {
@@ -56,7 +82,7 @@ export const test = base.extend<Record<string, unknown>, { sharedContext: Browse
             ),
         );
         await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
-      });
+      }, SHEETS_FINISHED);
       await settleAnimations(page);
     };
 
