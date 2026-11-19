@@ -156,6 +156,8 @@ The `/tw` entrypoints also replace Tailwind's `contrast-more:`, `contrast-less:`
 
 `data-motion="none"` counts as reduced motion, so `motion-reduce:` applies under it. As with the package's own rules, the attributes are read only on `<html>` and not from inside a shadow root.
 
+Tailwind cannot negate a variant that is both a selector and a media query, so under a `/tw` entrypoint `not-motion-safe:`, `not-motion-reduce:`, `not-contrast-more:`, and `not-dark:` compile to nothing, and Tailwind says nothing about it. Write the opposite variant instead: `motion-reduce:` for `not-motion-safe:`, and `motion-safe:` for `not-motion-reduce:`, which are exact opposites. For the others, give the utility unprefixed and undo it under the positive variant: `border-4 contrast-more:border-2` in place of `not-contrast-more:border-4`, and `bg-white dark:bg-black` in place of `not-dark:bg-white`. `not-contrast-less:` compiles as usual.
+
 ## Next
 
 Return to the main path: [Building a screen](../concepts.md) adds the first card and form to the settings page. Everything it shows works the same on `/tw`.

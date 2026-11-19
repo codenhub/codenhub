@@ -58,7 +58,7 @@ Mark the control invalid with `aria-invalid="true"` and give the error message `
 </div>
 ```
 
-An invalid control draws its border, focus ring, and typed text in the destructive color, whatever intent class it has. The text uses the readable tone of that color, `--intent-strong`, so it stays legible on the page. The package only paints the state: deciding that the value is invalid, setting and clearing `aria-invalid`, and writing the message are your code. Remove `aria-invalid` once the value is valid again; leaving it set keeps the field red. On a checkbox, radio, or switch, `aria-invalid="true"` draws the toggle exactly as `.destructive` does, checked mark included.
+An invalid control draws its border and typed text in the destructive color, whatever intent class it has and whatever surface it sits on. Its focus ring is the one a valid control draws, set by [`--focus-ring`](./theming.md#foundation-tokens). The text uses the readable tone of that color, `--intent-strong`, so it stays legible on the page. The package only paints the state: deciding that the value is invalid, setting and clearing `aria-invalid`, and writing the message are your code. Remove `aria-invalid` once the value is valid again; leaving it set keeps the field red. On a checkbox, radio, or switch, `aria-invalid="true"` draws the toggle exactly as `.destructive` does, checked mark included.
 
 A hint takes any of the six built-in intents, not only `.destructive`: `.hint.success` confirms a value was accepted, and `.hint.warning` flags one that is allowed but unusual. Each prints in its intent's readable tone, `--intent-strong`, which holds 4.5:1 against the page in both themes. A hint with no intent, with `.neutral`, or with an [intent you defined yourself](./theming.md#your-own-intent), stays secondary-colored. Only a class on the hint itself colors it; an intent on the field or a container around it does not.
 
@@ -218,7 +218,7 @@ An aesthetic that draws its border as an inner shadow, such as `.pixel`, cannot 
 
 ## Fill and border on text controls
 
-Text controls take intent, which colors the border, the focus ring, and the typed text, the text in the intent's readable tone (`--intent-strong`). They also take both presentation axes. Their fill is capped low, so typed text stays readable:
+Text controls take intent, which colors the border and the typed text, the text in the intent's readable tone (`--intent-strong`). They also take both presentation axes. Their fill is capped low, so typed text stays readable:
 
 | On a text control                               | Fill |
 | ----------------------------------------------- | ---- |
