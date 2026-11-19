@@ -1,7 +1,7 @@
 import { beforeAll, describe, expect, it } from "vitest";
 
 import type { JwtHeader, PublicKey, SecretKey, VerificationKey } from "../core/types";
-import { generateKeyPair, generateSecretKey } from "../keys";
+import { exportPublicJwk, generateKeyPair, generateSecretKey } from "../keys";
 import {
   EC_P256_PRIVATE_JWK,
   EC_P256_PUBLIC_JWK,
@@ -47,6 +47,21 @@ describe("createKeySet", () => {
 
   it("should return a frozen key set", () => {
     expect(Object.isFrozen(createKeySet([ecA]))).toBe(true);
+  });
+
+  it("should list its keys, in the order given, in a frozen array", () => {
+    const keys = createKeySet([ecA, secretA, ecNoKid]).keys;
+    expect([keys, Object.isFrozen(keys)]).toEqual([[ecA, secretA, ecNoKid], true]);
+  });
+
+  it("should publish a JWKS from the public keys it lists", async () => {
+    const keySet = createKeySet([ecA, secretA]);
+    const jwks = {
+      keys: await Promise.all(
+        keySet.keys.filter((key): key is PublicKey => key.kind === "public").map(async (key) => exportPublicJwk(key)),
+      ),
+    };
+    expect(jwks.keys.map((jwk) => [jwk.kid, jwk.alg])).toEqual([["a", "ES256"]]);
   });
 
   it("should not change when the given array changes", async () => {
@@ -235,6 +250,17 @@ describe("importKeySet", () => {
   it("should return a frozen result", async () => {
     const result = await importKeySet({ keys: [] });
     expect([Object.isFrozen(result), Object.isFrozen(valueOf(result))]).toEqual([true, true]);
+  });
+
+  it("should list each key it imported, once per algorithm it was bound to", async () => {
+    const keySet = valueOf(await importKeySet({ keys: [{ ...ED25519_PUBLIC_JWK, kid: "ed" }] }));
+    expect([keySet.keys.map((key) => [key.kid, key.alg]), Object.isFrozen(keySet.keys)]).toEqual([
+      [
+        ["ed", "EdDSA"],
+        ["ed", "Ed25519"],
+      ],
+      true,
+    ]);
   });
 
   it.each([

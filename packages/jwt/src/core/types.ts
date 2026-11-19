@@ -254,6 +254,15 @@ export interface KeySet {
   select(header: JwtHeader): Promise<JwtResult<VerificationKey>>;
 }
 
+/** A key set over a fixed list of keys, from {@link createKeySet} or {@link importKeySet}. Frozen. */
+export interface LocalKeySet extends KeySet {
+  /**
+   * The keys the set selects from, frozen. For {@link createKeySet}, the keys given, in order; for
+   * {@link importKeySet}, one key per JWK and algorithm it was bound to, in JWKS order.
+   */
+  readonly keys: readonly VerificationKey[];
+}
+
 /** A verified token. Frozen. */
 export interface VerifiedJwt<TPayload extends JwtPayload = JwtPayload> {
   /** The protected header. */

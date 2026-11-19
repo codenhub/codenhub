@@ -39,6 +39,21 @@ const verify = createVerifier({
 
 `createKeySet` takes public and secret keys this package created, and copies the list, so changing your array later does not change the set. It throws a `TypeError` for an empty list, a private key, an object this package did not create, or two keys with the same `kid` and `alg`, including two keys without a `kid` and with the same `alg`, which selection could never tell apart.
 
+The set lists its keys in `keys`, a frozen array in the order you gave them. An issuer that verifies its own tokens with the set can publish its JWKS from the same list, so the two never disagree:
+
+```ts
+import { createKeySet, exportPublicJwk, type PublicKey } from "@codenhub/jwt";
+
+const keys = createKeySet([currentKey, previousKey]);
+
+const jwks = {
+  keys: await Promise.all(keys.keys.filter((key): key is PublicKey => key.kind === "public").map(async (key) => exportPublicJwk(key))),
+};
+// Serve JSON.stringify(jwks) at your jwks_uri.
+```
+
+The filter keeps secret keys out of the document, where `exportPublicJwk` would refuse them anyway.
+
 ## Importing a JWKS
 
 A JWKS (JSON Web Key Set) is a JSON object whose `keys` member is an array of JWKs. `importKeySet` imports the public keys of one:
@@ -64,6 +79,8 @@ Each usable key becomes one key per algorithm it is bound to:
 `algorithms` defaults to every asymmetric algorithm, a list that may grow in a minor release. Narrow it to what your issuer actually uses, so a key the issuer meant only for `RS256` is never used to check a `PS256` token.
 
 Two usable keys with the same `kid` and `alg` do not fail the import; selecting them fails with `ambiguous_key` rather than picking one.
+
+The imported set's `keys` lists one key per JWK and algorithm it was bound to, in the JWKS's order, so an RSA JWK without `alg` appears six times.
 
 ## A remote key set
 

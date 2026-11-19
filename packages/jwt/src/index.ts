@@ -19,6 +19,7 @@ export type {
   JwtRegisteredClaims,
   JwtResult,
   KeySet,
+  LocalKeySet,
   PrivateKey,
   PublicKey,
   SecretKey,

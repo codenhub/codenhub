@@ -1,6 +1,6 @@
 import { fail, ok } from "../core";
 import { rejectUnknownOptions } from "../core/options";
-import type { AsymmetricAlgorithm, JwtHeader, JwtResult, KeySet, VerificationKey } from "../core/types";
+import type { AsymmetricAlgorithm, JwtHeader, JwtResult, LocalKeySet, VerificationKey } from "../core/types";
 import {
   ASYMMETRIC_ALGORITHMS,
   compatibleAlgorithms,
@@ -43,11 +43,11 @@ const IMPORT_KEY_SET_OPTIONS: Readonly<Record<keyof ImportKeySetOptions, true>> 
  *
  * @param keys - Public and secret keys from `import*` or `generate*`. No two may share both `kid` and
  * `alg`, and two keys without a `kid` may not share an `alg`.
- * @returns A frozen key set holding a copy of `keys`.
+ * @returns A frozen key set holding a copy of `keys`, which its `keys` lists.
  * @throws TypeError when `keys` is not a non-empty array, holds a value that is not a public or secret
  * key created by this package, or holds two keys with the same `kid` and `alg`.
  */
-export function createKeySet(keys: readonly VerificationKey[]): KeySet {
+export function createKeySet(keys: readonly VerificationKey[]): LocalKeySet {
   if (!Array.isArray(keys) || keys.length === 0) {
     throw new TypeError("createKeySet: keys must be a non-empty array.");
   }
@@ -95,7 +95,7 @@ export function createKeySet(keys: readonly VerificationKey[]): KeySet {
  * @throws TypeError when `options` is not an object or `options.algorithms` is not a non-empty array of
  * asymmetric algorithms.
  */
-export async function importKeySet(jwks: unknown, options?: ImportKeySetOptions): Promise<JwtResult<KeySet>> {
+export async function importKeySet(jwks: unknown, options?: ImportKeySetOptions): Promise<JwtResult<LocalKeySet>> {
   const algorithms = readAlgorithms(options, "importKeySet");
   if (options !== undefined) {
     rejectUnknownOptions(options, IMPORT_KEY_SET_OPTIONS, "importKeySet");
@@ -105,8 +105,9 @@ export async function importKeySet(jwks: unknown, options?: ImportKeySetOptions)
 }
 
 /** Wraps keys, already checked, into a frozen key set. */
-export function keySetOf(keys: readonly VerificationKey[]): KeySet {
+export function keySetOf(keys: readonly VerificationKey[]): LocalKeySet {
   return Object.freeze({
+    keys,
     select: async (header: JwtHeader): Promise<JwtResult<VerificationKey>> => selectKey(keys, header),
   });
 }
