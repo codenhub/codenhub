@@ -83,7 +83,7 @@ function pickLocale<TLocale extends string>(i18n: I18n<TLocale>, request: Reques
 
 A visitor whose languages all fail to match, including one who refuses your default with `en;q=0`, still gets the default locale, since the page has to be in some language. This helper does not implement the rest of `Accept-Language`, such as `*`; use your server framework's parser if you need it, and pass its result to `matchLocale()`.
 
-`matchLocale()` takes a list rather than the header because parsing the header, and limiting its size, belongs to your server. Keep the limit: `matchLocale()` tries preferences in order until one matches, so a request whose 16 KB header lists thousands of languages you don't support would otherwise hold your server's event loop for tens of milliseconds.
+`matchLocale()` takes a list rather than the header because parsing the header, and limiting its size, belongs to your server. Keep the limit: `matchLocale()` tries preferences in order until one matches, so a request whose 16 KB header lists thousands of languages you don't support would otherwise hold your server's event loop for tens of milliseconds. A single entry longer than 255 characters is skipped without being read, so one long tag can't do the same.
 
 It matches the same way the browser binding does, so a visitor gets the same language from the server as from the browser: `pt-BR` gets your `pt`, and `zh-TW` gets your `zh-Hant`. Malformed tags are skipped, and `undefined` means nothing matched. [Turn outside input into a locale](index.md#turn-outside-input-into-a-locale) has the full matching order, including which of two regional locales wins, and `resolveLocale()` for a locale from a cookie or a query string.
 
@@ -155,7 +155,7 @@ await Promise.all(
 );
 ```
 
-`pathname` is a URL path, percent-encoded where the table has words such as `/serviços`. Hosts decode a request before looking for its file, so name the file after `decodeURI(pathname)`: `serviços` for `/servi%C3%A7os`, not the encoded form, which no request finds. Where that file goes, such as `serviços.html` or `serviços/index.html`, depends on your host and your `trailingSlash` setting.
+`pathname` is a URL path, percent-encoded wherever it has characters such as `ç`, whether from the table's words, such as `/serviços`, or from your own paths. Hosts decode a request before looking for its file, so name the file after `decodeURI(pathname)`: `serviços` for `/servi%C3%A7os`, not the encoded form, which no request finds. Where that file goes, such as `serviços.html` or `serviços/index.html`, depends on your host and your `trailingSlash` setting.
 
 A dictionary that fails to load or check makes `init()` reject, so the build fails instead of publishing pages without text.
 

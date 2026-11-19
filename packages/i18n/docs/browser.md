@@ -112,21 +112,24 @@ While `followsSystem` is `true`, the binding also listens for the browser's `lan
 In a framework, render the picker from `binding.subscribe()` rather than `i18n.subscribe()`. Picking the language already showing, or "System" while the detected language is the one showing, changes the selection without changing the language, so the manager has nothing to report. The binding reports both, and every language change. In React:
 
 ```tsx
-import { useSyncExternalStore } from "react";
+import { useState, useSyncExternalStore } from "react";
 import type { BrowserI18nBinding } from "@codenhub/i18n/browser";
 import { i18n } from "./i18n";
 
 export function LanguagePicker({ binding }: { binding: BrowserI18nBinding }) {
   const selected = useSyncExternalStore(binding.subscribe, () => (binding.followsSystem ? "system" : i18n.locale));
+  // The visitor's pick, shown while its language loads, so the select doesn't jump back to the old one.
+  const [pending, setPending] = useState<string>();
 
   return (
     <select
-      value={selected}
+      value={pending ?? selected}
       onChange={(event) => {
         const value = event.target.value;
+        setPending(value);
         const switching = value === "system" ? binding.followSystem() : i18n.setLocale(value as (typeof i18n.locales)[number]);
-        // The selection re-renders from the binding either way; a failed load only needs reporting.
-        switching.catch((error: unknown) => console.error(error));
+        // Then the selection comes from the binding again, even when the switch failed or a later one overtook it.
+        switching.catch((error: unknown) => console.error(error)).finally(() => setPending((current) => (current === value ? undefined : current)));
       }}
     >
       <option value="system">System</option>
@@ -141,6 +144,8 @@ export function LanguagePicker({ binding }: { binding: BrowserI18nBinding }) {
 ```
 
 When the detected language fails to load, `followSystem()` rejects with the loader's `I18nError`, and the page keeps its current language; the saved choice is already forgotten. `followsSystem` is `true` all the same, so the picker shows "System" over the old language: that is what the visitor chose, and the next visit or `languagechange` tries the detected language again. A failure after a `languagechange` warns and keeps the current language. Neither falls back to the default the way a start does, because the page already has a language to show.
+
+"System" belongs to a site where the binding chooses the language. On a site with the language in its URLs, the URL chooses it: each page passes its locale to `initializeBrowserI18n()`, as [Localized URLs](localized-urls.md) does, which saves it and ends following the system, so a "System" pick lasts only until the next page. There, make "System" navigate instead, to the current page's URL in the language `i18n.matchLocale(navigator.languages)` finds, or leave the entry out.
 
 ## Re-render a framework
 
@@ -273,6 +278,7 @@ A worker has no `localStorage` either, so saving warns and is skipped. Add `pers
 ## Rules to know
 
 - **One binding per manager.** A second `initializeBrowserI18n()` call for the same manager rejects until the first is disconnected.
+- **Give each binding its own part of the page.** Two bindings, as in micro-frontends, each with its own manager, need `root`s that don't contain each other. Where they overlap, each translates the shared elements in its own language, and whichever runs last wins.
 - **Let the binding start the manager.** The binding's promise rejects with `Error: [I18n] Browser initialization was superseded before its locale became active.` when, before the binding's locale is active, your code either:
   - calls `i18n.init()`, or
   - calls `i18n.setLocale()` on a manager that was already initialized, even to the locale already showing.

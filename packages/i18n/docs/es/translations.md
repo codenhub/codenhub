@@ -2,7 +2,7 @@
 title: Escribe tus traducciones
 description: Diccionarios, archivos JSON, placeholders, mensajes ICU, plurales, formateadores, claves y valores tipados, cómo detectar claves sin traducir y límites de tamaño.
 order: 1
-source: 453c6f576b7ed2e7ad6bbacd4b94425da7b261a9
+source: c7f13bdaf19725a0e60bfcc193823ab5bb951c03
 ---
 
 # Escribe tus traducciones
@@ -110,13 +110,14 @@ Una clave se busca en este orden:
 
 1. El locale activo.
 2. Cada locale configurado que resulta de quitarle sus últimos subtags, como `zh-Hant` para `zh-Hant-TW`. Un padre escrito en otro script se omite: `zh` es chino simplificado, así que una página `zh-Hant` recurre al locale por defecto en lugar de mezclar escrituras.
-3. El locale por defecto.
+3. El locale configurado que nombran su idioma y su script, como `zh-Hant` para `zh-HK`, que se escribe en chino tradicional, o `sr-Latn` para `sr-ME`. Así que un diccionario `zh-HK` puede contener solo lo que Hong Kong dice distinto.
+4. El locale por defecto.
 
 Un grupo de plurales usa las reglas del locale en cuyo diccionario está.
 
 Todos los locales de esa cadena se cargan junto con el activo, así que arrancar en `pt-BR` carga `pt-BR`, `pt` y `en`. Si uno de ellos falla, la llamada se rechaza como con cualquier locale.
 
-Solo cuentan los padres que resultan de quitar subtags. `es-MX` no recurre a `es-419`, porque `es-419` no es una versión más corta de `es-MX`. Dale su propio diccionario, o atiende a los visitantes de México directamente con `es-419`, como muestra [Convierte entradas externas en un locale](index.md#convierte-entradas-externas-en-un-locale).
+Solo cuentan esos padres. `es-MX` no recurre a `es-419`, porque `es-419` no es ni una versión más corta de `es-MX` ni su idioma y script. Dale su propio diccionario, o atiende a los visitantes de México directamente con `es-419`, como muestra [Convierte entradas externas en un locale](index.md#convierte-entradas-externas-en-un-locale).
 
 ## Pon valores en el texto
 
@@ -394,7 +395,7 @@ Leer los argumentos de un mensaje ocurre por completo en el sistema de tipos, lo
 
 - **La clave es una de varias.** En `t(hasFailed ? "checkout.failed" : "checkout.done")`, TypeScript ve una unión de dos claves y no puede saber los valores de qué mensaje aplican. Llama a `t()` con cada clave en su propia rama, `hasFailed ? t("checkout.failed", { orderId }) : t("checkout.done")`, y cada llamada se comprueba.
 - **El mensaje es un `string` simple**, como lo es todo texto en un diccionario JSON. Escribe el idioma por defecto como TypeScript `as const`, como arriba.
-- **El mensaje tiene una `{` sin cerrar**, o un nombre de placeholder que no está hecho de letras ASCII, dígitos y `_`, como `{first-name}`. Otra sintaxis inválida, como `{n, number, currency}` o un `select` sin `other`, puede igual pedir valores. En cualquier caso, el runtime tampoco puede leerlo: registra una advertencia y muestra el texto con solo los placeholders `{name}` válidos completados. Corrige el mensaje; la [comprobación de mensajes](#encuentra-claves-sin-traducir) los encuentra.
+- **El mensaje tiene sintaxis inválida**, como una `{` sin cerrar, un nombre de placeholder que no está hecho de letras ASCII, dígitos y `_` (`{first-name}`), `{n, number, currency}`, o un `select` o `plural` sin `other`. Alguna sintaxis inválida, como una opción escrita dos veces, una forma plural desconocida o un anidamiento de más de 10 niveles, puede igual pedir valores. En cualquier caso, el runtime tampoco puede leerlo: registra una advertencia y muestra el texto con solo los placeholders `{name}` válidos completados. Corrige el mensaje; la [comprobación de mensajes](#encuentra-claves-sin-traducir) los encuentra.
 - **El mensaje es demasiado largo para que los tipos lo lean**: unos 900 apóstrofos, 450 argumentos o 900 espacios dentro de las llaves de un argumento, en un mismo texto. TypeScript tiene un límite de cuán profundo puede llegar un tipo, y la lectura se detiene antes de alcanzarlo en lugar de hacer fallar tu build. En tiempo de ejecución el mensaje funciona con normalidad. Si tienes uno de estos, probablemente sean tres mensajes disfrazados de uno; dividirlo devuelve las comprobaciones.
 - **El tipo del gestor está escrito a mano sin el diccionario.** `I18n<"en" | "pt", Key>` comprueba las claves pero no los valores. Pasa el tipo del diccionario como tercer argumento de tipo, `I18n<"en" | "pt", Key, typeof en>`, para que sigan comprobándose.
 

@@ -276,7 +276,8 @@ A configured locale that `Intl.Locale` rejects, such as one with a private-use s
 The rest of its behavior is short:
 
 - It returns `undefined` when nothing matches.
-- It skips blank and malformed entries.
+- It skips blank and malformed entries, and entries longer than 255 characters, which no real tag is.
+- It reads an underscore as a hyphen, so `pt_BR`, as iOS, Android, and POSIX write it, matches `pt-BR`.
 - It throws a `TypeError` when `preferences` isn't an array.
 
 When several of your locales share a language and script, and none matches a preference exactly or by its likely region, the first one in `locales` wins. So order `locales` by which one should serve everyone else.

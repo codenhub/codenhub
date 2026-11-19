@@ -2,7 +2,7 @@
 title: Renderiza en un servidor o en tiempo de build
 description: Un gestor por solicitud, cómo elegir un locale a partir de Accept-Language, builds de sitios estáticos y logs de producción silenciosos.
 order: 3
-source: c48df89e4dd7f1424ecac02c21a94249cc27c2c1
+source: 99e7adf111f46c0adb6d99e8178f8049bbde2df0
 ---
 
 # Renderiza en un servidor o en tiempo de build
@@ -84,7 +84,7 @@ function pickLocale<TLocale extends string>(i18n: I18n<TLocale>, request: Reques
 
 Un visitante para el que no coincide ninguno de sus idiomas, incluido uno que rechaza tu idioma por defecto con `en;q=0`, igual recibe el locale por defecto, porque la página tiene que estar en algún idioma. Este helper no implementa el resto de `Accept-Language`, como `*`; si lo necesitas, usa el parser de tu framework de servidor y pasa su resultado a `matchLocale()`.
 
-`matchLocale()` recibe una lista en lugar del encabezado porque parsear el encabezado, y limitar su tamaño, le corresponde a tu servidor. Mantén el límite: `matchLocale()` prueba las preferencias en orden hasta que una coincide, así que, sin él, una solicitud cuyo encabezado de 16 KB enumera miles de idiomas que no soportas ocuparía el event loop de tu servidor durante decenas de milisegundos.
+`matchLocale()` recibe una lista en lugar del encabezado porque parsear el encabezado, y limitar su tamaño, le corresponde a tu servidor. Mantén el límite: `matchLocale()` prueba las preferencias en orden hasta que una coincide, así que, sin él, una solicitud cuyo encabezado de 16 KB enumera miles de idiomas que no soportas ocuparía el event loop de tu servidor durante decenas de milisegundos. Una sola entrada de más de 255 caracteres se omite sin leerla, así que una etiqueta larga no puede hacer lo mismo.
 
 Compara igual que el binding del navegador, así que un visitante recibe el mismo idioma desde el servidor que desde el navegador: `pt-BR` recibe tu `pt`, y `zh-TW` recibe tu `zh-Hant`. Las etiquetas mal formadas se omiten, y `undefined` significa que nada coincidió. [Convierte entradas externas en un locale](index.md#convierte-entradas-externas-en-un-locale) tiene el orden completo de comparación, incluido cuál de dos locales regionales gana, y `resolveLocale()` para un locale que viene de una cookie o de un query string.
 
@@ -156,7 +156,7 @@ await Promise.all(
 );
 ```
 
-`pathname` es una ruta de URL, codificada con porcentajes donde la tabla tiene palabras como `/serviços`. Los hosts decodifican la solicitud antes de buscar su archivo, así que nombra el archivo según `decodeURI(pathname)`: `serviços` para `/servi%C3%A7os`, no la forma codificada, que ninguna solicitud encuentra. Dónde va ese archivo, como `serviços.html` o `serviços/index.html`, depende de tu host y de tu configuración de `trailingSlash`.
+`pathname` es una ruta de URL, codificada con porcentajes dondequiera que tenga caracteres como `ç`, ya vengan de las palabras de la tabla, como `/serviços`, o de tus propias rutas. Los hosts decodifican la solicitud antes de buscar su archivo, así que nombra el archivo según `decodeURI(pathname)`: `serviços` para `/servi%C3%A7os`, no la forma codificada, que ninguna solicitud encuentra. Dónde va ese archivo, como `serviços.html` o `serviços/index.html`, depende de tu host y de tu configuración de `trailingSlash`.
 
 Un diccionario que no carga o no pasa la comprobación hace que `init()` se rechace, así que el build falla en lugar de publicar páginas sin texto.
 

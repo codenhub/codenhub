@@ -52,7 +52,7 @@ Generates the canonical URL pathname of a page for one supported locale.
 
 **Parameters**
 
-- `pathname` — A canonical application pathname of at most 8,192 characters and 100 segments, without a URL, query, or fragment. A path that starts with a locale is read as that locale's URL, as `parse` reads it.
+- `pathname` — A canonical application pathname of at most 8,192 characters and 100 segments, without a URL, query, or fragment, such as `parse(url).pathname`. It is never read as a URL, so `/pt/about` is not Portuguese.
 - `locale` — A supported locale, trimmed and matched case-insensitively.
 
 **Returns** — The pathname in the locale's words, with the configured locale-prefix and trailing-slash policies applied.
@@ -60,7 +60,7 @@ Generates the canonical URL pathname of a page for one supported locale.
 **Throws**
 
 - `TypeError` — When `pathname` is not a valid application pathname.
-- `RangeError` — When `locale` is unsupported or is not a string at runtime, when the result would be longer than 8,192 characters or 100 segments, or when the result would be parsed as another page or locale, such as a page the table doesn't list whose path is another locale's translated path. A static build that localizes its page list finds those clashes at build time; links built for a request can use `parse(url.pathname).alternates`, which leaves out the locales where `localize` throws.
+- `RangeError` — When `locale` is unsupported or is not a string at runtime, when `pathname` starts with a configured locale, such as `/my/orders` with Burmese, `my`, configured, since every URL of it would be that locale's `/orders`, when the result would be longer than 8,192 characters or 100 segments, or when the result would be parsed as another page or locale, such as a page the table doesn't list whose path is another locale's translated path. A static build that localizes its page list finds those clashes at build time; links built for a request can use `parse(url.pathname).alternates`, which leaves out the locales where `localize` throws.
 
 #### LocaleRouting › localizeAll
 
@@ -176,7 +176,7 @@ The trimmed canonical configured locale used to generate the pathname.
 pathname: string;
 ```
 
-The absolute localized application pathname.
+The absolute localized application pathname, percent-encoded as a URL's pathname is.
 
 ### ParsedLocalePath
 
@@ -212,4 +212,4 @@ The trimmed canonical configured locale identified by the pathname.
 pathname: string;
 ```
 
-The canonical application pathname: the locale prefix removed and translated segments read back. A listed page's fixed segments are written as a URL writes the table's words, the same in every locale, so `/pt/%61/x` reads as `/a/x` when `/a/:q` is listed, and so does `/%61/x` where the default locale has no prefix; other segments are kept as written.
+The canonical application pathname: the locale prefix removed and translated segments read back, with every segment written as a URL's pathname writes it, so `/pt/%61/caf%c3%a9` reads as `/a/caf%C3%A9`, the same spelling `localize` builds.
