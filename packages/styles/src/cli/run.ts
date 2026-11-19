@@ -217,9 +217,11 @@ async function build(options: BuildOptions, io: CliIo): Promise<string> {
    What it writes starts with the package's notice, after Tailwind's banner, so
    a file that does is replaced; another banner or a layer order does not tell
    a stylesheet written by hand from a built one. A file of no bytes, or of
-   whitespace alone, holds nothing to lose and is replaced too. What is not a file is
-   left to the write, which reports it. A file that cannot be read is refused:
-   a directory can let a file be renamed over that it does not let be read. */
+   whitespace alone, holds nothing to lose and is replaced too. What is not a
+   file, after any link, is refused: renaming over a pipe, or as root over a
+   device such as `/dev/null`, would replace it with the stylesheet. A file that
+   cannot be read is refused: a directory can let a file be renamed over that it
+   does not let be read. */
 async function assertReplaceable(options: BuildOptions, cwd: string, output: string): Promise<void> {
   if (options.contentGlobs.some((entry) => path.relative(path.resolve(cwd, entry), output) === "")) {
     throw new Error(`--output ${options.output} is also a --content file; name a stylesheet to write.`);
@@ -231,7 +233,12 @@ async function assertReplaceable(options: BuildOptions, cwd: string, output: str
   try {
     const stats = await fs.stat(output);
 
-    if (!stats.isFile() || stats.size === 0) {
+    if (!stats.isFile()) {
+      throw new NotAFileError(
+        `--output ${options.output} is ${kindOf(stats)}, not a file; name a stylesheet to write.`,
+      );
+    }
+    if (stats.size === 0) {
       return;
     }
     size = stats.size;
@@ -249,6 +256,9 @@ async function assertReplaceable(options: BuildOptions, cwd: string, output: str
     if ((error as { code?: string }).code === "ENOENT") {
       return;
     }
+    if (error instanceof NotAFileError) {
+      throw error;
+    }
 
     throw new Error(
       `cannot read --output ${options.output} to check it is a stylesheet this command wrote: ${error instanceof Error ? error.message : String(error)}`,
@@ -264,6 +274,19 @@ async function assertReplaceable(options: BuildOptions, cwd: string, output: str
       `--output ${options.output} holds something this command did not write; move it or name another file.`,
     );
   }
+}
+
+class NotAFileError extends Error {}
+
+function kindOf(stats: { isDirectory(): boolean; isFIFO(): boolean; isSocket(): boolean }): string {
+  if (stats.isDirectory()) {
+    return "a folder";
+  }
+  if (stats.isFIFO()) {
+    return "a pipe";
+  }
+
+  return stats.isSocket() ? "a socket" : "a device";
 }
 
 /* Every entry has to name a file and every file has to be readable, so a build

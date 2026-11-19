@@ -1,3 +1,4 @@
+import { execFileSync } from "node:child_process";
 import { chmod, lstat, mkdir, mkdtemp, readdir, readFile, rm, stat, symlink, writeFile } from "node:fs/promises";
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
@@ -379,13 +380,40 @@ describe("failures", () => {
     );
   });
 
-  it("passes on Node.js's own failure to write the output", async () => {
+  it("refuses an --output that is a folder, and leaves it", async () => {
     await mkdir(path.join(project, "app.css"));
 
-    expect(await failureOf("build", "-c", "app/views/**/*.erb", "-o", "app.css")).toMatch(
-      /^chs: cannot write the stylesheet: .*(EISDIR|EPERM)/,
+    expect(await failureOf("build", "-c", "app/views/**/*.erb", "-o", "app.css")).toBe(
+      "chs: --output app.css is a folder, not a file; name a stylesheet to write.",
     );
+    expect(await readdir(path.join(project, "app.css"))).toEqual([]);
   });
+
+  /* Renaming over a pipe replaces it with a file, and as root renaming over a
+     device does too, so `-o /dev/null` turned `/dev/null` into a stylesheet. */
+  it.skipIf(process.platform === "win32")("refuses an --output that is a pipe, and leaves it", async () => {
+    const pipe = path.join(project, "app.css");
+
+    execFileSync("mkfifo", [pipe]);
+
+    expect(await failureOf("build", "-c", "app/views/**/*.erb", "-o", "app.css")).toBe(
+      "chs: --output app.css is a pipe, not a file; name a stylesheet to write.",
+    );
+    expect((await lstat(pipe)).isFIFO()).toBe(true);
+    expect(await readdir(project)).toEqual(["app", "app.css"]);
+  });
+
+  it.skipIf(!canSymlink || process.platform === "win32")(
+    "refuses an --output link that leads to a device, and leaves it",
+    async () => {
+      await symlink("/dev/null", path.join(project, "app.css"), "file");
+
+      expect(await failureOf("build", "-c", "app/views/**/*.erb", "-o", "app.css")).toBe(
+        "chs: --output app.css is a device, not a file; name a stylesheet to write.",
+      );
+      expect((await stat("/dev/null")).isCharacterDevice()).toBe(true);
+    },
+  );
 
   // The temporary file is the one write that can fail partway; a directory in its place makes it fail.
   it("leaves the previous stylesheet whole when the write fails", async () => {
