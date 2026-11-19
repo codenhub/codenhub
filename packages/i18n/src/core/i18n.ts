@@ -112,6 +112,7 @@ class I18nInstance<TLocale extends string, TKey extends string = string>
   private requestId = 0;
   /** The request whose dictionaries are loading, until its load settles. */
   private loadingRequestId: number | undefined;
+  private loadingRequest: Promise<unknown> | undefined;
   private applyListener: ((requestId: number) => void) | undefined;
   private readonly warnedMissingKeys = new Map<string, undefined>();
   private readonly pluralRules = new Map<TLocale, Intl.PluralRules | undefined>();
@@ -156,6 +157,15 @@ class I18nInstance<TLocale extends string, TKey extends string = string>
       init: (options) => this.applyInit(options as I18nInitOptions<TLocale>),
       latestRequestId: () => this.requestId,
       isLatestRequestLoading: () => this.loadingRequestId === this.requestId,
+      // A reaction added after the request's own `await`, so the request has applied or thrown before it resolves.
+      latestRequestSettled: async () => {
+        if (this.loadingRequestId === this.requestId) {
+          await this.loadingRequest?.then(
+            () => undefined,
+            () => undefined,
+          );
+        }
+      },
       setApplyListener: (listener) => {
         this.applyListener = listener;
       },
@@ -564,13 +574,21 @@ class I18nInstance<TLocale extends string, TKey extends string = string>
     return chain.map((chainLocale, index) => ({ locale: chainLocale, dictionary: dictionaries[index]! }));
   }
 
-  private async loadRequest(requestId: number, locale: TLocale): Promise<readonly ChainDictionary<TLocale>[]> {
+  private loadRequest(requestId: number, locale: TLocale): Promise<readonly ChainDictionary<TLocale>[]> {
     this.loadingRequestId = requestId;
+    const request = this.trackRequest(requestId, locale);
+    this.loadingRequest = request;
+    return request;
+  }
+
+  // Loading always awaits, so `finally` runs after `loadRequest` has stored the promise it clears.
+  private async trackRequest(requestId: number, locale: TLocale): Promise<readonly ChainDictionary<TLocale>[]> {
     try {
       return await this.loadRequiredDictionaries(locale);
     } finally {
       if (this.loadingRequestId === requestId) {
         this.loadingRequestId = undefined;
+        this.loadingRequest = undefined;
       }
     }
   }

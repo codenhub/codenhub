@@ -14,6 +14,11 @@ export interface I18nInternals {
   /** Whether the latest `init()` or `setLocale()` request is still loading its dictionaries. */
   isLatestRequestLoading(): boolean;
   /**
+   * Resolves after the latest request's loading settles, once that request has applied or failed; at once when nothing
+   * is loading. It never rejects.
+   */
+  latestRequestSettled(): Promise<void>;
+  /**
    * Sets the one listener called with a request's id when that request takes effect, before its event, if any. A
    * `setLocale()` to the active locale takes effect at once and dispatches no event. `undefined` removes it.
    */

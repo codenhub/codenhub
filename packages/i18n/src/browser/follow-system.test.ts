@@ -291,6 +291,30 @@ describe("initializeBrowserI18n languagechange", () => {
     expect(i18n.locale).toBe("fr");
   });
 
+  it("follows an event that arrived while an application request was loading, once that request fails", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    let rejectAr: ((error: Error) => void) | undefined;
+    const i18n = createManager({
+      loadLocale: (locale) =>
+        locale === "ar"
+          ? new Promise((_resolve, reject) => {
+              rejectAr = reject;
+            })
+          : dictionaries[locale],
+    });
+    const binding = await bind({ i18n });
+
+    const choosing = i18n.setLocale("ar");
+    changeLanguages(["fr"]);
+    rejectAr!(new Error("503"));
+    await expect(choosing).rejects.toThrow(I18nError);
+    await flushPromises();
+
+    expect(i18n.locale).toBe("fr");
+    expect(binding.followsSystem).toBe(true);
+    expect(localStorage.getItem("i18n")).toBeNull();
+  });
+
   it("follows the event again after followSystem()", async () => {
     const i18n = createManager();
     const binding = await bind({ i18n, locale: "ar" });

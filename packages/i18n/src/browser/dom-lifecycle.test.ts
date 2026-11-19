@@ -118,26 +118,93 @@ describe("initializeBrowserI18n document integration", () => {
     );
   });
 
-  it.each(["style", "script", "noscript", "template"])("does not translate active <%s> containers", async (tagName) => {
-    const element = document.createElement(tagName);
-    if (element instanceof HTMLScriptElement) {
-      element.type = "application/json";
+  it.each(["style", "script", "noscript", "template", "xmp", "iframe", "noembed", "noframes", "plaintext"])(
+    "does not translate <%s>, whose text can run, stay hidden, or be read as HTML",
+    async (tagName) => {
+      const element = document.createElement(tagName);
+      if (element instanceof HTMLScriptElement) {
+        element.type = "application/json";
+      }
+      element.setAttribute("data-i18n", "greeting");
+      const fallbackText = tagName === "style" ? "" : "Safe fallback";
+      element.textContent = fallbackText;
+      document.body.append(element);
+      const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+      const i18n = createManager();
+
+      const binding = await initializeBrowserI18n({ i18n, locale: "fr", root: document.body });
+      try {
+        expect(element.textContent).toBe(fallbackText);
+        expect(warn).toHaveBeenCalledWith(
+          `[I18n] Skipping translation on <${tagName}> because the element can run, hide, or reparse its text as HTML.`,
+        );
+      } finally {
+        binding.disconnect();
+      }
+    },
+  );
+
+  it("keeps a translation out of the HTML when the page is serialized", async () => {
+    const container = document.createElement("div");
+    for (const tagName of ["xmp", "iframe", "noembed", "noframes"]) {
+      const element = document.createElement(tagName);
+      element.setAttribute("data-i18n", "greeting");
+      container.append(element);
     }
-    element.setAttribute("data-i18n", "greeting");
-    const fallbackText = tagName === "style" ? "" : "Safe fallback";
-    element.textContent = fallbackText;
-    document.body.append(element);
-    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
-    const i18n = createManager();
+    document.body.append(container);
+    vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const i18n = createManager({
+      loadLocale: (locale) => (locale === "fr" ? { greeting: "</xmp></iframe></noembed></noframes><img src=x>" } : {}),
+    });
 
     const binding = await initializeBrowserI18n({ i18n, locale: "fr", root: document.body });
     try {
-      expect(element.textContent).toBe(fallbackText);
-      expect(warn).toHaveBeenCalledWith(
-        `[I18n] Skipping translation on <${tagName}> because the element can activate or hide translated content.`,
-      );
+      const reparsed = document.createElement("div");
+      reparsed.innerHTML = container.innerHTML;
+      expect(reparsed.querySelectorAll("img")).toHaveLength(0);
     } finally {
       binding.disconnect();
+    }
+  });
+
+  it("settles when two observing bindings share an element", async () => {
+    document.body.innerHTML = '<div id="widget"></div>';
+    const widget = document.querySelector("#widget")!;
+    const outer = await initializeBrowserI18n({
+      i18n: createManager(),
+      locale: "en",
+      root: document.body,
+      observe: true,
+      syncDocument: false,
+      persistLocale: false,
+    });
+    const inner = await initializeBrowserI18n({
+      i18n: createManager(),
+      locale: "pt-BR",
+      root: widget,
+      observe: true,
+      syncDocument: false,
+      persistLocale: false,
+    });
+    let records = 0;
+    const counter = new MutationObserver((mutations) => {
+      records += mutations.length;
+    });
+    counter.observe(document.body, { childList: true, subtree: true, characterData: true });
+    try {
+      const element = document.createElement("b");
+      element.setAttribute("data-i18n", "greeting");
+      widget.append(element);
+      for (let index = 0; index < 5; index += 1) {
+        // oxlint-disable-next-line no-await-in-loop -- each turn lets the observers answer each other.
+        await flushMutations();
+      }
+
+      expect(records).toBeLessThan(10);
+    } finally {
+      counter.disconnect();
+      outer.disconnect();
+      inner.disconnect();
     }
   });
 
@@ -152,7 +219,7 @@ describe("initializeBrowserI18n document integration", () => {
     try {
       expect(element.textContent).toBe("");
       expect(warn).toHaveBeenCalledWith(
-        "[I18n] Skipping translation on <style> because the element can activate or hide translated content.",
+        "[I18n] Skipping translation on <style> because the element can run, hide, or reparse its text as HTML.",
       );
     } finally {
       binding.disconnect();

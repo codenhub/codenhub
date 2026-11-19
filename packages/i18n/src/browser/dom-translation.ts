@@ -3,7 +3,22 @@ import { formatReportedKey } from "../locale/dictionary";
 
 const TRANSLATION_ATTRIBUTE = "data-i18n";
 const ELEMENT_NODE = 1;
-const BLOCKED_ELEMENT_NAMES = new Set(["noscript", "script", "style", "template"]);
+/**
+ * Elements whose text can run, stay hidden, or be read as HTML. The HTML serializer writes the text of `xmp`, `iframe`,
+ * `noembed`, `noframes`, and `plaintext` unescaped, so a page saved through `innerHTML`, as a prerender does, would turn
+ * a translation such as `</xmp><img onerror=...>` into markup.
+ */
+const BLOCKED_ELEMENT_NAMES = new Set([
+  "iframe",
+  "noembed",
+  "noframes",
+  "noscript",
+  "plaintext",
+  "script",
+  "style",
+  "template",
+  "xmp",
+]);
 
 /**
  * Attributes that `data-i18n-<attribute>` may translate: text shown to people or assistive technology. URLs, styles,
@@ -106,6 +121,14 @@ const isValidDomKey = (rawKey: string): boolean => normalizeTranslationKey(rawKe
 const fallbackTexts = new WeakMap<Element, string>();
 const translatedTexts = new WeakMap<Element, string>();
 const attributeStates = new WeakMap<Element, Map<string, AttributeState>>();
+
+/**
+ * Whether the element shows the text a binding last wrote to it. Another binding whose root overlaps reads such a write
+ * as its own rather than a change to translate again, so two bindings never answer each other's writes forever.
+ *
+ * @internal
+ */
+export const showsTranslatedText = (element: Element): boolean => translatedTexts.get(element) === element.textContent;
 
 /** Creates the DOM translator of one browser binding. @internal */
 export function createDomTranslator(options: DomTranslatorOptions): DomTranslator {
@@ -243,7 +266,7 @@ export function createDomTranslator(options: DomTranslatorOptions): DomTranslato
     if (BLOCKED_ELEMENT_NAMES.has(element.localName)) {
       if (!options.isSilent) {
         console.warn(
-          `[I18n] Skipping translation on <${element.tagName.toLowerCase()}> because the element can activate or hide translated content.`,
+          `[I18n] Skipping translation on <${element.tagName.toLowerCase()}> because the element can run, hide, or reparse its text as HTML.`,
         );
       }
       return;

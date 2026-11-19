@@ -157,6 +157,27 @@ describe("initializeBrowserI18n locale resolution", () => {
     expect(i18n.isReady).toBe(false);
   });
 
+  it("rejects without a global event target before initializing core", async () => {
+    const i18n = createManager();
+    const descriptor = Object.getOwnPropertyDescriptor(globalThis, "addEventListener");
+    Object.defineProperty(globalThis, "addEventListener", { value: undefined, configurable: true });
+
+    try {
+      await expect(
+        initializeBrowserI18n({ i18n, locale: "fr", persistLocale: false, syncDocument: false }),
+      ).rejects.toThrow(
+        new TypeError("[I18n] The browser binding requires a global event target, such as window or a worker's self."),
+      );
+    } finally {
+      if (descriptor === undefined) {
+        delete (globalThis as { addEventListener?: unknown }).addEventListener;
+      } else {
+        Object.defineProperty(globalThis, "addEventListener", descriptor);
+      }
+    }
+    expect(i18n.isReady).toBe(false);
+  });
+
   it("initializes without a page document when document synchronization is disabled", async () => {
     const i18n = createManager();
     const descriptor = Object.getOwnPropertyDescriptor(globalThis, "document")!;
