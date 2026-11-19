@@ -135,6 +135,7 @@ function buildProbes() {
  * @param browser Playwright browser instance.
  * @param stylesheetPath Compiled harness CSS, written to disk.
  * @param theme Theme name from {@link THEMES}.
+ * @param temporaryRoot Directory the probe page is written into.
  * @returns Map from `data-key` to its rest and hover computed styles.
  */
 async function readTheme(browser, stylesheetPath, theme, temporaryRoot) {
@@ -148,22 +149,25 @@ async function readTheme(browser, stylesheetPath, theme, temporaryRoot) {
     )
     .join("\n");
 
+  /* The harness stops every transition and animation outright. `box` fades
+     `background-color` and `border-color` on hover over
+     `--motion-duration-normal`, and reduced motion keeps colour fades
+     (`reset.css`, docs/accessibility.md), so a read taken while the fade runs
+     lands on an eased frame. Frame-counting heuristics settled on such a frame
+     whenever two frames rounded to the same 8-bit colour near the end of the
+     ease, which is what made the CI drift check disagree with itself
+     (codenhub/codenhub#605). With no transition the computed value is the
+     final one the moment the element matches `:hover`, so the read below has
+     nothing to wait for but the hover itself. Values are unaffected: a
+     transition changes when a value is reached, never which. */
   await writeFile(
     htmlPath,
-    `<!doctype html><html data-theme="${theme}"><head><meta charset="utf-8" /><link rel="stylesheet" href="${stylesheetHref}" /></head><body>${body}</body></html>`,
+    `<!doctype html><html data-theme="${theme}"><head><meta charset="utf-8" /><link rel="stylesheet" href="${stylesheetHref}" /><style>*, *::before, *::after { transition: none !important; animation: none !important; }</style></head><body>${body}</body></html>`,
   );
 
   const page = await browser.newPage();
 
   try {
-    /* `box` transitions `background-color`/`border-color` on hover
-       (`--motion-duration-normal`, 200ms), and `reset.css` -- part of the real
-       `src/index.css` this harness compiles -- collapses every transition to
-       0.01ms under reduced motion. Without this a hover read races the
-       transition and lands on a random interpolated frame instead of the
-       resting hover value, which is exactly what made two runs of this script
-       disagree before this was added. */
-    await page.emulateMedia({ reducedMotion: "reduce" });
     await page.goto(pathToFileURL(htmlPath).href, { waitUntil: "load" });
 
     const rest = await page.evaluate(() => {
@@ -180,54 +184,22 @@ async function readTheme(browser, stylesheetPath, theme, temporaryRoot) {
     });
 
     /* oxlint-disable no-await-in-loop -- one page, hovered in turn: hover is a
-       real `:hover`, and each read has to settle before the next probe moves
-       the mouse away from the one it just read. */
+       real `:hover`, so each probe is read before the mouse moves to the next. */
     for (const { key } of probes.filter((probe) => probe.readsBg)) {
-      await page.locator(`[data-key="${key}"]`).hover();
-      /* `:hover` matches immediately, but the `background-color: var(--_bg)`
-         declaration on `.box` does not visibly repaint to `--_bg`'s new,
-         `.box-hover`-won value until the browser's next style flush, and that
-         flush can take more than one animation frame. A fixed wait raced it
-         and baked the still-resting value into the generated palette; two
-         consecutive equal samples can race it too, since two frames can both
-         land before the repaint and agree on the stale resting value.
-         Waiting for the read to actually move off the already-known resting
-         value first, then for it to stop moving, is what actually settles on
-         the real one regardless of how long the engine takes to repaint. */
-      const hovered = await page.evaluate(
-        ({ probeKey, restingBg, restingEdge }) => {
-          const element = document.querySelector(`[data-key="${probeKey}"]`);
-          const read = () => {
-            const styles = getComputedStyle(element);
-            return { bg: styles.backgroundColor, edge: styles.borderTopColor };
-          };
-          const nextFrame = () => new Promise((resolve) => requestAnimationFrame(() => resolve()));
+      const probe = page.locator(`[data-key="${key}"]`);
 
-          return (async () => {
-            let current = read();
-
-            for (let frame = 0; frame < 60 && current.bg === restingBg && current.edge === restingEdge; frame += 1) {
-              await nextFrame();
-              current = read();
-            }
-
-            let previous = current;
-
-            for (let frame = 0; frame < 60; frame += 1) {
-              await nextFrame();
-              current = read();
-
-              if (current.bg === previous.bg && current.edge === previous.edge) {
-                return current;
-              }
-              previous = current;
-            }
-
-            return previous;
-          })();
-        },
-        { probeKey: key, restingBg: rest[key].bg, restingEdge: rest[key].edge },
-      );
+      await probe.hover();
+      /* `:hover` is the only thing left to wait for: once the element matches
+         it, `getComputedStyle` flushes style and returns the hovered value. */
+      await probe.evaluate((element) => {
+        if (!element.matches(":hover")) {
+          throw new Error(`${element.dataset.key} is not hovered after hover().`);
+        }
+      });
+      const hovered = await probe.evaluate((element) => {
+        const styles = getComputedStyle(element);
+        return { bg: styles.backgroundColor, edge: styles.borderTopColor };
+      });
 
       rest[key].bgHover = hovered.bg;
       rest[key].edgeHover = hovered.edge;
@@ -283,6 +255,28 @@ function indent(block) {
   return block.replace(/^/gm, "  ");
 }
 
+/**
+ * Prints the lines a dry run would change, so a drift failure in CI says which
+ * values moved instead of only that something did.
+ * @param generated The contents the run produced.
+ */
+async function reportDrift(generated) {
+  const authored = (await read("src/palette.css").catch(() => "")).split(/\r?\n/);
+  const lines = generated.split("\n");
+  const changed = [];
+
+  for (let index = 0; index < Math.max(authored.length, lines.length); index += 1) {
+    if (authored[index] !== lines[index]) {
+      changed.push(`  line ${index + 1}:\n    - ${authored[index] ?? ""}\n    + ${lines[index] ?? ""}`);
+    }
+  }
+
+  console.error(changed.slice(0, 40).join("\n"));
+  if (changed.length > 40) {
+    console.error(`  ...and ${changed.length - 40} more line(s).`);
+  }
+}
+
 async function main() {
   const isDryRun = process.argv.includes("--dry-run");
   const temporaryRoot = await mkdtemp(path.join(tmpdir(), "codenhub-palette-"));
@@ -299,11 +293,8 @@ async function main() {
     try {
       const results = [];
 
-      /* oxlint-disable no-await-in-loop -- sequential on purpose: two pages
-         polling animation frames for a settled hover read at the same time,
-         against one shared browser process, starved each other's rAF timing
-         under contention and settled on a stale frame. Not latency-sensitive
-         enough to be worth that risk for the concurrency `Promise.all` bought. */
+      /* oxlint-disable no-await-in-loop -- sequential: one page at a time keeps
+         a single mouse in play, and the run is short enough not to need more. */
       for (const theme of THEMES) {
         results.push(await readTheme(browser, stylesheetPath, theme, temporaryRoot));
       }
@@ -354,6 +345,7 @@ async function main() {
   if (isDryRun) {
     console.log(outcome.hasDrift ? "src/palette.css is out of date." : "src/palette.css is up to date.");
     if (outcome.hasDrift) {
+      await reportDrift(output);
       process.exitCode = 1;
     }
     return;
