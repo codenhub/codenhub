@@ -18,7 +18,7 @@ A verifier does not take a key; it takes a **key set**, an object that picks the
 
 Every key set, the three above and your own if it uses the same rules, selects one key and never tries keys in turn. Trying each key until one verifies would let a token pass against a key it never named, and would multiply the cost of every forged token by the size of the set.
 
-- **The header has a `kid`.** Only keys with that `kid` are candidates. None is `unknown_kid`. Among them, exactly one must have the header's `alg`: none is `alg_mismatch`, and several is `ambiguous_key`.
+- **The header has a `kid`.** Only keys with that `kid` are candidates. Among them, exactly one must have the header's `alg`: none is `alg_mismatch`, and several is `ambiguous_key`. When no key has that `kid`, a key with no `kid` at all stands in: exactly one such key must have the header's `alg`, several is `ambiguous_key`, and none is `unknown_kid`. That is how a single PEM key, which has no `kid`, verifies tokens from an issuer that names its key in every token.
 - **The header has no `kid`.** Exactly one key in the whole set must have the header's `alg`. None is `no_matching_key`, and several is `ambiguous_key`.
 
 So a set may hold one key per algorithm without `kid`s, but once it holds two keys of one algorithm, tokens must name their key. A secret key only ever matches tokens of its own HMAC algorithm and a public key only its own algorithm, since both follow from the `alg` comparison.

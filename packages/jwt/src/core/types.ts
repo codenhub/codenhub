@@ -221,9 +221,9 @@ export interface JwtPayload {
  */
 export interface KeySet {
   /**
-   * Selects the single key for a header. With a `kid`, only keys with that `kid` are candidates;
-   * without one, the set must hold exactly one key compatible with the header's `alg`. Keys are never
-   * tried in turn.
+   * Selects the single key for a header. With a `kid`, only keys with that `kid` are candidates, or,
+   * when none has it, keys without a `kid`; without one, the set must hold exactly one key compatible with
+   * the header's `alg`. Keys are never tried in turn.
    *
    * @param header - The token's header, as {@link readHeader} returned it.
    * @returns The selected key, or a failure with `unknown_kid`, `alg_mismatch`, `no_matching_key`,
