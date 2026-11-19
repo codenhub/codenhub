@@ -1,3 +1,5 @@
+import { isUint8Array } from "./bytes";
+
 const ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
 
 /** Not a base64url character. */
@@ -78,7 +80,7 @@ export function decodeBase64Url(text: string): Uint8Array<ArrayBuffer> | undefin
  * @throws TypeError when `bytes` is not a `Uint8Array`.
  */
 export function encodeBase64Url(bytes: Uint8Array): string {
-  if (!(bytes instanceof Uint8Array)) {
+  if (!isUint8Array(bytes)) {
     throw new TypeError("encodeBase64Url: bytes must be a Uint8Array.");
   }
   let text = "";
