@@ -2,6 +2,7 @@ import { fail, ok } from "../core";
 import { rejectUnknownOptions } from "../core/options";
 import type { AsymmetricAlgorithm, JwtHeader, JwtIssue, JwtResult, KeySet, VerificationKey } from "../core/types";
 import { parseJsonObject } from "../encoding";
+import { readIssuer } from "../keys";
 import { importKeys, readAlgorithms } from "./local";
 import { lacksKid, selectKey } from "./select";
 
@@ -26,6 +27,13 @@ export interface RemoteKeySetOptions {
    * `RS512`, `PS256`, `PS384`, `PS512`
    */
   readonly algorithms?: readonly AsymmetricAlgorithm[];
+  /**
+   * The issuer whose JWKS this is, as for {@link ImportKeySetOptions.issuer}: each key is bound to it, so a
+   * token verified with one must carry this `iss`.
+   *
+   * @defaultValue keys bound to no issuer
+   */
+  readonly issuer?: string;
   /**
    * Seconds a fetched JWKS is used before it is fetched again. An integer of at least 1.
    *
@@ -106,6 +114,7 @@ const KNOWN_OPTIONS: Readonly<Record<keyof RemoteKeySetOptions, true>> = {
   url: true,
   fetch: true,
   algorithms: true,
+  issuer: true,
   cacheTtl: true,
   cooldown: true,
   maxStale: true,
@@ -137,6 +146,7 @@ interface RemoteConfig {
   readonly url: string;
   readonly fetch: typeof fetch | undefined;
   readonly algorithms: ReadonlySet<AsymmetricAlgorithm>;
+  readonly issuer: string | undefined;
   readonly cacheTtlMs: number;
   readonly cooldownMs: number;
   readonly maxStaleMs: number;
@@ -215,7 +225,7 @@ interface CachedKeys {
  * `{ reason: "key_set_error" }` instead.
  * @throws TypeError when `options` is not an object; `options` has a member that is not an option; `url` is not an absolute `https:` URL, or
  * `http:` URL on a loopback host, or carries credentials; `fetch`, `now`, `onFetch`, `onFetchError` or `waitUntil` is not a function; `seed` has no finite
- * `fetchedAt`; `algorithms` is not a non-empty array of asymmetric algorithms; or `cacheTtl`, `cooldown`, `maxStale`, `timeout` or
+ * `fetchedAt`; `algorithms` is not a non-empty array of asymmetric algorithms; `issuer` is not a non-empty string; or `cacheTtl`, `cooldown`, `maxStale`, `timeout` or
  * `maxResponseBytes` is out of range.
  */
 export function createRemoteKeySet(options: RemoteKeySetOptions): KeySet {
@@ -341,7 +351,7 @@ export function createRemoteKeySet(options: RemoteKeySetOptions): KeySet {
 
   /** Imports the seed once, unless a fetch has filled the cache first. */
   const importSeed = async (seed: RemoteKeySetSnapshot): Promise<void> => {
-    const imported = await importKeys(seed.jwks, config.algorithms);
+    const imported = await importKeys(seed.jwks, config.algorithms, config.issuer);
     if (imported.ok && cached === undefined) {
       cached = { keys: imported.value, fetchedAt: seed.fetchedAt };
     }
@@ -407,7 +417,7 @@ async function fetchKeys(config: RemoteConfig): Promise<JwtResult<FetchedKeys>> 
   if (!fetched.ok) {
     return fetched;
   }
-  const imported = await importKeys(fetched.value, config.algorithms);
+  const imported = await importKeys(fetched.value, config.algorithms, config.issuer);
   return imported.ok ? ok({ jwks: fetched.value, keys: imported.value }) : fetchFailure("invalid_response");
 }
 
@@ -561,6 +571,7 @@ function readRemoteOptions(options: unknown): RemoteConfig {
     url: readUrl(source.url),
     fetch: readFunction(source, "fetch") as typeof fetch | undefined,
     algorithms: readAlgorithms(options, "createRemoteKeySet"),
+    issuer: readIssuer(options, "createRemoteKeySet"),
     cacheTtlMs: cacheTtl * MS_PER_SECOND,
     cooldownMs: cooldown * MS_PER_SECOND,
     maxStaleMs: readInteger(source, { name: "maxStale", fallback: DEFAULT_MAX_STALE, minimum: 0 }) * MS_PER_SECOND,

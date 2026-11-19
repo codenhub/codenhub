@@ -3,11 +3,13 @@ import { rejectUnknownOptions } from "../core/options";
 import type { AsymmetricAlgorithm, JwtHeader, JwtResult, LocalKeySet, VerificationKey } from "../core/types";
 import {
   ASYMMETRIC_ALGORITHMS,
+  bindIssuer,
   compatibleAlgorithms,
   getKeyEntry,
   importPublicKey,
   isAsymmetricAlgorithm,
   ownDataValue,
+  readIssuer,
 } from "../keys";
 import { selectKey } from "./select";
 
@@ -24,9 +26,30 @@ export interface ImportKeySetOptions {
    * `RS512`, `PS256`, `PS384`, `PS512`
    */
   readonly algorithms?: readonly AsymmetricAlgorithm[];
+  /**
+   * The issuer whose keys these are. Each key is bound to it (see {@link PublicKey.issuer}), so a token
+   * verified with one of them must carry this `iss`. Give it whenever keys of several issuers can reach
+   * one verifier.
+   *
+   * @defaultValue keys bound to no issuer
+   */
+  readonly issuer?: string;
 }
 
-const IMPORT_KEY_SET_OPTIONS: Readonly<Record<keyof ImportKeySetOptions, true>> = { algorithms: true };
+const IMPORT_KEY_SET_OPTIONS: Readonly<Record<keyof ImportKeySetOptions, true>> = { algorithms: true, issuer: true };
+
+/** How {@link createKeySet} builds its set. */
+export interface CreateKeySetOptions {
+  /**
+   * The issuer whose keys these are, as for {@link ImportKeySetOptions.issuer}. The set holds copies of the
+   * keys bound to it.
+   *
+   * @defaultValue the keys as given
+   */
+  readonly issuer?: string;
+}
+
+const CREATE_KEY_SET_OPTIONS: Readonly<Record<keyof CreateKeySetOptions, true>> = { issuer: true };
 
 /**
  * Builds a key set from keys this package created, for verifying tokens against a fixed set.
@@ -44,14 +67,25 @@ const IMPORT_KEY_SET_OPTIONS: Readonly<Record<keyof ImportKeySetOptions, true>> 
  *
  * @param keys - Public and secret keys from `import*` or `generate*`. No two may share both `kid` and
  * `alg`, and two keys without a `kid` may not share an `alg`.
- * @returns A frozen key set holding a copy of `keys`, which its `keys` lists.
+ * @param options - The issuer the keys belong to.
+ * @returns A frozen key set holding a copy of `keys`, which its `keys` lists; with `issuer`, each key
+ * bound to it.
  * @throws TypeError when `keys` is not a non-empty array, holds a value that is not a public or secret
- * key created by this package, or holds two keys with the same `kid` and `alg`.
+ * key created by this package, or holds two keys with the same `kid` and `alg`; when `options` is not an
+ * object or has a member that is not an option; when `options.issuer` is not a non-empty string; or when
+ * a key is already bound to another issuer.
  */
-export function createKeySet(keys: readonly VerificationKey[]): LocalKeySet {
+export function createKeySet(keys: readonly VerificationKey[], options?: CreateKeySetOptions): LocalKeySet {
   if (!Array.isArray(keys) || keys.length === 0) {
     throw new TypeError("createKeySet: keys must be a non-empty array.");
   }
+  if (options !== undefined) {
+    if (typeof options !== "object" || options === null) {
+      throw new TypeError("createKeySet: options must be an object.");
+    }
+    rejectUnknownOptions(options, CREATE_KEY_SET_OPTIONS, "createKeySet");
+  }
+  const issuer = readIssuer(options, "createKeySet");
   // Copied once, by index, so the set holds exactly the keys checked below.
   const snapshot: readonly unknown[] = Array.from({ length: keys.length }, (_, index) => keys[index]);
   const seen = new Set<string>();
@@ -67,7 +101,10 @@ export function createKeySet(keys: readonly VerificationKey[]): LocalKeySet {
     }
     seen.add(identity);
   }
-  return keySetOf(Object.freeze(snapshot as VerificationKey[]));
+  const checked = snapshot as VerificationKey[];
+  return keySetOf(
+    Object.freeze(issuer === undefined ? checked : checked.map((key) => bindIssuer(key, issuer, "createKeySet"))),
+  );
 }
 
 /**
@@ -89,19 +126,19 @@ export function createKeySet(keys: readonly VerificationKey[]): LocalKeySet {
  * ```
  *
  * @param jwks - The JWKS, an object with a `keys` array. Any value is accepted.
- * @param options - Which algorithms keys may be bound to.
+ * @param options - Which algorithms keys may be bound to, and the issuer they belong to.
  * @returns The frozen key set, or a failure with one issue: `malformed` when `jwks` is not an object
  * (path omitted) or its `keys` is not an array (path `["keys"]`), or `too_large` with
  * `{ limit: "keys", maximum: 100 }` for more than 100 keys. Never throws for any `jwks`.
- * @throws TypeError when `options` is not an object or `options.algorithms` is not a non-empty array of
- * asymmetric algorithms.
+ * @throws TypeError when `options` is not an object, `options.algorithms` is not a non-empty array of
+ * asymmetric algorithms, or `options.issuer` is not a non-empty string.
  */
 export async function importKeySet(jwks: unknown, options?: ImportKeySetOptions): Promise<JwtResult<LocalKeySet>> {
   const algorithms = readAlgorithms(options, "importKeySet");
   if (options !== undefined) {
     rejectUnknownOptions(options, IMPORT_KEY_SET_OPTIONS, "importKeySet");
   }
-  const imported = await importKeys(jwks, algorithms);
+  const imported = await importKeys(jwks, algorithms, readIssuer(options, "importKeySet"));
   return imported.ok ? ok(keySetOf(imported.value)) : imported;
 }
 
@@ -138,17 +175,25 @@ export function readAlgorithms(options: unknown, functionName: string): Readonly
   return new Set(algorithms);
 }
 
-/** Imports every usable public key of an untrusted JWKS, skipping the unusable ones. Never throws. */
+/**
+ * Imports every usable public key of an untrusted JWKS, skipping the unusable ones, and binds each to
+ * `issuer` when there is one. Never throws.
+ */
 export async function importKeys(
   jwks: unknown,
   algorithms: ReadonlySet<AsymmetricAlgorithm>,
+  issuer: string | undefined,
 ): Promise<JwtResult<readonly VerificationKey[]>> {
   const entries = readEntries(jwks);
   if (!entries.ok) {
     return entries;
   }
   const attempts = entries.value.flatMap((jwk) =>
-    bindableAlgorithms(jwk, algorithms).map((alg) => importPublicKey(jwk, { alg })),
+    bindableAlgorithms(jwk, algorithms).map(async (alg) => {
+      const result = await importPublicKey(jwk, { alg });
+      // A freshly imported key has no issuer, so binding it cannot throw.
+      return result.ok && issuer !== undefined ? ok(bindIssuer(result.value, issuer, "importKeys")) : result;
+    }),
   );
   const results = await Promise.all(attempts);
   return ok(Object.freeze(results.flatMap((result) => (result.ok ? [result.value] : []))));

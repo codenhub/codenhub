@@ -8,6 +8,9 @@ export type JwtPathSegment = string | number;
  *
  * Token codes come from {@link Verifier} and {@link readHeader}; key codes from the `import*`
  * functions and key sets; `key_fetch_failed` from any key set that fails, remote or custom.
+ *
+ * A minor release may add codes, and values of `params.reason`, when a new check or failure needs its own
+ * name; an existing one never changes meaning. Handle an unknown code as a failure like any other.
  */
 export type JwtIssueCode =
   // Token structure
@@ -129,6 +132,11 @@ export interface PublicKey {
   readonly alg: AsymmetricAlgorithm;
   /** Key identifier used for selection, from the JWK `kid` or the generation options. */
   readonly kid?: string;
+  /**
+   * The issuer this key verifies tokens for, when a key set bound it with its `issuer` option. A verifier
+   * that selects the key then requires the token's `iss` to equal it, whatever its own `issuer` option says.
+   */
+  readonly issuer?: string;
 }
 
 /** An asymmetric private key bound to exactly one algorithm. It only signs. */
@@ -157,6 +165,11 @@ export interface SecretKey {
   readonly kid?: string;
   /** Whether {@link exportSecretJwk} may export this key's material. */
   readonly extractable: boolean;
+  /**
+   * The issuer this key verifies tokens for, when a key set bound it with its `issuer` option. A verifier
+   * that selects the key then requires the token's `iss` to equal it, whatever its own `issuer` option says.
+   */
+  readonly issuer?: string;
 }
 
 /** A key that can sign. */
@@ -258,7 +271,8 @@ export interface KeySet {
 export interface LocalKeySet extends KeySet {
   /**
    * The keys the set selects from, frozen. For {@link createKeySet}, the keys given, in order; for
-   * {@link importKeySet}, one key per JWK and algorithm it was bound to, in JWKS order.
+   * {@link importKeySet}, one key per JWK and algorithm it was bound to, in JWKS order. With an `issuer`
+   * option, each is a copy of its key bound to that issuer, which works wherever the original does.
    */
   readonly keys: readonly VerificationKey[];
 }

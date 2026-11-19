@@ -48,7 +48,8 @@ export interface SignHeader {
 export interface SignInput<TPayload extends object = JwtPayload> {
   /**
    * The claims. A plain object of JSON values: strings, finite numbers, booleans, `null`, arrays and
-   * plain objects, nested at most 32 deep. `exp`, `nbf` and `iat` are seconds since the Unix epoch.
+   * plain objects, nested at most 32 deep. `exp`, `nbf` and `iat` are seconds since the Unix epoch, at
+   * most 253402300799, so a time in milliseconds throws.
    */
   readonly payload: TPayload & JwtRegisteredClaims & JsonCompatible<TPayload>;
   /** A private or secret key this package created. It fixes the token's `alg`. */
@@ -83,6 +84,12 @@ const FORBIDDEN_HEADER_MEMBERS = ["crit", "b64", "jwk", "jku", "x5u", "x5c"] as 
 const TEXT_HEADER_MEMBERS = ["kid", "typ", "cty"] as const;
 
 const NUMERIC_DATE_CLAIMS = ["exp", "nbf", "iat"] as const;
+/**
+ * The last second of 9999-12-31, the latest a numeric date may name (scope.md decision 45). Every timestamp in
+ * milliseconds since 1978 is larger, so `Date.now()` given in place of seconds is caught rather than signing a
+ * token that expires in some 55,000 years.
+ */
+const MAX_NUMERIC_DATE = 253_402_300_799;
 const TEXT_CLAIMS = ["iss", "sub", "jti"] as const;
 
 const isPlainObject = (value: unknown): value is Record<string, unknown> => {
@@ -119,7 +126,8 @@ const isPlainObject = (value: unknown): value is Record<string, unknown> => {
  * string; `input.payload` is not a plain object; the header or payload holds a value JSON cannot carry
  * exactly (`undefined`, a function, a symbol, a bigint, a non-finite number or `-0`, a non-plain object, an
  * accessor) or nests deeper than 32 levels; or a registered claim has the wrong type (`exp`, `nbf`, `iat`
- * not finite numbers; `iss`, `sub`, `jti` not strings; `aud` neither a string nor an array of strings);
+ * not finite numbers, or past 253402300799, the end of year 9999, as a time in milliseconds is; `iss`,
+ * `sub`, `jti` not strings; `aud` neither a string nor an array of strings);
  * `input` has a member other than `payload`, `key`, `header` and `embedKey`; or `input.embedKey` is not a
  * public key this package created, `input.key` is not a private key, or the two are not one key pair bound to
  * one algorithm.
@@ -224,6 +232,11 @@ function serializePayload(payload: unknown): string {
   for (const name of NUMERIC_DATE_CLAIMS) {
     if (Object.hasOwn(payload, name) && typeof payload[name] !== "number") {
       throw new TypeError(`sign: input.payload.${name} must be a finite number of seconds.`);
+    }
+    if (Object.hasOwn(payload, name) && (payload[name] as number) > MAX_NUMERIC_DATE) {
+      throw new TypeError(
+        `sign: input.payload.${name} must be seconds since the Unix epoch, at most ${MAX_NUMERIC_DATE}; it looks like milliseconds.`,
+      );
     }
   }
   for (const name of TEXT_CLAIMS) {

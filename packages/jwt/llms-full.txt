@@ -127,7 +127,8 @@ fetches; // 1
 - **Only compact JWS.** No encrypted tokens (JWE), no JWS JSON serialization, no unencoded payloads (`b64`), and no `crit` header extensions; tokens using them are rejected.
 - **Claim checks are generic.** Issuer, audience, `typ`, times, maximum age and required claims are checked here. Protocol rules such as OpenID Connect's `nonce` or `azp` are left to the code above; `tokenHash` computes the `at_hash` and `c_hash` it compares.
 - **Clock tolerance defaults to 0 seconds**, and is capped at 300. Set `clockTolerance` when the issuer's clock may differ from yours. `nbf` and `iat` always allow at least 60 seconds, so a token checked the moment it is issued passes on a clock slightly behind the issuer's.
-- **Algorithms may be added in a minor release.** Give a `switch` over an `alg` a default branch.
+- **One verifier for several issuers needs issuer-bound keys.** Pass `issuer` to each issuer's key set, so one issuer's key cannot verify a token claiming another; [Key sets](docs/key-sets.md#keys-of-several-issuers) explains.
+- **Algorithms and issue codes may be added in a minor release.** Give a `switch` over an `alg` or a `code` a default branch.
 
 ## License
 
@@ -361,6 +362,8 @@ const verifyHint = createVerifier({ keys, issuer: "https://issuer.example", audi
 
 With `issuer` set, `iss` must equal one of the given values exactly, character for character: `https://issuer.example` and `https://issuer.example/` are different issuers. A missing `iss` is `missing_claim` with `{ claim: "iss" }`, and a different one is `wrong_issuer`.
 
+A key bound to an issuer by its key set's `issuer` option adds a second check: `iss` must also equal that key's issuer, with the same issues, reported once even when both checks fail. It applies with or without the verifier's `issuer` option. Use it whenever one verifier holds the keys of several issuers, so that one issuer's key cannot verify a token claiming another; [Key sets](docs/key-sets.md#keys-of-several-issuers) shows how.
+
 ### Audience
 
 `aud` names who a token is for. It may be one string or an array of strings. With `audience` set, the token passes when any value in its `aud` equals any value in `audience`:
@@ -454,7 +457,7 @@ The payload, key and header are your own data, not input from outside, so a mist
 
 ## The payload is signed as given
 
-`sign` adds no claim. It does not set `iat`, `exp` or `jti`, and does not check that `exp` is in the future. Every claim the token should carry is one you write, which keeps what a token says visible at the call that signs it. Write times as whole seconds since the Unix epoch, `Math.floor(Date.now() / 1000)`, since that is what verifiers, this one included, read them as.
+`sign` adds no claim. It does not set `iat`, `exp` or `jti`, and does not check that `exp` is in the future. Every claim the token should carry is one you write, which keeps what a token says visible at the call that signs it. Write times as whole seconds since the Unix epoch, `Math.floor(Date.now() / 1000)`, since that is what verifiers, this one included, read them as. An `exp`, `nbf` or `iat` past 253402300799, the last second of year 9999, throws: it is almost certainly `Date.now()` in milliseconds, which would sign a token that expires in some 55,000 years.
 
 The payload must be a plain object whose values JSON represents exactly: strings, finite numbers, booleans, `null`, arrays and plain objects, nested at most 32 levels deep. `undefined`, functions, symbols, bigints, `NaN`, `Infinity` and `-0`, `Date`s and other class instances, getters, sparse arrays and cycles all throw. `JSON.stringify` would drop or rewrite most of these silently, so the token would not say what your code meant. A `Date` in `exp` is the classic: it would sign as a string, and every verifier would then refuse a token whose expiry is not a number.
 
@@ -613,7 +616,7 @@ Both keys of a pair carry the same `alg` and `kid`. `modulusLength` is 2048, 307
 
 Generated private and secret keys are not extractable unless you pass `extractable: true`. Keep that default for keys that live only as long as the process; set it when you need to store the key, as shown under [Exporting keys](#exporting-keys).
 
-On Linux builds of WebKit, such as WebKitGTK and WPE browsers and Playwright's Linux WebKit, generating an `EdDSA` or `Ed25519` pair rejects with Web Crypto's `OperationError` in about 1 call in 128, because of a WebKit bug fixed upstream that releases may not include yet. Each call fails independently, so retry `generateKeyPair` on `OperationError` a bounded number of times: three failures in a row happen about once in two million calls. Importing, signing, verifying and exporting Ed25519 keys are not affected: in a run of 50,000 generations on Playwright's Linux WebKit, only generation failed, and every key it did generate exported, imported, signed and verified.
+On Linux builds of WebKit, such as WebKitGTK and WPE browsers and Playwright's Linux WebKit, generating an `EdDSA` or `Ed25519` pair rejects with Web Crypto's `OperationError` in about 1 call in 128, because of a WebKit bug fixed upstream that releases may not include yet. Each call fails independently, so `generateKeyPair` retries that error up to three times for these two algorithms: it rejects with `OperationError` only after four failures in a row, about once in 270 million calls. Importing, signing, verifying and exporting Ed25519 keys are not affected: in a run of 50,000 generations on Playwright's Linux WebKit, only generation failed, and every key it did generate exported, imported, signed and verified.
 
 If you are choosing an algorithm for tokens you issue, `ES256` and `Ed25519` give small keys and signatures and are fast. `RS256` is the one every JWT library supports. `EdDSA` exists for issuers that already publish it.
 
@@ -855,6 +858,18 @@ Two usable keys with the same `kid` and `alg` do not fail the import; selecting 
 
 The imported set's `keys` lists one key per JWK and algorithm it was bound to, in the JWKS's order, so an RSA JWK without `alg` appears six times.
 
+## Keys of several issuers
+
+A verifier's `issuer` option says which issuers it accepts, but not which issuer each key speaks for. When one verifier holds the keys of several issuers, such as one per tenant, any of those keys would verify a token claiming any accepted `iss`: tenant A's key, or anyone who holds it, could sign a token that says it comes from tenant B. Give each issuer's key set the `issuer` option, which `createKeySet`, `importKeySet` and `createRemoteKeySet` all take:
+
+```ts
+const tenantA = createRemoteKeySet({ url: "https://a.issuer.example/jwks.json", issuer: "https://a.issuer.example" });
+```
+
+Each key the set hands out is then bound to that issuer, and its `issuer` member says so. A verifier that selects a bound key requires the token's `iss` to equal it, whatever its own `issuer` option allows: a missing `iss` is `missing_claim` with `{ claim: "iss" }`, and a different one is `wrong_issuer`. The binding travels with the key, so it holds in a key set built from other key sets, as in [your own key set](#your-own-key-set).
+
+`createKeySet` binds copies of the keys you give it and leaves the originals unbound; a copy works wherever the original does. A key already bound to the same issuer is kept as it is, and one bound to another issuer throws a `TypeError`, since a key cannot speak for two issuers.
+
 ## A remote key set
 
 `createRemoteKeySet` fetches an issuer's JWKS from a URL, imports it as `importKeySet` does, and caches it:
@@ -891,6 +906,7 @@ Durations are in seconds. Every option is checked when the key set is created, a
 | `url`              | required                       | An absolute `https:` URL, as a string or a `URL`, or `http:` on `localhost`, `127.0.0.0/8` or `[::1]` for local development. Anything else, and URLs with a user name or password, throw.         |
 | `fetch`            | `globalThis.fetch`             | The `fetch` to call, for runtimes or tests that supply their own. The global is looked up at each fetch.                                                                                          |
 | `algorithms`       | every asymmetric algorithm     | As for [`importKeySet`](#importing-a-jwks).                                                                                                                                                       |
+| `issuer`           | none                           | The issuer whose JWKS this is. Each key is bound to it, so a token it verifies must carry that `iss`. See [keys of several issuers](#keys-of-several-issuers).                                    |
 | `cacheTtl`         | `600`                          | How long a fetched JWKS is used before it is fetched again. An integer of at least 1.                                                                                                             |
 | `cooldown`         | `30`, or `cacheTtl` if smaller | Least time between the starts of two fetches caused by a failure or an unknown `kid`. An integer from 0 through `cacheTtl`.                                                                       |
 | `maxStale`         | `3600`                         | How long after `cacheTtl` ran out the last JWKS is still used while a new one is fetched, or while fetching it fails. An integer of at least 0; 0 never uses an expired JWKS.                     |
@@ -950,8 +966,8 @@ The issue holds nothing from the response. `select` never throws and never rejec
 import { createRemoteKeySet, type KeySet } from "@codenhub/jwt";
 
 const tenants = new Map<string, KeySet>([
-  ["a", createRemoteKeySet({ url: "https://a.issuer.example/jwks.json" })],
-  ["b", createRemoteKeySet({ url: "https://b.issuer.example/jwks.json" })],
+  ["a", createRemoteKeySet({ url: "https://a.issuer.example/jwks.json", issuer: "https://a.issuer.example" })],
+  ["b", createRemoteKeySet({ url: "https://b.issuer.example/jwks.json", issuer: "https://b.issuer.example" })],
 ]);
 
 const keys: KeySet = {
@@ -961,6 +977,8 @@ const keys: KeySet = {
   },
 };
 ```
+
+Each tenant's set has its `issuer`, so tenant A's key verifies only tokens whose `iss` is tenant A's, whichever `kid` the token names. Without it, a token signed with tenant A's key and claiming tenant B's `iss` would pass, as the `kid` alone picks the key. A verifier's `issuer` option still says which issuers it accepts at all.
 
 A verifier treats a custom key set as code that may be wrong. If `select` throws, rejects, or returns anything other than a result holding a public or secret key this package created, the verifier fails with `key_fetch_failed` and `{ reason: "key_set_error" }` instead of throwing or using what it returned. A failed result is passed through as returned, so keep its issues free of token values as this package's own are.
 
@@ -1003,6 +1021,8 @@ An issue this package creates never holds a value taken from the input: no token
 
 Two kinds of issue come from your code, and hold only what it puts in them: an `invalid_claims` path is your schema's path, so a schema over a record can name a payload's own property names there, and a custom key set's failure issues are returned as it gave them. Keep both free of input values if you log them.
 
+Codes and `params.reason` values may gain members in a minor release, when a new check or failure needs its own name; existing ones keep their meaning. Treat an unknown code as a failure like any other, and give a `switch` over codes a `default` branch rather than relying on TypeScript's exhaustiveness check.
+
 There are no messages: a code is the whole answer. Map codes to text yourself if a person needs to read them, and prefer not to tell a client more than "invalid token" when the client may be an attacker.
 
 ## Codes
@@ -1038,7 +1058,7 @@ There are no messages: a code is the whole answer. Map codes to text yourself if
 | `not_yet_valid`    | `["payload", "nbf"]`         |              | Now plus the clock tolerance is before `nbf`.                                                                  |
 | `issued_in_future` | `["payload", "iat"]`         |              | `iat` is later than now plus the clock tolerance.                                                              |
 | `too_old`          | `["payload", "iat"]`         | `{ maxAge }` | More than `maxAge` plus the clock tolerance has passed since `iat`.                                            |
-| `wrong_issuer`     | `["payload", "iss"]`         |              | `iss` is none of the accepted issuers.                                                                         |
+| `wrong_issuer`     | `["payload", "iss"]`         |              | `iss` is none of the accepted issuers, or is not the issuer the selected key is bound to.                      |
 | `wrong_audience`   | `["payload", "aud"]`         |              | `aud` contains none of the accepted audiences, or the verifier names no `audience` and the token has an `aud`. |
 | `wrong_type`       | `["header", "typ"]`          |              | The `typ` header is missing or is not the required type.                                                       |
 | `missing_claim`    | `["payload", claim]`         | `{ claim }`  | A claim required by `requiredClaims`, `issuer`, `audience`, `maxAge` or `requireExpiration` is absent.         |
@@ -1090,6 +1110,7 @@ Three things propagate rather than becoming a result: an exception thrown by you
 - `jwkThumbprint` accepts a private key too, extractable or not, and gives the thumbprint of its public half, so a signer can name its key without keeping the public key around.
 - `tokenHash(value, alg)` computes the OpenID Connect `at_hash` and `c_hash` claims for every algorithm the package signs with, `EdDSA` included. [Signing tokens](docs/signing.md#token-hashes-in-id-tokens) shows it.
 - `JWS_ALGORITHMS`, `ASYMMETRIC_ALGORITHMS` and `SYMMETRIC_ALGORITHMS`, with the guards `isJwsAlgorithm`, `isAsymmetricAlgorithm` and `isSymmetricAlgorithm`, and `encodeBase64Url` and `decodeBase64Url`, so a caller no longer copies them. [Keys](docs/keys.md#algorithms) lists them.
+- An `issuer` option on `createKeySet`, `importKeySet` and `createRemoteKeySet` binds each key to the issuer whose key it is, and a verifier then requires that `iss` for a token the key verifies. Without it, a verifier holding several issuers' keys accepted a token signed with one issuer's key that claimed another's `iss`. Give it to every key set when one verifier serves several tenants; [Key sets](docs/key-sets.md#keys-of-several-issuers) shows how. A key's new `issuer` member says what it is bound to, and `CreateKeySetOptions` is exported.
 - `createKeySet` and `importKeySet` return a `LocalKeySet`, whose `keys` lists the set's keys, so an issuer can publish its JWKS from the set it verifies with.
 - `createVerifier` options: `allowExpired`, which accepts an expired token whose other checks pass, for an OpenID Connect `id_token_hint`; `audience: false` and `requireExpiration: false`, which waive the new defaults below; and `type` as an array, where `null` accepts a token without `typ`. [Verifying tokens](docs/verifying.md) covers them.
 - `createRemoteKeySet` options: `seed`, to start from a JWKS saved earlier instead of fetching on the first token; `onFetch` and `onFetchError`, to save each fetched JWKS and log failures; and `waitUntil`, which on Cloudflare Workers keeps a fetch running after the request that started it has responded. [Key sets](docs/key-sets.md#persisting-the-cache) shows a cache saved between requests.
@@ -1112,6 +1133,9 @@ Three things propagate rather than becoming a result: an exception thrown by you
 - **Breaking.** `importSecretKey` takes `Uint8Array | object`, so passing a string is a compile error. At run time a string still returns `invalid_key`. Encode the secret to bytes first, such as with `new TextEncoder().encode(secret)` when it is text.
 - **Breaking.** `sign` rejects `-0`, which JSON writes as `0`; an array whose prototype is not `Array.prototype`; and a value with a `toJSON` method anywhere on its prototype chain, a polluted `Object.prototype` or `Array.prototype` included. Each would have signed a different value than the one given. Pass plain data.
 - **Breaking.** A custom key set's failure is passed through only when every issue is an object with a string `code` of its own; a list with a hole, or an issue without such a `code`, gives `key_fetch_failed` with `{ reason: "key_set_error" }`, as other key set mistakes already did. Return issues built as `{ code: "unknown_kid" }`.
+- **Breaking.** `sign` throws a `TypeError` for an `exp`, `nbf` or `iat` above 253402300799, the last second of year 9999, which is almost always `Date.now()` in milliseconds and signed a token valid for some 55,000 years. Write seconds: `Math.floor(Date.now() / 1000)`. Verifiers still accept such values from other issuers.
+- `generateKeyPair` retries an `EdDSA` or `Ed25519` generation that Web Crypto rejects with `OperationError`, up to three times. Linux builds of WebKit fail about 1 in 128 such generations at random; drop any retry of your own.
+- Issue codes and `params.reason` values may gain members in a minor release, and an existing one never changes meaning. Give a `switch` over codes a default branch.
 - `typ` compares ASCII letters without regard to case, and drops a leading `application/` only when no other `/` follows, as RFC 7515 §4.1.9 says. 0.0.1 used `toLowerCase`, which also folded some letters beyond ASCII, such as the Kelvin sign (U+212A) to `k`, and dropped `application/` from values such as `application/a/b`. A `typ` spelled that way no longer matches.
 
 ## Fixed

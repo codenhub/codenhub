@@ -274,3 +274,53 @@ describe("importKeySet", () => {
     await expect(importKeySet({ keys: [] }, options as never)).rejects.toThrow(TypeError);
   });
 });
+
+describe("key sets bound to an issuer", () => {
+  const ISSUER = "https://issuer.example";
+
+  it("should bind copies of the keys given to createKeySet, leaving the originals alone", async () => {
+    const keys = createKeySet([ecA, secretA], { issuer: ISSUER });
+    expect(keys.keys.map((key) => [key.kind, key.kid, key.issuer])).toEqual([
+      ["public", "a", ISSUER],
+      ["secret", "a", ISSUER],
+    ]);
+    expect([ecA.issuer, secretA.issuer, Object.isFrozen(keys.keys[0])]).toEqual([undefined, undefined, true]);
+  });
+
+  it("should give bound copies that work wherever the original does", async () => {
+    const [bound] = createKeySet([ecA], { issuer: ISSUER }).keys as [PublicKey];
+    expect(await exportPublicJwk(bound)).toEqual(await exportPublicJwk(ecA));
+    expect(createKeySet([bound]).keys[0]).toBe(bound);
+  });
+
+  it("should keep a key already bound to the same issuer", () => {
+    const [bound] = createKeySet([ecA], { issuer: ISSUER }).keys;
+    expect(createKeySet([bound as PublicKey], { issuer: ISSUER }).keys[0]).toBe(bound);
+  });
+
+  it("should throw for a key bound to another issuer", () => {
+    const [bound] = createKeySet([ecA], { issuer: ISSUER }).keys;
+    expect(() => createKeySet([bound as PublicKey], { issuer: "https://other.example" })).toThrow(
+      new TypeError("createKeySet: a key is already bound to another issuer."),
+    );
+  });
+
+  it.each([[""], [1], [null]])("should throw for issuer %j", (issuer) => {
+    expect(() => createKeySet([ecA], { issuer } as never)).toThrow(
+      new TypeError("createKeySet: options.issuer must be a non-empty string."),
+    );
+    return expect(importKeySet({ keys: [] }, { issuer } as never)).rejects.toThrow(
+      new TypeError("importKeySet: options.issuer must be a non-empty string."),
+    );
+  });
+
+  it("should throw for an unknown createKeySet option or options that are not an object", () => {
+    expect(() => createKeySet([ecA], { issuers: ISSUER } as never)).toThrow(TypeError);
+    expect(() => createKeySet([ecA], null as never)).toThrow(new TypeError("createKeySet: options must be an object."));
+  });
+
+  it("should bind every key importKeySet imports", async () => {
+    const result = await importKeySet({ keys: [{ ...EC_P256_PUBLIC_JWK, kid: "ec" }] }, { issuer: ISSUER });
+    expect(valueOf(result).keys.map((key) => [key.alg, key.issuer])).toEqual([["ES256", ISSUER]]);
+  });
+});

@@ -96,6 +96,8 @@ const verifyHint = createVerifier({ keys, issuer: "https://issuer.example", audi
 
 With `issuer` set, `iss` must equal one of the given values exactly, character for character: `https://issuer.example` and `https://issuer.example/` are different issuers. A missing `iss` is `missing_claim` with `{ claim: "iss" }`, and a different one is `wrong_issuer`.
 
+A key bound to an issuer by its key set's `issuer` option adds a second check: `iss` must also equal that key's issuer, with the same issues, reported once even when both checks fail. It applies with or without the verifier's `issuer` option. Use it whenever one verifier holds the keys of several issuers, so that one issuer's key cannot verify a token claiming another; [Key sets](key-sets.md#keys-of-several-issuers) shows how.
+
 ### Audience
 
 `aud` names who a token is for. It may be one string or an array of strings. With `audience` set, the token passes when any value in its `aud` equals any value in `audience`:

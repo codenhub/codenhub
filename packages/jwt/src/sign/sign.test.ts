@@ -287,6 +287,17 @@ describe("sign TypeError", () => {
     );
   });
 
+  // `Date.now()` in place of seconds is the usual mistake, and it signs a token that never expires.
+  it.each(["exp", "nbf", "iat"])("should throw when %s is in milliseconds", async (name) => {
+    await expect(sign({ payload: { [name]: Date.now() + 300_000 }, key: secretKey })).rejects.toThrow(
+      `sign: input.payload.${name} must be seconds since the Unix epoch, at most 253402300799; it looks like milliseconds.`,
+    );
+  });
+
+  it.each(["exp", "nbf", "iat"])("should accept %s at the last second of year 9999", async (name) => {
+    await expect(sign({ payload: { [name]: 253_402_300_799 }, key: secretKey })).resolves.toMatch(/\./);
+  });
+
   it.each(["iss", "sub", "jti"])("should throw when %s is not a string", async (name) => {
     await expect(sign({ payload: { [name]: 1 }, key: secretKey })).rejects.toThrow(
       `sign: input.payload.${name} must be a string.`,
