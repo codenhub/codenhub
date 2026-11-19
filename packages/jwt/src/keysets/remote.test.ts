@@ -847,6 +847,42 @@ describe("createRemoteKeySet missing kid", () => {
       2,
     ]);
   });
+  it("should refetch for a kid the cache lacks when several unnamed keys make the selection ambiguous", async () => {
+    const clock = createClock();
+    const unnamed = { ...EC_P256_PUBLIC_JWK, alg: "ES256" };
+    const fetch = fetchSequence(
+      () => jwksResponse(unnamed, unnamed),
+      () => jwksResponse({ ...EC_P256_PUBLIC_JWK, kid: "rotated", alg: "ES256" }),
+    );
+    const keys = createSet({ fetch, now: clock.now, cooldown: 30 });
+    await keys.select({ alg: "ES256", kid: "ec" });
+    clock.set(31);
+    expect(describeSelection(await keys.select({ alg: "ES256", kid: "rotated" }))).toEqual({
+      alg: "ES256",
+      kid: "rotated",
+    });
+  });
+
+  it("should not refetch inside the cooldown when a joined fetch misses its deadline and the cache is usable", async () => {
+    const clock = createClock();
+    const fetch = fetchSequence(
+      () => jwksResponse(EC_JWK),
+      () => new Promise<Response>(() => undefined),
+      () => jwksResponse(EC_JWK),
+    );
+    const keys = createSet({ fetch, now: clock.now, cacheTtl: 600, cooldown: 30, timeout: 5 });
+    await keys.select(EC_HEADER);
+    vi.useFakeTimers();
+    clock.set(600);
+    await keys.select(EC_HEADER);
+    clock.set(602);
+    const pending = keys.select({ alg: "ES256", kid: "invented" });
+    clock.set(606);
+    await vi.advanceTimersByTimeAsync(4000);
+    const result = await pending;
+    expect([result.ok, fetch.mock.calls.length]).toEqual([false, 2]);
+  });
+
   it("should keep the unnamed key when the refetch for a missing kid fails", async () => {
     const clock = createClock();
     const fetch = fetchSequence(

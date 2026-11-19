@@ -52,24 +52,17 @@ function single(candidates: readonly VerificationKey[], whenNone: JwtResult<neve
   return candidates.length === 1 ? ok(candidates[0] as VerificationKey) : AMBIGUOUS_KEY;
 }
 
-/** Whether a selection failed only because no key carries the header's `kid`, which a refetch may fix. */
-export function isUnknownKid(result: JwtResult<VerificationKey>): boolean {
-  return !result.ok && result.error.issues[0].code === "unknown_kid";
-}
-
 /**
- * Whether no key carries the header's `kid`, so a refetch may bring it: the selection failed with
- * `unknown_kid`, or a key without a `kid` stood in for it.
+ * Whether the header names a `kid` that no key in `keys` carries, so a refetch may bring it, whatever
+ * the selection gave: `unknown_kid`, a key without a `kid` standing in, or several such keys.
  */
-export function lacksKid(result: JwtResult<VerificationKey>, header: JwtHeader): boolean {
-  if (isUnknownKid(result)) {
-    return true;
-  }
-  if (!result.ok || result.value.kid !== undefined) {
+export function lacksKid(keys: readonly VerificationKey[], header: JwtHeader): boolean {
+  if (typeof header !== "object" || header === null) {
     return false;
   }
   try {
-    return typeof header.kid === "string";
+    const { kid } = header;
+    return kid !== undefined && !keys.some((key) => key.kid === kid);
   } catch {
     return false;
   }

@@ -175,7 +175,8 @@ interface CachedKeys {
  * - **One fetch at a time.** A `select` that needs keys the cache cannot give while a fetch is running
  *   waits for that fetch, at most until a second past its `timeout`; concurrent callers never start a
  *   second one. A fetch that misses that deadline, or rejects because a Workers runtime cancelled it with
- *   the request that started it, is fetched again by the waiting `select`. Such a fetch also stops
+ *   the request that started it, is fetched again by the waiting `select`, unless the cooldown is running
+ *   and the cache is still usable, which then answers. Such a fetch also stops
  *   holding back a new one once it is past the deadline and the cooldown. `waitUntil` keeps fetches
  *   running past their request.
  * - **Unknown `kid`.** When a token's `kid` is not in the cached JWKS, the JWKS is fetched again once,
@@ -324,6 +325,10 @@ export function createRemoteKeySet(options: RemoteKeySetOptions): KeySet {
         clearTimeout(timer);
       }
     }
+    // Inside the cooldown, a usable cache answers rather than a fetch that invented kids could repeat.
+    if (isCoolingDown() && isCachedWithin(config.cacheTtlMs + config.maxStaleMs)) {
+      return usableKeys();
+    }
     if (inFlight === running) {
       inFlight = undefined;
     }
@@ -362,7 +367,7 @@ export function createRemoteKeySet(options: RemoteKeySetOptions): KeySet {
       // neither does a missing kid while a fetch past its deadline holds the cooldown.
       if (cached !== undefined && isCachedWithin(usableWithin)) {
         const selected = selectKey(cached.keys, header);
-        if (!lacksKid(selected, header) || !hasLiveFetch()) {
+        if (!lacksKid(cached.keys, header) || !hasLiveFetch()) {
           return selected;
         }
       }
@@ -382,7 +387,7 @@ export function createRemoteKeySet(options: RemoteKeySetOptions): KeySet {
       return keys;
     }
     const selected = selectKey(keys.value, header);
-    if (!lacksKid(selected, header) || hasFetched || (isCoolingDown() && !hasLiveFetch())) {
+    if (!lacksKid(keys.value, header) || hasFetched || (isCoolingDown() && !hasLiveFetch())) {
       return selected;
     }
     const refetched = await awaitFetch();
