@@ -263,3 +263,21 @@ describe("discover", () => {
     expect((error as Error).message).not.toContain("99");
   });
 });
+
+describe("discover: tenantIssuer", () => {
+  it("accepts the {tenantid} template a multi-tenant endpoint publishes", async () => {
+    const requested = "https://login.microsoftonline.com/organizations/v2.0";
+    const template = "https://login.microsoftonline.com/{tenantid}/v2.0";
+    const stub = stubFetch(() => jsonResponse({ ...validDocument(requested), issuer: template }));
+
+    const accepted = await discover(requested, { fetch: stub, tenantIssuer: true });
+    const refused = await discover(requested, { fetch: stub });
+
+    expect(accepted.ok && accepted.value.issuer).toBe(template);
+    expect(issuesOf(refused)).toEqual([{ code: "issuer_mismatch", path: ["metadata", "issuer"] }]);
+  });
+
+  it("throws TypeError for a tenantIssuer that is not a boolean", async () => {
+    await expect(discover(ISSUER, { tenantIssuer: "yes" as unknown as boolean })).rejects.toThrow("tenantIssuer");
+  });
+});

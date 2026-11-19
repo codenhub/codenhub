@@ -22,7 +22,21 @@ export type ClientAuth =
       readonly method: "private_key_jwt";
       readonly key: PrivateKey;
       readonly audience?: AssertionAudience;
+      /** Certificate thumbprints to put in the assertion's header, for a provider that finds the key by them. */
+      readonly header?: AssertionHeader;
     };
+
+/**
+ * Header parameters a `private_key_jwt` assertion may carry beyond `alg` and the key's `kid`: the thumbprint of
+ * the certificate the provider registered for the key (RFC 7515 §4.1.7 and §4.1.8), as the Microsoft identity
+ * platform asks for a certificate credential. Each is base64url without padding, of the digest's bytes, not hex.
+ */
+export interface AssertionHeader {
+  /** The certificate's SHA-1 thumbprint: 27 base64url characters. */
+  readonly x5t?: string;
+  /** The certificate's SHA-256 thumbprint: 43 base64url characters. */
+  readonly "x5t#S256"?: string;
+}
 
 /**
  * What a client assertion names as its `aud`.
@@ -51,7 +65,22 @@ export interface DiscoverOptions {
    * @defaultValue 5
    */
   readonly timeout?: number;
+  /**
+   * Accepts a document whose `issuer` is a template holding the literal `{tenantid}` where the requested issuer has
+   * one path segment, as the Microsoft identity platform's multi-tenant `common` and `organizations` documents do.
+   * Without it, `issuer` must equal the requested issuer exactly. A client made from such metadata needs
+   * {@link ClientOptions.tenantIssuer}.
+   *
+   * @defaultValue false
+   */
+  readonly tenantIssuer?: boolean;
 }
+
+/**
+ * Which tenants a client made from a `{tenantid}` issuer template accepts: `true` for any, or the `tid` values of
+ * the tenants allowed to sign in.
+ */
+export type TenantIssuer = true | { readonly tenants: readonly string[] };
 
 /** How {@link createClient} talks to one provider. Invalid options throw `TypeError` at creation. */
 export interface ClientOptions {
@@ -110,6 +139,72 @@ export interface ClientOptions {
    * @defaultValue `Date.now`
    */
   readonly now?: () => number;
+  /**
+   * Whether the provider speaks OpenID Connect. `false` makes a plain OAuth 2.0 client; see {@link OAuthClientOptions}.
+   *
+   * @defaultValue true
+   */
+  readonly openid?: true;
+  /**
+   * Accepts the `{tenantid}` issuer template of a multi-tenant provider, such as the Microsoft identity platform's
+   * `common` endpoint, which {@link DiscoverOptions.tenantIssuer} lets `discover` return. Each token's `iss` must
+   * then equal the template with `{tenantid}` replaced by the token's own `tid` claim, a non-empty string of ASCII
+   * letters, digits and `-`. `{ tenants }` also limits `tid` to the listed tenants. Required for such metadata,
+   * and refused for any other. A client assertion then needs `auth.audience: "token_endpoint"`, since the template
+   * names no one provider.
+   *
+   * @defaultValue none: the issuer matches exactly
+   */
+  readonly tenantIssuer?: TenantIssuer;
+}
+
+/**
+ * Metadata for a plain OAuth 2.0 provider (RFC 8414 §2), such as GitHub, which publishes no discovery document and
+ * issues no ID tokens. Usually written by hand.
+ */
+export interface OAuthMetadata {
+  /**
+   * The provider's issuer identifier: an `https` URL without query or fragment. For a provider that names none,
+   * use the URL it is known by, such as `https://github.com`. An `iss` callback parameter (RFC 9207) must equal
+   * it, and a client assertion names it as its audience unless `auth.audience` says otherwise.
+   */
+  readonly issuer: string;
+  readonly authorization_endpoint: string;
+  readonly token_endpoint: string;
+  /** The endpoint {@link OAuthClient.userinfo} reads, such as GitHub's `https://api.github.com/user`. */
+  readonly userinfo_endpoint?: string;
+  readonly revocation_endpoint?: string;
+  readonly end_session_endpoint?: string;
+  /** When present, must include `code`. */
+  readonly response_types_supported?: readonly string[];
+  readonly response_modes_supported?: readonly string[];
+  readonly grant_types_supported?: readonly string[];
+  readonly scopes_supported?: readonly string[];
+  readonly token_endpoint_auth_methods_supported?: readonly string[];
+  readonly token_endpoint_auth_signing_alg_values_supported?: readonly string[];
+  readonly revocation_endpoint_auth_methods_supported?: readonly string[];
+  readonly revocation_endpoint_auth_signing_alg_values_supported?: readonly string[];
+  /** When present, must include `S256`. */
+  readonly code_challenge_methods_supported?: readonly string[];
+  readonly authorization_response_iss_parameter_supported?: boolean;
+  /** Any other metadata member, unused by this package. */
+  readonly [member: string]: unknown;
+}
+
+/**
+ * How {@link createClient} talks to a plain OAuth 2.0 provider, such as GitHub: the code flow with PKCE, and no ID
+ * token. No `nonce` is sent, `openid` is neither required nor added, an `id_token` in a token response is ignored,
+ * and userinfo returns the endpoint's JSON object as it is. Nothing identifies the user but what the app reads with
+ * the access token.
+ */
+export interface OAuthClientOptions extends Omit<
+  ClientOptions,
+  "metadata" | "openid" | "backchannelLogout" | "tenantIssuer"
+> {
+  /** Must be `false`. */
+  readonly openid: false;
+  /** The provider's metadata. Checked as strictly as OpenID metadata, except for the OpenID-only members. */
+  readonly metadata: OAuthMetadata;
 }
 
 /** What to ask for in one authorization request. */
@@ -137,6 +232,52 @@ export interface AuthorizeOptions {
    * {@link RefreshOptions.resource}, but never widen them.
    */
   readonly resource?: readonly string[];
+  /** Authentication context classes to ask for, most preferred first (`acr_values`). Each has no spaces. */
+  readonly acrValues?: readonly string[];
+  /** How the provider shows its pages. */
+  readonly display?: "page" | "popup" | "touch" | "wap";
+  /**
+   * An ID token the provider issued this client earlier, as a hint about who is signing in (`id_token_hint`). It has
+   * no length cap of its own, only the 8192-character limit of the URL.
+   */
+  readonly idTokenHint?: string;
+  /** Preferred languages for the claims the provider returns, as BCP 47 tags (`claims_locales`). */
+  readonly claimsLocales?: readonly string[];
+  /**
+   * Individual claims to request (OpenID Connect Core §5.5), as a plain JSON object, sent JSON-encoded as `claims`.
+   * At most 4096 characters once encoded.
+   */
+  readonly claims?: Readonly<Record<string, unknown>>;
+  /**
+   * How the provider returns the response (OAuth 2.0 Multiple Response Type Encoding Practices and Form Post
+   * Response Mode). `form_post` makes the browser `POST` it to the redirect URI, as Sign in with Apple requires
+   * for the `name` and `email` scopes; pass that request to {@link Client.callback}.
+   *
+   * @defaultValue `"query"`, which sends no `response_mode`
+   */
+  readonly responseMode?: ResponseMode;
+  /**
+   * Other parameters to send, for a provider-specific option such as Google's `access_type` and `hd` or the
+   * Microsoft identity platform's `domain_hint`. Each name and value is a non-empty string of well-formed Unicode
+   * of at most 4096 characters. A name the client sets itself, or one an option above covers, throws `TypeError`.
+   */
+  readonly extraParameters?: Readonly<Record<string, string>>;
+}
+
+/** Where the provider puts the authorization response: the redirect URI's query, or a form it posts there. */
+export type ResponseMode = "query" | "form_post";
+
+/** What to ask for in one authorization request to a plain OAuth 2.0 provider. */
+export interface OAuthAuthorizeOptions extends Omit<
+  AuthorizeOptions,
+  "scope" | "maxAge" | "idTokenHint" | "acrValues" | "claims" | "claimsLocales"
+> {
+  /**
+   * Scopes to request, any scope tokens the provider defines. `openid` is neither required nor added.
+   *
+   * @defaultValue none sent: the provider's default
+   */
+  readonly scope?: readonly string[];
 }
 
 /**
@@ -146,13 +287,22 @@ export interface AuthorizeOptions {
  */
 export interface PendingAuthorization {
   readonly state: string;
-  readonly nonce: string;
+  /** The nonce the ID token must carry. Absent for a client created with `openid: false`. */
+  readonly nonce?: string;
   readonly codeVerifier: string;
   /** The `max_age` that was requested, in seconds, when one was. */
   readonly maxAge?: number;
   /** When the request was made, in seconds since the Unix epoch. Present exactly when `maxAge` is. */
   readonly requestedAt?: number;
+  /** `form_post` when the response was asked for as a form post. Absent for the `query` default. */
+  readonly responseMode?: "form_post";
 }
+
+/**
+ * What {@link Client.callback} reads the authorization response from: the URL the provider redirected the browser
+ * to, as a string or a `URL`, or the incoming request itself. A `form_post` response is only in a request's body.
+ */
+export type CallbackInput = string | URL | Request;
 
 /** A started authorization: where to send the user, and what to keep for the callback. */
 export interface AuthorizationStart {
@@ -184,6 +334,20 @@ export interface SignIn {
   readonly claims: IdTokenClaims;
   /** The tokens, with `idToken` always present. */
   readonly tokens: TokenSet & { readonly idToken: string };
+  /**
+   * The authorization response's parameters the client did not read, such as Sign in with Apple's `user` or the
+   * Microsoft identity platform's `session_state`. The provider's browser redirect carried them, so nothing
+   * vouches for them: treat each as the user's own input.
+   */
+  readonly parameters: Readonly<Record<string, string>>;
+}
+
+/** A completed sign-in with a plain OAuth 2.0 provider: tokens, and no claims. Frozen. */
+export interface OAuthSignIn {
+  /** The tokens. An `id_token` in the response is ignored, so `idToken` is never present. */
+  readonly tokens: TokenSet;
+  /** As {@link SignIn.parameters}. */
+  readonly parameters: Readonly<Record<string, string>>;
 }
 
 /** A completed refresh. Frozen. */
@@ -193,6 +357,9 @@ export interface Refreshed {
   readonly claims?: IdTokenClaims;
 }
 
+/** The claims of the ID token a refresh continues, which a new ID token must agree with. */
+export type PreviousIdToken = Pick<IdTokenClaims, "iss" | "sub" | "aud" | "azp" | "auth_time" | "nonce">;
+
 /** What to refresh. */
 export interface RefreshOptions {
   /**
@@ -200,8 +367,13 @@ export interface RefreshOptions {
    * and the app keeps using it (RFC 6749 §6), so only a new `tokens.refreshToken` replaces it.
    */
   readonly refreshToken: string;
-  /** The `sub` of the original ID token. When the provider sends a new ID token, its `sub` must equal it. */
-  readonly subject: string;
+  /**
+   * The claims of the sign-in's ID token, `signIn.claims`, or of a later refresh's. When the provider sends a new ID
+   * token, it must agree with them as OpenID Connect Core §12.2 requires: the same `iss`, `sub` and `aud`, the same
+   * `azp` or none when they had none, the same `auth_time` when both carry one, and the same `nonce` when it
+   * carries one.
+   */
+  readonly previous: PreviousIdToken;
   /** A narrower set of scopes to request. Must be within the original grant. */
   readonly scope?: readonly string[];
   /**
@@ -210,6 +382,15 @@ export interface RefreshOptions {
    * token for every resource of the sign-in that the client's registration still lists.
    */
   readonly resource?: readonly string[];
+}
+
+/** What to refresh with a plain OAuth 2.0 provider. There is no ID token to continue. */
+export type OAuthRefreshOptions = Omit<RefreshOptions, "previous">;
+
+/** A completed refresh with a plain OAuth 2.0 provider. Frozen. */
+export interface OAuthRefreshed {
+  /** The tokens. An `id_token` in the response is ignored, so `idToken` is never present. */
+  readonly tokens: TokenSet;
 }
 
 /** What {@link Client.clientCredentials} asks for. */
@@ -283,6 +464,9 @@ export interface UserinfoOptions {
   readonly subject: string;
 }
 
+/** What to ask a plain OAuth 2.0 provider's user endpoint. There is no ID token whose `sub` to compare. */
+export type OAuthUserinfoOptions = Omit<UserinfoOptions, "subject">;
+
 /**
  * A relying party for one provider and one registered client. It holds no per-user state: everything a
  * sign-in needs between redirect and callback is in the {@link PendingAuthorization} the app keeps.
@@ -297,12 +481,22 @@ export interface Client {
    */
   authorize(options?: AuthorizeOptions): Promise<AuthorizationStart>;
   /**
-   * Finishes a sign-in from the URL the provider redirected the browser to: checks `state` and `iss`,
-   * exchanges the code, and validates the ID token.
+   * Finishes a sign-in from the provider's authorization response: checks `state` and `iss`, exchanges the code,
+   * and validates the ID token.
    *
-   * @returns The validated claims and tokens, or every issue found. Never throws for any URL or response.
+   * @remarks
+   * `input` is the URL the browser was redirected to, or the incoming request. A `GET` request is read by its URL.
+   * A `POST` is a `form_post` response, read from its body, which must be `application/x-www-form-urlencoded` UTF-8
+   * of at most 16384 bytes, under the same parameter rules as a query. A `pending` made with `responseMode:
+   * "form_post"` is completed only from such a `POST`, and any other only from a URL or a `GET`; otherwise the result
+   * is `invalid_callback`.
+   *
+   * @returns The validated claims and tokens, and the response's other parameters, or every issue found. Never
+   * throws for any URL, request or response.
+   * @throws {TypeError} When `input` is not a string, a `URL` or a `Request`, the URL is relative, `pending` is
+   * malformed, or the request's body was already read.
    */
-  callback(url: string | URL, pending: PendingAuthorization): Promise<OidcResult<SignIn>>;
+  callback(input: CallbackInput, pending: PendingAuthorization): Promise<OidcResult<SignIn>>;
   /**
    * Exchanges a refresh token for new tokens. The provider may rotate refresh tokens: when `tokens.refreshToken`
    * is present, store it in place of the old one. When it is absent, keep the old refresh token, which stays
@@ -314,7 +508,8 @@ export interface Client {
    * user in again.
    *
    * @returns The new tokens, or every issue found. Never throws for any response.
-   * @throws {TypeError} When `options` is invalid, such as an empty `refreshToken`, a scope list that is not
+   * @throws {TypeError} When `options` is invalid, such as an empty `refreshToken`, a `previous` without the
+   * `iss`, `sub` and `aud` of an ID token, a scope list that is not
    * a non-empty array of scope tokens, or a `resource` that is not a non-empty array of at most 20 absolute URIs
    * without a fragment. The message names the option and never its value.
    */
@@ -323,6 +518,11 @@ export interface Client {
    * Fetches the user's claims from the userinfo endpoint. The access token must be granted `openid`, so one from
    * {@link Client.clientCredentials}, which has no user, gets an issue instead: this package's provider answers
    * it with `403 insufficient_scope`.
+   *
+   * A response signed as a JWT (`application/jwt`, OpenID Connect Core §5.3.2) is verified with the ID token's key
+   * set and algorithms. Its `iss` and `aud`, when present, must be the issuer and include this client, and its
+   * `sub` is checked as a JSON response's is. An encrypted (JWE) response is `invalid_userinfo` with
+   * `params.reason` of `encrypted`, since this package decrypts nothing.
    *
    * @returns The claims, or every issue found. Never throws for any response; it rejects only for the caller
    * errors listed below.
@@ -402,4 +602,50 @@ export interface Client {
    * middleware that parsed the form first.
    */
   readBackchannelLogout(request: Request): Promise<OidcResult<BackchannelLogout>>;
+}
+
+/**
+ * A client for a plain OAuth 2.0 provider, from {@link createClient} with `openid: false`. It signs users in with
+ * the code flow and PKCE, as {@link Client} does, but there is no ID token, so nothing it returns says who the user
+ * is: read that with the access token, such as through {@link OAuthClient.userinfo}.
+ */
+export interface OAuthClient {
+  /** The provider metadata the client was created with. */
+  readonly metadata: OAuthMetadata;
+  /**
+   * Starts an authorization code flow with PKCE `S256` and a fresh `state`. No `nonce` is sent.
+   *
+   * @throws {TypeError} When `options` are invalid.
+   */
+  authorize(options?: OAuthAuthorizeOptions): Promise<AuthorizationStart>;
+  /**
+   * Finishes a sign-in as {@link Client.callback} does, without an ID token: an `id_token` in the token response is
+   * ignored.
+   *
+   * @returns The tokens and the response's other parameters, or every issue found. Never throws for any URL,
+   * request or response.
+   * @throws {TypeError} As {@link Client.callback}.
+   */
+  callback(input: CallbackInput, pending: PendingAuthorization): Promise<OidcResult<OAuthSignIn>>;
+  /**
+   * Exchanges a refresh token for new tokens, as {@link Client.refresh} does, without an ID token.
+   *
+   * @returns The new tokens, or every issue found. Never throws for any response.
+   * @throws {TypeError} When `options` is invalid.
+   */
+  refresh(options: OAuthRefreshOptions): Promise<OidcResult<OAuthRefreshed>>;
+  /**
+   * Fetches the metadata's `userinfo_endpoint` with the access token as a `Bearer` credential and returns the JSON
+   * object it answers, as it is: nothing is compared, since there is no ID token.
+   *
+   * @returns The frozen object, or every issue found. Never throws for any response.
+   * @throws {TypeError} When the metadata has no userinfo_endpoint, or an option is invalid.
+   */
+  userinfo(options: OAuthUserinfoOptions): Promise<OidcResult<Readonly<Record<string, unknown>>>>;
+  /** As {@link Client.revoke}. */
+  revoke(options: RevokeOptions): Promise<OidcResult<void>>;
+  /** As {@link Client.clientCredentials}. */
+  clientCredentials(options?: ClientCredentialsOptions): Promise<OidcResult<TokenSet>>;
+  /** As {@link Client.endSessionUrl}. */
+  endSessionUrl(options?: EndSessionOptions): string;
 }

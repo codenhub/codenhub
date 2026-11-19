@@ -98,6 +98,12 @@ describe("buildAuthorization", () => {
     expect(new URL(url).searchParams.get("prompt")).toBe("none");
   });
 
+  it("sends prompt=create, which asks the provider for its sign-up page", async () => {
+    const { url } = await buildAuthorization(resolvedOptions(), { prompt: ["create"] });
+
+    expect(new URL(url).searchParams.get("prompt")).toBe("create");
+  });
+
   it("omits the prompt parameter when none was requested", async () => {
     const { url } = await buildAuthorization(resolvedOptions());
 
@@ -455,5 +461,209 @@ describe("buildAuthorization", () => {
     expect(error).toBeInstanceOf(TypeError);
     expect((error as Error).message).toContain("loginHint");
     expect((error as Error).message).not.toContain("ada@example.com");
+  });
+});
+
+describe("buildAuthorization: OpenID Connect request options", () => {
+  const paramsOf = async (request: AuthorizeOptions) =>
+    new URL((await buildAuthorization(resolvedOptions(), request)).url).searchParams;
+
+  it("sends acr_values, display, id_token_hint, claims_locales and claims", async () => {
+    const claims = { userinfo: { email: { essential: true } }, id_token: { auth_time: null } };
+    const params = await paramsOf({
+      acrValues: ["urn:mace:incommon:iap:silver", "phr"],
+      display: "popup",
+      idTokenHint: "hint.token.value",
+      claimsLocales: ["pt-BR", "en"],
+      claims,
+    });
+
+    expect(params.get("acr_values")).toBe("urn:mace:incommon:iap:silver phr");
+    expect(params.get("display")).toBe("popup");
+    expect(params.get("id_token_hint")).toBe("hint.token.value");
+    expect(params.get("claims_locales")).toBe("pt-BR en");
+    expect(JSON.parse(params.get("claims") ?? "")).toEqual(claims);
+  });
+
+  it("accepts an id_token_hint longer than one parameter, held only to the URL limit", async () => {
+    const params = await paramsOf({ idTokenHint: "h".repeat(5000) });
+
+    expect(params.get("id_token_hint")).toHaveLength(5000);
+    await expect(attempt({ idTokenHint: "h".repeat(MAX_URL_LENGTH) })).rejects.toThrow(TypeError);
+  });
+
+  it.each([
+    ["display that is not a listed value", { display: "fullscreen" }],
+    ["acrValues that is not an array", { acrValues: "phr" }],
+    ["acrValues with a space", { acrValues: ["a b"] }],
+    ["claimsLocales that is empty strings", { claimsLocales: [""] }],
+    ["claims that is an array", { claims: [] }],
+    ["claims with a function", { claims: { userinfo: () => 1 } }],
+    ["claims with a non-finite number", { claims: { n: Number.NaN } }],
+    ["claims with a class instance", { claims: { at: new Date(0) } }],
+    ["claims nested too deep", { claims: { a: { b: { c: { d: { e: { f: { g: { h: { i: 1 } } } } } } } } } }],
+    ["claims longer than a parameter once encoded", { claims: { long: "x".repeat(4096) } }],
+    ["idTokenHint that is not a string", { idTokenHint: 1 }],
+  ])("throws TypeError for %s", async (_name, request) => {
+    await expect(attempt(request)).rejects.toThrow(TypeError);
+  });
+
+  it("throws TypeError for a member that is not an option, naming an identifier-like one", async () => {
+    await expect(attempt({ login_hint: "user" })).rejects.toThrow("login_hint is not an option");
+    const refused = await refusalOf({ "secret value with spaces": 1 });
+    expect(refused).toBeInstanceOf(TypeError);
+    expect((refused as Error).message).not.toContain("secret value");
+  });
+});
+
+describe("buildAuthorization: extraParameters", () => {
+  it("sends each extra parameter after the client's own", async () => {
+    const { url } = await buildAuthorization(resolvedOptions(), {
+      extraParameters: { audience: "https://api.example", access_type: "offline" },
+    });
+    const entries = [...new URL(url).searchParams];
+
+    expect(entries.slice(-2)).toEqual([
+      ["audience", "https://api.example"],
+      ["access_type", "offline"],
+    ]);
+  });
+
+  it.each([
+    "state",
+    "nonce",
+    "code_challenge",
+    "code_challenge_method",
+    "redirect_uri",
+    "client_id",
+    "response_type",
+    "response_mode",
+    "scope",
+    "prompt",
+    "max_age",
+    "login_hint",
+    "ui_locales",
+    "acr_values",
+    "display",
+    "id_token_hint",
+    "claims_locales",
+    "claims",
+    "resource",
+    "request",
+    "request_uri",
+  ])("throws TypeError for an extra parameter that sets %s", async (name) => {
+    const refused = await refusalOf({ extraParameters: { [name]: "attacker-value" } });
+
+    expect(refused).toBeInstanceOf(TypeError);
+    expect((refused as Error).message).toContain(name);
+    expect((refused as Error).message).not.toContain("attacker-value");
+  });
+
+  it.each([
+    ["a non-object", "a=b"],
+    ["an array", [["a", "b"]]],
+    ["an empty value", { a: "" }],
+    ["a non-string value", { a: 1 }],
+    ["a value longer than a parameter", { a: "v".repeat(4097) }],
+    ["a value of ill-formed Unicode", { a: "\uD800" }],
+    ["an empty name", { "": "v" }],
+  ])("throws TypeError for extraParameters with %s, never echoing the value", async (_name, extraParameters) => {
+    const refused = await refusalOf({ extraParameters });
+
+    expect(refused).toBeInstanceOf(TypeError);
+    expect((refused as Error).message).not.toContain("vvvv");
+  });
+
+  it("counts extra parameters toward the provider's parameter limit", async () => {
+    // Eight required parameters leave room for 24 more.
+    const fits = Object.fromEntries(Array.from({ length: 24 }, (_, index) => [`x${index}`, "v"]));
+    const over = { ...fits, one_more: "v" };
+
+    await expect(attempt({ extraParameters: fits })).resolves.toBeDefined();
+    await expect(attempt({ extraParameters: over })).rejects.toThrow("more than 32 parameters");
+  });
+
+  it("counts the endpoint's own query toward the parameter limit", async () => {
+    const fits = Object.fromEntries(Array.from({ length: 24 }, (_, index) => [`x${index}`, "v"]));
+    const options = resolvedOptions(`${ISSUER}/authorize?p=tenant`);
+
+    await expect(buildAuthorization(options, { extraParameters: fits })).rejects.toThrow("more than 32 parameters");
+  });
+
+  it("counts extra parameter values toward the URL limit", async () => {
+    const extraParameters = { a: "v".repeat(4000), b: "v".repeat(4000), c: "v".repeat(400) };
+
+    await expect(attempt({ extraParameters })).rejects.toThrow(String(MAX_URL_LENGTH));
+  });
+});
+
+describe("buildAuthorization: response mode", () => {
+  it("sends response_mode=form_post and records it in the pending state", async () => {
+    const { url, pending } = await buildAuthorization(resolvedOptions(), { responseMode: "form_post" });
+
+    expect(new URL(url).searchParams.get("response_mode")).toBe("form_post");
+    expect(pending.responseMode).toBe("form_post");
+  });
+
+  it("sends no response_mode for the default query mode", async () => {
+    const { url, pending } = await buildAuthorization(resolvedOptions(), { responseMode: "query" });
+
+    expect(new URL(url).searchParams.has("response_mode")).toBe(false);
+    expect("responseMode" in pending).toBe(false);
+  });
+
+  it("throws TypeError for form_post when the provider lists modes without it, or for an unknown mode", async () => {
+    const options = resolveClientOptions({
+      metadata: { ...validMetadata(), response_modes_supported: ["query", "fragment"] },
+      clientId: CLIENT_ID,
+      redirectUri: REDIRECT_URI,
+      auth: { method: "none" },
+    });
+
+    await expect(buildAuthorization(options, { responseMode: "form_post" })).rejects.toThrow("form_post");
+    await expect(attempt({ responseMode: "fragment" })).rejects.toThrow(TypeError);
+  });
+});
+
+describe("buildAuthorization: plain OAuth 2.0 client", () => {
+  const oauthOptions = (): ResolvedClientOptions =>
+    resolveClientOptions({
+      openid: false,
+      metadata: {
+        issuer: "https://github.com",
+        authorization_endpoint: "https://github.com/login/oauth/authorize",
+        token_endpoint: "https://github.com/login/oauth/access_token",
+      },
+      clientId: CLIENT_ID,
+      redirectUri: REDIRECT_URI,
+      auth: { method: "none" },
+    });
+
+  it("sends no nonce and no scope by default, and keeps PKCE", async () => {
+    const { url, pending } = await buildAuthorization(oauthOptions());
+    const params = new URL(url).searchParams;
+
+    expect(params.has("nonce")).toBe(false);
+    expect(params.has("scope")).toBe(false);
+    expect(params.get("code_challenge_method")).toBe("S256");
+    expect("nonce" in pending).toBe(false);
+  });
+
+  it("sends a scope without openid", async () => {
+    const { url } = await buildAuthorization(oauthOptions(), { scope: ["read:user", "user:email"] });
+
+    expect(new URL(url).searchParams.get("scope")).toBe("read:user user:email");
+  });
+
+  it.each([
+    ["maxAge", 0],
+    ["idTokenHint", "hint"],
+    ["acrValues", ["a"]],
+    ["claims", {}],
+    ["claimsLocales", ["en"]],
+  ])("throws TypeError for %s, which only an OpenID Provider reads", async (name, value) => {
+    await expect(buildAuthorization(oauthOptions(), { [name]: value } as AuthorizeOptions)).rejects.toThrow(
+      "openid: false",
+    );
   });
 });

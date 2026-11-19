@@ -2,6 +2,7 @@ import { MAX_PARAMETER_LENGTH } from "../shared/limits";
 import { fail, ok } from "../shared/result";
 import type { OidcIssue, OidcResult, ProviderMetadata } from "../shared/types";
 import { isHttpsUrl } from "../shared/urls";
+import { isTenantTemplate, tenantOf } from "./issuer";
 
 /**
  * The asymmetric algorithms this package verifies ID tokens with. A provider must advertise at least one,
@@ -11,6 +12,20 @@ export const ID_TOKEN_ALGORITHMS = ["ES256", "EdDSA", "Ed25519", "RS256", "PS256
 
 /** One of {@link ID_TOKEN_ALGORITHMS}. */
 export type IdTokenAlgorithm = (typeof ID_TOKEN_ALGORITHMS)[number];
+
+/**
+ * Which rules a document is held to: `openid` for an OpenID Provider, `oauth` for a plain OAuth 2.0 provider, which
+ * needs no `jwks_uri`, ID token algorithms, subject types, or response types list.
+ */
+export type MetadataMode = "openid" | "oauth";
+
+/** How {@link checkMetadata} reads a document. */
+export interface CheckMetadataOptions {
+  /** @defaultValue `"openid"` */
+  readonly mode?: MetadataMode;
+  /** Accepts an `issuer` that is a `{tenantid}` template matching the requested issuer. */
+  readonly tenantIssuer?: boolean;
+}
 
 const METADATA_ROOT = "metadata";
 const ISSUER_MEMBER = "issuer";
@@ -24,6 +39,8 @@ interface MemberRule {
   readonly name: string;
   readonly required: boolean;
   readonly accepts: Predicate;
+  /** Required of an OpenID Provider only; a plain OAuth 2.0 provider may leave it out. */
+  readonly openidOnly?: true;
 }
 
 /**
@@ -60,6 +77,14 @@ const required = (name: string, accepts: Predicate): MemberRule => ({ name, requ
 
 const optional = (name: string, accepts: Predicate): MemberRule => ({ name, required: false, accepts });
 
+/** Required of an OpenID Provider, and checked by the same rule when a plain OAuth 2.0 provider sends it. */
+const requiredForOpenid = (name: string, accepts: Predicate): MemberRule => ({
+  name,
+  required: true,
+  accepts,
+  openidOnly: true,
+});
+
 /**
  * Every member this package reads, with its rule. A member missing from this list is kept in the copy but
  * not checked, because this package does not use it.
@@ -68,14 +93,14 @@ const MEMBER_RULES: readonly MemberRule[] = [
   // Capped so a valid endpoint always leaves room in the 8192-character request limit for the request's parameters.
   required("authorization_endpoint", isShortHttpsUrl),
   required("token_endpoint", isHttpsUrl),
-  required("jwks_uri", isHttpsUrl),
+  requiredForOpenid("jwks_uri", isHttpsUrl),
   optional("userinfo_endpoint", isHttpsUrl),
   optional("revocation_endpoint", isHttpsUrl),
   // Capped like the authorization endpoint, since the logout request is also a URL the browser is sent to.
   optional("end_session_endpoint", isShortHttpsUrl),
-  required("response_types_supported", includesString(RESPONSE_TYPE_CODE)),
-  required("subject_types_supported", isStringArray),
-  required("id_token_signing_alg_values_supported", includesAnyOf(ID_TOKEN_ALGORITHMS)),
+  requiredForOpenid("response_types_supported", includesString(RESPONSE_TYPE_CODE)),
+  requiredForOpenid("subject_types_supported", isStringArray),
+  requiredForOpenid("id_token_signing_alg_values_supported", includesAnyOf(ID_TOKEN_ALGORITHMS)),
   optional("scopes_supported", isStringArray),
   optional("response_modes_supported", isStringArray),
   optional("grant_types_supported", isStringArray),
@@ -108,10 +133,16 @@ function readMember(document: object, name: string): MemberRead {
 
 const invalid = (path: readonly string[]): OidcIssue => ({ code: "invalid_metadata", path });
 
-/** `issuer` must equal the issuer the document was fetched for, byte for byte. */
-function checkIssuer(document: object, issuer: string): OidcIssue[] {
+/**
+ * `issuer` must equal the issuer the document was fetched for, byte for byte. With `tenantIssuer`, it may instead be
+ * a `{tenantid}` template that equals the requested issuer with one path segment, such as `common`, in its place.
+ */
+function checkIssuer(document: object, issuer: string, tenantIssuer: boolean): OidcIssue[] {
   const read = readMember(document, ISSUER_MEMBER);
-  const matches = read.state === "data" && read.value === issuer;
+  const value = read.state === "data" ? read.value : undefined;
+  const matches =
+    value === issuer ||
+    (tenantIssuer && typeof value === "string" && isTenantTemplate(value) && tenantOf(issuer, value) !== undefined);
   return matches ? [] : [{ code: "issuer_mismatch", path: [METADATA_ROOT, ISSUER_MEMBER] }];
 }
 
@@ -194,17 +225,18 @@ function copyValue(value: unknown): unknown {
  * Checks one listed member against its rule. The rule reads a copy, so a getter inside an array or object is
  * found before the rule can run it.
  */
-function checkRule(document: object, rule: MemberRule): OidcIssue[] {
+function checkRule(document: object, rule: MemberRule, mode: MetadataMode): OidcIssue[] {
   const read = readMember(document, rule.name);
   const path = [METADATA_ROOT, rule.name];
+  const isRequired = rule.required && (mode === "openid" || rule.openidOnly !== true);
   if (read.state === "absent") {
-    return rule.required ? [invalid(path)] : [];
+    return isRequired ? [invalid(path)] : [];
   }
   if (read.state === "accessor") {
     return [invalid(path)];
   }
   // A hand-written metadata object may carry `undefined` for a member it does not have, as spreads do.
-  if (read.value === undefined && !rule.required) {
+  if (read.value === undefined && !isRequired) {
     return [];
   }
   const copy = copyValue(read.value);
@@ -243,16 +275,22 @@ function copyDocument(document: object): ProviderMetadata | typeof UNCOPYABLE {
  *
  * @param value - The parsed document, which may be any untrusted value.
  * @param issuer - The issuer the document must name, byte for byte.
+ * @param options - The rules to hold it to: OpenID by default, and an exact issuer.
  * @returns A deep-frozen copy of the document, or every issue found. Issues never hold a value from the
  * document.
  */
-export function checkMetadata(value: unknown, issuer: string): OidcResult<ProviderMetadata> {
+export function checkMetadata(
+  value: unknown,
+  issuer: string,
+  options: CheckMetadataOptions = {},
+): OidcResult<ProviderMetadata> {
   if (!isDocumentObject(value)) {
     return fail(invalid([METADATA_ROOT]));
   }
+  const mode = options.mode ?? "openid";
   const issues = [
-    ...checkIssuer(value, issuer),
-    ...MEMBER_RULES.flatMap((rule) => checkRule(value, rule)),
+    ...checkIssuer(value, issuer, options.tenantIssuer === true),
+    ...MEMBER_RULES.flatMap((rule) => checkRule(value, rule, mode)),
     ...checkUnlistedMembers(value),
   ];
   const [first, ...rest] = issues;

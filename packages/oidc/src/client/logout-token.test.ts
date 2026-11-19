@@ -537,3 +537,36 @@ describe("readBackchannelLogout", () => {
     );
   });
 });
+
+describe("createLogoutTokenValidator: multi-tenant issuer", () => {
+  const TEMPLATE = "https://login.microsoftonline.com/{tenantid}/v2.0";
+  const tenantValidator = () =>
+    validatorWith({
+      metadata: {
+        issuer: TEMPLATE,
+        authorization_endpoint: `${ISSUER}/authorize`,
+        token_endpoint: `${ISSUER}/token`,
+        jwks_uri: `${ISSUER}/jwks`,
+        response_types_supported: ["code"],
+        subject_types_supported: ["public"],
+        id_token_signing_alg_values_supported: ["ES256"],
+      },
+      tenantIssuer: { tenants: ["contoso"] },
+    });
+
+  it("accepts a token from an allowed tenant, with iss the template and its tid", async () => {
+    const token = await tokenWith({ iss: TEMPLATE.replace("{tenantid}", "contoso"), tid: "contoso" });
+
+    expect((await tenantValidator()(token)).ok).toBe(true);
+  });
+
+  it("refuses a token of another tenant, or whose iss is not its tid's", async () => {
+    const other = await tokenWith({ iss: TEMPLATE.replace("{tenantid}", "fabrikam"), tid: "fabrikam" });
+    const mixed = await tokenWith({ iss: TEMPLATE.replace("{tenantid}", "fabrikam"), tid: "contoso" });
+    const missing = await tokenWith({ tid: "contoso" }, { remove: ["iss"] });
+
+    expect(summarize(await tenantValidator()(other))).toEqual(["invalid_logout_token payload.tid wrong_issuer"]);
+    expect(summarize(await tenantValidator()(mixed))).toEqual(["invalid_logout_token payload.iss wrong_issuer"]);
+    expect(summarize(await tenantValidator()(missing))[0]).toContain("missing_claim");
+  });
+});

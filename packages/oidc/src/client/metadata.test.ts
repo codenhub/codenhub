@@ -413,3 +413,37 @@ describe("checkMetadata", () => {
     ]);
   });
 });
+
+describe("checkMetadata: modes and tenant templates", () => {
+  it("lets a plain OAuth 2.0 document leave out the OpenID members, but checks them when present", () => {
+    const document = validDocument();
+    for (const name of [
+      "jwks_uri",
+      "response_types_supported",
+      "subject_types_supported",
+      "id_token_signing_alg_values_supported",
+    ]) {
+      delete document[name];
+    }
+
+    expect(checkMetadata(document, ISSUER, { mode: "oauth" }).ok).toBe(true);
+    expect(checkMetadata(document, ISSUER).ok).toBe(false);
+    expect(issuesOf(checkMetadata({ ...document, jwks_uri: "http://x" }, ISSUER, { mode: "oauth" }))).toEqual([
+      { code: "invalid_metadata", path: ["metadata", "jwks_uri"] },
+    ]);
+  });
+
+  it("accepts a {tenantid} issuer for the requested tenant only with tenantIssuer", () => {
+    const template = "https://login.microsoftonline.com/{tenantid}/v2.0";
+    const requested = "https://login.microsoftonline.com/common/v2.0";
+    const document = { ...validDocument(), issuer: template };
+
+    expect(checkMetadata(document, requested, { tenantIssuer: true }).ok).toBe(true);
+    expect(issuesOf(checkMetadata(document, requested))).toEqual([
+      { code: "issuer_mismatch", path: ["metadata", "issuer"] },
+    ]);
+    expect(checkMetadata(document, "https://login.microsoftonline.com/a/b/v2.0", { tenantIssuer: true }).ok).toBe(
+      false,
+    );
+  });
+});
