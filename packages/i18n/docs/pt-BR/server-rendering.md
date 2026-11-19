@@ -2,7 +2,7 @@
 title: Renderize no servidor ou no build
 description: Um gerenciador por requisição, escolha de locale a partir do Accept-Language, builds de sites estáticos e logs de produção sob controle.
 order: 3
-source: 2d0be183a0b05f1d87a27140aa07d59add2d8d41
+source: 05b5ef19c9d00d610cfbacb2332204b69fac1647
 ---
 
 # Renderize no servidor ou no build
@@ -156,7 +156,7 @@ await Promise.all(
 );
 ```
 
-`pathname` é um caminho de URL, codificado com percent-encoding onde quer que tenha caracteres como `ç`, venham eles das palavras da tabela, como `/serviços`, ou dos seus próprios caminhos. Os hosts decodificam a requisição antes de procurar o arquivo, então dê ao arquivo o nome de `decodeURIComponent(pathname)`: `serviços` para `/servi%C3%A7os`, e não a forma codificada, que nenhuma requisição encontra. `decodeURI()` não basta, porque deixa codificado um escape reservado como `%2B`; `decodeURIComponent()` é seguro aqui porque o roteamento recusa `%2F` e `%5C`. Onde esse arquivo vai parar, como `serviços.html` ou `serviços/index.html`, depende do seu host e da sua configuração de `trailingSlash`.
+`pathname` é um caminho de URL, codificado com percent-encoding onde quer que tenha caracteres como `ç`, venham eles das palavras da tabela, como `/serviços`, ou dos seus próprios caminhos. Os hosts decodificam a requisição antes de procurar o arquivo, então dê ao arquivo o nome de `decodeURIComponent(pathname)`: `serviços` para `/servi%C3%A7os`, e não a forma codificada, que nenhuma requisição encontra. `decodeURI()` não basta, porque deixa codificado um escape reservado como `%2B`; `decodeURIComponent()` não consegue partir um segmento aqui, porque o roteamento recusa `%2F` e `%5C`. Ele lança um `URIError` para um escape que não é UTF-8, como `%FF`, que o roteamento mantém como está; nenhum arquivo pode ter o nome desse caminho, então o build para nele. Onde esse arquivo vai parar, como `serviços.html` ou `serviços/index.html`, depende do seu host e da sua configuração de `trailingSlash`.
 
 Um dicionário que falha ao carregar ou na verificação faz `init()` ser rejeitado, então o build falha em vez de publicar páginas sem texto.
 

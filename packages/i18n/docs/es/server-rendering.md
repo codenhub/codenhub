@@ -2,7 +2,7 @@
 title: Renderiza en un servidor o en tiempo de build
 description: Un gestor por solicitud, cómo elegir un locale a partir de Accept-Language, builds de sitios estáticos y logs de producción silenciosos.
 order: 3
-source: 2d0be183a0b05f1d87a27140aa07d59add2d8d41
+source: 05b5ef19c9d00d610cfbacb2332204b69fac1647
 ---
 
 # Renderiza en un servidor o en tiempo de build
@@ -156,7 +156,7 @@ await Promise.all(
 );
 ```
 
-`pathname` es una ruta de URL, codificada con porcentajes dondequiera que tenga caracteres como `ç`, ya vengan de las palabras de la tabla, como `/serviços`, o de tus propias rutas. Los hosts decodifican la solicitud antes de buscar su archivo, así que nombra el archivo según `decodeURIComponent(pathname)`: `serviços` para `/servi%C3%A7os`, no la forma codificada, que ninguna solicitud encuentra. `decodeURI()` no basta, porque deja codificado un escape reservado como `%2B`; `decodeURIComponent()` es seguro aquí porque el enrutamiento rechaza `%2F` y `%5C`. Dónde va ese archivo, como `serviços.html` o `serviços/index.html`, depende de tu host y de tu configuración de `trailingSlash`.
+`pathname` es una ruta de URL, codificada con porcentajes dondequiera que tenga caracteres como `ç`, ya vengan de las palabras de la tabla, como `/serviços`, o de tus propias rutas. Los hosts decodifican la solicitud antes de buscar su archivo, así que nombra el archivo según `decodeURIComponent(pathname)`: `serviços` para `/servi%C3%A7os`, no la forma codificada, que ninguna solicitud encuentra. `decodeURI()` no basta, porque deja codificado un escape reservado como `%2B`; `decodeURIComponent()` no puede partir un segmento aquí, porque el enrutamiento rechaza `%2F` y `%5C`. Lanza un `URIError` para un escape que no es UTF-8, como `%FF`, que el enrutamiento deja tal cual; ningún archivo puede llamarse como esa ruta, así que la compilación se detiene en ella. Dónde va ese archivo, como `serviços.html` o `serviços/index.html`, depende de tu host y de tu configuración de `trailingSlash`.
 
 Un diccionario que no carga o no pasa la comprobación hace que `init()` se rechace, así que el build falla en lugar de publicar páginas sin texto.
 

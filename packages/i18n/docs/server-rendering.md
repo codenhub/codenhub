@@ -155,7 +155,7 @@ await Promise.all(
 );
 ```
 
-`pathname` is a URL path, percent-encoded wherever it has characters such as `ç`, whether from the table's words, such as `/serviços`, or from your own paths. Hosts decode a request before looking for its file, so name the file after `decodeURIComponent(pathname)`: `serviços` for `/servi%C3%A7os`, not the encoded form, which no request finds. `decodeURI()` is not enough, since it leaves a reserved escape such as `%2B` encoded; `decodeURIComponent()` is safe here because routing refuses `%2F` and `%5C`. Where that file goes, such as `serviços.html` or `serviços/index.html`, depends on your host and your `trailingSlash` setting.
+`pathname` is a URL path, percent-encoded wherever it has characters such as `ç`, whether from the table's words, such as `/serviços`, or from your own paths. Hosts decode a request before looking for its file, so name the file after `decodeURIComponent(pathname)`: `serviços` for `/servi%C3%A7os`, not the encoded form, which no request finds. `decodeURI()` is not enough, since it leaves a reserved escape such as `%2B` encoded; `decodeURIComponent()` can't split a segment here, because routing refuses `%2F` and `%5C`. It throws a `URIError` for an escape that isn't UTF-8, such as `%FF`, which routing keeps as written; no file can be named after that path, so the build stops on it. Where that file goes, such as `serviços.html` or `serviços/index.html`, depends on your host and your `trailingSlash` setting.
 
 A dictionary that fails to load or check makes `init()` reject, so the build fails instead of publishing pages without text.
 
