@@ -1,7 +1,7 @@
 ---
 title: Visão geral
 description: O que o @codenhub/i18n faz, as quatro ideias por trás dele, um passo a passo de cinco minutos, idiomas da direita para a esquerda e como o gerenciador se comporta quando as chamadas se sobrepõem.
-source: 0a23a1af8f426a75d05669e5f4203ee8f3dc4d44
+source: 9b516d4841d9d2b93d6c83ddf9f30e5406902f71
 ---
 
 # Traduza o seu app
@@ -277,7 +277,8 @@ Um locale configurado que o `Intl.Locale` rejeita, como um com uma subtag de uso
 O resto do comportamento é curto:
 
 - Ele devolve `undefined` quando nada corresponde.
-- Ele pula entradas em branco e malformadas.
+- Ele pula entradas em branco e malformadas, e entradas com mais de 255 caracteres, o que nenhuma tag real tem.
+- Ele lê um sublinhado como hífen, então `pt_BR`, como iOS, Android e POSIX escrevem, corresponde a `pt-BR`.
 - Ele lança um `TypeError` quando `preferences` não é um array.
 
 Quando vários dos seus locales têm o mesmo idioma e a mesma escrita, e nenhum corresponde a uma preferência exatamente ou pela região provável, vence o primeiro em `locales`. Então ordene `locales` por qual deles deve atender todos os outros.

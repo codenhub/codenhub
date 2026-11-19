@@ -2,7 +2,7 @@
 title: Traduce una app de navegador
 description: Detecta y recuerda el idioma del visitante, mantén sincronizados lang y dir, vuelve a renderizar un framework, traduce HTML y ejecuta en un Web Worker.
 order: 2
-source: 827c566373d47bfbc5d175cd813663615e2e9e14
+source: 9f57dddd98ae0dfd238e21d765a4ad4901ebbc67
 ---
 
 # Traduce una app de navegador
@@ -113,21 +113,24 @@ Mientras `followsSystem` es `true`, el binding también escucha el evento `langu
 En un framework, renderiza el selector desde `binding.subscribe()` en lugar de `i18n.subscribe()`. Elegir el idioma que ya se muestra, o "Sistema" mientras el idioma detectado es el que se muestra, cambia la selección sin cambiar el idioma, así que el gestor no tiene nada que avisar. El binding avisa de ambos casos, y de cada cambio de idioma. En React:
 
 ```tsx
-import { useSyncExternalStore } from "react";
+import { useState, useSyncExternalStore } from "react";
 import type { BrowserI18nBinding } from "@codenhub/i18n/browser";
 import { i18n } from "./i18n";
 
 export function LanguagePicker({ binding }: { binding: BrowserI18nBinding }) {
   const selected = useSyncExternalStore(binding.subscribe, () => (binding.followsSystem ? "system" : i18n.locale));
+  // La elección del visitante, mostrada mientras carga su idioma, para que el select no vuelva de golpe al anterior.
+  const [pending, setPending] = useState<string>();
 
   return (
     <select
-      value={selected}
+      value={pending ?? selected}
       onChange={(event) => {
         const value = event.target.value;
+        setPending(value);
         const switching = value === "system" ? binding.followSystem() : i18n.setLocale(value as (typeof i18n.locales)[number]);
-        // La selección se vuelve a renderizar desde el binding en cualquier caso; un fallo de carga solo hay que reportarlo.
-        switching.catch((error: unknown) => console.error(error));
+        // Después la selección vuelve a venir del binding, incluso cuando el cambio falló o uno posterior lo adelantó.
+        switching.catch((error: unknown) => console.error(error)).finally(() => setPending((current) => (current === value ? undefined : current)));
       }}
     >
       <option value="system">System</option>
@@ -142,6 +145,8 @@ export function LanguagePicker({ binding }: { binding: BrowserI18nBinding }) {
 ```
 
 Cuando el idioma detectado no carga, `followSystem()` rechaza con el `I18nError` del loader, y la página mantiene su idioma actual; la elección guardada ya está olvidada. Aun así `followsSystem` es `true`, así que el selector muestra "System" sobre el idioma anterior: es lo que eligió el visitante, y la próxima visita o el próximo `languagechange` vuelve a intentar el idioma detectado. Un fallo tras un `languagechange` advierte y mantiene el idioma actual. Ninguno cae al idioma por defecto como hace el arranque, porque la página ya tiene un idioma que mostrar.
+
+"Sistema" es para un sitio donde el binding elige el idioma. En un sitio con el idioma en sus URLs, lo elige la URL: cada página pasa su locale a `initializeBrowserI18n()`, como hace [URLs localizadas](localized-urls.md), que lo guarda y deja de seguir el sistema, así que una elección de "Sistema" dura solo hasta la página siguiente. Ahí, haz que "Sistema" navegue, a la URL de la página actual en el idioma que encuentra `i18n.matchLocale(navigator.languages)`, o deja fuera esa opción.
 
 ## Vuelve a renderizar un framework
 
@@ -274,6 +279,7 @@ Un worker tampoco tiene `localStorage`, así que el guardado advierte y se omite
 ## Reglas que conviene saber
 
 - **Un binding por gestor.** Una segunda llamada a `initializeBrowserI18n()` para el mismo gestor se rechaza hasta que el primero se desconecta.
+- **Dale a cada binding su propia parte de la página.** Dos bindings, como en los micro-frontends, cada uno con su propio gestor, necesitan `root`s que no se contengan entre sí. Donde se superponen, cada uno traduce los elementos compartidos en su propio idioma, y gana el que se ejecuta último.
 - **Deja que el binding arranque el gestor.** La promesa del binding se rechaza con `Error: [I18n] Browser initialization was superseded before its locale became active.` cuando, antes de que el locale del binding esté activo, tu código:
   - llama a `i18n.init()`, o
   - llama a `i18n.setLocale()` sobre un gestor que ya estaba inicializado, aunque sea al locale que ya se muestra.

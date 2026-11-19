@@ -5,6 +5,12 @@ import { languageAndScript, maximizeTag } from "./likely-subtags";
 // as CLDR does; `Intl.Locale` keeps them apart. Nynorsk, `nn`, is a separate written standard and stays apart.
 const LANGUAGE_ALIASES: ReadonlyMap<string, string> = new Map([["no", "nb"]]);
 
+/**
+ * The longest preference read. `Intl.Locale` parses a run of variants in quadratic time, so one `Accept-Language` tag of
+ * 16 KB, which Node.js accepts as a header, cost about 25 ms a match; real tags are far shorter.
+ */
+const MAX_PREFERENCE_LENGTH = 255;
+
 const compareLanguage = (language: string): string => LANGUAGE_ALIASES.get(language) ?? language;
 
 // A lowercased tag with its language as `compareLanguage` gives it, such as `nb-no` for `no-NO`.
@@ -28,7 +34,8 @@ const maximizeLocale = (value: string): string | undefined => {
  * language and likely script. A locale whose likely script differs never matches, so `zh-TW` tries the next preference
  * rather than Simplified `zh`. A locale `Intl.Locale` rejects matches by language subtag, and by the script it names
  * when it names one. `no` and `nb` are compared as one language, Norwegian Bokmål. A preference whose language is `und`
- * names no language and is skipped unless a configured locale is that exact tag.
+ * names no language and is skipped unless a configured locale is that exact tag. An underscore reads as a hyphen, so
+ * `pt_BR`, as iOS, Android, and POSIX write it, is `pt-BR`. A preference longer than 255 characters is skipped unread.
  * Among configured locales of the same language and script, the first in `locales` wins when none matches exactly or by
  * likely region, so `es-MX` matches `es-419` when it is listed before `es-ES`, while `en` matches `en-US`, its likely
  * region, wherever it is listed.
@@ -45,17 +52,18 @@ export function matchConfiguredLocale<TLocale extends string>(
   const maximizedLocales = locales.map((locale) => ({ locale, maximized: maximizeLocale(locale) }));
 
   for (const preference of preferences) {
-    if (typeof preference !== "string") {
+    if (typeof preference !== "string" || preference.length > MAX_PREFERENCE_LENGTH) {
       continue;
     }
 
-    const exactLocale = resolveConfiguredLocale(locales, preference);
+    const tag = preference.replaceAll("_", "-");
+    const exactLocale = resolveConfiguredLocale(locales, tag);
 
     if (exactLocale !== undefined) {
       return exactLocale;
     }
 
-    const normalizedPreference = preference.trim().toLowerCase();
+    const normalizedPreference = tag.trim().toLowerCase();
 
     // `und` names no language, yet likely subtags turn it into `en-Latn-US`, so it is no preference at all.
     if (normalizedPreference.length === 0 || normalizedPreference.split("-")[0] === "und") {

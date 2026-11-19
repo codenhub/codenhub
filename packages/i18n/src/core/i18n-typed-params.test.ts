@@ -28,11 +28,13 @@ type Messages = typeof en | typeof pt;
 
 type Params<K extends string> = TranslateParams<Messages, K>;
 type Values<K extends string> = NonNullable<Params<K>[0]>;
-type Value<K extends string, P extends string> = Values<K>[P];
+type Value<K extends string, P extends keyof Values<K>> = Values<K>[P];
+// What an untyped manager takes: optional values of any name.
+type Loose = TranslateParams<unknown, string>;
 
 describe("typed placeholder values", () => {
   it("should leave values optional for a message without arguments", () => {
-    expectTypeOf<Params<"plain">>().toEqualTypeOf<[params?: Readonly<Record<string, string | number | Date>>]>();
+    expectTypeOf<Params<"plain">>().toEqualTypeOf<Loose>();
     expectTypeOf<Params<"quoted">>().toEqualTypeOf<Params<"plain">>();
   });
 
@@ -76,15 +78,73 @@ describe("typed placeholder values", () => {
   });
 
   it("should accept any values for a message it can't read, a key union, or untyped dictionaries", () => {
-    type Loose = [params?: Readonly<Record<string, string | number | Date>>];
     expectTypeOf<Params<"broken">>().toEqualTypeOf<Loose>();
     expectTypeOf<Params<"plain" | "greeting">>().toEqualTypeOf<Loose>();
     expectTypeOf<TranslateParams<{ readonly greeting: string }, "greeting">>().toEqualTypeOf<Loose>();
     expectTypeOf<TranslateParams<unknown, "greeting">>().toEqualTypeOf<Loose>();
   });
 
+  it("should check the message of a key a Partial dictionary type makes optional", () => {
+    type Full = {
+      readonly hello: "Hello {name}";
+      readonly group: { readonly one: "{count} item"; readonly other: "{count} items" };
+    };
+    type Regional =
+      | Full
+      | Partial<Full>
+      | { readonly group?: Partial<Full["group"]> & { readonly other: "{count} itens" } };
+    expectTypeOf<TranslateParams<Regional, "hello">["length"]>().toEqualTypeOf<1>();
+    expectTypeOf<{}>().not.toExtend<NonNullable<TranslateParams<Regional, "hello">[0]>>();
+    expectTypeOf<{}>().not.toExtend<NonNullable<TranslateParams<Regional, "group">[0]>>();
+    expectTypeOf<{ count: 1 }>().toExtend<NonNullable<TranslateParams<Regional, "group">[0]>>();
+  });
+
+  it("should take extra values when the key's type is passed", async () => {
+    const typed = createI18n({
+      locales: ["en"] as const,
+      defaultLocale: "en",
+      loadLocale: () => ({ greeting: "Hello, {name}!" }) as const,
+      isSilent: true,
+    });
+    await typed.init();
+
+    expect(typed.t<"greeting">("greeting", { name: "Ana", title: "Dr." })).toBe("Hello, Ana!");
+    expect(typed.translate<"greeting">("greeting", { name: "Ana", title: "Dr." })).toBe("Hello, Ana!");
+    // @ts-expect-error -- `name` is required.
+    typed.t<"greeting">("greeting", { title: "Dr." });
+  });
+
+  it("should take values typed by an interface, and still check each value", async () => {
+    interface User {
+      name: string;
+      id: number;
+    }
+    const user: User = { name: "Ana", id: 7 };
+    const typed = createI18n({
+      locales: ["en"] as const,
+      defaultLocale: "en",
+      loadLocale: () => ({ greeting: "Hello, {name}!", plain: "Hi" }) as const,
+      isSilent: true,
+    });
+    const untyped = createI18n({
+      locales: ["en"] as const,
+      defaultLocale: "en",
+      loadLocale: (): Record<string, unknown> => ({ greeting: "Hello, {name}!" }),
+      isSilent: true,
+    });
+    await typed.init();
+    await untyped.init();
+
+    expect(typed.t("greeting", user)).toBe("Hello, Ana!");
+    expect(typed.t("plain", user)).toBe("Hi");
+    expect(untyped.t("greeting", user)).toBe("Hello, Ana!");
+    // @ts-expect-error -- a boolean is no message value.
+    untyped.t("greeting", { name: true });
+    // @ts-expect-error -- `name` is required.
+    typed.t("greeting", { id: 7 });
+  });
+
   it("should not require an argument the runtime prints as quoted text", () => {
-    type Loose = [params?: Readonly<Record<string, string | number | Date>>];
     // `''` inside quoted text is an apostrophe, so the quote still ends at the last `'`.
     expectTypeOf<TranslateParams<{ readonly m: "'{it''s {x}'" }, "m">>().toEqualTypeOf<Loose>();
     expectTypeOf<{ x: 1 }>().toExtend<NonNullable<TranslateParams<{ readonly m: "'{it''s}' {x}" }, "m">[0]>>();
@@ -92,7 +152,6 @@ describe("typed placeholder values", () => {
   });
 
   it("should not require an argument the runtime prints as text quoted by an apostrophe before #", () => {
-    type Loose = [params?: Readonly<Record<string, string | number | Date>>];
     expectTypeOf<TranslateParams<{ readonly m: "{n, plural, other {'# {name}' ok}}" }, "m">>().toEqualTypeOf<Loose>();
     expectTypeOf<TranslateParams<{ readonly m: "{n, plural, other {'# {name}}}" }, "m">>().toEqualTypeOf<Loose>();
     expectTypeOf<TranslateParams<{ readonly m: "{n, plural, other {'# it''s {x}'}}" }, "m">>().toEqualTypeOf<Loose>();
@@ -110,7 +169,6 @@ describe("typed placeholder values", () => {
   });
 
   it("should accept any values for a message the runtime refuses, which it prints as written", () => {
-    type Loose = [params?: Readonly<Record<string, string | number | Date>>];
     type ParamsOf<M extends string> = TranslateParams<{ readonly m: M }, "m">;
     expectTypeOf<ParamsOf<"{n, number, currency}">>().toEqualTypeOf<Loose>();
     expectTypeOf<ParamsOf<"{d, date, bogus}">>().toEqualTypeOf<Loose>();
@@ -127,7 +185,6 @@ describe("typed placeholder values", () => {
   });
 
   it("should accept any values for an argument name the runtime can't read", () => {
-    type Loose = [params?: Readonly<Record<string, string | number | Date>>];
     expectTypeOf<TranslateParams<{ readonly m: "{first-name}" }, "m">>().toEqualTypeOf<Loose>();
     expectTypeOf<TranslateParams<{ readonly m: "{nome_ç}" }, "m">>().toEqualTypeOf<Loose>();
     expectTypeOf<Value<"spaced", "name">>().toEqualTypeOf<string | number | Date>();
@@ -135,7 +192,6 @@ describe("typed placeholder values", () => {
   });
 
   it("should accept any values for a message too long to read, without failing to compile", () => {
-    type Loose = [params?: Readonly<Record<string, string | number | Date>>];
     type Apostrophes10 = "l'a l'a l'a l'a l'a l'a l'a l'a l'a l'a ";
     type Apostrophes100 =
       `${Apostrophes10}${Apostrophes10}${Apostrophes10}${Apostrophes10}${Apostrophes10}${Apostrophes10}${Apostrophes10}${Apostrophes10}${Apostrophes10}${Apostrophes10}`;
@@ -155,7 +211,6 @@ describe("typed placeholder values", () => {
   });
 
   it("should accept any values for an argument with too many spaces to read, without failing to compile", () => {
-    type Loose = [params?: Readonly<Record<string, string | number | Date>>];
     type Spaces10 = "          ";
     type Spaces100 =
       `${Spaces10}${Spaces10}${Spaces10}${Spaces10}${Spaces10}${Spaces10}${Spaces10}${Spaces10}${Spaces10}${Spaces10}`;

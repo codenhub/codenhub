@@ -43,6 +43,19 @@ describe("regional fallback", () => {
     expect(i18n.t("bye")).toBe("Bye");
   });
 
+  it.each([
+    ["zh-HK", ["en", "zh", "zh-Hant", "zh-HK"], "zh-Hant"],
+    ["sr-ME", ["en", "sr", "sr-Latn", "sr-ME"], "sr-Latn"],
+  ])("should fall back from %s to the configured locale of its likely script", async (locale, locales, parent) => {
+    const loadLocale = (requested: string): unknown =>
+      requested === locale ? { hello: "regional" } : requested === parent ? { bye: "script" } : { bye: "other" };
+    const i18n = create(locales, loadLocale);
+    await i18n.init({ locale });
+
+    expect(i18n.t("hello")).toBe("regional");
+    expect(i18n.t("bye")).toBe("script");
+  });
+
   it("should fall back to a parent in a language with no likely script", async () => {
     const i18n = create(["en", "nah", "nah-MX"], (locale) =>
       locale === "nah" ? { hello: "Niltze" } : locale === "nah-MX" ? {} : dictionaries[locale],

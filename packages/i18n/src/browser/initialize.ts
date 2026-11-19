@@ -1,7 +1,7 @@
 import { I18nError } from "../core/errors";
 import { getI18nInternals } from "../core/internals";
 import type { I18n } from "../core/types";
-import { createDomTranslator, runEach, TRANSLATION_KEY_ATTRIBUTES } from "./dom-translation";
+import { createDomTranslator, runEach, showsTranslatedText, TRANSLATION_KEY_ATTRIBUTES } from "./dom-translation";
 
 const DEFAULT_STORAGE_KEY = "i18n";
 const LOCALE_CHANGE_EVENT = "locale-change";
@@ -170,7 +170,8 @@ const getMutationObserver = (root: ParentNode): typeof MutationObserver => {
  * @returns A binding that disconnects browser-owned listeners and observation.
  * @throws {TypeError} When observation lacks a root, when `root` is not an element, a document, or a shadow root,
  * such as the `null` of a `querySelector()` that found nothing, when `syncDocument` is on without a global `document`, such as in a
- * Web Worker, when the manager was not created by `createI18n()`, or when it already has a browser binding. These are
+ * Web Worker, when there is no global event target, such as on a server, when the manager was not created by
+ * `createI18n()`, or when it already has a browser binding. These are
  * thrown before the manager is initialized.
  * @throws {RangeError} When an explicit locale is unsupported or is not a string at runtime.
  * @throws {Error} With the message "[I18n] Browser initialization was superseded before its locale became active." when
@@ -209,6 +210,12 @@ export async function initializeBrowserI18n<TLocale extends string>(
   if (shouldSyncDocument && typeof document === "undefined") {
     throw new TypeError(
       "[I18n] Document synchronization requires a page document; pass syncDocument: false without one.",
+    );
+  }
+
+  if (typeof globalThis.addEventListener !== "function") {
+    throw new TypeError(
+      "[I18n] The browser binding requires a global event target, such as window or a worker's self.",
     );
   }
 
@@ -296,7 +303,11 @@ export async function initializeBrowserI18n<TLocale extends string>(
         continue;
       }
 
-      if (isElement(mutation.target) && mutation.target.hasAttribute("data-i18n")) {
+      if (
+        isElement(mutation.target) &&
+        mutation.target.hasAttribute("data-i18n") &&
+        !showsTranslatedText(mutation.target)
+      ) {
         changedRoots.add(mutation.target);
       }
 
@@ -372,7 +383,16 @@ export async function initializeBrowserI18n<TLocale extends string>(
     // An application request still loading is a choice about to apply, so a detected locale must not supersede it.
     const isApplicationRequestLoading =
       internals.isLatestRequestLoading() && internals.latestRequestId() !== detectedRequestId;
-    if (!isFollowingSystem || isApplicationRequestLoading) {
+    if (!isFollowingSystem) {
+      return;
+    }
+    if (isApplicationRequestLoading) {
+      // The request may still fail or be superseded, so the event is answered once it settles; one that applies ends
+      // following the system, and the check above then ignores the event.
+      await internals.latestRequestSettled();
+      if (!isCleaned) {
+        await handleLanguageChange();
+      }
       return;
     }
     try {

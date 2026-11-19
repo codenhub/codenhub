@@ -32,16 +32,16 @@
         "createI18n": {
           "files": {
             "dist/index.js": {
-              "bytes": 18950,
+              "bytes": 19306,
               "declarations": {
-                "I18nInstance": 7316,
+                "I18nInstance": 7563,
                 "Parser": 3503,
                 "formatNodes": 1039,
-                "matchConfiguredLocale": 815,
+                "matchConfiguredLocale": 853,
                 "validateI18nConfig": 464,
                 "createLocaleLoader": 454,
+                "createFallbackChains": 440,
                 "NUMBER_FORMAT_OPTIONS": 369,
-                "createFallbackChains": 369,
                 "maximizeTag": 243,
                 "RTL_SCRIPTS": 242,
                 "DATE_TIME_FORMAT_OPTIONS": 235,
@@ -156,8 +156,8 @@
               "bytes": 25
             }
           },
-          "gzip": 8312,
-          "minified": 25193
+          "gzip": 8416,
+          "minified": 25549
         },
         "i18nErrors": {
           "files": {
@@ -178,16 +178,16 @@
       },
       "files": {
         "dist/index.js": {
-          "bytes": 18953,
+          "bytes": 19309,
           "declarations": {
-            "I18nInstance": 7318,
+            "I18nInstance": 7565,
             "Parser": 3503,
             "formatNodes": 1039,
-            "matchConfiguredLocale": 815,
+            "matchConfiguredLocale": 853,
             "validateI18nConfig": 464,
             "createLocaleLoader": 454,
+            "createFallbackChains": 440,
             "NUMBER_FORMAT_OPTIONS": 369,
-            "createFallbackChains": 369,
             "maximizeTag": 243,
             "RTL_SCRIPTS": 242,
             "DATE_TIME_FORMAT_OPTIONS": 235,
@@ -303,36 +303,37 @@
           "bytes": 56
         }
       },
-      "gzip": 8407,
-      "minified": 25394,
-      "sha256": "ca0e946be820561a1421b2f0b82c591e2d6b1584b5b5b7105f98fb379fa8ccbf"
+      "gzip": 8510,
+      "minified": 25750,
+      "sha256": "eb1fcddffde0401ecf7b62b239759354e8dc0af23ff9a70f77088ae7803dccb3"
     },
     "./browser": {
       "exports": {
         "initializeBrowserI18n": {
           "files": {
             "dist/browser.js": {
-              "bytes": 7153,
+              "bytes": 7489,
               "declarations": {
-                "initializeBrowserI18n": 3714,
-                "createDomTranslator": 1685,
+                "initializeBrowserI18n": 3944,
+                "createDomTranslator": 1712,
                 "readPersistedLocale": 244,
                 "TRANSLATED_ATTRIBUTES": 131,
                 "isInsideCustomElement": 127,
                 "persistLocale": 125,
+                "BLOCKED_ELEMENT_NAMES": 116,
                 "forgetPersistedLocale": 104,
                 "getNavigatorPreferences": 98,
                 "collectElements": 96,
                 "runEach": 92,
                 "getMutationObserver": 89,
                 "syncDocumentLocale": 87,
-                "BLOCKED_ELEMENT_NAMES": 68,
                 "isForeignChange": 61,
                 "warn": 43,
                 "PARENT_NODE_TYPES": 36,
                 "hasTranslationKey": 34,
                 "TRANSLATION_KEY_ATTRIBUTES": 31,
                 "TRANSLATION_KEY_SELECTOR": 31,
+                "showsTranslatedText": 31,
                 "BOUND_MANAGERS": 30,
                 "attributeStates": 30,
                 "fallbackTexts": 30,
@@ -373,33 +374,34 @@
               "bytes": 35
             }
           },
-          "gzip": 3404,
-          "minified": 8096
+          "gzip": 3525,
+          "minified": 8432
         }
       },
       "files": {
         "dist/browser.js": {
-          "bytes": 7153,
+          "bytes": 7489,
           "declarations": {
-            "initializeBrowserI18n": 3714,
-            "createDomTranslator": 1685,
+            "initializeBrowserI18n": 3944,
+            "createDomTranslator": 1712,
             "readPersistedLocale": 244,
             "TRANSLATED_ATTRIBUTES": 131,
             "isInsideCustomElement": 127,
             "persistLocale": 125,
+            "BLOCKED_ELEMENT_NAMES": 116,
             "forgetPersistedLocale": 104,
             "getNavigatorPreferences": 98,
             "collectElements": 96,
             "runEach": 92,
             "getMutationObserver": 89,
             "syncDocumentLocale": 87,
-            "BLOCKED_ELEMENT_NAMES": 68,
             "isForeignChange": 61,
             "warn": 43,
             "PARENT_NODE_TYPES": 36,
             "hasTranslationKey": 34,
             "TRANSLATION_KEY_ATTRIBUTES": 31,
             "TRANSLATION_KEY_SELECTOR": 31,
+            "showsTranslatedText": 31,
             "BOUND_MANAGERS": 30,
             "attributeStates": 30,
             "fallbackTexts": 30,
@@ -440,18 +442,18 @@
           "bytes": 35
         }
       },
-      "gzip": 3404,
-      "minified": 8096,
-      "sha256": "c2813df798006baf128306d945ac654188228b86e73480e8e2028c3f4311cebd"
+      "gzip": 3525,
+      "minified": 8432,
+      "sha256": "bd1f4fcffeb2e55b36c594dd3122bf0bcb8257a85d0d7b791d2e1e1d35322b33"
     },
     "./routing": {
       "exports": {
         "createLocaleRouting": {
           "files": {
             "dist/routing.js": {
-              "bytes": 9228,
+              "bytes": 9431,
               "declarations": {
-                "createLocaleRouting": 3357,
+                "createLocaleRouting": 3560,
                 "compilePathnames": 1536,
                 "indexByShape": 625,
                 "findOverlapped": 609,
@@ -521,15 +523,15 @@
               "bytes": 33
             }
           },
-          "gzip": 4773,
-          "minified": 12256
+          "gzip": 4820,
+          "minified": 12459
         }
       },
       "files": {
         "dist/routing.js": {
-          "bytes": 9228,
+          "bytes": 9431,
           "declarations": {
-            "createLocaleRouting": 3357,
+            "createLocaleRouting": 3560,
             "compilePathnames": 1536,
             "indexByShape": 625,
             "findOverlapped": 609,
@@ -599,9 +601,9 @@
           "bytes": 33
         }
       },
-      "gzip": 4773,
-      "minified": 12256,
-      "sha256": "aa47cea67d0eb1387a8dcc22f967a5ad11a33f5e5de4560b80ad9f55dc7bb0b4"
+      "gzip": 4820,
+      "minified": 12459,
+      "sha256": "cea576c720e6866a31c263856ac010c197ae0a013189d5cbd045c54106d194ac"
     }
   }
 }

@@ -234,7 +234,8 @@ export interface I18n<TLocale extends string = string, TKey extends string = str
    * before `es-ES` to serve `es-MX` from `es-419`. `es-ES`, and `es`, whose likely region is Spain, still match `es-ES`.
    *
    * @param preferences - Untrusted locale tags, most preferred first; blank, malformed, and non-string entries are
-   * skipped, and so is `und`, which names no language, unless a configured locale is that exact tag.
+   * skipped, as are entries longer than 255 characters, and so is `und`, which names no language, unless a configured
+   * locale is that exact tag. An underscore reads as a hyphen, so `pt_BR` is `pt-BR`.
    * @returns The canonical locale for the first preference that matches, or undefined when none does.
    * @throws {TypeError} When `preferences` is not an array.
    */
@@ -246,7 +247,8 @@ export interface I18n<TLocale extends string = string, TKey extends string = str
    *
    * @remarks
    * A parent is made by dropping subtags and is skipped when its likely script differs, so `zh-Hant` never falls back to
-   * `zh`, which is Simplified Chinese.
+   * `zh`, which is Simplified Chinese. The configured locale named by the active locale's likely language and script is
+   * a parent too, after those, so `zh-HK` falls back to `zh-Hant` and `sr-ME` to `sr-Latn`.
    *
    * Messages use ICU syntax: `{name}`, `{n, number}` with an optional `integer` or `percent` style, `{d, date}` and
    * `{d, time}` with an optional `short`, `medium` (the default), `long`, or `full` style, `{n, plural, …}` and
@@ -277,7 +279,10 @@ export interface I18n<TLocale extends string = string, TKey extends string = str
    * @throws {TypeError} When `params` is neither `undefined` nor an object, such as `null` passed from plain
    * JavaScript.
    */
-  translate<K extends TKey>(key: K, ...params: TranslateParams<TMessages, K>): string;
+  translate<K extends TKey, TValues extends object = Readonly<Record<string, string | number | Date>>>(
+    key: K,
+    ...params: TranslateParams<TMessages, K, TValues>
+  ): string;
 
   /**
    * Whether a key has a text, or is a plural group, in a dictionary the active locale falls back to. Unlike `t()`, a
@@ -304,7 +309,10 @@ export interface I18n<TLocale extends string = string, TKey extends string = str
   has(key: string): key is TKey;
 
   /** Short alias of {@link I18n.translate}, the same bound function. */
-  t<K extends TKey>(key: K, ...params: TranslateParams<TMessages, K>): string;
+  t<K extends TKey, TValues extends object = Readonly<Record<string, string | number | Date>>>(
+    key: K,
+    ...params: TranslateParams<TMessages, K, TValues>
+  ): string;
 
   /**
    * Formats a number for the active locale with `Intl.NumberFormat`.

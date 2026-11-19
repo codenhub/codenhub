@@ -2,7 +2,7 @@
 title: URLs localizadas
 description: Coloque o locale no caminho, traduza o próprio caminho, leia os dois de volta, crie links para outros idiomas, gere todas as páginas localizadas e mande os visitantes para o idioma deles num site estático.
 order: 4
-source: a43c58749f399ac05075733394821e59515b0048
+source: 63e651b9c39c7c6228b55693865260c77948a881
 ---
 
 # URLs localizadas
@@ -149,11 +149,7 @@ routing.localize("/about", "pt"); // "/pt/about"
 routing.localize("/about", "en"); // "/about"
 ```
 
-Um caminho que já começa com um locale é lido como URL daquele locale, então o prefixo é substituído:
-
-```ts
-routing.localize("/pt/about", "en"); // "/about"
-```
+Um caminho canônico nunca começa com um locale, então `localize()` lança um `RangeError` para um que comece, como `/pt/about`. Isso é uma URL; passe `parse("/pt/about").pathname` em vez dele. Ele também lança para uma página sua cujo caminho começa com o código de um locale: com birmanês, `my`, configurado, uma página em inglês em `/my/orders` não tem URL, já que `/my/orders` é o `/orders` em birmanês. Dê outro caminho a essa página.
 
 Num site localizado, trocar de idioma é uma navegação, e não só um `setLocale()`: `setLocale()` muda o texto, mas nunca a URL. Então o seletor de idioma da loja lê a página atual com `parse()`, pega o caminho dela no novo idioma em `alternates`, mantém a query string e o fragmento e deixa o seu router ir até lá:
 
@@ -217,7 +213,7 @@ Como ler a tabela:
 - **Um catch-all** é um último segmento escrito `:name*`, como `"/help/:path*": { pt: "/ajuda/:path*" }`. Ele corresponde a um ou mais segmentos e os copia, então `/help/shipping/returns` é `/pt/ajuda/shipping/returns`. Ele não corresponde a zero segmentos: liste o próprio `/help` como uma entrada separada.
 - **O que a tabela não lista mantém as suas palavras.** `/blog` é `/pt/blog`, e `/products/42` em espanhol é `/es/products/42`, já que só o português o traduz.
 - **Segmentos fixos diferenciam maiúsculas de minúsculas**, como as URLs, então `/pt/Sobre` não é a página "sobre". Só o prefixo do locale ignora essa diferença.
-- **Prefira letras simples nos caminhos.** O roteamento não muda as suas palavras, então você só recebe `/servicos` se escrever `/servicos`. A maioria dos sites tira os acentos das URLs, porque um caminho acentuado aparece com percent-encoding em todo lugar em que é copiado como texto, como `/servi%C3%A7os`. Acentos também funcionam: `"/serviços"` corresponde ao `/servi%C3%A7os` que os navegadores mandam, e `localize()` devolve a forma codificada. Então um build estático que escreve uma pasta para esse caminho precisa decodificá-lo antes, como em [Gere um site estático](server-rendering.md#gere-um-site-estático).
+- **Prefira letras simples nos caminhos.** O roteamento não muda as suas palavras, então você só recebe `/servicos` se escrever `/servicos`. A maioria dos sites tira os acentos das URLs, porque um caminho acentuado aparece com percent-encoding em todo lugar em que é copiado como texto, como `/servi%C3%A7os`. Acentos também funcionam: `"/serviços"` corresponde ao `/servi%C3%A7os` que os navegadores mandam, e `localize()` devolve a forma codificada, como faz com todo segmento, como o slug de um produto, e como `parse()` devolve o seu `pathname`. Então um build estático que escreve uma pasta para esse caminho precisa decodificá-lo antes, como em [Gere um site estático](server-rendering.md#gere-um-site-estático).
 - **Uma página listada volta numa grafia só.** `parse()` devolve as palavras fixas de uma página listada do jeito que uma URL escreve as palavras da tabela, em todos os locales. Então `/%61bout` e `/pt/%73obre`, grafias estranhas de `/about` e `/pt/sobre`, dão as duas `pathname: "/about"`. Parâmetros e segmentos que a tabela não lista voltam do jeito que a requisição os escreveu.
 - **Um segmento fixo ganha de um parâmetro, e um parâmetro ganha de um catch-all.** Com `/products/new` e `/products/:id` listados, `/products/new` é a página de novo produto, seja qual for a ordem em que a tabela os lista. Com `/help/contact` e `/help/:path*`, `/help/contact` é a página de contato, e todo outro caminho `/help/…` vai para o catch-all.
 - **O locale padrão também pode ser traduzido.** Um site que é primeiro em português, com código em inglês, pode usar `defaultLocale: "pt"` e `{ "/about": { pt: "/sobre" } }`, de modo que `/sobre` é a página em português e `/en/about`, a em inglês.

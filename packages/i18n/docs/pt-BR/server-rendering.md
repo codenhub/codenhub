@@ -2,7 +2,7 @@
 title: Renderize no servidor ou no build
 description: Um gerenciador por requisição, escolha de locale a partir do Accept-Language, builds de sites estáticos e logs de produção sob controle.
 order: 3
-source: c48df89e4dd7f1424ecac02c21a94249cc27c2c1
+source: 99e7adf111f46c0adb6d99e8178f8049bbde2df0
 ---
 
 # Renderize no servidor ou no build
@@ -84,7 +84,7 @@ function pickLocale<TLocale extends string>(i18n: I18n<TLocale>, request: Reques
 
 Um visitante cujos idiomas não correspondem a nada, inclusive um que recusa o seu padrão com `en;q=0`, ainda recebe o locale padrão, já que a página precisa estar em algum idioma. Esse helper não implementa o resto do `Accept-Language`, como o `*`; use o parser do seu framework de servidor se precisar disso e passe o resultado para `matchLocale()`.
 
-`matchLocale()` recebe uma lista em vez do cabeçalho porque interpretar o cabeçalho, e limitar o tamanho dele, é trabalho do seu servidor. Mantenha o limite: `matchLocale()` testa as preferências em ordem até uma corresponder, então uma requisição cujo cabeçalho de 16 KB lista milhares de idiomas que você não suporta seguraria o event loop do seu servidor por dezenas de milissegundos.
+`matchLocale()` recebe uma lista em vez do cabeçalho porque interpretar o cabeçalho, e limitar o tamanho dele, é trabalho do seu servidor. Mantenha o limite: `matchLocale()` testa as preferências em ordem até uma corresponder, então uma requisição cujo cabeçalho de 16 KB lista milhares de idiomas que você não suporta seguraria o event loop do seu servidor por dezenas de milissegundos. Uma única entrada com mais de 255 caracteres é pulada sem ser lida, então uma tag longa não consegue fazer o mesmo.
 
 Ele compara do mesmo jeito que o binding do navegador, então um visitante recebe o mesmo idioma do servidor e do navegador: `pt-BR` recebe o seu `pt`, e `zh-TW` recebe o seu `zh-Hant`. Tags malformadas são puladas, e `undefined` significa que nada correspondeu. [Transforme entrada externa em um locale](index.md#transforme-entrada-externa-em-um-locale) tem a ordem completa de correspondência, inclusive qual de dois locales regionais vence, e o `resolveLocale()` para um locale vindo de um cookie ou de uma query string.
 
@@ -156,7 +156,7 @@ await Promise.all(
 );
 ```
 
-`pathname` é um caminho de URL, codificado com percent-encoding onde a tabela tem palavras como `/serviços`. Os hosts decodificam a requisição antes de procurar o arquivo, então dê ao arquivo o nome de `decodeURI(pathname)`: `serviços` para `/servi%C3%A7os`, e não a forma codificada, que nenhuma requisição encontra. Onde esse arquivo vai parar, como `serviços.html` ou `serviços/index.html`, depende do seu host e da sua configuração de `trailingSlash`.
+`pathname` é um caminho de URL, codificado com percent-encoding onde quer que tenha caracteres como `ç`, venham eles das palavras da tabela, como `/serviços`, ou dos seus próprios caminhos. Os hosts decodificam a requisição antes de procurar o arquivo, então dê ao arquivo o nome de `decodeURI(pathname)`: `serviços` para `/servi%C3%A7os`, e não a forma codificada, que nenhuma requisição encontra. Onde esse arquivo vai parar, como `serviços.html` ou `serviços/index.html`, depende do seu host e da sua configuração de `trailingSlash`.
 
 Um dicionário que falha ao carregar ou na verificação faz `init()` ser rejeitado, então o build falha em vez de publicar páginas sem texto.
 

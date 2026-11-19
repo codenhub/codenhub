@@ -109,13 +109,14 @@ A key is looked up in this order:
 
 1. The active locale.
 2. Each configured locale made by dropping its last subtags, such as `zh-Hant` for `zh-Hant-TW`. A parent written in another script is skipped: `zh` is Simplified Chinese, so a `zh-Hant` page falls back to the default rather than mixing scripts.
-3. The default locale.
+3. The configured locale named by its language and script, such as `zh-Hant` for `zh-HK`, which is written in Traditional Chinese, or `sr-Latn` for `sr-ME`. So a `zh-HK` dictionary can hold only what Hong Kong says differently.
+4. The default locale.
 
 A plural group uses the rules of the locale whose dictionary has it.
 
 Every locale in that chain loads with the active one, so starting in `pt-BR` loads `pt-BR`, `pt`, and `en`. If one of them fails, the call rejects as for any locale.
 
-Only parents made by dropping subtags count. `es-MX` does not fall back to `es-419`, because `es-419` is not a shorter version of it. Give it its own dictionary, or serve Mexican visitors from `es-419` directly, as [Turn outside input into a locale](index.md#turn-outside-input-into-a-locale) shows.
+Only those parents count. `es-MX` does not fall back to `es-419`, because `es-419` is neither a shorter version of it nor its language and script. Give it its own dictionary, or serve Mexican visitors from `es-419` directly, as [Turn outside input into a locale](index.md#turn-outside-input-into-a-locale) shows.
 
 ## Put values into text
 
@@ -393,7 +394,7 @@ Reading a message's arguments happens entirely in the type system, which is clev
 
 - **The key is one of several.** In `t(hasFailed ? "checkout.failed" : "checkout.done")`, TypeScript sees a union of two keys and can't know which message's values apply. Call `t()` with each key in its own branch, `hasFailed ? t("checkout.failed", { orderId }) : t("checkout.done")`, and each call is checked.
 - **The message is a plain `string`**, as every text in a JSON dictionary is. Write the default language as `as const` TypeScript, as above.
-- **The message has an unclosed `{`**, or a placeholder name that isn't ASCII letters, digits, and `_`, such as `{first-name}`. Other invalid syntax, such as `{n, number, currency}` or a `select` without `other`, may still ask for values. Either way, the runtime can't read it either: it logs a warning and shows the text with only valid `{name}` placeholders filled. Fix the message; the [message check](#find-untranslated-keys) finds these.
+- **The message has invalid syntax**, such as an unclosed `{`, a placeholder name that isn't ASCII letters, digits, and `_` (`{first-name}`), `{n, number, currency}`, or a `select` or `plural` without `other`. Some invalid syntax, such as an option written twice, an unknown plural form, or nesting past 10 levels, may still ask for values. Either way, the runtime can't read it either: it logs a warning and shows the text with only valid `{name}` placeholders filled. Fix the message; the [message check](#find-untranslated-keys) finds these.
 - **The message is too long for the types to read**: about 900 apostrophes, 450 arguments, or 900 spaces inside one argument's braces, in one text. TypeScript has a limit on how deep a type can go, and the reading stops short of it instead of failing your build. At runtime the message works normally. If you have one of these, it is probably three messages in a trench coat; splitting it brings the checks back.
 - **The manager's type is written by hand without the dictionary.** `I18n<"en" | "pt", Key>` checks keys but not values. Pass the dictionary type as a third type argument, `I18n<"en" | "pt", Key, typeof en>`, to keep them checked.
 

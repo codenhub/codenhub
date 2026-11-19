@@ -2,7 +2,7 @@
 title: URLs localizadas
 description: Pon el locale en la ruta, traduce la propia ruta, lee ambas de vuelta, enlaza a otros idiomas, genera cada página localizada y lleva a cada visitante a su propio idioma en un sitio estático.
 order: 4
-source: a43c58749f399ac05075733394821e59515b0048
+source: 63e651b9c39c7c6228b55693865260c77948a881
 ---
 
 # URLs localizadas
@@ -149,11 +149,7 @@ routing.localize("/about", "pt"); // "/pt/about"
 routing.localize("/about", "en"); // "/about"
 ```
 
-Una ruta que ya empieza con un locale se lee como la URL de ese locale, así que el prefijo se reemplaza:
-
-```ts
-routing.localize("/pt/about", "en"); // "/about"
-```
+Una ruta canónica nunca empieza con un locale, así que `localize()` lanza un `RangeError` para una que sí, como `/pt/about`. Eso es una URL; pasa `parse("/pt/about").pathname` en su lugar. También lanza para una página tuya cuya ruta empieza con un código de locale: con el birmano, `my`, configurado, una página en inglés en `/my/orders` no tiene URL, porque `/my/orders` es el `/orders` birmano. Dale otra ruta a esa página.
 
 En un sitio localizado, cambiar de idioma es una navegación, no solo un `setLocale()`: `setLocale()` cambia el texto, pero nunca la URL. Así que el selector de idioma de la tienda lee la página actual con `parse()`, toma su ruta en el nuevo idioma de `alternates`, conserva el query string y el fragmento, y deja que tu router vaya ahí:
 
@@ -217,7 +213,7 @@ Cómo se lee la tabla:
 - **Un comodín** es un último segmento escrito `:name*`, como `"/help/:path*": { pt: "/ajuda/:path*" }`. Coincide con uno o más segmentos y los copia, así que `/help/shipping/returns` es `/pt/ajuda/shipping/returns`. No coincide con cero segmentos: pon `/help` en sí como una entrada propia.
 - **Todo lo que la tabla no enumera conserva sus palabras.** `/blog` es `/pt/blog`, y `/products/42` en español es `/es/products/42`, porque solo el portugués la traduce.
 - **Los segmentos fijos distinguen mayúsculas y minúsculas**, como las URLs, así que `/pt/Sobre` no es la página "acerca de". Solo el prefijo del locale ignora las mayúsculas.
-- **Prefiere letras simples en las rutas.** El routing no cambia tus palabras, así que obtienes `/servicos` solo si escribes `/servicos`. La mayoría de los sitios quita los acentos de las URLs, porque una ruta con acentos se muestra codificada con porcentajes dondequiera que se copie como texto, como `/servi%C3%A7os`. Los acentos también funcionan: `"/serviços"` coincide con el `/servi%C3%A7os` que envían los navegadores, y `localize()` devuelve la forma codificada. Así que un build estático que escribe una carpeta para esa ruta tiene que decodificarla antes, como en [Genera un sitio estático](server-rendering.md#genera-un-sitio-estático).
+- **Prefiere letras simples en las rutas.** El routing no cambia tus palabras, así que obtienes `/servicos` solo si escribes `/servicos`. La mayoría de los sitios quita los acentos de las URLs, porque una ruta con acentos se muestra codificada con porcentajes dondequiera que se copie como texto, como `/servi%C3%A7os`. Los acentos también funcionan: `"/serviços"` coincide con el `/servi%C3%A7os` que envían los navegadores, y `localize()` devuelve la forma codificada, como hace con cada segmento, como el slug de un producto, y como `parse()` devuelve su `pathname`. Así que un build estático que escribe una carpeta para esa ruta tiene que decodificarla antes, como en [Genera un sitio estático](server-rendering.md#genera-un-sitio-estático).
 - **Una página de la tabla vuelve con una sola escritura.** `parse()` devuelve las palabras fijas de una página de la tabla tal como una URL escribe las palabras de la tabla, en todos los locales. Así que `/%61bout` y `/pt/%73obre`, escrituras raras de `/about` y `/pt/sobre`, dan las dos `pathname: "/about"`. Los parámetros y los segmentos que la tabla no enumera vuelven tal como los escribió la solicitud.
 - **Un segmento fijo le gana a un parámetro, y un parámetro le gana a un comodín.** Con `/products/new` y `/products/:id` en la tabla, `/products/new` es la página de producto nuevo, en el orden en que sea que la tabla los enumere. Con `/help/contact` y `/help/:path*`, `/help/contact` es la página de contacto y cualquier otra ruta `/help/…` va al comodín.
 - **El locale por defecto también se puede traducir.** Un sitio que se escribe primero en portugués, con el código en inglés, puede usar `defaultLocale: "pt"` y `{ "/about": { pt: "/sobre" } }`, así `/sobre` es la página en portugués y `/en/about`, la página en inglés.

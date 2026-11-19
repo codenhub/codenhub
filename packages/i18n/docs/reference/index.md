@@ -107,10 +107,10 @@ export interface I18n<TLocale extends string = string, TKey extends string = str
     setLocale(locale: TLocale): Promise<void>;
     resolveLocale(value: string): TLocale | undefined;
     matchLocale(preferences: readonly string[]): TLocale | undefined;
-    translate<K extends TKey>(key: K, ...params: TranslateParams<TMessages, K>): string;
+    translate<K extends TKey, TValues extends object = Readonly<Record<string, string | number | Date>>>(key: K, ...params: TranslateParams<TMessages, K, TValues>): string;
     has(key: TKey): boolean;
     has(key: string): key is TKey;
-    t<K extends TKey>(key: K, ...params: TranslateParams<TMessages, K>): string;
+    t<K extends TKey, TValues extends object = Readonly<Record<string, string | number | Date>>>(key: K, ...params: TranslateParams<TMessages, K, TValues>): string;
     formatNumber(value: number | bigint, options?: Intl.NumberFormatOptions): string;
     formatDate(value: Date | number, options?: Intl.DateTimeFormatOptions): string;
     formatRelativeTime(value: number, unit: Intl.RelativeTimeFormatUnit, options?: Intl.RelativeTimeFormatOptions): string;
@@ -357,7 +357,7 @@ Each preference, in order, tries an exact case-insensitive match, then the longe
 
 **Parameters**
 
-- `preferences` — Untrusted locale tags, most preferred first; blank, malformed, and non-string entries are skipped, and so is `und`, which names no language, unless a configured locale is that exact tag.
+- `preferences` — Untrusted locale tags, most preferred first; blank, malformed, and non-string entries are skipped, as are entries longer than 255 characters, and so is `und`, which names no language, unless a configured locale is that exact tag. An underscore reads as a hyphen, so `pt_BR` is `pt-BR`.
 
 **Returns** — The canonical locale for the first preference that matches, or undefined when none does.
 
@@ -431,7 +431,7 @@ Calls a listener after every applied `init()` and every applied locale change, s
 #### I18n › t
 
 ```ts
-t<K extends TKey>(key: K, ...params: TranslateParams<TMessages, K>): string;
+t<K extends TKey, TValues extends object = Readonly<Record<string, string | number | Date>>>(key: K, ...params: TranslateParams<TMessages, K, TValues>): string;
 ```
 
 Short alias of `I18n.translate`, the same bound function.
@@ -439,12 +439,12 @@ Short alias of `I18n.translate`, the same bound function.
 #### I18n › translate
 
 ```ts
-translate<K extends TKey>(key: K, ...params: TranslateParams<TMessages, K>): string;
+translate<K extends TKey, TValues extends object = Readonly<Record<string, string | number | Date>>>(key: K, ...params: TranslateParams<TMessages, K, TValues>): string;
 ```
 
 Resolves a trimmed key against the active locale's dictionary, then each configured parent locale's, such as `pt` for `pt-BR`, then the default locale's, and formats it as an ICU message.
 
-A parent is made by dropping subtags and is skipped when its likely script differs, so `zh-Hant` never falls back to `zh`, which is Simplified Chinese.
+A parent is made by dropping subtags and is skipped when its likely script differs, so `zh-Hant` never falls back to `zh`, which is Simplified Chinese. The configured locale named by the active locale's likely language and script is a parent too, after those, so `zh-HK` falls back to `zh-Hant` and `sr-ME` to `sr-Latn`.
 
 Messages use ICU syntax: `{name}`, `{n, number}` with an optional `integer` or `percent` style, `{d, date}` and `{d, time}` with an optional `short`, `medium` (the default), `long`, or `full` style, `{n, plural, …}` and `{n, selectordinal, …}` with `=N` and CLDR category options, an optional `offset:N`, and `#` for the number in the plural's own forms, and `{v, select, …}`. Plural categories and every format use the locale of the dictionary that has the text. An apostrophe before `{`, `}`, or, in a plural, `#` quotes them, and `''` is one apostrophe. A message that is not valid syntax warns once, unless silent, and only its `{name}` placeholders are filled.
 
@@ -808,7 +808,7 @@ Safe consumer feedback keyed by stable i18n error code. Each entry provides a fa
 ### AnyValues
 
 ```ts
-type AnyValues = Readonly<Record<string, MessageValue>>;
+type AnyValues<TValues> = [params?: Values<TValues>];
 ```
 
 Not exported; declared in `src/core/message-params.ts`.
@@ -958,7 +958,7 @@ Not exported; declared in `src/core/message-params.ts`.
 ### ParamsFor
 
 ```ts
-type ParamsFor<U> = IsUnreadable<U> extends true ? [params?: AnyValues] : ParamsOf<UnionToIntersection<U>>;
+type ParamsFor<U, TValues> = IsUnreadable<U> extends true ? AnyValues<TValues> : ParamsOf<UnionToIntersection<U>, TValues>;
 ```
 
 Not exported; declared in `src/core/message-params.ts`.
@@ -966,7 +966,7 @@ Not exported; declared in `src/core/message-params.ts`.
 ### ParamsOf
 
 ```ts
-type ParamsOf<A> = keyof A extends never ? [params?: AnyValues] : [params: Readonly<Simplify<A>> & AnyValues];
+type ParamsOf<A, TValues> = keyof A extends never ? AnyValues<TValues> : [params: Readonly<Simplify<A>> & Values<TValues>];
 ```
 
 Not exported; declared in `src/core/message-params.ts`.
@@ -1074,7 +1074,7 @@ Not exported; declared in `src/core/message-params.ts`.
 ### TranslateParams
 
 ```ts
-type TranslateParams<TMessages, TKey extends string> = unknown extends TMessages ? [params?: AnyValues] : IsUnion<TKey> extends true ? [params?: AnyValues] : string extends TKey ? [params?: AnyValues] : ParamsFor<ValueArguments<ValueAt<TMessages, TKey>>>;
+type TranslateParams<TMessages, TKey extends string, TValues = {}> = unknown extends TMessages ? AnyValues<TValues> : IsUnion<TKey> extends true ? AnyValues<TValues> : string extends TKey ? AnyValues<TValues> : ParamsFor<ValueArguments<Exclude<ValueAt<TMessages, TKey>, undefined>>, TValues>;
 ```
 
 The parameters `t(key, …)` takes: required values when every dictionary type's message at `key` is a literal with arguments, otherwise optional values of any name.
@@ -1156,5 +1156,17 @@ Not exported; declared in `src/core/message-params.ts`.
 ```ts
 type ValueOfType<T> = T extends "number" | "plural" | "selectordinal" ? number : T extends "date" | "time" ? Date | number : T extends "select" ? string | number : Unreadable;
 ```
+
+Not exported; declared in `src/core/message-params.ts`.
+
+### Values
+
+```ts
+type Values<TValues> = TValues & {
+    readonly [K in keyof TValues]: MessageValue;
+};
+```
+
+The values passed, `TValues`, with each one checked as a message value. Read from the argument rather than written as an index signature, which an `interface` or a class instance lacks, so `t("greeting", user)` takes a `User`.
 
 Not exported; declared in `src/core/message-params.ts`.

@@ -2,7 +2,7 @@
 title: Escreva as suas traduções
 description: Dicionários, arquivos JSON, placeholders, mensagens ICU, plurais, formatadores, chaves e valores tipados, verificação de chaves não traduzidas e limites de tamanho.
 order: 1
-source: 453c6f576b7ed2e7ad6bbacd4b94425da7b261a9
+source: c7f13bdaf19725a0e60bfcc193823ab5bb951c03
 ---
 
 # Escreva as suas traduções
@@ -110,13 +110,14 @@ Uma chave é procurada nesta ordem:
 
 1. O locale ativo.
 2. Cada locale configurado que se obtém tirando as últimas subtags, como `zh-Hant` para `zh-Hant-TW`. Um pai escrito em outra escrita é pulado: `zh` é chinês simplificado, então uma página `zh-Hant` faz fallback para o padrão em vez de misturar escritas.
-3. O locale padrão.
+3. O locale configurado nomeado pelo seu idioma e escrita, como `zh-Hant` para `zh-HK`, que é escrito em chinês tradicional, ou `sr-Latn` para `sr-ME`. Assim um dicionário `zh-HK` pode conter só o que Hong Kong diz de outro jeito.
+4. O locale padrão.
 
 Um grupo de plural usa as regras do locale cujo dicionário o contém.
 
 Todo locale dessa cadeia carrega junto com o ativo, então iniciar em `pt-BR` carrega `pt-BR`, `pt` e `en`. Se um deles falhar, a chamada é rejeitada como para qualquer locale.
 
-Só contam os pais que se obtêm tirando subtags. `es-MX` não faz fallback para `es-419`, porque `es-419` não é uma versão mais curta dele. Dê a ele um dicionário próprio, ou atenda os visitantes mexicanos diretamente com `es-419`, como mostra [Transforme entrada externa em um locale](index.md#transforme-entrada-externa-em-um-locale).
+Só esses pais contam. `es-MX` não faz fallback para `es-419`, porque `es-419` não é nem uma versão mais curta dele nem o seu idioma e escrita. Dê a ele um dicionário próprio, ou atenda os visitantes mexicanos diretamente com `es-419`, como mostra [Transforme entrada externa em um locale](index.md#transforme-entrada-externa-em-um-locale).
 
 ## Coloque valores no texto
 
@@ -394,7 +395,7 @@ Ler os argumentos de uma mensagem acontece inteiramente no sistema de tipos, o q
 
 - **A chave é uma entre várias.** Em `t(hasFailed ? "checkout.failed" : "checkout.done")`, o TypeScript vê uma união de duas chaves e não tem como saber de qual mensagem vêm os valores. Chame `t()` com cada chave no seu próprio ramo, `hasFailed ? t("checkout.failed", { orderId }) : t("checkout.done")`, e cada chamada é conferida.
 - **A mensagem é uma `string` simples**, como todo texto de um dicionário JSON. Escreva o idioma padrão em TypeScript com `as const`, como acima.
-- **A mensagem tem uma `{` sem fechamento**, ou um nome de placeholder que não é feito de letras ASCII, dígitos e `_`, como `{first-name}`. Outras sintaxes inválidas, como `{n, number, currency}` ou um `select` sem `other`, ainda podem pedir valores. De um jeito ou de outro, o runtime também não consegue lê-la: ele registra um aviso e mostra o texto com apenas os placeholders `{name}` válidos preenchidos. Conserte a mensagem; a [verificação de mensagens](#encontre-chaves-não-traduzidas) encontra esses casos.
+- **A mensagem tem sintaxe inválida**, como uma `{` sem fechamento, um nome de placeholder que não é feito de letras ASCII, dígitos e `_` (`{first-name}`), `{n, number, currency}`, ou um `select` ou `plural` sem `other`. Algumas sintaxes inválidas, como uma opção escrita duas vezes, uma forma de plural desconhecida ou aninhamento além de 10 níveis, ainda podem pedir valores. De um jeito ou de outro, o runtime também não consegue lê-la: ele registra um aviso e mostra o texto com apenas os placeholders `{name}` válidos preenchidos. Conserte a mensagem; a [verificação de mensagens](#encontre-chaves-não-traduzidas) encontra esses casos.
 - **A mensagem é longa demais para os tipos lerem**: uns 900 apóstrofos, 450 argumentos ou 900 espaços dentro das chaves de um argumento, num só texto. O TypeScript tem um limite de profundidade para os tipos, e a leitura para antes de chegar nele em vez de quebrar o seu build. Em tempo de execução, a mensagem funciona normalmente. Se você tem uma dessas, ela provavelmente são três mensagens disfarçadas de uma; dividi-la traz as verificações de volta.
 - **O tipo do gerenciador foi escrito à mão, sem o dicionário.** `I18n<"en" | "pt", Key>` confere as chaves, mas não os valores. Passe o tipo do dicionário como terceiro argumento de tipo, `I18n<"en" | "pt", Key, typeof en>`, para mantê-los conferidos.
 

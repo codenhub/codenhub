@@ -74,4 +74,30 @@ describe("matchConfiguredLocale", () => {
   ] as const)("matches %j to %j in a language with no likely script", (locales, preferences, expected) => {
     expect(matchConfiguredLocale(locales, preferences)).toBe(expected);
   });
+
+  it.each([
+    [["en", "he"], ["iw-IL"], "he"],
+    [["en", "he"], ["iw"], "he"],
+    [["en", "id"], ["in"], "id"],
+    [["en", "fil"], ["tl"], "fil"],
+    [["en", "ro"], ["mo"], "ro"],
+  ] as const)("matches %j to %j, an old code of the same language", (locales, preferences, expected) => {
+    expect(matchConfiguredLocale(locales, preferences)).toBe(expected);
+  });
+
+  it.each([
+    [["en", "pt-BR"], ["pt_BR"], "pt-BR"],
+    [["en", "pt"], ["pt_PT"], "pt"],
+    [["en", "zh-Hant"], ["zh_Hant_TW"], "zh-Hant"],
+  ] as const)("matches %j to %j, written with underscores", (locales, preferences, expected) => {
+    expect(matchConfiguredLocale(locales, preferences)).toBe(expected);
+  });
+
+  // `Intl.Locale` parses a long run of variants in quadratic time, about 25 ms for one 16 KB `Accept-Language` tag.
+  it("skips a preference longer than 255 characters, and matches one of 255", () => {
+    const tagOfLength = (length: number) => `en-x-${"abcdefgh-".repeat(30)}`.slice(0, length - 1) + "z";
+
+    expect(matchConfiguredLocale(["en", "fr"], [tagOfLength(256), "fr"])).toBe("fr");
+    expect(matchConfiguredLocale(["en", "fr"], [tagOfLength(255), "fr"])).toBe("en");
+  });
 });
