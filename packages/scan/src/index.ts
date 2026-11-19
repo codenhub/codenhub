@@ -38,7 +38,8 @@ export class UnmatchedEntryError extends Error {
 
 // `(` starts every extglob, such as `@(a|b)`, the one glob form with none of the other characters.
 const GLOB_CHARACTERS = /[*?[\]{}(]/;
-const NODE_MODULES_SEGMENT = /(^|[\\/])node_modules([\\/]|$)/;
+// A brace or extglob alternative names a folder too, as in `{src,node_modules/ui}/**`.
+const NODE_MODULES_SEGMENT = /(^|[\\/{,(|])node_modules([\\/},)|]|$)/;
 
 /**
  * Resolves entries into the files they name, as absolute paths, each listed once.

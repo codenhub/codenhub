@@ -88,6 +88,15 @@ describe("findFiles", () => {
       ]);
     });
 
+    it.each(["{app/views,node_modules/dep}/**/*.html", "@(app|node_modules)/**/*.html"])(
+      "reads node_modules when an alternative of %s names it",
+      (entry) => {
+        expect(relative(findFiles([entry], { cwd: root, skipNodeModules: true }))).toEqual(
+          expect.arrayContaining(["app/views/a.html", "node_modules/dep/demo.html"]),
+        );
+      },
+    );
+
     it("reads node_modules without it", () => {
       expect(relative(findFiles(["**/*.html"], { cwd: root }))).toContain("node_modules/dep/demo.html");
     });
