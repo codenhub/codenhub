@@ -212,7 +212,8 @@ export interface I18n<TLocale extends string = string, TKey extends string = str
   setLocale(locale: TLocale): Promise<void>;
 
   /**
-   * Canonicalizes an exact configured locale match.
+   * Canonicalizes an exact configured locale match, ignoring letter case and surrounding spaces, and reading `_` as
+   * `-`, so `pt_BR` resolves to a configured `pt-BR`.
    *
    * @param value - Untrusted locale value.
    * @returns The canonical locale or undefined; language subtags are not matched, as {@link I18n.matchLocale} does.

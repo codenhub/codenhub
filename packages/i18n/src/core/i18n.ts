@@ -198,7 +198,8 @@ class I18nInstance<TLocale extends string, TKey extends string = string>
       return undefined;
     }
 
-    return this.localeLookup.get(value.trim().toLowerCase());
+    // A configured locale has no `_`, so reading one as `-`, as `matchLocale` does, matches nothing else.
+    return this.localeLookup.get(value.trim().replaceAll("_", "-").toLowerCase());
   }
 
   matchLocale(preferences: readonly string[]): TLocale | undefined {
