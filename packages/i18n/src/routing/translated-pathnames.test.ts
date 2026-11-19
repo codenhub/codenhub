@@ -708,6 +708,8 @@ describe("translated pathnames", () => {
       }
     });
 
+    // About 1,200 paths in 18 configurations take about 2 s alone, and twice that under a parallel run, near the 5 s
+    // default.
     it("should settle the guide's canonical redirect in one hop, and read every alternate back as the same page", () => {
       const pathnames = {
         ...PATHNAMES,
@@ -811,7 +813,7 @@ describe("translated pathnames", () => {
           }
         }
       }
-    });
+    }, 30_000);
   });
 
   describe("with a large table", () => {
