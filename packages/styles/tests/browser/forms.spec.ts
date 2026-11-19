@@ -2235,6 +2235,50 @@ test.describe("forms", () => {
     expect(forced.toggleOutline, "forced colours: and the toggle keeps its own").toBe("solid");
   });
 
+  /* Forced colours ring a focused lone field in Highlight, two pixels outside
+     its border. The group kept its layered ring, drawn over its own border
+     in the forced text colour, so a focused group read as a resting one. */
+  test("rings a focused group in forced colours as it rings a lone field", async ({ page }) => {
+    await page.emulateMedia({ forcedColors: "active" });
+    await page.goto(FORMS_URL);
+    test.skip(
+      !(await page.evaluate(() => matchMedia("(forced-colors: active)").matches)),
+      "engine cannot emulate forced colors",
+    );
+    await stopTransitions(page);
+    await page.evaluate(() => {
+      const host = document.querySelector('[data-testid="preview-root"]') ?? document.body;
+
+      host.insertAdjacentHTML(
+        "afterbegin",
+        `<button data-ring="before">.</button><input class="ipt" data-ring="lone" />
+         <div class="input-group" data-ring="group"><span>@</span><input class="ipt" /></div>`,
+      );
+    });
+
+    const ring = async (selector: string, target: string) => {
+      await page.locator(selector).focus();
+      await page.keyboard.press("Tab");
+
+      return page.locator(target).evaluate((element) => {
+        const styles = getComputedStyle(element);
+
+        return {
+          focused: element.matches(":focus-visible, :focus-within"),
+          style: styles.outlineStyle,
+          width: styles.outlineWidth,
+          offset: styles.outlineOffset,
+          color: styles.outlineColor,
+        };
+      });
+    };
+    const lone = await ring('[data-ring="before"]', '[data-ring="lone"]');
+    const group = await ring('[data-ring="lone"]', '[data-ring="group"]');
+
+    expect(lone).toMatchObject({ focused: true, style: "solid", width: "2px", offset: "2px" });
+    expect(group, "the group rings as the lone field does").toEqual(lone);
+  });
+
   /* The text controls take the button's size steps, so a `.btn.sm` and an
      `.ipt.sm` line up in a row: height, text size, and the corner the size
      step scales. */

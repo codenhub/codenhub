@@ -762,6 +762,16 @@
         var(--focus-ring, color-mix(in srgb, var(--color-primary) 64%, transparent));
       outline-offset: var(--focus-ring-offset, calc(-1 * var(--ui-border-width, var(--border-width))));
       box-shadow: var(--_focus-stack, var(--_shadow), inset 0 0 0 2px var(--_focus-gap));
+
+      /* Forced colours ring it as they ring a lone field: Highlight, two
+         pixels outside the border. The ring above lay over the group's own
+         border in the forced text colour, so a focused group read as a
+         resting one. */
+      @media (forced-colors: active) {
+        outline: 2px solid Highlight;
+        outline-offset: 2px;
+        box-shadow: none;
+      }
     }
 
     /* Hovered while focused, the line keeps the focus tone, as a lone field's
