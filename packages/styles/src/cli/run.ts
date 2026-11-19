@@ -201,6 +201,7 @@ async function build(options: BuildOptions, io: CliIo): Promise<string> {
   try {
     await fs.mkdir(path.dirname(target), { recursive: true });
     await fs.writeFile(temporary, css);
+    await keepOwnership(temporary, target, options.output, io);
     await replaceFile(temporary, target);
   } catch (error) {
     // Best effort: the error worth reporting is the one above.
@@ -209,6 +210,75 @@ async function build(options: BuildOptions, io: CliIo): Promise<string> {
   }
 
   return output;
+}
+
+/* The stylesheet is renamed over the output, so it would come out with the mode
+   and owner of a new file: a `0640` file of the web server's group would come
+   back `0644` and the runner's. The temporary file takes the permission bits,
+   owner, and group of the file it replaces first. Only root can give a file to
+   another user, and only to a group its owner is in, so a runner without that
+   right keeps the group when it is in it, and says what changed on stderr
+   rather than fail a build that wrote the stylesheet. Windows keeps neither:
+   its mode is only the read-only attribute, which a rename over the file
+   refuses, and a new file takes its folder's permissions. */
+async function keepOwnership(temporary: string, target: string, output: string, io: CliIo): Promise<void> {
+  if (process.platform === "win32") {
+    return;
+  }
+
+  const previous = await fs.stat(target).catch((error: unknown) => {
+    if ((error as { code?: string }).code === "ENOENT") {
+      return undefined;
+    }
+    throw error;
+  });
+
+  if (previous === undefined) {
+    return;
+  }
+
+  const created = await fs.stat(temporary);
+
+  if (previous.uid !== created.uid || previous.gid !== created.gid) {
+    const kept = await chownAllowed(temporary, previous.uid, previous.gid);
+
+    if (kept === "group") {
+      io.stderr(
+        `${BIN}: warning: --output ${output} now belongs to user ${created.uid}, not ${previous.uid}, since only root can give a file to another user; its group and mode are kept.`,
+      );
+    } else if (kept === "neither") {
+      io.stderr(
+        `${BIN}: warning: --output ${output} now belongs to user ${created.uid} and group ${created.gid}, not ${previous.uid} and ${previous.gid}, since only root can give a file to another user or to a group you are not in; its mode is kept.`,
+      );
+    }
+  }
+  // After the owner: changing it can clear the set-user-ID and set-group-ID bits.
+  await fs.chmod(temporary, previous.mode & 0o777);
+}
+
+/* Gives the file to the user and group, or to the group alone when only root
+   could give it to the user. Any failure but that refusal is thrown. */
+async function chownAllowed(file: string, uid: number, gid: number): Promise<"both" | "group" | "neither"> {
+  const isRefused = (error: unknown) => (error as { code?: string }).code === "EPERM";
+
+  try {
+    await fs.chown(file, uid, gid);
+    return "both";
+  } catch (error) {
+    if (!isRefused(error)) {
+      throw error;
+    }
+  }
+  try {
+    await fs.chown(file, -1, gid);
+    return "group";
+  } catch (error) {
+    if (!isRefused(error)) {
+      throw error;
+    }
+  }
+
+  return "neither";
 }
 
 /* Node.js names the path a system call failed on, and here that is mostly the

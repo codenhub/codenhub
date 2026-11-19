@@ -1,5 +1,5 @@
 import { execFileSync } from "node:child_process";
-import { chmod, lstat, mkdir, mkdtemp, readdir, readFile, rm, stat, symlink, writeFile } from "node:fs/promises";
+import { chmod, chown, lstat, mkdir, mkdtemp, readdir, readFile, rm, stat, symlink, writeFile } from "node:fs/promises";
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import path from "node:path";
@@ -266,6 +266,51 @@ describe("build", () => {
     expect(await readOutput("build/real.css")).toMatch(ruleFor("btn"));
   });
 
+  /* The stylesheet is renamed over the output, so it used to take the mode and
+     owner a new file gets: a `0640` file of the web server's group came back
+     `0644` and the runner's, readable by everyone and maybe not by the server. */
+  it.skipIf(process.platform === "win32").each([
+    ["0640", 0o640],
+    ["0444", 0o444],
+  ])("keeps the mode %s of the stylesheet it replaces", async (_, mode) => {
+    const file = path.join(project, "app.css");
+
+    expect(await build("build", "-c", "app/views/**/*.erb", "-o", "app.css")).toBe(0);
+    await chmod(file, mode);
+    expect(await build("build", "-c", "app/views/**/*.erb", "-o", "app.css", "--no-minify")).toBe(0);
+    expect((await stat(file)).mode & 0o777).toBe(mode);
+    expect(await readOutput()).toMatch(/\n {2}\S/);
+  });
+
+  it.skipIf(process.platform === "win32" || process.getuid?.() !== 0)(
+    "keeps the owner and group of the stylesheet it replaces, as root",
+    async () => {
+      const file = path.join(project, "app.css");
+
+      expect(await build("build", "-c", "app/views/**/*.erb", "-o", "app.css")).toBe(0);
+      await chown(file, 4321, 4322);
+      expect(await build("build", "-c", "app/views/**/*.erb", "-o", "app.css")).toBe(0);
+      expect(await stat(file)).toMatchObject({ uid: 4321, gid: 4322 });
+      expect(stderr).toEqual([]);
+    },
+  );
+
+  // A user can give a file they own to any group they are in.
+  const otherGroup = process.getgroups?.().find((gid) => gid !== process.getegid?.());
+
+  it.skipIf(process.platform === "win32" || otherGroup === undefined)(
+    "keeps the group of the stylesheet it replaces",
+    async () => {
+      const file = path.join(project, "app.css");
+
+      expect(await build("build", "-c", "app/views/**/*.erb", "-o", "app.css")).toBe(0);
+      await chown(file, -1, otherGroup ?? -1);
+      expect(await build("build", "-c", "app/views/**/*.erb", "-o", "app.css")).toBe(0);
+      expect((await stat(file)).gid).toBe(otherGroup);
+      expect(stderr).toEqual([]);
+    },
+  );
+
   /* POSIX follows `alias` before its `..`; Windows collapses the `..` first, so the case does not arise there. */
   it.skipIf(!canSymlink || process.platform === "win32")(
     "writes where an --output link points when its target climbs out of another link",
@@ -509,6 +554,27 @@ describe("failures", () => {
       expect(await readOutput()).toBe(".mine { color: red; }");
     },
   );
+
+  /* Windows refuses to rename over a file with the read-only attribute, where
+     POSIX replaces a read-only file and keeps its mode. */
+  it.skipIf(process.platform !== "win32")("refuses a read-only stylesheet on Windows, and leaves it", async () => {
+    const file = path.join(project, "app.css");
+
+    expect(await build("build", "-c", "app/views/**/*.erb", "-o", "app.css")).toBe(0);
+    const previous = await readOutput();
+
+    stdout = [];
+    await chmod(file, 0o444);
+
+    try {
+      expect(await failureOf("build", "-c", "app/views/**/*.erb", "-o", "app.css", "--no-minify")).toBe(
+        "chs: cannot write --output app.css: operation not permitted (EPERM); check that you can write to it and to its folder, or name another file.",
+      );
+      expect(await readOutput()).toBe(previous);
+    } finally {
+      await chmod(file, 0o644);
+    }
+  });
 
   it("replaces a stylesheet it wrote, and an empty file", async () => {
     await writeFile(path.join(project, "empty.css"), "");
