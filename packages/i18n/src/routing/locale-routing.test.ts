@@ -296,15 +296,21 @@ describe("createLocaleRouting", () => {
     expect(routing.localize("/about", "pt-BR")).toBe("/pt-BR/about");
   });
 
-  it("should replace recognized prefixes while preserving unsupported leading segments", () => {
+  it("should refuse a canonical path that starts with a locale, and keep other leading segments", () => {
     const routing = createLocaleRouting({
       defaultLocale: "en-US",
       locales: LOCALES,
       localePrefix: "except-default",
     });
 
-    expect(routing.localize("/PT-br/about/", "pt-BR")).toBe("/pt-BR/about/");
-    expect(routing.localize("/pt-BR/about", "en-US")).toBe("/about");
+    expect(() => routing.localize("/PT-br/about/", "pt-BR")).toThrow(
+      new RangeError(
+        '[I18n] "/PT-br/about/" starts with the locale "pt-BR", so no URL leads to it. If it is a URL, pass ' +
+          "parse(url).pathname instead; if it is a page, give it a path that doesn't start with a locale",
+      ),
+    );
+    expect(() => routing.localize("/pt-BR/about", "en-US")).toThrow(RangeError);
+    expect(() => routing.localizeAll("/en-US/about/")).toThrow(RangeError);
     expect(routing.localize("/fr/about", "pt-BR")).toBe("/pt-BR/fr/about");
     expect(routing.localize("/pt-BR-other/about", "pt-BR")).toBe("/pt-BR/pt-BR-other/about");
   });
@@ -316,7 +322,7 @@ describe("createLocaleRouting", () => {
       localePrefix: "except-default",
     });
 
-    expect(routing.localizeAll("/en-US/about/")).toEqual([
+    expect(routing.localizeAll("/about/")).toEqual([
       { locale: "pt-BR", pathname: "/pt-BR/about/" },
       { locale: "en-US", pathname: "/about/" },
     ]);
@@ -467,7 +473,7 @@ describe("createLocaleRouting", () => {
       expect(routing.localize("/", "en-US")).toBe("/");
       expect(routing.localize("/", "pt-BR")).toBe("/pt-BR");
       expect(routing.localize("/brand/", "pt-BR")).toBe("/pt-BR/marca");
-      expect(routing.localize("/pt-BR/marca/", "en-US")).toBe("/brand");
+      expect(routing.localize("/brand/", "en-US")).toBe("/brand");
     });
 
     it("should parse both spellings, keeping the request's slash, so a redirect can send one to the other", () => {
