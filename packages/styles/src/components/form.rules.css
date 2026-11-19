@@ -540,7 +540,9 @@
     font-size: var(--text-sm);
     line-height: var(--tw-leading, var(--text-sm--line-height));
 
-    color: var(--color-text-secondary);
+    /* The page's secondary ink, or a plate's ink on a solid surface, as a
+       placeholder takes it: the page's grey read at 1.0 to 3.24:1 there. */
+    color: color-mix(in oklab, var(--_held-ink, transparent) var(--_held-on, 0%), var(--color-text-secondary));
     font-weight: 400;
     letter-spacing: 0.05em;
 
@@ -957,13 +959,14 @@
        reads as secondary. A button, a link button, and any `<input>` keep their
        own styling. Zero specificity: it is a default for unstyled content, and at
        the 0-2-0 it had, a badge or a text utility on the adornment lost its
-       colour to this grey. */
+       colour to this grey. On a solid surface it takes the surface's ink, as
+       the field's placeholder does: the grey read at 1.0 to 2.9:1 there. */
     :where(& > :not(.ipt, .textarea, .select, .text-control, input, textarea, select, button, .btn)) {
       display: inline-flex;
       flex: none;
       align-items: center;
 
-      color: var(--color-text-secondary);
+      color: color-mix(in oklab, var(--_held-ink) var(--_held-on), var(--color-text-secondary));
     }
 
     /* The group is destructive when its control is invalid. Carried here for an

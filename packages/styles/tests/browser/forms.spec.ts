@@ -1769,6 +1769,69 @@ test.describe("forms", () => {
     }
   });
 
+  /* Helper text kept the page's secondary grey on a solid surface, where the
+     placeholder already took the surface's ink: a hint, and a group's text
+     affix and icon, read at 1.0 to 3.24:1 on `.card.solid.<intent>`. */
+  test("prints a hint and a group's adornments at 4.5:1 on a solid surface", async ({ page }) => {
+    await page.goto(FORMS_URL);
+
+    for (const theme of ["light", "dark"]) {
+      // oxlint-disable-next-line no-await-in-loop -- one theme, then the other, on one page.
+      const samples = await page.evaluate((name) => {
+        document.documentElement.classList.remove("light", "dark");
+        document.documentElement.classList.add(name);
+        const host = document.querySelector('[data-testid="preview-root"]') ?? document.body;
+        const probe = document.createElement("div");
+
+        probe.style.backgroundColor = "var(--color-background)";
+        host.append(probe);
+        const page = getComputedStyle(probe).backgroundColor;
+        probe.remove();
+        const plates = ["", "neutral", "primary", "secondary", "success", "warning", "destructive", "info"];
+
+        return plates.flatMap((plate) => {
+          const card = document.createElement("div");
+
+          card.className = `card solid ${plate}`;
+          card.innerHTML = `
+            <span class="hint">Helper text</span>
+            <span class="hint neutral">Helper text</span>
+            <div class="input-group"><span>https://</span><input class="ipt" /><svg width="16" height="16" fill="currentColor"><rect width="16" height="16" /></svg></div>`;
+          host.append(card);
+
+          const group = card.querySelector(".input-group")!;
+          const read = (element: Element, label: string, ground: Element) => ({
+            label: `${name} ${label} on .card.solid${plate ? `.${plate}` : ""}`,
+            color: getComputedStyle(element).color,
+            ground: getComputedStyle(ground).backgroundColor,
+            card: getComputedStyle(card).backgroundColor,
+            page,
+          });
+          const [hint, neutral] = card.querySelectorAll(".hint");
+          const result = [
+            read(hint, ".hint", card),
+            read(neutral, ".hint.neutral", card),
+            read(group.querySelector("span")!, "group text affix", group),
+            read(group.querySelector("svg")!, "group icon", group),
+          ];
+
+          card.remove();
+
+          return result;
+        });
+      }, theme);
+
+      for (const sample of samples) {
+        const card = flattenColor(sample.card, sample.page);
+        const ground = flattenColor(sample.ground, card);
+
+        expect
+          .soft(getContrastRatio(flattenColor(sample.color, ground), ground), sample.label)
+          .toBeGreaterThanOrEqual(4.5);
+      }
+    }
+  });
+
   /* The group reads intent the way a lone field does, typed text included. The
      control inside resets its own intent to neutral at its root, like every
      component, so an `.input-group.success` once drew a success line around
