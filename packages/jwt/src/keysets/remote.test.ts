@@ -798,6 +798,71 @@ describe("createRemoteKeySet abandoned fetches", () => {
   });
 });
 
+describe("createRemoteKeySet missing kid", () => {
+  it("should not refetch inside the cooldown while an abandoned background fetch is pending", async () => {
+    const clock = createClock();
+    const fetch = fetchSequence(
+      () => jwksResponse(EC_JWK),
+      () => new Promise<Response>(() => undefined),
+      () => jwksResponse(EC_JWK),
+    );
+    const keys = createSet({ fetch, now: clock.now, cacheTtl: 600, cooldown: 30, timeout: 5 });
+    await keys.select(EC_HEADER);
+    vi.useFakeTimers();
+    clock.set(600);
+    await keys.select(EC_HEADER);
+    clock.set(610);
+    const result = await keys.select({ alg: "ES256", kid: "invented" });
+    expect([result.ok, fetch.mock.calls.length]).toEqual([false, 2]);
+  });
+
+  it("should refetch for a kid the cache lacks even when an unnamed key could stand in", async () => {
+    const clock = createClock();
+    const fetch = fetchSequence(
+      () => jwksResponse({ ...EC_P256_PUBLIC_JWK, alg: "ES256" }),
+      () => jwksResponse({ ...EC_P256_PUBLIC_JWK, kid: "rotated", alg: "ES256" }),
+    );
+    const keys = createSet({ fetch, now: clock.now, cooldown: 30 });
+    await keys.select({ alg: "ES256" });
+    clock.set(31);
+    expect(describeSelection(await keys.select({ alg: "ES256", kid: "rotated" }))).toEqual({
+      alg: "ES256",
+      kid: "rotated",
+    });
+  });
+
+  it("should fall back to the unnamed key when the refetched JWKS still lacks the kid", async () => {
+    const clock = createClock();
+    const unnamed = (): Response => jwksResponse({ ...EC_P256_PUBLIC_JWK, alg: "ES256" });
+    const fetch = fetchSequence(unnamed, unnamed, unnamed);
+    const keys = createSet({ fetch, now: clock.now, cooldown: 30 });
+    await keys.select({ alg: "ES256" });
+    clock.set(31);
+    const first = describeSelection(await keys.select({ alg: "ES256", kid: "issuer-key" }));
+    clock.set(32);
+    const second = describeSelection(await keys.select({ alg: "ES256", kid: "issuer-key" }));
+    expect([first, second, fetch.mock.calls.length]).toEqual([
+      { alg: "ES256", kid: undefined },
+      { alg: "ES256", kid: undefined },
+      2,
+    ]);
+  });
+  it("should keep the unnamed key when the refetch for a missing kid fails", async () => {
+    const clock = createClock();
+    const fetch = fetchSequence(
+      () => jwksResponse({ ...EC_P256_PUBLIC_JWK, alg: "ES256" }),
+      () => new Response("unavailable", { status: 503 }),
+    );
+    const keys = createSet({ fetch, now: clock.now, cooldown: 30 });
+    await keys.select({ alg: "ES256" });
+    clock.set(31);
+    expect(describeSelection(await keys.select({ alg: "ES256", kid: "issuer-key" }))).toEqual({
+      alg: "ES256",
+      kid: undefined,
+    });
+  });
+});
+
 describe("createRemoteKeySet waitUntil", () => {
   it("should hand each fetch it starts to waitUntil", async () => {
     const clock = createClock();

@@ -3,7 +3,7 @@ import { rejectUnknownOptions } from "../core/options";
 import type { AsymmetricAlgorithm, JwtHeader, JwtIssue, JwtResult, KeySet, VerificationKey } from "../core/types";
 import { parseJsonObject } from "../encoding";
 import { importKeys, readAlgorithms } from "./local";
-import { isUnknownKid, selectKey } from "./select";
+import { lacksKid, selectKey } from "./select";
 
 /** How {@link createRemoteKeySet} fetches and caches a JWKS. Durations are in seconds. */
 export interface RemoteKeySetOptions {
@@ -179,8 +179,9 @@ interface CachedKeys {
  *   holding back a new one once it is past the deadline and the cooldown. `waitUntil` keeps fetches
  *   running past their request.
  * - **Unknown `kid`.** When a token's `kid` is not in the cached JWKS, the JWKS is fetched again once,
- *   and the selection is repeated on the result. A failing refetch gives `key_fetch_failed`. A header
- *   without a `kid` never causes a refetch.
+ *   and the selection is repeated on the result, also when a key without a `kid` could stand in for it.
+ *   A failing refetch gives `key_fetch_failed`, unless such a key stands in. A header without a `kid`
+ *   never causes a refetch.
  * - **Cooldown.** A refetch for an unknown `kid`, or a retry after a failed fetch, starts only when
  *   `cooldown` seconds have passed since the last fetch started. Inside that window an unknown `kid`
  *   fails with `unknown_kid` at once, so a flood of tokens with invented `kid`s causes at most one
@@ -269,14 +270,20 @@ export function createRemoteKeySet(options: RemoteKeySetOptions): KeySet {
     return ok(outcome.value.keys);
   };
 
-  /** Whether a fetch is running that a new one should wait for, rather than one presumed abandoned. */
-  const isFetching = (): boolean => {
+  /** Whether a fetch is running and still within its deadline, so it may yet settle. */
+  const hasLiveFetch = (): boolean => {
     if (inFlight === undefined || lastFetchStartedAt === undefined) {
       return false;
     }
     const elapsed = config.now() - lastFetchStartedAt;
-    return (elapsed >= 0 && elapsed < config.timeoutMs + ABANDONED_FETCH_GRACE_MS) || isCoolingDown();
+    return elapsed >= 0 && elapsed < config.timeoutMs + ABANDONED_FETCH_GRACE_MS;
   };
+
+  /**
+   * Whether a fetch is running that a new one should wait for, rather than one presumed abandoned. A fetch
+   * past its deadline still counts during the cooldown, so invented `kid`s cannot start fetches faster.
+   */
+  const isFetching = (): boolean => inFlight !== undefined && (hasLiveFetch() || isCoolingDown());
 
   /** Starts a fetch unless one is running, and returns the running one. */
   const refetch = (): Promise<JwtResult<readonly VerificationKey[]>> => {
@@ -351,10 +358,11 @@ export function createRemoteKeySet(options: RemoteKeySetOptions): KeySet {
     const usableWithin = config.cacheTtlMs + config.maxStaleMs;
     let hasFetched = false;
     if (isFetching()) {
-      // A cache that is still usable and holds the key needs no wait for the fetch that is running.
+      // A cache that is still usable and holds the key needs no wait for the fetch that is running, and
+      // neither does a missing kid while a fetch past its deadline holds the cooldown.
       if (cached !== undefined && isCachedWithin(usableWithin)) {
         const selected = selectKey(cached.keys, header);
-        if (!isUnknownKid(selected)) {
+        if (!lacksKid(selected, header) || !hasLiveFetch()) {
           return selected;
         }
       }
@@ -374,11 +382,15 @@ export function createRemoteKeySet(options: RemoteKeySetOptions): KeySet {
       return keys;
     }
     const selected = selectKey(keys.value, header);
-    if (!isUnknownKid(selected) || hasFetched || (!isFetching() && isCoolingDown())) {
+    if (!lacksKid(selected, header) || hasFetched || (isCoolingDown() && !hasLiveFetch())) {
       return selected;
     }
     const refetched = await awaitFetch();
-    return refetched.ok ? selectKey(refetched.value, header) : refetched;
+    if (!refetched.ok) {
+      // A key that stood in for the kid still answers when the refetch fails.
+      return selected.ok ? selected : refetched;
+    }
+    return selectKey(refetched.value, header);
   };
 
   return Object.freeze({ select });

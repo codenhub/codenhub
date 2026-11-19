@@ -56,3 +56,21 @@ function single(candidates: readonly VerificationKey[], whenNone: JwtResult<neve
 export function isUnknownKid(result: JwtResult<VerificationKey>): boolean {
   return !result.ok && result.error.issues[0].code === "unknown_kid";
 }
+
+/**
+ * Whether no key carries the header's `kid`, so a refetch may bring it: the selection failed with
+ * `unknown_kid`, or a key without a `kid` stood in for it.
+ */
+export function lacksKid(result: JwtResult<VerificationKey>, header: JwtHeader): boolean {
+  if (isUnknownKid(result)) {
+    return true;
+  }
+  if (!result.ok || result.value.kid !== undefined) {
+    return false;
+  }
+  try {
+    return typeof header.kid === "string";
+  } catch {
+    return false;
+  }
+}
