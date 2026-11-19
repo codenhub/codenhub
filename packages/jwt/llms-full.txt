@@ -5,7 +5,7 @@
 JwtKit signs and verifies JSON Web Tokens with Web Crypto, imports and exports JSON Web Keys, and picks verification keys from a local set or from an issuer's JWKS URL. It is written for the side that receives tokens it did not issue:
 
 - **The algorithm comes from the key, never from the token.** Every key is bound to one algorithm when it is generated or imported, and `none` is not an algorithm here in any casing.
-- **Claims are never read from an unverified token.** There is no `decode`; only the header can be read before verification, to choose a key.
+- **Claims are never read from an unverified token.** There is no `decode`; only the header can be read before verification, to choose a key, and, when `keys` is a function, the `iss` it routes by, which stays untrusted until the signature verifies.
 - **Bad input is cheap and never throws.** A token's length is capped before it is decoded, JSON is parsed strictly and to a bounded depth, and a remote JWKS is fetched with a timeout, a size cap and a cooldown.
 - **Issues never hold a value of the input**, so logging a failed verification cannot log a token or a key.
 
@@ -247,9 +247,9 @@ A verifier runs its checks in a fixed order and stops at the first structural, k
 
 1. The token is a string no longer than `maxLength` characters (8192 by default), checked before anything is decoded.
 2. It has exactly three non-empty segments of strict base64url, and its header is a JSON object without repeated member names, with a supported `alg` and no `crit` member.
-3. The key set selects one key for the header.
+3. The key set selects one key for the header. When `keys` is a function, the payload's `iss` is read first, untrusted, only to choose the key set; [Key sets](docs/key-sets.md#choosing-the-key-set-by-issuer) explains.
 4. The key's algorithm equals the header's `alg`, and the signature verifies.
-5. Only then is the payload decoded, and every configured claim check runs. Claim failures are reported together, not one at a time. A `claims` schema runs last, only when every built-in claim check passed.
+5. Only then is the payload's content trusted, and every configured claim check runs. Claim failures are reported together, not one at a time. A `claims` schema runs last, only when every built-in claim check passed.
 
 There is no function that decodes a payload without verifying it. When you need to look at a token before verifying it, for example to route it by `kid`, `readHeader` returns the header alone. [Verifying tokens](docs/verifying.md) covers every check and option.
 
@@ -431,7 +431,7 @@ if (header.ok && header.value.kid?.startsWith("tenant-a:")) {
 }
 ```
 
-It checks the token exactly as a verifier does up to the header, steps 1 to 3 above, and takes the same `maxLength` option. It does not decode the payload, and nothing in this package does before a signature verifies: there is no way to read claims from an unverified token. Treat the header as untrusted too; it only becomes meaningful once a verifier accepts the token.
+It checks the token exactly as a verifier does up to the header, steps 1 to 3 above, and takes the same `maxLength` option. It does not decode the payload, and nothing in this package does before a signature verifies, except a verifier whose `keys` is a function, which reads `iss` to route the token and hands it to that function alone: there is no way to read claims from an unverified token. Treat the header as untrusted too; it only becomes meaningful once a verifier accepts the token.
 
 <!-- Source: docs/signing.md -->
 
@@ -752,7 +752,7 @@ const { privateKey, publicKey } = result.value;
 - `importPrivateKey` and `importKeyPair` take a `CryptoKeyPair`. The private `CryptoKey` is kept as it is, never exported, so a non-extractable key stays so; the public one runs through the JWK checks; and a probe signature proves the two belong together and that the private key fits `alg`, its hash and padding included. Anything that does not fit is `invalid_key`. They also take an extractable private `CryptoKey` alone, which is exported and read as a JWK; a non-extractable one alone is `invalid_key`, since its public half cannot be read from it.
 - `importSecretKey` takes an HMAC `CryptoKey`, kept as it is. It must use the algorithm's hash and have both the `sign` and `verify` usages, or it is `invalid_key`, and be at least as long as the hash, or it is `weak_key`.
 
-A `CryptoKey` has no `kid`, so pass one as an option. `extractable: true` needs an extractable `CryptoKey`, or the result is `invalid_key`; without it, the imported key cannot be exported even when the `CryptoKey` could be.
+A `CryptoKey` has no `kid`, so pass one as an option. A public key is always exportable. For a private or secret key, `extractable: true` needs an extractable `CryptoKey`, or the result is `invalid_key`; without it, the imported key cannot be exported even when the `CryptoKey` could be.
 
 ## Exporting keys
 

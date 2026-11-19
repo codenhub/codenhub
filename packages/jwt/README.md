@@ -3,7 +3,7 @@
 JwtKit signs and verifies JSON Web Tokens with Web Crypto, imports and exports JSON Web Keys, and picks verification keys from a local set or from an issuer's JWKS URL. It is written for the side that receives tokens it did not issue:
 
 - **The algorithm comes from the key, never from the token.** Every key is bound to one algorithm when it is generated or imported, and `none` is not an algorithm here in any casing.
-- **Claims are never read from an unverified token.** There is no `decode`; only the header can be read before verification, to choose a key.
+- **Claims are never read from an unverified token.** There is no `decode`; only the header can be read before verification, to choose a key, and, when `keys` is a function, the `iss` it routes by, which stays untrusted until the signature verifies.
 - **Bad input is cheap and never throws.** A token's length is capped before it is decoded, JSON is parsed strictly and to a bounded depth, and a remote JWKS is fetched with a timeout, a size cap and a cooldown.
 - **Issues never hold a value of the input**, so logging a failed verification cannot log a token or a key.
 

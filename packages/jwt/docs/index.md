@@ -114,9 +114,9 @@ A verifier runs its checks in a fixed order and stops at the first structural, k
 
 1. The token is a string no longer than `maxLength` characters (8192 by default), checked before anything is decoded.
 2. It has exactly three non-empty segments of strict base64url, and its header is a JSON object without repeated member names, with a supported `alg` and no `crit` member.
-3. The key set selects one key for the header.
+3. The key set selects one key for the header. When `keys` is a function, the payload's `iss` is read first, untrusted, only to choose the key set; [Key sets](key-sets.md#choosing-the-key-set-by-issuer) explains.
 4. The key's algorithm equals the header's `alg`, and the signature verifies.
-5. Only then is the payload decoded, and every configured claim check runs. Claim failures are reported together, not one at a time. A `claims` schema runs last, only when every built-in claim check passed.
+5. Only then is the payload's content trusted, and every configured claim check runs. Claim failures are reported together, not one at a time. A `claims` schema runs last, only when every built-in claim check passed.
 
 There is no function that decodes a payload without verifying it. When you need to look at a token before verifying it, for example to route it by `kid`, `readHeader` returns the header alone. [Verifying tokens](verifying.md) covers every check and option.
 

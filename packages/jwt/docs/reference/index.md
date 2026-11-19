@@ -78,7 +78,7 @@ export declare function createVerifier<TSchema extends StandardSchemaV1 | undefi
 
 Creates a verifier that checks a token's structure, signature and claims in one call.
 
-Each token goes through, in order: the length cap, before any decoding; strict parsing of its three segments and header; key selection from `options.keys`; the selected key's algorithm, which must equal the header's `alg`; the signature; and only then the payload, which is never read before its signature verifies. Claim checks then run and report every failing claim together: registered claim types, `exp` (expired once now ≥ `exp` + tolerance), `nbf`, `iat`, `maxAge`, issuer, audience, `typ`, and required claims. When all of them pass, `options.claims` runs last.
+Each token goes through, in order: the length cap, before any decoding; strict parsing of its three segments and header; key selection from `options.keys`; the selected key's algorithm, which must equal the header's `alg`; the signature; and only then the payload, which is never read before its signature verifies, except for the `iss` a `keys` function routes by, which is untrusted until then. Claim checks then run and report every failing claim together: registered claim types, `exp` (expired once now ≥ `exp` + tolerance), `nbf`, `iat`, `maxAge`, issuer, audience, `typ`, and required claims. When all of them pass, `options.claims` runs last.
 
 When `options.keys` is a [`KeySetResolver`](#keysetresolver), the payload's `iss` is read before the signature, only to ask it for the issuer's key set; nothing else in the payload is used until the signature verifies.
 

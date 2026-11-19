@@ -206,7 +206,7 @@
         "createRemoteKeySet": {
           "files": {
             "dist/index.js": {
-              "bytes": 22226,
+              "bytes": 22311,
               "declarations": {
                 "StrictJsonParser": 2804,
                 "createRemoteKeySet": 1619,
@@ -243,6 +243,7 @@
                 "getKeyEntry": 188,
                 "checkedClock": 185,
                 "readTimeout": 184,
+                "isCryptoKey": 180,
                 "compatibleAlgorithms": 179,
                 "isBase64Url": 178,
                 "rejectUnknownOptions": 178,
@@ -275,7 +276,6 @@
                 "sourceJwk": 99,
                 "MEMBER_NAMES": 98,
                 "decodeUtf8": 98,
-                "isCryptoKey": 95,
                 "checkMaterial": 94,
                 "checkJwk": 87,
                 "fetchFailure": 83,
@@ -339,13 +339,13 @@
               "bytes": 36
             }
           },
-          "gzip": 7777,
-          "minified": 22262
+          "gzip": 7804,
+          "minified": 22347
         },
         "createVerifier": {
           "files": {
             "dist/index.js": {
-              "bytes": 15606,
+              "bytes": 15603,
               "declarations": {
                 "StrictJsonParser": 2802,
                 "resolveOptions": 1182,
@@ -354,7 +354,7 @@
                 "timeIssues": 578,
                 "identityIssues": 555,
                 "checkSegments": 465,
-                "routeByIssuer": 385,
+                "routeByIssuer": 382,
                 "headerIssue": 363,
                 "CLAIM_TYPES": 325,
                 "readTypes": 319,
@@ -437,8 +437,8 @@
               "bytes": 32
             }
           },
-          "gzip": 5417,
-          "minified": 15638
+          "gzip": 5420,
+          "minified": 15635
         },
         "decodeBase64Url": {
           "files": {
@@ -903,7 +903,7 @@
         "importKeyPair": {
           "files": {
             "dist/index.js": {
-              "bytes": 12350,
+              "bytes": 12435,
               "declarations": {
                 "checkHeaderMembers": 864,
                 "importPair": 680,
@@ -924,6 +924,7 @@
                 "readCryptoKeyPair": 228,
                 "readElement": 224,
                 "decodeBase64Url": 216,
+                "isCryptoKey": 179,
                 "isBase64Url": 178,
                 "rejectUnknownOptions": 178,
                 "secretMaterial": 176,
@@ -947,7 +948,6 @@
                 "hmac": 99,
                 "MEMBER_NAMES": 98,
                 "sourceJwk": 97,
-                "isCryptoKey": 94,
                 "checkMaterial": 92,
                 "checkJwk": 83,
                 "(top level)": 82,
@@ -1000,13 +1000,13 @@
               "bytes": 28
             }
           },
-          "gzip": 4361,
-          "minified": 12378
+          "gzip": 4389,
+          "minified": 12463
         },
         "importKeySet": {
           "files": {
             "dist/index.js": {
-              "bytes": 13375,
+              "bytes": 13460,
               "declarations": {
                 "checkHeaderMembers": 864,
                 "pemToJwk": 668,
@@ -1032,6 +1032,7 @@
                 "readIssuer": 207,
                 "getKeyEntry": 187,
                 "compatibleAlgorithms": 179,
+                "isCryptoKey": 179,
                 "isBase64Url": 178,
                 "rejectUnknownOptions": 178,
                 "secretMaterial": 177,
@@ -1059,7 +1060,6 @@
                 "MEMBER_NAMES": 98,
                 "sourceJwk": 98,
                 "(top level)": 94,
-                "isCryptoKey": 94,
                 "checkMaterial": 92,
                 "checkJwk": 83,
                 "registerKey": 79,
@@ -1113,13 +1113,13 @@
               "bytes": 26
             }
           },
-          "gzip": 4769,
-          "minified": 13401
+          "gzip": 4797,
+          "minified": 13486
         },
         "importPrivateKey": {
           "files": {
             "dist/index.js": {
-              "bytes": 12394,
+              "bytes": 12479,
               "declarations": {
                 "checkHeaderMembers": 864,
                 "importPair": 680,
@@ -1140,6 +1140,7 @@
                 "readCryptoKeyPair": 228,
                 "readElement": 224,
                 "decodeBase64Url": 216,
+                "isCryptoKey": 179,
                 "isBase64Url": 178,
                 "rejectUnknownOptions": 178,
                 "secretMaterial": 176,
@@ -1164,7 +1165,6 @@
                 "MEMBER_NAMES": 98,
                 "importPrivateKey": 97,
                 "sourceJwk": 97,
-                "isCryptoKey": 94,
                 "checkMaterial": 92,
                 "checkJwk": 83,
                 "(top level)": 82,
@@ -1216,13 +1216,13 @@
               "bytes": 31
             }
           },
-          "gzip": 4379,
-          "minified": 12425
+          "gzip": 4407,
+          "minified": 12510
         },
         "importPublicKey": {
           "files": {
             "dist/index.js": {
-              "bytes": 10853,
+              "bytes": 10938,
               "declarations": {
                 "checkHeaderMembers": 864,
                 "pemToJwk": 666,
@@ -1241,6 +1241,7 @@
                 "importPublicKey": 238,
                 "readElement": 224,
                 "decodeBase64Url": 216,
+                "isCryptoKey": 179,
                 "rejectUnknownOptions": 179,
                 "isBase64Url": 178,
                 "secretMaterial": 176,
@@ -1263,7 +1264,6 @@
                 "hmac": 99,
                 "sourceJwk": 98,
                 "MEMBER_NAMES": 97,
-                "isCryptoKey": 94,
                 "checkMaterial": 92,
                 "checkJwk": 83,
                 "registerKey": 80,
@@ -1315,13 +1315,13 @@
               "bytes": 30
             }
           },
-          "gzip": 4006,
-          "minified": 10883
+          "gzip": 4034,
+          "minified": 10968
         },
         "importSecretKey": {
           "files": {
             "dist/index.js": {
-              "bytes": 9447,
+              "bytes": 9532,
               "declarations": {
                 "checkHeaderMembers": 864,
                 "importSecretKey": 630,
@@ -1336,6 +1336,7 @@
                 "DIGESTS": 243,
                 "curveMaterial": 240,
                 "decodeBase64Url": 216,
+                "isCryptoKey": 179,
                 "isBase64Url": 178,
                 "rejectUnknownOptions": 178,
                 "secretMaterial": 176,
@@ -1356,7 +1357,6 @@
                 "stripLeadingZeros": 101,
                 "hmac": 99,
                 "MEMBER_NAMES": 97,
-                "isCryptoKey": 94,
                 "checkMaterial": 92,
                 "checkJwk": 83,
                 "registerKey": 79,
@@ -1405,8 +1405,8 @@
               "bytes": 29
             }
           },
-          "gzip": 3451,
-          "minified": 9476
+          "gzip": 3479,
+          "minified": 9561
         },
         "isAsymmetricAlgorithm": {
           "files": {
@@ -1818,7 +1818,7 @@
       },
       "files": {
         "dist/index.js": {
-          "bytes": 43754,
+          "bytes": 43836,
           "declarations": {
             "StrictJsonParser": 2808,
             "createRemoteKeySet": 1629,
@@ -1846,7 +1846,7 @@
             "requestJson": 423,
             "jwkThumbprint": 414,
             "encodeBase64Url": 412,
-            "routeByIssuer": 388,
+            "routeByIssuer": 385,
             "readUrl": 379,
             "resolveMaxLength": 376,
             "headerIssue": 367,
@@ -1901,6 +1901,7 @@
             "readTimeout": 184,
             "toJwk": 181,
             "compatibleAlgorithms": 179,
+            "isCryptoKey": 179,
             "isBase64Url": 178,
             "rejectUnknownOptions": 178,
             "secretMaterial": 177,
@@ -1944,7 +1945,6 @@
             "sourceJwk": 98,
             "isAudience": 96,
             "checkMaterial": 94,
-            "isCryptoKey": 94,
             "getKeyEntryOfKind": 90,
             "checkJwk": 86,
             "fetchFailure": 83,
@@ -2047,9 +2047,9 @@
           "bytes": 567
         }
       },
-      "gzip": 13785,
-      "minified": 44321,
-      "sha256": "d25137d87ec3bff2cfbca4d8e6086f4847fa85cd5bd63d02f1a71d629c6dd51d"
+      "gzip": 13810,
+      "minified": 44403,
+      "sha256": "197b20a3695bd80ca26f79430fb09e62ac6d1ab1ba80802bdea28e378d7bafcf"
     }
   }
 }

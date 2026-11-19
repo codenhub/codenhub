@@ -165,4 +165,4 @@ if (header.ok && header.value.kid?.startsWith("tenant-a:")) {
 }
 ```
 
-It checks the token exactly as a verifier does up to the header, steps 1 to 3 above, and takes the same `maxLength` option. It does not decode the payload, and nothing in this package does before a signature verifies: there is no way to read claims from an unverified token. Treat the header as untrusted too; it only becomes meaningful once a verifier accepts the token.
+It checks the token exactly as a verifier does up to the header, steps 1 to 3 above, and takes the same `maxLength` option. It does not decode the payload, and nothing in this package does before a signature verifies, except a verifier whose `keys` is a function, which reads `iss` to route the token and hands it to that function alone: there is no way to read claims from an unverified token. Treat the header as untrusted too; it only becomes meaningful once a verifier accepts the token.
