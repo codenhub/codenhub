@@ -9,7 +9,12 @@
  */
 
 type MessageValue = string | number | Date;
-type AnyValues = Readonly<Record<string, MessageValue>>;
+/**
+ * The values passed, `TValues`, with each one checked as a message value. Read from the argument rather than written as
+ * an index signature, which an `interface` or a class instance lacks, so `t("greeting", user)` takes a `User`.
+ */
+type Values<TValues> = TValues & { readonly [K in keyof TValues]: MessageValue };
+type AnyValues<TValues> = [params?: Values<TValues>];
 
 /** Marks a message these types can't read. */
 declare const unreadable: unique symbol;
@@ -304,8 +309,11 @@ type Simplify<T> = { readonly [K in keyof T]: Narrow<T[K]> } & {};
 type IsUnreadable<U> = [Extract<U, Unreadable>] extends [never] ? false : true;
 
 // Any dictionary whose message can't be read makes the values loose; otherwise every dictionary's arguments apply.
-type ParamsFor<U> = IsUnreadable<U> extends true ? [params?: AnyValues] : ParamsOf<UnionToIntersection<U>>;
-type ParamsOf<A> = keyof A extends never ? [params?: AnyValues] : [params: Readonly<Simplify<A>> & AnyValues];
+type ParamsFor<U, TValues> =
+  IsUnreadable<U> extends true ? AnyValues<TValues> : ParamsOf<UnionToIntersection<U>, TValues>;
+type ParamsOf<A, TValues> = keyof A extends never
+  ? AnyValues<TValues>
+  : [params: Readonly<Simplify<A>> & Values<TValues>];
 
 /**
  * The parameters `t(key, …)` takes: required values when every dictionary type's message at `key` is a literal with
@@ -313,10 +321,11 @@ type ParamsOf<A> = keyof A extends never ? [params?: AnyValues] : [params: Reado
  *
  * @internal
  */
-export type TranslateParams<TMessages, TKey extends string> = unknown extends TMessages
-  ? [params?: AnyValues]
+export type TranslateParams<TMessages, TKey extends string, TValues = {}> = unknown extends TMessages
+  ? AnyValues<TValues>
   : IsUnion<TKey> extends true
-    ? [params?: AnyValues]
+    ? AnyValues<TValues>
     : string extends TKey
-      ? [params?: AnyValues]
-      : ParamsFor<ValueArguments<ValueAt<TMessages, TKey>>>;
+      ? AnyValues<TValues>
+      : // An optional key, as in a `Partial` dictionary type, is checked as the message it has where present.
+        ParamsFor<ValueArguments<Exclude<ValueAt<TMessages, TKey>, undefined>>, TValues>;
