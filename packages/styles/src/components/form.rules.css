@@ -293,8 +293,11 @@
        `--intent-contrast` and `--intent-subtle` go with them, so an invalid
        toggle is a destructive one in every part: left neutral, a checked invalid
        checkbox in the dark theme drew the near-black neutral mark on a red plate
-       (3.28:1). The bare elements and the `.input-group` bridge are below the
-       utility, since they name no class `@apply` could carry. */
+       (3.28:1). `--intent-fill-max` goes too, so the control is no longer
+       neutral: left at the reset's 20%, an invalid field or toggle on a solid
+       surface took the surface's ink as a neutral one does, and its red line
+       read as the valid grey. The bare elements and the `.input-group` bridge
+       are below the utility, since they name no class `@apply` could carry. */
     &[aria-invalid="true"] {
       --intent-color: var(--color-destructive);
       --intent-contrast: var(--color-destructive-contrast);
@@ -302,6 +305,7 @@
       --intent-border: var(--color-destructive);
       --intent-strong: var(--color-destructive-strong);
       --intent-subtle: var(--color-destructive-subtle);
+      --intent-fill-max: 100%;
     }
 
     /* S1, P6: `:checked` is a state, so it re-declares the presentation inputs --
@@ -459,6 +463,7 @@
     --intent-border: var(--color-destructive);
     --intent-strong: var(--color-destructive-strong);
     --intent-subtle: var(--color-destructive-subtle);
+    --intent-fill-max: 100%;
   }
 }
 
@@ -852,7 +857,15 @@
        alone inherits, and an invalid group -- by its own `aria-invalid` or the
        control's, through the `:has()` arm -- prints destructive text the way a
        lone invalid field does. The group owns the field, so an intent class on
-       the control inside does not colour its text. */
+       the control inside does not colour its text.
+
+       Its cap stays neutral's for the same reason, whatever the control says:
+       its own `aria-invalid` lifts the cap a lone field needs to be read as
+       destructive, which on a solid surface printed the red tone on the
+       surface where `.input-group.destructive` prints the surface's ink. The
+       group is what is invalid, and it draws the red line. Restated on the
+       invalid control at 0-3-0, since Tailwind emits the control's own state
+       after this rule. */
     &
       > :is(.ipt, .textarea, .select, .text-control, input, textarea, select):where(
         :not(
@@ -881,6 +894,10 @@
       border: none;
       background-color: transparent;
       box-shadow: none;
+
+      &[aria-invalid="true"] {
+        --intent-fill-max: 20%;
+      }
 
       &:focus-visible {
         outline: none;
@@ -977,6 +994,7 @@
       --intent-border: var(--color-destructive);
       --intent-strong: var(--color-destructive-strong);
       --intent-subtle: var(--color-destructive-subtle);
+      --intent-fill-max: 100%;
     }
   }
 

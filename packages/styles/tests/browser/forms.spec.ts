@@ -1877,6 +1877,103 @@ test.describe("forms", () => {
     }
   });
 
+  /* The invalid state wrote the destructive slots but not the cap, so the
+     control stayed neutral under the reset's 20% and, on a solid surface, took
+     the surface's ink in place of the red: an invalid field's line read
+     159,147,147 against a valid one's 143,143,143 on `.card.solid.primary`.
+     Held to `.destructive` on every solid surface, by class, in a group, and
+     on the bare elements `/native` styles. */
+  for (const [route, fixtures] of [
+    [
+      FORMS_URL,
+      [
+        ['<input class="ipt" ATTR />', "ipt"],
+        ['<textarea class="textarea" ATTR></textarea>', "textarea"],
+        ['<select class="select" ATTR><option>A</option></select>', "select"],
+        ['<input class="checkbox" type="checkbox" ATTR />', "checkbox"],
+        ['<input class="checkbox" type="checkbox" checked ATTR />', "checkbox:checked"],
+        ['<input class="radio" type="radio" ATTR />', "radio"],
+        ['<input class="switch" type="checkbox" role="switch" ATTR />', "switch"],
+        ['<input class="switch" type="checkbox" role="switch" checked ATTR />', "switch:checked"],
+        ['<div class="input-group GROUP"><input class="ipt" ATTR /></div>', "input-group"],
+      ],
+    ],
+    [
+      `${ORIGIN}/native/?env=vanilla`,
+      [
+        ["<input ATTR />", "input"],
+        ["<textarea ATTR></textarea>", "textarea"],
+        ['<input type="checkbox" ATTR />', "checkbox"],
+        ['<input type="checkbox" checked ATTR />', "checkbox:checked"],
+      ],
+    ],
+  ] as const) {
+    test(`draws an invalid control as a destructive one on a solid surface, ${route.includes("native") ? "bare" : "by class"}`, async ({
+      page,
+    }) => {
+      await page.goto(route);
+
+      for (const theme of ["light", "dark"]) {
+        // oxlint-disable-next-line no-await-in-loop -- one theme, then the other, on one page.
+        const pairs = await page.evaluate(
+          ([name, list]) => {
+            document.documentElement.classList.remove("light", "dark");
+            document.documentElement.classList.add(name);
+            const host = document.querySelector('[data-testid="preview-root"]') ?? document.body;
+            const plates = ["", "neutral", "primary", "secondary", "success", "warning", "destructive", "info"];
+            const read = (plate: string, html: string) => {
+              const wrapper = document.createElement("div");
+
+              wrapper.className = `card solid ${plate}`;
+              wrapper.innerHTML = html;
+              host.append(wrapper);
+
+              const control = wrapper.firstElementChild!;
+              const field = control.querySelector("input") ?? control;
+              const styles = getComputedStyle(control);
+              const values = {
+                background: styles.backgroundColor,
+                border: styles.borderTopColor,
+                color: getComputedStyle(field).color,
+                mark: getComputedStyle(control, "::after").backgroundColor,
+              };
+
+              wrapper.remove();
+
+              return values;
+            };
+
+            return plates.flatMap((plate) =>
+              list.map(([html, label]) => {
+                /* A group takes its intent on the group, and its invalid state
+                   from the control inside: that is the pair the docs promise. */
+                const invalid = html.replace("ATTR", 'aria-invalid="true"').replace(" GROUP", "");
+                const destructive = html.includes("GROUP")
+                  ? html.replace("ATTR", "").replace("GROUP", "destructive")
+                  : html.includes("class=")
+                    ? html.replace("ATTR", "").replace(/class="([^"]+)"/u, 'class="$1 destructive"')
+                    : html.replace("ATTR", 'class="destructive"');
+
+                return {
+                  label: `${name} ${label} on .card.solid${plate ? `.${plate}` : ""}`,
+                  invalid: read(plate, invalid),
+                  destructive: read(plate, destructive),
+                };
+              }),
+            );
+          },
+          [theme, fixtures] as const,
+        );
+
+        for (const { label, invalid, destructive } of pairs) {
+          for (const part of ["background", "border", "color", "mark"] as const) {
+            expectSameColor(invalid[part], destructive[part], `${label} invalid ${part}`);
+          }
+        }
+      }
+    });
+  }
+
   /* A group is a field, so it is a field's height and lines up with the fields
      and buttons beside it. The control inside once kept its own
      `--control-height` inside a box that adds its own line, and the group was
