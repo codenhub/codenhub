@@ -118,3 +118,26 @@ async function verifyProof(proof: string) {
 ```
 
 Limit `alg` to the algorithms you accept, as above. `jkt` is the value an access token's `cnf.jkt` must equal. Checking `htm`, `htu`, `ath`, `nonce` and that each `jti` is used once is the protocol's job, above this package.
+
+A proof's `ath` is the whole SHA-256 hash of the access token, base64url-encoded, which `encodeBase64Url` gives:
+
+```ts
+import { encodeBase64Url } from "@codenhub/jwt";
+
+const ath = encodeBase64Url(new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(accessToken))));
+```
+
+## Token hashes in ID tokens
+
+An OpenID Connect ID token issued with an access token carries `at_hash`, and one issued with an authorization code carries `c_hash`: the left half of the token's hash, with the hash the ID token's `alg` uses. `tokenHash` computes it for every algorithm this package signs with, `EdDSA` and `Ed25519` included, which use SHA-512:
+
+```ts
+import { sign, tokenHash } from "@codenhub/jwt";
+
+const idToken = await sign({
+  payload: { ...claims, at_hash: await tokenHash(accessToken, "ES256"), c_hash: await tokenHash(code, "ES256") },
+  key: privateKey,
+});
+```
+
+To check one, compute it from the token you received and the verified ID token's `alg`, and compare. `tokenHash` throws a `TypeError` for an `alg` this package does not support.

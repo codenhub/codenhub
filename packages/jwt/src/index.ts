@@ -31,8 +31,11 @@ export type {
   VerifierOptions,
 } from "./core/types";
 export type { StandardSchemaV1 } from "./interop/standard-schema";
+export { JWS_ALGORITHMS, isJwsAlgorithm } from "./core/limits";
+export { decodeBase64Url, encodeBase64Url } from "./encoding";
 export { readHeader, type ReadHeaderOptions } from "./jws/read-header";
 export {
+  ASYMMETRIC_ALGORITHMS,
   exportPrivateJwk,
   exportPublicJwk,
   exportSecretJwk,
@@ -42,7 +45,11 @@ export {
   importPrivateKey,
   importPublicKey,
   importSecretKey,
+  isAsymmetricAlgorithm,
+  isSymmetricAlgorithm,
   jwkThumbprint,
+  SYMMETRIC_ALGORITHMS,
+  tokenHash,
   type GenerateKeyPairOptions,
   type GenerateSecretKeyOptions,
   type ImportPrivateKeyOptions,

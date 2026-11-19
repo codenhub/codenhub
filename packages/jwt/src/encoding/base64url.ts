@@ -44,9 +44,15 @@ export function isBase64Url(text: string): boolean {
   return mask === undefined || (sextet(text.charCodeAt(text.length - 1)) & mask) === 0;
 }
 
-/** Decodes canonical unpadded base64url, as {@link isBase64Url} defines it, or returns undefined for anything else. */
+/**
+ * Decodes canonical unpadded base64url (RFC 7515 §2): only `A-Z a-z 0-9 - _`, no `=` padding, and no
+ * unused bits set in the last character, so each byte string has exactly one encoding.
+ *
+ * @param text - The base64url text. The empty string decodes to no bytes.
+ * @returns The bytes, or `undefined` when `text` is not a string or not canonical base64url.
+ */
 export function decodeBase64Url(text: string): Uint8Array<ArrayBuffer> | undefined {
-  if (!isBase64Url(text)) {
+  if (typeof text !== "string" || !isBase64Url(text)) {
     return undefined;
   }
   const bytes = new Uint8Array(Math.floor((text.length * 3) / 4));
@@ -64,8 +70,17 @@ export function decodeBase64Url(text: string): Uint8Array<ArrayBuffer> | undefin
   return bytes;
 }
 
-/** Encodes bytes as unpadded base64url. */
+/**
+ * Encodes bytes as unpadded base64url (RFC 7515 §2), as JWS and JWK members are.
+ *
+ * @param bytes - The bytes to encode.
+ * @returns The base64url text, empty for no bytes.
+ * @throws TypeError when `bytes` is not a `Uint8Array`.
+ */
 export function encodeBase64Url(bytes: Uint8Array): string {
+  if (!(bytes instanceof Uint8Array)) {
+    throw new TypeError("encodeBase64Url: bytes must be a Uint8Array.");
+  }
   let text = "";
   let index = 0;
   for (; index + 2 < bytes.length; index += 3) {

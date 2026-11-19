@@ -5,9 +5,14 @@ import * as entrypoint from "./index";
 describe("package entrypoint", () => {
   it("should export exactly the public runtime API", () => {
     expect(Object.keys(entrypoint).sort()).toEqual([
+      "ASYMMETRIC_ALGORITHMS",
+      "JWS_ALGORITHMS",
+      "SYMMETRIC_ALGORITHMS",
       "createKeySet",
       "createRemoteKeySet",
       "createVerifier",
+      "decodeBase64Url",
+      "encodeBase64Url",
       "exportPrivateJwk",
       "exportPublicJwk",
       "exportSecretJwk",
@@ -18,9 +23,13 @@ describe("package entrypoint", () => {
       "importPrivateKey",
       "importPublicKey",
       "importSecretKey",
+      "isAsymmetricAlgorithm",
+      "isJwsAlgorithm",
+      "isSymmetricAlgorithm",
       "jwkThumbprint",
       "readHeader",
       "sign",
+      "tokenHash",
     ]);
   });
 });

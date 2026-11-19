@@ -190,3 +190,15 @@ const jkt = await jwkThumbprint(publicKey);
 ```
 
 Use it for a `kid` that follows from the key, or for the `jkt` that binds an access token to a DPoP key, as [Signing tokens](signing.md#dpop-proofs) shows.
+
+## Algorithms
+
+`JWS_ALGORITHMS` lists every algorithm this package signs and verifies with, `ASYMMETRIC_ALGORITHMS` and `SYMMETRIC_ALGORITHMS` split it by key kind, and `isJwsAlgorithm`, `isAsymmetricAlgorithm` and `isSymmetricAlgorithm` check a value against them, exactly and case-sensitively. Use them to validate an `alg` from configuration or a discovery document before passing it on:
+
+```ts
+import { isAsymmetricAlgorithm } from "@codenhub/jwt";
+
+const algorithms = metadata.id_token_signing_alg_values_supported.filter(isAsymmetricAlgorithm);
+```
+
+The lists may grow in a minor release, as [the notes](../README.md#notes) say.

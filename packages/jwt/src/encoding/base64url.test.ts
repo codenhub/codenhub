@@ -73,3 +73,20 @@ describe("isBase64Url", () => {
     expect(["Z", "Zh", "Zm9", "Zg==", "+/8", "a.b"].some(isBase64Url)).toBe(false);
   });
 });
+
+describe("base64url input checks", () => {
+  it.each([[undefined], [null], [42], [["QQ"]]])("should decode %s to undefined", (text) => {
+    expect(decodeBase64Url(text as never)).toBeUndefined();
+  });
+
+  it.each([[undefined], ["AQ"], [[1, 2]], [new ArrayBuffer(2)]])("should throw TypeError to encode %s", (bytes) => {
+    expect(() => encodeBase64Url(bytes as never)).toThrow(
+      new TypeError("encodeBase64Url: bytes must be a Uint8Array."),
+    );
+  });
+
+  it("should encode a Buffer-like Uint8Array subclass", () => {
+    class Bytes extends Uint8Array {}
+    expect(encodeBase64Url(new Bytes([0xfb, 0xff]))).toBe("-_8");
+  });
+});
