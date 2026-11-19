@@ -23,7 +23,10 @@ async function verifyAt(
   header?: SignHeader,
 ): Promise<unknown> {
   const token = await sign({ payload, key, ...(header === undefined ? {} : { header }) });
-  return createVerifier({ keys: keySetOf(key), now: clockAt(offsetSeconds), ...options })(token);
+  // Most checks here are not about exp, so the helper waives it; the "exp required" tests set it back.
+  return createVerifier({ keys: keySetOf(key), now: clockAt(offsetSeconds), requireExpiration: false, ...options })(
+    token,
+  );
 }
 
 const verify = (payload: JwtPayload, options: ClaimOptions = {}, header?: SignHeader): Promise<unknown> =>
@@ -129,7 +132,9 @@ describe("maxAge", () => {
 
 describe("maxAge with unusual iat", () => {
   const verifyRaw = async (payload: string, options: ClaimOptions) =>
-    createVerifier({ keys: keySetOf(key), now: clockAt(), ...options })(await signRaw(key, '{"alg":"HS256"}', payload));
+    createVerifier({ keys: keySetOf(key), now: clockAt(), requireExpiration: false, ...options })(
+      await signRaw(key, '{"alg":"HS256"}', payload),
+    );
 
   it("should report an ill-typed iat once, without missing_claim or too_old", async () => {
     expect(await verifyRaw('{"iat":"yesterday"}', { maxAge: 60 })).toEqual(
@@ -219,8 +224,95 @@ describe("audience", () => {
     );
   });
 
-  it("should ignore aud when no audience is configured", async () => {
-    expect(await verify({ aud: "web" })).toEqual(passed({ aud: "web" }));
+  it("should reject a token with aud when no audience is configured", async () => {
+    expect(await verify({ aud: "web" })).toEqual(failure({ code: "wrong_audience", path: ["payload", "aud"] }));
+  });
+
+  it("should reject a token with an empty aud array when no audience is configured", async () => {
+    expect(await verify({ aud: [] })).toEqual(failure({ code: "wrong_audience", path: ["payload", "aud"] }));
+  });
+
+  it("should accept a token without aud when no audience is configured", async () => {
+    expect(await verify({ sub: "u" })).toEqual(passed({ sub: "u" }));
+  });
+
+  it("should accept any aud when audience is false", async () => {
+    expect(await verify({ aud: ["web", "admin"] }, { audience: false })).toEqual(passed({ aud: ["web", "admin"] }));
+  });
+
+  it("should accept a token without aud when audience is false", async () => {
+    expect(await verify({ sub: "u" }, { audience: false })).toEqual(passed({ sub: "u" }));
+  });
+
+  it("should still report an ill-typed aud when audience is false", async () => {
+    const token = await signRaw(key, '{"alg":"HS256"}', '{"aud":1}');
+    const verifier = createVerifier({ keys: keySetOf(key), now: clockAt(), requireExpiration: false, audience: false });
+    expect(await verifier(token)).toEqual(failure({ code: "invalid_claim", path: ["payload", "aud"] }));
+  });
+});
+
+describe("exp required", () => {
+  const byDefault = { requireExpiration: undefined };
+
+  it("should require exp by default", async () => {
+    expect(await verify({ sub: "u" }, byDefault)).toEqual(
+      failure({ code: "missing_claim", path: ["payload", "exp"], params: { claim: "exp" } }),
+    );
+  });
+
+  it("should accept a token with exp by default", async () => {
+    expect(await verifyAt(-1, { exp: NOW_SECONDS }, byDefault)).toEqual(passed({ exp: NOW_SECONDS }));
+  });
+
+  it("should not require exp when maxAge is set", async () => {
+    expect(await verify({ iat: NOW_SECONDS }, { ...byDefault, maxAge: 60 })).toEqual(passed({ iat: NOW_SECONDS }));
+  });
+
+  it("should not require exp when requireExpiration is false", async () => {
+    expect(await verify({ sub: "u" }, { requireExpiration: false })).toEqual(passed({ sub: "u" }));
+  });
+
+  it("should require exp alongside maxAge when requireExpiration is true", async () => {
+    expect(await verify({ iat: NOW_SECONDS }, { requireExpiration: true, maxAge: 60 })).toEqual(
+      failure({ code: "missing_claim", path: ["payload", "exp"], params: { claim: "exp" } }),
+    );
+  });
+
+  it("should report a missing exp once when requiredClaims also lists it", async () => {
+    expect(await verify({ sub: "u" }, { ...byDefault, requiredClaims: ["exp", "sub"] })).toEqual(
+      failure({ code: "missing_claim", path: ["payload", "exp"], params: { claim: "exp" } }),
+    );
+  });
+
+  it("should report an ill-typed exp as invalid_claim, not missing_claim", async () => {
+    const token = await signRaw(key, '{"alg":"HS256"}', '{"exp":"soon"}');
+    expect(await createVerifier({ keys: keySetOf(key), now: clockAt() })(token)).toEqual(
+      failure({ code: "invalid_claim", path: ["payload", "exp"] }),
+    );
+  });
+});
+
+describe("allowExpired", () => {
+  it("should accept a token past exp", async () => {
+    expect(await verifyAt(3600, { exp: NOW_SECONDS }, { allowExpired: true })).toEqual(passed({ exp: NOW_SECONDS }));
+  });
+
+  it("should still require exp", async () => {
+    expect(await verify({ sub: "u" }, { allowExpired: true, requireExpiration: undefined })).toEqual(
+      failure({ code: "missing_claim", path: ["payload", "exp"], params: { claim: "exp" } }),
+    );
+  });
+
+  it("should still check nbf", async () => {
+    expect(await verify({ exp: NOW_SECONDS - 1, nbf: NOW_SECONDS + 3600 }, { allowExpired: true })).toEqual(
+      failure({ code: "not_yet_valid", path: ["payload", "nbf"] }),
+    );
+  });
+
+  it("should still check maxAge", async () => {
+    expect(await verify({ exp: NOW_SECONDS - 1, iat: NOW_SECONDS - 120 }, { allowExpired: true, maxAge: 60 })).toEqual(
+      failure({ code: "too_old", path: ["payload", "iat"], params: { maxAge: 60 } }),
+    );
   });
 });
 
@@ -275,6 +367,32 @@ describe("type", () => {
   it("should reject a missing typ when a type is required", async () => {
     expect(await verify({}, { type: "JWT" })).toEqual(failure({ code: "wrong_type", path: ["header", "typ"] }));
   });
+
+  it("should accept a typ matching any type in a list", async () => {
+    expect(await verify({}, { type: ["JWT", "at+jwt"] }, { typ: "AT+JWT" })).toEqual(
+      passed({}, { alg: "HS256", typ: "AT+JWT" }),
+    );
+  });
+
+  it("should reject a typ outside a list", async () => {
+    expect(await verify({}, { type: ["JWT", "at+jwt"] }, { typ: "dpop+jwt" })).toEqual(
+      failure({ code: "wrong_type", path: ["header", "typ"] }),
+    );
+  });
+
+  it("should accept a missing typ when the list holds null", async () => {
+    expect(await verify({}, { type: ["at+jwt", null] })).toEqual(passed({}));
+  });
+
+  it("should reject a missing typ when the list holds no null", async () => {
+    expect(await verify({}, { type: ["at+jwt"] })).toEqual(failure({ code: "wrong_type", path: ["header", "typ"] }));
+  });
+
+  it("should reject any typ when the list holds only null", async () => {
+    expect(await verify({}, { type: [null] }, { typ: "JWT" })).toEqual(
+      failure({ code: "wrong_type", path: ["header", "typ"] }),
+    );
+  });
 });
 
 describe("requiredClaims", () => {
@@ -302,7 +420,9 @@ describe("requiredClaims", () => {
 
 describe("registered claim types", () => {
   const verifyRaw = async (payload: string, options: ClaimOptions = {}) =>
-    createVerifier({ keys: keySetOf(key), now: clockAt(), ...options })(await signRaw(key, '{"alg":"HS256"}', payload));
+    createVerifier({ keys: keySetOf(key), now: clockAt(), requireExpiration: false, ...options })(
+      await signRaw(key, '{"alg":"HS256"}', payload),
+    );
 
   it.each([
     ["exp", '{"exp":"1"}'],

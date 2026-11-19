@@ -68,7 +68,7 @@ afterEach(() => {
 });
 
 const verifierOver = (keys: KeySet, options: Omit<VerifierOptions, "keys" | "now"> = {}) =>
-  createVerifier({ keys, now, ...options });
+  createVerifier({ keys, now, requireExpiration: false, ...options });
 
 /** A token signed by the RS256 key with an attacker-chosen header and payload. */
 const rsaToken = (header: string, payload: string) => forge("RS256", privateJwks.RS256, header, payload);
@@ -622,7 +622,11 @@ describe("remote JWKS end to end", () => {
 
   it("should verify a token against keys fetched from the endpoint", async () => {
     const fetch = countingFetch(() => jwksResponse(publicJwks.ES256));
-    const verify = createVerifier({ keys: createRemoteKeySet({ url: URL_STRING, fetch, now }), now });
+    const verify = createVerifier({
+      requireExpiration: false,
+      keys: createRemoteKeySet({ url: URL_STRING, fetch, now }),
+      now,
+    });
 
     const result = await verify(await esToken());
 
@@ -632,7 +636,11 @@ describe("remote JWKS end to end", () => {
   it("should report key_fetch_failed with timeout for an endpoint that never answers", async () => {
     vi.useFakeTimers();
     const fetch = vi.fn((): Promise<Response> => new Promise(() => undefined));
-    const verify = createVerifier({ keys: createRemoteKeySet({ url: URL_STRING, fetch, timeout: 1, now }), now });
+    const verify = createVerifier({
+      requireExpiration: false,
+      keys: createRemoteKeySet({ url: URL_STRING, fetch, timeout: 1, now }),
+      now,
+    });
     const token = await esToken();
 
     const pending = verify(token);
@@ -650,6 +658,7 @@ describe("remote JWKS end to end", () => {
         },
       );
     const verify = createVerifier({
+      requireExpiration: false,
       keys: createRemoteKeySet({ url: URL_STRING, fetch: countingFetch(endless), now }),
       now,
     });
@@ -662,6 +671,7 @@ describe("remote JWKS end to end", () => {
   it("should report key_fetch_failed with invalid_response for a JWKS nested 100,000 deep", async () => {
     const body = `{"keys":${"[".repeat(100_000)}${"]".repeat(100_000)}}`;
     const verify = createVerifier({
+      requireExpiration: false,
       keys: createRemoteKeySet({
         url: URL_STRING,
         fetch: countingFetch(() => new Response(body, { status: 200 })),
@@ -683,6 +693,7 @@ describe("remote JWKS end to end", () => {
       () => new Response(null, { status: 503 }),
     );
     const verify = createVerifier({
+      requireExpiration: false,
       keys: createRemoteKeySet({ url: URL_STRING, fetch, cacheTtl: 600, now: clock.now }),
       now: clock.now,
     });
@@ -702,6 +713,7 @@ describe("remote JWKS end to end", () => {
       () => jwksResponse(publicJwks.ES256, publicJwks.EdDSA),
     );
     const verify = createVerifier({
+      requireExpiration: false,
       keys: createRemoteKeySet({ url: URL_STRING, fetch, cooldown: 30, now: clock.now }),
       now: clock.now,
     });
@@ -718,6 +730,7 @@ describe("remote JWKS end to end", () => {
     const clock = createClock();
     const fetch = countingFetch(() => jwksResponse(publicJwks.ES256));
     const verify = createVerifier({
+      requireExpiration: false,
       keys: createRemoteKeySet({ url: URL_STRING, fetch, cooldown: 30, now: clock.now }),
       now: clock.now,
     });

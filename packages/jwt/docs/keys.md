@@ -93,7 +93,7 @@ Import ignores a JWK's `ext` and any member it does not know. A public key is al
 
 ## Importing a PEM key
 
-`importPublicKey`, `importPrivateKey` and `importKeyPair` also take a PEM string, as OpenSSL, cloud key services and secret stores hand keys out. A public key is a `PUBLIC KEY` block (SPKI) and a private key a `PRIVATE KEY` block (PKCS#8). A PEM has no `kid`, so pass one as an option:
+`importPublicKey`, `importPrivateKey` and `importKeyPair` also take a PEM string, as OpenSSL, cloud key services and secret stores hand keys out. A public key is a `PUBLIC KEY` block (SPKI) or a `CERTIFICATE` block (X.509), and a private key a `PRIVATE KEY` block (PKCS#8). A PEM has no `kid`, so pass one as an option:
 
 ```ts
 import { importKeyPair } from "@codenhub/jwt";
@@ -103,11 +103,13 @@ const result = await importKeyPair(process.env.SIGNING_KEY_PEM ?? "", { alg: "RS
 
 The PEM is read into the JWK of its key and every check in the table above runs on that, so a 1024-bit RSA key is `weak_key` whichever way it arrives. The string must be one block of at most 16384 characters, with nothing but whitespace around it and either line ending. Anything else is `invalid_key`: other labels, including `RSA PRIVATE KEY` (PKCS#1), `EC PRIVATE KEY` (SEC 1) and encrypted keys, which Web Crypto cannot read; a key of another type or curve than `alg`; and a `PUBLIC KEY` given to a private import. A `PRIVATE KEY` given to `importPublicKey` is `unexpected_private_key`. Convert other formats to PKCS#8 first, such as with `openssl pkcs8 -topk8 -nocrypt -in key.pem`.
 
-The `kid` option applies to PEM only; for a JWK, the JWK's own `kid` is used.
+From a certificate, `importPublicKey` takes the public key and nothing else. It does not check the certificate's dates, issuer, chain, extensions or signature, so a certificate is exactly as trusted as the key in it would be: use one you got from a source you already trust, such as an identity provider's admin console, and not one a token or a client sent you. A `CERTIFICATE` given to a private import is `invalid_key`.
+
+The `kid` option applies to PEM only; for a JWK, the JWK's own `kid` is used. Without it, the key still verifies tokens that name a `kid`, as long as it is the only key in its set without a `kid` for that algorithm ([how a key is selected](key-sets.md#how-a-key-is-selected)).
 
 ## Importing a private key
 
-`importPrivateKey` takes the same arguments and runs the same checks, except that the private members are required: `d` for `EC` and `OKP` keys, and `d`, `p`, `q`, `dp`, `dq` and `qi` for `RSA` keys. Multi-prime RSA keys, with `oth`, are `unsupported_key`. Pass `extractable: true` if the key must be exportable again.
+`importPrivateKey` takes the same arguments and runs the same checks, except that the private members are required: `d` for `EC` and `OKP` keys, and `d`, `p`, `q`, `dp`, `dq` and `qi` for `RSA` keys. Multi-prime RSA keys, with `oth`, are `unsupported_key`. The public members must belong to the private key: the key signs a fixed message that they must verify, and a JWK whose halves come from two keys is `invalid_key`. Pass `extractable: true` if the key must be exportable again.
 
 ```ts
 import { importPrivateKey } from "@codenhub/jwt";
@@ -181,12 +183,26 @@ Every exported JWK is frozen, names `kty`, `alg` and `use: "sig"`, includes `kid
 
 ## Thumbprints
 
-`jwkThumbprint` computes a public key's JWK SHA-256 Thumbprint (RFC 7638): 43 base64url characters that name the key by its material alone, whatever its `alg` or `kid`.
+`jwkThumbprint` computes a key pair's JWK SHA-256 Thumbprint (RFC 7638): 43 base64url characters that name the key by its material alone, whatever its `alg` or `kid`. Pass the public key or the private key; both give the same thumbprint, and a private key need not be extractable.
 
 ```ts
-import { jwkThumbprint } from "@codenhub/jwt";
+import { importPrivateKey, jwkThumbprint } from "@codenhub/jwt";
 
-const jkt = await jwkThumbprint(publicKey);
+const result = await importPrivateKey(env.SIGNING_KEY_PEM, { alg: "ES256" });
+if (!result.ok) throw new Error("The signing key could not be imported.");
+const kid = await jwkThumbprint(result.value);
 ```
 
 Use it for a `kid` that follows from the key, or for the `jkt` that binds an access token to a DPoP key, as [Signing tokens](signing.md#dpop-proofs) shows.
+
+## Algorithms
+
+`JWS_ALGORITHMS` lists every algorithm this package signs and verifies with, `ASYMMETRIC_ALGORITHMS` and `SYMMETRIC_ALGORITHMS` split it by key kind, and `isJwsAlgorithm`, `isAsymmetricAlgorithm` and `isSymmetricAlgorithm` check a value against them, exactly and case-sensitively. Use them to validate an `alg` from configuration or a discovery document before passing it on:
+
+```ts
+import { isAsymmetricAlgorithm } from "@codenhub/jwt";
+
+const algorithms = metadata.id_token_signing_alg_values_supported.filter(isAsymmetricAlgorithm);
+```
+
+The lists may grow in a minor release, as [the algorithm table](index.md#keys-are-bound-to-one-algorithm) says. Copy them into your own code and they will be out of date by exactly one release.

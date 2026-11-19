@@ -10,6 +10,7 @@ export {
 } from "./algorithms";
 export { exportPrivateJwk, exportPublicJwk, exportSecretJwk } from "./export";
 export { jwkThumbprint } from "./thumbprint";
+export { tokenHash } from "./token-hash";
 export {
   generateKeyPair,
   generateSecretKey,

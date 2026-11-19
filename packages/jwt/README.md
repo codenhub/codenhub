@@ -28,7 +28,7 @@ const verify = createVerifier({
   keys: createRemoteKeySet({ url: "https://issuer.example/.well-known/jwks.json" }),
   issuer: "https://issuer.example",
   audience: "api",
-  requiredClaims: ["sub", "exp"],
+  requiredClaims: ["sub"],
 });
 
 const result = await verify(token);
@@ -57,7 +57,7 @@ const token = await sign({
 const result = await createVerifier({ keys: createKeySet([publicKey]) })(token);
 ```
 
-Times in claims are seconds since the Unix epoch. `sign` adds no claim of its own, and a token without `exp` never expires unless you require it.
+Times in claims are seconds since the Unix epoch. `sign` adds no claim of its own. A verifier requires `exp` unless `maxAge` is set, and refuses a token that names an audience when you named none.
 
 ## What hostile input gets
 
@@ -123,7 +123,7 @@ fetches; // 1
 ## Notes
 
 - **Only compact JWS.** No encrypted tokens (JWE), no JWS JSON serialization, no unencoded payloads (`b64`), and no `crit` header extensions; tokens using them are rejected.
-- **Claim checks are generic.** Issuer, audience, `typ`, times, maximum age and required claims are checked here. Protocol rules such as OpenID Connect's `nonce`, `azp` or `at_hash` are left to the code above.
+- **Claim checks are generic.** Issuer, audience, `typ`, times, maximum age and required claims are checked here. Protocol rules such as OpenID Connect's `nonce` or `azp` are left to the code above; `tokenHash` computes the `at_hash` and `c_hash` it compares.
 - **Clock tolerance defaults to 0 seconds**, and is capped at 300. Set `clockTolerance` when the issuer's clock may differ from yours. `nbf` and `iat` always allow at least 60 seconds, so a token checked the moment it is issued passes on a clock slightly behind the issuer's.
 - **Algorithms may be added in a minor release.** Give a `switch` over an `alg` a default branch.
 

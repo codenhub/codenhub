@@ -12,6 +12,8 @@ export interface KeyEntry {
    * modulus byte length for an RSA key.
    */
   readonly signatureLength: number;
+  /** For a private key, the public half of its pair, proven to match, so its thumbprint never needs the private material. */
+  readonly publicCryptoKey?: CryptoKey;
 }
 
 const registry = new WeakMap<object, KeyEntry>();

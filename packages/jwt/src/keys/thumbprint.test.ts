@@ -1,8 +1,14 @@
 import { describe, expect, it } from "vitest";
 
 import { generateKeyPair, generateSecretKey } from "./generate";
-import { importPublicKey } from "./import";
-import { EC_P256_PUBLIC_JWK, valueOf } from "./test-fixtures";
+import { importKeyPair, importPrivateKey, importPublicKey } from "./import";
+import {
+  EC_P256_PRIVATE_JWK,
+  EC_P256_PUBLIC_JWK,
+  ED25519_PRIVATE_JWK,
+  RSA_2048_PRIVATE_JWK,
+  valueOf,
+} from "./test-fixtures";
 import { jwkThumbprint } from "./thumbprint";
 
 /** RFC 7638 §3.1: the RSA key of the example, and its thumbprint. */
@@ -48,10 +54,34 @@ describe("jwkThumbprint", () => {
     expect(await jwkThumbprint(a.publicKey)).not.toBe(await jwkThumbprint(b.publicKey));
   });
 
-  it("should throw TypeError for a private key, a secret key and a look-alike", async () => {
-    const { privateKey } = await generateKeyPair({ alg: "ES256" });
+  it.each(["ES256", "EdDSA", "RS256"] as const)(
+    "should give a generated %s private key, not extractable, its public key's thumbprint",
+    async (alg) => {
+      const { privateKey, publicKey } = await generateKeyPair({ alg });
+      expect([privateKey.extractable, await jwkThumbprint(privateKey)]).toEqual([
+        false,
+        await jwkThumbprint(publicKey),
+      ]);
+    },
+  );
+
+  it("should give a private key from importKeyPair its public key's thumbprint", async () => {
+    const { privateKey, publicKey } = valueOf(await importKeyPair(EC_P256_PRIVATE_JWK, { alg: "ES256" }));
+    expect(await jwkThumbprint(privateKey)).toBe(await jwkThumbprint(publicKey));
+  });
+
+  it.each([
+    ["ES256", EC_P256_PRIVATE_JWK],
+    ["Ed25519", ED25519_PRIVATE_JWK],
+    ["RS256", RSA_2048_PRIVATE_JWK],
+  ] as const)("should give a %s private key from importPrivateKey its public key's thumbprint", async (alg, jwk) => {
+    const { publicKey } = valueOf(await importKeyPair(jwk, { alg }));
+    expect(await jwkThumbprint(valueOf(await importPrivateKey(jwk, { alg })))).toBe(await jwkThumbprint(publicKey));
+  });
+
+  it("should throw TypeError for a secret key and a look-alike", async () => {
     const secret = await generateSecretKey({ alg: "HS256" });
-    for (const key of [privateKey, secret, { kind: "public", alg: "ES256" }]) {
+    for (const key of [secret, { kind: "public", alg: "ES256" }, { kind: "private", alg: "ES256" }]) {
       // oxlint-disable-next-line no-await-in-loop
       await expect(jwkThumbprint(key as never)).rejects.toThrow(TypeError);
     }

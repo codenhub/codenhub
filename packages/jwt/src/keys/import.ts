@@ -9,6 +9,7 @@ import type {
   SecretKey,
   SymmetricAlgorithm,
 } from "../core/types";
+import { isUint8Array } from "../encoding";
 import { ALGORITHM_PARAMS } from "./algorithms";
 import type { KeyPair } from "./generate";
 import { checkJwk, type KeyRole } from "./jwk";
@@ -84,13 +85,14 @@ const USAGES: Readonly<Record<KeyRole, KeyUsage[]>> = {
 };
 
 /**
- * Imports an untrusted public JWK, or a PEM `PUBLIC KEY` (SPKI), as a verification key bound to one
- * algorithm.
+ * Imports an untrusted public JWK, a PEM `PUBLIC KEY` (SPKI), or the public key of a PEM `CERTIFICATE`
+ * (X.509), as a verification key bound to one algorithm.
  *
  * @remarks
  * A PEM string is read into the JWK of its material, and every check below runs on that JWK. It must be
  * one block of at most 16384 characters, with only whitespace around it; anything else is `invalid_key`,
- * and a `PRIVATE KEY` block is `unexpected_private_key`.
+ * and a `PRIVATE KEY` block is `unexpected_private_key`. Only a certificate's key is read: its validity,
+ * issuer, extensions and signature are not checked, so trust it as you would a bare public key.
  *
  * The JWK's `kty` and `crv` must fit `options.alg`; a JWK `alg`, `use` or `key_ops` member, when
  * present, must agree with it. RSA moduli must be 2048 to 8192 bits. Private members are refused
@@ -136,7 +138,8 @@ export async function importPublicKey(key: unknown, options: ImportPublicKeyOpti
  * The same checks as {@link importPublicKey} apply, except that private members are required: `d`
  * for EC and OKP keys, and `d`, `p`, `q`, `dp`, `dq` and `qi` for RSA keys. `key_ops`, when present,
  * must include `sign`. A PEM string is read as for {@link importPublicKey}, and must be a `PRIVATE KEY`
- * block: `RSA PRIVATE KEY` (PKCS#1) and `EC PRIVATE KEY` (SEC 1) are `invalid_key`.
+ * block: `RSA PRIVATE KEY` (PKCS#1) and `EC PRIVATE KEY` (SEC 1) are `invalid_key`. As for
+ * {@link importKeyPair}, the key's public members must belong to it, which a probe signature proves.
  *
  * @example
  * ```ts
@@ -147,24 +150,14 @@ export async function importPublicKey(key: unknown, options: ImportPublicKeyOpti
  * @param options - The algorithm to bind the key to, a `kid` for a PEM key, and whether it may be exported again.
  * @returns The frozen key, or a failure with one issue: `invalid_key`, `unsupported_key` (also for
  * multi-prime RSA keys with `oth`), `alg_mismatch`, `wrong_use` or `weak_key`, as described for
- * {@link importPublicKey}. Issues never contain key values. Never throws for any `key`.
+ * {@link importPublicKey}, and `invalid_key` without a path when the public members do not belong to the
+ * private key. Issues never contain key values. Never throws for any `key`.
  * @throws TypeError when `options` is not an object, has a member that is not an option, `options.alg` is
  * not an asymmetric algorithm, `options.kid` is not a string, or `options.extractable` is not a boolean.
  */
 export async function importPrivateKey(key: unknown, options: ImportPrivateKeyOptions): Promise<JwtResult<PrivateKey>> {
-  const checked = requireOptions(options, PRIVATE_KEY_OPTIONS, "importPrivateKey");
-  const alg = requireAsymmetricAlg(checked, "importPrivateKey");
-  const isExtractable = readExtractable(checked, "importPrivateKey");
-  const jwk = await sourceJwk(key, alg, "private", readKid(checked, "importPrivateKey"));
-  if (!jwk.ok) {
-    return fail(jwk.issue);
-  }
-  return importJwk(jwk.value, { alg, role: "private", isExtractable }, (kid) => ({
-    kind: "private",
-    alg,
-    ...kidMember(kid),
-    extractable: isExtractable,
-  }));
+  const pair = await importPair(key, options, "importPrivateKey");
+  return pair.ok ? ok(pair.value.privateKey) : pair;
 }
 
 /**
@@ -194,10 +187,19 @@ export async function importPrivateKey(key: unknown, options: ImportPrivateKeyOp
  * not an asymmetric algorithm, `options.kid` is not a string, or `options.extractable` is not a boolean.
  */
 export async function importKeyPair(key: unknown, options: ImportPrivateKeyOptions): Promise<JwtResult<KeyPair>> {
-  const checked = requireOptions(options, PRIVATE_KEY_OPTIONS, "importKeyPair");
-  const alg = requireAsymmetricAlg(checked, "importKeyPair");
-  const isExtractable = readExtractable(checked, "importKeyPair");
-  const jwk = await sourceJwk(key, alg, "private", readKid(checked, "importKeyPair"));
+  return importPair(key, options, "importKeyPair");
+}
+
+/** Imports a private key and the public key of its public members, proven to belong together. */
+async function importPair(
+  key: unknown,
+  options: ImportPrivateKeyOptions,
+  functionName: string,
+): Promise<JwtResult<KeyPair>> {
+  const checked = requireOptions(options, PRIVATE_KEY_OPTIONS, functionName);
+  const alg = requireAsymmetricAlg(checked, functionName);
+  const isExtractable = readExtractable(checked, functionName);
+  const jwk = await sourceJwk(key, alg, "private", readKid(checked, functionName));
   if (!jwk.ok) {
     return fail(jwk.issue);
   }
@@ -233,7 +235,7 @@ export async function importKeyPair(key: unknown, options: ImportPrivateKeyOptio
     Object.freeze({
       privateKey: registerKey<PrivateKey>(
         { kind: "private", alg, ...kidMember(material.kid), extractable: isExtractable },
-        { ...entry, cryptoKey: privateCryptoKey },
+        { ...entry, cryptoKey: privateCryptoKey, publicCryptoKey },
       ),
       publicKey: registerKey<PublicKey>(
         { kind: "public", alg, ...kidMember(material.kid) },
@@ -300,24 +302,6 @@ export async function importSecretKey(
   }
   const cryptoKey = await crypto.subtle.importKey("raw", bytes, importParams, isExtractable, USAGES.secret);
   return ok(registerKey(buildKey(optionKid), { cryptoKey, signatureLength: minimum }));
-}
-
-const typedArrayTag = Object.getOwnPropertyDescriptor(
-  Object.getPrototypeOf(Uint8Array.prototype) as object,
-  Symbol.toStringTag,
-)?.get as ((this: unknown) => unknown) | undefined;
-
-/**
- * Whether `value` is a real `Uint8Array`, from any realm. The tag getter reads an internal slot, so a
- * Proxy around a typed array, a look-alike and a subclass that overrides `Symbol.toStringTag` give no
- * false answer, and no trap or getter of `value` runs. A subclass of `Uint8Array` is one too.
- */
-function isUint8Array(value: unknown): value is Uint8Array {
-  try {
-    return typedArrayTag?.call(value) === "Uint8Array";
-  } catch {
-    return false;
-  }
 }
 
 /**

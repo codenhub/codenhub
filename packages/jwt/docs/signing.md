@@ -28,7 +28,20 @@ The payload, key and header are your own data, not input from outside, so a mist
 
 `sign` adds no claim. It does not set `iat`, `exp` or `jti`, and does not check that `exp` is in the future. Every claim the token should carry is one you write, which keeps what a token says visible at the call that signs it. Write times as whole seconds since the Unix epoch, `Math.floor(Date.now() / 1000)`, since that is what verifiers, this one included, read them as.
 
-The payload must be a plain object whose values JSON represents exactly: strings, finite numbers, booleans, `null`, arrays and plain objects, nested at most 32 levels deep. `undefined`, functions, symbols, bigints, `NaN`, `Infinity` and `-0`, `Date`s and other class instances, getters, sparse arrays and cycles all throw. `JSON.stringify` would drop or rewrite most of these silently, so the token would not say what your code meant.
+The payload must be a plain object whose values JSON represents exactly: strings, finite numbers, booleans, `null`, arrays and plain objects, nested at most 32 levels deep. `undefined`, functions, symbols, bigints, `NaN`, `Infinity` and `-0`, `Date`s and other class instances, getters, sparse arrays and cycles all throw. `JSON.stringify` would drop or rewrite most of these silently, so the token would not say what your code meant. A `Date` in `exp` is the classic: it would sign as a string, and every verifier would then refuse a token whose expiry is not a number.
+
+In TypeScript, the payload may have any object type, an `interface` included, as long as its registered claims have their RFC 7519 types and every member is a JSON value: a `Date` member or an `exp` typed as a string is a compile error, before it is a `TypeError`.
+
+```ts
+interface SessionClaims {
+  sub: string;
+  exp: number;
+  roles: string[];
+}
+
+const claims: SessionClaims = { sub: "user-1", exp: Math.floor(Date.now() / 1000) + 300, roles: ["admin"] };
+const token = await sign({ payload: claims, key: signingKey });
+```
 
 The registered claims are checked for the types RFC 7519 gives them: `exp`, `nbf` and `iat` must be finite numbers, `iss`, `sub` and `jti` strings, and `aud` a string or an array of strings. A token this package signs therefore never fails a verifier's `invalid_claim` check.
 
@@ -105,3 +118,26 @@ async function verifyProof(proof: string) {
 ```
 
 Limit `alg` to the algorithms you accept, as above. `jkt` is the value an access token's `cnf.jkt` must equal. Checking `htm`, `htu`, `ath`, `nonce` and that each `jti` is used once is the protocol's job, above this package.
+
+A proof's `ath` is the whole SHA-256 hash of the access token, base64url-encoded, which `encodeBase64Url` gives:
+
+```ts
+import { encodeBase64Url } from "@codenhub/jwt";
+
+const ath = encodeBase64Url(new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(accessToken))));
+```
+
+## Token hashes in ID tokens
+
+An OpenID Connect ID token issued with an access token carries `at_hash`, and one issued with an authorization code carries `c_hash`: the left half of the token's hash, with the hash the ID token's `alg` uses. `tokenHash` computes it for every algorithm this package signs with, `EdDSA` and `Ed25519` included, which use SHA-512:
+
+```ts
+import { sign, tokenHash } from "@codenhub/jwt";
+
+const idToken = await sign({
+  payload: { ...claims, at_hash: await tokenHash(accessToken, "ES256"), c_hash: await tokenHash(code, "ES256") },
+  key: privateKey,
+});
+```
+
+To check one, compute it from the token you received and the verified ID token's `alg`, and compare. `tokenHash` throws a `TypeError` for an `alg` this package does not support.

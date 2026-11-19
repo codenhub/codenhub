@@ -10,16 +10,18 @@ let ecB: PublicKey;
 let edA: PublicKey;
 let ecNoKid: PublicKey;
 let ecNoKidOther: PublicKey;
+let edNoKid: PublicKey;
 let secretA: SecretKey;
 
 beforeAll(async () => {
-  [ecA, ecATwin, ecB, edA, ecNoKid, ecNoKidOther, secretA] = await Promise.all([
+  [ecA, ecATwin, ecB, edA, ecNoKid, ecNoKidOther, edNoKid, secretA] = await Promise.all([
     generateKeyPair({ alg: "ES256", kid: "a" }).then((pair) => pair.publicKey),
     generateKeyPair({ alg: "ES256", kid: "a" }).then((pair) => pair.publicKey),
     generateKeyPair({ alg: "ES256", kid: "b" }).then((pair) => pair.publicKey),
     generateKeyPair({ alg: "EdDSA", kid: "a" }).then((pair) => pair.publicKey),
     generateKeyPair({ alg: "ES256" }).then((pair) => pair.publicKey),
     generateKeyPair({ alg: "ES256" }).then((pair) => pair.publicKey),
+    generateKeyPair({ alg: "EdDSA" }).then((pair) => pair.publicKey),
     generateSecretKey({ alg: "HS256", kid: "a" }),
   ]);
 });
@@ -45,10 +47,32 @@ describe("selectKey with a kid", () => {
     });
   });
 
-  it("should not fall back to a key without the kid when the kid matches nothing", () => {
-    expect(selectKey([ecNoKid], header({ alg: "ES256", kid: "a" }))).toEqual({
+  it("should fall back to the one key without a kid and with the alg when the kid matches nothing", () => {
+    expect(selectKey([ecB, ecNoKid], header({ alg: "ES256", kid: "a" }))).toEqual({ ok: true, value: ecNoKid });
+  });
+
+  it("should prefer the key with the kid over a key without one", () => {
+    expect(selectKey([ecNoKid, ecB], header({ alg: "ES256", kid: "b" }))).toEqual({ ok: true, value: ecB });
+  });
+
+  it("should not fall back when keys with the kid have another alg", () => {
+    expect(selectKey([edA, ecNoKid], header({ alg: "ES256", kid: "a" }))).toEqual({
+      ok: false,
+      error: { issues: [{ code: "alg_mismatch", path: ["header", "alg"] }] },
+    });
+  });
+
+  it("should report unknown_kid when no key without a kid has the alg", () => {
+    expect(selectKey([ecB, edNoKid], header({ alg: "ES256", kid: "a" }))).toEqual({
       ok: false,
       error: { issues: [{ code: "unknown_kid", path: ["header", "kid"] }] },
+    });
+  });
+
+  it("should report ambiguous_key when several keys without a kid have the alg", () => {
+    expect(selectKey([ecNoKid, ecNoKidOther], header({ alg: "ES256", kid: "a" }))).toEqual({
+      ok: false,
+      error: { issues: [{ code: "ambiguous_key" }] },
     });
   });
 
@@ -128,11 +152,8 @@ describe("selectKey with an empty or odd kid", () => {
     expect(selectKey([ecNoKid, empty, ecA], header({ alg: "ES256", kid: "" }))).toEqual({ ok: true, value: empty });
   });
 
-  it("should not match a key without a kid for a header with an empty kid", () => {
-    expect(selectKey([ecNoKid], header({ alg: "ES256", kid: "" }))).toEqual({
-      ok: false,
-      error: { issues: [{ code: "unknown_kid", path: ["header", "kid"] }] },
-    });
+  it("should fall back to a key without a kid for a header with an empty kid that matches nothing", () => {
+    expect(selectKey([ecNoKid, ecA], header({ alg: "ES256", kid: "" }))).toEqual({ ok: true, value: ecNoKid });
   });
 
   it.each([1, null, true, {}, ["a"]])("should report unknown_kid for a header kid of %j", (kid) => {

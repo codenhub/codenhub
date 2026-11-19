@@ -27,19 +27,30 @@ describe("createVerifier options", () => {
     expect(() => createVerifier(options as never)).toThrow(new TypeError(message));
   });
 
-  it.each(["issuer", "audience"].flatMap((name) => ["", [], [""], ["a", 1], 1, null].map((value) => [name, value])))(
-    "should throw when %s is %j",
-    (name, value) => {
-      expect(() => createVerifier({ keys, [name as string]: value } as never)).toThrow(
-        new TypeError(
-          `createVerifier: options.${name as string} must be a non-empty string or a non-empty array of non-empty strings.`,
-        ),
-      );
-    },
-  );
+  it.each(["", [], [""], ["a", 1], 1, null, false])("should throw when issuer is %j", (value) => {
+    expect(() => createVerifier({ keys, issuer: value } as never)).toThrow(
+      new TypeError(
+        "createVerifier: options.issuer must be a non-empty string or a non-empty array of non-empty strings.",
+      ),
+    );
+  });
+
+  it.each(["", [], [""], ["a", 1], 1, null, true])("should throw when audience is %j", (value) => {
+    expect(() => createVerifier({ keys, audience: value } as never)).toThrow(
+      new TypeError(
+        "createVerifier: options.audience must be false, a non-empty string, or a non-empty array of non-empty strings.",
+      ),
+    );
+  });
 
   it.each([
-    ...casesOf("type", "must be a non-empty string other than application/.", ["", 1, "application/", "APPLICATION/"]),
+    ...casesOf(
+      "type",
+      "must be a non-empty string other than application/, or a non-empty array of such strings and null.",
+      ["", 1, "application/", "APPLICATION/", null, [], [""], ["JWT", 1], ["JWT", undefined], ["application/"]],
+    ),
+    ...casesOf("requireExpiration", "must be a boolean.", [1, "true", null]),
+    ...casesOf("allowExpired", "must be a boolean.", [1, "true", null]),
     ...casesOf("clockTolerance", "must be an integer number of seconds from 0 through 300.", [
       -1,
       301,

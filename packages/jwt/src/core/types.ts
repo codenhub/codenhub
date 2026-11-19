@@ -199,8 +199,11 @@ export interface JwtHeader {
   readonly [parameter: string]: unknown;
 }
 
-/** Registered JWT claims (RFC 7519 §4.1), plus any other claim. Frozen. */
-export interface JwtPayload {
+/**
+ * The registered JWT claims (RFC 7519 §4.1) with the types they must have, and nothing else. A payload type
+ * declared as an `interface` satisfies it, which {@link JwtPayload}'s index signature would not allow.
+ */
+export interface JwtRegisteredClaims {
   readonly iss?: string;
   readonly sub?: string;
   readonly aud?: string | readonly string[];
@@ -211,8 +214,27 @@ export interface JwtPayload {
   /** Issued-at time, in seconds since the Unix epoch. */
   readonly iat?: number;
   readonly jti?: string;
+}
+
+/** Registered JWT claims (RFC 7519 §4.1), plus any other claim. Frozen. */
+export interface JwtPayload extends JwtRegisteredClaims {
   readonly [claim: string]: unknown;
 }
+
+/**
+ * `T` as JSON can carry it: every member that is a function, or an object with methods such as a `Date`,
+ * becomes `never`, so a value JSON would change fails to compile. Members typed `unknown` pass, and are
+ * checked when signing.
+ */
+export type JsonCompatible<T> = unknown extends T
+  ? T
+  : T extends string | number | boolean | null
+    ? T
+    : T extends (...args: never[]) => unknown
+      ? never
+      : T extends object
+        ? { readonly [K in keyof T]: JsonCompatible<T[K]> }
+        : never;
 
 /**
  * A source of verification keys. A verifier asks it for the one key that matches a token's header.
@@ -221,15 +243,24 @@ export interface JwtPayload {
  */
 export interface KeySet {
   /**
-   * Selects the single key for a header. With a `kid`, only keys with that `kid` are candidates;
-   * without one, the set must hold exactly one key compatible with the header's `alg`. Keys are never
-   * tried in turn.
+   * Selects the single key for a header. With a `kid`, only keys with that `kid` are candidates, or,
+   * when none has it, keys without a `kid`; without one, the set must hold exactly one key compatible with
+   * the header's `alg`. Keys are never tried in turn.
    *
    * @param header - The token's header, as {@link readHeader} returned it.
    * @returns The selected key, or a failure with `unknown_kid`, `alg_mismatch`, `no_matching_key`,
    * `ambiguous_key`, or `key_fetch_failed`. Never throws for any header.
    */
   select(header: JwtHeader): Promise<JwtResult<VerificationKey>>;
+}
+
+/** A key set over a fixed list of keys, from {@link createKeySet} or {@link importKeySet}. Frozen. */
+export interface LocalKeySet extends KeySet {
+  /**
+   * The keys the set selects from, frozen. For {@link createKeySet}, the keys given, in order; for
+   * {@link importKeySet}, one key per JWK and algorithm it was bound to, in JWKS order.
+   */
+  readonly keys: readonly VerificationKey[];
 }
 
 /** A verified token. Frozen. */
@@ -251,13 +282,38 @@ export interface VerifierOptions<TSchema extends StandardSchemaV1 | undefined = 
   /**
    * Accepted audiences. When set, `aud` is required, and a token passes when its `aud` (a string or
    * an array) contains at least one of them.
+   *
+   * @remarks
+   * When unset, a token that carries `aud` fails with `wrong_audience`: RFC 7519 §4.1.3 says a recipient
+   * that does not identify itself in `aud` must reject the token, so a token minted for another service of
+   * the same issuer is never accepted by accident. `false` skips the audience check for every token, for a
+   * verifier that accepts tokens for any audience on purpose.
    */
-  readonly audience?: string | readonly string[];
+  readonly audience?: string | readonly string[] | false;
   /**
-   * Required `typ` header value, such as `JWT` or `at+jwt`. Compared case-insensitively, with an
-   * `application/` prefix ignored on either side (RFC 7515 §4.1.9). When set, `typ` is required.
+   * Required `typ` header value, such as `JWT` or `at+jwt`, or a list of accepted ones. Compared
+   * case-insensitively, with an `application/` prefix ignored on either side (RFC 7515 §4.1.9). When set,
+   * `typ` is required, unless the list holds `null`, which accepts a token without `typ`: `["at+jwt", null]`
+   * accepts `at+jwt` or no `typ` at all.
    */
-  readonly type?: string;
+  readonly type?: string | readonly (string | null)[];
+  /**
+   * Whether `exp` is required. A token without `exp` never expires, so it is required unless `maxAge`
+   * bounds the token's age instead. Set `false` for tokens that carry no `exp` on purpose, and `true` to
+   * require it alongside `maxAge`.
+   *
+   * @defaultValue `true` when `maxAge` is unset, `false` when it is set
+   */
+  readonly requireExpiration?: boolean;
+  /**
+   * Accept a token whose `exp` has passed. Every other check still runs, `exp` is still required when
+   * {@link VerifierOptions.requireExpiration} says so, and `maxAge` still bounds the token's age. Meant for a
+   * token whose signature and issuer still matter after it expired, such as an OpenID Connect
+   * `id_token_hint` at logout; never for a token that grants access.
+   *
+   * @defaultValue false
+   */
+  readonly allowExpired?: boolean;
   /**
    * Seconds of clock skew allowed on `exp`, `nbf`, `iat` and `maxAge`. An integer from 0 through 300.
    *

@@ -749,6 +749,32 @@ describe("importSecretKey option and JWK interplay", () => {
   });
 });
 
+describe("importPrivateKey halves", () => {
+  it.each([
+    { alg: "ES256", privateJwk: EC_P256_PRIVATE_JWK, members: ["x", "y"] },
+    { alg: "Ed25519", privateJwk: ED25519_PRIVATE_JWK, members: ["x"] },
+    { alg: "RS256", privateJwk: RSA_2048_PRIVATE_JWK, members: ["n"] },
+  ] as const)(
+    "should report invalid_key for an $alg JWK whose public members belong to another key",
+    async ({ alg, privateJwk, members }) => {
+      const other = await exportPrivateJwk((await generateKeyPair({ alg, extractable: true })).privateKey);
+      const mixed = withMembers(privateJwk, Object.fromEntries(members.map((name) => [name, other[name]])));
+      expect(issuesOf(await importPrivateKey(mixed, { alg }))).toEqual([{ code: "invalid_key" }]);
+    },
+  );
+
+  it("should report invalid_key when the public half does not verify the private half's signature", async () => {
+    const verify = vi.spyOn(crypto.subtle, "verify").mockResolvedValueOnce(false);
+    try {
+      expect(issuesOf(await importPrivateKey(EC_P256_PRIVATE_JWK, { alg: "ES256" }))).toEqual([
+        { code: "invalid_key" },
+      ]);
+    } finally {
+      verify.mockRestore();
+    }
+  });
+});
+
 describe("importPrivateKey with a mismatched d", () => {
   it.each([
     ["ES256", EC_P256_PRIVATE_JWK],

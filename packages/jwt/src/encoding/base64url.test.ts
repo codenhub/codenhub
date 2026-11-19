@@ -1,3 +1,5 @@
+import { runInNewContext } from "node:vm";
+
 import { describe, expect, it } from "vitest";
 
 import { decodeBase64Url, encodeBase64Url, isBase64Url } from "./base64url";
@@ -71,5 +73,33 @@ describe("isBase64Url", () => {
   it("should agree with decodeBase64Url on canonical and non-canonical text", () => {
     expect(["", "Zg", "Zm8", "Zm9v", "-_8"].every(isBase64Url)).toBe(true);
     expect(["Z", "Zh", "Zm9", "Zg==", "+/8", "a.b"].some(isBase64Url)).toBe(false);
+  });
+});
+
+describe("base64url input checks", () => {
+  it.each([[undefined], [null], [42], [["QQ"]]])("should decode %s to undefined", (text) => {
+    expect(decodeBase64Url(text as never)).toBeUndefined();
+  });
+
+  it.each([
+    [undefined],
+    ["AQ"],
+    [[1, 2]],
+    [new ArrayBuffer(2)],
+    [new Int8Array(2)],
+    [new DataView(new ArrayBuffer(2))],
+  ])("should throw TypeError to encode %s", (bytes) => {
+    expect(() => encodeBase64Url(bytes as never)).toThrow(
+      new TypeError("encodeBase64Url: bytes must be a Uint8Array."),
+    );
+  });
+
+  it("should encode a Buffer-like Uint8Array subclass", () => {
+    class Bytes extends Uint8Array {}
+    expect(encodeBase64Url(new Bytes([0xfb, 0xff]))).toBe("-_8");
+  });
+
+  it("should encode a Uint8Array from another realm", () => {
+    expect(encodeBase64Url(runInNewContext("new Uint8Array([251, 255])") as Uint8Array)).toBe("-_8");
   });
 });

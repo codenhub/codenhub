@@ -117,6 +117,14 @@ describe("createRemoteKeySet options", () => {
     ["maxResponseBytes over 1 MiB", { maxResponseBytes: 1_048_577 }],
     ["fetch that is not a function", { fetch: "fetch" }],
     ["now that is not a function", { now: 0 }],
+    ["onFetch that is not a function", { onFetch: "log" }],
+    ["onFetchError that is not a function", { onFetchError: {} }],
+    ["waitUntil that is not a function", { waitUntil: true }],
+    ["seed that is not an object", { seed: "{}" }],
+    ["seed null", { seed: null }],
+    ["seed without fetchedAt", { seed: { jwks: { keys: [] } } }],
+    ["seed with a NaN fetchedAt", { seed: { jwks: { keys: [] }, fetchedAt: Number.NaN } }],
+    ["seed with a string fetchedAt", { seed: { jwks: { keys: [] }, fetchedAt: "0" } }],
     ["empty algorithms", { algorithms: [] }],
     ["algorithms with HS256", { algorithms: ["HS256"] }],
   ])("should throw TypeError for %s", (_name, options) => {
@@ -642,6 +650,417 @@ describe("createRemoteKeySet response handling", () => {
     clock.set(700);
     await keys.select(EC_HEADER);
     expect([callsBeforeExpiry, fetch.mock.calls.length]).toEqual([1, 2]);
+  });
+});
+
+describe("createRemoteKeySet refreshing in the background", () => {
+  const settlesWithin = async <T>(promise: Promise<T>, ms: number): Promise<T | "still pending"> =>
+    Promise.race([promise, new Promise<"still pending">((resolve) => setTimeout(() => resolve("still pending"), ms))]);
+
+  it("should serve the expired JWKS at once while the refetch is still running", async () => {
+    const clock = createClock();
+    const fetch = fetchSequence(
+      () => jwksResponse(EC_JWK),
+      () => new Promise<Response>(() => undefined),
+    );
+    const keys = createSet({ fetch, now: clock.now, cacheTtl: 600, timeout: 60 });
+    await keys.select(EC_HEADER);
+    clock.set(600);
+    const result = await settlesWithin(keys.select(EC_HEADER), 50);
+    expect([result === "still pending" ? result : describeSelection(result), fetch.mock.calls.length]).toEqual([
+      { alg: "ES256", kid: "ec" },
+      2,
+    ]);
+  });
+
+  it("should replace the cache with the JWKS the background refetch returns", async () => {
+    const clock = createClock();
+    const fetch = fetchSequence(
+      () => jwksResponse(EC_JWK),
+      () => jwksResponse(ED_JWK),
+    );
+    const keys = createSet({ fetch, now: clock.now, cacheTtl: 600, cooldown: 30 });
+    await keys.select(EC_HEADER);
+    clock.set(600);
+    await keys.select(EC_HEADER);
+    await vi.waitFor(() => expect(fetch).toHaveBeenCalledTimes(2));
+    clock.set(601);
+    expect([describeSelection(await keys.select(ED_HEADER)), describeSelection(await keys.select(EC_HEADER))]).toEqual([
+      { alg: "EdDSA", kid: "ed" },
+      { ok: false, error: { issues: [{ code: "unknown_kid", path: ["header", "kid"] }] } },
+    ]);
+  });
+
+  it("should wait for the background refetch for a kid the expired JWKS lacks", async () => {
+    const clock = createClock();
+    const fetch = fetchSequence(
+      () => jwksResponse(EC_JWK),
+      () => jwksResponse(EC_JWK, ED_JWK),
+    );
+    const keys = createSet({ fetch, now: clock.now, cacheTtl: 600 });
+    await keys.select(EC_HEADER);
+    clock.set(600);
+    expect([describeSelection(await keys.select(ED_HEADER)), fetch.mock.calls.length]).toEqual([
+      { alg: "EdDSA", kid: "ed" },
+      2,
+    ]);
+  });
+
+  it("should start one background refetch for concurrent selects of an expired JWKS", async () => {
+    const clock = createClock();
+    const fetch = fetchSequence(() => jwksResponse(EC_JWK));
+    const keys = createSet({ fetch, now: clock.now, cacheTtl: 600 });
+    await keys.select(EC_HEADER);
+    clock.set(600);
+    await Promise.all([keys.select(EC_HEADER), keys.select(EC_HEADER), keys.select(EC_HEADER)]);
+    expect(fetch).toHaveBeenCalledTimes(2);
+  });
+
+  // A Workers runtime may cancel the I/O of a request that ended, so a fetch another request started can
+  // stay pending past its own timeout; the set must not wait on it forever.
+  it("should start a new fetch when the running one outlived its timeout and the cooldown", async () => {
+    const clock = createClock();
+    const fetch = fetchSequence(
+      () => jwksResponse(EC_JWK),
+      () => new Promise<Response>(() => undefined),
+      () => jwksResponse(EC_JWK, ED_JWK),
+    );
+    const keys = createSet({ fetch, now: clock.now, cacheTtl: 600, cooldown: 30, timeout: 5 });
+    await keys.select(EC_HEADER);
+    vi.useFakeTimers();
+    clock.set(600);
+    await keys.select(EC_HEADER);
+    clock.set(631);
+    expect([describeSelection(await keys.select(ED_HEADER)), fetch.mock.calls.length]).toEqual([
+      { alg: "EdDSA", kid: "ed" },
+      3,
+    ]);
+  });
+
+  it("should ignore a replaced fetch that settles after the fetch that replaced it", async () => {
+    const clock = createClock();
+    let answerLate: (response: Response) => void = () => undefined;
+    const fetch = fetchSequence(
+      () => jwksResponse(EC_JWK),
+      () =>
+        new Promise<Response>((resolve) => {
+          answerLate = resolve;
+        }),
+      () => jwksResponse(EC_JWK),
+    );
+    const keys = createSet({ fetch, now: clock.now, cacheTtl: 600, cooldown: 30, timeout: 5 });
+    await keys.select(EC_HEADER);
+    vi.useFakeTimers();
+    clock.set(600);
+    await keys.select(EC_HEADER);
+    clock.set(631);
+    await keys.select(EC_HEADER);
+    await vi.waitFor(() => expect(fetch).toHaveBeenCalledTimes(3));
+    answerLate(jwksResponse(ED_JWK));
+    await vi.advanceTimersByTimeAsync(0);
+    clock.set(632);
+    expect(describeSelection(await keys.select(ED_HEADER))).toEqual({
+      ok: false,
+      error: { issues: [{ code: "unknown_kid", path: ["header", "kid"] }] },
+    });
+  });
+
+  it("should keep waiting on a running fetch that has not outlived the cooldown", async () => {
+    const clock = createClock();
+    const fetch = fetchSequence(
+      () => jwksResponse(EC_JWK),
+      () => new Promise<Response>(() => undefined),
+    );
+    const keys = createSet({ fetch, now: clock.now, cacheTtl: 600, cooldown: 30, timeout: 5 });
+    await keys.select(EC_HEADER);
+    vi.useFakeTimers();
+    clock.set(600);
+    await keys.select(EC_HEADER);
+    clock.set(629);
+    await keys.select(EC_HEADER);
+    expect(fetch).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe("createRemoteKeySet abandoned fetches", () => {
+  it("should fetch again for a select that joins a fetch past its deadline", async () => {
+    const clock = createClock();
+    const fetch = fetchSequence(
+      () => new Promise<Response>(() => undefined),
+      () => jwksResponse(EC_JWK),
+    );
+    const keys = createSet({ fetch, now: clock.now, cooldown: 30, timeout: 5 });
+    vi.useFakeTimers();
+    void keys.select(EC_HEADER);
+    clock.set(10);
+    expect(describeSelection(await keys.select(EC_HEADER))).toEqual({ alg: "ES256", kid: "ec" });
+    expect(fetch).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe("createRemoteKeySet missing kid", () => {
+  it("should not refetch inside the cooldown while an abandoned background fetch is pending", async () => {
+    const clock = createClock();
+    const fetch = fetchSequence(
+      () => jwksResponse(EC_JWK),
+      () => new Promise<Response>(() => undefined),
+      () => jwksResponse(EC_JWK),
+    );
+    const keys = createSet({ fetch, now: clock.now, cacheTtl: 600, cooldown: 30, timeout: 5 });
+    await keys.select(EC_HEADER);
+    vi.useFakeTimers();
+    clock.set(600);
+    await keys.select(EC_HEADER);
+    clock.set(610);
+    const result = await keys.select({ alg: "ES256", kid: "invented" });
+    expect([result.ok, fetch.mock.calls.length]).toEqual([false, 2]);
+  });
+
+  it("should refetch for a kid the cache lacks even when an unnamed key could stand in", async () => {
+    const clock = createClock();
+    const fetch = fetchSequence(
+      () => jwksResponse({ ...EC_P256_PUBLIC_JWK, alg: "ES256" }),
+      () => jwksResponse({ ...EC_P256_PUBLIC_JWK, kid: "rotated", alg: "ES256" }),
+    );
+    const keys = createSet({ fetch, now: clock.now, cooldown: 30 });
+    await keys.select({ alg: "ES256" });
+    clock.set(31);
+    expect(describeSelection(await keys.select({ alg: "ES256", kid: "rotated" }))).toEqual({
+      alg: "ES256",
+      kid: "rotated",
+    });
+  });
+
+  it("should fall back to the unnamed key when the refetched JWKS still lacks the kid", async () => {
+    const clock = createClock();
+    const unnamed = (): Response => jwksResponse({ ...EC_P256_PUBLIC_JWK, alg: "ES256" });
+    const fetch = fetchSequence(unnamed, unnamed, unnamed);
+    const keys = createSet({ fetch, now: clock.now, cooldown: 30 });
+    await keys.select({ alg: "ES256" });
+    clock.set(31);
+    const first = describeSelection(await keys.select({ alg: "ES256", kid: "issuer-key" }));
+    clock.set(32);
+    const second = describeSelection(await keys.select({ alg: "ES256", kid: "issuer-key" }));
+    expect([first, second, fetch.mock.calls.length]).toEqual([
+      { alg: "ES256", kid: undefined },
+      { alg: "ES256", kid: undefined },
+      2,
+    ]);
+  });
+  it("should refetch for a kid the cache lacks when several unnamed keys make the selection ambiguous", async () => {
+    const clock = createClock();
+    const unnamed = { ...EC_P256_PUBLIC_JWK, alg: "ES256" };
+    const fetch = fetchSequence(
+      () => jwksResponse(unnamed, unnamed),
+      () => jwksResponse({ ...EC_P256_PUBLIC_JWK, kid: "rotated", alg: "ES256" }),
+    );
+    const keys = createSet({ fetch, now: clock.now, cooldown: 30 });
+    await keys.select({ alg: "ES256", kid: "ec" });
+    clock.set(31);
+    expect(describeSelection(await keys.select({ alg: "ES256", kid: "rotated" }))).toEqual({
+      alg: "ES256",
+      kid: "rotated",
+    });
+  });
+
+  it("should not refetch inside the cooldown when a joined fetch misses its deadline and the cache is usable", async () => {
+    const clock = createClock();
+    const fetch = fetchSequence(
+      () => jwksResponse(EC_JWK),
+      () => new Promise<Response>(() => undefined),
+      () => jwksResponse(EC_JWK),
+    );
+    const keys = createSet({ fetch, now: clock.now, cacheTtl: 600, cooldown: 30, timeout: 5 });
+    await keys.select(EC_HEADER);
+    vi.useFakeTimers();
+    clock.set(600);
+    await keys.select(EC_HEADER);
+    clock.set(602);
+    const pending = keys.select({ alg: "ES256", kid: "invented" });
+    clock.set(606);
+    await vi.advanceTimersByTimeAsync(4000);
+    const result = await pending;
+    expect([result.ok, fetch.mock.calls.length]).toEqual([false, 2]);
+  });
+
+  it("should keep the unnamed key when the refetch for a missing kid fails", async () => {
+    const clock = createClock();
+    const fetch = fetchSequence(
+      () => jwksResponse({ ...EC_P256_PUBLIC_JWK, alg: "ES256" }),
+      () => new Response("unavailable", { status: 503 }),
+    );
+    const keys = createSet({ fetch, now: clock.now, cooldown: 30 });
+    await keys.select({ alg: "ES256" });
+    clock.set(31);
+    expect(describeSelection(await keys.select({ alg: "ES256", kid: "issuer-key" }))).toEqual({
+      alg: "ES256",
+      kid: undefined,
+    });
+  });
+});
+
+describe("createRemoteKeySet waitUntil", () => {
+  it("should hand each fetch it starts to waitUntil", async () => {
+    const clock = createClock();
+    const waitUntil = vi.fn();
+    const fetch = fetchSequence(
+      () => jwksResponse(EC_JWK),
+      () => jwksResponse(EC_JWK),
+    );
+    const keys = createSet({ fetch, now: clock.now, waitUntil });
+    await keys.select(EC_HEADER);
+    clock.set(600);
+    await keys.select(EC_HEADER);
+    await vi.waitFor(() => expect(fetch).toHaveBeenCalledTimes(2));
+    expect(waitUntil.mock.calls.map(([promise]) => promise instanceof Promise)).toEqual([true, true]);
+  });
+
+  it("should select as usual when waitUntil throws", async () => {
+    const keys = createSet({
+      fetch: fetchSequence(() => jwksResponse(EC_JWK)),
+      waitUntil: () => {
+        throw new Error("no request context");
+      },
+    });
+    expect(describeSelection(await keys.select(EC_HEADER))).toEqual({ alg: "ES256", kid: "ec" });
+  });
+});
+
+describe("createRemoteKeySet callbacks", () => {
+  it("should call onFetch with the fetched JWKS and when it was fetched", async () => {
+    const clock = createClock();
+    clock.set(42);
+    const onFetch = vi.fn();
+    const keys = createSet({ fetch: fetchSequence(() => jwksResponse(EC_JWK)), now: clock.now, onFetch });
+    await keys.select(EC_HEADER);
+    expect(onFetch.mock.calls).toEqual([[{ jwks: { keys: [EC_JWK] }, fetchedAt: 42_000 }]]);
+  });
+
+  it("should call onFetchError with the issue of each failed fetch", async () => {
+    const onFetchError = vi.fn();
+    const keys = createSet({ fetch: fetchSequence(() => new Response(null, { status: 503 })), onFetchError });
+    await keys.select(EC_HEADER);
+    expect(onFetchError.mock.calls).toEqual([
+      [{ code: "key_fetch_failed", params: { reason: "status", status: 503 } }],
+    ]);
+  });
+
+  it("should not call onFetchError for a successful fetch, nor onFetch for a failed one", async () => {
+    const onFetch = vi.fn();
+    const onFetchError = vi.fn();
+    const clock = createClock();
+    const fetch = fetchSequence(
+      () => jwksResponse(EC_JWK),
+      () => new Response(null, { status: 503 }),
+    );
+    const keys = createSet({ fetch, now: clock.now, maxStale: 0, onFetch, onFetchError });
+    await keys.select(EC_HEADER);
+    clock.set(600);
+    await keys.select(EC_HEADER);
+    expect([onFetch.mock.calls.length, onFetchError.mock.calls.length]).toEqual([1, 1]);
+  });
+
+  it.each([
+    [
+      "throws",
+      () => {
+        throw new Error("callback broke");
+      },
+    ],
+    ["rejects", async () => Promise.reject(new Error("callback broke"))],
+  ])("should select as usual when a callback %s", async (_name, callback) => {
+    const unhandled = vi.fn();
+    process.on("unhandledRejection", unhandled);
+    try {
+      const failing = createSet({
+        fetch: fetchSequence(() => new Response(null, { status: 503 })),
+        onFetchError: callback,
+      });
+      const working = createSet({ fetch: fetchSequence(() => jwksResponse(EC_JWK)), onFetch: callback });
+      const results = [await failing.select(EC_HEADER), describeSelection(await working.select(EC_HEADER))];
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      expect([...results, unhandled.mock.calls.length]).toEqual([
+        failure({ reason: "status", status: 503 }),
+        { alg: "ES256", kid: "ec" },
+        0,
+      ]);
+    } finally {
+      process.off("unhandledRejection", unhandled);
+    }
+  });
+});
+
+describe("createRemoteKeySet seed", () => {
+  it("should select from a fresh seed without fetching", async () => {
+    const clock = createClock();
+    clock.set(100);
+    const fetch = fetchSequence(() => jwksResponse(ED_JWK));
+    const keys = createSet({ fetch, now: clock.now, seed: { jwks: { keys: [EC_JWK] }, fetchedAt: 0 } });
+    expect([describeSelection(await keys.select(EC_HEADER)), fetch.mock.calls.length]).toEqual([
+      { alg: "ES256", kid: "ec" },
+      0,
+    ]);
+  });
+
+  it("should accept what onFetch received as a seed", async () => {
+    const clock = createClock();
+    let saved: unknown;
+    const first = createSet({
+      fetch: fetchSequence(() => jwksResponse(EC_JWK)),
+      now: clock.now,
+      onFetch: (fetched) => {
+        saved = JSON.parse(JSON.stringify(fetched));
+      },
+    });
+    await first.select(EC_HEADER);
+    const fetch = fetchSequence(() => jwksResponse(ED_JWK));
+    const second = createSet({ fetch, now: clock.now, seed: saved as RemoteKeySetOptions["seed"] });
+    expect([describeSelection(await second.select(EC_HEADER)), fetch.mock.calls.length]).toEqual([
+      { alg: "ES256", kid: "ec" },
+      0,
+    ]);
+  });
+
+  it("should serve an expired seed and refresh it in the background", async () => {
+    const clock = createClock();
+    clock.set(700);
+    const fetch = fetchSequence(() => jwksResponse(ED_JWK));
+    const keys = createSet({ fetch, now: clock.now, cacheTtl: 600, seed: { jwks: { keys: [EC_JWK] }, fetchedAt: 0 } });
+    expect([describeSelection(await keys.select(EC_HEADER)), fetch.mock.calls.length]).toEqual([
+      { alg: "ES256", kid: "ec" },
+      1,
+    ]);
+  });
+
+  it("should fetch instead of using a seed older than cacheTtl plus maxStale", async () => {
+    const clock = createClock();
+    clock.set(600 + 3600);
+    const fetch = fetchSequence(() => jwksResponse(ED_JWK));
+    const keys = createSet({ fetch, now: clock.now, seed: { jwks: { keys: [EC_JWK] }, fetchedAt: 0 } });
+    expect(describeSelection(await keys.select(EC_HEADER))).toEqual({
+      ok: false,
+      error: { issues: [{ code: "unknown_kid", path: ["header", "kid"] }] },
+    });
+  });
+
+  it.each([
+    ["not a JWKS", { keys: "none" }],
+    ["a JWKS with more than 100 keys", { keys: Array.from({ length: 101 }, () => EC_JWK) }],
+    ["null", null],
+  ])("should ignore a seed whose jwks is %s and fetch", async (_name, jwks) => {
+    const fetch = fetchSequence(() => jwksResponse(EC_JWK));
+    const keys = createSet({ fetch, seed: { jwks, fetchedAt: 0 } });
+    expect([describeSelection(await keys.select(EC_HEADER)), fetch.mock.calls.length]).toEqual([
+      { alg: "ES256", kid: "ec" },
+      1,
+    ]);
+  });
+
+  it("should treat a seed fetched later than the clock as expired", async () => {
+    const fetch = fetchSequence(() => jwksResponse(ED_JWK));
+    const keys = createSet({ fetch, now: () => 0, maxStale: 0, seed: { jwks: { keys: [EC_JWK] }, fetchedAt: 1000 } });
+    await keys.select(EC_HEADER);
+    expect(fetch).toHaveBeenCalledTimes(1);
   });
 });
 

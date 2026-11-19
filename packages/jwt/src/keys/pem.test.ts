@@ -57,7 +57,7 @@ describe.each(ASYMMETRIC)("PEM import for %s", (alg) => {
       { kind: "private", alg, kid: "pem-1", extractable: false },
     ]);
 
-    const token = await sign({ payload: { sub: "u1" }, key: privateKey });
+    const token = await sign({ payload: { sub: "u1", exp: Math.floor(Date.now() / 1000) + 600 }, key: privateKey });
     const verified = await createVerifier({ keys: createKeySet([publicKey]) })(token);
     expect(verified.ok).toBe(true);
   });

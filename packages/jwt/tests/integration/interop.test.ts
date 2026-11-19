@@ -37,7 +37,7 @@ const ASYMMETRIC: readonly AsymmetricAlgorithm[] = [
 const SYMMETRIC = ["HS256", "HS384", "HS512"] as const;
 /** A secret of each HMAC algorithm's minimum length: its hash output (RFC 7518 §3.2). */
 const SECRET_BYTES = { HS256: 32, HS384: 48, HS512: 64 } as const;
-const PAYLOAD = { iss: "https://issuer.example", sub: "user-1", aud: "app", iat: 1_800_000_000 };
+const PAYLOAD = { iss: "https://issuer.example", sub: "user-1", aud: "app", iat: 1_800_000_000, exp: 1_800_000_600 };
 const NOW = () => 1_800_000_000 * 1000;
 
 const valueOf = <T>(result: JwtResult<T>): T => {
@@ -47,7 +47,7 @@ const valueOf = <T>(result: JwtResult<T>): T => {
   return result.value;
 };
 
-const verifierFor = (keys: KeySet) => createVerifier({ keys, now: NOW });
+const verifierFor = (keys: KeySet) => createVerifier({ keys, audience: "app", now: NOW });
 
 interface JosePair {
   readonly publicJwk: jose.JWK;

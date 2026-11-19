@@ -10,7 +10,9 @@ const AMBIGUOUS_KEY = fail({ code: "ambiguous_key" });
  * Picks the one key for a header from `keys`, shared by local and remote key sets.
  *
  * With a `kid`, only keys with that `kid` are candidates and exactly one of them must have the header's
- * `alg`; without one, exactly one key in the set must have it. Keys are never tried in turn. A secret
+ * `alg`. When no key has that `kid`, a key without any `kid` stands in, as a PEM key has none: exactly one
+ * such key must have the header's `alg`, or the `kid` is unknown. Without a `kid` in the header, exactly
+ * one key in the set must have the `alg`. Keys are never tried in turn. A secret
  * key only matches `HS256` and a public key only its own algorithm, since both follow from `alg`
  * equality. Never throws, whatever `header` holds.
  */
@@ -29,7 +31,8 @@ export function selectKey(keys: readonly VerificationKey[], header: JwtHeader): 
   if (kid !== undefined) {
     const candidates = keys.filter((key) => key.kid === kid);
     if (candidates.length === 0) {
-      return UNKNOWN_KID;
+      const unnamed = keys.filter((key) => key.kid === undefined && key.alg === alg);
+      return typeof kid === "string" && unnamed.length > 0 ? single(unnamed, UNKNOWN_KID) : UNKNOWN_KID;
     }
     return single(
       candidates.filter((key) => key.alg === alg),
@@ -49,7 +52,18 @@ function single(candidates: readonly VerificationKey[], whenNone: JwtResult<neve
   return candidates.length === 1 ? ok(candidates[0] as VerificationKey) : AMBIGUOUS_KEY;
 }
 
-/** Whether a selection failed only because no key carries the header's `kid`, which a refetch may fix. */
-export function isUnknownKid(result: JwtResult<VerificationKey>): boolean {
-  return !result.ok && result.error.issues[0].code === "unknown_kid";
+/**
+ * Whether the header names a `kid` that no key in `keys` carries, so a refetch may bring it, whatever
+ * the selection gave: `unknown_kid`, a key without a `kid` standing in, or several such keys.
+ */
+export function lacksKid(keys: readonly VerificationKey[], header: JwtHeader): boolean {
+  if (typeof header !== "object" || header === null) {
+    return false;
+  }
+  try {
+    const { kid } = header;
+    return kid !== undefined && !keys.some((key) => key.kid === kid);
+  } catch {
+    return false;
+  }
 }

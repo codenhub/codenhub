@@ -83,6 +83,37 @@ describe("sign payload", () => {
 
     expect(payloadTextOf(await sign({ payload, key: secretKey }))).toBe('{"sub":"user-1"}');
   });
+
+  it("should accept claims typed by an interface", async () => {
+    interface IdClaims {
+      sub: string;
+      tenant: string;
+      roles: string[];
+    }
+    const claims: IdClaims = { sub: "user-1", tenant: "t1", roles: ["admin"] };
+
+    expect(payloadTextOf(await sign({ payload: claims, key: secretKey }))).toBe(JSON.stringify(claims));
+  });
+});
+
+describe("sign payload types", () => {
+  // Each call below is a compile error that `pnpm typecheck` checks; at runtime each one still throws.
+  it("should refuse a Date claim at compile time", async () => {
+    const claims: { sub: string; when: Date } = { sub: "user-1", when: new Date(0) };
+
+    // @ts-expect-error A Date is not a JSON value.
+    await expect(sign({ payload: claims, key: secretKey })).rejects.toThrow(TypeError);
+  });
+
+  it("should refuse an ill-typed registered claim at compile time", async () => {
+    // @ts-expect-error exp is a number of seconds.
+    await expect(sign({ payload: { exp: "soon" }, key: secretKey })).rejects.toThrow(TypeError);
+  });
+
+  it("should refuse a function claim at compile time", async () => {
+    // @ts-expect-error A function is not a JSON value.
+    await expect(sign({ payload: { sub: "u", run: () => 1 }, key: secretKey })).rejects.toThrow(TypeError);
+  });
 });
 
 const nestedDeeperThan32 = (): Record<string, unknown> => {
@@ -203,7 +234,8 @@ describe("sign TypeError", () => {
     ["an array hole", { list: holey() }, "sign: input.payload must not hold array holes."],
     ["undefined in an array", { list: [undefined] }, "sign: input.payload must hold only JSON values, not undefined."],
   ])("should throw when the payload holds %s", async (_, payload, message) => {
-    await expect(sign({ payload, key: secretKey })).rejects.toThrow(message);
+    // Values the payload type already refuses; the runtime must refuse them too for untyped callers.
+    await expect(sign({ payload: payload as never, key: secretKey })).rejects.toThrow(message);
   });
 
   it.each([
@@ -313,7 +345,7 @@ describe("sign embedKey", () => {
       if (!embedded.ok) {
         throw new Error("expected the embedded key to import");
       }
-      const verified = await createVerifier({ keys: createKeySet([embedded.value]) })(token);
+      const verified = await createVerifier({ keys: createKeySet([embedded.value]), requireExpiration: false })(token);
       expect(verified.ok && verified.value.payload).toEqual({ jti: "j1" });
       expect(await jwkThumbprint(embedded.value)).toBe(await jwkThumbprint(pair.publicKey));
     },

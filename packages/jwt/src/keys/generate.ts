@@ -112,7 +112,7 @@ export async function generateKeyPair(options: GenerateKeyPairOptions): Promise<
   return Object.freeze({
     privateKey: registerKey<PrivateKey>(
       { kind: "private", alg, ...kidMember(kid), extractable: isExtractable },
-      { cryptoKey: pair.privateKey, signatureLength },
+      { cryptoKey: pair.privateKey, signatureLength, publicCryptoKey: pair.publicKey },
     ),
     publicKey: registerKey<PublicKey>(
       { kind: "public", alg, ...kidMember(kid) },

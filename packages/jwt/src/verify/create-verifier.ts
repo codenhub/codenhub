@@ -57,9 +57,11 @@ const KEY_SET_ERROR = fail({ code: "key_fetch_failed", params: { reason: "key_se
  * `options.claims` propagates, and so does a `TypeError` when `options.now` returns something other than a
  * finite number, checked once per verification when the claims are checked, after the signature.
  * @throws TypeError when `options` is not an object; `options` has a member that is not an option, such as
- * a misspelled `audiance`; `keys` has no `select` function; `issuer` or
- * `audience` is neither a non-empty string nor a non-empty array of them; `type` is not a non-empty
- * string; `clockTolerance` is not an integer from 0 through 300; `maxAge` is not a positive integer;
+ * a misspelled `audiance`; `keys` has no `select` function; `issuer` is neither a non-empty string nor a
+ * non-empty array of them; `audience` is neither `false` nor one of those; `type` is neither a non-empty
+ * string other than `application/` nor a non-empty array of such strings and `null`;
+ * `requireExpiration` or `allowExpired` is not a boolean; `clockTolerance` is not an integer from 0
+ * through 300; `maxAge` is not a positive integer;
  * `maxLength` is not an integer from 1 through 65536; `requiredClaims` is not an array of non-empty
  * strings; `claims` is not a version 1 Standard Schema; or `now` is not a function.
  */
