@@ -9,6 +9,7 @@ import {
   isTransparent,
   ORIGIN,
   readSrgb,
+  stopTransitions,
 } from "./test-utils";
 
 const BUTTONS_URL = `${ORIGIN}/buttons/?env=vanilla`;
@@ -572,6 +573,8 @@ test.describe("buttons", () => {
      motion, which the aesthetics suite asserts for every look. */
   test("scales a pressed button on the base look", async ({ page }) => {
     await page.goto(BUTTONS_URL);
+    // The pressed scale itself, read once `:active` holds, not the travel into it.
+    await stopTransitions(page);
 
     const button = page.getByTestId("btn-default-none");
     const pressedScale = async () => {
@@ -583,8 +586,8 @@ test.describe("buttons", () => {
     await button.hover();
     await page.mouse.down();
     try {
-      /* The transform is transitioned, so this polls for the settled value. */
-      await expect.poll(pressedScale, "pressed on the base look").toBeCloseTo(0.97, 2);
+      expect(await button.evaluate((node) => node.matches(":active")), "held").toBe(true);
+      expect(await pressedScale(), "pressed on the base look").toBeCloseTo(0.97, 2);
     } finally {
       await page.mouse.up();
     }

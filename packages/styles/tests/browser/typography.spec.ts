@@ -221,7 +221,7 @@ test("paints a table row's own intent while other rows keep the table's", async 
 
     await target.hover();
     const hover = await target.evaluate(async (element) => {
-      await Promise.all(element.getAnimations().map((animation) => animation.finished));
+      await Promise.allSettled(element.getAnimations().map((animation) => animation.finished));
       return getComputedStyle(element).backgroundColor;
     });
     await page.mouse.move(0, 0);

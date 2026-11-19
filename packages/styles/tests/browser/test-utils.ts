@@ -196,3 +196,31 @@ export const drawsCornerShape = (page: Page) => page.evaluate(() => CSS.supports
 export const expectSameColor = (actual: string, expected: string, label: string) => {
   expect(getColorDistance(actual, expected), `${label}: ${actual} vs ${expected}`).toBeLessThanOrEqual(2);
 };
+
+/* Ends every transition at once, for a test that reads a state rather than
+   the motion into it. A computed value read mid-transition is an eased frame
+   that depends on how fast the engine runs, and an assertion that a value
+   did not change passes on a transition's first frame whatever the rule says. */
+export const stopTransitions = (page: Page) =>
+  page.addStyleTag({ content: "*, *::before, *::after { transition: none !important; }" });
+
+/* Waits for every finite animation and transition in the document to end.
+   `allSettled`, because one a later style change cancels rejects its
+   `finished`; infinite ones are skipped, since they never finish; and the
+   list is read again until it is empty, since ending one can start another. */
+export const settleAnimations = (page: Page) =>
+  page.evaluate(async () => {
+    for (let round = 0; round < 20; round += 1) {
+      const running = document
+        .getAnimations()
+        .filter((animation) => animation.playState !== "finished")
+        .filter((animation) => animation.effect?.getComputedTiming().endTime !== Infinity);
+
+      if (running.length === 0) {
+        return;
+      }
+
+      // oxlint-disable-next-line no-await-in-loop -- ending one can start another, so the list is read after each wait.
+      await Promise.allSettled(running.map((animation) => animation.finished));
+    }
+  });

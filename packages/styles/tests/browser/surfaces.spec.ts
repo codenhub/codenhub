@@ -1,5 +1,5 @@
 import { expect, test } from "./fixtures";
-import { expectSameColor, getColorDistance, isTransparent, ORIGIN } from "./test-utils";
+import { expectSameColor, getColorDistance, isTransparent, ORIGIN, stopTransitions } from "./test-utils";
 
 const SURFACES_URL = `${ORIGIN}/surfaces/?env=vanilla`;
 
@@ -62,6 +62,8 @@ test.describe("surfaces", () => {
      that regression cannot pass silently again. */
   test("rests a neutral soft card untinted and reveals the tint only on hover", async ({ page }) => {
     await page.goto(SURFACES_URL);
+    // Each state read final, not a frame of the transition into it.
+    await stopTransitions(page);
 
     const styles = await page.evaluate(() => {
       const resolveToken = (tokenName: string) => {
@@ -90,7 +92,7 @@ test.describe("surfaces", () => {
 
     await card.hover();
 
-    await expect.poll(background, "soft card deepens on hover").not.toBe(restBackground);
+    expect(await background(), "soft card deepens on hover").not.toBe(restBackground);
   });
 
   test("changes only padding for the density modifiers", async ({ page }) => {
@@ -130,6 +132,8 @@ test.describe("surfaces", () => {
      of the page colour, and the slab stayed put while the card tinted on hover. */
   test("a nested ghost control stays unfilled at rest and while the card is hovered", async ({ page }) => {
     await page.goto(SURFACES_URL);
+    // Each state read final, not a frame of the transition into it.
+    await stopTransitions(page);
 
     const button = page.locator('[data-testid="card-nested-ghost-button"]');
     const card = page.locator('[data-testid="card-nested-ghost"]');
@@ -142,10 +146,10 @@ test.describe("surfaces", () => {
 
     await card.hover();
 
-    /* The card's fill is transitioned, so poll for it to actually move -- an
-       assertion that only checks the hovered card is non-transparent would pass
-       on the resting soft fill without the hover doing anything. */
-    await expect.poll(() => background(card), "soft card deepens on hover").not.toBe(restCardBackground);
+    /* Checked to move off the resting fill: an assertion that only checks the
+       hovered card is non-transparent would pass on the resting soft fill
+       without the hover doing anything. */
+    expect(await background(card), "soft card deepens on hover").not.toBe(restCardBackground);
 
     /* The button opted out: its fill stays transparent while the card behind it
        tints, rather than inheriting the card's surface ground. */
@@ -453,6 +457,8 @@ test.describe("surfaces", () => {
      `:active` needs a held pointer, which no keyboard move drives. */
   test("presses an interactive card on the base look and leaves a plain card alone", async ({ page }) => {
     await page.goto(SURFACES_URL);
+    // Each state read final, not a frame of the transition into it.
+    await stopTransitions(page);
 
     const readScale = (testId: string) =>
       page.getByTestId(testId).evaluate((node) => {
@@ -466,10 +472,8 @@ test.describe("surfaces", () => {
     await interactive.hover();
     await page.mouse.down();
     try {
-      /* The transform is transitioned, so this polls for the settled value. */
-      await expect
-        .poll(() => readScale("card-default-none-interactive"), "interactive card pressed")
-        .toBeCloseTo(0.97, 2);
+      expect(await interactive.evaluate((node) => node.matches(":active")), "held").toBe(true);
+      expect(await readScale("card-default-none-interactive"), "interactive card pressed").toBeCloseTo(0.97, 2);
       expect(await readScale("card-default-none"), "plain card unmoved").toBe(1);
     } finally {
       await page.mouse.up();
@@ -481,6 +485,8 @@ test.describe("surfaces", () => {
      is not a pointer target. */
   test("hovers a `.hoverable` card without giving it the press or the pointer", async ({ page }) => {
     await page.goto(SURFACES_URL);
+    // Each state read final, not a frame of the transition into it.
+    await stopTransitions(page);
 
     const card = page.getByTestId("card-hoverable");
     const background = () => card.evaluate((node) => getComputedStyle(node).backgroundColor);
@@ -497,11 +503,11 @@ test.describe("surfaces", () => {
 
     await card.hover();
 
-    /* The fill is transitioned, so poll for it to actually move. */
-    await expect.poll(background, "hoverable card deepens on hover").not.toBe(restBackground);
+    expect(await background(), "hoverable card deepens on hover").not.toBe(restBackground);
 
     await page.mouse.down();
     try {
+      expect(await card.evaluate((node) => node.matches(":active")), "held").toBe(true);
       expect(await scale(), "hoverable card does not take the press scale").toBe(1);
     } finally {
       await page.mouse.up();
@@ -512,6 +518,8 @@ test.describe("surfaces", () => {
      the card scales on press and shows a pointer, but does not warm on hover. */
   test("presses a `.pressable` card without warming it on hover", async ({ page }) => {
     await page.goto(SURFACES_URL);
+    // Each state read final, not a frame of the transition into it.
+    await stopTransitions(page);
 
     const card = page.getByTestId("card-pressable");
     const background = () => card.evaluate((node) => getComputedStyle(node).backgroundColor);
@@ -527,12 +535,13 @@ test.describe("surfaces", () => {
     const restBackground = await background();
 
     await card.hover();
+    expect(await card.evaluate((node) => node.matches(":hover")), "hovered").toBe(true);
     expect(await background(), "pressable card does not warm on hover").toBe(restBackground);
 
     await page.mouse.down();
     try {
-      /* The transform is transitioned, so this polls for the settled value. */
-      await expect.poll(scale, "pressable card pressed").toBeCloseTo(0.97, 2);
+      expect(await card.evaluate((node) => node.matches(":active")), "held").toBe(true);
+      expect(await scale(), "pressable card pressed").toBeCloseTo(0.97, 2);
     } finally {
       await page.mouse.up();
     }
@@ -611,7 +620,7 @@ test.describe("surfaces", () => {
       await element.hover();
 
       return element.evaluate(async (node) => {
-        await Promise.all(node.getAnimations().map((animation) => animation.finished));
+        await Promise.allSettled(node.getAnimations().map((animation) => animation.finished));
         return getComputedStyle(node).backgroundColor;
       });
     };

@@ -651,6 +651,13 @@ test.describe("feedback", () => {
       const bubble = page.locator('[data-probe="bubble"]');
 
       expect(await bubble.evaluate((element) => getComputedStyle(element).visibility)).toBe("hidden");
+      /* The default linger, read rather than raced. The cross below then runs
+         under a linger no runner can outlast, so it proves the bubble can be
+         reached at all, without the pause between moves ever counting. */
+      expect(await bubble.evaluate((element) => getComputedStyle(element).transitionDelay.split(",")[0])).toBe("0.3s");
+      await page.locator('[data-probe="host"]').evaluate((element) => {
+        element.style.setProperty("--tooltip-linger", "60s");
+      });
 
       await trigger.hover();
       await expect(bubble).toHaveCSS("opacity", "1");
@@ -659,20 +666,20 @@ test.describe("feedback", () => {
       const bubbleBox = (await bubble.boundingBox())!;
       const x = bubbleBox.x + bubbleBox.width / 2;
 
-      /* Into the gap, a pause longer than the fade alone would allow, then onto
-       the bubble: only the linger keeps it there to land on. It lands by the
-       bubble's near edge, the transform origin it shrinks toward while it
-       fades: its middle leaves the bubble halfway through the fade, which left
-       a slow runner too little margin past the pause. */
+      /* Into the gap, then onto the bubble: only the linger keeps it there to
+         land on. It lands by the bubble's near edge, the transform origin it
+         shrinks toward while it fades. */
       await page.mouse.move(x, triggerBox.y + 1);
       await page.mouse.move(x, (triggerBox.y + bubbleBox.y + bubbleBox.height) / 2);
-      await page.waitForTimeout(250);
       await page.mouse.move(x, bubbleBox.y + bubbleBox.height - 2);
-      await page.waitForTimeout(800);
 
       await expect(bubble).toHaveCSS("opacity", "1");
       expect(await bubble.evaluate((element) => getComputedStyle(element).visibility)).toBe("visible");
+      expect(await page.locator('[data-probe="host"]').evaluate((element) => element.matches(":hover"))).toBe(true);
 
+      await page.locator('[data-probe="host"]').evaluate((element) => {
+        element.style.setProperty("--tooltip-linger", "0s");
+      });
       await page.mouse.move(0, 0);
       await expect(bubble).toHaveCSS("visibility", "hidden");
     });

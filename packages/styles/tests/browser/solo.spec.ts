@@ -3,7 +3,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { expect, test, type Page } from "./fixtures";
-import { drawsCornerShape, expectSameColor, readSrgb } from "./test-utils";
+import { drawsCornerShape, expectSameColor, readSrgb, settleAnimations, stopTransitions } from "./test-utils";
 
 /* A solo class exists for an element this package does not style, on a page
    that may never have loaded the base stylesheet. So unlike the aesthetic
@@ -17,8 +17,7 @@ const built = (file: string) => readFile(path.join(packageRoot, "dist", file), "
    animates in from its initial value, and a class toggled later animates too. A
    consumer's page has the sheet before it renders; waiting the transitions out
    reads what that page shows. */
-const settle = (page: Page) =>
-  page.evaluate(() => Promise.all(document.getAnimations().map((animation) => animation.finished)));
+const settle = (page: Page) => settleAnimations(page);
 
 const load = async (page: Page, files: readonly string[], markup: string, extraCss = "") => {
   await page.setContent(`<!doctype html><html><body>${markup}</body></html>`);
@@ -245,6 +244,12 @@ test.describe("solo utilities", () => {
        <button id="disabled" class="neobrutalism-solo" style="margin: 40px" disabled>Off</button>`,
     );
 
+    /* The pressed state itself, not a frame of the travel into it: with no
+       transition the value is final once the element matches `:active`, so a
+       press that never comes fails rather than timing out, and one that does
+       is not missed by a slow engine. */
+    await stopTransitions(page);
+
     const pressed = async (selector: string) => {
       const target = page.locator(selector);
 
@@ -252,22 +257,22 @@ test.describe("solo utilities", () => {
       await page.mouse.down();
 
       try {
-        // Transitions run, so this polls for the settled value.
-        return await expect
-          .poll(() => target.evaluate((node) => getComputedStyle(node).translate), { timeout: 2000 })
-          .toBe("4px 4px")
-          .then(
-            () => true,
-            () => false,
-          );
+        return await target.evaluate((node) => ({
+          active: node.matches(":active"),
+          translate: getComputedStyle(node).translate,
+        }));
       } finally {
         await page.mouse.up();
       }
     };
 
-    expect(await pressed("#action"), "action").toBe(true);
-    expect(await pressed("#container"), "container").toBe(false);
-    expect(await pressed("#disabled"), "disabled action").toBe(false);
+    const action = await pressed("#action");
+    const container = await pressed("#container");
+
+    expect(action, "action").toEqual({ active: true, translate: "4px 4px" });
+    expect(container.active, "the container is held").toBe(true);
+    expect(container.translate, "container").not.toBe("4px 4px");
+    expect((await pressed("#disabled")).translate, "disabled action").not.toBe("4px 4px");
   });
 
   /* `.disabled` and `[data-disabled]` are the documented ways to disable what

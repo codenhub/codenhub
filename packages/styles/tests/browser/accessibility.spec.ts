@@ -3,7 +3,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { expect, test } from "./fixtures";
-import { getContrastRatio, ORIGIN } from "./test-utils";
+import { getContrastRatio, ORIGIN, stopTransitions } from "./test-utils";
 
 const FEEDBACK_URL = `${ORIGIN}/feedback/?env=vanilla`;
 const NATIVE_URL = `${ORIGIN}/native/?env=vanilla`;
@@ -815,22 +815,15 @@ test("separates the focus ring from a filled control with a line of the page col
       "utf8",
     ),
   });
+  /* The ring fades in. With no transition it is whole the moment focus lands,
+     so a read cannot catch it partway, however slowly the engine paints. */
+  await stopTransitions(page);
 
   const focusedShadow = async (id: string) => {
     /* A real keyboard move from the sibling before it: every engine gates
        `:focus-visible` on its own heuristic, and all three agree on Tab. */
     await page.locator(`#before-${id}`).focus();
     await page.keyboard.press("Tab");
-    await page.evaluate(
-      (elementId) =>
-        Promise.all(
-          document
-            .getElementById(elementId)!
-            .getAnimations()
-            .map((animation) => animation.finished),
-        ),
-      id,
-    );
 
     return page.evaluate((elementId) => {
       const element = document.getElementById(elementId)!;
@@ -872,6 +865,10 @@ test("separates the focus ring from a filled control with a line of the page col
 test("shows a focused control on a solid surface", async ({ page }) => {
   await page.setContent("<!doctype html><html><body></body></html>");
   await page.addStyleTag({ url: `${ORIGIN}/shared/entry-vanilla.css` });
+  /* The ring fades in, and a shadow read before the fade ends has no inset
+     line yet: a fixed wait of twice the fade lost to CI's WebKit. With no
+     transition the ring is whole the moment focus lands. */
+  await stopTransitions(page);
 
   const cases = [];
 
@@ -903,17 +900,6 @@ test("shows a focused control on a solid surface", async ({ page }) => {
     await page.locator("#before").focus();
     // oxlint-disable-next-line no-await-in-loop -- one control holds focus at a time.
     await page.keyboard.press("Tab");
-    /* The ring fades in, and a shadow read before the fade ends has no inset
-       line yet. A fixed wait of twice the fade was not enough on CI's WebKit. */
-    // oxlint-disable-next-line no-await-in-loop -- the ring fades in.
-    await page.evaluate(() =>
-      Promise.all(
-        document
-          .getElementById("control")!
-          .getAnimations()
-          .map((animation) => animation.finished),
-      ),
-    );
     // oxlint-disable-next-line no-await-in-loop -- one control holds focus at a time.
     const read = await page.evaluate(() => {
       const element = document.getElementById("control")!;

@@ -8,6 +8,7 @@ import {
   isTransparent,
   ORIGIN,
   readSrgb,
+  stopTransitions,
 } from "./test-utils";
 
 const FORMS_URL = `${ORIGIN}/forms/?env=vanilla`;
@@ -814,6 +815,9 @@ test.describe("forms", () => {
      `--intent-hover` was the one the state does not set. */
   test("resolves an intent on a bare text control at rest and on hover", async ({ page }) => {
     await page.goto(FORMS_URL);
+    /* The hovered line itself: a line that faded to `none` on hover would
+       still move off the resting value for the length of the fade. */
+    await stopTransitions(page);
 
     /* One pointer, so the two controls are measured one after the other rather
        than in parallel. */
@@ -827,7 +831,10 @@ test.describe("forms", () => {
       expect(isTransparent(resting), `${testId} resting border`).toBe(false);
 
       await control.hover();
-      await expect.poll(read, { message: `${testId} hovered border` }).not.toBe(resting);
+      const hovered = await read();
+
+      expect(hovered, `${testId} hovered border`).not.toBe(resting);
+      expect(isTransparent(hovered), `${testId} hovered border is drawn`).toBe(false);
     };
 
     await expectALine("text-control");
@@ -1021,6 +1028,8 @@ test.describe("forms", () => {
 
   test("stops a disabled toggle reacting to hover", async ({ page }) => {
     await page.goto(FORMS_URL);
+    // Read after any change would have landed, not on the first frame of one.
+    await stopTransitions(page);
 
     const expectUnmoved = async (testId: string) => {
       const element = page.getByTestId(testId);
@@ -1284,7 +1293,7 @@ test.describe("forms", () => {
       const element = page.locator(`[data-hover-probe="${probe}"]`);
       const settled = () =>
         element.evaluate(async (node) => {
-          await Promise.all(node.getAnimations().map((animation) => animation.finished));
+          await Promise.allSettled(node.getAnimations().map((animation) => animation.finished));
           return getComputedStyle(node).borderTopColor;
         });
 
@@ -1917,6 +1926,12 @@ test.describe("forms", () => {
     expect(forced.input, "forced colours: the field draws none of its own").toBe("none");
   });
 
+  /* A checkbox is an `<input>`, and four of the group's rules took any
+     `<input>` for its field where the rest named only the text fields: a
+     focused checkbox drew its ring inside the group's, an invalid one reddened
+     the group's line around neutral text, and a disabled one stopped the group
+     answering the pointer without dimming it. A toggle beside the field is the
+     group's other content, as a button is. */
   /* The text controls take the button's size steps, so a `.btn.sm` and an
      `.ipt.sm` line up in a row: height, text size, and the corner the size
      step scales. */

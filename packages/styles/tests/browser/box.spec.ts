@@ -1,5 +1,12 @@
 import { expect, test } from "./fixtures";
-import { expectSameColor, flattenColor, getColorDistance, getContrastRatio, ORIGIN } from "./test-utils";
+import {
+  expectSameColor,
+  flattenColor,
+  getColorDistance,
+  getContrastRatio,
+  ORIGIN,
+  stopTransitions,
+} from "./test-utils";
 
 const BUTTONS_URL = `${ORIGIN}/buttons/?env=vanilla`;
 
@@ -155,12 +162,17 @@ test("a neutral box with no plate prints in the ink of the plate it sits on", as
     () => getComputedStyle(document.querySelector("[data-plate]")!).backgroundColor,
   );
 
+  /* The hover tone itself, not a frame of the fade into it. */
+  await stopTransitions(page);
   await page.hover("[data-child]");
-  /* Once the line has faded into its hover tone. */
-  await page.waitForTimeout(600);
-  const hoveredLine = await page.evaluate(
-    () => getComputedStyle(document.querySelector("[data-child]")!).borderTopColor,
-  );
+  const hoveredLine = await page.evaluate(() => {
+    const child = document.querySelector("[data-child]")!;
+
+    if (!child.matches(":hover")) {
+      throw new Error("the button is not hovered after hover().");
+    }
+    return getComputedStyle(child).borderTopColor;
+  });
 
   expect(
     getContrastRatio(hoveredLine, plateFill),

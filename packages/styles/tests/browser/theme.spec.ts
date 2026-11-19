@@ -1,5 +1,5 @@
 import { expect, test } from "./fixtures";
-import { ORIGIN } from "./test-utils";
+import { ORIGIN, settleAnimations } from "./test-utils";
 
 const COMPONENTS_URL = `${ORIGIN}/components/?env=vanilla`;
 
@@ -282,7 +282,7 @@ test("prints a dark page in the light theme, and a filled box with its plate", a
         '<button class="btn solid primary" id="button">Save</button></body></html>',
     );
     await page.addStyleTag({ url: `${ORIGIN}/shared/entry-vanilla.css` });
-    await page.evaluate(() => Promise.all(document.getAnimations().map((animation) => animation.finished)));
+    await settleAnimations(page);
 
     return page.evaluate(() => {
       const style = (id: string) => getComputedStyle(document.getElementById(id)!);
@@ -320,7 +320,7 @@ test("prints a filled quotation with its plate", async ({ page }) => {
   );
   await page.addStyleTag({ url: `${ORIGIN}/shared/entry-vanilla.css` });
   await page.emulateMedia({ media: "print" });
-  await page.evaluate(() => Promise.all(document.getAnimations().map((animation) => animation.finished)));
+  await settleAnimations(page);
 
   const quote = await page.evaluate(() => {
     const style = getComputedStyle(document.getElementById("quote")!);

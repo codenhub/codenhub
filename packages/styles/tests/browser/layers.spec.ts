@@ -3,6 +3,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { expect, test, type Page } from "./fixtures";
+import { settleAnimations } from "./test-utils";
 
 /* The layer map: everything the package ships sits in `theme`, `base`,
    `components`, or `utilities`, so a consumer's own utility or unlayered CSS
@@ -77,7 +78,7 @@ const load = async (page: Page, files: readonly string[]) => {
     await page.addStyleTag({ content: await built(file) });
   }
   await page.addStyleTag({ content: CONSUMER_CSS });
-  await page.evaluate(() => Promise.all(document.getAnimations().map((animation) => animation.finished)));
+  await settleAnimations(page);
 };
 
 const read = (page: Page, testId: string, property: string) =>

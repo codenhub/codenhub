@@ -1,5 +1,5 @@
 import { expect, test } from "./fixtures";
-import { expectSameColor, ORIGIN } from "./test-utils";
+import { expectSameColor, ORIGIN, settleAnimations } from "./test-utils";
 
 const NATIVE_URL = `${ORIGIN}/native/?env=vanilla`;
 
@@ -442,7 +442,7 @@ test("draws a bare progress element in the colour it sits in, as the class does"
       "</div></body></html>",
   );
   await page.addStyleTag({ url: `${ORIGIN}/native/entry-vanilla.css` });
-  await page.evaluate(() => Promise.all(document.getAnimations().map((animation) => animation.finished)));
+  await settleAnimations(page);
 
   const filled = async (selector: string) => {
     const png = (await page.locator(selector).screenshot({ animations: "disabled" })).toString("base64");
@@ -498,7 +498,7 @@ test("keeps the checked plate on a bare toggle with a quiet presentation", async
     mixed.indeterminate = true;
     void getComputedStyle(mixed).backgroundColor;
 
-    return Promise.all(document.getAnimations().map((animation) => animation.finished));
+    return Promise.allSettled(document.getAnimations().map((animation) => animation.finished));
   });
 
   const plates = await page.evaluate(() =>
@@ -529,7 +529,7 @@ test("draws a bare dialog as a floating card, and keeps it closed until opened",
 
   /* The sheet arrives after the first render, so every value transitions to
      it; Firefox reads them part-way. */
-  await page.evaluate(() => Promise.all(document.getAnimations().map((animation) => animation.finished)));
+  await settleAnimations(page);
 
   const read = (selector: string) =>
     page.evaluate((target) => {

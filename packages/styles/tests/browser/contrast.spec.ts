@@ -3,7 +3,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { expect, test, type Page } from "./fixtures";
-import { flattenColor, getContrastRatio, readSrgb } from "./test-utils";
+import { flattenColor, getContrastRatio, readSrgb, settleAnimations } from "./test-utils";
 
 /* What `prefers-contrast: more` promises, in docs/accessibility.md: every line
    the package rests below 3:1 by choice reaches it, and glass turns opaque.
@@ -23,9 +23,7 @@ const load = async (page: Page, theme: string, markup: string) => {
   await page.setContent(`<!doctype html><html data-theme="${theme}"><body>${markup}</body></html>`);
   await page.addStyleTag({ content: await built("index.css") });
   await page.addStyleTag({ content: await built("aesthetics/index.css") });
-  /* `allSettled`: the theme attribute lands before the sheets do, and a
-     transition the second sheet replaces rejects its `finished`. */
-  await page.evaluate(() => Promise.allSettled(document.getAnimations().map((animation) => animation.finished)));
+  await settleAnimations(page);
 };
 
 const style = (page: Page, testId: string, property: string) =>

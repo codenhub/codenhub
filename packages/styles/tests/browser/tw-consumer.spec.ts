@@ -6,6 +6,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { promisify } from "node:util";
 
 import { expect, test, type Page } from "./fixtures";
+import { settleAnimations } from "./test-utils";
 
 /* `/tw` ships no safelist, so a consumer's Tailwind build emits only the
    classes it finds in their files. This holds that tree-shaken build to the
@@ -590,7 +591,7 @@ const renderFixture = async (page: Page, theme: "light" | "dark", css: string, s
   );
   await page.evaluate(async () => {
     await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
-    await Promise.all(document.getAnimations().map((animation) => animation.finished));
+    await Promise.allSettled(document.getAnimations().map((animation) => animation.finished));
   });
 
   return page.evaluate(() => {
@@ -1025,13 +1026,13 @@ test.describe("/tw consumer build", () => {
       /* The pointer stays where the last page left it, over the card. */
       await page.mouse.move(0, 0);
       await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
-      await page.evaluate(() => Promise.all(document.getAnimations().map((animation) => animation.finished)));
+      await settleAnimations(page);
 
       const target = page.locator("#target");
       const rest = await target.evaluate((element) => getComputedStyle(element).backgroundColor);
 
       await target.hover();
-      await page.evaluate(() => Promise.all(document.getAnimations().map((animation) => animation.finished)));
+      await settleAnimations(page);
 
       return {
         rest,

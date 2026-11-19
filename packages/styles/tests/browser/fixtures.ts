@@ -1,5 +1,7 @@
 import { test as base, type BrowserContext, type Page } from "@playwright/test";
 
+import { settleAnimations } from "./test-utils";
+
 /* Playwright gives every test its own browser context, which is the right
    default when tests carry state: cookies, storage, and permissions cannot
    leak between them. These tests carry none. They open a playground page,
@@ -34,14 +36,41 @@ export const test = base.extend<Record<string, unknown>, { sharedContext: Browse
   page: async ({ sharedContext }, use) => {
     const page = await sharedContext.newPage();
     const goto = page.goto.bind(page);
+    const reload = page.reload.bind(page);
+    /* Every stylesheet link applied, a settled paint, then every finite
+       animation and transition ended, so a test reads the page as a visitor
+       sees it once it has loaded. A late sheet animates each transitioned
+       property in from its initial value, which a read straight after `load`
+       could catch partway. Infinite animations are left running. */
+    const settle = async () => {
+      await page.evaluate(async () => {
+        await Promise.all(
+          [...document.querySelectorAll<HTMLLinkElement>('link[rel="stylesheet"]')]
+            .filter((link) => link.sheet === null)
+            .map(
+              (link) =>
+                new Promise((resolve) => {
+                  link.addEventListener("load", resolve, { once: true });
+                  link.addEventListener("error", resolve, { once: true });
+                }),
+            ),
+        );
+        await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+      });
+      await settleAnimations(page);
+    };
 
     page.goto = (async (...args: Parameters<Page["goto"]>) => {
       const response = await goto(...args);
-      await page.evaluate(
-        () => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))),
-      );
+      await settle();
       return response;
     }) as Page["goto"];
+    // A reload loads the sheets again, so it waits the same way.
+    page.reload = (async (...args: Parameters<Page["reload"]>) => {
+      const response = await reload(...args);
+      await settle();
+      return response;
+    }) as Page["reload"];
 
     await use(page);
     await page.close();
