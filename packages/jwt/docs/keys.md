@@ -107,7 +107,7 @@ The `kid` option applies to PEM only; for a JWK, the JWK's own `kid` is used. Wi
 
 ## Importing a private key
 
-`importPrivateKey` takes the same arguments and runs the same checks, except that the private members are required: `d` for `EC` and `OKP` keys, and `d`, `p`, `q`, `dp`, `dq` and `qi` for `RSA` keys. Multi-prime RSA keys, with `oth`, are `unsupported_key`. Pass `extractable: true` if the key must be exportable again.
+`importPrivateKey` takes the same arguments and runs the same checks, except that the private members are required: `d` for `EC` and `OKP` keys, and `d`, `p`, `q`, `dp`, `dq` and `qi` for `RSA` keys. Multi-prime RSA keys, with `oth`, are `unsupported_key`. The public members must belong to the private key: the key signs a fixed message that they must verify, and a JWK whose halves come from two keys is `invalid_key`. Pass `extractable: true` if the key must be exportable again.
 
 ```ts
 import { importPrivateKey } from "@codenhub/jwt";
@@ -181,12 +181,14 @@ Every exported JWK is frozen, names `kty`, `alg` and `use: "sig"`, includes `kid
 
 ## Thumbprints
 
-`jwkThumbprint` computes a public key's JWK SHA-256 Thumbprint (RFC 7638): 43 base64url characters that name the key by its material alone, whatever its `alg` or `kid`.
+`jwkThumbprint` computes a key pair's JWK SHA-256 Thumbprint (RFC 7638): 43 base64url characters that name the key by its material alone, whatever its `alg` or `kid`. Pass the public key or the private key; both give the same thumbprint, and a private key need not be extractable.
 
 ```ts
-import { jwkThumbprint } from "@codenhub/jwt";
+import { importPrivateKey, jwkThumbprint } from "@codenhub/jwt";
 
-const jkt = await jwkThumbprint(publicKey);
+const result = await importPrivateKey(env.SIGNING_KEY_PEM, { alg: "ES256" });
+if (!result.ok) throw new Error("The signing key could not be imported.");
+const kid = await jwkThumbprint(result.value);
 ```
 
 Use it for a `kid` that follows from the key, or for the `jkt` that binds an access token to a DPoP key, as [Signing tokens](signing.md#dpop-proofs) shows.

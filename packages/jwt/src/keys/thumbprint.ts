@@ -1,8 +1,8 @@
-import type { Jwk, PublicKey } from "../core/types";
+import type { Jwk, PrivateKey, PublicKey } from "../core/types";
 import { encodeBase64Url, encodeUtf8 } from "../encoding";
 import { ALGORITHM_PARAMS } from "./algorithms";
 import { exportWebCryptoJwk } from "./exported-jwk";
-import { getKeyEntryOfKind } from "./registry";
+import { getKeyEntry } from "./registry";
 
 /** RFC 7638 §3.2: the required members of each key type, in lexicographic order. */
 const THUMBPRINT_MEMBERS: Readonly<
@@ -14,12 +14,14 @@ const THUMBPRINT_MEMBERS: Readonly<
 };
 
 /**
- * Computes a public key's JWK SHA-256 Thumbprint (RFC 7638), base64url-encoded without padding.
+ * Computes a key pair's JWK SHA-256 Thumbprint (RFC 7638), base64url-encoded without padding, from its
+ * public key or its private key.
  *
  * @remarks
  * The thumbprint names the key by its material alone: `alg`, `kid` and `use` do not change it, so the same
  * key imported for two algorithms has one thumbprint. It is what DPoP binds a token to (RFC 9449 §6.1, the
- * `jkt` of a `cnf` claim), and it makes a stable `kid`.
+ * `jkt` of a `cnf` claim), and it makes a stable `kid`. A private key gives the thumbprint of its public
+ * half, also when it is not extractable.
  *
  * @example
  * ```ts
@@ -27,13 +29,17 @@ const THUMBPRINT_MEMBERS: Readonly<
  * const jkt = await jwkThumbprint(publicKey); // 43 base64url characters
  * ```
  *
- * @param key - A public key from {@link importPublicKey}, {@link importKeyPair} or {@link generateKeyPair}.
+ * @param key - A public or private key created by this package.
  * @returns The 43-character thumbprint.
- * @throws TypeError when `key` is not a public key created by this package.
+ * @throws TypeError when `key` is not a public or private key created by this package.
  */
-export async function jwkThumbprint(key: PublicKey): Promise<string> {
-  const entry = getKeyEntryOfKind(key, "public");
-  const exported = await exportWebCryptoJwk(entry.cryptoKey, key.alg);
+export async function jwkThumbprint(key: PublicKey | PrivateKey): Promise<string> {
+  const entry = getKeyEntry(key);
+  const publicCryptoKey = key.kind === "private" ? entry.publicCryptoKey : entry.cryptoKey;
+  if ((key.kind !== "public" && key.kind !== "private") || publicCryptoKey === undefined) {
+    throw new TypeError("jwkThumbprint: key must be a public or private key created by this package.");
+  }
+  const exported = await exportWebCryptoJwk(publicCryptoKey, key.alg);
   const kty = ALGORITHM_PARAMS[key.alg].kty as keyof typeof THUMBPRINT_MEMBERS;
   const material: Record<string, unknown> = { ...exported, kty };
   // Every required member is a base64url string or a fixed name, so JSON.stringify writes the RFC 7638 form:
