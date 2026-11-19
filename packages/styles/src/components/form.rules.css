@@ -134,8 +134,10 @@
 
     /* The last exclusion is `.input-group`'s: a group whose control is disabled
        dims as a disabled field does (see `input-group`), so it does not answer
-       the pointer either. The list is the group's own, so a `<select>` with a
-       disabled `<option>` is not caught by it. Under `(hover: hover)` as the
+       the pointer either. The list is the group's field, as its dimming names
+       it, so a `<select>` with a disabled `<option>` is not caught by it, nor a
+       group whose disabled control is a toggle or a button beside the field,
+       which does not dim it. Under `(hover: hover)` as the
        other hover responses are: a tapped checkbox, select, or group stays in
        `:hover` without matching `:focus-visible`, and kept the hover line. */
     @media (hover: hover) {
@@ -145,7 +147,26 @@
           [aria-disabled="true"],
           [data-disabled],
           :focus-visible,
-          :has(> :is(.ipt, .textarea, .select, .text-control, input, textarea, select):disabled)
+          :has(
+            > :is(.ipt, .textarea, .select, .text-control, input, textarea, select):where(
+                :not(
+                  .checkbox,
+                  .radio,
+                  .switch,
+                  .btn,
+                  [type="checkbox"],
+                  [type="radio"],
+                  [type="button"],
+                  [type="submit"],
+                  [type="reset"],
+                  [type="image"],
+                  [type="range"],
+                  [type="color"],
+                  [type="file"],
+                  [type="hidden"]
+                )
+              ):disabled
+          )
         ) {
         --_line-tone: color-mix(in oklab, var(--_held-ink) var(--_through), var(--intent-hover));
       }
@@ -167,9 +188,9 @@
 
        `!important`, as the reset's ring is: the copy lands in whichever layer the
        consumer applied it in, and an accessibility override has to win over any
-       layered rule there. So it cannot be suppressed and is kept off a control
-       inside an `.input-group`, which draws the field's ring and has the control
-       inside draw none; the offset and the cleared shadow are not important and
+       layered rule there. So it cannot be suppressed and is kept off the field
+       inside an `.input-group`, which draws the field's ring and has the field
+       draw none -- not off a toggle beside it, which keeps its own; the offset and the cleared shadow are not important and
        reach that control too, as the unlayered block's do. */
     @media (forced-colors: active) {
       &:focus-visible {
@@ -177,7 +198,29 @@
         box-shadow: none;
       }
 
-      &:focus-visible:where(:not(.input-group > *)) {
+      &:focus-visible:where(
+          :not(
+            .input-group
+              > :is(.ipt, .textarea, .select, .text-control, input, textarea, select):where(
+                :not(
+                  .checkbox,
+                  .radio,
+                  .switch,
+                  .btn,
+                  [type="checkbox"],
+                  [type="radio"],
+                  [type="button"],
+                  [type="submit"],
+                  [type="reset"],
+                  [type="image"],
+                  [type="range"],
+                  [type="color"],
+                  [type="file"],
+                  [type="hidden"]
+                )
+              )
+          )
+        ) {
         outline: 2px solid Highlight !important;
       }
     }
@@ -355,9 +398,10 @@
      this repeats its values for the bare element, with the neutral cap
      `native.css`'s reset puts back, which the arm above lifts only when
      checked. Not `radio:indeterminate`, which every radio of a group with
-     nothing chosen matches. */
+     nothing chosen matches, nor a switch's, which has no mixed state to show
+     and would take the "on" plate with its knob still off. */
   input:is([type="checkbox"], [type="radio"]):checked,
-  input[type="checkbox"]:indeterminate {
+  input[type="checkbox"]:indeterminate:where(:not(.switch)) {
     --intent-fill-max: 100%;
     --ui-fill: 100%;
     --ui-fg-on-fill: 100%;
@@ -385,10 +429,30 @@
      regardless of source order. */
 
   /* `text-control`'s invalid state, for a bare field no class reaches and for
-     the `.input-group` whose control is invalid. The values are the
-     utility's; see the state there. */
+     the `.input-group` whose field is invalid -- not a toggle or a button
+     beside it, which the group's text does not answer to either. The values
+     are the utility's; see the state there. */
   :is(input, textarea, select)[aria-invalid="true"],
-  .input-group:has(> :is(.ipt, .textarea, .select, .text-control, input, textarea, select)[aria-invalid="true"]) {
+  .input-group:has(
+    > :is(.ipt, .textarea, .select, .text-control, input, textarea, select):where(
+        :not(
+          .checkbox,
+          .radio,
+          .switch,
+          .btn,
+          [type="checkbox"],
+          [type="radio"],
+          [type="button"],
+          [type="submit"],
+          [type="reset"],
+          [type="image"],
+          [type="range"],
+          [type="color"],
+          [type="file"],
+          [type="hidden"]
+        )
+      )[aria-invalid="true"]
+  ) {
     --intent-color: var(--color-destructive);
     --intent-contrast: var(--color-destructive-contrast);
     --intent-hover: var(--color-destructive-hover);
@@ -693,14 +757,50 @@
       box-shadow: var(--_focus-stack, var(--_shadow), inset 0 0 0 2px var(--_focus-gap));
     }
 
+    /* Hovered while focused, the line keeps the focus tone, as a lone field's
+       does: `text-control`'s hover answers `:focus-visible`, which the group
+       never matches, and at 0-4-0 (its `:has(> FIELD:disabled)` exclusion
+       weighs 0-2-0) it beat the tone above, so pointing at the field being
+       typed in faded its line. The same weight, after it: a group is a `<div>`,
+       never `:disabled`, so `:not(:disabled)` adds weight and no condition. */
+    @media (hover: hover) {
+      &:focus-within:hover:not(:disabled) {
+        --_line-tone: color-mix(in oklab, var(--_held-ink) var(--_through), var(--intent-color));
+      }
+    }
+
     /* Focus on anything but the field -- the clear button the docs show, a
        toggle -- is focus on that control, so it keeps its own ring and the group
        drops the field's. Enter presses a focused button rather than typing into
        the field, and two rings around one target say neither. The line keeps its
        focus tone: something in the field still has focus. A separate rule rather
        than a `:not(:has())` on the ring above, so an engine without `:has()`
-       drops only this rule and keeps the group's ring. */
-    &:has(> :not(.ipt, .textarea, .select, .text-control, input, textarea, select):focus) {
+       drops only this rule and keeps the group's ring. A toggle is an `<input>`
+       but not the field, so it is named here as the group's other rules name
+       it; taken for the field, a focused checkbox drew its ring inside the
+       group's. */
+    &:has(
+      > :not(
+        :is(.ipt, .textarea, .select, .text-control, input, textarea, select):where(
+          :not(
+            .checkbox,
+            .radio,
+            .switch,
+            .btn,
+            [type="checkbox"],
+            [type="radio"],
+            [type="button"],
+            [type="submit"],
+            [type="reset"],
+            [type="image"],
+            [type="range"],
+            [type="color"],
+            [type="file"],
+            [type="hidden"]
+          )
+        )
+      ):focus
+    ) {
       outline: none;
       box-shadow: var(--_shadow);
     }
@@ -924,14 +1024,30 @@
 
     clip-path: var(--ui-clip-tight, var(--ui-clip, none));
 
-    /* `text-control` trades the outline for its own line colour, which reads on a
-       40px field and not on a 16px box. The ring goes back as a shadow layer
-       rather than as an `outline`, so a clipping aesthetic clips it with
-       everything else and its own inset focus layer still paints over the top. */
+    /* `text-control`'s line colour, its focus signal on a field, reads on a
+       40px field and not on a 16px box, so a toggle draws a ring as well: as a
+       shadow layer rather than as an `outline`, so a clipping aesthetic clips it
+       with everything else and its own inset focus layer still paints over the
+       top. */
     &:focus-visible {
       --_shadow:
         var(--_shadow-parts) var(--_halo-layer,),
         0 0 0 var(--focus-ring-width) var(--focus-ring, color-mix(in srgb, var(--color-primary) 64%, transparent));
+      /* The shadow is the ring, so the reset's outline is not drawn as well:
+         the two overlapped a pixel apart at the ring's alpha and painted one
+         blotched band. Forced colours keep their important outline, since
+         they drop every shadow. */
+      outline: none;
+      /* The inset focus layers a clipping aesthetic asks for, capped as the
+         edge is: `.pixel`'s seven-pixel ring and its two-pixel line of the page
+         colour covered all but a dot of a 16px box, so a focused unchecked box
+         read as a filled one. Two pixels past the edge, the least that shows
+         over it. Undefined with no such aesthetic, as `box`'s stack is. */
+      --_focus-inset: min(var(--ui-focus-inset), calc(var(--_ss) + 2px));
+      --_focus-stack:
+        var(--_shadow),
+        inset 0 0 0 var(--_focus-inset) var(--focus-ring, color-mix(in srgb, var(--color-primary) 64%, transparent)),
+        inset 0 0 0 calc(var(--_focus-inset) + 2px) var(--color-background);
     }
 
     &::after {
@@ -1050,6 +1166,12 @@
       --_shadow:
         var(--_shadow-parts) var(--_halo-layer,),
         0 0 0 var(--focus-ring-width) var(--focus-ring, color-mix(in srgb, var(--color-primary) 64%, transparent));
+      outline: none;
+      --_focus-inset: min(var(--ui-focus-inset), calc(var(--_ss) + 2px));
+      --_focus-stack:
+        var(--_shadow),
+        inset 0 0 0 var(--_focus-inset) var(--focus-ring, color-mix(in srgb, var(--color-primary) 64%, transparent)),
+        inset 0 0 0 calc(var(--_focus-inset) + 2px) var(--color-background);
     }
 
     &::after {
@@ -1205,6 +1327,12 @@
       --_shadow:
         var(--_shadow-parts) var(--_halo-layer,),
         0 0 0 var(--focus-ring-width) var(--focus-ring, color-mix(in srgb, var(--color-primary) 64%, transparent));
+      outline: none;
+      --_focus-inset: min(var(--ui-focus-inset), calc(var(--_ss) + 2px));
+      --_focus-stack:
+        var(--_shadow),
+        inset 0 0 0 var(--_focus-inset) var(--focus-ring, color-mix(in srgb, var(--color-primary) 64%, transparent)),
+        inset 0 0 0 calc(var(--_focus-inset) + 2px) var(--color-background);
     }
 
     &::after {
@@ -1355,10 +1483,29 @@
     box-shadow: none;
   }
 
-  /* The group draws the field's ring, so the control inside draws none here
+  /* The group draws the field's ring, so the field inside draws none here
      either: this block is unlayered, and the ring above beat the group's
-     layered suppression and drew a second ring inside the group's. */
-  .input-group > :is(.ipt, .textarea, .select, .text-control, input, textarea, select):focus-visible {
+     layered suppression and drew a second ring inside the group's. A toggle
+     beside the field keeps its own, since the group drops its ring for it. */
+  .input-group
+    > :is(.ipt, .textarea, .select, .text-control, input, textarea, select):where(
+      :not(
+        .checkbox,
+        .radio,
+        .switch,
+        .btn,
+        [type="checkbox"],
+        [type="radio"],
+        [type="button"],
+        [type="submit"],
+        [type="reset"],
+        [type="image"],
+        [type="range"],
+        [type="color"],
+        [type="file"],
+        [type="hidden"]
+      )
+    ):focus-visible {
     outline: none;
   }
 }

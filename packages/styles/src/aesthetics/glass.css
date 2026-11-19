@@ -173,16 +173,20 @@
   /* More contrast also takes the ground whole, above, and then the white
      hairline has nothing to be seen against: 1.03:1 on an opaque light page.
      The line becomes the theme's control grey, above 4:1 on both grounds.
+     The rules dividers and tables draw take it too: they read their own
+     ink first, and its 20% hairline stayed below 2:1 under this preference.
      Only under this preference: reduced transparency asks for no stronger
      line. See docs/accessibility.md. */
   @media (prefers-contrast: more) {
     .glass:not(:where(:root[data-contrast="standard"], :root[data-contrast="standard"] *)) {
       --ui-ink: var(--color-control-border);
+      --ui-rule-ink: var(--color-control-border);
     }
   }
 
   .glass:where(:root[data-contrast="more"], :root[data-contrast="more"] *) {
     --ui-ink: var(--color-control-border);
+    --ui-rule-ink: var(--color-control-border);
   }
 
   /* Liquid glass: a modifier of glass, the way `.sketch-rounded` is of sketch.

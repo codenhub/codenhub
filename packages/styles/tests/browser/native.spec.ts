@@ -1,5 +1,5 @@
 import { expect, test } from "./fixtures";
-import { expectSameColor, ORIGIN, settleAnimations } from "./test-utils";
+import { expectSameColor, ORIGIN, settleAnimations, stopTransitions } from "./test-utils";
 
 const NATIVE_URL = `${ORIGIN}/native/?env=vanilla`;
 
@@ -382,6 +382,51 @@ test("draws sketch's dashed accents on bare elements as on their classes", async
   expect(styles.switch, "a switch keeps its solid line").toBe("solid");
   expect(styles.classCell).toBe("dashed");
   expect(styles.bareCell).toBe(styles.classCell);
+});
+
+/* A switch is a checkbox element, so `/native`'s checkbox styling reached it:
+   the knob was the checkbox's mark, hidden until checked and masked to a tick,
+   so an unchecked switch showed no knob and a checked one drew a tick. A mixed
+   switch took the checked plate with its knob still off. It draws as it does
+   under the main entry. */
+test("draws a switch on /native as on the main entry", async ({ page }) => {
+  const draw = async (entry: string) => {
+    await page.setContent(
+      "<!doctype html><html><body>" +
+        '<input type="checkbox" class="switch" id="off" />' +
+        '<input type="checkbox" class="switch" id="on" checked />' +
+        '<input type="checkbox" class="switch" id="mixed" />' +
+        "</body></html>",
+    );
+    await page.addStyleTag({ url: `${ORIGIN}/${entry}` });
+    await stopTransitions(page);
+
+    return page.evaluate(() => {
+      document.querySelector<HTMLInputElement>("#mixed")!.indeterminate = true;
+
+      return Object.fromEntries(
+        ["off", "on", "mixed"].map((id) => {
+          const element = document.getElementById(id)!;
+          const knob = getComputedStyle(element, "::after");
+
+          return [
+            id,
+            {
+              track: getComputedStyle(element).backgroundColor,
+              knob: [knob.opacity, knob.maskImage, knob.width, knob.translate, knob.backgroundColor].join(" | "),
+            },
+          ];
+        }),
+      );
+    });
+  };
+
+  const main = await draw("shared/entry-vanilla.css");
+  const native = await draw("native/entry-vanilla.css");
+
+  expect(main.off?.knob, "the main entry draws an opaque, unmasked knob").toMatch(/^1 \| none \| /);
+  expect(main.mixed, "a mixed switch draws as an unchecked one").toEqual(main.off);
+  expect(native).toEqual(main);
 });
 
 /* `/native` styles elements without classes, and a `<progress>` and a

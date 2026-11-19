@@ -174,7 +174,11 @@
     @compose select;
   }
 
-  input[type="checkbox"] {
+  /* Not a switch: it is a checkbox element drawn as `.switch`, and the
+     checkbox's mark -- hidden until checked, masked to a tick or a dash --
+     left its knob invisible when off and drew it as a tick when on. In
+     `:where()`, so the selector weighs what the bare element does. */
+  input[type="checkbox"]:where(:not(.switch)) {
     @compose checkbox;
   }
 
@@ -307,7 +311,7 @@
   /* A checked radio is the filled disc and dot it draws with forced colours
      off, as `.radio` is in `form.css`: one look on both entrypoints. */
   input[type="checkbox"]:checked,
-  input[type="checkbox"]:indeterminate,
+  input[type="checkbox"]:indeterminate:where(:not(.switch)),
   input[type="radio"]:checked {
     background-color: Highlight;
     border-color: Highlight;

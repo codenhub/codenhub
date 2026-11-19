@@ -15,7 +15,7 @@ const THEMES = ["light", "dark"] as const;
 const INTENTS = ["neutral", "primary", "secondary", "success", "warning", "destructive", "info"] as const;
 /* The aesthetics that draw a surface's edge as a border. Glass has its own
    test below; pixel draws an inset ring in its ink, the page's text colour. */
-const AESTHETICS = ["chunky-tile", "cyber", "neobrutalism", "sketch"] as const;
+const AESTHETICS = ["chunky-tile", "cyber", "glass", "neobrutalism", "sketch"] as const;
 const SOFT_EDGED = ["alert", "panel", "badge", "kbd", "code", "pre"] as const;
 const MINIMUM = 3;
 
@@ -96,18 +96,34 @@ for (const theme of THEMES) {
       expect(await lineContrast(page, "head", "border-bottom-color"), "head rule").toBeGreaterThanOrEqual(MINIMUM);
     });
 
-    test("draws every aesthetic's neutral line at 3:1", async ({ page }) => {
+    /* Glass draws its rules in an ink of their own, which kept its 20%
+       hairline under this preference while its surface line took the control
+       grey: a divider and a table rule under 2:1. */
+    test("draws every aesthetic's neutral line and rules at 3:1", async ({ page }) => {
       await load(
         page,
         theme,
         AESTHETICS.map(
-          (aesthetic) => `<div class="${aesthetic}"><div data-testid="${aesthetic}" class="card">c</div></div>`,
+          (aesthetic) =>
+            `<div class="${aesthetic}"><div data-testid="${aesthetic}" class="card">c</div>` +
+            `<hr data-testid="${aesthetic}-divider" class="divider" />` +
+            `<table class="data-table"><thead><tr><th data-testid="${aesthetic}-head">h</th></tr></thead></table></div>`,
         ).join(""),
       );
 
-      for (const aesthetic of AESTHETICS) {
-        // oxlint-disable-next-line no-await-in-loop -- one page, read in turn.
-        expect(await lineContrast(page, aesthetic), aesthetic).toBeGreaterThanOrEqual(MINIMUM);
+      const lines = await Promise.all(
+        AESTHETICS.map(async (aesthetic) => ({
+          aesthetic,
+          head: await lineContrast(page, `${aesthetic}-head`, "border-bottom-color"),
+          divider: await lineContrast(page, `${aesthetic}-divider`),
+          surface: await lineContrast(page, aesthetic),
+        })),
+      );
+
+      for (const { aesthetic, divider, head, surface } of lines) {
+        expect(surface, aesthetic).toBeGreaterThanOrEqual(MINIMUM);
+        expect(divider, `${aesthetic} divider`).toBeGreaterThanOrEqual(MINIMUM);
+        expect(head, `${aesthetic} head rule`).toBeGreaterThanOrEqual(MINIMUM);
       }
     });
 
