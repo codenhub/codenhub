@@ -119,6 +119,7 @@ describe("createRemoteKeySet options", () => {
     ["now that is not a function", { now: 0 }],
     ["onFetch that is not a function", { onFetch: "log" }],
     ["onFetchError that is not a function", { onFetchError: {} }],
+    ["waitUntil that is not a function", { waitUntil: true }],
     ["seed that is not an object", { seed: "{}" }],
     ["seed null", { seed: null }],
     ["seed without fetchedAt", { seed: { jwks: { keys: [] } } }],
@@ -778,6 +779,49 @@ describe("createRemoteKeySet refreshing in the background", () => {
     clock.set(629);
     await keys.select(EC_HEADER);
     expect(fetch).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe("createRemoteKeySet abandoned fetches", () => {
+  it("should fetch again for a select that joins a fetch past its deadline", async () => {
+    const clock = createClock();
+    const fetch = fetchSequence(
+      () => new Promise<Response>(() => undefined),
+      () => jwksResponse(EC_JWK),
+    );
+    const keys = createSet({ fetch, now: clock.now, cooldown: 30, timeout: 5 });
+    vi.useFakeTimers();
+    void keys.select(EC_HEADER);
+    clock.set(10);
+    expect(describeSelection(await keys.select(EC_HEADER))).toEqual({ alg: "ES256", kid: "ec" });
+    expect(fetch).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe("createRemoteKeySet waitUntil", () => {
+  it("should hand each fetch it starts to waitUntil", async () => {
+    const clock = createClock();
+    const waitUntil = vi.fn();
+    const fetch = fetchSequence(
+      () => jwksResponse(EC_JWK),
+      () => jwksResponse(EC_JWK),
+    );
+    const keys = createSet({ fetch, now: clock.now, waitUntil });
+    await keys.select(EC_HEADER);
+    clock.set(600);
+    await keys.select(EC_HEADER);
+    await vi.waitFor(() => expect(fetch).toHaveBeenCalledTimes(2));
+    expect(waitUntil.mock.calls.map(([promise]) => promise instanceof Promise)).toEqual([true, true]);
+  });
+
+  it("should select as usual when waitUntil throws", async () => {
+    const keys = createSet({
+      fetch: fetchSequence(() => jwksResponse(EC_JWK)),
+      waitUntil: () => {
+        throw new Error("no request context");
+      },
+    });
+    expect(describeSelection(await keys.select(EC_HEADER))).toEqual({ alg: "ES256", kid: "ec" });
   });
 });
 

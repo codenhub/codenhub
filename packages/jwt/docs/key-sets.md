@@ -99,6 +99,16 @@ const verify = createVerifier({ keys, issuer: "https://issuer.example", audience
 
 Nothing is fetched until the first token needs a key. Create the key set once and share it between requests, so they share its cache.
 
+On Cloudflare Workers, also pass `waitUntil` from `cloudflare:workers`. A Worker cancels a request's unfinished I/O once the request has responded, and that includes a JWKS fetch the key set started in the background. With `waitUntil`, each fetch keeps running until it is done:
+
+```ts
+import { waitUntil } from "cloudflare:workers";
+
+const keys = createRemoteKeySet({ url: "https://issuer.example/.well-known/jwks.json", waitUntil });
+```
+
+Without it, nothing breaks. The cache is just replaced later: background fetches die with their requests, so the expired JWKS keeps being used until `maxStale` runs out and a token waits for a fetch of its own.
+
 ### Options
 
 Durations are in seconds. Every option is checked when the key set is created, and an invalid one throws a `TypeError`, as does a name that is not an option below (`createRemoteKeySet: options.cachettl is not an option.`).
@@ -117,11 +127,12 @@ Durations are in seconds. Every option is checked when the key set is created, a
 | `seed`             | none                           | `{ jwks, fetchedAt }`, a JWKS fetched earlier and when, in milliseconds, used as if this key set had fetched it. A `jwks` that is not a JWKS is ignored. See [persisting](#persisting-the-cache). |
 | `onFetch`          | none                           | Called with `{ jwks, fetchedAt }` after each successful fetch.                                                                                                                                    |
 | `onFetchError`     | none                           | Called with the `key_fetch_failed` issue after each failed fetch, including fetches no token waited for.                                                                                          |
+| `waitUntil`        | none                           | Called with each fetch as it starts, to keep it running after the request that started it has responded. On Cloudflare Workers, pass `waitUntil` from `cloudflare:workers`.                       |
 
 ### Caching and rotation
 
 - **Expiry.** A fetched JWKS is used for `cacheTtl` seconds, counted from when the fetch finished. The first token after that is still verified with it, at once, and starts a fetch in the background that replaces it for later tokens. Past `maxStale`, tokens wait for the fetch instead.
-- **One fetch at a time.** While a fetch is running, a token waits for it only when the cached JWKS cannot give its key; concurrent requests never start a second fetch. A fetch that has not settled a second past its `timeout`, and past the cooldown, no longer counts as running. That happens on Cloudflare Workers when the request that started the fetch ended and took its I/O with it.
+- **One fetch at a time.** While a fetch is running, a token waits for it only when the cached JWKS cannot give its key; concurrent requests never start a second fetch. A token waits at most until a second past the fetch's `timeout`. If the fetch has not finished by then, or fails because the request that started it has ended, the token's request fetches again itself. A fetch that has not settled a second past its `timeout`, and past the cooldown, no longer counts as running. Both happen on Cloudflare Workers when the request that started the fetch ended and took its I/O with it, unless `waitUntil` kept it alive.
 - **Unknown `kid`.** When an issuer rotates in a new key, the first token signed with it names a `kid` your cached JWKS does not hold. The key set then fetches the JWKS once more and selects again from the result. A header without a `kid` never causes a refetch.
 - **Cooldown.** A refetch for an unknown `kid`, and a retry after a failed fetch, only starts once `cooldown` seconds have passed since the last fetch started. Inside that window an unknown `kid` fails with `unknown_kid` at once. Anyone can send you tokens with invented `kid`s; with the cooldown, a flood of them costs the issuer at most one request per window, however many tokens arrive.
 - **Stale keys.** When a fetch fails after `cacheTtl` ran out, the last JWKS that was fetched is still used for up to `maxStale` more seconds, so a short outage at the issuer does not take your service down with it. Using it does not extend it: each token after the cooldown tries to fetch again, and past `maxStale` the key set fails with `key_fetch_failed`. Lower `maxStale` if a revoked key must stop working sooner, at the cost of failing sooner when the issuer is unreachable.

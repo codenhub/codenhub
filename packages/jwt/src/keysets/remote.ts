@@ -83,6 +83,14 @@ export interface RemoteKeySetOptions {
    * the fetch, for logging. Its errors, thrown or rejected, are ignored.
    */
   readonly onFetchError?: (issue: JwtIssue) => void;
+  /**
+   * Called with each fetch as it starts, to keep it running after the request that started it has
+   * responded. On Cloudflare Workers, pass `waitUntil` from `cloudflare:workers`: without it, a fetch
+   * started in the background, or by a request that ends first, is cancelled with that request, and the
+   * cache is refreshed only when a later `select` has to wait for a fetch. Its errors, thrown or
+   * rejected, are ignored.
+   */
+  readonly waitUntil?: (promise: Promise<unknown>) => void;
 }
 
 /** A fetched JWKS and when it was fetched, as {@link RemoteKeySetOptions.onFetch} receives it. */
@@ -107,6 +115,7 @@ const KNOWN_OPTIONS: Readonly<Record<keyof RemoteKeySetOptions, true>> = {
   seed: true,
   onFetch: true,
   onFetchError: true,
+  waitUntil: true,
 };
 
 const MS_PER_SECOND = 1000;
@@ -137,6 +146,7 @@ interface RemoteConfig {
   readonly seed: RemoteKeySetSnapshot | undefined;
   readonly onFetch: ((snapshot: RemoteKeySetSnapshot) => void) | undefined;
   readonly onFetchError: ((issue: JwtIssue) => void) | undefined;
+  readonly waitUntil: ((promise: Promise<unknown>) => void) | undefined;
 }
 
 /** A JWKS that was fetched and imported. */
@@ -163,9 +173,11 @@ interface CachedKeys {
  *   seconds, a `select` still answers from it at once and starts a fetch in the background; past that, it
  *   waits for the fetch.
  * - **One fetch at a time.** A `select` that needs keys the cache cannot give while a fetch is running
- *   waits for that fetch; concurrent callers never start a second one. A fetch still unsettled past
- *   `timeout`, plus a second, and past the cooldown, as when a Workers runtime cancelled the request
- *   that started it, no longer holds back a new one.
+ *   waits for that fetch, at most until a second past its `timeout`; concurrent callers never start a
+ *   second one. A fetch that misses that deadline, or rejects because a Workers runtime cancelled it with
+ *   the request that started it, is fetched again by the waiting `select`. Such a fetch also stops
+ *   holding back a new one once it is past the deadline and the cooldown. `waitUntil` keeps fetches
+ *   running past their request.
  * - **Unknown `kid`.** When a token's `kid` is not in the cached JWKS, the JWKS is fetched again once,
  *   and the selection is repeated on the result. A failing refetch gives `key_fetch_failed`. A header
  *   without a `kid` never causes a refetch.
@@ -200,7 +212,7 @@ interface CachedKeys {
  * is a bug in the caller's clock; a verifier that calls such a key set reports `key_fetch_failed` with
  * `{ reason: "key_set_error" }` instead.
  * @throws TypeError when `options` is not an object; `options` has a member that is not an option; `url` is not an absolute `https:` URL, or
- * `http:` URL on a loopback host, or carries credentials; `fetch`, `now`, `onFetch` or `onFetchError` is not a function; `seed` has no finite
+ * `http:` URL on a loopback host, or carries credentials; `fetch`, `now`, `onFetch`, `onFetchError` or `waitUntil` is not a function; `seed` has no finite
  * `fetchedAt`; `algorithms` is not a non-empty array of asymmetric algorithms; or `cacheTtl`, `cooldown`, `maxStale`, `timeout` or
  * `maxResponseBytes` is out of range.
  */
@@ -272,8 +284,47 @@ export function createRemoteKeySet(options: RemoteKeySetOptions): KeySet {
       lastFetchStartedAt = config.now();
       generation += 1;
       inFlight = runFetch(generation);
+      notify(config.waitUntil, inFlight);
     }
     return inFlight;
+  };
+
+  /**
+   * Waits for a new fetch, or joins the running one until its deadline. On Workers, a fetch whose request
+   * ended never settles, or rejects when awaited from another request; either way this select fetches
+   * again, once, from its own request.
+   */
+  const awaitFetch = async (): Promise<JwtResult<readonly VerificationKey[]>> => {
+    if (inFlight === undefined || !isFetching()) {
+      return refetch();
+    }
+    const running = inFlight;
+    const remainingMs =
+      (lastFetchStartedAt ?? config.now()) + config.timeoutMs + ABANDONED_FETCH_GRACE_MS - config.now();
+    if (remainingMs > 0) {
+      let timer: ReturnType<typeof setTimeout> | undefined;
+      const abandoned = new Promise<undefined>((resolve) => {
+        timer = setTimeout(() => resolve(undefined), remainingMs);
+      });
+      try {
+        const settled = await Promise.race([running, abandoned]);
+        if (settled !== undefined) {
+          return settled;
+        }
+      } catch {
+        // Only a fetch cancelled with its request rejects: runFetch itself never does.
+      } finally {
+        clearTimeout(timer);
+      }
+    }
+    if (inFlight === running) {
+      inFlight = undefined;
+    }
+    try {
+      return await refetch();
+    } catch {
+      return fetchFailure("network");
+    }
   };
 
   /** Imports the seed once, unless a fetch has filled the cache first. */
@@ -307,14 +358,14 @@ export function createRemoteKeySet(options: RemoteKeySetOptions): KeySet {
           return selected;
         }
       }
-      await refetch();
+      await awaitFetch();
       hasFetched = true;
     } else if (!isCachedWithin(config.cacheTtlMs) && !isCoolingDown()) {
       if (isCachedWithin(usableWithin)) {
         // The expired keys answer now; the refetch replaces them for later selects.
         void ignoreRejection(refetch());
       } else {
-        await refetch();
+        await awaitFetch();
         hasFetched = true;
       }
     }
@@ -326,7 +377,7 @@ export function createRemoteKeySet(options: RemoteKeySetOptions): KeySet {
     if (!isUnknownKid(selected) || hasFetched || (!isFetching() && isCoolingDown())) {
       return selected;
     }
-    const refetched = await refetch();
+    const refetched = await awaitFetch();
     return refetched.ok ? selectKey(refetched.value, header) : refetched;
   };
 
@@ -507,6 +558,7 @@ function readRemoteOptions(options: unknown): RemoteConfig {
     seed: readSeed(source.seed),
     onFetch: readFunction(source, "onFetch") as RemoteConfig["onFetch"],
     onFetchError: readFunction(source, "onFetchError") as RemoteConfig["onFetchError"],
+    waitUntil: readFunction(source, "waitUntil") as RemoteConfig["waitUntil"],
   };
 }
 

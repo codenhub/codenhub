@@ -46,7 +46,7 @@ Builds a key set that fetches its keys from a JWKS URL, caches them, and refetch
 Nothing is fetched until the first `select`. Then:
 
 - **TTL.** A fetched JWKS is used for `cacheTtl` seconds. After that, for up to `maxStale` more seconds, a `select` still answers from it at once and starts a fetch in the background; past that, it waits for the fetch.
-- **One fetch at a time.** A `select` that needs keys the cache cannot give while a fetch is running waits for that fetch; concurrent callers never start a second one. A fetch still unsettled past `timeout`, plus a second, and past the cooldown, as when a Workers runtime cancelled the request that started it, no longer holds back a new one.
+- **One fetch at a time.** A `select` that needs keys the cache cannot give while a fetch is running waits for that fetch, at most until a second past its `timeout`; concurrent callers never start a second one. A fetch that misses that deadline, or rejects because a Workers runtime cancelled it with the request that started it, is fetched again by the waiting `select`. Such a fetch also stops holding back a new one once it is past the deadline and the cooldown. `waitUntil` keeps fetches running past their request.
 - **Unknown `kid`.** When a token's `kid` is not in the cached JWKS, the JWKS is fetched again once, and the selection is repeated on the result. A failing refetch gives `key_fetch_failed`. A header without a `kid` never causes a refetch.
 - **Cooldown.** A refetch for an unknown `kid`, or a retry after a failed fetch, starts only when `cooldown` seconds have passed since the last fetch started. Inside that window an unknown `kid` fails with `unknown_kid` at once, so a flood of tokens with invented `kid`s causes at most one fetch per window. `cooldown: 0` gives up that limit: each such `select` may start a fetch, though never while another is running.
 - **Stale keys.** When fetching fails, or a retry waits for the cooldown, the expired JWKS is used until `maxStale` runs out; past that, `select` fails with `key_fetch_failed`. Using stale keys does not extend them: every `select` after the cooldown tries to fetch again.
@@ -60,7 +60,7 @@ Fetches are `GET` requests with `accept: application/json` that do not follow re
 
 **Returns** — A frozen key set. Its `select` never rejects for a fetch problem or a token: a failed fetch gives `key_fetch_failed` with `params.reason` of `timeout`, `network` (the fetch rejected), `status` (with `params.status`, also for a redirect), `too_large` (`Content-Length` or body over `maxResponseBytes`) or `invalid_response` (not a strict JSON object, or not a JWKS). Issues never contain anything from the response. `select` rejects with a `TypeError` only when `options.now` returns something other than a finite number, which is a bug in the caller's clock; a verifier that calls such a key set reports `key_fetch_failed` with `{ reason: "key_set_error" }` instead.
 
-**Throws** — TypeError when `options` is not an object; `options` has a member that is not an option; `url` is not an absolute `https:` URL, or `http:` URL on a loopback host, or carries credentials; `fetch`, `now`, `onFetch` or `onFetchError` is not a function; `seed` has no finite `fetchedAt`; `algorithms` is not a non-empty array of asymmetric algorithms; or `cacheTtl`, `cooldown`, `maxStale`, `timeout` or `maxResponseBytes` is out of range.
+**Throws** — TypeError when `options` is not an object; `options` has a member that is not an option; `url` is not an absolute `https:` URL, or `http:` URL on a loopback host, or carries credentials; `fetch`, `now`, `onFetch`, `onFetchError` or `waitUntil` is not a function; `seed` has no finite `fetchedAt`; `algorithms` is not a non-empty array of asymmetric algorithms; or `cacheTtl`, `cooldown`, `maxStale`, `timeout` or `maxResponseBytes` is out of range.
 
 **Example**
 
@@ -1284,6 +1284,7 @@ export interface RemoteKeySetOptions {
     readonly seed?: RemoteKeySetSnapshot;
     readonly onFetch?: (snapshot: RemoteKeySetSnapshot) => void;
     readonly onFetchError?: (issue: JwtIssue) => void;
+    readonly waitUntil?: (promise: Promise<unknown>) => void;
 }
 ```
 
@@ -1400,6 +1401,14 @@ readonly url: string | URL;
 ```
 
 Absolute `https:` URL of the JWKS, such as an issuer's `jwks_uri`. Plain `http:` is accepted only on a loopback host (`localhost`, `127.0.0.0/8` or `[::1]`), for a development issuer on the same machine. Credentials in the URL are refused.
+
+#### RemoteKeySetOptions › waitUntil
+
+```ts
+readonly waitUntil?: (promise: Promise<unknown>) => void;
+```
+
+Called with each fetch as it starts, to keep it running after the request that started it has responded. On Cloudflare Workers, pass `waitUntil` from `cloudflare:workers`: without it, a fetch started in the background, or by a request that ends first, is cancelled with that request, and the cache is refreshed only when a later `select` has to wait for a fetch. Its errors, thrown or rejected, are ignored.
 
 ### RemoteKeySetSnapshot
 
