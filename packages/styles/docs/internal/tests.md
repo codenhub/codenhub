@@ -137,8 +137,8 @@ Node-based Vitest checks validate every published target. Every compiled export 
 | Measured                                   | Minified | Gzip   | Ceiling |
 | ------------------------------------------ | -------- | ------ | ------- |
 | `dist/index.css`                           | 218,451  | 18,977 | 225,000 |
-| `dist/components.css`                      | 175,749  | 14,762 | 181,000 |
-| `dist/native.css`                          | 325,499  | 24,927 | 335,250 |
+| `dist/components.css`                      | 181,264  | 14,574 | 186,700 |
+| `dist/native.css`                          | 336,171  | 24,843 | 346,250 |
 | `dist/theme.css`                           | 12,788   | 2,574  | 13,200  |
 | `dist/palette.css`                         | 25,967   | 3,103  | 26,800  |
 | `dist/aesthetics/index.css`                | 48,275   | 5,191  | 49,750  |
@@ -152,7 +152,7 @@ Node-based Vitest checks validate every published target. Every compiled export 
 | `dist/purge/classes.json`                  | 6,855    | 1,626  | 7,100   |
 | `/button/tw`, a page with `btn primary`    | 21,949   |        | 22,600  |
 | `/button/tw`, a page with no package class | 9,610    |        | 9,900   |
-| `/tw`, a page with `btn primary`           | 26,733   |        | 27,550  |
+| `/tw`, a page with `btn primary`           | 27,923   |        | 28,750  |
 
 About 694 bytes of each of the three `/tw` rows are the nine `--tw-*` registrations `/tw` ships itself, with the fallbacks Tailwind's polyfills write for them, because Tailwind registers each only on a page that uses a utility setting it, and registers nothing a utility body sets by hand. `dist/aesthetics/index.css` carries no Tailwind banner, as it carries none of Tailwind's CSS.
 
