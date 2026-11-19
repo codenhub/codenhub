@@ -368,7 +368,14 @@ function assertNodeVersion(nodeVersion: string): void {
 
 /* The file a link leads to, or the path itself while nothing is there yet. A
    link whose target does not exist yet still leads there: the stylesheet is
-   written where it points rather than over the link. */
+   written where it points rather than over the link.
+
+   The target's folder is resolved by the filesystem, not by `path.resolve`,
+   which drops a `..` before the link in front of it is followed: on POSIX a
+   link to `alias/../real.css`, with `alias` a link into another folder, named
+   a different `real.css` than the one the link leads to, and the build
+   overwrote it unchecked. A folder that does not exist yet has no links to
+   follow, so it is taken as written. */
 async function realPathOf(file: string): Promise<string> {
   try {
     return await fs.realpath(file);
@@ -379,7 +386,15 @@ async function realPathOf(file: string): Promise<string> {
 
     const link = await fs.readlink(file).catch(() => undefined);
 
-    return link === undefined ? file : realPathOf(path.resolve(path.dirname(file), link));
+    if (link === undefined) {
+      return file;
+    }
+
+    // Joined as written, so no `..` is collapsed before the filesystem sees it.
+    const target = path.isAbsolute(link) ? link : `${path.dirname(file)}${path.sep}${link}`;
+    const folder = await fs.realpath(path.dirname(target)).catch(() => path.resolve(path.dirname(target)));
+
+    return realPathOf(path.join(folder, path.basename(target)));
   }
 }
 

@@ -264,6 +264,24 @@ describe("build", () => {
     expect((await lstat(path.join(project, "app.css"))).isSymbolicLink()).toBe(true);
     expect(await readOutput("build/real.css")).toMatch(ruleFor("btn"));
   });
+
+  /* POSIX follows `alias` before its `..`; Windows collapses the `..` first, so the case does not arise there. */
+  it.skipIf(!canSymlink || process.platform === "win32")(
+    "writes where an --output link points when its target climbs out of another link",
+    async () => {
+      const authored = "a { color: red; }";
+
+      await mkdir(path.join(project, "nested", "dir"), { recursive: true });
+      await symlink(path.join(project, "nested", "dir"), path.join(project, "alias"), "dir");
+      await writeFile(path.join(project, "real.css"), authored);
+      // Written whole: `path.join` would collapse the `..` this test is about.
+      await symlink("alias/../real.css", path.join(project, "app.css"), "file");
+
+      expect(await build("build", "-c", "app/views/**/*.erb", "-o", "app.css")).toBe(0);
+      expect(await readOutput("real.css")).toBe(authored);
+      expect(await readOutput("nested/real.css")).toMatch(ruleFor("btn"));
+    },
+  );
 });
 
 describe("failures", () => {
