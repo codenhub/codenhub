@@ -596,7 +596,7 @@ test("draws a bare dialog as a floating card, and keeps it closed until opened",
   expect(await read("#bare")).toEqual(await read("#class"));
 });
 
-test("sweeps a bare progress element with no value, and rests it under reduced motion", async ({ page }) => {
+test("sweeps a bare progress element with no value, and fills its track under reduced motion", async ({ page }) => {
   const read = async () => {
     await page.setContent('<!doctype html><html><body><progress id="bare"></progress></body></html>');
     await page.addStyleTag({ url: `${ORIGIN}/native/entry-vanilla.css` });
@@ -614,9 +614,14 @@ test("sweeps a bare progress element with no value, and rests it under reduced m
   expect(moving.image).toContain("linear-gradient");
   expect(moving.size).toBe("33% 100%");
 
+  /* No sweep: the whole track, pulsing, as `.progress.indeterminate` does;
+     accessibility.spec.ts covers every motion setting. */
   await page.emulateMedia({ reducedMotion: "reduce" });
 
-  expect((await read()).animation).toBe("none");
+  const still = await read();
+
+  expect(still.animation).toBe("anim-progress-pulse-fill");
+  expect(still.size).toBe("100% 100%");
 });
 
 test("sweeps a bare progress element from the start side under right-to-left text", async ({ page }) => {

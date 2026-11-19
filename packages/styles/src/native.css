@@ -232,8 +232,8 @@
      paints its pseudo-element empty or full, and neither can be moved. */
   progress:indeterminate {
     background-image: linear-gradient(
-      var(--progress-color, var(--intent-color)),
-      var(--progress-color, var(--intent-color))
+      color-mix(in srgb, var(--progress-color, var(--intent-color)) var(--_progress-pulse), transparent),
+      color-mix(in srgb, var(--progress-color, var(--intent-color)) var(--_progress-pulse), transparent)
     );
     background-repeat: no-repeat;
     background-size: 33% 100%;
@@ -255,14 +255,30 @@
     background-color: transparent;
   }
 
-  /* The sweep rests at the start, as `.progress.indeterminate`'s does. */
+  /* Under reduced motion, the full, dimmed fill `.progress.indeterminate`
+     takes: pulsing under `reduce`, still under `none`. The fill is the
+     background image, so it dims through `--_progress-pulse` rather than
+     `opacity`, which would dim the track and its line with it. */
   @media (prefers-reduced-motion: reduce) {
-    progress:indeterminate:not(:where(:root[data-motion="full"] *)) {
-      animation: none;
+    progress:indeterminate:not(:where(:root:is([data-motion="full"], [data-motion="none"]) *)) {
+      --_progress-pulse: 60%;
+
+      background-size: 100% 100%;
+      animation: anim-progress-pulse-fill 1.5s infinite alternate ease-in-out;
     }
   }
 
-  progress:indeterminate:where(:root:is([data-motion="reduce"], [data-motion="none"]) *) {
+  progress:indeterminate:where(:root[data-motion="reduce"] *) {
+    --_progress-pulse: 60%;
+
+    background-size: 100% 100%;
+    animation: anim-progress-pulse-fill 1.5s infinite alternate ease-in-out;
+  }
+
+  progress:indeterminate:where(:root[data-motion="none"] *) {
+    --_progress-pulse: 60%;
+
+    background-size: 100% 100%;
     animation: none;
   }
 }
@@ -276,6 +292,24 @@
 
   to {
     background-position: 150% 0;
+  }
+}
+
+/* The reduced-motion fill's strength. Registered so the pulse interpolates;
+   `inherits: false`, so a bar inside another starts from its own. */
+@property --_progress-pulse {
+  syntax: "<percentage>";
+  inherits: false;
+  initial-value: 100%;
+}
+
+@keyframes anim-progress-pulse-fill {
+  from {
+    --_progress-pulse: 100%;
+  }
+
+  to {
+    --_progress-pulse: 50%;
   }
 }
 
@@ -295,8 +329,13 @@
     background-color: CanvasText;
   }
 
+  /* Dimmed by the reduced-motion pulse as `.progress`'s fill is by its
+     opacity: a full, solid bar would read as a finished one. */
   progress:indeterminate {
-    background-image: linear-gradient(CanvasText, CanvasText);
+    background-image: linear-gradient(
+      color-mix(in srgb, CanvasText var(--_progress-pulse), transparent),
+      color-mix(in srgb, CanvasText var(--_progress-pulse), transparent)
+    );
   }
 
   input[type="checkbox"],

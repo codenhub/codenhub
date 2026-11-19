@@ -133,7 +133,7 @@ When you do not know how far along the work is, such as while the export is bein
 <div class="progress primary indeterminate" role="progressbar" aria-label="Preparing export"></div>
 ```
 
-`.active` adds a shimmer over the track of a determinate bar, to show that work is still happening between updates. Both animations stop when the user asks for reduced motion; an indeterminate bar then rests with its fill at the start.
+`.active` adds a shimmer over the track of a determinate bar, to show that work is still happening between updates. The shimmer stops when the user asks for reduced motion. An indeterminate bar stops sweeping and fills its whole track, dimmed, so it never looks like a bar partway done; under reduced motion it pulses gently, and with `data-motion="none"` it stays still. A plain `<progress>` with no `value` does the same.
 
 With the [classless stylesheet](../setup.md#classless-html), a plain `<progress>` element is drawn as `.progress`: filled to its `value`, or the indeterminate sweep when it has no `value`. It announces its value itself, so it needs no `aria-valuenow`.
 
@@ -147,7 +147,7 @@ To change the colors of the fill, the track, or its border without changing the 
 
 ## Animation that keeps running
 
-Skeletons, `.active` shimmers, indeterminate bars, and spinners animate for as long as they are on the page. The package stops its own animations when the user asks the system for reduced motion, but that is not the only requirement. WCAG 2.2.2 asks that motion which starts automatically, lasts more than five seconds, and is shown alongside other content can be paused, stopped, or hidden by the user, unless the motion is essential.
+Skeletons, `.active` shimmers, indeterminate bars, and spinners animate for as long as they are on the page. The package stops its own animations when the user asks the system for reduced motion, except an indeterminate bar's pulse, which changes only opacity, but that is not the only requirement. WCAG 2.2.2 asks that motion which starts automatically, lasts more than five seconds, and is shown alongside other content can be paused, stopped, or hidden by the user, unless the motion is essential.
 
 A loading indicator shown while the user cannot do anything else, and that would confuse them if it were missing, counts as essential. A shimmer or spinner that keeps moving next to content the user is working with, such as a decorative "live" shimmer on a card, does not. Remove those as soon as their work is done, or give the user a control that stops them.
 
