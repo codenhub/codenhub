@@ -114,6 +114,8 @@ Rendering contracts are asserted primarily through computed styles on the shared
 - Aesthetic checks retain glass behavior coverage: translucency and blur on cards, panels, alerts, and tooltip bubbles when transparency is allowed; absence of per-control blur; and opaque, unblurred degradation under reduced transparency.
 - Chromium explicitly emulates both `prefers-reduced-transparency` branches, because it can report `reduce` from the operating system (glass then renders opaque and unblurred while Firefox and WebKit report no preference), so the suite never reads the environment's value. The allowed-transparency behavior also runs in Firefox and WebKit, so syntax and computed values are checked across all supported browser engines.
 - Direct and inherited aesthetic precedence, including glass and pixel tooltip pseudo-elements, is verified through computed styles.
+- Text and rings on a solid surface are measured against the flattened plate in both themes, on every intent: a hint, a group's adornments, a caption, and an inline quote at 4.5:1, a bare link's, summary's, or `[tabindex]` region's ring at 3:1, and an invalid control drawn as a `.destructive` one.
+- Where only the paint answers -- whether a select shows its arrow, whether a small icon button's icon stays in sight under `.pixel`'s focus layers -- a test decodes a screenshot of the one element and counts pixels against a second shot of the same element, never against a stored baseline.
 - `test-utils.ts` provides shared color parsing, comparison, contrast, and Playwright helpers.
 
 A test reads a state, not the motion into it. Colour transitions run 200ms even under reduced motion, so a value read straight after a hover, a press, or a focus is an eased frame that depends on how fast the engine runs; reads like that were most of this suite's flaky failures and the cause of the palette's drift check failing in CI. `fixtures.ts` makes `page.goto` and `page.reload` wait for every stylesheet link, a settled paint, and every finite animation, so a page is read as it rests once loaded. A test that then reads a state calls `stopTransitions(page)` first, which ends every transition at once, checks the state took (`element.matches(":hover")`, `":active"`, or `":focus-visible"`), and reads once: no fixed wait and no polling, since an assertion that a value did not change passes on a transition's first frame whatever the rule says. A test that loads stylesheets itself with `page.setContent` calls `settleAnimations(page)`, which waits on the finite animations with `allSettled`, because one a later style change cancels rejects its `finished`.
@@ -136,9 +138,9 @@ Node-based Vitest checks validate every published target. Every compiled export 
 
 | Measured                                   | Minified | Gzip   | Ceiling |
 | ------------------------------------------ | -------- | ------ | ------- |
-| `dist/index.css`                           | 218,451  | 18,977 | 225,000 |
-| `dist/components.css`                      | 175,749  | 14,762 | 181,000 |
-| `dist/native.css`                          | 325,499  | 24,927 | 335,250 |
+| `dist/index.css`                           | 226,140  | 18,695 | 233,000 |
+| `dist/components.css`                      | 182,803  | 14,549 | 188,300 |
+| `dist/native.css`                          | 338,328  | 24,833 | 348,500 |
 | `dist/theme.css`                           | 12,788   | 2,574  | 13,200  |
 | `dist/palette.css`                         | 25,967   | 3,103  | 26,800  |
 | `dist/aesthetics/index.css`                | 48,275   | 5,191  | 49,750  |

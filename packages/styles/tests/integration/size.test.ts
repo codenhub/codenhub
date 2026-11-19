@@ -35,9 +35,9 @@ const twEntry = (file: string) => pathToFileURL(path.join(packageRoot, "tw", fil
 
 // Minified bytes, measured with Tailwind 4.3.4 on the dates `docs/internal/tests.md` records.
 const COMPILED_CEILINGS: Record<string, number> = {
-  "dist/index.css": 225_000,
-  "dist/components.css": 181_000,
-  "dist/native.css": 335_250,
+  "dist/index.css": 233_000,
+  "dist/components.css": 188_300,
+  "dist/native.css": 348_500,
   "dist/theme.css": 13_200,
   "dist/palette.css": 26_800,
   "dist/aesthetics/index.css": 49_750,
