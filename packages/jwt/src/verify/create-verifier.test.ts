@@ -57,7 +57,7 @@ describe("createVerifier round trip", () => {
   });
 
   it("should deep-freeze the result", async () => {
-    const payload = { sub: "user-1", roles: ["admin"], profile: { name: "n" } };
+    const payload = { sub: "user-1", exp: NOW_SECONDS + 60, roles: ["admin"], profile: { name: "n" } };
     const result = await verifierFor(keySetOf(secretKey))(await sign({ payload, key: secretKey }));
     const { header, payload: verified, key } = valueOf(result);
 
@@ -77,7 +77,7 @@ describe("createVerifier round trip", () => {
 
 describe("createVerifier payload and clock", () => {
   it("should keep __proto__ as an own payload key from sign to verify", async () => {
-    const payload = JSON.parse('{"__proto__":{"admin":true},"sub":"u"}') as Record<string, unknown>;
+    const payload = JSON.parse('{"__proto__":{"admin":true},"sub":"u","exp":1800000060}') as Record<string, unknown>;
     const result = await verifierFor(keySetOf(secretKey))(await sign({ payload, key: secretKey }));
 
     const verified = valueOf(result).payload;

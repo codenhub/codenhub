@@ -177,7 +177,12 @@ describe("token failures carry no input", () => {
   });
 
   it("should drop the messages of schema issues that quote the payload", async () => {
-    const verify = createVerifier({ keys: createKeySet([secretKey]), claims: quotingSchema, now });
+    const verify = createVerifier({
+      keys: createKeySet([secretKey]),
+      claims: quotingSchema,
+      requireExpiration: false,
+      now,
+    });
     const result = await verify(await hmacToken('{"alg":"HS256"}', `{"role":"${MARKER}"}`));
 
     expect(result).toEqual({ ok: false, error: { issues: [{ code: "invalid_claims", path: ["payload", "role"] }] } });

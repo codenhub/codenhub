@@ -67,18 +67,18 @@ There are no messages: a code is the whole answer. Map codes to text yourself if
 
 ### Claims
 
-| Code               | Path                         | Params       | Meaning                                                                              |
-| ------------------ | ---------------------------- | ------------ | ------------------------------------------------------------------------------------ |
-| `invalid_claim`    | `["payload", claim]`         |              | A registered claim has the wrong type, such as an `exp` that is not a finite number. |
-| `expired`          | `["payload", "exp"]`         |              | Now is at or past `exp` plus the clock tolerance.                                    |
-| `not_yet_valid`    | `["payload", "nbf"]`         |              | Now plus the clock tolerance is before `nbf`.                                        |
-| `issued_in_future` | `["payload", "iat"]`         |              | `iat` is later than now plus the clock tolerance.                                    |
-| `too_old`          | `["payload", "iat"]`         | `{ maxAge }` | More than `maxAge` plus the clock tolerance has passed since `iat`.                  |
-| `wrong_issuer`     | `["payload", "iss"]`         |              | `iss` is none of the accepted issuers.                                               |
-| `wrong_audience`   | `["payload", "aud"]`         |              | `aud` contains none of the accepted audiences.                                       |
-| `wrong_type`       | `["header", "typ"]`          |              | The `typ` header is missing or is not the required type.                             |
-| `missing_claim`    | `["payload", claim]`         | `{ claim }`  | A claim required by `requiredClaims`, `issuer`, `audience` or `maxAge` is absent.    |
-| `invalid_claims`   | `["payload", ...schemaPath]` |              | Your `claims` schema reported an issue there. The path segments are the schema's.    |
+| Code               | Path                         | Params       | Meaning                                                                                                        |
+| ------------------ | ---------------------------- | ------------ | -------------------------------------------------------------------------------------------------------------- |
+| `invalid_claim`    | `["payload", claim]`         |              | A registered claim has the wrong type, such as an `exp` that is not a finite number.                           |
+| `expired`          | `["payload", "exp"]`         |              | Now is at or past `exp` plus the clock tolerance.                                                              |
+| `not_yet_valid`    | `["payload", "nbf"]`         |              | Now plus the clock tolerance is before `nbf`.                                                                  |
+| `issued_in_future` | `["payload", "iat"]`         |              | `iat` is later than now plus the clock tolerance.                                                              |
+| `too_old`          | `["payload", "iat"]`         | `{ maxAge }` | More than `maxAge` plus the clock tolerance has passed since `iat`.                                            |
+| `wrong_issuer`     | `["payload", "iss"]`         |              | `iss` is none of the accepted issuers.                                                                         |
+| `wrong_audience`   | `["payload", "aud"]`         |              | `aud` contains none of the accepted audiences, or the verifier names no `audience` and the token has an `aud`. |
+| `wrong_type`       | `["header", "typ"]`          |              | The `typ` header is missing or is not the required type.                                                       |
+| `missing_claim`    | `["payload", claim]`         | `{ claim }`  | A claim required by `requiredClaims`, `issuer`, `audience`, `maxAge` or `requireExpiration` is absent.         |
+| `invalid_claims`   | `["payload", ...schemaPath]` |              | Your `claims` schema reported an issue there. The path segments are the schema's.                              |
 
 [Verifying tokens](verifying.md#claim-checks) describes each check.
 

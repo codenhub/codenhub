@@ -10,9 +10,12 @@ export const MAX_CLOCK_TOLERANCE = 300;
 export interface ResolvedOptions {
   readonly keys: KeySet;
   readonly issuers?: readonly string[];
-  readonly audiences?: readonly string[];
-  /** The required `typ`, already normalized by {@link normalizeType}. */
-  readonly type?: string;
+  /** The accepted audiences; `false` skips the check, and unset rejects every token that has `aud`. */
+  readonly audiences?: readonly string[] | false;
+  /** The accepted `typ` values, already normalized by {@link normalizeType}; `null` accepts a missing `typ`. */
+  readonly types?: readonly (string | null)[];
+  readonly requireExpiration: boolean;
+  readonly allowExpired: boolean;
   readonly clockTolerance: number;
   readonly maxAge?: number;
   readonly maxLength: number;
@@ -27,6 +30,8 @@ const KNOWN_OPTIONS: Readonly<Record<keyof VerifierOptions, true>> = {
   issuer: true,
   audience: true,
   type: true,
+  requireExpiration: true,
+  allowExpired: true,
   clockTolerance: true,
   maxAge: true,
   maxLength: true,
@@ -69,12 +74,30 @@ export function resolveOptions(options: VerifierOptions<StandardSchemaV1 | undef
     throwInvalid("options must be an object.");
   }
   rejectUnknownOptions(options, KNOWN_OPTIONS, "createVerifier");
-  const { keys, issuer, audience, type, clockTolerance, maxAge, maxLength, requiredClaims, claims, now } = options;
+  const {
+    keys,
+    issuer,
+    audience,
+    type,
+    requireExpiration,
+    allowExpired,
+    clockTolerance,
+    maxAge,
+    maxLength,
+    requiredClaims,
+    claims,
+    now,
+  } = options;
   if (typeof keys !== "object" || keys === null || typeof keys.select !== "function") {
     throwInvalid("options.keys must be a key set (an object with a select function).");
   }
-  if (type !== undefined && !(isNonEmptyString(type) && normalizeType(type) !== "")) {
-    throwInvalid("options.type must be a non-empty string other than application/.");
+  for (const [name, value] of [
+    ["requireExpiration", requireExpiration],
+    ["allowExpired", allowExpired],
+  ] as const) {
+    if (value !== undefined && typeof value !== "boolean") {
+      throwInvalid(`options.${name} must be a boolean.`);
+    }
   }
   if (clockTolerance !== undefined && !isIntegerInRange(clockTolerance, 0, MAX_CLOCK_TOLERANCE)) {
     throwInvalid(`options.clockTolerance must be an integer number of seconds from 0 through ${MAX_CLOCK_TOLERANCE}.`);
@@ -91,8 +114,10 @@ export function resolveOptions(options: VerifierOptions<StandardSchemaV1 | undef
   return {
     keys,
     ...optional("issuers", readStringList(issuer, "issuer")),
-    ...optional("audiences", readStringList(audience, "audience")),
-    ...optional("type", type === undefined ? undefined : normalizeType(type)),
+    ...optional("audiences", readAudience(audience)),
+    ...optional("types", readTypes(type)),
+    requireExpiration: requireExpiration ?? maxAge === undefined,
+    allowExpired: allowExpired ?? false,
     clockTolerance: clockTolerance ?? 0,
     ...optional("maxAge", maxAge),
     maxLength: maxLength ?? DEFAULT_MAX_TOKEN_LENGTH,
@@ -116,6 +141,40 @@ function readStringList(value: unknown, name: string): readonly string[] | undef
     throwInvalid(`options.${name} must be a non-empty string or a non-empty array of non-empty strings.`);
   }
   return Object.freeze(copy as string[]);
+}
+
+const AUDIENCE_MESSAGE =
+  "options.audience must be false, a non-empty string, or a non-empty array of non-empty strings.";
+
+function readAudience(value: unknown): readonly string[] | false | undefined {
+  if (value === false) {
+    return false;
+  }
+  if (value === undefined) {
+    return undefined;
+  }
+  const list: unknown = typeof value === "string" ? [value] : value;
+  const copy = Array.isArray(list) ? denseCopy(list) : undefined;
+  if (copy === undefined || copy.length === 0 || !copy.every(isNonEmptyString)) {
+    throwInvalid(AUDIENCE_MESSAGE);
+  }
+  return Object.freeze(copy as string[]);
+}
+
+const isTypeValue = (value: unknown): value is string => isNonEmptyString(value) && normalizeType(value) !== "";
+
+function readTypes(value: unknown): readonly (string | null)[] | undefined {
+  if (value === undefined) {
+    return undefined;
+  }
+  const list: unknown = typeof value === "string" ? [value] : value;
+  const copy = Array.isArray(list) ? denseCopy(list) : undefined;
+  if (copy === undefined || copy.length === 0 || !copy.every((entry) => entry === null || isTypeValue(entry))) {
+    throwInvalid(
+      "options.type must be a non-empty string other than application/, or a non-empty array of such strings and null.",
+    );
+  }
+  return Object.freeze(copy.map((entry) => (entry === null ? null : normalizeType(entry as string))));
 }
 
 function readRequiredClaims(value: unknown): readonly string[] {

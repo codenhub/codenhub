@@ -251,13 +251,38 @@ export interface VerifierOptions<TSchema extends StandardSchemaV1 | undefined = 
   /**
    * Accepted audiences. When set, `aud` is required, and a token passes when its `aud` (a string or
    * an array) contains at least one of them.
+   *
+   * @remarks
+   * When unset, a token that carries `aud` fails with `wrong_audience`: RFC 7519 §4.1.3 says a recipient
+   * that does not identify itself in `aud` must reject the token, so a token minted for another service of
+   * the same issuer is never accepted by accident. `false` skips the audience check for every token, for a
+   * verifier that accepts tokens for any audience on purpose.
    */
-  readonly audience?: string | readonly string[];
+  readonly audience?: string | readonly string[] | false;
   /**
-   * Required `typ` header value, such as `JWT` or `at+jwt`. Compared case-insensitively, with an
-   * `application/` prefix ignored on either side (RFC 7515 §4.1.9). When set, `typ` is required.
+   * Required `typ` header value, such as `JWT` or `at+jwt`, or a list of accepted ones. Compared
+   * case-insensitively, with an `application/` prefix ignored on either side (RFC 7515 §4.1.9). When set,
+   * `typ` is required, unless the list holds `null`, which accepts a token without `typ`: `["at+jwt", null]`
+   * accepts `at+jwt` or no `typ` at all.
    */
-  readonly type?: string;
+  readonly type?: string | readonly (string | null)[];
+  /**
+   * Whether `exp` is required. A token without `exp` never expires, so it is required unless `maxAge`
+   * bounds the token's age instead. Set `false` for tokens that carry no `exp` on purpose, and `true` to
+   * require it alongside `maxAge`.
+   *
+   * @defaultValue `true` when `maxAge` is unset, `false` when it is set
+   */
+  readonly requireExpiration?: boolean;
+  /**
+   * Accept a token whose `exp` has passed. Every other check still runs, `exp` is still required when
+   * {@link VerifierOptions.requireExpiration} says so, and `maxAge` still bounds the token's age. Meant for a
+   * token whose signature and issuer still matter after it expired, such as an OpenID Connect
+   * `id_token_hint` at logout; never for a token that grants access.
+   *
+   * @defaultValue false
+   */
+  readonly allowExpired?: boolean;
   /**
    * Seconds of clock skew allowed on `exp`, `nbf`, `iat` and `maxAge`. An integer from 0 through 300.
    *

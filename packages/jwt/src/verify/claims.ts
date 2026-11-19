@@ -44,7 +44,8 @@ export function checkClaims(header: JwtHeader, payload: JwtPayload, options: Res
   };
   const now = readClock(options) / MILLISECONDS_PER_SECOND;
   issues.push(...timeIssues(claims, now, options), ...identityIssues(claims, options));
-  if (options.type !== undefined && (header.typ === undefined || normalizeType(header.typ) !== options.type)) {
+  const typ = header.typ === undefined ? null : normalizeType(header.typ);
+  if (options.types !== undefined && !options.types.includes(typ)) {
     issues.push({ code: "wrong_type", path: ["header", "typ"] });
   }
   const reported = new Set(issues.flatMap((issue) => (issue.code === "missing_claim" ? [issue.params?.claim] : [])));
@@ -83,7 +84,9 @@ function timeIssues(claims: Claims, now: number, options: ResolvedOptions): JwtI
   const tolerance = options.clockTolerance;
   const futureTolerance = Math.max(tolerance, FUTURE_LEEWAY_SECONDS);
   const exp = claims.valid("exp");
-  if (exp !== undefined && now >= exp + tolerance) {
+  if (options.requireExpiration && !claims.present("exp")) {
+    issues.push(missing("exp"));
+  } else if (exp !== undefined && !options.allowExpired && now >= exp + tolerance) {
     issues.push({ code: "expired", path: ["payload", "exp"] });
   }
   const nbf = claims.valid("nbf");
@@ -114,12 +117,18 @@ function identityIssues(claims: Claims, options: ResolvedOptions): JwtIssue[] {
       issues.push({ code: "wrong_issuer", path: ["payload", "iss"] });
     }
   }
-  if (options.audiences !== undefined) {
+  const accepted = options.audiences;
+  if (accepted === undefined) {
+    // RFC 7519 §4.1.3: a recipient that names no audience is in no `aud`, so a token with one is not for it.
+    if (claims.valid("aud") !== undefined) {
+      issues.push({ code: "wrong_audience", path: ["payload", "aud"] });
+    }
+  } else if (accepted !== false) {
     const aud = claims.valid("aud");
     const audiences: readonly string[] = typeof aud === "string" ? [aud] : (aud ?? []);
     if (!claims.present("aud")) {
       issues.push(missing("aud"));
-    } else if (aud !== undefined && !audiences.some((entry) => options.audiences?.includes(entry))) {
+    } else if (aud !== undefined && !audiences.some((entry) => accepted.includes(entry))) {
       issues.push({ code: "wrong_audience", path: ["payload", "aud"] });
     }
   }

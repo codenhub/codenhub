@@ -313,7 +313,7 @@ describe("sign embedKey", () => {
       if (!embedded.ok) {
         throw new Error("expected the embedded key to import");
       }
-      const verified = await createVerifier({ keys: createKeySet([embedded.value]) })(token);
+      const verified = await createVerifier({ keys: createKeySet([embedded.value]), requireExpiration: false })(token);
       expect(verified.ok && verified.value.payload).toEqual({ jti: "j1" });
       expect(await jwkThumbprint(embedded.value)).toBe(await jwkThumbprint(pair.publicKey));
     },

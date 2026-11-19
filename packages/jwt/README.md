@@ -28,7 +28,7 @@ const verify = createVerifier({
   keys: createRemoteKeySet({ url: "https://issuer.example/.well-known/jwks.json" }),
   issuer: "https://issuer.example",
   audience: "api",
-  requiredClaims: ["sub", "exp"],
+  requiredClaims: ["sub"],
 });
 
 const result = await verify(token);
@@ -57,7 +57,7 @@ const token = await sign({
 const result = await createVerifier({ keys: createKeySet([publicKey]) })(token);
 ```
 
-Times in claims are seconds since the Unix epoch. `sign` adds no claim of its own, and a token without `exp` never expires unless you require it.
+Times in claims are seconds since the Unix epoch. `sign` adds no claim of its own. A verifier requires `exp` unless `maxAge` is set, and refuses a token that names an audience when you named none.
 
 ## What hostile input gets
 

@@ -42,7 +42,8 @@ type Algorithm = (typeof ALGORITHMS)[number];
 type Symmetric = (typeof SYMMETRIC)[number];
 const isSymmetric = (alg: Algorithm): alg is Symmetric => (SYMMETRIC as readonly string[]).includes(alg);
 
-const PAYLOAD = { sub: "user-1", iss: "https://issuer.example" };
+// A fixed exp: workerd reads Date.now() as 0 at module scope, so one computed here would already be past.
+const PAYLOAD = { sub: "user-1", iss: "https://issuer.example", exp: 4_102_444_800 };
 
 function check(condition: boolean, what: string, actual: unknown): void {
   if (!condition) {

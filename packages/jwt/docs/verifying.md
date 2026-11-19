@@ -15,7 +15,7 @@ const verify = createVerifier({
   keys: createRemoteKeySet({ url: "https://issuer.example/.well-known/jwks.json" }),
   issuer: "https://issuer.example",
   audience: "api",
-  requiredClaims: ["sub", "exp"],
+  requiredClaims: ["sub"],
 });
 
 export async function authenticate(authorization: string | null) {
@@ -31,20 +31,25 @@ The verifier accepts any value, including `undefined` or a number, and reports a
 
 Every option is checked when `createVerifier` runs, and an invalid one throws a `TypeError` naming the option and its constraint. So does a name that is not an option below, such as `audiance` or `issuers` (`createVerifier: options.audiance is not an option.`), even when its value is `undefined`: a misspelled option would otherwise silently turn its check off. Durations are in seconds.
 
-| Option           | Default    | What it does                                                                                                                                                  |
-| ---------------- | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `keys`           | required   | The [key set](key-sets.md) that selects the verification key for each token.                                                                                  |
-| `issuer`         | none       | A string or a non-empty array of strings. When set, `iss` is required and must equal one of them exactly.                                                     |
-| `audience`       | none       | A string or a non-empty array of strings. When set, `aud` is required and must contain at least one of them.                                                  |
-| `type`           | none       | The required `typ` header, such as `JWT` or `at+jwt`. When set, `typ` is required.                                                                            |
-| `clockTolerance` | `0`        | Seconds of clock skew allowed on `exp`, `nbf`, `iat` and `maxAge`, with at least 60 on `nbf` and `iat`. An integer from 0 through 300.                        |
-| `maxAge`         | none       | Most seconds since `iat`. When set, `iat` is required. A positive integer.                                                                                    |
-| `maxLength`      | `8192`     | Longest token accepted, in characters, checked before anything is decoded. An integer from 1 through 65536.                                                   |
-| `requiredClaims` | `[]`       | Claims that must be present, whatever their value.                                                                                                            |
-| `claims`         | none       | A [Standard Schema](#checking-your-own-claims) run on the payload after every other check passed.                                                             |
-| `now`            | `Date.now` | The current time in **milliseconds** since the Unix epoch, as `Date.now` returns it. Pass your own clock in tests. It must return a finite number; see below. |
+| Option              | Default                 | What it does                                                                                                                                                                               |
+| ------------------- | ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `keys`              | required                | The [key set](key-sets.md) that selects the verification key for each token.                                                                                                               |
+| `issuer`            | none                    | A string or a non-empty array of strings. When set, `iss` is required and must equal one of them exactly.                                                                                  |
+| `audience`          | none                    | A string or a non-empty array of strings. When set, `aud` is required and must contain at least one of them. Unset, a token with `aud` fails; `false` accepts any `aud`.                   |
+| `type`              | none                    | The required `typ` header, such as `JWT` or `at+jwt`, or an array of accepted ones, where `null` accepts a token without `typ`. When set, `typ` is required unless the array holds `null`. |
+| `requireExpiration` | `true` without `maxAge` | Whether `exp` is required. `false` when `maxAge` is set, since `maxAge` bounds the token's life instead.                                                                                   |
+| `allowExpired`      | `false`                 | Accept a token whose `exp` has passed, for an expired token that still identifies someone, such as an OpenID Connect `id_token_hint`. Every other check still runs.                        |
+| `clockTolerance`    | `0`                     | Seconds of clock skew allowed on `exp`, `nbf`, `iat` and `maxAge`, with at least 60 on `nbf` and `iat`. An integer from 0 through 300.                                                     |
+| `maxAge`            | none                    | Most seconds since `iat`. When set, `iat` is required. A positive integer.                                                                                                                 |
+| `maxLength`         | `8192`                  | Longest token accepted, in characters, checked before anything is decoded. An integer from 1 through 65536.                                                                                |
+| `requiredClaims`    | `[]`                    | Claims that must be present, whatever their value.                                                                                                                                         |
+| `claims`            | none                    | A [Standard Schema](#checking-your-own-claims) run on the payload after every other check passed.                                                                                          |
+| `now`               | `Date.now`              | The current time in **milliseconds** since the Unix epoch, as `Date.now` returns it. Pass your own clock in tests. It must return a finite number; see below.                              |
 
-Without `issuer`, `audience`, `type`, `maxAge` and `requiredClaims`, a verifier checks only the signature, the types of the registered claims (`iss`, `sub`, `aud`, `jti`, `exp`, `nbf`, `iat`) and the times the token itself states. A token without `exp` never expires: if your tokens must expire, list `exp` in `requiredClaims`.
+Without `issuer`, `audience`, `type`, `maxAge` and `requiredClaims`, a verifier checks the signature, the types of the registered claims (`iss`, `sub`, `aud`, `jti`, `exp`, `nbf`, `iat`), the times the token itself states, that it has an `exp`, and that it names no audience. Two defaults are strict on purpose, since forgetting an option should never make a verifier accept more:
+
+- **`exp` is required.** A token without `exp` would never expire, so it is `missing_claim` with `{ claim: "exp" }` unless `maxAge` is set, which bounds the token's age instead, as for DPoP proofs. Tokens that carry no `exp` by design, such as long-lived API keys you revoke by `jti`, need `requireExpiration: false`.
+- **A token with `aud` needs `audience`.** RFC 7519 §4.1.3 says a recipient that is not in a token's `aud` must reject it. An issuer that mints tokens for several services would otherwise have each service accept the others' tokens. Name your audience, or pass `audience: false` when a verifier accepts tokens for any audience on purpose.
 
 ## The order checks run in
 
@@ -77,7 +82,13 @@ The verifier reads the current time as `now() / 1000`, a fractional number of se
 | `iat`    | `iat` > now + max(`clockTolerance`, 60)   | `issued_in_future` |
 | `maxAge` | now − `iat` > `maxAge` + `clockTolerance` | `too_old`          |
 
-A token is expired at the very second its `exp` names, as RFC 7519 §4.1.4 requires. With `maxAge` set and no `iat`, the result is `missing_claim` with `{ claim: "iat" }`; `too_old` carries `{ maxAge }`.
+A token is expired at the very second its `exp` names, as RFC 7519 §4.1.4 requires. A token without `exp` is `missing_claim` with `{ claim: "exp" }` unless `requireExpiration` is `false`, which it is by default when `maxAge` is set. With `maxAge` set and no `iat`, the result is `missing_claim` with `{ claim: "iat" }`; `too_old` carries `{ maxAge }`.
+
+`allowExpired: true` skips only the `expired` check. Every other check still runs, `exp` is still required, and `maxAge` still bounds the token's age, so the token must still be one the issuer signed for you. It exists for tokens that identify someone after they expired, such as the `id_token_hint` an OpenID Connect provider accepts at logout. Give such tokens a verifier of their own, and never use it for a token that grants access:
+
+```ts
+const verifyHint = createVerifier({ keys, issuer: "https://issuer.example", audience: clientId, allowExpired: true });
+```
 
 `clockTolerance` exists because the issuer's clock and yours never agree exactly. It defaults to 0 for `exp` and `maxAge`, so a token never lives longer than it says unless you opt in. `nbf` and `iat` always allow at least 60 seconds: they come from the issuer's clock, and with no leeway a verifier a fraction of a second behind refuses a token the moment it is issued. Accepting a token early does not extend its life, which `exp` still bounds. A tolerance of 30 to 60 seconds is common for tokens from another server; the cap of 300 seconds keeps a typo from turning a five-minute token into a much longer one.
 
@@ -97,6 +108,9 @@ With `issuer` set, `iss` must equal one of the given values exactly, character f
 | `"api"`              | `["web"]`        | `wrong_audience` |
 | `"api"`              | `[]`             | `wrong_audience` |
 | `"api"`              | absent           | `missing_claim`  |
+| unset                | `"api"`          | `wrong_audience` |
+| unset                | absent           | passes           |
+| `false`              | anything         | passes           |
 
 A token with several audiences is accepted by each of them. Whether that is acceptable is a policy of the protocol on top: OpenID Connect, for example, adds the `azp` claim for it, which this package does not interpret.
 
@@ -104,9 +118,11 @@ A token with several audiences is accepted by each of them. Whether that is acce
 
 Some tokens look alike but mean different things, such as an ID token and an access token from the same issuer. The `typ` header tells them apart, and `type` requires a specific one, so a token of one kind cannot be replayed as another. The comparison follows RFC 7515 §4.1.9: it ignores case, and ignores an `application/` prefix on either side, so `type: "at+jwt"` accepts `at+jwt`, `AT+JWT` and `application/at+jwt`. A missing or different `typ` is `wrong_type` at `["header", "typ"]`.
 
+`type` also takes an array of accepted values. `null` in it accepts a token without `typ`, which helps while an issuer moves to explicit types: `type: ["at+jwt", null]` accepts RFC 9068 access tokens and older ones that carried no `typ`, but not an ID token typed `JWT`.
+
 ### Required claims
 
-`requiredClaims` lists claims that must be present, whatever their value. Each missing one is `missing_claim` with `{ claim }` and path `["payload", claim]`. A claim already reported missing by `issuer`, `audience` or `maxAge` is not reported twice.
+`requiredClaims` lists claims that must be present, whatever their value. Each missing one is `missing_claim` with `{ claim }` and path `["payload", claim]`. A claim already reported missing by `issuer`, `audience`, `maxAge` or the `exp` requirement is not reported twice.
 
 ## Checking your own claims
 
