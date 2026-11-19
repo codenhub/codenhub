@@ -88,26 +88,26 @@ Once a visitor picks a language, it sticks, which is the point. A "System" entry
 const binding = await initializeBrowserI18n({ i18n });
 const picker = document.querySelector<HTMLSelectElement>("#language")!;
 
-picker.value = binding.followsSystem ? "system" : i18n.locale;
+picker.value = binding.isUsingSystemLocale ? "system" : i18n.locale;
 picker.addEventListener("change", async () => {
   try {
     if (picker.value === "system") {
-      await binding.followSystem();
+      await binding.switchToSystemLocale();
     } else {
       await i18n.setLocale(picker.value as (typeof i18n.locales)[number]);
     }
   } finally {
     // Show the visitor's choice, even when the switch failed or a later one overtook it.
-    picker.value = binding.followsSystem ? "system" : i18n.locale;
+    picker.value = binding.isUsingSystemLocale ? "system" : i18n.locale;
   }
 });
 ```
 
-`followSystem()` forgets the saved choice and switches to the language the binding detects right now, from the browser settings, then the default locale. That language is not saved, so the next visit detects again. If storage can't be cleared, the binding warns, and the next visit still finds the old choice.
+`switchToSystemLocale()` forgets the saved choice and switches to the language the binding detects right now, from the browser settings, then the default locale. That language is not saved, so the next visit detects again. If storage can't be cleared, the binding warns, and the next visit still finds the old choice.
 
-`followsSystem` says which entry to show selected. It is `true` when the binding started with nothing chosen, and after `followSystem()`. It turns `false` when your app applies a locale with `setLocale()` or `init()`, including the one already showing: a visitor who picks English while English was detected has chosen it.
+`isUsingSystemLocale` says which entry to show selected. It is `true` when the binding started with nothing chosen, and after `switchToSystemLocale()`. It turns `false` when your app applies a locale with `setLocale()` or `init()`, including the one already showing: a visitor who picks English while English was detected has chosen it.
 
-While `followsSystem` is `true`, the binding also listens for the browser's `languagechange` event, so a visitor who changes their browser's language mid-visit gets the new one without a reload. A language the visitor just picked and that is still loading is kept, not overtaken.
+While `isUsingSystemLocale` is `true`, the binding also listens for the browser's `languagechange` event, so a visitor who changes their browser's language mid-visit gets the new one without a reload. A language the visitor just picked and that is still loading is kept, not overtaken.
 
 In a framework, render the picker from `binding.subscribe()` rather than `i18n.subscribe()`. Picking the language already showing, or "System" while the detected language is the one showing, changes the selection without changing the language, so the manager has nothing to report. The binding reports both, and every language change. In React:
 
@@ -117,7 +117,7 @@ import type { BrowserI18nBinding } from "@codenhub/i18n/browser";
 import { i18n } from "./i18n";
 
 export function LanguagePicker({ binding }: { binding: BrowserI18nBinding }) {
-  const selected = useSyncExternalStore(binding.subscribe, () => (binding.followsSystem ? "system" : i18n.locale));
+  const selected = useSyncExternalStore(binding.subscribe, () => (binding.isUsingSystemLocale ? "system" : i18n.locale));
   // The visitor's pick, shown while its language loads, so the select doesn't jump back to the old one.
   const [pending, setPending] = useState<string>();
 
@@ -127,7 +127,7 @@ export function LanguagePicker({ binding }: { binding: BrowserI18nBinding }) {
       onChange={(event) => {
         const value = event.target.value;
         setPending(value);
-        const switching = value === "system" ? binding.followSystem() : i18n.setLocale(value as (typeof i18n.locales)[number]);
+        const switching = value === "system" ? binding.switchToSystemLocale() : i18n.setLocale(value as (typeof i18n.locales)[number]);
         // Then the selection comes from the binding again, even when the switch failed or a later one overtook it.
         switching.catch((error: unknown) => console.error(error)).finally(() => setPending((current) => (current === value ? undefined : current)));
       }}
@@ -143,7 +143,7 @@ export function LanguagePicker({ binding }: { binding: BrowserI18nBinding }) {
 }
 ```
 
-When the detected language fails to load, `followSystem()` rejects with the loader's `I18nError`, and the page keeps its current language; the saved choice is already forgotten. `followsSystem` is `true` all the same, so the picker shows "System" over the old language: that is what the visitor chose, and the next visit or `languagechange` tries the detected language again. A failure after a `languagechange` warns and keeps the current language. Neither falls back to the default the way a start does, because the page already has a language to show.
+When the detected language fails to load, `switchToSystemLocale()` rejects with the loader's `I18nError`, and the page keeps its current language; the saved choice is already forgotten. `isUsingSystemLocale` is `true` all the same, so the picker shows "System" over the old language: that is what the visitor chose, and the next visit or `languagechange` tries the detected language again. A failure after a `languagechange` warns and keeps the current language. Neither falls back to the default the way a start does, because the page already has a language to show.
 
 "System" belongs to a site where the binding chooses the language. On a site with the language in its URLs, the URL chooses it: each page passes its locale to `initializeBrowserI18n()`, as [Localized URLs](localized-urls.md) does, which saves it and ends following the system, so a "System" pick lasts only until the next page. There, make "System" navigate instead, to the current page's URL in the language `i18n.matchLocale(navigator.languages)` finds, or leave the entry out.
 
@@ -189,7 +189,7 @@ How each part behaves:
 - **Comments are replaced too.** They are not elements, so they don't count as children. Don't put `data-i18n` on an element a framework renders or hydrates, since frameworks keep comment markers there; translate that text with `t()` instead.
 - **`data-i18n-<attribute>` translates one attribute.** Only attributes that hold text for people or screen readers are allowed: `alt`, `title`, `placeholder`, `label`, `aria-label`, `aria-description`, `aria-placeholder`, `aria-roledescription`, and `aria-valuetext`. Others, such as `data-i18n-href` or `data-i18n-onclick`, are ignored, so a translation can never change a link, a style, or an event handler.
 - **The text already in the HTML is the last fallback.** A key a language lacks shows the text of the next locale in its fallback chain, as `t()` does: a configured parent such as `pt` for `pt-BR`, then the default locale. The original text comes back only when no dictionary in the chain has the key.
-- **Text is set as plain text, never as HTML.** `<script>`, `<style>`, `<noscript>`, and `<template>` are never touched.
+- **Text is set as plain text, never as HTML.** The text of `<script>`, `<style>`, `<noscript>`, `<template>`, `<iframe>`, `<noembed>`, `<noframes>`, `<xmp>`, and `<plaintext>` is never touched, since it runs as code, decides what shows, or is written back unescaped when the page is saved as HTML. Their attributes are translated like any other, so `<iframe data-i18n-title="video.title">` gets a translated accessible name.
 - **Placeholders such as `{name}` are not filled here**, because there is nowhere in the HTML to pass a value from. Render text with values from your code with `t()`.
 - **The page shows its HTML text until the visitor's dictionary has loaded**, then switches in place, which on a slow connection is visible. There are two ways to avoid that:
   - Render a page per language ahead of time, as in [Build a static site](server-rendering.md#build-a-static-site), and pass its `locale`.
@@ -285,7 +285,7 @@ A worker has no `localStorage` either, so saving warns and is skipped. Add `pers
 
   The manager keeps the later call's result, under [the latest-call rule](index.md#the-latest-call-wins), and the binding is not connected. On a manager that was not initialized yet, `setLocale()` just fails with its own error and the binding carries on. Calling `init()` or `setLocale()` after the binding's promise has resolved is fine.
 
-- **`disconnect()` stops reacting but undoes nothing.** It stops saving, syncing, translating, following the browser's language, and calling `binding.subscribe()` listeners, but leaves the current text, attributes, and saved choice as they are. A switch to a detected language still loading is dropped, and `followSystem()` rejects after it. You can then start a new binding.
+- **`disconnect()` stops reacting but undoes nothing.** It stops saving, syncing, translating, following the browser's language, and calling `binding.subscribe()` listeners, but leaves the current text, attributes, and saved choice as they are. A switch to a detected language still loading is dropped, and `switchToSystemLocale()` rejects after it. You can then start a new binding.
 
 The [browser reference](reference/browser.md) documents every option and failure, and [Troubleshooting](troubleshooting.md#the-browser-binding-warns-or-rejects) lists each warning the binding logs.
 

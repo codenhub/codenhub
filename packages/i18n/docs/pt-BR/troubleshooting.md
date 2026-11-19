@@ -2,7 +2,7 @@
 title: Solução de problemas
 description: O que cada erro e aviso quer dizer, e como resolver.
 order: 5
-source: ab391d7b4840624cbcb92f5eebd7f0e74567a689
+source: 2d1643a4c47855d4636065591d926e6cdf415b36
 ---
 
 # Solução de problemas
@@ -162,12 +162,12 @@ Você vê `Ouvrir l{app}` onde esperava `Ouvrir l'éditeur`, e o console está q
 - **"Browser observation requires a root"**: `observe: true` precisa de um `root` para observar.
 - **"root must be an element, a document, or a shadow root, such as document.body."**: `root` era outra coisa, normalmente o `null` que `document.querySelector("#app")` devolve numa página sem `#app`. O binding lança o erro antes de iniciar o gerenciador. Confira se o elemento existe em toda página que roda o script, ou passe `document`.
 - **`onMissingKey` lançou um erro**: o binding ainda traduz todos os outros elementos, e depois rejeita com o primeiro erro na primeira inicialização, ou o reporta como erro não capturado depois de uma troca de idioma posterior. Só o texto ou atributo cuja chave faltava fica com o valor que tinha. Uma primeira inicialização que rejeita desse jeito deixa o gerenciador iniciado, mas o binding desconectado, então as trocas de idioma seguintes não traduzem a página; corrija o callback e chame `initializeBrowserI18n()` de novo.
-- **"Could not read persisted locale", "Could not persist locale" ou "Could not forget persisted locale"**: o `localStorage` não está disponível, como em alguns modos de navegação privada ou num Web Worker. A escolha do visitante não é salva ou, depois de `followSystem()`, não é esquecida; todo o resto funciona. Passe `persistLocale: false` onde não houver armazenamento, para iniciar em silêncio.
+- **"Could not read persisted locale", "Could not persist locale" ou "Could not forget persisted locale"**: o `localStorage` não está disponível, como em alguns modos de navegação privada ou num Web Worker. A escolha do visitante não é salva ou, depois de `switchToSystemLocale()`, não é esquecida; todo o resto funciona. Passe `persistLocale: false` onde não houver armazenamento, para iniciar em silêncio.
 - **"Could not switch to the detected locale"**: o idioma do navegador mudou enquanto o binding [seguia o sistema](browser.md#ofereça-uma-opção-sistema), e o loader falhou para o locale detectado. A página mantém o idioma atual. Corrija o loader.
-- **"followSystem() requires a connected browser binding"**: você chamou `followSystem()` depois de `disconnect()`. Chame-o no binding que está conectado.
+- **"switchToSystemLocale() requires a connected browser binding"**: você chamou `switchToSystemLocale()` depois de `disconnect()`. Chame-o no binding que está conectado.
 - **`Could not load locale "pt"; using "es".`** ou **`Could not load locale "pt"; using the default locale.`**: o loader falhou para um locale salvo ou detectado que não é o padrão, então o visitante recebeu o seguinte: o locale detectado pelo navegador depois de um salvo, e depois o padrão. Corrija o loader; a escolha salva é mantida para a próxima vez. Se o próprio locale padrão falhar ao carregar, não sobra nada para onde cair, e a inicialização é rejeitada com `Failed to load translations for locale "en".`
 - **"Skipping translation on <p> because translated elements must be leaves"**: o elemento com `data-i18n` tem elementos filhos. Coloque a chave num elemento que contenha só texto, ou traduza com `t()`.
-- **"Skipping translation on <style> because the element can activate or hide translated content"**: uma chave `data-i18n` está num elemento `<script>`, `<style>`, `<noscript>` ou `<template>`, cujo texto roda como código ou decide o que aparece. Mude a chave para um elemento comum.
+- **"Skipping translation on <style> because the element can run, hide, or reparse its text as HTML"**: uma chave `data-i18n` está num elemento `<script>`, `<style>`, `<noscript>`, `<template>`, `<iframe>`, `<noembed>`, `<noframes>`, `<xmp>` ou `<plaintext>`, cujo texto roda como código, decide o que aparece ou é escrito sem escape quando a página é salva como HTML. O aviso nomeia a chave e passa o elemento, então o console aponta para ele. Mude a chave para um elemento comum. As chaves `data-i18n-<attribute>` dele, como o `data-i18n-title` de um `<iframe>`, continuam sendo traduzidas.
 - **"Skipping translation because data-i18n contains an invalid key"**, ou o mesmo para um `data-i18n-<attribute>`: a chave está em branco, tem mais de 1.000 caracteres ou contém um caractere de controle ASCII, então nenhum dicionário consegue guardá-la. O elemento fica com o texto atual. Corrija a chave no HTML.
 - **O texto de `data-i18n` mostra `{name}`**: a tradução de HTML não consegue preencher placeholders. Renderize esse texto com `t()` e passe os valores.
 - **Um atributo `data-i18n-href` não faz nada**: só atributos de texto podem ser traduzidos. Veja [Traduza HTML sem framework](browser.md#traduza-html-sem-framework).

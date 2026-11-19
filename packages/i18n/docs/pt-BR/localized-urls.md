@@ -2,7 +2,7 @@
 title: URLs localizadas
 description: Coloque o locale no caminho, traduza o próprio caminho, leia os dois de volta, crie links para outros idiomas, gere todas as páginas localizadas e mande os visitantes para o idioma deles num site estático.
 order: 4
-source: 63e651b9c39c7c6228b55693865260c77948a881
+source: 634cc878a98ebcde653e1664e29ee8d1333076b3
 ---
 
 # URLs localizadas
@@ -214,7 +214,7 @@ Como ler a tabela:
 - **O que a tabela não lista mantém as suas palavras.** `/blog` é `/pt/blog`, e `/products/42` em espanhol é `/es/products/42`, já que só o português o traduz.
 - **Segmentos fixos diferenciam maiúsculas de minúsculas**, como as URLs, então `/pt/Sobre` não é a página "sobre". Só o prefixo do locale ignora essa diferença.
 - **Prefira letras simples nos caminhos.** O roteamento não muda as suas palavras, então você só recebe `/servicos` se escrever `/servicos`. A maioria dos sites tira os acentos das URLs, porque um caminho acentuado aparece com percent-encoding em todo lugar em que é copiado como texto, como `/servi%C3%A7os`. Acentos também funcionam: `"/serviços"` corresponde ao `/servi%C3%A7os` que os navegadores mandam, e `localize()` devolve a forma codificada, como faz com todo segmento, como o slug de um produto, e como `parse()` devolve o seu `pathname`. Então um build estático que escreve uma pasta para esse caminho precisa decodificá-lo antes, como em [Gere um site estático](server-rendering.md#gere-um-site-estático).
-- **Uma página listada volta numa grafia só.** `parse()` devolve as palavras fixas de uma página listada do jeito que uma URL escreve as palavras da tabela, em todos os locales. Então `/%61bout` e `/pt/%73obre`, grafias estranhas de `/about` e `/pt/sobre`, dão as duas `pathname: "/about"`. Parâmetros e segmentos que a tabela não lista voltam do jeito que a requisição os escreveu.
+- **Uma página volta numa grafia só.** `parse()` escreve cada segmento, listado ou não, como a RFC 3986 normaliza uma URL: um escape de letra, dígito ou `-._~` é decodificado, qualquer outro escape é escrito em maiúsculas, e um caractere que uma URL codifica, como `é`, é codificado. Então `/%61bout` e `/pt/%73obre`, grafias estranhas de `/about` e `/pt/sobre`, dão as duas `pathname: "/about"`, e `/products/caf%c3%a9` dá `/products/caf%C3%A9`. Um caractere reservado escapado continua escapado, então `/products/c%2B%2B` e `/products/c++` são duas páginas, já que um servidor pode ler `%2B` de outro jeito que `+`. Então passe o pathname do jeito que a URL o escreve, como `new URL(request.url).pathname`, e não um que o seu framework decodificou: decodificado, `/100%25` vira `/100%`, que `parse()` recusa.
 - **Um segmento fixo ganha de um parâmetro, e um parâmetro ganha de um catch-all.** Com `/products/new` e `/products/:id` listados, `/products/new` é a página de novo produto, seja qual for a ordem em que a tabela os lista. Com `/help/contact` e `/help/:path*`, `/help/contact` é a página de contato, e todo outro caminho `/help/…` vai para o catch-all.
 - **O locale padrão também pode ser traduzido.** Um site que é primeiro em português, com código em inglês, pode usar `defaultLocale: "pt"` e `{ "/about": { pt: "/sobre" } }`, de modo que `/sobre` é a página em português e `/en/about`, a em inglês.
 

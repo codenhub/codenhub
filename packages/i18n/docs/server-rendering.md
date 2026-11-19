@@ -109,7 +109,7 @@ export const createAppI18n = (timeZone?: string) =>
 
 ## Keep production logs useful
 
-A missing key logs a warning once for each locale and key in each manager. With a manager per request, that is once per request, so one missing key on the home page becomes a log line for every visitor. On a good sales day, that is a lot of log lines about one word.
+A missing key logs a warning once for each locale and key, shared by every manager in the process, so a manager per request doesn't log it again for every visitor. But a warning says only that a word is missing, not how many visitors saw it, and it scrolls past among everything else the server logs.
 
 In production, send misses to your logger, where you can count them instead of scrolling past them, or turn the warnings off:
 
@@ -155,7 +155,7 @@ await Promise.all(
 );
 ```
 
-`pathname` is a URL path, percent-encoded wherever it has characters such as `ç`, whether from the table's words, such as `/serviços`, or from your own paths. Hosts decode a request before looking for its file, so name the file after `decodeURI(pathname)`: `serviços` for `/servi%C3%A7os`, not the encoded form, which no request finds. Where that file goes, such as `serviços.html` or `serviços/index.html`, depends on your host and your `trailingSlash` setting.
+`pathname` is a URL path, percent-encoded wherever it has characters such as `ç`, whether from the table's words, such as `/serviços`, or from your own paths. Hosts decode a request before looking for its file, so name the file after `decodeURIComponent(pathname)`: `serviços` for `/servi%C3%A7os`, not the encoded form, which no request finds. `decodeURI()` is not enough, since it leaves a reserved escape such as `%2B` encoded; `decodeURIComponent()` is safe here because routing refuses `%2F` and `%5C`. Where that file goes, such as `serviços.html` or `serviços/index.html`, depends on your host and your `trailingSlash` setting.
 
 A dictionary that fails to load or check makes `init()` reject, so the build fails instead of publishing pages without text.
 
@@ -166,13 +166,37 @@ A key that only your default language has does not fail the build; it renders in
 
 ## Hand the locale to the browser
 
-When the browser takes over a server-rendered page, it must start in the language the server used, or the text changes as the page loads. Pass that locale explicitly. It overrides saved and detected ones, and the binding saves it as the visitor's choice, as [How the locale is chosen](browser.md#how-the-locale-is-chosen) explains:
+When the browser takes over a server-rendered page, it must start in the language the server used, or the text changes as the page loads. On a localized site, the URL says which: read it with `routing.parse()`, as [Localized URLs](localized-urls.md#read-the-locale-on-the-client) shows.
+
+Without a locale in the URL, the server's `Accept-Language` match is a guess, not a choice. Don't pass it to the binding as `locale`: the binding saves an explicit locale as the visitor's choice, as [How the locale is chosen](browser.md#how-the-locale-is-chosen) explains, so a visitor who picked Portuguese would have English saved over it on every page load. Keep the visitor's choice in a cookie instead, which the server can read too:
 
 ```ts
-await initializeBrowserI18n({ i18n, locale: document.documentElement.lang as "en" | "pt" });
+// src/render.ts
+export async function renderPage(request: Request) {
+  const i18n = createAppI18n();
+  const chosen = /(?:^|;\s*)locale=([^;]*)/.exec(request.headers.get("cookie") ?? "")?.[1];
+  await i18n.init({ locale: i18n.resolveLocale(chosen ?? "") ?? pickLocale(i18n, request) });
+  // ...
+}
 ```
 
-On a localized site, read it from the URL with `routing.parse()` instead, as [Localized URLs](localized-urls.md#read-the-locale-on-the-client) shows.
+```ts
+// In the browser
+const chosen = /(?:^|;\s*)locale=([^;]*)/.exec(document.cookie)?.[1];
+const binding = await initializeBrowserI18n({
+  i18n,
+  // The cookie holds the choice, so the binding neither saves nor reads its own.
+  persistLocale: false,
+  locale: i18n.resolveLocale(chosen ?? ""),
+});
+binding.subscribe(() => {
+  document.cookie = binding.isUsingSystemLocale ? "locale=; path=/; max-age=0" : `locale=${i18n.locale}; path=/; max-age=31536000; samesite=lax`;
+});
+```
+
+- **A visitor who picked a language** gets it from the server, and the browser starts in it.
+- **A visitor who never picked one, or picked "System"**, has no cookie. The server matches `Accept-Language`, and the binding detects from `navigator.languages` with the same rules, saving nothing, so `isUsingSystemLocale` stays `true` and the page follows the browser's language. Browsers build both lists from the same settings. One that sends fewer languages in the header than `navigator.languages` lists can disagree when the visitor's first language is one you don't support, and the text then changes as the page loads.
+- **A picker** calls `i18n.setLocale()` or `binding.switchToSystemLocale()`, as in [Offer a "System" choice](browser.md#offer-a-system-choice), and `subscribe()` writes or deletes the cookie.
 
 ## Next
 

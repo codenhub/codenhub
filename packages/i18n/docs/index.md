@@ -135,12 +135,14 @@ Translations rarely stay complete. The tea shop adds gift wrapping, the English 
 
 In the second case, the manager also logs a warning, such as `[I18n] Missing key "home.subtitle" in locale "pt".`. How often, and where it goes:
 
-- It warns once for each locale and key pair, so a key used on every render doesn't flood the console.
+- It warns once for each locale and key pair, across every manager in the process, so a key used on every render, or by a manager per request, doesn't flood the console.
 - It remembers the 1,000 most recent pairs, so a pair that drops off that list can warn again.
 - A manager created with `isSilent: true` never logs it.
-- To send misses to your own logger instead, pass `onMissingKey(key, locale)`. It replaces the warning and runs on every miss, not once per pair.
+- To send misses to your own logger instead, pass `onMissingKey(key, locale)`. It replaces the warning and runs on every miss, not once per pair. If it throws, `t()` throws the same error, so a test can fail on the first missing key; a browser binding translates the rest of the page, then rejects with that error.
 
 `t()` always returns a string, so you never need `?? ""` after it.
+
+An empty string is a translation, not a gap. `""` renders nothing, logs nothing, and doesn't fall back to another locale, so one language can leave out what another needs, such as a tooltip on a button whose label already says "+ Add" in English but only "+" in Portuguese.
 
 ## Right-to-left languages
 
@@ -248,7 +250,7 @@ Failures follow the same rule. A call that fails rejects and leaves the current 
 
 `init()` and `setLocale()` throw a `RangeError` for a locale that isn't in `locales`. A locale from a cookie, a query string, or a request header is untrusted text, so turn it into a configured locale first. Two methods do that, for two kinds of input.
 
-**`resolveLocale(value)`** is for a value that should already be one of your locales, such as a `?lang=` parameter or a cookie your app wrote. It accepts exact matches only, ignoring letter case and surrounding spaces, and returns your spelling of the locale, or `undefined`:
+**`resolveLocale(value)`** is for a value that should already be one of your locales, such as a `?lang=` parameter or a cookie your app wrote. It accepts exact matches only, ignoring letter case and surrounding spaces and reading `_` as `-`, and returns your spelling of the locale, or `undefined`:
 
 ```ts
 const lang = new URL(location.href).searchParams.get("lang") ?? "";
@@ -256,7 +258,7 @@ await i18n.init({ locale: i18n.resolveLocale(lang) ?? i18n.defaultLocale });
 // ?lang=PT starts in "pt"; ?lang=fr, or no lang, starts in the default.
 ```
 
-With `pt-BR` among your locales, `?lang=PT-br` would start in `"pt-BR"` the same way.
+With `pt-BR` among your locales, `?lang=PT-br` and `?lang=pt_BR` would start in `"pt-BR"` the same way.
 
 **`matchLocale(preferences)`** is for a visitor's language preferences, such as `navigator.languages` or the languages of an `Accept-Language` header, most preferred first. It finds the closest locale you support. Each preference is tried in order, and the first one that matches anything wins:
 

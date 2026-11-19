@@ -2,7 +2,7 @@
 title: Renderiza en un servidor o en tiempo de build
 description: Un gestor por solicitud, cómo elegir un locale a partir de Accept-Language, builds de sitios estáticos y logs de producción silenciosos.
 order: 3
-source: 99e7adf111f46c0adb6d99e8178f8049bbde2df0
+source: 2d0be183a0b05f1d87a27140aa07d59add2d8d41
 ---
 
 # Renderiza en un servidor o en tiempo de build
@@ -110,7 +110,7 @@ export const createAppI18n = (timeZone?: string) =>
 
 ## Mantén útiles los logs de producción
 
-Una clave que falta registra una advertencia una vez por cada locale y clave en cada gestor. Con un gestor por solicitud, eso es una vez por solicitud, así que una sola clave que falta en la página de inicio se convierte en una línea de log por cada visitante. En un buen día de ventas, son muchísimas líneas de log por una sola palabra.
+Una clave que falta registra una advertencia una vez por cada locale y clave, compartida por todos los gestores del proceso, así que un gestor por solicitud no la vuelve a registrar por cada visitante. Pero una advertencia solo dice que falta una palabra, no cuántos visitantes la vieron, y se pierde entre todo lo demás que registra el servidor.
 
 En producción, manda las claves faltantes a tu logger, donde puedes contarlas en lugar de pasarlas de largo, o desactiva las advertencias:
 
@@ -156,7 +156,7 @@ await Promise.all(
 );
 ```
 
-`pathname` es una ruta de URL, codificada con porcentajes dondequiera que tenga caracteres como `ç`, ya vengan de las palabras de la tabla, como `/serviços`, o de tus propias rutas. Los hosts decodifican la solicitud antes de buscar su archivo, así que nombra el archivo según `decodeURI(pathname)`: `serviços` para `/servi%C3%A7os`, no la forma codificada, que ninguna solicitud encuentra. Dónde va ese archivo, como `serviços.html` o `serviços/index.html`, depende de tu host y de tu configuración de `trailingSlash`.
+`pathname` es una ruta de URL, codificada con porcentajes dondequiera que tenga caracteres como `ç`, ya vengan de las palabras de la tabla, como `/serviços`, o de tus propias rutas. Los hosts decodifican la solicitud antes de buscar su archivo, así que nombra el archivo según `decodeURIComponent(pathname)`: `serviços` para `/servi%C3%A7os`, no la forma codificada, que ninguna solicitud encuentra. `decodeURI()` no basta, porque deja codificado un escape reservado como `%2B`; `decodeURIComponent()` es seguro aquí porque el enrutamiento rechaza `%2F` y `%5C`. Dónde va ese archivo, como `serviços.html` o `serviços/index.html`, depende de tu host y de tu configuración de `trailingSlash`.
 
 Un diccionario que no carga o no pasa la comprobación hace que `init()` se rechace, así que el build falla en lugar de publicar páginas sin texto.
 
@@ -167,13 +167,37 @@ Una clave que solo tiene tu idioma por defecto no hace fallar el build; se rende
 
 ## Pasa el locale al navegador
 
-Cuando el navegador toma el control de una página renderizada en el servidor, tiene que arrancar en el idioma que usó el servidor, o el texto cambia mientras carga la página. Pasa ese locale explícitamente. Se impone al guardado y al detectado, y el binding lo guarda como la elección del visitante, como explica [Cómo se elige el locale](browser.md#cómo-se-elige-el-locale):
+Cuando el navegador toma el control de una página renderizada en el servidor, tiene que arrancar en el idioma que usó el servidor, o el texto cambia mientras carga la página. En un sitio localizado, la URL dice cuál: léelo con `routing.parse()`, como muestra [URLs localizadas](localized-urls.md#lee-el-locale-en-el-cliente).
+
+Sin un locale en la URL, la coincidencia del servidor con `Accept-Language` es una suposición, no una elección. No se la pases al binding como `locale`: el binding guarda un locale explícito como la elección del visitante, como explica [Cómo se elige el locale](browser.md#cómo-se-elige-el-locale), así que a un visitante que eligió portugués se le guardaría inglés encima en cada carga de página. Guarda la elección del visitante en una cookie, que el servidor también puede leer:
 
 ```ts
-await initializeBrowserI18n({ i18n, locale: document.documentElement.lang as "en" | "pt" });
+// src/render.ts
+export async function renderPage(request: Request) {
+  const i18n = createAppI18n();
+  const chosen = /(?:^|;\s*)locale=([^;]*)/.exec(request.headers.get("cookie") ?? "")?.[1];
+  await i18n.init({ locale: i18n.resolveLocale(chosen ?? "") ?? pickLocale(i18n, request) });
+  // ...
+}
 ```
 
-En un sitio localizado, léelo de la URL con `routing.parse()`, como muestra [URLs localizadas](localized-urls.md#lee-el-locale-en-el-cliente).
+```ts
+// En el navegador
+const chosen = /(?:^|;\s*)locale=([^;]*)/.exec(document.cookie)?.[1];
+const binding = await initializeBrowserI18n({
+  i18n,
+  // La cookie guarda la elección, así que el binding no guarda ni lee la suya.
+  persistLocale: false,
+  locale: i18n.resolveLocale(chosen ?? ""),
+});
+binding.subscribe(() => {
+  document.cookie = binding.isUsingSystemLocale ? "locale=; path=/; max-age=0" : `locale=${i18n.locale}; path=/; max-age=31536000; samesite=lax`;
+});
+```
+
+- **Un visitante que eligió un idioma** lo recibe del servidor, y el navegador arranca en él.
+- **Un visitante que nunca eligió uno, o que eligió "Sistema"**, no tiene cookie. El servidor hace coincidir `Accept-Language`, y el binding detecta a partir de `navigator.languages` con las mismas reglas, sin guardar nada, así que `isUsingSystemLocale` sigue en `true` y la página sigue el idioma del navegador. Los navegadores arman las dos listas con la misma configuración. Uno que envía en el encabezado menos idiomas de los que lista `navigator.languages` puede no coincidir cuando el primer idioma del visitante es uno que no soportas, y entonces el texto cambia mientras carga la página.
+- **Un selector** llama a `i18n.setLocale()` o a `binding.switchToSystemLocale()`, como en [Ofrece una opción "Sistema"](browser.md#ofrece-una-opción-sistema), y `subscribe()` escribe o borra la cookie.
 
 ## Siguiente
 

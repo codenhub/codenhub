@@ -46,8 +46,8 @@ Locale selection uses explicit input, valid persisted state, navigator preferenc
 
 ```ts
 export interface BrowserI18nBinding {
-    readonly followsSystem: boolean;
-    followSystem(): Promise<void>;
+    readonly isUsingSystemLocale: boolean;
+    switchToSystemLocale(): Promise<void>;
     subscribe(listener: () => void): () => void;
     disconnect(): void;
 }
@@ -55,13 +55,13 @@ export interface BrowserI18nBinding {
 
 Browser effects exclusively owned for one i18n manager after successful initialization.
 
-#### BrowserI18nBinding › followsSystem
+#### BrowserI18nBinding › isUsingSystemLocale
 
 ```ts
-readonly followsSystem: boolean;
+readonly isUsingSystemLocale: boolean;
 ```
 
-Whether the locale follows the browser's languages rather than a choice: `true` after a start with no explicit locale and no saved locale that matches a configured one, and after `followSystem()`, and `false` once the application applies a locale through `setLocale()` or `init()`. While it is `true`, a `languagechange` event switches to the newly detected locale, unless an application request is still loading.
+Whether the locale follows the browser's languages rather than a choice: `true` after a start with no explicit locale and no saved locale that matches a configured one, and after `switchToSystemLocale()`, and `false` once the application applies a locale through `setLocale()` or `init()`. While it is `true`, a `languagechange` event switches to the newly detected locale, unless an application request is still loading.
 
 #### BrowserI18nBinding › disconnect
 
@@ -73,10 +73,20 @@ Stops locale-change handling, mutation observation, and `subscribe()` calls.
 
 Existing DOM text, document attributes, persisted state, and core i18n state are unchanged. A switch to a detected locale still loading is dropped; a `setLocale()` call still loading is not. Manager ownership is released, so a new browser binding may then be initialized.
 
-#### BrowserI18nBinding › followSystem
+#### BrowserI18nBinding › subscribe
 
 ```ts
-followSystem(): Promise<void>;
+subscribe(listener: () => void): () => void;
+```
+
+Calls `listener` after each change to what a language picker shows: the active locale or `isUsingSystemLocale`. That includes a `setLocale()` to the locale already showing, which ends following the system without an `i18n.subscribe()` call, and a `switchToSystemLocale()` that keeps the locale. Changes made together are reported once, after the current task's synchronous work. A listener that throws is reported like an event listener's error, and the others still run.
+
+**Returns** — A function that stops the calls; calling it again does nothing. `disconnect()` stops every listener.
+
+#### BrowserI18nBinding › switchToSystemLocale
+
+```ts
+switchToSystemLocale(): Promise<void>;
 ```
 
 Forgets the saved locale and switches to the locale detected now from navigator preferences, then the default locale, without saving it. The binding then follows the system until the application applies a locale again.
@@ -87,16 +97,6 @@ The saved locale is removed only when `persistLocale` is on; a failed removal wa
 
 - `Error` — When the binding is disconnected.
 - `I18nError` — When the loader rejects for the detected locale. The saved locale is already forgotten and the active locale is unchanged. Other exceptions `setLocale()` throws propagate unchanged.
-
-#### BrowserI18nBinding › subscribe
-
-```ts
-subscribe(listener: () => void): () => void;
-```
-
-Calls `listener` after each change to what a language picker shows: the active locale or `followsSystem`. That includes a `setLocale()` to the locale already showing, which ends following the system without an `i18n.subscribe()` call, and a `followSystem()` that keeps the locale. Changes made together are reported once, after the current task's synchronous work. A listener that throws is reported like an event listener's error, and the others still run.
-
-**Returns** — A function that stops the calls; calling it again does nothing. `disconnect()` stops every listener.
 
 ### BrowserI18nOptions
 

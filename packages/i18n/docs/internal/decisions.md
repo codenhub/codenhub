@@ -14,6 +14,14 @@ The public docs describe current behavior only. This page keeps the reasons and 
 
 A key missing from both dictionaries returns the trimmed key. The key renders a visible, searchable placeholder. Rejected: returning `undefined`, which types every result `string | undefined`, so each call outside JSX needs `?? ""`, and a template literal renders `"undefined"`; and an empty string, which hides the miss on screen.
 
+### An empty translation is a translation (0.5.0)
+
+`""` is returned as written: it is not a miss, calls no `onMissingKey`, and does not fall back to a parent or the default locale. A language sometimes needs no text where another does, such as a button that reads "+ Add" in English with no tooltip, but "+" with an "Adicionar" tooltip in Portuguese. Rejected: treating `""` as missing, which leaves no way to say "nothing here" in one locale, and shows the default locale's text, or the key, in its place.
+
+### A throwing `onMissingKey` fails the lookup (0.5.0)
+
+An exception from `onMissingKey` propagates from `t()`, so a test or a strict build fails on the first missing key. The browser binding translates the rest of the page first, then rejects with the first such error, so a strict handler also fails the binding's start. Rejected: catching it in the binding, which would make a strict handler silently lenient in the code that renders the page.
+
 ### `init()` returns `void`
 
 Rejected: resolving `true` or `false` for whether it applied, because `setLocale()` reports the same case, a stale request, with no value, and a caller that needs the outcome reads `locale` and `isReady`.
@@ -140,6 +148,14 @@ The 1,000-character key limit applies to the trimmed key, which lookup uses, in 
 
 `Intl.Locale.prototype.maximize()` results are cached by tag and shared by fallback chains, matching, and every manager, so creating a manager and matching a request no longer maximize every configured locale. With 50 locales that cost 0.4 ms per request, against the docs' "creating a manager is cheap". The cache holds 1,000 tags of up to 64 characters, least recently used first, because `matchLocale` receives tags from `Accept-Language`. Rejected: caching per configured list only, which leaves the request's tags uncached.
 
+### Missing-key warnings are remembered per process (0.5.0)
+
+The default warning's record of the 1,000 most recent locale/key pairs is shared by every manager in the process, as the parse cache is. A server creates a manager per request, so a record per manager warned once per request, and one missing word on a home page logged a line for every visitor. Rejected: a record per manager, which 0.4.0 kept; a test that wants each manager to warn passes `onMissingKey`, which runs on every miss.
+
+### `resolveLocale` reads `_` as `-` (0.5.0)
+
+`resolveLocale("pt_BR")` returns a configured `pt-BR`, as `matchLocale` already did, because POSIX, Java, Android, and many back ends write a locale with an underscore, and a cookie or a query string often carries that spelling. A configured locale cannot contain `_`, so the reading matches nothing else. Rejected: exact spelling only, which made `resolveLocale` stricter than `matchLocale` for no reason a caller could see.
+
 ### `timeZone` is a manager option (0.2.0)
 
 With only the runtime's time zone, a server renders `{d, date}` on its own calendar day: 01:00 UTC on 2 November is "November 2" for a reader in São Paulo, where it is still 1 November, and the text changes when the browser takes over. `formatDate` takes `options.timeZone`, but that reaches no message.
@@ -180,19 +196,19 @@ A stored locale the application no longer configures exactly, such as `pt-PT` af
 
 ### The binding can follow the system again
 
-`followSystem()` removes the saved locale and switches to the locale detected now, without saving it, and `followsSystem` tells a picker whether to show a "System" entry as selected. While it is `true`, a `languagechange` event switches to the newly detected locale. Requested in #588, so an application with a "System" entry need not keep its own copy of the choice beside the binding's storage.
+`switchToSystemLocale()` removes the saved locale and switches to the locale detected now, without saving it, and `isUsingSystemLocale` tells a picker whether to show a "System" entry as selected. While it is `true`, a `languagechange` event switches to the newly detected locale. Requested in #588, so an application with a "System" entry need not keep its own copy of the choice beside the binding's storage.
 
-**A flag, not the saved locale.** `followsSystem` is `false` after any locale the application applies, whether or not `persistLocale` saves it. Rejected: exposing the saved locale, as #588 proposed, which is always `undefined` with `persistLocale: false`, so a picker would show "System" for an explicit `locale` the application chose.
+**A flag, not the saved locale.** `isUsingSystemLocale` is `false` after any locale the application applies, whether or not `persistLocale` saves it. Rejected: exposing the saved locale, as #588 proposed, which is always `undefined` with `persistLocale: false`, so a picker would show "System" for an explicit `locale` the application chose.
 
 **Choosing the active locale is a choice.** `setLocale()` for the locale already active dispatches no event, so the binding learns of every applied request through an internal hook in core, and saves it. Otherwise a visitor who picks English while English was detected would save nothing and still see "System" selected.
 
-**A failed switch keeps the current locale.** `followSystem()` rejects with the loader's error, and a failure after `languagechange` warns. Neither falls back to the default as a start does: the page already shows a language, and the start falls back only because it has none. The saved locale is forgotten before loading, so a visitor who asked for the system gets it at the next start even when this load failed, unless storage refused the removal, which warns.
+**A failed switch keeps the current locale.** `switchToSystemLocale()` rejects with the loader's error, and a failure after `languagechange` warns. Neither falls back to the default as a start does: the page already shows a language, and the start falls back only because it has none. The saved locale is forgotten before loading, so a visitor who asked for the system gets it at the next start even when this load failed, unless storage refused the removal, which warns.
 
 **The binding's own switches end with it.** `disconnect()` supersedes a detected locale still loading, so it does not apply to a manager nobody binds; an application request still loading is left to apply. A browser language change during the start's loading, before the listener exists, is caught by comparing the detected locale once the start ends.
 
 **A visitor's pick is not overtaken.** A `languagechange` while an application request is still loading is ignored, so the pick applies and is saved; the latest-call rule would otherwise let the binding's detection replace it. Core tells the binding whether the latest request is loading, rather than the binding remembering which request last applied, so a pick that failed does not stop the binding from following later changes.
 
-**The binding reports what a picker shows.** `binding.subscribe()` calls its listeners once after each change to the active locale or to `followsSystem`. `i18n.subscribe()` can't serve a picker: a pick of the locale already showing, or a `followSystem()` that keeps the locale, changes the selection but not the manager, so a framework picker rendered from the manager kept the old entry. Changes made together, such as a pick that changes the locale and ends following the system, are reported once, from a microtask, so a listener never runs inside the manager's request handling. Listeners are dispatched through an `EventTarget`, so one that throws is reported as `i18n.subscribe()` listeners are, and the others still run. Rejected: making `i18n.subscribe()` fire for a request that changes nothing, which re-renders every subscriber for a selection only the picker shows; and documenting a re-read after each `await`, which a framework's store can't do.
+**The binding reports what a picker shows.** `binding.subscribe()` calls its listeners once after each change to the active locale or to `isUsingSystemLocale`. `i18n.subscribe()` can't serve a picker: a pick of the locale already showing, or a `switchToSystemLocale()` that keeps the locale, changes the selection but not the manager, so a framework picker rendered from the manager kept the old entry. Changes made together, such as a pick that changes the locale and ends following the system, are reported once, from a microtask, so a listener never runs inside the manager's request handling. Listeners are dispatched through an `EventTarget`, so one that throws is reported as `i18n.subscribe()` listeners are, and the others still run. Rejected: making `i18n.subscribe()` fire for a request that changes nothing, which re-renders every subscriber for a selection only the picker shows; and documenting a re-read after each `await`, which a framework's store can't do.
 
 **The manager stays runtime-neutral.** Rejected: `setLocale("system")` or `setLocale(undefined)` on the manager, which knows nothing of the browser or of storage.
 
@@ -218,13 +234,15 @@ The binding skips every element inside a custom element, from an outer root: a t
 
 `script`, `style`, `template`, `noscript`, `iframe`, `noembed`, `noframes`, `xmp`, and `plaintext` are skipped with a warning (0.5.0 added the last five). Their text is not read as text: the HTML serializer writes the children of `xmp`, `iframe`, `noembed`, `noframes`, and `plaintext` without escaping, as it does for `script` and `style`, so a translation containing `</xmp><img onerror=…>` would become markup when the page is serialized, as a server-rendering or prerendering step does. Rejected: escaping the text, which these elements would show literally.
 
+**Only their text is blocked.** Their `data-i18n-<attribute>` keys are translated like any other element's, since the serializer escapes every attribute value and the allowlist holds no URL, style, or handler (0.5.0). An `<iframe>`'s `title` is its accessible name, which an embedded video or map needs in the reader's language. Rejected: skipping the whole element, which 0.5.0 first did when it added `iframe` to the list, and which left that name in the page's original language.
+
 ### Bindings must not overlap
 
 Each binding is given its own part of the page. Two bindings observing one element would each rewrite its text when the other did, forever; the binding now skips text it wrote itself, which ends the loop, and the guide says to give each binding roots that don't overlap. Rejected: detecting overlap between roots, which can be added to after start, and still couldn't say which binding should own an element.
 
 ### The browser binding needs a global event target (0.5.0)
 
-`initializeBrowserI18n()` throws a `TypeError` before touching the manager when `globalThis.addEventListener` is not a function, as in some test environments and embedded runtimes, rather than initializing the manager and then rejecting when it listens for `languagechange` and `storage`. Rejected: skipping those listeners there, which would leave a binding that silently ignores the browser's language and other tabs.
+`initializeBrowserI18n()` throws a `TypeError` before touching the manager when `globalThis.addEventListener` is not a function, as in some test environments and embedded runtimes, rather than initializing the manager and then rejecting when it listens for `languagechange`. Rejected: skipping that listener there, which would leave a binding that silently ignores a change to the browser's language.
 
 ### A missing document fails before initialization
 
@@ -335,3 +353,5 @@ Rejected: only cutting the repeated work per locale, which a profile put at abou
 ### A page comes back in one spelling
 
 Every segment comes back from `parse` the way a URL's pathname writes it, the same in every locale, so `/%61/x` and `/pt/%61/x` both give `/a/x`, and `/pt/produtos/café` gives `/products/caf%C3%A9`. `localize` writes every segment it builds the same way, listed or not. Keeping the request's spelling for a request matched through its canonical words, in a prefixed locale and also in the default locale when the table gives it its own form, would give two requests for one page two `pathname`s. The length limit applies to the path `parse` returns, after this re-spelling. Until 0.5.0 parameters and unlisted segments were returned as written, which did not weigh that `/café` and `/caf%C3%A9` are one URL to a browser but two pages to a cache or an equality check, and that `localize` then wrote a raw `é` into an `href` or a `Location` header. Normalizing them costs one stable redirect hop for a hand-typed spelling.
+
+**Normalized as RFC 3986 says, not decoded.** An escape of an unreserved character (`A-Z a-z 0-9 - . _ ~`) is decoded, every other escape is written in upper case, and every other character a URL encodes is encoded; a lone surrogate, which is not text, is written as U+FFFD's `%EF%BF%BD`, as the URL parser writes it (0.5.0). Rejected: decoding every escape and encoding the result again, which 0.5.0 first did, and which turned `c%2B%2B` into `c++` and `a%3Bb` into `a;b`, characters a server or a framework may read differently from their escapes, so two pages could share one `pathname`.
