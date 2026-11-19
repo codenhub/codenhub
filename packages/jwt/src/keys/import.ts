@@ -84,13 +84,14 @@ const USAGES: Readonly<Record<KeyRole, KeyUsage[]>> = {
 };
 
 /**
- * Imports an untrusted public JWK, or a PEM `PUBLIC KEY` (SPKI), as a verification key bound to one
- * algorithm.
+ * Imports an untrusted public JWK, a PEM `PUBLIC KEY` (SPKI), or the public key of a PEM `CERTIFICATE`
+ * (X.509), as a verification key bound to one algorithm.
  *
  * @remarks
  * A PEM string is read into the JWK of its material, and every check below runs on that JWK. It must be
  * one block of at most 16384 characters, with only whitespace around it; anything else is `invalid_key`,
- * and a `PRIVATE KEY` block is `unexpected_private_key`.
+ * and a `PRIVATE KEY` block is `unexpected_private_key`. Only a certificate's key is read: its validity,
+ * issuer, extensions and signature are not checked, so trust it as you would a bare public key.
  *
  * The JWK's `kty` and `crv` must fit `options.alg`; a JWK `alg`, `use` or `key_ops` member, when
  * present, must agree with it. RSA moduli must be 2048 to 8192 bits. Private members are refused
