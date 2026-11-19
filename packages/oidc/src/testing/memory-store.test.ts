@@ -231,16 +231,34 @@ describe("findClient", () => {
     expect((await store.findClient("client-a"))?.scopes).toEqual(["openid"]);
   });
 
-  it("should keep a jwt key object in a client record by identity, since it cannot be copied", async () => {
+  it("should keep jwt key objects in a client record by identity, since they cannot be copied", async () => {
     const key = await generateSecretKey({ alg: "HS256" });
     const store = createMemoryStore({
-      clients: [makeClient({ auth: { method: "client_secret_jwt", key } })],
+      clients: [makeClient({ auth: { method: "client_secret_jwt", keys: [key] } })],
     });
 
     const found = await store.findClient("client-a");
 
-    expect(found?.auth).toEqual({ method: "client_secret_jwt", key });
-    expect(found?.auth.method === "client_secret_jwt" ? found.auth.key : undefined).toBe(key);
+    expect(found?.auth).toEqual({ method: "client_secret_jwt", keys: [key] });
+    expect(found?.auth.method === "client_secret_jwt" ? found.auth.keys[0] : undefined).toBe(key);
+  });
+
+  it("should not change the next find when the caller mutates the client_secret_jwt key list", async () => {
+    const [first, second] = await Promise.all([
+      generateSecretKey({ alg: "HS256" }),
+      generateSecretKey({ alg: "HS256" }),
+    ]);
+    const keys = [first];
+    const store = createMemoryStore({ clients: [makeClient({ auth: { method: "client_secret_jwt", keys } })] });
+    keys.push(second);
+
+    const found = await store.findClient("client-a");
+    if (found?.auth.method === "client_secret_jwt") {
+      (found.auth.keys as unknown[]).push(second);
+    }
+
+    const again = await store.findClient("client-a");
+    expect(again?.auth.method === "client_secret_jwt" ? again.auth.keys : undefined).toEqual([first]);
   });
 });
 

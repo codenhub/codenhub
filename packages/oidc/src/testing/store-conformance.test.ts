@@ -59,21 +59,75 @@ function expectNoKeyInMessage(error: Error, seen: readonly string[]): void {
 }
 
 describe("storeConformanceCases rejects broken stores", () => {
-  it("fails the no-challenge case when a store hands a missing codeChallenge back as null", async () => {
+  const ABSENT_CASE = "a record saved without its optional fields comes back with each one absent";
+
+  /** A store whose reads hand every absent optional field back as `value`, as a SQL column mapping might. */
+  function fillingAbsent(value: unknown): OidcStore {
     const memory = createMemoryStore();
-    const createBroken = (): OidcStore => ({
+    const fill = <T extends object>(record: T, names: readonly string[]): T => ({
+      ...Object.fromEntries(names.map((name) => [name, value])),
+      ...record,
+    });
+    const interactionFields = ["state", "nonce", "codeChallenge", "maxAge", "loginHint", "uiLocales"];
+    const codeFields = ["codeChallenge", "nonce", "amr", "acr", "sessionId", "resources"];
+    const accessFields = ["grantType", "authTime", "amr", "acr", "sessionId", "audience"];
+    const refreshFields = ["amr", "acr", "sessionId", "resources", "issuedAt"];
+    return {
       ...memory,
+      consumeInteraction: async (key) => {
+        const record = await memory.consumeInteraction(key);
+        return record === undefined ? undefined : fill(record, interactionFields);
+      },
       consumeCode: async (key) => {
         const consumption = await memory.consumeCode(key);
         return consumption?.status === "consumed"
-          ? { status: "consumed", record: { ...consumption.record, codeChallenge: null as unknown as string } }
+          ? { status: "consumed", record: fill(consumption.record, codeFields) }
           : consumption;
       },
-    });
+      findAccessToken: async (key) => {
+        const record = await memory.findAccessToken(key);
+        return record === undefined ? undefined : fill(record, accessFields);
+      },
+      consumeRefreshToken: async (key) => {
+        const consumption = await memory.consumeRefreshToken(key);
+        return consumption?.status === "consumed"
+          ? { status: "consumed", record: fill(consumption.record, refreshFields) }
+          : consumption;
+      },
+    };
+  }
 
-    const error = await failureOf("a record saved without a codeChallenge comes back without one", createBroken);
+  it("passes the absent-fields case when a store hands every absent optional field back as null", async () => {
+    const testCase = storeConformanceCases.find((candidate) => candidate.name === ABSENT_CASE);
 
-    expect(error.message).toContain("without codeChallenge");
+    expect(testCase).toBeDefined();
+    await expect(testCase?.run(() => fillingAbsent(null))).resolves.toBeUndefined();
+  });
+
+  it.each([
+    ["an empty string", ""],
+    ["an empty list", []],
+    ["zero", 0],
+    ["false", false],
+  ])("fails the absent-fields case, naming the field, when a store hands one back as %s", async (_name, value) => {
+    const error = await failureOf(ABSENT_CASE, () => fillingAbsent(value));
+
+    expect(error.message).toBe(
+      "OidcStore contract: consumeInteraction must return a record saved without state with no state: missing, undefined or null, never another value",
+    );
+  });
+
+  it("names the access token field a store fills in, such as an empty audience", async () => {
+    const memory = createMemoryStore();
+    const error = await failureOf(ABSENT_CASE, () => ({
+      ...memory,
+      findAccessToken: async (key) => {
+        const record = await memory.findAccessToken(key);
+        return record === undefined ? undefined : { ...record, audience: [] };
+      },
+    }));
+
+    expect(error.message).toContain("findAccessToken must return a record saved without audience with no audience");
   });
 
   it("fails the concurrent consumeInteraction case when the read and the delete straddle an await", async () => {
@@ -286,8 +340,8 @@ describe("storeConformanceCases checks findClient", () => {
     },
   );
 
-  it("rejects a store that returns a client_secret_jwt key rebuilt from JSON", async () => {
-    const error = await failureOf("findClient returns a client_secret_jwt client whose key still verifies", (seed) => {
+  it("rejects a store that returns client_secret_jwt keys rebuilt from JSON", async () => {
+    const error = await failureOf("findClient returns a client_secret_jwt client whose keys still verify", (seed) => {
       const memory = createMemoryStore(seed);
       return {
         ...memory,
@@ -295,8 +349,24 @@ describe("storeConformanceCases checks findClient", () => {
       };
     });
     expect(error.message).toBe(
-      "OidcStore contract: findClient must return a client_secret_jwt key that verifies what the registered key signed",
+      "OidcStore contract: findClient must return each client_secret_jwt key, in its order, so that it verifies what the registered key signed",
     );
+  });
+
+  it("rejects a store that keeps only the first client_secret_jwt key", async () => {
+    const error = await failureOf("findClient returns a client_secret_jwt client whose keys still verify", (seed) => {
+      const memory = createMemoryStore(seed);
+      return {
+        ...memory,
+        findClient: async (id) => {
+          const client = await memory.findClient(id);
+          return client?.auth.method === "client_secret_jwt"
+            ? { ...client, auth: { ...client.auth, keys: client.auth.keys.slice(0, 1) } }
+            : client;
+        },
+      };
+    });
+    expect(error.message).toMatch(/number of keys it was registered with$/);
   });
 });
 
