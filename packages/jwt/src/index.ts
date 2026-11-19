@@ -5,6 +5,7 @@
  */
 export type {
   AsymmetricAlgorithm,
+  JsonCompatible,
   JwsAlgorithm,
   Jwk,
   JwtErr,
@@ -15,6 +16,7 @@ export type {
   JwtOk,
   JwtPathSegment,
   JwtPayload,
+  JwtRegisteredClaims,
   JwtResult,
   KeySet,
   PrivateKey,

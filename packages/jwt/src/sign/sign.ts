@@ -1,6 +1,13 @@
 import { MAX_JSON_DEPTH } from "../core/limits";
 import { rejectUnknownOptions } from "../core/options";
-import type { JwsAlgorithm, JwtPayload, PublicKey, SigningKey } from "../core/types";
+import type {
+  JsonCompatible,
+  JwsAlgorithm,
+  JwtPayload,
+  JwtRegisteredClaims,
+  PublicKey,
+  SigningKey,
+} from "../core/types";
 import { encodeBase64Url } from "../encoding/base64url";
 import { encodeUtf8 } from "../encoding/text";
 import { ALGORITHM_PARAMS } from "../keys/algorithms";
@@ -32,13 +39,18 @@ export interface SignHeader {
   readonly [parameter: string]: unknown;
 }
 
-/** What {@link sign} turns into a token. */
-export interface SignInput {
+/**
+ * What {@link sign} turns into a token.
+ *
+ * @typeParam TPayload - The payload's own type, which may be an `interface`. Registered claims must have
+ * their RFC 7519 types, and every member must be a JSON value.
+ */
+export interface SignInput<TPayload extends object = JwtPayload> {
   /**
    * The claims. A plain object of JSON values: strings, finite numbers, booleans, `null`, arrays and
    * plain objects, nested at most 32 deep. `exp`, `nbf` and `iat` are seconds since the Unix epoch.
    */
-  readonly payload: JwtPayload;
+  readonly payload: TPayload & JwtRegisteredClaims & JsonCompatible<TPayload>;
   /** A private or secret key this package created. It fixes the token's `alg`. */
   readonly key: SigningKey;
   /** Extra protected header parameters. */
@@ -112,7 +124,7 @@ const isPlainObject = (value: unknown): value is Record<string, unknown> => {
  * public key this package created, `input.key` is not a private key, or the two are not one key pair bound to
  * one algorithm.
  */
-export async function sign(input: SignInput): Promise<string> {
+export async function sign<TPayload extends object = JwtPayload>(input: SignInput<TPayload>): Promise<string> {
   if (typeof input !== "object" || input === null) {
     throw new TypeError("sign: input must be an object.");
   }

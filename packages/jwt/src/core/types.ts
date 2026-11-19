@@ -199,8 +199,11 @@ export interface JwtHeader {
   readonly [parameter: string]: unknown;
 }
 
-/** Registered JWT claims (RFC 7519 §4.1), plus any other claim. Frozen. */
-export interface JwtPayload {
+/**
+ * The registered JWT claims (RFC 7519 §4.1) with the types they must have, and nothing else. A payload type
+ * declared as an `interface` satisfies it, which {@link JwtPayload}'s index signature would not allow.
+ */
+export interface JwtRegisteredClaims {
   readonly iss?: string;
   readonly sub?: string;
   readonly aud?: string | readonly string[];
@@ -211,8 +214,27 @@ export interface JwtPayload {
   /** Issued-at time, in seconds since the Unix epoch. */
   readonly iat?: number;
   readonly jti?: string;
+}
+
+/** Registered JWT claims (RFC 7519 §4.1), plus any other claim. Frozen. */
+export interface JwtPayload extends JwtRegisteredClaims {
   readonly [claim: string]: unknown;
 }
+
+/**
+ * `T` as JSON can carry it: every member that is a function, or an object with methods such as a `Date`,
+ * becomes `never`, so a value JSON would change fails to compile. Members typed `unknown` pass, and are
+ * checked when signing.
+ */
+export type JsonCompatible<T> = unknown extends T
+  ? T
+  : T extends string | number | boolean | null
+    ? T
+    : T extends (...args: never[]) => unknown
+      ? never
+      : T extends object
+        ? { readonly [K in keyof T]: JsonCompatible<T[K]> }
+        : never;
 
 /**
  * A source of verification keys. A verifier asks it for the one key that matches a token's header.
