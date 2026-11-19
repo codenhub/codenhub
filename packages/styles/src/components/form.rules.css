@@ -86,7 +86,11 @@
        A single `--_line` that states overwrote would lose the blend along with
        the tone, because replacing a composed result drops every term it was
        composed from -- the same failure as the edge below. */
-    --_line-tone: color-mix(in oklab, var(--intent-border) var(--_line-rest), transparent);
+    --_line-tone: color-mix(
+      in oklab,
+      color-mix(in oklab, var(--_held-ink) var(--_through), var(--intent-border)) var(--_line-rest),
+      transparent
+    );
     --_line: color-mix(in oklab, var(--intent-color) var(--_fill), var(--_line-tone));
     /* The edge floor, as an input to `box` rather than a rewrite of its result.
        The line is drawn whatever a *container's* edge class says, because a
@@ -143,7 +147,7 @@
           :focus-visible,
           :has(> :is(.ipt, .textarea, .select, .text-control, input, textarea, select):disabled)
         ) {
-        --_line-tone: var(--intent-hover);
+        --_line-tone: color-mix(in oklab, var(--_held-ink) var(--_through), var(--intent-hover));
       }
     }
 
@@ -152,7 +156,7 @@
        outline: `&:focus { outline-none }` nested here lands in the utilities layer
        and beats `reset.css`'s `@layer base` ring, killing the keyboard ring too. */
     &:focus-visible {
-      --_line-tone: var(--intent-color);
+      --_line-tone: color-mix(in oklab, var(--_held-ink) var(--_through), var(--intent-color));
     }
 
     /* The forced-colours ring, carried so `@apply text-control` draws it: the
@@ -681,7 +685,7 @@
        drops its own ring below so the group shows one. The cost is that the ring
        also shows on a mouse click, which a lone field's does not. */
     &:focus-within {
-      --_line-tone: var(--intent-color);
+      --_line-tone: color-mix(in oklab, var(--_held-ink) var(--_through), var(--intent-color));
 
       outline: var(--focus-ring-width) solid
         var(--focus-ring, color-mix(in srgb, var(--color-primary) 64%, transparent));
@@ -984,9 +988,12 @@
     /* The toggle's cap is its own (`--_fill-cap`), whatever the intent: a
        neutral fill stops at 20% elsewhere because it is the page's ink, and a
        neutral checkbox is the common case and has to look like a present,
-       interactive box. In the body so `@apply` carries it; it beats the intent
-       classes from here as it did as a plain rule in `utilities`. */
-    --intent-fill-max: 100%;
+       interactive box. Lifted with `box`'s `--_cap-lift` rather than
+       `--intent-fill-max`, so a neutral toggle is still neutral: on a solid
+       surface it draws its line in the surface's ink, where the page's ink read
+       at 1.03 to 2.3:1 against the surface. In the body so `@apply` carries
+       it. */
+    --_cap-lift: 100%;
 
     /* Forced colours, carried for an applied toggle. The package's own classes
        also keep the unlayered copy at the foot of this file, which beats every
@@ -1112,9 +1119,12 @@
     /* The toggle's cap is its own (`--_fill-cap`), whatever the intent: a
        neutral fill stops at 20% elsewhere because it is the page's ink, and a
        neutral checkbox is the common case and has to look like a present,
-       interactive box. In the body so `@apply` carries it; it beats the intent
-       classes from here as it did as a plain rule in `utilities`. */
-    --intent-fill-max: 100%;
+       interactive box. Lifted with `box`'s `--_cap-lift` rather than
+       `--intent-fill-max`, so a neutral toggle is still neutral: on a solid
+       surface it draws its line in the surface's ink, where the page's ink read
+       at 1.03 to 2.3:1 against the surface. In the body so `@apply` carries
+       it. */
+    --_cap-lift: 100%;
 
     /* Forced colours, carried for an applied toggle. The package's own classes
        also keep the unlayered copy at the foot of this file, which beats every
@@ -1156,10 +1166,9 @@
        without reaching a checked track's pinned 100%, so the knob's position
        still says which; `axes.spec.ts` asserts all three. `checkbox`/`radio`
        raise their own cap to the same value for the same reason. A cap rather
-       than a resting value, because it answers the cascade case;
-       `--intent-fill-max` (declared where the intents are, above) lifts to 100%
-       for all three toggles so a neutral one reads this cap, not the 20% ceiling
-       a badge or a card stays under. */
+       than a resting value, because it answers the cascade case; `--_cap-lift`
+       (below) lifts the intent's cap for all three toggles so a neutral one
+       reads this cap, not the 20% ceiling a badge or a card stays under. */
     --_fill-cap: 40%;
 
     /* The track's size is public, read with its default, so a value set on any
@@ -1211,8 +1220,9 @@
       /* The knob is the one part that does not take the box's foreground: an
          unchecked track is unfilled, so a knob in that colour would be the same
          tone as the label beside it. Checked, it takes the mark colour like the
-         other two toggles. */
-      background-color: var(--color-text-secondary);
+         other two toggles. On a solid surface it takes the surface's ink, as
+         the line does: the page's grey read at 1.1 to 2.3:1 there. */
+      background-color: color-mix(in oklab, var(--_held-ink) var(--_through), var(--color-text-secondary));
       border-radius: var(--ui-radius-pill, var(--ui-radius, var(--ui-corner, calc(infinity * 1px))));
       /* A pseudo-element is not a box: the knob takes the track's corner shape
          itself, so the two stay the same shape. */
@@ -1263,9 +1273,12 @@
     /* The toggle's cap is its own (`--_fill-cap`), whatever the intent: a
        neutral fill stops at 20% elsewhere because it is the page's ink, and a
        neutral checkbox is the common case and has to look like a present,
-       interactive box. In the body so `@apply` carries it; it beats the intent
-       classes from here as it did as a plain rule in `utilities`. */
-    --intent-fill-max: 100%;
+       interactive box. Lifted with `box`'s `--_cap-lift` rather than
+       `--intent-fill-max`, so a neutral toggle is still neutral: on a solid
+       surface it draws its line in the surface's ink, where the page's ink read
+       at 1.03 to 2.3:1 against the surface. In the body so `@apply` carries
+       it. */
+    --_cap-lift: 100%;
 
     /* Forced colours, carried for an applied toggle. The package's own classes
        also keep the unlayered copy at the foot of this file, which beats every

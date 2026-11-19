@@ -903,8 +903,17 @@ test("shows a focused control on a solid surface", async ({ page }) => {
     await page.locator("#before").focus();
     // oxlint-disable-next-line no-await-in-loop -- one control holds focus at a time.
     await page.keyboard.press("Tab");
+    /* The ring fades in, and a shadow read before the fade ends has no inset
+       line yet. A fixed wait of twice the fade was not enough on CI's WebKit. */
     // oxlint-disable-next-line no-await-in-loop -- the ring fades in.
-    await page.waitForTimeout(400);
+    await page.evaluate(() =>
+      Promise.all(
+        document
+          .getElementById("control")!
+          .getAnimations()
+          .map((animation) => animation.finished),
+      ),
+    );
     // oxlint-disable-next-line no-await-in-loop -- one control holds focus at a time.
     const read = await page.evaluate(() => {
       const element = document.getElementById("control")!;

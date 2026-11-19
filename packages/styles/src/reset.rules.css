@@ -151,7 +151,8 @@
       animation-iteration-count: 1 !important;
       scroll-behavior: auto !important;
       transition-property:
-        opacity, visibility, color, background-color, border-color, outline-color, text-decoration-color, fill, stroke !important;
+        opacity, display, overlay, visibility, color, background-color, border-color, outline-color,
+        text-decoration-color, fill, stroke !important;
     }
   }
 
@@ -162,7 +163,8 @@
     animation-iteration-count: 1 !important;
     scroll-behavior: auto !important;
     transition-property:
-      opacity, visibility, color, background-color, border-color, outline-color, text-decoration-color, fill, stroke !important;
+      opacity, display, overlay, visibility, color, background-color, border-color, outline-color,
+      text-decoration-color, fill, stroke !important;
   }
 
   /* No motion, asked for by the app: every animation and transition ends at

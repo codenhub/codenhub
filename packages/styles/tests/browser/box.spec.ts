@@ -205,8 +205,9 @@ test("a neutral box with no plate prints in the ink of the plate it sits on", as
    the contrast of that ink: a soft button or a solid field in a dark
    `.card.solid.success` read at 3.6 to 4.2:1, on a plate whose own text read
    at 5.1:1. */
-test("a neutral box on a plate keeps its text legible", async ({ page }) => {
-  await page.setContent("<!doctype html><html><body></body></html>");
+test("a neutral box on a plate keeps its text legible, at rest and hovered", async ({ page }) => {
+  /* No motion, so a hovered colour is read where it lands. */
+  await page.setContent('<!doctype html><html data-motion="none"><body></body></html>');
   await page.addStyleTag({ url: "http://localhost:5184/shared/entry-vanilla.css" });
 
   /* oxlint-disable no-await-in-loop -- one fixture on the page at a time. */
@@ -217,6 +218,7 @@ test("a neutral box on a plate keeps its text legible", async ({ page }) => {
       for (const child of [
         '<button class="btn soft">Go</button>',
         '<button class="btn soft edged">Go</button>',
+        '<button class="btn ghost">Go</button>',
         '<span class="badge soft">3</span>',
         '<input class="ipt solid" value="Text" />',
       ]) {
@@ -231,13 +233,27 @@ test("a neutral box on a plate keeps its text legible", async ({ page }) => {
           },
           [child, intent],
         );
-        const fill = flattenColor(read.fill, read.ground);
+        await page.hover("#plate > *");
+        const hovered = await page.evaluate(async () => {
+          // The near-zero transition still lands a frame later.
+          await new Promise(requestAnimationFrame);
+          await new Promise(requestAnimationFrame);
+          const box = getComputedStyle(document.querySelector("#plate > *")!);
+
+          return { fill: box.backgroundColor, text: box.color };
+        });
+        await page.mouse.move(0, 0);
 
         if (getContrastRatio(read.ink, read.ground) >= 4.5) {
-          expect(
-            getContrastRatio(read.text, fill),
-            `${scheme} ${intent} ${child} reads as the plate does`,
-          ).toBeGreaterThanOrEqual(4.5);
+          for (const [state, box] of [
+            ["at rest", read],
+            ["hovered", hovered],
+          ] as const) {
+            expect(
+              getContrastRatio(box.text, flattenColor(box.fill, read.ground)),
+              `${scheme} ${intent} ${child} ${state} reads as the plate does`,
+            ).toBeGreaterThanOrEqual(4.5);
+          }
         }
       }
     }

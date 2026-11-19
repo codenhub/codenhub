@@ -2,7 +2,7 @@
 title: Configuração
 description: Instale o pacote, escolha entre CSS compilado ou código-fonte do Tailwind e renderize a estrutura da página de configurações.
 order: 1
-source: 1626380ec1fa14148f5b8aa1e5c4d39e63ab7a17
+source: 6c3027b30bbb7ef0aedc157cab4b1f6fb58b0a4a
 ---
 
 # Configuração
@@ -175,7 +175,7 @@ Todo entrypoint coloca o seu CSS nas quatro camadas de cascata (cascade layers) 
 | `base`       | O reset e os estilos de elemento sem classes.                                                                                                                                                                                                                                                 |
 | `components` | As classes de estética e os valores de intenção neutros de que todo componente parte.                                                                                                                                                                                                         |
 | `utilities`  | Todos os componentes (`.btn`, `.card`, `.ipt` e assim por diante), ao lado dos seus próprios utilitários do Tailwind. As classes de intenção, apresentação, borda, elevação, canto e tamanho ficam em `utilities.families`, uma subcamada que perde para qualquer outra regra de `utilities`. |
-| _sem camada_ | As sobrescritas de cores forçadas e de movimento reduzido, a correção do `<dialog>` fechado e as classes `-solo`.                                                                                                                                                                             |
+| _sem camada_ | As sobrescritas de cores forçadas, a correção do `<dialog>` fechado e as classes `-solo` com as suas regras de movimento reduzido. As regras de movimento reduzido do reset e dos componentes ficam em `base` e `utilities`.                                                                  |
 
 O que isso significa quando você escreve o seu próprio CSS:
 

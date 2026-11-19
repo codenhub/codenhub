@@ -171,6 +171,14 @@ const OVERRIDES = `
 <button class="btn icon p-4" id="icon-padding">x</button>
 <div class="card p-xs p-8" id="card-padding">Card</div>`;
 
+/* Read by the preference variant test alone. Each element is hidden by the
+   one variant it names. */
+const VARIANTS = `
+<p class="contrast-more:hidden" id="contrast-more">a</p>
+<p class="contrast-less:hidden" id="contrast-less">a</p>
+<p class="motion-safe:hidden" id="motion-safe">a</p>
+<p class="motion-reduce:hidden" id="motion-reduce">a</p>`;
+
 const fixtureFor = (side: "tw" | "dist") =>
   FIXTURE.replaceAll(/\{tw:([^|]*)\|dist:([^}]*)\}/g, (_, tw: string, dist: string) => (side === "tw" ? tw : dist));
 
@@ -517,6 +525,7 @@ test.beforeAll(async () => {
     await writeFile(path.join(temporaryRoot, "dialogs.html"), DIALOGS);
     await writeFile(path.join(temporaryRoot, "intents.html"), CUSTOM_INTENTS);
     await writeFile(path.join(temporaryRoot, "overrides.html"), OVERRIDES);
+    await writeFile(path.join(temporaryRoot, "variants.html"), VARIANTS);
     await writeFile(
       path.join(temporaryRoot, "input.css"),
       CONSUMER_CSS(
@@ -927,6 +936,54 @@ test.describe("/tw consumer build", () => {
     await page.locator("#trigger").hover();
     await expect(bubble).toBeVisible();
     await expect(bubble).toHaveCSS("opacity", "1");
+  });
+
+  /* Tailwind's own variants read only the media query, so beside components
+     that follow the app's `data-contrast` and `data-motion`, a consumer's
+     `contrast-more:` or `motion-reduce:` utility answered the system
+     instead. The attribute decides when it is set, and the query when not. */
+  test("the preference variants follow the app's attributes in place of the query", async ({ page }) => {
+    const VARIANT_IDS = ["contrast-more", "contrast-less", "motion-safe", "motion-reduce"] as const;
+    const hidden = async (
+      media: {
+        contrast: "more" | "no-preference";
+        reducedMotion: "reduce" | "no-preference";
+      },
+      attributes: string,
+    ) => {
+      await page.emulateMedia(media);
+      await page.setContent(
+        `<!doctype html><html ${attributes}><head><meta charset="utf-8" /><style>${twCss}</style></head><body>${VARIANTS}</body></html>`,
+      );
+
+      return page.evaluate(
+        (ids) => ids.filter((id) => getComputedStyle(document.getElementById(id)!).display === "none"),
+        [...VARIANT_IDS],
+      );
+    };
+    const none = {
+      contrast: "no-preference",
+      reducedMotion: "no-preference",
+    } as const;
+    const more = { contrast: "more", reducedMotion: "reduce" } as const;
+
+    /* oxlint-disable no-await-in-loop -- one page, read in turn. */
+    expect(await hidden(none, ""), "the queries alone, no preference").toEqual(["motion-safe"]);
+    expect(await hidden(more, ""), "the queries alone, more and reduce").toEqual(["contrast-more", "motion-reduce"]);
+    expect(
+      await hidden(none, 'data-contrast="more" data-motion="reduce"'),
+      "the attributes over no preference",
+    ).toEqual(["contrast-more", "motion-reduce"]);
+    expect(await hidden(none, 'data-motion="none"'), "no motion is reduced motion").toEqual(["motion-reduce"]);
+    expect(
+      await hidden(more, 'data-contrast="standard" data-motion="full"'),
+      "the attributes over the queries",
+    ).toEqual(["motion-safe"]);
+    expect(await hidden(more, 'data-contrast="unknown"'), "an unlisted value leaves the query").toEqual([
+      "contrast-more",
+      "motion-reduce",
+    ]);
+    /* oxlint-enable no-await-in-loop */
   });
 
   test("a Tailwind utility on the element beats a component's inner default", async ({ page }) => {

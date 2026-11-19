@@ -277,7 +277,40 @@ test.describe("data-motion", () => {
         );
       });
 
-      expect(running).toEqual({ opacity: 200, color: 200, "background-color": 1000 });
+      expect(running).toEqual({
+        opacity: 200,
+        color: 200,
+        "background-color": 1000,
+      });
+    });
+
+    /* A popover or dialog fades out by keeping `display` and `overlay` for the
+       length of the fade; without them in the list it vanishes at once. They
+       follow `opacity`, where such a transition names them. */
+    test(`under ${label}, a popover still fades out`, async ({ page }) => {
+      const read = async (motion: "reduce" | "no-preference", html: string) => {
+        await page.emulateMedia({ reducedMotion: motion });
+        await page.setContent(
+          `<!doctype html><html ${html}><body><style>
+          [popover] { opacity: 0; transition: opacity 1s, display 1s allow-discrete, overlay 1s allow-discrete; }
+          [popover]:popover-open { opacity: 1; }
+          @starting-style { [popover]:popover-open { opacity: 0; } }
+        </style><div popover data-testid="pop">Saved</div></body></html>`,
+        );
+        await page.addStyleTag({ content: await built("index.css") });
+
+        return page.getByTestId("pop").evaluate(async (element: HTMLElement) => {
+          element.showPopover();
+          await Promise.allSettled(element.getAnimations().map((animation) => animation.finished));
+          element.hidePopover();
+          await new Promise(requestAnimationFrame);
+
+          return getComputedStyle(element).display;
+        });
+      };
+
+      // An engine that cannot animate `display` closes the popover at once with no preference too.
+      expect(await read(reducedMotion, attributes)).toBe(await read("no-preference", ""));
     });
   }
 });

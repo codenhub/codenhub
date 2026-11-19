@@ -14,8 +14,9 @@
  * - `tw/theme.css`, which every `/tw` export imports, carries what only the
  *   adapter needs: `base/properties.css`, the `--tw-*` registrations a utility
  *   body sets by hand and Tailwind therefore does not register, after the
- *   theme's imports; and `adapter.css`, the breakpoint and the `dark` variant,
- *   which mean something only to Tailwind, at its end.
+ *   theme's imports; and `adapter.css`, the breakpoint and the `dark`,
+ *   `contrast-*`, and `motion-*` variants, which mean something only to
+ *   Tailwind, at its end.
  * - An export that composes a utility its own imports do not bring references
  *   the file that defines it, so a consumer of that export alone can name the
  *   utility or `@apply` it. An aggregate references nothing: each route to a

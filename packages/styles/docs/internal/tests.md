@@ -122,9 +122,9 @@ Node-based Vitest checks validate every published target. Every compiled export 
 
 | Measured                                   | Minified | Gzip   | Ceiling |
 | ------------------------------------------ | -------- | ------ | ------- |
-| `dist/index.css`                           | 211,214  | 18,253 | 217,500 |
-| `dist/components.css`                      | 169,455  | 14,204 | 174,500 |
-| `dist/native.css`                          | 314,507  | 24,027 | 324,000 |
+| `dist/index.css`                           | 218,451  | 18,977 | 225,000 |
+| `dist/components.css`                      | 175,749  | 14,762 | 181,000 |
+| `dist/native.css`                          | 325,499  | 24,927 | 335,250 |
 | `dist/theme.css`                           | 12,788   | 2,574  | 13,200  |
 | `dist/palette.css`                         | 25,967   | 3,103  | 26,800  |
 | `dist/aesthetics/index.css`                | 48,281   | 5,120  | 49,750  |
@@ -136,7 +136,7 @@ Node-based Vitest checks validate every published target. Every compiled export 
 | `dist/aesthetics/sketch.css`               | 14,905   | 2,094  | 15,350  |
 | `dist/purge/index.css`                     | 297,039  | 24,351 | 306,000 |
 | `dist/purge/classes.json`                  | 6,855    | 1,626  | 7,100   |
-| `/button/tw`, a page with `btn primary`    | 21,156   |        | 21,800  |
+| `/button/tw`, a page with `btn primary`    | 21,949   |        | 22,600  |
 | `/button/tw`, a page with no package class | 9,610    |        | 9,900   |
 | `/tw`, a page with `btn primary`           | 26,733   |        | 27,550  |
 
