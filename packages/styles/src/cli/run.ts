@@ -205,10 +205,33 @@ async function build(options: BuildOptions, io: CliIo): Promise<string> {
   } catch (error) {
     // Best effort: the error worth reporting is the one above.
     await fs.rm(temporary, { force: true }).catch(() => undefined);
-    throw new Error(`cannot write the stylesheet: ${error instanceof Error ? error.message : String(error)}`);
+    throw new Error(`cannot write --output ${options.output}: ${describeWriteError(error)}`);
   }
 
   return output;
+}
+
+/* Node.js names the path a system call failed on, and here that is mostly the
+   temporary file, a name the user never gave and cannot find afterwards. The
+   message keeps Node.js's reason and code, drops the paths, and says what to do. */
+function describeWriteError(error: unknown): string {
+  const { code } = error as { code?: unknown };
+
+  if (!(error instanceof Error) || typeof code !== "string" || !error.message.startsWith(`${code}: `)) {
+    return error instanceof Error ? error.message : String(error);
+  }
+
+  // As in "EACCES: permission denied, open '/srv/app.css.42.tmp'".
+  const reason = error.message.slice(code.length + 2).replace(/, \w+ '.*$/s, "");
+  let advice = "fix that, or name another file";
+
+  if (["EACCES", "EPERM", "EROFS"].includes(code)) {
+    advice = "check that you can write to it and to its folder, or name another file";
+  } else if (["ENOSPC", "EDQUOT"].includes(code)) {
+    advice = "free some space, or name a file on another disk";
+  }
+
+  return `${reason} (${code}); ${advice}.`;
 }
 
 /* The output is replaced whole, so a file this command did not write is

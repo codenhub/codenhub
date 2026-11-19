@@ -420,11 +420,29 @@ describe("failures", () => {
     await writeFile(path.join(project, "app.css"), "/*! @codenhub/styles | previous */");
     await mkdir(path.join(project, `app.css.${process.pid}.tmp`));
 
-    expect(await failureOf("build", "-c", "app/views/**/*.erb", "-o", "app.css")).toMatch(
-      /^chs: cannot write the stylesheet: /,
-    );
+    const failure = await failureOf("build", "-c", "app/views/**/*.erb", "-o", "app.css");
+
+    expect(failure).toMatch(/^chs: cannot write --output app\.css: .+ \((?:EISDIR|EPERM)\); .+\.$/);
+    expect(failure).not.toContain(".tmp");
     expect(await readFile(path.join(project, "app.css"), "utf8")).toBe("/*! @codenhub/styles | previous */");
   });
+
+  /* The write goes through a file beside the output, so Node.js's message named
+     that file, which the user never gave, and not the --output they did. */
+  it.skipIf(process.platform === "win32" || process.getuid?.() === 0)(
+    "names the --output it cannot write, not the file it writes through",
+    async () => {
+      await mkdir(path.join(project, "locked"), { mode: 0o555 });
+
+      try {
+        expect(await failureOf("build", "-c", "app/views/**/*.erb", "-o", "locked/app.css")).toBe(
+          "chs: cannot write --output locked/app.css: permission denied (EACCES); check that you can write to it and to its folder, or name another file.",
+        );
+      } finally {
+        await chmod(path.join(project, "locked"), 0o755);
+      }
+    },
+  );
 
   /* The output is replaced whole, so naming a template or a hand-written
      stylesheet as the output by mistake used to lose it. */
