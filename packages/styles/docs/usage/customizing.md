@@ -244,7 +244,7 @@ Three more tokens have no intent, presentation, ground, or hover: `--palette-bor
 
 ## Component variables
 
-Eighteen variables are read by a single component and are supported inputs. A component reads each one where it is drawn, so a value set on the component or on any element around it reaches it, and the nearest value wins: set `--switch-width` on a form and every switch in it takes it. Every other variable a component declares, such as `--surface-padding` or any name that starts with `--_`, is internal and may change in any release.
+Eighteen variables are read by a single component and are supported inputs. A component reads each one where it is drawn, so a value set on the component or on any element around it reaches it, and the nearest value wins: set `--switch-width` on a form and every switch in it takes it. Every other variable a component declares, such as any name that starts with `--_`, is internal and may change in any release.
 
 | Variable                | Element                       | Value                        | Default                                                                 | Effect                                                                                                                    |
 | ----------------------- | ----------------------------- | ---------------------------- | ----------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |

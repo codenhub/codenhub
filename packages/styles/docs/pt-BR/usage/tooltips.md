@@ -118,9 +118,9 @@ Uma classe de intenção preenche o balão com a cor dessa intenção e troca o 
 - `.tooltip-bubble.primary` tem fundo quase preto com texto quase branco numa página clara, e fundo quase branco com texto quase preto numa escura.
 - `.tooltip-bubble.destructive` tem fundo vermelho com texto claro nos dois temas.
 
-Coloque as classes de intenção, apresentação, estética e elevação no `.tooltip-bubble`, o elemento que é pintado, e não no `.tooltip`. O balão é plano por padrão, mesmo numa estética que desenha profundidade; adicione `.raised` ou `.floating` ao balão para elevá-lo. Uma estética em vigor dá forma ao balão como a qualquer outro componente; com `.glass`, ele fica fosco como um card. O `.tooltip-icon` assume o canto da estética: quadrado com `.neobrutalism` e `.pixel`, um losango com `.cyber`.
+Coloque as classes de intenção, apresentação, estética e elevação no `.tooltip-bubble`, o elemento que é pintado, e não no `.tooltip`. O balão é plano por padrão, mesmo numa estética que desenha profundidade; adicione `.raised` ou `.floating` ao balão para elevá-lo. `.glass` é a exceção: a sombra dele é um único valor completo que a elevação não consegue escalar, então um balão de vidro mantém essa sombra, e `.flat` também não a remove. Uma estética em vigor dá forma ao balão como a qualquer outro componente; com `.glass`, ele fica fosco como um card. O `.tooltip-icon` assume o canto da estética: quadrado com `.neobrutalism` e `.pixel`, um losango com `.cyber`.
 
-O balão aparece sem o efeito de crescer quando o usuário pede movimento reduzido.
+O balão aparece sem o efeito de crescer quando o usuário pede movimento reduzido, seja pela configuração do sistema ou com `data-motion="reduce"` no `<html>`. Com `data-motion="none"`, o esmaecimento dele também termina de imediato, depois da espera, e `data-motion="full"` mantém o crescimento mesmo quando o sistema pede menos movimento. [Configurações do app](../accessibility.md#configurações-do-app) descreve o atributo.
 
 ## A seguir
 

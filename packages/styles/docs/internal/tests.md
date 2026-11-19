@@ -46,8 +46,10 @@ packages/styles/
       accessibility.spec.ts
       aesthetics.spec.ts
       axes.spec.ts
+      box.spec.ts
       buttons.spec.ts
       components.spec.ts
+      contrast.spec.ts
       environment.spec.ts
       feedback.spec.ts
       fixtures.ts
@@ -57,16 +59,19 @@ packages/styles/
       native.spec.ts
       palette.spec.ts
       playground.spec.ts
+      preferences.spec.ts
       solo.spec.ts
       structure.spec.ts
       surfaces.spec.ts
       test-utils.ts
       theme.spec.ts
+      tw-consumer.spec.ts
       typography.spec.ts
     integration/
       adapter.test.ts
       cli.test.ts
       exports.test.ts
+      purge.test.ts
       registry.test.ts
       size.test.ts
 ```
@@ -91,7 +96,7 @@ Vite application running against `tw/`, the Tailwind source a `/tw` consumer com
 
 ## `debug/`
 
-Vite application running against built package CSS in `dist/` for pre-ship debugging. Starts on http://localhost:5184.
+Vite application running against built package CSS in `dist/` for pre-ship debugging. Starts on http://localhost:5184. The browser suite starts its own on `STYLES_TEST_PORT`, 5184 unless set, and refuses a port another server already holds, so two checkouts can test at once on two ports and a run never asserts another checkout's build.
 
 ## `tests/browser/`
 
@@ -100,6 +105,10 @@ Automated browser testing runs in Chromium, Firefox, and WebKit. One-shot runs u
 Rendering contracts are asserted primarily through computed styles on the shared playground fixtures. These assertions name the behavior the package promises, such as resolved intent colors, presentation inheritance, visible control boundaries, focus treatment, material geometry, pseudo-element artwork, and relative elevation. The suite also checks browser-visible semantics, navigation, route/environment wiring, and fixture accessibility where those are the observable contract.
 
 - Component-focused specs cover buttons, forms, feedback, surfaces, typography, layout, native mappings, themes, and shared composition behavior.
+- `box.spec.ts` covers the `box` helper on elements no component names: the ink an aesthetic gives a box with no intent, a neutral box on and off a plate, a helper nested in a component, and the press and hover states.
+- `contrast.spec.ts` holds `prefers-contrast: more` to what `docs/accessibility.md` promises, on the built files: every line the package rests below 3:1 reaches it in both themes, and glass turns opaque.
+- `preferences.spec.ts` checks that `data-contrast` and `data-motion` on `<html>` draw what the media queries they stand for draw, and override the system when the two disagree, across components, aesthetics, solo classes, native elements, and the reset.
+- `tw-consumer.spec.ts` compiles a page through `/tw` from its own markup with the Tailwind CLI and holds it to the same page on the compiled `dist/index.css`, by class and through `@apply`, and checks the build is tree-shaken.
 - Elevation is asserted off the composited `box-shadow` rather than off `--ui-elevation`: the claim is that one unitless number scales the geometry an aesthetic supplies, which is only observable after the multiplication. Both the plain step and the neobrutalist slab are covered, along with the non-inheritance (an unclassed descendant of a raised container takes no depth) and the per-element opt-in (its own elevation class still reaches it regardless of the container around it).
 - Form checks retain direct and inherited fill coverage for unchecked checkbox and radio boundaries, along with focus, forced-color, and reduced-motion behavior.
 - Aesthetic checks retain glass behavior coverage: translucency and blur on cards, panels, alerts, and tooltip bubbles when transparency is allowed; absence of per-control blur; and opaque, unblurred degradation under reduced transparency.
@@ -118,6 +127,8 @@ Node-based Vitest checks validate every published target. Every compiled export 
 
 `adapter.test.ts` holds the two paths to each other: each compiled entry that has a `/tw` counterpart, every one but `dist/palette.css`, is compiled again from it with the Tailwind installed, naming every utility it ships, and the two must emit the same rules in the same order. On the Tailwind release `src/base/` was copied from, that is byte for byte apart from Tailwind's banner and the `--tw-*` registrations, which are compared as sets. On another release, as the Tailwind workflow runs it, Tailwind's theme values and Preflight are that release's, so the package's components and utilities are compared alone, and a separate test fails when the lockfile moves the catalog's Tailwind off the release `src/base/` was copied from.
 
+`purge.test.ts` covers the tree-shaking `chs build` runs, apart from the command: which selectors a set of used classes can match, which rules and selectors a purge drops, that the compiled stylesheets the command reads parse and write back unchanged, that purging the source to every class of the complete stylesheet gives that stylesheet, and the readable output `--no-minify` writes.
+
 `size.test.ts` holds what a consumer downloads under ceilings, in minified bytes, each about 3% above the measurement it was set from. Gzipped lengths are recorded here but never compared, because zlib output can differ between machines. A change that grows past a ceiling raises it in the same change and says why. Measured with Tailwind 4.3.4:
 
 | Measured                                   | Minified | Gzip   | Ceiling |
@@ -127,14 +138,14 @@ Node-based Vitest checks validate every published target. Every compiled export 
 | `dist/native.css`                          | 325,499  | 24,927 | 335,250 |
 | `dist/theme.css`                           | 12,788   | 2,574  | 13,200  |
 | `dist/palette.css`                         | 25,967   | 3,103  | 26,800  |
-| `dist/aesthetics/index.css`                | 48,281   | 5,120  | 49,750  |
-| `dist/aesthetics/chunky-tile.css`          | 5,419    | 1,361  | 5,600   |
-| `dist/aesthetics/cyber.css`                | 4,736    | 1,322  | 4,900   |
+| `dist/aesthetics/index.css`                | 48,275   | 5,191  | 49,750  |
+| `dist/aesthetics/chunky-tile.css`          | 5,417    | 1,333  | 5,600   |
+| `dist/aesthetics/cyber.css`                | 4,734    | 1,307  | 4,900   |
 | `dist/aesthetics/glass.css`                | 14,052   | 2,340  | 14,500  |
-| `dist/aesthetics/neobrutalism.css`         | 4,588    | 1,289  | 4,750   |
-| `dist/aesthetics/pixel.css`                | 4,794    | 1,134  | 4,950   |
+| `dist/aesthetics/neobrutalism.css`         | 4,586    | 1,265  | 4,750   |
+| `dist/aesthetics/pixel.css`                | 4,852    | 1,157  | 5,000   |
 | `dist/aesthetics/sketch.css`               | 14,905   | 2,094  | 15,350  |
-| `dist/purge/index.css`                     | 297,039  | 24,351 | 306,000 |
+| `dist/purge/index.css`                     | 305,376  | 25,217 | 314,500 |
 | `dist/purge/classes.json`                  | 6,855    | 1,626  | 7,100   |
 | `/button/tw`, a page with `btn primary`    | 21,949   |        | 22,600  |
 | `/button/tw`, a page with no package class | 9,610    |        | 9,900   |

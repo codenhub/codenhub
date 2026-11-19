@@ -245,7 +245,7 @@ Mais três tokens não têm intenção, apresentação, chão nem hover: `--pale
 
 ## Variáveis de componente
 
-Dezoito variáveis são lidas por um único componente e são entradas suportadas. Um componente lê cada uma onde é desenhado, então um valor definido no componente ou em qualquer elemento em volta dele chega até ele, e o valor mais próximo vence: defina `--switch-width` num formulário e todos os switches dentro dele o recebem. Todas as outras variáveis que um componente declara, como `--surface-padding` ou qualquer nome que comece com `--_`, são internas e podem mudar em qualquer versão.
+Dezoito variáveis são lidas por um único componente e são entradas suportadas. Um componente lê cada uma onde é desenhado, então um valor definido no componente ou em qualquer elemento em volta dele chega até ele, e o valor mais próximo vence: defina `--switch-width` num formulário e todos os switches dentro dele o recebem. Todas as outras variáveis que um componente declara, como qualquer nome que comece com `--_`, são internas e podem mudar em qualquer versão.
 
 | Variável                | Elemento                      | Valor                             | Padrão                                                                  | Efeito                                                                                                                                 |
 | ----------------------- | ----------------------------- | --------------------------------- | ----------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |

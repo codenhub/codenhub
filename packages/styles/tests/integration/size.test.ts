@@ -45,10 +45,10 @@ const COMPILED_CEILINGS: Record<string, number> = {
   "dist/aesthetics/cyber.css": 4_900,
   "dist/aesthetics/glass.css": 14_500,
   "dist/aesthetics/neobrutalism.css": 4_750,
-  "dist/aesthetics/pixel.css": 4_950,
+  "dist/aesthetics/pixel.css": 5_000,
   "dist/aesthetics/sketch.css": 15_350,
   /* Read by `chs build`, never served, but every consumer installs it. */
-  "dist/purge/index.css": 306_000,
+  "dist/purge/index.css": 314_500,
   "dist/purge/classes.json": 7_100,
 };
 

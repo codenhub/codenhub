@@ -675,7 +675,7 @@ These authored defaults are decisions, not derivations -- there is no rule that 
 
 `box` states what a box rests as when nothing says otherwise: `--_d-fill: 0%`, `--_d-fg-on-fill: 0%`, `--_d-border: 0%`, `--_d-elevation: 1`, and `--_d-holds-ink: none` -- no fill, no line, the ordinary depth, and no ink handed down. They are stated on the element rather than left to the `var()` fallbacks, for the reason `--_d-ground` is: `--_d-*` inherit like any custom property, so a bare `box` inside a `.btn` rested as the button did, with a full fill and the button's line.
 
-A component writes its own after `@compose box`. The `@compose` inlines `box`'s declarations at that point, and the later declaration in one rule wins, so a value written above the `@compose` is overridden by the very utility it was meant to specialise. The no-op restatements of `--_fill-cap`, `--_edge-floor`, `--_bare-ink`, the scale steps, and `--surface-padding` in `box` are there for the same inheritance, so a nested box reads its own presentation rather than its container's reinterpretation of one.
+A component writes its own after `@compose box`. The `@compose` inlines `box`'s declarations at that point, and the later declaration in one rule wins, so a value written above the `@compose` is overridden by the very utility it was meant to specialise. The no-op restatements of `--_fill-cap`, `--_edge-floor`, `--_bare-ink`, and the scale steps in `box` are there for the same inheritance, so a nested box reads its own presentation rather than its container's reinterpretation of one.
 
 ### `.input-group` owns the box; the control inside gives it up
 
@@ -794,7 +794,7 @@ Not carried, because it names the applied element from somewhere else: `.input-g
 
 ### Public component variables
 
-Eighteen component-scoped custom properties are supported consumer inputs, documented in one table in `docs/usage/customizing.md`: `--progress-value`, `--progress-color`, `--progress-surface`, `--progress-edge`, `--input-group-gap`, `--input-group-padding`, `--field-gap`, `--switch-width`, `--switch-height`, `--tooltip-gap`, `--tooltip-linger`, `--divider-color`, `--divider-width`, `--skeleton-base`, `--skeleton-sheen`, `--quote-width`, `--table-cell-padding`, and `--table-hover`. Every other variable a component declares or reads, such as `--surface-padding` and every `--_*` private, is internal wiring that may change in any release.
+Eighteen component-scoped custom properties are supported consumer inputs, documented in one table in `docs/usage/customizing.md`: `--progress-value`, `--progress-color`, `--progress-surface`, `--progress-edge`, `--input-group-gap`, `--input-group-padding`, `--field-gap`, `--switch-width`, `--switch-height`, `--tooltip-gap`, `--tooltip-linger`, `--divider-color`, `--divider-width`, `--skeleton-base`, `--skeleton-sheen`, `--quote-width`, `--table-cell-padding`, and `--table-hover`. Every other variable a component declares or reads, such as every `--_*` private, is internal wiring that may change in any release.
 
 A component never declares a public variable. It reads it with its default, `var(--switch-width, 2.5rem)`, or resolves it into a private, `--_switch-width: var(--switch-width, 2.5rem)`, so a value set on any ancestor reaches it and the nearest one wins. Declared on the component, the default hid every value set above it, and the docs had to tell consumers that a value on a parent is ignored.
 

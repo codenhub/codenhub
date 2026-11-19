@@ -117,9 +117,9 @@ An intent class fills the bubble with that intent's color and switches the text 
 - `.tooltip-bubble.primary` has a near-black background with near-white text on a light page, and a near-white background with near-black text on a dark one.
 - `.tooltip-bubble.destructive` has a red background with light text in both themes.
 
-Put intent, presentation, aesthetic, and elevation classes on `.tooltip-bubble`, the element that is painted, not on `.tooltip`. The bubble is flat by default, even under an aesthetic that draws depth; add `.raised` or `.floating` to the bubble to lift it. An aesthetic in scope shapes the bubble like any other component; under `.glass` it is frosted like a card. `.tooltip-icon` takes the aesthetic's corner: square under `.neobrutalism` and `.pixel`, a diamond under `.cyber`.
+Put intent, presentation, aesthetic, and elevation classes on `.tooltip-bubble`, the element that is painted, not on `.tooltip`. The bubble is flat by default, even under an aesthetic that draws depth; add `.raised` or `.floating` to the bubble to lift it. `.glass` is the exception: its shadow is one complete value that elevation cannot scale, so a glass bubble keeps that shadow, and `.flat` does not remove it either. An aesthetic in scope shapes the bubble like any other component; under `.glass` it is frosted like a card. `.tooltip-icon` takes the aesthetic's corner: square under `.neobrutalism` and `.pixel`, a diamond under `.cyber`.
 
-The bubble appears without scaling up when the user asks for reduced motion.
+The bubble appears without scaling up when the user asks for reduced motion, either through the system setting or with `data-motion="reduce"` on `<html>`. With `data-motion="none"` its fade ends at once too, after the linger, and `data-motion="full"` keeps the scaling even when the system asks for less motion. [App settings](../accessibility.md#app-settings) describes the attribute.
 
 ## Next
 

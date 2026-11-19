@@ -118,9 +118,9 @@ Una clase de intención rellena la burbuja con el color de esa intención y camb
 - `.tooltip-bubble.primary` tiene un fondo casi negro con texto casi blanco en una página clara, y un fondo casi blanco con texto casi negro en una oscura.
 - `.tooltip-bubble.destructive` tiene un fondo rojo con texto claro en ambos temas.
 
-Pon las clases de intención, presentación, estética y elevación en `.tooltip-bubble`, el elemento que se pinta, no en `.tooltip`. La burbuja es plana por defecto, incluso bajo una estética que dibuja profundidad; añade `.raised` o `.floating` a la burbuja para elevarla. Una estética en el ámbito da forma a la burbuja como a cualquier otro componente; bajo `.glass` es esmerilada como una tarjeta. `.tooltip-icon` toma la esquina de la estética: cuadrada bajo `.neobrutalism` y `.pixel`, un rombo bajo `.cyber`.
+Pon las clases de intención, presentación, estética y elevación en `.tooltip-bubble`, el elemento que se pinta, no en `.tooltip`. La burbuja es plana por defecto, incluso bajo una estética que dibuja profundidad; añade `.raised` o `.floating` a la burbuja para elevarla. `.glass` es la excepción: su sombra es un único valor completo que la elevación no puede escalar, así que una burbuja de vidrio conserva esa sombra, y `.flat` tampoco la quita. Una estética en el ámbito da forma a la burbuja como a cualquier otro componente; bajo `.glass` es esmerilada como una tarjeta. `.tooltip-icon` toma la esquina de la estética: cuadrada bajo `.neobrutalism` y `.pixel`, un rombo bajo `.cyber`.
 
-La burbuja aparece sin el efecto de escala cuando el usuario pide movimiento reducido.
+La burbuja aparece sin el efecto de escala cuando el usuario pide movimiento reducido, ya sea con el ajuste del sistema o con `data-motion="reduce"` en `<html>`. Con `data-motion="none"` su fundido también termina al instante, después de la espera, y `data-motion="full"` mantiene la escala aunque el sistema pida menos movimiento. [Ajustes de la app](../accessibility.md#ajustes-de-la-app) describe el atributo.
 
 ## Siguiente paso
 
