@@ -690,7 +690,7 @@
   }
 
   /* A wrapper that owns the field box so a control can carry adornments beside it
-     -- a leading or trailing icon today, an affix or an in-field button later. It
+     -- a leading or trailing icon, a text affix, or an in-field button. It
      composes `text-control` for the border, radius, fill cap, aesthetic shape,
      and the invalid and disabled handling a lone field carries; `:focus-within`
      stands in for the `:focus-visible` a wrapper cannot have. The control inside
