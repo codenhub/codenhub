@@ -256,6 +256,14 @@ describe("build", () => {
     expect((await lstat(path.join(project, "app.css"))).isSymbolicLink()).toBe(true);
     expect(await readOutput("real.css")).toMatch(ruleFor("btn"));
   });
+
+  it.skipIf(!canSymlink)("writes where an --output link points before its target exists", async () => {
+    await symlink(path.join(project, "build", "real.css"), path.join(project, "app.css"), "file");
+
+    expect(await build("build", "-c", "app/views/**/*.erb", "-o", "app.css")).toBe(0);
+    expect((await lstat(path.join(project, "app.css"))).isSymbolicLink()).toBe(true);
+    expect(await readOutput("build/real.css")).toMatch(ruleFor("btn"));
+  });
 });
 
 describe("failures", () => {

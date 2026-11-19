@@ -201,7 +201,7 @@ async function build(options: BuildOptions, io: CliIo): Promise<string> {
   try {
     await fs.mkdir(path.dirname(target), { recursive: true });
     await fs.writeFile(temporary, css);
-    await fs.rename(temporary, target);
+    await replaceFile(temporary, target);
   } catch (error) {
     // Best effort: the error worth reporting is the one above.
     await fs.rm(temporary, { force: true }).catch(() => undefined);
@@ -337,28 +337,58 @@ function readPackageFile(relativePath: string): Promise<string> {
   return fs.readFile(path.resolve(packageRoot, relativePath), "utf8");
 }
 
+/* Windows refuses to rename over a file another process holds open without
+   delete sharing, which an antivirus scan or a dev server does for a moment
+   after a write. The rename is retried briefly there; elsewhere it is atomic
+   and fails only for a reason a retry does not fix. */
+async function replaceFile(from: string, to: string): Promise<void> {
+  const busy = new Set(["EACCES", "EBUSY", "EPERM"]);
+
+  for (let attempt = 1; ; attempt += 1) {
+    try {
+      // oxlint-disable-next-line no-await-in-loop -- each attempt waits on the one before
+      await fs.rename(from, to);
+      return;
+    } catch (error) {
+      if (process.platform !== "win32" || attempt === 10 || !busy.has((error as { code?: string }).code ?? "")) {
+        throw error;
+      }
+
+      // oxlint-disable-next-line no-await-in-loop -- the backoff between attempts
+      await new Promise((resolve) => setTimeout(resolve, attempt * 20));
+    }
+  }
+}
+
 function assertNodeVersion(nodeVersion: string): void {
   if (Number.parseInt(nodeVersion, 10) < MIN_NODE_MAJOR) {
     throw new Error(`this command needs Node.js ${MIN_NODE_MAJOR} or newer; this is Node.js ${nodeVersion}.`);
   }
 }
 
-/* The file a link leads to, or the path itself while nothing is there yet. */
+/* The file a link leads to, or the path itself while nothing is there yet. A
+   link whose target does not exist yet still leads there: the stylesheet is
+   written where it points rather than over the link. */
 async function realPathOf(file: string): Promise<string> {
   try {
     return await fs.realpath(file);
   } catch (error) {
-    if ((error as { code?: string }).code === "ENOENT") {
-      return file;
+    if ((error as { code?: string }).code !== "ENOENT") {
+      throw error;
     }
 
-    throw error;
+    const link = await fs.readlink(file).catch(() => undefined);
+
+    return link === undefined ? file : realPathOf(path.resolve(path.dirname(file), link));
   }
 }
 
+/* The native resolver, as `fs.realpath` above uses: on Windows the JavaScript
+   one keeps an 8.3 short name or a `subst` drive as written, so the output and
+   a content file naming it compared unequal and the output was read back. */
 function realPathSyncOf(file: string): string {
   try {
-    return realpathSync(file);
+    return realpathSync.native(file);
   } catch {
     // The read that follows reports a file it cannot reach.
     return file;
