@@ -22,6 +22,8 @@ const ISSUER = "https://op.example";
 const CLIENT_ID = "app";
 const REDIRECT_URI = "https://app.example/callback";
 const NOW_S = Math.floor(Date.now() / 1000);
+/** The claims of the ID token a refresh continues, as the fake provider signs them. */
+const PREVIOUS = { iss: ISSUER, sub: "user-1", aud: CLIENT_ID, auth_time: NOW_S } as const;
 
 const fakeMetadata: ProviderMetadata = {
   issuer: ISSUER,
@@ -395,6 +397,21 @@ describe("callback", () => {
     ]);
   });
 
+  it("reports an unmet_authentication_requirements from the provider as provider_error with its code", async () => {
+    const op = createFakeOp();
+    const rp = clientFor(op);
+    const { pending } = await begin(op, rp);
+
+    const result = await rp.callback(
+      redirect({ state: pending.state, error: "unmet_authentication_requirements" }),
+      pending,
+    );
+
+    expect(issuesOf(result)).toEqual([
+      { code: "provider_error", params: { endpoint: "authorization", error: "unmet_authentication_requirements" } },
+    ]);
+  });
+
   it("narrows an unknown provider error to unknown, and keeps its text out of the result", async () => {
     const op = createFakeOp();
     const rp = clientFor(op);
@@ -670,7 +687,7 @@ describe("refresh", () => {
     }
     const oldRefresh = first.value.tokens.refreshToken ?? "";
 
-    const result = await rp.refresh({ refreshToken: oldRefresh, subject: "user-1" });
+    const result = await rp.refresh({ refreshToken: oldRefresh, previous: PREVIOUS });
 
     expect(result.ok).toBe(true);
     expect(result.ok && result.value.tokens.refreshToken).not.toBe(oldRefresh);
@@ -682,7 +699,7 @@ describe("refresh", () => {
     op.refreshClaims = {};
     const rp = clientFor(op);
 
-    const result = await rp.refresh({ refreshToken: "rt-seed", subject: "user-1" });
+    const result = await rp.refresh({ refreshToken: "rt-seed", previous: PREVIOUS });
 
     expect(result).toMatchObject({ ok: true, value: { claims: { sub: "user-1" } } });
   });
@@ -692,7 +709,7 @@ describe("refresh", () => {
     op.refreshClaims = { sub: "user-2" };
     const rp = clientFor(op);
 
-    const result = await rp.refresh({ refreshToken: "rt-seed", subject: "user-1" });
+    const result = await rp.refresh({ refreshToken: "rt-seed", previous: PREVIOUS });
 
     expect(issuesOf(result)).toEqual([{ code: "subject_mismatch", path: ["id_token", "payload", "sub"] }]);
   });
@@ -700,7 +717,7 @@ describe("refresh", () => {
   it("reports a refresh token the provider refuses as provider_error", async () => {
     const rp = clientFor(createFakeOp());
 
-    const result = await rp.refresh({ refreshToken: "revoked", subject: "user-1" });
+    const result = await rp.refresh({ refreshToken: "revoked", previous: PREVIOUS });
 
     expect(issuesOf(result)).toEqual([
       { code: "provider_error", params: { endpoint: "token", error: "invalid_grant" } },
@@ -710,20 +727,20 @@ describe("refresh", () => {
   it("throws a TypeError for an empty refresh token", async () => {
     const rp = clientFor(createFakeOp());
 
-    await expect(rp.refresh({ refreshToken: "", subject: "user-1" })).rejects.toThrow(TypeError);
+    await expect(rp.refresh({ refreshToken: "", previous: PREVIOUS })).rejects.toThrow(TypeError);
   });
 
   it("throws a TypeError for a scope list that is empty", async () => {
     const rp = clientFor(createFakeOp());
 
-    await expect(rp.refresh({ refreshToken: "rt-seed", subject: "user-1", scope: [] })).rejects.toThrow(TypeError);
+    await expect(rp.refresh({ refreshToken: "rt-seed", previous: PREVIOUS, scope: [] })).rejects.toThrow(TypeError);
   });
 
   it("throws a TypeError for a null scope", async () => {
     const rp = clientFor(createFakeOp());
 
     await expect(
-      rp.refresh({ refreshToken: "rt-seed", subject: "user-1", scope: null as unknown as readonly string[] }),
+      rp.refresh({ refreshToken: "rt-seed", previous: PREVIOUS, scope: null as unknown as readonly string[] }),
     ).rejects.toThrow(
       expect.objectContaining({ name: "TypeError", message: expect.stringContaining("refresh: scope") }),
     );
@@ -733,7 +750,7 @@ describe("refresh", () => {
     const rp = clientFor(createFakeOp());
     const scope = Array.from({ length: 101 }, (_, index) => `s${index}`);
 
-    await expect(rp.refresh({ refreshToken: "rt-seed", subject: "user-1", scope })).rejects.toThrow(
+    await expect(rp.refresh({ refreshToken: "rt-seed", previous: PREVIOUS, scope })).rejects.toThrow(
       expect.objectContaining({ name: "TypeError", message: expect.stringContaining("at most 100") }),
     );
   });
@@ -742,7 +759,7 @@ describe("refresh", () => {
     const rp = clientFor(createFakeOp());
 
     await expect(
-      rp.refresh({ refreshToken: "rt-seed", subject: "user-1", scope: ["openid", "s".repeat(4096)] }),
+      rp.refresh({ refreshToken: "rt-seed", previous: PREVIOUS, scope: ["openid", "s".repeat(4096)] }),
     ).rejects.toThrow(
       expect.objectContaining({ name: "TypeError", message: expect.stringContaining("refresh: scope") }),
     );
@@ -753,7 +770,7 @@ describe("refresh", () => {
     // oxlint-disable-next-line no-sparse-arrays -- the hole is what this test is about
     const scope = ["openid", , "profile"] as unknown as readonly string[];
 
-    await expect(rp.refresh({ refreshToken: "rt-seed", subject: "user-1", scope })).rejects.toThrow(TypeError);
+    await expect(rp.refresh({ refreshToken: "rt-seed", previous: PREVIOUS, scope })).rejects.toThrow(TypeError);
   });
 
   it("sends each requested scope once, in first-seen order", async () => {
@@ -767,7 +784,7 @@ describe("refresh", () => {
     });
     const rp = createClient(baseOptions(fetchSpy));
 
-    await rp.refresh({ refreshToken: "rt-seed", subject: "user-1", scope: ["openid", "profile", "openid", "email"] });
+    await rp.refresh({ refreshToken: "rt-seed", previous: PREVIOUS, scope: ["openid", "profile", "openid", "email"] });
 
     expect(sent[0]?.get("scope")).toBe("openid profile email");
   });
@@ -785,7 +802,7 @@ describe("refresh", () => {
 
     await rp.refresh({
       refreshToken: "rt-seed",
-      subject: "user-1",
+      previous: PREVIOUS,
       resource: ["https://api.example", "https://other.example", "https://api.example"],
     });
 
@@ -801,7 +818,7 @@ describe("refresh", () => {
     const rp = clientFor(createFakeOp());
 
     await expect(
-      rp.refresh({ refreshToken: "rt-seed", subject: "user-1", resource: resource as readonly string[] }),
+      rp.refresh({ refreshToken: "rt-seed", previous: PREVIOUS, resource: resource as readonly string[] }),
     ).rejects.toThrow(
       expect.objectContaining({ name: "TypeError", message: expect.stringContaining("refresh: resource") }),
     );
@@ -1007,7 +1024,7 @@ describe("leaks", () => {
     for (const attempt of cases) {
       record(attempt.code);
       record(attempt.pending.state);
-      record(attempt.pending.nonce);
+      record(attempt.pending.nonce ?? "");
       record(attempt.pending.codeVerifier);
     }
 
@@ -1036,7 +1053,7 @@ describe("sign-in through the provider", () => {
         : method === "client_secret_basic" || method === "client_secret_post"
           ? { method, secretHashes: [await hashClientSecret(secret)] }
           : method === "client_secret_jwt"
-            ? { method, key: hmacKey }
+            ? { method, keys: [hmacKey] }
             : { method, keys: createKeySet([clientKey.publicKey]) };
     const store = createMemoryStore({
       clients: [
@@ -1104,4 +1121,389 @@ describe("sign-in through the provider", () => {
       expect(signedIn).toMatchObject({ ok: true, value: { claims: { sub: "user-1", aud: CLIENT_ID } } });
     },
   );
+});
+
+/** A `form_post` response, as the browser posts it to the redirect URI. */
+const formPost = (body: string, contentType = "application/x-www-form-urlencoded"): Request =>
+  new Request(REDIRECT_URI, { method: "POST", headers: { "content-type": contentType }, body });
+
+describe("callback: Request input and response modes", () => {
+  it("reads a GET Request's URL query", async () => {
+    const op = createFakeOp();
+    const rp = clientFor(op);
+    const { pending, url } = await begin(op, rp);
+
+    const result = await rp.callback(new Request(url), pending);
+
+    expect(result).toMatchObject({ ok: true, value: { claims: { sub: "user-1" } } });
+  });
+
+  it("reads a form_post response from the POST body", async () => {
+    const op = createFakeOp();
+    const rp = clientFor(op);
+    const { pending, code } = await begin(op, rp, {}, { responseMode: "form_post" });
+    const body = new URLSearchParams({ code, state: pending.state }).toString();
+
+    const result = await rp.callback(formPost(body), pending);
+
+    expect(result).toMatchObject({ ok: true, value: { claims: { sub: "user-1" }, parameters: {} } });
+  });
+
+  it("returns the parameters it did not read, frozen, such as Apple's user", async () => {
+    const op = createFakeOp();
+    const rp = clientFor(op);
+    const { pending, code } = await begin(op, rp, {}, { responseMode: "form_post" });
+    const user = JSON.stringify({ name: { firstName: "Ada" } });
+    const body = new URLSearchParams({ code, state: pending.state, user, session_state: "s1" }).toString();
+
+    const result = await rp.callback(formPost(body), pending);
+
+    expect(result.ok && result.value.parameters).toEqual({ user, session_state: "s1" });
+    expect(result.ok && Object.isFrozen(result.value.parameters)).toBe(true);
+  });
+
+  it("refuses a form_post pending answered by a URL or a GET, and a query pending answered by a POST", async () => {
+    const op = createFakeOp();
+    const rp = clientFor(op);
+    const posted = await begin(op, rp, {}, { responseMode: "form_post" });
+    const queried = await begin(op, rp);
+    const method = [{ code: "invalid_callback", path: ["callback", "method"] }];
+
+    expect(issuesOf(await rp.callback(posted.url, posted.pending))).toEqual(method);
+    expect(issuesOf(await rp.callback(new Request(posted.url), posted.pending))).toEqual(method);
+    const body = new URLSearchParams({ code: queried.code, state: queried.pending.state }).toString();
+    expect(issuesOf(await rp.callback(formPost(body), queried.pending))).toEqual(method);
+  });
+
+  it("refuses a form_post body that is not a form, too large, or malformed", async () => {
+    const op = createFakeOp();
+    const rp = clientFor(op);
+    const { pending } = await begin(op, rp, {}, { responseMode: "form_post" });
+
+    expect(issuesOf(await rp.callback(formPost("state=x", "application/json"), pending))).toEqual([
+      { code: "invalid_callback", path: ["callback", "headers", "content-type"] },
+    ]);
+    expect(issuesOf(await rp.callback(formPost(`state=${"x".repeat(16385)}`), pending))).toEqual([
+      { code: "invalid_callback", path: ["callback", "body"], params: { reason: "too_large" } },
+    ]);
+    expect(issuesOf(await rp.callback(formPost("state=a&state=b"), pending))).toEqual([
+      { code: "invalid_callback", path: ["callback", "body"], params: { reason: "duplicate" } },
+    ]);
+  });
+
+  it("throws TypeError for a Request whose body was already read, and for another input", async () => {
+    const op = createFakeOp();
+    const rp = clientFor(op);
+    const { pending } = await begin(op, rp, {}, { responseMode: "form_post" });
+    const used = formPost("state=x");
+    await used.text();
+
+    await expect(rp.callback(used, pending)).rejects.toThrow(TypeError);
+    await expect(rp.callback(42 as unknown as string, pending)).rejects.toThrow(TypeError);
+  });
+});
+
+describe("refresh: OpenID Connect Core §12.2", () => {
+  const refreshWith = async (claims: Readonly<Record<string, unknown>>, previous: object = PREVIOUS) => {
+    const op = createFakeOp();
+    op.refreshClaims = claims;
+    return clientFor(op).refresh({ refreshToken: "rt-seed", previous: previous as typeof PREVIOUS });
+  };
+  const mismatch = (claim: string) => ({ code: "id_token_mismatch", path: ["id_token", "payload", claim] });
+
+  it("accepts a token that continues the session, with the audience as a list", async () => {
+    const result = await refreshWith({ aud: [CLIENT_ID] });
+
+    expect(result).toMatchObject({ ok: true, value: { claims: { sub: "user-1" } } });
+  });
+
+  it("refuses another audience, another azp, or another auth_time", async () => {
+    expect(issuesOf(await refreshWith({ aud: [CLIENT_ID, "other"], azp: CLIENT_ID }))).toEqual([
+      mismatch("aud"),
+      mismatch("azp"),
+    ]);
+    expect(issuesOf(await refreshWith({ auth_time: NOW_S - 10 }))).toEqual([mismatch("auth_time")]);
+  });
+
+  it("refuses another issuer", async () => {
+    const result = await refreshWith({}, { ...PREVIOUS, iss: "https://other.example" });
+
+    expect(issuesOf(result)).toEqual([mismatch("iss")]);
+  });
+
+  it("accepts the original nonce and refuses any other", async () => {
+    expect((await refreshWith({ nonce: "n-1" }, { ...PREVIOUS, nonce: "n-1" })).ok).toBe(true);
+    expect(issuesOf(await refreshWith({ nonce: "n-2" }, { ...PREVIOUS, nonce: "n-1" }))).toEqual([
+      { code: "nonce_mismatch", path: ["id_token", "payload", "nonce"] },
+    ]);
+    expect(issuesOf(await refreshWith({ nonce: "n-2" }))).toEqual([
+      { code: "nonce_mismatch", path: ["id_token", "payload", "nonce"] },
+    ]);
+  });
+
+  it.each([
+    ["missing", undefined],
+    ["without iss", { sub: "user-1", aud: CLIENT_ID }],
+    ["with an empty aud list", { ...PREVIOUS, aud: [] }],
+    ["with a non-string azp", { ...PREVIOUS, azp: 1 }],
+    ["with a non-number auth_time", { ...PREVIOUS, auth_time: "now" }],
+  ])("throws TypeError for previous %s", async (_name, previous) => {
+    const rp = clientFor(createFakeOp());
+
+    await expect(rp.refresh({ refreshToken: "rt-seed", previous: previous as never })).rejects.toThrow(
+      "refresh: previous",
+    );
+  });
+});
+
+describe("userinfo: application/jwt", () => {
+  const jwtReply = (jwt: string) => () => new Response(jwt, { headers: { "content-type": "application/jwt" } });
+  const signUserinfo = (payload: Readonly<Record<string, unknown>>, typ = "JWT") =>
+    sign({ payload: payload as Parameters<typeof sign>[0]["payload"], key: keys.privateKey, header: { typ } });
+
+  it("verifies a signed response, and asks for both types", async () => {
+    const op = createFakeOp();
+    let accept: string | null = null;
+    const jwt = await signUserinfo({ iss: ISSUER, aud: CLIENT_ID, sub: "user-1", name: "Ada" });
+    op.userinfoReply = (request) => {
+      accept = request.headers.get("accept");
+      return jwtReply(jwt)();
+    };
+
+    const result = await clientFor(op).userinfo({ accessToken: "at-1", subject: "user-1" });
+
+    expect(result).toEqual({ ok: true, value: { iss: ISSUER, aud: CLIENT_ID, sub: "user-1", name: "Ada" } });
+    expect(accept).toBe("application/json, application/jwt");
+  });
+
+  it("refuses another issuer, another audience, another subject, or an access token", async () => {
+    const op = createFakeOp();
+    const rp = clientFor(op);
+    const ask = () => rp.userinfo({ accessToken: "at-1", subject: "user-1" });
+
+    op.userinfoReply = jwtReply(await signUserinfo({ iss: "https://evil.example", aud: "other", sub: "user-2" }));
+    expect(issuesOf(await ask())).toEqual([
+      { code: "invalid_userinfo", path: ["userinfo", "payload", "iss"], params: { jwtCode: "wrong_issuer" } },
+      { code: "invalid_userinfo", path: ["userinfo", "payload", "aud"], params: { jwtCode: "wrong_audience" } },
+      { code: "subject_mismatch", path: ["userinfo", "sub"] },
+    ]);
+    op.userinfoReply = jwtReply(await signUserinfo({ sub: "user-1" }, "at+jwt"));
+    expect(issuesOf(await ask())).toEqual([
+      { code: "invalid_userinfo", path: ["userinfo", "header", "typ"], params: { jwtCode: "wrong_type" } },
+    ]);
+  });
+
+  it("reports an encrypted response as invalid_userinfo, not a network failure", async () => {
+    const op = createFakeOp();
+    op.userinfoReply = jwtReply("eyJhbGciOiJSU0EtT0FFUCJ9.a.b.c.d");
+
+    const result = await clientFor(op).userinfo({ accessToken: "at-1", subject: "user-1" });
+
+    expect(issuesOf(result)).toEqual([
+      { code: "invalid_userinfo", path: ["userinfo"], params: { reason: "encrypted" } },
+    ]);
+  });
+
+  it.each([
+    [
+      "an unsigned",
+      `${Buffer.from('{"alg":"none"}').toString("base64url")}.${Buffer.from('{"sub":"user-1"}').toString("base64url")}.`,
+    ],
+    ["a garbled", "garbage"],
+    ["an empty", ""],
+  ])("reports %s response as invalid_userinfo with the jwt code", async (_name, body) => {
+    const op = createFakeOp();
+    const rp = clientFor(op);
+    op.userinfoReply = jwtReply(body);
+
+    const issues = issuesOf(await rp.userinfo({ accessToken: "at-1", subject: "user-1" }));
+
+    expect(issues.every((issue) => issue.code === "invalid_userinfo")).toBe(true);
+    expect(issues[0]?.params?.jwtCode).toBeTypeOf("string");
+  });
+});
+
+describe("token endpoint", () => {
+  it("reports an error member in a 200 response as provider_error, and asks for JSON", async () => {
+    const op = createFakeOp();
+    let accept: string | null = null;
+    const rp = createClient(
+      baseOptions(async (input, init) => {
+        const request = new Request(input, init);
+        if (new URL(request.url).pathname === "/token") {
+          accept = request.headers.get("accept");
+          return json({ error: "bad_verification_code", error_description: "raw text" });
+        }
+        return op.fetch(input, init);
+      }),
+    );
+    const { pending, url } = await begin(op, rp);
+
+    const result = await rp.callback(url, pending);
+
+    expect(issuesOf(result)).toEqual([{ code: "provider_error", params: { endpoint: "token", error: "unknown" } }]);
+    expect(accept).toBe("application/json");
+  });
+});
+
+describe("multi-tenant issuer", () => {
+  const TEMPLATE = "https://login.microsoftonline.com/{tenantid}/v2.0";
+  const TENANT = "9188040d-6c67-4c5b-b112-36a304b66dad";
+  const tenantIssuer = (tid: string) => TEMPLATE.replace("{tenantid}", tid);
+  const tenantClient = (op: FakeOp, tenantIssuerOption: ClientOptions["tenantIssuer"] = true) =>
+    clientFor(op, { metadata: { ...fakeMetadata, issuer: TEMPLATE }, tenantIssuer: tenantIssuerOption });
+
+  it("accepts a token whose iss is the template with its own tid", async () => {
+    const op = createFakeOp();
+    const rp = tenantClient(op);
+    const { pending, url } = await begin(op, rp, { claims: { iss: tenantIssuer(TENANT), tid: TENANT } });
+
+    const result = await rp.callback(url, pending);
+
+    expect(result).toMatchObject({ ok: true, value: { claims: { iss: tenantIssuer(TENANT), tid: TENANT } } });
+  });
+
+  it("refuses an iss of another tenant than its tid, a malformed tid, and a tenant not allowed", async () => {
+    const op = createFakeOp();
+    const wrong = (claim: string) => ({
+      code: "invalid_id_token",
+      path: ["id_token", "payload", claim],
+      params: { jwtCode: "wrong_issuer" },
+    });
+    const signInWith = async (rp: Client, claims: Readonly<Record<string, unknown>>) => {
+      const { pending, url } = await begin(op, rp, { claims });
+      return rp.callback(url, pending);
+    };
+    const anyTenant = tenantClient(op);
+    const onlyOne = tenantClient(op, { tenants: ["contoso"] });
+
+    expect(issuesOf(await signInWith(anyTenant, { iss: tenantIssuer("other"), tid: TENANT }))).toEqual([wrong("iss")]);
+    expect(issuesOf(await signInWith(anyTenant, { iss: tenantIssuer("a/b"), tid: "a/b" }))).toEqual([wrong("tid")]);
+    expect(issuesOf(await signInWith(anyTenant, { iss: tenantIssuer(TENANT) }))).toEqual([wrong("tid")]);
+    expect(issuesOf(await signInWith(onlyOne, { iss: tenantIssuer(TENANT), tid: TENANT }))).toEqual([wrong("tid")]);
+  });
+
+  it("checks the callback's iss parameter against the template and the allowed tenants", async () => {
+    const op = createFakeOp();
+    const rp = tenantClient(op, { tenants: [TENANT] });
+    const started = await begin(op, rp, { claims: { iss: tenantIssuer(TENANT), tid: TENANT } });
+    const withIss = (iss: string) => {
+      const url = new URL(started.url);
+      url.searchParams.set("iss", iss);
+      return url.href;
+    };
+
+    expect(issuesOf(await rp.callback(withIss(tenantIssuer("other")), started.pending))).toEqual([
+      { code: "iss_mismatch", path: ["callback", "iss"] },
+    ]);
+    expect((await rp.callback(withIss(tenantIssuer(TENANT)), started.pending)).ok).toBe(true);
+  });
+
+  it("throws TypeError for a template without the option, and the option without a template", () => {
+    const op = createFakeOp();
+
+    expect(() => clientFor(op, { metadata: { ...fakeMetadata, issuer: TEMPLATE } })).toThrow("tenantIssuer");
+    expect(() => clientFor(op, { tenantIssuer: true })).toThrow("tenantIssuer");
+    expect(() => tenantClient(op, { tenants: [] })).toThrow(TypeError);
+    expect(() => tenantClient(op, { tenants: ["a.b"] })).toThrow(TypeError);
+    expect(() => tenantClient(op, { tenants: Array.from({ length: 101 }, (_, index) => `t${index}`) })).toThrow(
+      TypeError,
+    );
+    expect(() => tenantClient(op, { tenants: Array.from({ length: 100 }, (_, index) => `t${index}`) })).not.toThrow();
+  });
+});
+
+describe("plain OAuth 2.0 client", () => {
+  const GITHUB = "https://github.com";
+  const oauthMetadata = {
+    issuer: GITHUB,
+    authorization_endpoint: `${GITHUB}/login/oauth/authorize`,
+    token_endpoint: `${GITHUB}/login/oauth/access_token`,
+    userinfo_endpoint: "https://api.github.com/user",
+  };
+  /** A GitHub-like provider: no ID token unless asked to send one, a comma-separated scope, and JSON userinfo. */
+  const githubLike = (idToken?: string) => {
+    const requests: Request[] = [];
+    const fetchFunction = (async (input: string | URL | Request, init?: RequestInit) => {
+      const request = new Request(input, init);
+      requests.push(request);
+      if (new URL(request.url).pathname === "/login/oauth/access_token") {
+        return json({
+          access_token: "gho_token",
+          token_type: "bearer",
+          scope: "read:user,user:email",
+          ...(idToken === undefined ? {} : { id_token: idToken }),
+        });
+      }
+      return json({ login: "octocat", id: 1 });
+    }) as typeof fetch;
+    const rp = createClient({
+      openid: false,
+      metadata: oauthMetadata,
+      clientId: CLIENT_ID,
+      redirectUri: REDIRECT_URI,
+      auth: { method: "client_secret_post", secret: "s3cr3t-value" },
+      fetch: fetchFunction,
+    });
+    return { rp, requests };
+  };
+
+  it("signs in with no nonce and no ID token, and returns no claims", async () => {
+    const { rp, requests } = githubLike();
+    const started = await rp.authorize({ scope: ["read:user"] });
+    const url = redirect({ code: "c1", state: started.pending.state });
+
+    const result = await rp.callback(url, started.pending);
+
+    expect(new URL(started.url).searchParams.has("nonce")).toBe(false);
+    expect(result).toEqual({
+      ok: true,
+      value: {
+        tokens: { accessToken: "gho_token", tokenType: "Bearer", scope: ["read:user,user:email"] },
+        parameters: {},
+      },
+    });
+    expect(requests.some((request) => new URL(request.url).pathname.includes("jwks"))).toBe(false);
+  });
+
+  it("ignores an ID token, even a malformed one", async () => {
+    const { rp } = githubLike("not-a-jwt");
+    const started = await rp.authorize();
+
+    const result = await rp.callback(redirect({ code: "c1", state: started.pending.state }), started.pending);
+
+    expect(result.ok && "idToken" in result.value.tokens).toBe(false);
+    expect(result.ok && "claims" in result.value).toBe(false);
+  });
+
+  it("refreshes without previous, and returns userinfo as the provider sent it", async () => {
+    const { rp } = githubLike("not-a-jwt");
+
+    const refreshed = await rp.refresh({ refreshToken: "ghr_token" });
+    const user = await rp.userinfo({ accessToken: "gho_token" });
+
+    expect(refreshed).toEqual({
+      ok: true,
+      value: { tokens: { accessToken: "gho_token", tokenType: "Bearer", scope: ["read:user,user:email"] } },
+    });
+    expect(user).toEqual({ ok: true, value: { login: "octocat", id: 1 } });
+  });
+
+  it("has no back-channel logout methods, and refuses the options that need ID tokens", () => {
+    const { rp } = githubLike();
+    const base = { metadata: oauthMetadata, clientId: CLIENT_ID, auth: { method: "none" } } as const;
+
+    expect("verifyLogoutToken" in rp).toBe(false);
+    expect(Object.isFrozen(rp)).toBe(true);
+    expect(() => createClient({ ...base, openid: false, backchannelLogout: {} } as unknown as ClientOptions)).toThrow(
+      TypeError,
+    );
+    expect(() => createClient({ ...base, openid: "no" } as unknown as ClientOptions)).toThrow("openid");
+  });
+
+  it("still requires jwks_uri of an OpenID client", () => {
+    expect(() =>
+      createClient({ metadata: oauthMetadata, clientId: CLIENT_ID, auth: { method: "none" } } as never),
+    ).toThrow(TypeError);
+  });
 });

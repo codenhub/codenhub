@@ -24,13 +24,23 @@ export interface JsonRequest {
    * means nothing (RFC 7009 §2.2).
    */
   readonly ignoreOkBody?: boolean;
+  /**
+   * Also accepts a `200` of `application/jwt`, as a userinfo endpoint may answer (OpenID Connect Core §5.3.2). Its
+   * text comes back as `jwt`, with `body` `{}`, and the request asks for both types.
+   */
+  readonly acceptJwt?: boolean;
 }
 
 /** A JSON object response, of any status. */
 export interface JsonResponse {
   readonly status: number;
   readonly body: Readonly<Record<string, unknown>>;
+  /** The compact JWT of an `application/jwt` response, when `acceptJwt` allowed one. */
+  readonly jwt?: string;
 }
+
+const JSON_TYPE = /^application\/json\s*(;|$)/i;
+const JWT_TYPE = /^application\/jwt\s*(;|$)/i;
 
 const HTTP_OK = 200;
 
@@ -65,6 +75,7 @@ const OAUTH_ERROR_CODES: ReadonlySet<string> = new Set<OAuthErrorCode>([
   "request_uri_not_supported",
   "registration_not_supported",
   "invalid_target",
+  "unmet_authentication_requirements",
 ]);
 
 /**
@@ -112,7 +123,8 @@ export async function requestJson(request: JsonRequest): Promise<OidcResult<Json
 }
 
 async function send(request: JsonRequest, signal: AbortSignal): Promise<OidcResult<JsonResponse>> {
-  const headers: Record<string, string> = { accept: "application/json", ...request.headers };
+  const accept = request.acceptJwt === true ? "application/json, application/jwt" : "application/json";
+  const headers: Record<string, string> = { accept, ...request.headers };
   if (request.form !== undefined) {
     headers["content-type"] = "application/x-www-form-urlencoded";
   }
@@ -130,8 +142,9 @@ async function send(request: JsonRequest, signal: AbortSignal): Promise<OidcResu
     discardBody(response);
     return ok({ status: HTTP_OK, body: {} });
   }
-  const isJson = /^application\/json\s*(;|$)/i.test(response.headers.get("content-type") ?? "");
-  if (!isJson) {
+  const contentType = response.headers.get("content-type") ?? "";
+  const isJwt = request.acceptJwt === true && response.status === HTTP_OK && JWT_TYPE.test(contentType);
+  if (!isJwt && !JSON_TYPE.test(contentType)) {
     discardBody(response);
     return response.status === HTTP_OK
       ? requestFailure(endpoint, "content_type")
@@ -149,6 +162,12 @@ async function send(request: JsonRequest, signal: AbortSignal): Promise<OidcResu
   if (bytes === undefined) {
     return requestFailure(endpoint, "too_large");
   }
+  if (isJwt) {
+    const jwt = decodeText(bytes);
+    return jwt === undefined
+      ? requestFailure(endpoint, "malformed")
+      : ok({ status: HTTP_OK, body: {}, jwt: jwt.trim() });
+  }
   const body = parseObject(bytes);
   return body === undefined ? requestFailure(endpoint, "malformed") : ok({ status: response.status, body });
 }
@@ -163,6 +182,15 @@ function parseObject(bytes: Uint8Array): Record<string, unknown> | undefined {
     return typeof parsed === "object" && parsed !== null && !Array.isArray(parsed)
       ? (parsed as Record<string, unknown>)
       : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+/** Decodes strict UTF-8, or `undefined` for bytes that are not. */
+function decodeText(bytes: Uint8Array): string | undefined {
+  try {
+    return new TextDecoder("utf-8", { fatal: true }).decode(bytes);
   } catch {
     return undefined;
   }

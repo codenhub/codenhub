@@ -10,7 +10,7 @@ import { reportRefusal } from "./diagnostics";
 import { type ResolvedOptions, resolveOptions } from "./options";
 import { hashClientSecret } from "./secrets";
 import { handleToken } from "./token";
-import type { ClientRecord, CodeRecord, ProviderDiagnostic, ProviderOptions } from "./types";
+import type { ClientRecord, CodeRecord, ProviderDiagnostic, ProviderOptions, RefreshTokenRecord } from "./types";
 import { handleUserinfo } from "./userinfo";
 
 const ISSUER = "https://op.example";
@@ -790,6 +790,133 @@ describe("handleToken: a refresh after the client's record changes", () => {
   });
 });
 
+describe("handleToken: the grant context of record", () => {
+  /** A refresh token saved as the token endpoint would, with defaults a test overrides for one field. */
+  async function saveRefreshToken(store: MemoryStore, overrides: Partial<RefreshTokenRecord> = {}): Promise<string> {
+    const token = randomToken();
+    await store.saveRefreshToken(await digestKey(token), {
+      grantId: "grant-1",
+      clientId: "public",
+      subject: "user-1",
+      scopes: ["openid", "profile", "offline_access"],
+      authTime: NOW_SECONDS - 30,
+      expiresAt: NOW_SECONDS + 3600,
+      ...overrides,
+    });
+    return token;
+  }
+
+  it("saves the grant type and authentication context on the access token of a code exchange and a refresh", async () => {
+    const { options, store } = await setup();
+    const issued = await redeemCode(options, store, { sessionId: "session-1" });
+    const refreshed = (await (
+      await handleToken(options, tokenRequest(refreshBody(issued.refresh_token ?? "")))
+    ).json()) as TokenBody;
+    const context = {
+      grantType: "authorization_code",
+      authTime: NOW_SECONDS - 30,
+      amr: ["pwd"],
+      acr: "urn:loa:1",
+      sessionId: "session-1",
+    };
+
+    expect(await store.findAccessToken(await digestKey(issued.access_token))).toMatchObject(context);
+    expect(await store.findAccessToken(await digestKey(refreshed.access_token))).toMatchObject(context);
+  });
+
+  it("sets issuedAt anew at each rotation, and keeps the family's expiresAt", async () => {
+    const { options, store, setClock } = await setup();
+    const issued = await redeemCode(options, store);
+    setClock(NOW_MS + 600_000);
+
+    const rotated = (await (
+      await handleToken(options, tokenRequest(refreshBody(issued.refresh_token ?? "")))
+    ).json()) as TokenBody;
+    const consumption = await store.consumeRefreshToken(await digestKey(rotated.refresh_token ?? ""));
+
+    expect(consumption).toMatchObject({
+      record: { issuedAt: NOW_SECONDS + 600, expiresAt: NOW_SECONDS + 30 * 24 * 3600 },
+    });
+  });
+
+  it("reads null optional fields of a code as absent, and puts no null claim in the ID token", async () => {
+    const seen: unknown[] = [];
+    const { options, store } = await setup({
+      clients: CLIENTS.map((client) => ({ ...client, idTokenClaims: true })),
+      claims: (request) => {
+        seen.push(request);
+        return {};
+      },
+    });
+    const nulls = { nonce: null, amr: null, acr: null, sessionId: null, resources: null } as unknown as CodeRecord;
+
+    const body = await redeemCode(options, store, nulls);
+    const payload = payloadOf(body.id_token);
+
+    for (const claim of ["nonce", "amr", "acr", "sid"]) {
+      expect(payload).not.toHaveProperty(claim);
+    }
+    expect(Object.values(payload)).not.toContain(null);
+    const record = await store.findAccessToken(await digestKey(body.access_token));
+    expect(Object.values(record ?? {})).not.toContain(null);
+    expect(seen).toEqual([expect.not.objectContaining({ sessionId: expect.anything() })]);
+    expect(seen[0]).not.toHaveProperty("sessionId");
+  });
+
+  it("reads null optional fields of a refresh token as absent, in the check and in the tokens it issues", async () => {
+    const seen: Record<string, unknown>[] = [];
+    const { options, store } = await setup({
+      onRefresh: (request) => {
+        seen.push(request as unknown as Record<string, unknown>);
+        return true;
+      },
+    });
+    const nulls = {
+      amr: null,
+      acr: null,
+      sessionId: null,
+      resources: null,
+      issuedAt: null,
+    } as unknown as Partial<RefreshTokenRecord>;
+    const token = await saveRefreshToken(store, nulls);
+
+    const response = await handleToken(options, tokenRequest(refreshBody(token)));
+    const body = (await response.json()) as TokenBody;
+
+    expect(response.status).toBe(200);
+    for (const name of ["amr", "acr", "sessionId", "resources", "issuedAt"]) {
+      expect(seen[0]).not.toHaveProperty(name);
+    }
+    expect(Object.values(payloadOf(body.id_token))).not.toContain(null);
+    const record = await store.findAccessToken(await digestKey(body.access_token));
+    expect(Object.values(record ?? {})).not.toContain(null);
+  });
+
+  it("still refuses an expired refresh token whose required expiresAt is null, rather than reading it as absent", async () => {
+    const { options, store } = await setup();
+    const token = await saveRefreshToken(store, { expiresAt: null as unknown as number });
+
+    const response = await handleToken(options, tokenRequest(refreshBody(token)));
+
+    expect(response.status).toBe(400);
+  });
+
+  it("passes the session to the claims callback of a code exchange", async () => {
+    const seen: unknown[] = [];
+    const { options, store } = await setup({
+      clients: CLIENTS.map((client) => ({ ...client, idTokenClaims: true })),
+      claims: (request) => {
+        seen.push(request);
+        return {};
+      },
+    });
+
+    await redeemCode(options, store, { sessionId: "session-1" });
+
+    expect(seen).toEqual([expect.objectContaining({ grantId: "grant-1", sessionId: "session-1" })]);
+  });
+});
+
 describe("handleToken: a code exchange after the client's record changes", () => {
   const PUBLIC: ClientRecord = {
     clientId: "public",
@@ -855,8 +982,14 @@ describe("handleToken: the onRefresh re-check", () => {
         scopes: ["openid", "profile"],
         grantId: "grant-1",
         sessionId: "session-9",
+        authTime: NOW_SECONDS - 30,
+        amr: ["pwd"],
+        acr: "urn:loa:1",
+        issuedAt: NOW_SECONDS,
+        expiresAt: NOW_SECONDS + 30 * 24 * 3600,
       },
     ]);
+    expect(Object.isFrozen(seen[0])).toBe(true);
     expect(((await response.json()) as TokenBody).refresh_token).toEqual(expect.any(String));
   });
 
@@ -873,7 +1006,17 @@ describe("handleToken: the onRefresh re-check", () => {
     await handleToken(options, tokenRequest(refreshBody(issued.refresh_token ?? "")));
 
     expect(seen).toEqual([
-      { subject: "user-1", clientId: "public", scopes: ["openid", "profile", "offline_access"], grantId: "grant-1" },
+      {
+        subject: "user-1",
+        clientId: "public",
+        scopes: ["openid", "profile", "offline_access"],
+        grantId: "grant-1",
+        authTime: NOW_SECONDS - 30,
+        amr: ["pwd"],
+        acr: "urn:loa:1",
+        issuedAt: NOW_SECONDS,
+        expiresAt: NOW_SECONDS + 30 * 24 * 3600,
+      },
     ]);
   });
 
@@ -915,7 +1058,16 @@ describe("handleToken: the onRefresh re-check", () => {
       response,
     );
 
-    expect(seen).toEqual([{ endpoint: "token", status: 400, reason: "refresh_refused", clientId: "public" }]);
+    expect(seen).toEqual([
+      {
+        endpoint: "token",
+        status: 400,
+        reason: "refresh_refused",
+        clientId: "public",
+        grantId: "grant-1",
+        subject: "user-1",
+      },
+    ]);
     expect(seenRequests).toHaveLength(1);
     expect(seenRequests[0]).toBe(request);
   });
@@ -1044,7 +1196,13 @@ describe("handleToken: scope claims in the ID token", () => {
     expect(payloadOf(body.id_token)).not.toHaveProperty("name");
     expect(payloadOf(body.id_token)).not.toHaveProperty("picture");
     expect(seen).toEqual([
-      { subject: "user-1", clientId: "public", scopes: ["openid", "email"], claims: ["email", "email_verified"] },
+      {
+        subject: "user-1",
+        clientId: "public",
+        grantId: "grant-1",
+        scopes: ["openid", "email"],
+        claims: ["email", "email_verified"],
+      },
     ]);
   });
 

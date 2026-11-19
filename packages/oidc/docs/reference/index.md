@@ -191,7 +191,7 @@ Stable failure category.
 readonly params?: Readonly<Record<string, string | number | boolean>>;
 ```
 
-Facts that are never input values, such as `{ endpoint: "token", reason: "timeout" }`. The keys are a fixed set: `endpoint` (`discovery`, `authorization`, `token`, `userinfo` or `revocation`) and `reason` on `request_failed`, with `status` when the reason is `status`; `endpoint` and `error` (an [`OAuthErrorCode`](#oautherrorcode) or `unknown`) on `provider_error`; `jwtCode`, the `@codenhub/jwt` issue code, and that issue's own params on `invalid_id_token` and `invalid_logout_token`; `reason` on a provider `invalid_request` the app renders, and on `invalid_callback` and `invalid_logout_request` a parameter failure: `duplicate`, `too_many`, `too_long` or `malformed`, or for a logout request's body, `too_large` or `unreadable`.
+Facts that are never input values, such as `{ endpoint: "token", reason: "timeout" }`. The keys are a fixed set: `endpoint` (`discovery`, `authorization`, `token`, `userinfo` or `revocation`) and `reason` on `request_failed`, with `status` when the reason is `status`; `endpoint` and `error` (an [`OAuthErrorCode`](#oautherrorcode) or `unknown`) on `provider_error`; `jwtCode`, the `@codenhub/jwt` issue code, and that issue's own params on `invalid_id_token`, `invalid_logout_token`, and a userinfo JWT's `invalid_userinfo`; `reason: "encrypted"` on `invalid_userinfo` for an encrypted userinfo JWT; `reason` on a provider `invalid_request` the app renders, and on `invalid_callback` and `invalid_logout_request` a parameter failure: `duplicate`, `too_many`, `too_long` or `malformed`, or for a logout request's or `form_post` callback's body, `too_large` or `unreadable`.
 
 #### OidcIssue › path
 
@@ -463,15 +463,15 @@ Any other claim the provider released for the granted scopes.
 ### OAuthErrorCode
 
 ```ts
-export type OAuthErrorCode = "invalid_request" | "unauthorized_client" | "access_denied" | "unsupported_response_type" | "invalid_scope" | "server_error" | "temporarily_unavailable" | "invalid_client" | "invalid_grant" | "unsupported_grant_type" | "invalid_token" | "unsupported_token_type" | "insufficient_scope" | "interaction_required" | "login_required" | "account_selection_required" | "consent_required" | "invalid_request_uri" | "invalid_request_object" | "request_not_supported" | "request_uri_not_supported" | "registration_not_supported" | "invalid_target";
+export type OAuthErrorCode = "invalid_request" | "unauthorized_client" | "access_denied" | "unsupported_response_type" | "invalid_scope" | "server_error" | "temporarily_unavailable" | "invalid_client" | "invalid_grant" | "unsupported_grant_type" | "invalid_token" | "unsupported_token_type" | "insufficient_scope" | "interaction_required" | "login_required" | "account_selection_required" | "consent_required" | "invalid_request_uri" | "invalid_request_object" | "request_not_supported" | "request_uri_not_supported" | "registration_not_supported" | "invalid_target" | "unmet_authentication_requirements";
 ```
 
-OAuth 2.0 and OpenID Connect error codes a provider sends to a client, from RFC 6749 §4.1.2.1 and §5.2, RFC 6750 §3.1, RFC 7009 §2.2.1, RFC 8707 §2, and OpenID Connect Core §3.1.2.6.
+OAuth 2.0 and OpenID Connect error codes a provider sends to a client, from RFC 6749 §4.1.2.1 and §5.2, RFC 6750 §3.1, RFC 7009 §2.2.1, RFC 8707 §2, OpenID Connect Core §3.1.2.6, and OpenID Connect Core Unmet Authentication Requirements 1.0.
 
 ### OidcIssueCode
 
 ```ts
-export type OidcIssueCode = "request_failed" | "invalid_metadata" | "issuer_mismatch" | "invalid_token_response" | "invalid_userinfo" | "provider_error" | "invalid_callback" | "state_mismatch" | "iss_mismatch" | "invalid_id_token" | "nonce_mismatch" | "azp_mismatch" | "at_hash_mismatch" | "auth_time_missing" | "auth_too_old" | "subject_mismatch" | "invalid_logout_request" | "invalid_logout_token" | "unknown_client" | "invalid_redirect_uri" | "interaction_not_found" | "invalid_request" | "unauthorized_client" | "unsupported_response_type" | "invalid_scope" | "request_not_supported" | "request_uri_not_supported" | "registration_not_supported" | "invalid_target" | "invalid_token" | "insufficient_scope";
+export type OidcIssueCode = "request_failed" | "invalid_metadata" | "issuer_mismatch" | "invalid_token_response" | "invalid_userinfo" | "provider_error" | "invalid_callback" | "state_mismatch" | "iss_mismatch" | "invalid_id_token" | "nonce_mismatch" | "azp_mismatch" | "at_hash_mismatch" | "auth_time_missing" | "auth_too_old" | "subject_mismatch" | "id_token_mismatch" | "invalid_logout_request" | "invalid_logout_token" | "unknown_client" | "invalid_redirect_uri" | "interaction_not_found" | "invalid_request" | "unauthorized_client" | "unsupported_response_type" | "invalid_scope" | "request_not_supported" | "request_uri_not_supported" | "registration_not_supported" | "invalid_target" | "invalid_token" | "insufficient_scope";
 ```
 
 Stable category of a failure that callers can branch on without parsing messages.
@@ -497,7 +497,7 @@ What every operation on untrusted input returns instead of throwing. The shape m
 ### Prompt
 
 ```ts
-export type Prompt = "none" | "login" | "consent" | "select_account";
+export type Prompt = "none" | "login" | "consent" | "select_account" | "create";
 ```
 
-A `prompt` value (OpenID Connect Core §3.1.2.1).
+A `prompt` value: one of OpenID Connect Core §3.1.2.1, or `create` (Initiating User Registration via OpenID Connect 1.0), which asks the app to show its sign-up page rather than its login page.

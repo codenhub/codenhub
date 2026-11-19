@@ -21,7 +21,8 @@ import {
 import { readFrontChannelParameters } from "./front-channel";
 import { verifyIdTokenHint } from "./id-token-hint";
 import { type ResolvedOptions, SUBJECT } from "./options";
-import { redirectResponse } from "./responses";
+import { readInteractionRecord } from "./records";
+import { formPostResponse, redirectResponse } from "./responses";
 import type {
   AuthorizationDenial,
   AuthorizationFailure,
@@ -32,6 +33,7 @@ import type {
   Display,
   IdTokenHintClaims,
   InteractionRecord,
+  ResponseMode,
 } from "./types";
 
 type ParameterMap = ReadonlyMap<string, string>;
@@ -48,9 +50,10 @@ type Failure = OidcErr<AuthorizationFailure>;
 /** A check that either passes with a value or fails with the response to send. */
 type Checked<T> = { readonly ok: true; readonly value: T } | Failure;
 
-/** Where a redirect goes, and what it carries besides the response parameters. */
+/** Where a response goes, how it gets there, and what it carries besides the response parameters. */
 interface RedirectTarget {
   readonly uri: string;
+  readonly mode: ResponseMode;
   readonly state: string | undefined;
   readonly issuer: string;
 }
@@ -70,6 +73,7 @@ interface ValidatedRequest {
   readonly claimsLocales: readonly string[] | undefined;
   readonly display: Display | undefined;
   readonly resources: readonly string[] | undefined;
+  readonly extensions: Readonly<Record<string, string>> | undefined;
 }
 
 /** What the checks after client verification read from. */
@@ -84,7 +88,38 @@ interface RequestContext {
 const MAX_AGE_PATTERN = /^\d{1,9}$/;
 /** A non-empty run of visible ASCII: no space, control character or non-ASCII character. */
 const VISIBLE_ASCII = /^[!-~]+$/;
-const PROMPTS: readonly Prompt[] = ["none", "login", "consent", "select_account"];
+/** The `prompt` values of OpenID Connect Core §3.1.2.1, and `create` of Initiating User Registration via OpenID Connect 1.0. */
+const PROMPTS: readonly Prompt[] = ["none", "login", "consent", "select_account", "create"];
+/** The response modes this provider answers with: the query (RFC 6749 §4.1.2) and OAuth 2.0 Form Post Response Mode. */
+const RESPONSE_MODES: readonly ResponseMode[] = ["query", "form_post"];
+/**
+ * The parameters the provider reads, refuses, or ignores as defined by OAuth or OpenID Connect. Any other parameter
+ * is an extension, which the provider passes to the app without acting on it.
+ */
+const RECOGNIZED_PARAMETERS: ReadonlySet<string> = new Set([
+  "client_id",
+  "redirect_uri",
+  "response_type",
+  "response_mode",
+  "scope",
+  "state",
+  "nonce",
+  "code_challenge",
+  "code_challenge_method",
+  "prompt",
+  "max_age",
+  "login_hint",
+  "ui_locales",
+  "acr_values",
+  "claims_locales",
+  "display",
+  "id_token_hint",
+  "resource",
+  "request",
+  "request_uri",
+  "registration",
+  "claims",
+]);
 /** The `display` values of OpenID Connect Core §3.1.2.1. */
 const DISPLAYS: readonly Display[] = ["page", "popup", "touch", "wap"];
 /** The OAuth codes a validation failure redirects with, which are also its issue codes. */
@@ -96,6 +131,9 @@ const DENIAL_ERRORS = new Set<unknown>([
   "consent_required",
   "interaction_required",
   "account_selection_required",
+  "temporarily_unavailable",
+  "server_error",
+  "unmet_authentication_requirements",
 ]);
 
 /** Parameters this provider refuses because it does not implement the mechanism they carry (OpenID Connect Core §6, §7). */
@@ -129,8 +167,11 @@ export async function beginAuthorization(
   if (!redirectUri.ok) {
     return redirectUri;
   }
+  // Read before any check, so every failure that redirects honors the mode. A mode the provider does not offer is
+  // answered in the query, the default, with the failure `findResponseModeFailure` reports.
   const target: RedirectTarget = {
     uri: redirectUri.value,
+    mode: parameters.get("response_mode") === "form_post" ? "form_post" : "query",
     state: parameters.get("state"),
     issuer: options.issuer,
   };
@@ -256,13 +297,22 @@ function redirectFailure(target: RedirectTarget, code: RedirectErrorCode, path?:
   });
 }
 
-/** A redirect to the verified URI carrying `parameters`, with the state the client sent and this issuer (RFC 9207). */
+/**
+ * The response that sends `parameters` to the verified URI, with the state the client sent and this issuer
+ * (RFC 9207): a redirect with them in the query, or under `form_post` a page that posts them.
+ */
 function respond(target: RedirectTarget, parameters: Readonly<Record<string, string>>): Response {
-  return redirectResponse(target.uri, { ...parameters, state: target.state, iss: target.issuer });
+  const sent = { ...parameters, state: target.state, iss: target.issuer };
+  return target.mode === "form_post" ? formPostResponse(target.uri, sent) : redirectResponse(target.uri, sent);
 }
 
 function targetOf(options: ResolvedOptions, interaction: InteractionRecord): RedirectTarget {
-  return { uri: interaction.redirectUri, state: interaction.state, issuer: options.issuer };
+  return {
+    uri: interaction.redirectUri,
+    mode: interaction.responseMode === "form_post" ? "form_post" : "query",
+    state: interaction.state,
+    issuer: options.issuer,
+  };
 }
 
 /**
@@ -355,8 +405,19 @@ function checkRequest(context: RequestContext): Checked<ValidatedRequest> {
       claimsLocales: readList(parameters, "claims_locales"),
       display: readDisplay(parameters),
       resources: context.resources,
+      extensions: readExtensions(parameters),
     },
   };
+}
+
+/**
+ * The parameters the provider does not recognize, such as `screen_hint`, for the app to act on as it chooses; absent
+ * when there are none. The front-channel limits already bound their number and length. Built with `fromEntries`, so
+ * a parameter named `__proto__` is an own member rather than a prototype.
+ */
+function readExtensions(parameters: ParameterMap): Readonly<Record<string, string>> | undefined {
+  const entries = [...parameters].filter(([name]) => !RECOGNIZED_PARAMETERS.has(name));
+  return entries.length === 0 ? undefined : Object.fromEntries(entries);
 }
 
 /** A client registered only for `client_credentials` signs no users in. */
@@ -379,8 +440,9 @@ function findResponseTypeFailure({ parameters, target }: RequestContext): Failur
 }
 
 function findResponseModeFailure({ parameters, target }: RequestContext): Failure | undefined {
+  // The fragment mode and JARM are not offered: the code flow never needs the fragment, and JARM signs the response.
   const responseMode = parameters.get("response_mode");
-  return responseMode === undefined || responseMode === "query"
+  return responseMode === undefined || (RESPONSE_MODES as readonly string[]).includes(responseMode)
     ? undefined
     : redirectFailure(target, "invalid_request", ["response_mode"]);
 }
@@ -509,6 +571,9 @@ async function saveInteraction(
     ...optionalMember("claimsLocales", request.claimsLocales),
     ...optionalMember("display", request.display),
     ...optionalMember("resources", request.resources),
+    // Absent means the query, so a record saved before the field existed answers as it did.
+    ...optionalMember("responseMode", request.target.mode === "form_post" ? request.target.mode : undefined),
+    ...optionalMember("extensions", request.extensions),
   };
   // The id is a bearer secret for the app's session, so the store only ever sees its digest.
   const id = randomToken();
@@ -528,6 +593,7 @@ async function saveInteraction(
     ...optionalMember("display", request.display),
     ...optionalMember("resources", request.resources),
     ...optionalMember("idTokenHint", idTokenHint),
+    ...optionalMember("extensions", request.extensions),
   });
 }
 
@@ -577,7 +643,7 @@ async function consumeLiveInteraction(
   if (typeof interactionId !== "string" || interactionId === "") {
     return fail({ code: "interaction_not_found" });
   }
-  const record = await options.store.consumeInteraction(await digestKey(interactionId));
+  const record = readInteractionRecord(await options.store.consumeInteraction(await digestKey(interactionId)));
   if (record === undefined || record.expiresAt <= options.now()) {
     return fail({ code: "interaction_not_found" });
   }

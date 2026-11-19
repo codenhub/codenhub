@@ -13,6 +13,7 @@ import {
   redeem,
   REDIRECT_URI,
   refreshForm,
+  SUBJECT,
   setUpProvider,
   tokenRequest,
   USERINFO_URL,
@@ -85,7 +86,16 @@ describe("onDiagnostic", () => {
 
     expect(response.status).toBe(400);
     expect(await response.json()).toEqual({ error: "invalid_grant" });
-    expect(seen).toEqual([{ endpoint: "token", reason: "refresh_refused", status: 400, clientId: PUBLIC_CLIENT }]);
+    expect(seen).toEqual([
+      {
+        endpoint: "token",
+        reason: "refresh_refused",
+        status: 400,
+        clientId: PUBLIC_CLIENT,
+        grantId: expect.any(String),
+        subject: SUBJECT,
+      },
+    ]);
     const userinfo = await answer(refusing.provider, userinfoRequest(issued.tokens.access_token));
     expect(userinfo.status).toBe(401);
   });
@@ -96,9 +106,61 @@ describe("onDiagnostic", () => {
     await redeem(setup, refreshForm(refreshToken, PUBLIC_CLIENT));
     await redeem(setup, refreshForm(refreshToken, PUBLIC_CLIENT));
 
+    // A replay names the grant the store reported, but no subject: the store returns only the grant id.
     expect(seen).toEqual([
-      { endpoint: "token", reason: "refresh_token_replayed", status: 400, clientId: PUBLIC_CLIENT },
+      {
+        endpoint: "token",
+        reason: "refresh_token_replayed",
+        status: 400,
+        clientId: PUBLIC_CLIENT,
+        grantId: expect.any(String),
+      },
     ]);
+  });
+
+  it("names the grant and subject of record on a refused code, and the same grant on its replay", async () => {
+    const issued = await issueCode(setup);
+    await redeem(setup, codeForm(issued, PUBLIC_CLIENT, { code_verifier: "w".repeat(43) }));
+    await redeem(setup, codeForm(issued, PUBLIC_CLIENT));
+
+    expect(seen).toEqual([
+      expect.objectContaining({ reason: "code_verifier_mismatch", grantId: expect.any(String), subject: SUBJECT }),
+      expect.objectContaining({ reason: "code_replayed", grantId: seen[0]?.grantId }),
+    ]);
+  });
+
+  it("reports a successful revocation as token_revoked, with the grant and subject of record", async () => {
+    const revoke = (token: string): Promise<Response> =>
+      answer(
+        setup.provider,
+        new Request(`${ISSUER}/revoke`, {
+          method: "POST",
+          headers: { "content-type": "application/x-www-form-urlencoded" },
+          body: new URLSearchParams({ token, client_id: PUBLIC_CLIENT }).toString(),
+        }),
+      );
+    const byAccessToken = await issueTokens(setup);
+    const byRefreshToken = await issueTokens(setup);
+
+    const responses = [
+      await revoke(byAccessToken.tokens.access_token),
+      await revoke(byRefreshToken.tokens.refresh_token ?? ""),
+      await revoke("never-issued"),
+    ];
+
+    expect(responses.map(({ status }) => status)).toEqual([200, 200, 200]);
+    const revoked = {
+      endpoint: "revocation",
+      reason: "token_revoked",
+      status: 200,
+      clientId: PUBLIC_CLIENT,
+      grantId: expect.any(String),
+      subject: SUBJECT,
+    };
+    // An unknown token revokes nothing, so it is not an event.
+    expect(seen).toEqual([revoked, revoked]);
+    expect(seen[0]?.grantId).not.toBe(seen[1]?.grantId);
+    expect(Object.isFrozen(seen[0])).toBe(true);
   });
 
   it("reports userinfo and revocation refusals", async () => {

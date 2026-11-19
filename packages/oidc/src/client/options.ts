@@ -1,7 +1,8 @@
 import type { ProviderMetadata } from "../shared/types";
 import { isHttpsUrl, isRedirectUri } from "../shared/urls";
-import { checkMetadata, ID_TOKEN_ALGORITHMS, type IdTokenAlgorithm } from "./metadata";
-import type { AssertionAudience, ClientAuth, ClientOptions } from "./types";
+import { readTenantIssuer, TENANT_PLACEHOLDER, type TenantRule } from "./issuer";
+import { checkMetadata, ID_TOKEN_ALGORITHMS, type IdTokenAlgorithm, type MetadataMode } from "./metadata";
+import type { AssertionAudience, AssertionHeader, ClientAuth, ClientOptions, OAuthClientOptions } from "./types";
 
 /** Every error this module throws starts with this, so a caller can tell which factory refused. */
 const PREFIX = "createClient:";
@@ -15,6 +16,14 @@ const AUTH_METHODS: ReadonlySet<string> = new Set([
 ]);
 
 const SECONDS_TO_MILLISECONDS = 1000;
+
+/** The certificate thumbprints a `private_key_jwt` assertion may carry, and the base64url length of each digest. */
+const THUMBPRINT_LENGTHS: ReadonlyMap<string, number> = new Map([
+  ["x5t", 27],
+  ["x5t#S256", 43],
+]);
+
+const BASE64URL = /^[A-Za-z0-9_-]+$/;
 
 /** Client options after validation, as every operation reads them. Frozen. */
 export interface ResolvedClientOptions {
@@ -31,6 +40,10 @@ export interface ResolvedClientOptions {
   readonly idTokenAlgorithms: readonly IdTokenAlgorithm[];
   /** Whether a logout token must carry `sid`: `backchannelLogout.sessionRequired`. */
   readonly logoutSessionRequired: boolean;
+  /** `false` for a plain OAuth 2.0 client, which handles no ID token. */
+  readonly openid: boolean;
+  /** How a `{tenantid}` issuer template is resolved, or `undefined` when the issuer matches exactly. */
+  readonly tenant: TenantRule | undefined;
 }
 
 interface IntegerRange {
@@ -79,15 +92,17 @@ function readIssuer(metadata: unknown): string {
 }
 
 /** Checks the metadata with the same rules as a fetched document, and names the first member that fails. */
-function readMetadata(metadata: ProviderMetadata): ProviderMetadata {
+function readMetadata(metadata: ProviderMetadata, mode: MetadataMode): ProviderMetadata {
   const issuer = readIssuer(metadata);
-  // A hand-written document is held to the issuer rules `discover` applies to its argument.
-  if (!isHttpsUrl(issuer) || issuer.includes("?")) {
+  // A hand-written document is held to the issuer rules `discover` applies to its argument. A `{tenantid}` template
+  // is checked as the issuer of one tenant, since braces are not URL characters.
+  const checked = issuer.replaceAll(TENANT_PLACEHOLDER, "tenant");
+  if (!isHttpsUrl(checked) || checked.includes("?")) {
     throw new TypeError(
       `${PREFIX} metadata.issuer must be an own data property holding an https URL without query, fragment, or credentials`,
     );
   }
-  const result = checkMetadata(metadata, issuer);
+  const result = checkMetadata(metadata, issuer, { mode });
   if (result.ok) {
     return result.value;
   }
@@ -190,15 +205,47 @@ function readAuth(auth: ClientAuth, metadata: ProviderMetadata): ClientAuth {
         key: auth.key,
         audience: readAssertionAudience(auth.audience),
       });
-    case "private_key_jwt":
+    case "private_key_jwt": {
       checkKeyKind(auth.key, "private");
       checkAssertionAlgorithm(metadata, auth.key);
+      const header = readAssertionHeader(auth.header);
       return Object.freeze({
         method: auth.method,
         key: auth.key,
         audience: readAssertionAudience(auth.audience),
+        ...(header === undefined ? {} : { header }),
       });
+    }
   }
+}
+
+/**
+ * Reads the extra header of a `private_key_jwt` assertion: only `x5t` and `x5t#S256`, each the base64url of a SHA-1
+ * or SHA-256 digest. The exact length also refuses a thumbprint written in hex, as certificate tools print it.
+ */
+function readAssertionHeader(header: unknown): AssertionHeader | undefined {
+  if (header === undefined) {
+    return undefined;
+  }
+  if (!isObject(header) || Array.isArray(header)) {
+    throw new TypeError(`${PREFIX} auth.header must be an object`);
+  }
+  const copy: Record<string, string> = {};
+  for (const name of Reflect.ownKeys(header)) {
+    const length = typeof name === "string" ? THUMBPRINT_LENGTHS.get(name) : undefined;
+    if (typeof name !== "string" || length === undefined) {
+      throw new TypeError(`${PREFIX} auth.header may hold only x5t and x5t#S256`);
+    }
+    const descriptor = Object.getOwnPropertyDescriptor(header, name);
+    const value: unknown = descriptor !== undefined && "value" in descriptor ? descriptor.value : undefined;
+    if (typeof value !== "string" || value.length !== length || !BASE64URL.test(value)) {
+      throw new TypeError(
+        `${PREFIX} auth.header.${name} must be the base64url of the certificate's digest: ${length} characters, without padding`,
+      );
+    }
+    copy[name] = value;
+  }
+  return Object.freeze(copy);
 }
 
 function readAssertionAudience(audience: unknown): AssertionAudience {
@@ -253,16 +300,27 @@ function readLogoutSessionRequired(value: unknown): boolean {
  * @throws {TypeError} When `options` is not an object, or one of its members is invalid. The message names
  * the member and never its value.
  */
-export function resolveClientOptions(options: ClientOptions): ResolvedClientOptions {
+export function resolveClientOptions(options: ClientOptions | OAuthClientOptions): ResolvedClientOptions {
   if (!isObject(options)) {
     throw new TypeError(`${PREFIX} options must be an object`);
   }
-  const metadata = readMetadata(options.metadata);
+  const openid = readOpenid(options.openid);
+  const extra = options as { readonly backchannelLogout?: unknown; readonly tenantIssuer?: unknown };
+  if (!openid && (extra.backchannelLogout !== undefined || extra.tenantIssuer !== undefined)) {
+    throw new TypeError(`${PREFIX} backchannelLogout and tenantIssuer need ID tokens, which openid: false has none of`);
+  }
+  const metadata = readMetadata(options.metadata as ProviderMetadata, openid ? "openid" : "oauth");
+  const tenant = readTenantIssuer(extra.tenantIssuer, metadata.issuer);
+  const auth = readAuth(options.auth, metadata);
+  // The template names no one provider, so an assertion addressed to it would be refused.
+  if (tenant !== undefined && "audience" in auth && auth.audience === "issuer") {
+    throw new TypeError(`${PREFIX} a tenantIssuer client's assertion needs auth.audience "token_endpoint"`);
+  }
   return Object.freeze({
     metadata,
     clientId: readClientId(options.clientId),
     redirectUri: readRedirectUri(options.redirectUri),
-    auth: readAuth(options.auth, metadata),
+    auth,
     fetch: readOptionalFunction<typeof fetch>(options.fetch, "fetch"),
     timeoutMs: readTimeoutSeconds(options.timeout, `${PREFIX} timeout`) * SECONDS_TO_MILLISECONDS,
     clockTolerance: readBoundedInteger(options.clockTolerance, {
@@ -272,7 +330,16 @@ export function resolveClientOptions(options: ClientOptions): ResolvedClientOpti
       fallback: 60,
     }),
     now: readNow(options.now),
-    idTokenAlgorithms: readIdTokenAlgorithms(metadata),
-    logoutSessionRequired: readLogoutSessionRequired(options.backchannelLogout),
+    idTokenAlgorithms: openid ? readIdTokenAlgorithms(metadata) : Object.freeze([]),
+    logoutSessionRequired: readLogoutSessionRequired(extra.backchannelLogout),
+    openid,
+    tenant,
   });
+}
+
+function readOpenid(value: unknown): boolean {
+  if (value !== undefined && typeof value !== "boolean") {
+    throw new TypeError(`${PREFIX} openid must be a boolean`);
+  }
+  return value !== false;
 }

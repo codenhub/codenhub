@@ -105,7 +105,14 @@ describe("requirePkce: false", () => {
     expect(response.status).toBe(400);
     expect(await response.text()).toBe(INVALID_GRANT);
     expect(seen).toEqual([
-      { endpoint: "token", reason: "code_verifier_unexpected", status: 400, clientId: LEGACY_CLIENT },
+      {
+        endpoint: "token",
+        reason: "code_verifier_unexpected",
+        status: 400,
+        clientId: LEGACY_CLIENT,
+        grantId: expect.any(String),
+        subject: "user-1",
+      },
     ]);
   });
 

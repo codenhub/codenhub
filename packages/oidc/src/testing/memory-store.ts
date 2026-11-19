@@ -175,13 +175,21 @@ function copyObject<T>(value: T): T {
   return typeof value === "object" && value !== null && !Array.isArray(value) ? { ...value } : value;
 }
 
-/** Copies a client's authentication, and its list of secret digests, which the caller may otherwise mutate. */
+/**
+ * Copies a client's authentication, and its list of secret digests or of `client_secret_jwt` keys, which the caller
+ * may otherwise mutate. The keys themselves are shared, as every `@codenhub/jwt` key is.
+ */
 function copyAuth(auth: ClientRecord["auth"]): ClientRecord["auth"] {
   const copy = copyObject(auth);
   // Tested by type, not by `copy !== auth`: a malformed `NaN` is unequal to itself, and `in` throws on a primitive.
-  return typeof copy === "object" && copy !== null && "secretHashes" in copy
-    ? { ...copy, secretHashes: copyList(copy.secretHashes) }
-    : copy;
+  if (typeof copy !== "object" || copy === null) {
+    return copy;
+  }
+  if ("secretHashes" in copy) {
+    return { ...copy, secretHashes: copyList(copy.secretHashes) };
+  }
+  // A `private_key_jwt` key set is one object, not a list, so only the `client_secret_jwt` list is copied.
+  return copy.method === "client_secret_jwt" ? { ...copy, keys: copyList(copy.keys) } : copy;
 }
 
 /** Copies an array; any other value is returned unchanged. */

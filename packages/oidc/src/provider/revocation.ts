@@ -1,6 +1,7 @@
 import { digestKey } from "../shared/encoding";
-import { refuse } from "./diagnostics";
+import { type GrantOfRecord, refuse } from "./diagnostics";
 import type { ResolvedOptions } from "./options";
+import { readAccessTokenRecord, readRefreshTokenRecord } from "./records";
 import { revocationResponse, tokenErrorResponse } from "./responses";
 import { readClientRequest } from "./token";
 
@@ -23,6 +24,9 @@ import { readClientRequest } from "./token";
  *
  * Expiry is not checked: an expired token the store still holds revokes its grant.
  *
+ * Each answer that revoked a grant is reported to `onDiagnostic` as `token_revoked`, with the grant, and its subject
+ * when the store returned the whole record; an unknown token revokes nothing and is not reported.
+ *
  * Never throws for a request. Store rejections propagate, and a request whose body was already read rejects with
  * `TypeError`.
  *
@@ -41,16 +45,18 @@ export async function handleRevocation(options: ResolvedOptions, request: Reques
     return refuse(tokenErrorResponse("invalid_request"), "token_missing", clientId);
   }
   const key = await digestKey(token);
-  const otherClient = (): Response =>
-    refuse(tokenErrorResponse("invalid_request"), "token_of_another_client", clientId);
+  // A revocation that ends a grant is a security event the operator logs like a refusal (`token_revoked`).
+  const revoked = (grant: GrantOfRecord): Response => refuse(revocationResponse(), "token_revoked", clientId, grant);
 
-  const accessToken = await options.store.findAccessToken(key);
-  if (accessToken !== undefined) {
+  const found = await options.store.findAccessToken(key);
+  if (found !== undefined) {
+    const accessToken = readAccessTokenRecord(found);
+    const grant = { grantId: accessToken.grantId, subject: accessToken.subject };
     if (accessToken.clientId !== clientId) {
-      return otherClient();
+      return refuse(tokenErrorResponse("invalid_request"), "token_of_another_client", clientId, grant);
     }
     await options.store.revokeGrant(accessToken.grantId);
-    return revocationResponse();
+    return revoked(grant);
   }
 
   const consumption = await options.store.consumeRefreshToken(key);
@@ -60,8 +66,12 @@ export async function handleRevocation(options: ResolvedOptions, request: Reques
   if (consumption.status === "replayed") {
     // A spent refresh token presented again is a replay wherever it arrives.
     await options.store.revokeGrant(consumption.grantId);
-    return revocationResponse();
+    return revoked({ grantId: consumption.grantId });
   }
-  await options.store.revokeGrant(consumption.record.grantId);
-  return consumption.record.clientId === clientId ? revocationResponse() : otherClient();
+  const record = readRefreshTokenRecord(consumption.record);
+  const grant = { grantId: record.grantId, subject: record.subject };
+  await options.store.revokeGrant(record.grantId);
+  return record.clientId === clientId
+    ? revoked(grant)
+    : refuse(tokenErrorResponse("invalid_request"), "token_of_another_client", clientId, grant);
 }

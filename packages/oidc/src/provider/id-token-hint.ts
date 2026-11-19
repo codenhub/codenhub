@@ -17,8 +17,8 @@ export interface IdTokenHint {
 }
 
 /**
- * Verifies an `id_token_hint` as an ID token this provider issued: signed by one of its keys, with its issuer and
- * typed `JWT`, or `undefined` when it is not one.
+ * Verifies an `id_token_hint` as an ID token this provider issued: signed by one of its published keys, a signing key
+ * or a verification key, with its issuer and typed `JWT`, or `undefined` when it is not one.
  *
  * @remarks
  * It may have expired, as a hint normally has by the time it is sent back (RP-Initiated Logout 1.0 §2, OpenID
@@ -36,7 +36,7 @@ export async function verifyIdTokenHint(
   }
   const verifyAt = (now: number): ReturnType<ReturnType<typeof createVerifier>> =>
     createVerifier({
-      keys: createKeySet(options.publicKeys),
+      keys: createKeySet(options.publishedKeys),
       issuer: options.issuer,
       type: "JWT",
       // As long as the ID tokens a client of this package accepts; the default of @codenhub/jwt is 8192.

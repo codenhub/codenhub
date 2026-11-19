@@ -198,3 +198,38 @@ describe("authenticate", () => {
     );
   });
 });
+
+describe("private_key_jwt assertion header", () => {
+  /** Decodes the header of a compact JWT without verifying it. */
+  const headerOf = (token: string): Record<string, unknown> =>
+    JSON.parse(Buffer.from(token.split(".")[0] ?? "", "base64url").toString("utf8")) as Record<string, unknown>;
+  const X5T = "A".repeat(27);
+  const X5T_S256 = "b_-".repeat(14) + "c";
+
+  it("adds the certificate thumbprints to the header", async () => {
+    const form = new URLSearchParams();
+    const auth: ClientAuth = {
+      method: "private_key_jwt",
+      key: clientKeys.privateKey,
+      header: { x5t: X5T, "x5t#S256": X5T_S256 },
+    };
+
+    await authenticate(resolve(auth), form);
+
+    expect(headerOf(form.get("client_assertion") ?? "")).toMatchObject({ x5t: X5T, "x5t#S256": X5T_S256 });
+  });
+
+  it.each([
+    ["another parameter", { kid: "other" }],
+    ["an x5c chain", { x5c: ["MIIB"] }],
+    ["a hex thumbprint", { x5t: "ab".repeat(20) }],
+    ["a padded thumbprint", { x5t: `${"A".repeat(26)}=` }],
+    ["a non-string thumbprint", { "x5t#S256": 1 }],
+    ["a non-object", "x5t"],
+  ])("throws TypeError for a header with %s, never echoing the value", (_name, header) => {
+    const auth = { method: "private_key_jwt", key: clientKeys.privateKey, header } as unknown as ClientAuth;
+
+    expect(() => resolve(auth)).toThrow(TypeError);
+    expect(() => resolve(auth)).not.toThrow(/abab|MIIB|AAAA/);
+  });
+});

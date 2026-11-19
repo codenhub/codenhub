@@ -7,6 +7,7 @@ import { parseParameters } from "../shared/parameters";
 import { fail, ok } from "../shared/result";
 import type { OidcIssue, OidcResult } from "../shared/types";
 import { azpIssues, failAll, fromJwtIssues } from "./id-token";
+import { tenantIssuerIssues } from "./issuer";
 import type { ResolvedClientOptions } from "./options";
 import type { BackchannelLogout } from "./types";
 
@@ -73,6 +74,9 @@ function claimIssues(payload: JwtPayload, options: ResolvedClientOptions): OidcI
     issues.push(claimIssue("nonce", "invalid_claim"));
   }
   issues.push(...azpIssues(payload, options.clientId, "logout_token"));
+  if (options.tenant !== undefined) {
+    issues.push(...tenantIssuerIssues(payload, options.tenant, { code: "invalid_logout_token", path: "logout_token" }));
+  }
   return issues;
 }
 
@@ -92,11 +96,12 @@ function claimIssues(payload: JwtPayload, options: ResolvedClientOptions): OidcI
 export function createLogoutTokenValidator(options: ResolvedClientOptions, keys: KeySet): LogoutTokenValidator {
   const verify = createVerifier({
     keys,
-    issuer: options.metadata.issuer,
+    // A `{tenantid}` template names no token's issuer, so `iss` is checked against it after the signature.
+    ...(options.tenant === undefined ? { issuer: options.metadata.issuer } : {}),
     audience: options.clientId,
     type: LOGOUT_TOKEN_TYPE,
     clockTolerance: options.clockTolerance,
-    requiredClaims: ["iat", "exp", "jti", "events"],
+    requiredClaims: ["iss", "iat", "exp", "jti", "events"],
     now: options.now,
   });
   return async (logoutToken) => {

@@ -78,8 +78,13 @@ export function checkClientRecord(
   ) {
     return invalid("must carry a non-empty auth.secretHashes list of non-empty strings for a client secret method");
   }
-  if (auth.method === "client_secret_jwt" && !isRecord(auth.key)) {
-    return invalid("must carry auth.key for client_secret_jwt");
+  if (
+    auth.method === "client_secret_jwt" &&
+    (!Array.isArray(auth.keys) ||
+      auth.keys.length === 0 ||
+      !Array.from(auth.keys as unknown[]).every((key) => isRecord(key) && key.kind === "secret"))
+  ) {
+    return invalid("must carry a non-empty auth.keys list of secret keys for client_secret_jwt");
   }
   if (auth.method === "private_key_jwt" && (!isRecord(auth.keys) || typeof auth.keys.select !== "function")) {
     return invalid("must carry an auth.keys key set for private_key_jwt");

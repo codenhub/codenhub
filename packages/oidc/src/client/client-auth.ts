@@ -2,7 +2,7 @@ import { type SigningKey, sign } from "@codenhub/jwt";
 
 import { encodeBase64Url, randomToken } from "../shared/encoding";
 import type { ResolvedClientOptions } from "./options";
-import type { AssertionAudience } from "./types";
+import type { AssertionAudience, AssertionHeader } from "./types";
 
 /** The client assertion type of RFC 7523 §2.2, the only one a provider accepts. */
 const CLIENT_ASSERTION_TYPE = "urn:ietf:params:oauth:client-assertion-type:jwt-bearer";
@@ -42,9 +42,12 @@ function signAssertion(
   options: ResolvedClientOptions,
   key: SigningKey,
   audience: AssertionAudience | undefined,
+  header?: AssertionHeader,
 ): Promise<string> {
   const nowSeconds = Math.floor(options.now() / MILLISECONDS_PER_SECOND);
   return sign({
+    // Only the certificate thumbprints `createClient` checked; jwt writes them after `alg` and `kid`.
+    ...(header === undefined ? {} : { header: { ...header } }),
     payload: {
       iss: options.clientId,
       sub: options.clientId,
@@ -90,7 +93,10 @@ export async function authenticate(
     case "private_key_jwt":
       form.set("client_id", clientId);
       form.set("client_assertion_type", CLIENT_ASSERTION_TYPE);
-      form.set("client_assertion", await signAssertion(options, auth.key, auth.audience));
+      form.set(
+        "client_assertion",
+        await signAssertion(options, auth.key, auth.audience, "header" in auth ? auth.header : undefined),
+      );
       return {};
   }
 }

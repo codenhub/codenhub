@@ -13,7 +13,9 @@ import { MAX_ID_TOKEN_LENGTH } from "../shared/limits";
 import { fail, ok } from "../shared/result";
 import { computeTokenHash } from "../shared/token-hash";
 import type { IdTokenClaims, OidcIssue, OidcResult } from "../shared/types";
+import { tenantIssuerIssues } from "./issuer";
 import type { ResolvedClientOptions } from "./options";
+import type { PreviousIdToken } from "./types";
 
 /** What an ID token must match for this sign-in, or for this refresh. Each member is checked only when set. */
 export interface IdTokenExpectations {
@@ -29,6 +31,11 @@ export interface IdTokenExpectations {
   readonly accessToken?: string;
   /** The `sub` the token must carry, such as the one a refresh continues. */
   readonly subject?: string;
+  /**
+   * The claims of the ID token a refresh continues (OpenID Connect Core §12.2): `iss`, `sub`, `aud` and `azp` must be
+   * the same, `auth_time` too when both carry it, and a `nonce` is allowed only when it is the original one.
+   */
+  readonly previous?: PreviousIdToken;
 }
 
 /** The validator {@link createIdTokenValidator} returns. */
@@ -59,7 +66,7 @@ const OTHER_TOKEN_TYPES: ReadonlySet<string> = new Set([AT_JWT, "logout+jwt"]);
  * A `typ` names another token than an ID token when, lowercased and without an `application/` prefix, it is
  * `at+jwt` or `logout+jwt`.
  */
-const isOtherTokenType = (typ: string | undefined): boolean =>
+export const isOtherTokenType = (typ: string | undefined): boolean =>
   typ !== undefined && OTHER_TOKEN_TYPES.has(typ.toLowerCase().replace(APPLICATION_PREFIX, ""));
 
 /** The payload claim an issue names, as its path: `["id_token", "payload", claim]`. */
@@ -88,8 +95,8 @@ export function failAll(issues: readonly OidcIssue[]): OidcResult<never> {
  */
 export function fromJwtIssues(
   issues: readonly JwtIssue[],
-  code: "invalid_id_token" | "invalid_logout_token" = "invalid_id_token",
-  token: "id_token" | "logout_token" = "id_token",
+  code: "invalid_id_token" | "invalid_logout_token" | "invalid_userinfo" = "invalid_id_token",
+  token: "id_token" | "logout_token" | "userinfo" = "id_token",
 ): OidcResult<never> {
   return failAll(
     issues.map((issue) => ({
@@ -143,6 +150,51 @@ function authTimeIssues(
   return requestedAt - authTime > seconds + options.clockTolerance
     ? [{ code: "auth_too_old", path: claimPath("auth_time") }]
     : [];
+}
+
+/** An audience as a set, since `"a"` and `["a"]` name the same one (RFC 7519 §4.1.3). */
+function audienceSet(aud: unknown): ReadonlySet<unknown> {
+  return new Set(Array.isArray(aud) ? aud : [aud]);
+}
+
+function sameAudience(left: unknown, right: unknown): boolean {
+  const a = audienceSet(left);
+  const b = audienceSet(right);
+  return a.size === b.size && [...a].every((value) => b.has(value));
+}
+
+/**
+ * Checks a refreshed ID token against the one it continues (OpenID Connect Core §12.2). `sub` is checked with the
+ * expected subject, and `nonce` with the expected nonce, so this covers the rest: a token for another issuer,
+ * audience, party, or authentication is `id_token_mismatch`.
+ */
+function previousIssues(payload: JwtPayload, previous: PreviousIdToken): OidcIssue[] {
+  const mismatch = (claim: string): OidcIssue => ({ code: "id_token_mismatch", path: claimPath(claim) });
+  const issues: OidcIssue[] = [];
+  if (payload.iss !== previous.iss) {
+    issues.push(mismatch("iss"));
+  }
+  if (!sameAudience(payload.aud, previous.aud)) {
+    issues.push(mismatch("aud"));
+  }
+  if (payload.azp !== previous.azp) {
+    issues.push(mismatch("azp"));
+  }
+  const authTime = payload.auth_time;
+  if (authTime !== undefined && previous.auth_time !== undefined && authTime !== previous.auth_time) {
+    issues.push(mismatch("auth_time"));
+  }
+  // A refreshed token need not carry the nonce, but when it does it must be the original one (§12.2).
+  if (payload.nonce !== undefined) {
+    const matches =
+      typeof payload.nonce === "string" &&
+      previous.nonce !== undefined &&
+      timingSafeEqual(payload.nonce, previous.nonce);
+    if (!matches) {
+      issues.push({ code: "nonce_mismatch", path: claimPath("nonce") });
+    }
+  }
+  return issues;
 }
 
 /** `at_hash` is optional in the code flow, so it is checked only when present and an access token is expected. */
@@ -202,6 +254,12 @@ async function claimIssues(
   if (expected.subject !== undefined && isNonEmptyString(payload.sub) && payload.sub !== expected.subject) {
     issues.push({ code: "subject_mismatch", path: claimPath("sub") });
   }
+  if (expected.previous !== undefined) {
+    issues.push(...previousIssues(payload, expected.previous));
+  }
+  if (options.tenant !== undefined) {
+    issues.push(...tenantIssuerIssues(payload, options.tenant, { code: "invalid_id_token", path: "id_token" }));
+  }
   return issues;
 }
 
@@ -227,7 +285,8 @@ export function createProviderKeySet(options: ResolvedClientOptions): KeySet {
  * @remarks
  * The signature must verify against a key the provider's JWKS publishes, with one of the asymmetric
  * algorithms both sides support. The issuer and audience must match, the token must not be expired, and
- * the claims the expectations name must match. Every problem found is returned, not only the first.
+ * the claims the expectations name must match. With a `{tenantid}` issuer template, the issuer is the template with
+ * the token's verified `tid` in place, which must be an allowed tenant. Every problem found is returned, not only the first.
  *
  * @param options - The resolved client options, supplying the issuer, client, clock, and JWKS endpoint.
  * @param keys - The provider's key set, shared with the logout token validator so the JWKS is fetched once.
@@ -240,10 +299,11 @@ export function createIdTokenValidator(
 ): IdTokenValidator {
   const verify = createVerifier({
     keys,
-    issuer: options.metadata.issuer,
+    // A `{tenantid}` template names no token's issuer, so `iss` is checked against it after the signature.
+    ...(options.tenant === undefined ? { issuer: options.metadata.issuer } : {}),
     audience: options.clientId,
     clockTolerance: options.clockTolerance,
-    requiredClaims: ["sub", "exp", "iat"],
+    requiredClaims: ["iss", "sub", "exp", "iat"],
     // A token with many claims, such as a user's groups, outgrows the verifier's 8192-character default, and refusing
     // it after the code is spent leaves the user unable to sign in. The token response that carries it is already
     // capped at `MAX_RESPONSE_BYTES`, which is also the verifier's ceiling.

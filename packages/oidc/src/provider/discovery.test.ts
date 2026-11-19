@@ -67,7 +67,7 @@ describe("buildMetadata", () => {
       jwks_uri: `${ISSUER}/jwks`,
       scopes_supported: ["openid", "offline_access", "profile", "email", "address", "phone"],
       response_types_supported: ["code"],
-      response_modes_supported: ["query"],
+      response_modes_supported: ["query", "form_post"],
       grant_types_supported: ["authorization_code", "refresh_token", "client_credentials"],
       subject_types_supported: ["public"],
       id_token_signing_alg_values_supported: ["ES256"],
@@ -97,6 +97,7 @@ describe("buildMetadata", () => {
       claims_parameter_supported: false,
       request_parameter_supported: false,
       request_uri_parameter_supported: false,
+      prompt_values_supported: ["none", "login", "consent", "select_account", "create"],
     });
   });
 
@@ -168,7 +169,26 @@ describe("buildMetadata and per-client ID token algorithms", () => {
   });
 });
 
+describe("buildMetadata with verification keys", () => {
+  it("leaves a verification key's algorithm out of id_token_signing_alg_values_supported", async () => {
+    const incoming = await keyPair("next", "RS256");
+    const options = resolve({ verificationKeys: [incoming.publicKey] }, [await keyPair("current")]);
+
+    expect(buildMetadata(options).id_token_signing_alg_values_supported).toEqual(["ES256"]);
+  });
+});
+
 describe("createJwksDocument", () => {
+  it("shouldPublishVerificationKeysAfterTheSigningKeys", async () => {
+    const incoming = await keyPair("next", "EdDSA");
+    const retiring = await keyPair("previous");
+    const options = resolve({ verificationKeys: [incoming.publicKey, retiring.publicKey] }, [await keyPair("current")]);
+
+    const document = await createJwksDocument(options)();
+
+    expect(document.keys.map((key) => key.kid)).toEqual(["current", "next", "previous"]);
+  });
+
   it("shouldExportOneEntryPerKeyWithItsKidAndAlg", async () => {
     const options = resolve({}, [await keyPair("first"), await keyPair("second", "EdDSA")]);
 
@@ -200,12 +220,12 @@ describe("createJwksDocument", () => {
     const good = await keyPair("2026-10");
     const bad = { kind: "public", alg: "ES256", kid: "2026-10" } as unknown as KeyPair["publicKey"];
     // Mutating the array between calls simulates a key that becomes valid after a transient failure.
-    const publicKeys = [bad];
-    const options = { ...resolve({}, [good]), publicKeys } as ResolvedOptions;
+    const publishedKeys = [bad];
+    const options = { ...resolve({}, [good]), publishedKeys } as ResolvedOptions;
     const jwks = createJwksDocument(options);
 
     await expect(jwks()).rejects.toThrow(TypeError);
-    publicKeys.splice(0, 1, good.publicKey);
+    publishedKeys.splice(0, 1, good.publicKey);
 
     expect(await jwks()).toEqual({ keys: [expect.objectContaining({ kid: "2026-10" })] });
   });

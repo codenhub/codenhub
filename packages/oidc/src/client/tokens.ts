@@ -45,7 +45,7 @@ const invalidMember = (name: string): OidcIssue => ({ code: "invalid_token_respo
  * Collects every problem with the token response, so a provider that gets several members wrong is
  * reported in one result. The checks are the ones RFC 6749 §5.1 and OpenID Connect Core §3.1.3.3 state.
  */
-function tokenResponseIssues(body: Readonly<Record<string, unknown>>): OidcIssue[] {
+function tokenResponseIssues(body: Readonly<Record<string, unknown>>, openid: boolean): OidcIssue[] {
   const issues: OidcIssue[] = [];
   const accessToken = member(body, "access_token");
   if (!isAccessToken(accessToken)) {
@@ -62,7 +62,8 @@ function tokenResponseIssues(body: Readonly<Record<string, unknown>>): OidcIssue
   if (Object.hasOwn(body, "refresh_token") && !isNonEmptyString(member(body, "refresh_token"))) {
     issues.push(invalidMember("refresh_token"));
   }
-  if (Object.hasOwn(body, "id_token") && !isNonEmptyString(member(body, "id_token"))) {
+  // A plain OAuth 2.0 client ignores an ID token, so a malformed one does not fail its sign-in.
+  if (openid && Object.hasOwn(body, "id_token") && !isNonEmptyString(member(body, "id_token"))) {
     issues.push(invalidMember("id_token"));
   }
   if (Object.hasOwn(body, "scope") && typeof member(body, "scope") !== "string") {
@@ -87,11 +88,11 @@ const splitScope = (scope: string): string[] => scope.split(SPACE).filter((token
  * Turns a token response the checks accepted into a {@link TokenSet}. The expiry is computed here, from
  * the clock at receipt, so later callers compare against one fixed instant.
  */
-function toTokenSet(body: Readonly<Record<string, unknown>>, now: () => number): TokenSet {
+function toTokenSet(body: Readonly<Record<string, unknown>>, now: () => number, openid: boolean): TokenSet {
   const accessToken = body.access_token as string;
   const expiresIn = readExpiresIn(member(body, "expires_in"));
   const refreshToken = member(body, "refresh_token") as string | undefined;
-  const idToken = member(body, "id_token") as string | undefined;
+  const idToken = openid ? (member(body, "id_token") as string | undefined) : undefined;
   const scope = member(body, "scope") as string | undefined;
   return {
     accessToken,
@@ -109,9 +110,10 @@ function toTokenSet(body: Readonly<Record<string, unknown>>, now: () => number):
  * Sends a request to the token endpoint, authenticated as the client is configured, and reads the tokens.
  *
  * @remarks
- * A non-`200` response with an OAuth `error` is `provider_error`, with the code narrowed by
- * {@link readErrorCode} so the provider's own text never reaches the result. Any other non-`200` is
- * `request_failed`. A `200` must be a valid token response. Never throws for any response.
+ * A response with an OAuth `error` is `provider_error`, with the code narrowed by {@link readErrorCode} so the
+ * provider's own text never reaches the result. That includes a `200`, which some providers, such as GitHub, answer
+ * an error with. Any other non-`200` is `request_failed`. A `200` must be a valid token response. A plain OAuth 2.0
+ * client ignores an `id_token` member. Never throws for any response.
  *
  * @param options - The resolved client options, supplying the endpoint, credentials, and clock.
  * @param form - The grant parameters. The credentials are added to it, so the caller must not reuse it.
@@ -135,14 +137,15 @@ export async function requestTokens(
     return response;
   }
   const { status, body } = response.value;
-  if (status !== HTTP_OK) {
+  // RFC 6749 §5.2 sends an error with 400, but GitHub sends it with 200; either way no token was issued.
+  if (status !== HTTP_OK || Object.hasOwn(body, "error")) {
     const error = member(body, "error");
-    return typeof error === "string"
+    return typeof error === "string" || status === HTTP_OK
       ? fail({ code: "provider_error", params: { endpoint: "token", error: readErrorCode(error) } })
       : requestFailure("token", "status", status);
   }
-  const issues = tokenResponseIssues(body);
-  return issues.length === 0 ? ok(toTokenSet(body, options.now)) : failAll(issues);
+  const issues = tokenResponseIssues(body, options.openid);
+  return issues.length === 0 ? ok(toTokenSet(body, options.now, options.openid)) : failAll(issues);
 }
 
 /**

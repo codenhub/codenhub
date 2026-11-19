@@ -359,3 +359,22 @@ describe("endSession", () => {
     await expect(result).rejects.toThrow("postLogoutRedirectUris");
   });
 });
+
+describe("endSession with verification keys", () => {
+  it("accepts a hint signed by a verification key, as one signed before a rotation is", async () => {
+    const retired = await generateKeyPair({ alg: "ES256", kid: "k0" });
+    const pair = await generateKeyPair({ alg: "ES256", kid: "k1" });
+    const op = createProvider({
+      issuer: ISSUER,
+      signingKeys: [pair],
+      verificationKeys: [retired.publicKey],
+      store: createMemoryStore({ clients: CLIENTS }),
+      claims: () => ({}),
+      now: () => NOW_MS,
+    });
+
+    const result = await op.endSession(logout({ id_token_hint: await idToken(retired) }));
+
+    expect(result.ok && result.value).toMatchObject({ clientId: "web", subject: "user-1" });
+  });
+});

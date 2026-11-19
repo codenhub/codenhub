@@ -1,5 +1,6 @@
 import { createKeySet, createVerifier, generateSecretKey, sign } from "@codenhub/jwt";
 
+import { OPTIONAL_FIELDS } from "../provider/records";
 import type {
   AccessTokenRecord,
   ClientRecord,
@@ -116,6 +117,8 @@ function interactionFixture(): InteractionRecord {
     claimsLocales: ["en"],
     display: "popup",
     resources: ["https://api.example/", "urn:example:data"],
+    responseMode: "form_post",
+    extensions: { screen_hint: "signup" },
     createdAt: now,
     expiresAt: now + LIFETIME_SECONDS,
   };
@@ -146,6 +149,10 @@ function accessTokenFixture(grantId: string): AccessTokenRecord {
     clientId: "conformance-client",
     subject: "conformance-user",
     scopes: ["openid", "profile"],
+    grantType: "authorization_code",
+    authTime: nowSeconds(),
+    amr: ["pwd", "otp"],
+    acr: "urn:example:loa2",
     sessionId: "conformance-session",
     audience: ["https://api.example/", "urn:example:data"],
     expiresAt: nowSeconds() + LIFETIME_SECONDS,
@@ -164,8 +171,39 @@ function refreshTokenFixture(grantId: string): RefreshTokenRecord {
     acr: "urn:example:loa2",
     sessionId: "conformance-session",
     resources: ["https://api.example/", "urn:example:data"],
+    issuedAt: now,
     expiresAt: now + LIFETIME_SECONDS,
   };
+}
+
+/** A copy of `record` without the fields named in `names`, as the provider saves a record that has none of them. */
+function withoutFields<T extends object>(record: T, names: readonly string[]): T {
+  return Object.fromEntries(Object.entries(record).filter(([name]) => !names.includes(name))) as T;
+}
+
+/**
+ * Checks a record saved without any optional field: each must come back absent, as a missing member, `undefined`
+ * or `null`, and every other field as it was saved. `""`, `[]`, `0` or `false` is a value, and fails naming the field.
+ */
+function assertOptionalFieldsAbsent(
+  method: string,
+  actual: unknown,
+  expected: object,
+  optional: readonly string[],
+): void {
+  assert(typeof actual === "object" && actual !== null, `${method} must return the record that was saved`);
+  const returned = actual as Record<string, unknown>;
+  for (const name of optional) {
+    const value = returned[name];
+    assert(
+      value === undefined || value === null,
+      `${method} must return a record saved without ${name} with no ${name}: missing, undefined or null, never another value`,
+    );
+  }
+  assert(
+    sameRecord(withoutFields(returned, optional), expected),
+    `${method} must return the other fields of a record saved without optional fields as they were saved`,
+  );
 }
 
 /** Passes when `operation` rejects. `rule` is the failure message when it resolves. */
@@ -238,63 +276,42 @@ const cases: StoreConformanceCase[] = [
     },
   ),
 
-  defineCase("a record saved without resources or an audience comes back without them", async (createStore) => {
+  defineCase("a record saved without its optional fields comes back with each one absent", async (createStore) => {
     const store = await createStore(NO_CLIENTS);
     const keys = { interaction: newKey(), code: newKey(), accessToken: newKey(), refreshToken: newKey() };
-    // A request that names no resource leaves every record without one, and an opaque access token issued for no
-    // resource has no audience. A column that comes back as null, or as an empty list, is not the same record.
-    const without = <T extends object>(record: T): T =>
-      Object.fromEntries(Object.entries(record).filter(([name]) => name !== "resources" && name !== "audience")) as T;
-    const interaction = without(interactionFixture());
-    const code = without(codeFixture(newKey()));
-    const accessToken = without(accessTokenFixture(newKey()));
-    const refreshToken = without(refreshTokenFixture(newKey()));
+    // A request without state, nonce, PKCE or resources, a grant without amr, acr or session, and a row written
+    // before a field existed all leave fields out. The provider reads null as absent, so a SQL column that returns
+    // NULL passes; an empty string, an empty list, 0 or false is a value, and the provider would use it.
+    const interaction = withoutFields(interactionFixture(), OPTIONAL_FIELDS.interaction);
+    const code = withoutFields(codeFixture(newKey()), OPTIONAL_FIELDS.code);
+    const accessToken = withoutFields(accessTokenFixture(newKey()), OPTIONAL_FIELDS.accessToken);
+    const refreshToken = withoutFields(refreshTokenFixture(newKey()), OPTIONAL_FIELDS.refreshToken);
     await store.saveInteraction(keys.interaction, interaction);
     await store.saveCode(keys.code, code);
     await store.saveAccessToken(keys.accessToken, accessToken);
     await store.saveRefreshToken(keys.refreshToken, refreshToken);
-    assert(
-      sameRecord(await store.consumeInteraction(keys.interaction), interaction),
-      "consumeInteraction must return a record saved without resources as it was, with no resources",
+    assertOptionalFieldsAbsent(
+      "consumeInteraction",
+      await store.consumeInteraction(keys.interaction),
+      interaction,
+      OPTIONAL_FIELDS.interaction,
     );
     const consumedCode = await store.consumeCode(keys.code);
-    assert(
-      consumedCode !== undefined && consumedCode.status === "consumed" && sameRecord(consumedCode.record, code),
-      "consumeCode must return a record saved without resources as it was, with no resources",
-    );
-    assert(
-      sameRecord(await store.findAccessToken(keys.accessToken), accessToken),
-      "findAccessToken must return a record saved without audience as it was, with no audience",
+    assert(consumedCode?.status === "consumed", "consumeCode must return consumed on the first call");
+    assertOptionalFieldsAbsent("consumeCode", consumedCode.record, code, OPTIONAL_FIELDS.code);
+    assertOptionalFieldsAbsent(
+      "findAccessToken",
+      await store.findAccessToken(keys.accessToken),
+      accessToken,
+      OPTIONAL_FIELDS.accessToken,
     );
     const consumedRefresh = await store.consumeRefreshToken(keys.refreshToken);
-    assert(
-      consumedRefresh !== undefined &&
-        consumedRefresh.status === "consumed" &&
-        sameRecord(consumedRefresh.record, refreshToken),
-      "consumeRefreshToken must return a record saved without resources as it was, with no resources",
-    );
-  }),
-
-  defineCase("a record saved without a codeChallenge comes back without one", async (createStore) => {
-    const store = await createStore(NO_CLIENTS);
-    const interactionKey = newKey();
-    const codeKey = newKey();
-    // A client with requirePkce: false sends none, so both records carry no challenge. A column that comes back
-    // as null, or as an empty string, is not the same record.
-    const withoutChallenge = <T extends object>(record: T): T =>
-      Object.fromEntries(Object.entries(record).filter(([name]) => name !== "codeChallenge")) as T;
-    const interaction = withoutChallenge(interactionFixture());
-    const code = withoutChallenge(codeFixture(newKey()));
-    await store.saveInteraction(interactionKey, interaction);
-    await store.saveCode(codeKey, code);
-    assert(
-      sameRecord(await store.consumeInteraction(interactionKey), interaction),
-      "consumeInteraction must return a record saved without codeChallenge as it was, with no codeChallenge",
-    );
-    const consumed = await store.consumeCode(codeKey);
-    assert(
-      consumed !== undefined && consumed.status === "consumed" && sameRecord(consumed.record, code),
-      "consumeCode must return a record saved without codeChallenge as it was, with no codeChallenge",
+    assert(consumedRefresh?.status === "consumed", "consumeRefreshToken must return consumed on the first call");
+    assertOptionalFieldsAbsent(
+      "consumeRefreshToken",
+      consumedRefresh.record,
+      refreshToken,
+      OPTIONAL_FIELDS.refreshToken,
     );
   }),
 
@@ -602,28 +619,47 @@ const cases: StoreConformanceCase[] = [
     );
   }),
 
-  defineCase("findClient returns a client_secret_jwt client whose key still verifies", async (createStore) => {
-    // Extractable, so an adapter that persists the key can export it as a JWK, as `docs/store.md` describes.
-    const key = await generateSecretKey({ alg: "HS256", extractable: true });
+  defineCase("findClient returns a client_secret_jwt client whose keys still verify", async (createStore) => {
+    // Extractable, so an adapter that persists the keys can export them as JWKs, as `docs/store.md` describes. Two
+    // keys, as a client has while its secret is rotated, in the order they were registered.
+    const keys = await Promise.all([
+      generateSecretKey({ alg: "HS256", extractable: true }),
+      generateSecretKey({ alg: "HS256", extractable: true }),
+    ]);
     const clientId = `conformance-${newKey()}`;
     const expected = { clientId, redirectUris: ["https://app.example/callback"], scopes: ["openid"] };
-    const client: ClientRecord = { ...expected, auth: { method: "client_secret_jwt", key } };
+    const client: ClientRecord = { ...expected, auth: { method: "client_secret_jwt", keys } };
     const store = await createStore({ clients: [client] });
     const found = await store.findClient(clientId);
     const { auth, ...rest } = found ?? client;
     assert(
-      found !== undefined && auth.method === "client_secret_jwt" && sameRecord(rest, expected),
-      "findClient must return a client_secret_jwt client with the values it was registered with",
+      found !== undefined &&
+        auth.method === "client_secret_jwt" &&
+        Array.isArray(auth.keys) &&
+        auth.keys.length === keys.length &&
+        sameRecord(rest, expected),
+      "findClient must return a client_secret_jwt client with the values and the number of keys it was registered with",
     );
     const now = nowSeconds();
-    const assertion = await sign({ payload: { iss: clientId, sub: clientId, iat: now, exp: now + 60 }, key });
-    let verified = false;
-    try {
-      verified = (await createVerifier({ keys: createKeySet([auth.key]), issuer: clientId })(assertion)).ok;
-    } catch {
-      // A key that is not a `SecretKey`, such as one rebuilt as a plain object, is refused with a TypeError.
-    }
-    assert(verified, "findClient must return a client_secret_jwt key that verifies what the registered key signed");
+    const verifiedEach = await Promise.all(
+      keys.map(async (key, index) => {
+        const assertion = await sign({ payload: { iss: clientId, sub: clientId, iat: now, exp: now + 60 }, key });
+        try {
+          const returned = auth.keys[index];
+          return (
+            returned !== undefined &&
+            (await createVerifier({ keys: createKeySet([returned]), issuer: clientId })(assertion)).ok
+          );
+        } catch {
+          // A key that is not a `SecretKey`, such as one rebuilt as a plain object, is refused with a TypeError.
+          return false;
+        }
+      }),
+    );
+    assert(
+      verifiedEach.every(Boolean),
+      "findClient must return each client_secret_jwt key, in its order, so that it verifies what the registered key signed",
+    );
   }),
 
   defineCase(

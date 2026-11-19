@@ -53,7 +53,7 @@ async function fixtures(): Promise<Fixtures> {
       ...base,
       auth: { method: "client_secret_post", secretHashes: [await hashClientSecret(postSecret)] },
     },
-    { clientId: "hmac", ...base, auth: { method: "client_secret_jwt", key: hmacKey } },
+    { clientId: "hmac", ...base, auth: { method: "client_secret_jwt", keys: [hmacKey] } },
     { clientId: "keyed", ...base, auth: { method: "private_key_jwt", keys: createKeySet([clientKey.publicKey]) } },
   ];
   return { clients, postSecret, hmacKey, clientKey, otherKey };
@@ -219,6 +219,55 @@ describe("authenticateClient: successful methods", () => {
     });
 
     expect(result.ok && result.client.clientId).toBe("hmac");
+  });
+
+  it("authenticates client_secret_jwt with any key of a client whose secret is being rotated", async () => {
+    const { clients } = await fixtures();
+    const [current, next, retired] = await Promise.all([
+      generateSecretKey({ alg: "HS256", extractable: false }),
+      generateSecretKey({ alg: "HS256", extractable: false }),
+      generateSecretKey({ alg: "HS256", extractable: false }),
+    ]);
+    const rotating: ClientRecord = {
+      clientId: "rotating",
+      redirectUris: [REDIRECT_URI],
+      scopes: ["openid"],
+      auth: { method: "client_secret_jwt", keys: [current, next] },
+    };
+    const options = await setup([...clients, rotating]);
+    const signedWith = (key: SecretKey, jti: string): Promise<string> =>
+      sign({ payload: { iss: "rotating", sub: "rotating", aud: ISSUER, exp: NOW_SECONDS + 300, jti }, key });
+    const present = async (token: string): Promise<ClientAuthResult> =>
+      authenticate(options, { client_id: "rotating", client_assertion_type: ASSERTION_TYPE, client_assertion: token });
+
+    const byCurrent = await present(await signedWith(current, "jti-current"));
+    const byNext = await present(await signedWith(next, "jti-next"));
+    const byRetired = await present(await signedWith(retired, "jti-retired"));
+
+    expect(byCurrent.ok && byCurrent.client.clientId).toBe("rotating");
+    expect(byNext.ok && byNext.client.clientId).toBe("rotating");
+    expect(await errorOf(byRetired)).toMatchObject({ status: 401, body: { error: "invalid_client" } });
+  });
+
+  it("throws a TypeError for a client_secret_jwt record with an empty key list", async () => {
+    const { clients } = await fixtures();
+    const options = await setup([
+      ...clients,
+      {
+        clientId: "keyless",
+        redirectUris: [REDIRECT_URI],
+        scopes: ["openid"],
+        auth: { method: "client_secret_jwt", keys: [] },
+      },
+    ]);
+    const token = await sign({
+      payload: { iss: "keyless", sub: "keyless", aud: ISSUER, exp: NOW_SECONDS + 300, jti: "jti-1" },
+      key: await generateSecretKey({ alg: "HS256" }),
+    });
+
+    await expect(
+      authenticate(options, { client_id: "keyless", client_assertion_type: ASSERTION_TYPE, client_assertion: token }),
+    ).rejects.toThrow(TypeError);
   });
 
   it("authenticates private_key_jwt with an assertion addressed to the issuer", async () => {

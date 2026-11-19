@@ -6,13 +6,19 @@ import type { ResolvedOptions } from "./options";
  * answers with this, and an ID token for a client with `idTokenClaims` carries it.
  *
  * @param options - Validated provider options.
- * @param grant - Who the claims are about, for which client and scopes.
+ * @param grant - Who the claims are about, for which client, scopes, grant and session.
  * @returns The released claims, with `sub` set.
  * @throws {TypeError} When the callback resolves to something that is not an object. Its own errors propagate.
  */
 export async function releaseClaims(
   options: ResolvedOptions,
-  grant: { readonly subject: string; readonly clientId: string; readonly scopes: readonly string[] },
+  grant: {
+    readonly subject: string;
+    readonly clientId: string;
+    readonly scopes: readonly string[];
+    readonly grantId: string;
+    readonly sessionId?: string;
+  },
 ): Promise<Record<string, unknown>> {
   const claimNames = claimNamesFor(options, grant.scopes);
   const released = await options.claims({
@@ -20,6 +26,8 @@ export async function releaseClaims(
     clientId: grant.clientId,
     scopes: grant.scopes,
     claims: claimNames,
+    grantId: grant.grantId,
+    ...(grant.sessionId === undefined ? {} : { sessionId: grant.sessionId }),
   });
   return releasedClaims(released, claimNames, grant.subject);
 }

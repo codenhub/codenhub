@@ -1,12 +1,16 @@
-/** A `prompt` value (OpenID Connect Core §3.1.2.1). */
-export type Prompt = "none" | "login" | "consent" | "select_account";
+/**
+ * A `prompt` value: one of OpenID Connect Core §3.1.2.1, or `create` (Initiating User Registration via OpenID Connect
+ * 1.0), which asks the app to show its sign-up page rather than its login page.
+ */
+export type Prompt = "none" | "login" | "consent" | "select_account" | "create";
 
 /** Object key or array index leading to the value an issue refers to. */
 export type OidcPathSegment = string | number;
 
 /**
  * OAuth 2.0 and OpenID Connect error codes a provider sends to a client, from RFC 6749 §4.1.2.1 and
- * §5.2, RFC 6750 §3.1, RFC 7009 §2.2.1, RFC 8707 §2, and OpenID Connect Core §3.1.2.6.
+ * §5.2, RFC 6750 §3.1, RFC 7009 §2.2.1, RFC 8707 §2, OpenID Connect Core §3.1.2.6, and OpenID Connect Core
+ * Unmet Authentication Requirements 1.0.
  */
 export type OAuthErrorCode =
   | "invalid_request"
@@ -31,7 +35,8 @@ export type OAuthErrorCode =
   | "request_not_supported"
   | "request_uri_not_supported"
   | "registration_not_supported"
-  | "invalid_target";
+  | "invalid_target"
+  | "unmet_authentication_requirements";
 
 /**
  * Stable category of a failure that callers can branch on without parsing messages.
@@ -62,6 +67,7 @@ export type OidcIssueCode =
   | "auth_time_missing"
   | "auth_too_old"
   | "subject_mismatch"
+  | "id_token_mismatch"
   // Client: back-channel logout
   | "invalid_logout_request"
   | "invalid_logout_token"
@@ -99,9 +105,11 @@ export interface OidcIssue {
    * fixed set: `endpoint` (`discovery`, `authorization`, `token`, `userinfo` or `revocation`) and `reason`
    * on `request_failed`, with `status` when the reason is `status`; `endpoint` and `error` (an
    * {@link OAuthErrorCode} or `unknown`) on `provider_error`; `jwtCode`, the `@codenhub/jwt` issue code, and
-   * that issue's own params on `invalid_id_token` and `invalid_logout_token`; `reason` on a provider `invalid_request`
+   * that issue's own params on `invalid_id_token`, `invalid_logout_token`, and a userinfo JWT's `invalid_userinfo`;
+   * `reason: "encrypted"` on `invalid_userinfo` for an encrypted userinfo JWT; `reason` on a provider `invalid_request`
    * the app renders, and on `invalid_callback` and `invalid_logout_request` a parameter failure: `duplicate`,
-   * `too_many`, `too_long` or `malformed`, or for a logout request's body, `too_large` or `unreadable`.
+   * `too_many`, `too_long` or `malformed`, or for a logout request's or `form_post` callback's body, `too_large` or
+   * `unreadable`.
    */
   readonly params?: Readonly<Record<string, string | number | boolean>>;
 }

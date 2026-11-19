@@ -1,9 +1,12 @@
 import type { ProviderDiagnostic, ProviderDiagnosticReason, ProviderOptions } from "./types";
 
 /** Why a refusal was sent, attached to the response that carries it. */
-interface Refusal {
-  readonly reason: ProviderDiagnosticReason;
-  readonly clientId?: string;
+type Refusal = Omit<ProviderDiagnostic, "endpoint" | "status">;
+
+/** The grant a refusal concerns, from the store: its identifier, and its subject when the whole record was read. */
+export interface GrantOfRecord {
+  readonly grantId: string;
+  readonly subject?: string;
 }
 
 /*
@@ -14,21 +17,32 @@ interface Refusal {
 const refusals = new WeakMap<Response, Refusal>();
 
 /**
- * Records why `response` refuses a request, for {@link reportRefusal}.
+ * Records why `response` refuses a request, or which security event it answers, for {@link reportRefusal}.
  *
- * @param response - The error response to send.
+ * @param response - The response to send.
  * @param reason - Why, from the fixed vocabulary.
  * @param clientId - The client, only when it comes from the store or an authenticated request.
+ * @param grant - The grant concerned, only from a record or a replay the store returned.
  * @returns `response`, unchanged.
  */
-export function refuse(response: Response, reason: ProviderDiagnosticReason, clientId?: string): Response {
-  refusals.set(response, clientId === undefined ? { reason } : { reason, clientId });
+export function refuse(
+  response: Response,
+  reason: ProviderDiagnosticReason,
+  clientId?: string,
+  grant?: GrantOfRecord,
+): Response {
+  refusals.set(response, {
+    reason,
+    ...(clientId === undefined ? {} : { clientId }),
+    ...(grant === undefined ? {} : { grantId: grant.grantId }),
+    ...(grant?.subject === undefined ? {} : { subject: grant.subject }),
+  });
   return response;
 }
 
 /**
- * Passes the refusal recorded for `response`, if any, to the app's `onDiagnostic` callback, with the request
- * that was refused.
+ * Passes the refusal or event recorded for `response`, if any, to the app's `onDiagnostic` callback, with the
+ * request it answers.
  *
  * @param onDiagnostic - The app's callback, when it set one.
  * @param endpoint - The endpoint that answered.

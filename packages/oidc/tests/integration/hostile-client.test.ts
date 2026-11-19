@@ -472,3 +472,173 @@ describe("userinfo", () => {
     expect(result).toEqual(requestFailed({ endpoint: "userinfo", reason: "timeout" }));
   });
 });
+
+describe("authorize: hostile extraParameters", () => {
+  const thrown = async (extraParameters: unknown): Promise<unknown> => {
+    try {
+      await harness.client.authorize({ extraParameters } as never);
+      return undefined;
+    } catch (error) {
+      return error;
+    }
+  };
+
+  it("refuses more parameters than the provider reads, a value over the URL limit, and a reserved name", async () => {
+    const many = Object.fromEntries(Array.from({ length: 1000 }, (_, index) => [`p${index}`, "hostile-value"]));
+    const results = [
+      await thrown(many),
+      await thrown({ a: "hostile-value".repeat(700) }),
+      await thrown({ redirect_uri: "https://evil.example/hostile-value" }),
+      await thrown({ request_uri: "urn:hostile-value" }),
+    ];
+
+    for (const error of results) {
+      expect(error).toBeInstanceOf(TypeError);
+      expect((error as Error).message).not.toContain("hostile-value");
+    }
+  });
+});
+
+describe("callback: hostile form_post", () => {
+  /** A started sign-in whose pending state asks for a POST callback, and the body the provider would post. */
+  const formPostStart = async () => {
+    const started = await startSignIn();
+    const pending = { ...started.pending, responseMode: "form_post" as const };
+    const body = new URL(started.location).searchParams.toString();
+    return { ...started, pending, body };
+  };
+  const post = (body: BodyInit, contentType = "application/x-www-form-urlencoded") =>
+    new Request(REDIRECT_URI, { method: "POST", headers: { "content-type": contentType }, body });
+
+  it("reads a valid posted response", async () => {
+    const { client, pending, body } = await formPostStart();
+
+    expect((await client.callback(post(body), pending)).ok).toBe(true);
+  });
+
+  it("refuses a body over 16384 bytes, streamed or declared, with invalid_callback too_large", async () => {
+    const { client, pending, body } = await formPostStart();
+    const huge = `${body}&pad=${"z".repeat(20_000)}`;
+    const stream = new ReadableStream<Uint8Array>({
+      start(controller) {
+        for (let index = 0; index < 40; index += 1) {
+          controller.enqueue(new TextEncoder().encode("z".repeat(1000)));
+        }
+        controller.close();
+      },
+    });
+    const streamed = new Request(REDIRECT_URI, {
+      method: "POST",
+      headers: { "content-type": "application/x-www-form-urlencoded" },
+      body: stream,
+      duplex: "half",
+    } as RequestInit);
+    const tooLarge = failedWith([
+      { code: "invalid_callback", path: ["callback", "body"], params: { reason: "too_large" } },
+    ]);
+
+    expect(await client.callback(post(huge), pending)).toEqual(tooLarge);
+    expect(await client.callback(streamed, pending)).toEqual(tooLarge);
+  });
+
+  it("refuses a body of invalid UTF-8, of the wrong type, or with too many parameters", async () => {
+    const { client, pending, body } = await formPostStart();
+    const many = Array.from({ length: 40 }, (_, index) => `p${index}=v`).join("&");
+
+    expect(await client.callback(post(new Uint8Array([0x73, 0x3d, 0xff])), pending)).toMatchObject(
+      failedWith([{ code: "invalid_callback", path: ["callback", "body"] }]),
+    );
+    expect(await client.callback(post(body, "text/plain"), pending)).toEqual(
+      failedWith([{ code: "invalid_callback", path: ["callback", "headers", "content-type"] }]),
+    );
+    expect(await client.callback(post(`${body}&${many}`), pending)).toEqual(
+      failedWith([{ code: "invalid_callback", path: ["callback", "body"], params: { reason: "too_many" } }]),
+    );
+  });
+
+  it("refuses a POST for a query sign-in, and a GET for a form_post one, before reading anything", async () => {
+    const started = await startSignIn();
+    const posted = await formPostStart();
+    const method = failedWith([{ code: "invalid_callback", path: ["callback", "method"] }]);
+
+    expect(
+      await started.client.callback(post(new URL(started.location).searchParams.toString()), started.pending),
+    ).toEqual(method);
+    expect(await posted.client.callback(new Request(posted.location), posted.pending)).toEqual(method);
+    expect(await posted.client.callback(new Request(posted.location, { method: "PUT" }), posted.pending)).toEqual(
+      method,
+    );
+  });
+});
+
+describe("userinfo: hostile application/jwt", () => {
+  const jwtResponse = (body: string) => () =>
+    new Response(body, { status: 200, headers: { "content-type": "application/jwt" } });
+  const askWith = async (body: string) => {
+    const tokens = await signedIn();
+    harness.setTamper(onlyAt(USERINFO_URL, jwtResponse(body)));
+    return harness.client.userinfo({ accessToken: tokens.tokens.accessToken, subject: "user-1" });
+  };
+  const codes = (result: { readonly ok: boolean; readonly error?: { readonly issues: readonly { code: string }[] } }) =>
+    result.ok ? [] : (result.error?.issues ?? []).map((issue) => issue.code);
+
+  it("refuses an encrypted token with reason encrypted", async () => {
+    expect(await askWith("eyJhbGciOiJSU0EtT0FFUCIsImVuYyI6IkEyNTZHQ00ifQ.k.iv.ct.tag")).toEqual(
+      failedWith([{ code: "invalid_userinfo", path: ["userinfo"], params: { reason: "encrypted" } }]),
+    );
+  });
+
+  it.each([
+    ["an unsigned token", unsignedToken({ sub: "user-1" }, { alg: "none" })],
+    ["garbage", "not a token at all"],
+    ["an empty body", ""],
+    ["four segments", "a.b.c.d"],
+    ["bad base64url", "!!!.???.***"],
+  ])("refuses %s with invalid_userinfo, not a network failure", async (_name, body) => {
+    const result = await askWith(body);
+
+    expect(codes(result).length).toBeGreaterThan(0);
+    expect(codes(result).every((code) => code === "invalid_userinfo")).toBe(true);
+  });
+
+  it("refuses a signed token of the wrong issuer, audience, or subject, and an ID token's own typ", async () => {
+    const result = await askWith(await forgeIdToken({ iss: "https://evil.example", aud: "other", sub: "user-2" }));
+    const logout = await askWith(await forgeIdToken({ iss: ISSUER, sub: "user-1" }, { typ: "logout+jwt" }));
+
+    expect(codes(result)).toEqual(["invalid_userinfo", "invalid_userinfo", "subject_mismatch"]);
+    expect(codes(logout)).toEqual(["invalid_userinfo"]);
+  });
+
+  it("fails a token over 65536 bytes with request_failed too_large", async () => {
+    expect(await askWith("a".repeat(70_000))).toEqual(requestFailed({ endpoint: "userinfo", reason: "too_large" }));
+  });
+
+  it("fails a JWT content type on a non-200 with request_failed status", async () => {
+    const tokens = await signedIn();
+    harness.setTamper(
+      onlyAt(
+        USERINFO_URL,
+        () => new Response("x.y.z", { status: 403, headers: { "content-type": "application/jwt" } }),
+      ),
+    );
+
+    expect(await harness.client.userinfo({ accessToken: tokens.tokens.accessToken, subject: "user-1" })).toEqual(
+      requestFailed({ endpoint: "userinfo", reason: "status", status: 403 }),
+    );
+  });
+});
+
+describe("token endpoint: error at 200", () => {
+  it("reports an error member in a 200 as provider_error, never its description", async () => {
+    const started = await startSignIn();
+    harness.setTamper(
+      onlyAt(TOKEN_URL, () => jsonResponse({ error: "invalid_grant", error_description: "hostile-description" })),
+    );
+
+    const result = await started.client.callback(started.location, started.pending);
+
+    expect(result).toEqual(
+      failedWith([{ code: "provider_error", params: { endpoint: "token", error: "invalid_grant" } }]),
+    );
+  });
+});

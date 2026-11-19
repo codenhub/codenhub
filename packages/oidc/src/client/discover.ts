@@ -25,9 +25,10 @@ function discoveryUrl(issuer: string): string {
 function readDiscoverOptions(options: DiscoverOptions | undefined): {
   readonly fetch: typeof fetch | undefined;
   readonly timeout: number;
+  readonly tenantIssuer: boolean;
 } {
   if (options === undefined) {
-    return { fetch: undefined, timeout: readTimeoutSeconds(undefined, "discover: timeout") };
+    return { fetch: undefined, timeout: readTimeoutSeconds(undefined, "discover: timeout"), tenantIssuer: false };
   }
   if (typeof options !== "object" || options === null) {
     throw new TypeError("discover: options must be an object");
@@ -35,7 +36,14 @@ function readDiscoverOptions(options: DiscoverOptions | undefined): {
   if (options.fetch !== undefined && typeof options.fetch !== "function") {
     throw new TypeError("discover: fetch must be a function");
   }
-  return { fetch: options.fetch, timeout: readTimeoutSeconds(options.timeout, "discover: timeout") };
+  if (options.tenantIssuer !== undefined && typeof options.tenantIssuer !== "boolean") {
+    throw new TypeError("discover: tenantIssuer must be a boolean");
+  }
+  return {
+    fetch: options.fetch,
+    timeout: readTimeoutSeconds(options.timeout, "discover: timeout"),
+    tenantIssuer: options.tenantIssuer === true,
+  };
 }
 
 /**
@@ -44,14 +52,17 @@ function readDiscoverOptions(options: DiscoverOptions | undefined): {
  * @remarks
  * The document is requested at `{issuer}/.well-known/openid-configuration`, with redirects not followed,
  * a response bound of 64 KiB, and the timeout applied to the whole request. Its `issuer` member must equal
- * the issuer given here, byte for byte, so a document served for another issuer is refused.
+ * the issuer given here, byte for byte, so a document served for another issuer is refused. With `tenantIssuer`, it
+ * may instead be a `{tenantid}` template that equals the issuer given here with one path segment in its place, as
+ * the Microsoft identity platform's `common` document is; pass {@link ClientOptions.tenantIssuer} to the client.
  *
  * Failures of the network, the response, or the document come back as results and never throw, so a
  * provider that is down or misconfigured is an ordinary outcome. Only a bad argument throws.
  *
  * @param issuer - The provider's issuer identifier, an `https` URL with no query or fragment. A trailing
  * slash is removed before the well-known path is added.
- * @param options - The `fetch` and `timeout` to use. Omit it for the global `fetch` and a 5-second timeout.
+ * @param options - The `fetch`, `timeout` and `tenantIssuer` to use. Omit it for the global `fetch`, a 5-second
+ * timeout, and an exact issuer.
  * @returns The frozen metadata, or every issue found. The failures are:
  * - `request_failed` with `params.reason` of `timeout`, `network`, `status` (with `params.status`, for any
  *   response other than `200`, including redirects), `content_type` (a `200` that is not JSON),
@@ -61,7 +72,8 @@ function readDiscoverOptions(options: DiscoverOptions | undefined): {
  *   `["metadata", "jwks_uri"]`. Every such issue is collected in one result.
  *
  * @throws {TypeError} When `issuer` is not an `https` URL or has a query, when `options` is not an object,
- * when `options.fetch` is not a function, or when `options.timeout` is not an integer from 1 through 60.
+ * when `options.fetch` is not a function, when `options.timeout` is not an integer from 1 through 60, or when
+ * `options.tenantIssuer` is not a boolean.
  *
  * @example
  * ```ts
@@ -77,7 +89,7 @@ function readDiscoverOptions(options: DiscoverOptions | undefined): {
  */
 export async function discover(issuer: string, options?: DiscoverOptions): Promise<OidcResult<ProviderMetadata>> {
   const url = discoveryUrl(issuer);
-  const { fetch, timeout } = readDiscoverOptions(options);
+  const { fetch, timeout, tenantIssuer } = readDiscoverOptions(options);
   const response = await requestJson({
     endpoint: "discovery",
     url,
@@ -91,5 +103,5 @@ export async function discover(issuer: string, options?: DiscoverOptions): Promi
   if (response.value.status !== HTTP_OK) {
     return requestFailure("discovery", "status", response.value.status);
   }
-  return checkMetadata(response.value.body, issuer);
+  return checkMetadata(response.value.body, issuer, { tenantIssuer });
 }

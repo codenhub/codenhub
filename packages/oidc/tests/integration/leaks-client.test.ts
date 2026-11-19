@@ -47,7 +47,7 @@ function signInSecrets(started: SignInStart): Labelled[] {
   return [
     ["authorization code", codeOf(started.location)],
     ["state", started.pending.state],
-    ["nonce", started.pending.nonce],
+    ["nonce", started.pending.nonce ?? ""],
     ["code verifier", started.pending.codeVerifier],
     ["client secret", harness.clientSecret],
   ];
@@ -273,8 +273,8 @@ const failures: ReadonlyArray<readonly [string, Failure]> = [
       harness.setTamper(recordTokens(secrets, identity));
       const signed = okOrThrow(await started.client.callback(started.location, started.pending));
       const refreshToken = requireString(signed.tokens.refreshToken, "refresh token");
-      okOrThrow(await started.client.refresh({ refreshToken, subject: "user-1" }));
-      return started.client.refresh({ refreshToken, subject: "user-1" });
+      okOrThrow(await started.client.refresh({ refreshToken, previous: signed.claims }));
+      return started.client.refresh({ refreshToken, previous: signed.claims });
     },
   ],
   [
@@ -293,6 +293,66 @@ const failures: ReadonlyArray<readonly [string, Failure]> = [
       return started.client.userinfo({ accessToken: signed.tokens.accessToken, subject: "user-1" });
     },
   ],
+  [
+    "a form_post callback body is over the limit",
+    async (secrets) => {
+      const started = await startSignIn();
+      secrets.push(...signInSecrets(started));
+      const body = `${new URL(started.location).searchParams.toString()}&pad=${"z".repeat(20_000)}`;
+      const request = new Request(REDIRECT_URI, {
+        method: "POST",
+        headers: { "content-type": "application/x-www-form-urlencoded" },
+        body,
+      });
+      return started.client.callback(request, { ...started.pending, responseMode: "form_post" });
+    },
+  ],
+  [
+    "a form_post callback answers a query sign-in",
+    async (secrets) => {
+      const started = await startSignIn();
+      secrets.push(...signInSecrets(started));
+      const request = new Request(REDIRECT_URI, {
+        method: "POST",
+        headers: { "content-type": "application/x-www-form-urlencoded" },
+        body: new URL(started.location).searchParams.toString(),
+      });
+      return started.client.callback(request, started.pending);
+    },
+  ],
+  [
+    "the userinfo JWT is garbage that holds a secret",
+    async (secrets) => {
+      const started = await startSignIn();
+      secrets.push(...signInSecrets(started));
+      harness.setTamper(recordTokens(secrets, identity));
+      const signed = okOrThrow(await started.client.callback(started.location, started.pending));
+      const garbage = `${Buffer.from(JSON.stringify({ alg: "none", hint: BAD_OPTION_SECRET })).toString("base64url")}.${Buffer.from(JSON.stringify({ sub: EMAIL })).toString("base64url")}.`;
+      secrets.push(["userinfo jwt", garbage], ["userinfo secret", BAD_OPTION_SECRET]);
+      harness.setTamper(
+        onlyAt(
+          USERINFO_URL,
+          () => new Response(garbage, { status: 200, headers: { "content-type": "application/jwt" } }),
+        ),
+      );
+      return started.client.userinfo({ accessToken: signed.tokens.accessToken, subject: "user-1" });
+    },
+  ],
+  [
+    "the userinfo JWT is signed for another subject",
+    async (secrets) => {
+      const started = await startSignIn();
+      secrets.push(...signInSecrets(started));
+      harness.setTamper(recordTokens(secrets, identity));
+      const signed = okOrThrow(await started.client.callback(started.location, started.pending));
+      const jwt = await forgeIdToken({ iss: ISSUER, sub: EMAIL, email: EMAIL });
+      secrets.push(["userinfo jwt", jwt], ["email", EMAIL]);
+      harness.setTamper(
+        onlyAt(USERINFO_URL, () => new Response(jwt, { status: 200, headers: { "content-type": "application/jwt" } })),
+      );
+      return started.client.userinfo({ accessToken: signed.tokens.accessToken, subject: "user-1" });
+    },
+  ],
 ];
 
 describe("leaks: successful outcomes", () => {
@@ -306,7 +366,7 @@ describe("leaks: successful outcomes", () => {
     const tokens = okOrThrow(signed).tokens;
     const refreshed = await started.client.refresh({
       refreshToken: requireString(tokens.refreshToken, "refresh token"),
-      subject: "user-1",
+      previous: okOrThrow(signed).claims,
     });
     const claims = await started.client.userinfo({ accessToken: tokens.accessToken, subject: "user-1" });
 
@@ -372,8 +432,23 @@ describe("leaks: TypeError messages", () => {
           auth: { method: "none" },
         }),
       () => harness.client.authorize({ maxAge: BAD_OPTION_SECRET as unknown as number }),
-      () => harness.client.refresh({ refreshToken: BAD_OPTION_SECRET, subject: 7 as unknown as string }),
+      () => harness.client.refresh({ refreshToken: BAD_OPTION_SECRET, previous: 7 as never }),
       () => harness.client.userinfo({ accessToken: BAD_OPTION_SECRET, subject: 7 as unknown as string }),
+      () => harness.client.authorize({ extraParameters: { state: BAD_OPTION_SECRET } }),
+      () => harness.client.authorize({ extraParameters: { a: BAD_OPTION_SECRET.repeat(200) } }),
+      () =>
+        harness.client.authorize({
+          extraParameters: Object.fromEntries(
+            Array.from({ length: 40 }, (_, index) => [`p${index}`, BAD_OPTION_SECRET]),
+          ),
+        }),
+      () => harness.client.authorize({ [BAD_OPTION_SECRET]: 1 } as never),
+      () => harness.client.authorize({ claims: { secret: BAD_OPTION_SECRET, bad: Number.NaN } }),
+      () =>
+        harness.client.refresh({
+          refreshToken: "rt",
+          previous: { iss: BAD_OPTION_SECRET, sub: BAD_OPTION_SECRET, aud: 7 as never },
+        }),
     ];
     const errors = await Promise.all(calls.map((call) => thrownBy(call)));
     expect(errors.every((error) => error instanceof TypeError)).toBe(true);

@@ -47,7 +47,7 @@ async function setUp(modules: Modules, auth: AuthMethod, accessToken?: providerM
         : auth === "client_secret_post"
           ? ({ method: "client_secret_post", secretHashes: [await provider.hashClientSecret(secret)] } as const)
           : auth === "client_secret_jwt"
-            ? ({ method: "client_secret_jwt", key: hmacKey } as const)
+            ? ({ method: "client_secret_jwt", keys: [hmacKey] } as const)
             : ({ method: "private_key_jwt", keys: jwt.createKeySet([clientKey.publicKey]) } as const);
   const store = testing.createMemoryStore({
     clients: [
@@ -181,15 +181,18 @@ export const scenarios: Readonly<Record<string, Scenario>> = {
   "rotates refresh tokens and revokes the family on reuse": async (modules) => {
     const { rp, signedIn } = await signIn(modules, "none");
     const refreshToken = signedIn.tokens.refreshToken as string;
-    const first = await rp.refresh({ refreshToken, subject: "user-1" });
+    const first = await rp.refresh({ refreshToken, previous: signedIn.claims });
     check(first.ok, "refresh failed");
     if (!first.ok) {
       throw new Error("unreachable");
     }
     check(first.value.tokens.refreshToken !== refreshToken, "refresh token not rotated");
-    const reused = await rp.refresh({ refreshToken, subject: "user-1" });
+    const reused = await rp.refresh({ refreshToken, previous: signedIn.claims });
     check(!reused.ok && reused.error.issues[0].code === "provider_error", "reuse not refused");
-    const rotated = await rp.refresh({ refreshToken: first.value.tokens.refreshToken as string, subject: "user-1" });
+    const rotated = await rp.refresh({
+      refreshToken: first.value.tokens.refreshToken as string,
+      previous: signedIn.claims,
+    });
     check(!rotated.ok, "family not revoked after reuse");
     const claims = await rp.userinfo({ accessToken: first.value.tokens.accessToken, subject: "user-1" });
     check(!claims.ok, "access token not revoked after reuse");
@@ -386,7 +389,7 @@ export const scenarios: Readonly<Record<string, Scenario>> = {
     );
     const refreshed = await rp.refresh({
       refreshToken: signedIn.value.tokens.refreshToken ?? "",
-      subject: "user-1",
+      previous: signedIn.value.claims,
       resource: [api],
     });
     check(refreshed.ok, `refresh failed: ${JSON.stringify(refreshed)}`);
@@ -400,7 +403,7 @@ export const scenarios: Readonly<Record<string, Scenario>> = {
     check(again.ok && again.value.audience?.join(" ") === api, `refreshed token refused: ${JSON.stringify(again)}`);
     const widened = await rp.refresh({
       refreshToken: refreshed.value.tokens.refreshToken ?? "",
-      subject: "user-1",
+      previous: signedIn.value.claims,
       resource: ["https://default.example"],
     });
     check(
@@ -417,6 +420,47 @@ export const scenarios: Readonly<Record<string, Scenario>> = {
       !begun.ok && begun.error.redirect === null && begun.error.issues[0]?.params?.reason === "malformed",
       `invalid escape accepted: ${JSON.stringify(begun)}`,
     );
+  },
+
+  // The page's CSP allows its script by hash, so the hash must match the script the built package writes.
+  "answers response_mode=form_post with a page whose script its CSP allows": async (modules) => {
+    const { op } = await setUp(modules, "none");
+    const state = `"><script>alert(1)</script>`;
+    const search = new URLSearchParams({
+      client_id: "app",
+      redirect_uri: REDIRECT_URI,
+      response_type: "code",
+      response_mode: "form_post",
+      scope: "openid",
+      state,
+      code_challenge: "E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM",
+      code_challenge_method: "S256",
+    });
+    const begun = await op.beginAuthorization(new Request(`${ISSUER}/authorize?${search.toString()}`));
+    check(begun.ok, `beginAuthorization failed: ${JSON.stringify(begun)}`);
+    if (!begun.ok) {
+      throw new Error("unreachable");
+    }
+    const completed = await op.completeAuthorization(begun.value.id, {
+      subject: "user-1",
+      authTime: Math.floor(Date.now() / 1000),
+      scopes: ["openid"],
+    });
+    check(completed.ok && completed.value.status === 200, "form_post was not answered with a page");
+    if (!completed.ok) {
+      throw new Error("unreachable");
+    }
+    const html = await completed.value.text();
+    const scriptStart = html.indexOf("<script>") + "<script>".length;
+    const script = html.slice(scriptStart, html.indexOf("</script>", scriptStart));
+    const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(script));
+    const hash = btoa(String.fromCharCode(...new Uint8Array(digest)));
+    const policy = completed.value.headers.get("content-security-policy") ?? "";
+    check(policy.includes(`script-src 'sha256-${hash}'`), `the CSP does not allow the page's script: ${policy}`);
+    check(policy.includes("form-action https://app.example"), `the CSP does not limit the form: ${policy}`);
+    check(html.match(/<script\b/gi)?.length === 1, "the state added a script to the page");
+    check(/<input type="hidden" name="code" value="[A-Za-z0-9_-]{43}">/.test(html), "the page posts no code");
+    check(html.includes('action="https://app.example/callback"'), "the page posts somewhere else");
   },
 };
 

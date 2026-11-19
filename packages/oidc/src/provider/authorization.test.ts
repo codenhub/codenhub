@@ -985,3 +985,249 @@ describe("requirePkce", () => {
     expectErrorRedirect(failure.redirect, "invalid_request");
   });
 });
+
+/** The page of a `form_post` response, and the fields its form posts. */
+async function formPostOf(response: Response | null): Promise<{ action: string; fields: Record<string, string> }> {
+  if (response === null) {
+    throw new Error("expected a response");
+  }
+  expect(response.status).toBe(200);
+  expect(response.headers.get("content-type")).toBe("text/html; charset=utf-8");
+  expect(response.headers.has("location")).toBe(false);
+  const html = await response.text();
+  const unescape = (value: string): string =>
+    value
+      .replaceAll("&quot;", '"')
+      .replaceAll("&#39;", "'")
+      .replaceAll("&lt;", "<")
+      .replaceAll("&gt;", ">")
+      .replaceAll("&amp;", "&");
+  const action = /<form method="post" action="([^"]*)">/.exec(html)?.[1];
+  if (action === undefined) {
+    throw new Error("expected a form");
+  }
+  const fields: Record<string, string> = {};
+  for (const [, name = "", value = ""] of html.matchAll(/<input type="hidden" name="([^"]*)" value="([^"]*)">/g)) {
+    fields[unescape(name)] = unescape(value);
+  }
+  return { action: unescape(action), fields };
+}
+
+describe("response_mode", () => {
+  it("answers a form_post grant with a page that posts the code, state and issuer to the redirect URI", async () => {
+    const interaction = await beginOk(query({ response_mode: "form_post" }));
+    const result = await completeAuthorization(options, interaction.id, GRANT);
+
+    const page = await formPostOf(result.ok ? result.value : null);
+
+    expect(page.action).toBe(REDIRECT_URI);
+    expect(Object.keys(page.fields)).toEqual(["code", "state", "iss"]);
+    expect(page.fields.code).toMatch(/^[A-Za-z0-9_-]{43}$/);
+    expect(page.fields).toMatchObject({ state: STATE, iss: ISSUER });
+  });
+
+  it("answers a form_post denial with a page that posts the error", async () => {
+    const interaction = await beginOk(query({ response_mode: "form_post" }));
+    const result = await completeAuthorization(options, interaction.id, { error: "access_denied" });
+
+    const page = await formPostOf(result.ok ? result.value : null);
+
+    expect(page.fields).toEqual({ error: "access_denied", state: STATE, iss: ISSUER });
+  });
+
+  it.each([
+    ["an unknown scope", { scope: "openid admin" }, "invalid_scope"],
+    ["a request object", { request: "eyJhbGciOiJub25lIn0." }, "request_not_supported"],
+    ["a missing response_type", { response_type: null }, "invalid_request"],
+    ["prompt none with create", { prompt: "none create" }, "invalid_request"],
+  ] as const)("posts the error of %s back when the request asked for form_post", async (_name, overrides, error) => {
+    const failure = failureOf(
+      await beginAuthorization(options, getRequest(query({ ...overrides, response_mode: "form_post" }))),
+    );
+
+    const page = await formPostOf(failure.redirect);
+
+    expect(page.fields).toEqual({ error, state: STATE, iss: ISSUER });
+  });
+
+  it("posts the error of a client that may not use the code flow back under form_post", async () => {
+    store.addClient({
+      ...client,
+      grantTypes: ["client_credentials"],
+      auth: { method: "client_secret_basic", secretHashes: ["hash"] },
+    });
+
+    const failure = failureOf(await beginAuthorization(options, getRequest(query({ response_mode: "form_post" }))));
+
+    expect((await formPostOf(failure.redirect)).fields.error).toBe("unauthorized_client");
+  });
+
+  it("escapes a hostile state in the page it posts", async () => {
+    const state = `"><script>alert(1)</script><input name='x' value="&amp;`;
+    const interaction = await beginOk(query({ response_mode: "form_post", state }));
+    const result = await completeAuthorization(options, interaction.id, GRANT);
+    const response = result.ok ? result.value : null;
+
+    const html = await response?.clone().text();
+
+    expect(html).not.toContain("<script>alert");
+    expect(html?.match(/<script\b/gi)).toHaveLength(1);
+    expect((await formPostOf(response)).fields.state).toBe(state);
+  });
+
+  it.each([
+    ["no response_mode", {}],
+    ["response_mode query", { response_mode: "query" }],
+  ] as const)("redirects with a 302 for %s", async (_name, overrides) => {
+    const interaction = await beginOk(query(overrides));
+    const result = await completeAuthorization(options, interaction.id, GRANT);
+
+    expect(result.ok && result.value.status).toBe(302);
+  });
+
+  it.each([["fragment"], ["query.jwt"], ["form_post.jwt"], ["jwt"], ["FORM_POST"]])(
+    "redirects to the query with invalid_request for response_mode %j",
+    async (responseMode) => {
+      const failure = failureOf(await beginAuthorization(options, getRequest(query({ response_mode: responseMode }))));
+
+      expectErrorRedirect(failure.redirect, "invalid_request");
+      expect(failure.issues).toEqual([{ code: "invalid_request", path: ["response_mode"] }]);
+    },
+  );
+
+  it("saves form_post on the interaction record, and leaves the member out for query", async () => {
+    const saveSpy = vi.spyOn(store, "saveInteraction");
+
+    await beginOk(query({ response_mode: "form_post" }));
+    await beginOk(query({ response_mode: "query" }));
+    await beginOk();
+
+    expect(saveSpy.mock.calls.map(([, record]) => record.responseMode)).toEqual(["form_post", undefined, undefined]);
+    expect(saveSpy.mock.calls.map(([, record]) => Object.hasOwn(record, "responseMode"))).toEqual([true, false, false]);
+  });
+
+  it("answers with a 302 for a record read back with a null responseMode, as a SQL column returns it", async () => {
+    const interaction = await beginOk(query({ response_mode: "form_post" }));
+    const consume = store.consumeInteraction.bind(store);
+    vi.spyOn(store, "consumeInteraction").mockImplementation(async (key) => {
+      const record = await consume(key);
+      return record === undefined ? undefined : ({ ...record, responseMode: null } as never);
+    });
+
+    const result = await completeAuthorization(options, interaction.id, GRANT);
+
+    expect(result.ok && result.value.status).toBe(302);
+  });
+});
+
+describe("prompt=create", () => {
+  it("passes create to the app", async () => {
+    const interaction = await beginOk(query({ prompt: "create" }));
+
+    expect(interaction.prompt).toEqual(["create"]);
+  });
+
+  it("passes create with consent to the app", async () => {
+    const interaction = await beginOk(query({ prompt: "create consent" }));
+
+    expect(interaction.prompt).toEqual(["create", "consent"]);
+  });
+
+  it("redirects with invalid_request for create with none", async () => {
+    const failure = failureOf(await beginAuthorization(options, getRequest(query({ prompt: "create none" }))));
+
+    expectErrorRedirect(failure.redirect, "invalid_request");
+    expect(failure.issues).toEqual([{ code: "invalid_request", path: ["prompt"] }]);
+  });
+});
+
+describe("extensions", () => {
+  it("passes the parameters the provider does not recognize to the app, frozen", async () => {
+    const interaction = await beginOk(query({ screen_hint: "signup", "x-tenant": "acme" }));
+
+    expect(interaction.extensions).toEqual({ screen_hint: "signup", "x-tenant": "acme" });
+    expect(Object.isFrozen(interaction.extensions)).toBe(true);
+  });
+
+  it("leaves extensions out when every parameter is one the provider recognizes", async () => {
+    store.addClient({ ...client, resources: ["https://api.example/"] });
+    const hint = await idTokenHint();
+    const interaction = await beginOk(
+      query({
+        response_mode: "query",
+        nonce: "n",
+        prompt: "login",
+        max_age: "60",
+        login_hint: "ada",
+        ui_locales: "en",
+        acr_values: "a",
+        claims_locales: "en",
+        display: "page",
+        id_token_hint: hint,
+        resource: "https://api.example/",
+        claims: "{}",
+      }),
+    );
+
+    expect(Object.hasOwn(interaction, "extensions")).toBe(false);
+  });
+
+  it("keeps a parameter named __proto__ as a plain member, without touching the prototype", async () => {
+    const interaction = await beginOk(`${query()}&__proto__=polluted&constructor=x`);
+
+    expect(Object.getPrototypeOf(interaction.extensions)).toBe(Object.prototype);
+    expect(Object.hasOwn(interaction.extensions ?? {}, "__proto__")).toBe(true);
+    expect(interaction.extensions?.["__proto__"]).toBe("polluted");
+    expect(interaction.extensions?.["constructor"]).toBe("x");
+  });
+
+  it("saves the extensions on the interaction record, and leaves the member out when there are none", async () => {
+    const saveSpy = vi.spyOn(store, "saveInteraction");
+
+    await beginOk(query({ screen_hint: "signup" }));
+    await beginOk();
+
+    expect(saveSpy.mock.calls[0]?.[1].extensions).toEqual({ screen_hint: "signup" });
+    expect(Object.hasOwn(saveSpy.mock.calls[1]?.[1] ?? {}, "extensions")).toBe(false);
+  });
+
+  it("refuses an extension over the parameter length limit, as any other parameter", async () => {
+    const result = await beginAuthorization(
+      options,
+      getRequest(query({ screen_hint: "x".repeat(MAX_PARAMETER_LENGTH + 1) })),
+    );
+
+    expect(failureOf(result).redirect).toBeNull();
+  });
+});
+
+describe("denial codes", () => {
+  it.each([["temporarily_unavailable"], ["server_error"], ["unmet_authentication_requirements"]] as const)(
+    "redirects a %s denial to the client",
+    async (error) => {
+      const interaction = await beginOk();
+      const result = await completeAuthorization(options, interaction.id, { error });
+
+      expect(result.ok).toBe(true);
+      expectErrorRedirect(result.ok ? result.value : null, error);
+    },
+  );
+});
+
+describe("beginAuthorization with verification keys", () => {
+  it("reads a hint signed by a verification key", async () => {
+    const retired = await generateKeyPair({ alg: "ES256", kid: "k0" });
+    options = resolveOptions({
+      issuer: ISSUER,
+      signingKeys: [keyPair],
+      verificationKeys: [retired.publicKey],
+      store,
+      claims: () => ({}),
+      now: () => clockMs,
+    });
+
+    const interaction = await beginOk(query({ id_token_hint: await idTokenHint({}, retired) }));
+
+    expect(interaction.idTokenHint).toEqual({ subject: "user-1" });
+  });
+});

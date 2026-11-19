@@ -133,8 +133,48 @@ describe("handleUserinfo", () => {
     await handleUserinfo(options, getWithToken(ACCESS_TOKEN));
 
     expect(requests).toEqual([
-      { subject: SUBJECT, clientId: CLIENT_ID, scopes: ["openid", "email"], claims: ["email", "email_verified"] },
+      {
+        subject: SUBJECT,
+        clientId: CLIENT_ID,
+        grantId: "grant-1",
+        scopes: ["openid", "email"],
+        claims: ["email", "email_verified"],
+      },
     ]);
+  });
+
+  it("shouldPassTheGrantAndSessionOfRecordToTheCallback", async () => {
+    const { options, store, requests } = await setUp();
+    await store.saveAccessToken(await digestKey(ACCESS_TOKEN), {
+      grantId: "grant-1",
+      clientId: CLIENT_ID,
+      subject: SUBJECT,
+      scopes: ["openid", "email"],
+      sessionId: "session-1",
+      expiresAt: NOW_S + 600,
+    });
+
+    await handleUserinfo(options, getWithToken(ACCESS_TOKEN));
+
+    expect(requests).toEqual([expect.objectContaining({ grantId: "grant-1", sessionId: "session-1" })]);
+  });
+
+  it("shouldReadANullSessionIdAsAbsent", async () => {
+    const { options, store, requests } = await setUp();
+    await store.saveAccessToken(await digestKey(ACCESS_TOKEN), {
+      grantId: "grant-1",
+      clientId: CLIENT_ID,
+      subject: SUBJECT,
+      scopes: ["openid", "email"],
+      sessionId: null as unknown as string,
+      audience: null as unknown as string[],
+      expiresAt: NOW_S + 600,
+    });
+
+    const response = await handleUserinfo(options, getWithToken(ACCESS_TOKEN));
+
+    expect(response.status).toBe(200);
+    expect(requests[0]).not.toHaveProperty("sessionId");
   });
 
   it("shouldRejectWhenTheClaimsCallbackRejects", async () => {

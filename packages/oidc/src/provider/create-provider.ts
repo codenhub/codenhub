@@ -109,8 +109,9 @@ async function answerRequest(context: ProviderContext, request: Request): Promis
  * endpoints.
  * @returns A frozen provider. Its `metadata` is the discovery document it publishes.
  * @throws {TypeError} When an option is invalid, such as a non-`https` issuer, a store missing a method, two
- * signing keys with the same `kid`, or a lifetime outside its range. The message names the option, never
- * its value.
+ * signing keys with the same `kid`, a lifetime outside its range, a member that is not an option (such as a
+ * misspelled `ttl.acessToken`, at any level), or an issuer or endpoint not written as the URL parser serializes it.
+ * The message names the option, never its value.
  * @example
  * ```ts
  * import { generateKeyPair } from "@codenhub/jwt";

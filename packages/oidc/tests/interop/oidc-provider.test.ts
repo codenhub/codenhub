@@ -61,7 +61,7 @@ describe("this client against oidc-provider", () => {
     expect(claims).toMatchObject({ sub: ACCOUNT_ID, iss: ISSUER, aud: CLIENT_ID, nonce: pending.nonce });
     expect(tokens.refreshToken).toBeTypeOf("string");
 
-    const refreshed = await client.refresh({ refreshToken: tokens.refreshToken as string, subject: claims.sub });
+    const refreshed = await client.refresh({ refreshToken: tokens.refreshToken as string, previous: claims });
     if (!refreshed.ok) {
       throw new Error(`refresh failed: ${JSON.stringify(refreshed.error.issues)}`);
     }

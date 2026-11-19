@@ -26,7 +26,7 @@ The provider answers the discovery, JWKS, token, userinfo, and revocation endpoi
 
 **Returns** — A frozen provider. Its `metadata` is the discovery document it publishes.
 
-**Throws** — `TypeError` — When an option is invalid, such as a non-`https` issuer, a store missing a method, two signing keys with the same `kid`, or a lifetime outside its range. The message names the option, never its value.
+**Throws** — `TypeError` — When an option is invalid, such as a non-`https` issuer, a store missing a method, two signing keys with the same `kid`, a lifetime outside its range, a member that is not an option (such as a misspelled `ttl.acessToken`, at any level), or an issuer or endpoint not written as the URL parser serializes it. The message names the option, never its value.
 
 **Example**
 
@@ -89,6 +89,7 @@ export interface AccessTokenClaimsRequest {
     readonly scopes: readonly string[];
     readonly audience: readonly string[];
     readonly grantId: string;
+    readonly sessionId?: string;
 }
 ```
 
@@ -124,6 +125,14 @@ readonly scopes: readonly string[];
 
 The scopes the token carries.
 
+#### AccessTokenClaimsRequest › sessionId
+
+```ts
+readonly sessionId?: string;
+```
+
+The app's session the grant was issued during, when `completeAuthorization` was given one.
+
 #### AccessTokenClaimsRequest › subject
 
 ```ts
@@ -140,6 +149,10 @@ export interface AccessTokenRecord {
     readonly clientId: string;
     readonly subject: string;
     readonly scopes: readonly string[];
+    readonly grantType?: GrantType;
+    readonly authTime?: number;
+    readonly amr?: readonly string[];
+    readonly acr?: string;
     readonly sessionId?: string;
     readonly audience?: readonly string[];
     readonly expiresAt: number;
@@ -148,6 +161,22 @@ export interface AccessTokenRecord {
 
 What an access token stands for.
 
+#### AccessTokenRecord › acr
+
+```ts
+readonly acr?: string;
+```
+
+The authentication context class of the sign-in, as the app reported it.
+
+#### AccessTokenRecord › amr
+
+```ts
+readonly amr?: readonly string[];
+```
+
+The authentication methods of the sign-in (RFC 8176), as the app reported them.
+
 #### AccessTokenRecord › audience
 
 ```ts
@@ -155,6 +184,14 @@ readonly audience?: readonly string[];
 ```
 
 The resource servers the token is for: the token request's `resource` values, else the grant's (at a refresh, those the client's record still lists), else, for a JWT access token, the `accessToken.audience` option. Absent for an opaque token issued for no resource.
+
+#### AccessTokenRecord › authTime
+
+```ts
+readonly authTime?: number;
+```
+
+When the user authenticated, in seconds since the Unix epoch. Absent for `client_credentials`.
 
 #### AccessTokenRecord › clientId
 
@@ -176,6 +213,14 @@ In seconds since the Unix epoch.
 readonly grantId: string;
 ```
 
+#### AccessTokenRecord › grantType
+
+```ts
+readonly grantType?: GrantType;
+```
+
+The grant that issued the token: `authorization_code` for a code exchange and every refresh of its family, or `client_credentials`. The provider always writes it; it is optional so that a row saved before it existed still reads.
+
 #### AccessTokenRecord › scopes
 
 ```ts
@@ -195,6 +240,8 @@ The app's session identifier from the grant.
 ```ts
 readonly subject: string;
 ```
+
+The user the token is for, or the client identifier for `client_credentials`.
 
 ### AuthenticateOptions
 
@@ -267,16 +314,22 @@ The response to return as is: `401` with `WWW-Authenticate: Bearer` when no toke
 
 ```ts
 export interface AuthorizationDenial {
-    readonly error: "access_denied" | "login_required" | "consent_required" | "interaction_required" | "account_selection_required";
+    readonly error: "access_denied" | "login_required" | "consent_required" | "interaction_required" | "account_selection_required" | "unmet_authentication_requirements" | "temporarily_unavailable" | "server_error";
 }
 ```
 
 Why the app is not granting the request. Sent to the client as the OAuth error.
 
+- `access_denied`: the user, or the app's policy, refused.
+- `login_required`, `consent_required`, `account_selection_required`, `interaction_required`: the step is needed but `prompt=none` forbids showing it, or the user of the app's session is not the one `idTokenHint` names.
+- `unmet_authentication_requirements`: the app cannot authenticate the user as the request requires, such as an `acr_values` class it cannot meet when the request makes it essential (OpenID Connect Core Unmet Authentication Requirements 1.0).
+- `temporarily_unavailable`: the app cannot handle the request now, such as during maintenance or overload, and the client may retry later.
+- `server_error`: the app failed unexpectedly while handling the request, so the client is not left waiting.
+
 #### AuthorizationDenial › error
 
 ```ts
-readonly error: "access_denied" | "login_required" | "consent_required" | "interaction_required" | "account_selection_required";
+readonly error: "access_denied" | "login_required" | "consent_required" | "interaction_required" | "account_selection_required" | "unmet_authentication_requirements" | "temporarily_unavailable" | "server_error";
 ```
 
 ### AuthorizationFailure
@@ -299,7 +352,7 @@ Inherited from [`OidcFailure`](#oidcfailure--issues).
 readonly redirect: Response | null;
 ```
 
-A `302` to the client's verified redirect URI carrying the error, to return as is; or `null` when the client or its redirect URI could not be verified, in which case the app must render its own error page and must not redirect anywhere.
+The response that carries the error to the client's verified redirect URI, to return as is: a `302`, or under `response_mode=form_post` a `200` HTML page that posts it there. `null` when the client or its redirect URI could not be verified, in which case the app must render its own error page and must not redirect anywhere.
 
 ### AuthorizationGrant
 
@@ -379,6 +432,7 @@ export interface AuthorizationInteraction {
     readonly display?: Display;
     readonly resources?: readonly string[];
     readonly idTokenHint?: IdTokenHintClaims;
+    readonly extensions?: Readonly<Record<string, string>>;
     readonly createdAt: number;
 }
 ```
@@ -423,6 +477,14 @@ readonly display?: Display;
 
 How the client asks the app to show its pages. A hint: a `display` other than `page`, `popup`, `touch` or `wap` is ignored, so it is absent here, and the app may ignore this one as well.
 
+#### AuthorizationInteraction › extensions
+
+```ts
+readonly extensions?: Readonly<Record<string, string>>;
+```
+
+The request's parameters the provider does not recognize, by name, such as `screen_hint` or a parameter of the app's own. The provider does not act on them; the app may, after treating each value as untrusted input from the browser. Bounded like every other parameter: the request carries at most 32 parameters, each value at most 4096 characters, and none repeated. A parameter named `__proto__` is an ordinary member. Absent when there are none.
+
 #### AuthorizationInteraction › id
 
 ```ts
@@ -459,7 +521,7 @@ Maximum seconds since the user last authenticated.
 readonly prompt: readonly Prompt[];
 ```
 
-`login` means authenticate again; `consent` means ask again; `none` means show nothing. The app performs the login or consent step itself; the provider checks the outcome the app reports to `Provider.completeAuthorization`, such as the `authTime` under `prompt=login`.
+`login` means authenticate again; `consent` means ask again; `select_account` means let the user choose an account; `create` means show the sign-up page rather than the login page (Initiating User Registration via OpenID Connect 1.0); `none` means show nothing, and stands alone. The app performs the login, sign-up or consent step itself; the provider checks the outcome the app reports to `Provider.completeAuthorization`, such as the `authTime` under `prompt=login`.
 
 #### AuthorizationInteraction › redirectUri
 
@@ -495,6 +557,8 @@ export interface ClaimsRequest {
     readonly clientId: string;
     readonly scopes: readonly string[];
     readonly claims: readonly string[];
+    readonly grantId: string;
+    readonly sessionId?: string;
 }
 ```
 
@@ -514,6 +578,14 @@ The claim names those scopes release. Other returned claims are dropped.
 readonly clientId: string;
 ```
 
+#### ClaimsRequest › grantId
+
+```ts
+readonly grantId: string;
+```
+
+The grant the claims are released for: the access token's at userinfo, or the grant of the ID token being signed.
+
 #### ClaimsRequest › scopes
 
 ```ts
@@ -521,6 +593,14 @@ readonly scopes: readonly string[];
 ```
 
 The granted scopes.
+
+#### ClaimsRequest › sessionId
+
+```ts
+readonly sessionId?: string;
+```
+
+The app's session the grant was issued during, when `completeAuthorization` was given one. An app that has ended that session can release nothing for it at once, by returning `{}` (only `sub` is then sent) or by throwing, which makes `handle` reject, rather than waiting for the access token to expire.
 
 #### ClaimsRequest › subject
 
@@ -956,6 +1036,8 @@ export interface InteractionRecord {
     readonly claimsLocales?: readonly string[];
     readonly display?: Display;
     readonly resources?: readonly string[];
+    readonly responseMode?: ResponseMode;
+    readonly extensions?: Readonly<Record<string, string>>;
     readonly createdAt: number;
     readonly expiresAt: number;
 }
@@ -1013,6 +1095,14 @@ readonly expiresAt: number;
 
 When the interaction expires, in seconds since the Unix epoch.
 
+#### InteractionRecord › extensions
+
+```ts
+readonly extensions?: Readonly<Record<string, string>>;
+```
+
+The request's parameters the provider does not recognize; see `AuthorizationInteraction.extensions`.
+
 #### InteractionRecord › loginHint
 
 ```ts
@@ -1052,6 +1142,14 @@ readonly resources?: readonly string[];
 ```
 
 The `resource` values the client asked for (RFC 8707), each one of the client's `resources`.
+
+#### InteractionRecord › responseMode
+
+```ts
+readonly responseMode?: ResponseMode;
+```
+
+How the response goes back to the client: `form_post` for a form the browser posts to the redirect URI. Absent means `query`, so a record saved before this member existed completes as it always did.
 
 #### InteractionRecord › scopes
 
@@ -1142,7 +1240,7 @@ Stable failure category.
 readonly params?: Readonly<Record<string, string | number | boolean>>;
 ```
 
-Facts that are never input values, such as `{ endpoint: "token", reason: "timeout" }`. The keys are a fixed set: `endpoint` (`discovery`, `authorization`, `token`, `userinfo` or `revocation`) and `reason` on `request_failed`, with `status` when the reason is `status`; `endpoint` and `error` (an [`OAuthErrorCode`](#oautherrorcode) or `unknown`) on `provider_error`; `jwtCode`, the `@codenhub/jwt` issue code, and that issue's own params on `invalid_id_token` and `invalid_logout_token`; `reason` on a provider `invalid_request` the app renders, and on `invalid_callback` and `invalid_logout_request` a parameter failure: `duplicate`, `too_many`, `too_long` or `malformed`, or for a logout request's body, `too_large` or `unreadable`.
+Facts that are never input values, such as `{ endpoint: "token", reason: "timeout" }`. The keys are a fixed set: `endpoint` (`discovery`, `authorization`, `token`, `userinfo` or `revocation`) and `reason` on `request_failed`, with `status` when the reason is `status`; `endpoint` and `error` (an [`OAuthErrorCode`](#oautherrorcode) or `unknown`) on `provider_error`; `jwtCode`, the `@codenhub/jwt` issue code, and that issue's own params on `invalid_id_token`, `invalid_logout_token`, and a userinfo JWT's `invalid_userinfo`; `reason: "encrypted"` on `invalid_userinfo` for an encrypted userinfo JWT; `reason` on a provider `invalid_request` the app renders, and on `invalid_callback` and `invalid_logout_request` a parameter failure: `duplicate`, `too_many`, `too_long` or `malformed`, or for a logout request's or `form_post` callback's body, `too_large` or `unreadable`.
 
 #### OidcIssue › path
 
@@ -1196,7 +1294,9 @@ export interface OidcStore {
 
 Persistence the provider needs. The app implements it over its database; `@codenhub/oidc/testing` has an in-memory reference, and `storeConformanceCases` there checks an adapter against this contract.
 
-Every key the provider passes for a code, token, or interaction is a SHA-256 digest of the value, never the value itself, so a leaked store holds no usable code, token or interaction. A client record is different: it may hold a `client_secret_jwt` HMAC key, which the provider needs in full, so a client record's credentials still need protection. Interaction, code and token records are plain JSON; a client record may hold `@codenhub/jwt` keys, which the app rebuilds from what it persists. Methods may throw or reject on infrastructure failure; the provider lets that propagate rather than answering as if the value were invalid.
+Every key the provider passes for a code, token, or interaction is a SHA-256 digest of the value, never the value itself, so a leaked store holds no usable code, token or interaction. A client record is different: it may hold `client_secret_jwt` HMAC keys, which the provider needs in full, so a client record's credentials still need protection. Interaction, code and token records are plain JSON; a client record may hold `@codenhub/jwt` keys, which the app rebuilds from what it persists.
+
+An optional field the provider saved without a value may come back missing, `undefined` or `null`: the provider reads `null` as absent in every interaction, code, access token and refresh token record, so a SQL column that returns `NULL` for an empty value works. Any other value, such as `""`, `[]`, `0` or `false`, is a value, and an adapter must not return one for an absent field. A required field is never `null`, and a client record is held to its own rules: a `null` there is a malformed record. Methods may throw or reject on infrastructure failure; the provider lets that propagate rather than answering as if the value were invalid.
 
 The `consume*` methods must be atomic: two concurrent calls for one key must never both get `consumed`. A store without a compare-and-set or transaction, such as plain Cloudflare KV, cannot implement them; use D1, a Durable Object, or a SQL transaction. The revocation check belongs to the same atomic step: the store orders each consumption and each revocation of the same grant, and a consumption whose atomic step runs after the revocation's must not return `consumed`.
 
@@ -1361,7 +1461,7 @@ beginAuthorization(request: Request): Promise<OidcResult<AuthorizationInteractio
 
 Validates an authorization request and saves it as an interaction for the app's login and consent pages.
 
-**Returns** — The interaction, or a failure whose `redirect` is the response to send, or `null` when the app must render an error itself. Never throws for any request; rejects only when the store does, or with a `TypeError` when the store returns a malformed client record or a `POST`'s body was already read.
+**Returns** — The interaction, or a failure whose `redirect` is the response to send (a `302`, or the `form_post` page), or `null` when the app must render an error itself. Never throws for any request; rejects only when the store does, or with a `TypeError` when the store returns a malformed client record or a `POST`'s body was already read.
 
 #### Provider › completeAuthorization
 
@@ -1369,7 +1469,7 @@ Validates an authorization request and saves it as an interaction for the app's 
 completeAuthorization(interactionId: string, outcome: AuthorizationGrant | AuthorizationDenial): Promise<OidcResult<Response>>;
 ```
 
-Finishes an interaction: issues a code, or sends the denial, as a `302` to the client's redirect URI.
+Finishes an interaction: issues a code, or sends the denial, to the client's redirect URI: as a `302`, or, when the request asked for `response_mode=form_post`, as a `200` HTML page that posts it there. Either way, return the response as is: the page's headers forbid framing, caching and any script but its own.
 
 **Returns** — The response, or `interaction_not_found` when the interaction does not exist, was already completed, or expired, or, for a grant or a denial, when its client is no longer in the store, no longer lists the interaction's redirect URI, or no longer has the `authorization_code` grant type: the provider redirects only to a URI the client's record lists now. Rejects when the store does, or with a `TypeError` when it returns a malformed client record.
 
@@ -1403,10 +1503,12 @@ export interface ProviderDiagnostic {
     readonly reason: ProviderDiagnosticReason;
     readonly status: number;
     readonly clientId?: string;
+    readonly grantId?: string;
+    readonly subject?: string;
 }
 ```
 
-One refused request, for the operator's logs. It never holds a value the request carried: no token, code, secret, verifier, or unverified client identifier.
+One refused request, or one security event, for the operator's logs: every refusal of the token, userinfo and revocation endpoints, and each revocation request that revoked a grant (`token_revoked`, status `200`). It never holds a value the request carried: no token, code, secret, verifier, or unverified client identifier. Frozen.
 
 #### ProviderDiagnostic › clientId
 
@@ -1422,6 +1524,14 @@ The client, when the provider knows it from the store: the authenticated client,
 readonly endpoint: "token" | "userinfo" | "revocation";
 ```
 
+#### ProviderDiagnostic › grantId
+
+```ts
+readonly grantId?: string;
+```
+
+The grant the presented code or token belongs to, from the store's record, when the provider read one: a replayed code or refresh token, whose grant is then revoked, a refusal after the record was found, such as `code_expired`, `refresh_refused` or `access_token_expired`, and `token_revoked`. Never read from the request.
+
 #### ProviderDiagnostic › reason
 
 ```ts
@@ -1435,6 +1545,14 @@ readonly status: number;
 ```
 
 The HTTP status the client was sent.
+
+#### ProviderDiagnostic › subject
+
+```ts
+readonly subject?: string;
+```
+
+The user the grant was issued to, or the client for a `client_credentials` token, from the store's record, when the provider read the whole record. Absent for a replay, whose store answer names only the grant. A user's subject identifies a person, so log it where the app may keep personal data.
 
 ### ProviderEndpoints
 
@@ -1714,6 +1832,7 @@ Any other metadata member, unused by this package.
 export interface ProviderOptions {
     readonly issuer: string;
     readonly signingKeys: readonly KeyPair[];
+    readonly verificationKeys?: readonly PublicKey[];
     readonly store: OidcStore;
     readonly claims: (request: ClaimsRequest) => Readonly<Record<string, unknown>> | Promise<Readonly<Record<string, unknown>>>;
     readonly scopes?: Readonly<Record<string, readonly string[]>>;
@@ -1725,6 +1844,7 @@ export interface ProviderOptions {
     readonly onRefresh?: (request: RefreshCheck) => boolean | Promise<boolean>;
     readonly accessTokenClaims?: (request: AccessTokenClaimsRequest) => Readonly<Record<string, unknown>> | Promise<Readonly<Record<string, unknown>>>;
     readonly subjectTypes?: readonly ("public" | "pairwise")[];
+    readonly metadata?: Readonly<Record<string, unknown>>;
 }
 ```
 
@@ -1776,7 +1896,19 @@ Endpoint URLs.
 readonly issuer: string;
 ```
 
-The issuer identifier: an `https` URL of visible ASCII, with no query, fragment or credentials, used byte for byte everywhere.
+The issuer identifier: an `https` URL of visible ASCII, with no query, fragment or credentials, used byte for byte everywhere. It must be written as the URL parser serializes it, with a lowercase scheme and host, no default port and no dot segments, so `https://OP.example` or `https://op.example:443` is refused; `https://op.example`, which the parser reads with an empty path, is accepted as written.
+
+#### ProviderOptions › metadata
+
+```ts
+readonly metadata?: Readonly<Record<string, unknown>>;
+```
+
+Extra members for the discovery document, merged after the ones the provider computes, such as `acr_values_supported`, `ui_locales_supported`, `op_policy_uri` or `service_documentation`. The provider does not act on them: they state what the app does, as `subjectTypes` does.
+
+A member the provider computes, such as `issuer`, an endpoint URL or `response_modes_supported`, makes `createProvider` throw `TypeError`, so the document cannot contradict what the endpoints enforce. So does a value that is not JSON data (`null`, a boolean, a finite number, a well-formed string, a dense array or a plain object, with no accessor), one nested more than 16 levels deep, or members longer than 16384 characters as JSON. The provider keeps a deep-frozen copy.
+
+**Default** — `{}`
 
 #### ProviderOptions › now
 
@@ -1794,7 +1926,7 @@ Current time in milliseconds since the Unix epoch, for tests.
 readonly onDiagnostic?: (diagnostic: ProviderDiagnostic, request: Request) => void;
 ```
 
-Called with the reason each time the token, userinfo, or revocation endpoint refuses a request, after the response is built and before `handle` resolves. The client only ever sees the OAuth error code, so this is how an operator tells an expired code from a wrong verifier. Like the store and the `claims` callback, an exception it throws makes `handle` reject. Authorization failures are not reported here, since `beginAuthorization` and `completeAuthorization` already return their issues.
+Called with the reason each time the token, userinfo, or revocation endpoint refuses a request, and each time a revocation request revokes a grant (`token_revoked`, status `200`), after the response is built and before `handle` resolves. The client only ever sees the OAuth error code, so this is how an operator tells an expired code from a wrong verifier, and which user's grant a replay or a revocation ended. Like the store and the `claims` callback, an exception it throws makes `handle` reject. Authorization failures are not reported here, since `beginAuthorization` and `completeAuthorization` already return their issues.
 
 A returned promise is awaited before the response is returned, so an async callback that rejects makes `handle` reject with its error, as a synchronous throw does.
 
@@ -1826,7 +1958,7 @@ Extra scopes and the claim names each releases, merged over the standard `profil
 readonly signingKeys: readonly KeyPair[];
 ```
 
-Key pairs from `generateKeyPair` or `importPrivateKey`/`importPublicKey`, each with a unique `kid`. A client's ID tokens are signed with the first key of the algorithm its `idTokenSigningAlg` names, or without one with the first `RS256` key when there is one and otherwise the first key. The first key signs JWT access tokens. Every public key is published, so a retiring key stays verifiable.
+Key pairs from `generateKeyPair` or `importPrivateKey`/`importPublicKey`, each with a unique `kid`. A client's ID tokens are signed with the first key of the algorithm its `idTokenSigningAlg` names, or without one with the first `RS256` key when there is one and otherwise the first key. The first key signs JWT access tokens. Every public key is published, then each of `ProviderOptions.verificationKeys`.
 
 Each pair's private and public keys must be the two halves of one key pair. Only their algorithm and `kid` are checked, so a mismatched pair issues ID tokens nobody can verify. The keys must come from the same `@codenhub/jwt` copy as this package's peer dependency: a key from another copy makes the JWKS endpoint reject, and any token response that signs an ID token or a JWT access token. An opaque access token from the client-credentials grant signs nothing, so it is still issued.
 
@@ -1857,6 +1989,16 @@ readonly ttl?: ProviderTtl;
 ```
 
 Token lifetimes.
+
+#### ProviderOptions › verificationKeys
+
+```ts
+readonly verificationKeys?: readonly PublicKey[];
+```
+
+Public keys published in the JWKS after the signing keys, which never sign: a new key published ahead of its use so caches learn it first, or a retired key kept until the tokens it signed expire. They are accepted wherever the provider verifies its own tokens, such as an `id_token_hint`. Each needs a `kid` that no signing key and no other verification key has, and at most 16 may be given. Their algorithms are not added to `id_token_signing_alg_values_supported`, since no ID token is signed with them.
+
+**Default** — `[]`
 
 ### ProviderTtl
 
@@ -1931,16 +2073,54 @@ export interface RefreshCheck {
     readonly scopes: readonly string[];
     readonly grantId: string;
     readonly sessionId?: string;
+    readonly authTime: number;
+    readonly amr?: readonly string[];
+    readonly acr?: string;
+    readonly resources?: readonly string[];
+    readonly issuedAt?: number;
+    readonly expiresAt: number;
 }
 ```
 
-What `ProviderOptions.onRefresh` is asked about: the refresh that is about to issue tokens.
+What `ProviderOptions.onRefresh` is asked about: the refresh that is about to issue tokens. Frozen.
+
+#### RefreshCheck › acr
+
+```ts
+readonly acr?: string;
+```
+
+The authentication context class of the sign-in, as the app reported it for the grant.
+
+#### RefreshCheck › amr
+
+```ts
+readonly amr?: readonly string[];
+```
+
+How the user signed in (RFC 8176), as the app reported it for the grant.
+
+#### RefreshCheck › authTime
+
+```ts
+readonly authTime: number;
+```
+
+When the user signed in, in seconds since the Unix epoch: the grant's `authTime`, which a refresh never changes.
 
 #### RefreshCheck › clientId
 
 ```ts
 readonly clientId: string;
 ```
+
+#### RefreshCheck › expiresAt
+
+```ts
+readonly expiresAt: number;
+```
+
+When the whole family expires, in seconds since the Unix epoch.
 
 #### RefreshCheck › grantId
 
@@ -1949,6 +2129,22 @@ readonly grantId: string;
 ```
 
 The grant the family belongs to; the provider revokes it when the answer is `false`.
+
+#### RefreshCheck › issuedAt
+
+```ts
+readonly issuedAt?: number;
+```
+
+When the presented refresh token was issued, in seconds since the Unix epoch: at the code exchange, or at the refresh that rotated to it. The time since then is how long the family went unused, for an idle timeout. Absent for a token saved before the provider recorded it (`RefreshTokenRecord.issuedAt`).
+
+#### RefreshCheck › resources
+
+```ts
+readonly resources?: readonly string[];
+```
+
+The resource servers the family covers (RFC 8707), from the authorization request.
 
 #### RefreshCheck › scopes
 
@@ -1987,6 +2183,7 @@ export interface RefreshTokenRecord {
     readonly acr?: string;
     readonly sessionId?: string;
     readonly resources?: readonly string[];
+    readonly issuedAt?: number;
     readonly expiresAt: number;
 }
 ```
@@ -2030,6 +2227,14 @@ When the whole token family expires, in seconds since the Unix epoch. Rotation k
 ```ts
 readonly grantId: string;
 ```
+
+#### RefreshTokenRecord › issuedAt
+
+```ts
+readonly issuedAt?: number;
+```
+
+When this refresh token was issued, by the code exchange or by the refresh that rotated to it, in seconds since the Unix epoch. Rotation sets it anew, so it is when the family was last used. The provider always writes it; it is optional so that a row saved before it existed still reads.
 
 #### RefreshTokenRecord › resources
 
@@ -2100,10 +2305,10 @@ export type ClientAuthentication =
         readonly method: "client_secret_post";
         readonly secretHashes: readonly string[];
     }
-    /** The client's HS256 secret, from `importSecretKey`. */
+    /** The client's HS256 secrets, from `generateSecretKey` or `importSecretKey`; any one of them verifies. */
     | {
         readonly method: "client_secret_jwt";
-        readonly key: SecretKey;
+        readonly keys: readonly SecretKey[];
     }
     /** The client's public keys, from `createKeySet`, `importKeySet`, or `createRemoteKeySet`. */
     | {
@@ -2117,6 +2322,8 @@ How a registered client authenticates to the token endpoint, and what the provid
 Secrets are never stored in plaintext: each entry of `secretHashes` is what [`hashClientSecret`](#hashclientsecret) returns for a secret [`generateClientSecret`](#generateclientsecret) created. `client_secret_jwt` is the exception, because an HMAC can only be checked with the secret itself.
 
 `secretHashes` lists every secret the client may use, and a presented secret authenticates when it matches any of them, so a secret can be rotated without downtime: add the new hash, roll the new secret out to the client, then remove the old hash. The list must be non-empty and each entry a non-empty string, or the provider throws `TypeError` when it reads the record.
+
+A `client_secret_jwt` client's `keys` work the same way: the provider tries every key, and an assertion that any of them verifies authenticates, so its HMAC secret rotates as a hashed secret does. The list must be non-empty and hold only `SecretKey` objects, or the provider throws `TypeError` when it reads the record.
 
 A remote key set given as `keys` must be one object per client, reused across `findClient` calls: its cache and its limit on fetches live in the object, so a new one for each read lets every token request that presents an assertion for that client make the provider fetch the client's JWKS.
 
@@ -2157,15 +2364,15 @@ A grant a client may use at the token endpoint. `authorization_code` signs users
 ### OAuthErrorCode
 
 ```ts
-export type OAuthErrorCode = "invalid_request" | "unauthorized_client" | "access_denied" | "unsupported_response_type" | "invalid_scope" | "server_error" | "temporarily_unavailable" | "invalid_client" | "invalid_grant" | "unsupported_grant_type" | "invalid_token" | "unsupported_token_type" | "insufficient_scope" | "interaction_required" | "login_required" | "account_selection_required" | "consent_required" | "invalid_request_uri" | "invalid_request_object" | "request_not_supported" | "request_uri_not_supported" | "registration_not_supported" | "invalid_target";
+export type OAuthErrorCode = "invalid_request" | "unauthorized_client" | "access_denied" | "unsupported_response_type" | "invalid_scope" | "server_error" | "temporarily_unavailable" | "invalid_client" | "invalid_grant" | "unsupported_grant_type" | "invalid_token" | "unsupported_token_type" | "insufficient_scope" | "interaction_required" | "login_required" | "account_selection_required" | "consent_required" | "invalid_request_uri" | "invalid_request_object" | "request_not_supported" | "request_uri_not_supported" | "registration_not_supported" | "invalid_target" | "unmet_authentication_requirements";
 ```
 
-OAuth 2.0 and OpenID Connect error codes a provider sends to a client, from RFC 6749 §4.1.2.1 and §5.2, RFC 6750 §3.1, RFC 7009 §2.2.1, RFC 8707 §2, and OpenID Connect Core §3.1.2.6.
+OAuth 2.0 and OpenID Connect error codes a provider sends to a client, from RFC 6749 §4.1.2.1 and §5.2, RFC 6750 §3.1, RFC 7009 §2.2.1, RFC 8707 §2, OpenID Connect Core §3.1.2.6, and OpenID Connect Core Unmet Authentication Requirements 1.0.
 
 ### OidcIssueCode
 
 ```ts
-export type OidcIssueCode = "request_failed" | "invalid_metadata" | "issuer_mismatch" | "invalid_token_response" | "invalid_userinfo" | "provider_error" | "invalid_callback" | "state_mismatch" | "iss_mismatch" | "invalid_id_token" | "nonce_mismatch" | "azp_mismatch" | "at_hash_mismatch" | "auth_time_missing" | "auth_too_old" | "subject_mismatch" | "invalid_logout_request" | "invalid_logout_token" | "unknown_client" | "invalid_redirect_uri" | "interaction_not_found" | "invalid_request" | "unauthorized_client" | "unsupported_response_type" | "invalid_scope" | "request_not_supported" | "request_uri_not_supported" | "registration_not_supported" | "invalid_target" | "invalid_token" | "insufficient_scope";
+export type OidcIssueCode = "request_failed" | "invalid_metadata" | "issuer_mismatch" | "invalid_token_response" | "invalid_userinfo" | "provider_error" | "invalid_callback" | "state_mismatch" | "iss_mismatch" | "invalid_id_token" | "nonce_mismatch" | "azp_mismatch" | "at_hash_mismatch" | "auth_time_missing" | "auth_too_old" | "subject_mismatch" | "id_token_mismatch" | "invalid_logout_request" | "invalid_logout_token" | "unknown_client" | "invalid_redirect_uri" | "interaction_not_found" | "invalid_request" | "unauthorized_client" | "unsupported_response_type" | "invalid_scope" | "request_not_supported" | "request_uri_not_supported" | "registration_not_supported" | "invalid_target" | "invalid_token" | "insufficient_scope";
 ```
 
 Stable category of a failure that callers can branch on without parsing messages.
@@ -2191,15 +2398,68 @@ What every operation on untrusted input returns instead of throwing. The shape m
 ### Prompt
 
 ```ts
-export type Prompt = "none" | "login" | "consent" | "select_account";
+export type Prompt = "none" | "login" | "consent" | "select_account" | "create";
 ```
 
-A `prompt` value (OpenID Connect Core §3.1.2.1).
+A `prompt` value: one of OpenID Connect Core §3.1.2.1, or `create` (Initiating User Registration via OpenID Connect 1.0), which asks the app to show its sign-up page rather than its login page.
 
 ### ProviderDiagnosticReason
 
 ```ts
-export type ProviderDiagnosticReason = "content_type" | "body" | "parameters" | "client_credentials_missing" | "client_credentials_ambiguous" | "client_credentials_malformed" | "client_unknown" | "client_method_mismatch" | "client_credentials_wrong" | "grant_type_missing" | "grant_type_unsupported" | "grant_type_unauthorized" | "parameter_missing" | "code_verifier_malformed" | "code_verifier_missing" | "code_verifier_unexpected" | "code_unknown" | "code_replayed" | "code_expired" | "code_client_mismatch" | "redirect_uri_mismatch" | "code_verifier_mismatch" | "scope_invalid" | "refresh_token_unknown" | "refresh_token_replayed" | "refresh_token_expired" | "refresh_token_client_mismatch" | "scope_not_granted" | "refresh_refused" | "resource_invalid" | "resource_not_granted" | "access_token_missing" | "access_token_malformed" | "access_token_unknown" | "access_token_expired" | "access_token_client_unknown" | "access_token_without_openid" | "token_missing" | "token_of_another_client";
+export type ProviderDiagnosticReason =
+    | "content_type"
+    | "body"
+    | "parameters"
+    | "client_credentials_missing"
+    | "client_credentials_ambiguous"
+    | "client_credentials_malformed"
+    | "client_unknown"
+    | "client_method_mismatch"
+    | "client_credentials_wrong"
+    | "grant_type_missing"
+    | "grant_type_unsupported"
+    | "grant_type_unauthorized"
+    | "parameter_missing"
+    | "code_verifier_malformed"
+    | "code_verifier_missing"
+    | "code_verifier_unexpected"
+    | "code_unknown"
+    | "code_replayed"
+    | "code_expired"
+    | "code_client_mismatch"
+    | "redirect_uri_mismatch"
+    | "code_verifier_mismatch"
+    | "scope_invalid"
+    | "refresh_token_unknown"
+    | "refresh_token_replayed"
+    | "refresh_token_expired"
+    | "refresh_token_client_mismatch"
+    | "scope_not_granted"
+    | "refresh_refused"
+    | "resource_invalid"
+    | "resource_not_granted"
+    | "access_token_missing"
+    | "access_token_malformed"
+    | "access_token_unknown"
+    | "access_token_expired"
+    | "access_token_client_unknown"
+    | "access_token_without_openid"
+    | "token_missing"
+    | "token_of_another_client"
+    /** Not a refusal: a revocation request revoked a grant, and was answered `200`. */
+    | "token_revoked";
 ```
 
 Why the provider refused a request at the token, userinfo, or revocation endpoint. The client is sent only the OAuth error code, so this is what an operator debugs with.
+
+## Internal types
+
+### ResponseMode
+
+```ts
+type ResponseMode = "query" | "form_post";
+```
+
+How the authorization response reaches the client's redirect URI: `query` adds its parameters to the URI's query (RFC 6749 §4.1.2), and `form_post` has the browser post them as a form (OAuth 2.0 Form Post Response Mode).
+
+Not exported; declared in `src/provider/types.ts`.

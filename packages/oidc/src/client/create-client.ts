@@ -1,35 +1,43 @@
+import { assertBodyUnread, readBody } from "../shared/body";
+import { isFormContentType } from "../shared/content-type";
 import { timingSafeEqual } from "../shared/encoding";
-import { MAX_PARAMETER_LENGTH, MAX_URL_LENGTH } from "../shared/limits";
+import { MAX_BODY_BYTES, MAX_PARAMETER_LENGTH, MAX_URL_LENGTH } from "../shared/limits";
 import { parseParameters } from "../shared/parameters";
 import { fail, ok } from "../shared/result";
-import type { OidcIssue, OidcResult, UserinfoClaims } from "../shared/types";
+import type { OidcIssue, OidcResult } from "../shared/types";
 import { buildAuthorization, denseCopy, readResources, requireRedirectUri } from "./authorize";
 import { buildEndSessionUrl } from "./end-session";
-import { readErrorCode, requestFailure, requestJson } from "./http";
+import { readErrorCode } from "./http";
 import { createIdTokenValidator, createProviderKeySet, type IdTokenValidator } from "./id-token";
+import { matchesTenantIssuer } from "./issuer";
 import { createLogoutTokenValidator, readBackchannelLogout } from "./logout-token";
 import { type ResolvedClientOptions, resolveClientOptions } from "./options";
 import { requestRevocation, requestTokens } from "./tokens";
 import type {
   AuthorizeOptions,
+  CallbackInput,
   Client,
   ClientCredentialsOptions,
   EndSessionOptions,
   ClientOptions,
+  OAuthClient,
+  OAuthClientOptions,
+  OAuthSignIn,
   PendingAuthorization,
+  PreviousIdToken,
   Refreshed,
   RefreshOptions,
   SignIn,
   RevokeOptions,
   TokenSet,
-  UserinfoOptions,
 } from "./types";
+import { createUserinfoFetcher } from "./userinfo";
 
-const HTTP_OK = 200;
+/** The callback parameters the client reads itself, which {@link SignIn.parameters} leaves out. */
+const CONSUMED_PARAMETERS: ReadonlySet<string> = new Set(["state", "code", "iss"]);
 
 /** RFC 6749 §3.3: printable ASCII except space, `"` and `\`. */
 const SCOPE_TOKEN = /^[\x21\x23-\x5B\x5D-\x7E]+$/;
-const PRINTABLE_ASCII = /^[\x20-\x7E]+$/;
 
 const isObject = (value: unknown): value is Readonly<Record<string, unknown>> =>
   typeof value === "object" && value !== null;
@@ -52,18 +60,28 @@ function readRequiredString(record: Readonly<Record<string, unknown>>, name: str
 
 /**
  * Checks the pending state the app stored, which it passes back untouched. It is the caller's own data, so
- * a malformed value is a caller bug and throws; the names of the members are the only thing reported.
+ * a malformed value is a caller bug and throws; the names of the members are the only thing reported. A plain
+ * OAuth 2.0 client's pending state has no nonce.
  */
-function readPending(pending: unknown): PendingAuthorization {
+function readPending(pending: unknown, openid: boolean): PendingAuthorization {
   if (!isObject(pending)) {
     throw new TypeError("callback: pending must be an object");
   }
   const state = readRequiredString(pending, "state", "callback: pending");
-  const nonce = readRequiredString(pending, "nonce", "callback: pending");
+  const nonce = openid ? readRequiredString(pending, "nonce", "callback: pending") : undefined;
   const codeVerifier = readRequiredString(pending, "codeVerifier", "callback: pending");
-  const { maxAge, requestedAt } = pending;
+  const { maxAge, requestedAt, responseMode } = pending;
+  if (responseMode !== undefined && responseMode !== "form_post") {
+    throw new TypeError('callback: pending.responseMode must be "form_post" when set');
+  }
+  const base = {
+    state,
+    ...(nonce === undefined ? {} : { nonce }),
+    codeVerifier,
+    ...(responseMode === undefined ? {} : { responseMode: "form_post" as const }),
+  };
   if (maxAge === undefined) {
-    return { state, nonce, codeVerifier };
+    return base;
   }
   if (!isNonNegativeInteger(maxAge)) {
     throw new TypeError("callback: pending.maxAge must be a non-negative integer");
@@ -71,21 +89,15 @@ function readPending(pending: unknown): PendingAuthorization {
   if (!isNonNegativeInteger(requestedAt)) {
     throw new TypeError("callback: pending.requestedAt must be a non-negative integer when pending.maxAge is set");
   }
-  return { state, nonce, codeVerifier, maxAge, requestedAt };
+  return { ...base, maxAge, requestedAt };
 }
 
 /** An `invalid_callback` issue at the callback URL, with optional facts about why. */
 const invalidCallback = (path: readonly string[], params?: Readonly<Record<string, string>>): OidcResult<never> =>
   fail(params === undefined ? { code: "invalid_callback", path } : { code: "invalid_callback", path, params });
 
-/**
- * Reads the parameters of the callback URL. The query is the only place a provider's response goes here,
- * because this client uses the `query` response mode.
- */
-function readCallbackParameters(url: string | URL): OidcResult<ReadonlyMap<string, string>> {
-  if (typeof url !== "string" && !(url instanceof URL)) {
-    throw new TypeError("callback: url must be a string or a URL");
-  }
+/** Reads the parameters of a callback URL's query, where the `query` response mode puts them. */
+function readUrlParameters(url: string | URL): OidcResult<ReadonlyMap<string, string>> {
   const text = url instanceof URL ? url.href : url;
   if (text.length > MAX_URL_LENGTH) {
     return invalidCallback(["callback"]);
@@ -100,33 +112,83 @@ function readCallbackParameters(url: string | URL): OidcResult<ReadonlyMap<strin
 }
 
 /**
+ * Reads the parameters of a `form_post` response (OAuth 2.0 Form Post Response Mode): a form body of at most
+ * {@link MAX_BODY_BYTES} UTF-8 bytes, read with the rules a back-channel logout request is.
+ */
+async function readFormParameters(request: Request): Promise<OidcResult<ReadonlyMap<string, string>>> {
+  if (!isFormContentType(request.headers.get("content-type"))) {
+    return invalidCallback(["callback", "headers", "content-type"]);
+  }
+  const body = await readBody(request, MAX_BODY_BYTES);
+  if (!body.ok) {
+    return invalidCallback(["callback", "body"], { reason: body.reason });
+  }
+  const parsed = parseParameters(body.text);
+  return parsed.ok ? ok(parsed.parameters) : invalidCallback(["callback", "body"], { reason: parsed.reason });
+}
+
+/**
+ * Reads the parameters of the authorization response, from where the pending request's response mode puts them: the
+ * URL's query for `query`, and a POST body for `form_post`. A response that arrived another way is refused, since a
+ * provider never sends it so.
+ */
+async function readCallbackParameters(
+  input: CallbackInput,
+  pending: PendingAuthorization,
+): Promise<OidcResult<ReadonlyMap<string, string>>> {
+  const formPost = pending.responseMode === "form_post";
+  if (typeof input === "string" || input instanceof URL) {
+    return formPost ? invalidCallback(["callback", "method"]) : readUrlParameters(input);
+  }
+  if (!(input instanceof Request)) {
+    throw new TypeError("callback: input must be a string, a URL, or a Request");
+  }
+  assertBodyUnread(input, "callback");
+  if (input.method === "GET" && !formPost) {
+    return readUrlParameters(input.url);
+  }
+  if (input.method === "POST" && formPost) {
+    return readFormParameters(input);
+  }
+  return invalidCallback(["callback", "method"]);
+}
+
+/**
  * Checks the `iss` of an authorization response (RFC 9207). A provider that advertises the parameter must
  * send it, so its absence is a failure as well as a wrong value.
  */
 function issuerIssue(iss: string | undefined, options: ResolvedClientOptions): OidcIssue | undefined {
+  const { tenant } = options;
   const mismatch =
     iss === undefined
       ? options.metadata.authorization_response_iss_parameter_supported === true
-      : iss !== options.metadata.issuer;
+      : tenant === undefined
+        ? iss !== options.metadata.issuer
+        : !matchesTenantIssuer(iss, tenant);
   return mismatch ? { code: "iss_mismatch", path: ["callback", "iss"] } : undefined;
 }
 
+/** The response parameters the client did not read itself, such as the `user` Sign in with Apple posts. */
+const otherParameters = (params: ReadonlyMap<string, string>): Readonly<Record<string, string>> =>
+  Object.fromEntries([...params].filter(([name]) => !CONSUMED_PARAMETERS.has(name)));
+
 /**
  * Finishes a sign-in: checks the callback against the pending state, exchanges the code, and validates the
- * ID token. The checks stop at the first failure, so nothing after a bad `state` runs.
+ * ID token. The checks stop at the first failure, so nothing after a bad `state` runs. A plain OAuth 2.0 client
+ * (`validate` undefined) has no ID token to validate.
  */
 async function finishSignIn(
   options: ResolvedClientOptions,
-  validate: IdTokenValidator,
-  url: string | URL,
+  validate: IdTokenValidator | undefined,
+  input: CallbackInput,
   pendingInput: PendingAuthorization,
-): Promise<OidcResult<SignIn>> {
-  if (typeof url !== "string" && !(url instanceof URL)) {
-    throw new TypeError("callback: url must be a string or URL");
+): Promise<OidcResult<SignIn | OAuthSignIn>> {
+  if (typeof input !== "string" && !(input instanceof URL) && !(input instanceof Request)) {
+    throw new TypeError("callback: input must be a string, a URL, or a Request");
   }
   const redirectUri = requireRedirectUri(options, "callback");
-  const pending = readPending(pendingInput);
-  const parameters = readCallbackParameters(url);
+  const pending = readPending(pendingInput, validate !== undefined);
+  const parameters = await readCallbackParameters(input, pending);
   if (!parameters.ok) {
     return parameters;
   }
@@ -165,12 +227,15 @@ async function finishSignIn(
   if (!tokens.ok) {
     return tokens;
   }
+  if (validate === undefined) {
+    return ok({ tokens: tokens.value, parameters: otherParameters(params) });
+  }
   const idToken = tokens.value.idToken;
   if (idToken === undefined) {
     return fail({ code: "invalid_token_response", path: ["response", "id_token"] });
   }
   const claims = await validate(idToken, {
-    nonce: pending.nonce,
+    ...(pending.nonce === undefined ? {} : { nonce: pending.nonce }),
     ...(pending.maxAge === undefined || pending.requestedAt === undefined
       ? {}
       : { maxAge: { seconds: pending.maxAge, requestedAt: pending.requestedAt } }),
@@ -179,13 +244,50 @@ async function finishSignIn(
   if (!claims.ok) {
     return claims;
   }
-  return ok({ claims: claims.value, tokens: { ...tokens.value, idToken } });
+  return ok({ claims: claims.value, tokens: { ...tokens.value, idToken }, parameters: otherParameters(params) });
+}
+
+/**
+ * Checks the claims of the ID token a refresh continues, which the app kept from the sign-in. It is the caller's own
+ * data, so a malformed value throws, naming the member and never its value.
+ */
+function readPrevious(value: unknown): PreviousIdToken {
+  if (!isObject(value)) {
+    throw new TypeError("refresh: previous must be the claims of the ID token the session holds");
+  }
+  const iss = readRequiredString(value, "iss", "refresh: previous");
+  const sub = readRequiredString(value, "sub", "refresh: previous");
+  const aud = typeof value.aud === "string" ? value.aud : denseCopy(value.aud);
+  if (aud === undefined || aud === "" || (Array.isArray(aud) && (aud.length === 0 || !aud.every(isNonEmptyString)))) {
+    throw new TypeError("refresh: previous.aud must be a non-empty string or array of non-empty strings");
+  }
+  const { azp, auth_time: authTime, nonce } = value;
+  if (azp !== undefined && typeof azp !== "string") {
+    throw new TypeError("refresh: previous.azp must be a string when set");
+  }
+  if (authTime !== undefined && (typeof authTime !== "number" || !Number.isFinite(authTime))) {
+    throw new TypeError("refresh: previous.auth_time must be a finite number when set");
+  }
+  if (nonce !== undefined && typeof nonce !== "string") {
+    throw new TypeError("refresh: previous.nonce must be a string when set");
+  }
+  return {
+    iss,
+    sub,
+    aud: aud as string | readonly string[],
+    ...(azp === undefined ? {} : { azp }),
+    ...(authTime === undefined ? {} : { auth_time: authTime }),
+    ...(nonce === undefined ? {} : { nonce }),
+  };
 }
 
 /** Checks the refresh request. A bad argument is a caller bug, so it throws. */
-function readRefreshOptions(options: unknown): {
+function readRefreshOptions(
+  options: unknown,
+  openid: boolean,
+): {
   readonly refreshToken: string;
-  readonly subject: string;
+  readonly previous: PreviousIdToken | undefined;
   readonly scope: readonly string[] | undefined;
   readonly resource: readonly string[];
 } {
@@ -194,7 +296,7 @@ function readRefreshOptions(options: unknown): {
   }
   return {
     refreshToken: readRequiredString(options, "refreshToken", "refresh"),
-    subject: readRequiredString(options, "subject", "refresh"),
+    previous: openid ? readPrevious(options.previous) : undefined,
     scope: readScopeList(options.scope, "refresh"),
     resource: readResources(options.resource, "refresh"),
   };
@@ -228,15 +330,16 @@ function readScopeList(value: unknown, caller: string): readonly string[] | unde
 }
 
 /**
- * Exchanges a refresh token. An ID token in the response is validated against the subject the app
- * already has, and not against a nonce, since a refresh has none.
+ * Exchanges a refresh token. An ID token in the response is validated against the one the session holds (OpenID
+ * Connect Core §12.2), and not against the sign-in's nonce, since a refresh sends none. A plain OAuth 2.0 client
+ * ignores any ID token.
  */
 async function refreshTokens(
   options: ResolvedClientOptions,
-  validate: IdTokenValidator,
+  validate: IdTokenValidator | undefined,
   input: RefreshOptions,
 ): Promise<OidcResult<Refreshed>> {
-  const request = readRefreshOptions(input);
+  const request = readRefreshOptions(input, validate !== undefined);
   const form = new URLSearchParams({ grant_type: "refresh_token", refresh_token: request.refreshToken });
   if (request.scope !== undefined) {
     form.set("scope", request.scope.join(" "));
@@ -247,62 +350,15 @@ async function refreshTokens(
     return tokens;
   }
   const idToken = tokens.value.idToken;
-  if (idToken === undefined) {
+  if (idToken === undefined || validate === undefined || request.previous === undefined) {
     return ok({ tokens: tokens.value });
   }
-  const claims = await validate(idToken, { accessToken: tokens.value.accessToken, subject: request.subject });
-  return claims.ok ? ok({ tokens: tokens.value, claims: claims.value }) : claims;
-}
-
-/** Checks the userinfo request. A bad argument, or a provider without the endpoint, is a caller bug, so it throws. */
-function readUserinfoOptions(options: UserinfoOptions): { readonly accessToken: string; readonly subject: string } {
-  if (!isObject(options)) {
-    throw new TypeError("userinfo: options must be an object");
-  }
-  const accessToken = readRequiredString(options, "accessToken", "userinfo");
-  // The token goes into a header, which takes printable ASCII only; any other value would fail inside `fetch`
-  // and be reported as a network failure. Token responses are held to the same rule.
-  if (!PRINTABLE_ASCII.test(accessToken)) {
-    throw new TypeError("userinfo: accessToken must be printable ASCII");
-  }
-  return { accessToken, subject: readRequiredString(options, "subject", "userinfo") };
-}
-
-/**
- * Fetches the userinfo claims. The response's `sub` must equal the subject the app already has
- * (OpenID Connect Core §5.3.2), so claims about another user are refused.
- */
-async function fetchUserinfo(
-  options: ResolvedClientOptions,
-  input: UserinfoOptions,
-): Promise<OidcResult<UserinfoClaims>> {
-  const request = readUserinfoOptions(input);
-  const url = options.metadata.userinfo_endpoint;
-  if (url === undefined) {
-    throw new TypeError("userinfo: metadata has no userinfo_endpoint");
-  }
-  const response = await requestJson({
-    endpoint: "userinfo",
-    url,
-    method: "GET",
-    headers: { authorization: `Bearer ${request.accessToken}` },
-    fetch: options.fetch,
-    timeoutMs: options.timeoutMs,
+  const claims = await validate(idToken, {
+    accessToken: tokens.value.accessToken,
+    subject: request.previous.sub,
+    previous: request.previous,
   });
-  if (!response.ok) {
-    return response;
-  }
-  if (response.value.status !== HTTP_OK) {
-    return requestFailure("userinfo", "status", response.value.status);
-  }
-  const claims = response.value.body;
-  if (typeof claims.sub !== "string") {
-    return fail({ code: "invalid_userinfo", path: ["userinfo", "sub"] });
-  }
-  if (claims.sub !== request.subject) {
-    return fail({ code: "subject_mismatch", path: ["userinfo", "sub"] });
-  }
-  return ok(claims as UserinfoClaims);
+  return claims.ok ? ok({ tokens: tokens.value, claims: claims.value }) : claims;
 }
 
 /**
@@ -393,6 +449,9 @@ async function requestClientToken(
  * Creates a relying party for one provider and one registered client.
  *
  * @remarks
+ * With `openid: false`, the client is a plain OAuth 2.0 client, such as one for GitHub: it sends no nonce and needs
+ * no `openid` scope, handles no ID token, and returns an {@link OAuthClient} whose results carry no claims.
+ *
  * The client holds no per-user state. Between the redirect and the callback the app keeps the
  * {@link PendingAuthorization} that {@link Client.authorize} returned, in its own session. Every method
  * validates its input first and throws only for a caller's mistake; a response from the provider, or a URL
@@ -433,21 +492,33 @@ async function requestClientToken(
  * }
  * ```
  */
-export function createClient(options: ClientOptions): Client {
+export function createClient(options: ClientOptions): Client;
+export function createClient(options: OAuthClientOptions): OAuthClient;
+export function createClient(options: ClientOptions | OAuthClientOptions): Client | OAuthClient {
   const resolved = resolveClientOptions(options);
+  const shared = (
+    validate: IdTokenValidator | undefined,
+    keys: ReturnType<typeof createProviderKeySet> | undefined,
+  ) => ({
+    metadata: resolved.metadata,
+    authorize: (request?: AuthorizeOptions) => buildAuthorization(resolved, request),
+    callback: (input: CallbackInput, pending: PendingAuthorization) => finishSignIn(resolved, validate, input, pending),
+    refresh: (request: RefreshOptions) => refreshTokens(resolved, validate, request),
+    userinfo: createUserinfoFetcher(resolved, keys),
+    revoke: (request: RevokeOptions) => revokeToken(resolved, request),
+    clientCredentials: (request?: ClientCredentialsOptions) => requestClientToken(resolved, request),
+    endSessionUrl: (request?: EndSessionOptions) => buildEndSessionUrl(resolved, request),
+  });
+  if (!resolved.openid) {
+    // No ID token, so no key set: the provider may have no JWKS, and nothing is ever fetched from one.
+    return Object.freeze(shared(undefined, undefined)) as unknown as OAuthClient;
+  }
   const keys = createProviderKeySet(resolved);
   const validate = createIdTokenValidator(resolved, keys);
   const verifyLogoutToken = createLogoutTokenValidator(resolved, keys);
   return Object.freeze({
-    metadata: resolved.metadata,
-    authorize: (request?: AuthorizeOptions) => buildAuthorization(resolved, request),
-    callback: (url: string | URL, pending: PendingAuthorization) => finishSignIn(resolved, validate, url, pending),
-    refresh: (request: RefreshOptions) => refreshTokens(resolved, validate, request),
-    userinfo: (request: UserinfoOptions) => fetchUserinfo(resolved, request),
-    revoke: (request: RevokeOptions) => revokeToken(resolved, request),
-    clientCredentials: (request?: ClientCredentialsOptions) => requestClientToken(resolved, request),
-    endSessionUrl: (request?: EndSessionOptions) => buildEndSessionUrl(resolved, request),
+    ...shared(validate, keys),
     verifyLogoutToken,
     readBackchannelLogout: (request: Request) => readBackchannelLogout(verifyLogoutToken, request),
-  });
+  }) as unknown as Client;
 }
