@@ -3,7 +3,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { expect, test } from "./fixtures";
-import { getContrastRatio, ORIGIN, settleAnimations, stopTransitions } from "./test-utils";
+import { flattenColor, getContrastRatio, ORIGIN, settleAnimations, stopTransitions } from "./test-utils";
 
 const FEEDBACK_URL = `${ORIGIN}/feedback/?env=vanilla`;
 const NATIVE_URL = `${ORIGIN}/native/?env=vanilla`;
@@ -965,6 +965,68 @@ test("shows a focused control on a solid surface", async ({ page }) => {
     expect(read.focused, label).toBe(true);
     expect(line, `${label} draws a line inside its ring`).toBeDefined();
     expect(getContrastRatio(line!, read.plate), `${label} line against the plate`).toBeGreaterThanOrEqual(3);
+  }
+});
+
+/* The reset's ring is the primary colour at 64%: on a solid surface a focused
+   bare link, summary or `[tabindex]` drew it over a fill of its own colour or
+   close to it, at 1.0:1 on `.card.solid.primary`. */
+test("rings a bare focusable element on a solid surface at 3:1", async ({ browserName, page }) => {
+  await page.setContent("<!doctype html><html><body></body></html>");
+  await page.addStyleTag({ url: `${ORIGIN}/shared/entry-vanilla.css` });
+  await stopTransitions(page);
+
+  const cases = [];
+
+  for (const scheme of ["light", "dark"] as const) {
+    for (const plate of ["", "neutral", "primary", "secondary", "success", "warning", "destructive", "info"]) {
+      for (const control of [
+        '<a href="#x">Read more</a>',
+        "<details><summary>More</summary>Body</details>",
+        '<div tabindex="0">Region</div>',
+      ]) {
+        cases.push({ scheme, plate, control });
+      }
+    }
+  }
+
+  for (const { scheme, plate, control } of cases) {
+    // oxlint-disable-next-line no-await-in-loop -- one control holds focus at a time.
+    await page.emulateMedia({ colorScheme: scheme });
+    // oxlint-disable-next-line no-await-in-loop -- one control holds focus at a time.
+    await page.evaluate(
+      ([markup, name]) => {
+        document.body.innerHTML = `<button id="before">.</button><div class="card solid ${name}" id="plate">${markup}</div>`;
+        document.querySelector("#plate :is(a, summary, [tabindex])")!.id = "control";
+      },
+      [control, plate],
+    );
+    // oxlint-disable-next-line no-await-in-loop -- one control holds focus at a time.
+    await page.locator("#before").focus();
+    // oxlint-disable-next-line no-await-in-loop -- one control holds focus at a time.
+    await page.keyboard.press("Tab");
+    /* WebKit, as Safari, leaves links out of the Tab order. Focus moved by a
+       script just after a key press is still keyboard focus there. */
+    if (browserName === "webkit") {
+      // oxlint-disable-next-line no-await-in-loop -- one control holds focus at a time.
+      await page.locator("#control").focus();
+    }
+    // oxlint-disable-next-line no-await-in-loop -- one control holds focus at a time.
+    const read = await page.evaluate(() => {
+      const element = document.getElementById("control")!;
+
+      return {
+        focused: element.matches(":focus-visible"),
+        ring: getComputedStyle(element).outlineColor,
+        plate: getComputedStyle(document.getElementById("plate")!).backgroundColor,
+        page: getComputedStyle(document.body).backgroundColor,
+      };
+    });
+    const label = `${scheme} ${control} in .card.solid${plate ? `.${plate}` : ""}`;
+    const ground = flattenColor(read.plate, read.page);
+
+    expect(read.focused, label).toBe(true);
+    expect.soft(getContrastRatio(flattenColor(read.ring, ground), ground), label).toBeGreaterThanOrEqual(3);
   }
 });
 
