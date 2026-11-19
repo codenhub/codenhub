@@ -2,7 +2,7 @@
 title: Configuração
 description: Instale o pacote, escolha entre CSS compilado ou código-fonte do Tailwind e renderize a estrutura da página de configurações.
 order: 1
-source: 6c3027b30bbb7ef0aedc157cab4b1f6fb58b0a4a
+source: 3054c215b54a165e31d6c9104997150bd837dedc
 ---
 
 # Configuração

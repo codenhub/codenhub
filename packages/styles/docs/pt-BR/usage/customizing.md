@@ -2,7 +2,7 @@
 title: Personalização
 description: Consulta sobre tokens de apresentação e de material, ajustes das estéticas, as variáveis públicas de componente, a paleta gerada e os helpers para criar os seus próprios componentes.
 order: 9
-source: 57296b90438d78d821003e3cfa9438ffa0ed9dad
+source: e1b49dcfe93316935a4587c2a9bc030350b591e1
 ---
 
 # Personalização

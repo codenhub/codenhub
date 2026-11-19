@@ -2,7 +2,7 @@
 title: Configuración inicial
 description: Instala el paquete, elige entre CSS compilado o código fuente de Tailwind y renderiza la estructura base de la página de ajustes.
 order: 1
-source: 6c3027b30bbb7ef0aedc157cab4b1f6fb58b0a4a
+source: 3054c215b54a165e31d6c9104997150bd837dedc
 ---
 
 # Configuración inicial

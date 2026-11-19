@@ -2,7 +2,7 @@
 title: Classes solo
 description: Como aplicar uma estética a um único elemento de outra biblioteca, como um toast ou um dialog, e o que uma classe solo lê e ignora.
 order: 7
-source: ed6b271ec9d3eb83dfc5f098f587d8fc0d5e2ad3
+source: 6f20a0d912e1ffc1a525f9536f4f9ff4f8abb6ec
 ---
 
 # Classes solo

@@ -2,7 +2,7 @@
 title: Clases solo
 description: Cómo pintar una estética sobre un elemento de otra librería, como un toast o un diálogo, y qué lee e ignora una clase solo.
 order: 7
-source: ed6b271ec9d3eb83dfc5f098f587d8fc0d5e2ad3
+source: 6f20a0d912e1ffc1a525f9536f4f9ff4f8abb6ec
 ---
 
 # Clases solo
