@@ -203,9 +203,8 @@ for (const theme of THEMES) {
     );
     await page.evaluate(() => {
       document.documentElement.setAttribute("data-contrast", "more");
-
-      return Promise.allSettled(document.getAnimations().map((animation) => animation.finished));
     });
+    await settleAnimations(page);
 
     for (const intent of INTENTS.filter((name) => name !== "neutral")) {
       // oxlint-disable-next-line no-await-in-loop -- one page, read in turn.

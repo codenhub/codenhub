@@ -542,9 +542,8 @@ test("keeps the checked plate on a bare toggle with a quiet presentation", async
 
     mixed.indeterminate = true;
     void getComputedStyle(mixed).backgroundColor;
-
-    return Promise.allSettled(document.getAnimations().map((animation) => animation.finished));
   });
+  await settleAnimations(page);
 
   const plates = await page.evaluate(() =>
     Object.fromEntries(

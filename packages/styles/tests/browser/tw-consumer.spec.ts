@@ -589,10 +589,12 @@ const renderFixture = async (page: Page, theme: "light" | "dark", css: string, s
   await page.setContent(
     `<!doctype html><html data-theme="${theme}"><head><meta charset="utf-8" /><style>${css}</style></head><body>${fixtureFor(side)}</body></html>`,
   );
-  await page.evaluate(async () => {
-    await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
-    await Promise.allSettled(document.getAnimations().map((animation) => animation.finished));
-  });
+  await page.evaluate(
+    () => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))),
+  );
+  /* Finite animations only: under reduced motion an indeterminate bar's pulse
+     runs on, and waiting on every animation waited forever. */
+  await settleAnimations(page);
 
   return page.evaluate(() => {
     const read = (element: Element, pseudo?: string) => {
