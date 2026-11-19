@@ -48,12 +48,20 @@ export async function exportMaterialJwk(
   return kid === undefined ? jwk : { ...jwk, kid };
 }
 
-/** Whether `value` is a Web Crypto key of this realm; never throws. */
+/**
+ * Whether `value` is a genuine Web Crypto key of this realm; never throws. `instanceof` alone also passes
+ * `Object.create(CryptoKey.prototype)` or a proxy of a key, whose `type` getter then throws, so the native
+ * getter is called on it as the brand check.
+ */
 export function isCryptoKey(value: unknown): value is CryptoKey {
   try {
-    return typeof CryptoKey === "function" && value instanceof CryptoKey;
+    if (typeof CryptoKey !== "function" || !(value instanceof CryptoKey)) {
+      return false;
+    }
+    Object.getOwnPropertyDescriptor(CryptoKey.prototype, "type")?.get?.call(value);
+    return true;
   } catch {
-    // A revoked proxy throws on the prototype lookup; it is no key.
+    // A revoked proxy throws on the prototype lookup, and an impostor in the native getter; neither is a key.
     return false;
   }
 }

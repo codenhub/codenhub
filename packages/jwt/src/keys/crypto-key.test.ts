@@ -142,6 +142,29 @@ describe("CryptoKey import", () => {
   });
 });
 
+describe("CryptoKey impostors", () => {
+  it("should report invalid_key without throwing for an object that only inherits from CryptoKey", async () => {
+    const impostor = Object.create(CryptoKey.prototype) as CryptoKey;
+    const pair = await webCryptoPair("ES256");
+    const codesOf = (result: { ok: boolean; error?: { issues: readonly { code: string }[] } }) =>
+      result.ok ? [] : result.error?.issues.map((issue) => issue.code);
+
+    // Not a key, so it is read as the JWK it is not, and refused as one.
+    expect(codesOf(await importPublicKey(impostor, { alg: "ES256" }))).toEqual(["invalid_key"]);
+    expect(codesOf(await importPrivateKey(impostor, { alg: "ES256" }))).toEqual(["invalid_key"]);
+    expect(codesOf(await importKeyPair({ privateKey: impostor, publicKey: pair.publicKey }, { alg: "ES256" }))).toEqual(
+      ["invalid_key"],
+    );
+    expect(codesOf(await importSecretKey(impostor, { alg: "HS256" }))).toEqual(["invalid_key"]);
+  });
+
+  it("should report invalid_key without throwing for a proxy of a real CryptoKey", async () => {
+    const proxy = new Proxy((await webCryptoPair("ES256")).publicKey, {});
+
+    expect(issuesOf(await importPublicKey(proxy, { alg: "ES256" }))).toEqual([{ code: "invalid_key" }]);
+  });
+});
+
 describe("importSecretKey with a CryptoKey", () => {
   it("should keep a non-extractable HMAC key that signs and verifies", async () => {
     const secret = valueOf(await importSecretKey(await hmacKey("SHA-256", 256), { alg: "HS256", kid: "s1" }));
