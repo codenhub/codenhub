@@ -167,25 +167,6 @@
       text-decoration-color, fill, stroke !important;
   }
 
-  /* The one animation reduced motion keeps: an indeterminate progress bar's
-     pulse, which changes only opacity and the fill's strength. Ended at once,
-     the bar rests as a dimmed full track, which still reads as working but no
-     longer as a bar that is filling. A bar drawn with `@apply` carries no class
-     this can name, and rests that way. Under `none` it ends with the rest. */
-  @media (prefers-reduced-motion: reduce) {
-    :root:not([data-motion="full"], [data-motion="none"]) .progress.indeterminate::after,
-    :root:not([data-motion="full"], [data-motion="none"]) progress:indeterminate {
-      animation-duration: 1.5s !important;
-      animation-iteration-count: infinite !important;
-    }
-  }
-
-  :root[data-motion="reduce"] .progress.indeterminate::after,
-  :root[data-motion="reduce"] progress:indeterminate {
-    animation-duration: 1.5s !important;
-    animation-iteration-count: infinite !important;
-  }
-
   /* No motion, asked for by the app: every animation and transition ends at
      once. The near-zero duration rather than `none`, so a `transitionend` or
      `animationend` still fires. */

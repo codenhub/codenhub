@@ -3,7 +3,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { expect, test } from "./fixtures";
-import { getContrastRatio, ORIGIN, stopTransitions } from "./test-utils";
+import { getContrastRatio, ORIGIN, settleAnimations, stopTransitions } from "./test-utils";
 
 const FEEDBACK_URL = `${ORIGIN}/feedback/?env=vanilla`;
 const NATIVE_URL = `${ORIGIN}/native/?env=vanilla`;
@@ -409,8 +409,7 @@ test("allows document-level horizontal overflow instead of clipping it", async (
    own under reduced motion, whether the reader's system asks for it or the
    app does through `data-motion`. Under `reduce` a component may still fade:
    what keeps a duration is a colour, opacity, or visibility change, never a
-   transform, a slide, or a size. Under `none` nothing keeps one. The one
-   animation `reduce` keeps is the indeterminate bar's opacity pulse. */
+   transform, a slide, or a size. Under `none` nothing keeps one. */
 const MOTION_CASES = [
   { name: "the system asks for reduced motion", media: "reduce", motion: null, fades: true },
   { name: 'data-motion="reduce"', media: "no-preference", motion: "reduce", fades: true },
@@ -465,8 +464,7 @@ for (const { name, media, motion: level, fades } of MOTION_CASES) {
       };
     });
 
-    /* The indeterminate bar's pulse is a fade, so only it survives `reduce`. */
-    expect(motion.animations).toEqual(["none", "none", fades ? "anim-progress-pulse" : "none"]);
+    expect(motion.animations).toEqual(["none", "none", "none"]);
     if (fades) {
       for (const running of motion.running) {
         expect(running, "only a fade keeps its duration").toMatch(
@@ -482,8 +480,8 @@ for (const { name, media, motion: level, fades } of MOTION_CASES) {
 
 /* Resting at a third of the track, an indeterminate bar that could not sweep
    read as a bar a third done. Under reduced motion it takes the whole track,
-   dimmed, and pulses under `reduce`: with the reset, which stops every other
-   animation, and without it. Under `none` it rests dimmed. */
+   dimmed and still, with the reset and without it, and a bare `<progress>`
+   with no value does the same. */
 const STILL_BAR_SHEETS = [
   { name: "the main entry", url: `${ORIGIN}/shared/entry-vanilla.css` },
   { name: "/components", url: COMPONENT_STYLES_URL },
@@ -491,7 +489,7 @@ const STILL_BAR_SHEETS = [
 ] as const;
 
 for (const { name: sheet, url } of STILL_BAR_SHEETS) {
-  for (const { name, media, motion: level, fades } of MOTION_CASES) {
+  for (const { name, media, motion: level } of MOTION_CASES) {
     test(`fills an indeterminate bar's track instead of a third when ${name}, ${sheet}`, async ({ page }) => {
       await page.emulateMedia({ reducedMotion: media });
       await page.setContent(
@@ -500,6 +498,7 @@ for (const { name: sheet, url } of STILL_BAR_SHEETS) {
           '<progress style="width: 300px"></progress></body></html>',
       );
       await page.addStyleTag({ url });
+      await settleAnimations(page);
 
       const bar = await page.evaluate(() => {
         const track = document.querySelector(".progress")!;
@@ -509,30 +508,20 @@ for (const { name: sheet, url } of STILL_BAR_SHEETS) {
         return {
           fill: Number.parseFloat(fill.width) / track.clientWidth,
           name: fill.animationName,
-          count: fill.animationIterationCount,
           opacity: fill.opacity,
           nativeSize: native.backgroundSize,
           nativeName: native.animationName,
-          nativeCount: native.animationIterationCount,
-          nativeStrength: native.getPropertyValue("--_progress-pulse").trim(),
+          nativeStrength: native.getPropertyValue("--_progress-strength").trim(),
         };
       });
 
       expect(bar.fill, "the fill spans the track").toBeCloseTo(1, 2);
+      expect(bar.name).toBe("none");
+      expect(bar.opacity, "dimmed, so it is not a finished bar").toBe("0.6");
       if (sheet === "/native") {
         expect(bar.nativeSize, "a bare <progress> fills its track too").toBe("100% 100%");
-        expect(bar.nativeName).toBe(fades ? "anim-progress-pulse-fill" : "none");
-        if (fades) {
-          expect(bar.nativeCount).toBe("infinite");
-        } else {
-          expect(bar.nativeStrength, "dimmed, so it is not a finished bar").toBe("60%");
-        }
-      }
-      expect(bar.name).toBe(fades ? "anim-progress-pulse" : "none");
-      if (fades) {
-        expect(bar.count, "the pulse keeps going").toBe("infinite");
-      } else {
-        expect(bar.opacity, "dimmed, so it is not a finished bar").toBe("0.6");
+        expect(bar.nativeName).toBe("none");
+        expect(bar.nativeStrength, "and is dimmed the same").toBe("60%");
       }
     });
   }

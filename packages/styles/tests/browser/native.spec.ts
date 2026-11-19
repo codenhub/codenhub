@@ -613,13 +613,13 @@ test("sweeps a bare progress element with no value, and fills its track under re
   expect(moving.image).toContain("linear-gradient");
   expect(moving.size).toBe("33% 100%");
 
-  /* No sweep: the whole track, pulsing, as `.progress.indeterminate` does;
-     accessibility.spec.ts covers every motion setting. */
+  /* No sweep: the whole track, dimmed and still, as `.progress.indeterminate`
+     does; accessibility.spec.ts covers every motion setting. */
   await page.emulateMedia({ reducedMotion: "reduce" });
 
   const still = await read();
 
-  expect(still.animation).toBe("anim-progress-pulse-fill");
+  expect(still.animation).toBe("none");
   expect(still.size).toBe("100% 100%");
 });
 

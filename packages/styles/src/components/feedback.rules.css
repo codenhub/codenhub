@@ -22,18 +22,6 @@
   }
 }
 
-/* The indeterminate bar under reduced motion: the whole track, breathing
-   rather than travelling. Opacity only, so nothing moves. */
-@keyframes anim-progress-pulse {
-  from {
-    opacity: 1;
-  }
-
-  to {
-    opacity: 0.5;
-  }
-}
-
 /* A soft, edged surface, so an aesthetic that blurs surfaces blurs this too: an
    alert is a container carrying a message, not a control. */
 @layer utilities {
@@ -251,11 +239,12 @@
     --_indeterminate-sweep: var(--_m-indeterminate) anim-progress-indeterminate 1.5s infinite ease-in-out;
     /* Under reduced motion the fill takes the whole track, dimmed, so a bar
        that cannot sweep never reads as a known value: resting at a third, it
-       looked like a bar a third done. It pulses under `reduce`, and rests
-       dimmed under `none` or wherever the pulse is stopped. */
+       looked like a bar a third done. Still under `reduce` and `none` alike:
+       a pulse would have to survive the reset's `!important` stop, which can
+       name `.progress` but not a class built with `@apply`, so an applied bar
+       and the class would differ. */
     --_indeterminate-still: var(--_m-indeterminate) 100%;
     --_indeterminate-dim: var(--_m-indeterminate) 0.6;
-    --_indeterminate-pulse: var(--_m-indeterminate) anim-progress-pulse 1.5s infinite alternate ease-in-out;
 
     /* Printed as drawn. A browser leaves backgrounds off paper by default, and
        the bar is nothing but two backgrounds: the track and the value. */
@@ -362,38 +351,29 @@
     }
 
     /* Reduced motion, for the entries without the reset; see `box.css`. The
-       value moves without sliding and the shimmer stops. The indeterminate
-       sweep becomes the full, dimmed fill above: pulsing under `reduce`, which
-       keeps a fade, and still under `none`, which keeps none. The reset stops
-       every other animation, and names this one as its exception. */
+       value moves without sliding, the shimmer stops, and the indeterminate
+       sweep becomes the full, dimmed fill above. */
     @media (prefers-reduced-motion: reduce) {
-      &:not(:where(:root:is([data-motion="full"], [data-motion="none"]) *))::after {
+      &:not(:where(:root[data-motion="full"] *))::after {
         transition-duration: 0.01ms;
         width: var(--_indeterminate-still, var(--progress-value, 0%));
         opacity: var(--_indeterminate-dim, 1);
-        animation: var(--_indeterminate-pulse, none);
       }
 
-      &:not(:where(:root[data-motion="full"] *))::before {
+      &:not(:where(:root[data-motion="full"] *))::before,
+      &:not(:where(:root[data-motion="full"] *))::after {
         animation: none;
       }
     }
 
-    &:where(:root[data-motion="reduce"] *)::after {
+    &:where(:root:is([data-motion="reduce"], [data-motion="none"]) *)::after {
       transition-duration: 0.01ms;
       width: var(--_indeterminate-still, var(--progress-value, 0%));
       opacity: var(--_indeterminate-dim, 1);
-      animation: var(--_indeterminate-pulse, none);
     }
 
-    &:where(:root[data-motion="none"] *)::after {
-      transition-duration: 0.01ms;
-      width: var(--_indeterminate-still, var(--progress-value, 0%));
-      opacity: var(--_indeterminate-dim, 1);
-      animation: none;
-    }
-
-    &:where(:root:is([data-motion="reduce"], [data-motion="none"]) *)::before {
+    &:where(:root:is([data-motion="reduce"], [data-motion="none"]) *)::before,
+    &:where(:root:is([data-motion="reduce"], [data-motion="none"]) *)::after {
       animation: none;
     }
 

@@ -2,7 +2,7 @@
 title: Feedback
 description: Um botão de salvando, alertas, badges, placeholders de carregamento e barras de progresso, e o que o seu código precisa manter em sincronia com eles.
 order: 3
-source: b8458c0d253fd1dc6c13d9fa579f3cd6554b6382
+source: 90f3b926ce9f13e34183267232f56ec0ce38ab27
 ---
 
 # Feedback
@@ -134,7 +134,7 @@ Quando você não sabe quanto do trabalho já foi feito, como enquanto a exporta
 <div class="progress primary indeterminate" role="progressbar" aria-label="Preparing export"></div>
 ```
 
-`.active` acrescenta um brilho sobre o trilho de uma barra determinada, para mostrar que o trabalho continua acontecendo entre uma atualização e outra. O brilho para quando o usuário pede movimento reduzido. Uma barra indeterminada deixa de deslizar e preenche todo o trilho, atenuada, para nunca parecer uma barra no meio do caminho; com movimento reduzido ela pulsa suavemente, e com `data-motion="none"` fica parada. Um `<progress>` sem `value` faz o mesmo.
+`.active` acrescenta um brilho sobre o trilho de uma barra determinada, para mostrar que o trabalho continua acontecendo entre uma atualização e outra. O brilho para quando o usuário pede movimento reduzido. Uma barra indeterminada deixa de deslizar e preenche todo o trilho, atenuada e parada, para nunca parecer uma barra no meio do caminho. Um `<progress>` sem `value` faz o mesmo.
 
 Com a [folha de estilos sem classes](../setup.md#html-sem-classes), um elemento `<progress>` puro é desenhado como `.progress`: preenchido até o seu `value`, ou com a varredura indeterminada quando não tem `value`. Ele anuncia o próprio valor, então não precisa de `aria-valuenow`.
 
@@ -148,7 +148,7 @@ Para mudar as cores do preenchimento, do trilho ou da borda dele sem mudar a int
 
 ## Animação que não para
 
-Skeletons, brilhos de `.active`, barras indeterminadas e spinners ficam animados enquanto estiverem na página. O pacote para as suas próprias animações quando o usuário pede movimento reduzido ao sistema, exceto o pulso de uma barra indeterminada, que só muda a opacidade, mas esse não é o único requisito. O WCAG 2.2.2 pede que um movimento que começa automaticamente, dura mais de cinco segundos e aparece junto com outro conteúdo possa ser pausado, parado ou escondido pelo usuário, a menos que o movimento seja essencial.
+Skeletons, brilhos de `.active`, barras indeterminadas e spinners ficam animados enquanto estiverem na página. O pacote para as suas próprias animações quando o usuário pede movimento reduzido ao sistema mas esse não é o único requisito. O WCAG 2.2.2 pede que um movimento que começa automaticamente, dura mais de cinco segundos e aparece junto com outro conteúdo possa ser pausado, parado ou escondido pelo usuário, a menos que o movimento seja essencial.
 
 Um indicador de carregamento mostrado enquanto o usuário não pode fazer mais nada, e cuja ausência o deixaria confuso, conta como essencial. Um brilho ou spinner que continua se movendo ao lado de um conteúdo com que o usuário está trabalhando, como um brilho decorativo de "ao vivo" num card, não conta. Remova esses assim que o trabalho deles terminar, ou dê ao usuário um controle que os pare.
 
