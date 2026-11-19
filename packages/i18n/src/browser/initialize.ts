@@ -56,11 +56,11 @@ export interface BrowserI18nOptions<TLocale extends string> {
 export interface BrowserI18nBinding {
   /**
    * Whether the locale follows the browser's languages rather than a choice: `true` after a start with no explicit locale
-   * and no saved locale that matches a configured one, and after `followSystem()`, and `false` once the application applies a locale through
+   * and no saved locale that matches a configured one, and after `switchToSystemLocale()`, and `false` once the application applies a locale through
    * `setLocale()` or `init()`. While it is `true`, a `languagechange` event switches to the newly detected locale, unless
    * an application request is still loading.
    */
-  readonly followsSystem: boolean;
+  readonly isUsingSystemLocale: boolean;
   /**
    * Forgets the saved locale and switches to the locale detected now from navigator preferences, then the default
    * locale, without saving it. The binding then follows the system until the application applies a locale again.
@@ -73,11 +73,11 @@ export interface BrowserI18nBinding {
    * active locale is unchanged.
    * Other exceptions `setLocale()` throws propagate unchanged.
    */
-  followSystem(): Promise<void>;
+  switchToSystemLocale(): Promise<void>;
   /**
-   * Calls `listener` after each change to what a language picker shows: the active locale or `followsSystem`. That
+   * Calls `listener` after each change to what a language picker shows: the active locale or `isUsingSystemLocale`. That
    * includes a `setLocale()` to the locale already showing, which ends following the system without an `i18n.subscribe()`
-   * call, and a `followSystem()` that keeps the locale. Changes made together are reported once, after the current
+   * call, and a `switchToSystemLocale()` that keeps the locale. Changes made together are reported once, after the current
    * task's synchronous work. A listener that throws is reported like an event listener's error, and the others still
    * run.
    *
@@ -401,9 +401,9 @@ export async function initializeBrowserI18n<TLocale extends string>(
       warn(i18n, "[I18n] Could not switch to the detected locale.", cause);
     }
   };
-  const followSystem = async (): Promise<void> => {
+  const switchToSystemLocale = async (): Promise<void> => {
     if (isCleaned) {
-      throw new Error("[I18n] followSystem() requires a connected browser binding.");
+      throw new Error("[I18n] switchToSystemLocale() requires a connected browser binding.");
     }
     if (shouldPersistLocale) {
       forgetPersistedLocale(i18n, storageKey);
@@ -571,10 +571,10 @@ export async function initializeBrowserI18n<TLocale extends string>(
     }
 
     return {
-      get followsSystem() {
+      get isUsingSystemLocale() {
         return isFollowingSystem;
       },
-      followSystem,
+      switchToSystemLocale,
       subscribe,
       disconnect: cleanup,
     };
