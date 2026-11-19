@@ -1,5 +1,6 @@
 import { fail, ok } from "../core/result";
 import type {
+  JwtErr,
   JwtHeader,
   JwtIssue,
   JwtPayload,
@@ -87,10 +88,10 @@ export function createVerifier<TSchema extends StandardSchemaV1 | undefined = un
     let keys: KeySet;
     if (typeof resolved.keys === "function") {
       const routed = await routeByIssuer(resolved.keys, jws, resolved.issuers);
-      if (!routed.ok) {
+      if ("error" in routed) {
         return routed;
       }
-      ({ keys, payload: early } = routed.value);
+      ({ keys, payload: early } = routed);
     } else {
       keys = resolved.keys;
     }
@@ -140,7 +141,7 @@ async function routeByIssuer(
   resolver: KeySetResolver,
   jws: CompactJws,
   issuers: readonly string[] | undefined,
-): Promise<JwtResult<{ readonly keys: KeySet; readonly payload: JwtPayload }>> {
+): Promise<IssuerRoute | JwtErr> {
   const payload = parsePayload(jws);
   if (!payload.ok) {
     return payload;
@@ -174,7 +175,14 @@ async function routeByIssuer(
   } catch {
     return KEY_SET_ERROR;
   }
-  return typeof select === "function" ? ok({ keys: keys as KeySet, payload: payload.value }) : KEY_SET_ERROR;
+  // Not wrapped in `ok`, which would deep-freeze the caller's key set and any state it keeps.
+  return typeof select === "function" ? { keys: keys as KeySet, payload: payload.value } : KEY_SET_ERROR;
+}
+
+/** The key set a resolver chose for a token, and the payload already read to choose it. */
+interface IssuerRoute {
+  readonly keys: KeySet;
+  readonly payload: JwtPayload;
 }
 
 /**

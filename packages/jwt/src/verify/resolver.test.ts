@@ -128,6 +128,24 @@ describe("createVerifier with a key set resolver", () => {
     );
   });
 
+  it("should leave the key set the resolver returns unfrozen", async () => {
+    const counted = {
+      calls: { count: 0 },
+      select: (header: Parameters<KeySet["select"]>[0]) => {
+        counted.calls.count += 1;
+        return (sets.get(ISSUER_A) as KeySet).select(header);
+      },
+    };
+    const verify = verifierWith(() => counted);
+
+    const first = await verify(await tokenFor(pairA, { iss: ISSUER_A }));
+    const second = await verify(await tokenFor(pairA, { iss: ISSUER_A }));
+
+    expect([first.ok, second.ok]).toEqual([true, true]);
+    expect(Object.isFrozen(counted) || Object.isFrozen(counted.calls)).toBe(false);
+    expect(counted.calls.count).toBe(2);
+  });
+
   it("should still run the claim checks on the routed token", async () => {
     const token = await sign({ payload: { iss: ISSUER_A, exp: NOW_SECONDS - 1 }, key: pairA.privateKey });
 
