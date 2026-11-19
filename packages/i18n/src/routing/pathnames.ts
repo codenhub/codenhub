@@ -88,7 +88,6 @@ export const buildPattern = (pattern: Pattern, parameters: Parameters): string[]
 
 interface IndexEntry<T> {
   readonly item: T;
-  readonly order: number;
 }
 
 /** The items whose patterns start with the segments that lead to this node. */
@@ -106,7 +105,7 @@ const createShapeNode = <T>(): ShapeNode<T> => ({ byValue: new Map(), param: und
 const indexByShape = <T>(items: readonly T[], patternOf: (item: T) => Pattern): ShapeIndex<T> => {
   const root = createShapeNode<T>();
 
-  for (const [order, item] of items.entries()) {
+  for (const item of items) {
     const pattern = patternOf(item);
     const isRest = hasRest(pattern);
     let node = root;
@@ -122,34 +121,44 @@ const indexByShape = <T>(items: readonly T[], patternOf: (item: T) => Pattern): 
       }
       node = child;
     }
-    (isRest ? node.rests : node.ends).push({ item, order });
+    (isRest ? node.rests : node.ends).push({ item });
   }
 
-  // The walk below keeps its own stack: a pattern may have about 4,000 segments, and a call per segment overflows the
-  // call stack.
+  // The walk keeps its own stack: a pattern may have about 4,000 segments, and a call per segment overflows the call
+  // stack. At each segment it tries a fixed word, then a parameter, then a catch-all, which is the order
+  // `bySpecificity` sorts items in, so the first item it reaches is the most specific match and it stops there. Items at
+  // one node match the same paths, so only the first of them can be found.
   return {
     find(keys, segments) {
-      // The first item of each matching node, since items at one node match the same paths.
-      const matches: IndexEntry<T>[] = [];
-      const pending: [ShapeNode<T> | undefined, number][] = [[root, 0]];
+      const pending: ({ readonly node: ShapeNode<T>; readonly depth: number } | IndexEntry<T>)[] = [
+        { node: root, depth: 0 },
+      ];
       for (let next = pending.pop(); next !== undefined; next = pending.pop()) {
-        const [node, depth] = next;
-        if (node === undefined) {
-          continue;
+        if ("item" in next) {
+          return { item: next.item, parameters: readParameters(patternOf(next.item), segments) };
         }
+        const { node, depth } = next;
         if (depth === keys.length) {
-          matches.push(...node.ends.slice(0, 1));
+          const end = node.ends[0];
+          if (end !== undefined) {
+            pending.push(end);
+          }
           continue;
         }
-        matches.push(...node.rests.slice(0, 1)); // A catch-all takes this segment and the rest.
-        pending.push([node.byValue.get(keys[depth]!), depth + 1], [node.param, depth + 1]);
+        // Pushed in reverse, so a fixed word is tried first and a catch-all, which takes this segment and the rest, last.
+        const rest = node.rests[0];
+        if (rest !== undefined) {
+          pending.push(rest);
+        }
+        if (node.param !== undefined) {
+          pending.push({ node: node.param, depth: depth + 1 });
+        }
+        const child = node.byValue.get(keys[depth]!);
+        if (child !== undefined) {
+          pending.push({ node: child, depth: depth + 1 });
+        }
       }
-
-      const found = matches.reduce<IndexEntry<T> | undefined>(
-        (first, entry) => (first === undefined || entry.order < first.order ? entry : first),
-        undefined,
-      );
-      return found && { item: found.item, parameters: readParameters(patternOf(found.item), segments) };
+      return undefined;
     },
   };
 };
