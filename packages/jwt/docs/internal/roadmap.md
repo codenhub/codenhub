@@ -25,7 +25,6 @@ None at present. The changelog starts at 0.1.0 ([docs/changelog](../changelog/in
 ## Later / Possible
 
 - **JWE**, if encrypted ID tokens turn out to be needed (scope.md section 2).
-- **Serving stale keys while a refetch is in flight**: today, requests that arrive while a refetch hangs wait up to `timeout` even when stale keys within `maxStale` are usable, once per cooldown window (with `cooldown: 0`, after every failed fetch); this stays as it is for 0.1.
 
 ## Not Planned
 

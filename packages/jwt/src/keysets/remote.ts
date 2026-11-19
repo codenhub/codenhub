@@ -66,6 +66,31 @@ export interface RemoteKeySetOptions {
    * @defaultValue `Date.now`
    */
   readonly now?: () => number;
+  /**
+   * A JWKS fetched earlier, such as one a previous instance saved from {@link RemoteKeySetOptions.onFetch},
+   * used as if this set had fetched it at `fetchedAt`. It is imported at the first `select`; a `jwks` that is
+   * not a JWKS is ignored, and the set fetches as it would without a seed. A seed older than `cacheTtl`
+   * plus `maxStale` is never used.
+   */
+  readonly seed?: RemoteKeySetSnapshot;
+  /**
+   * Called after each successful fetch, with the JWKS as fetched and when, for a caller that saves it to
+   * pass as `seed` later. Its errors, thrown or rejected, are ignored.
+   */
+  readonly onFetch?: (snapshot: RemoteKeySetSnapshot) => void;
+  /**
+   * Called after each failed fetch with its `key_fetch_failed` issue, whether or not a `select` waited for
+   * the fetch, for logging. Its errors, thrown or rejected, are ignored.
+   */
+  readonly onFetchError?: (issue: JwtIssue) => void;
+}
+
+/** A fetched JWKS and when it was fetched, as {@link RemoteKeySetOptions.onFetch} receives it. */
+export interface RemoteKeySetSnapshot {
+  /** The JWKS document, a JSON value. */
+  readonly jwks: unknown;
+  /** When the fetch completed, in milliseconds since the Unix epoch, from `options.now`. */
+  readonly fetchedAt: number;
 }
 
 /** Every documented option; typed so adding one to `RemoteKeySetOptions` fails to compile until listed. */
@@ -79,6 +104,9 @@ const KNOWN_OPTIONS: Readonly<Record<keyof RemoteKeySetOptions, true>> = {
   timeout: true,
   maxResponseBytes: true,
   now: true,
+  seed: true,
+  onFetch: true,
+  onFetchError: true,
 };
 
 const MS_PER_SECOND = 1000;
@@ -90,6 +118,8 @@ const MAX_TIMEOUT = 60;
 const DEFAULT_MAX_RESPONSE_BYTES = 65_536;
 const MAX_RESPONSE_BYTES_LIMIT = 1_048_576;
 const HTTP_OK = 200;
+/** Time past `timeout` after which a fetch that never settled no longer holds back a new one. */
+const ABANDONED_FETCH_GRACE_MS = 1000;
 
 /** Why a fetch failed, as `params.reason` of a `key_fetch_failed` issue. */
 type FetchFailureReason = "timeout" | "network" | "status" | "too_large" | "invalid_response";
@@ -104,6 +134,15 @@ interface RemoteConfig {
   readonly timeoutMs: number;
   readonly maxResponseBytes: number;
   readonly now: () => number;
+  readonly seed: RemoteKeySetSnapshot | undefined;
+  readonly onFetch: ((snapshot: RemoteKeySetSnapshot) => void) | undefined;
+  readonly onFetchError: ((issue: JwtIssue) => void) | undefined;
+}
+
+/** A JWKS that was fetched and imported. */
+interface FetchedKeys {
+  readonly jwks: unknown;
+  readonly keys: readonly VerificationKey[];
 }
 
 /** The last JWKS fetched successfully. */
@@ -120,9 +159,13 @@ interface CachedKeys {
  * @remarks
  * Nothing is fetched until the first `select`. Then:
  *
- * - **TTL.** A fetched JWKS is used for `cacheTtl` seconds, then the next `select` fetches it again.
- * - **One fetch at a time.** Every `select` that needs keys while a fetch is running waits for that
- *   fetch, unless the cache is fresh and holds the key; concurrent callers never start a second one.
+ * - **TTL.** A fetched JWKS is used for `cacheTtl` seconds. After that, for up to `maxStale` more
+ *   seconds, a `select` still answers from it at once and starts a fetch in the background; past that, it
+ *   waits for the fetch.
+ * - **One fetch at a time.** A `select` that needs keys the cache cannot give while a fetch is running
+ *   waits for that fetch; concurrent callers never start a second one. A fetch still unsettled past
+ *   `timeout`, plus a second, and past the cooldown, as when a Workers runtime cancelled the request
+ *   that started it, no longer holds back a new one.
  * - **Unknown `kid`.** When a token's `kid` is not in the cached JWKS, the JWKS is fetched again once,
  *   and the selection is repeated on the result. A failing refetch gives `key_fetch_failed`. A header
  *   without a `kid` never causes a refetch.
@@ -131,10 +174,11 @@ interface CachedKeys {
  *   fails with `unknown_kid` at once, so a flood of tokens with invented `kid`s causes at most one
  *   fetch per window. `cooldown: 0` gives up that limit: each such `select` may start a fetch, though
  *   never while another is running.
- * - **Stale keys.** When fetching fails, or a retry waits for the cooldown, after `cacheTtl` ran out,
- *   the last fetched JWKS is still used for up to `maxStale` more seconds; past that, `select` fails
- *   with `key_fetch_failed`. Using stale keys does not extend them: every `select` after the cooldown
- *   tries to fetch again.
+ * - **Stale keys.** When fetching fails, or a retry waits for the cooldown, the expired JWKS is used
+ *   until `maxStale` runs out; past that, `select` fails with `key_fetch_failed`. Using stale keys does
+ *   not extend them: every `select` after the cooldown tries to fetch again.
+ * - **Persisting.** `onFetch` hands out each fetched JWKS, and `seed` starts a new set from one, so a
+ *   short-lived process need not fetch on its first `select`.
  *
  * Fetches are `GET` requests with `accept: application/json` that do not follow redirects; only status
  * 200 is accepted. The body is capped at `maxResponseBytes`, and the whole fetch at `timeout` seconds.
@@ -156,8 +200,9 @@ interface CachedKeys {
  * is a bug in the caller's clock; a verifier that calls such a key set reports `key_fetch_failed` with
  * `{ reason: "key_set_error" }` instead.
  * @throws TypeError when `options` is not an object; `options` has a member that is not an option; `url` is not an absolute `https:` URL, or
- * `http:` URL on a loopback host, or carries credentials; `fetch` or `now` is not a function; `algorithms` is not a non-empty array of asymmetric
- * algorithms; or `cacheTtl`, `cooldown`, `maxStale`, `timeout` or `maxResponseBytes` is out of range.
+ * `http:` URL on a loopback host, or carries credentials; `fetch`, `now`, `onFetch` or `onFetchError` is not a function; `seed` has no finite
+ * `fetchedAt`; `algorithms` is not a non-empty array of asymmetric algorithms; or `cacheTtl`, `cooldown`, `maxStale`, `timeout` or
+ * `maxResponseBytes` is out of range.
  */
 export function createRemoteKeySet(options: RemoteKeySetOptions): KeySet {
   const config = readRemoteOptions(options);
@@ -165,6 +210,9 @@ export function createRemoteKeySet(options: RemoteKeySetOptions): KeySet {
   let lastFailure: JwtResult<never> | undefined;
   let lastFetchStartedAt: number | undefined;
   let inFlight: Promise<JwtResult<readonly VerificationKey[]>> | undefined;
+  // Counts fetches started, so a fetch that settles after a newer one replaced it changes nothing.
+  let generation = 0;
+  let seeding: Promise<void> | undefined;
 
   // A clock that steps back makes an elapsed time negative. That never keeps a cooldown running or a cache
   // alive: the cooldown is over, and keys fetched "in the future" are expired, so the bounds of decision 5 hold.
@@ -185,31 +233,55 @@ export function createRemoteKeySet(options: RemoteKeySetOptions): KeySet {
     return age >= 0 && age < limitMs;
   };
 
-  const runFetch = async (): Promise<JwtResult<readonly VerificationKey[]>> => {
-    let outcome: JwtResult<readonly VerificationKey[]>;
+  const runFetch = async (started: number): Promise<JwtResult<readonly VerificationKey[]>> => {
+    let outcome: JwtResult<FetchedKeys>;
     try {
       outcome = await fetchKeys(config);
     } catch {
       // fetchKeys reports every expected failure; this keeps an unforeseen one from rejecting every caller.
       outcome = fetchFailure("network");
     }
-    inFlight = undefined;
-    if (outcome.ok) {
-      cached = { keys: outcome.value, fetchedAt: config.now() };
-      lastFailure = undefined;
-    } else {
-      lastFailure = outcome;
+    if (started !== generation) {
+      return outcome.ok ? ok(outcome.value.keys) : outcome;
     }
-    return outcome;
+    inFlight = undefined;
+    if (!outcome.ok) {
+      lastFailure = outcome;
+      notify(config.onFetchError, outcome.error.issues[0] as JwtIssue);
+      return outcome;
+    }
+    const fetchedAt = config.now();
+    cached = { keys: outcome.value.keys, fetchedAt };
+    lastFailure = undefined;
+    notify(config.onFetch, { jwks: outcome.value.jwks, fetchedAt });
+    return ok(outcome.value.keys);
+  };
+
+  /** Whether a fetch is running that a new one should wait for, rather than one presumed abandoned. */
+  const isFetching = (): boolean => {
+    if (inFlight === undefined || lastFetchStartedAt === undefined) {
+      return false;
+    }
+    const elapsed = config.now() - lastFetchStartedAt;
+    return (elapsed >= 0 && elapsed < config.timeoutMs + ABANDONED_FETCH_GRACE_MS) || isCoolingDown();
   };
 
   /** Starts a fetch unless one is running, and returns the running one. */
   const refetch = (): Promise<JwtResult<readonly VerificationKey[]>> => {
-    if (inFlight === undefined) {
+    if (inFlight === undefined || !isFetching()) {
       lastFetchStartedAt = config.now();
-      inFlight = runFetch();
+      generation += 1;
+      inFlight = runFetch(generation);
     }
     return inFlight;
+  };
+
+  /** Imports the seed once, unless a fetch has filled the cache first. */
+  const importSeed = async (seed: RemoteKeySetSnapshot): Promise<void> => {
+    const imported = await importKeys(seed.jwks, config.algorithms);
+    if (imported.ok && cached === undefined) {
+      cached = { keys: imported.value, fetchedAt: seed.fetchedAt };
+    }
   };
 
   /** The keys to select from now, or why there are none. */
@@ -221,19 +293,27 @@ export function createRemoteKeySet(options: RemoteKeySetOptions): KeySet {
   };
 
   const select = async (header: JwtHeader): Promise<JwtResult<VerificationKey>> => {
+    if (config.seed !== undefined) {
+      seeding ??= importSeed(config.seed);
+      await seeding;
+    }
+    const usableWithin = config.cacheTtlMs + config.maxStaleMs;
     let hasFetched = false;
-    if (inFlight !== undefined) {
-      // A fresh cache that holds the key needs no wait for the fetch that is running.
-      if (cached !== undefined && isCachedWithin(config.cacheTtlMs)) {
+    if (isFetching()) {
+      // A cache that is still usable and holds the key needs no wait for the fetch that is running.
+      if (cached !== undefined && isCachedWithin(usableWithin)) {
         const selected = selectKey(cached.keys, header);
         if (!isUnknownKid(selected)) {
           return selected;
         }
       }
-      await inFlight;
+      await refetch();
       hasFetched = true;
-    } else if (!isCachedWithin(config.cacheTtlMs)) {
-      if (!isCoolingDown()) {
+    } else if (!isCachedWithin(config.cacheTtlMs) && !isCoolingDown()) {
+      if (isCachedWithin(usableWithin)) {
+        // The expired keys answer now; the refetch replaces them for later selects.
+        void ignoreRejection(refetch());
+      } else {
         await refetch();
         hasFetched = true;
       }
@@ -243,7 +323,7 @@ export function createRemoteKeySet(options: RemoteKeySetOptions): KeySet {
       return keys;
     }
     const selected = selectKey(keys.value, header);
-    if (!isUnknownKid(selected) || hasFetched || isCoolingDown()) {
+    if (!isUnknownKid(selected) || hasFetched || (!isFetching() && isCoolingDown())) {
       return selected;
     }
     const refetched = await refetch();
@@ -254,13 +334,28 @@ export function createRemoteKeySet(options: RemoteKeySetOptions): KeySet {
 }
 
 /** Fetches and imports the JWKS once. Never throws. */
-async function fetchKeys(config: RemoteConfig): Promise<JwtResult<readonly VerificationKey[]>> {
+async function fetchKeys(config: RemoteConfig): Promise<JwtResult<FetchedKeys>> {
   const fetched = await fetchJson(config);
   if (!fetched.ok) {
     return fetched;
   }
   const imported = await importKeys(fetched.value, config.algorithms);
-  return imported.ok ? imported : fetchFailure("invalid_response");
+  return imported.ok ? ok({ jwks: fetched.value, keys: imported.value }) : fetchFailure("invalid_response");
+}
+
+/** Calls a caller's callback, whose failure must not change what `select` returns. */
+function notify<T>(callback: ((value: T) => void) | undefined, value: T): void {
+  if (callback === undefined) {
+    return;
+  }
+  try {
+    const result: unknown = callback(value);
+    if (result instanceof Promise) {
+      void ignoreRejection(result);
+    }
+  } catch {
+    // Deliberately ignored: the callback only observes the fetch.
+  }
 }
 
 /** Thrown inside a fetch to end it with a given failure. */
@@ -409,7 +504,24 @@ function readRemoteOptions(options: unknown): RemoteConfig {
       maximum: MAX_RESPONSE_BYTES_LIMIT,
     }),
     now: checkedClock((readFunction(source, "now") as (() => number) | undefined) ?? Date.now),
+    seed: readSeed(source.seed),
+    onFetch: readFunction(source, "onFetch") as RemoteConfig["onFetch"],
+    onFetchError: readFunction(source, "onFetchError") as RemoteConfig["onFetchError"],
   };
+}
+
+/** Checks the seed's shape; its `jwks` is checked when imported, and ignored if it is not a JWKS. */
+function readSeed(value: unknown): RemoteKeySetSnapshot | undefined {
+  if (value === undefined) {
+    return undefined;
+  }
+  const fetchedAt: unknown = typeof value === "object" && value !== null ? Reflect.get(value, "fetchedAt") : undefined;
+  if (typeof fetchedAt !== "number" || !Number.isFinite(fetchedAt)) {
+    throw new TypeError(
+      "createRemoteKeySet: options.seed must be an object with a jwks and a finite fetchedAt in milliseconds.",
+    );
+  }
+  return { jwks: Reflect.get(value as object, "jwks"), fetchedAt };
 }
 
 /**

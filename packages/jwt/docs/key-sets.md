@@ -86,25 +86,44 @@ Nothing is fetched until the first token needs a key. Create the key set once an
 
 Durations are in seconds. Every option is checked when the key set is created, and an invalid one throws a `TypeError`, as does a name that is not an option below (`createRemoteKeySet: options.cachettl is not an option.`).
 
-| Option             | Default                        | What it does                                                                                                                                                                              |
-| ------------------ | ------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `url`              | required                       | An absolute `https:` URL, as a string or a `URL`, or `http:` on `localhost`, `127.0.0.0/8` or `[::1]` for local development. Anything else, and URLs with a user name or password, throw. |
-| `fetch`            | `globalThis.fetch`             | The `fetch` to call, for runtimes or tests that supply their own. The global is looked up at each fetch.                                                                                  |
-| `algorithms`       | every asymmetric algorithm     | As for [`importKeySet`](#importing-a-jwks).                                                                                                                                               |
-| `cacheTtl`         | `600`                          | How long a fetched JWKS is used before it is fetched again. An integer of at least 1.                                                                                                     |
-| `cooldown`         | `30`, or `cacheTtl` if smaller | Least time between the starts of two fetches caused by a failure or an unknown `kid`. An integer from 0 through `cacheTtl`.                                                               |
-| `maxStale`         | `3600`                         | How long after `cacheTtl` ran out the last JWKS is still used while fetching a new one fails. An integer of at least 0; 0 never uses an expired JWKS.                                     |
-| `timeout`          | `5`                            | How long one fetch, body included, may take. Greater than 0 and at most 60; fractions are allowed.                                                                                        |
-| `maxResponseBytes` | `65536`                        | Largest response body accepted, in bytes. An integer from 1 through 1048576.                                                                                                              |
-| `now`              | `Date.now`                     | The current time in milliseconds, for tests.                                                                                                                                              |
+| Option             | Default                        | What it does                                                                                                                                                                                      |
+| ------------------ | ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `url`              | required                       | An absolute `https:` URL, as a string or a `URL`, or `http:` on `localhost`, `127.0.0.0/8` or `[::1]` for local development. Anything else, and URLs with a user name or password, throw.         |
+| `fetch`            | `globalThis.fetch`             | The `fetch` to call, for runtimes or tests that supply their own. The global is looked up at each fetch.                                                                                          |
+| `algorithms`       | every asymmetric algorithm     | As for [`importKeySet`](#importing-a-jwks).                                                                                                                                                       |
+| `cacheTtl`         | `600`                          | How long a fetched JWKS is used before it is fetched again. An integer of at least 1.                                                                                                             |
+| `cooldown`         | `30`, or `cacheTtl` if smaller | Least time between the starts of two fetches caused by a failure or an unknown `kid`. An integer from 0 through `cacheTtl`.                                                                       |
+| `maxStale`         | `3600`                         | How long after `cacheTtl` ran out the last JWKS is still used while a new one is fetched, or while fetching it fails. An integer of at least 0; 0 never uses an expired JWKS.                     |
+| `timeout`          | `5`                            | How long one fetch, body included, may take. Greater than 0 and at most 60; fractions are allowed.                                                                                                |
+| `maxResponseBytes` | `65536`                        | Largest response body accepted, in bytes. An integer from 1 through 1048576.                                                                                                                      |
+| `now`              | `Date.now`                     | The current time in milliseconds, for tests.                                                                                                                                                      |
+| `seed`             | none                           | `{ jwks, fetchedAt }`, a JWKS fetched earlier and when, in milliseconds, used as if this key set had fetched it. A `jwks` that is not a JWKS is ignored. See [persisting](#persisting-the-cache). |
+| `onFetch`          | none                           | Called with `{ jwks, fetchedAt }` after each successful fetch.                                                                                                                                    |
+| `onFetchError`     | none                           | Called with the `key_fetch_failed` issue after each failed fetch, including fetches no token waited for.                                                                                          |
 
 ### Caching and rotation
 
-- **Expiry.** A fetched JWKS is used for `cacheTtl` seconds, counted from when the fetch finished. The first token after that fetches it again.
-- **One fetch at a time.** While a fetch is running, every token that needs keys waits for it, unless the cache is fresh and holds its key; concurrent requests never start a second fetch.
+- **Expiry.** A fetched JWKS is used for `cacheTtl` seconds, counted from when the fetch finished. The first token after that is still verified with it, at once, and starts a fetch in the background that replaces it for later tokens. Past `maxStale`, tokens wait for the fetch instead.
+- **One fetch at a time.** While a fetch is running, a token waits for it only when the cached JWKS cannot give its key; concurrent requests never start a second fetch. A fetch that has not settled a second past its `timeout`, and past the cooldown, no longer counts as running. That happens on Cloudflare Workers when the request that started the fetch ended and took its I/O with it.
 - **Unknown `kid`.** When an issuer rotates in a new key, the first token signed with it names a `kid` your cached JWKS does not hold. The key set then fetches the JWKS once more and selects again from the result. A header without a `kid` never causes a refetch.
 - **Cooldown.** A refetch for an unknown `kid`, and a retry after a failed fetch, only starts once `cooldown` seconds have passed since the last fetch started. Inside that window an unknown `kid` fails with `unknown_kid` at once. Anyone can send you tokens with invented `kid`s; with the cooldown, a flood of them costs the issuer at most one request per window, however many tokens arrive.
 - **Stale keys.** When a fetch fails after `cacheTtl` ran out, the last JWKS that was fetched is still used for up to `maxStale` more seconds, so a short outage at the issuer does not take your service down with it. Using it does not extend it: each token after the cooldown tries to fetch again, and past `maxStale` the key set fails with `key_fetch_failed`. Lower `maxStale` if a revoked key must stop working sooner, at the cost of failing sooner when the issuer is unreachable.
+
+### Persisting the cache
+
+A process that lives for one request, such as a serverless function, starts with an empty cache and fetches the JWKS on its first token. To skip that, save what `onFetch` receives and pass it back as `seed`:
+
+```ts
+const saved = await store.get("jwks"); // whatever you stored last time, or undefined
+
+const keys = createRemoteKeySet({
+  url: "https://issuer.example/.well-known/jwks.json",
+  seed: saved === undefined ? undefined : JSON.parse(saved),
+  onFetch: (snapshot) => void store.put("jwks", JSON.stringify(snapshot)),
+});
+```
+
+A seed is treated exactly like a JWKS this key set fetched at `fetchedAt`: fresh for `cacheTtl`, then stale for `maxStale`, then not used at all. A seed whose `jwks` does not import is ignored, and the key set fetches. `onFetch` and `onFetchError` may return a promise; what they throw or reject with is ignored, so a broken store or logger never fails a token.
 
 ### When fetching fails
 

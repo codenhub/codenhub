@@ -57,6 +57,7 @@ export {
   importKeySet,
   type ImportKeySetOptions,
   type RemoteKeySetOptions,
+  type RemoteKeySetSnapshot,
 } from "./keysets";
 export { sign, type SignHeader, type SignInput } from "./sign";
 export { createVerifier } from "./verify";
