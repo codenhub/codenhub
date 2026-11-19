@@ -5,12 +5,13 @@ import {
   getColorDistance,
   getContrastRatio,
   isTransparent,
+  ORIGIN,
   readSrgb,
 } from "./test-utils";
 
-const FEEDBACK_URL = "http://localhost:5184/feedback/?env=vanilla";
+const FEEDBACK_URL = `${ORIGIN}/feedback/?env=vanilla`;
 /* The forms page renders `@codenhub/icons` glyphs, which the alert-icon check needs. */
-const FORMS_URL = "http://localhost:5184/forms/?env=vanilla";
+const FORMS_URL = `${ORIGIN}/forms/?env=vanilla`;
 
 test.describe("feedback", () => {
   test("loads canonical compiled styles with tokens and components", async ({ page }) => {

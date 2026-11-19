@@ -1,5 +1,10 @@
 import { expect, type Page } from "@playwright/test";
 
+/* The playground server's origin. `playwright.config.ts` starts it on
+   `STYLES_TEST_PORT`, 5184 unless set, so two checkouts can each run the
+   suite against their own build at once. */
+export const ORIGIN = `http://localhost:${process.env.STYLES_TEST_PORT ?? "5184"}`;
+
 interface LinearColor {
   alpha: number;
   blue: number;

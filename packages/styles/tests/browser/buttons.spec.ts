@@ -1,16 +1,17 @@
 import { expect, test } from "./fixtures";
 import {
   BUTTON_INTENT_TOKENS,
+  type ButtonIntentToken,
   expectSameColor,
   flattenColor,
   getColorDistance,
   getContrastRatio,
   isTransparent,
+  ORIGIN,
   readSrgb,
-  type ButtonIntentToken,
 } from "./test-utils";
 
-const BUTTONS_URL = "http://localhost:5184/buttons/?env=vanilla";
+const BUTTONS_URL = `${ORIGIN}/buttons/?env=vanilla`;
 
 test("rejects a transparent ground when flattening a color", () => {
   expect(() => flattenColor("rgb(0 0 0 / 50%)", "transparent")).toThrow("Expected an opaque ground");

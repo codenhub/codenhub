@@ -1,7 +1,7 @@
 import { expect, test } from "./fixtures";
-import { expectSameColor, getColorDistance, isTransparent } from "./test-utils";
+import { expectSameColor, getColorDistance, isTransparent, ORIGIN } from "./test-utils";
 
-const SURFACES_URL = "http://localhost:5184/surfaces/?env=vanilla";
+const SURFACES_URL = `${ORIGIN}/surfaces/?env=vanilla`;
 
 test.describe("surfaces", () => {
   test("keeps ordinary surfaces flat and reads intent and presentation", async ({ page }) => {

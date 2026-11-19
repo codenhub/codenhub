@@ -1,6 +1,7 @@
 import { expect, test } from "./fixtures";
+import { ORIGIN } from "./test-utils";
 
-const LAYOUT_URL = "http://localhost:5184/layout/?env=vanilla";
+const LAYOUT_URL = `${ORIGIN}/layout/?env=vanilla`;
 
 test("composes directional views with the shared layout gap", async ({ page }) => {
   await page.goto(LAYOUT_URL);

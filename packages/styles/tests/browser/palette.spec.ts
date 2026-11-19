@@ -3,7 +3,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { expect, test } from "./fixtures";
-import { getColorDistance } from "./test-utils";
+import { getColorDistance, ORIGIN } from "./test-utils";
 
 /* `docs/internal/generated-palette.md`'s whole premise is that `./palette`'s
    values are provably identical to what the package's components render,
@@ -42,7 +42,7 @@ const ALL_COMPONENTS = GROUNDS.flatMap((ground) => ground.components);
    other cell match, and `docs/usage/customizing.md` says which one does not. */
 const UNDESCRIBED = new Set(["tooltip-icon:neutral-soft-subtle bg", "tooltip-icon:neutral-soft-subtle bg-hover"]);
 
-const SURFACES_URL = "http://localhost:5184/surfaces/?env=vanilla";
+const SURFACES_URL = `${ORIGIN}/surfaces/?env=vanilla`;
 
 interface Probe {
   classes: string;

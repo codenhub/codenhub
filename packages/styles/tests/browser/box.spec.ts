@@ -1,7 +1,7 @@
 import { expect, test } from "./fixtures";
-import { expectSameColor, flattenColor, getColorDistance, getContrastRatio } from "./test-utils";
+import { expectSameColor, flattenColor, getColorDistance, getContrastRatio, ORIGIN } from "./test-utils";
 
-const BUTTONS_URL = "http://localhost:5184/buttons/?env=vanilla";
+const BUTTONS_URL = `${ORIGIN}/buttons/?env=vanilla`;
 
 /* A `box` on an element the intent reset does not name has no intent slots of
    its own. `--intent-border` used to be resolved at `:root`, where no aesthetic
@@ -70,7 +70,7 @@ test("keeps a raised button's vertical offset while it is pressed", async ({ pag
    took the card's depth under an aesthetic that draws one. */
 test("a helper inside a component rests as it does alone", async ({ page }) => {
   await page.setContent("<!doctype html><html><body></body></html>");
-  await page.addStyleTag({ url: "http://localhost:5184/native/entry-vanilla.css" });
+  await page.addStyleTag({ url: `${ORIGIN}/native/entry-vanilla.css` });
 
   const read = (parent: string) =>
     page.evaluate((parentClass) => {
@@ -103,7 +103,7 @@ test("a helper inside a component rests as it does alone", async ({ page }) => {
    Unfilled boxes pass it on; a box with a plate of its own starts again. */
 test("a neutral box with no plate prints in the ink of the plate it sits on", async ({ page }) => {
   await page.setContent("<!doctype html><html><body></body></html>");
-  await page.addStyleTag({ url: "http://localhost:5184/shared/entry-vanilla.css" });
+  await page.addStyleTag({ url: `${ORIGIN}/shared/entry-vanilla.css` });
 
   const read = (html: string) =>
     page.evaluate((markup) => {
@@ -208,7 +208,7 @@ test("a neutral box with no plate prints in the ink of the plate it sits on", as
 test("a neutral box on a plate keeps its text legible, at rest and hovered", async ({ page }) => {
   /* No motion, so a hovered colour is read where it lands. */
   await page.setContent('<!doctype html><html data-motion="none"><body></body></html>');
-  await page.addStyleTag({ url: "http://localhost:5184/shared/entry-vanilla.css" });
+  await page.addStyleTag({ url: `${ORIGIN}/shared/entry-vanilla.css` });
 
   /* oxlint-disable no-await-in-loop -- one fixture on the page at a time. */
   for (const scheme of ["light", "dark"] as const) {

@@ -3,12 +3,12 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { expect, test } from "./fixtures";
-import { getContrastRatio } from "./test-utils";
+import { getContrastRatio, ORIGIN } from "./test-utils";
 
-const FEEDBACK_URL = "http://localhost:5184/feedback/?env=vanilla";
-const NATIVE_URL = "http://localhost:5184/native/?env=vanilla";
-const COMPONENT_STYLES_URL = "http://localhost:5184/shared/entry-components.css";
-const NATIVE_STYLES_URL = "http://localhost:5184/native/entry-vanilla.css";
+const FEEDBACK_URL = `${ORIGIN}/feedback/?env=vanilla`;
+const NATIVE_URL = `${ORIGIN}/native/?env=vanilla`;
+const COMPONENT_STYLES_URL = `${ORIGIN}/shared/entry-components.css`;
+const NATIVE_STYLES_URL = `${ORIGIN}/native/entry-vanilla.css`;
 const CONTROL_CLASSES = ["text-control", "ipt", "textarea", "select", "checkbox", "radio", "switch"] as const;
 
 test("associates every native form label with its control", async ({ page }) => {
@@ -147,7 +147,7 @@ test("uses visible system-color outlines for form controls in forced colors", as
    which is a text field all the same: it once fell back to the generic ring. */
 for (const [entry, url] of [
   ["/native", NATIVE_STYLES_URL],
-  ["the reset", "http://localhost:5184/shared/entry-vanilla.css"],
+  ["the reset", `${ORIGIN}/shared/entry-vanilla.css`],
 ] as const) {
   test(`uses visible system-color outlines for unclassed native controls in forced colors from ${entry}`, async ({
     page,
@@ -598,7 +598,7 @@ test("lets a layer ordered before base keep an animation under reduced motion", 
         @keyframes spin { to { rotate: 1turn; } }
         .essential, .ordinary { animation: spin 1s linear infinite !important; }
       </style>
-      <link rel="stylesheet" href="http://localhost:5184/shared/entry-vanilla.css">
+      <link rel="stylesheet" href="${ORIGIN}/shared/entry-vanilla.css">
     </head><body><div class="essential"></div><div class="ordinary"></div></body></html>`,
     { waitUntil: "load" },
   );
@@ -871,7 +871,7 @@ test("separates the focus ring from a filled control with a line of the page col
    prints in the plate's ink, so the line inside the ring takes that ink. */
 test("shows a focused control on a solid surface", async ({ page }) => {
   await page.setContent("<!doctype html><html><body></body></html>");
-  await page.addStyleTag({ url: "http://localhost:5184/shared/entry-vanilla.css" });
+  await page.addStyleTag({ url: `${ORIGIN}/shared/entry-vanilla.css` });
 
   const cases = [];
 

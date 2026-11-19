@@ -3,7 +3,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { expect, test, type Page } from "./fixtures";
-import { flattenColor, getColorDistance, readSrgb } from "./test-utils";
+import { flattenColor, getColorDistance, ORIGIN, readSrgb } from "./test-utils";
 
 /* The registry says which axes each component reads. This asserts it, in both
    directions, and that pairing is the point: an axis listed as live must change
@@ -47,7 +47,7 @@ const registry = JSON.parse(await readFile(path.join(packageRoot, "registry.json
   modifiers: Record<string, string[] | Record<string, unknown>>;
 };
 
-const SURFACES_URL = "http://localhost:5184/surfaces/?env=vanilla";
+const SURFACES_URL = `${ORIGIN}/surfaces/?env=vanilla`;
 
 /* Every axis, and the class that moves a component off its published default in
    each. A component resting at one end is probed from the other, so the probe is
@@ -475,7 +475,7 @@ const PROBE_TAGS: Record<string, string> = { ...TAGS, "text-control": "input", "
 
 const openProbePage = async (page: Page) => {
   await page.setContent('<!doctype html><html data-theme="light"><body><div id="region"></div></body></html>');
-  await page.addStyleTag({ url: "http://localhost:5184/shared/entry-vanilla.css" });
+  await page.addStyleTag({ url: `${ORIGIN}/shared/entry-vanilla.css` });
   await page.addStyleTag({ content: DISTINCT_THEME });
 };
 

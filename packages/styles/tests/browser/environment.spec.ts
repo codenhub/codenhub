@@ -1,11 +1,12 @@
 import { expect, test } from "./fixtures";
+import { ORIGIN } from "./test-utils";
 
-const VANILLA_FEEDBACK_URL = "http://localhost:5184/feedback/?env=vanilla";
-const BUILD_FEEDBACK_URL = "http://localhost:5184/feedback/?env=build";
-const BUILD_LAYOUT_URL = "http://localhost:5184/layout/?env=build";
-const BUILD_NATIVE_URL = "http://localhost:5184/native/?env=build";
-const BUILD_TYPOGRAPHY_URL = "http://localhost:5184/typography/?env=build";
-const DEFAULT_NATIVE_URL = "http://localhost:5184/native/";
+const VANILLA_FEEDBACK_URL = `${ORIGIN}/feedback/?env=vanilla`;
+const BUILD_FEEDBACK_URL = `${ORIGIN}/feedback/?env=build`;
+const BUILD_LAYOUT_URL = `${ORIGIN}/layout/?env=build`;
+const BUILD_NATIVE_URL = `${ORIGIN}/native/?env=build`;
+const BUILD_TYPOGRAPHY_URL = `${ORIGIN}/typography/?env=build`;
+const DEFAULT_NATIVE_URL = `${ORIGIN}/native/`;
 
 test.describe("preview environments", () => {
   test("shows the alternate preview environment in the environment toggle tooltip", async ({ page }) => {

@@ -5,18 +5,19 @@ import {
   flattenColor,
   getColorDistance,
   isTransparent,
+  ORIGIN,
   readSrgb,
 } from "./test-utils";
 
 /* An aesthetic is a cascading class the playground puts on the preview root, so
    these read the ordinary component fixtures under a chosen aesthetic rather
    than a separate set that could drift from them. */
-const BUTTONS_URL = "http://localhost:5184/buttons/?env=vanilla";
-const FEEDBACK_URL = "http://localhost:5184/feedback/?env=vanilla";
-const FORMS_URL = "http://localhost:5184/forms/?env=vanilla";
-const SURFACES_URL = "http://localhost:5184/surfaces/?env=vanilla";
-const TYPOGRAPHY_URL = "http://localhost:5184/typography/?env=vanilla";
-const NATIVE_URL = "http://localhost:5184/native/?env=vanilla";
+const BUTTONS_URL = `${ORIGIN}/buttons/?env=vanilla`;
+const FEEDBACK_URL = `${ORIGIN}/feedback/?env=vanilla`;
+const FORMS_URL = `${ORIGIN}/forms/?env=vanilla`;
+const SURFACES_URL = `${ORIGIN}/surfaces/?env=vanilla`;
+const TYPOGRAPHY_URL = `${ORIGIN}/typography/?env=vanilla`;
+const NATIVE_URL = `${ORIGIN}/native/?env=vanilla`;
 
 const withAesthetic = (url: string, aesthetic: string) => `${url}&aesthetic=${aesthetic}`;
 

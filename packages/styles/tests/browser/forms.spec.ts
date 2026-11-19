@@ -6,10 +6,11 @@ import {
   getColorDistance,
   getContrastRatio,
   isTransparent,
+  ORIGIN,
   readSrgb,
 } from "./test-utils";
 
-const FORMS_URL = "http://localhost:5184/forms/?env=vanilla";
+const FORMS_URL = `${ORIGIN}/forms/?env=vanilla`;
 
 /* Matrix rows name a fill and an edge, and the test id joins them with a dash the
    way `playground/shared/matrix.js` does. */
@@ -895,7 +896,7 @@ test.describe("forms", () => {
   test("draws an unchecked toggle in a solid surface's ink, at rest and focused", async ({ page }) => {
     await page.setContent('<!doctype html><html data-motion="none"><body></body></html>');
     await page.addStyleTag({
-      url: "http://localhost:5184/shared/entry-vanilla.css",
+      url: `${ORIGIN}/shared/entry-vanilla.css`,
     });
 
     /* oxlint-disable no-await-in-loop -- one fixture on the page at a time. */
@@ -1989,7 +1990,7 @@ test.describe("forms", () => {
    printed secondary text; a badge's own colour lost to the adornment grey. */
 test("an input group leaves what is not a text field alone", async ({ page }) => {
   await page.setContent("<!doctype html><html><body></body></html>");
-  await page.addStyleTag({ url: "http://localhost:5184/shared/entry-components.css" });
+  await page.addStyleTag({ url: `${ORIGIN}/shared/entry-components.css` });
 
   const read = () =>
     page.evaluate(() =>
