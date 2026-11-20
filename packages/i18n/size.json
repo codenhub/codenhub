@@ -320,11 +320,12 @@
         "initializeBrowserI18n": {
           "files": {
             "dist/browser.js": {
-              "bytes": 8708,
+              "bytes": 8944,
               "declarations": {
                 "initializeBrowserI18n": 4015,
-                "createDomTranslator": 2777,
+                "createDomTranslator": 2919,
                 "readPersistedLocale": 244,
+                "namesStyleSheetSet": 138,
                 "TRANSLATED_ATTRIBUTES": 131,
                 "isInsideCustomElement": 127,
                 "persistLocale": 125,
@@ -336,7 +337,6 @@
                 "getMutationObserver": 90,
                 "syncDocumentLocale": 88,
                 "isForeignChange": 61,
-                "STYLE_SHEET_ELEMENT_NAMES": 44,
                 "warn": 43,
                 "PARENT_NODE_TYPES": 36,
                 "hasTranslationKey": 34,
@@ -385,17 +385,18 @@
               "bytes": 35
             }
           },
-          "gzip": 3909,
-          "minified": 9651
+          "gzip": 4006,
+          "minified": 9887
         }
       },
       "files": {
         "dist/browser.js": {
-          "bytes": 8708,
+          "bytes": 8944,
           "declarations": {
             "initializeBrowserI18n": 4015,
-            "createDomTranslator": 2777,
+            "createDomTranslator": 2919,
             "readPersistedLocale": 244,
+            "namesStyleSheetSet": 138,
             "TRANSLATED_ATTRIBUTES": 131,
             "isInsideCustomElement": 127,
             "persistLocale": 125,
@@ -407,7 +408,6 @@
             "getMutationObserver": 90,
             "syncDocumentLocale": 88,
             "isForeignChange": 61,
-            "STYLE_SHEET_ELEMENT_NAMES": 44,
             "warn": 43,
             "PARENT_NODE_TYPES": 36,
             "hasTranslationKey": 34,
@@ -456,9 +456,9 @@
           "bytes": 35
         }
       },
-      "gzip": 3909,
-      "minified": 9651,
-      "sha256": "db02d066a021fd3d4e2de372499975ea0c353b15ffaa710af24d41ee65476a94"
+      "gzip": 4006,
+      "minified": 9887,
+      "sha256": "6e93c089f791c33c5dddcc2151bca7baf75227d1be5d52fc7d4c28a08af5e537"
     },
     "./routing": {
       "exports": {

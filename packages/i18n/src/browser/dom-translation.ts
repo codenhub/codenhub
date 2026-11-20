@@ -26,10 +26,17 @@ const BLOCKED_ELEMENT_NAMES = new Set([
 ]);
 
 /**
- * Elements whose `title` names the style sheet set they belong to rather than text people read, so translating it
- * could switch the preferred style sheet off.
+ * Whether the element's `title` names the style sheet set it belongs to rather than text people read, so translating
+ * it could switch the preferred style sheet off. A `<link>` that is not a style sheet, such as a feed, has a readable
+ * title.
  */
-const STYLE_SHEET_ELEMENT_NAMES = new Set(["link", "style"]);
+const namesStyleSheetSet = (element: Element): boolean =>
+  element.localName === "style" ||
+  (element.localName === "link" &&
+    (element.getAttribute("rel") ?? "")
+      .toLowerCase()
+      .split(/[\t\n\f\r ]+/u)
+      .includes("stylesheet"));
 
 /**
  * Attributes that `data-i18n-<attribute>` may translate: text shown to people or assistive technology. URLs, styles,
@@ -311,10 +318,14 @@ export function createDomTranslator(options: DomTranslatorOptions): DomTranslato
       return;
     }
 
-    if (state === undefined || currentLang !== state.written) {
+    if (state === undefined) {
       langStates.set(element, { original: currentLang, written: lang });
-    } else {
+    } else if (currentLang === state.written) {
       state.written = lang;
+    } else {
+      // Other code set `lang` over the one written, so it now owns the attribute.
+      langStates.delete(element);
+      return;
     }
     if (currentLang !== lang) {
       element.setAttribute(LANG_ATTRIBUTE, lang);
@@ -376,7 +387,9 @@ export function createDomTranslator(options: DomTranslatorOptions): DomTranslato
         }
       } else if (rawKey !== null) {
         hasTextKey = true;
-        shownLocales.push(translateText(element, rawKey, translate) ?? null);
+        // Counted as unknown before translating, so a key whose missing-key handling throws keeps the element unmarked.
+        const index = shownLocales.push(null) - 1;
+        shownLocales[index] = translateText(element, rawKey, translate) ?? null;
       } else {
         restoreText(element);
       }
@@ -384,7 +397,7 @@ export function createDomTranslator(options: DomTranslatorOptions): DomTranslato
     const translateOwnAttribute = (attribute: string): void => {
       const rawAttributeKey = element.getAttribute(`${TRANSLATION_ATTRIBUTE}-${attribute}`);
 
-      if (rawAttributeKey !== null && attribute === "title" && STYLE_SHEET_ELEMENT_NAMES.has(element.localName)) {
+      if (rawAttributeKey !== null && attribute === "title" && namesStyleSheetSet(element)) {
         if (!options.isSilent) {
           console.warn(
             "%s",
@@ -394,7 +407,14 @@ export function createDomTranslator(options: DomTranslatorOptions): DomTranslato
           );
         }
       } else if (rawAttributeKey !== null) {
-        shownLocales.push(translateAttribute(element, attribute, rawAttributeKey, translate) ?? null);
+        const index = shownLocales.push(null) - 1;
+        const shown = translateAttribute(element, attribute, rawAttributeKey, translate);
+        // An attribute neither translated nor in the HTML shows no text, so it says nothing about the language.
+        if (shown === undefined && !element.hasAttribute(attribute)) {
+          shownLocales.splice(index, 1);
+        } else {
+          shownLocales[index] = shown ?? null;
+        }
       } else {
         restoreAttribute(element, attribute);
       }

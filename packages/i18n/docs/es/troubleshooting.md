@@ -2,7 +2,7 @@
 title: Solución de problemas
 description: Qué significa cada error y cada advertencia, y cómo solucionarlo.
 order: 5
-source: dda3cd23415d8e4a8d4aadf78baa0fc2a9f6ec2c
+source: 301803b13f79cc8b972546a00c5412e1c0489207
 ---
 
 # Solución de problemas
@@ -170,7 +170,7 @@ Ves `Ouvrir l{app}` donde esperabas `Ouvrir l'éditeur`, y la consola está en s
 - **"Skipping translation on <style> because the element can run, hide, or reparse its text as HTML"**: hay una clave `data-i18n` en un elemento `<script>`, `<style>`, `<noscript>`, `<template>`, `<iframe>`, `<noembed>`, `<noframes>`, `<xmp>` o `<plaintext>`, cuyo texto se ejecuta como código, decide qué se muestra o se escribe sin escapar cuando la página se guarda como HTML. La advertencia nombra la clave y pasa el elemento, así que la consola apunta a él. Mueve la clave a un elemento normal. Sus claves `data-i18n-<atributo>`, como el `data-i18n-title` de un `<iframe>`, se siguen traduciendo.
 - **"Skipping translation because data-i18n contains an invalid key"**, o lo mismo para un `data-i18n-<attribute>`: la clave está vacía, tiene más de 1000 caracteres o contiene un carácter de control ASCII, así que ningún diccionario puede contenerla. El elemento conserva su texto actual. Corrige la clave en el HTML.
 - **"Skipping translation because data-i18n names a message that needs values"**: el mensaje tiene un placeholder, un plural o un select, y la traducción de HTML no tiene valores para completarlos. El elemento conserva su texto del HTML, y la advertencia aparece una vez por clave. Renderiza ese texto con `t()` y pasa los valores.
-- **"Skipping translation of the title of <style> because it names a style sheet set"**: hay una clave `data-i18n-title` en un elemento `<style>` o `<link>`, cuyo `title` agrupa hojas de estilo entre las que el navegador alterna, así que traducirlo cambiaría cuáles se aplican. El elemento conserva su `title`. Quita la clave.
+- **"Skipping translation of the title of <style> because it names a style sheet set"**: hay una clave `data-i18n-title` en un elemento `<style>` o `<link rel="stylesheet">`, cuyo `title` agrupa hojas de estilo entre las que el navegador alterna, así que traducirlo cambiaría cuáles se aplican. El elemento conserva su `title`. Quita la clave.
 - **Un atributo `data-i18n-href` no hace nada**: solo se pueden traducir los atributos de texto. Consulta [Traduce HTML sin un framework](browser.md#traduce-html-sin-un-framework).
 
 Las advertencias del navegador se silencian junto con todas las demás cuando el gestor tiene `isSilent: true`.
