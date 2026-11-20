@@ -5,7 +5,8 @@ import { createKeySet } from "../keysets/local";
 import { sign } from "../sign/sign";
 import { createVerifier } from "../verify/create-verifier";
 import { ALGORITHM_PARAMS } from "./algorithms";
-import { exportPublicJwk } from "./export";
+import { exportPrivateJwk, exportPublicJwk } from "./export";
+import { generateKeyPair } from "./generate";
 import { importKeyPair, importPrivateKey, importPublicKey } from "./import";
 import { MAX_PEM_LENGTH } from "./pem";
 import { valueOf } from "./test-fixtures";
@@ -91,6 +92,29 @@ describe("PEM import text", () => {
     }
   });
 
+  it("should read literal backslash-n and backslash-r-backslash-n escapes as line breaks", async () => {
+    const { importParams } = ALGORITHM_PARAMS.ES256;
+    const pair = (await crypto.subtle.generateKey(importParams, true, ["sign", "verify"])) as CryptoKeyPair;
+    const der = await crypto.subtle.exportKey("spki", pair.publicKey);
+    const results = [];
+    // As a .env file or a JSON-encoded secret often leaves a PEM: its line breaks written as escapes.
+    for (const escape of [String.raw`\n`, String.raw`\r\n`]) {
+      // oxlint-disable-next-line no-await-in-loop
+      results.push((await importPublicKey(pemOf("PUBLIC KEY", der, escape) + escape, { alg: "ES256" })).ok);
+    }
+    expect(results).toEqual([true, true]);
+  });
+
+  it("should refuse a backslash that is not a line break escape as invalid_key", async () => {
+    const { importParams } = ALGORITHM_PARAMS.ES256;
+    const pair = (await crypto.subtle.generateKey(importParams, true, ["sign", "verify"])) as CryptoKeyPair;
+    const der = await crypto.subtle.exportKey("spki", pair.publicKey);
+    expect(await importPublicKey(pemOf("PUBLIC KEY", der, String.raw`\t`), { alg: "ES256" })).toEqual({
+      ok: false,
+      error: { issues: [{ code: "invalid_key" }] },
+    });
+  });
+
   it("should refuse a private key where a public one is expected as unexpected_private_key", async () => {
     const { pkcs8 } = await pemPair("ES256");
     expect(issuesOf(await importPublicKey(pkcs8, { alg: "ES256" }))).toEqual([{ code: "unexpected_private_key" }]);
@@ -116,10 +140,29 @@ describe("PEM import text", () => {
     ]);
   });
 
-  it("should ignore options.kid for a JWK, which keeps its own", async () => {
+  it("should refuse a JWK whose own kid differs from options.kid as invalid_key at kid", async () => {
     const { spki } = await pemPair("ES256");
     const jwk = { ...(await exportPublicJwk(valueOf(await importPublicKey(spki, { alg: "ES256" })))), kid: "own" };
-    expect(valueOf(await importPublicKey(jwk, { alg: "ES256", kid: "given" })).kid).toBe("own");
+    expect(issuesOf(await importPublicKey(jwk, { alg: "ES256", kid: "given" }))).toEqual([
+      { code: "invalid_key", path: ["kid"] },
+    ]);
+    expect(valueOf(await importPublicKey(jwk, { alg: "ES256", kid: "own" })).kid).toBe("own");
+  });
+
+  it("should give a public JWK without a kid the kid option", async () => {
+    const { spki } = await pemPair("ES256");
+    const jwk = await exportPublicJwk(valueOf(await importPublicKey(spki, { alg: "ES256" })));
+    expect(valueOf(await importPublicKey(jwk, { alg: "ES256", kid: "given" })).kid).toBe("given");
+  });
+
+  it("should give both halves of a private JWK without a kid the kid option", async () => {
+    const pair = await generateKeyPair({ alg: "ES256", extractable: true });
+    const jwk = await exportPrivateJwk(pair.privateKey);
+    const imported = valueOf(await importKeyPair(jwk, { alg: "ES256", kid: "given" }));
+    expect([imported.privateKey.kid, imported.publicKey.kid]).toEqual(["given", "given"]);
+    expect(issuesOf(await importPrivateKey({ ...jwk, kid: "own" }, { alg: "ES256", kid: "given" }))).toEqual([
+      { code: "invalid_key", path: ["kid"] },
+    ]);
   });
 
   it("should throw a TypeError for a kid that is not a string", async () => {

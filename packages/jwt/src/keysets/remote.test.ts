@@ -386,6 +386,19 @@ describe("createRemoteKeySet failures", () => {
     expect(await pending).toEqual(failure({ reason: "timeout" }));
   });
 
+  it("should cancel a stalled body on timeout, even when fetch ignores the signal", async () => {
+    vi.useFakeTimers();
+    const cancel = vi.fn();
+    const stalled = new ReadableStream<Uint8Array>({
+      start: (controller) => controller.enqueue(new Uint8Array([123])),
+      cancel,
+    });
+    const keys = createSet({ fetch: fetchSequence(() => new Response(stalled, { status: 200 })), timeout: 2 });
+    const pending = keys.select(EC_HEADER);
+    await vi.advanceTimersByTimeAsync(2000);
+    expect([await pending, cancel.mock.calls.length]).toEqual([failure({ reason: "timeout" }), 1]);
+  });
+
   it("should report too_large for a Content-Length over the cap", async () => {
     const response = () => new Response("{}", { status: 200, headers: { "content-length": "1000" } });
     const keys = createSet({ fetch: fetchSequence(response), maxResponseBytes: 999 });
@@ -586,6 +599,31 @@ describe("createRemoteKeySet when the clock steps back", () => {
     await keys.select(EC_HEADER);
     clock.set(0);
     expect(describeSelection(await keys.select(ED_HEADER))).toEqual({ alg: "EdDSA", kid: "ed" });
+  });
+
+  it.each([
+    [60, 1],
+    [61, 2],
+  ])("should keep the cache when the clock steps back %i seconds, fetching %i times", async (step, fetches) => {
+    const clock = createClock();
+    clock.set(1000);
+    const fetch = fetchSequence(() => jwksResponse(EC_JWK));
+    const keys = createSet({ fetch, now: clock.now, cacheTtl: 600, maxStale: 0 });
+    await keys.select(EC_HEADER);
+    clock.set(1000 - step);
+    await keys.select(EC_HEADER);
+    await vi.waitFor(() => expect(fetch).toHaveBeenCalledTimes(fetches));
+  });
+
+  it("should use a seed fetched up to 60 seconds ahead of the clock", async () => {
+    const clock = createClock();
+    clock.set(1000);
+    const fetch = fetchSequence(() => jwksResponse(ED_JWK));
+    const keys = createSet({ fetch, now: clock.now, seed: { jwks: { keys: [EC_JWK] }, fetchedAt: 1_030_000 } });
+    expect([describeSelection(await keys.select(EC_HEADER)), fetch.mock.calls.length]).toEqual([
+      { alg: "ES256", kid: "ec" },
+      0,
+    ]);
   });
 
   it("should not serve the cached JWKS as stale when the clock is earlier than the fetch", async () => {
@@ -915,6 +953,19 @@ describe("createRemoteKeySet waitUntil", () => {
     expect(waitUntil.mock.calls.map(([promise]) => promise instanceof Promise)).toEqual([true, true]);
   });
 
+  it.each([
+    ["onFetch", () => jwksResponse(EC_JWK)],
+    ["onFetchError", () => new Response(null, { status: 503 })],
+  ] as const)("should hand the promise %s returns to waitUntil, its rejection ignored", async (name, respond) => {
+    const waitUntil = vi.fn();
+    const callback = vi.fn(async () => Promise.reject(new Error("save failed")));
+    const keys = createSet({ fetch: fetchSequence(respond), waitUntil, [name]: callback });
+    await keys.select(EC_HEADER);
+    expect(waitUntil).toHaveBeenCalledTimes(2);
+    const handed = waitUntil.mock.calls[1]?.[0] as Promise<unknown>;
+    await expect(handed).resolves.toBeUndefined();
+  });
+
   it("should select as usual when waitUntil throws", async () => {
     const keys = createSet({
       fetch: fetchSequence(() => jwksResponse(EC_JWK)),
@@ -1056,9 +1107,9 @@ describe("createRemoteKeySet seed", () => {
     ]);
   });
 
-  it("should treat a seed fetched later than the clock as expired", async () => {
+  it("should treat a seed fetched over 60 seconds later than the clock as expired", async () => {
     const fetch = fetchSequence(() => jwksResponse(ED_JWK));
-    const keys = createSet({ fetch, now: () => 0, maxStale: 0, seed: { jwks: { keys: [EC_JWK] }, fetchedAt: 1000 } });
+    const keys = createSet({ fetch, now: () => 0, maxStale: 0, seed: { jwks: { keys: [EC_JWK] }, fetchedAt: 60_001 } });
     await keys.select(EC_HEADER);
     expect(fetch).toHaveBeenCalledTimes(1);
   });

@@ -142,6 +142,53 @@ describe("CryptoKey import", () => {
   });
 });
 
+describe("CryptoKey made for another purpose", () => {
+  const rsaOaep = () =>
+    crypto.subtle.generateKey(
+      { name: "RSA-OAEP", modulusLength: 2048, publicExponent: new Uint8Array([1, 0, 1]), hash: "SHA-256" },
+      true,
+      ["encrypt", "decrypt"],
+    ) as Promise<CryptoKeyPair>;
+  const ecdh = () =>
+    crypto.subtle.generateKey({ name: "ECDH", namedCurve: "P-256" }, true, ["deriveBits"]) as Promise<CryptoKeyPair>;
+
+  it("should refuse an RSA-OAEP key alone as alg_mismatch, public or private", async () => {
+    const pair = await rsaOaep();
+
+    expect(issuesOf(await importPublicKey(pair.publicKey, { alg: "RS256" }))).toEqual([{ code: "alg_mismatch" }]);
+    expect(issuesOf(await importPrivateKey(pair.privateKey, { alg: "RS256" }))).toEqual([{ code: "alg_mismatch" }]);
+  });
+
+  it("should refuse an ECDH key alone as alg_mismatch, public or private", async () => {
+    const pair = await ecdh();
+
+    expect(issuesOf(await importPublicKey(pair.publicKey, { alg: "ES256" }))).toEqual([{ code: "alg_mismatch" }]);
+    expect(issuesOf(await importKeyPair(pair.privateKey, { alg: "ES256" }))).toEqual([{ code: "alg_mismatch" }]);
+  });
+
+  it("should refuse an ECDH key pair as alg_mismatch", async () => {
+    expect(issuesOf(await importKeyPair(await ecdh(), { alg: "ES256" }))).toEqual([{ code: "alg_mismatch" }]);
+  });
+
+  it.each<[string, AsymmetricAlgorithm, AsymmetricAlgorithm]>([
+    ["another hash", "RS512", "RS256"],
+    ["another RSA scheme", "PS256", "RS256"],
+    ["another key type", "Ed25519", "ES256"],
+  ])("should refuse a public CryptoKey of %s as alg_mismatch", async (_, made, alg) => {
+    const pair = await webCryptoPair(made, true);
+
+    expect(issuesOf(await importPublicKey(pair.publicKey, { alg }))).toEqual([{ code: "alg_mismatch" }]);
+  });
+
+  it("should refuse a public CryptoKey without the verify usage as wrong_use", async () => {
+    const publicKey = (
+      (await crypto.subtle.generateKey({ name: "ECDSA", namedCurve: "P-256" }, true, ["sign"])) as CryptoKeyPair
+    ).publicKey;
+
+    expect(issuesOf(await importPublicKey(publicKey, { alg: "ES256" }))).toEqual([{ code: "wrong_use" }]);
+  });
+});
+
 describe("CryptoKey impostors", () => {
   it("should report invalid_key without throwing for an object that only inherits from CryptoKey", async () => {
     const impostor = Object.create(CryptoKey.prototype) as CryptoKey;

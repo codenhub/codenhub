@@ -160,3 +160,48 @@ describe("createVerifier with a key set resolver", () => {
     );
   });
 });
+
+describe("createVerifier with a resolver that returns a route", () => {
+  const routeVerifier = (route: object, options: { audience?: string; type?: string } = {}) =>
+    createVerifier({ keys: () => route as never, now: clockAt(), ...options });
+
+  it("should check the route's audience instead of the verifier's", async () => {
+    const route = { keys: sets.get(ISSUER_A), audience: "tenant-a" };
+    const verify = routeVerifier(route, { audience: "verifier-wide" });
+    const accepted = await verify(await tokenFor(pairA, { iss: ISSUER_A, aud: "tenant-a" }));
+    const refused = await verify(await tokenFor(pairA, { iss: ISSUER_A, aud: "verifier-wide" }));
+    expect([accepted.ok, refused]).toEqual([true, failure({ code: "wrong_audience", path: ["payload", "aud"] })]);
+  });
+
+  it("should check the route's type instead of the verifier's", async () => {
+    const verify = routeVerifier({ keys: sets.get(ISSUER_A), type: "at+jwt" }, { type: "JWT" });
+    const token = await sign({
+      header: { typ: "at+jwt" },
+      payload: { exp: NOW_SECONDS + 60, iss: ISSUER_A },
+      key: pairA.privateKey,
+    });
+    expect((await verify(token)).ok).toBe(true);
+  });
+
+  it("should keep the verifier's audience when the route sets none", async () => {
+    const verify = routeVerifier({ keys: sets.get(ISSUER_A) }, { audience: "verifier-wide" });
+    expect((await verify(await tokenFor(pairA, { iss: ISSUER_A, aud: "verifier-wide" }))).ok).toBe(true);
+  });
+
+  it.each([
+    ["keys that is not a key set", { keys: {} }],
+    ["an invalid audience", { audience: "" }],
+    ["an invalid type", { type: ["application/"] }],
+  ])("should fail with key_set_error and report a TypeError for a route with %s", async (_name, overrides) => {
+    const errors: unknown[] = [];
+    const verify = createVerifier({
+      keys: () => ({ keys: sets.get(ISSUER_A), ...overrides }) as never,
+      now: clockAt(),
+      onKeySetError: (error) => errors.push(error),
+    });
+    expect(await verify(await tokenFor(pairA, { iss: ISSUER_A }))).toEqual(
+      failure({ code: "key_fetch_failed", params: { reason: "key_set_error" } }),
+    );
+    expect(errors.map((error) => error instanceof TypeError)).toEqual([true]);
+  });
+});

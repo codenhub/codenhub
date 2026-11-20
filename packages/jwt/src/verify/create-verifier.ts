@@ -18,7 +18,7 @@ import { parseCompact, parsePayload, type CompactJws } from "../jws/compact";
 import { ALGORITHM_PARAMS } from "../keys/algorithms";
 import { getKeyEntry, isRegisteredKey } from "../keys/registry";
 import { checkClaims, schemaIssues } from "./claims";
-import { resolveOptions } from "./options";
+import { readRouteChecks, resolveOptions, type ResolvedOptions } from "./options";
 
 const KEY_SET_ERROR = fail({ code: "key_fetch_failed", params: { reason: "key_set_error" } });
 const MISSING_ISSUER = fail({ code: "missing_claim", path: ["payload", "iss"], params: { claim: "iss" } });
@@ -78,6 +78,7 @@ export function createVerifier<TSchema extends StandardSchemaV1 | undefined = un
   options: VerifierOptions<TSchema>,
 ): Verifier<VerifiedPayload<TSchema>> {
   const resolved = resolveOptions(options);
+  const report = reporterOf(resolved.onKeySetError);
   return async (token) => {
     const parsed = parseCompact(token, resolved.maxLength);
     if (!parsed.ok) {
@@ -86,16 +87,18 @@ export function createVerifier<TSchema extends StandardSchemaV1 | undefined = un
     const jws = parsed.value;
     let early: JwtPayload | undefined;
     let keys: KeySet;
+    let checks: ResolvedOptions = resolved;
     if (typeof resolved.keys === "function") {
-      const routed = await routeByIssuer(resolved.keys, jws, resolved.issuers);
+      const routed = await routeByIssuer(resolved.keys, jws, resolved.issuers, report);
       if ("error" in routed) {
         return routed;
       }
       ({ keys, payload: early } = routed);
+      checks = routed.checks === undefined ? resolved : { ...resolved, ...routed.checks };
     } else {
       keys = resolved.keys;
     }
-    const selected = await selectKey(keys, jws.header);
+    const selected = await selectKey(keys, jws.header, report);
     if (!selected.ok) {
       return selected;
     }
@@ -115,7 +118,7 @@ export function createVerifier<TSchema extends StandardSchemaV1 | undefined = un
     if (!payload.ok) {
       return payload;
     }
-    const claimIssues = checkClaims(jws.header, payload.value, resolved, key);
+    const claimIssues = checkClaims(jws.header, payload.value, checks, key);
     const issues: JwtIssue[] =
       claimIssues.length === 0 && resolved.claims !== undefined
         ? await schemaIssues(resolved.claims, payload.value)
@@ -141,6 +144,7 @@ async function routeByIssuer(
   resolver: KeySetResolver,
   jws: CompactJws,
   issuers: readonly string[] | undefined,
+  report: Reporter,
 ): Promise<IssuerRoute | JwtErr> {
   const payload = parsePayload(jws);
   if (!payload.ok) {
@@ -157,55 +161,99 @@ async function routeByIssuer(
   if (issuers !== undefined && !issuers.includes(iss)) {
     return WRONG_ISSUER;
   }
-  let keys: unknown;
+  let returned: unknown;
   try {
-    keys = await resolver(iss, jws.header);
-  } catch {
-    return KEY_SET_ERROR;
+    returned = await resolver(iss, jws.header);
+  } catch (error) {
+    return report(error);
   }
-  if (keys === undefined) {
+  if (returned === undefined) {
     return WRONG_ISSUER;
   }
-  if (typeof keys !== "object" || keys === null) {
-    return KEY_SET_ERROR;
-  }
-  let select: unknown;
   try {
-    select = (keys as { select?: unknown }).select;
-  } catch {
-    return KEY_SET_ERROR;
+    // Read inside the `try`: a getter or Proxy trap on what the resolver returned can throw.
+    if (isKeySet(returned)) {
+      // Not wrapped in `ok`, which would deep-freeze the caller's key set and any state it keeps.
+      return { keys: returned, payload: payload.value, checks: undefined };
+    }
+    const route = returned as { keys?: unknown; audience?: unknown; type?: unknown } | null;
+    if (typeof route !== "object" || route === null || !isKeySet(route.keys)) {
+      return report(new TypeError(NOT_A_KEY_SET));
+    }
+    const checks = readRouteChecks(route);
+    return { keys: route.keys, payload: payload.value, checks };
+  } catch (error) {
+    return report(error);
   }
-  // Not wrapped in `ok`, which would deep-freeze the caller's key set and any state it keeps.
-  return typeof select === "function" ? { keys: keys as KeySet, payload: payload.value } : KEY_SET_ERROR;
 }
 
-/** The key set a resolver chose for a token, and the payload already read to choose it. */
+const NOT_A_KEY_SET = "The keys function returned something other than a key set, a route or undefined.";
+
+function isKeySet(value: unknown): value is KeySet {
+  return typeof value === "object" && value !== null && typeof (value as { select?: unknown }).select === "function";
+}
+
+/** The key set a resolver chose for a token, the payload already read to choose it, and the route's checks. */
 interface IssuerRoute {
   readonly keys: KeySet;
   readonly payload: JwtPayload;
+  readonly checks: Pick<ResolvedOptions, "audiences" | "types"> | undefined;
+}
+
+/** Hands a key set's error to `onKeySetError` and returns the `key_set_error` failure. */
+type Reporter = (error: unknown) => typeof KEY_SET_ERROR;
+
+function reporterOf(onKeySetError: ((error: unknown) => void) | undefined): Reporter {
+  return (error) => {
+    if (onKeySetError !== undefined) {
+      try {
+        const result: unknown = onKeySetError(error);
+        if (result instanceof Promise) {
+          void ignoreRejection(result);
+        }
+      } catch {
+        // Deliberately ignored: the hook only observes the failure.
+      }
+    }
+    return KEY_SET_ERROR;
+  };
+}
+
+async function ignoreRejection(promise: Promise<unknown>): Promise<void> {
+  try {
+    await promise;
+  } catch {
+    // Deliberately ignored: the hook only observes the failure.
+  }
 }
 
 /**
  * Asks the key set for the header's key. A key set is caller code, so whatever it does wrong, throwing
  * included, becomes a `key_set_error` failure rather than an exception or an unchecked key.
  */
-async function selectKey(keys: KeySet, header: JwtHeader): Promise<JwtResult<VerificationKey>> {
+async function selectKey(keys: KeySet, header: JwtHeader, report: Reporter): Promise<JwtResult<VerificationKey>> {
   try {
     const result: unknown = await keys.select(header);
     if (typeof result !== "object" || result === null) {
-      return KEY_SET_ERROR;
+      return report(new TypeError("The key set's select returned something other than a result."));
     }
     // Read inside the `try` as well: a getter or Proxy trap on the result can throw too.
     const { ok: isOk, value, error } = result as { ok?: unknown; value?: unknown; error?: { issues?: unknown } };
     if (isOk === true) {
-      return isRegisteredKey(value) && value.kind !== "private" ? ok(value) : KEY_SET_ERROR;
+      return isRegisteredKey(value) && value.kind !== "private"
+        ? ok(value)
+        : report(
+            new TypeError("The key set's select returned a value that is not a public or secret key of this package."),
+          );
     }
     const issues = isOk === false ? error?.issues : undefined;
     // Copied by index, so a hole becomes `undefined` and fails the check; `every` would skip it.
     const list = Array.isArray(issues) ? Array.from({ length: issues.length }, (_, index) => issues[index]) : [];
-    return list.length > 0 && list.every(hasStringCode) ? fail(...(list as [JwtIssue, ...JwtIssue[]])) : KEY_SET_ERROR;
-  } catch {
-    return KEY_SET_ERROR;
+    return list.length > 0 && list.every(hasStringCode)
+      ? fail(...(list as [JwtIssue, ...JwtIssue[]]))
+      : report(new TypeError("The key set's select returned a failure without issues that each have a string code."));
+  } catch (error) {
+    return report(error);
   }
 }
 

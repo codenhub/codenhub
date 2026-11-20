@@ -14,6 +14,11 @@ export interface KeyEntry {
   readonly signatureLength: number;
   /** For a private key, the public half of its pair, proven to match, so its thumbprint never needs the private material. */
   readonly publicCryptoKey?: CryptoKey;
+  /**
+   * For a private key made by `createExternalSigningKey`, the function its signatures come from, already in
+   * JWS form. `cryptoKey` is then the public key, which can only verify.
+   */
+  readonly externalSign?: (data: Uint8Array<ArrayBuffer>) => Promise<Uint8Array<ArrayBuffer>>;
 }
 
 const registry = new WeakMap<object, KeyEntry>();

@@ -22,6 +22,7 @@ export interface ResolvedOptions {
   readonly requiredClaims: readonly string[];
   readonly claims?: StandardSchemaV1;
   readonly now: () => number;
+  readonly onKeySetError?: (error: unknown) => void;
 }
 
 /** Every documented verifier option; typed so adding one to `VerifierOptions` fails to compile until listed. */
@@ -38,6 +39,7 @@ const KNOWN_OPTIONS: Readonly<Record<keyof VerifierOptions, true>> = {
   requiredClaims: true,
   claims: true,
   now: true,
+  onKeySetError: true,
 };
 
 const MEDIA_TYPE_PREFIX = "application/";
@@ -57,6 +59,17 @@ export function normalizeType(type: string): string {
 
 function throwInvalid(message: string): never {
   throw new TypeError(`createVerifier: ${message}`);
+}
+
+// A route's audiences and types, checked as the verifier options are; throws a TypeError naming the member.
+export function readRouteChecks(route: {
+  readonly audience?: unknown;
+  readonly type?: unknown;
+}): Pick<ResolvedOptions, "audiences" | "types"> {
+  return {
+    ...optional("audiences", readAudience(route.audience, "route")),
+    ...optional("types", readTypes(route.type, "route")),
+  };
 }
 
 const isNonEmptyString = (value: unknown): value is string => typeof value === "string" && value.length > 0;
@@ -87,6 +100,7 @@ export function resolveOptions(options: VerifierOptions<StandardSchemaV1 | undef
     requiredClaims,
     claims,
     now,
+    onKeySetError,
   } = options;
   if (typeof keys !== "function" && (typeof keys !== "object" || keys === null || typeof keys.select !== "function")) {
     throwInvalid("options.keys must be a key set (an object with a select function) or a function returning one.");
@@ -111,6 +125,9 @@ export function resolveOptions(options: VerifierOptions<StandardSchemaV1 | undef
   if (now !== undefined && typeof now !== "function") {
     throwInvalid("options.now must be a function returning milliseconds.");
   }
+  if (onKeySetError !== undefined && typeof onKeySetError !== "function") {
+    throwInvalid("options.onKeySetError must be a function.");
+  }
   return {
     keys,
     ...optional("issuers", readStringList(issuer, "issuer")),
@@ -124,6 +141,7 @@ export function resolveOptions(options: VerifierOptions<StandardSchemaV1 | undef
     requiredClaims: readRequiredClaims(requiredClaims),
     ...optional("claims", readSchema(claims)),
     now: now ?? Date.now,
+    ...optional("onKeySetError", onKeySetError),
   };
 }
 
@@ -143,10 +161,7 @@ function readStringList(value: unknown, name: string): readonly string[] | undef
   return Object.freeze(copy as string[]);
 }
 
-const AUDIENCE_MESSAGE =
-  "options.audience must be false, a non-empty string, or a non-empty array of non-empty strings.";
-
-function readAudience(value: unknown): readonly string[] | false | undefined {
+function readAudience(value: unknown, owner = "options"): readonly string[] | false | undefined {
   if (value === false) {
     return false;
   }
@@ -156,14 +171,14 @@ function readAudience(value: unknown): readonly string[] | false | undefined {
   const list: unknown = typeof value === "string" ? [value] : value;
   const copy = Array.isArray(list) ? denseCopy(list) : undefined;
   if (copy === undefined || copy.length === 0 || !copy.every(isNonEmptyString)) {
-    throwInvalid(AUDIENCE_MESSAGE);
+    throwInvalid(`${owner}.audience must be false, a non-empty string, or a non-empty array of non-empty strings.`);
   }
   return Object.freeze(copy as string[]);
 }
 
 const isTypeValue = (value: unknown): value is string => isNonEmptyString(value) && normalizeType(value) !== "";
 
-function readTypes(value: unknown): readonly (string | null)[] | undefined {
+function readTypes(value: unknown, owner = "options"): readonly (string | null)[] | undefined {
   if (value === undefined) {
     return undefined;
   }
@@ -171,7 +186,7 @@ function readTypes(value: unknown): readonly (string | null)[] | undefined {
   const copy = Array.isArray(list) ? denseCopy(list) : undefined;
   if (copy === undefined || copy.length === 0 || !copy.every((entry) => entry === null || isTypeValue(entry))) {
     throwInvalid(
-      "options.type must be a non-empty string other than application/, or a non-empty array of such strings and null.",
+      `${owner}.type must be a non-empty string other than application/, or a non-empty array of such strings and null.`,
     );
   }
   return Object.freeze(copy.map((entry) => (entry === null ? null : normalizeType(entry as string))));

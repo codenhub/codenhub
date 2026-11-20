@@ -20,6 +20,7 @@ export type {
   JwtResult,
   KeySet,
   KeySetResolver,
+  KeySetRoute,
   LocalKeySet,
   PrivateKey,
   PublicKey,
@@ -38,6 +39,7 @@ export { decodeBase64Url, encodeBase64Url } from "./encoding";
 export { readHeader, type ReadHeaderOptions } from "./jws/read-header";
 export {
   ASYMMETRIC_ALGORITHMS,
+  createExternalSigningKey,
   exportPrivateJwk,
   exportPublicJwk,
   exportSecretJwk,
@@ -53,6 +55,7 @@ export {
   jwkThumbprint,
   SYMMETRIC_ALGORITHMS,
   tokenHash,
+  type ExternalSigningKeyOptions,
   type GenerateKeyPairOptions,
   type GenerateSecretKeyOptions,
   type ImportPrivateKeyOptions,

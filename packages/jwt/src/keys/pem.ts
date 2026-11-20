@@ -46,7 +46,9 @@ export async function pemToJwk(
   if (pem.length > MAX_PEM_LENGTH) {
     return invalid;
   }
-  const match = PEM_PATTERN.exec(pem.trim());
+  // A backslash never occurs in a PEM, so `\n` and `\r` written as escapes, as a .env file or a JSON-encoded
+  // secret leaves them, can only be line breaks. Any other backslash still fails the pattern.
+  const match = PEM_PATTERN.exec(pem.replace(/\\[nr]/g, "\n").trim());
   const [, label, body, endLabel] = match ?? [];
   if (label === undefined || body === undefined || label !== endLabel) {
     return invalid;

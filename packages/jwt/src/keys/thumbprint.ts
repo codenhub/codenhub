@@ -1,4 +1,4 @@
-import type { Jwk, PrivateKey, PublicKey } from "../core/types";
+import type { AsymmetricAlgorithm, Jwk, PrivateKey, PublicKey } from "../core/types";
 import { encodeBase64Url, encodeUtf8 } from "../encoding";
 import { ALGORITHM_PARAMS } from "./algorithms";
 import { exportWebCryptoJwk } from "./exported-jwk";
@@ -39,8 +39,13 @@ export async function jwkThumbprint(key: PublicKey | PrivateKey): Promise<string
   if ((key.kind !== "public" && key.kind !== "private") || publicCryptoKey === undefined) {
     throw new TypeError("jwkThumbprint: key must be a public or private key created by this package.");
   }
-  const exported = await exportWebCryptoJwk(publicCryptoKey, key.alg);
-  const kty = ALGORITHM_PARAMS[key.alg].kty as keyof typeof THUMBPRINT_MEMBERS;
+  return cryptoKeyThumbprint(publicCryptoKey, key.alg);
+}
+
+/** The RFC 7638 thumbprint of a public `CryptoKey` bound to `alg`. */
+export async function cryptoKeyThumbprint(publicCryptoKey: CryptoKey, alg: AsymmetricAlgorithm): Promise<string> {
+  const exported = await exportWebCryptoJwk(publicCryptoKey, alg);
+  const kty = ALGORITHM_PARAMS[alg].kty as keyof typeof THUMBPRINT_MEMBERS;
   const material: Record<string, unknown> = { ...exported, kty };
   // Every required member is a base64url string or a fixed name, so JSON.stringify writes the RFC 7638 form:
   // no whitespace, and no escapes to normalize.

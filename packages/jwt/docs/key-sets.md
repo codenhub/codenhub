@@ -106,7 +106,18 @@ const tenants = new Map<string, KeySet>(["https://a.issuer.example", "https://b.
 const verify = createVerifier({ keys: (issuer) => tenants.get(issuer), audience: "https://api.example" });
 ```
 
-The verifier reads `iss` from the payload before the signature is checked, only to route the token: a token without `iss` is `missing_claim` with `{ claim: "iss" }`, one whose `iss` is not a string is `invalid_claim`, and an `iss` the function returns `undefined` for is `wrong_issuer`. When the verifier also has an `issuer` option, an `iss` it does not list is `wrong_issuer` before the function is called. The function may be `async`. If it throws, rejects, or returns something other than a key set, the token fails with `key_fetch_failed` and `{ reason: "key_set_error" }`.
+The verifier reads `iss` from the payload before the signature is checked, only to route the token: a token without `iss` is `missing_claim` with `{ claim: "iss" }`, one whose `iss` is not a string is `invalid_claim`, and an `iss` the function returns `undefined` for is `wrong_issuer`. When the verifier also has an `issuer` option, an `iss` it does not list is `wrong_issuer` before the function is called. The function may be `async`. If it throws, rejects, or returns something other than a key set or a route, the token fails with `key_fetch_failed` and `{ reason: "key_set_error" }`, and `onKeySetError` gets the error.
+
+When issuers' tokens name different audiences or `typ` values, as tenants with their own client IDs do, return a route instead of the key set: `{ keys, audience, type }`. A route's `audience` and `type` take the same values as the verifier options and replace them for that issuer's tokens; one it leaves out keeps the verifier's. An invalid route is `key_set_error`, like any other mistake in the function.
+
+```ts
+const verify = createVerifier({
+  keys: (issuer) => {
+    const tenant = tenantsByIssuer.get(issuer);
+    return tenant && { keys: tenant.keySet, audience: tenant.clientId };
+  },
+});
+```
 
 The `iss` is chosen by whoever sent the token. Look it up among issuers you already hold, as the `Map` above does, and never build a JWKS URL or a database query from it without checking it against a list first: otherwise anyone can make your server fetch from an address they pick. Still give each set its `issuer`: the function picks the set by a claim the signature has not yet covered, and the binding is what then refuses a token whose key belongs to another issuer.
 
@@ -180,7 +191,9 @@ const keys = createRemoteKeySet({
 });
 ```
 
-A seed is treated exactly like a JWKS this key set fetched at `fetchedAt`: fresh for `cacheTtl`, then stale for `maxStale`, then not used at all. A seed whose `jwks` does not import is ignored, and the key set fetches. `onFetch` and `onFetchError` may return a promise; what they throw or reject with is ignored, so a broken store or logger never fails a token.
+A seed is treated exactly like a JWKS this key set fetched at `fetchedAt`: fresh for `cacheTtl`, then stale for `maxStale`, then not used at all. A seed whose `jwks` does not import is ignored, and the key set fetches. `onFetch` and `onFetchError` may return a promise, which is handed to `waitUntil` so a save outlives the request on Workers; what they throw or reject with is ignored, so a broken store or logger never fails a token.
+
+A seed or cache whose `fetchedAt` is up to a minute ahead of the clock, as after a small clock correction or from a host whose clock runs ahead, counts as just fetched. Further ahead, it is expired: a clock that jumps back that far could otherwise keep a removed key trusted past `cacheTtl` plus `maxStale`.
 
 ### When fetching fails
 
@@ -221,5 +234,11 @@ const keys: KeySet = {
 Each tenant's set has its `issuer`, so tenant A's key verifies only tokens whose `iss` is tenant A's, whichever `kid` the token names. Without it, a token signed with tenant A's key and claiming tenant B's `iss` would pass, as the `kid` alone picks the key. A verifier's `issuer` option still says which issuers it accepts at all.
 
 A verifier treats a custom key set as code that may be wrong. If `select` throws, rejects, or returns anything other than a result holding a public or secret key this package created, the verifier fails with `key_fetch_failed` and `{ reason: "key_set_error" }` instead of throwing or using what it returned. A failed result is passed through as returned, so keep its issues free of token values as this package's own are.
+
+The issue never carries the error, which may hold anything. To log it, pass `onKeySetError` to `createVerifier`: it is called with what `select` or the `keys` function threw or rejected with, or with a `TypeError` naming what it returned instead. It is not called for a failure the key set returns itself, such as `unknown_kid`, and its own errors are ignored.
+
+```ts
+const verify = createVerifier({ keys: tenantKeys, onKeySetError: (error) => logger.error("key set failed", error) });
+```
 
 Keys are recognized only by the copy of `@codenhub/jwt` that created them. If your program loads two copies, `createKeySet` throws the `TypeError` meant for look-alikes ("… not a look-alike object") for a key from the other copy, and when a verifier's key set, one from the other copy or a custom one, selects such a key, the token fails with `key_fetch_failed` and `{ reason: "key_set_error" }`. Deduplicate the install so one copy is loaded, and if you publish a library built on this package, declare it as a `peerDependency`. [Keys](keys.md) explains why.

@@ -129,6 +129,15 @@ describe("maxAge", () => {
       failure({ code: "too_old", path: ["payload", "iat"], params: { maxAge: 60 } }),
     );
   });
+
+  it("should measure maxAge from an iat up to 60 seconds ahead, so the token is accepted until iat + maxAge", async () => {
+    const iat = NOW_SECONDS + 50;
+    expect(await verifyAt(0, { iat }, { maxAge: 30 })).toEqual(passed({ iat }));
+    expect(await verifyAt(80, { iat }, { maxAge: 30 })).toEqual(passed({ iat }));
+    expect(await verifyAt(81, { iat }, { maxAge: 30 })).toEqual(
+      failure({ code: "too_old", path: ["payload", "iat"], params: { maxAge: 30 } }),
+    );
+  });
 });
 
 describe("maxAge with unusual iat", () => {

@@ -398,3 +398,56 @@ describe("createVerifier key set", () => {
     expect(headers).toEqual([{ alg: "HS256", kid: "HS256-key", typ: "JWT" }]);
   });
 });
+
+describe("createVerifier onKeySetError", () => {
+  const KEY_SET_ERROR = failure({ code: "key_fetch_failed", params: { reason: "key_set_error" } });
+  const tokenFor = async () => sign({ payload: PAYLOAD, key: pairs.ES256.privateKey });
+
+  it("should hand what a key set throws to onKeySetError, keeping it out of the result", async () => {
+    const thrown = new Error("database unreachable");
+    const errors: unknown[] = [];
+    const keys: KeySet = {
+      select: async () => {
+        throw thrown;
+      },
+    };
+    const verify = createVerifier({ keys, now: clockAt(), onKeySetError: (error) => errors.push(error) });
+    expect([await verify(await tokenFor()), errors]).toEqual([KEY_SET_ERROR, [thrown]]);
+  });
+
+  it("should hand a TypeError naming the mistake when a key set returns something other than a result", async () => {
+    const errors: unknown[] = [];
+    const keys = { select: async () => "not a result" } as unknown as KeySet;
+    const verify = createVerifier({ keys, now: clockAt(), onKeySetError: (error) => errors.push(error) });
+    expect(await verify(await tokenFor())).toEqual(KEY_SET_ERROR);
+    expect(errors).toEqual([new TypeError("The key set's select returned something other than a result.")]);
+  });
+
+  it.each([
+    [
+      "throws",
+      () => {
+        throw new Error("logger broke");
+      },
+    ],
+    ["rejects", async () => Promise.reject(new Error("logger broke"))],
+  ])("should return the same failure when onKeySetError %s", async (_name, onKeySetError) => {
+    const keys = { select: async () => null } as unknown as KeySet;
+    const verify = createVerifier({ keys, now: clockAt(), onKeySetError });
+    expect(await verify(await tokenFor())).toEqual(KEY_SET_ERROR);
+  });
+
+  it("should not call onKeySetError for a key set's own failure", async () => {
+    const errors: unknown[] = [];
+    const keys: KeySet = { select: async () => fail({ code: "unknown_kid", path: ["header", "kid"] }) };
+    const verify = createVerifier({ keys, now: clockAt(), onKeySetError: (error) => errors.push(error) });
+    await verify(await tokenFor());
+    expect(errors).toEqual([]);
+  });
+
+  it("should throw TypeError when onKeySetError is not a function", () => {
+    expect(() => createVerifier({ keys: keySetOf(pairs.ES256.publicKey), onKeySetError: "log" as never })).toThrow(
+      new TypeError("createVerifier: options.onKeySetError must be a function."),
+    );
+  });
+});

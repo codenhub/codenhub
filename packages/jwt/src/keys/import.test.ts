@@ -159,6 +159,25 @@ describe.each(CASES)("importPublicKey for $alg", ({ alg, publicJwk, materialMemb
     ]);
   });
 
+  it("should report invalid_key with path key_ops when key_ops repeats an operation", async () => {
+    expect(issuesOf(await importPublicKey({ ...publicJwk, key_ops: ["verify", "verify"] }, { alg }))).toEqual([
+      { code: "invalid_key", path: ["key_ops"] },
+    ]);
+  });
+
+  it.each([["encrypt"], ["deriveKey"], ["custom"]])(
+    "should report wrong_use with path key_ops when key_ops also allows %s",
+    async (operation) => {
+      expect(issuesOf(await importPublicKey({ ...publicJwk, key_ops: ["verify", operation] }, { alg }))).toEqual([
+        { code: "wrong_use", path: ["key_ops"] },
+      ]);
+    },
+  );
+
+  it("should accept key_ops allowing both sign and verify", async () => {
+    expect((await importPublicKey({ ...publicJwk, key_ops: ["sign", "verify"] }, { alg })).ok).toBe(true);
+  });
+
   it("should report invalid_key with path key_ops when key_ops is not an array of strings", async () => {
     expect(issuesOf(await importPublicKey({ ...publicJwk, key_ops: "verify" }, { alg }))).toEqual([
       { code: "invalid_key", path: ["key_ops"] },
@@ -524,8 +543,13 @@ describe("importSecretKey", () => {
   });
 
   it("should import an oct JWK, taking kid from the JWK", async () => {
-    const result = await importSecretKey({ ...HMAC_SECRET_JWK, kid: "j1" }, { alg: "HS256", kid: "ignored" });
+    const result = await importSecretKey({ ...HMAC_SECRET_JWK, kid: "j1" }, { alg: "HS256", kid: "j1" });
     expect(result).toEqual({ ok: true, value: { kind: "secret", alg: "HS256", kid: "j1", extractable: false } });
+  });
+
+  it("should refuse an oct JWK whose kid differs from options.kid as invalid_key at kid", async () => {
+    const result = await importSecretKey({ ...HMAC_SECRET_JWK, kid: "j1" }, { alg: "HS256", kid: "other" });
+    expect(issuesOf(result)).toEqual([{ code: "invalid_key", path: ["kid"] }]);
   });
 
   it("should report weak_key with path k for a 31-byte oct JWK", async () => {
@@ -564,6 +588,11 @@ describe("importSecretKey", () => {
     expect(issuesOf(await importSecretKey({ ...HMAC_SECRET_JWK, key_ops: ["encrypt"] }, { alg: "HS256" }))).toEqual([
       { code: "wrong_use", path: ["key_ops"] },
     ]);
+  });
+
+  it("should report wrong_use with path key_ops when key_ops also allows encryption", async () => {
+    const jwk = { ...HMAC_SECRET_JWK, key_ops: ["sign", "verify", "encrypt"] };
+    expect(issuesOf(await importSecretKey(jwk, { alg: "HS256" }))).toEqual([{ code: "wrong_use", path: ["key_ops"] }]);
   });
 
   it("should report alg_mismatch with path alg for an oct JWK naming another algorithm", async () => {
@@ -737,9 +766,9 @@ describe("importSecretKey option and JWK interplay", () => {
     expect(signature.byteLength).toBe(32);
   });
 
-  it("should ignore the kid option for a JWK without a kid", async () => {
-    const result = await importSecretKey(HMAC_SECRET_JWK, { alg: "HS256", kid: "ignored" });
-    expect(valueOf(result).kid).toBeUndefined();
+  it("should give a JWK without a kid the kid option", async () => {
+    const result = await importSecretKey(HMAC_SECRET_JWK, { alg: "HS256", kid: "given" });
+    expect(valueOf(result).kid).toBe("given");
   });
 
   it("should accept an empty-string kid from the option and from a JWK", async () => {
@@ -784,6 +813,16 @@ describe("importPrivateKey with a mismatched d", () => {
     const { d } = await exportPrivateJwk(other.privateKey);
     expect(d).not.toBe(jwk.d);
     expect(issuesOf(await importPrivateKey({ ...jwk, d }, { alg }))).toEqual([{ code: "invalid_key" }]);
+  });
+
+  // Web Crypto signs RSA with the CRT members alone, so the probe signature cannot see a wrong d; another
+  // library that signs with d from the exported JWK would.
+  it("should report invalid_key with path d for RSA when d does not fit p and q", async () => {
+    const other = await generateKeyPair({ alg: "RS256", extractable: true });
+    const { d } = await exportPrivateJwk(other.privateKey);
+    expect(issuesOf(await importPrivateKey({ ...RSA_2048_PRIVATE_JWK, d }, { alg: "RS256" }))).toEqual([
+      { code: "invalid_key", path: ["d"] },
+    ]);
   });
 });
 

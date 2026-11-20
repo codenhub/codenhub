@@ -78,17 +78,19 @@ export interface RemoteKeySetOptions {
    * A JWKS fetched earlier, such as one a previous instance saved from {@link RemoteKeySetOptions.onFetch},
    * used as if this set had fetched it at `fetchedAt`. It is imported at the first `select`; a `jwks` that is
    * not a JWKS is ignored, and the set fetches as it would without a seed. A seed older than `cacheTtl`
-   * plus `maxStale` is never used.
+   * plus `maxStale` is never used, and neither is one whose `fetchedAt` is more than a minute ahead of `now`.
    */
   readonly seed?: RemoteKeySetSnapshot;
   /**
    * Called after each successful fetch, with the JWKS as fetched and when, for a caller that saves it to
-   * pass as `seed` later. Its errors, thrown or rejected, are ignored.
+   * pass as `seed` later. A promise it returns is handed to `waitUntil`; its errors, thrown or rejected, are
+   * ignored.
    */
   readonly onFetch?: (snapshot: RemoteKeySetSnapshot) => void;
   /**
    * Called after each failed fetch with its `key_fetch_failed` issue, whether or not a `select` waited for
-   * the fetch, for logging. Its errors, thrown or rejected, are ignored.
+   * the fetch, for logging. A promise it returns is handed to `waitUntil`; its errors, thrown or rejected, are
+   * ignored.
    */
   readonly onFetchError?: (issue: JwtIssue) => void;
   /**
@@ -138,6 +140,8 @@ const MAX_RESPONSE_BYTES_LIMIT = 1_048_576;
 const HTTP_OK = 200;
 /** Time past `timeout` after which a fetch that never settled no longer holds back a new one. */
 const ABANDONED_FETCH_GRACE_MS = 1000;
+/** How far the clock may step back, or a seed's `fetchedAt` lie ahead, with the cache still counted as fresh. */
+const CLOCK_STEP_BACK_TOLERANCE_MS = 60_000;
 
 /** Why a fetch failed, as `params.reason` of a `key_fetch_failed` issue. */
 type FetchFailureReason = "timeout" | "network" | "status" | "too_large" | "invalid_response";
@@ -238,8 +242,10 @@ export function createRemoteKeySet(options: RemoteKeySetOptions): KeySet {
   let generation = 0;
   let seeding: Promise<void> | undefined;
 
-  // A clock that steps back makes an elapsed time negative. That never keeps a cooldown running or a cache
-  // alive: the cooldown is over, and keys fetched "in the future" are expired, so the bounds of decision 5 hold.
+  // A clock that steps back makes an elapsed time negative. That never keeps a cooldown running. A cache
+  // fetched up to a minute "in the future", as after a small clock correction or from a seed saved on a host
+  // whose clock runs ahead, counts as just fetched; further ahead it is expired, so the bounds of decision 5
+  // hold within that minute.
   const isCoolingDown = (): boolean => {
     if (lastFetchStartedAt === undefined) {
       return false;
@@ -248,13 +254,13 @@ export function createRemoteKeySet(options: RemoteKeySetOptions): KeySet {
     return elapsed >= 0 && elapsed < config.cooldownMs;
   };
 
-  /** Whether the cache is younger than `limitMs`; a cache older than the clock says is never young. */
+  /** Whether the cache is younger than `limitMs`; a cache far newer than the clock says is never young. */
   const isCachedWithin = (limitMs: number): boolean => {
     if (cached === undefined) {
       return false;
     }
     const age = config.now() - cached.fetchedAt;
-    return age >= 0 && age < limitMs;
+    return age >= -CLOCK_STEP_BACK_TOLERANCE_MS && Math.max(age, 0) < limitMs;
   };
 
   const runFetch = async (started: number): Promise<JwtResult<readonly VerificationKey[]>> => {
@@ -271,13 +277,13 @@ export function createRemoteKeySet(options: RemoteKeySetOptions): KeySet {
     inFlight = undefined;
     if (!outcome.ok) {
       lastFailure = outcome;
-      notify(config.onFetchError, outcome.error.issues[0] as JwtIssue);
+      notify(config.onFetchError, outcome.error.issues[0] as JwtIssue, config.waitUntil);
       return outcome;
     }
     const fetchedAt = config.now();
     cached = { keys: outcome.value.keys, fetchedAt };
     lastFailure = undefined;
-    notify(config.onFetch, { jwks: outcome.value.jwks, fetchedAt });
+    notify(config.onFetch, { jwks: outcome.value.jwks, fetchedAt }, config.waitUntil);
     return ok(outcome.value.keys);
   };
 
@@ -421,15 +427,23 @@ async function fetchKeys(config: RemoteConfig): Promise<JwtResult<FetchedKeys>> 
   return imported.ok ? ok({ jwks: fetched.value, keys: imported.value }) : fetchFailure("invalid_response");
 }
 
-/** Calls a caller's callback, whose failure must not change what `select` returns. */
-function notify<T>(callback: ((value: T) => void) | undefined, value: T): void {
+/**
+ * Calls a caller's callback, whose failure must not change what `select` returns. A promise it returns, such
+ * as one saving a snapshot, is handed to `waitUntil` so the work outlives the request.
+ */
+function notify<T>(
+  callback: ((value: T) => void) | undefined,
+  value: T,
+  waitUntil?: (promise: Promise<unknown>) => void,
+): void {
   if (callback === undefined) {
     return;
   }
   try {
     const result: unknown = callback(value);
     if (result instanceof Promise) {
-      void ignoreRejection(result);
+      const settled = ignoreRejection(result);
+      notify(waitUntil, settled);
     }
   } catch {
     // Deliberately ignored: the callback only observes the fetch.
@@ -488,7 +502,7 @@ async function requestJson(config: RemoteConfig, signal: AbortSignal): Promise<J
     discardBody(response);
     return fetchFailure("too_large");
   }
-  const body = await readCappedBody(response, config.maxResponseBytes);
+  const body = await readCappedBody(response, config.maxResponseBytes, signal);
   if (body === undefined) {
     return fetchFailure("too_large");
   }
@@ -496,13 +510,39 @@ async function requestJson(config: RemoteConfig, signal: AbortSignal): Promise<J
   return parsed.ok ? parsed : fetchFailure("invalid_response");
 }
 
-/** Reads the body, stopping as soon as it grows past `maxBytes`, in which case it returns `undefined`. */
-async function readCappedBody(response: Response, maxBytes: number): Promise<Uint8Array | undefined> {
+/**
+ * Reads the body, stopping as soon as it grows past `maxBytes`, in which case it returns `undefined`. An abort
+ * cancels the reader, so a body still streaming after the timeout is released even from a `fetch` that
+ * ignores the signal.
+ */
+async function readCappedBody(
+  response: Response,
+  maxBytes: number,
+  signal: AbortSignal,
+): Promise<Uint8Array | undefined> {
   if (response.body === null) {
     const whole = new Uint8Array(await response.arrayBuffer());
     return whole.byteLength > maxBytes ? undefined : whole;
   }
   const reader = response.body.getReader();
+  const cancelOnAbort = (): void => {
+    void ignoreRejection(reader.cancel());
+  };
+  if (signal.aborted) {
+    cancelOnAbort();
+  }
+  signal.addEventListener("abort", cancelOnAbort, { once: true });
+  try {
+    return await readChunks(reader, maxBytes);
+  } finally {
+    signal.removeEventListener("abort", cancelOnAbort);
+  }
+}
+
+async function readChunks(
+  reader: ReadableStreamDefaultReader<Uint8Array>,
+  maxBytes: number,
+): Promise<Uint8Array | undefined> {
   const chunks: Uint8Array[] = [];
   let length = 0;
   for (;;) {

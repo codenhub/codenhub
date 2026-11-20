@@ -46,6 +46,9 @@ type Members = Partial<Record<MemberName, unknown>>;
 const RSA_PRIVATE_MEMBERS = ["d", "p", "q", "dp", "dq", "qi"] as const;
 const ASYMMETRIC_PRIVATE_MEMBERS = [...RSA_PRIVATE_MEMBERS, "oth", "k"] as const;
 
+/** RFC 7517 §4.3 says unrelated operations SHOULD NOT share a key; a key that also encrypts is refused. */
+const SIGNATURE_OPERATIONS: ReadonlySet<string> = new Set(["sign", "verify"]);
+
 const REQUIRED_OPERATION: Readonly<Record<KeyRole, readonly string[]>> = {
   public: ["verify"],
   private: ["sign"],
@@ -153,10 +156,18 @@ function checkHeaderMembers(members: Members, alg: JwsAlgorithm, role: KeyRole):
   }
   if (members.key_ops !== undefined) {
     const operations = members.key_ops;
-    if (!Array.isArray(operations) || !operations.every((op) => typeof op === "string")) {
+    // RFC 7517 §4.3: duplicates MUST NOT be present.
+    if (
+      !Array.isArray(operations) ||
+      !operations.every((op) => typeof op === "string") ||
+      new Set(operations).size !== operations.length
+    ) {
       return issue("invalid_key", "key_ops");
     }
-    if (!REQUIRED_OPERATION[role].some((op) => operations.includes(op))) {
+    if (
+      !REQUIRED_OPERATION[role].some((op) => operations.includes(op)) ||
+      !operations.every((op) => SIGNATURE_OPERATIONS.has(op))
+    ) {
       return issue("wrong_use", "key_ops");
     }
   }
@@ -255,8 +266,36 @@ function rsaMaterial(members: Members, role: KeyRole): Material {
       }
       importJwk[name] = members[name] as string;
     }
+    if (!isPrivateExponentConsistent(importJwk)) {
+      return issue("invalid_key", "d");
+    }
   }
   return { importJwk, signatureLength: significant.length };
+}
+
+/**
+ * Whether `d` agrees with the CRT members: `d mod (p - 1) = dp` and `d mod (q - 1) = dq`. Web Crypto signs with
+ * the CRT members alone, so the probe signature cannot see a wrong `d`, which the exported JWK would carry to a
+ * library that signs with it. The probe proves the CRT members themselves.
+ */
+function isPrivateExponentConsistent(jwk: JsonWebKey): boolean {
+  const [d, p, q, dp, dq] = [jwk.d, jwk.p, jwk.q, jwk.dp, jwk.dq].map(memberToBigInt);
+  if (d === undefined || p === undefined || q === undefined || dp === undefined || dq === undefined) {
+    return false;
+  }
+  return p > 1n && q > 1n && d % (p - 1n) === dp && d % (q - 1n) === dq;
+}
+
+function memberToBigInt(value: string | undefined): bigint | undefined {
+  const bytes = decodeMember(value);
+  if (bytes === undefined) {
+    return undefined;
+  }
+  let hex = "0x0";
+  for (const byte of bytes) {
+    hex += byte.toString(16).padStart(2, "0");
+  }
+  return BigInt(hex);
 }
 
 function stripLeadingZeros(bytes: Uint8Array): Uint8Array {

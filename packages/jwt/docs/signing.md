@@ -83,6 +83,8 @@ const signingKey = imported.value;
 export const issue = (sub: string) => sign({ payload: { sub, exp: Math.floor(Date.now() / 1000) + 300 }, key: signingKey });
 ```
 
+A key held by a cloud KMS or an HSM signs through `createExternalSigningKey`; [Keys](keys.md#keys-held-by-a-kms-or-hsm) shows it.
+
 ## DPoP proofs
 
 A DPoP proof (RFC 9449) is a token that carries the public key it was signed with, in a `jwk` header, so a server can bind an access token to the client's key. Sign one with `embedKey`, the public half of the signing key:
@@ -117,7 +119,7 @@ async function verifyProof(proof: string) {
 }
 ```
 
-Limit `alg` to the algorithms you accept, as above. `jkt` is the value an access token's `cnf.jkt` must equal. Checking `htm`, `htu`, `ath`, `nonce` and that each `jti` is used once is the protocol's job, above this package.
+Limit `alg` to the algorithms you accept, as above. `jkt` is the value an access token's `cnf.jkt` must equal. Checking `htm`, `htu`, `ath`, `nonce` and that each `jti` is used once is the protocol's job, above this package. With `maxAge`, keep each `jti` until the proof's `iat + maxAge + clockTolerance` has passed, not `maxAge` after you first saw it: a proof whose `iat` is up to `max(clockTolerance, 60)` seconds ahead of your clock is accepted that much longer, as [Verifying tokens](verifying.md) describes.
 
 A proof's `ath` is the whole SHA-256 hash of the access token, base64url-encoded, which `encodeBase64Url` gives:
 

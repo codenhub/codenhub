@@ -10,9 +10,9 @@ import type {
 } from "../core/types";
 import { encodeBase64Url } from "../encoding/base64url";
 import { encodeUtf8 } from "../encoding/text";
-import { ALGORITHM_PARAMS } from "../keys/algorithms";
+import { ALGORITHM_PARAMS, type AlgorithmParams } from "../keys/algorithms";
 import { exportPublicJwk } from "../keys/export";
-import { getKeyEntry, isRegisteredKey } from "../keys/registry";
+import { getKeyEntry, isRegisteredKey, type KeyEntry } from "../keys/registry";
 
 /** Header parameters a caller may set when signing. `alg` always comes from the key. */
 export interface SignHeader {
@@ -148,13 +148,34 @@ export async function sign<TPayload extends object = JwtPayload>(input: SignInpu
   const signingInput = `${encodeBase64Url(encodeUtf8(headerJson))}.${encodeBase64Url(encodeUtf8(payloadJson))}`;
   const signedBytes = encodeUtf8(signingInput);
   const { signParams } = ALGORITHM_PARAMS[key.alg];
-  const signature = await crypto.subtle.sign(signParams, entry.cryptoKey, signedBytes);
+  const signature = await signatureOf(entry, signParams, signedBytes);
   // Matching algorithms do not make a pair: a token embedding another key would never verify, so the
   // pairing is proven on the signature itself.
   if (embedded !== undefined && !(await crypto.subtle.verify(signParams, embedded.cryptoKey, signature, signedBytes))) {
     throw new TypeError("sign: input.embedKey must be the public key of input.key.");
   }
   return `${signingInput}.${encodeBase64Url(new Uint8Array(signature))}`;
+}
+
+/**
+ * Signs with Web Crypto, or with an external signer, whose signature is verified with the public key first,
+ * since a signer holding another key, or a DER conversion gone wrong, would otherwise give tokens no one can
+ * verify.
+ */
+async function signatureOf(
+  entry: KeyEntry,
+  signParams: AlgorithmParams["signParams"],
+  signedBytes: Uint8Array<ArrayBuffer>,
+): Promise<ArrayBuffer | Uint8Array<ArrayBuffer>> {
+  if (entry.externalSign === undefined) {
+    return crypto.subtle.sign(signParams, entry.cryptoKey, signedBytes);
+  }
+  // A copy: a signer that changes its input would otherwise sign, and pass the check on, bytes the token lacks.
+  const signature = await entry.externalSign(signedBytes.slice());
+  if (!(await crypto.subtle.verify(signParams, entry.cryptoKey, signature, signedBytes))) {
+    throw new TypeError("sign: the external signer's signature does not verify with its public key.");
+  }
+  return signature;
 }
 
 /** Checks `embedKey` against the signing key and reads the public members it embeds. */
