@@ -10,6 +10,7 @@ describe("package entrypoint", () => {
       "SYMMETRIC_ALGORITHMS",
       "certificateThumbprint",
       "createExternalSigningKey",
+      "createJwsVerifier",
       "createKeySet",
       "createRemoteKeySet",
       "createVerifier",
@@ -35,6 +36,8 @@ describe("package entrypoint", () => {
       "jwkThumbprintUri",
       "readHeader",
       "sign",
+      "signGeneralJws",
+      "signJws",
       "tokenHash",
     ]);
   });

@@ -350,7 +350,7 @@ describe("signGeneralJws", () => {
 
   it("should name the signer whose header is wrong", async () => {
     await expect(
-      signGeneralJws({ payload: "", signers: [{ key: secretKey }, { key: secretKey, header: { jku: "x" } }] }),
+      signGeneralJws({ payload: "", signers: [{ key: secretKey }, { key: secretKey, header: { jku: "x" } as never }] }),
     ).rejects.toThrow("signGeneralJws: input.signers[1].header.jku is not supported.");
   });
 
