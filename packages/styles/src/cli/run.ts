@@ -117,6 +117,12 @@ function parseCommandLine(argv: readonly string[]): BuildOptions | "help" | "ver
       "--output - would write a file named -; this command writes no standard output, so name a stylesheet, as in --output public/app.css.",
     );
   }
+  // `path.resolve` drops a trailing separator, so `newdir/` wrote a file named `newdir` where none existed.
+  if ((process.platform === "win32" ? /[\\/]$/ : /\/$/).test(output)) {
+    throw new Error(
+      `--output ${output} ends with a folder separator, so it names a folder, not a file; name a stylesheet to write, as in --output ${output}app.css.`,
+    );
+  }
 
   return {
     contentGlobs: values.content,

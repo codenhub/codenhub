@@ -458,6 +458,17 @@ describe("failures", () => {
     );
   });
 
+  // `path.resolve` drops a trailing separator, so `-o newdir/` wrote a file named `newdir`.
+  it.each(["newdir/", ...(process.platform === "win32" ? ["newdir\\"] : [])])(
+    "refuses an --output that ends with a separator, as %s",
+    async (output) => {
+      expect(await failureOf("build", "-c", "app/views/**/*.erb", "-o", output)).toBe(
+        `chs: --output ${output} ends with a folder separator, so it names a folder, not a file; name a stylesheet to write, as in --output ${output}app.css.`,
+      );
+      expect(await readdir(project)).toEqual(["app"]);
+    },
+  );
+
   it("rejects extra arguments, which an unquoted glob expanded by the shell produces", async () => {
     expect(await failureOf("build", "-c", "app/views/a.html.erb", "app/views/b.html.erb", "-o", "app.css")).toMatch(
       /app\/views\/b\.html\.erb.*quote/,
