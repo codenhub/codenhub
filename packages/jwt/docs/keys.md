@@ -95,7 +95,7 @@ Import ignores a JWK's `ext` and any member it does not know. A public key is al
 
 ## Importing a PEM key
 
-`importPublicKey`, `importPrivateKey` and `importKeyPair` also take a PEM string, as OpenSSL, cloud key services and secret stores hand keys out. A public key is a `PUBLIC KEY` block (SPKI) or a `CERTIFICATE` block (X.509), and a private key a `PRIVATE KEY` block (PKCS#8). A PEM has no `kid`, so pass one as an option, as for a JWK without one:
+`importPublicKey`, `importPrivateKey` and `importKeyPair` also take a PEM string, as OpenSSL, cloud key services and secret stores hand keys out. A public key is a `PUBLIC KEY` block (SPKI), an `RSA PUBLIC KEY` block (PKCS#1) or a `CERTIFICATE` block (X.509), and a private key a `PRIVATE KEY` block (PKCS#8), an `RSA PRIVATE KEY` block (PKCS#1) or an `EC PRIVATE KEY` block (SEC 1). A PEM has no `kid`, so pass one as an option, as for a JWK without one:
 
 ```ts
 import { importKeyPair } from "@codenhub/jwt";
@@ -103,7 +103,11 @@ import { importKeyPair } from "@codenhub/jwt";
 const result = await importKeyPair(process.env.SIGNING_KEY_PEM ?? "", { alg: "RS256", kid: "2026-11" });
 ```
 
-The PEM is read into the JWK of its key and every check in the table above runs on that, so a 1024-bit RSA key is `weak_key` whichever way it arrives. The string must be one block of at most 16384 characters, with nothing but whitespace around it. Whitespace inside the block is ignored, so either line ending works, and so does a PEM flattened onto one line, as an environment variable often holds it. Line breaks written as the two characters `\n` or `\r\n`, as a `.env` file or a JSON-encoded secret often leaves them, count as line breaks too. Anything else is `invalid_key`: other labels, including `RSA PRIVATE KEY` (PKCS#1), `EC PRIVATE KEY` (SEC 1) and encrypted keys, which Web Crypto cannot read; a key of another type or curve than `alg`; and a `PUBLIC KEY` given to a private import. A `PRIVATE KEY` given to `importPublicKey` is `unexpected_private_key`. Convert other formats to PKCS#8 first, such as with `openssl pkcs8 -topk8 -nocrypt -in key.pem`.
+The PEM is read into the JWK of its key and every check in the table above runs on that, so a 1024-bit RSA key is `weak_key` whichever way it arrives. The string must be one block of at most 16384 characters, with nothing but whitespace around it. Whitespace inside the block is ignored, so either line ending works, and so does a PEM flattened onto one line, as an environment variable often holds it. Line breaks written as the two characters `\n` or `\r\n`, as a `.env` file or a JSON-encoded secret often leaves them, count as line breaks too. A PKCS#1 or SEC 1 key is wrapped into SPKI or PKCS#8 as it is read, and an `EC PRIVATE KEY` must name its curve, as OpenSSL writes it by default. A key of another type or curve than `alg` is `unsupported_key` at `["kty"]` or `["crv"]`, as for a JWK. A private key block given to `importPublicKey` is `unexpected_private_key`. The rest is `invalid_key`:
+
+- with `{ reason: "encrypted" }`, an encrypted key: an `ENCRYPTED PRIVATE KEY` block, or a block whose headers say `Proc-Type: 4,ENCRYPTED`. Decrypt it first, such as with `openssl pkcs8 -topk8 -nocrypt -in key.pem`, and keep it in a secret store instead.
+- with `{ reason: "unsupported_format" }`, a label this package does not read, such as `OPENSSH PRIVATE KEY` or `DSA PRIVATE KEY`, headers that do not say the key is encrypted, and an `EC PRIVATE KEY` without its curve.
+- without `params`, anything malformed, and a public key block given to a private import.
 
 From a certificate, `importPublicKey` takes the public key and nothing else. It does not check the certificate's dates, issuer, chain, extensions or signature, so a certificate is exactly as trusted as the key in it would be: use one you got from a source you already trust, such as an identity provider's admin console, and not one a token or a client sent you. A `CERTIFICATE` given to a private import is `invalid_key`.
 

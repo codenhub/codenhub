@@ -89,8 +89,8 @@ const USAGES: Readonly<Record<KeyRole, KeyUsage[]>> = {
 };
 
 /**
- * Imports an untrusted public JWK, a PEM `PUBLIC KEY` (SPKI), the public key of a PEM `CERTIFICATE`
- * (X.509), or a public Web Crypto `CryptoKey`, as a verification key bound to one algorithm.
+ * Imports an untrusted public JWK, a PEM `PUBLIC KEY` (SPKI) or `RSA PUBLIC KEY` (PKCS#1), the public key of
+ * a PEM `CERTIFICATE` (X.509), or a public Web Crypto `CryptoKey`, as a verification key bound to one algorithm.
  *
  * @remarks
  * A `CryptoKey` must be an extractable public key, as every public key Web Crypto generates is. It is
@@ -100,8 +100,9 @@ const USAGES: Readonly<Record<KeyRole, KeyUsage[]>> = {
  *
  * A PEM string is read into the JWK of its material, and every check below runs on that JWK. It must be
  * one block of at most 16384 characters, with only whitespace around it and any whitespace inside it, so a
- * PEM flattened onto one line imports too; anything else is `invalid_key`,
- * and a `PRIVATE KEY` block is `unexpected_private_key`. Only a certificate's key is read: its validity,
+ * PEM flattened onto one line imports too. A key of another type or curve than `alg` is `unsupported_key`, and
+ * a private key block is `unexpected_private_key`; anything else is `invalid_key`, with `{ reason: "encrypted" }`
+ * for an encrypted key and `{ reason: "unsupported_format" }` for a label or form this package does not read. Only a certificate's key is read: its validity,
  * issuer, extensions and signature are not checked, so trust it as you would a bare public key.
  *
  * The JWK's `kty` and `crv` must fit `options.alg`; a JWK `alg`, `use` or `key_ops` member, when
@@ -142,14 +143,14 @@ export async function importPublicKey(key: unknown, options: ImportPublicKeyOpti
 }
 
 /**
- * Imports an untrusted private JWK, a PEM `PRIVATE KEY` (PKCS#8), or a Web Crypto key pair, as a signing key
- * bound to one algorithm.
+ * Imports an untrusted private JWK, a PEM `PRIVATE KEY` (PKCS#8), `RSA PRIVATE KEY` (PKCS#1) or `EC PRIVATE KEY`
+ * (SEC 1), or a Web Crypto key pair, as a signing key bound to one algorithm.
  *
  * @remarks
  * The same checks as {@link importPublicKey} apply, except that private members are required: `d`
  * for EC and OKP keys, and `d`, `p`, `q`, `dp`, `dq` and `qi` for RSA keys. `key_ops`, when present,
- * must include `sign`. A PEM string is read as for {@link importPublicKey}, and must be a `PRIVATE KEY`
- * block: `RSA PRIVATE KEY` (PKCS#1) and `EC PRIVATE KEY` (SEC 1) are `invalid_key`. As for
+ * must include `sign`. A PEM string is read as for {@link importPublicKey}, and must be a private key block; an
+ * `EC PRIVATE KEY` must name its curve. As for
  * {@link importKeyPair}, the key's public members must belong to it, which a probe signature proves.
  * A `CryptoKey` is read as {@link importKeyPair} describes. {@link getPublicKey} gives the public half.
  *
@@ -176,7 +177,7 @@ export async function importPrivateKey(key: unknown, options: ImportPrivateKeyOp
 }
 
 /**
- * Imports an untrusted private JWK, a PEM `PRIVATE KEY` (PKCS#8), or a Web Crypto key pair, as a key pair
+ * Imports an untrusted private JWK, a PEM private key as {@link importPrivateKey} reads it, or a Web Crypto key pair, as a key pair
  * bound to one algorithm: the private key, and the public key taken from the same key's public members.
  *
  * @remarks

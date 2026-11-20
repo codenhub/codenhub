@@ -1,3 +1,5 @@
+import { createPublicKey, generateKeyPairSync, randomUUID } from "node:crypto";
+
 import { describe, expect, it } from "vitest";
 
 import type { AsymmetricAlgorithm } from "../core/types";
@@ -5,6 +7,7 @@ import { createKeySet } from "../keysets/local";
 import { sign } from "../sign/sign";
 import { createVerifier } from "../verify/create-verifier";
 import { ALGORITHM_PARAMS } from "./algorithms";
+import { DER_SEQUENCE, encodeElement } from "./der";
 import { exportPrivateJwk, exportPublicJwk } from "./export";
 import { generateKeyPair } from "./generate";
 import { importKeyPair, importPrivateKey, importPublicKey } from "./import";
@@ -126,11 +129,18 @@ describe("PEM import text", () => {
     expect(issuesOf(await importKeyPair(spki, { alg: "ES256" }))).toEqual([{ code: "invalid_key" }]);
   });
 
-  it("should refuse a key of another curve or type than alg as invalid_key", async () => {
+  it("should refuse a key of another curve or type than alg as unsupported_key, as for a JWK", async () => {
+    const p256 = await pemPair("ES256");
     const p384 = await pemPair("ES384");
     const ed = await pemPair("Ed25519");
-    expect(issuesOf(await importPublicKey(p384.spki, { alg: "ES256" }))).toEqual([{ code: "invalid_key" }]);
-    expect(issuesOf(await importPrivateKey(ed.pkcs8, { alg: "RS256" }))).toEqual([{ code: "invalid_key" }]);
+    const rsa = await pemPair("RS256");
+    const crv = [{ code: "unsupported_key", path: ["crv"] }];
+    const kty = [{ code: "unsupported_key", path: ["kty"] }];
+    expect(issuesOf(await importPublicKey(p384.spki, { alg: "ES256" }))).toEqual(crv);
+    expect(issuesOf(await importPublicKey(p256.spki, { alg: "ES384" }))).toEqual(crv);
+    expect(issuesOf(await importPrivateKey(ed.pkcs8, { alg: "RS256" }))).toEqual(kty);
+    expect(issuesOf(await importPublicKey(rsa.spki, { alg: "ES256" }))).toEqual(kty);
+    expect(issuesOf(await importKeyPair(p256.pkcs8, { alg: "EdDSA" }))).toEqual(kty);
   });
 
   it("should run the JWK checks on the key read, so a 1024-bit RSA modulus is weak_key", async () => {
@@ -182,9 +192,7 @@ describe("PEM import text", () => {
     ["an empty string", () => ""],
     ["a bare base64 body", (spki) => spki.split("\n").slice(1, -2).join("")],
     ["mismatched labels", (spki) => spki.replace("END PUBLIC KEY", "END PRIVATE KEY")],
-    ["a PKCS#1 label", (spki) => spki.replaceAll("PUBLIC KEY", "RSA PUBLIC KEY")],
     ["a lowercase label", (spki) => spki.replaceAll("PUBLIC KEY", "public key")],
-    ["PEM headers inside the block", (spki) => spki.replace("-----\n", "-----\nProc-Type: 4,ENCRYPTED\n")],
     ["text before the block", (spki) => `key:\n${spki}`],
     ["two blocks", (spki) => `${spki}${spki}`],
     ["a character outside base64", (spki) => spki.replace(/\n(.)/, "\n*")],
@@ -195,5 +203,148 @@ describe("PEM import text", () => {
   ])("should report invalid_key without throwing for %s", async (_, change) => {
     const { spki } = await pemPair("ES256");
     expect(issuesOf(await importPublicKey(change(spki), { alg: "ES256" }))).toEqual([{ code: "invalid_key" }]);
+  });
+});
+
+/** A key pair made by OpenSSL through `node:crypto`, in the PEM forms it writes for RSA (PKCS#1) and EC (SEC 1). */
+function nodePair(type: "rsa" | "ec", namedCurve?: string, cipher?: string) {
+  const privateKeyEncoding = {
+    type: type === "rsa" ? "pkcs1" : "sec1",
+    format: "pem",
+    // A passphrase made for the run, never written down: the test only needs the key to be encrypted.
+    ...(cipher === undefined ? {} : { cipher, passphrase: randomUUID() }),
+  } as const;
+  const publicKeyEncoding = { type: type === "rsa" ? "pkcs1" : "spki", format: "pem" } as const;
+  return type === "rsa"
+    ? generateKeyPairSync("rsa", { modulusLength: 2048, publicKeyEncoding, privateKeyEncoding } as never)
+    : generateKeyPairSync("ec", { namedCurve: namedCurve as string, publicKeyEncoding, privateKeyEncoding } as never);
+}
+
+/** The DER of a PEM block. */
+const derOfPem = (pem: string): Uint8Array<ArrayBuffer> =>
+  Uint8Array.from(atob(pem.replace(/-----[A-Z ]+-----|\s/g, "")), (char) => char.charCodeAt(0));
+
+const spkiPemOf = (pem: string) => createPublicKey(pem).export({ type: "spki", format: "pem" }) as string;
+
+const ec256 = (): string => (nodePair("ec", "prime256v1") as unknown as { privateKey: string }).privateKey;
+
+describe("PEM import of PKCS#1 and SEC 1", () => {
+  it("should import an RSA PRIVATE KEY and an RSA PUBLIC KEY as the same key as its PKCS#8 and SPKI", async () => {
+    const { publicKey, privateKey } = nodePair("rsa") as unknown as { publicKey: string; privateKey: string };
+    expect(privateKey.startsWith("-----BEGIN RSA PRIVATE KEY-----")).toBe(true);
+    expect(publicKey.startsWith("-----BEGIN RSA PUBLIC KEY-----")).toBe(true);
+    const pair = valueOf(await importKeyPair(privateKey, { alg: "PS256", kid: "pkcs1" }));
+    const fromPublic = valueOf(await importPublicKey(publicKey, { alg: "PS256" }));
+    const fromSpki = valueOf(await importPublicKey(spkiPemOf(publicKey), { alg: "PS256" }));
+    expect((await exportPublicJwk(pair.publicKey)).n).toBe((await exportPublicJwk(fromSpki)).n);
+    expect((await exportPublicJwk(fromPublic)).n).toBe((await exportPublicJwk(fromSpki)).n);
+    const token = await sign({ payload: { exp: Math.floor(Date.now() / 1000) + 600 }, key: pair.privateKey });
+    expect((await createVerifier({ keys: createKeySet([fromPublic]) })(token)).ok).toBe(true);
+  });
+
+  it.each([
+    ["ES256", "prime256v1"],
+    ["ES384", "secp384r1"],
+    ["ES512", "secp521r1"],
+  ] as const)("should import a %s EC PRIVATE KEY whose public key matches the SPKI", async (alg, curve) => {
+    const { publicKey, privateKey } = nodePair("ec", curve) as unknown as { publicKey: string; privateKey: string };
+    expect(privateKey.startsWith("-----BEGIN EC PRIVATE KEY-----")).toBe(true);
+    const pair = valueOf(await importKeyPair(privateKey, { alg }));
+    const spki = valueOf(await importPublicKey(publicKey, { alg }));
+    expect(await exportPublicJwk(pair.publicKey)).toEqual(await exportPublicJwk(spki));
+  });
+
+  // A P-256 ECPrivateKey: 30 77 | 02 01 01 | 04 20 <32 bytes> | a0 0a <OID> | a1 44 <public key>.
+  it("should import an EC PRIVATE KEY without its optional public key", async () => {
+    const der = derOfPem(ec256());
+    const withoutPublic = encodeElement(DER_SEQUENCE, der.subarray(2, 2 + 3 + 34 + 12));
+    expect(withoutPublic[withoutPublic.length - 12]).toBe(0xa0);
+    expect(valueOf(await importPrivateKey(pemOf("EC PRIVATE KEY", withoutPublic.buffer), { alg: "ES256" }))).toEqual({
+      kind: "private",
+      alg: "ES256",
+      extractable: false,
+    });
+  });
+
+  it("should refuse an EC PRIVATE KEY without parameters as an unsupported form", async () => {
+    const der = derOfPem(ec256());
+    const withoutParameters = encodeElement(DER_SEQUENCE, der.subarray(2, 2 + 3 + 34));
+    const pem = pemOf("EC PRIVATE KEY", withoutParameters.buffer);
+    expect(issuesOf(await importPrivateKey(pem, { alg: "ES256" }))).toEqual([
+      { code: "invalid_key", params: { reason: "unsupported_format" } },
+    ]);
+  });
+
+  it("should refuse an EC PRIVATE KEY of another curve or type than alg as unsupported_key", async () => {
+    const p256 = ec256();
+    const secp256k1 = (nodePair("ec", "secp256k1") as unknown as { privateKey: string }).privateKey;
+    const crv = [{ code: "unsupported_key", path: ["crv"] }];
+    expect(issuesOf(await importPrivateKey(p256, { alg: "ES384" }))).toEqual(crv);
+    expect(issuesOf(await importPrivateKey(secp256k1, { alg: "ES256" }))).toEqual(crv);
+    expect(issuesOf(await importPrivateKey(p256, { alg: "RS256" }))).toEqual([
+      { code: "unsupported_key", path: ["kty"] },
+    ]);
+  });
+
+  it.each<[string, (der: Uint8Array) => Uint8Array]>([
+    ["bytes after the key", (der) => Uint8Array.from([...der, 0])],
+    ["version 0", (der) => Uint8Array.from(der, (byte, index) => (index === 4 ? 0 : byte))],
+    ["a non-minimal length", (der) => Uint8Array.from([0x30, 0x81, ...der.subarray(1)])],
+    ["parameters that are not an OID", (der) => Uint8Array.from(der, (byte, index) => (index === 41 ? 0x05 : byte))],
+  ])("should refuse an EC PRIVATE KEY with %s as invalid_key", async (_, change) => {
+    const der = derOfPem(ec256());
+    expect([der[1], der[4], der[39], der[41]]).toEqual([0x77, 1, 0xa0, 0x06]);
+    const pem = pemOf("EC PRIVATE KEY", Uint8Array.from(change(der)).buffer);
+    expect(issuesOf(await importPrivateKey(pem, { alg: "ES256" }))).toEqual([{ code: "invalid_key" }]);
+  });
+
+  it("should refuse an RSA PUBLIC KEY given to a private import, and an RSA PRIVATE KEY to a public one", async () => {
+    const { publicKey, privateKey } = nodePair("rsa") as unknown as { publicKey: string; privateKey: string };
+    expect(issuesOf(await importPrivateKey(publicKey, { alg: "RS256" }))).toEqual([{ code: "invalid_key" }]);
+    expect(issuesOf(await importPublicKey(privateKey, { alg: "RS256" }))).toEqual([{ code: "unexpected_private_key" }]);
+  });
+});
+
+describe("PEM import of encrypted and unsupported keys", () => {
+  const encrypted = [{ code: "invalid_key", params: { reason: "encrypted" } }];
+
+  it("should refuse an ENCRYPTED PRIVATE KEY as encrypted", async () => {
+    const { privateKey } = generateKeyPairSync("ec", {
+      namedCurve: "prime256v1",
+      privateKeyEncoding: { type: "pkcs8", format: "pem", cipher: "aes-256-cbc", passphrase: randomUUID() },
+      publicKeyEncoding: { type: "spki", format: "pem" },
+    });
+    expect(privateKey.startsWith("-----BEGIN ENCRYPTED PRIVATE KEY-----")).toBe(true);
+    expect(issuesOf(await importPrivateKey(privateKey, { alg: "ES256" }))).toEqual(encrypted);
+    expect(issuesOf(await importKeyPair(privateKey, { alg: "ES256" }))).toEqual(encrypted);
+    expect(issuesOf(await importPublicKey(privateKey, { alg: "ES256" }))).toEqual([{ code: "unexpected_private_key" }]);
+  });
+
+  it.each([
+    ["RSA", "rsa", undefined, "RS256"],
+    ["EC", "ec", "prime256v1", "ES256"],
+  ] as const)("should refuse a legacy encrypted %s PRIVATE KEY as encrypted", async (_, type, curve, alg) => {
+    const pem = (nodePair(type, curve, "aes-256-cbc") as unknown as { privateKey: string }).privateKey;
+    expect(pem).toMatch(/^-----BEGIN (RSA|EC) PRIVATE KEY-----\nProc-Type: 4,ENCRYPTED\nDEK-Info: /);
+    expect(issuesOf(await importPrivateKey(pem, { alg }))).toEqual(encrypted);
+    expect(issuesOf(await importPrivateKey(pem.replaceAll("\n", "\r\n"), { alg }))).toEqual(encrypted);
+  });
+
+  it.each(["OPENSSH PRIVATE KEY", "DSA PRIVATE KEY", "CERTIFICATE REQUEST"])(
+    "should refuse a %s block as an unsupported format",
+    async (label) => {
+      const pem = `-----BEGIN ${label}-----\nAAAA\n-----END ${label}-----\n`;
+      expect(issuesOf(await importPrivateKey(pem, { alg: "ES256" }))).toEqual([
+        { code: "invalid_key", params: { reason: "unsupported_format" } },
+      ]);
+    },
+  );
+
+  it("should refuse PEM headers that do not say the key is encrypted as an unsupported format", async () => {
+    const { spki } = await pemPair("ES256");
+    const withHeader = spki.replace("-----\n", "-----\nComment: made by hand\n\n");
+    expect(issuesOf(await importPublicKey(withHeader, { alg: "ES256" }))).toEqual([
+      { code: "invalid_key", params: { reason: "unsupported_format" } },
+    ]);
   });
 });
