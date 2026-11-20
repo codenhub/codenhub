@@ -81,7 +81,7 @@ export async function run(argv: readonly string[], io: CliIo): Promise<number> {
 }
 
 function parseCommandLine(argv: readonly string[]): BuildOptions | "help" | "version" {
-  const { values, positionals } = parseFlags(argv);
+  const { values, positionals, tokens } = parseFlags(argv);
 
   if (values.help) {
     return "help";
@@ -105,6 +105,11 @@ function parseCommandLine(argv: readonly string[]): BuildOptions | "help" | "ver
   }
   if (!values.content?.length) {
     throw new Error(`missing --content; name the templates to scan, as in --content "app/views/**/*.erb".`);
+  }
+
+  // parseArgs keeps the last value of a flag given twice, so `-o a.css -o b.css` wrote b.css alone.
+  if (tokens.filter((token) => token.kind === "option" && token.name === "output").length > 1) {
+    throw new Error("--output is given more than once; name one stylesheet to write.");
   }
 
   const output = values.output?.trim();
@@ -137,6 +142,7 @@ function parseFlags(argv: readonly string[]) {
     return parseArgs({
       args: [...argv],
       allowPositionals: true,
+      tokens: true,
       options: {
         content: { type: "string", short: "c", multiple: true },
         output: { type: "string", short: "o" },

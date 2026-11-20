@@ -469,6 +469,14 @@ describe("failures", () => {
     },
   );
 
+  // parseArgs keeps the last value, so `-o a.css -o b.css` wrote only b.css and said nothing of a.css.
+  it("refuses --output given twice", async () => {
+    expect(await failureOf("build", "-c", "app/views/**/*.erb", "-o", "a.css", "--output=b.css")).toBe(
+      "chs: --output is given more than once; name one stylesheet to write.",
+    );
+    expect(await readdir(project)).toEqual(["app"]);
+  });
+
   it("rejects extra arguments, which an unquoted glob expanded by the shell produces", async () => {
     expect(await failureOf("build", "-c", "app/views/a.html.erb", "app/views/b.html.erb", "-o", "app.css")).toMatch(
       /app\/views\/b\.html\.erb.*quote/,
