@@ -50,6 +50,7 @@ export type {
 } from "./core/types";
 export type { StandardSchemaV1 } from "./interop/standard-schema";
 export { JWS_ALGORITHMS, isJwsAlgorithm } from "./core/limits";
+export { createDpopProof, type DpopProofInput } from "./dpop";
 export { decodeBase64Url, encodeBase64Url } from "./encoding";
 export { readHeader, type ReadHeaderOptions } from "./jws/read-header";
 export {
