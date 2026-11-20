@@ -174,7 +174,7 @@ async function build(options: BuildOptions, io: CliIo): Promise<string> {
 
   // Through a link, the file it leads to is the one written, and the one no glob may read.
   const target = await realPathOf(output);
-  const contents = readContent(options.contentGlobs, io.cwd, target);
+  const contents = readContent(options.contentGlobs, io.cwd, target, options.output);
 
   const droppable = new Set(JSON.parse(await readPackageFile(PURGE_CLASSES)) as string[]);
   const found = new Set<string>();
@@ -446,20 +446,38 @@ function kindOf(stats: { isDirectory(): boolean; isFIFO(): boolean; isSocket(): 
    from missing content fails rather than writing a stylesheet without its
    classes. The output is left out: it names every class it keeps, so a glob
    that matches it would keep last build's classes, and the stylesheet would
-   grow with each build instead of following the templates. `path.relative` is
-   empty for the same file, in the case Windows ignores. A wildcard stays out
-   of `node_modules` unless the entry names it: a dependency's demo page, or
-   this package's own list of every class, would keep classes no template uses. */
-function readContent(entries: readonly string[], cwd: string, output: string): Generator<string> {
-  try {
-    const files = findFiles(entries, { cwd, failOnUnmatched: true, skipNodeModules: true }).filter(
-      (file) => path.relative(realPathSyncOf(file), output) !== "",
-    );
+   grow with each build instead of following the templates. An entry is checked
+   once the output is left out, so one that matched only the output, as
+   `public/*.css` does after a build into `public/`, fails rather than build
+   from nothing. `path.relative` is empty for the same file, in the case
+   Windows ignores. A wildcard stays out of `node_modules` unless the entry
+   names it: a dependency's demo page, or this package's own list of every
+   class, would keep classes no template uses. */
+function readContent(entries: readonly string[], cwd: string, output: string, given: string): Generator<string> {
+  const files = new Set<string>();
 
-    return readFiles(files, { cwd, failOnUnreadable: true });
-  } catch (error) {
-    throw error instanceof UnmatchedEntryError ? new Error(`--content ${error.message}`) : error;
+  for (const entry of entries) {
+    let matched: string[];
+
+    try {
+      matched = findFiles([entry], { cwd, failOnUnmatched: true, skipNodeModules: true });
+    } catch (error) {
+      throw error instanceof UnmatchedEntryError ? new Error(`--content ${error.message}`) : error;
+    }
+
+    const content = matched.filter((file) => path.relative(realPathSyncOf(file), output) !== "");
+
+    if (content.length === 0) {
+      throw new Error(
+        `--content "${entry}" matches only --output ${given}, which is never read for classes; name the templates to scan.`,
+      );
+    }
+    for (const file of content) {
+      files.add(file);
+    }
   }
+
+  return readFiles(files, { cwd, failOnUnreadable: true });
 }
 
 /* Content is read as text and never run, as Tailwind reads it: every run of

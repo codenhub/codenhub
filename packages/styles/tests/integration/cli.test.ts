@@ -448,6 +448,16 @@ describe("failures", () => {
     expect(await failureOf("build", "-c", "app/view/**/*.erb", "-o", "app.css")).toMatch(/app\/view\/\*\*\/\*\.erb/);
   });
 
+  // After a build into public/, the glob matched only the stylesheet, which is never read, so the build read nothing.
+  it("rejects a --content glob that matches only the --output", async () => {
+    expect(await build("build", "-c", "app/views/**/*.erb", "-o", "public/s.css")).toBe(0);
+    stdout = [];
+
+    expect(await failureOf("build", "-c", "public/*.css", "-o", "public/s.css")).toBe(
+      'chs: --content "public/*.css" matches only --output public/s.css, which is never read for classes; name the templates to scan.',
+    );
+  });
+
   it("rejects extra arguments, which an unquoted glob expanded by the shell produces", async () => {
     expect(await failureOf("build", "-c", "app/views/a.html.erb", "app/views/b.html.erb", "-o", "app.css")).toMatch(
       /app\/views\/b\.html\.erb.*quote/,
