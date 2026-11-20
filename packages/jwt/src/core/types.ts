@@ -32,11 +32,12 @@ export type JwtIssueCode =
   | "issued_in_future"
   | "too_old"
   | "wrong_issuer"
+  | "wrong_subject"
   | "wrong_audience"
   | "wrong_type"
   | "missing_claim"
   | "invalid_claim"
-  | "invalid_claims"
+  | "schema_failed"
   // Key import
   | "invalid_key"
   | "unsupported_key"
@@ -49,7 +50,7 @@ export type JwtIssueCode =
  *
  * An issue this package creates never holds a value taken from the input: no token segment, claim value,
  * header value, or key material. It names which check failed and, where useful, the limit or the claim the
- * check used. An `invalid_claims` path is whatever the caller's schema reports, which for a record-style
+ * check used. A `schema_failed` path is whatever the caller's schema reports, which for a record-style
  * schema can include claim names from the token. A custom key set's issues are passed through, so those
  * hold only what the caller's code puts in them.
  */
@@ -294,7 +295,8 @@ export type KeySetResolver = (
 /**
  * What a {@link KeySetResolver} returns for an issuer whose tokens are checked differently from the verifier's
  * defaults, such as a tenant whose tokens name its own audience:
- * `{ keys: tenant.keySet, audience: tenant.clientId }`.
+ * `{ keys: tenant.keySet, audience: tenant.clientId }`. A route with any other member, such as a misspelled
+ * `audiance` or a `typ`, is invalid rather than ignored, like a route whose members have invalid values.
  */
 export interface KeySetRoute {
   /** The issuer's key set. */
@@ -326,7 +328,7 @@ export interface LocalKeySet extends KeySet {
 }
 
 /** A verified token. Frozen. */
-export interface VerifiedJwt<TPayload extends JwtPayload = JwtPayload> {
+export interface VerifiedJwt<TPayload extends JwtRegisteredClaims = JwtPayload> {
   /** The protected header. */
   readonly header: JwtHeader;
   /** The payload, after every configured claim check passed. */
@@ -344,6 +346,11 @@ export interface VerifierOptions<TSchema extends StandardSchemaV1 | undefined = 
   readonly keys: KeySet | KeySetResolver;
   /** Accepted `iss` values. When set, `iss` is required and must equal one exactly. */
   readonly issuer?: string | readonly string[];
+  /**
+   * Accepted `sub` values, for a verifier that accepts tokens about known subjects only, such as a client
+   * assertion whose `sub` must be the client's own id. When set, `sub` is required and must equal one exactly.
+   */
+  readonly subject?: string | readonly string[];
   /**
    * Accepted audiences. When set, `aud` is required, and a token passes when its `aud` (a string or
    * an array) contains at least one of them.
@@ -402,7 +409,7 @@ export interface VerifierOptions<TSchema extends StandardSchemaV1 | undefined = 
   readonly requiredClaims?: readonly string[];
   /**
    * Standard Schema run on the payload after every other check passed. Its issues become
-   * `invalid_claims` issues carrying only their path; its messages are dropped, since they may quote
+   * `schema_failed` issues carrying only their path; its messages are dropped, since they may quote
    * the input. The schema checks; it does not transform: the returned payload is the token's own.
    */
   readonly claims?: TSchema;
@@ -432,12 +439,13 @@ export type VerifiedPayload<TSchema extends StandardSchemaV1 | undefined> = TSch
 
 /**
  * A configured verifier. Call it with any value; it never throws for a token, whatever its content.
+ * `TPayload` is the payload type {@link createVerifier} gave it, from its `claims` schema or its type argument.
  * Only caller code makes its promise reject: a `claims` schema that throws or rejects, or an
  * `options.now` that returns something other than a finite number.
  *
  * @returns The verified token, or every issue found. Structural, key, and signature failures stop at
  * the first issue; claim checks report every failing claim.
  */
-export type Verifier<TPayload extends JwtPayload = JwtPayload> = (
+export type Verifier<TPayload extends JwtRegisteredClaims = JwtPayload> = (
   token: unknown,
 ) => Promise<JwtResult<VerifiedJwt<TPayload>>>;

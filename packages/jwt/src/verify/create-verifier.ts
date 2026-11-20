@@ -1,9 +1,10 @@
-import { fail, ok } from "../core/result";
+import { fail, frozenOk } from "../core/result";
 import type {
   JwtErr,
   JwtHeader,
   JwtIssue,
   JwtPayload,
+  JwtRegisteredClaims,
   JwtResult,
   KeySet,
   KeySetResolver,
@@ -34,7 +35,7 @@ const WRONG_ISSUER = fail({ code: "wrong_issuer", path: ["payload", "iss"] });
  * the header's `alg`; the signature; and only then the payload, which is never read before its signature
  * verifies, except for the `iss` a `keys` function routes by, which is untrusted until then. Claim checks
  * then run and report every failing claim together: registered claim types, `exp` (expired once now ≥
- * `exp` + tolerance), `nbf`, `iat`, `maxAge`, issuer, audience, `typ`, and required claims. When all of them pass, `options.claims` runs last.
+ * `exp` + tolerance), `nbf`, `iat`, `maxAge`, issuer, subject, audience, `typ`, and required claims. When all of them pass, `options.claims` runs last.
  *
  * When `options.keys` is a {@link KeySetResolver}, the payload's `iss` is read before the signature, only to
  * ask it for the issuer's key set; nothing else in the payload is used until the signature verifies.
@@ -56,6 +57,13 @@ const WRONG_ISSUER = fail({ code: "wrong_issuer", path: ["payload", "iss"] });
  * const { sub } = result.value.payload;
  * ```
  *
+ * The verified payload's type comes from `options.claims` when it is given: `createVerifier({ keys, claims:
+ * schema })` returns a `Verifier` whose payload is the schema's input type. Without a schema, a type argument
+ * names it: `createVerifier<AccessClaims>({ keys })`, with `AccessClaims` any object type, an `interface`
+ * included, whose registered claims have their RFC 7519 types. That type is not checked at runtime: only the
+ * registered claims are, so a claim the token lacks or holds with another type still reaches your code as
+ * typed. Give a schema when the payload's other claims must be checked.
+ *
  * @typeParam TSchema - The Standard Schema given as `options.claims`, which types the verified payload.
  * @param options - Where keys come from and which claims to require; see {@link VerifierOptions}.
  * @returns A {@link Verifier}. It resolves to the frozen `{ header, payload, key }`, or to a failure and
@@ -66,17 +74,32 @@ const WRONG_ISSUER = fail({ code: "wrong_issuer", path: ["payload", "iss"] });
  * `options.claims` propagates, and so does a `TypeError` when `options.now` returns something other than a
  * finite number, checked once per verification when the claims are checked, after the signature.
  * @throws TypeError when `options` is not an object; `options` has a member that is not an option, such as
- * a misspelled `audiance`; `keys` is neither a function nor an object with a `select` function; `issuer` is neither a non-empty string nor a
+ * a misspelled `audiance`; `keys` is neither a function nor an object with a `select` function; `issuer` or `subject` is neither a non-empty string nor a
  * non-empty array of them; `audience` is neither `false` nor one of those; `type` is neither a non-empty
  * string other than `application/` nor a non-empty array of such strings and `null`;
  * `requireExpiration` or `allowExpired` is not a boolean; `clockTolerance` is not an integer from 0
  * through 300; `maxAge` is not a positive integer;
  * `maxLength` is not an integer from 1 through 65536; `requiredClaims` is not an array of non-empty
- * strings; `claims` is not a version 1 Standard Schema; or `now` is not a function.
+ * strings; `claims` is not a version 1 Standard Schema; `now` is not a function; or `onKeySetError` is not a
+ * function.
  */
-export function createVerifier<TSchema extends StandardSchemaV1 | undefined = undefined>(
-  options: VerifierOptions<TSchema>,
-): Verifier<VerifiedPayload<TSchema>> {
+export function createVerifier<TSchema extends StandardSchemaV1>(
+  options: VerifierOptions<TSchema> & { readonly claims: TSchema },
+): Verifier<VerifiedPayload<TSchema>>;
+/**
+ * Creates a verifier whose payload type is given rather than inferred from a `claims` schema; see the
+ * overload above for everything it checks. Options whose `claims` may or may not be set also come here.
+ *
+ * @typeParam TPayload - The verified payload's type, unchecked at runtime beyond the registered claims: an
+ * object type, an `interface` included, whose registered claims have their RFC 7519 types.
+ * @param options - Where keys come from and which claims to require; see {@link VerifierOptions}.
+ * @returns A {@link Verifier} whose payload is typed `TPayload`.
+ * @throws TypeError for the invalid options the overload above lists.
+ */
+export function createVerifier<TPayload extends JwtRegisteredClaims = JwtPayload>(
+  options: VerifierOptions<StandardSchemaV1 | undefined>,
+): Verifier<TPayload>;
+export function createVerifier(options: VerifierOptions<StandardSchemaV1 | undefined>): Verifier<JwtPayload> {
   const resolved = resolveOptions(options);
   const report = reporterOf(resolved.onKeySetError);
   return async (token) => {
@@ -114,7 +137,7 @@ export function createVerifier<TSchema extends StandardSchemaV1 | undefined = un
     if (!(await crypto.subtle.verify(signParams, cryptoKey, jws.signature, jws.signingInput))) {
       return fail({ code: "bad_signature" });
     }
-    const payload = early === undefined ? parsePayload(jws) : ok(early);
+    const payload = early === undefined ? parsePayload(jws) : frozenOk(early);
     if (!payload.ok) {
       return payload;
     }
@@ -126,12 +149,10 @@ export function createVerifier<TSchema extends StandardSchemaV1 | undefined = un
     if (issues.length > 0) {
       return fail(...(issues as [JwtIssue, ...JwtIssue[]]));
     }
-    const verified: VerifiedJwt<VerifiedPayload<TSchema>> = {
-      header: jws.header,
-      payload: payload.value as VerifiedPayload<TSchema>,
-      key,
-    };
-    return ok(verified);
+    // The header and payload come deep-frozen from the parser and the key frozen from its registration, so
+    // only the new objects are frozen: `ok` would walk the whole token again.
+    const verified: VerifiedJwt = Object.freeze({ header: jws.header, payload: payload.value, key });
+    return frozenOk(verified);
   };
 }
 
@@ -241,7 +262,7 @@ async function selectKey(keys: KeySet, header: JwtHeader, report: Reporter): Pro
     const { ok: isOk, value, error } = result as { ok?: unknown; value?: unknown; error?: { issues?: unknown } };
     if (isOk === true) {
       return isRegisteredKey(value) && value.kind !== "private"
-        ? ok(value)
+        ? frozenOk(value)
         : report(
             new TypeError("The key set's select returned a value that is not a public or secret key of this package."),
           );

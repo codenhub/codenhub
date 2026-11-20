@@ -185,7 +185,7 @@ describe("token failures carry no input", () => {
     });
     const result = await verify(await hmacToken('{"alg":"HS256"}', `{"role":"${MARKER}"}`));
 
-    expect(result).toEqual({ ok: false, error: { issues: [{ code: "invalid_claims", path: ["payload", "role"] }] } });
+    expect(result).toEqual({ ok: false, error: { issues: [{ code: "schema_failed", path: ["payload", "role"] }] } });
   });
 });
 
