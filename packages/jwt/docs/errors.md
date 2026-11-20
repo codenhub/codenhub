@@ -1,7 +1,7 @@
 ---
 title: Issues
 description: The result shape, every issue code with its path and params, and which mistakes throw instead.
-order: 8
+order: 9
 ---
 
 # Issues
@@ -54,7 +54,7 @@ There are no messages: a code is the whole answer. Map codes to text yourself if
 | `too_large`        | `["header"]` or `["payload"]`       | `{ limit: "depth", maximum: 32 }` | The JSON nests deeper than 32 levels.                                                                                                                                                     |
 | `duplicate_key`    | `["header"]` or `["payload"]`       |                                   | A JSON object repeats a member name, at any depth.                                                                                                                                        |
 | `unsupported_alg`  | `["header", "alg"]`                 |                                   | `alg` is missing or not one of the supported algorithms, compared exactly. `none` in any casing is here.                                                                                  |
-| `unsupported_crit` | `["header", "crit"]`                |                                   | The header has a `crit` member. No header extension is supported.                                                                                                                         |
+| `unsupported_crit` | `["header", "crit"]`                |                                   | The header has a `crit` member. A JWT understands no header extension.                                                                                                                    |
 
 ### Key selection and signature
 
@@ -66,6 +66,22 @@ There are no messages: a code is the whole answer. Map codes to text yourself if
 | `alg_mismatch`     | `["header", "alg"]` |                                         | Keys with the header's `kid` exist, but none is bound to its `alg`; or a custom key set or resolver returned a key bound to another `alg`.                                                                                                                                                                      |
 | `bad_signature`    | none                |                                         | The signature has the wrong length for the key, or does not verify.                                                                                                                                                                                                                                             |
 | `key_fetch_failed` | none                | `{ reason }`, and `status` for `status` | A remote key set could not get its JWKS: `reason` is `timeout`, `network`, `status`, `too_large`, `invalid_response` or `no_usable_keys`, a JWKS without a key the set can use. `key_set_error` means a custom key set or `keys` function threw or returned something unusable; `onKeySetError` gets the error. |
+
+### JWS
+
+A [JWS verifier](jws.md#verifying) returns the token structure and key selection codes above, with these meanings added. In the general JSON serialization, an issue of one signature is under `["signatures", index]`, such as `["signatures", 1, "header", "kid"]`.
+
+| Code               | Path                                   | Params                                | Meaning                                                                                                                                                                                                                                                                            |
+| ------------------ | -------------------------------------- | ------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `malformed`        | none, a JWS member, or a header member |                                       | The JSON serialization is not an object, or a member has the wrong type or encoding: `["payload"]`, `["signatures"]`, or a signature's `["protected"]`, `["header"]` or `["signature"]`. An unencoded compact payload that is not printable ASCII without `.` is at `["payload"]`. |
+| `malformed`        | `["header", name]`                     |                                       | `alg`, `crit` or `b64` in the unprotected header; a `crit` that breaks RFC 7515 §4.1.11; a `b64` that is not a boolean, is missing from `crit`, or differs between signatures; or a non-text `kid`, `typ` or `cty`.                                                                |
+| `malformed`        | `["header"]`                           |                                       | The protected and unprotected headers share a member, which the issue does not name.                                                                                                                                                                                               |
+| `malformed`        | `["payload"]`                          |                                       | A payload was given to the verifier for a JWS that carries one, or the given string holds a lone surrogate.                                                                                                                                                                        |
+| `missing_payload`  | `["payload"]`                          |                                       | A JSON JWS has no `payload` member and none was given to the verifier.                                                                                                                                                                                                             |
+| `too_large`        | `["signatures"]`                       | `{ limit: "signatures", maximum: 8 }` | A general JWS holds more than 8 signatures.                                                                                                                                                                                                                                        |
+| `too_large`        | none, or a signature's `["protected"]` | `{ limit: "depth", maximum: 32 }`     | The JSON nests deeper than 32 levels.                                                                                                                                                                                                                                              |
+| `duplicate_key`    | none, or a signature's `["protected"]` |                                       | A JSON object repeats a member name, at any depth.                                                                                                                                                                                                                                 |
+| `unsupported_crit` | `["header", "crit"]`                   |                                       | `crit` names a parameter other than `b64` that the verifier's `crit` option does not list.                                                                                                                                                                                         |
 
 ### Claims
 
@@ -135,11 +151,12 @@ A decrypter and a nested verifier use the token structure and key selection code
 
 A `TypeError` means a mistake in the calling code, not in the input, and is thrown as early as possible:
 
-- **Options.** Every option of `createVerifier`, `createDpopVerifier`, `createDecrypter`, `createNestedVerifier`, `createRemoteKeySet`, `importKeySet`, `readHeader` and the key functions is checked when the function is called, and an invalid one throws, naming the option and its constraint. Every one of them, and the input of `sign`, `createDpopProof`, `encrypt` and `encryptJwt`, also throws for a name that is not one of its options, so a typo such as `audiance` cannot silently disable a check or fall back to a default. Create verifiers and key sets at startup and a misconfiguration fails the deploy, not the first request.
+- **Options.** Every option of `createVerifier`, `createJwsVerifier`, `createDpopVerifier`, `createDecrypter`, `createNestedVerifier`, `createRemoteKeySet`, `importKeySet`, `readHeader` and the key functions is checked when the function is called, and an invalid one throws, naming the option and its constraint. Every one of them, and the input of `sign`, `signJws`, `signGeneralJws`, `createDpopProof`, `encrypt` and `encryptJwt`, also throws for a name that is not one of its options, so a typo such as `audiance` cannot silently disable a check or fall back to a default. Create verifiers and key sets at startup and a misconfiguration fails the deploy, not the first request.
 - **Key objects.** Passing an object this package did not create where a key is expected, a key of the wrong kind (such as a public key to `sign`, or a signing key to `encrypt`), or exporting a key created without `extractable: true`.
-- **What you sign.** A payload or header `sign` cannot write exactly as JSON, one that breaks the rules in [Signing tokens](signing.md), or an `embedKey` that is not the public half of the signing key.
+- **What you sign.** A payload or header `sign` cannot write exactly as JSON, one that breaks the rules in [Signing tokens](signing.md) or [JWS](jws.md#signing), or an `embedKey` that is not the public half of the signing key.
 - **What you encrypt.** A plaintext that is neither bytes nor text, an `enc` a `dir` key is not bound to, or a header member [Encrypting tokens](encrypting.md#encrypting) refuses.
 - **DPoP requests.** The request a DPoP verifier is called with: a member it does not know, an invalid method or URL, an empty `accessToken`, or `accessTokenClaims` that is not an object. The verifier's promise rejects; a proof never makes it reject.
+- **A JWS verifier's call options.** Options that are not an object, hold an unknown member, or give a `payload` that is neither a string nor a `Uint8Array` reject the verifier's promise.
 
 A `TypeError` message names the option or member and the rule it broke, never its value.
 

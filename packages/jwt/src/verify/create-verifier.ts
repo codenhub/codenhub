@@ -222,9 +222,9 @@ interface IssuerRoute {
 }
 
 /** Hands a key set's error to `onKeySetError` and returns the `key_set_error` failure. */
-type Reporter = (error: unknown) => typeof KEY_SET_ERROR;
+export type Reporter = (error: unknown) => typeof KEY_SET_ERROR;
 
-function reporterOf(onKeySetError: ((error: unknown) => void) | undefined): Reporter {
+export function reporterOf(onKeySetError: ((error: unknown) => void) | undefined): Reporter {
   return (error) => {
     if (onKeySetError !== undefined) {
       try {
@@ -252,7 +252,11 @@ export async function ignoreRejection(promise: Promise<unknown>): Promise<void> 
  * Asks the key set for the header's key. A key set is caller code, so whatever it does wrong, throwing
  * included, becomes a `key_set_error` failure rather than an exception or an unchecked key.
  */
-async function selectKey(keys: KeySet, header: JwtHeader, report: Reporter): Promise<JwtResult<VerificationKey>> {
+export async function selectKey(
+  keys: KeySet,
+  header: JwtHeader,
+  report: Reporter,
+): Promise<JwtResult<VerificationKey>> {
   try {
     const result: unknown = await keys.select(header);
     if (typeof result !== "object" || result === null) {

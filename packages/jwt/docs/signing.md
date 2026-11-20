@@ -82,8 +82,8 @@ Other header parameters are written as given, with the same JSON rules as the pa
 
 | Parameter                  | Why it is refused                                                                                                                                                                     |
 | -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `crit`                     | It asks the verifier to understand an extension. This package implements none, and its own verifier rejects every token with `crit`.                                                  |
-| `b64`                      | Unencoded payloads (RFC 7797) are not supported.                                                                                                                                      |
+| `crit`                     | It asks the verifier to understand an extension. No JWT extension is implemented, and `createVerifier` rejects every token with `crit`; [JWS](jws.md) supports it.                    |
+| `b64`                      | RFC 7797 §7 keeps unencoded payloads out of JWTs; [JWS](jws.md) supports them for other payloads.                                                                                     |
 | `jwk`, `jku`, `x5u`, `x5c` | They tell the verifier where to find the key. A verifier that trusts them lets the token choose its own key, so this package never reads them, and writes `jwk` only from `embedKey`. |
 
 In TypeScript, `SignHeader` types these members as `never`, so writing one is a compile error too.

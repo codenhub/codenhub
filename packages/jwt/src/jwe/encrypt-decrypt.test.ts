@@ -122,7 +122,7 @@ describe("encrypt", () => {
         return reads === 1 ? "checked" : 42;
       },
     };
-    await expect(encrypt({ plaintext: "", key: kw, enc: "A256GCM", header })).rejects.toThrow(
+    await expect(encrypt({ plaintext: "", key: kw, enc: "A256GCM", header: header as never })).rejects.toThrow(
       "encrypt: input.header must not hold accessor properties.",
     );
     expect(reads).toBe(0);

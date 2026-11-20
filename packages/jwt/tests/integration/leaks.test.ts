@@ -5,6 +5,7 @@ import { beforeAll, describe, expect, it } from "vitest";
 import {
   createDecrypter,
   createJweKeySet,
+  createJwsVerifier,
   createKeySet,
   createNestedVerifier,
   createRemoteKeySet,
@@ -26,6 +27,8 @@ import {
   importSecretKey,
   readHeader,
   sign,
+  signGeneralJws,
+  signJws,
   type KeyPair,
   type SecretKey,
   type StandardSchemaV1,
@@ -556,5 +559,80 @@ describe("JWE failures carry no input", () => {
     const error = imported.ok ? await exportJweSecretJwk(imported.value).catch((caught: unknown) => caught) : undefined;
 
     expect([error instanceof TypeError, String(error).includes(base64Url(bytes))]).toEqual([true, false]);
+  });
+});
+
+describe("JWS failures carry no input", () => {
+  const verifier = () => createJwsVerifier({ keys: createKeySet([secretKey, pair.publicKey]) });
+  const hs = segmentOf('{"alg":"HS256"}');
+  const unencoded = segmentOf('{"alg":"HS256","b64":false,"crit":["b64"]}');
+
+  const corpus: [string, string][] = [
+    [
+      "a marker unprotected alg",
+      JSON.stringify({ payload: "YQ", protected: hs, header: { alg: MARKER }, signature: "AAAA" }),
+    ],
+    [
+      "a marker in both headers",
+      JSON.stringify({
+        payload: "YQ",
+        protected: segmentOf(`{"alg":"HS256","${MARKER}":1}`),
+        header: { [MARKER]: 1 },
+        signature: "AAAA",
+      }),
+    ],
+    [
+      "a marker kid unknown to the key set",
+      JSON.stringify({ payload: "YQ", protected: hs, header: { kid: MARKER }, signature: "AAAA" }),
+    ],
+    ["a marker in crit", `${segmentOf(`{"alg":"HS256","crit":["${MARKER}"],"${MARKER}":1}`)}.YQ.AAAA`],
+    ["a marker b64 outside crit", `${segmentOf(`{"alg":"HS256","b64":"${MARKER}"}`)}.YQ.AAAA`],
+    ["a marker unencoded payload with a bad signature", `${unencoded}.${MARKER}.AAAA`],
+    ["a marker unencoded payload holding a period", `${unencoded}.${MARKER}.${MARKER}.AAAA`],
+    [
+      "a marker JSON payload that is not base64url",
+      JSON.stringify({ payload: `${MARKER}=`, protected: hs, signature: "AAAA" }),
+    ],
+    ["a duplicate marker member", `{"${MARKER}":1,"${MARKER}":2,"protected":"${hs}","signature":"AAAA"}`],
+    [
+      "marker signatures",
+      JSON.stringify({
+        payload: segmentOf(MARKER),
+        signatures: [{ protected: segmentOf(MARKER), signature: segmentOf(MARKER) }],
+      }),
+    ],
+    ["too long, full of markers", `{"payload":"${MARKER.repeat(1000)}"}`],
+  ];
+
+  it.each(corpus)("should not echo the marker for %s", async (_, jws) => {
+    const result = await verifier()(jws);
+
+    expect([result.ok, leakedBy(result)]).toEqual([false, []]);
+  });
+
+  it("should not echo a marker detached payload whose signature fails", async () => {
+    const result = await verifier()(`${hs}..AAAA`, { payload: MARKER });
+
+    expect([result.ok, leakedBy(result)]).toEqual([false, []]);
+  });
+
+  it.each([
+    ["an unprotected marker alg", { unprotectedHeader: { alg: MARKER } }],
+    ["a marker crit", { header: { crit: [MARKER] } }],
+    [
+      "a marker member in both headers",
+      { header: { [MARKER]: 1 }, unprotectedHeader: { [MARKER]: 1 }, serialization: "flattened" },
+    ],
+    ["a marker unencoded compact payload", { b64: false, payload: `${MARKER}.` }],
+  ])("should reject signJws with a TypeError without the marker for %s", async (_, input) => {
+    expect(await leakedByRejection(() => signJws({ payload: MARKER, key: secretKey, ...input } as never))).toEqual([]);
+  });
+
+  it("should reject signGeneralJws with a TypeError without the marker for a marker signer header", async () => {
+    expect(
+      await leakedByRejection(() =>
+        signGeneralJws({ payload: MARKER, signers: [{ key: secretKey, header: { jku: MARKER } }] } as never),
+      ),
+    ).toEqual([]);
   });
 });

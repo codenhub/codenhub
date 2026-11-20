@@ -208,7 +208,7 @@ export async function signToken<TPayload extends object = JwtPayload>(
     throw new TypeError("sign: input.key must be a private or secret key.");
   }
   const embedded = input.embedKey === undefined ? undefined : await embeddedJwk(input.embedKey, key);
-  const headerJson = serializeHeader(input.header, writeKeyKid ? key.kid : undefined, key.alg, embedded?.jwk);
+  const headerJson = serializeHeader(input.header, key, embedded?.jwk, writeKeyKid);
   const payloadJson = serializePayload(input.payload, addedClaims(input));
   const signingInput = `${encodeBase64Url(encodeUtf8(headerJson))}.${encodeBase64Url(encodeUtf8(payloadJson))}`;
   const signedBytes = encodeUtf8(signingInput);
@@ -227,10 +227,11 @@ export async function signToken<TPayload extends object = JwtPayload>(
  * since a signer holding another key, or a DER conversion gone wrong, would otherwise give tokens no one can
  * verify.
  */
-async function signatureOf(
+export async function signatureOf(
   entry: KeyEntry,
   signParams: AlgorithmParams["signParams"],
   signedBytes: Uint8Array<ArrayBuffer>,
+  caller = "sign",
 ): Promise<ArrayBuffer | Uint8Array<ArrayBuffer>> {
   if (entry.externalSign === undefined) {
     return crypto.subtle.sign(signParams, entry.cryptoKey, signedBytes);
@@ -238,7 +239,7 @@ async function signatureOf(
   // A copy: a signer that changes its input would otherwise sign, and pass the check on, bytes the token lacks.
   const signature = await entry.externalSign(signedBytes.slice());
   if (!(await crypto.subtle.verify(signParams, entry.cryptoKey, signature, signedBytes))) {
-    throw new TypeError("sign: the external signer's signature does not verify with its public key.");
+    throw new TypeError(`${caller}: the external signer's signature does not verify with its public key.`);
   }
   return signature;
 }
@@ -268,49 +269,85 @@ async function embeddedJwk(
   return { jwk, cryptoKey: getKeyEntry(embedKey).cryptoKey };
 }
 
-/** Validates the caller's header and writes it as JSON with `alg`, `kid`, `typ`, `cty` first. */
-function serializeHeader(
+/** Where a signing header comes from, for the messages {@link readSignHeader} throws. */
+export interface SignHeaderContext {
+  /** The function name messages start with, such as `sign`. */
+  readonly caller: string;
+  /** The header's place in the input, such as `input.header`. */
+  readonly label: string;
+  /** Members the caller may not set. */
+  readonly forbidden: readonly string[];
+  /** Whether a key's `kid` is written when the header sets none. */
+  readonly defaultKid: boolean;
+}
+
+/**
+ * Validates the caller's protected header and lists its members in the order they are written: `alg` from
+ * the key, `kid`, `typ` and `cty` first (`leading`), then every other member in the order given (`rest`).
+ *
+ * @throws TypeError when the header is not a plain object of JSON values, names another `alg` than the
+ * key's, holds a forbidden member, or holds a `kid`, `typ` or `cty` that is not a string.
+ */
+export function readSignHeader(
   header: unknown,
-  keyKid: string | undefined,
-  alg: JwsAlgorithm,
-  jwk: Record<string, string> | undefined,
-): string {
+  key: SigningKey,
+  context: SignHeaderContext,
+): {
+  readonly given: Record<string, unknown>;
+  readonly leading: [string, unknown][];
+  readonly rest: [string, unknown][];
+} {
+  const { caller, label } = context;
   if (header !== undefined && !isPlainObject(header)) {
-    throw new TypeError("sign: input.header must be a plain object.");
+    throw new TypeError(`${caller}: ${label} must be a plain object.`);
   }
-  const given = snapshotJsonObject(header ?? {}, "input.header");
-  if (Object.hasOwn(given, "alg") && given.alg !== alg) {
-    throw new TypeError("sign: input.header.alg must equal the key's alg.");
+  const given = snapshotJsonObject(header ?? {}, label, caller);
+  if (Object.hasOwn(given, "alg") && given.alg !== key.alg) {
+    throw new TypeError(`${caller}: ${label}.alg must equal the key's alg.`);
   }
-  const forbidden = FORBIDDEN_HEADER_MEMBERS.find((name) => Object.hasOwn(given, name));
+  const forbidden = context.forbidden.find((name) => Object.hasOwn(given, name));
   if (forbidden !== undefined) {
-    throw new TypeError(`sign: input.header.${forbidden} is not supported.`);
+    throw new TypeError(`${caller}: ${label}.${forbidden} is not supported.`);
   }
   const notText = TEXT_HEADER_MEMBERS.find((name) => Object.hasOwn(given, name) && typeof given[name] !== "string");
   if (notText !== undefined) {
-    throw new TypeError(`sign: input.header.${notText} must be a string.`);
+    throw new TypeError(`${caller}: ${label}.${notText} must be a string.`);
   }
-  const kid = Object.hasOwn(given, "kid") ? given.kid : keyKid;
-  const members: [string, unknown][] = [["alg", alg]];
+  const kid = Object.hasOwn(given, "kid") ? given.kid : context.defaultKid ? key.kid : undefined;
+  const leading: [string, unknown][] = [["alg", key.alg]];
   if (kid !== undefined) {
-    members.push(["kid", kid]);
+    leading.push(["kid", kid]);
   }
   for (const name of ["typ", "cty"] as const) {
     if (Object.hasOwn(given, name)) {
-      members.push([name, given[name]]);
+      leading.push([name, given[name]]);
     }
   }
-  if (jwk !== undefined) {
-    members.push(["jwk", jwk]);
-  }
-  const leading: readonly string[] = ["alg", ...TEXT_HEADER_MEMBERS];
-  for (const name of Object.keys(given)) {
-    if (!leading.includes(name)) {
-      members.push([name, given[name]]);
-    }
-  }
-  // Written member by member: an object would list integer-like names before `alg`.
-  return `{${members.map(([name, value]) => `${JSON.stringify(name)}:${writeJson(value)}`).join(",")}}`;
+  const leadingNames: readonly string[] = ["alg", ...TEXT_HEADER_MEMBERS];
+  const rest = Object.keys(given)
+    .filter((name) => !leadingNames.includes(name))
+    .map((name): [string, unknown] => [name, given[name]]);
+  return { given, leading, rest };
+}
+
+/** Writes members as a JSON object in the order listed: an object would list integer-like names before `alg`. */
+export const writeMembers = (members: readonly (readonly [string, unknown])[]): string =>
+  `{${members.map(([name, value]) => `${JSON.stringify(name)}:${writeJson(value)}`).join(",")}}`;
+
+/** Validates the caller's header and writes it as JSON with `alg`, `kid`, `typ`, `cty` first. */
+function serializeHeader(
+  header: unknown,
+  key: SigningKey,
+  jwk: Record<string, string> | undefined,
+  writeKeyKid: boolean,
+): string {
+  const { leading, rest } = readSignHeader(header, key, {
+    caller: "sign",
+    label: "input.header",
+    forbidden: FORBIDDEN_HEADER_MEMBERS,
+    defaultKid: writeKeyKid,
+  });
+  return writeMembers(jwk === undefined ? [...leading, ...rest] : [...leading, ["jwk", jwk], ...rest]);
 }
 
 /** Validates the payload and its registered claims, adds the claims `input` asks for, and writes it as JSON. */
@@ -441,34 +478,34 @@ function currentSeconds(now: () => number): number {
  * descriptor, and the token is written from the copy, so a `Proxy` or a value changed meanwhile cannot show the
  * checks one value and the token another.
  */
-export function snapshotJsonObject(object: unknown, label: string): Record<string, unknown> {
-  return snapshot(object, label, 1) as Record<string, unknown>;
+export function snapshotJsonObject(object: unknown, label: string, caller = "sign"): Record<string, unknown> {
+  return snapshot(object, label, 1, caller) as Record<string, unknown>;
 }
 
-function snapshot(container: unknown, label: string, depth: number): unknown {
+function snapshot(container: unknown, label: string, depth: number, caller: string): unknown {
   const isArray = Array.isArray(container);
   // An Array subclass or a swapped prototype can carry a `toJSON` of its own.
   if (isArray ? !isPlainArray(container) : !isPlainObject(container)) {
-    throw new TypeError(`sign: ${label} must hold only plain objects and arrays.`);
+    throw new TypeError(`${caller}: ${label} must hold only plain objects and arrays.`);
   }
   // `JSON.stringify` runs a `toJSON` found anywhere on the chain, own or inherited from a polluted
   // `Object.prototype` or `Array.prototype`; a caller who has one expects the token to say what it returns.
   if ("toJSON" in (container as object)) {
-    throw new TypeError(`sign: ${label} must not hold toJSON methods.`);
+    throw new TypeError(`${caller}: ${label} must not hold toJSON methods.`);
   }
   const copyOf = (descriptor: PropertyDescriptor): unknown => {
     if (!("value" in descriptor)) {
-      throw new TypeError(`sign: ${label} must not hold accessor properties.`);
+      throw new TypeError(`${caller}: ${label} must not hold accessor properties.`);
     }
     const child: unknown = descriptor.value;
     if (typeof child !== "object" || child === null) {
-      assertJsonPrimitive(child, label);
+      assertJsonPrimitive(child, label, caller);
       return child;
     }
     if (depth + 1 > MAX_JSON_DEPTH) {
-      throw new TypeError(`sign: ${label} must not nest deeper than ${MAX_JSON_DEPTH} levels.`);
+      throw new TypeError(`${caller}: ${label} must not nest deeper than ${MAX_JSON_DEPTH} levels.`);
     }
-    return snapshot(child, label, depth + 1);
+    return snapshot(child, label, depth + 1, caller);
   };
   if (isArray) {
     const { length } = container as readonly unknown[];
@@ -476,7 +513,7 @@ function snapshot(container: unknown, label: string, depth: number): unknown {
     for (let index = 0; index < length; index += 1) {
       const descriptor = Object.getOwnPropertyDescriptor(container, String(index));
       if (descriptor === undefined) {
-        throw new TypeError(`sign: ${label} must not hold array holes.`);
+        throw new TypeError(`${caller}: ${label} must not hold array holes.`);
       }
       copy.push(copyOf(descriptor));
     }
@@ -486,7 +523,7 @@ function snapshot(container: unknown, label: string, depth: number): unknown {
   // `Reflect.ownKeys` lists names in the order `Object.keys` does, without reading each descriptor a second time.
   for (const name of Reflect.ownKeys(container as object)) {
     if (typeof name === "symbol") {
-      throw new TypeError(`sign: ${label} must not have symbol keys.`);
+      throw new TypeError(`${caller}: ${label} must not have symbol keys.`);
     }
     const descriptor = Object.getOwnPropertyDescriptor(container, name);
     if (descriptor?.enumerable === true) {
@@ -500,7 +537,7 @@ function snapshot(container: unknown, label: string, depth: number): unknown {
  * Writes a {@link snapshot} copy, or a value this module built, as `JSON.stringify` would, without looking up
  * `toJSON` anywhere: only primitives reach `JSON.stringify`.
  */
-function writeJson(value: unknown): string {
+export function writeJson(value: unknown): string {
   if (Array.isArray(value)) {
     return `[${value.map(writeJson).join(",")}]`;
   }
@@ -513,19 +550,19 @@ function writeJson(value: unknown): string {
   return JSON.stringify(value);
 }
 
-function assertJsonPrimitive(value: unknown, label: string): void {
+function assertJsonPrimitive(value: unknown, label: string, caller: string): void {
   if (typeof value === "string" || typeof value === "boolean" || value === null) {
     return;
   }
   if (typeof value === "number") {
     if (!Number.isFinite(value)) {
-      throw new TypeError(`sign: ${label} must not hold a non-finite number.`);
+      throw new TypeError(`${caller}: ${label} must not hold a non-finite number.`);
     }
     if (Object.is(value, -0)) {
       // `JSON.stringify` writes -0 as 0, so the token would not carry the value that was given.
-      throw new TypeError(`sign: ${label} must not hold negative zero.`);
+      throw new TypeError(`${caller}: ${label} must not hold negative zero.`);
     }
     return;
   }
-  throw new TypeError(`sign: ${label} must hold only JSON values, not ${typeof value}.`);
+  throw new TypeError(`${caller}: ${label} must hold only JSON values, not ${typeof value}.`);
 }

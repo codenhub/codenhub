@@ -16,6 +16,7 @@ describe("package entrypoint", () => {
       "createDpopVerifier",
       "createExternalSigningKey",
       "createJweKeySet",
+      "createJwsVerifier",
       "createKeyRing",
       "createKeySet",
       "createNestedVerifier",
@@ -58,6 +59,8 @@ describe("package entrypoint", () => {
       "jwkThumbprintUri",
       "readHeader",
       "sign",
+      "signGeneralJws",
+      "signJws",
       "tokenHash",
     ]);
   });

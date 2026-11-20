@@ -31,7 +31,8 @@ Nothing yet.
 ## Not Planned
 
 - **Unverified payload decoding.** Invariant 3.
-- **`none`, JWS JSON serialization and RFC 7797 unencoded payloads.** Out of scope for 0.1 (scope.md section 2), and `none` permanently (invariant 2).
+- **`none`.** Permanently (invariant 2).
+- **JWS JSON serialization and RFC 7797 unencoded payloads for JWTs.** RFC 7519 and RFC 7797 keep JWTs compact and encoded; other payloads have them through `signJws`, `signGeneralJws` and `createJwsVerifier` (scope.md decision 70).
 - **JWE JSON serialization, `zip`, `RSA1_5`, `PBES2-*` and 192-bit AES.** Decision 63.
 - **OIDC-specific checks** (`nonce`, `azp`, `at_hash`, `c_hash`). They belong in `@codenhub/oidc` (decisions 7 and 14).
 

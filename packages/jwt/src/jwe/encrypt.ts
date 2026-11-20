@@ -225,13 +225,8 @@ function readHeader(
   if (header !== undefined && !isPlainObject(header)) {
     throw new TypeError(`${functionName}: input.header must be a plain object.`);
   }
-  let given: Record<string, unknown>;
-  try {
-    // Read once into a copy, so a getter or Proxy cannot show the checks one header and the token another.
-    given = header === undefined ? {} : snapshotJsonObject(header, "input.header");
-  } catch (error) {
-    throw new TypeError((error as Error).message.replace(/^sign:/, `${functionName}:`));
-  }
+  // Read once into a copy, so a getter or Proxy cannot show the checks one header and the token another.
+  const given = header === undefined ? {} : snapshotJsonObject(header, "input.header", functionName);
   if (Object.hasOwn(given, "alg") && given.alg !== alg) {
     throw new TypeError(`${functionName}: input.header.alg must equal the key's alg.`);
   }

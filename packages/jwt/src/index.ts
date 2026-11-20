@@ -7,6 +7,10 @@ export type {
   AsymmetricAlgorithm,
   JsonCompatible,
   JwsAlgorithm,
+  JwsHeader,
+  JwsVerifier,
+  JwsVerifierOptions,
+  JwsVerifyOptions,
   Jwk,
   JwtErr,
   JwtFailure,
@@ -28,6 +32,7 @@ export type {
   SigningKey,
   SymmetricAlgorithm,
   VerificationKey,
+  VerifiedJws,
   VerifiedJwt,
   VerifiedPayload,
   Verifier,
@@ -109,7 +114,17 @@ export {
   type RemoteKeySetOptions,
   type RemoteKeySetSnapshot,
 } from "./keysets";
-export { sign, type SignHeader, type SignInput } from "./sign";
-export { createVerifier } from "./verify";
+export {
+  sign,
+  signGeneralJws,
+  signJws,
+  type JwsSigner,
+  type JwsSignHeader,
+  type SignGeneralJwsInput,
+  type SignHeader,
+  type SignInput,
+  type SignJwsInput,
+} from "./sign";
+export { createJwsVerifier, createVerifier } from "./verify";
 export * from "./jwe";
 export type { RemoteEncryptionKeySetOptions } from "./keysets/remote";
