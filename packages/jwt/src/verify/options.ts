@@ -1,6 +1,6 @@
 import { DEFAULT_MAX_TOKEN_LENGTH, MAX_TOKEN_LENGTH_LIMIT } from "../core/limits";
 import { rejectUnknownOptions } from "../core/options";
-import type { KeySet, KeySetResolver, VerifierOptions } from "../core/types";
+import type { KeySet, KeySetResolver, KeySetRoute, VerifierOptions } from "../core/types";
 import type { StandardSchemaV1 } from "../interop/standard-schema";
 
 /** Largest `clockTolerance`, in seconds. */
@@ -61,11 +61,20 @@ function throwInvalid(message: string): never {
   throw new TypeError(`createVerifier: ${message}`);
 }
 
-// A route's audiences and types, checked as the verifier options are; throws a TypeError naming the member.
+/** Every member a {@link KeySetRoute} may have; typed so adding one fails to compile until listed. */
+const ROUTE_MEMBERS: Readonly<Record<keyof KeySetRoute, true>> = { keys: true, audience: true, type: true };
+
+/**
+ * A route's audiences and types, checked as the verifier options are. A member that is not one of the route's,
+ * such as a misspelled `audiance`, is refused rather than ignored, which would silently drop the check.
+ *
+ * @throws TypeError naming the first unknown or invalid member, never its value.
+ */
 export function readRouteChecks(route: {
   readonly audience?: unknown;
   readonly type?: unknown;
 }): Pick<ResolvedOptions, "audiences" | "types"> {
+  rejectUnknownOptions(route, ROUTE_MEMBERS, "createVerifier", "route");
   return {
     ...optional("audiences", readAudience(route.audience, "route")),
     ...optional("types", readTypes(route.type, "route")),

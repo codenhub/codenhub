@@ -217,4 +217,28 @@ describe("createVerifier with a resolver that returns a route", () => {
     );
     expect(errors.map((error) => error instanceof TypeError)).toEqual([true]);
   });
+
+  it.each([
+    ["a misspelled audience", { audiance: "tenant-a" }, "audiance"],
+    ["typ in place of type", { typ: "at+jwt" }, "typ"],
+    ["an option the route does not take", { issuer: ISSUER_A }, "issuer"],
+    ["an unknown member set to undefined", { audiance: undefined }, "audiance"],
+    ["a long unknown member", { ["x".repeat(100)]: 1 }, `${"x".repeat(64)}...`],
+  ])("should fail with key_set_error for a route with %s, naming the member", async (_name, extra, shown) => {
+    const errors: unknown[] = [];
+    const verify = createVerifier({
+      keys: () => ({ keys: sets.get(ISSUER_A), ...extra }) as never,
+      now: clockAt(),
+      onKeySetError: (error) => errors.push(error),
+    });
+    expect(await verify(await tokenFor(pairA, { iss: ISSUER_A }))).toEqual(
+      failure({ code: "key_fetch_failed", params: { reason: "key_set_error" } }),
+    );
+    expect(errors).toEqual([new TypeError(`createVerifier: route.${shown} is not an option.`)]);
+  });
+
+  it("should ignore symbol members of a route", async () => {
+    const route = { keys: sets.get(ISSUER_A), [Symbol("tag")]: true };
+    expect((await routeVerifier(route)(await tokenFor(pairA, { iss: ISSUER_A }))).ok).toBe(true);
+  });
 });
