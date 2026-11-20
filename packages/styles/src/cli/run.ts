@@ -1,3 +1,4 @@
+import { randomBytes } from "node:crypto";
 import { existsSync, readFileSync, realpathSync } from "node:fs";
 import * as fs from "node:fs/promises";
 import path from "node:path";
@@ -196,34 +197,68 @@ async function build(options: BuildOptions, io: CliIo): Promise<string> {
   /* Written beside the output and renamed over it, so a write that fails
      partway, on a full disk say, leaves the previous stylesheet whole rather
      than a truncated one a deploy would ship. */
-  const temporary = `${target}.${process.pid}.tmp`;
+  let temporary: string | undefined;
+  let warning: string | undefined;
 
   try {
     await fs.mkdir(path.dirname(target), { recursive: true });
-    await fs.writeFile(temporary, css);
-    await keepOwnership(temporary, target, options.output, io);
+
+    const created = await createTemporary(target);
+
+    temporary = created.path;
+    try {
+      await created.handle.writeFile(css);
+      warning = await keepOwnershipOf(created.handle, target, options.output);
+    } finally {
+      await created.handle.close();
+    }
     await replaceFile(temporary, target);
   } catch (error) {
-    // Best effort: the error worth reporting is the one above.
-    await fs.rm(temporary, { force: true }).catch(() => undefined);
+    // Best effort, and only for a file this build created: the error worth reporting is the one above.
+    if (temporary !== undefined) {
+      await fs.rm(temporary, { force: true }).catch(() => undefined);
+    }
     throw new Error(`cannot write --output ${options.output}: ${describeWriteError(error)}`);
+  }
+
+  // After the rename, so a build that fails prints its one line and no warning.
+  if (warning !== undefined) {
+    io.stderr(warning);
   }
 
   return output;
 }
 
+/* A name anyone could guess, such as one from the process ID, let whoever can
+   write to the output's folder plant a link there first, and the write went
+   through it to a file the build was never given. The name is random, and the
+   file is created with `wx`, which fails on any entry already there, a link
+   included, so the file written is always one this build created. Everything
+   after goes through the handle, never the name. */
+async function createTemporary(target: string): Promise<{ path: string; handle: fs.FileHandle }> {
+  for (let attempt = 1; ; attempt += 1) {
+    const name = `${target}.${randomBytes(8).toString("hex")}.tmp`;
+
+    try {
+      // oxlint-disable-next-line no-await-in-loop -- a name is tried only once the one before it is taken
+      return { path: name, handle: await fs.open(name, "wx") };
+    } catch (error) {
+      if ((error as { code?: string }).code !== "EEXIST" || attempt === 5) {
+        throw error;
+      }
+    }
+  }
+}
+
 /* The stylesheet is renamed over the output, so it would come out with the mode
    and owner of a new file: a `0640` file of the web server's group would come
    back `0644` and the runner's. The temporary file takes the permission bits,
-   owner, and group of the file it replaces first. Only root can give a file to
-   another user, and only to a group its owner is in, so a runner without that
-   right keeps the group when it is in it, and says what changed on stderr
-   rather than fail a build that wrote the stylesheet. Windows keeps neither:
-   its mode is only the read-only attribute, which a rename over the file
-   refuses, and a new file takes its folder's permissions. */
-async function keepOwnership(temporary: string, target: string, output: string, io: CliIo): Promise<void> {
+   owner, and group of the file it replaces first. Windows keeps neither: its
+   mode is only the read-only attribute, which a rename over the file refuses,
+   and a new file takes its folder's permissions. */
+async function keepOwnershipOf(handle: fs.FileHandle, target: string, output: string): Promise<string | undefined> {
   if (process.platform === "win32") {
-    return;
+    return undefined;
   }
 
   const previous = await fs.stat(target).catch((error: unknown) => {
@@ -233,36 +268,52 @@ async function keepOwnership(temporary: string, target: string, output: string, 
     throw error;
   });
 
-  if (previous === undefined) {
-    return;
-  }
+  return previous === undefined ? undefined : keepOwnership(handle, previous, output);
+}
 
-  const created = await fs.stat(temporary);
+/** What {@link keepOwnership} changes: the temporary file, through its handle. */
+export interface OwnedFile {
+  stat(): Promise<{ uid: number; gid: number }>;
+  chown(uid: number, gid: number): Promise<void>;
+  chmod(mode: number): Promise<void>;
+}
+
+/**
+ * Gives `file` the owner, group, and permission bits of `previous`, and returns the warning to
+ * print when it could not keep them all. Only root can give a file to another user, and only to a
+ * group its owner is in, so a runner without that right keeps the group when it is in it, and says
+ * what changed rather than fail a build that wrote the stylesheet.
+ */
+export async function keepOwnership(
+  file: OwnedFile,
+  previous: { uid: number; gid: number; mode: number },
+  output: string,
+): Promise<string | undefined> {
+  const created = await file.stat();
+  let warning: string | undefined;
 
   if (previous.uid !== created.uid || previous.gid !== created.gid) {
-    const kept = await chownAllowed(temporary, previous.uid, previous.gid);
+    const kept = await chownAllowed(file, previous.uid, previous.gid);
 
     if (kept === "group") {
-      io.stderr(
-        `${BIN}: warning: --output ${output} now belongs to user ${created.uid}, not ${previous.uid}, since only root can give a file to another user; its group and mode are kept.`,
-      );
+      warning = `${BIN}: warning: --output ${output} now belongs to user ${created.uid}, not ${previous.uid}, since only root can give a file to another user; its group and mode are kept.`;
     } else if (kept === "neither") {
-      io.stderr(
-        `${BIN}: warning: --output ${output} now belongs to user ${created.uid} and group ${created.gid}, not ${previous.uid} and ${previous.gid}, since only root can give a file to another user or to a group you are not in; its mode is kept.`,
-      );
+      warning = `${BIN}: warning: --output ${output} now belongs to user ${created.uid} and group ${created.gid}, not ${previous.uid} and ${previous.gid}, since only root can give a file to another user or to a group you are not in; its mode is kept.`;
     }
   }
   // After the owner: changing it can clear the set-user-ID and set-group-ID bits.
-  await fs.chmod(temporary, previous.mode & 0o777);
+  await file.chmod(previous.mode & 0o777);
+
+  return warning;
 }
 
 /* Gives the file to the user and group, or to the group alone when only root
    could give it to the user. Any failure but that refusal is thrown. */
-async function chownAllowed(file: string, uid: number, gid: number): Promise<"both" | "group" | "neither"> {
+async function chownAllowed(file: OwnedFile, uid: number, gid: number): Promise<"both" | "group" | "neither"> {
   const isRefused = (error: unknown) => (error as { code?: string }).code === "EPERM";
 
   try {
-    await fs.chown(file, uid, gid);
+    await file.chown(uid, gid);
     return "both";
   } catch (error) {
     if (!isRefused(error)) {
@@ -270,7 +321,7 @@ async function chownAllowed(file: string, uid: number, gid: number): Promise<"bo
     }
   }
   try {
-    await fs.chown(file, -1, gid);
+    await file.chown(-1, gid);
     return "group";
   } catch (error) {
     if (!isRefused(error)) {

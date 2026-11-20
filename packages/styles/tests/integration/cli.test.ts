@@ -7,7 +7,7 @@ import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { classesOf, parse } from "../../src/cli/purge";
-import { findPackageRoot, run } from "../../src/cli/run";
+import { findPackageRoot, keepOwnership, run } from "../../src/cli/run";
 
 const { version } = createRequire(import.meta.url)("../../package.json") as { version: string };
 const packageRoot = path.resolve(import.meta.dirname, "../..");
@@ -292,6 +292,25 @@ describe("build", () => {
     expect(await readOutput("build/real.css")).toMatch(ruleFor("btn"));
   });
 
+  /* The temporary file was named after the process ID, which anyone can guess,
+     and written through whatever stood there, so a link planted at that name
+     made the build overwrite a file it was never given. */
+  it.skipIf(!canSymlink)("does not write through a link planted where its temporary file went", async () => {
+    const victim = path.join(root, "victim.txt");
+
+    await writeFile(victim, "keep me");
+    await symlink(victim, path.join(project, `app.css.${process.pid}.tmp`), "file");
+
+    expect(await build("build", "-c", "app/views/**/*.erb", "-o", "app.css")).toBe(0);
+    expect(await readFile(victim, "utf8")).toBe("keep me");
+    expect(await readOutput()).toMatch(ruleFor("btn"));
+  });
+
+  it("leaves no temporary file beside the output", async () => {
+    expect(await build("build", "-c", "app/views/**/*.erb", "-o", "app.css")).toBe(0);
+    expect((await readdir(project)).sort()).toEqual(["app", "app.css"]);
+  });
+
   /* The stylesheet is renamed over the output, so it used to take the mode and
      owner a new file gets: a `0640` file of the web server's group came back
      `0644` and the runner's, readable by everyone and maybe not by the server. */
@@ -486,18 +505,6 @@ describe("failures", () => {
     },
   );
 
-  // The temporary file is the one write that can fail partway; a directory in its place makes it fail.
-  it("leaves the previous stylesheet whole when the write fails", async () => {
-    await writeFile(path.join(project, "app.css"), "/*! @codenhub/styles | previous */");
-    await mkdir(path.join(project, `app.css.${process.pid}.tmp`));
-
-    const failure = await failureOf("build", "-c", "app/views/**/*.erb", "-o", "app.css");
-
-    expect(failure).toMatch(/^chs: cannot write --output app\.css: .+ \((?:EISDIR|EPERM)\); .+\.$/);
-    expect(failure).not.toContain(".tmp");
-    expect(await readFile(path.join(project, "app.css"), "utf8")).toBe("/*! @codenhub/styles | previous */");
-  });
-
   /* The write goes through a file beside the output, so Node.js's message named
      that file, which the user never gave, and not the --output they did. */
   it.skipIf(process.platform === "win32" || process.getuid?.() === 0)(
@@ -637,6 +644,63 @@ describe("help and version", () => {
   it("prints the package version with --version and exits 0", async () => {
     expect(await build("--version")).toBe(0);
     expect(stdout).toEqual([version]);
+  });
+});
+
+/* A test cannot make a file of another user without root, so the ownership
+   rules run on a file whose calls are recorded and refused as a user's are. */
+describe("keepOwnership", () => {
+  const runner = { uid: 1000, gid: 1000 };
+
+  function fileOf({ refuseOwner, refuseGroup }: { refuseOwner: boolean; refuseGroup: boolean }) {
+    const calls: string[] = [];
+    const refusal = () => Object.assign(new Error("EPERM: operation not permitted"), { code: "EPERM" });
+
+    return {
+      calls,
+      stat: () => Promise.resolve(runner),
+      chown(uid: number, gid: number) {
+        calls.push(`chown ${uid} ${gid}`);
+        return (uid === -1 ? refuseGroup : refuseOwner) ? Promise.reject(refusal()) : Promise.resolve();
+      },
+      chmod(mode: number) {
+        calls.push(`chmod ${mode.toString(8)}`);
+        return Promise.resolve();
+      },
+    };
+  }
+
+  it("gives the file the previous owner, group, and mode", async () => {
+    const file = fileOf({ refuseOwner: false, refuseGroup: false });
+
+    expect(await keepOwnership(file, { uid: 33, gid: 33, mode: 0o100640 }, "app.css")).toBeUndefined();
+    expect(file.calls).toEqual(["chown 33 33", "chmod 640"]);
+  });
+
+  it("warns that the owner changed and the group and mode are kept", async () => {
+    const file = fileOf({ refuseOwner: true, refuseGroup: false });
+
+    expect(await keepOwnership(file, { uid: 33, gid: 33, mode: 0o100640 }, "app.css")).toBe(
+      "chs: warning: --output app.css now belongs to user 1000, not 33, since only root can give a file to another user; its group and mode are kept.",
+    );
+    expect(file.calls).toEqual(["chown 33 33", "chown -1 33", "chmod 640"]);
+  });
+
+  it("warns that the owner and group changed and the mode is kept", async () => {
+    const file = fileOf({ refuseOwner: true, refuseGroup: true });
+
+    expect(await keepOwnership(file, { uid: 33, gid: 33, mode: 0o100644 }, "app.css")).toBe(
+      "chs: warning: --output app.css now belongs to user 1000 and group 1000, not 33 and 33, since only root can give a file to another user or to a group you are not in; its mode is kept.",
+    );
+  });
+
+  it("throws a failure other than a refusal", async () => {
+    const file = {
+      ...fileOf({ refuseOwner: false, refuseGroup: false }),
+      chown: () => Promise.reject(Object.assign(new Error("EIO: i/o error"), { code: "EIO" })),
+    };
+
+    await expect(keepOwnership(file, { uid: 33, gid: 33, mode: 0o100644 }, "app.css")).rejects.toThrow(/EIO/);
   });
 });
 
