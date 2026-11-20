@@ -93,7 +93,9 @@ const USAGES: Readonly<Record<KeyRole, KeyUsage[]>> = {
  *
  * @remarks
  * A `CryptoKey` must be an extractable public key, as every public key Web Crypto generates is. It is
- * exported and checked as a JWK; a private one is `unexpected_private_key`, any other `invalid_key`.
+ * exported and checked as a JWK; a private one is `unexpected_private_key`, any other `invalid_key`. Its Web Crypto
+ * algorithm and hash must be the ones `alg` signs with, or it is `alg_mismatch`, so an `RSA-OAEP` or `ECDH` key
+ * is refused; and it must allow `verify`, or it is `wrong_use`.
  *
  * A PEM string is read into the JWK of its material, and every check below runs on that JWK. It must be
  * one block of at most 16384 characters, with only whitespace around it and any whitespace inside it, so a
@@ -183,7 +185,8 @@ export async function importPrivateKey(key: unknown, options: ImportPrivateKeyOp
  * A `CryptoKeyPair`, such as one `crypto.subtle.generateKey` made non-extractable and an application kept in
  * IndexedDB, is used as it is: its private `CryptoKey` is kept, never exported, so it stays non-extractable;
  * its public key must be extractable and passes the JWK checks; and the probe signature proves the private
- * key fits `alg`, its hash and padding included. With `extractable: true`, the private `CryptoKey` must be
+ * key fits `alg`, its hash and padding included. A `CryptoKey` of another Web Crypto algorithm or hash than `alg`
+ * signs with, such as an `RSA-OAEP` or `ECDH` key, is `alg_mismatch`. With `extractable: true`, the private `CryptoKey` must be
  * extractable. An extractable private `CryptoKey` given alone is exported and read as a JWK; a
  * non-extractable one alone is `invalid_key`, since its public half cannot be read from it.
  *
@@ -313,6 +316,10 @@ async function cryptoKeyPairHalves(
     publicKey.type !== "public"
   ) {
     return { code: "invalid_key" };
+  }
+  const purposeIssue = cryptoKeyPurposeIssue(privateKey, alg) ?? cryptoKeyPurposeIssue(publicKey, alg);
+  if (purposeIssue !== undefined) {
+    return purposeIssue;
   }
   const jwk = await cryptoKeyToJwk(publicKey, alg, "public", undefined);
   if (!jwk.ok) {
@@ -463,7 +470,14 @@ async function cryptoKeyToJwk(
   if (cryptoKey.type === "private" && role === "public") {
     return { ok: false, issue: { code: "unexpected_private_key" } };
   }
-  if (cryptoKey.type !== role || !cryptoKey.extractable) {
+  if (cryptoKey.type !== role) {
+    return { ok: false, issue: { code: "invalid_key" } };
+  }
+  const purposeIssue = cryptoKeyPurposeIssue(cryptoKey, alg);
+  if (purposeIssue !== undefined) {
+    return { ok: false, issue: purposeIssue };
+  }
+  if (!cryptoKey.extractable) {
     return { ok: false, issue: { code: "invalid_key" } };
   }
   try {
@@ -471,6 +485,23 @@ async function cryptoKeyToJwk(
   } catch {
     return { ok: false, issue: { code: "invalid_key" } };
   }
+}
+
+/**
+ * Why an asymmetric `CryptoKey` was made for something other than `alg`, or `undefined` when it was not: its
+ * algorithm and hash must be the ones `alg` signs with, and a public key must allow verifying. Exporting the
+ * key drops all three, so an encryption or key-agreement key, such as `RSA-OAEP` or `ECDH`, would otherwise
+ * pass the JWK checks of the same material. The curve is left to those checks.
+ */
+function cryptoKeyPurposeIssue(cryptoKey: CryptoKey, alg: AsymmetricAlgorithm): JwtIssue | undefined {
+  const expected = ALGORITHM_PARAMS[alg].importParams;
+  const name = typeof expected === "string" ? expected : expected.name;
+  const hash = typeof expected === "object" && "hash" in expected ? expected.hash : undefined;
+  const algorithm = cryptoKey.algorithm as Partial<RsaHashedKeyAlgorithm>;
+  if (algorithm.name !== name || (hash !== undefined && algorithm.hash?.name !== hash)) {
+    return { code: "alg_mismatch" };
+  }
+  return cryptoKey.type === "public" && !cryptoKey.usages.includes("verify") ? { code: "wrong_use" } : undefined;
 }
 
 /**
