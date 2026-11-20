@@ -160,6 +160,58 @@ for (const theme of ["light", "dark"] as const) {
   });
 }
 
+/* docs/usage/theming.md's recipe for giving a custom intent the strong
+   border the six built-in ones take under more contrast, as written there:
+   the badge draws what one handed its strong tone as its border draws. */
+test("a custom intent takes its strong border with the theming recipe", async ({ page }) => {
+  const RECIPE = `
+    .beta {
+      --intent-color: #7c3aed;
+      --intent-contrast: #ffffff;
+      --intent-hover: #6d28d9;
+      --intent-strong: light-dark(#5b21b6, #c4b5fd);
+      --intent-subtle: light-dark(#ede9fe, #4c1d95);
+      --intent-border: light-dark(#7c3aed, #a78bfa);
+      --intent-fill-max: 100%;
+    }
+    @media (prefers-contrast: more) {
+      .beta:not(:where(:root[data-contrast="standard"] *)) {
+        --intent-border: var(--intent-strong);
+      }
+    }
+    :root[data-contrast="more"] .beta {
+      --intent-border: var(--intent-strong);
+    }`;
+  const read = async (contrast: "more" | "no-preference", attributes = "") => {
+    await page.emulateMedia({ contrast });
+    await page.setContent(
+      `<!doctype html><html data-theme="light" ${attributes}><body>
+        <span data-testid="beta" class="badge soft edged beta">Beta</span>
+        <span data-testid="strong" class="badge soft edged beta" style="--intent-border: var(--intent-strong)">Beta</span>
+      </body></html>`,
+    );
+    await page.addStyleTag({ content: await built("index.css") });
+    await page.addStyleTag({ content: RECIPE });
+
+    return page.evaluate(async () => {
+      await Promise.allSettled(document.getAnimations().map((animation) => animation.finished));
+
+      return {
+        border: getComputedStyle(document.querySelector('[data-testid="beta"]')!).borderTopColor,
+        strong: getComputedStyle(document.querySelector('[data-testid="strong"]')!).borderTopColor,
+      };
+    });
+  };
+
+  const standard = await read("no-preference");
+  const more = await read("more");
+
+  expect(more.border).toBe(more.strong);
+  expect(standard.border).not.toBe(more.border);
+  expect(await read("no-preference", 'data-contrast="more"')).toEqual(more);
+  expect(await read("more", 'data-contrast="standard"')).toEqual(standard);
+});
+
 test.describe("data-motion", () => {
   for (const sheet of ["components.css", "native.css"] as const) {
     test(`data-motion="reduce" moves as prefers-reduced-motion: reduce does, ${sheet}`, async ({ page }) => {
