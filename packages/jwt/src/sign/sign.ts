@@ -75,6 +75,39 @@ export interface SignInput<TPayload extends object = JwtPayload> {
    * @defaultValue no `jwk` header
    */
   readonly embedKey?: PublicKey;
+  /**
+   * Writes `iat`, the current time in whole seconds. The payload must not set `iat` too.
+   *
+   * @defaultValue false, no `iat` unless the payload has one
+   */
+  readonly issuedAt?: boolean;
+  /**
+   * Writes `nbf` this many whole seconds after the current time, at most 315360000 (ten years), so a time in
+   * milliseconds throws. The payload must not set `nbf` too.
+   *
+   * @defaultValue no `nbf` unless the payload has one
+   */
+  readonly notBefore?: number;
+  /**
+   * Writes `exp` this many whole seconds after the current time, the same time `issuedAt` writes, at most
+   * 315360000 (ten years), so a time in milliseconds throws. The payload must not set `exp` too.
+   *
+   * @defaultValue no `exp` unless the payload has one
+   */
+  readonly expiresIn?: number;
+  /**
+   * Writes `jti`, a random UUID from `crypto.randomUUID()`. The payload must not set `jti` too.
+   *
+   * @defaultValue false, no `jti` unless the payload has one
+   */
+  readonly jti?: boolean;
+  /**
+   * The clock `issuedAt`, `notBefore` and `expiresIn` read, in milliseconds since the Unix epoch, as a
+   * verifier's `now` is. It is called once, and only when one of them is given.
+   *
+   * @defaultValue `Date.now`
+   */
+  readonly now?: () => number;
 }
 
 const INPUT_MEMBERS: Readonly<Record<keyof SignInput, true>> = {
@@ -82,6 +115,11 @@ const INPUT_MEMBERS: Readonly<Record<keyof SignInput, true>> = {
   key: true,
   header: true,
   embedKey: true,
+  issuedAt: true,
+  notBefore: true,
+  expiresIn: true,
+  jti: true,
+  now: true,
 };
 
 /** The members of an embedded public key, in the order {@link exportPublicJwk} writes them. */
@@ -101,6 +139,13 @@ const NUMERIC_DATE_CLAIMS = ["exp", "nbf", "iat"] as const;
  */
 const MAX_NUMERIC_DATE = 253_402_300_799;
 const TEXT_CLAIMS = ["iss", "sub", "jti"] as const;
+/**
+ * The largest `expiresIn` or `notBefore`, ten years of 365 days. `Date.now()`, or a duration in milliseconds
+ * of four days or more, is larger, so either given in place of seconds throws (scope.md decision 55). A
+ * shorter duration in milliseconds passes as a longer one in seconds; the option names say seconds.
+ */
+const MAX_RELATIVE_SECONDS = 315_360_000;
+const MILLISECONDS_PER_SECOND = 1000;
 
 /**
  * Signs a payload into a compact JWS (a JWT) with a key's own algorithm.
@@ -108,19 +153,23 @@ const TEXT_CLAIMS = ["iss", "sub", "jti"] as const;
  * @remarks
  * The header's `alg` always comes from the key, so a key can never sign under another algorithm. The
  * header is written as `alg`, then `kid`, `typ` and `cty` when present, then `jwk` for an `embedKey`,
- * then the other parameters in the order given. The payload is signed exactly as given: no claim, such as `iat`, is added.
+ * then the other parameters in the order given. The payload is signed as given, plus only the claims
+ * `issuedAt`, `notBefore`, `expiresIn` and `jti` ask for, written after the payload's own members.
  *
  * @example
  * ```ts
  * const { privateKey } = await generateKeyPair({ alg: "ES256", kid: "2026-10" });
  * const token = await sign({
- *   payload: { iss: "https://issuer.example", sub: "user-1", exp: Math.floor(Date.now() / 1000) + 300 },
+ *   payload: { iss: "https://issuer.example", sub: "user-1" },
  *   key: privateKey,
  *   header: { typ: "JWT" },
+ *   issuedAt: true,
+ *   expiresIn: 300,
  * });
  * ```
  *
- * @param input - The payload, the signing key, optional header parameters, and an optional public key to embed.
+ * @param input - The payload, the signing key, optional header parameters, an optional public key to embed,
+ * and the claims to add.
  * @returns The compact token, `<header>.<payload>.<signature>` in base64url.
  * @throws TypeError, as a rejected promise, when `input` is not an object; `input.key` is not a private
  * or secret key this package created; `input.header` is not a plain object, names an `alg` other than the
@@ -130,9 +179,12 @@ const TEXT_CLAIMS = ["iss", "sub", "jti"] as const;
  * accessor) or nests deeper than 32 levels; or a registered claim has the wrong type (`exp`, `nbf`, `iat`
  * not finite numbers, or past 253402300799, the end of year 9999, as a time in milliseconds is; `iss`,
  * `sub`, `jti` not strings; `aud` neither a string nor an array of strings);
- * `input` has a member other than `payload`, `key`, `header` and `embedKey`; or `input.embedKey` is not a
- * public key this package created, `input.key` is not a private key, or the two are not one key pair bound to
- * one algorithm.
+ * `input` has a member other than `payload`, `key`, `header`, `embedKey`, `issuedAt`, `notBefore`,
+ * `expiresIn`, `jti` and `now`; `input.issuedAt` or `input.jti` is not a boolean, `input.notBefore` or
+ * `input.expiresIn` is not a whole number of seconds from 0 to 315360000, `input.now` is not a function or
+ * returns something other than milliseconds before the year 9990, or one of these options adds a claim the
+ * payload already has; or `input.embedKey` is not a public key this package created, `input.key` is not a
+ * private key, or the two are not one key pair bound to one algorithm.
  */
 export async function sign<TPayload extends object = JwtPayload>(input: SignInput<TPayload>): Promise<string> {
   if (typeof input !== "object" || input === null) {
@@ -146,7 +198,7 @@ export async function sign<TPayload extends object = JwtPayload>(input: SignInpu
   }
   const embedded = input.embedKey === undefined ? undefined : await embeddedJwk(input.embedKey, key);
   const headerJson = serializeHeader(input.header, key, embedded?.jwk);
-  const payloadJson = serializePayload(input.payload);
+  const payloadJson = serializePayload(input.payload, addedClaims(input));
   const signingInput = `${encodeBase64Url(encodeUtf8(headerJson))}.${encodeBase64Url(encodeUtf8(payloadJson))}`;
   const signedBytes = encodeUtf8(signingInput);
   const { signParams } = ALGORITHM_PARAMS[key.alg];
@@ -245,8 +297,8 @@ function serializeHeader(header: unknown, key: SigningKey, jwk: Record<string, s
   return `{${members.map(([name, value]) => `${JSON.stringify(name)}:${writeJson(value)}`).join(",")}}`;
 }
 
-/** Validates the payload and its registered claims, and writes it as JSON. */
-function serializePayload(given: unknown): string {
+/** Validates the payload and its registered claims, adds the claims `input` asks for, and writes it as JSON. */
+function serializePayload(given: unknown, claims: AddedClaims): string {
   if (!isPlainObject(given)) {
     throw new TypeError("sign: input.payload must be a plain object.");
   }
@@ -269,6 +321,14 @@ function serializePayload(given: unknown): string {
   if (Object.hasOwn(payload, "aud") && !isAudience(payload.aud)) {
     throw new TypeError("sign: input.payload.aud must be a string or an array of strings.");
   }
+  for (const [claim, value] of Object.entries(claims)) {
+    if (Object.hasOwn(payload, claim)) {
+      throw new TypeError(
+        `sign: input.${ADDED_CLAIM_OPTIONS[claim as keyof AddedClaims]} and input.payload.${claim} both set ${claim}; give one.`,
+      );
+    }
+    payload[claim] = value;
+  }
   return writeJson(payload);
 }
 
@@ -276,6 +336,87 @@ function serializePayload(given: unknown): string {
 const isAudience = (value: unknown): boolean =>
   typeof value === "string" ||
   (Array.isArray(value) && Array.prototype.every.call(value, (entry) => typeof entry === "string"));
+
+/** Claims `sign` writes for its `issuedAt`, `notBefore`, `expiresIn` and `jti` options. */
+interface AddedClaims {
+  iat?: number;
+  nbf?: number;
+  exp?: number;
+  jti?: string;
+}
+
+const ADDED_CLAIM_OPTIONS: Readonly<Record<keyof AddedClaims, string>> = {
+  iat: "issuedAt",
+  nbf: "notBefore",
+  exp: "expiresIn",
+  jti: "jti",
+};
+
+/** Validates the claim options of `input` and computes the claims they add, reading the clock at most once. */
+function addedClaims(input: Pick<SignInput, "issuedAt" | "notBefore" | "expiresIn" | "jti" | "now">): AddedClaims {
+  const { issuedAt, notBefore, expiresIn, jti, now } = input;
+  for (const [option, value] of [
+    ["issuedAt", issuedAt],
+    ["jti", jti],
+  ] as const) {
+    if (value !== undefined && typeof value !== "boolean") {
+      throw new TypeError(`sign: input.${option} must be a boolean.`);
+    }
+  }
+  if (now !== undefined && typeof now !== "function") {
+    throw new TypeError("sign: input.now must be a function.");
+  }
+  const relative = [
+    ["nbf", "notBefore", notBefore],
+    ["exp", "expiresIn", expiresIn],
+  ] as const;
+  for (const [, option, value] of relative) {
+    if (value === undefined) {
+      continue;
+    }
+    if (typeof value !== "number" || !Number.isInteger(value) || value < 0) {
+      throw new TypeError(`sign: input.${option} must be a whole, non-negative number of seconds.`);
+    }
+    if (value > MAX_RELATIVE_SECONDS) {
+      throw new TypeError(
+        `sign: input.${option} must be seconds, at most ${MAX_RELATIVE_SECONDS}, ten years; it looks like milliseconds.`,
+      );
+    }
+  }
+  const claims: AddedClaims = {};
+  if (issuedAt === true || notBefore !== undefined || expiresIn !== undefined) {
+    const seconds = currentSeconds(now ?? Date.now);
+    if (issuedAt === true) {
+      claims.iat = seconds;
+    }
+    for (const [claim, , value] of relative) {
+      if (value !== undefined) {
+        claims[claim] = seconds + value;
+      }
+    }
+  }
+  if (jti === true) {
+    claims.jti = crypto.randomUUID();
+  }
+  return claims;
+}
+
+/**
+ * Reads the clock, caller code when `input.now` is given, as whole seconds since the Unix epoch: RFC 7519
+ * allows fractions, but many verifiers read numeric dates as integers.
+ */
+function currentSeconds(now: () => number): number {
+  const time: unknown = now();
+  if (typeof time !== "number" || !Number.isFinite(time)) {
+    throw new TypeError("sign: input.now must return a finite number of milliseconds.");
+  }
+  const seconds = Math.floor(time / MILLISECONDS_PER_SECOND);
+  // Leaves room for the largest offset, so no added claim passes the numeric date bound.
+  if (seconds < 0 || seconds > MAX_NUMERIC_DATE - MAX_RELATIVE_SECONDS) {
+    throw new TypeError("sign: input.now must return milliseconds since the Unix epoch, before the year 9990.");
+  }
+  return seconds;
+}
 
 /**
  * Copies a plain object of JSON values, nested at most {@link MAX_JSON_DEPTH} deep, into prototype-less objects

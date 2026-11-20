@@ -57,7 +57,7 @@ const token = await sign({
 const result = await createVerifier({ keys: createKeySet([publicKey]) })(token);
 ```
 
-Times in claims are seconds since the Unix epoch. `sign` adds no claim of its own. A verifier requires `exp` unless `maxAge` is set, and refuses a token that names an audience when you named none.
+Times in claims are seconds since the Unix epoch. `sign` adds only the claims you ask for, such as `iat` with `issuedAt: true` and `exp` with `expiresIn: 300`. A verifier requires `exp` unless `maxAge` is set, and refuses a token that names an audience when you named none.
 
 ## What hostile input gets
 

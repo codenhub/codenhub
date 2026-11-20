@@ -52,7 +52,7 @@ const verify = createVerifier({
 const result = await verify(token);
 ```
 
-Claims that hold a time, `exp`, `nbf` and `iat`, are seconds since the Unix epoch, as RFC 7519 defines them, which is why the example divides `Date.now()` by 1000. `sign` adds no claim of its own: the payload is signed exactly as given.
+Claims that hold a time, `exp`, `nbf` and `iat`, are seconds since the Unix epoch, as RFC 7519 defines them, which is why the example divides `Date.now()` by 1000. `sign` adds a claim only when asked: `issuedAt: true` writes `iat` and `expiresIn: 300` writes `exp`, in whole seconds, as [Signing tokens](signing.md#claims-sign-can-add) shows.
 
 `createVerifier` is called once, when your module loads, and checks every option then; the function it returns is called once per token.
 
@@ -129,7 +129,7 @@ There is no function that decodes a payload without verifying it. When you need 
 ## Next steps
 
 - [Verifying tokens](verifying.md): every verifier option, the order checks run in, times and clock skew, audiences, `typ`, custom claim schemas, and `readHeader`.
-- [Signing tokens](signing.md): what `sign` writes into the header, what payloads it accepts, and why it adds no claims.
+- [Signing tokens](signing.md): what `sign` writes into the header, what payloads it accepts, and the claims it can add.
 - [Keys](keys.md): public, private and secret keys, importing JWKs and raw secrets, generating keys, and exporting them.
 - [Key sets](key-sets.md): how a key is selected, local sets, importing a JWKS, and fetching an issuer's JWKS with caching, cooldown and stale keys.
 - [Issues](errors.md): the result shape, every issue code and its `params`, and what throws instead.

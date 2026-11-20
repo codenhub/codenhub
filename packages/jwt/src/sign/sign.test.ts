@@ -502,6 +502,136 @@ describe("sign reads each value once", () => {
   });
 });
 
+describe("sign claim options", () => {
+  const now = (): number => 1_700_000_000_999;
+
+  it("should write iat, nbf and exp in whole seconds of now, after the payload's own claims", async () => {
+    const token = await sign({
+      payload: { sub: "u" },
+      key: secretKey,
+      issuedAt: true,
+      notBefore: 10,
+      expiresIn: 300,
+      now,
+    });
+
+    expect(payloadTextOf(token)).toBe('{"sub":"u","iat":1700000000,"nbf":1700000010,"exp":1700000300}');
+  });
+
+  it("should read the clock once, and not at all without a time option", async () => {
+    let calls = 0;
+    const counting = (): number => {
+      calls += 1;
+      return 1_700_000_000_000;
+    };
+
+    await sign({ payload: {}, key: secretKey, now: counting, jti: true });
+    await sign({ payload: {}, key: secretKey, issuedAt: true, expiresIn: 1, now: counting });
+
+    expect(calls).toBe(1);
+  });
+
+  it("should default the clock to Date.now", async () => {
+    const before = Math.floor(Date.now() / 1000);
+
+    const token = await sign({ payload: {}, key: secretKey, issuedAt: true });
+
+    const { iat } = JSON.parse(payloadTextOf(token)) as { iat: number };
+    expect(iat).toBeGreaterThanOrEqual(before);
+    expect(iat).toBeLessThanOrEqual(Math.floor(Date.now() / 1000));
+  });
+
+  it("should write a random UUID as jti", async () => {
+    const jtiOf = async (): Promise<string> =>
+      (JSON.parse(payloadTextOf(await sign({ payload: {}, key: secretKey, jti: true }))) as { jti: string }).jti;
+
+    const first = await jtiOf();
+
+    expect(first).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
+    expect(await jtiOf()).not.toBe(first);
+  });
+
+  it("should add nothing when issuedAt and jti are false", async () => {
+    expect(payloadTextOf(await sign({ payload: {}, key: secretKey, issuedAt: false, jti: false }))).toBe("{}");
+  });
+
+  it("should sign a token the verifier accepts", async () => {
+    const token = await sign({ payload: { sub: "u" }, key: secretKey, issuedAt: true, expiresIn: 60 });
+
+    const verified = await createVerifier({ keys: createKeySet([secretKey]), maxAge: 60 })(token);
+
+    expect(verified.ok).toBe(true);
+  });
+
+  it.each([
+    ["issuedAt", "iat", { issuedAt: true }],
+    ["notBefore", "nbf", { notBefore: 0 }],
+    ["expiresIn", "exp", { expiresIn: 60 }],
+    ["jti", "jti", { jti: true }],
+  ] as const)("should throw when %s and the payload both set %s", async (option, claim, options) => {
+    const payload = { [claim]: claim === "jti" ? "id-1" : 1 };
+
+    await expect(sign({ payload, key: secretKey, ...options, now })).rejects.toThrow(
+      new TypeError(`sign: input.${option} and input.payload.${claim} both set ${claim}; give one.`),
+    );
+  });
+
+  it.each(["notBefore", "expiresIn"])("should throw when %s is in milliseconds", async (option) => {
+    await expect(sign({ payload: {}, key: secretKey, [option]: 604_800_000, now })).rejects.toThrow(
+      new TypeError(`sign: input.${option} must be seconds, at most 315360000, ten years; it looks like milliseconds.`),
+    );
+  });
+
+  it.each(["notBefore", "expiresIn"])("should accept %s of 0 and of ten years", async (option) => {
+    await expect(sign({ payload: {}, key: secretKey, [option]: 0, now })).resolves.toMatch(/\./);
+    await expect(sign({ payload: {}, key: secretKey, [option]: 315_360_000, now })).resolves.toMatch(/\./);
+  });
+
+  it.each([
+    ["a fraction", 1.5],
+    ["negative", -1],
+    ["a string", "300"],
+    ["NaN", Number.NaN],
+  ])("should throw when expiresIn is %s", async (_, expiresIn) => {
+    await expect(sign({ payload: {}, key: secretKey, expiresIn: expiresIn as number, now })).rejects.toThrow(
+      new TypeError("sign: input.expiresIn must be a whole, non-negative number of seconds."),
+    );
+  });
+
+  it.each(["issuedAt", "jti"])("should throw when %s is not a boolean", async (option) => {
+    await expect(sign({ payload: {}, key: secretKey, [option]: 1 })).rejects.toThrow(
+      new TypeError(`sign: input.${option} must be a boolean.`),
+    );
+  });
+
+  it("should throw when now is not a function", async () => {
+    await expect(sign({ payload: {}, key: secretKey, now: 1 as never })).rejects.toThrow(
+      new TypeError("sign: input.now must be a function."),
+    );
+  });
+
+  it.each([
+    ["NaN", Number.NaN, "sign: input.now must return a finite number of milliseconds."],
+    ["a string", "0", "sign: input.now must return a finite number of milliseconds."],
+    ["negative", -1, "sign: input.now must return milliseconds since the Unix epoch, before the year 9990."],
+    [
+      "microseconds",
+      1_700_000_000_000_000,
+      "sign: input.now must return milliseconds since the Unix epoch, before the year 9990.",
+    ],
+  ])("should throw when now returns %s", async (_, time, message) => {
+    await expect(sign({ payload: {}, key: secretKey, issuedAt: true, now: () => time as number })).rejects.toThrow(
+      new TypeError(message),
+    );
+  });
+
+  it("should still refuse an unknown option", async () => {
+    await expect(sign({ payload: {}, key: secretKey, expiresAt: 1 } as never)).rejects.toThrow(
+      new TypeError("sign: input.expiresAt is not an option."),
+    );
+  });
+});
+
 describe("sign header types", () => {
   // Each header below is a compile error that `pnpm typecheck` checks; at runtime each one still throws.
   it("should refuse each refused member at compile time", async () => {
