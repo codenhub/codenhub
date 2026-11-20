@@ -26,16 +26,16 @@ Out of scope, and documented rather than defended:
 
 ## Module layout
 
-| Folder      | Owns                                                                                                          |
-| ----------- | ------------------------------------------------------------------------------------------------------------- |
-| `core/`     | The public type contract (`types.ts`), limits, and the internal `ok`/`fail` helpers that deep-freeze results. |
-| `encoding/` | Strict base64url, the strict JSON object parser, and UTF-8 helpers.                                           |
-| `jws/`      | Compact parsing (`checkSegments`, `parseCompact`, `parsePayload`) and the public `readHeader`.                |
-| `keys/`     | The algorithm table, the key registry, JWK and PEM checks, import, generation, export and thumbprints.        |
-| `keysets/`  | Selection, local key sets, JWKS import, and the remote key set.                                               |
-| `sign/`     | `sign`.                                                                                                       |
-| `verify/`   | Option resolution, claim checks, and `createVerifier`.                                                        |
-| `interop/`  | A local copy of the Standard Schema v1 types, so the package has no dependency for them.                      |
+| Folder      | Owns                                                                                                                                                |
+| ----------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `core/`     | The public type contract (`types.ts`), limits, and the internal `ok`/`fail` helpers that deep-freeze results.                                       |
+| `encoding/` | Strict base64url, the strict JSON object parser, and UTF-8 helpers.                                                                                 |
+| `jws/`      | Compact parsing (`checkSegments`, `parseCompact`, `parsePayload`), the public `readHeader`, and `parseJws`, which reads a JWS in any serialization. |
+| `keys/`     | The algorithm table, the key registry, JWK and PEM checks, import, generation, export and thumbprints.                                              |
+| `keysets/`  | Selection, local key sets, JWKS import, and the remote key set.                                                                                     |
+| `sign/`     | `sign`, and `signJws` and `signGeneralJws` for a JWS of any payload.                                                                                |
+| `verify/`   | Option resolution, claim checks, `createVerifier`, and `createJwsVerifier`.                                                                         |
+| `interop/`  | A local copy of the Standard Schema v1 types, so the package has no dependency for them.                                                            |
 
 ## Algorithm binding
 
@@ -88,7 +88,7 @@ Rejected: `JSON.parse` with a reviver. A reviver sees the object after duplicate
 
 ### Headers
 
-`jws/compact.ts` checks, in order: the value is a string; its length is at most `maxLength`, before anything else; exactly three segments, each non-empty and canonical base64url; a header that parses under the rules above; a supported `alg`; no `crit`; no `b64`; and text `kid`, `typ` and `cty`. Members are read with `Object.hasOwn`, so a header can never pick up a value from `Object.prototype`. The payload segment's characters are checked here, but it is not decoded until the signature verifies.
+`jws/compact.ts` checks a JWT, in order: the value is a string; its length is at most `maxLength`, before anything else; exactly three segments, each non-empty and canonical base64url; a header that parses under the rules above; a supported `alg`; no `crit`; no `b64`; and text `kid`, `typ` and `cty`. Members are read with `Object.hasOwn`, so a header can never pick up a value from `Object.prototype`. The payload segment's characters are checked here, but it is not decoded until the signature verifies.
 
 `readHeader` runs exactly this function, so it can never accept a token a verifier would reject before key selection.
 
@@ -112,6 +112,17 @@ Time is `now() / 1000`, fractional seconds, compared with the numeric date claim
 `typ` is normalized for comparison per RFC 7515 §4.1.9: lowercased, with a leading `application/` removed, on both the option (once, at creation) and the header.
 
 The verified result is `ok({ header, payload, key })`, deep-frozen; header and payload are already frozen by the parser.
+
+## JWS verification flow
+
+`createJwsVerifier` (`verify/create-jws-verifier.ts`, decision 62) shares key selection, the key-set wrapper and the reporting of key-set errors with `createVerifier`, and the `alg` and text-member checks with `jws/compact.ts`. Its options are checked once; each call's options are checked when it is made. For each JWS:
+
+1. `parseJws` (`jws/parse-jws.ts`): the type, the length cap and well-formedness; then the compact form, or, when the text starts with `{` after JSON whitespace, the JSON form, parsed whole by the strict parser. A general JWS's `signatures` is counted before any entry is read. Every signature's structure and headers are checked here, and any issue fails the whole JWS: `alg`, `crit` and `b64` outside the protected header, a member in both headers, a `crit` that breaks RFC 7515 §4.1.11, a `b64` that is not a boolean, is missing from `crit`, or differs between signatures, and the payload's characters for its `b64`.
+2. The payload part of the signing input, from the JWS or from the detached payload the call gives, once for every signature.
+3. Each signature in order: `algIssue`, the `crit` names the verifier understands, `selectKey` with the merged headers, the key's `alg`, the signature's length, and `crypto.subtle.verify`. The first that verifies ends the loop; the others' issues are collected, prefixed with `["signatures", index]` in the general serialization.
+4. The payload's bytes, decoded only now, a new array per call.
+
+Signatures are checked one at a time rather than together, so a general JWS whose first signature verifies costs one key selection.
 
 ## Embedded keys and thumbprints
 
@@ -192,6 +203,7 @@ The seed is read when the key set is created and imported at the first `select`.
 | ----------------------------- | -------------------------- | ---------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Token length                  | 8192 characters            | `maxLength`, 1 to 65536            | Large enough for ID tokens with many claims; the ceiling stops a typo from lifting the bound.                                                                                                                                             |
 | JSON depth                    | 32                         | no                                 | JWT claims are shallow; 32 leaves room for nested custom claims. The parser keeps open containers on its own stack, so depth never threatens the call stack; the limit bounds what consumers walking the payload recursively must handle. |
+| Signatures in a general JWS   | 8                          | no                                 | Each costs a key selection and a signature check; a JWS signed for a few recipients needs a handful.                                                                                                                                      |
 | Keys in a JWKS                | 100                        | no                                 | Issuers publish a handful; each key costs an import.                                                                                                                                                                                      |
 | RSA modulus                   | 2048 to 8192 bit           | no                                 | NIST minimum below; above, verification cost grows with no security need.                                                                                                                                                                 |
 | HMAC secret                   | 32, 48 or 64 bytes minimum | no                                 | RFC 7518 §3.2 requires a key at least as long as the hash output of `HS256`, `HS384` or `HS512`.                                                                                                                                          |

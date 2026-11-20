@@ -11,7 +11,7 @@ It is written for the side of the exchange that receives tokens it did not make.
 
 ## A token in one paragraph
 
-A JSON Web Token (JWT, RFC 7519) signed as a compact JWS, the only kind this package handles, is three base64url-encoded parts joined by dots: `<header>.<payload>.<signature>`. The **header** is a JSON object saying how the token was signed, most importantly `alg`, the algorithm, and often `kid`, the identifier of the key. The **payload** is a JSON object of **claims**: statements such as who issued the token (`iss`), who it is about (`sub`), who it is for (`aud`) and when it expires (`exp`). The **signature** covers the first two parts, so a token whose header or payload was changed no longer verifies. This three-part form is the JWS compact serialization (RFC 7515); it is the only one this package reads and writes.
+A JSON Web Token (JWT, RFC 7519) signed as a compact JWS is three base64url-encoded parts joined by dots: `<header>.<payload>.<signature>`. The **header** is a JSON object saying how the token was signed, most importantly `alg`, the algorithm, and often `kid`, the identifier of the key. The **payload** is a JSON object of **claims**: statements such as who issued the token (`iss`), who it is about (`sub`), who it is for (`aud`) and when it expires (`exp`). The **signature** covers the first two parts, so a token whose header or payload was changed no longer verifies. This three-part form is the JWS compact serialization (RFC 7515), the only one `sign` and `createVerifier` read and write. To sign other payloads, in the JSON serialization or unencoded, see [JWS](jws.md).
 
 Base64url is an encoding, not encryption: anyone holding a token can read its payload. A signature proves who made the token and that it was not changed, nothing more.
 
@@ -133,5 +133,6 @@ There is no function that decodes a payload without verifying it. When you need 
 - [Signing tokens](signing.md): what `sign` writes into the header, what payloads it accepts, and the claims it can add.
 - [Keys](keys.md): public, private and secret keys, importing JWKs and raw secrets, generating keys, and exporting them.
 - [Key sets](key-sets.md): how a key is selected, local sets, importing a JWKS, and fetching an issuer's JWKS with caching, cooldown and stale keys.
+- [JWS](jws.md): signing and verifying any payload, in the compact or JSON serialization, with unencoded and detached payloads.
 - [Issues](errors.md): the result shape, every issue code and its `params`, and what throws instead.
 - [API reference](reference/index.md): every export with its signature, generated from the TSDoc.

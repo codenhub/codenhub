@@ -110,6 +110,7 @@ fetches; // 1
 - [Signing tokens](docs/signing.md)
 - [Keys](docs/keys.md)
 - [Key sets](docs/key-sets.md)
+- [JWS](docs/jws.md)
 - [Issues](docs/errors.md)
 - [API reference](docs/reference/index.md)
 - [Changelog](docs/changelog/index.md)
@@ -123,7 +124,7 @@ fetches; // 1
 
 ## Notes
 
-- **Only compact JWS.** No encrypted tokens (JWE), no JWS JSON serialization, no unencoded payloads (`b64`), and no `crit` header extensions; tokens using them are rejected.
+- **Tokens are compact JWS.** No encrypted tokens (JWE), and a JWT with the JSON serialization, an unencoded payload (`b64`) or a `crit` header extension is rejected. For other payloads, `signJws`, `signGeneralJws` and `createJwsVerifier` handle the JSON serialization and unencoded and detached payloads; [JWS](docs/jws.md) explains.
 - **Claim checks are generic.** Issuer, audience, `typ`, times, maximum age and required claims are checked here. Protocol rules such as OpenID Connect's `nonce` or `azp` are left to the code above; `tokenHash` computes the `at_hash` and `c_hash` it compares.
 - **Clock tolerance defaults to 0 seconds**, and is capped at 300. Set `clockTolerance` when the issuer's clock may differ from yours. `nbf` and `iat` always allow at least 60 seconds, so a token checked the moment it is issued passes on a clock slightly behind the issuer's.
 - **One verifier for several issuers needs issuer-bound keys.** Pass `issuer` to each issuer's key set, so one issuer's key cannot verify a token claiming another, and route tokens to those sets with a function as `keys`; [Key sets](docs/key-sets.md#keys-of-several-issuers) explains.
