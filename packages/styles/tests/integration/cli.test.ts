@@ -487,6 +487,19 @@ describe("failures", () => {
     );
   });
 
+  // A value left out before the next option was told to be written as `--content=-o`.
+  it.each([
+    [["-c", "-o", "out.css"], "--content"],
+    [["-c", "a.html", "-o", "--no-minify"], "--output"],
+    [["--content", "--output=out.css"], "--content"],
+    [["-c", "a.html", "--output", "--aesthetic", "glass"], "--output"],
+    [["-c", "a.html", "-o", "--help"], "--output"],
+  ])("says only that a value is missing when %j gives the next option instead", async (args, name) => {
+    expect(await failureOf("build", ...args)).toBe(
+      `chs: option "${name}" is missing its value; run "chs --help" for the options.`,
+    );
+  });
+
   it("says a --content folder is a folder and shows a glob for its files", async () => {
     expect(await failureOf("build", "-c", "app/views", "-o", "app.css")).toBe(
       `chs: --content "app/views" is a folder in ${project}, not a file; name the files in it, as in "app/views/**/*".`,

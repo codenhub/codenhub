@@ -137,20 +137,32 @@ function parseCommandLine(argv: readonly string[]): BuildOptions | "help" | "ver
   };
 }
 
+const OPTIONS = {
+  content: { type: "string", short: "c", multiple: true },
+  output: { type: "string", short: "o" },
+  aesthetic: { type: "string", multiple: true },
+  "no-minify": { type: "boolean" },
+  help: { type: "boolean" },
+  version: { type: "boolean" },
+} as const;
+
+/* One of this command's own options, as `-o`, `--output`, or `--output=a.css`:
+   after an option that takes a value, it is a value left out, not one that
+   starts with a dash. */
+function isOwnOption(arg: string): boolean {
+  return Object.entries(OPTIONS).some(
+    ([name, option]) =>
+      arg === `--${name}` || arg.startsWith(`--${name}=`) || ("short" in option && arg === `-${option.short}`),
+  );
+}
+
 function parseFlags(argv: readonly string[]) {
   try {
     return parseArgs({
       args: [...argv],
       allowPositionals: true,
       tokens: true,
-      options: {
-        content: { type: "string", short: "c", multiple: true },
-        output: { type: "string", short: "o" },
-        aesthetic: { type: "string", multiple: true },
-        "no-minify": { type: "boolean" },
-        help: { type: "boolean" },
-        version: { type: "boolean" },
-      },
+      options: OPTIONS,
     });
   } catch (error) {
     // parseArgs words its errors for programmers ("To specify a positional argument starting with a '-'..."), so keep only the part naming the flag.
@@ -170,6 +182,9 @@ function parseFlags(argv: readonly string[]) {
       const at = argv.findIndex((arg, index) => arg === flag && argv[index + 1]?.startsWith("-"));
       const value = at === -1 ? "<value>" : argv[at + 1];
 
+      if (value !== undefined && isOwnOption(value)) {
+        throw new Error(`option "${name}" is missing its value; run "${BIN} --help" for the options.`);
+      }
       throw new Error(
         `option "${name}" is missing its value; to give it a value that starts with a dash, write ${name}=${value}.`,
       );
