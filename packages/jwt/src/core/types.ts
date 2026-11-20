@@ -280,11 +280,40 @@ export interface KeySet {
  * this is called, one whose `iss` is not a string with `invalid_claim`, and one the verifier's `issuer` option
  * does not accept with `wrong_issuer`.
  * @param header - The token's header, as {@link readHeader} returns it.
- * @returns The issuer's key set, or `undefined` for an issuer you do not accept, which fails the token with
- * `wrong_issuer`. Throwing, rejecting or returning anything else fails it with `key_fetch_failed` and
- * `{ reason: "key_set_error" }`.
+ * @returns The issuer's key set; a {@link KeySetRoute}, to also check that issuer's tokens for their own
+ * audience or `typ`; or `undefined` for an issuer you do not accept, which fails the token with
+ * `wrong_issuer`. Throwing, rejecting or returning anything else, an invalid route included, fails it with
+ * `key_fetch_failed` and `{ reason: "key_set_error" }`, and {@link VerifierOptions.onKeySetError} gets the
+ * error.
  */
-export type KeySetResolver = (issuer: string, header: JwtHeader) => KeySet | undefined | Promise<KeySet | undefined>;
+export type KeySetResolver = (
+  issuer: string,
+  header: JwtHeader,
+) => KeySet | KeySetRoute | undefined | Promise<KeySet | KeySetRoute | undefined>;
+
+/**
+ * What a {@link KeySetResolver} returns for an issuer whose tokens are checked differently from the verifier's
+ * defaults, such as a tenant whose tokens name its own audience:
+ * `{ keys: tenant.keySet, audience: tenant.clientId }`.
+ */
+export interface KeySetRoute {
+  /** The issuer's key set. */
+  readonly keys: KeySet;
+  /**
+   * The audiences this issuer's tokens must name, in place of {@link VerifierOptions.audience}, with the same
+   * values allowed.
+   *
+   * @defaultValue the verifier's `audience`
+   */
+  readonly audience?: string | readonly string[] | false;
+  /**
+   * The `typ` values this issuer's tokens must carry, in place of {@link VerifierOptions.type}, with the same
+   * values allowed.
+   *
+   * @defaultValue the verifier's `type`
+   */
+  readonly type?: string | readonly (string | null)[];
+}
 
 /** A key set over a fixed list of keys, from {@link createKeySet} or {@link importKeySet}. Frozen. */
 export interface LocalKeySet extends KeySet {
@@ -386,6 +415,14 @@ export interface VerifierOptions<TSchema extends StandardSchemaV1 | undefined = 
    * @defaultValue `Date.now`
    */
   readonly now?: () => number;
+  /**
+   * Called with what went wrong when a key set or a {@link KeySetResolver} fails with `key_set_error`: the
+   * value it threw or rejected with, or a `TypeError` naming what it returned instead of a result, a key set
+   * or a route. The token's issue never carries it, since it may hold anything; this hands it to your logs.
+   * Not called for a failure the key set returns itself, such as `unknown_kid`. Its errors, thrown or
+   * rejected, are ignored.
+   */
+  readonly onKeySetError?: (error: unknown) => void;
 }
 
 /** The payload type a verifier with the given schema returns. */

@@ -20,6 +20,7 @@ export type {
   JwtResult,
   KeySet,
   KeySetResolver,
+  KeySetRoute,
   LocalKeySet,
   PrivateKey,
   PublicKey,

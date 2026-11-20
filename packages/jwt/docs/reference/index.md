@@ -1212,6 +1212,46 @@ Selects the single key for a header. With a `kid`, only keys with that `kid` are
 
 **Returns** — The selected key, or a failure with `unknown_kid`, `alg_mismatch`, `no_matching_key`, `ambiguous_key`, or `key_fetch_failed`. Never throws for any header.
 
+### KeySetRoute
+
+```ts
+export interface KeySetRoute {
+    readonly keys: KeySet;
+    readonly audience?: string | readonly string[] | false;
+    readonly type?: string | readonly (string | null)[];
+}
+```
+
+What a [`KeySetResolver`](#keysetresolver) returns for an issuer whose tokens are checked differently from the verifier's defaults, such as a tenant whose tokens name its own audience: `{ keys: tenant.keySet, audience: tenant.clientId }`.
+
+#### KeySetRoute › audience
+
+```ts
+readonly audience?: string | readonly string[] | false;
+```
+
+The audiences this issuer's tokens must name, in place of `VerifierOptions.audience`, with the same values allowed.
+
+**Default** — the verifier's `audience`
+
+#### KeySetRoute › keys
+
+```ts
+readonly keys: KeySet;
+```
+
+The issuer's key set.
+
+#### KeySetRoute › type
+
+```ts
+readonly type?: string | readonly (string | null)[];
+```
+
+The `typ` values this issuer's tokens must carry, in place of `VerifierOptions.type`, with the same values allowed.
+
+**Default** — the verifier's `type`
+
 ### LocalKeySet
 
 ```ts
@@ -1989,6 +2029,7 @@ export interface VerifierOptions<TSchema extends StandardSchemaV1 | undefined = 
     readonly requiredClaims?: readonly string[];
     readonly claims?: TSchema;
     readonly now?: () => number;
+    readonly onKeySetError?: (error: unknown) => void;
 }
 ```
 
@@ -2078,6 +2119,14 @@ Current time in milliseconds since the Unix epoch, for tests. It must return a f
 
 **Default** — `Date.now`
 
+#### VerifierOptions › onKeySetError
+
+```ts
+readonly onKeySetError?: (error: unknown) => void;
+```
+
+Called with what went wrong when a key set or a [`KeySetResolver`](#keysetresolver) fails with `key_set_error`: the value it threw or rejected with, or a `TypeError` naming what it returned instead of a result, a key set or a route. The token's issue never carries it, since it may hold anything; this hands it to your logs. Not called for a failure the key set returns itself, such as `unknown_kid`. Its errors, thrown or rejected, are ignored.
+
 #### VerifierOptions › requiredClaims
 
 ```ts
@@ -2165,7 +2214,7 @@ What every operation on untrusted input returns instead of throwing. The shape m
 ### KeySetResolver
 
 ```ts
-export type KeySetResolver = (issuer: string, header: JwtHeader) => KeySet | undefined | Promise<KeySet | undefined>;
+export type KeySetResolver = (issuer: string, header: JwtHeader) => KeySet | KeySetRoute | undefined | Promise<KeySet | KeySetRoute | undefined>;
 ```
 
 Chooses the key set for a token by the issuer it claims, for a verifier that accepts tokens from several issuers or several clients: `createVerifier({ keys: (issuer) => keySets.get(issuer) })`.

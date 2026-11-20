@@ -910,7 +910,18 @@ const tenants = new Map<string, KeySet>(["https://a.issuer.example", "https://b.
 const verify = createVerifier({ keys: (issuer) => tenants.get(issuer), audience: "https://api.example" });
 ```
 
-The verifier reads `iss` from the payload before the signature is checked, only to route the token: a token without `iss` is `missing_claim` with `{ claim: "iss" }`, one whose `iss` is not a string is `invalid_claim`, and an `iss` the function returns `undefined` for is `wrong_issuer`. When the verifier also has an `issuer` option, an `iss` it does not list is `wrong_issuer` before the function is called. The function may be `async`. If it throws, rejects, or returns something other than a key set, the token fails with `key_fetch_failed` and `{ reason: "key_set_error" }`.
+The verifier reads `iss` from the payload before the signature is checked, only to route the token: a token without `iss` is `missing_claim` with `{ claim: "iss" }`, one whose `iss` is not a string is `invalid_claim`, and an `iss` the function returns `undefined` for is `wrong_issuer`. When the verifier also has an `issuer` option, an `iss` it does not list is `wrong_issuer` before the function is called. The function may be `async`. If it throws, rejects, or returns something other than a key set or a route, the token fails with `key_fetch_failed` and `{ reason: "key_set_error" }`, and `onKeySetError` gets the error.
+
+When issuers' tokens name different audiences or `typ` values, as tenants with their own client IDs do, return a route instead of the key set: `{ keys, audience, type }`. A route's `audience` and `type` take the same values as the verifier options and replace them for that issuer's tokens; one it leaves out keeps the verifier's. An invalid route is `key_set_error`, like any other mistake in the function.
+
+```ts
+const verify = createVerifier({
+  keys: (issuer) => {
+    const tenant = tenantsByIssuer.get(issuer);
+    return tenant && { keys: tenant.keySet, audience: tenant.clientId };
+  },
+});
+```
 
 The `iss` is chosen by whoever sent the token. Look it up among issuers you already hold, as the `Map` above does, and never build a JWKS URL or a database query from it without checking it against a list first: otherwise anyone can make your server fetch from an address they pick. Still give each set its `issuer`: the function picks the set by a claim the signature has not yet covered, and the binding is what then refuses a token whose key belongs to another issuer.
 
@@ -1028,6 +1039,12 @@ Each tenant's set has its `issuer`, so tenant A's key verifies only tokens whose
 
 A verifier treats a custom key set as code that may be wrong. If `select` throws, rejects, or returns anything other than a result holding a public or secret key this package created, the verifier fails with `key_fetch_failed` and `{ reason: "key_set_error" }` instead of throwing or using what it returned. A failed result is passed through as returned, so keep its issues free of token values as this package's own are.
 
+The issue never carries the error, which may hold anything. To log it, pass `onKeySetError` to `createVerifier`: it is called with what `select` or the `keys` function threw or rejected with, or with a `TypeError` naming what it returned instead. It is not called for a failure the key set returns itself, such as `unknown_kid`, and its own errors are ignored.
+
+```ts
+const verify = createVerifier({ keys: tenantKeys, onKeySetError: (error) => logger.error("key set failed", error) });
+```
+
 Keys are recognized only by the copy of `@codenhub/jwt` that created them. If your program loads two copies, `createKeySet` throws the `TypeError` meant for look-alikes ("… not a look-alike object") for a key from the other copy, and when a verifier's key set, one from the other copy or a custom one, selects such a key, the token fails with `key_fetch_failed` and `{ reason: "key_set_error" }`. Deduplicate the install so one copy is loaded, and if you publish a library built on this package, declare it as a `peerDependency`. [Keys](docs/keys.md) explains why.
 
 <!-- Source: docs/errors.md -->
@@ -1086,14 +1103,14 @@ There are no messages: a code is the whole answer. Map codes to text yourself if
 
 ### Key selection and signature
 
-| Code               | Path                | Params                                  | Meaning                                                                                                                                                                                              |
-| ------------------ | ------------------- | --------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `unknown_kid`      | `["header", "kid"]` |                                         | No key in the set has the header's `kid`. A remote set refetches first, outside its cooldown.                                                                                                        |
-| `no_matching_key`  | none                |                                         | The header has no `kid`, and no key in the set has its `alg`.                                                                                                                                        |
-| `ambiguous_key`    | none                |                                         | More than one key fits the header. Keys are never tried in turn.                                                                                                                                     |
-| `alg_mismatch`     | `["header", "alg"]` |                                         | Keys with the header's `kid` exist, but none is bound to its `alg`; or a custom key set or resolver returned a key bound to another `alg`.                                                           |
-| `bad_signature`    | none                |                                         | The signature has the wrong length for the key, or does not verify.                                                                                                                                  |
-| `key_fetch_failed` | none                | `{ reason }`, and `status` for `status` | A remote key set could not get its JWKS: `reason` is `timeout`, `network`, `status`, `too_large` or `invalid_response`. `key_set_error` means a custom key set threw or returned something unusable. |
+| Code               | Path                | Params                                  | Meaning                                                                                                                                                                                                                                                 |
+| ------------------ | ------------------- | --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `unknown_kid`      | `["header", "kid"]` |                                         | No key in the set has the header's `kid`. A remote set refetches first, outside its cooldown.                                                                                                                                                           |
+| `no_matching_key`  | none                |                                         | The header has no `kid`, and no key in the set has its `alg`.                                                                                                                                                                                           |
+| `ambiguous_key`    | none                |                                         | More than one key fits the header. Keys are never tried in turn.                                                                                                                                                                                        |
+| `alg_mismatch`     | `["header", "alg"]` |                                         | Keys with the header's `kid` exist, but none is bound to its `alg`; or a custom key set or resolver returned a key bound to another `alg`.                                                                                                              |
+| `bad_signature`    | none                |                                         | The signature has the wrong length for the key, or does not verify.                                                                                                                                                                                     |
+| `key_fetch_failed` | none                | `{ reason }`, and `status` for `status` | A remote key set could not get its JWKS: `reason` is `timeout`, `network`, `status`, `too_large` or `invalid_response`. `key_set_error` means a custom key set or `keys` function threw or returned something unusable; `onKeySetError` gets the error. |
 
 ### Claims
 
@@ -1147,6 +1164,8 @@ Three things propagate rather than becoming a result: an exception thrown by you
 
 ## Added
 
+- `createVerifier({ onKeySetError })`, called with the error behind a `key_set_error`: what a custom key set or `keys` function threw, or a `TypeError` naming what it returned. The issue carries nothing from it, so before this the cause was lost.
+- A `keys` function may return a route, `{ keys, audience, type }`, to check an issuer's tokens for its own audience or `typ` in place of the verifier's. The new `KeySetRoute` type describes it.
 - `generateKeyPair({ alg, kid: "thumbprint" })` names both keys by the public key's RFC 7638 thumbprint, a `kid` derived from the key alone. [Keys](docs/keys.md#thumbprints) covers it.
 - `ES384`, `ES512`, `RS384`, `RS512`, `PS384`, `PS512`, `HS384` and `HS512`, for generating, importing, signing and verifying. An HMAC secret must be at least as long as its hash: 48 bytes for `HS384` and 64 for `HS512`. The [algorithm table](docs/index.md#keys-are-bound-to-one-algorithm) lists them all. From this release, an algorithm may be added in a minor version, which widens `JwsAlgorithm`, `AsymmetricAlgorithm`, `SymmetricAlgorithm` and the JWK and header types: give a `switch` over an `alg` a default branch.
 - PEM import: `importPublicKey` takes a `PUBLIC KEY` block (SPKI), and `importPrivateKey` and `importKeyPair` a `PRIVATE KEY` block (PKCS#8), with a new `kid` option to name the key. Every JWK check runs on the key read. Whitespace inside the block is ignored, so a PEM flattened onto one line, as environment variables often hold it, imports too, and so does one whose line breaks are written as `\n` escapes. [Keys](docs/keys.md#importing-a-pem-key) covers it.
