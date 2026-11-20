@@ -303,12 +303,12 @@ describe("createJwsVerifier JSON structure", () => {
   });
 
   it.each([
-    ["alg", { alg: "HS256" }],
-    ["kid", { kid: "s" }],
-  ])("should refuse %s in both headers", async (name, header) => {
+    ["alg", { alg: "HS256" }, ["header", "alg"]],
+    ["kid", { kid: "s" }, ["header"]],
+  ])("should refuse %s in both headers, naming no member it does not define", async (_, header, path) => {
     const jws = await forgeFlattened(secret, '{"alg":"HS256","kid":"s"}', "YQ", { header });
 
-    expect(await secretVerifier()(jws)).toEqual(failure({ code: "malformed", path: ["header", name] }));
+    expect(await secretVerifier()(jws)).toEqual(failure({ code: "malformed", path }));
   });
 
   it.each([

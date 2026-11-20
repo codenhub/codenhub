@@ -165,7 +165,7 @@ describe("signJws flattened", () => {
         header: { typ: "a" },
         unprotectedHeader: { typ: "b" },
       }),
-    ).rejects.toThrow("signJws: input.unprotectedHeader.typ is in the protected header too.");
+    ).rejects.toThrow("signJws: input.unprotectedHeader shares a member with input.header.");
   });
 
   it("should refuse a header kid alongside an unprotected kid", async () => {

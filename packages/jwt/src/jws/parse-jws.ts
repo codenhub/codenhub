@@ -205,20 +205,22 @@ function readSignature(entry: unknown, prefix: readonly JwtPathSegment[]): JwtRe
 }
 
 /**
- * Checks a signature's headers, returning the first issue found, each `malformed` at `["header", name]`:
- * `alg`, `crit` or `b64` outside the protected header; a member in both headers; a `crit` that is not a
- * non-empty list of distinct names, each present in the protected header and none defined by RFC 7515 or
- * RFC 7518 (RFC 7515 §4.1.11); a `b64` that is not a boolean or that `crit` does not list (RFC 7797 §6); or a
- * `kid`, `typ` or `cty` that is not text. Whether the algorithm and the `crit` names are understood is left
- * to the verifier.
+ * Checks a signature's headers, returning the first issue found, each `malformed`: at `["header", name]`,
+ * `alg`, `crit` or `b64` outside the protected header; at `["header"]`, a member in both headers, whose name
+ * the issue does not give, since it is input; and at `["header", name]`, a `crit` that is not a non-empty
+ * list of distinct names, each present in the protected header and none defined by RFC 7515 or RFC 7518
+ * (RFC 7515 §4.1.11), a `b64` that is not a boolean or that `crit` does not list (RFC 7797 §6), or a `kid`,
+ * `typ` or `cty` that is not text. Whether the algorithm and the `crit` names are understood is left to the
+ * verifier.
  */
 function headerIssue(protectedHeader: JsonObject, unprotectedHeader: JsonObject | undefined): JwtIssue | undefined {
   if (unprotectedHeader !== undefined) {
-    const misplaced =
-      PROTECTED_ONLY.find((name) => Object.hasOwn(unprotectedHeader, name)) ??
-      Object.keys(unprotectedHeader).find((name) => Object.hasOwn(protectedHeader, name));
-    if (misplaced !== undefined) {
-      return malformed(["header", misplaced]);
+    const protectedOnly = PROTECTED_ONLY.find((name) => Object.hasOwn(unprotectedHeader, name));
+    if (protectedOnly !== undefined) {
+      return malformed(["header", protectedOnly]);
+    }
+    if (Object.keys(unprotectedHeader).some((name) => Object.hasOwn(protectedHeader, name))) {
+      return malformed(["header"]);
     }
   }
   const crit = ownMember(protectedHeader, "crit");

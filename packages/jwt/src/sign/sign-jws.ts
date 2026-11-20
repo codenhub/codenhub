@@ -336,9 +336,9 @@ async function signEntry(
   }
   const members = [...leading, ...critMembers, ...rest.filter(([name]) => name !== "crit")];
   if (unprotected !== undefined) {
-    const repeated = members.find(([name]) => Object.hasOwn(unprotected, name));
-    if (repeated !== undefined) {
-      throw new TypeError(`${caller}: ${label}.unprotectedHeader.${repeated[0]} is in the protected header too.`);
+    // The message names no member: a header built from data could carry one in its name.
+    if (members.some(([name]) => Object.hasOwn(unprotected, name))) {
+      throw new TypeError(`${caller}: ${label}.unprotectedHeader shares a member with ${label}.header.`);
     }
   }
   const protectedSegment = encodeBase64Url(encodeUtf8(writeMembers(members)));
