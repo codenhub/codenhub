@@ -236,6 +236,7 @@ const privateJwk = await exportPrivateJwk(privateKey); // store it as you would 
 
 - `exportPublicJwk` exports any public key, imported or generated, with its public members only. Publish its output in your JWKS as `{ keys: [publicJwk] }`. For a private key, export `getPublicKey(privateKey)`; passing the private key itself throws a `TypeError` that says so.
 - `exportPrivateJwk` exports a private key's public and private members, and `exportSecretJwk` a secret as an `oct` JWK. Both throw a `TypeError` for a key created without `extractable: true`.
+- `exportPublicPem` exports a public key as an SPKI `PUBLIC KEY` PEM, and `exportPrivatePem` a private key as an unencrypted PKCS#8 `PRIVATE KEY` PEM, for tools that read PEM rather than JWK, such as OpenSSL or a KMS that imports key material. They follow the same rules as their JWK counterparts, wrap the base64 at 64 characters and end with a line break. A PEM carries no `alg` or `kid`, so pass them again when importing it back.
 
 Every exported JWK is frozen, names `kty`, `alg` and `use: "sig"`, includes `kid` when the key has one, lists its members in a stable order, and carries no `ext` or `key_ops`. Re-importing it with the same `alg` gives an equivalent key.
 
