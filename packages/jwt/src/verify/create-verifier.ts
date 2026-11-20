@@ -1,4 +1,4 @@
-import { fail, ok } from "../core/result";
+import { fail, frozenOk } from "../core/result";
 import type {
   JwtErr,
   JwtHeader,
@@ -114,7 +114,7 @@ export function createVerifier<TSchema extends StandardSchemaV1 | undefined = un
     if (!(await crypto.subtle.verify(signParams, cryptoKey, jws.signature, jws.signingInput))) {
       return fail({ code: "bad_signature" });
     }
-    const payload = early === undefined ? parsePayload(jws) : ok(early);
+    const payload = early === undefined ? parsePayload(jws) : frozenOk(early);
     if (!payload.ok) {
       return payload;
     }
@@ -126,12 +126,14 @@ export function createVerifier<TSchema extends StandardSchemaV1 | undefined = un
     if (issues.length > 0) {
       return fail(...(issues as [JwtIssue, ...JwtIssue[]]));
     }
-    const verified: VerifiedJwt<VerifiedPayload<TSchema>> = {
+    // The header and payload come deep-frozen from the parser and the key frozen from its registration, so
+    // only the new objects are frozen: `ok` would walk the whole token again.
+    const verified: VerifiedJwt<VerifiedPayload<TSchema>> = Object.freeze({
       header: jws.header,
       payload: payload.value as VerifiedPayload<TSchema>,
       key,
-    };
-    return ok(verified);
+    });
+    return frozenOk(verified);
   };
 }
 
@@ -241,7 +243,7 @@ async function selectKey(keys: KeySet, header: JwtHeader, report: Reporter): Pro
     const { ok: isOk, value, error } = result as { ok?: unknown; value?: unknown; error?: { issues?: unknown } };
     if (isOk === true) {
       return isRegisteredKey(value) && value.kind !== "private"
-        ? ok(value)
+        ? frozenOk(value)
         : report(
             new TypeError("The key set's select returned a value that is not a public or secret key of this package."),
           );

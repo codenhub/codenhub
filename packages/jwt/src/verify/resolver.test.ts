@@ -146,6 +146,19 @@ describe("createVerifier with a key set resolver", () => {
     expect(counted.calls.count).toBe(2);
   });
 
+  it("should deep-freeze the result, whose payload was read to route the token", async () => {
+    const result = await verifierWith((issuer) => sets.get(issuer))(
+      await tokenFor(pairA, { iss: ISSUER_A, roles: ["admin"], profile: { name: "n" } }),
+    );
+    const value = result.ok ? result.value : undefined;
+    const payload = value?.payload as { roles: string[]; profile: object } | undefined;
+
+    expect(
+      payload !== undefined &&
+        [result, value, value?.header, payload, payload.roles, payload.profile, value?.key].every(Object.isFrozen),
+    ).toBe(true);
+  });
+
   it("should still run the claim checks on the routed token", async () => {
     const token = await sign({ payload: { iss: ISSUER_A, exp: NOW_SECONDS - 1 }, key: pairA.privateKey });
 

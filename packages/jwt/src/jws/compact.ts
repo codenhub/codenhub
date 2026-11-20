@@ -1,5 +1,5 @@
 import { isJwsAlgorithm } from "../core/limits";
-import { fail, ok } from "../core/result";
+import { fail, frozenOk } from "../core/result";
 import type { JwtHeader, JwtIssue, JwtPayload, JwtResult } from "../core/types";
 import { decodeBase64Url, isBase64Url } from "../encoding/base64url";
 import { parseJsonObject } from "../encoding/json";
@@ -85,7 +85,10 @@ export function checkSegments(token: unknown, maxLength: number): JwtResult<Chec
   if (issue !== undefined) {
     return fail(issue);
   }
-  return ok({ header: parsed.value as JwtHeader, headerSegment, payloadSegment, signatureSegment });
+  // The parsed header is deep-frozen already, and the rest are strings.
+  return frozenOk(
+    Object.freeze({ header: parsed.value as JwtHeader, headerSegment, payloadSegment, signatureSegment }),
+  );
 }
 
 /**
@@ -103,12 +106,15 @@ export function parseCompact(token: unknown, maxLength: number): JwtResult<Compa
     return checked;
   }
   const { header, headerSegment, payloadSegment, signatureSegment } = checked.value;
-  return ok({
-    header,
-    payloadSegment,
-    signingInput: encodeUtf8(`${headerSegment}.${payloadSegment}`),
-    signature: decodeBase64Url(signatureSegment) as Uint8Array<ArrayBuffer>,
-  });
+  // The header is deep-frozen already; byte arrays are never frozen, as with `ok`.
+  return frozenOk(
+    Object.freeze({
+      header,
+      payloadSegment,
+      signingInput: encodeUtf8(`${headerSegment}.${payloadSegment}`),
+      signature: decodeBase64Url(signatureSegment) as Uint8Array<ArrayBuffer>,
+    }),
+  );
 }
 
 /**
