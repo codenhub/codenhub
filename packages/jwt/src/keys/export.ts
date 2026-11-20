@@ -75,8 +75,7 @@ export async function exportSecretJwk(key: SecretKey): Promise<SecretJwk> {
  * ```
  *
  * @param key - A public key from {@link importPublicKey} or {@link generateKeyPair}.
- * @returns The PEM text: the base64 in 64-character lines, with `
-` line endings and a final line break.
+ * @returns The PEM text: the base64 in 64-character lines, with LF line endings and a final line break.
  * @throws TypeError when `key` is not a public key created by this package. For a private key, the message
  * points to {@link getPublicKey}.
  */
@@ -90,8 +89,7 @@ export async function exportPublicPem(key: PublicKey): Promise<string> {
  * secret.
  *
  * @param key - A private key imported or generated with `extractable: true`.
- * @returns The PEM text: the base64 in 64-character lines, with `
-` line endings and a final line break.
+ * @returns The PEM text: the base64 in 64-character lines, with LF line endings and a final line break.
  * @throws TypeError when `key` is not a private key created by this package, was created without
  * `extractable: true`, or is held by an external signer.
  */
