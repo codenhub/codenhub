@@ -101,6 +101,18 @@ describe("createExternalSigningKey", () => {
     expect(await verifies(await sign({ payload: { exp: EXP() }, key }), key)).toBe(true);
   });
 
+  it("should throw from sign when the signer signs other bytes than the ones it was given", async () => {
+    const { publicKey, signRaw } = await kmsKey("ES256");
+    const key = createExternalSigningKey({
+      publicKey,
+      sign: async (data) => {
+        data.fill(0x41);
+        return signRaw(data);
+      },
+    });
+    await expect(sign({ payload: { exp: EXP() }, key })).rejects.toThrow(TypeError);
+  });
+
   it("should give the public key back from getPublicKey, and its thumbprint", async () => {
     const { publicKey, signRaw } = await kmsKey("ES256");
     const key = createExternalSigningKey({ publicKey, sign: signRaw });

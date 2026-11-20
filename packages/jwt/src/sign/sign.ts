@@ -170,7 +170,8 @@ async function signatureOf(
   if (entry.externalSign === undefined) {
     return crypto.subtle.sign(signParams, entry.cryptoKey, signedBytes);
   }
-  const signature = await entry.externalSign(signedBytes);
+  // A copy: a signer that changes its input would otherwise sign, and pass the check on, bytes the token lacks.
+  const signature = await entry.externalSign(signedBytes.slice());
   if (!(await crypto.subtle.verify(signParams, entry.cryptoKey, signature, signedBytes))) {
     throw new TypeError("sign: the external signer's signature does not verify with its public key.");
   }
