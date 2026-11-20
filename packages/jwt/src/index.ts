@@ -70,6 +70,7 @@ export {
   importKeySet,
   type CreateKeySetOptions,
   type ImportKeySetOptions,
+  type JwksFetch,
   type RemoteKeySetOptions,
   type RemoteKeySetSnapshot,
 } from "./keysets";
