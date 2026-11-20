@@ -152,6 +152,8 @@ const fallbackTexts = new WeakMap<Element, string>();
 const translatedTexts = new WeakMap<Element, string>();
 const attributeStates = new WeakMap<Element, Map<string, AttributeState>>();
 const langStates = new WeakMap<Element, LangState>();
+/** Elements whose `lang` other code changed after the binding wrote it, so the binding never writes it again. */
+const appOwnedLangs = new WeakSet<Element>();
 
 /**
  * Whether the element shows the text a binding last wrote to it. Another binding whose root overlaps reads such a write
@@ -300,32 +302,38 @@ export function createDomTranslator(options: DomTranslatorOptions): DomTranslato
 
   /**
    * Writes `lang` for translations in another locale than the active one, or with `undefined`, restores the element's
-   * own value, unless other code changed it since.
+   * own value. Once other code changes a `lang` the binding wrote, that code owns it, and the binding leaves it alone.
    */
   const applyLang = (element: Element, lang: string | undefined): void => {
+    if (appOwnedLangs.has(element)) {
+      return;
+    }
+
     const state = langStates.get(element);
     const currentLang = element.getAttribute(LANG_ATTRIBUTE);
 
+    if (state !== undefined && currentLang !== state.written) {
+      appOwnedLangs.add(element);
+      langStates.delete(element);
+      return;
+    }
+
     if (lang === undefined) {
-      if (state !== undefined && currentLang === state.written) {
+      if (state !== undefined) {
         if (state.original === null) {
           element.removeAttribute(LANG_ATTRIBUTE);
         } else {
           element.setAttribute(LANG_ATTRIBUTE, state.original);
         }
+        langStates.delete(element);
       }
-      langStates.delete(element);
       return;
     }
 
     if (state === undefined) {
       langStates.set(element, { original: currentLang, written: lang });
-    } else if (currentLang === state.written) {
-      state.written = lang;
     } else {
-      // Other code set `lang` over the one written, so it now owns the attribute.
-      langStates.delete(element);
-      return;
+      state.written = lang;
     }
     if (currentLang !== lang) {
       element.setAttribute(LANG_ATTRIBUTE, lang);

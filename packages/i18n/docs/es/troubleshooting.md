@@ -2,7 +2,7 @@
 title: Solución de problemas
 description: Qué significa cada error y cada advertencia, y cómo solucionarlo.
 order: 5
-source: 301803b13f79cc8b972546a00c5412e1c0489207
+source: f3a1e38b48aa9722f1d98a83ca2ced23b1d574bc
 ---
 
 # Solución de problemas
@@ -100,7 +100,7 @@ La configuración no es válida. La mayoría de los mensajes tienen la forma `[I
 - `loadLocale` sea una función.
 - `timeZone`, cuando está definido, sea uno que `Intl` conoce. Una errata da `timeZone: Must be a time zone Intl supports, such as "America/Sao_Paulo" or "UTC"`.
 - `dictionaryLimits` nombre solo límites conocidos, cada uno un número entero positivo. `maxKeys` da `dictionaryLimits.maxKeys: Is not a recognized limit`, y `maxDepth: 0` da `dictionaryLimits.maxDepth: Must be a positive whole number`. [Límites de tamaño](translations.md#límites-de-tamaño) enumera los nombres.
-- `isSilent`, cuando está definido, sea un booleano. `isSilent: "true"` da `isSilent: Expected boolean, received string`.
+- `isSilent`, cuando está definido, sea un booleano. `isSilent: "true"` da `isSilent: Expected boolean, received "true"`.
 - `getLocaleDirection` y `onMissingKey`, cuando están definidos, sean funciones; si no, el mensaje dice `getLocaleDirection: Must be a function` o `onMissingKey: Must be a function`.
 - La configuración sea un objeto simple. Una instancia de una clase, o un objeto que hereda sus opciones, se rechaza para que no se cuelen valores heredados.
 

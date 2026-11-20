@@ -380,6 +380,8 @@ describe("initializeBrowserI18n fallback language", () => {
     expect(paragraph.getAttribute("lang")).toBe("de");
     await i18n.setLocale("en");
     expect(paragraph.getAttribute("lang")).toBe("de");
+    await i18n.setLocale("fr");
+    expect(paragraph.getAttribute("lang")).toBe("de");
     binding.disconnect();
   });
 

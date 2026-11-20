@@ -2,7 +2,7 @@
 title: Solução de problemas
 description: O que cada erro e aviso quer dizer, e como resolver.
 order: 5
-source: 301803b13f79cc8b972546a00c5412e1c0489207
+source: f3a1e38b48aa9722f1d98a83ca2ced23b1d574bc
 ---
 
 # Solução de problemas
@@ -100,7 +100,7 @@ A configuração é inválida. A maioria das mensagens tem o formato `[I18n] Inv
 - `loadLocale` é uma função.
 - `timeZone`, quando definido, é um que o `Intl` conhece. Um erro de digitação dá `timeZone: Must be a time zone Intl supports, such as "America/Sao_Paulo" or "UTC"`.
 - `dictionaryLimits` nomeia só limites conhecidos, cada um um número inteiro positivo. `maxKeys` dá `dictionaryLimits.maxKeys: Is not a recognized limit`, e `maxDepth: 0` dá `dictionaryLimits.maxDepth: Must be a positive whole number`. [Limites de tamanho](translations.md#limites-de-tamanho) lista os nomes.
-- `isSilent`, quando definido, é um booleano. `isSilent: "true"` dá `isSilent: Expected boolean, received string`.
+- `isSilent`, quando definido, é um booleano. `isSilent: "true"` dá `isSilent: Expected boolean, received "true"`.
 - `getLocaleDirection` e `onMissingKey`, quando definidos, são funções; senão a mensagem diz `getLocaleDirection: Must be a function` ou `onMissingKey: Must be a function`.
 - A configuração é um objeto simples. Uma instância de classe, ou um objeto que herda as opções, é rejeitado para que valores herdados não passem escondidos.
 

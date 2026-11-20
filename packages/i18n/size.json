@@ -320,17 +320,17 @@
         "initializeBrowserI18n": {
           "files": {
             "dist/browser.js": {
-              "bytes": 8944,
+              "bytes": 8971,
               "declarations": {
-                "initializeBrowserI18n": 4015,
-                "createDomTranslator": 2919,
+                "initializeBrowserI18n": 4014,
+                "createDomTranslator": 2916,
                 "readPersistedLocale": 244,
                 "namesStyleSheetSet": 138,
                 "TRANSLATED_ATTRIBUTES": 131,
                 "isInsideCustomElement": 127,
                 "persistLocale": 125,
                 "BLOCKED_ELEMENT_NAMES": 116,
-                "forgetPersistedLocale": 103,
+                "forgetPersistedLocale": 104,
                 "getNavigatorPreferences": 98,
                 "collectElements": 96,
                 "runEach": 92,
@@ -343,6 +343,7 @@
                 "TRANSLATION_KEY_ATTRIBUTES": 31,
                 "TRANSLATION_KEY_SELECTOR": 31,
                 "BOUND_MANAGERS": 30,
+                "appOwnedLangs": 30,
                 "attributeStates": 30,
                 "fallbackTexts": 30,
                 "langStates": 30,
@@ -385,23 +386,23 @@
               "bytes": 35
             }
           },
-          "gzip": 4006,
-          "minified": 9887
+          "gzip": 4011,
+          "minified": 9914
         }
       },
       "files": {
         "dist/browser.js": {
-          "bytes": 8944,
+          "bytes": 8971,
           "declarations": {
-            "initializeBrowserI18n": 4015,
-            "createDomTranslator": 2919,
+            "initializeBrowserI18n": 4014,
+            "createDomTranslator": 2916,
             "readPersistedLocale": 244,
             "namesStyleSheetSet": 138,
             "TRANSLATED_ATTRIBUTES": 131,
             "isInsideCustomElement": 127,
             "persistLocale": 125,
             "BLOCKED_ELEMENT_NAMES": 116,
-            "forgetPersistedLocale": 103,
+            "forgetPersistedLocale": 104,
             "getNavigatorPreferences": 98,
             "collectElements": 96,
             "runEach": 92,
@@ -414,6 +415,7 @@
             "TRANSLATION_KEY_ATTRIBUTES": 31,
             "TRANSLATION_KEY_SELECTOR": 31,
             "BOUND_MANAGERS": 30,
+            "appOwnedLangs": 30,
             "attributeStates": 30,
             "fallbackTexts": 30,
             "langStates": 30,
@@ -456,9 +458,9 @@
           "bytes": 35
         }
       },
-      "gzip": 4006,
-      "minified": 9887,
-      "sha256": "6e93c089f791c33c5dddcc2151bca7baf75227d1be5d52fc7d4c28a08af5e537"
+      "gzip": 4011,
+      "minified": 9914,
+      "sha256": "7bf8357278326bbdd54de3d4c6a9d9609e51b5715624fb9fb5d9dfc8ae2bdcea"
     },
     "./routing": {
       "exports": {
