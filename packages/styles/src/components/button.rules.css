@@ -114,7 +114,10 @@
     --_sm-px: var(--_size-sm) 0.75rem;
     --_lg-px: var(--_size-lg) 1.25rem;
     --_sm-py: var(--_size-sm) 0.25rem;
-    --_lg-py: var(--_size-lg) 0.625rem;
+    /* Less the line, as the default step's is, so a `.btn.lg` stands as tall
+       as an `.ipt.lg` under any line width: at the whole 0.625rem a 2px border
+       took it to 49.5px beside the field's 48px. */
+    --_lg-py: var(--_size-lg) calc(0.625rem - var(--_width));
     --_sm-text: var(--_size-sm) var(--text-sm);
     --_lg-text: var(--_size-lg) 1.0625rem;
     --_sm-leading: var(--_size-sm) var(--text-sm--line-height);
