@@ -2,7 +2,7 @@
 title: Acessibilidade
 description: O que o CSS faz por foco, estados, movimento, contraste, cores forçadas e texto da direita para a esquerda, e o que a sua aplicação ainda deve aos seus usuários.
 order: 5
-source: 3b4f15a58ef5e66808fcd987f9b2682bc0dd853b
+source: 19229fdf879ffd1e79b4ac6507061a6aa1645f4d
 ---
 
 # Acessibilidade
@@ -158,7 +158,7 @@ As medições abaixo são das cores entregues. Assim que você mudar um token de
 | ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Cores forçadas   | Com `forced-colors: active`, as bordas, os estados marcados, a seta de um `.select` e o valor de uma barra de progresso continuam visíveis, desenhados nas cores do sistema, sob todas as estéticas. Uma estética que desenha a borda como sombra interna, como `.pixel`, desenha uma borda real no lugar. O glass fica opaco, porque as cores forçadas mantêm a transparência de um fundo. |
 | Direção do texto | Sob `dir="rtl"`, a barra da citação, o ícone do alerta, o preenchimento do progresso, o divisor vertical, o botão do switch, o alinhamento das tabelas e a seta de um select trocam de lado. Nenhuma classe é necessária.                                                                                                                                                                   |
-| Escritas unidas  | Os estilos de texto não adicionam espaçamento entre letras num idioma cuja escrita une as letras, como o árabe, então as ligações e as ligaduras se mantêm. Defina `lang`; veja [Conteúdo e layout](./usage/content-and-layout.md).                                                                                                                                                         |
+| Escritas unidas  | Os estilos de texto, o rótulo e a dica de um campo e o espaçamento de rótulos de uma estética não adicionam espaçamento entre letras num idioma cuja escrita une as letras, como o árabe, então as ligações e as ligaduras se mantêm. Defina `lang`; veja [Conteúdo e layout](./usage/content-and-layout.md).                                                                               |
 
 Em cores forçadas, `.text-control`, `.ipt`, `.textarea`, `.select`, os toggles e uma classe sua que faz `@apply text-control` mostram um outline de foco `Highlight` de 2px. Dentro de um `.input-group`, o grupo desenha o anel do campo, dois pixels por fora da própria borda, e o campo não desenha nenhum, então um campo focado mostra um único anel; um checkbox, radio, switch ou botão no grupo mantém o próprio anel, e o grupo tira o dele enquanto um deles tem o foco. O entrypoint nativo dá o mesmo outline a campos de texto, selects, textareas, checkboxes e radios sem classe.
 

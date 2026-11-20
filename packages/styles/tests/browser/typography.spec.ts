@@ -930,3 +930,39 @@ test("tracks no cursive script, while a consumer's tracking still wins", async (
   expect(await read("body")).toBe("normal");
   expect(await read("h1"), "Latin headings keep theirs").not.toBe("normal");
 });
+
+/* The other tracking the package adds is off in a joining script too: a
+   field's label and hint, and the label tracking chunky tile gives buttons
+   and badges, its solo class's included. A Latin passage keeps each. */
+test("tracks no cursive script on labels, hints, and chunky tile's labels", async ({ page }) => {
+  const { readFile } = await import("node:fs/promises");
+  const [index, chunky] = await Promise.all(
+    ["index.css", "aesthetics/chunky-tile.css"].map((file) =>
+      readFile(new URL(`../../dist/${file}`, import.meta.url), "utf8"),
+    ),
+  );
+  const markup = (suffix: string) =>
+    `<label data-testid="label${suffix}" class="label">الله</label>
+     <span data-testid="hint${suffix}" class="hint">الله</span>
+     <div class="chunky-tile">
+       <button data-testid="btn${suffix}" class="btn">الله</button>
+       <span data-testid="badge${suffix}" class="badge">الله</span>
+     </div>
+     <button data-testid="solo${suffix}" class="chunky-tile-solo">الله</button>`;
+
+  await page.setContent(
+    `<!doctype html><html dir="rtl" lang="ar"><body>${markup("")}<div lang="en" dir="ltr">${markup("-latin")}</div></body></html>`,
+  );
+  await page.addStyleTag({ content: index });
+  await page.addStyleTag({ content: chunky });
+
+  const ids = ["label", "hint", "btn", "badge", "solo"];
+  const read = (id: string) => page.getByTestId(id).evaluate((element) => getComputedStyle(element).letterSpacing);
+
+  expect(await Promise.all(ids.map(read))).toEqual(ids.map(() => "normal"));
+
+  for (const id of ids) {
+    // oxlint-disable-next-line no-await-in-loop -- one page, read in turn.
+    expect(await read(`${id}-latin`), `a Latin ${id} keeps its tracking`).not.toBe("normal");
+  }
+});

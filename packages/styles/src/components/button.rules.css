@@ -108,7 +108,9 @@
        without a colour, so it takes the label's own and cannot lower its
        contrast. See docs/internal/model.md#cascade-layers. */
     font-weight: var(--ui-label-weight, var(--font-weight-semibold));
-    letter-spacing: var(--ui-label-tracking, normal);
+    /* An aesthetic's tracking is off in a joining script, as the text styles'
+       is; see `typography.rules.css`. */
+    letter-spacing: var(--_script-tracking, var(--ui-label-tracking, normal));
     text-transform: var(--ui-label-case, none);
     text-shadow: var(--ui-label-shadow, none);
 
