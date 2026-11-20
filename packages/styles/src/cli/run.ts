@@ -128,6 +128,14 @@ function parseCommandLine(argv: readonly string[]): BuildOptions | "help" | "ver
       `--output ${output} ends with a folder separator, so it names a folder, not a file; name a stylesheet to write, as in --output ${output}app.css.`,
     );
   }
+  // It resolves `newdir/.` and `newdir/sub/..` to `newdir` as well.
+  const lastSegment = (process.platform === "win32" ? /(^|[\\/])(\.\.?)$/ : /(^|\/)(\.\.?)$/).exec(output);
+
+  if (lastSegment !== null) {
+    throw new Error(
+      `--output ${output} ends with a . or .. segment, so it names a folder, not a file; name a stylesheet to write, as in --output ${output}${lastSegment[1] || "/"}app.css.`,
+    );
+  }
 
   return {
     contentGlobs: values.content,

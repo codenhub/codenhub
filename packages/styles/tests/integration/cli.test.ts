@@ -469,6 +469,19 @@ describe("failures", () => {
     },
   );
 
+  // `path.resolve` takes `newdir/.` for `newdir`, so it wrote a file named `newdir` too.
+  it.each([
+    ["newdir/.", "newdir/./app.css"],
+    ["newdir/..", "newdir/../app.css"],
+    ["newdir/sub/..", "newdir/sub/../app.css"],
+    ...(process.platform === "win32" ? [["newdir\\.", "newdir\\.\\app.css"]] : []),
+  ])("refuses an --output whose last segment is . or .., as %s", async (output, example) => {
+    expect(await failureOf("build", "-c", "app/views/**/*.erb", "-o", output)).toBe(
+      `chs: --output ${output} ends with a . or .. segment, so it names a folder, not a file; name a stylesheet to write, as in --output ${example}.`,
+    );
+    expect(await readdir(project)).toEqual(["app"]);
+  });
+
   // parseArgs keeps the last value, so `-o a.css -o b.css` wrote only b.css and said nothing of a.css.
   it("refuses --output given twice", async () => {
     expect(await failureOf("build", "-c", "app/views/**/*.erb", "-o", "a.css", "--output=b.css")).toBe(
