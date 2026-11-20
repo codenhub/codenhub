@@ -1,3 +1,5 @@
+import { runInNewContext } from "node:vm";
+
 import { describe, expect, it } from "vitest";
 
 import type { AsymmetricAlgorithm, PrivateKey } from "../core/types";
@@ -97,6 +99,23 @@ describe("createExternalSigningKey", () => {
     const key = createExternalSigningKey({
       publicKey,
       sign: async (data) => (await signRaw(data)).buffer as ArrayBuffer,
+    });
+    expect(await verifies(await sign({ payload: { exp: EXP() }, key }), key)).toBe(true);
+  });
+
+  it.each([
+    ["Uint8Array", "new Uint8Array(raw)"],
+    ["ArrayBuffer", "new Uint8Array(raw).buffer"],
+    ["DataView", "new DataView(new Uint8Array(raw).buffer)"],
+  ])("should accept a %s from another realm from the signer", async (_name, expression) => {
+    const { publicKey, signRaw } = await kmsKey("ES256");
+    const key = createExternalSigningKey({
+      publicKey,
+      sign: async (data) => {
+        const foreign = runInNewContext(expression, { raw: [...(await signRaw(data))] }) as Uint8Array;
+        expect(foreign instanceof Object).toBe(false);
+        return foreign;
+      },
     });
     expect(await verifies(await sign({ payload: { exp: EXP() }, key }), key)).toBe(true);
   });

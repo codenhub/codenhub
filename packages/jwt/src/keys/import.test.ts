@@ -641,6 +641,17 @@ describe("cross-realm inputs", () => {
     expect(encodeBase64Url(new Uint8Array(40).fill(7))).toBe((await exportSecretJwk(valueOf(result))).k);
   });
 
+  it.each([
+    ["ArrayBuffer", "new Uint8Array(40).fill(7).buffer"],
+    ["DataView", "new DataView(new Uint8Array(48).fill(7).buffer, 8)"],
+    ["Uint16Array", "new Uint16Array(20).fill(0x0707)"],
+  ])("should import a %s from another realm as raw bytes", async (_name, expression) => {
+    const foreign = runInNewContext(expression) as ArrayBuffer;
+    expect(foreign instanceof Object).toBe(false);
+    const result = await importSecretKey(foreign, { alg: "HS256", extractable: true });
+    expect(encodeBase64Url(new Uint8Array(40).fill(7))).toBe((await exportSecretJwk(valueOf(result))).k);
+  });
+
   it("should report weak_key for a short Uint8Array from another realm", async () => {
     const foreign = runInNewContext("new Uint8Array(31)");
     expect(issuesOf(await importSecretKey(foreign, { alg: "HS256" }))).toEqual([
@@ -815,7 +826,23 @@ describe("importPrivateKey with a mismatched d", () => {
     expect(issuesOf(await importPrivateKey({ ...jwk, d }, { alg }))).toEqual([{ code: "invalid_key" }]);
   });
 
-  // Web Crypto signs RSA with the CRT members alone, so the probe signature cannot see a wrong d; another
+  // OpenSSL signs again with d when a CRT signature is wrong, so the probe signature cannot see a wrong qi;
+  // another library that signs with the CRT members of the exported JWK would.
+  it("should report invalid_key with path qi for RSA when qi is not the inverse of q modulo p", async () => {
+    expect(
+      issuesOf(await importPrivateKey({ ...RSA_2048_PRIVATE_JWK, qi: RSA_2048_PRIVATE_JWK.dp }, { alg: "RS256" })),
+    ).toEqual([{ code: "invalid_key", path: ["qi"] }]);
+  });
+
+  it("should report invalid_key with path qi for RSA when p and q are swapped but qi is kept", async () => {
+    const { p, q, dp, dq } = RSA_2048_PRIVATE_JWK;
+    const swapped = { ...RSA_2048_PRIVATE_JWK, p: q, q: p, dp: dq, dq: dp };
+    expect(issuesOf(await importPrivateKey(swapped, { alg: "RS256" }))).toEqual([
+      { code: "invalid_key", path: ["qi"] },
+    ]);
+  });
+
+  // A signer that uses only the CRT members never reads d, so the probe signature cannot see a wrong d; another
   // library that signs with d from the exported JWK would.
   it("should report invalid_key with path d for RSA when d does not fit p and q", async () => {
     const other = await generateKeyPair({ alg: "RS256", extractable: true });

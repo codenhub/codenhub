@@ -179,25 +179,102 @@ export type SigningKey = PrivateKey | SecretKey;
 /** A key that can verify. */
 export type VerificationKey = PublicKey | SecretKey;
 
-/** A JSON Web Key as this package exports it. Every exported JWK is frozen. */
-export interface Jwk {
-  readonly kty: "EC" | "OKP" | "RSA" | "oct";
-  readonly alg: JwsAlgorithm;
+/** The key material members of a JWK, across every key type. */
+type JwkMaterialMember = "crv" | "x" | "y" | "n" | "e" | "d" | "p" | "q" | "dp" | "dq" | "qi" | "k";
+
+/**
+ * The members every JWK this package exports has, and every material member of other key types as absent, so
+ * a member of any JWK can still be read by name: `jwk.n` is `undefined` on an `EC` key rather than a compile
+ * error, and `jwk.d !== undefined` tells a private JWK from a public one.
+ */
+type JwkMembers<TAlgorithm extends JwsAlgorithm, TOwn extends JwkMaterialMember> = {
+  readonly alg: TAlgorithm;
   readonly use: "sig";
   readonly kid?: string;
-  readonly crv?: "P-256" | "P-384" | "P-521" | "Ed25519";
-  readonly x?: string;
-  readonly y?: string;
-  readonly n?: string;
-  readonly e?: string;
-  readonly d?: string;
-  readonly p?: string;
-  readonly q?: string;
-  readonly dp?: string;
-  readonly dq?: string;
-  readonly qi?: string;
-  readonly k?: string;
+} & { readonly [TMember in Exclude<JwkMaterialMember, TOwn>]?: never };
+
+/** An elliptic-curve public key (RFC 7518 §6.2), as {@link exportPublicJwk} exports an `ES*` key. */
+export interface EcPublicJwk extends JwkMembers<Extract<AsymmetricAlgorithm, `ES${string}`>, "crv" | "x" | "y"> {
+  readonly kty: "EC";
+  readonly crv: "P-256" | "P-384" | "P-521";
+  readonly x: string;
+  readonly y: string;
 }
+
+/** An elliptic-curve private key, as {@link exportPrivateJwk} exports an `ES*` key. */
+export interface EcPrivateJwk
+  extends
+    JwkMembers<Extract<AsymmetricAlgorithm, `ES${string}`>, "crv" | "x" | "y" | "d">,
+    Pick<EcPublicJwk, "kty" | "crv" | "x" | "y"> {
+  readonly d: string;
+}
+
+/** An Ed25519 public key (RFC 8037 §2), as {@link exportPublicJwk} exports an `EdDSA` or `Ed25519` key. */
+export interface OkpPublicJwk extends JwkMembers<Extract<AsymmetricAlgorithm, `Ed${string}`>, "crv" | "x"> {
+  readonly kty: "OKP";
+  readonly crv: "Ed25519";
+  readonly x: string;
+}
+
+/** An Ed25519 private key, as {@link exportPrivateJwk} exports an `EdDSA` or `Ed25519` key. */
+export interface OkpPrivateJwk
+  extends
+    JwkMembers<Extract<AsymmetricAlgorithm, `Ed${string}`>, "crv" | "x" | "d">,
+    Pick<OkpPublicJwk, "kty" | "crv" | "x"> {
+  readonly d: string;
+}
+
+/** An RSA public key (RFC 7518 §6.3), as {@link exportPublicJwk} exports an `RS*` or `PS*` key. */
+export interface RsaPublicJwk extends JwkMembers<
+  Extract<AsymmetricAlgorithm, `RS${string}` | `PS${string}`>,
+  "n" | "e"
+> {
+  readonly kty: "RSA";
+  readonly n: string;
+  readonly e: string;
+}
+
+/** An RSA private key with its CRT members, as {@link exportPrivateJwk} exports an `RS*` or `PS*` key. */
+export interface RsaPrivateJwk
+  extends
+    JwkMembers<
+      Extract<AsymmetricAlgorithm, `RS${string}` | `PS${string}`>,
+      "n" | "e" | "d" | "p" | "q" | "dp" | "dq" | "qi"
+    >,
+    Pick<RsaPublicJwk, "kty" | "n" | "e"> {
+  readonly d: string;
+  readonly p: string;
+  readonly q: string;
+  readonly dp: string;
+  readonly dq: string;
+  readonly qi: string;
+}
+
+/** An HMAC secret (RFC 7518 §6.4), as {@link exportSecretJwk} exports it. */
+export interface OctJwk extends JwkMembers<SymmetricAlgorithm, "k"> {
+  readonly kty: "oct";
+  readonly k: string;
+}
+
+/** An elliptic-curve JWK, public or private. */
+export type EcJwk = EcPublicJwk | EcPrivateJwk;
+/** An Ed25519 JWK, public or private. */
+export type OkpJwk = OkpPublicJwk | OkpPrivateJwk;
+/** An RSA JWK, public or private. */
+export type RsaJwk = RsaPublicJwk | RsaPrivateJwk;
+
+/** A public JWK, as {@link exportPublicJwk} exports it. Narrow it on `kty`. */
+export type PublicJwk = EcPublicJwk | OkpPublicJwk | RsaPublicJwk;
+/** A private JWK, its public members included, as {@link exportPrivateJwk} exports it. Narrow it on `kty`. */
+export type PrivateJwk = EcPrivateJwk | OkpPrivateJwk | RsaPrivateJwk;
+/** A secret JWK, as {@link exportSecretJwk} exports it. */
+export type SecretJwk = OctJwk;
+
+/**
+ * A JSON Web Key as this package exports it: one of the shapes above, told apart by `kty`, and by `d` or `k`
+ * for private material. Every exported JWK is frozen.
+ */
+export type Jwk = PublicJwk | PrivateJwk | SecretJwk;
 
 /** A verified or inspected JWS protected header. Frozen. */
 export interface JwtHeader {

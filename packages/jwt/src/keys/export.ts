@@ -1,6 +1,7 @@
-import type { Jwk, PrivateKey, PublicKey, SecretKey } from "../core/types";
+import type { Jwk, PrivateJwk, PrivateKey, PublicJwk, PublicKey, SecretJwk, SecretKey } from "../core/types";
 import { ALGORITHM_PARAMS } from "./algorithms";
 import { exportWebCryptoJwk } from "./exported-jwk";
+import { writePem } from "./pem";
 import { getKeyEntryOfKind, isRegisteredKey } from "./registry";
 
 type MaterialMember = "crv" | "x" | "y" | "n" | "e" | "d" | "p" | "q" | "dp" | "dq" | "qi" | "k";
@@ -28,12 +29,9 @@ const PRIVATE_MEMBERS: Readonly<Record<Jwk["kty"], readonly MaterialMember[]>> =
  * @throws TypeError when `key` is not a public key created by this package. For a private key, the message
  * points to {@link getPublicKey}.
  */
-export async function exportPublicJwk(key: PublicKey): Promise<Jwk> {
-  if (isRegisteredKey(key) && (key as { readonly kind: string }).kind === "private") {
-    throw new TypeError("exportPublicJwk: key is a private key; export its public half with getPublicKey(key).");
-  }
-  const entry = getKeyEntryOfKind(key, "public");
-  return toJwk(key, await exportWebCryptoJwk(entry.cryptoKey, key.alg), PUBLIC_MEMBERS);
+export async function exportPublicJwk(key: PublicKey): Promise<PublicJwk> {
+  const entry = publicEntry(key, "exportPublicJwk");
+  return toJwk(key, await exportWebCryptoJwk(entry.cryptoKey, key.alg), PUBLIC_MEMBERS) as PublicJwk;
 }
 
 /**
@@ -45,15 +43,9 @@ export async function exportPublicJwk(key: PublicKey): Promise<Jwk> {
  * @throws TypeError when `key` is not a private key created by this package, or was created without
  * `extractable: true`.
  */
-export async function exportPrivateJwk(key: PrivateKey): Promise<Jwk> {
-  const entry = getKeyEntryOfKind(key, "private");
-  if (entry.externalSign !== undefined) {
-    throw new TypeError("exportPrivateJwk: the key's material is held by an external signer.");
-  }
-  if (!key.extractable) {
-    throw new TypeError("exportPrivateJwk: the key was not created with extractable: true.");
-  }
-  return toJwk(key, await exportWebCryptoJwk(entry.cryptoKey, key.alg), PRIVATE_MEMBERS);
+export async function exportPrivateJwk(key: PrivateKey): Promise<PrivateJwk> {
+  const entry = extractablePrivateEntry(key, "exportPrivateJwk");
+  return toJwk(key, await exportWebCryptoJwk(entry.cryptoKey, key.alg), PRIVATE_MEMBERS) as PrivateJwk;
 }
 
 /**
@@ -65,12 +57,65 @@ export async function exportPrivateJwk(key: PrivateKey): Promise<Jwk> {
  * @throws TypeError when `key` is not a secret key created by this package, or was created without
  * `extractable: true`.
  */
-export async function exportSecretJwk(key: SecretKey): Promise<Jwk> {
+export async function exportSecretJwk(key: SecretKey): Promise<SecretJwk> {
   const entry = getKeyEntryOfKind(key, "secret");
   if (!key.extractable) {
     throw new TypeError("exportSecretJwk: the key was not created with extractable: true.");
   }
-  return toJwk(key, await exportWebCryptoJwk(entry.cryptoKey, key.alg), PRIVATE_MEMBERS);
+  return toJwk(key, await exportWebCryptoJwk(entry.cryptoKey, key.alg), PRIVATE_MEMBERS) as SecretJwk;
+}
+
+/**
+ * Exports a public key as a PEM `PUBLIC KEY` block (SPKI, RFC 7468 §13), for tools and services that take PEM
+ * rather than a JWK, such as OpenSSL or a cloud console.
+ *
+ * @example
+ * ```ts
+ * const pem = await exportPublicPem(getPublicKey(privateKey));
+ * ```
+ *
+ * @param key - A public key from {@link importPublicKey} or {@link generateKeyPair}.
+ * @returns The PEM text: the base64 in 64-character lines, with LF line endings and a final line break.
+ * @throws TypeError when `key` is not a public key created by this package. For a private key, the message
+ * points to {@link getPublicKey}.
+ */
+export async function exportPublicPem(key: PublicKey): Promise<string> {
+  const entry = publicEntry(key, "exportPublicPem");
+  return writePem("PUBLIC KEY", new Uint8Array(await crypto.subtle.exportKey("spki", entry.cryptoKey)));
+}
+
+/**
+ * Exports a private key as a PEM `PRIVATE KEY` block (PKCS#8, RFC 7468 §10), unencrypted. Handle the result as a
+ * secret.
+ *
+ * @param key - A private key imported or generated with `extractable: true`.
+ * @returns The PEM text: the base64 in 64-character lines, with LF line endings and a final line break.
+ * @throws TypeError when `key` is not a private key created by this package, was created without
+ * `extractable: true`, or is held by an external signer.
+ */
+export async function exportPrivatePem(key: PrivateKey): Promise<string> {
+  const entry = extractablePrivateEntry(key, "exportPrivatePem");
+  return writePem("PRIVATE KEY", new Uint8Array(await crypto.subtle.exportKey("pkcs8", entry.cryptoKey)));
+}
+
+/** The entry of a public key, with a message that points a private key to `getPublicKey`. */
+function publicEntry(key: PublicKey, functionName: string) {
+  if (isRegisteredKey(key) && (key as { readonly kind: string }).kind === "private") {
+    throw new TypeError(`${functionName}: key is a private key; export its public half with getPublicKey(key).`);
+  }
+  return getKeyEntryOfKind(key, "public");
+}
+
+/** The entry of a private key whose material may be exported. */
+function extractablePrivateEntry(key: PrivateKey, functionName: string) {
+  const entry = getKeyEntryOfKind(key, "private");
+  if (entry.externalSign !== undefined) {
+    throw new TypeError(`${functionName}: the key's material is held by an external signer.`);
+  }
+  if (!key.extractable) {
+    throw new TypeError(`${functionName}: the key was not created with extractable: true.`);
+  }
+  return entry;
 }
 
 function toJwk(

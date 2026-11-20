@@ -51,13 +51,16 @@ const DER_LONG_LENGTH_ONE_BYTE = 0x81;
  *
  * @example
  * ```ts
- * const imported = await importPublicKey(kmsPublicKeyPem, { alg: "ES256", kid: "kms-2026" });
+ * // `spki` is the KMS public key, imported with crypto.subtle.importKey("spki", …).
+ * const imported = await importPublicKey(spki, { alg: "ES256", kid: "kms-2026" });
  * if (!imported.ok) throw new Error("The KMS public key could not be imported.");
  * const signingKey = createExternalSigningKey({
  *   publicKey: imported.value,
  *   signatureFormat: "der",
- *   sign: async (data) => (await kms.sign({ KeyId, Message: data, MessageType: "RAW",
- *     SigningAlgorithm: "ECDSA_SHA_256" })).Signature!,
+ *   // A digest, not the message: MessageType "RAW" caps the message at 4096 bytes.
+ *   sign: async (data) => (await kms.send(new SignCommand({ KeyId, MessageType: "DIGEST",
+ *     Message: new Uint8Array(await crypto.subtle.digest("SHA-256", data)),
+ *     SigningAlgorithm: "ECDSA_SHA_256" }))).Signature!,
  * });
  * const token = await sign({ payload: { sub: "u1", exp }, key: signingKey });
  * ```
