@@ -477,6 +477,16 @@ describe("failures", () => {
     expect(await readdir(project)).toEqual(["app"]);
   });
 
+  // parseArgs takes `-a.css` for a flag, and its own advice, to write `--output=-a.css`, was dropped.
+  it.each([
+    ["-o", "--output"],
+    ["--content", "--content"],
+  ])("says how to give %s a value that starts with a dash", async (flag, name) => {
+    expect(await failureOf("build", "-c", "app/views/**/*.erb", "-o", "app.css", flag, "-a.css")).toBe(
+      `chs: option "${name}" is missing its value; to give it a value that starts with a dash, write ${name}=-a.css.`,
+    );
+  });
+
   it("rejects extra arguments, which an unquoted glob expanded by the shell produces", async () => {
     expect(await failureOf("build", "-c", "app/views/a.html.erb", "app/views/b.html.erb", "-o", "app.css")).toMatch(
       /app\/views\/b\.html\.erb.*quote/,

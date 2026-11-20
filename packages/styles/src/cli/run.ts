@@ -161,6 +161,19 @@ function parseFlags(argv: readonly string[]) {
     }
 
     const code = (error as { code?: string }).code;
+    // As in "To specify an option argument starting with a dash use '--output=-XYZ' or '-o-XYZ'."
+    const name = (error as Error).message.includes("starting with a dash")
+      ? /'(--[\w-]+)=-XYZ'/.exec((error as Error).message)?.[1]
+      : undefined;
+
+    if (name !== undefined) {
+      const at = argv.findIndex((arg, index) => arg === flag && argv[index + 1]?.startsWith("-"));
+      const value = at === -1 ? "<value>" : argv[at + 1];
+
+      throw new Error(
+        `option "${name}" is missing its value; to give it a value that starts with a dash, write ${name}=${value}.`,
+      );
+    }
 
     throw new Error(
       code === "ERR_PARSE_ARGS_UNKNOWN_OPTION"
