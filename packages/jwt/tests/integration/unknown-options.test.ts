@@ -1,9 +1,20 @@
 import { beforeAll, describe, expect, it } from "vitest";
 
 import {
+  createDecrypter,
+  createJweKeySet,
   createKeySet,
+  createNestedVerifier,
   createRemoteKeySet,
   createVerifier,
+  encrypt,
+  encryptJwt,
+  generateJweKeyPair,
+  generateJweSecretKey,
+  importJweKeyPair,
+  importJwePrivateKey,
+  importJwePublicKey,
+  importJweSecretKey,
   generateKeyPair,
   generateSecretKey,
   importKeyPair,
@@ -13,6 +24,7 @@ import {
   importSecretKey,
   readHeader,
   sign,
+  type JweKeyPair,
   type KeyPair,
 } from "../../src";
 import { RFC7515_A2_JWK, RFC7515_A2_TOKEN } from "./fixtures/rfc-vectors";
@@ -23,12 +35,15 @@ import { RFC7515_A2_JWK, RFC7515_A2_TOKEN } from "./fixtures/rfc-vectors";
  */
 
 let pair: KeyPair;
+let jwePair: JweKeyPair;
 
 beforeAll(async () => {
   pair = await generateKeyPair({ alg: "ES256" });
+  jwePair = await generateJweKeyPair({ alg: "ECDH-ES", extractable: true });
 });
 
 const RSA_PUBLIC_JWK = { kty: "RSA", n: RFC7515_A2_JWK.n, e: RFC7515_A2_JWK.e };
+const RSA_ENCRYPTION_JWK = { ...RFC7515_A2_JWK, use: "enc" };
 
 /** Each call with one misspelled member, and the name it must report. */
 const CALLS: readonly (readonly [string, string, () => unknown])[] = [
@@ -66,6 +81,67 @@ const CALLS: readonly (readonly [string, string, () => unknown])[] = [
     "createRemoteKeySet",
     "options.timout",
     () => createRemoteKeySet({ url: "https://issuer.example/jwks", timout: 1 } as never),
+  ],
+  [
+    "createRemoteKeySet",
+    "options.algoritms",
+    () => createRemoteKeySet({ url: "https://issuer.example/jwks", use: "enc", algoritms: ["ECDH-ES"] } as never),
+  ],
+  [
+    "importKeySet",
+    "options.algoritms",
+    () => importKeySet({ keys: [] }, { use: "enc", algoritms: ["ECDH-ES"] } as never),
+  ],
+  [
+    "encrypt",
+    "input.headers",
+    () => encrypt({ plaintext: "", key: jwePair.publicKey, enc: "A128GCM", headers: {} } as never),
+  ],
+  [
+    "encryptJwt",
+    "input.payload",
+    () => encryptJwt({ sign: { payload: {}, key: pair.privateKey }, key: jwePair.publicKey, payload: {} } as never),
+  ],
+  [
+    "createDecrypter",
+    "options.encs",
+    () => createDecrypter({ keys: createJweKeySet([jwePair.privateKey]), encs: ["A128GCM"] } as never),
+  ],
+  [
+    "createNestedVerifier",
+    "options.verifier",
+    () =>
+      createNestedVerifier({
+        decrypt: createDecrypter({ keys: createJweKeySet([jwePair.privateKey]) }),
+        verify: createVerifier({ keys: createKeySet([pair.publicKey]) }),
+        verifier: true,
+      } as never),
+  ],
+  ["generateJweKeyPair", "options.curve", () => generateJweKeyPair({ alg: "ECDH-ES", curve: "P-256" } as never)],
+  [
+    "generateJweSecretKey",
+    "options.extractible",
+    () => generateJweSecretKey({ alg: "A128KW", extractible: true } as never),
+  ],
+  [
+    "importJwePublicKey",
+    "options.extractable",
+    () => importJwePublicKey({ ...RSA_PUBLIC_JWK, use: "enc" }, { alg: "RSA-OAEP", extractable: true } as never),
+  ],
+  [
+    "importJwePrivateKey",
+    "options.enc",
+    () => importJwePrivateKey(RSA_ENCRYPTION_JWK, { alg: "RSA-OAEP", enc: "A128GCM" } as never),
+  ],
+  [
+    "importJweKeyPair",
+    "options.enc",
+    () => importJweKeyPair(RSA_ENCRYPTION_JWK, { alg: "RSA-OAEP", enc: "A128GCM" } as never),
+  ],
+  [
+    "importJweSecretKey",
+    "options.extractible",
+    () => importJweSecretKey(new Uint8Array(16), { alg: "A128KW", extractible: true } as never),
   ],
 ];
 
