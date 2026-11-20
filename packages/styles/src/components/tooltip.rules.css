@@ -17,10 +17,9 @@
        defaults rather than declared, so a value set on any ancestor reaches the
        tooltip. The linger is how long the bubble stays after the pointer leaves
        the trigger: long enough to cross the gap onto the bubble, which keeps it
-       open (WCAG 1.4.13). The default is resolved here, so a bubble outside a
-       tooltip keeps no delay unless a linger is set above it. The bubble reads
-       the public one first, so a value set on the bubble itself, as 0.8
-       allowed, still wins. */
+       open (WCAG 1.4.13). The bubble reads the public one first, so a value
+       set on the bubble itself, as 0.8 allowed, still wins. A bubble outside a
+       tooltip has no fade to delay. */
     --_tooltip-gap: var(--tooltip-gap, 0.5rem);
     --_tooltip-linger: var(--tooltip-linger, 300ms);
     --_tooltip-top: calc(var(--_tooltip-gap) * -1);
@@ -59,10 +58,16 @@
   /* The bubble. It is a surface, so an aesthetic that blurs surfaces blurs it
      too, and it rests on a ground of its own, edged, and flat -- depth is opt-in
      through its own `.raised`/`.floating`, like any other component. See
-     model.md#elevation. */
+     model.md#elevation.
+
+     On its own the class is the look and nothing else: the hidden resting
+     state, the scale, and the position belong to `.tooltip` and are written
+     for a bubble inside one, below. tooltips.md tells a consumer with a
+     positioning library to put the class on its own popover, and set on the
+     bubble itself they kept that popover hidden and shrunk to nothing while it
+     was open. */
   .tooltip-bubble {
     @compose surface;
-    position: absolute;
     z-index: var(--z-popover);
     width: max-content;
     max-width: calc(var(--spacing) * 72);
@@ -73,18 +78,6 @@
     --tw-font-weight: var(--font-weight-normal);
     font-weight: var(--font-weight-normal);
     white-space: normal;
-    opacity: 0%;
-
-    /* Hidden rather than merely transparent, so a closed bubble is nothing
-       under the pointer, and it lingers before it goes: the host stays hovered
-       once the pointer is over the bubble, so crossing the gap in
-       `--_tooltip-linger` keeps it open. Visibility switches at the end of the
-       fade, so the bubble is there to land on for the whole of it. */
-    visibility: hidden;
-    transition-property: opacity, transform, visibility;
-    transition-duration: var(--motion-duration-normal);
-    transition-timing-function: var(--motion-ease);
-    transition-delay: var(--tooltip-linger, var(--_tooltip-linger, 0s));
 
     /* Filled, over a ground of its own. An intent floods the fill
        (`.tooltip-bubble.primary` is the primary colour); with no intent
@@ -123,30 +116,50 @@
       calc(var(--_corner) * var(--ui-corner-tl, 1)) calc(var(--_corner) * var(--ui-corner-tr, 1))
         calc(var(--_corner) * var(--ui-corner-br, 1)) calc(var(--_corner) * var(--ui-corner-bl, 1))
     );
-    left: var(--_tooltip-left);
-    right: var(--_tooltip-right);
-    top: var(--_tooltip-top);
-    bottom: var(--_tooltip-bottom);
-    transform: var(--_tooltip-transform) scale(0);
-    transform-origin: var(--_tooltip-origin);
 
-    /* The bubble appears without growing under reduced motion, for the entries
-       without the reset; see `box.css`. It also rests at full size, hidden by
-       its fade alone: a `transform` left out of the transition lands at once,
-       ignoring the linger, so a bubble that shrank on close would be gone from
-       under the pointer before it could cross the gap (WCAG 1.4.13). */
-    @media (prefers-reduced-motion: reduce) {
-      &:not(:where(:root[data-motion="full"] *)) {
+    /* Inside `.tooltip`, at the class's own specificity: placed beside the
+       trigger, hidden at rest, and grown in. `:where()` keeps the host out of
+       the count, so a consumer's class on the bubble still beats each line.
+
+       Hidden rather than merely transparent, so a closed bubble is nothing
+       under the pointer, and it lingers before it goes: the host stays hovered
+       once the pointer is over the bubble, so crossing the gap in
+       `--_tooltip-linger` keeps it open. Visibility switches at the end of the
+       fade, so the bubble is there to land on for the whole of it. */
+    :where(.tooltip) & {
+      position: absolute;
+      left: var(--_tooltip-left);
+      right: var(--_tooltip-right);
+      top: var(--_tooltip-top);
+      bottom: var(--_tooltip-bottom);
+      opacity: 0%;
+      visibility: hidden;
+      transform: var(--_tooltip-transform) scale(0);
+      transform-origin: var(--_tooltip-origin);
+      transition-property: opacity, transform, visibility;
+      transition-duration: var(--motion-duration-normal);
+      transition-timing-function: var(--motion-ease);
+      transition-delay: var(--tooltip-linger, var(--_tooltip-linger));
+
+      /* The bubble appears without growing under reduced motion, for the
+         entries without the reset; see `box.css`. It also rests at full size,
+         hidden by its fade alone: a `transform` left out of the transition
+         lands at once, ignoring the linger, so a bubble that shrank on close
+         would be gone from under the pointer before it could cross the gap
+         (WCAG 1.4.13). */
+      @media (prefers-reduced-motion: reduce) {
+        &:not(:where(:root[data-motion="full"] *)) {
+          transform: var(--_tooltip-transform) scale(1);
+          transition-property: opacity, visibility;
+        }
+      }
+      &:where(:root:is([data-motion="reduce"], [data-motion="none"]) *) {
         transform: var(--_tooltip-transform) scale(1);
         transition-property: opacity, visibility;
       }
-    }
-    &:where(:root:is([data-motion="reduce"], [data-motion="none"]) *) {
-      transform: var(--_tooltip-transform) scale(1);
-      transition-property: opacity, visibility;
-    }
-    &:where(:root[data-motion="none"] *) {
-      transition-duration: 0.01ms;
+      &:where(:root[data-motion="none"] *) {
+        transition-duration: 0.01ms;
+      }
     }
 
     /* The no-intent plate, carried so `@apply tooltip-bubble` gets it: the rule

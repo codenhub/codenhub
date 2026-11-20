@@ -7,6 +7,7 @@ import {
   isTransparent,
   ORIGIN,
   readSrgb,
+  settleAnimations,
   stopTransitions,
 } from "./test-utils";
 
@@ -3358,3 +3359,54 @@ test("keeps a small icon button's icon in sight when focused under pixel", async
       .toBeGreaterThanOrEqual(0.5);
   }
 });
+
+/* A glass surface's backdrop filter, and a liquid one's isolation, make it a
+   stacking context, which traps the bubble's `z-index` inside it: an open
+   tooltip in one card was painted under the next card. The surface holding an
+   open tooltip is lifted to the popover layer. Every aesthetic is read, since
+   any of them may make a surface a stacking context. */
+for (const region of ["", "chunky-tile", "cyber", "glass", "glass glass-liquid", "neobrutalism", "pixel", "sketch"]) {
+  test(`paints an open tooltip over the next surface${region ? ` under .${region.replace(" ", ".")}` : ""}`, async ({
+    page,
+  }) => {
+    await page.goto(FEEDBACK_URL);
+    await page.evaluate((classes) => {
+      const host = document.createElement("div");
+      host.className = classes;
+      host.style.cssText = "padding: 2rem";
+      host.innerHTML =
+        '<div class="card"><span class="tooltip" data-state="open" data-tooltip-position="bottom">' +
+        '<button type="button">Trigger</button>' +
+        '<span class="tooltip-bubble" data-probe="bubble">A message long enough to cover the card below</span>' +
+        "</span></div>" +
+        '<div class="card" data-probe="next">Next card</div>' +
+        '<table class="data-table"><tbody><tr><td><span class="tooltip" data-state="open" data-tooltip-position="bottom">' +
+        '<button type="button">Cell</button><span class="tooltip-bubble" data-probe="cell-bubble">Below the table</span>' +
+        '</span></td></tr></tbody></table><div class="card" data-probe="after-table" style="min-height: 4rem">After the table</div>';
+      document.body.prepend(host);
+    }, region);
+    await settleAnimations(page);
+
+    for (const [probe, next] of [
+      ["bubble", "next"],
+      ["cell-bubble", "after-table"],
+    ]) {
+      // oxlint-disable-next-line no-await-in-loop -- one page, read in turn.
+      const paint = await page.locator(`[data-probe="${probe}"]`).evaluate((element, nextProbe) => {
+        const rect = element.getBoundingClientRect();
+        const below = document.querySelector(`[data-probe="${nextProbe}"]`)!.getBoundingClientRect();
+        const x = rect.left + rect.width / 2;
+        const y = rect.bottom - 2;
+        const hit = document.elementFromPoint(x, y);
+
+        return {
+          overlaps: y > below.top && y < below.bottom && x > below.left && x < below.right,
+          onTop: hit === element || element.contains(hit),
+        };
+      }, next);
+
+      expect(paint.overlaps, `${probe} reaches over the surface after it`).toBe(true);
+      expect(paint.onTop, `${probe} is painted on top`).toBe(true);
+    }
+  });
+}

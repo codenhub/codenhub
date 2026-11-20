@@ -2,7 +2,7 @@
 title: Accesibilidad
 description: Lo que hace el CSS con el foco, los estados, el movimiento, el contraste, los colores forzados y el texto de derecha a izquierda, y lo que tu aplicación todavía les debe a sus usuarios.
 order: 5
-source: 64247645618a1c10521309525c89bb273b72bafa
+source: 94700a4dc5e33d939125a7731aff3c9493733df9
 ---
 
 # Accesibilidad
@@ -141,7 +141,7 @@ Las mediciones de abajo corresponden a los colores incluidos. En cuanto cambies 
 
 | Característica                   | Comportamiento                                                                                                                                                                                                                                                                                                                                    |
 | -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Etiquetas rellenas               | La etiqueta `.solid` de cada intención cumple 4.5:1 (WCAG 1.4.3) como texto normal, en ambos temas. La más baja es success, con 5.14:1.                                                                                                                                                                                                           |
+| Etiquetas rellenas               | La etiqueta `.solid` de cada intención cumple 4.5:1 (WCAG 1.4.3) como texto normal, en ambos temas, en reposo y bajo el puntero. La más baja es success en reposo, con 5.14:1, e info bajo el puntero en modo oscuro, con 5.08:1.                                                                                                                 |
 | Texto de warning                 | `--color-warning-contrast` es casi negro, no el color de la página, porque un ámbar lo bastante oscuro para llevar texto blanco ya no parece ámbar.                                                                                                                                                                                               |
 | Rellenos parciales               | El color de texto de contraste solo aparece en rellenos por encima de la mitad de intensidad, así que el relleno limitado de un control de texto conserva el color de texto propio de la intención.                                                                                                                                               |
 | Color de intención en oscuro     | En modo oscuro, una etiqueta `.soft` o `.ghost` usa el tono `-300` de su intención, así que conserva su matiz en lugar de volverse blanca.                                                                                                                                                                                                        |

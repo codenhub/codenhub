@@ -2,7 +2,7 @@
 title: Botones
 description: Acciones destructivas y secundarias, botones de icono, tamaños, enlaces con aspecto de botón, estados deshabilitados e iconos de carga.
 order: 1
-source: 54f7c8a1eee5a0f696dc60b9f60f42026d49c5d5
+source: 204d1e79721e553fceb51ff03a7ca1879e990222
 ---
 
 # Botones
@@ -60,6 +60,8 @@ Cuando un botón con relleno tiene el foco del teclado, una línea de 2px del co
 | `.p-lg`   | Relleno amplio (1.5rem en los lados, 0.75rem arriba y abajo).                                                                                                                               |
 
 Una clase de tamaño y una de relleno se pueden combinar. Solo `.p-xs` quita la altura mínima de un botón con texto; cualquier otra combinación la conserva. En un botón de icono, cualquier clase `.p-*` quita el tamaño mínimo y el botón toma el tamaño de su icono más ese relleno: 0.125rem, 0.25rem o 0.75rem alrededor.
+
+Una etiqueta se queda en una línea mientras cabe. Cuando el contenedor del botón es más estrecho que la etiqueta, la etiqueta pasa a varias líneas dentro del botón, equilibradas entre sí, y el botón crece en altura, así que una etiqueta larga nunca hace que una pantalla estrecha se desplace hacia los lados. Un botón en una fila con otros elementos, como una barra de herramientas o un `.input-group`, no queda apretado en dos líneas por sus vecinos: solo pasa a varias líneas cuando es más ancho que toda la fila. Para mantener una etiqueta en una línea de todos modos, añade `white-space: nowrap` al botón.
 
 El aspecto base dibuja esquinas que escalan con el tamaño: un botón `.sm` o `.p-sm` tiene esquinas algo más pequeñas que uno por defecto, y `.lg` algo más grandes.
 

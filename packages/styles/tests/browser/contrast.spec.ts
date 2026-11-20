@@ -229,3 +229,114 @@ test("leaves a text control's resting line quiet without the preference", async 
 
   expect(await lineContrast(page, "ipt")).toBeLessThan(MINIMUM);
 });
+
+/* docs/accessibility.md promises every intent's `.solid` label 4.5:1 in both
+   themes. Hover swaps the plate for `--intent-hover`, a tone baked per theme,
+   so the promise has to hold there too: dark success's hover once lightened
+   its plate to 3.98:1 under the neutral-50 label. Every aesthetic is read,
+   since one may restate the fill or the ink, and a solid interactive card
+   takes the same hover tone as the button. */
+const SOLID_REGIONS = [
+  ["default", ""],
+  ["chunky-tile", "chunky-tile"],
+  ["cyber", "cyber"],
+  ["glass", "glass"],
+  ["glass-liquid", "glass glass-liquid"],
+  ["neobrutalism", "neobrutalism"],
+  ["pixel", "pixel"],
+  ["sketch", "sketch"],
+] as const;
+const SOLID_COMPONENTS = [
+  ["btn", "btn solid"],
+  ["card", "card interactive solid"],
+] as const;
+
+for (const theme of THEMES) {
+  test(`prints every intent's solid label at 4.5:1 at rest and on hover, ${theme}`, async ({ page }) => {
+    await load(
+      page,
+      theme,
+      SOLID_REGIONS.map(
+        ([name, region]) =>
+          `<div class="${region}" style="padding: 1rem">${INTENTS.flatMap((intent) =>
+            SOLID_COMPONENTS.map(
+              ([component, classes]) =>
+                `<button data-testid="${name}-${component}-${intent}" class="${classes} ${intent}">Label</button>`,
+            ),
+          ).join("")}</div>`,
+      ).join(""),
+    );
+    await page.addStyleTag({ content: "*, *::before, *::after { transition: none !important; }" });
+
+    const ground = await pageColor(page);
+    const ratio = async (testId: string) => {
+      const plate = flattenColor(await style(page, testId, "background-color"), ground);
+
+      return getContrastRatio(flattenColor(await style(page, testId, "color"), plate), plate);
+    };
+
+    for (const [name] of SOLID_REGIONS) {
+      for (const intent of INTENTS) {
+        for (const [component] of SOLID_COMPONENTS) {
+          const testId = `${name}-${component}-${intent}`;
+
+          // oxlint-disable-next-line no-await-in-loop -- one pointer, moved in turn.
+          expect.soft(await ratio(testId), `${testId} at rest`).toBeGreaterThanOrEqual(4.5);
+          // oxlint-disable-next-line no-await-in-loop -- one pointer, moved in turn.
+          await page.getByTestId(testId).hover();
+          // oxlint-disable-next-line no-await-in-loop -- one pointer, moved in turn.
+          expect.soft(await ratio(testId), `${testId} on hover`).toBeGreaterThanOrEqual(4.5);
+        }
+      }
+    }
+  });
+}
+
+/* Glass grounds a surface on a translucent pane, which shows whatever is
+   behind it. Nested in a `.solid` surface, the plate showed through: a ghost
+   or soft neutral card in a `.card.solid.primary` read 3.0 to 3.99:1. A
+   surface resting on a plate takes an opaque ground, so its text keeps the
+   4.5:1 it has on the page. The plate is read over the page, as the pane is
+   read over the plate. */
+const PLATES = ["neutral", "primary", "secondary", "success", "warning", "destructive", "info"] as const;
+const PANES = ["card ghost", "card soft", "panel", "alert", "card"] as const;
+
+for (const theme of THEMES) {
+  for (const region of ["glass", "glass glass-liquid"]) {
+    test(`prints a pane's text at 4.5:1 on a solid surface under .${region.replace(" ", ".")}, ${theme}`, async ({
+      page,
+    }) => {
+      await load(
+        page,
+        theme,
+        `<div class="${region}">${PLATES.map(
+          (plate) =>
+            `<div class="card solid ${plate}" data-testid="plate-${plate}">${INTENTS.flatMap((intent) =>
+              PANES.map(
+                (pane, index) => `<div class="${pane} ${intent}" data-testid="${plate}-${intent}-${index}">Text</div>`,
+              ),
+            ).join("")}</div>`,
+        ).join("")}</div>`,
+      );
+
+      const ground = await pageColor(page);
+
+      for (const plate of PLATES) {
+        // oxlint-disable-next-line no-await-in-loop -- one page, read in turn.
+        const under = flattenColor(await style(page, `plate-${plate}`, "background-color"), ground);
+
+        for (const intent of INTENTS) {
+          for (const [index, pane] of PANES.entries()) {
+            const testId = `${plate}-${intent}-${index}`;
+            // oxlint-disable-next-line no-await-in-loop -- one page, read in turn.
+            const fill = flattenColor(await style(page, testId, "background-color"), under);
+            // oxlint-disable-next-line no-await-in-loop -- one page, read in turn.
+            const ink = flattenColor(await style(page, testId, "color"), fill);
+
+            expect.soft(getContrastRatio(ink, fill), `${pane} ${intent} on ${plate}`).toBeGreaterThanOrEqual(4.5);
+          }
+        }
+      }
+    });
+  }
+}

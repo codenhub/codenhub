@@ -2,7 +2,7 @@
 title: Tooltips
 description: Ajuda de campo que abre no hover e no foco, como ligá-la a leitores de tela e à tecla Escape, e onde um tooltip é cortado.
 order: 4
-source: e9dba9085f67616a424f7cd1da1ddde579829945
+source: a6cd221c4332817a03cb3b3c5063781f558b9f84
 ---
 
 # Tooltips
@@ -56,17 +56,18 @@ Um balão tem a largura do texto, até 18rem, e a partir daí quebra a linha.
 
 ### Onde um tooltip é cortado
 
-O balão é posicionado só com CSS, no lado que você escolheu. Nada mede a página: ele não se move para ficar dentro da janela, não vira para o outro lado quando falta espaço e não vai para a camada superior (top layer) da página. Isso tem três consequências:
+O balão é posicionado só com CSS, no lado que você escolheu. Nada mede a página: ele não se move para ficar dentro da janela, não vira para o outro lado quando falta espaço e não vai para a camada superior (top layer) da página. Isso tem quatro consequências:
 
 - **Um contêiner com rolagem ou recorte o corta.** Um ancestral com `overflow: hidden`, `auto` ou `scroll` recorta o balão na borda dele. A tabela de chaves de API da tela de configurações fica num `.table-wrap`, que tem rolagem, então um tooltip acima da primeira linha é cortado no topo do wrapper. Aumentar o `z-index` não ajuda: ele muda sobre o que o balão é pintado, não se o contêiner o recorta.
 - **A borda da janela o corta.** Um tooltip acima da primeira linha de uma página, ou um tooltip à direita perto da borda direita, sai da tela.
 - **Esquerda e direita são lados físicos.** Numa página da direita para a esquerda, `"left"` continua significando o lado esquerdo da tela.
+- **O card seguinte pode cobri-lo, por um instante.** Sob `.glass`, cada card, painel, alerta e tabela é uma camada própria, então um balão é pintado acima das superfícies que vêm depois da sua só enquanto a sua superfície está elevada. O pacote eleva um `.card`, `.panel`, `.alert`, `.surface` ou `.data-table` que contém um tooltip enquanto o tooltip está fixado aberto, ou enquanto a superfície está sob o ponteiro ou contém o foco, com `position: relative` e o `z-index` dos popovers. Uma superfície que você mesmo posicionou mantém o próprio `position`. Quando o ponteiro sai da superfície, a elevação acaba na hora, então um balão que avança sobre o card seguinte se apaga por baixo dele durante o `--tooltip-linger`.
 
 O que fazer:
 
 - Escolha um lado com espaço: na primeira linha de uma tabela, use `data-tooltip-position="bottom"`.
 - Tire o gatilho do tooltip de dentro do contêiner que recorta, ou remova o `overflow` de um contêiner que não precisa dele.
-- Se a posição do gatilho não puder ser conhecida de antemão, como numa lista com rolagem ou num painel redimensionável, use uma biblioteca de posicionamento ou o componente de popover do seu framework, que consegue medir e virar. Você ainda pode dar ao elemento da mensagem as classes de `.tooltip-bubble` para o visual, mas mostrar, esconder e posicionar, como descrito nesta página, passam a ser trabalho dessa biblioteca, e não do `.tooltip`.
+- Se a posição do gatilho não puder ser conhecida de antemão, como numa lista com rolagem ou num painel redimensionável, use uma biblioteca de posicionamento ou o componente de popover do seu framework, que consegue medir e virar. Você ainda pode dar ao elemento da mensagem as classes de `.tooltip-bubble` para o visual. Fora do `.tooltip`, a classe é só o visual: sem estado oculto em repouso, posição ou escala, então um popover que a biblioteca abre, como `<div popover class="tooltip-bubble primary">`, aparece assim que abre. Mostrar, esconder e posicionar, como descrito nesta página, passam então a ser trabalho dessa biblioteca.
 
 ## Hover, permanência e Escape
 

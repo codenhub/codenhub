@@ -170,6 +170,13 @@
       backdrop-filter: var(--ui-backdrop, none);
     }
 
+    /* Raised while it holds an open tooltip, as a surface is: the blur makes
+       the table a stacking context too. See `surface.rules.css`. */
+    :where(&:has(.tooltip):is(:hover, :focus-within), &:has(.tooltip[data-state="open"])) {
+      position: relative;
+      z-index: var(--z-popover);
+    }
+
     /* How much rule there is between body rows, and none unless asked for. Ruling
        every row is a style choice rather than part of what a table is, so it is
        not tied to the edge axis: `.ruled` asks for it, `.ruleless` is its

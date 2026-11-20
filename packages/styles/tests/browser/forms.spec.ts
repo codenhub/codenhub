@@ -2281,7 +2281,10 @@ test.describe("forms", () => {
 
   /* The text controls take the button's size steps, so a `.btn.sm` and an
      `.ipt.sm` line up in a row: height, text size, and the corner the size
-     step scales. */
+     step scales. Heights are read under every aesthetic and under a 2px
+     border, the preset in docs/usage/presets.md: `.btn.lg` once kept its
+     padding whole while the controls gave the line back, and stood 49.5px to
+     their 48px wherever the border was 2px. */
   test("sizes text controls and groups with the button's size steps", async ({ page }) => {
     await page.goto(FORMS_URL);
 
@@ -2334,6 +2337,58 @@ test.describe("forms", () => {
 
     expect(sizes.sm.btn.height, "the steps differ").toBeLessThan(sizes.default.btn.height);
     expect(sizes.lg.btn.height, "the steps differ").toBeGreaterThan(sizes.default.btn.height);
+
+    const regions = await page.evaluate(() => {
+      const root = document.querySelector('[data-testid="preview-root"]') ?? document.body;
+      const regionsToRead = [
+        ["2px border", "", "--border-width: 2px"],
+        ["chunky-tile", "chunky-tile", ""],
+        ["cyber", "cyber", ""],
+        ["glass", "glass", ""],
+        ["neobrutalism", "neobrutalism", ""],
+        ["pixel", "pixel", ""],
+        ["sketch", "sketch", ""],
+        ["sketch-rounded", "sketch sketch-rounded", ""],
+      ] as const;
+
+      return regionsToRead.flatMap(([label, classes, style]) => {
+        const host = document.createElement("div");
+
+        host.className = classes;
+        host.setAttribute("style", style);
+        host.innerHTML = ["", "sm", "lg"]
+          .map(
+            (size) =>
+              `<div data-size="${size || "default"}">` +
+              `<button class="btn ${size}" type="button">Go</button>` +
+              `<input class="ipt ${size}" />` +
+              `<select class="select ${size}"><option>One</option></select>` +
+              `<div class="input-group ${size}"><span>@</span><input class="ipt" /></div></div>`,
+          )
+          .join("");
+        root.append(host);
+
+        const rows = [...host.children].map((row) => ({
+          label: `${label} ${(row as HTMLElement).dataset.size}`,
+          heights: [...row.children].map((element) => ({
+            name: element.className.split(" ")[0],
+            height: element.getBoundingClientRect().height,
+          })),
+        }));
+
+        host.remove();
+
+        return rows;
+      });
+    });
+
+    for (const { heights, label } of regions) {
+      const button = heights[0]!.height;
+
+      for (const { height, name } of heights.slice(1)) {
+        expect.soft(height, `${label} .${name} height`).toBeCloseTo(button, 1);
+      }
+    }
 
     for (const control of ["ipt", "select", "textarea", "group"] as const) {
       expect(sizes.sm[control].paddingStart, `.${control}.sm pads less`).toBeLessThan(

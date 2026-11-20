@@ -176,7 +176,7 @@ Each row is an override point: set it on `:root` to retheme the page, or on any 
 | `--color-tooltip-contrast`     | `neutral-900`, `neutral-100` | Text on `--color-tooltip`.                                                                     |
 | `--color-success`              | `emerald-700`                | Fill of `.success`.                                                                            |
 | `--color-success-contrast`     | `neutral-50`                 | Text on a full success fill: 5.14:1.                                                           |
-| `--color-success-hover`        | `#007552`, `#008e66`         | Success fill under the pointer.                                                                |
+| `--color-success-hover`        | `#007552`, `#006448`         | Success fill under the pointer.                                                                |
 | `--color-success-subtle`       | `emerald-100`, `emerald-900` | Success tint behind soft components.                                                           |
 | `--color-success-strong`       | `emerald-800`, `emerald-300` | Success text, icons, and borders where the fill is not full.                                   |
 | `--color-warning`              | `amber-600`                  | Fill of `.warning`.                                                                            |
