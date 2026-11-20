@@ -91,6 +91,8 @@ Issue paths name the JWK member at fault, such as `["kty"]` or `["n"]`.
 
 The `kid` option names a JWK that has no `kid`, so a JWK stored without one gets an identifier on import. A JWK whose own `kid` differs from the option is `invalid_key` at `["kid"]`, rather than one of them silently winning; the same `kid` in both is fine.
 
+As for `generateKeyPair`, `kid: "thumbprint"` names the key by its public key's [thumbprint](#thumbprints), for every import function and every form of key: a JWK, a PEM string or a `CryptoKey`. A JWK with its own `kid` is then accepted only when that `kid` is the thumbprint, so the literal string `"thumbprint"` cannot be a `kid` given to an import.
+
 Import ignores a JWK's `ext` and any member it does not know. A public key is always exportable. For a private or secret key, only the `extractable` option decides whether it can be exported again, so a JWK that says `ext: true` still gives a non-extractable key unless you pass `extractable: true`.
 
 ## Importing a PEM key
@@ -167,7 +169,7 @@ The secret must be at least as long as the hash, 32 bytes for `HS256`, 48 for `H
 
 A JWK's `key_ops` is checked but does not restrict the secret key: one imported with `key_ops: ["verify"]` can still sign. Whoever holds an HMAC secret can compute the same signature with any other library, so a verify-only secret would protect nothing.
 
-`kid` sets the identifier for raw bytes, and for a JWK as [for a public JWK](#importing-a-public-key): it names a JWK without a `kid`, and one with another `kid` is `invalid_key` at `["kid"]`.
+`kid` sets the identifier for raw bytes, and for a JWK as [for a public JWK](#importing-a-public-key): it names a JWK without a `kid`, and one with another `kid` is `invalid_key` at `["kid"]`. `kid: "thumbprint"` names the secret by its `oct` thumbprint (RFC 7638 §3.2), a SHA-256 hash of the secret; a `CryptoKey` must then be extractable, or the result is `invalid_key`, since its secret cannot be read.
 
 ## Importing a Web Crypto key
 
@@ -251,7 +253,7 @@ if (!result.ok) throw new Error("The signing key could not be imported.");
 const kid = await jwkThumbprint(result.value);
 ```
 
-To generate a pair already named by its thumbprint, pass `kid: "thumbprint"` to `generateKeyPair`.
+To generate or import a key already named by its thumbprint, pass `kid: "thumbprint"` to `generateKeyPair` or to an import function.
 
 Use it for a `kid` that follows from the key, or for the `jkt` that binds an access token to a DPoP key, as [Signing tokens](signing.md#dpop-proofs) shows.
 

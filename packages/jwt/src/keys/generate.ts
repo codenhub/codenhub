@@ -9,7 +9,7 @@ import {
   requireSymmetricAlg,
 } from "./options";
 import { kidMember, registerKey } from "./registry";
-import { cryptoKeyThumbprint } from "./thumbprint";
+import { cryptoKeyThumbprint, THUMBPRINT_KID } from "./thumbprint";
 
 /** RSA modulus lengths {@link generateKeyPair} accepts, in bits. */
 export type RsaModulusLength = 2048 | 3072 | 4096;
@@ -85,8 +85,6 @@ const RSA_PUBLIC_EXPONENT = new Uint8Array([1, 0, 1]);
 const BITS_PER_BYTE = 8;
 /** Retries after an `OperationError` from Ed25519 generation; four failures in a row are about 1 in 2^28. */
 const OKP_GENERATION_RETRIES = 3;
-/** The `kid` option value that names a generated pair by its RFC 7638 thumbprint. */
-const THUMBPRINT_KID = "thumbprint";
 
 /**
  * Generates a key pair bound to one asymmetric algorithm.

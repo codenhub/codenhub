@@ -9,7 +9,7 @@ import type {
   SecretKey,
   SymmetricAlgorithm,
 } from "../core/types";
-import { copyBytes, isArrayBuffer, isUint8Array } from "../encoding";
+import { copyBytes, encodeBase64Url, isArrayBuffer, isUint8Array } from "../encoding";
 import { ALGORITHM_PARAMS } from "./algorithms";
 import { exportMaterialJwk, isCryptoKey } from "./exported-jwk";
 import type { KeyPair } from "./generate";
@@ -17,6 +17,7 @@ import { checkJwk, type KeyRole } from "./jwk";
 import { readExtractable, readKid, requireAsymmetricAlg, requireOptions, requireSymmetricAlg } from "./options";
 import { pemToJwk } from "./pem";
 import { kidMember, registerKey } from "./registry";
+import { materialThumbprint, THUMBPRINT_KID } from "./thumbprint";
 
 /** How {@link importPublicKey} binds the imported key. */
 export interface ImportPublicKeyOptions {
@@ -24,7 +25,9 @@ export interface ImportPublicKeyOptions {
   readonly alg: AsymmetricAlgorithm;
   /**
    * Key identifier. A PEM key and a `CryptoKey` have no place for one; a JWK without a `kid` takes this one,
-   * and a JWK whose own `kid` differs is `invalid_key` at `["kid"]`.
+   * and a JWK whose own `kid` differs is `invalid_key` at `["kid"]`. The literal `"thumbprint"` is reserved: it
+   * names the key by its public key's RFC 7638 thumbprint, as {@link jwkThumbprint} computes it, which a JWK's own
+   * `kid` must then equal.
    *
    * @defaultValue no `kid`
    */
@@ -37,7 +40,9 @@ export interface ImportPrivateKeyOptions {
   readonly alg: AsymmetricAlgorithm;
   /**
    * Key identifier. A PEM key and a `CryptoKey` have no place for one; a JWK without a `kid` takes this one,
-   * and a JWK whose own `kid` differs is `invalid_key` at `["kid"]`.
+   * and a JWK whose own `kid` differs is `invalid_key` at `["kid"]`. The literal `"thumbprint"` is reserved: it
+   * names the key by its public key's RFC 7638 thumbprint, as {@link jwkThumbprint} computes it, which a JWK's own
+   * `kid` must then equal.
    *
    * @defaultValue no `kid`
    */
@@ -63,7 +68,9 @@ export interface ImportSecretKeyOptions {
   readonly alg: SymmetricAlgorithm;
   /**
    * Key identifier. Raw bytes and a `CryptoKey` have no place for one; a JWK without a `kid` takes this one, and
-   * a JWK whose own `kid` differs is `invalid_key` at `["kid"]`.
+   * a JWK whose own `kid` differs is `invalid_key` at `["kid"]`. The literal `"thumbprint"` is reserved: it names
+   * the secret by its RFC 7638 `oct` thumbprint, which a JWK's own `kid` must then equal, and needs an extractable
+   * `CryptoKey`, or it is `invalid_key`.
    *
    * @defaultValue no `kid`
    */
@@ -131,7 +138,7 @@ export async function importPublicKey(key: unknown, options: ImportPublicKeyOpti
   const checked = requireOptions(options, PUBLIC_KEY_OPTIONS, "importPublicKey");
   const alg = requireAsymmetricAlg(checked, "importPublicKey");
   const kid = readKid(checked, "importPublicKey");
-  const jwk = await sourceJwk(key, alg, "public", kid);
+  const jwk = await sourceJwk(key, alg, "public", sourceKid(kid));
   if (!jwk.ok) {
     return fail(jwk.issue);
   }
@@ -276,7 +283,7 @@ async function jwkHalves(
   kid: string | undefined,
   isExtractable: boolean,
 ): Promise<KeyHalves | JwtIssue> {
-  const jwk = await sourceJwk(key, alg, "private", kid);
+  const jwk = await sourceJwk(key, alg, "private", sourceKid(kid));
   if (!jwk.ok) {
     return jwk.issue;
   }
@@ -284,8 +291,9 @@ async function jwkHalves(
   if ("code" in material) {
     return material;
   }
-  if (isKidConflict(material.kid, kid)) {
-    return { code: "invalid_key", path: ["kid"] };
+  const named = await resolveKid(material.kid, kid, material.importJwk, alg);
+  if ("code" in named) {
+    return named;
   }
   const { importParams } = ALGORITHM_PARAMS[alg];
   const publicJwk: JsonWebKey = { ...material.importJwk };
@@ -297,7 +305,7 @@ async function jwkHalves(
       privateCryptoKey: await crypto.subtle.importKey("jwk", material.importJwk, importParams, isExtractable, ["sign"]),
       publicCryptoKey: await crypto.subtle.importKey("jwk", publicJwk, importParams, true, ["verify"]),
       signatureLength: material.signatureLength,
-      kid: material.kid ?? kid,
+      kid: named.kid,
     };
   } catch {
     // Web Crypto rejects material it cannot use, such as a point off the curve; its message may quote it.
@@ -336,13 +344,17 @@ async function cryptoKeyPairHalves(
   if ("code" in material) {
     return material;
   }
+  const named = await resolveKid(undefined, kid, material.importJwk, alg);
+  if ("code" in named) {
+    return named;
+  }
   try {
     const { importParams } = ALGORITHM_PARAMS[alg];
     return {
       privateCryptoKey: privateKey,
       publicCryptoKey: await crypto.subtle.importKey("jwk", material.importJwk, importParams, true, ["verify"]),
       signatureLength: material.signatureLength,
-      kid,
+      kid: named.kid,
     };
   } catch {
     return { code: "invalid_key" };
@@ -428,9 +440,18 @@ export async function importSecretKey(
       minimum,
       isExtractable,
     );
-    return issue === undefined
-      ? ok(registerKey(buildKey(optionKid), { cryptoKey: input, signatureLength: minimum }))
-      : fail(issue);
+    if (issue !== undefined) {
+      return fail(issue);
+    }
+    let kid = optionKid;
+    if (optionKid === THUMBPRINT_KID) {
+      // The thumbprint is computed from `k`, which a non-extractable key never gives up.
+      if (!input.extractable) {
+        return fail({ code: "invalid_key" });
+      }
+      kid = await materialThumbprint(await crypto.subtle.exportKey("jwk", input), "oct");
+    }
+    return ok(registerKey(buildKey(kid), { cryptoKey: input, signatureLength: minimum }));
   }
   if (bytes === undefined) {
     return importJwk(input, { alg, role: "secret", isExtractable, kid: optionKid }, buildKey);
@@ -439,7 +460,8 @@ export async function importSecretKey(
     return fail({ code: "weak_key", params: { minimum } });
   }
   const cryptoKey = await crypto.subtle.importKey("raw", bytes, importParams, isExtractable, USAGES.secret);
-  return ok(registerKey(buildKey(optionKid), { cryptoKey, signatureLength: minimum }));
+  const kid = optionKid === THUMBPRINT_KID ? await materialThumbprint({ k: encodeBase64Url(bytes) }, "oct") : optionKid;
+  return ok(registerKey(buildKey(kid), { cryptoKey, signatureLength: minimum }));
 }
 
 /**
@@ -541,9 +563,27 @@ interface ImportPlan {
   readonly kid: string | undefined;
 }
 
-/** Whether a JWK's own `kid` and the `kid` option both name the key, differently. */
-function isKidConflict(jwkKid: string | undefined, optionKid: string | undefined): boolean {
-  return jwkKid !== undefined && optionKid !== undefined && jwkKid !== optionKid;
+/** The `kid` option as a PEM or `CryptoKey` source takes it: `"thumbprint"` is resolved later, from the material. */
+function sourceKid(kid: string | undefined): string | undefined {
+  return kid === THUMBPRINT_KID ? undefined : kid;
+}
+
+/**
+ * The key's `kid`: the JWK's own, or the option's, which `"thumbprint"` turns into the RFC 7638 thumbprint of
+ * `material`. Both naming the key differently is `invalid_key` at `["kid"]`, rather than one silently winning.
+ */
+async function resolveKid(
+  jwkKid: string | undefined,
+  optionKid: string | undefined,
+  material: JsonWebKey,
+  alg: JwsAlgorithm,
+): Promise<{ readonly kid: string | undefined } | JwtIssue> {
+  const named =
+    optionKid === THUMBPRINT_KID ? await materialThumbprint(material, ALGORITHM_PARAMS[alg].kty) : optionKid;
+  if (jwkKid !== undefined && named !== undefined && jwkKid !== named) {
+    return { code: "invalid_key", path: ["kid"] };
+  }
+  return { kid: jwkKid ?? named };
 }
 
 async function importJwk<TKey extends PublicKey | PrivateKey | SecretKey>(
@@ -555,8 +595,9 @@ async function importJwk<TKey extends PublicKey | PrivateKey | SecretKey>(
   if ("code" in checked) {
     return fail(checked);
   }
-  if (isKidConflict(checked.kid, plan.kid)) {
-    return fail({ code: "invalid_key", path: ["kid"] });
+  const named = await resolveKid(checked.kid, plan.kid, checked.importJwk, plan.alg);
+  if ("code" in named) {
+    return fail(named);
   }
   let cryptoKey: CryptoKey;
   try {
@@ -571,5 +612,5 @@ async function importJwk<TKey extends PublicKey | PrivateKey | SecretKey>(
     // Web Crypto rejects material it cannot use, such as a point off the curve; its message may quote it.
     return fail({ code: "invalid_key" });
   }
-  return ok(registerKey(buildKey(checked.kid ?? plan.kid), { cryptoKey, signatureLength: checked.signatureLength }));
+  return ok(registerKey(buildKey(named.kid), { cryptoKey, signatureLength: checked.signatureLength }));
 }

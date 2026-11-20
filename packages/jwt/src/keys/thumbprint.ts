@@ -5,13 +5,15 @@ import { exportWebCryptoJwk } from "./exported-jwk";
 import { getKeyEntry } from "./registry";
 
 /** RFC 7638 §3.2: the required members of each key type, in lexicographic order. */
-const THUMBPRINT_MEMBERS: Readonly<
-  Record<Exclude<Jwk["kty"], "oct">, readonly ("crv" | "e" | "kty" | "n" | "x" | "y")[]>
-> = {
+const THUMBPRINT_MEMBERS: Readonly<Record<Jwk["kty"], readonly ("crv" | "e" | "k" | "kty" | "n" | "x" | "y")[]>> = {
   EC: ["crv", "kty", "x", "y"],
   OKP: ["crv", "kty", "x"],
   RSA: ["e", "kty", "n"],
+  oct: ["k", "kty"],
 };
+
+/** The `kid` option value that names a generated or imported key by its RFC 7638 thumbprint. */
+export const THUMBPRINT_KID = "thumbprint";
 
 /**
  * Computes a key pair's JWK SHA-256 Thumbprint (RFC 7638), base64url-encoded without padding, from its
@@ -44,9 +46,16 @@ export async function jwkThumbprint(key: PublicKey | PrivateKey): Promise<string
 
 /** The RFC 7638 thumbprint of a public `CryptoKey` bound to `alg`. */
 export async function cryptoKeyThumbprint(publicCryptoKey: CryptoKey, alg: AsymmetricAlgorithm): Promise<string> {
-  const exported = await exportWebCryptoJwk(publicCryptoKey, alg);
-  const kty = ALGORITHM_PARAMS[alg].kty as keyof typeof THUMBPRINT_MEMBERS;
-  const material: Record<string, unknown> = { ...exported, kty };
+  return materialThumbprint(await exportWebCryptoJwk(publicCryptoKey, alg), ALGORITHM_PARAMS[alg].kty);
+}
+
+/**
+ * The RFC 7638 thumbprint of a JWK's material, read from the members its `kty` requires (RFC 7638 §3.2), which
+ * must be in canonical form already: an RSA `n` and `e` without leading zero bytes, as Web Crypto exports them
+ * and the JWK checks give them.
+ */
+export async function materialThumbprint(jwk: JsonWebKey, kty: Jwk["kty"]): Promise<string> {
+  const material: Record<string, unknown> = { ...jwk, kty };
   // Every required member is a base64url string or a fixed name, so JSON.stringify writes the RFC 7638 form:
   // no whitespace, and no escapes to normalize.
   const canonical = JSON.stringify(Object.fromEntries(THUMBPRINT_MEMBERS[kty].map((name) => [name, material[name]])));
