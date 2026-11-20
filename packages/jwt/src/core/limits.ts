@@ -30,3 +30,36 @@ export const JWS_ALGORITHMS: readonly JwsAlgorithm[] = Object.freeze([
 /** Tests whether a value names a supported algorithm, exactly and case-sensitively. */
 export const isJwsAlgorithm = (value: unknown): value is JwsAlgorithm =>
   typeof value === "string" && (JWS_ALGORITHMS as readonly string[]).includes(value);
+
+/**
+ * Most signatures a general JWS JSON serialization may hold, when signing and when verifying: each one costs a
+ * key selection and a signature check.
+ */
+export const MAX_JWS_SIGNATURES = 8;
+
+/**
+ * Header parameter names RFC 7515 and RFC 7518 define, which a `crit` list must not name (RFC 7515 §4.1.11):
+ * `crit` is for extensions.
+ */
+export const REGISTERED_HEADER_NAMES: readonly string[] = Object.freeze([
+  "alg",
+  "jku",
+  "jwk",
+  "kid",
+  "x5u",
+  "x5c",
+  "x5t",
+  "x5t#S256",
+  "typ",
+  "cty",
+  "crit",
+  "enc",
+  "zip",
+  "epk",
+  "apu",
+  "apv",
+  "iv",
+  "tag",
+  "p2s",
+  "p2c",
+]);
