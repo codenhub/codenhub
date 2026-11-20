@@ -1,3 +1,5 @@
+import { runInNewContext } from "node:vm";
+
 import { beforeAll, describe, expect, it } from "vitest";
 
 import type { PrivateKey, PublicKey, SecretKey } from "../core/types";
@@ -408,3 +410,54 @@ const valueOrThrow = <T>(result: { ok: true; value: T } | { ok: false }): T => {
   }
   return result.value;
 };
+
+describe("sign values from another realm", () => {
+  const foreign = <T>(source: string): T => runInNewContext(source) as T;
+
+  it("should accept a payload, a header and nested containers created in another realm", async () => {
+    const payload = foreign<Record<string, unknown>>(
+      '({ sub: "user-1", aud: ["a", "b"], extra: { list: [1, { deep: true }] } })',
+    );
+    const header = foreign<SignHeader>('({ typ: "JWT", custom: { list: [null] } })');
+
+    const token = await sign({ payload, key: secretKey, header });
+
+    expect(headerTextOf(token)).toBe('{"alg":"HS256","typ":"JWT","custom":{"list":[null]}}');
+    expect(payloadTextOf(token)).toBe('{"sub":"user-1","aud":["a","b"],"extra":{"list":[1,{"deep":true}]}}');
+  });
+
+  it.each([
+    ["an Array subclass", "({ aud: new (class extends Array {})() })", "must hold only plain objects and arrays."],
+    [
+      "an array with a swapped prototype",
+      '({ aud: Object.setPrototypeOf(["a"], { toJSON: () => 5 }) })',
+      "must hold only plain objects and arrays.",
+    ],
+    [
+      "an object with a swapped prototype",
+      "({ claim: Object.setPrototypeOf({}, { toJSON: () => 5 }) })",
+      "must hold only plain objects and arrays.",
+    ],
+    ["an object with an own toJSON", "({ claim: { toJSON: () => 5 } })", "must not hold toJSON methods."],
+    [
+      "an array with an own toJSON",
+      '({ claim: Object.defineProperty(["a"], "toJSON", { value: () => 5 }) })',
+      "must not hold toJSON methods.",
+    ],
+  ])("should throw for %s from another realm", async (_, source, message) => {
+    await expect(sign({ payload: foreign<Record<string, unknown>>(source), key: secretKey })).rejects.toThrow(
+      `sign: input.payload ${message}`,
+    );
+  });
+
+  it.each([
+    ["Object.prototype", "({ claim: { a: 1 } })"],
+    ["Array.prototype", '({ claim: ["a"] })'],
+  ])("should throw when the other realm's %s has a polluting toJSON", async (prototype, source) => {
+    const payload = foreign<Record<string, unknown>>(`${prototype}.toJSON = () => 5; ${source}`);
+
+    await expect(sign({ payload, key: secretKey })).rejects.toThrow(
+      "sign: input.payload must not hold toJSON methods.",
+    );
+  });
+});
