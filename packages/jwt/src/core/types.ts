@@ -295,7 +295,8 @@ export type KeySetResolver = (
 /**
  * What a {@link KeySetResolver} returns for an issuer whose tokens are checked differently from the verifier's
  * defaults, such as a tenant whose tokens name its own audience:
- * `{ keys: tenant.keySet, audience: tenant.clientId }`.
+ * `{ keys: tenant.keySet, audience: tenant.clientId }`. A route with any other member, such as a misspelled
+ * `audiance` or a `typ`, is invalid rather than ignored, like a route whose members have invalid values.
  */
 export interface KeySetRoute {
   /** The issuer's key set. */
