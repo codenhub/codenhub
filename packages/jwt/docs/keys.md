@@ -140,7 +140,7 @@ Before returning the pair, it signs a fixed message with the private key and ver
 
 ## Importing a secret
 
-`importSecretKey` takes either the secret's raw bytes or an `oct` JWK. A string is a compile error, since it could be text, base64 or hex; encode it to bytes first. A string that reaches it anyway, from untyped code, returns `invalid_key`:
+`importSecretKey` takes either the secret's raw bytes, as any typed array, `DataView` or `ArrayBuffer`, including one from another realm such as an iframe or a `node:vm` context, or an `oct` JWK. A string is a compile error, since it could be text, base64 or hex; encode it to bytes first. A string that reaches it anyway, from untyped code, returns `invalid_key`:
 
 ```ts
 import { importSecretKey } from "@codenhub/jwt";

@@ -641,6 +641,17 @@ describe("cross-realm inputs", () => {
     expect(encodeBase64Url(new Uint8Array(40).fill(7))).toBe((await exportSecretJwk(valueOf(result))).k);
   });
 
+  it.each([
+    ["ArrayBuffer", "new Uint8Array(40).fill(7).buffer"],
+    ["DataView", "new DataView(new Uint8Array(48).fill(7).buffer, 8)"],
+    ["Uint16Array", "new Uint16Array(20).fill(0x0707)"],
+  ])("should import a %s from another realm as raw bytes", async (_name, expression) => {
+    const foreign = runInNewContext(expression) as ArrayBuffer;
+    expect(foreign instanceof Object).toBe(false);
+    const result = await importSecretKey(foreign, { alg: "HS256", extractable: true });
+    expect(encodeBase64Url(new Uint8Array(40).fill(7))).toBe((await exportSecretJwk(valueOf(result))).k);
+  });
+
   it("should report weak_key for a short Uint8Array from another realm", async () => {
     const foreign = runInNewContext("new Uint8Array(31)");
     expect(issuesOf(await importSecretKey(foreign, { alg: "HS256" }))).toEqual([

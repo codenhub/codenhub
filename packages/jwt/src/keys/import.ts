@@ -372,8 +372,8 @@ function readCryptoKeyPair(key: unknown): CryptoKeyPairInput | undefined {
 const PRIVATE_MEMBERS = ["d", "p", "q", "dp", "dq", "qi"] as const;
 
 /**
- * Imports an HMAC secret, given as raw bytes, as an untrusted `oct` JWK, or as a Web Crypto `CryptoKey`,
- * bound to one algorithm.
+ * Imports an HMAC secret, given as raw bytes (any typed array, `DataView` or `ArrayBuffer`, from any realm),
+ * as an untrusted `oct` JWK, or as a Web Crypto `CryptoKey`, bound to one algorithm.
  *
  * @remarks
  * The secret must be at least as long as the algorithm's hash output: 32 bytes for `HS256`, 48 for
@@ -385,7 +385,7 @@ const PRIVATE_MEMBERS = ["d", "p", "q", "dp", "dq", "qi"] as const;
  * algorithm's hash with both the `sign` and `verify` usages, and extractable when `extractable` is `true`;
  * otherwise it is `invalid_key`, and `weak_key` when shorter than the minimum.
  *
- * @param input - The secret's bytes, an `oct` JWK (untrusted, so any object is accepted), or a `CryptoKey`. A string is a
+ * @param input - The secret's bytes, as any typed array, `DataView` or `ArrayBuffer`, an `oct` JWK (untrusted, so any object is accepted), or a `CryptoKey`. A string is a
  * compile error, because a string secret is ambiguous; at runtime any other value, a string included, still
  * returns `invalid_key`.
  * @param options - The algorithm, the `kid`, and whether the secret may be
