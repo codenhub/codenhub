@@ -1,5 +1,15 @@
 import type { I18nInitOptions } from "./types";
 
+/** A translation formatted without values, as the DOM shows it. @internal */
+export interface FoundText {
+  /** The message formatted without values. */
+  readonly text: string;
+  /** The locale of the dictionary that has the message, which differs from the active one for a fallback. */
+  readonly locale: string;
+  /** Whether the message has an argument, which `text` shows as written, such as `{name}` or a whole plural. */
+  readonly needsValues: boolean;
+}
+
 /** Manager operations the browser entrypoint needs but the public `I18n` type does not expose. @internal */
 export interface I18nInternals {
   /**
@@ -8,7 +18,7 @@ export interface I18nInternals {
    */
   init(options: I18nInitOptions): Promise<boolean>;
   /** Looks a key up like `translate()`, reporting a miss, but returns undefined for it rather than the key. */
-  lookup(key: string): string | undefined;
+  lookup(key: string): FoundText | undefined;
   /** The id of the latest `init()` or `setLocale()` request, which a request takes synchronously when it starts. */
   latestRequestId(): number;
   /** Whether the latest `init()` or `setLocale()` request is still loading its dictionaries. */

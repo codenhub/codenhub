@@ -1,7 +1,11 @@
+import type { FoundText } from "../core/internals";
 import { normalizeTranslationKey } from "../core/string-validation";
 import { formatReportedKey } from "../locale/dictionary";
 
 const TRANSLATION_ATTRIBUTE = "data-i18n";
+const LANG_ATTRIBUTE = "lang";
+// Keys whose message needs values are warned about once each, among the most recent.
+const MAX_NEEDS_VALUES_WARNINGS = 1_000;
 const ELEMENT_NODE = 1;
 /**
  * Elements whose text can run, stay hidden, or be read as HTML. The HTML serializer writes the text of `xmp`, `iframe`,
@@ -20,6 +24,12 @@ const BLOCKED_ELEMENT_NAMES = new Set([
   "template",
   "xmp",
 ]);
+
+/**
+ * Elements whose `title` names the style sheet set they belong to rather than text people read, so translating it
+ * could switch the preferred style sheet off.
+ */
+const STYLE_SHEET_ELEMENT_NAMES = new Set(["link", "style"]);
 
 /**
  * Attributes that `data-i18n-<attribute>` may translate: text shown to people or assistive technology. URLs, styles,
@@ -50,6 +60,12 @@ interface AttributeState {
   translated: string | null;
 }
 
+/** The `lang` a binding wrote to an element, and the value the element had before. */
+interface LangState {
+  readonly original: string | null;
+  written: string;
+}
+
 interface DomTranslatorOptions {
   readonly isSilent: boolean;
 }
@@ -57,15 +73,21 @@ interface DomTranslatorOptions {
 interface TranslateRootOptions {
   readonly root: ParentNode;
   readonly boundary?: ParentNode | undefined;
-  readonly translate: (key: string) => string | undefined;
+  /** The active locale, which text from another dictionary is marked apart from with `lang`. */
+  readonly locale: string;
+  readonly translate: (key: string) => FoundText | undefined;
 }
+
+type Translate = TranslateRootOptions["translate"];
 
 /** @internal */
 export interface DomTranslator {
   /**
-   * Translates safe leaves and attributes at and below the root, restoring the fallback where a key was removed. A
-   * text or attribute whose translation throws, such as from a throwing `onMissingKey`, keeps its value; every other
-   * key is still translated, and the first error is thrown after the pass.
+   * Translates safe leaves and attributes at and below the root, restoring the fallback where a key was removed, and
+   * marks an element whose translations come from another locale's dictionary with that locale's `lang`. A message
+   * that needs values keeps the fallback, with a warning. A text or attribute whose translation throws, such as from a
+   * throwing `onMissingKey`, keeps its value; every other key is still translated, and the first error is thrown after
+   * the pass.
    */
   translateRoot(options: TranslateRootOptions): void;
 }
@@ -122,6 +144,7 @@ const isValidDomKey = (rawKey: string): boolean => normalizeTranslationKey(rawKe
 const fallbackTexts = new WeakMap<Element, string>();
 const translatedTexts = new WeakMap<Element, string>();
 const attributeStates = new WeakMap<Element, Map<string, AttributeState>>();
+const langStates = new WeakMap<Element, LangState>();
 
 /**
  * Whether the element shows the text a binding last wrote to it. Another binding whose root overlaps reads such a write
@@ -145,6 +168,38 @@ export function createDomTranslator(options: DomTranslatorOptions): DomTranslato
     }
   };
 
+  const warnedNeedsValues = new Set<string>();
+  const warnNeedsValues = (element: Element, keyAttribute: string, key: string): void => {
+    if (options.isSilent || warnedNeedsValues.has(key)) {
+      return;
+    }
+    if (warnedNeedsValues.size >= MAX_NEEDS_VALUES_WARNINGS) {
+      warnedNeedsValues.delete(warnedNeedsValues.values().next().value!);
+    }
+    warnedNeedsValues.add(key);
+    console.warn(
+      "%s",
+      `[I18n] Skipping translation because ${keyAttribute} names a message that needs values, ` +
+        `${formatReportedKey(key)}; render it with t().`,
+      element,
+    );
+  };
+
+  /** The translation to show for a key, or `undefined` for a miss or a message that needs values. */
+  const readTranslation = (
+    element: Element,
+    keyAttribute: string,
+    key: string,
+    translate: Translate,
+  ): FoundText | undefined => {
+    const found = translate(key);
+    if (found?.needsValues === true) {
+      warnNeedsValues(element, keyAttribute, key);
+      return undefined;
+    }
+    return found;
+  };
+
   const getFallbackText = (element: Element): string => {
     const fallbackText = fallbackTexts.get(element);
     const currentText = element.textContent ?? "";
@@ -162,11 +217,12 @@ export function createDomTranslator(options: DomTranslatorOptions): DomTranslato
     element: Element,
     attribute: string,
     rawKey: string,
-    translate: (key: string) => string | undefined,
-  ): void => {
+    translate: Translate,
+  ): string | undefined => {
+    const keyAttribute = `${TRANSLATION_ATTRIBUTE}-${attribute}`;
     if (!isValidDomKey(rawKey)) {
-      warnInvalidKey(element, `${TRANSLATION_ATTRIBUTE}-${attribute}`, rawKey);
-      return;
+      warnInvalidKey(element, keyAttribute, rawKey);
+      return undefined;
     }
 
     let states = attributeStates.get(element);
@@ -184,7 +240,8 @@ export function createDomTranslator(options: DomTranslatorOptions): DomTranslato
       states.set(attribute, state);
     }
 
-    const nextValue = translate(rawKey.trim()) ?? state.fallback;
+    const found = readTranslation(element, keyAttribute, rawKey.trim(), translate);
+    const nextValue = found?.text ?? state.fallback;
 
     if (nextValue === null) {
       element.removeAttribute(attribute);
@@ -192,6 +249,7 @@ export function createDomTranslator(options: DomTranslatorOptions): DomTranslato
       element.setAttribute(attribute, nextValue);
     }
     state.translated = nextValue;
+    return found?.locale;
   };
 
   /** Restores the fallback of an attribute whose key was removed, unless the value changed since translation. */
@@ -233,10 +291,41 @@ export function createDomTranslator(options: DomTranslatorOptions): DomTranslato
     translatedTexts.delete(element);
   };
 
-  const isTracked = (element: Element): boolean =>
-    translatedTexts.has(element) || (attributeStates.get(element)?.size ?? 0) > 0;
+  /**
+   * Writes `lang` for translations in another locale than the active one, or with `undefined`, restores the element's
+   * own value, unless other code changed it since.
+   */
+  const applyLang = (element: Element, lang: string | undefined): void => {
+    const state = langStates.get(element);
+    const currentLang = element.getAttribute(LANG_ATTRIBUTE);
 
-  const translateText = (element: Element, rawKey: string, translate: (key: string) => string | undefined): void => {
+    if (lang === undefined) {
+      if (state !== undefined && currentLang === state.written) {
+        if (state.original === null) {
+          element.removeAttribute(LANG_ATTRIBUTE);
+        } else {
+          element.setAttribute(LANG_ATTRIBUTE, state.original);
+        }
+      }
+      langStates.delete(element);
+      return;
+    }
+
+    if (state === undefined || currentLang !== state.written) {
+      langStates.set(element, { original: currentLang, written: lang });
+    } else {
+      state.written = lang;
+    }
+    if (currentLang !== lang) {
+      element.setAttribute(LANG_ATTRIBUTE, lang);
+    }
+  };
+
+  const isTracked = (element: Element): boolean =>
+    translatedTexts.has(element) || (attributeStates.get(element)?.size ?? 0) > 0 || langStates.has(element);
+
+  /** Translates the text, returning the locale of the translation shown, or `undefined` when none is. */
+  const translateText = (element: Element, rawKey: string, translate: Translate): string | undefined => {
     if (element.childElementCount > 0) {
       // The application owns its content now, so a translation recorded for an earlier locale no longer describes it.
       fallbackTexts.delete(element);
@@ -249,24 +338,29 @@ export function createDomTranslator(options: DomTranslatorOptions): DomTranslato
           element,
         );
       }
-      return;
+      return undefined;
     }
 
     if (!isValidDomKey(rawKey)) {
       warnInvalidKey(element, TRANSLATION_ATTRIBUTE, rawKey);
-      return;
+      return undefined;
     }
 
     const fallbackText = getFallbackText(element);
-    const nextText = translate(rawKey.trim()) ?? fallbackText;
+    const found = readTranslation(element, TRANSLATION_ATTRIBUTE, rawKey.trim(), translate);
+    const nextText = found?.text ?? fallbackText;
 
     if (element.textContent !== nextText) {
       element.textContent = nextText;
     }
     translatedTexts.set(element, nextText);
+    return found?.locale;
   };
 
-  const translateElement = (element: Element, translate: (key: string) => string | undefined): void => {
+  const translateElement = (element: Element, locale: string, translate: Translate): void => {
+    // The locale of each translation shown, or `null` where the element's own value is shown, of unknown language.
+    const shownLocales: (string | null)[] = [];
+    let hasTextKey = false;
     const translateOwnText = (): void => {
       const rawKey = element.getAttribute(TRANSLATION_ATTRIBUTE);
 
@@ -281,7 +375,8 @@ export function createDomTranslator(options: DomTranslatorOptions): DomTranslato
           );
         }
       } else if (rawKey !== null) {
-        translateText(element, rawKey, translate);
+        hasTextKey = true;
+        shownLocales.push(translateText(element, rawKey, translate) ?? null);
       } else {
         restoreText(element);
       }
@@ -289,25 +384,52 @@ export function createDomTranslator(options: DomTranslatorOptions): DomTranslato
     const translateOwnAttribute = (attribute: string): void => {
       const rawAttributeKey = element.getAttribute(`${TRANSLATION_ATTRIBUTE}-${attribute}`);
 
-      if (rawAttributeKey !== null) {
-        translateAttribute(element, attribute, rawAttributeKey, translate);
+      if (rawAttributeKey !== null && attribute === "title" && STYLE_SHEET_ELEMENT_NAMES.has(element.localName)) {
+        if (!options.isSilent) {
+          console.warn(
+            "%s",
+            `[I18n] Skipping translation of the title of <${element.localName}> because it names a style sheet set; ` +
+              `its ${TRANSLATION_ATTRIBUTE}-title is ${formatReportedKey(rawAttributeKey)}.`,
+            element,
+          );
+        }
+      } else if (rawAttributeKey !== null) {
+        shownLocales.push(translateAttribute(element, attribute, rawAttributeKey, translate) ?? null);
       } else {
         restoreAttribute(element, attribute);
       }
     };
 
+    // `lang` names the language of the element's text and attributes alike, so it is written only when every
+    // translation shown comes from one other locale's dictionary. An element with children but no translated text,
+    // such as a `<div>` with a translated `title`, is left alone, since `lang` would mislabel its children too.
+    const markLanguage = (): void => {
+      const [first] = shownLocales;
+      const isMarkable = hasTextKey || element.childNodes.length === 0;
+      applyLang(
+        element,
+        isMarkable && typeof first === "string" && first !== locale && shownLocales.every((shown) => shown === first)
+          ? first
+          : undefined,
+      );
+    };
+
     // The text and each attribute are translated even when another of the element's keys throws.
     runEach(
-      [translateOwnText, ...TRANSLATED_ATTRIBUTES.map((attribute) => () => translateOwnAttribute(attribute))],
+      [
+        translateOwnText,
+        ...TRANSLATED_ATTRIBUTES.map((attribute) => () => translateOwnAttribute(attribute)),
+        markLanguage,
+      ],
       (step) => step(),
     );
   };
 
   return {
-    translateRoot({ root, boundary = root, translate }) {
+    translateRoot({ root, boundary = root, locale, translate }) {
       runEach(collectElements(root, isTracked), (element) => {
         if (!isInsideCustomElement(element, boundary)) {
-          translateElement(element, translate);
+          translateElement(element, locale, translate);
         }
       });
     },

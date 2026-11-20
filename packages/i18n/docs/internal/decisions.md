@@ -150,7 +150,7 @@ The 1,000-character key limit applies to the trimmed key, which lookup uses, in 
 
 ### Missing-key warnings are remembered per process (0.5.0)
 
-The default warning's record of the 1,000 most recent locale/key pairs is shared by every manager in the process, as the parse cache is. A server creates a manager per request, so a record per manager warned once per request, and one missing word on a home page logged a line for every visitor. Rejected: a record per manager, which 0.4.0 kept; a test that wants each manager to warn passes `onMissingKey`, which runs on every miss.
+The default warning's record of the 1,000 most recent locale/key pairs is shared by every manager in the process, as the parse cache is. So is the record of the 1,000 most recent invalid messages, which warn once per locale and text. A server creates a manager per request, so a record per manager warned once per request, and one missing word on a home page logged a line for every visitor. Rejected: a record per manager, which 0.4.0 kept; a test that wants each manager to warn passes `onMissingKey`, which runs on every miss.
 
 ### `resolveLocale` reads `_` as `-` (0.5.0)
 
@@ -235,6 +235,22 @@ The binding skips every element inside a custom element, from an outer root: a t
 `script`, `style`, `template`, `noscript`, `iframe`, `noembed`, `noframes`, `xmp`, and `plaintext` are skipped with a warning (0.5.0 added the last five). Their text is not read as text: the HTML serializer writes the children of `xmp`, `iframe`, `noembed`, `noframes`, and `plaintext` without escaping, as it does for `script` and `style`, so a translation containing `</xmp><img onerror=…>` would become markup when the page is serialized, as a server-rendering or prerendering step does. Rejected: escaping the text, which these elements would show literally.
 
 **Only their text is blocked.** Their `data-i18n-<attribute>` keys are translated like any other element's, since the serializer escapes every attribute value and the allowlist holds no URL, style, or handler (0.5.0). An `<iframe>`'s `title` is its accessible name, which an embedded video or map needs in the reader's language. Rejected: skipping the whole element, which 0.5.0 first did when it added `iframe` to the list, and which left that name in the page's original language.
+
+### A message that needs values keeps the HTML text (0.5.0)
+
+`data-i18n` names a message the binding can only show without values. When the message has a placeholder, a plural, or a select, the binding leaves the element's text as the HTML wrote it and warns once per key, rather than writing `Hello {name}` or a plural's `other` form into the page. The HTML's text is the author's fallback, written for that element, and a visitor reads it rather than a template. Rejected: showing the message as written, which 0.4.0 did and which put `{name}` on screen with no warning; and filling values from data attributes, which would add a second way to pass values that `t()` already covers.
+
+### Text in another locale is marked with `lang` (0.5.0)
+
+When every key an element shows comes from one fallback locale's dictionary, rather than the active one's, the binding sets the element's `lang` to that locale, so a screen reader pronounces it, and a browser hyphenates and spellchecks it, in its own language. An element with children is marked only by its `data-i18n` text, since its attributes say nothing about the children's language, and an element whose keys come from different locales, or include a miss, is left alone. The binding restores the element's own `lang` when the text returns to the active locale or the key is removed, unless other code changed `lang` since. Text the HTML wrote, kept for a miss, is not marked, since the binding can't know its language. Rejected: a public way to ask which locale a key came from, which no other consumer needed.
+
+### A style sheet's `title` is not translated (0.5.0)
+
+`data-i18n-title` on a `<style>` or `<link>` is skipped with a warning. Their `title` names a style sheet set, so a translated title would put the sheet in a set of its own and change which styles apply in a language other than the default. Rejected: translating it anyway, as every other element's `title` is, which no page needs, since a style sheet's title is never shown to a reader.
+
+### A binding is started once per manager
+
+A manager has one binding, and a second `initializeBrowserI18n()` rejects until the first is disconnected. The guide says to start the binding at module scope, outside a component, so React's StrictMode, which runs effects twice in development, starts it once. Rejected: an abort `signal` for an initialization still in progress, which would add an option for one framework's development mode when starting outside the component already avoids it.
 
 ### Bindings must not overlap
 
@@ -352,6 +368,6 @@ Rejected: only cutting the repeated work per locale, which a profile put at abou
 
 ### A page comes back in one spelling
 
-Every segment comes back from `parse` the way a URL's pathname writes it, the same in every locale, so `/%61/x` and `/pt/%61/x` both give `/a/x`, and `/pt/produtos/café` gives `/products/caf%C3%A9`. `localize` writes every segment it builds the same way, listed or not. Keeping the request's spelling for a request matched through its canonical words, in a prefixed locale and also in the default locale when the table gives it its own form, would give two requests for one page two `pathname`s. The length limit applies to the path `parse` returns, after this re-spelling. Until 0.5.0 parameters and unlisted segments were returned as written, which did not weigh that `/café` and `/caf%C3%A9` are one URL to a browser but two pages to a cache or an equality check, and that `localize` then wrote a raw `é` into an `href` or a `Location` header. Normalizing them costs one stable redirect hop for a hand-typed spelling.
+Every segment comes back from `parse` normalized as RFC 3986 says, the same in every locale, so `/%61/x` and `/pt/%61/x` both give `/a/x`, and `/pt/produtos/café` gives `/products/caf%C3%A9`. `localize` writes every segment it builds the same way, listed or not. Keeping the request's spelling for a request matched through its canonical words, in a prefixed locale and also in the default locale when the table gives it its own form, would give two requests for one page two `pathname`s. The length limit applies to the path `parse` returns, after this re-spelling. Until 0.5.0 parameters and unlisted segments were returned as written, which did not weigh that `/café` and `/caf%C3%A9` are one URL to a browser but two pages to a cache or an equality check, and that `localize` then wrote a raw `é` into an `href` or a `Location` header. Normalizing them costs one stable redirect hop for a hand-typed spelling.
 
 **Normalized as RFC 3986 says, not decoded.** An escape of an unreserved character (`A-Z a-z 0-9 - . _ ~`) is decoded, every other escape is written in upper case, and every other character a URL encodes is encoded; a lone surrogate, which is not text, is written as U+FFFD's `%EF%BF%BD`, as the URL parser writes it (0.5.0). Rejected: decoding every escape and encoding the result again, which 0.5.0 first did, and which turned `c%2B%2B` into `c++` and `a%3Bb` into `a;b`, characters a server or a framework may read differently from their escapes, so two pages could share one `pathname`.

@@ -255,11 +255,17 @@ export async function initializeBrowserI18n<TLocale extends string>(
               domTranslator.translateRoot({
                 root: element,
                 boundary: observedRoot,
+                locale: i18n.locale,
                 translate: (key) => internals.lookup(key),
               });
             }
           }),
-        () => domTranslator.translateRoot({ root: observedRoot, translate: (key) => internals.lookup(key) }),
+        () =>
+          domTranslator.translateRoot({
+            root: observedRoot,
+            locale: i18n.locale,
+            translate: (key) => internals.lookup(key),
+          }),
         handleChangesDuringPass,
       ],
       (step) => step(),
@@ -343,6 +349,7 @@ export async function initializeBrowserI18n<TLocale extends string>(
       domTranslator.translateRoot({
         root: changedRoot,
         boundary: observedRoot,
+        locale: i18n.locale,
         translate: (key) => internals.lookup(key),
       });
     });

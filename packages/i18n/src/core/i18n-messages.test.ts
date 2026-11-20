@@ -356,8 +356,51 @@ describe("ICU messages", () => {
     const i18n = create();
     await i18n.init();
 
-    expect(getI18nInternals(i18n).lookup("apostrophe")).toBe("It's {name}");
-    expect(getI18nInternals(i18n).lookup("items")).toBe("{count, plural, =0 {No items} one {# item} other {# items}}");
+    const { lookup } = getI18nInternals(i18n);
+    expect(lookup("apostrophe")).toEqual({ text: "It's {name}", locale: "en", needsValues: true });
+    expect(lookup("items")).toMatchObject({ needsValues: true });
+    expect(lookup("quoted")).toEqual({ text: "Write {name} literally", locale: "en", needsValues: false });
+    expect(lookup("pound")).toMatchObject({ needsValues: false });
+    // Invalid syntax fills only complete `{name}` placeholders, and this one has none.
+    expect(lookup("broken")).toMatchObject({ needsValues: false });
+    expect(lookup("plain")).toEqual({ text: "Just text", locale: "en", needsValues: false });
+  });
+
+  it("should say that a malformed message with a placeholder needs values", async () => {
+    const i18n = createI18n({
+      defaultLocale: "en",
+      locales: ["en"],
+      loadLocale: () => ({ since: "Since {when} }" }),
+      isSilent: true,
+    });
+    await i18n.init();
+
+    expect(getI18nInternals(i18n).lookup("since")).toMatchObject({ needsValues: true });
+  });
+
+  it("should say which locale's dictionary has the text DOM translation reads", async () => {
+    const i18n = create({ pt: { plain: "Só texto" } });
+    await i18n.init({ locale: "pt" });
+
+    expect(getI18nInternals(i18n).lookup("plain")).toMatchObject({ locale: "pt" });
+    expect(getI18nInternals(i18n).lookup("pound")).toMatchObject({ locale: "en" });
+  });
+
+  it("should warn once per process for a malformed message, as a server with a manager per request has", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      const requests = [1, 2, 3].map(() =>
+        createI18n({ defaultLocale: "en", locales: ["en"], loadLocale: () => ({ broken: "Per request {name" }) }),
+      );
+      await Promise.all(requests.map((i18n) => i18n.init()));
+      for (const i18n of requests) {
+        i18n.t("broken", { name: "Ana" });
+      }
+
+      expect(warn).toHaveBeenCalledTimes(1);
+    } finally {
+      warn.mockRestore();
+    }
   });
 });
 

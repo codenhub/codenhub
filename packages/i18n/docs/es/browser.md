@@ -2,7 +2,7 @@
 title: Traduce una app de navegador
 description: Detecta y recuerda el idioma del visitante, mantén sincronizados lang y dir, vuelve a renderizar un framework, traduce HTML y ejecuta en un Web Worker.
 order: 2
-source: 5bc4faa8216bdff685ecfcd53861ec49e2c72561
+source: 74a8030ff374f0164375763976efc40faaa639ad
 ---
 
 # Traduce una app de navegador
@@ -188,10 +188,10 @@ Cómo se comporta cada parte:
 
 - **`data-i18n` reemplaza todo el contenido de un elemento.** El elemento tiene que contener solo texto, sin elementos hijos, para que una traducción nunca pueda borrar tu marcado. Los elementos con hijos se omiten con una advertencia.
 - **Los comentarios también se reemplazan.** No son elementos, así que no cuentan como hijos. No pongas `data-i18n` en un elemento que un framework renderiza o hidrata, porque los frameworks guardan marcadores en comentarios ahí; traduce ese texto con `t()`.
-- **`data-i18n-<atributo>` traduce un atributo.** Solo se permiten los atributos que contienen texto para personas o lectores de pantalla: `alt`, `title`, `placeholder`, `label`, `aria-label`, `aria-description`, `aria-placeholder`, `aria-roledescription` y `aria-valuetext`. Los demás, como `data-i18n-href` o `data-i18n-onclick`, se ignoran, así que una traducción nunca puede cambiar un enlace, un estilo ni un manejador de eventos.
-- **El texto que ya está en el HTML es el último respaldo.** Una clave que le falta a un idioma muestra el texto del siguiente locale de su cadena de respaldo, igual que `t()`: un padre configurado, como `pt` para `pt-BR`, y después el locale por defecto. El texto original vuelve solo cuando ningún diccionario de la cadena tiene la clave.
+- **`data-i18n-<atributo>` traduce un atributo.** Solo se permiten los atributos que contienen texto para personas o lectores de pantalla: `alt`, `title`, `placeholder`, `label`, `aria-label`, `aria-description`, `aria-placeholder`, `aria-roledescription` y `aria-valuetext`. Los demás, como `data-i18n-href` o `data-i18n-onclick`, se ignoran, así que una traducción nunca puede cambiar un enlace, un estilo ni un manejador de eventos. El `title` de un `<style>` o un `<link>` se omite con una advertencia, porque ahí nombra un conjunto de hojas de estilo, y cambiarle el nombre podría desactivar los estilos de la página.
+- **El texto que ya está en el HTML es el último respaldo.** Una clave que le falta a un idioma muestra el texto del siguiente locale de su cadena de respaldo, igual que `t()`: un padre configurado, como `pt` para `pt-BR`, y después el locale por defecto. El texto original vuelve solo cuando ningún diccionario de la cadena tiene la clave. Un elemento que muestra el texto de otro locale recibe el `lang` de ese locale, como `<p lang="en">` en una página en portugués, para que un lector de pantalla lo pronuncie en el idioma correcto; el binding quita el `lang` cuando el texto vuelve a estar en el idioma de la página. A un elemento con hijos lo marca solo por su texto, ya que `lang` cubriría también a los hijos.
 - **El texto se asigna como texto plano, nunca como HTML.** El texto de `<script>`, `<style>`, `<noscript>`, `<template>`, `<iframe>`, `<noembed>`, `<noframes>`, `<xmp>` y `<plaintext>` nunca se toca, ya que se ejecuta como código, decide qué se muestra o se escribe sin escapar cuando la página se guarda como HTML. Sus atributos se traducen como los de cualquier otro, así que `<iframe data-i18n-title="video.title">` recibe un nombre accesible traducido.
-- **Los placeholders como `{name}` no se completan aquí**, porque en el HTML no hay de dónde pasar un valor. Renderiza el texto con valores desde tu código con `t()`.
+- **Un mensaje que necesita valores conserva el texto del HTML**, con una advertencia una vez por clave, porque en el HTML no hay de dónde pasar un valor. Eso abarca `{name}` y cualquier otro argumento, como un plural entero, que si no mostraría su sintaxis ICU a los visitantes. Renderiza el texto con valores desde tu código con `t()`.
 - **La página muestra el texto de su HTML hasta que el diccionario del visitante carga**, y después cambia en el lugar, algo que en una conexión lenta se nota. Hay dos formas de evitarlo:
   - Renderiza de antemano una página por idioma, como en [Genera un sitio estático](server-rendering.md#genera-un-sitio-estático), y pasa su `locale`.
   - Mantén oculto el root hasta que la promesa del binding termine, ya sea que se resuelva o se rechace, con un plazo máximo en el loader como en [Nunca falla, solo se queda colgado](troubleshooting.md#nunca-falla-solo-se-queda-colgado), para que una solicitud trabada no pueda dejar la página en blanco.
@@ -212,6 +212,8 @@ await initializeBrowserI18n({ i18n, root: document.querySelector("#app")!, obser
 ```
 
 Con `observe`, agregar un elemento, o cambiar o quitar una clave `data-i18n`, se procesa en el momento en que ocurre. Eso incluye los elementos que otro código agrega mientras el binding está traduciendo, como un custom element que renderiza hijos cuando cambia su atributo.
+
+El texto de un elemento pertenece a su clave `data-i18n`, así que con `observe` el binding vuelve a escribir la traducción sobre el texto que pone tu código: un botón cuya etiqueta tu código cambia a "Enviando pedido…" vuelve a decir "Hacer pedido" al instante. Quita primero la clave, lo que restaura el texto del HTML, o pon el texto que cambia en un elemento sin clave.
 
 El binding procesa esos cambios una vez por pasada. Si ese código vuelve a cambiar una clave en respuesta, como haría un elemento que restablece una y otra vez su propio atributo `data-i18n-*`, el segundo cambio espera al siguiente cambio de locale en lugar de iniciar un bucle infinito. Dos piezas de código que no dejan de contestarse son una conversación sin fin, y el binding se retira con educación.
 
@@ -279,7 +281,8 @@ Un worker tampoco tiene `localStorage`, así que el guardado advierte y se omite
 ## Reglas que conviene saber
 
 - **Un binding por gestor.** Una segunda llamada a `initializeBrowserI18n()` para el mismo gestor se rechaza hasta que el primero se desconecta.
-- **Dale a cada binding su propia parte de la página.** Dos bindings, como en los micro-frontends, cada uno con su propio gestor, necesitan `root`s que no se contengan entre sí. Donde se superponen, cada uno traduce los elementos compartidos en su propio idioma, y gana el que se ejecuta último.
+- **Inicia el binding una sola vez, cuando arranca la app**, con un `await` en el nivel superior de un módulo o antes de montar la app, no en el efecto de un componente. Un inicio que todavía está cargando no se puede cancelar, así que un segundo inicio, como el que provoca el StrictMode de React al ejecutar un efecto dos veces, se rechaza con `Error: [I18n] The manager already has a browser binding.`, sin un binding al que llamar `disconnect()` todavía.
+- **Dale a cada binding su propia parte de la página.** Dos bindings, como en los micro-frontends, cada uno con su propio gestor, necesitan `root`s que no se contengan entre sí. Donde se superponen, cada uno traduce los elementos compartidos en su propio idioma, y gana el que se ejecuta último. También comparten la elección guardada y `<html lang>` salvo que se indique lo contrario: dale a cada binding adicional su propio `storageKey`, para que la elección de un visitante no sobrescriba la de otro, y `syncDocument: false` a todos menos al binding dueño de la página.
 - **Deja que el binding arranque el gestor.** La promesa del binding se rechaza con `Error: [I18n] Browser initialization was superseded before its locale became active.` cuando, antes de que el locale del binding esté activo, tu código:
   - llama a `i18n.init()`, o
   - llama a `i18n.setLocale()` sobre un gestor que ya estaba inicializado, aunque sea al locale que ya se muestra.

@@ -176,7 +176,7 @@ The trimmed canonical configured locale used to generate the pathname.
 pathname: string;
 ```
 
-The absolute localized application pathname, percent-encoded as a URL's pathname is.
+The absolute localized application pathname, with every segment encoded as `ParsedLocalePath.pathname` is.
 
 ### ParsedLocalePath
 
@@ -212,4 +212,4 @@ The trimmed canonical configured locale identified by the pathname.
 pathname: string;
 ```
 
-The canonical application pathname: the locale prefix removed and translated segments read back, with every segment written as a URL's pathname writes it, so `/pt/%61/caf%c3%a9` reads as `/a/caf%C3%A9`, the same spelling `localize` builds.
+The canonical application pathname: the locale prefix removed and translated segments read back, with every segment normalized as RFC 3986 says, so `/pt/%61/caf%c3%a9` reads as `/a/caf%C3%A9`, the same spelling `localize` builds. It also encodes `|`, `[`, and `]`, which a URL's pathname leaves raw.

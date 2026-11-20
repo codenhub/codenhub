@@ -32,11 +32,11 @@
         "createI18n": {
           "files": {
             "dist/index.js": {
-              "bytes": 19187,
+              "bytes": 19166,
               "declarations": {
-                "I18nInstance": 7417,
+                "I18nInstance": 7140,
                 "Parser": 3503,
-                "formatNodes": 1039,
+                "formatNodes": 1040,
                 "matchConfiguredLocale": 853,
                 "validateI18nConfig": 464,
                 "createLocaleLoader": 454,
@@ -45,19 +45,21 @@
                 "maximizeTag": 243,
                 "RTL_SCRIPTS": 242,
                 "DATE_TIME_FORMAT_OPTIONS": 235,
-                "parseCachedMessage": 212,
+                "parseCachedMessage": 211,
                 "getDefaultLocaleDirection": 203,
                 "CoreCustomEvent": 200,
-                "formatPlainValue": 187,
+                "formatPlainValue": 188,
                 "optionsKey": 186,
                 "parseMessageWithCost": 175,
                 "RTL_LANGUAGES": 173,
-                "interpolate": 164,
+                "interpolate": 165,
                 "getRelativeTimeFormat": 149,
                 "getDateTimeFormat": 139,
                 "cachedFormatter": 136,
                 "getNumberFormat": 136,
                 "getListFormat": 133,
+                "needsValues": 119,
+                "rememberWarning": 108,
                 "createCustomEvent": 99,
                 "getPluralRules": 90,
                 "readDateTime": 88,
@@ -69,8 +71,8 @@
                 "formatMessage": 75,
                 "intlLocale": 75,
                 "PLURAL_KEYWORDS": 70,
-                "isPlainMessage": 59,
                 "(top level)": 58,
+                "isPlainMessage": 58,
                 "RELATIVE_TIME_FORMAT_OPTIONS": 57,
                 "isOptionsObject": 51,
                 "likelyScript": 49,
@@ -81,10 +83,11 @@
                 "LIST_FORMAT_OPTIONS": 36,
                 "createI18n": 32,
                 "EXACT_VALUE_PATTERN": 28,
+                "warnedMessages": 27,
+                "warnedMissingKeys": 27,
                 "formatters": 26,
                 "maximizedTags": 26,
                 "parsedMessages": 26,
-                "warnedMissingKeys": 26,
                 "NUMBER_STYLES": 25,
                 "MessageSyntaxError": 24,
                 "PLACEHOLDER_PATTERN": 24,
@@ -118,16 +121,16 @@
                 "isObject": 4
               }
             },
-            "dist/config-validators-BMAPm0e1.js": {
-              "bytes": 2754,
+            "dist/config-validators-C8WjIK1O.js": {
+              "bytes": 2778,
               "declarations": {
                 "readLocales": 512,
                 "i18nConfig": 470,
                 "readDictionaryLimits": 312,
                 "readTimeZone": 231,
                 "assertConfig": 155,
+                "describeType": 152,
                 "readDefaultLocale": 132,
-                "describeType": 128,
                 "resolveConfiguredLocale": 128,
                 "readObject": 117,
                 "DICTIONARY_LIMIT_NAMES": 83,
@@ -157,8 +160,8 @@
               "bytes": 25
             }
           },
-          "gzip": 8411,
-          "minified": 25430
+          "gzip": 8439,
+          "minified": 25433
         },
         "i18nErrors": {
           "files": {
@@ -179,9 +182,9 @@
       },
       "files": {
         "dist/index.js": {
-          "bytes": 19187,
+          "bytes": 19166,
           "declarations": {
-            "I18nInstance": 7417,
+            "I18nInstance": 7142,
             "Parser": 3503,
             "formatNodes": 1039,
             "matchConfiguredLocale": 853,
@@ -192,7 +195,7 @@
             "maximizeTag": 243,
             "RTL_SCRIPTS": 242,
             "DATE_TIME_FORMAT_OPTIONS": 235,
-            "parseCachedMessage": 212,
+            "parseCachedMessage": 211,
             "getDefaultLocaleDirection": 203,
             "CoreCustomEvent": 200,
             "formatPlainValue": 187,
@@ -205,7 +208,9 @@
             "cachedFormatter": 136,
             "getNumberFormat": 136,
             "getListFormat": 133,
-            "createCustomEvent": 99,
+            "needsValues": 119,
+            "rememberWarning": 108,
+            "createCustomEvent": 100,
             "getPluralRules": 90,
             "readDateTime": 88,
             "languageAndScript": 86,
@@ -216,8 +221,8 @@
             "formatMessage": 75,
             "intlLocale": 75,
             "PLURAL_KEYWORDS": 70,
-            "isPlainMessage": 59,
             "(top level)": 58,
+            "isPlainMessage": 58,
             "RELATIVE_TIME_FORMAT_OPTIONS": 57,
             "isOptionsObject": 51,
             "likelyScript": 49,
@@ -228,10 +233,11 @@
             "LIST_FORMAT_OPTIONS": 36,
             "createI18n": 32,
             "EXACT_VALUE_PATTERN": 28,
+            "warnedMessages": 27,
+            "warnedMissingKeys": 27,
             "formatters": 26,
             "maximizedTags": 26,
             "parsedMessages": 26,
-            "warnedMissingKeys": 26,
             "NUMBER_STYLES": 25,
             "MessageSyntaxError": 24,
             "PLACEHOLDER_PATTERN": 24,
@@ -265,28 +271,28 @@
             "isObject": 4
           }
         },
-        "dist/config-validators-BMAPm0e1.js": {
-          "bytes": 2757,
+        "dist/config-validators-C8WjIK1O.js": {
+          "bytes": 2781,
           "declarations": {
             "readLocales": 512,
             "i18nConfig": 471,
-            "readDictionaryLimits": 313,
+            "readDictionaryLimits": 312,
             "readTimeZone": 231,
             "assertConfig": 155,
+            "describeType": 152,
             "readDefaultLocale": 132,
-            "describeType": 128,
             "resolveConfiguredLocale": 128,
-            "readObject": 118,
+            "readObject": 117,
             "DICTIONARY_LIMIT_NAMES": 83,
             "propertyPath": 73,
             "ConfigIssue": 67,
-            "readFunction": 59,
+            "readFunction": 60,
             "expectType": 50,
             "readBoolean": 49,
             "own": 40,
             "LOCALE_IDENTIFIER_PATTERN": 37,
             "isValidLocaleIdentifier": 31,
-            "readOptionalFunction": 30,
+            "readOptionalFunction": 31,
             "fail": 28,
             "(top level)": 22
           }
@@ -305,40 +311,42 @@
           "bytes": 56
         }
       },
-      "gzip": 8502,
-      "minified": 25631,
-      "sha256": "2fd018d2577dfcb829158fb69884610b1e492bdb4253f5ce3317333d129a08bc"
+      "gzip": 8530,
+      "minified": 25634,
+      "sha256": "893edb4cc3a0f66378bf4e30c2ea2ac7ff576600b6c969fd9dfba7db61df439d"
     },
     "./browser": {
       "exports": {
         "initializeBrowserI18n": {
           "files": {
             "dist/browser.js": {
-              "bytes": 7538,
+              "bytes": 8708,
               "declarations": {
-                "initializeBrowserI18n": 3966,
-                "createDomTranslator": 1739,
+                "initializeBrowserI18n": 4015,
+                "createDomTranslator": 2777,
                 "readPersistedLocale": 244,
                 "TRANSLATED_ATTRIBUTES": 131,
                 "isInsideCustomElement": 127,
                 "persistLocale": 125,
                 "BLOCKED_ELEMENT_NAMES": 116,
-                "forgetPersistedLocale": 104,
+                "forgetPersistedLocale": 103,
                 "getNavigatorPreferences": 98,
                 "collectElements": 96,
                 "runEach": 92,
-                "getMutationObserver": 89,
-                "syncDocumentLocale": 87,
+                "getMutationObserver": 90,
+                "syncDocumentLocale": 88,
                 "isForeignChange": 61,
+                "STYLE_SHEET_ELEMENT_NAMES": 44,
                 "warn": 43,
                 "PARENT_NODE_TYPES": 36,
                 "hasTranslationKey": 34,
                 "TRANSLATION_KEY_ATTRIBUTES": 31,
                 "TRANSLATION_KEY_SELECTOR": 31,
-                "showsTranslatedText": 31,
                 "BOUND_MANAGERS": 30,
                 "attributeStates": 30,
                 "fallbackTexts": 30,
+                "langStates": 30,
+                "showsTranslatedText": 30,
                 "translatedTexts": 30,
                 "isElement": 20,
                 "isElementNode": 20,
@@ -348,6 +356,7 @@
                 "TRANSLATION_ATTRIBUTE": 14,
                 "CHANGE_EVENT": 11,
                 "READY_EVENT": 10,
+                "LANG_ATTRIBUTE": 9,
                 "(top level)": 6
               }
             },
@@ -376,37 +385,39 @@
               "bytes": 35
             }
           },
-          "gzip": 3536,
-          "minified": 8481
+          "gzip": 3909,
+          "minified": 9651
         }
       },
       "files": {
         "dist/browser.js": {
-          "bytes": 7538,
+          "bytes": 8708,
           "declarations": {
-            "initializeBrowserI18n": 3966,
-            "createDomTranslator": 1739,
+            "initializeBrowserI18n": 4015,
+            "createDomTranslator": 2777,
             "readPersistedLocale": 244,
             "TRANSLATED_ATTRIBUTES": 131,
             "isInsideCustomElement": 127,
             "persistLocale": 125,
             "BLOCKED_ELEMENT_NAMES": 116,
-            "forgetPersistedLocale": 104,
+            "forgetPersistedLocale": 103,
             "getNavigatorPreferences": 98,
             "collectElements": 96,
             "runEach": 92,
-            "getMutationObserver": 89,
-            "syncDocumentLocale": 87,
+            "getMutationObserver": 90,
+            "syncDocumentLocale": 88,
             "isForeignChange": 61,
+            "STYLE_SHEET_ELEMENT_NAMES": 44,
             "warn": 43,
             "PARENT_NODE_TYPES": 36,
             "hasTranslationKey": 34,
             "TRANSLATION_KEY_ATTRIBUTES": 31,
             "TRANSLATION_KEY_SELECTOR": 31,
-            "showsTranslatedText": 31,
             "BOUND_MANAGERS": 30,
             "attributeStates": 30,
             "fallbackTexts": 30,
+            "langStates": 30,
+            "showsTranslatedText": 30,
             "translatedTexts": 30,
             "isElement": 20,
             "isElementNode": 20,
@@ -416,6 +427,7 @@
             "TRANSLATION_ATTRIBUTE": 14,
             "CHANGE_EVENT": 11,
             "READY_EVENT": 10,
+            "LANG_ATTRIBUTE": 9,
             "(top level)": 6
           }
         },
@@ -444,9 +456,9 @@
           "bytes": 35
         }
       },
-      "gzip": 3536,
-      "minified": 8481,
-      "sha256": "8e01afe563ce03794deafc39fe118c2bac9e6c16c45bd8bb7251f28f6037b7f1"
+      "gzip": 3909,
+      "minified": 9651,
+      "sha256": "db02d066a021fd3d4e2de372499975ea0c353b15ffaa710af24d41ee65476a94"
     },
     "./routing": {
       "exports": {
@@ -486,15 +498,15 @@
                 "(top level)": 6
               }
             },
-            "dist/config-validators-BMAPm0e1.js": {
-              "bytes": 2425,
+            "dist/config-validators-C8WjIK1O.js": {
+              "bytes": 2449,
               "declarations": {
                 "readLocales": 511,
                 "readPathnames": 439,
                 "localeRoutingConfig": 205,
                 "assertConfig": 154,
+                "describeType": 152,
                 "readDefaultLocale": 131,
-                "describeType": 128,
                 "resolveConfiguredLocale": 128,
                 "readObject": 117,
                 "readTrailingSlash": 101,
@@ -527,8 +539,8 @@
               "bytes": 33
             }
           },
-          "gzip": 4879,
-          "minified": 12549
+          "gzip": 4884,
+          "minified": 12573
         }
       },
       "files": {
@@ -566,15 +578,15 @@
             "(top level)": 6
           }
         },
-        "dist/config-validators-BMAPm0e1.js": {
-          "bytes": 2425,
+        "dist/config-validators-C8WjIK1O.js": {
+          "bytes": 2449,
           "declarations": {
             "readLocales": 511,
             "readPathnames": 439,
             "localeRoutingConfig": 205,
             "assertConfig": 154,
+            "describeType": 152,
             "readDefaultLocale": 131,
-            "describeType": 128,
             "resolveConfiguredLocale": 128,
             "readObject": 117,
             "readTrailingSlash": 101,
@@ -607,9 +619,9 @@
           "bytes": 33
         }
       },
-      "gzip": 4879,
-      "minified": 12549,
-      "sha256": "8254d1f1750ea3f5afed377cb6d42797fe9a1702a9c9cc3860e2406d191898e7"
+      "gzip": 4884,
+      "minified": 12573,
+      "sha256": "21b48c5eaf373db920bd060409a9335c133ba6dc1e77b5c45ab1e528f1469e73"
     }
   }
 }

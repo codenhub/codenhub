@@ -2,7 +2,7 @@
 title: Solução de problemas
 description: O que cada erro e aviso quer dizer, e como resolver.
 order: 5
-source: 2d1643a4c47855d4636065591d926e6cdf415b36
+source: dda3cd23415d8e4a8d4aadf78baa0fc2a9f6ec2c
 ---
 
 # Solução de problemas
@@ -122,7 +122,7 @@ O mesmo vale para `localePrefix` numa configuração de roteamento guardada numa
 
 ## Uma mensagem aparece com o texto cru
 
-Você vê `{count, plural, one {# item} other {# items}` ou `{first-name}` na tela, e o console avisa sobre uma mensagem inválida. O texto não é sintaxe de mensagem válida, então aparece como foi escrito, com só os placeholders `{name}` simples preenchidos, em vez de meio formatado. O aviso aparece uma vez por texto e locale.
+Você vê `{count, plural, one {# item} other {# items}` ou `{first-name}` na tela, e o console avisa sobre uma mensagem inválida. O texto não é sintaxe de mensagem válida, então aparece como foi escrito, com só os placeholders `{name}` simples preenchidos, em vez de meio formatado. O aviso aparece uma vez por texto e locale em cada processo, não importa quantos gerenciadores o mostrem.
 
 Causas comuns:
 
@@ -169,7 +169,8 @@ Você vê `Ouvrir l{app}` onde esperava `Ouvrir l'éditeur`, e o console está q
 - **"Skipping translation on <p> because translated elements must be leaves"**: o elemento com `data-i18n` tem elementos filhos. Coloque a chave num elemento que contenha só texto, ou traduza com `t()`.
 - **"Skipping translation on <style> because the element can run, hide, or reparse its text as HTML"**: uma chave `data-i18n` está num elemento `<script>`, `<style>`, `<noscript>`, `<template>`, `<iframe>`, `<noembed>`, `<noframes>`, `<xmp>` ou `<plaintext>`, cujo texto roda como código, decide o que aparece ou é escrito sem escape quando a página é salva como HTML. O aviso nomeia a chave e passa o elemento, então o console aponta para ele. Mude a chave para um elemento comum. As chaves `data-i18n-<attribute>` dele, como o `data-i18n-title` de um `<iframe>`, continuam sendo traduzidas.
 - **"Skipping translation because data-i18n contains an invalid key"**, ou o mesmo para um `data-i18n-<attribute>`: a chave está em branco, tem mais de 1.000 caracteres ou contém um caractere de controle ASCII, então nenhum dicionário consegue guardá-la. O elemento fica com o texto atual. Corrija a chave no HTML.
-- **O texto de `data-i18n` mostra `{name}`**: a tradução de HTML não consegue preencher placeholders. Renderize esse texto com `t()` e passe os valores.
+- **"Skipping translation because data-i18n names a message that needs values"**: a mensagem tem um placeholder, um plural ou um select, e a tradução de HTML não tem valores para preenchê-los. O elemento mantém o texto do HTML, e o aviso aparece uma vez por chave. Renderize esse texto com `t()` e passe os valores.
+- **"Skipping translation of the title of <style> because it names a style sheet set"**: uma chave `data-i18n-title` está num elemento `<style>` ou `<link>`, cujo `title` agrupa folhas de estilo entre as quais o navegador alterna, então traduzi-lo mudaria quais se aplicam. O elemento mantém o `title`. Remova a chave.
 - **Um atributo `data-i18n-href` não faz nada**: só atributos de texto podem ser traduzidos. Veja [Traduza HTML sem framework](browser.md#traduza-html-sem-framework).
 
 Os avisos do navegador são silenciados junto com o resto quando o gerenciador tem `isSilent: true`.

@@ -27,6 +27,11 @@ const describeType = (value: unknown): string => {
   if (value === null) {
     return "null";
   }
+  // A string is quoted, so a misspelled option, such as `localePrefix: "as-needed"`, is named, as errors quote what
+  // they name.
+  if (typeof value === "string") {
+    return formatReportedKey(value);
+  }
   if (Array.isArray(value)) {
     return "array";
   }

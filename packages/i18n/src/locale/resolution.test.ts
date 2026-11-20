@@ -99,7 +99,7 @@ describe("validateI18nConfig", () => {
     [
       "non-boolean silent mode",
       createConfig({ isSilent: "yes" as unknown as boolean }),
-      "isSilent: Expected boolean, received string",
+      'isSilent: Expected boolean, received "yes"',
     ],
     [
       "fractional dictionary limit",

@@ -95,8 +95,10 @@ describe("createLocaleRouting", () => {
     expect(create({ locales: ["en", "../admin"] })).toThrow("locales[1]: Must be an ASCII locale identifier");
     expect(create({ defaultLocale: "fr" })).toThrow("defaultLocale: Must match a configured locale");
     expect(create({ localePrefix: "yes" })).toThrow(
-      'localePrefix: Expected "always", "except-default", or "when-ambiguous", received string',
+      'localePrefix: Expected "always", "except-default", or "when-ambiguous", received "yes"',
     );
+    // The value is quoted with its line breaks escaped, so it can't forge a log line.
+    expect(create({ localePrefix: "as\nneeded" })).toThrow('received "as\\nneeded"');
     expect(create({ localePrefix: undefined })).toThrow("localePrefix: Expected");
   });
 
@@ -501,7 +503,7 @@ describe("createLocaleRouting", () => {
 
     it("should reject a value that is not a policy", () => {
       expect(() => create("sometimes" as "always")).toThrow(
-        '[I18n] Invalid locale routing configuration: trailingSlash: Expected "preserve", "always", or "never", received string',
+        '[I18n] Invalid locale routing configuration: trailingSlash: Expected "preserve", "always", or "never", received "sometimes"',
       );
     });
   });

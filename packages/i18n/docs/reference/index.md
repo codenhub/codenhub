@@ -446,7 +446,7 @@ Resolves a trimmed key against the active locale's dictionary, then each configu
 
 A parent is made by dropping subtags and is skipped when its likely script differs, so `zh-Hant` never falls back to `zh`, which is Simplified Chinese. The configured locale named by the active locale's likely language and script is a parent too, after those, so `zh-HK` falls back to `zh-Hant` and `sr-ME` to `sr-Latn`.
 
-Messages use ICU syntax: `{name}`, `{n, number}` with an optional `integer` or `percent` style, `{d, date}` and `{d, time}` with an optional `short`, `medium` (the default), `long`, or `full` style, `{n, plural, …}` and `{n, selectordinal, …}` with `=N` and CLDR category options, an optional `offset:N`, and `#` for the number in the plural's own forms, and `{v, select, …}`. Plural categories and every format use the locale of the dictionary that has the text. An apostrophe before `{`, `}`, or, in a plural, `#` quotes them, and `''` is one apostrophe. A message that is not valid syntax warns once, unless silent, and only its `{name}` placeholders are filled.
+Messages use ICU syntax: `{name}`, `{n, number}` with an optional `integer` or `percent` style, `{d, date}` and `{d, time}` with an optional `short`, `medium` (the default), `long`, or `full` style, `{n, plural, …}` and `{n, selectordinal, …}` with `=N` and CLDR category options, an optional `offset:N`, and `#` for the number in the plural's own forms, and `{v, select, …}`. Plural categories and every format use the locale of the dictionary that has the text. An apostrophe before `{`, `}`, or, in a plural, `#` quotes them, and `''` is one apostrophe. A message that is not valid syntax warns once per process for its locale and text, unless silent, and only its `{name}` placeholders are filled.
 
 When `params.count` is a number and the key is a group of plural forms rather than a text, such as `{ one: "{count} item", other: "{count} items" }`, the form is chosen with `Intl.PluralRules` for the locale of the dictionary that has the group, falling back to its `other` form. Forms are named by CLDR plural category: `zero`, `one`, `two`, `few`, `many`, and `other`.
 
@@ -455,7 +455,7 @@ When `params.count` is a number and the key is a group of plural forms rather th
 - `key` — Translation key, or the key of a plural group when `params.count` is a number.
 - `params` — Argument values, read from own properties. An argument without a usable value, such as a string for `{n, number}`, is left as written. A string in `{name}` is inserted as written, a number as `{name, number}` would format it, and a date as `{name, date}` would. A numeric `count` also selects a plural form.
 
-**Returns** — The translated text, or the trimmed key when no dictionary has it. A miss calls `onMissingKey`, or warns once per recent locale/key pair unless silent.
+**Returns** — The translated text, or the trimmed key when no dictionary has it. A miss calls `onMissingKey`, or warns once per recent locale/key pair in the process unless silent.
 
 **Throws**
 

@@ -997,7 +997,7 @@ describe("translated pathnames", () => {
 
     it("should require a plain object of plain objects of pathnames", () => {
       expect(invalid([])).toThrow("pathnames: Expected object, received array");
-      expect(invalid({ "/about": "/sobre" })).toThrow('pathnames["/about"]: Expected object, received string');
+      expect(invalid({ "/about": "/sobre" })).toThrow('pathnames["/about"]: Expected object, received "/sobre"');
       expect(invalid({ "/about": { pt: 1 } })).toThrow('pathnames["/about"].pt: Expected string, received number');
     });
 

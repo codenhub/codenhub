@@ -1087,10 +1087,10 @@ How each part behaves:
 
 - **`data-i18n` replaces an element's whole content.** The element must contain only text, with no child elements, so a translation can never remove your markup. Elements with children are skipped with a warning.
 - **Comments are replaced too.** They are not elements, so they don't count as children. Don't put `data-i18n` on an element a framework renders or hydrates, since frameworks keep comment markers there; translate that text with `t()` instead.
-- **`data-i18n-<attribute>` translates one attribute.** Only attributes that hold text for people or screen readers are allowed: `alt`, `title`, `placeholder`, `label`, `aria-label`, `aria-description`, `aria-placeholder`, `aria-roledescription`, and `aria-valuetext`. Others, such as `data-i18n-href` or `data-i18n-onclick`, are ignored, so a translation can never change a link, a style, or an event handler.
-- **The text already in the HTML is the last fallback.** A key a language lacks shows the text of the next locale in its fallback chain, as `t()` does: a configured parent such as `pt` for `pt-BR`, then the default locale. The original text comes back only when no dictionary in the chain has the key.
+- **`data-i18n-<attribute>` translates one attribute.** Only attributes that hold text for people or screen readers are allowed: `alt`, `title`, `placeholder`, `label`, `aria-label`, `aria-description`, `aria-placeholder`, `aria-roledescription`, and `aria-valuetext`. Others, such as `data-i18n-href` or `data-i18n-onclick`, are ignored, so a translation can never change a link, a style, or an event handler. The `title` of a `<style>` or `<link>` is skipped with a warning, since there it names a set of style sheets, and renaming it could switch the page's styles off.
+- **The text already in the HTML is the last fallback.** A key a language lacks shows the text of the next locale in its fallback chain, as `t()` does: a configured parent such as `pt` for `pt-BR`, then the default locale. The original text comes back only when no dictionary in the chain has the key. An element showing another locale's text gets that locale's `lang`, such as `<p lang="en">` on a Portuguese page, so a screen reader pronounces it in the right language; the binding removes the `lang` once the text is in the page's language again. It marks an element with children only by its text, since `lang` would cover the children too.
 - **Text is set as plain text, never as HTML.** The text of `<script>`, `<style>`, `<noscript>`, `<template>`, `<iframe>`, `<noembed>`, `<noframes>`, `<xmp>`, and `<plaintext>` is never touched, since it runs as code, decides what shows, or is written back unescaped when the page is saved as HTML. Their attributes are translated like any other, so `<iframe data-i18n-title="video.title">` gets a translated accessible name.
-- **Placeholders such as `{name}` are not filled here**, because there is nowhere in the HTML to pass a value from. Render text with values from your code with `t()`.
+- **A message that needs values keeps the HTML text**, with a warning once per key, because there is nowhere in the HTML to pass a value from. That covers `{name}` and any other argument, such as a whole plural, which would otherwise show its ICU syntax to visitors. Render text with values from your code with `t()`.
 - **The page shows its HTML text until the visitor's dictionary has loaded**, then switches in place, which on a slow connection is visible. There are two ways to avoid that:
   - Render a page per language ahead of time, as in [Build a static site](docs/server-rendering.md#build-a-static-site), and pass its `locale`.
   - Keep the root hidden until the binding's promise settles, whether it resolves or rejects, with a deadline on the loader as in [It never fails, it just hangs](docs/troubleshooting.md#it-never-fails-it-just-hangs), so a stalled request can't leave the page blank.
@@ -1111,6 +1111,8 @@ await initializeBrowserI18n({ i18n, root: document.querySelector("#app")!, obser
 ```
 
 With `observe`, adding an element, or changing or removing a `data-i18n` key, is handled as it happens. That includes elements other code adds while the binding is translating, such as a custom element that renders children when its attribute changes.
+
+An element's text belongs to its `data-i18n` key, so with `observe` the binding writes the translation back over text your code sets: a button whose label your code turns into "Placing order…" reads "Place order" again at once. Remove the key first, which restores the HTML text, or put the changing text in an element without one.
 
 The binding handles those once per pass. If that code changes a key again in response, as an element that keeps resetting its own `data-i18n-*` attribute would, the second change waits for the next locale change instead of starting an endless loop. Two pieces of code that keep answering each other is a conversation with no end, and the binding politely leaves it.
 
@@ -1178,7 +1180,8 @@ A worker has no `localStorage` either, so saving warns and is skipped. Add `pers
 ## Rules to know
 
 - **One binding per manager.** A second `initializeBrowserI18n()` call for the same manager rejects until the first is disconnected.
-- **Give each binding its own part of the page.** Two bindings, as in micro-frontends, each with its own manager, need `root`s that don't contain each other. Where they overlap, each translates the shared elements in its own language, and whichever runs last wins.
+- **Start the binding once, when the app starts**, as a module's top-level `await` or before mounting the app, not in a component's effect. A start still loading can't be cancelled, so a second start, as React's StrictMode makes by running an effect twice, rejects with `Error: [I18n] The manager already has a browser binding.`, with no binding yet to `disconnect()`.
+- **Give each binding its own part of the page.** Two bindings, as in micro-frontends, each with its own manager, need `root`s that don't contain each other. Where they overlap, each translates the shared elements in its own language, and whichever runs last wins. They also share the saved choice and `<html lang>` unless told otherwise: give each extra binding its own `storageKey`, so one visitor's pick doesn't overwrite another's, and `syncDocument: false` to all but the one binding that owns the page.
 - **Let the binding start the manager.** The binding's promise rejects with `Error: [I18n] Browser initialization was superseded before its locale became active.` when, before the binding's locale is active, your code either:
   - calls `i18n.init()`, or
   - calls `i18n.setLocale()` on a manager that was already initialized, even to the locale already showing.
@@ -1568,7 +1571,7 @@ if (fallback !== undefined) {
 }
 ```
 
-Escape both values as you would any text in HTML, or let your framework create the tags. A path can contain characters, such as `"` or `&`, that are allowed in a URL but not raw inside an attribute.
+Escape both values as you would any text in HTML, or let your framework create the tags. A path can contain characters, such as `&` or `'`, that are allowed in a URL but not raw inside an attribute.
 
 ## Translate paths
 
@@ -1958,7 +1961,7 @@ The same goes for `localePrefix` in a routing configuration kept in a variable, 
 
 ## A message shows its raw text
 
-You see `{count, plural, one {# item} other {# items}` or `{first-name}` on screen, and the console warns about an invalid message. The text isn't valid message syntax, so it is shown as written, with only its plain `{name}` placeholders filled, rather than half formatted. The warning appears once per text and locale.
+You see `{count, plural, one {# item} other {# items}` or `{first-name}` on screen, and the console warns about an invalid message. The text isn't valid message syntax, so it is shown as written, with only its plain `{name}` placeholders filled, rather than half formatted. The warning appears once per text and locale in each process, however many managers show it.
 
 Common causes:
 
@@ -2005,7 +2008,8 @@ You see `Ouvrir l{app}` where you expected `Ouvrir l'éditeur`, and the console 
 - **"Skipping translation on <p> because translated elements must be leaves"**: the element with `data-i18n` has child elements. Put the key on an element that contains only text, or translate it with `t()`.
 - **"Skipping translation on <style> because the element can run, hide, or reparse its text as HTML"**: a `data-i18n` key is on a `<script>`, `<style>`, `<noscript>`, `<template>`, `<iframe>`, `<noembed>`, `<noframes>`, `<xmp>`, or `<plaintext>` element, whose text runs as code, decides what shows, or is written back unescaped when the page is saved as HTML. The warning names the key and passes the element, so the console points to it. Move the key to an ordinary element. Its `data-i18n-<attribute>` keys, such as an `<iframe>`'s `data-i18n-title`, are still translated.
 - **"Skipping translation because data-i18n contains an invalid key"**, or the same for a `data-i18n-<attribute>`: the key is blank, longer than 1,000 characters, or contains an ASCII control character, so no dictionary can hold it. The element keeps its current text. Fix the key in the HTML.
-- **`data-i18n` text shows `{name}`**: HTML translation can't fill placeholders. Render that text with `t()` and pass the values.
+- **"Skipping translation because data-i18n names a message that needs values"**: the message has a placeholder, a plural, or a select, and HTML translation has no values to fill them. The element keeps its HTML text, and the warning appears once per key. Render that text with `t()` and pass the values.
+- **"Skipping translation of the title of <style> because it names a style sheet set"**: a `data-i18n-title` key is on a `<style>` or `<link>` element, whose `title` groups style sheets that the browser switches between, so translating it would change which ones apply. The element keeps its `title`. Remove the key.
 - **A `data-i18n-href` attribute does nothing**: only text attributes can be translated. See [Translate HTML without a framework](docs/browser.md#translate-html-without-a-framework).
 
 The browser warnings are silenced along with the rest when the manager has `isSilent: true`.
@@ -2029,11 +2033,16 @@ The [reference](docs/reference/index.md) documents every export, option, and the
 ## Changed
 
 - **`localize()` reads every path as canonical, and throws a `RangeError` for one that starts with a locale.** A prefixed path was read as that locale's URL, so with Burmese, `my`, configured, `localize("/my/orders", "en")` linked to the Burmese `/orders`. To switch a URL's language, pass `parse(url).pathname`, as the guide does; a page whose path starts with a locale code needs another path, since no URL leads to it. See [Link to another language](docs/localized-urls.md#link-to-another-language).
-- **Every segment is written as a URL's pathname writes it**, parameters and unlisted segments included. `localize("/products/café", "en")` returns `/products/caf%C3%A9`, where it wrote a raw `é` into the link, and `parse("/pt/produtos/café").pathname` is `/products/caf%C3%A9` too, so two spellings of one page give one `pathname`. A segment is normalized as RFC 3986 says: an escaped unreserved character such as `%61` is decoded, other escapes are written in upper case, and an escaped reserved character stays escaped, so `c%2B%2B` and `c++` stay two pages. A lone surrogate, which is not text, is written as `%EF%BF%BD`, as a URL writes it. A canonical redirect that compares the request with `localize(route.pathname, …)` now redirects a hand-typed `/café` once, to the encoded form. Code that compares `parse().pathname` with a path of its own needs that path in the same encoded form, as `localize()` returns it; decoding `pathname` with `decodeURI()` instead fails for a segment such as `%3F` or `%2B`, which it leaves encoded.
+- **Every segment is normalized as RFC 3986 says**, parameters and unlisted segments included. `localize("/products/café", "en")` returns `/products/caf%C3%A9`, where it wrote a raw `é` into the link, and `parse("/pt/produtos/café").pathname` is `/products/caf%C3%A9` too, so two spellings of one page give one `pathname`. A segment is normalized as RFC 3986 says: an escaped unreserved character such as `%61` is decoded, other escapes are written in upper case, and an escaped reserved character stays escaped, so `c%2B%2B` and `c++` stay two pages. That also encodes `|`, `[`, and `]`, which a URL's pathname leaves raw. A lone surrogate, which is not text, is written as `%EF%BF%BD`, as a URL writes it. A canonical redirect that compares the request with `localize(route.pathname, …)` now redirects a hand-typed `/café` once, to the encoded form. Code that compares `parse().pathname` with a path of its own needs that path in the same encoded form, as `localize()` returns it; decoding `pathname` with `decodeURI()` instead fails for a segment such as `%3F` or `%2B`, which it leaves encoded.
 - **A regional locale falls back to the configured locale of its likely script** after its parents: `zh-HK` reads `zh-Hant`, and `sr-ME` reads `sr-Latn`, where both fell back to the default. The fallback locale loads with it.
 - **`matchLocale()` reads `_` as `-`**, so `pt_BR` and `zh_Hant_TW`, as an OS or a database writes them, match `pt-BR` and `zh-Hant-TW`, where they matched nothing.
 - **`resolveLocale()` reads `_` as `-`** too, so `pt_BR` from a cookie or a back end resolves to `pt-BR`, where it returned `undefined`.
 - **The default missing-key warning is logged once per process for each locale and key**, shared by every manager, where each manager kept its own record. A server with a manager per request logged one missing word once for every visitor. A test that expects each new manager to warn again passes `onMissingKey` instead.
+- **An invalid message warns once per process for each locale and text**, shared by every manager, as a missing key does.
+- **`data-i18n` keeps the HTML's text for a message that needs values**, one with a placeholder, a plural, or a select, and warns once per key, where it wrote the message as written, such as `Hello {name}`, without a warning. Render that text with `t()`.
+- **`data-i18n` sets `lang` on text from a fallback locale's dictionary**, so a screen reader reads an English fallback on a French page in English. It restores the element's own `lang` when the text is translated again.
+- **`data-i18n-title` on a `<style>` or `<link>` is skipped with a warning**, since their `title` names a style sheet set and translating it would change which styles apply.
+- **A configuration error quotes a received string**, so `localePrefix: "as-needed"` reads `Expected …, received "as-needed"`, where it read `received string`.
 - **`matchLocale()` skips a preference longer than 255 characters**, as it skips one that isn't a string. A 16 KB `Accept-Language` entry cost about 25 ms a match.
 - **`data-i18n` skips `iframe`, `noembed`, `noframes`, `plaintext`, and `xmp`**, as it skips `script` and `style`, with a warning. Serializing the page writes their text without escaping, so a translation in one of them could become markup in server-rendered or prerendered HTML.
 - **Only the text of those elements is skipped.** Their `data-i18n-<attribute>` keys are translated, so an `<iframe>`'s `data-i18n-title`, the name a screen reader gives an embedded video or map, follows the language. That includes `<template>` and `<noscript>`, whose attributes 0.4.0 left untranslated.

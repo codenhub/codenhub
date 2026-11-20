@@ -58,8 +58,8 @@ export interface ParsedLocalePath<TLocale extends string> {
   locale: TLocale;
   /**
    * The canonical application pathname: the locale prefix removed and translated segments read back, with every
-   * segment written as a URL's pathname writes it, so `/pt/%61/caf%c3%a9` reads as `/a/caf%C3%A9`, the same spelling
-   * `localize` builds.
+   * segment normalized as RFC 3986 says, so `/pt/%61/caf%c3%a9` reads as `/a/caf%C3%A9`, the same spelling `localize`
+   * builds. It also encodes `|`, `[`, and `]`, which a URL's pathname leaves raw.
    */
   pathname: string;
   /**
@@ -76,7 +76,7 @@ export interface ParsedLocalePath<TLocale extends string> {
 export interface LocalizedPath<TLocale extends string> {
   /** The trimmed canonical configured locale used to generate the pathname. */
   locale: TLocale;
-  /** The absolute localized application pathname, percent-encoded as a URL's pathname is. */
+  /** The absolute localized application pathname, with every segment encoded as `ParsedLocalePath.pathname` is. */
   pathname: string;
 }
 
@@ -216,7 +216,7 @@ export const createLocaleRouting = <TLocale extends string>(
     readonly normalize: Normalize;
   }): string => {
     const found = findRoute(pathnames.byCanonical, canonical, normalize);
-    // Every segment is written as a URL's pathname writes it, as listed words already are, so a raw `/café` and a
+    // Every segment is normalized as RFC 3986 says, as listed words already are, so a raw `/café` and a
     // parameter such as `/produtos/café` come back as `caf%C3%A9`, ready for a `Location` header or a sitemap.
     const localized = (
       found === undefined ? canonical : buildPattern(found.item.forms.get(locale)!, found.parameters)

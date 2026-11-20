@@ -2,7 +2,7 @@
 title: URLs localizadas
 description: Pon el locale en la ruta, traduce la propia ruta, lee ambas de vuelta, enlaza a otros idiomas, genera cada página localizada y lleva a cada visitante a su propio idioma en un sitio estático.
 order: 4
-source: 634cc878a98ebcde653e1664e29ee8d1333076b3
+source: c8bde08e89440832aa0f8103fa0ba85782934856
 ---
 
 # URLs localizadas
@@ -178,7 +178,7 @@ if (fallback !== undefined) {
 }
 ```
 
-Escapa los dos valores como harías con cualquier texto en HTML, o deja que tu framework cree las etiquetas. Una ruta puede contener caracteres, como `"` o `&`, que están permitidos en una URL pero no tal cual dentro de un atributo.
+Escapa los dos valores como harías con cualquier texto en HTML, o deja que tu framework cree las etiquetas. Una ruta puede contener caracteres, como `&` o `'`, que están permitidos en una URL pero no tal cual dentro de un atributo.
 
 ## Traduce rutas
 
