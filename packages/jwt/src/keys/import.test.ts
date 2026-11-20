@@ -814,6 +814,16 @@ describe("importPrivateKey with a mismatched d", () => {
     expect(d).not.toBe(jwk.d);
     expect(issuesOf(await importPrivateKey({ ...jwk, d }, { alg }))).toEqual([{ code: "invalid_key" }]);
   });
+
+  // Web Crypto signs RSA with the CRT members alone, so the probe signature cannot see a wrong d; another
+  // library that signs with d from the exported JWK would.
+  it("should report invalid_key with path d for RSA when d does not fit p and q", async () => {
+    const other = await generateKeyPair({ alg: "RS256", extractable: true });
+    const { d } = await exportPrivateJwk(other.privateKey);
+    expect(issuesOf(await importPrivateKey({ ...RSA_2048_PRIVATE_JWK, d }, { alg: "RS256" }))).toEqual([
+      { code: "invalid_key", path: ["d"] },
+    ]);
+  });
 });
 
 describe("importPrivateKey ext and unknown members", () => {

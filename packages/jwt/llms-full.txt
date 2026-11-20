@@ -682,7 +682,7 @@ Without a `kid`, the key still verifies tokens that name a `kid`, as long as it 
 
 ## Importing a private key
 
-`importPrivateKey` takes the same arguments and runs the same checks, except that the private members are required: `d` for `EC` and `OKP` keys, and `d`, `p`, `q`, `dp`, `dq` and `qi` for `RSA` keys. Multi-prime RSA keys, with `oth`, are `unsupported_key`. The public members must belong to the private key: the key signs a fixed message that they must verify, and a JWK whose halves come from two keys is `invalid_key`. Pass `extractable: true` if the key must be exportable again.
+`importPrivateKey` takes the same arguments and runs the same checks, except that the private members are required: `d` for `EC` and `OKP` keys, and `d`, `p`, `q`, `dp`, `dq` and `qi` for `RSA` keys. Multi-prime RSA keys, with `oth`, are `unsupported_key`. The public members must belong to the private key: the key signs a fixed message that they must verify, and a JWK whose halves come from two keys is `invalid_key`. For RSA, `d` must also agree with `p`, `q`, `dp` and `dq`, or it is `invalid_key` at `["d"]`: Web Crypto signs with the other members alone, so the signature cannot catch a wrong `d`, but another library signing with the exported JWK would use it. Pass `extractable: true` if the key must be exportable again.
 
 ```ts
 import { importPrivateKey } from "@codenhub/jwt";
@@ -1192,6 +1192,7 @@ Three things propagate rather than becoming a result: an exception thrown by you
 
 ## Fixed
 
+- An RSA private JWK whose `d` does not agree with its `p`, `q`, `dp` and `dq` is `invalid_key` at `["d"]`. Web Crypto signs with the CRT members alone, so such a key imported and signed, and its exported JWK carried the wrong `d` to whatever read it next.
 - `exportPrivateJwk` writes an EC or Ed25519 `d` at its full length on WebKit, which drops its leading zero bytes on export. 0.0.1 exported about 1 `ES256` key in 200 in a form `importPrivateKey` then refused as `invalid_key`; an `ES512` key would have failed about half the time.
 - Key options are read as own properties, so a polluted `Object.prototype` can no longer make a generated or imported key extractable.
 - `importSecretKey` and JWK import accept a `Uint8Array` or a plain object from another realm, as Jest and jsdom give, which 0.0.1 refused as `invalid_key`.

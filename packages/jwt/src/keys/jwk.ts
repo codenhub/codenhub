@@ -266,8 +266,36 @@ function rsaMaterial(members: Members, role: KeyRole): Material {
       }
       importJwk[name] = members[name] as string;
     }
+    if (!isPrivateExponentConsistent(importJwk)) {
+      return issue("invalid_key", "d");
+    }
   }
   return { importJwk, signatureLength: significant.length };
+}
+
+/**
+ * Whether `d` agrees with the CRT members: `d mod (p - 1) = dp` and `d mod (q - 1) = dq`. Web Crypto signs with
+ * the CRT members alone, so the probe signature cannot see a wrong `d`, which the exported JWK would carry to a
+ * library that signs with it. The probe proves the CRT members themselves.
+ */
+function isPrivateExponentConsistent(jwk: JsonWebKey): boolean {
+  const [d, p, q, dp, dq] = [jwk.d, jwk.p, jwk.q, jwk.dp, jwk.dq].map(memberToBigInt);
+  if (d === undefined || p === undefined || q === undefined || dp === undefined || dq === undefined) {
+    return false;
+  }
+  return p > 1n && q > 1n && d % (p - 1n) === dp && d % (q - 1n) === dq;
+}
+
+function memberToBigInt(value: string | undefined): bigint | undefined {
+  const bytes = decodeMember(value);
+  if (bytes === undefined) {
+    return undefined;
+  }
+  let hex = "0x0";
+  for (const byte of bytes) {
+    hex += byte.toString(16).padStart(2, "0");
+  }
+  return BigInt(hex);
 }
 
 function stripLeadingZeros(bytes: Uint8Array): Uint8Array {

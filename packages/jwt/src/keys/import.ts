@@ -165,7 +165,8 @@ export async function importPublicKey(key: unknown, options: ImportPublicKeyOpti
  * @returns The frozen key, or a failure with one issue: `invalid_key`, `unsupported_key` (also for
  * multi-prime RSA keys with `oth`), `alg_mismatch`, `wrong_use` or `weak_key`, as described for
  * {@link importPublicKey}, and `invalid_key` without a path when the public members do not belong to the
- * private key. Issues never contain key values. Never throws for any `key`.
+ * private key, or at `["d"]` when an RSA key's `d` does not agree with `p`, `q`, `dp` and `dq`. Issues never
+ * contain key values. Never throws for any `key`.
  * @throws TypeError when `options` is not an object, has a member that is not an option, `options.alg` is
  * not an asymmetric algorithm, `options.kid` is not a string, or `options.extractable` is not a boolean.
  */
