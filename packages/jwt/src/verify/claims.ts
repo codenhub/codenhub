@@ -80,7 +80,8 @@ function readClock(options: ResolvedOptions): number {
  * Seconds a claim of the past (`nbf`, `iat`) may lie in the future whatever `clockTolerance` says. An issuer
  * whose clock runs ahead signs tokens that are in the future here from the moment they exist, so without it a
  * skew of a fraction of a second fails fresh tokens (scope.md decision 26). `exp` and `maxAge` keep the
- * caller's tolerance, so the floor never lengthens a token's life.
+ * caller's tolerance; `maxAge` still counts from `iat`, so a token stamped ahead is accepted until
+ * `iat + maxAge + clockTolerance`, up to 60 seconds after its age says.
  */
 const FUTURE_LEEWAY_SECONDS = 60;
 
