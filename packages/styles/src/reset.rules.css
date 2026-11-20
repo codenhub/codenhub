@@ -140,6 +140,14 @@
      once, a fade-in included, the near-zero duration keeping its
      `animationend`. `visibility` stays so a fade-out is still seen to the end.
 
+     The author's durations, delays, and timing functions are lists matched to
+     their own properties by position, and the browser pairs them with this
+     list instead, which no stylesheet can re-pair. Their behaviours are not
+     kept: `display` and `overlay` are always `allow-discrete`, or a popover
+     whose author named them anywhere but second and third closes at once.
+     Delays are kept, since a hide that puts `opacity` first holds
+     `visibility` back by the fade's length; set to zero, it hid at once.
+
      `data-motion` on `<html>` decides in place of the query: `reduce` asks for
      this, `full` and `none` leave it out. See docs/accessibility.md. */
   @media (prefers-reduced-motion: reduce) {
@@ -167,6 +175,7 @@
       transition-property:
         opacity, display, overlay, visibility, color, background-color, border-color, outline-color,
         text-decoration-color, fill, stroke !important;
+      transition-behavior: allow-discrete !important;
     }
   }
 
@@ -179,6 +188,7 @@
     transition-property:
       opacity, display, overlay, visibility, color, background-color, border-color, outline-color,
       text-decoration-color, fill, stroke !important;
+    transition-behavior: allow-discrete !important;
   }
 
   /* No motion, asked for by the app: every animation and transition ends at

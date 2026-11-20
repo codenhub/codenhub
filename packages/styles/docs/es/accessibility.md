@@ -2,7 +2,7 @@
 title: Accesibilidad
 description: Lo que hace el CSS con el foco, los estados, el movimiento, el contraste, los colores forzados y el texto de derecha a izquierda, y lo que tu aplicación todavía les debe a sus usuarios.
 order: 5
-source: 64247645618a1c10521309525c89bb273b72bafa
+source: 470b60dafe0be5fa13d8dcf2a94c53ad94835a6a
 ---
 
 # Accesibilidad
@@ -70,7 +70,9 @@ La regla de movimiento reducido de cada componente viene con el componente, así
 
 Una transición que el reset quita no se ejecuta, así que no dispara `transitionend`. Un cajón que se desliza y se elimina a sí mismo con ese evento se queda en la página con movimiento reducido. Comprueba si el elemento todavía tiene una transición que ejecutar antes de esperar el evento, o elimínalo también tras un tiempo de espera. Con `data-motion="none"`, cada transición sigue ejecutándose, durante 0.01ms, así que el evento se dispara.
 
-El reset cambia las propiedades que nombra una transición y conserva sus duraciones, y un navegador reutiliza una lista de duraciones en orden cuando la lista de propiedades es más larga. Así, `transition: transform 200ms, opacity 1s` funde la opacidad en 200ms, no en 1s, y lo que antes cambiaba al instante ahora también se funde: un color de fondo en 1s y un color de texto en 200ms. Dale a una transición una sola duración cuando importe cuánto dura su fundido: cada propiedad que el reset conserva se funde entonces durante ese tiempo.
+El reset cambia las propiedades que nombra una transición por su propia lista, en este orden: `opacity`, `display`, `overlay`, `visibility`, `color`, `background-color`, `border-color`, `outline-color`, `text-decoration-color`, `fill` y `stroke`. Tus duraciones, retrasos y funciones de tiempo se quedan como las escribiste, y el navegador las empareja con esa lista por posición, volviendo a empezar desde tu primera entrada cuando tu lista es más corta. Así, `transition: transform 200ms, opacity 1s` funde la opacidad en 200ms, no en 1s, y lo que antes cambiaba al instante ahora también se funde: un color de fondo en 1s y un color de texto en 200ms. Tu `allow-discrete` es el único valor que no se empareja por posición: `display` y `overlay` siempre lo reciben, así que un popover o un diálogo que se desvanece al cerrarse sigue abierto hasta que termina su fundido, en el orden en que los hayas nombrado. En un motor que hace transiciones de `display`, un elemento que ocultas con `display: none` sigue entonces en pantalla, quieto, durante la duración emparejada con `display`.
+
+Una transición pasa por el cambio sin alterarse cuando todas sus propiedades tienen la misma duración, el mismo retraso y la misma función de tiempo, como `transition: opacity 300ms, visibility 300ms`, porque entonces todos los emparejamientos son iguales. Una ocultación escrita con un retraso solo pasa con `opacity` primero: `transition: opacity 300ms, visibility 0s 300ms` se funde y luego se oculta, pero `transition: visibility 0s 300ms, opacity 300ms` empareja `opacity` con la duración cero y el retraso de `visibility`, así que el elemento se queda opaco durante 300ms y luego desaparece de golpe. Dale a `visibility` la duración del fundido en lugar de un retraso: sigue visible hasta que termina su transición, así que se oculta cuando termina el fundido.
 
 La regla del reset es `!important` dentro de la capa `base`, y un `!important` con capa gana a uno sin capa, así que tu propio `!important` no puede volver a activar una animación. Para mantener una en marcha para los usuarios que piden movimiento reducido, como un spinner de subida que consideres esencial, declárala `!important` en una capa ordenada antes de `base`, tanto con el ajuste del sistema como con el de la app. La primera sentencia `@layer` que lee el navegador fija el orden, así que la tuya va antes del paquete:
 

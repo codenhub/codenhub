@@ -2,7 +2,7 @@
 title: Acessibilidade
 description: O que o CSS faz por foco, estados, movimento, contraste, cores forçadas e texto da direita para a esquerda, e o que a sua aplicação ainda deve aos seus usuários.
 order: 5
-source: 64247645618a1c10521309525c89bb273b72bafa
+source: 470b60dafe0be5fa13d8dcf2a94c53ad94835a6a
 ---
 
 # Acessibilidade
@@ -70,7 +70,9 @@ A regra de movimento reduzido de cada componente vem com o componente, então to
 
 Uma transição que o reset remove não roda, então não dispara `transitionend`. Uma gaveta que desliza e se remove nesse evento fica na página com movimento reduzido. Verifique se o elemento ainda tem uma transição para rodar antes de esperar o evento, ou remova-o também depois de um tempo limite. Com `data-motion="none"`, toda transição ainda roda, por 0.01ms, então o evento dispara.
 
-O reset troca as propriedades que uma transição nomeia e mantém suas durações, e um navegador reutiliza uma lista de durações em ordem quando a lista de propriedades é mais longa. Assim, `transition: transform 200ms, opacity 1s` faz o fade da opacidade em 200ms, não em 1s, e o que antes mudava de imediato agora também faz fade: uma cor de fundo em 1s e uma cor de texto em 200ms. Dê uma única duração a uma transição quando a duração do fade importar: toda propriedade que o reset mantém faz fade por esse tempo.
+O reset troca as propriedades que uma transição nomeia pela sua própria lista, nesta ordem: `opacity`, `display`, `overlay`, `visibility`, `color`, `background-color`, `border-color`, `outline-color`, `text-decoration-color`, `fill` e `stroke`. Suas durações, atrasos e funções de tempo ficam como você escreveu, e o navegador os emparelha com essa lista por posição, recomeçando da sua primeira entrada quando a sua lista é mais curta. Assim, `transition: transform 200ms, opacity 1s` faz o fade da opacidade em 200ms, não em 1s, e o que antes mudava de imediato agora também faz fade: uma cor de fundo em 1s e uma cor de texto em 200ms. O seu `allow-discrete` é o único valor que não é emparelhado por posição: `display` e `overlay` sempre o recebem, então um popover ou um diálogo que some com fade continua aberto até o fade terminar, em qualquer ordem em que você os tenha nomeado. Num motor que faz transição de `display`, um elemento que você esconde com `display: none` fica então na tela, parado, pela duração emparelhada com `display`.
+
+Uma transição passa pela troca sem mudar quando todas as suas propriedades têm a mesma duração, o mesmo atraso e a mesma função de tempo, como `transition: opacity 300ms, visibility 300ms`, porque então todos os emparelhamentos são iguais. Um esconder escrito com atraso só passa com `opacity` primeiro: `transition: opacity 300ms, visibility 0s 300ms` faz o fade e depois esconde, mas `transition: visibility 0s 300ms, opacity 300ms` emparelha `opacity` com a duração zero e o atraso de `visibility`, então o elemento fica opaco por 300ms e depois some de uma vez. Dê a `visibility` a duração do fade em vez de um atraso: ela continua visível até a sua transição terminar, então esconde quando o fade termina.
 
 A regra do reset é `!important` dentro da camada `base`, e um `!important` com camada vence um sem camada, então o seu próprio `!important` não consegue religar uma animação. Para manter uma rodando para usuários que pedem movimento reduzido, como um spinner de upload que você considera essencial, declare-a `!important` numa camada ordenada antes de `base`, tanto com a configuração do sistema quanto com a do app. A primeira declaração `@layer` que o navegador lê define a ordem, então a sua vem antes do pacote:
 

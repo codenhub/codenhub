@@ -291,32 +291,71 @@ test.describe("data-motion", () => {
     });
 
     /* A popover or dialog fades out by keeping `display` and `overlay` for the
-       length of the fade; without them in the list it vanishes at once. They
-       follow `opacity`, where such a transition names them. */
-    test(`under ${label}, a popover still fades out`, async ({ page }) => {
-      const read = async (motion: "reduce" | "no-preference", html: string) => {
-        await page.emulateMedia({ reducedMotion: motion });
-        await page.setContent(
-          `<!doctype html><html ${html}><body><style>
-          [popover] { opacity: 0; transition: opacity 1s, display 1s allow-discrete, overlay 1s allow-discrete; }
-          [popover]:popover-open { opacity: 1; }
-          @starting-style { [popover]:popover-open { opacity: 0; } }
+       length of the fade; without them in the list it vanishes at once. The
+       reset gives both `allow-discrete` itself, since the behaviour the author
+       wrote for them sits at whatever position they named them in: MDN's
+       recipe names `transform` second, where the reset puts `display`. */
+    for (const transition of [
+      "opacity 1s, display 1s allow-discrete, overlay 1s allow-discrete",
+      "opacity 1s, transform 1s, overlay 1s allow-discrete, display 1s allow-discrete",
+    ]) {
+      test(`under ${label}, a popover still fades out, with ${transition}`, async ({ page }) => {
+        const read = async (motion: "reduce" | "no-preference", html: string) => {
+          await page.emulateMedia({ reducedMotion: motion });
+          await page.setContent(
+            `<!doctype html><html ${html}><body><style>
+          [popover] { opacity: 0; transform: scale(0.9); transition: ${transition}; }
+          [popover]:popover-open { opacity: 1; transform: none; }
+          @starting-style { [popover]:popover-open { opacity: 0; transform: scale(0.9); } }
         </style><div popover data-testid="pop">Saved</div></body></html>`,
+          );
+          await page.addStyleTag({ content: await built("index.css") });
+
+          return page.getByTestId("pop").evaluate(async (element: HTMLElement) => {
+            element.showPopover();
+            await Promise.allSettled(element.getAnimations().map((animation) => animation.finished));
+            element.hidePopover();
+            await new Promise(requestAnimationFrame);
+
+            return getComputedStyle(element).display;
+          });
+        };
+
+        // An engine that cannot animate `display` closes the popover at once with no preference too.
+        expect(await read(reducedMotion, attributes)).toBe(await read("no-preference", ""));
+      });
+    }
+
+    /* The reset pairs its own properties with the author's durations and
+       delays by position, as docs/accessibility.md says, so what survives is
+       a hide that puts `opacity` first or gives every property one duration
+       and no delay. Pinned so a change to the reset's order or to delays
+       shows here. */
+    for (const transition of ["opacity 1s, visibility 0s 1s", "visibility 1s, opacity 1s"]) {
+      test(`under ${label}, ${transition} still fades before it hides`, async ({ page }) => {
+        await page.emulateMedia({ reducedMotion });
+        await page.setContent(
+          `<!doctype html><html ${attributes}><body><style>
+          #m { transition: ${transition}; } #m.off { opacity: 0; visibility: hidden; }
+        </style><div id="m" data-testid="m">Saved</div></body></html>`,
         );
         await page.addStyleTag({ content: await built("index.css") });
 
-        return page.getByTestId("pop").evaluate(async (element: HTMLElement) => {
-          element.showPopover();
-          await Promise.allSettled(element.getAnimations().map((animation) => animation.finished));
-          element.hidePopover();
-          await new Promise(requestAnimationFrame);
+        const running = await page.getByTestId("m").evaluate((element) => {
+          element.classList.add("off");
 
-          return getComputedStyle(element).display;
+          return Object.fromEntries(
+            element.getAnimations().map((animation) => {
+              const timing = animation.effect!.getTiming();
+
+              return [(animation as CSSTransition).transitionProperty, [timing.duration, timing.delay]];
+            }),
+          );
         });
-      };
 
-      // An engine that cannot animate `display` closes the popover at once with no preference too.
-      expect(await read(reducedMotion, attributes)).toBe(await read("no-preference", ""));
-    });
+        expect(running.opacity, "opacity fades for its own duration, at once").toEqual([1000, 0]);
+        expect(running.visibility[0] + running.visibility[1], "visibility holds until the fade ends").toBe(1000);
+      });
+    }
   }
 });
