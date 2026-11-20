@@ -266,7 +266,7 @@ const kid = await jwkThumbprint(result.value);
 
 To generate or import a key already named by its thumbprint, pass `kid: "thumbprint"` to `generateKeyPair` or to an import function.
 
-Use it for a `kid` that follows from the key, or for the `jkt` that binds an access token to a DPoP key, as [Signing tokens](signing.md#dpop-proofs) shows.
+Use it for a `kid` that follows from the key, or for the `jkt` that binds an access token to a DPoP key, as [DPoP proofs](dpop.md#verifying-proofs) shows.
 
 A secret has a thumbprint too, of its `oct` JWK, so `jwkThumbprint` takes a secret created with `extractable: true` and throws a `TypeError` for one created without it, since the thumbprint is computed from the secret itself.
 

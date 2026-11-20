@@ -187,6 +187,17 @@ const MILLISECONDS_PER_SECOND = 1000;
  * private key, or the two are not one key pair bound to one algorithm.
  */
 export async function sign<TPayload extends object = JwtPayload>(input: SignInput<TPayload>): Promise<string> {
+  return signToken(input, true);
+}
+
+/**
+ * {@link sign}, with the choice to leave the key's own `kid` out of the header: a DPoP proof names its key by
+ * the `jwk` it embeds, so `createDpopProof` writes no `kid`. A `kid` in `input.header` is still written.
+ */
+export async function signToken<TPayload extends object = JwtPayload>(
+  input: SignInput<TPayload>,
+  writeKeyKid: boolean,
+): Promise<string> {
   if (typeof input !== "object" || input === null) {
     throw new TypeError("sign: input must be an object.");
   }
@@ -197,7 +208,7 @@ export async function sign<TPayload extends object = JwtPayload>(input: SignInpu
     throw new TypeError("sign: input.key must be a private or secret key.");
   }
   const embedded = input.embedKey === undefined ? undefined : await embeddedJwk(input.embedKey, key);
-  const headerJson = serializeHeader(input.header, key, embedded?.jwk);
+  const headerJson = serializeHeader(input.header, writeKeyKid ? key.kid : undefined, key.alg, embedded?.jwk);
   const payloadJson = serializePayload(input.payload, addedClaims(input));
   const signingInput = `${encodeBase64Url(encodeUtf8(headerJson))}.${encodeBase64Url(encodeUtf8(payloadJson))}`;
   const signedBytes = encodeUtf8(signingInput);
@@ -258,12 +269,17 @@ async function embeddedJwk(
 }
 
 /** Validates the caller's header and writes it as JSON with `alg`, `kid`, `typ`, `cty` first. */
-function serializeHeader(header: unknown, key: SigningKey, jwk: Record<string, string> | undefined): string {
+function serializeHeader(
+  header: unknown,
+  keyKid: string | undefined,
+  alg: JwsAlgorithm,
+  jwk: Record<string, string> | undefined,
+): string {
   if (header !== undefined && !isPlainObject(header)) {
     throw new TypeError("sign: input.header must be a plain object.");
   }
   const given = snapshotJsonObject(header ?? {}, "input.header");
-  if (Object.hasOwn(given, "alg") && given.alg !== key.alg) {
+  if (Object.hasOwn(given, "alg") && given.alg !== alg) {
     throw new TypeError("sign: input.header.alg must equal the key's alg.");
   }
   const forbidden = FORBIDDEN_HEADER_MEMBERS.find((name) => Object.hasOwn(given, name));
@@ -274,8 +290,8 @@ function serializeHeader(header: unknown, key: SigningKey, jwk: Record<string, s
   if (notText !== undefined) {
     throw new TypeError(`sign: input.header.${notText} must be a string.`);
   }
-  const kid = Object.hasOwn(given, "kid") ? given.kid : key.kid;
-  const members: [string, unknown][] = [["alg", key.alg]];
+  const kid = Object.hasOwn(given, "kid") ? given.kid : keyKid;
+  const members: [string, unknown][] = [["alg", alg]];
   if (kid !== undefined) {
     members.push(["kid", kid]);
   }

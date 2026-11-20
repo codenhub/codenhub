@@ -240,7 +240,7 @@ function reporterOf(onKeySetError: ((error: unknown) => void) | undefined): Repo
   };
 }
 
-async function ignoreRejection(promise: Promise<unknown>): Promise<void> {
+export async function ignoreRejection(promise: Promise<unknown>): Promise<void> {
   try {
     await promise;
   } catch {

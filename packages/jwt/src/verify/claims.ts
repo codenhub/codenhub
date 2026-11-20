@@ -15,6 +15,9 @@ const CLAIM_TYPES: readonly (readonly [string, (value: unknown) => boolean])[] =
   ["jti", (value) => typeof value === "string"],
 ];
 
+/** The resolved options the claim checks read. */
+export type ClaimCheckOptions = Omit<ResolvedOptions, "keys" | "maxLength" | "claims" | "onKeySetError">;
+
 /** The verified token's claims, viewed through the types their checks already confirmed. */
 interface Claims {
   readonly present: (name: string) => boolean;
@@ -32,7 +35,7 @@ const missing = (claim: string): JwtIssue => ({ code: "missing_claim", path: ["p
 export function checkClaims(
   header: JwtHeader,
   payload: JwtPayload,
-  options: ResolvedOptions,
+  options: ClaimCheckOptions,
   key: VerificationKey,
 ): JwtIssue[] {
   const issues: JwtIssue[] = [];
@@ -68,7 +71,7 @@ export function checkClaims(
  * throws instead of failing the token, as a throwing `claims` schema does (decision 10). Left alone, NaN
  * would turn every time comparison false and pass expired tokens.
  */
-function readClock(options: ResolvedOptions): number {
+function readClock(options: ClaimCheckOptions): number {
   const time: unknown = options.now();
   if (typeof time !== "number" || !Number.isFinite(time)) {
     throw new TypeError("createVerifier: options.now must return a finite number of milliseconds.");
@@ -85,7 +88,7 @@ function readClock(options: ResolvedOptions): number {
  */
 const FUTURE_LEEWAY_SECONDS = 60;
 
-function timeIssues(claims: Claims, now: number, options: ResolvedOptions): JwtIssue[] {
+function timeIssues(claims: Claims, now: number, options: ClaimCheckOptions): JwtIssue[] {
   const issues: JwtIssue[] = [];
   const tolerance = options.clockTolerance;
   const futureTolerance = Math.max(tolerance, FUTURE_LEEWAY_SECONDS);
@@ -119,7 +122,7 @@ function timeIssues(claims: Claims, now: number, options: ResolvedOptions): JwtI
  * (scope.md decision 43). Either check failing gives one issue. The subject check, when set, works as the
  * issuer option does.
  */
-function identityIssues(claims: Claims, options: ResolvedOptions, keyIssuer: string | undefined): JwtIssue[] {
+function identityIssues(claims: Claims, options: ClaimCheckOptions, keyIssuer: string | undefined): JwtIssue[] {
   const issues: JwtIssue[] = [];
   const { issuers } = options;
   if (issuers !== undefined || keyIssuer !== undefined) {
