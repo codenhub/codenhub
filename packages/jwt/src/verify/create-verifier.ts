@@ -80,7 +80,8 @@ const WRONG_ISSUER = fail({ code: "wrong_issuer", path: ["payload", "iss"] });
  * `requireExpiration` or `allowExpired` is not a boolean; `clockTolerance` is not an integer from 0
  * through 300; `maxAge` is not a positive integer;
  * `maxLength` is not an integer from 1 through 65536; `requiredClaims` is not an array of non-empty
- * strings; `claims` is not a version 1 Standard Schema; or `now` is not a function.
+ * strings; `claims` is not a version 1 Standard Schema; `now` is not a function; or `onKeySetError` is not a
+ * function.
  */
 export function createVerifier<TSchema extends StandardSchemaV1>(
   options: VerifierOptions<TSchema> & { readonly claims: TSchema },

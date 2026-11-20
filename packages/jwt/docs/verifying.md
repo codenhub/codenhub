@@ -31,21 +31,22 @@ The verifier accepts any value, including `undefined` or a number, and reports a
 
 Every option is checked when `createVerifier` runs, and an invalid one throws a `TypeError` naming the option and its constraint. So does a name that is not an option below, such as `audiance` or `issuers` (`createVerifier: options.audiance is not an option.`), even when its value is `undefined`: a misspelled option would otherwise silently turn its check off. Durations are in seconds.
 
-| Option              | Default                 | What it does                                                                                                                                                                                           |
-| ------------------- | ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `keys`              | required                | The [key set](key-sets.md) that selects the verification key for each token, or a function from the claimed `iss` to the key set, as in [several issuers](key-sets.md#choosing-the-key-set-by-issuer). |
-| `issuer`            | none                    | A string or a non-empty array of strings. When set, `iss` is required and must equal one of them exactly.                                                                                              |
-| `subject`           | none                    | A string or a non-empty array of strings. When set, `sub` is required and must equal one of them exactly.                                                                                              |
-| `audience`          | none                    | A string or a non-empty array of strings. When set, `aud` is required and must contain at least one of them. Unset, a token with `aud` fails; `false` accepts any `aud`.                               |
-| `type`              | none                    | The required `typ` header, such as `JWT` or `at+jwt`, or an array of accepted ones, where `null` accepts a token without `typ`. When set, `typ` is required unless the array holds `null`.             |
-| `requireExpiration` | `true` without `maxAge` | Whether `exp` is required. `false` when `maxAge` is set, since `maxAge` bounds the token's life instead.                                                                                               |
-| `allowExpired`      | `false`                 | Accept a token whose `exp` has passed, for an expired token that still identifies someone, such as an OpenID Connect `id_token_hint`. Every other check still runs.                                    |
-| `clockTolerance`    | `0`                     | Seconds of clock skew allowed on `exp`, `nbf`, `iat` and `maxAge`, with at least 60 on `nbf` and `iat`. An integer from 0 through 300.                                                                 |
-| `maxAge`            | none                    | Most seconds since `iat`. When set, `iat` is required. A positive integer.                                                                                                                             |
-| `maxLength`         | `8192`                  | Longest token accepted, in characters, checked before anything is decoded. An integer from 1 through 65536.                                                                                            |
-| `requiredClaims`    | `[]`                    | Claims that must be present, whatever their value.                                                                                                                                                     |
-| `claims`            | none                    | A [Standard Schema](#checking-your-own-claims) run on the payload after every other check passed.                                                                                                      |
-| `now`               | `Date.now`              | The current time in **milliseconds** since the Unix epoch, as `Date.now` returns it. Pass your own clock in tests. It must return a finite number; see below.                                          |
+| Option              | Default                 | What it does                                                                                                                                                                                                                                                                                                      |
+| ------------------- | ----------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `keys`              | required                | The [key set](key-sets.md) that selects the verification key for each token, or a function from the claimed `iss` to the key set, as in [several issuers](key-sets.md#choosing-the-key-set-by-issuer).                                                                                                            |
+| `issuer`            | none                    | A string or a non-empty array of strings. When set, `iss` is required and must equal one of them exactly.                                                                                                                                                                                                         |
+| `subject`           | none                    | A string or a non-empty array of strings. When set, `sub` is required and must equal one of them exactly.                                                                                                                                                                                                         |
+| `audience`          | none                    | A string or a non-empty array of strings. When set, `aud` is required and must contain at least one of them. Unset, a token with `aud` fails; `false` accepts any `aud` of a valid type.                                                                                                                          |
+| `type`              | none                    | The required `typ` header, such as `JWT` or `at+jwt`, or an array of accepted ones, where `null` accepts a token without `typ`. When set, `typ` is required unless the array holds `null`.                                                                                                                        |
+| `requireExpiration` | `true` without `maxAge` | Whether `exp` is required. `false` when `maxAge` is set, since `maxAge` bounds the token's life instead.                                                                                                                                                                                                          |
+| `allowExpired`      | `false`                 | Accept a token whose `exp` has passed, for an expired token that still identifies someone, such as an OpenID Connect `id_token_hint`. Every other check still runs.                                                                                                                                               |
+| `clockTolerance`    | `0`                     | Seconds of clock skew allowed on `exp`, `nbf`, `iat` and `maxAge`, with at least 60 on `nbf` and `iat`. An integer from 0 through 300.                                                                                                                                                                            |
+| `maxAge`            | none                    | Most seconds since `iat`. When set, `iat` is required. A positive integer.                                                                                                                                                                                                                                        |
+| `maxLength`         | `8192`                  | Longest token accepted, in characters, checked before anything is decoded. An integer from 1 through 65536.                                                                                                                                                                                                       |
+| `requiredClaims`    | `[]`                    | Claims that must be present, whatever their value.                                                                                                                                                                                                                                                                |
+| `claims`            | none                    | A [Standard Schema](#checking-your-own-claims) run on the payload after every other check passed.                                                                                                                                                                                                                 |
+| `now`               | `Date.now`              | The current time in **milliseconds** since the Unix epoch, as `Date.now` returns it. Pass your own clock in tests. It must return a finite number; see below.                                                                                                                                                     |
+| `onKeySetError`     | none                    | A function called with what went wrong when the key set or `keys` function fails with `key_fetch_failed` and `{ reason: "key_set_error" }`, for your logs; [your own key set](key-sets.md#your-own-key-set) has the details. Not called for a failure the key set returns itself, and its own errors are ignored. |
 
 Without `issuer`, `subject`, `audience`, `type`, `maxAge` and `requiredClaims`, a verifier checks the signature, the types of the registered claims (`iss`, `sub`, `aud`, `jti`, `exp`, `nbf`, `iat`), the times the token itself states, that it has an `exp`, and that it names no audience. Two defaults are strict on purpose, since forgetting an option should never make a verifier accept more:
 
@@ -107,17 +108,17 @@ With `subject` set, `sub` must equal one of the given values exactly, for a veri
 
 `aud` names who a token is for. It may be one string or an array of strings. With `audience` set, the token passes when any value in its `aud` equals any value in `audience`:
 
-| `audience`           | Token `aud`      | Result           |
-| -------------------- | ---------------- | ---------------- |
-| `"api"`              | `"api"`          | passes           |
-| `"api"`              | `["web", "api"]` | passes           |
-| `["api", "billing"]` | `"billing"`      | passes           |
-| `"api"`              | `["web"]`        | `wrong_audience` |
-| `"api"`              | `[]`             | `wrong_audience` |
-| `"api"`              | absent           | `missing_claim`  |
-| unset                | `"api"`          | `wrong_audience` |
-| unset                | absent           | passes           |
-| `false`              | anything         | passes           |
+| `audience`           | Token `aud`               | Result           |
+| -------------------- | ------------------------- | ---------------- |
+| `"api"`              | `"api"`                   | passes           |
+| `"api"`              | `["web", "api"]`          | passes           |
+| `["api", "billing"]` | `"billing"`               | passes           |
+| `"api"`              | `["web"]`                 | `wrong_audience` |
+| `"api"`              | `[]`                      | `wrong_audience` |
+| `"api"`              | absent                    | `missing_claim`  |
+| unset                | `"api"`                   | `wrong_audience` |
+| unset                | absent                    | passes           |
+| `false`              | any `aud` of a valid type | passes           |
 
 A token with several audiences is accepted by each of them. Whether that is acceptable is a policy of the protocol on top: OpenID Connect, for example, adds the `azp` claim for it, which this package does not interpret.
 
