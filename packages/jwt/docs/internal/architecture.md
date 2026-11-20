@@ -16,7 +16,7 @@ In scope, and the package must get right:
 - **Algorithm substitution**: `alg: none`, RS/HS confusion, and any token that tries to choose how it is verified, including through `jwk`, `jku`, `x5u` or `x5c` headers.
 - **Parser differentials**: input that one JSON or base64 parser reads differently from another, such as duplicate member names, padding, or non-canonical trailing bits, so that what was signed and what is read could differ.
 - **Leaks through failures**: no issue, `TypeError` message or result holds a value of a token, claim, header, JWK or response.
-- **Forced work against an issuer**: a stream of tokens with invented `kid`s costs the issuer at most one fetch per cooldown window.
+- **Forced work against an issuer**: while the cache is usable, a stream of tokens with invented `kid`s costs the issuer at most one fetch per cooldown window. A fetch that misses its deadline or is cancelled with its request (decision 42) may be fetched again inside the window, but only when no usable cache can answer, so invented `kid`s alone never reach that path. `cooldown: 0` gives the bound up, never more than one fetch at a time.
 
 Out of scope, and documented rather than defended:
 

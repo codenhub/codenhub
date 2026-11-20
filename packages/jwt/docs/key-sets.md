@@ -108,7 +108,7 @@ const verify = createVerifier({ keys: (issuer) => tenants.get(issuer), audience:
 
 The verifier reads `iss` from the payload before the signature is checked, only to route the token: a token without `iss` is `missing_claim` with `{ claim: "iss" }`, one whose `iss` is not a string is `invalid_claim`, and an `iss` the function returns `undefined` for is `wrong_issuer`. When the verifier also has an `issuer` option, an `iss` it does not list is `wrong_issuer` before the function is called. The function may be `async`. If it throws, rejects, or returns something other than a key set or a route, the token fails with `key_fetch_failed` and `{ reason: "key_set_error" }`, and `onKeySetError` gets the error.
 
-When issuers' tokens name different audiences or `typ` values, as tenants with their own client IDs do, return a route instead of the key set: `{ keys, audience, type }`. A route's `audience` and `type` take the same values as the verifier options and replace them for that issuer's tokens; one it leaves out keeps the verifier's. An invalid route is `key_set_error`, like any other mistake in the function.
+When issuers' tokens name different audiences or `typ` values, as tenants with their own client IDs do, return a route instead of the key set: `{ keys, audience, type }`. A route's `audience` and `type` take the same values as the verifier options and replace them for that issuer's tokens; one it leaves out keeps the verifier's. A route that is invalid, including one with any member besides `keys`, `audience` and `type`, such as a misspelled `audiences`, is `key_set_error`, like any other mistake in the function.
 
 ```ts
 const verify = createVerifier({
