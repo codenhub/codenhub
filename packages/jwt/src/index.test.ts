@@ -10,6 +10,7 @@ describe("package entrypoint", () => {
       "SYMMETRIC_ALGORITHMS",
       "certificateThumbprint",
       "createExternalSigningKey",
+      "createKeyRing",
       "createKeySet",
       "createRemoteKeySet",
       "createVerifier",

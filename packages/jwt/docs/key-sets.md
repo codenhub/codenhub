@@ -52,7 +52,7 @@ const jwks = {
 // Serve JSON.stringify(jwks) at your jwks_uri.
 ```
 
-The filter keeps secret keys out of the document, where `exportPublicJwk` would refuse them anyway.
+The filter keeps secret keys out of the document, where `exportPublicJwk` would refuse them anyway. To also choose the key that signs, and when each key is published, use a key ring instead: [Key rotation](rotation.md).
 
 ## Importing a JWKS
 

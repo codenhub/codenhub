@@ -1,7 +1,7 @@
 ---
 title: Issues
 description: The result shape, every issue code with its path and params, and which mistakes throw instead.
-order: 5
+order: 6
 ---
 
 # Issues

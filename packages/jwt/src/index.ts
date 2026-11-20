@@ -84,12 +84,17 @@ export {
   type RsaModulusLength,
 } from "./keys";
 export {
+  createKeyRing,
   createKeySet,
   createRemoteKeySet,
   importKeySet,
   type CreateKeySetOptions,
   type ImportKeySetOptions,
   type JwksFetch,
+  type KeyRing,
+  type KeyRingEntry,
+  type KeyRingOptions,
+  type PublicJwks,
   type RemoteKeySetOptions,
   type RemoteKeySetSnapshot,
 } from "./keysets";

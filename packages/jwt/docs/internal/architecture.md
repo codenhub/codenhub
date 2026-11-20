@@ -32,7 +32,7 @@ Out of scope, and documented rather than defended:
 | `encoding/` | Strict base64url, the strict JSON object parser, and UTF-8 helpers.                                           |
 | `jws/`      | Compact parsing (`checkSegments`, `parseCompact`, `parsePayload`) and the public `readHeader`.                |
 | `keys/`     | The algorithm table, the key registry, JWK and PEM checks, import, generation, export and thumbprints.        |
-| `keysets/`  | Selection, local key sets, JWKS import, and the remote key set.                                               |
+| `keysets/`  | Selection, local key sets, JWKS import, the remote key set, and the issuer's key ring.                        |
 | `sign/`     | `sign`.                                                                                                       |
 | `verify/`   | Option resolution, claim checks, and `createVerifier`.                                                        |
 | `interop/`  | A local copy of the Standard Schema v1 types, so the package has no dependency for them.                      |
