@@ -133,5 +133,6 @@ There is no function that decodes a payload without verifying it. When you need 
 - [Signing tokens](signing.md): what `sign` writes into the header, what payloads it accepts, and the claims it can add.
 - [Keys](keys.md): public, private and secret keys, importing JWKs and raw secrets, generating keys, and exporting them.
 - [Key sets](key-sets.md): how a key is selected, local sets, importing a JWKS, and fetching an issuer's JWKS with caching, cooldown and stale keys.
+- [Key rotation](rotation.md): rotating an issuer's signing keys with a key ring, the durations to choose, and replacing a leaked key.
 - [Issues](errors.md): the result shape, every issue code and its `params`, and what throws instead.
 - [API reference](reference/index.md): every export with its signature, generated from the TSDoc.
