@@ -2,7 +2,7 @@
 title: Temas
 description: Modo claro y oscuro, reemplazar la paleta con los colores de marca, definir una intención propia, y cada token de color, intención, base y fuente con su valor por defecto.
 order: 5
-source: e4ecd755cc2e249fe99284d6b43244d908ac13e1
+source: 86836142938cbddb71d5ebfa885b862678dd84a1
 ---
 
 # Temas
@@ -177,7 +177,7 @@ Cada fila es un punto de sobrescritura: defínelo en `:root` para cambiar el tem
 | `--color-tooltip-contrast`     | `neutral-900`, `neutral-100` | Texto sobre `--color-tooltip`.                                                                                   |
 | `--color-success`              | `emerald-700`                | Relleno de `.success`.                                                                                           |
 | `--color-success-contrast`     | `neutral-50`                 | Texto sobre un relleno success completo: 5.14:1.                                                                 |
-| `--color-success-hover`        | `#007552`, `#008e66`         | Relleno success bajo el puntero.                                                                                 |
+| `--color-success-hover`        | `#007552`, `#006448`         | Relleno success bajo el puntero.                                                                                 |
 | `--color-success-subtle`       | `emerald-100`, `emerald-900` | Tinte success detrás de los componentes soft.                                                                    |
 | `--color-success-strong`       | `emerald-800`, `emerald-300` | Texto, iconos y bordes success donde el relleno no es completo.                                                  |
 | `--color-warning`              | `amber-600`                  | Relleno de `.warning`.                                                                                           |

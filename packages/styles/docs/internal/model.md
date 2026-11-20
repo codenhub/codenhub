@@ -152,6 +152,8 @@ hover edge  = --intent-hover at the same width
 
 One formula, no branches, no tokens beyond `--hover-step`. `ghost` picks up a 14% tint, `soft` deepens to 26%, `solid` stays full and darkens because the base color changed. A ghost element rests at nothing and gains a tint under the pointer, which is what makes `.ghost` a fill name rather than an absence. An outline button tints on hover; it does not fill completely.
 
+The hover tones of the four status intents are baked per theme, as `tokens.css` records, each 82% of the base toward its `-strong`. Dark success is the exception: toward its `-300` the plate lightened under the neutral-50 label to 3.98:1, and the lightest step that keeps the 4.5:1 a `.solid` label promises moves the plate by 14 units, too little to read. So it darkens instead, halfway to `emerald-900`, at 6.87:1 and 25 units from rest. A solid label holds 4.5:1 under the pointer for every intent, in both themes and under every aesthetic (`contrast.spec.ts`).
+
 Measured on composited pixels, in sRGB distance where roughly 20 is a clearly visible step: the smallest rest-to-hover separation is `soft` in light at 31; `ghost` is 47 in light and 52 in dark, `soft` 48 in dark, `solid` 94 in light and 36 in dark. `.ghost.edged` and `.soft.edged` separate by 48 to 52 in both themes at a single pixel of border.
 
 ### The edge is never scaled

@@ -229,3 +229,65 @@ test("leaves a text control's resting line quiet without the preference", async 
 
   expect(await lineContrast(page, "ipt")).toBeLessThan(MINIMUM);
 });
+
+/* docs/accessibility.md promises every intent's `.solid` label 4.5:1 in both
+   themes. Hover swaps the plate for `--intent-hover`, a tone baked per theme,
+   so the promise has to hold there too: dark success's hover once lightened
+   its plate to 3.98:1 under the neutral-50 label. Every aesthetic is read,
+   since one may restate the fill or the ink, and a solid interactive card
+   takes the same hover tone as the button. */
+const SOLID_REGIONS = [
+  ["default", ""],
+  ["chunky-tile", "chunky-tile"],
+  ["cyber", "cyber"],
+  ["glass", "glass"],
+  ["glass-liquid", "glass glass-liquid"],
+  ["neobrutalism", "neobrutalism"],
+  ["pixel", "pixel"],
+  ["sketch", "sketch"],
+] as const;
+const SOLID_COMPONENTS = [
+  ["btn", "btn solid"],
+  ["card", "card interactive solid"],
+] as const;
+
+for (const theme of THEMES) {
+  test(`prints every intent's solid label at 4.5:1 at rest and on hover, ${theme}`, async ({ page }) => {
+    await load(
+      page,
+      theme,
+      SOLID_REGIONS.map(
+        ([name, region]) =>
+          `<div class="${region}" style="padding: 1rem">${INTENTS.flatMap((intent) =>
+            SOLID_COMPONENTS.map(
+              ([component, classes]) =>
+                `<button data-testid="${name}-${component}-${intent}" class="${classes} ${intent}">Label</button>`,
+            ),
+          ).join("")}</div>`,
+      ).join(""),
+    );
+    await page.addStyleTag({ content: "*, *::before, *::after { transition: none !important; }" });
+
+    const ground = await pageColor(page);
+    const ratio = async (testId: string) => {
+      const plate = flattenColor(await style(page, testId, "background-color"), ground);
+
+      return getContrastRatio(flattenColor(await style(page, testId, "color"), plate), plate);
+    };
+
+    for (const [name] of SOLID_REGIONS) {
+      for (const intent of INTENTS) {
+        for (const [component] of SOLID_COMPONENTS) {
+          const testId = `${name}-${component}-${intent}`;
+
+          // oxlint-disable-next-line no-await-in-loop -- one pointer, moved in turn.
+          expect.soft(await ratio(testId), `${testId} at rest`).toBeGreaterThanOrEqual(4.5);
+          // oxlint-disable-next-line no-await-in-loop -- one pointer, moved in turn.
+          await page.getByTestId(testId).hover();
+          // oxlint-disable-next-line no-await-in-loop -- one pointer, moved in turn.
+          expect.soft(await ratio(testId), `${testId} on hover`).toBeGreaterThanOrEqual(4.5);
+        }
+      }
+    }
+  });
+}

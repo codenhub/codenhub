@@ -81,8 +81,14 @@
        levels of `color-mix()` over a `light-dark()` crash the WebKit renderer on
        hover. Each pinned pair below is `color-mix(in srgb, <base> 82%,
        <strong>)`, resolved once per theme; re-bake it if the base or strong tone
-       it was mixed from changes. */
-    --color-success-hover: light-dark(#007552, #008e66);
+       it was mixed from changes.
+
+       Success's dark half is the exception: toward `-300` its plate lightens
+       under the neutral-50 label, which fell to 3.98:1 (rest 5.14:1), and the
+       lightest step that keeps 4.5:1 moves the plate too little to read as a
+       hover. So it darkens instead, `color-mix(in srgb, emerald-700 50%,
+       emerald-900)`: 6.87:1, as far from rest as the old tone. */
+    --color-success-hover: light-dark(#007552, #006448);
     /* The dark ground is `-900` to make room for the `-300` ink above it. `-subtle`
        is what `kbd`, `code`, `pre` and the tooltip bubble rest on, and those are the
        only places a partial fill prints text onto a tinted ground rather than onto

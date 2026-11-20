@@ -2,7 +2,7 @@
 title: Acessibilidade
 description: O que o CSS faz por foco, estados, movimento, contraste, cores forçadas e texto da direita para a esquerda, e o que a sua aplicação ainda deve aos seus usuários.
 order: 5
-source: 64247645618a1c10521309525c89bb273b72bafa
+source: 94700a4dc5e33d939125a7731aff3c9493733df9
 ---
 
 # Acessibilidade
@@ -141,7 +141,7 @@ As medições abaixo são das cores entregues. Assim que você mudar um token de
 
 | Recurso                       | Comportamento                                                                                                                                                                                                                                                                                                                                      |
 | ----------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Rótulos preenchidos           | O rótulo `.solid` de toda intenção atende a 4.5:1 (WCAG 1.4.3) como texto normal, nos dois temas. O menor é success, com 5.14:1.                                                                                                                                                                                                                   |
+| Rótulos preenchidos           | O rótulo `.solid` de toda intenção atende a 4.5:1 (WCAG 1.4.3) como texto normal, nos dois temas, em repouso e sob o ponteiro. O menor é success em repouso, com 5.14:1, e info sob o ponteiro no modo escuro, com 5.08:1.                                                                                                                         |
 | Texto em warning              | `--color-warning-contrast` é quase preto, e não a cor da página, porque um âmbar escuro o bastante para carregar texto branco deixa de parecer âmbar.                                                                                                                                                                                              |
 | Preenchimentos parciais       | A cor de texto de contraste só aparece em preenchimentos acima da metade da força, então o preenchimento limitado de um controle de texto mantém a cor de texto da própria intenção.                                                                                                                                                               |
 | Cor da intenção no escuro     | No modo escuro, um rótulo `.soft` ou `.ghost` usa o tom `-300` da sua intenção, para manter o matiz em vez de ficar branco.                                                                                                                                                                                                                        |
