@@ -55,11 +55,12 @@ A bubble is as wide as its text, up to 18rem, and then wraps.
 
 ### Where a tooltip gets cut off
 
-The bubble is positioned with CSS only, on the side you chose. Nothing measures the page: it does not move to stay inside the window, flip to the other side when there is no room, or move to the top layer of the page. That has three consequences:
+The bubble is positioned with CSS only, on the side you chose. Nothing measures the page: it does not move to stay inside the window, flip to the other side when there is no room, or move to the top layer of the page. That has four consequences:
 
 - **A scrolling or clipping container cuts it off.** An ancestor with `overflow: hidden`, `auto`, or `scroll` clips the bubble at its edge. The API keys table on the settings screen sits in a `.table-wrap`, which scrolls, so a top tooltip on the first row is cut off at the top of the wrapper. Raising `z-index` does not help: it changes what the bubble is painted above, not whether the container clips it.
 - **The window edge cuts it off.** A top tooltip on the first line of a page, or a right tooltip near the right edge, extends off screen.
 - **Left and right are physical sides.** In a right-to-left page, `"left"` still means the left side of the screen.
+- **The next card can cover it, briefly.** Under `.glass`, every card, panel, alert, and table is its own layer, so a bubble is painted above the surfaces after its own only while its surface is lifted. The package lifts a `.card`, `.panel`, `.alert`, `.surface`, or `.data-table` that holds a tooltip while the tooltip is pinned open, or while the surface is hovered or holds focus, with `position: relative` and the popover `z-index`. A surface you positioned yourself keeps its own `position`. Once the pointer leaves the surface, the lift ends at once, so a bubble that overhangs the next card fades out beneath it during `--tooltip-linger`.
 
 What to do:
 

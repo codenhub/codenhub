@@ -160,6 +160,19 @@
       isolation: var(--_layers-isolation, revert-layer);
     }
 
+    /* A surface holding an open tooltip rises to the popover layer. Glass's
+       backdrop filter, and liquid's isolation, make every surface a stacking
+       context, and the bubble's own `z-index` counts only inside it: an open
+       bubble in one card was painted under the next one. Raised while the
+       surface is hovered or holds focus, not only while the tooltip is, so the
+       pointer crossing the gap onto a bubble that overhangs the next surface
+       lands on the bubble. Zero specificity, after the anchor above, so a
+       surface's own positioning still wins. See docs/usage/tooltips.md. */
+    :where(&:has(.tooltip):is(:hover, :focus-within), &:has(.tooltip[data-state="open"])) {
+      position: relative;
+      z-index: var(--z-popover);
+    }
+
     :where(&)::before,
     :where(&)::after {
       --_layers-content: var(--_glass-liquid-on) "";

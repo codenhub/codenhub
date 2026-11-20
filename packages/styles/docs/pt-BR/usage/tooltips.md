@@ -2,7 +2,7 @@
 title: Tooltips
 description: Ajuda de campo que abre no hover e no foco, como ligá-la a leitores de tela e à tecla Escape, e onde um tooltip é cortado.
 order: 4
-source: 50886f966b37f702f22914de7c1ca383b4f5c15f
+source: a6cd221c4332817a03cb3b3c5063781f558b9f84
 ---
 
 # Tooltips
@@ -56,11 +56,12 @@ Um balão tem a largura do texto, até 18rem, e a partir daí quebra a linha.
 
 ### Onde um tooltip é cortado
 
-O balão é posicionado só com CSS, no lado que você escolheu. Nada mede a página: ele não se move para ficar dentro da janela, não vira para o outro lado quando falta espaço e não vai para a camada superior (top layer) da página. Isso tem três consequências:
+O balão é posicionado só com CSS, no lado que você escolheu. Nada mede a página: ele não se move para ficar dentro da janela, não vira para o outro lado quando falta espaço e não vai para a camada superior (top layer) da página. Isso tem quatro consequências:
 
 - **Um contêiner com rolagem ou recorte o corta.** Um ancestral com `overflow: hidden`, `auto` ou `scroll` recorta o balão na borda dele. A tabela de chaves de API da tela de configurações fica num `.table-wrap`, que tem rolagem, então um tooltip acima da primeira linha é cortado no topo do wrapper. Aumentar o `z-index` não ajuda: ele muda sobre o que o balão é pintado, não se o contêiner o recorta.
 - **A borda da janela o corta.** Um tooltip acima da primeira linha de uma página, ou um tooltip à direita perto da borda direita, sai da tela.
 - **Esquerda e direita são lados físicos.** Numa página da direita para a esquerda, `"left"` continua significando o lado esquerdo da tela.
+- **O card seguinte pode cobri-lo, por um instante.** Sob `.glass`, cada card, painel, alerta e tabela é uma camada própria, então um balão é pintado acima das superfícies que vêm depois da sua só enquanto a sua superfície está elevada. O pacote eleva um `.card`, `.panel`, `.alert`, `.surface` ou `.data-table` que contém um tooltip enquanto o tooltip está fixado aberto, ou enquanto a superfície está sob o ponteiro ou contém o foco, com `position: relative` e o `z-index` dos popovers. Uma superfície que você mesmo posicionou mantém o próprio `position`. Quando o ponteiro sai da superfície, a elevação acaba na hora, então um balão que avança sobre o card seguinte se apaga por baixo dele durante o `--tooltip-linger`.
 
 O que fazer:
 
