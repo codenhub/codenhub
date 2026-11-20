@@ -180,7 +180,9 @@ const keys = createRemoteKeySet({
 });
 ```
 
-A seed is treated exactly like a JWKS this key set fetched at `fetchedAt`: fresh for `cacheTtl`, then stale for `maxStale`, then not used at all. A seed whose `jwks` does not import is ignored, and the key set fetches. `onFetch` and `onFetchError` may return a promise; what they throw or reject with is ignored, so a broken store or logger never fails a token.
+A seed is treated exactly like a JWKS this key set fetched at `fetchedAt`: fresh for `cacheTtl`, then stale for `maxStale`, then not used at all. A seed whose `jwks` does not import is ignored, and the key set fetches. `onFetch` and `onFetchError` may return a promise, which is handed to `waitUntil` so a save outlives the request on Workers; what they throw or reject with is ignored, so a broken store or logger never fails a token.
+
+A seed or cache whose `fetchedAt` is up to a minute ahead of the clock, as after a small clock correction or from a host whose clock runs ahead, counts as just fetched. Further ahead, it is expired: a clock that jumps back that far could otherwise keep a removed key trusted past `cacheTtl` plus `maxStale`.
 
 ### When fetching fails
 

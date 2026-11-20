@@ -1455,7 +1455,7 @@ Current time in milliseconds since the Unix epoch, for tests. It must return a f
 readonly onFetch?: (snapshot: RemoteKeySetSnapshot) => void;
 ```
 
-Called after each successful fetch, with the JWKS as fetched and when, for a caller that saves it to pass as `seed` later. Its errors, thrown or rejected, are ignored.
+Called after each successful fetch, with the JWKS as fetched and when, for a caller that saves it to pass as `seed` later. A promise it returns is handed to `waitUntil`; its errors, thrown or rejected, are ignored.
 
 #### RemoteKeySetOptions › onFetchError
 
@@ -1463,7 +1463,7 @@ Called after each successful fetch, with the JWKS as fetched and when, for a cal
 readonly onFetchError?: (issue: JwtIssue) => void;
 ```
 
-Called after each failed fetch with its `key_fetch_failed` issue, whether or not a `select` waited for the fetch, for logging. Its errors, thrown or rejected, are ignored.
+Called after each failed fetch with its `key_fetch_failed` issue, whether or not a `select` waited for the fetch, for logging. A promise it returns is handed to `waitUntil`; its errors, thrown or rejected, are ignored.
 
 #### RemoteKeySetOptions › seed
 
@@ -1471,7 +1471,7 @@ Called after each failed fetch with its `key_fetch_failed` issue, whether or not
 readonly seed?: RemoteKeySetSnapshot;
 ```
 
-A JWKS fetched earlier, such as one a previous instance saved from `RemoteKeySetOptions.onFetch`, used as if this set had fetched it at `fetchedAt`. It is imported at the first `select`; a `jwks` that is not a JWKS is ignored, and the set fetches as it would without a seed. A seed older than `cacheTtl` plus `maxStale` is never used.
+A JWKS fetched earlier, such as one a previous instance saved from `RemoteKeySetOptions.onFetch`, used as if this set had fetched it at `fetchedAt`. It is imported at the first `select`; a `jwks` that is not a JWKS is ignored, and the set fetches as it would without a seed. A seed older than `cacheTtl` plus `maxStale` is never used, and neither is one whose `fetchedAt` is more than a minute ahead of `now`.
 
 #### RemoteKeySetOptions › timeout
 
