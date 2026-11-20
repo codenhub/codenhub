@@ -46,6 +46,9 @@ type Members = Partial<Record<MemberName, unknown>>;
 const RSA_PRIVATE_MEMBERS = ["d", "p", "q", "dp", "dq", "qi"] as const;
 const ASYMMETRIC_PRIVATE_MEMBERS = [...RSA_PRIVATE_MEMBERS, "oth", "k"] as const;
 
+/** RFC 7517 §4.3 says unrelated operations SHOULD NOT share a key; a key that also encrypts is refused. */
+const SIGNATURE_OPERATIONS: ReadonlySet<string> = new Set(["sign", "verify"]);
+
 const REQUIRED_OPERATION: Readonly<Record<KeyRole, readonly string[]>> = {
   public: ["verify"],
   private: ["sign"],
@@ -153,10 +156,18 @@ function checkHeaderMembers(members: Members, alg: JwsAlgorithm, role: KeyRole):
   }
   if (members.key_ops !== undefined) {
     const operations = members.key_ops;
-    if (!Array.isArray(operations) || !operations.every((op) => typeof op === "string")) {
+    // RFC 7517 §4.3: duplicates MUST NOT be present.
+    if (
+      !Array.isArray(operations) ||
+      !operations.every((op) => typeof op === "string") ||
+      new Set(operations).size !== operations.length
+    ) {
       return issue("invalid_key", "key_ops");
     }
-    if (!REQUIRED_OPERATION[role].some((op) => operations.includes(op))) {
+    if (
+      !REQUIRED_OPERATION[role].some((op) => operations.includes(op)) ||
+      !operations.every((op) => SIGNATURE_OPERATIONS.has(op))
+    ) {
       return issue("wrong_use", "key_ops");
     }
   }

@@ -120,7 +120,7 @@ const USAGES: Readonly<Record<KeyRole, KeyUsage[]>> = {
  * ill-typed member, invalid base64url, wrong coordinate lengths, or material Web Crypto rejects (such
  * as a point not on the curve); `unsupported_key` for a `kty`/`crv` that does not fit `alg` or a
  * modulus over 8192 bits; `alg_mismatch` for a JWK `alg` naming another algorithm; `wrong_use` for a
- * `use` other than `sig` or `key_ops` without `verify`; `unexpected_private_key` for any private
+ * `use` other than `sig`, or `key_ops` without `verify` or with an operation other than `sign` and `verify`; `unexpected_private_key` for any private
  * member; `weak_key` for a modulus under 2048 bits. Issues never contain key values. Never throws for
  * any `key`.
  * @throws TypeError when `options` is not an object, has a member that is not an option, `options.alg` is

@@ -159,6 +159,25 @@ describe.each(CASES)("importPublicKey for $alg", ({ alg, publicJwk, materialMemb
     ]);
   });
 
+  it("should report invalid_key with path key_ops when key_ops repeats an operation", async () => {
+    expect(issuesOf(await importPublicKey({ ...publicJwk, key_ops: ["verify", "verify"] }, { alg }))).toEqual([
+      { code: "invalid_key", path: ["key_ops"] },
+    ]);
+  });
+
+  it.each([["encrypt"], ["deriveKey"], ["custom"]])(
+    "should report wrong_use with path key_ops when key_ops also allows %s",
+    async (operation) => {
+      expect(issuesOf(await importPublicKey({ ...publicJwk, key_ops: ["verify", operation] }, { alg }))).toEqual([
+        { code: "wrong_use", path: ["key_ops"] },
+      ]);
+    },
+  );
+
+  it("should accept key_ops allowing both sign and verify", async () => {
+    expect((await importPublicKey({ ...publicJwk, key_ops: ["sign", "verify"] }, { alg })).ok).toBe(true);
+  });
+
   it("should report invalid_key with path key_ops when key_ops is not an array of strings", async () => {
     expect(issuesOf(await importPublicKey({ ...publicJwk, key_ops: "verify" }, { alg }))).toEqual([
       { code: "invalid_key", path: ["key_ops"] },
@@ -569,6 +588,11 @@ describe("importSecretKey", () => {
     expect(issuesOf(await importSecretKey({ ...HMAC_SECRET_JWK, key_ops: ["encrypt"] }, { alg: "HS256" }))).toEqual([
       { code: "wrong_use", path: ["key_ops"] },
     ]);
+  });
+
+  it("should report wrong_use with path key_ops when key_ops also allows encryption", async () => {
+    const jwk = { ...HMAC_SECRET_JWK, key_ops: ["sign", "verify", "encrypt"] };
+    expect(issuesOf(await importSecretKey(jwk, { alg: "HS256" }))).toEqual([{ code: "wrong_use", path: ["key_ops"] }]);
   });
 
   it("should report alg_mismatch with path alg for an oct JWK naming another algorithm", async () => {
