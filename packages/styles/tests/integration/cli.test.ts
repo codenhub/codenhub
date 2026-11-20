@@ -264,6 +264,17 @@ describe("build", () => {
     expect(await readOutput("app/views/app.css")).toBe(first);
   });
 
+  // A build killed before its rename leaves its temporary file, which held the last build's classes.
+  it("does not read a temporary file a killed build left beside the output", async () => {
+    await mkdir(path.join(project, "public"));
+    await writeFile(path.join(project, "public", "index.html"), '<button class="btn">Save</button>\n');
+    await writeFile(path.join(project, "public", "app.css.0123456789abcdef.tmp"), '<table class="data-table">\n');
+
+    expect(await build("build", "-c", "public/*", "-o", "public/app.css")).toBe(0);
+    expect(await readOutput("public/app.css")).toMatch(ruleFor("btn"));
+    expect(await readOutput("public/app.css")).not.toMatch(ruleFor("data-table"));
+  });
+
   it.skipIf(!canSymlink)("does not read its own output through a link a glob matches", async () => {
     const argv = ["build", "-c", "app/views/*", "-o", "app.css"];
 
@@ -455,6 +466,16 @@ describe("failures", () => {
 
     expect(await failureOf("build", "-c", "public/*.css", "-o", "public/s.css")).toBe(
       'chs: --content "public/*.css" matches only --output public/s.css, which is never read for classes; name the templates to scan.',
+    );
+  });
+
+  it("rejects a --content glob that matches only the --output and a killed build's temporary file", async () => {
+    expect(await build("build", "-c", "app/views/**/*.erb", "-o", "public/s.css")).toBe(0);
+    await writeFile(path.join(project, "public", "s.css.0123456789abcdef.tmp"), '<table class="data-table">\n');
+    stdout = [];
+
+    expect(await failureOf("build", "-c", "public/*", "-o", "public/s.css")).toBe(
+      'chs: --content "public/*" matches only --output public/s.css, which is never read for classes; name the templates to scan.',
     );
   });
 

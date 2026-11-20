@@ -518,7 +518,7 @@ function readContent(entries: readonly string[], cwd: string, output: string, gi
       throw error instanceof UnmatchedEntryError ? new Error(`--content ${error.message}`) : error;
     }
 
-    const content = matched.filter((file) => path.relative(realPathSyncOf(file), output) !== "");
+    const content = matched.filter((file) => !isOutputOrTemporary(realPathSyncOf(file), output));
 
     if (content.length === 0) {
       throw new Error(
@@ -531,6 +531,17 @@ function readContent(entries: readonly string[], cwd: string, output: string, gi
   }
 
   return readFiles(files, { cwd, failOnUnreadable: true });
+}
+
+/* The output, or a temporary file of `createTemporary` a build killed before
+   its rename left beside it: read as content, that held the classes of the
+   last build, which a build would then keep. `path.relative` compares the
+   output's part as the platform does, without case on Windows. */
+function isOutputOrTemporary(file: string, output: string): boolean {
+  return (
+    path.relative(file.slice(0, output.length), output) === "" &&
+    /^(?:\.[0-9a-f]{16}\.tmp)?$/.test(file.slice(output.length))
+  );
 }
 
 /* Content is read as text and never run, as Tailwind reads it: every run of
