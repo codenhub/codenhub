@@ -2,7 +2,7 @@
 title: Tooltips
 description: Ajuda de campo que abre no hover e no foco, como ligá-la a leitores de tela e à tecla Escape, e onde um tooltip é cortado.
 order: 4
-source: a6cd221c4332817a03cb3b3c5063781f558b9f84
+source: ae1c042c031c88173eabc55b79114c448ec57c29
 ---
 
 # Tooltips
@@ -61,7 +61,7 @@ O balão é posicionado só com CSS, no lado que você escolheu. Nada mede a pá
 - **Um contêiner com rolagem ou recorte o corta.** Um ancestral com `overflow: hidden`, `auto` ou `scroll` recorta o balão na borda dele. A tabela de chaves de API da tela de configurações fica num `.table-wrap`, que tem rolagem, então um tooltip acima da primeira linha é cortado no topo do wrapper. Aumentar o `z-index` não ajuda: ele muda sobre o que o balão é pintado, não se o contêiner o recorta.
 - **A borda da janela o corta.** Um tooltip acima da primeira linha de uma página, ou um tooltip à direita perto da borda direita, sai da tela.
 - **Esquerda e direita são lados físicos.** Numa página da direita para a esquerda, `"left"` continua significando o lado esquerdo da tela.
-- **O card seguinte pode cobri-lo, por um instante.** Sob `.glass`, cada card, painel, alerta e tabela é uma camada própria, então um balão é pintado acima das superfícies que vêm depois da sua só enquanto a sua superfície está elevada. O pacote eleva um `.card`, `.panel`, `.alert`, `.surface` ou `.data-table` que contém um tooltip enquanto o tooltip está fixado aberto, ou enquanto a superfície está sob o ponteiro ou contém o foco, com `position: relative` e o `z-index` dos popovers. Uma superfície que você mesmo posicionou mantém o próprio `position`. Quando o ponteiro sai da superfície, a elevação acaba na hora, então um balão que avança sobre o card seguinte se apaga por baixo dele durante o `--tooltip-linger`.
+- **O card seguinte pode cobri-lo, por um instante.** Sob `.glass`, cada card, painel, alerta e tabela é uma camada própria, então um balão é pintado acima das superfícies que vêm depois da sua só enquanto a sua superfície está elevada. Sob glass essas superfícies ficam com `position: relative` em repouso, então um filho com posição absoluta se posiciona em relação à sua superfície, e o pacote eleva em um degrau, com `z-index: 1`, um `.card`, `.panel`, `.alert`, `.surface` ou `.data-table` que contém um tooltip enquanto o tooltip está fixado aberto, ou enquanto a superfície está sob o ponteiro ou contém o foco. Um degrau basta para passar por cima das superfícies vizinhas e fica abaixo das suas próprias camadas, como um cabeçalho sticky ou um menu aberto. Fora do glass uma superfície não é uma camada própria e nada é elevado. Uma superfície que você mesmo posicionou, ou à qual deu o próprio `z-index`, mantém o seu. Quando o ponteiro sai da superfície, a elevação acaba na hora, então um balão que avança sobre o card seguinte se apaga por baixo dele durante o `--tooltip-linger`.
 
 O que fazer:
 

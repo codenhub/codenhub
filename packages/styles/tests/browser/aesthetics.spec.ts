@@ -3410,3 +3410,79 @@ for (const region of ["", "chunky-tile", "cyber", "glass", "glass glass-liquid",
     }
   });
 }
+
+/* The lift stays under the page's own layers. A card holding a tooltip and a
+   focused field took the popover layer, and painted over a sticky header and
+   an open menu at `z-index: 10` above it, taking their clicks. The lift is a
+   step above the next surface, not a layer of its own. */
+for (const region of ["", "glass"]) {
+  test(`keeps a sticky header and an open menu over a card holding a focused tooltip${region ? ` under .${region}` : ""}`, async ({
+    page,
+  }) => {
+    await page.goto(FEEDBACK_URL);
+    await page.evaluate((classes) => {
+      const host = document.createElement("div");
+      host.className = classes;
+      host.style.cssText = "position: relative; padding: 0 2rem 2rem";
+      host.innerHTML =
+        '<header data-probe="header" style="position: sticky; top: 0; z-index: 10; height: 3rem; background: white">Header</header>' +
+        '<div data-probe="menu" style="position: absolute; z-index: 10; top: 5rem; left: 2rem; width: 12rem; height: 3rem; background: white">Menu</div>' +
+        '<div class="card" data-probe="card" style="margin-top: -1.5rem; min-height: 8rem">' +
+        '<span class="tooltip"><button type="button">Trigger</button><span class="tooltip-bubble">A message</span></span>' +
+        '<input class="ipt" data-probe="field" aria-label="Field"></div>';
+      document.body.prepend(host);
+    }, region);
+    await page.locator('[data-probe="field"]').focus();
+    await settleAnimations(page);
+
+    const hits = await page.evaluate(() =>
+      ["header", "menu"].map((probe) => {
+        const element = document.querySelector(`[data-probe="${probe}"]`)!;
+        const card = document.querySelector('[data-probe="card"]')!.getBoundingClientRect();
+        const rect = element.getBoundingClientRect();
+        const x = rect.left + 8;
+        const y = Math.max(rect.top, card.top) + 4;
+
+        return {
+          probe,
+          overlaps: y > card.top && y < card.bottom && y < rect.bottom,
+          onTop: document.elementFromPoint(x, y) === element,
+        };
+      }),
+    );
+
+    for (const hit of hits) {
+      expect(hit.overlaps, `${hit.probe} overlaps the card`).toBe(true);
+      expect(hit.onTop, `${hit.probe} is painted over the card`).toBe(true);
+    }
+  });
+}
+
+/* Hover moves nothing. Hovering a card with a tooltip turned it from static to
+   relative, so an absolutely positioned child anchored to a wrapper outside
+   the card jumped to the card. A glass surface is a stacking context at rest,
+   so it is anchored at rest as well, and hover changes only its `z-index`. */
+for (const [region, position] of [
+  ["", "static"],
+  ["glass", "relative"],
+] as const) {
+  test(`keeps a card's position through hover${region ? ` under .${region}` : ""}`, async ({ page }) => {
+    await page.goto(FEEDBACK_URL);
+    await page.evaluate((classes) => {
+      const host = document.createElement("div");
+      host.className = classes;
+      host.style.cssText = "padding: 2rem";
+      host.innerHTML =
+        '<div class="card" data-probe="card"><span class="tooltip"><button type="button">Trigger</button>' +
+        '<span class="tooltip-bubble">A message</span></span></div>';
+      document.body.prepend(host);
+    }, region);
+
+    const card = page.locator('[data-probe="card"]');
+    const read = () => card.evaluate((element) => getComputedStyle(element).position);
+
+    expect(await read()).toBe(position);
+    await card.hover();
+    expect(await read()).toBe(position);
+  });
+}
