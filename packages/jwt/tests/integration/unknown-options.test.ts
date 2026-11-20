@@ -1,6 +1,7 @@
 import { beforeAll, describe, expect, it } from "vitest";
 
 import {
+  createJwsVerifier,
   createKeySet,
   createRemoteKeySet,
   createVerifier,
@@ -13,6 +14,8 @@ import {
   importSecretKey,
   readHeader,
   sign,
+  signGeneralJws,
+  signJws,
   type KeyPair,
 } from "../../src";
 import { RFC7515_A2_JWK, RFC7515_A2_TOKEN } from "./fixtures/rfc-vectors";
@@ -33,6 +36,26 @@ const RSA_PUBLIC_JWK = { kty: "RSA", n: RFC7515_A2_JWK.n, e: RFC7515_A2_JWK.e };
 /** Each call with one misspelled member, and the name it must report. */
 const CALLS: readonly (readonly [string, string, () => unknown])[] = [
   ["sign", "input.headers", () => sign({ payload: {}, key: pair.privateKey, headers: { typ: "JWT" } } as never)],
+  [
+    "signJws",
+    "input.serialisation",
+    () => signJws({ payload: "", key: pair.privateKey, serialisation: "flattened" } as never),
+  ],
+  [
+    "signGeneralJws",
+    "input.signers[0].headers",
+    () => signGeneralJws({ payload: "", signers: [{ key: pair.privateKey, headers: {} }] } as never),
+  ],
+  [
+    "createJwsVerifier",
+    "options.algorithms",
+    () => createJwsVerifier({ keys: createKeySet([pair.publicKey]), algorithms: ["ES256"] } as never),
+  ],
+  [
+    "JWS verifier",
+    "options.detached",
+    () => createJwsVerifier({ keys: createKeySet([pair.publicKey]) })("a.b.c", { detached: "a" } as never),
+  ],
   ["readHeader", "options.maxlength", () => readHeader(RFC7515_A2_TOKEN, { maxlength: 10 } as never)],
   ["importKeySet", "options.algoritms", () => importKeySet({ keys: [] }, { algoritms: ["ES256"] } as never)],
   ["generateKeyPair", "options.extractible", () => generateKeyPair({ alg: "ES256", extractible: true } as never)],
