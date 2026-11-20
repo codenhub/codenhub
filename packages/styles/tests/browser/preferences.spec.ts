@@ -400,13 +400,14 @@ test.describe("data-motion", () => {
             element.getAnimations().map((animation) => {
               const timing = animation.effect!.getTiming();
 
-              return [(animation as CSSTransition).transitionProperty, [timing.duration, timing.delay]];
+              return [(animation as CSSTransition).transitionProperty, [Number(timing.duration), timing.delay ?? 0]];
             }),
-          );
+          ) as Record<string, [number, number] | undefined>;
         });
+        const [visibilityDuration = Number.NaN, visibilityDelay = Number.NaN] = running.visibility ?? [];
 
         expect(running.opacity, "opacity fades for its own duration, at once").toEqual([1000, 0]);
-        expect(running.visibility[0] + running.visibility[1], "visibility holds until the fade ends").toBe(1000);
+        expect(visibilityDuration + visibilityDelay, "visibility holds until the fade ends").toBe(1000);
       });
     }
   }
