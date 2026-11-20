@@ -182,6 +182,22 @@ describe("createDecrypter", () => {
     expect(await garbage(token)).toEqual(expected);
   });
 
+  it.each([
+    ["an object shaped like a key", { kind: "jwe-secret", alg: "A256KW", kid: undefined }],
+    ["a public encryption key", "public"],
+    ["a signing key", "signing"],
+  ])("should report key_set_error, never throw, for a key set that selects %s", async (_name, value) => {
+    const signing = await generateKeyPair({ alg: "ES256" });
+    const selected = value === "public" ? recipient.publicKey : value === "signing" ? signing.privateKey : value;
+    const token = await encrypt({ plaintext: "", key: kw, enc: "A256GCM" });
+    const decrypt = createDecrypter({ keys: { select: async () => ({ ok: true, value: selected }) } as never });
+
+    expect(await decrypt(token)).toEqual({
+      ok: false,
+      error: { issues: [{ code: "key_fetch_failed", params: { reason: "key_set_error" } }] },
+    });
+  });
+
   it("should refuse options that are not valid", () => {
     const keys = createJweKeySet([kw]);
 
