@@ -151,7 +151,7 @@ function identityIssues(claims: Claims, options: ResolvedOptions, keyIssuer: str
 }
 
 /**
- * Runs a Standard Schema on the payload and maps its issues to `invalid_claims`, keeping only their
+ * Runs a Standard Schema on the payload and maps its issues to `schema_failed`, keeping only their
  * paths: schema messages may quote the input.
  */
 export async function schemaIssues(schema: StandardSchemaV1, payload: JwtPayload): Promise<JwtIssue[]> {
@@ -160,11 +160,11 @@ export async function schemaIssues(schema: StandardSchemaV1, payload: JwtPayload
     return [];
   }
   const issues = result.issues.map((issue): JwtIssue => ({
-    code: "invalid_claims",
+    code: "schema_failed",
     path: ["payload", ...pathOf(issue)],
   }));
   // A failure the schema reports without issues is still a failure.
-  return issues.length > 0 ? issues : [{ code: "invalid_claims", path: ["payload"] }];
+  return issues.length > 0 ? issues : [{ code: "schema_failed", path: ["payload"] }];
 }
 
 function pathOf(issue: StandardSchemaV1.Issue): JwtPathSegment[] {

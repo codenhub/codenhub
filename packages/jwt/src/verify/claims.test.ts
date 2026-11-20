@@ -581,14 +581,14 @@ describe("claims schema", () => {
 
   it("should report a schema issue by path and drop its message", async () => {
     expect(await verify({ sub: "SUBJECT-SECRET" }, { claims: schemaOf(requireRole) })).toEqual(
-      failure({ code: "invalid_claims", path: ["payload", "role"] }),
+      failure({ code: "schema_failed", path: ["payload", "role"] }),
     );
   });
 
   it("should await an asynchronous schema", async () => {
     const claims = schemaOf(async (value) => requireRole(value));
 
-    expect(await verify({}, { claims })).toEqual(failure({ code: "invalid_claims", path: ["payload", "role"] }));
+    expect(await verify({}, { claims })).toEqual(failure({ code: "schema_failed", path: ["payload", "role"] }));
   });
 
   it("should map path segment objects to their keys and drop symbol keys", async () => {
@@ -598,8 +598,8 @@ describe("claims schema", () => {
 
     expect(await verify({}, { claims })).toEqual(
       failure(
-        { code: "invalid_claims", path: ["payload", "profile", 0, "name"] },
-        { code: "invalid_claims", path: ["payload"] },
+        { code: "schema_failed", path: ["payload", "profile", 0, "name"] },
+        { code: "schema_failed", path: ["payload"] },
       ),
     );
   });
@@ -607,7 +607,7 @@ describe("claims schema", () => {
   it("should report a failure the schema gives without issues", async () => {
     const claims = schemaOf(() => ({ issues: [] }));
 
-    expect(await verify({}, { claims })).toEqual(failure({ code: "invalid_claims", path: ["payload"] }));
+    expect(await verify({}, { claims })).toEqual(failure({ code: "schema_failed", path: ["payload"] }));
   });
 
   it("should return the token's payload, not the schema's output", async () => {
@@ -650,7 +650,7 @@ describe("claims schema", () => {
   it("should keep a path naming a payload key", async () => {
     const claims = schemaOf(() => ({ issues: [{ message: "m", path: ["PAYLOAD-KEY"] }] }));
 
-    expect(await verify({}, { claims })).toEqual(failure({ code: "invalid_claims", path: ["payload", "PAYLOAD-KEY"] }));
+    expect(await verify({}, { claims })).toEqual(failure({ code: "schema_failed", path: ["payload", "PAYLOAD-KEY"] }));
   });
 
   it("should accept a callable schema", async () => {

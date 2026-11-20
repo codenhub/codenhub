@@ -36,7 +36,7 @@ export type JwtIssueCode =
   | "wrong_type"
   | "missing_claim"
   | "invalid_claim"
-  | "invalid_claims"
+  | "schema_failed"
   // Key import
   | "invalid_key"
   | "unsupported_key"
@@ -49,7 +49,7 @@ export type JwtIssueCode =
  *
  * An issue this package creates never holds a value taken from the input: no token segment, claim value,
  * header value, or key material. It names which check failed and, where useful, the limit or the claim the
- * check used. An `invalid_claims` path is whatever the caller's schema reports, which for a record-style
+ * check used. A `schema_failed` path is whatever the caller's schema reports, which for a record-style
  * schema can include claim names from the token. A custom key set's issues are passed through, so those
  * hold only what the caller's code puts in them.
  */
@@ -402,7 +402,7 @@ export interface VerifierOptions<TSchema extends StandardSchemaV1 | undefined = 
   readonly requiredClaims?: readonly string[];
   /**
    * Standard Schema run on the payload after every other check passed. Its issues become
-   * `invalid_claims` issues carrying only their path; its messages are dropped, since they may quote
+   * `schema_failed` issues carrying only their path; its messages are dropped, since they may quote
    * the input. The schema checks; it does not transform: the returned payload is the token's own.
    */
   readonly claims?: TSchema;

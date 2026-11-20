@@ -163,7 +163,7 @@ const verifyAccess = createVerifier<AccessClaims>({ keys: createKeySet([publicKe
 
 That type is a promise you make, not one the verifier checks: only the registered claims are checked, so a token without `scope`, or with a number there, still verifies and reaches your code typed as a string. Pass a schema whenever the other claims come from a token you do not fully control.
 
-Each issue the schema reports becomes one `invalid_claims` issue whose path is `["payload", ...]` followed by the schema's path. The schema's messages are dropped, since a message such as "expected a number, received 'hunter2'" can quote the token. The paths are kept, though, and can name keys the payload chose, so do not show them to users unescaped. A schema that throws or rejects is not caught: the verifier's promise rejects with that error.
+Each issue the schema reports becomes one `schema_failed` issue whose path is `["payload", ...]` followed by the schema's path. The schema's messages are dropped, since a message such as "expected a number, received 'hunter2'" can quote the token. The paths are kept, though, and can name keys the payload chose, so do not show them to users unescaped. A schema that throws or rejects is not caught: the verifier's promise rejects with that error.
 
 ## Reading the header before verifying
 
