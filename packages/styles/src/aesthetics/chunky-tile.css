@@ -277,7 +277,8 @@
     box-shadow var(--motion-duration-normal, 200ms) var(--motion-ease, cubic-bezier(0.2, 0, 0, 1)),
     translate var(--motion-duration-normal, 200ms) var(--motion-ease, cubic-bezier(0.2, 0, 0, 1));
 
-  /* None in a script that joins its letters, where spacing breaks the joins.
+  /* None in a script that joins its letters, or hangs them from a headstroke,
+     where spacing breaks the joins or the line.
      The solo class carries its own list rather than reading the package's
      `--_script-tracking`, which only a stylesheet with the components sets.
      The list is `typography.rules.css`'s. */
@@ -291,7 +292,16 @@
     :lang(ckb),
     :lang(ks),
     :lang(ku-Arab),
-    :lang(pa-Arab),
+    :lang(hi),
+    :lang(mr),
+    :lang(ne),
+    :lang(sa),
+    :lang(mai),
+    :lang(bho),
+    :lang(kok),
+    :lang(bn),
+    :lang(as),
+    :lang(pa),
     :lang(syr),
     :lang(nqo),
     :lang(mn-Mong),
