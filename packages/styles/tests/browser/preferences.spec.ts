@@ -359,3 +359,73 @@ test.describe("data-motion", () => {
     }
   }
 });
+/* The reset reaches the pseudo-elements a page animates outside the element
+   tree: a dialog's `::backdrop`, and the view transition's tree on `:root`.
+   Under reduced motion a view transition's group stops gliding between the
+   two positions; under `none` everything ends at once. */
+for (const [label, attributes, reducedMotion] of [
+  ["the system's reduced motion", "", "reduce"],
+  ['data-motion="reduce"', 'data-motion="reduce"', "no-preference"],
+  ['data-motion="none"', 'data-motion="none"', "no-preference"],
+] as const) {
+  test.describe(`under ${label}`, () => {
+    test("a backdrop's animation ends at once", async ({ page }) => {
+      await page.emulateMedia({ reducedMotion });
+      await page.setContent(
+        `<!doctype html><html ${attributes}><body><style>
+        @keyframes fade { from { opacity: 0; } }
+        dialog::backdrop { animation: fade 1s forwards; }
+      </style><dialog data-testid="dialog">Saved</dialog></body></html>`,
+      );
+      await page.addStyleTag({ content: await built("index.css") });
+
+      /* Read from the computed style: WebKit lists no animation on a
+         `::backdrop` in `getAnimations()`. */
+      const duration = await page.getByTestId("dialog").evaluate((element: HTMLDialogElement) => {
+        element.showModal();
+
+        return getComputedStyle(element, "::backdrop").animationDuration;
+      });
+
+      expect(Number.parseFloat(duration)).toBeLessThan(0.001);
+    });
+
+    test("a view transition does not move", async ({ page }) => {
+      await page.emulateMedia({ reducedMotion });
+      await page.setContent(
+        `<!doctype html><html ${attributes}><body><style>
+        #box { view-transition-name: box; width: 50px; height: 50px; background: red; }
+      </style><div id="box" data-testid="box"></div></body></html>`,
+      );
+      await page.addStyleTag({ content: await built("index.css") });
+
+      const durations = await page.getByTestId("box").evaluate(async (element) => {
+        if (!("startViewTransition" in document)) {
+          return null;
+        }
+
+        const transition = document.startViewTransition(() => {
+          element.style.marginLeft = "300px";
+        });
+
+        await transition.ready;
+
+        return Object.fromEntries(
+          document
+            .getAnimations()
+            .map((animation) => [
+              (animation.effect as KeyframeEffect).pseudoElement,
+              animation.effect!.getComputedTiming().duration,
+            ])
+            .filter(([pseudo]) => String(pseudo).startsWith("::view-transition")),
+        );
+      });
+
+      test.skip(durations === null, "the engine has no view transitions");
+      expect(Object.keys(durations!).length, "the group and its two images animate").toBeGreaterThanOrEqual(3);
+      for (const [pseudo, duration] of Object.entries(durations!)) {
+        expect(Number(duration), pseudo).toBeLessThan(1);
+      }
+    });
+  });
+}

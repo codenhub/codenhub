@@ -154,7 +154,7 @@ Node-based Vitest checks validate every published target. Every compiled export 
 | `dist/purge/classes.json`                  | 6,855    | 1,626  | 7,100   |
 | `/button/tw`, a page with `btn primary`    | 21,949   |        | 22,600  |
 | `/button/tw`, a page with no package class | 9,610    |        | 9,900   |
-| `/tw`, a page with `btn primary`           | 26,733   |        | 27,550  |
+| `/tw`, a page with `btn primary`           | 28,451   |        | 29,300  |
 
 About 694 bytes of each of the three `/tw` rows are the nine `--tw-*` registrations `/tw` ships itself, with the fallbacks Tailwind's polyfills write for them, because Tailwind registers each only on a page that uses a utility setting it, and registers nothing a utility body sets by hand. `dist/aesthetics/index.css` carries no Tailwind banner, as it carries none of Tailwind's CSS.
 

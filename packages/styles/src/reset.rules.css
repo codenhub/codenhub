@@ -138,7 +138,9 @@
      it was given; a transform, a size, or a position lands at once. A keyframe
      animation cannot be told apart by what it animates, so every one ends at
      once, a fade-in included, the near-zero duration keeping its
-     `animationend`. `visibility` stays so a fade-out is still seen to the end.
+     `animationend`: a dialog's `::backdrop` too, and a view transition, whose
+     group glides between the old and new positions and whose images a page
+     often slides. `visibility` stays so a fade-out is still seen to the end.
 
      The author's durations, delays, and timing functions are lists matched to
      their own properties by position, and the browser pairs them with this
@@ -168,7 +170,13 @@
           :root:is([data-motion="full"], [data-motion="none"]),
           :root:is([data-motion="full"], [data-motion="none"]) *
         )
-      )::after {
+      )::after,
+    *:not(
+        :where(
+          :root:is([data-motion="full"], [data-motion="none"]),
+          :root:is([data-motion="full"], [data-motion="none"]) *
+        )
+      )::backdrop {
       animation-duration: 0.01ms !important;
       animation-iteration-count: 1 !important;
       scroll-behavior: auto !important;
@@ -177,11 +185,20 @@
         text-decoration-color, fill, stroke !important;
       transition-behavior: allow-discrete !important;
     }
+
+    /* Rules of their own: an engine that does not know a pseudo-element drops
+       the whole rule that names it. */
+    :root:not([data-motion="full"])::view-transition-group(*),
+    :root:not([data-motion="full"])::view-transition-old(*),
+    :root:not([data-motion="full"])::view-transition-new(*) {
+      animation-duration: 0.01ms !important;
+    }
   }
 
   *:where(:root[data-motion="reduce"], :root[data-motion="reduce"] *),
   *:where(:root[data-motion="reduce"], :root[data-motion="reduce"] *)::before,
-  *:where(:root[data-motion="reduce"], :root[data-motion="reduce"] *)::after {
+  *:where(:root[data-motion="reduce"], :root[data-motion="reduce"] *)::after,
+  *:where(:root[data-motion="reduce"], :root[data-motion="reduce"] *)::backdrop {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     scroll-behavior: auto !important;
@@ -196,11 +213,18 @@
      `animationend` still fires. */
   *:where(:root[data-motion="none"], :root[data-motion="none"] *),
   *:where(:root[data-motion="none"], :root[data-motion="none"] *)::before,
-  *:where(:root[data-motion="none"], :root[data-motion="none"] *)::after {
+  *:where(:root[data-motion="none"], :root[data-motion="none"] *)::after,
+  *:where(:root[data-motion="none"], :root[data-motion="none"] *)::backdrop {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     scroll-behavior: auto !important;
     transition-duration: 0.01ms !important;
+  }
+
+  :root:is([data-motion="reduce"], [data-motion="none"])::view-transition-group(*),
+  :root:is([data-motion="reduce"], [data-motion="none"])::view-transition-old(*),
+  :root:is([data-motion="reduce"], [data-motion="none"])::view-transition-new(*) {
+    animation-duration: 0.01ms !important;
   }
 }
 

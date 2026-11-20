@@ -118,7 +118,9 @@ describe("a /tw consumer build", { timeout: 60_000 }, () => {
       name: "a page with one primary button, through /tw",
       imports: [twEntry("index.css")],
       candidates: ["btn", "primary"],
-      ceiling: 27_550,
+      /* 27,550 until 0.11.0's reset reached a dialog's backdrop and a view
+         transition, rules every page with the reset carries. */
+      ceiling: 29_300,
     },
   ];
 
