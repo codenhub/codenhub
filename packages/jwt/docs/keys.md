@@ -187,6 +187,32 @@ A `CryptoKey` must have been made for signing with `alg`: one whose Web Crypto a
 
 A `CryptoKey` has no `kid`, so pass one as an option. A public key is always exportable. For a private or secret key, `extractable: true` needs an extractable `CryptoKey`, or the result is `invalid_key`; without it, the imported key cannot be exported even when the `CryptoKey` could be.
 
+## Keys held by a KMS or HSM
+
+A key held by a cloud KMS or an HSM never leaves it: the service signs on request. `createExternalSigningKey` makes a private key from the public key and a function that asks the service for a signature, and `sign` uses it like any other private key:
+
+```ts
+import { createExternalSigningKey, importPublicKey, sign } from "@codenhub/jwt";
+
+const imported = await importPublicKey(kmsPublicKeyPem, { alg: "ES256", kid: "kms-2026" });
+if (!imported.ok) throw new Error("The KMS public key could not be imported.");
+
+const signingKey = createExternalSigningKey({
+  publicKey: imported.value,
+  signatureFormat: "der",
+  sign: async (data) => {
+    const { Signature } = await kms.send(new SignCommand({ KeyId, Message: data, MessageType: "RAW", SigningAlgorithm: "ECDSA_SHA_256" }));
+    return Signature!;
+  },
+});
+const token = await sign({ payload: { sub: "u1", exp }, key: signingKey });
+```
+
+- `alg` and `kid` come from `publicKey`, so import it with the `kid` your JWKS publishes. `getPublicKey`, `jwkThumbprint` and `embedKey` work with the key; `exportPrivateJwk` throws, since the material is not here.
+- `sign` receives the JWS signing input, the bytes the service must sign with `alg`'s hash, and resolves to a `Uint8Array` or an `ArrayBuffer`. It is called once per token, and only then: creating the key calls nothing.
+- `signatureFormat: "der"` converts the DER `Ecdsa-Sig-Value` that AWS KMS, Google Cloud KMS and PKCS#11 tokens return for an ECDSA key into the `r || s` form JWS uses. It is only for `ES256`, `ES384` and `ES512`; RSA and EdDSA signatures have one form. The DER must be strict, or `sign` throws.
+- Every signature is verified with `publicKey` before `sign` returns the token, so a function that signs with another key, or the wrong format, makes `sign` throw a `TypeError` rather than hand out a token no one can verify. A rejection from the function rejects `sign` unchanged.
+
 ## Exporting keys
 
 Export functions are separate and named for what they reveal, so code that exports private material says so:

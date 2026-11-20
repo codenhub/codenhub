@@ -514,6 +514,8 @@ const signingKey = imported.value;
 export const issue = (sub: string) => sign({ payload: { sub, exp: Math.floor(Date.now() / 1000) + 300 }, key: signingKey });
 ```
 
+A key held by a cloud KMS or an HSM signs through `createExternalSigningKey`; [Keys](docs/keys.md#keys-held-by-a-kms-or-hsm) shows it.
+
 ## DPoP proofs
 
 A DPoP proof (RFC 9449) is a token that carries the public key it was signed with, in a `jwk` header, so a server can bind an access token to the client's key. Sign one with `embedKey`, the public half of the signing key:
@@ -757,6 +759,32 @@ const { privateKey, publicKey } = result.value;
 A `CryptoKey` must have been made for signing with `alg`: one whose Web Crypto algorithm or hash differs, such as an `RSA-OAEP` encryption key or an `ECDH` key, is `alg_mismatch`, even though its material would fit, and a public one without the `verify` usage is `wrong_use`. Exporting a `CryptoKey` drops what it was made for, so without this check one key could end up both encrypting and signing.
 
 A `CryptoKey` has no `kid`, so pass one as an option. A public key is always exportable. For a private or secret key, `extractable: true` needs an extractable `CryptoKey`, or the result is `invalid_key`; without it, the imported key cannot be exported even when the `CryptoKey` could be.
+
+## Keys held by a KMS or HSM
+
+A key held by a cloud KMS or an HSM never leaves it: the service signs on request. `createExternalSigningKey` makes a private key from the public key and a function that asks the service for a signature, and `sign` uses it like any other private key:
+
+```ts
+import { createExternalSigningKey, importPublicKey, sign } from "@codenhub/jwt";
+
+const imported = await importPublicKey(kmsPublicKeyPem, { alg: "ES256", kid: "kms-2026" });
+if (!imported.ok) throw new Error("The KMS public key could not be imported.");
+
+const signingKey = createExternalSigningKey({
+  publicKey: imported.value,
+  signatureFormat: "der",
+  sign: async (data) => {
+    const { Signature } = await kms.send(new SignCommand({ KeyId, Message: data, MessageType: "RAW", SigningAlgorithm: "ECDSA_SHA_256" }));
+    return Signature!;
+  },
+});
+const token = await sign({ payload: { sub: "u1", exp }, key: signingKey });
+```
+
+- `alg` and `kid` come from `publicKey`, so import it with the `kid` your JWKS publishes. `getPublicKey`, `jwkThumbprint` and `embedKey` work with the key; `exportPrivateJwk` throws, since the material is not here.
+- `sign` receives the JWS signing input, the bytes the service must sign with `alg`'s hash, and resolves to a `Uint8Array` or an `ArrayBuffer`. It is called once per token, and only then: creating the key calls nothing.
+- `signatureFormat: "der"` converts the DER `Ecdsa-Sig-Value` that AWS KMS, Google Cloud KMS and PKCS#11 tokens return for an ECDSA key into the `r || s` form JWS uses. It is only for `ES256`, `ES384` and `ES512`; RSA and EdDSA signatures have one form. The DER must be strict, or `sign` throws.
+- Every signature is verified with `publicKey` before `sign` returns the token, so a function that signs with another key, or the wrong format, makes `sign` throw a `TypeError` rather than hand out a token no one can verify. A rejection from the function rejects `sign` unchanged.
 
 ## Exporting keys
 
@@ -1164,6 +1192,7 @@ Three things propagate rather than becoming a result: an exception thrown by you
 
 ## Added
 
+- `createExternalSigningKey({ publicKey, sign, signatureFormat? })` makes a private key whose signatures come from a function, for a key held by a cloud KMS or an HSM. `signatureFormat: "der"` converts the DER ECDSA signatures such services return, and each signature is verified with the public key before `sign` returns the token. `ExternalSigningKeyOptions` is exported. [Keys](docs/keys.md#keys-held-by-a-kms-or-hsm) covers it.
 - `createVerifier({ onKeySetError })`, called with the error behind a `key_set_error`: what a custom key set or `keys` function threw, or a `TypeError` naming what it returned. The issue carries nothing from it, so before this the cause was lost.
 - A `keys` function may return a route, `{ keys, audience, type }`, to check an issuer's tokens for its own audience or `typ` in place of the verifier's. The new `KeySetRoute` type describes it.
 - `generateKeyPair({ alg, kid: "thumbprint" })` names both keys by the public key's RFC 7638 thumbprint, a `kid` derived from the key alone. [Keys](docs/keys.md#thumbprints) covers it.

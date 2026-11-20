@@ -10,6 +10,38 @@ group: "Reference"
 
 ## Functions
 
+### createExternalSigningKey
+
+```ts
+export declare function createExternalSigningKey(options: ExternalSigningKeyOptions): PrivateKey;
+```
+
+Creates a private key whose signatures come from a function, for a key held outside Web Crypto, such as in a cloud KMS or an HSM, whose private material never leaves it.
+
+The key signs with [`sign`](#sign) like any other private key: `alg` and `kid` come from `publicKey`, and [`getPublicKey`](#getpublickey), [`jwkThumbprint`](#jwkthumbprint) and `embedKey` work with it. Each signature the function returns is verified with `publicKey` before `sign` returns the token, so a signer holding another key, or returning malformed bytes, makes `sign` throw instead of handing out a token no one can verify. The key is never extractable, and the function is not called until a token is signed.
+
+**Parameters**
+
+- `options` — The public key and the signing function.
+
+**Returns** — The frozen private key, with `extractable: false`.
+
+**Throws** — TypeError when `options` is not an object; `options.publicKey` is not a public key this package created; `options.sign` is not a function; `options.signatureFormat` is neither `"raw"` nor `"der"`, or is `"der"` for a key that is not ECDSA; or `options` has another member.
+
+**Example**
+
+```ts
+const imported = await importPublicKey(kmsPublicKeyPem, { alg: "ES256", kid: "kms-2026" });
+if (!imported.ok) throw new Error("The KMS public key could not be imported.");
+const signingKey = createExternalSigningKey({
+  publicKey: imported.value,
+  signatureFormat: "der",
+  sign: async (data) => (await kms.sign({ KeyId, Message: data, MessageType: "RAW",
+    SigningAlgorithm: "ECDSA_SHA_256" })).Signature!,
+});
+const token = await sign({ payload: { sub: "u1", exp }, key: signingKey });
+```
+
 ### createKeySet
 
 ```ts
@@ -538,6 +570,44 @@ readonly issuer?: string;
 The issuer whose keys these are, as for `ImportKeySetOptions.issuer`. The set holds copies of the keys bound to it.
 
 **Default** — the keys as given
+
+### ExternalSigningKeyOptions
+
+```ts
+export interface ExternalSigningKeyOptions {
+    readonly publicKey: PublicKey;
+    readonly sign: (data: Uint8Array<ArrayBuffer>) => Promise<Uint8Array | ArrayBuffer>;
+    readonly signatureFormat?: "raw" | "der";
+}
+```
+
+Options of [`createExternalSigningKey`](#createexternalsigningkey).
+
+#### ExternalSigningKeyOptions › publicKey
+
+```ts
+readonly publicKey: PublicKey;
+```
+
+The public key of the key the signer holds. It gives the signing key its `alg` and `kid`, and every signature is verified with it before a token is returned.
+
+#### ExternalSigningKeyOptions › sign
+
+```ts
+readonly sign: (data: Uint8Array<ArrayBuffer>) => Promise<Uint8Array | ArrayBuffer>;
+```
+
+Signs `data`, the JWS signing input, with the external key, and resolves to the signature. Its rejection rejects the `sign` call unchanged. It is called once per token.
+
+#### ExternalSigningKeyOptions › signatureFormat
+
+```ts
+readonly signatureFormat?: "raw" | "der";
+```
+
+The form of the signatures `sign` resolves to: `"raw"`, as JWS writes them, or `"der"`, the DER `Ecdsa-Sig-Value` (RFC 3279 §2.2.3) that AWS KMS, Google Cloud KMS and PKCS#11 tokens often return for an ECDSA key, which is converted. `"der"` is only for `ES256`, `ES384` and `ES512`.
+
+**Default** — `"raw"`
 
 ### GenerateKeyPairOptions
 

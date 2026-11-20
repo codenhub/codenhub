@@ -144,6 +144,64 @@
           "gzip": 1128,
           "minified": 2653
         },
+        "createExternalSigningKey": {
+          "files": {
+            "dist/index.js": {
+              "bytes": 4884,
+              "declarations": {
+                "createExternalSigningKey": 826,
+                "derToRaw": 545,
+                "ALGORITHM_PARAMS": 304,
+                "deepFreeze": 275,
+                "DIGESTS": 243,
+                "toBytes": 221,
+                "getKeyEntry": 187,
+                "rejectUnknownOptions": 178,
+                "ecdsa": 141,
+                "isPlainContainer": 140,
+                "JWS_ALGORITHMS": 133,
+                "ED25519": 109,
+                "rsaPkcs1": 104,
+                "rsaPss": 101,
+                "typedArrayTag": 101,
+                "hmac": 99,
+                "registerKey": 79,
+                "MISSING_ISSUER": 70,
+                "KEY_SET_ERROR": 61,
+                "TOO_DEEP": 60,
+                "TOO_MANY_KEYS": 56,
+                "isRegisteredKey": 55,
+                "ECDSA_ALGORITHMS": 53,
+                "INVALID_ISSUER": 49,
+                "WRONG_ISSUER": 48,
+                "ALG_MISMATCH": 47,
+                "UNKNOWN_KID": 46,
+                "ASYMMETRIC_ALGORITHMS": 45,
+                "SYMMETRIC_ALGORITHMS": 45,
+                "JsonRejection": 44,
+                "OPTION_MEMBERS": 44,
+                "kidMember": 43,
+                "(top level)": 40,
+                "fail": 38,
+                "MALFORMED_KEYS": 36,
+                "DUPLICATE_KEY": 30,
+                "registry": 30,
+                "NO_MATCHING_KEY": 28,
+                "AMBIGUOUS_KEY": 26,
+                "MALFORMED": 26,
+                "RSA_PUBLIC_EXPONENT": 24,
+                "MALFORMED_JWKS": 22,
+                "ENCODER": 16,
+                "encoder": 16
+              }
+            },
+            "(unattributed)": {
+              "bytes": 38
+            }
+          },
+          "gzip": 2007,
+          "minified": 4922
+        },
         "createKeySet": {
           "files": {
             "dist/index.js": {
@@ -555,16 +613,16 @@
         "exportPrivateJwk": {
           "files": {
             "dist/index.js": {
-              "bytes": 4709,
+              "bytes": 4823,
               "declarations": {
                 "encodeBase64Url": 412,
                 "ALGORITHM_PARAMS": 304,
+                "exportPrivateJwk": 299,
                 "deepFreeze": 275,
                 "DIGESTS": 243,
                 "exportWebCryptoJwk": 242,
                 "decodeBase64Url": 216,
                 "getKeyEntry": 187,
-                "exportPrivateJwk": 185,
                 "toJwk": 180,
                 "isBase64Url": 178,
                 "ecdsa": 141,
@@ -610,8 +668,8 @@
               "bytes": 30
             }
           },
-          "gzip": 2066,
-          "minified": 4739
+          "gzip": 2107,
+          "minified": 4853
         },
         "exportPublicJwk": {
           "files": {
@@ -1732,16 +1790,17 @@
         "sign": {
           "files": {
             "dist/index.js": {
-              "bytes": 9209,
+              "bytes": 9459,
               "declarations": {
                 "serializeHeader": 833,
                 "serializePayload": 670,
-                "sign": 617,
+                "sign": 590,
                 "childrenOf": 463,
                 "embeddedJwk": 425,
                 "encodeBase64Url": 412,
                 "assertJsonPrimitive": 340,
                 "ALGORITHM_PARAMS": 304,
+                "signatureOf": 277,
                 "deepFreeze": 275,
                 "assertJsonObject": 253,
                 "DIGESTS": 243,
@@ -1807,8 +1866,8 @@
               "bytes": 18
             }
           },
-          "gzip": 3505,
-          "minified": 9227
+          "gzip": 3583,
+          "minified": 9477
         },
         "tokenHash": {
           "files": {
@@ -1865,7 +1924,7 @@
       },
       "files": {
         "dist/index.js": {
-          "bytes": 46253,
+          "bytes": 48323,
           "declarations": {
             "StrictJsonParser": 2808,
             "createRemoteKeySet": 1663,
@@ -1873,6 +1932,7 @@
             "checkHeaderMembers": 919,
             "createVerifier": 889,
             "serializeHeader": 839,
+            "createExternalSigningKey": 831,
             "readRemoteOptions": 706,
             "createKeySet": 693,
             "pemToJwk": 690,
@@ -1881,11 +1941,12 @@
             "selectKey": 648,
             "importSecretKey": 640,
             "rsaMaterial": 634,
-            "sign": 622,
             "checkClaims": 597,
+            "sign": 596,
             "generateKeyPair": 581,
             "timeIssues": 578,
             "identityIssues": 555,
+            "derToRaw": 546,
             "cryptoKeyPairHalves": 522,
             "jwkHalves": 506,
             "routeByIssuer": 475,
@@ -1911,12 +1972,14 @@
             "readSchema": 311,
             "readSeed": 310,
             "fetchJson": 304,
+            "exportPrivateJwk": 301,
             "readInteger": 294,
             "getPublicKey": 290,
             "readAudience": 288,
             "readCappedBody": 287,
             "tokenHash": 281,
             "isPlainObject$1": 279,
+            "signatureOf": 278,
             "cryptoKeyPurposeIssue": 276,
             "deepFreeze": 275,
             "importKeys": 267,
@@ -1929,13 +1992,14 @@
             "DIGESTS": 246,
             "exportWebCryptoJwk": 242,
             "curveMaterial": 241,
-            "(top level)": 234,
+            "(top level)": 240,
             "readEntries": 234,
             "ownDataValue": 231,
             "schemaIssues": 230,
             "readCryptoKeyPair": 228,
             "readChunks": 224,
             "readElement": 224,
+            "toBytes": 222,
             "decodeBase64Url": 216,
             "exportPublicJwk": 208,
             "readIssuer": 206,
@@ -1944,7 +2008,6 @@
             "parseJsonObject": 191,
             "getKeyEntry": 188,
             "readRequiredClaims": 188,
-            "exportPrivateJwk": 187,
             "checkedClock": 185,
             "exportSecretJwk": 185,
             "generatePair": 184,
@@ -2032,6 +2095,7 @@
             "isRegisteredKey": 56,
             "copyArray": 55,
             "isAsymmetricAlgorithm": 55,
+            "ECDSA_ALGORITHMS": 54,
             "importKeyPair": 54,
             "isKidConflict": 54,
             "ownMember": 54,
@@ -2048,6 +2112,7 @@
             "denseCopy": 47,
             "SIGNATURE_OPERATIONS": 46,
             "INPUT_MEMBERS": 45,
+            "OPTION_MEMBERS": 45,
             "JsonRejection": 44,
             "LITERALS": 44,
             "isIntegerInRange": 44,
@@ -2103,12 +2168,12 @@
           }
         },
         "(unattributed)": {
-          "bytes": 570
+          "bytes": 601
         }
       },
-      "gzip": 14511,
-      "minified": 46823,
-      "sha256": "5d4a7441478bfb7e8953c0bd4813c43c72e838ee3cf9eba20f3e7abda9fb533f"
+      "gzip": 15163,
+      "minified": 48924,
+      "sha256": "d37cb850290140f39c82e211ad65ac18ba473136c2b143aca65a852dd2de8342"
     }
   }
 }

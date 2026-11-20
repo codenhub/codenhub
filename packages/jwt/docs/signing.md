@@ -83,6 +83,8 @@ const signingKey = imported.value;
 export const issue = (sub: string) => sign({ payload: { sub, exp: Math.floor(Date.now() / 1000) + 300 }, key: signingKey });
 ```
 
+A key held by a cloud KMS or an HSM signs through `createExternalSigningKey`; [Keys](keys.md#keys-held-by-a-kms-or-hsm) shows it.
+
 ## DPoP proofs
 
 A DPoP proof (RFC 9449) is a token that carries the public key it was signed with, in a `jwk` header, so a server can bind an access token to the client's key. Sign one with `embedKey`, the public half of the signing key:

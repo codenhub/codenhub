@@ -47,6 +47,9 @@ export async function exportPublicJwk(key: PublicKey): Promise<Jwk> {
  */
 export async function exportPrivateJwk(key: PrivateKey): Promise<Jwk> {
   const entry = getKeyEntryOfKind(key, "private");
+  if (entry.externalSign !== undefined) {
+    throw new TypeError("exportPrivateJwk: the key's material is held by an external signer.");
+  }
   if (!key.extractable) {
     throw new TypeError("exportPrivateJwk: the key was not created with extractable: true.");
   }
