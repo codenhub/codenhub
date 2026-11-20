@@ -1,4 +1,4 @@
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
 import { chmod, chown, lstat, mkdir, mkdtemp, readdir, readFile, rm, stat, symlink, writeFile } from "node:fs/promises";
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
@@ -487,6 +487,12 @@ describe("failures", () => {
     );
   });
 
+  it("says a --content folder is a folder and shows a glob for its files", async () => {
+    expect(await failureOf("build", "-c", "app/views", "-o", "app.css")).toBe(
+      `chs: --content "app/views" is a folder in ${project}, not a file; name the files in it, as in "app/views/**/*".`,
+    );
+  });
+
   it("rejects extra arguments, which an unquoted glob expanded by the shell produces", async () => {
     expect(await failureOf("build", "-c", "app/views/a.html.erb", "app/views/b.html.erb", "-o", "app.css")).toMatch(
       /app\/views\/b\.html\.erb.*quote/,
@@ -669,6 +675,30 @@ describe("failures", () => {
     await writeFile(path.join(project, "app.css"), await readFile(path.join(packageRoot, "dist", "index.css"), "utf8"));
 
     expect(await build("build", "-c", "app/views/**/*.erb", "-o", "app.css")).toBe(0);
+  });
+});
+
+/* Every other test runs the source; these run the file `bin` names, as an
+   installed package does, so a bundling mistake shows here. */
+describe("the shipped command", () => {
+  const cli = path.join(packageRoot, "dist", "cli.js");
+  const spawn = (...argv: string[]) => spawnSync(process.execPath, [cli, ...argv], { cwd: project, encoding: "utf8" });
+
+  it("builds and prints one line on stdout", async () => {
+    const result = spawn("build", "-c", "app/views/**/*.erb", "-o", "app.css");
+    const { size } = await stat(path.join(project, "app.css"));
+
+    expect(result).toMatchObject({ status: 0, stderr: "", stdout: `${path.join(project, "app.css")} ${size} bytes\n` });
+    expect(await readOutput()).toMatch(ruleFor("btn"));
+  });
+
+  it("fails with one chs: line on stderr", () => {
+    const result = spawn("build", "-c", "app/view/**/*.erb", "-o", "app.css");
+
+    expect(result).toMatchObject({ status: 1, stdout: "" });
+    expect(result.stderr).toBe(
+      `chs: --content "app/view/**/*.erb" matches no file in ${project}; check the path, or run from the project root.\n`,
+    );
   });
 });
 
