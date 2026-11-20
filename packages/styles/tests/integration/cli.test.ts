@@ -264,6 +264,17 @@ describe("build", () => {
     expect(await readOutput("app/views/app.css")).toBe(first);
   });
 
+  // A build killed before its rename leaves its temporary file, which held the last build's classes.
+  it("does not read a temporary file a killed build left beside the output", async () => {
+    await mkdir(path.join(project, "public"));
+    await writeFile(path.join(project, "public", "index.html"), '<button class="btn">Save</button>\n');
+    await writeFile(path.join(project, "public", "app.css.0123456789abcdef.tmp"), '<table class="data-table">\n');
+
+    expect(await build("build", "-c", "public/*", "-o", "public/app.css")).toBe(0);
+    expect(await readOutput("public/app.css")).toMatch(ruleFor("btn"));
+    expect(await readOutput("public/app.css")).not.toMatch(ruleFor("data-table"));
+  });
+
   it.skipIf(!canSymlink)("does not read its own output through a link a glob matches", async () => {
     const argv = ["build", "-c", "app/views/*", "-o", "app.css"];
 
@@ -458,6 +469,16 @@ describe("failures", () => {
     );
   });
 
+  it("rejects a --content glob that matches only the --output and a killed build's temporary file", async () => {
+    expect(await build("build", "-c", "app/views/**/*.erb", "-o", "public/s.css")).toBe(0);
+    await writeFile(path.join(project, "public", "s.css.0123456789abcdef.tmp"), '<table class="data-table">\n');
+    stdout = [];
+
+    expect(await failureOf("build", "-c", "public/*", "-o", "public/s.css")).toBe(
+      'chs: --content "public/*" matches only --output public/s.css, which is never read for classes; name the templates to scan.',
+    );
+  });
+
   // `path.resolve` drops a trailing separator, so `-o newdir/` wrote a file named `newdir`.
   it.each(["newdir/", ...(process.platform === "win32" ? ["newdir\\"] : [])])(
     "refuses an --output that ends with a separator, as %s",
@@ -468,6 +489,19 @@ describe("failures", () => {
       expect(await readdir(project)).toEqual(["app"]);
     },
   );
+
+  // `path.resolve` takes `newdir/.` for `newdir`, so it wrote a file named `newdir` too.
+  it.each([
+    ["newdir/.", "newdir/./app.css"],
+    ["newdir/..", "newdir/../app.css"],
+    ["newdir/sub/..", "newdir/sub/../app.css"],
+    ...(process.platform === "win32" ? [["newdir\\.", "newdir\\.\\app.css"]] : []),
+  ])("refuses an --output whose last segment is . or .., as %s", async (output, example) => {
+    expect(await failureOf("build", "-c", "app/views/**/*.erb", "-o", output)).toBe(
+      `chs: --output ${output} ends with a . or .. segment, so it names a folder, not a file; name a stylesheet to write, as in --output ${example}.`,
+    );
+    expect(await readdir(project)).toEqual(["app"]);
+  });
 
   // parseArgs keeps the last value, so `-o a.css -o b.css` wrote only b.css and said nothing of a.css.
   it("refuses --output given twice", async () => {
@@ -484,6 +518,19 @@ describe("failures", () => {
   ])("says how to give %s a value that starts with a dash", async (flag, name) => {
     expect(await failureOf("build", "-c", "app/views/**/*.erb", "-o", "app.css", flag, "-a.css")).toBe(
       `chs: option "${name}" is missing its value; to give it a value that starts with a dash, write ${name}=-a.css.`,
+    );
+  });
+
+  // A value left out before the next option was told to be written as `--content=-o`.
+  it.each([
+    [["-c", "-o", "out.css"], "--content"],
+    [["-c", "a.html", "-o", "--no-minify"], "--output"],
+    [["--content", "--output=out.css"], "--content"],
+    [["-c", "a.html", "--output", "--aesthetic", "glass"], "--output"],
+    [["-c", "a.html", "-o", "--help"], "--output"],
+  ])("says only that a value is missing when %j gives the next option instead", async (args, name) => {
+    expect(await failureOf("build", ...args)).toBe(
+      `chs: option "${name}" is missing its value; run "chs --help" for the options.`,
     );
   });
 
@@ -799,6 +846,16 @@ describe("keepOwnership", () => {
     expect(await keepOwnership(file, { uid: 33, gid: 33, mode: 0o100000 | mode }, "app.css")).toMatch(
       new RegExp(`; ${kept}, so user 33 may no longer be able to read it\\.$`),
     );
+  });
+
+  // The runner owns a `0640` file of a group it is not in: the owner never changed, so no reader lost it.
+  it("warns of the group alone when only the group could not be kept", async () => {
+    const file = fileOf({ refuseOwner: true, refuseGroup: true });
+
+    expect(await keepOwnership(file, { uid: 1000, gid: 33, mode: 0o100640 }, "app.css")).toBe(
+      "chs: warning: --output app.css now belongs to group 1000, not 33, since only root can give a file to a group you are not in; its owner and mode are kept.",
+    );
+    expect(file.calls).toEqual(["chown 1000 33", "chown -1 33", "chmod 640"]);
   });
 
   it("throws a failure other than a refusal", async () => {

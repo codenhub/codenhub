@@ -128,6 +128,14 @@ function parseCommandLine(argv: readonly string[]): BuildOptions | "help" | "ver
       `--output ${output} ends with a folder separator, so it names a folder, not a file; name a stylesheet to write, as in --output ${output}app.css.`,
     );
   }
+  // It resolves `newdir/.` and `newdir/sub/..` to `newdir` as well.
+  const lastSegment = (process.platform === "win32" ? /(^|[\\/])(\.\.?)$/ : /(^|\/)(\.\.?)$/).exec(output);
+
+  if (lastSegment !== null) {
+    throw new Error(
+      `--output ${output} ends with a . or .. segment, so it names a folder, not a file; name a stylesheet to write, as in --output ${output}${lastSegment[1] || "/"}app.css.`,
+    );
+  }
 
   return {
     contentGlobs: values.content,
@@ -137,20 +145,32 @@ function parseCommandLine(argv: readonly string[]): BuildOptions | "help" | "ver
   };
 }
 
+const OPTIONS = {
+  content: { type: "string", short: "c", multiple: true },
+  output: { type: "string", short: "o" },
+  aesthetic: { type: "string", multiple: true },
+  "no-minify": { type: "boolean" },
+  help: { type: "boolean" },
+  version: { type: "boolean" },
+} as const;
+
+/* One of this command's own options, as `-o`, `--output`, or `--output=a.css`:
+   after an option that takes a value, it is a value left out, not one that
+   starts with a dash. */
+function isOwnOption(arg: string): boolean {
+  return Object.entries(OPTIONS).some(
+    ([name, option]) =>
+      arg === `--${name}` || arg.startsWith(`--${name}=`) || ("short" in option && arg === `-${option.short}`),
+  );
+}
+
 function parseFlags(argv: readonly string[]) {
   try {
     return parseArgs({
       args: [...argv],
       allowPositionals: true,
       tokens: true,
-      options: {
-        content: { type: "string", short: "c", multiple: true },
-        output: { type: "string", short: "o" },
-        aesthetic: { type: "string", multiple: true },
-        "no-minify": { type: "boolean" },
-        help: { type: "boolean" },
-        version: { type: "boolean" },
-      },
+      options: OPTIONS,
     });
   } catch (error) {
     // parseArgs words its errors for programmers ("To specify a positional argument starting with a '-'..."), so keep only the part naming the flag.
@@ -170,6 +190,9 @@ function parseFlags(argv: readonly string[]) {
       const at = argv.findIndex((arg, index) => arg === flag && argv[index + 1]?.startsWith("-"));
       const value = at === -1 ? "<value>" : argv[at + 1];
 
+      if (value !== undefined && isOwnOption(value)) {
+        throw new Error(`option "${name}" is missing its value; run "${BIN} --help" for the options.`);
+      }
       throw new Error(
         `option "${name}" is missing its value; to give it a value that starts with a dash, write ${name}=${value}.`,
       );
@@ -329,7 +352,12 @@ export async function keepOwnership(
         ? `, so user ${previous.uid} may no longer be able to read it`
         : "";
 
-    if (kept === "group") {
+    if (previous.uid === created.uid) {
+      // Only the group was to change, and no owner's read bit was lost with it.
+      if (kept === "neither") {
+        warning = `${BIN}: warning: --output ${output} now belongs to group ${created.gid}, not ${previous.gid}, since only root can give a file to a group you are not in; its owner and mode are kept.`;
+      }
+    } else if (kept === "group") {
       warning = `${BIN}: warning: --output ${output} now belongs to user ${created.uid}, not ${previous.uid}, since only root can give a file to another user; its group and mode are kept${unreadable}.`;
     } else if (kept === "neither") {
       warning = `${BIN}: warning: --output ${output} now belongs to user ${created.uid} and group ${created.gid}, not ${previous.uid} and ${previous.gid}, since only root can give a file to another user or to a group you are not in; its mode is kept${unreadable}.`;
@@ -490,7 +518,7 @@ function readContent(entries: readonly string[], cwd: string, output: string, gi
       throw error instanceof UnmatchedEntryError ? new Error(`--content ${error.message}`) : error;
     }
 
-    const content = matched.filter((file) => path.relative(realPathSyncOf(file), output) !== "");
+    const content = matched.filter((file) => !isOutputOrTemporary(realPathSyncOf(file), output));
 
     if (content.length === 0) {
       throw new Error(
@@ -503,6 +531,17 @@ function readContent(entries: readonly string[], cwd: string, output: string, gi
   }
 
   return readFiles(files, { cwd, failOnUnreadable: true });
+}
+
+/* The output, or a temporary file of `createTemporary` a build killed before
+   its rename left beside it: read as content, that held the classes of the
+   last build, which a build would then keep. `path.relative` compares the
+   output's part as the platform does, without case on Windows. */
+function isOutputOrTemporary(file: string, output: string): boolean {
+  return (
+    path.relative(file.slice(0, output.length), output) === "" &&
+    /^(?:\.[0-9a-f]{16}\.tmp)?$/.test(file.slice(output.length))
+  );
 }
 
 /* Content is read as text and never run, as Tailwind reads it: every run of
