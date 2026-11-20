@@ -2,7 +2,7 @@
 title: Astro
 description: Cargar la hoja de estilos en una aplicación Astro.
 order: 5
-source: 4f93b3a6e0d1cd24a0b7d0eb6050cc98690cd598
+source: fe78710084a56e3e2d4bf199b4b00f729f04016b
 ---
 
 # Astro
@@ -24,7 +24,18 @@ import "@codenhub/styles";
 </html>
 ```
 
-Cada página que usa este layout carga la hoja de estilos una vez. ¿Usas Tailwind CSS v4? Importa en su lugar `@codenhub/styles/tw` a través de la integración de Tailwind para Astro; consulta [Tailwind CSS v4](./tailwind.md), incluido cuándo hace falta realmente un `@source` explícito.
+Cada página que usa este layout carga la hoja de estilos una vez. La plantilla mínima de Astro no crea ningún layout; si tu proyecto no tiene uno, crea este y envuelve tus páginas en él.
+
+¿Usas Tailwind CSS v4? Configúralo con `npx astro add tailwind`, que añade el plugin `@tailwindcss/vite` y un `src/styles/global.css`. Sustituye el `@import "tailwindcss"` de ese archivo por `@import "@codenhub/styles/tw"`, e importa el archivo en el layout en lugar de `@codenhub/styles`:
+
+```astro
+---
+// src/layouts/Layout.astro
+import "../styles/global.css";
+---
+```
+
+Consulta [Tailwind CSS v4](./tailwind.md), incluido cuándo hace falta realmente un `@source` explícito.
 
 ## Forzar un tema
 
