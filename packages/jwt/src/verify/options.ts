@@ -10,6 +10,7 @@ export const MAX_CLOCK_TOLERANCE = 300;
 export interface ResolvedOptions {
   readonly keys: KeySet | KeySetResolver;
   readonly issuers?: readonly string[];
+  readonly subjects?: readonly string[];
   /** The accepted audiences; `false` skips the check, and unset rejects every token that has `aud`. */
   readonly audiences?: readonly string[] | false;
   /** The accepted `typ` values, already normalized by {@link normalizeType}; `null` accepts a missing `typ`. */
@@ -29,6 +30,7 @@ export interface ResolvedOptions {
 const KNOWN_OPTIONS: Readonly<Record<keyof VerifierOptions, true>> = {
   keys: true,
   issuer: true,
+  subject: true,
   audience: true,
   type: true,
   requireExpiration: true,
@@ -99,6 +101,7 @@ export function resolveOptions(options: VerifierOptions<StandardSchemaV1 | undef
   const {
     keys,
     issuer,
+    subject,
     audience,
     type,
     requireExpiration,
@@ -140,6 +143,7 @@ export function resolveOptions(options: VerifierOptions<StandardSchemaV1 | undef
   return {
     keys,
     ...optional("issuers", readStringList(issuer, "issuer")),
+    ...optional("subjects", readStringList(subject, "subject")),
     ...optional("audiences", readAudience(audience)),
     ...optional("types", readTypes(type)),
     requireExpiration: requireExpiration ?? maxAge === undefined,

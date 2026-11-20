@@ -32,6 +32,7 @@ export type JwtIssueCode =
   | "issued_in_future"
   | "too_old"
   | "wrong_issuer"
+  | "wrong_subject"
   | "wrong_audience"
   | "wrong_type"
   | "missing_claim"
@@ -344,6 +345,11 @@ export interface VerifierOptions<TSchema extends StandardSchemaV1 | undefined = 
   readonly keys: KeySet | KeySetResolver;
   /** Accepted `iss` values. When set, `iss` is required and must equal one exactly. */
   readonly issuer?: string | readonly string[];
+  /**
+   * Accepted `sub` values, for a verifier that accepts tokens about known subjects only, such as a client
+   * assertion whose `sub` must be the client's own id. When set, `sub` is required and must equal one exactly.
+   */
+  readonly subject?: string | readonly string[];
   /**
    * Accepted audiences. When set, `aud` is required, and a token passes when its `aud` (a string or
    * an array) contains at least one of them.

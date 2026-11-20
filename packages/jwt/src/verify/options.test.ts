@@ -31,6 +31,14 @@ describe("createVerifier options", () => {
     expect(() => createVerifier(options as never)).toThrow(new TypeError(message));
   });
 
+  it.each(["", [], [""], ["a", 1], 1, null, false])("should throw when subject is %j", (value) => {
+    expect(() => createVerifier({ keys, subject: value } as never)).toThrow(
+      new TypeError(
+        "createVerifier: options.subject must be a non-empty string or a non-empty array of non-empty strings.",
+      ),
+    );
+  });
+
   it.each(["", [], [""], ["a", 1], 1, null, false])("should throw when issuer is %j", (value) => {
     expect(() => createVerifier({ keys, issuer: value } as never)).toThrow(
       new TypeError(

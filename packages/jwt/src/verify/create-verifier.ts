@@ -35,7 +35,7 @@ const WRONG_ISSUER = fail({ code: "wrong_issuer", path: ["payload", "iss"] });
  * the header's `alg`; the signature; and only then the payload, which is never read before its signature
  * verifies, except for the `iss` a `keys` function routes by, which is untrusted until then. Claim checks
  * then run and report every failing claim together: registered claim types, `exp` (expired once now ≥
- * `exp` + tolerance), `nbf`, `iat`, `maxAge`, issuer, audience, `typ`, and required claims. When all of them pass, `options.claims` runs last.
+ * `exp` + tolerance), `nbf`, `iat`, `maxAge`, issuer, subject, audience, `typ`, and required claims. When all of them pass, `options.claims` runs last.
  *
  * When `options.keys` is a {@link KeySetResolver}, the payload's `iss` is read before the signature, only to
  * ask it for the issuer's key set; nothing else in the payload is used until the signature verifies.
@@ -74,7 +74,7 @@ const WRONG_ISSUER = fail({ code: "wrong_issuer", path: ["payload", "iss"] });
  * `options.claims` propagates, and so does a `TypeError` when `options.now` returns something other than a
  * finite number, checked once per verification when the claims are checked, after the signature.
  * @throws TypeError when `options` is not an object; `options` has a member that is not an option, such as
- * a misspelled `audiance`; `keys` is neither a function nor an object with a `select` function; `issuer` is neither a non-empty string nor a
+ * a misspelled `audiance`; `keys` is neither a function nor an object with a `select` function; `issuer` or `subject` is neither a non-empty string nor a
  * non-empty array of them; `audience` is neither `false` nor one of those; `type` is neither a non-empty
  * string other than `application/` nor a non-empty array of such strings and `null`;
  * `requireExpiration` or `allowExpired` is not a boolean; `clockTolerance` is not an integer from 0

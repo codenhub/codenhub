@@ -35,6 +35,7 @@ Every option is checked when `createVerifier` runs, and an invalid one throws a 
 | ------------------- | ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `keys`              | required                | The [key set](key-sets.md) that selects the verification key for each token, or a function from the claimed `iss` to the key set, as in [several issuers](key-sets.md#choosing-the-key-set-by-issuer). |
 | `issuer`            | none                    | A string or a non-empty array of strings. When set, `iss` is required and must equal one of them exactly.                                                                                              |
+| `subject`           | none                    | A string or a non-empty array of strings. When set, `sub` is required and must equal one of them exactly.                                                                                              |
 | `audience`          | none                    | A string or a non-empty array of strings. When set, `aud` is required and must contain at least one of them. Unset, a token with `aud` fails; `false` accepts any `aud`.                               |
 | `type`              | none                    | The required `typ` header, such as `JWT` or `at+jwt`, or an array of accepted ones, where `null` accepts a token without `typ`. When set, `typ` is required unless the array holds `null`.             |
 | `requireExpiration` | `true` without `maxAge` | Whether `exp` is required. `false` when `maxAge` is set, since `maxAge` bounds the token's life instead.                                                                                               |
@@ -46,7 +47,7 @@ Every option is checked when `createVerifier` runs, and an invalid one throws a 
 | `claims`            | none                    | A [Standard Schema](#checking-your-own-claims) run on the payload after every other check passed.                                                                                                      |
 | `now`               | `Date.now`              | The current time in **milliseconds** since the Unix epoch, as `Date.now` returns it. Pass your own clock in tests. It must return a finite number; see below.                                          |
 
-Without `issuer`, `audience`, `type`, `maxAge` and `requiredClaims`, a verifier checks the signature, the types of the registered claims (`iss`, `sub`, `aud`, `jti`, `exp`, `nbf`, `iat`), the times the token itself states, that it has an `exp`, and that it names no audience. Two defaults are strict on purpose, since forgetting an option should never make a verifier accept more:
+Without `issuer`, `subject`, `audience`, `type`, `maxAge` and `requiredClaims`, a verifier checks the signature, the types of the registered claims (`iss`, `sub`, `aud`, `jti`, `exp`, `nbf`, `iat`), the times the token itself states, that it has an `exp`, and that it names no audience. Two defaults are strict on purpose, since forgetting an option should never make a verifier accept more:
 
 - **`exp` is required.** A token without `exp` would never expire, so it is `missing_claim` with `{ claim: "exp" }` unless `maxAge` is set, which bounds the token's age instead, as for DPoP proofs. Tokens that carry no `exp` by design, such as long-lived API keys you revoke by `jti`, need `requireExpiration: false`.
 - **A token with `aud` needs `audience`.** RFC 7519 §4.1.3 says a recipient that is not in a token's `aud` must reject it. An issuer that mints tokens for several services would otherwise have each service accept the others' tokens. Name your audience, or pass `audience: false` when a verifier accepts tokens for any audience on purpose.
@@ -98,6 +99,10 @@ With `issuer` set, `iss` must equal one of the given values exactly, character f
 
 A key bound to an issuer by its key set's `issuer` option adds a second check: `iss` must also equal that key's issuer, with the same issues, reported once even when both checks fail. It applies with or without the verifier's `issuer` option. Use it whenever one verifier holds the keys of several issuers, so that one issuer's key cannot verify a token claiming another; [Key sets](key-sets.md#keys-of-several-issuers) shows how.
 
+### Subject
+
+With `subject` set, `sub` must equal one of the given values exactly, for a verifier that accepts tokens about known subjects only, such as an RFC 7523 client assertion, whose `sub` must be the client's own id. A missing `sub` is `missing_claim` with `{ claim: "sub" }`, and a different one is `wrong_subject`. Only presence, not a value, is checked by `requiredClaims`, which also covers `jti`: `requiredClaims: ["jti"]` refuses a token without one.
+
 ### Audience
 
 `aud` names who a token is for. It may be one string or an array of strings. With `audience` set, the token passes when any value in its `aud` equals any value in `audience`:
@@ -124,7 +129,7 @@ Some tokens look alike but mean different things, such as an ID token and an acc
 
 ### Required claims
 
-`requiredClaims` lists claims that must be present, whatever their value. Each missing one is `missing_claim` with `{ claim }` and path `["payload", claim]`. A claim already reported missing by `issuer`, `audience`, `maxAge` or the `exp` requirement is not reported twice.
+`requiredClaims` lists claims that must be present, whatever their value. Each missing one is `missing_claim` with `{ claim }` and path `["payload", claim]`. A claim already reported missing by `issuer`, `subject`, `audience`, `maxAge` or the `exp` requirement is not reported twice.
 
 ## Checking your own claims
 
