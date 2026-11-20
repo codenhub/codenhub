@@ -2,7 +2,15 @@ import { DEFAULT_MAX_TOKEN_LENGTH, MAX_TOKEN_LENGTH_LIMIT } from "../core/limits
 import { rejectUnknownOptions } from "../core/options";
 import { isPlainObject } from "../core/plain";
 import { fail, frozenOk } from "../core/result";
-import type { AsymmetricAlgorithm, JwtHeader, JwtIssue, JwtPayload, JwtResult, PublicKey } from "../core/types";
+import type {
+  AsymmetricAlgorithm,
+  JwtHeader,
+  JwtIssue,
+  JwtPayload,
+  JwtRegisteredClaims,
+  JwtResult,
+  PublicKey,
+} from "../core/types";
 import { parseCompact, parsePayload } from "../jws/compact";
 import { ALGORITHM_PARAMS, ASYMMETRIC_ALGORITHMS, isAsymmetricAlgorithm, ownDataValue } from "../keys/algorithms";
 import { importPublicKey } from "../keys/import";
@@ -108,13 +116,21 @@ export interface DpopRequest {
 }
 
 /** The claims of a verified DPoP proof. */
-export interface DpopProofPayload extends JwtPayload {
+export interface DpopProofPayload extends JwtRegisteredClaims {
+  /** The proof's unique identifier. */
   readonly jti: string;
+  /** The request's method. */
   readonly htm: string;
+  /** The request's URL, without query and fragment. */
   readonly htu: string;
+  /** When the proof was created, in seconds since the Unix epoch. */
   readonly iat: number;
+  /** The access token's hash, when the proof came with one. */
   readonly ath?: string;
+  /** The server's nonce, when the proof carries one. */
   readonly nonce?: string;
+  /** Any other claim the proof carries, unchecked. */
+  readonly [claim: string]: unknown;
 }
 
 /** A verified DPoP proof. Frozen. */

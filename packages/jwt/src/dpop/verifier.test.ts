@@ -2,8 +2,8 @@ import { runInNewContext } from "node:vm";
 
 import { beforeAll, describe, expect, it, vi } from "vitest";
 
-import type { JwtIssue, KeyPair, PrivateKey } from "../core/types";
 import { encodeBase64Url } from "../encoding/base64url";
+import type { JwtIssue, KeyPair, PrivateKey } from "../index";
 import { exportPrivateJwk, exportPublicJwk } from "../keys/export";
 import { generateKeyPair, generateSecretKey } from "../keys/generate";
 import { issuesOf, valueOf } from "../keys/test-fixtures";
