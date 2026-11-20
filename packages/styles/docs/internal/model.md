@@ -140,6 +140,14 @@ The limits, recorded rather than worked around:
 - A fill set straight through `--ui-fill`, rather than by a fill class, does not flip the toggle, so it hands nothing down.
 - A `.soft` tint is not a plate, so nothing on it is re-inked.
 
+The ink stops at a surface, but the plate still shows through a translucent one. Glass grounds a surface on 45% of the page background, so a neutral `.card.ghost` or `.card.soft` inside a `.card.solid.primary` printed the page's ink over a mix of the page and the plate, at 3.0 to 3.99:1. Handing the plate's ink down instead does not fix it: over that mix neither ink reaches 4.5:1 on every intent. So a surface on a plate takes an opaque ground. `box` writes a fourth registered property beside the three, `--_on-plate`, from the same toggle and with the same pass-through, and a surface does not restate it, so it still says whether a plate lies beneath after the surface has blocked the ink. `surface` mixes the page background into `--ui-surface-ground` by it:
+
+```
+ground = color-mix(--color-background on-plate, --ui-surface-ground)
+```
+
+Where no public ground is set the mix is invalid and the component's own default stands, which is already the page background or a quiet tint over it, so only a public ground changes: glass's, liquid's, or a consumer's. The pane is opaque on a plate and frosted everywhere else, and its text keeps the contrast it has on the page, at every intent and in both themes (`contrast.spec.ts`). Rejected: thickening glass's ground everywhere, which removes the material from the case that has no plate under it.
+
 The same line carries one more ink: that of a neutral box with no fill. An aesthetic whose line is a highlight on a plate has nothing to draw on without one -- glass's hairline on a `.ghost.edged` button measured 1.01:1 on a light page. So `box` mixes `--_bare-ink` into the line by `--_bare`, 100% for a neutral intent resolving to no fill, stepped from the resolved values so a container's `.ghost` counts and an intent's own line is never swapped. `box` clears `--_bare-ink` with `initial` so a nested box does not inherit it; `.btn` and `.badge` point it at `--_unfilled-ink`, a private the region names. Only glass names one, the theme's ink at 55% that is also its control line, and it clears it again on a region of any other aesthetic nested inside, so the nearest region decides.
 
 ### Hover is derived, never declared

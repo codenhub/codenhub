@@ -291,3 +291,52 @@ for (const theme of THEMES) {
     }
   });
 }
+
+/* Glass grounds a surface on a translucent pane, which shows whatever is
+   behind it. Nested in a `.solid` surface, the plate showed through: a ghost
+   or soft neutral card in a `.card.solid.primary` read 3.0 to 3.99:1. A
+   surface resting on a plate takes an opaque ground, so its text keeps the
+   4.5:1 it has on the page. The plate is read over the page, as the pane is
+   read over the plate. */
+const PLATES = ["neutral", "primary", "secondary", "success", "warning", "destructive", "info"] as const;
+const PANES = ["card ghost", "card soft", "panel", "alert", "card"] as const;
+
+for (const theme of THEMES) {
+  for (const region of ["glass", "glass glass-liquid"]) {
+    test(`prints a pane's text at 4.5:1 on a solid surface under .${region.replace(" ", ".")}, ${theme}`, async ({
+      page,
+    }) => {
+      await load(
+        page,
+        theme,
+        `<div class="${region}">${PLATES.map(
+          (plate) =>
+            `<div class="card solid ${plate}" data-testid="plate-${plate}">${INTENTS.flatMap((intent) =>
+              PANES.map(
+                (pane, index) => `<div class="${pane} ${intent}" data-testid="${plate}-${intent}-${index}">Text</div>`,
+              ),
+            ).join("")}</div>`,
+        ).join("")}</div>`,
+      );
+
+      const ground = await pageColor(page);
+
+      for (const plate of PLATES) {
+        // oxlint-disable-next-line no-await-in-loop -- one page, read in turn.
+        const under = flattenColor(await style(page, `plate-${plate}`, "background-color"), ground);
+
+        for (const intent of INTENTS) {
+          for (const [index, pane] of PANES.entries()) {
+            const testId = `${plate}-${intent}-${index}`;
+            // oxlint-disable-next-line no-await-in-loop -- one page, read in turn.
+            const fill = flattenColor(await style(page, testId, "background-color"), under);
+            // oxlint-disable-next-line no-await-in-loop -- one page, read in turn.
+            const ink = flattenColor(await style(page, testId, "color"), fill);
+
+            expect.soft(getContrastRatio(ink, fill), `${pane} ${intent} on ${plate}`).toBeGreaterThanOrEqual(4.5);
+          }
+        }
+      }
+    });
+  }
+}

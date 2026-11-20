@@ -77,7 +77,15 @@
        nested inside one, the way `box` restates `--_d-ground`. See
        docs/internal/model.md#cascade-layers. */
     --_d-surface-ground: initial;
-    --_d-ground: var(--ui-surface-ground, var(--_d-surface-ground, var(--color-background)));
+    /* A public ground over a plate is set opaque on the page background:
+       glass's translucent pane showed the plate through it, and a ghost or
+       soft neutral card in a `.card.solid.primary` read 3.0 to 3.99:1.
+       `--_on-plate` is 100% wherever a filled box above hands down its ink.
+       Unset, the public token makes the mix invalid, and the component's own
+       default stands, as before. See
+       docs/internal/model.md#the-ink-of-the-plate-beneath. */
+    --_plated-ground: color-mix(in oklab, var(--color-background) var(--_on-plate), var(--ui-surface-ground));
+    --_d-ground: var(--_plated-ground, var(--_d-surface-ground, var(--color-background)));
 
     /* Whether this surface rests on a quiet neutral tint, as 0% or 100%: a
        neutral intent (its fill cap is below 100%) and a resolved fill above

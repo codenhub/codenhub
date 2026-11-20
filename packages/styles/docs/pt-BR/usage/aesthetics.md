@@ -2,7 +2,7 @@
 title: Estéticas
 description: Os seis visuais opcionais, o que cada um muda num componente, os seus ajustes e os seus limites.
 order: 6
-source: d10fa0628ac9627856be765250bbc4c24682793c
+source: 22bdaf42bfaf87e96f07b1c1c950b1cee169fa58
 ---
 
 # Estéticas
@@ -92,6 +92,7 @@ O `.glass` precisa de algo por trás para desfocar. Sobre um fundo de página pl
 
 - Toda superfície numa região glass é de vidro, incluindo um `.card.soft`, um `.panel` e um `.alert` neutros.
 - O vidro é o chão, não o preenchimento. Uma apresentação mantém o preenchimento inteiro, então um botão `.solid`, um toggle marcado e um card ou tabela `.solid` são opacos; as placas padrão, `.soft` e `.ghost` são as foscas.
+- Uma placa dentro de um card, painel ou alerta `.solid` é opaca: através de uma placa translúcida aparece a superfície preenchida atrás dela, e o texto da placa caía abaixo de 4.5:1. Ela fica sobre o fundo da página, então o texto mantém o contraste que tem na página.
 - O desfoque se aplica só a `.card`, `.panel`, `.alert`, ao balão de tooltip e a um `.data-table` padrão ou `.soft`. Os controles continuam sólidos e ficam sobre o vidro: um desfoque sob cada controle de um grupo denso custa uma camada de composição para cada um e vira ruído visual. Os controles ainda recebem o raio, a borda e a sombra da estética.
 - Com `prefers-reduced-transparency: reduce`, e em cores forçadas, as superfícies de vidro perdem o desfoque e ficam opacas. As cores forçadas substituem as cores mas mantêm a transparência delas, então sem isso um painel mostraria a página através do fundo do sistema.
 - Botões e um `.card` que optou por isso usam o clique simples `scale(0.97)`; com movimento reduzido, o clique ainda acontece, de imediato.
