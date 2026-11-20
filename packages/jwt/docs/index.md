@@ -1,11 +1,11 @@
 ---
 title: Overview
-description: What JwtKit does, the ideas it is built on, a first signed and verified token, and where to go next.
+description: What JwtKit does, the ideas it is built on, a first signed and verified token, encrypted tokens, and where to go next.
 ---
 
-# Sign and verify JSON Web Tokens
+# Sign, verify and encrypt JSON Web Tokens
 
-`@codenhub/jwt` (JwtKit) creates and checks JSON Web Tokens with the platform's Web Crypto API. It signs a set of claims into a token, verifies a token someone sent you, and manages the keys both of those need: generating them, importing them from JSON Web Keys (JWKs), exporting them, and picking the right one from a set, including a set an identity provider publishes at a URL.
+`@codenhub/jwt` (JwtKit) creates and checks JSON Web Tokens with the platform's Web Crypto API. It signs a set of claims into a token, verifies a token someone sent you, encrypts and decrypts tokens (JWE) when their content must stay private, and manages the keys all of those need: generating them, importing them from JSON Web Keys (JWKs), exporting them, and picking the right one from a set, including a set an identity provider publishes at a URL.
 
 It is written for the side of the exchange that receives tokens it did not make. A token arriving in an `Authorization` header is attacker-controlled text until a signature check says otherwise, so the package treats every token, every JWK and every key-set response as hostile input. Base64url is a costume, not a lock.
 
@@ -104,6 +104,8 @@ That closes the best-known class of JWT attacks. In the "`alg: none`" attack a f
 
 `EdDSA` and `Ed25519` produce identical signatures. RFC 9864 replaces the older, curve-agnostic `EdDSA` identifier with `Ed25519`, and issuers still use both, so both are supported, but a key is bound to one of them: a key bound to `Ed25519` does not verify a token whose header says `EdDSA`.
 
+Encryption keys follow the same rule, with their own algorithms and their own key kinds, which no signing function accepts: [Encrypting tokens](encrypting.md#algorithms) lists `dir`, `A128KW`, `A256KW`, `ECDH-ES` (alone and with `A128KW` or `A256KW`, on P-256, P-384, P-521 and X25519), `RSA-OAEP` and `RSA-OAEP-256`, with `A128GCM`, `A256GCM`, `A128CBC-HS256` and `A256CBC-HS512` content encryption.
+
 Asymmetric keys can also be imported from PEM, and any key from a Web Crypto `CryptoKey`. The list of algorithms may grow in a minor release, which widens `JwsAlgorithm` and the types built on it, so give a `switch` over an `alg` a default branch.
 
 [Keys](keys.md) covers key kinds, importing, generating and exporting.
@@ -123,7 +125,7 @@ There is no function that decodes a payload without verifying it. When you need 
 ## Requirements
 
 - Node.js 26 or newer, or another runtime with Web Crypto (`globalThis.crypto.subtle`), `TextEncoder`, `TextDecoder`, and, for remote key sets, `fetch`, `AbortController` and `setTimeout`. The package uses no Node.js API, so it also runs in browsers, Deno, Bun and Cloudflare Workers.
-- `EdDSA` and `Ed25519` need Web Crypto's Ed25519 support, which Node.js 26, Chrome 137, Firefox 129 and Safari 17 have. The other algorithms work wherever Web Crypto does.
+- `EdDSA` and `Ed25519` need Web Crypto's Ed25519 support, which Node.js 26, Chrome 137, Firefox 129 and Safari 17 have, and JWE on X25519 needs its X25519 support, which Node.js 26, Cloudflare Workers, Chrome and Firefox have. The other algorithms work wherever Web Crypto does.
 - ESM-aware package resolution. The package is ESM only and marked `sideEffects: false`.
 - TypeScript 5.7 or newer, when you type-check against the package: its declarations use generic typed arrays such as `Uint8Array<ArrayBuffer>`, which earlier versions report as errors unless `skipLibCheck` is on.
 
@@ -135,5 +137,6 @@ There is no function that decodes a payload without verifying it. When you need 
 - [Key sets](key-sets.md): how a key is selected, local sets, importing a JWKS, and fetching an issuer's JWKS with caching, cooldown and stale keys.
 - [Key rotation](rotation.md): rotating an issuer's signing keys with a key ring, the durations to choose, and replacing a leaked key.
 - [DPoP proofs](dpop.md): creating RFC 9449 proofs, verifying them with nonces and replay checks, and binding an access token to the proof's key.
+- [Encrypting tokens](encrypting.md): compact JWE, its keys and algorithms, signed tokens inside encrypted ones, a recipient's encryption JWKS, and what a forged token learns.
 - [Issues](errors.md): the result shape, every issue code and its `params`, and what throws instead.
 - [API reference](reference/index.md): every export with its signature, generated from the TSDoc.

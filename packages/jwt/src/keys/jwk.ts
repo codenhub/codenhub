@@ -41,11 +41,11 @@ const MEMBER_NAMES = [
   "oth",
   "k",
 ] as const;
-type MemberName = (typeof MEMBER_NAMES)[number];
-type Members = Partial<Record<MemberName, unknown>>;
+export type MemberName = (typeof MEMBER_NAMES)[number];
+export type Members = Partial<Record<MemberName, unknown>>;
 
 const RSA_PRIVATE_MEMBERS = ["d", "p", "q", "dp", "dq", "qi"] as const;
-const ASYMMETRIC_PRIVATE_MEMBERS = [...RSA_PRIVATE_MEMBERS, "oth", "k"] as const;
+export const ASYMMETRIC_PRIVATE_MEMBERS = [...RSA_PRIVATE_MEMBERS, "oth", "k"] as const;
 
 /** RFC 7517 §4.3 says unrelated operations SHOULD NOT share a key; a key that also encrypts is refused. */
 const SIGNATURE_OPERATIONS: ReadonlySet<string> = new Set(["sign", "verify"]);
@@ -56,7 +56,7 @@ const REQUIRED_OPERATION: Readonly<Record<KeyRole, readonly string[]>> = {
   secret: ["sign", "verify"],
 };
 
-const issue = (code: JwtIssue["code"], member?: MemberName, params?: JwtIssue["params"]): JwtIssue => ({
+export const issue = (code: JwtIssue["code"], member?: MemberName, params?: JwtIssue["params"]): JwtIssue => ({
   code,
   ...(member === undefined ? {} : { path: [member] }),
   ...(params === undefined ? {} : { params }),
@@ -76,7 +76,7 @@ export function checkJwk(jwk: unknown, alg: JwsAlgorithm, role: KeyRole): Checke
 }
 
 /** Snapshots the JWK's own data members, so later checks never run caller code. */
-function readMembers(jwk: unknown): Members | undefined {
+export function readMembers(jwk: unknown): Members | undefined {
   try {
     if (typeof jwk !== "object" || jwk === null || Array.isArray(jwk)) {
       return undefined;
@@ -176,7 +176,7 @@ function checkMaterial(members: Members, alg: JwsAlgorithm, role: KeyRole): Chec
   return { ...(kid === undefined ? {} : { kid }), ...result };
 }
 
-type Material = Omit<CheckedJwk, "kid"> | JwtIssue;
+export type Material = Omit<CheckedJwk, "kid"> | JwtIssue;
 
 function materialFor(members: Members, alg: JwsAlgorithm, role: KeyRole): Material {
   const params = ALGORITHM_PARAMS[alg];
@@ -211,7 +211,7 @@ function curveMaterial(
   return { importJwk, signatureLength: params.signatureBytes as number };
 }
 
-function rsaMaterial(members: Members, role: KeyRole): Material {
+export function rsaMaterial(members: Members, role: KeyRole): Material {
   const modulus = decodeMember(members.n);
   if (modulus === undefined) {
     return issue("invalid_key", "n");
@@ -319,7 +319,7 @@ function secretMaterial(members: Members, params: AlgorithmParams): Material {
   return { importJwk: { kty: "oct", k: members.k as string }, signatureLength: minimum };
 }
 
-function decodeMember(value: unknown): Uint8Array | undefined {
+export function decodeMember(value: unknown): Uint8Array | undefined {
   return typeof value === "string" ? decodeBase64Url(value) : undefined;
 }
 

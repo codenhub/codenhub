@@ -1,5 +1,5 @@
 /**
- * Sign and verify JSON Web Tokens with Web Crypto, and manage the keys they need: generate, import, export and select them, including from a remote JWKS.
+ * Sign, verify, encrypt and decrypt JSON Web Tokens with Web Crypto, and manage the keys they need: generate, import, export and select them, including from a remote JWKS.
  *
  * @packageDocumentation
  */
@@ -111,3 +111,5 @@ export {
 } from "./keysets";
 export { sign, type SignHeader, type SignInput } from "./sign";
 export { createVerifier } from "./verify";
+export * from "./jwe";
+export type { RemoteEncryptionKeySetOptions } from "./keysets/remote";

@@ -157,7 +157,43 @@ export async function pemToJwk(
   role: "public" | "private",
   kid: string | undefined,
 ): Promise<PemResult> {
-  const invalid = (reason?: "encrypted" | "unsupported_format"): PemResult => ({
+  const key = readPemDer(pem, role);
+  if (!key.ok) {
+    return key;
+  }
+  const format = role === "public" ? "spki" : "pkcs8";
+  const typeIssue = keyTypeIssue(key.value, format, alg);
+  if (typeIssue !== undefined) {
+    return { ok: false, issue: typeIssue };
+  }
+  try {
+    const { importParams } = ALGORITHM_PARAMS[alg];
+    const cryptoKey = await crypto.subtle.importKey(format, key.value, importParams, true, [
+      role === "public" ? "verify" : "sign",
+    ]);
+    return { ok: true, value: await exportMaterialJwk(cryptoKey, alg, kid) };
+  } catch {
+    // Web Crypto rejects DER it cannot read; its message may quote it.
+    return { ok: false, issue: { code: "invalid_key" } };
+  }
+}
+
+/** The DER a PEM holds, or the one issue that refuses it. */
+export type PemDerResult =
+  | { readonly ok: true; readonly value: Uint8Array<ArrayBuffer> }
+  | { readonly ok: false; readonly issue: JwtIssue };
+
+/**
+ * Reads the DER of one PEM key block: SPKI for the `public` role, from a `PUBLIC KEY`, a `CERTIFICATE`'s key or an
+ * `RSA PUBLIC KEY`, and PKCS#8 for the `private` role, from a `PRIVATE KEY`, an `RSA PRIVATE KEY` or an
+ * `EC PRIVATE KEY`, with PKCS#1 and SEC 1 wrapped first. Web Crypto, not this function, then parses the key inside.
+ *
+ * @returns The DER, or the issues {@link pemToJwk} names for the block itself: `unexpected_private_key`,
+ * `invalid_key` with `{ reason: "encrypted" }` or `{ reason: "unsupported_format" }`, or a plain `invalid_key`.
+ * Never throws, and an issue never quotes the input.
+ */
+export function readPemDer(pem: string, role: "public" | "private"): PemDerResult {
+  const invalid = (reason?: "encrypted" | "unsupported_format"): PemDerResult => ({
     ok: false,
     issue: { code: "invalid_key", ...(reason === undefined ? {} : { params: { reason } }) },
   });
@@ -179,23 +215,7 @@ export async function pemToJwk(
     return invalid();
   }
   const key = reader.read(block.der);
-  if ("code" in key) {
-    return { ok: false, issue: key };
-  }
-  const typeIssue = keyTypeIssue(key.der, key.format, alg);
-  if (typeIssue !== undefined) {
-    return { ok: false, issue: typeIssue };
-  }
-  try {
-    const { importParams } = ALGORITHM_PARAMS[alg];
-    const cryptoKey = await crypto.subtle.importKey(key.format, key.der, importParams, true, [
-      role === "public" ? "verify" : "sign",
-    ]);
-    return { ok: true, value: await exportMaterialJwk(cryptoKey, alg, kid) };
-  } catch {
-    // Web Crypto rejects DER it cannot read; its message may quote it.
-    return invalid();
-  }
+  return "code" in key ? { ok: false, issue: key } : { ok: true, value: key.der };
 }
 
 /** The `AlgorithmIdentifier` of an RSA key: `rsaEncryption` with `NULL` parameters (RFC 8017 Appendix A.1). */

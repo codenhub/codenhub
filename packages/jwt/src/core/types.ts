@@ -26,6 +26,9 @@ export type JwtIssueCode =
   | "alg_mismatch"
   | "bad_signature"
   | "key_fetch_failed"
+  // Encryption (JWE)
+  | "unsupported_enc"
+  | "decryption_failed"
   // Claims
   | "expired"
   | "not_yet_valid"

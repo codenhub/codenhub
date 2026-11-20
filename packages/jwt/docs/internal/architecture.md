@@ -26,16 +26,18 @@ Out of scope, and documented rather than defended:
 
 ## Module layout
 
-| Folder      | Owns                                                                                                          |
-| ----------- | ------------------------------------------------------------------------------------------------------------- |
-| `core/`     | The public type contract (`types.ts`), limits, and the internal `ok`/`fail` helpers that deep-freeze results. |
-| `encoding/` | Strict base64url, the strict JSON object parser, and UTF-8 helpers.                                           |
-| `jws/`      | Compact parsing (`checkSegments`, `parseCompact`, `parsePayload`) and the public `readHeader`.                |
-| `keys/`     | The algorithm table, the key registry, JWK and PEM checks, import, generation, export and thumbprints.        |
-| `keysets/`  | Selection, local key sets, JWKS import, the remote key set, and the issuer's key ring.                        |
-| `sign/`     | `sign`.                                                                                                       |
-| `verify/`   | Option resolution, claim checks, and `createVerifier`.                                                        |
-| `interop/`  | A local copy of the Standard Schema v1 types, so the package has no dependency for them.                      |
+| Folder      | Owns                                                                                                                                                                                     |
+| ----------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `core/`     | The public type contract (`types.ts`), limits, and the internal `ok`/`fail` helpers that deep-freeze results.                                                                            |
+| `encoding/` | Strict base64url, the strict JSON object parser, and UTF-8 helpers.                                                                                                                      |
+| `jws/`      | Compact parsing (`checkSegments`, `parseCompact`, `parsePayload`) and the public `readHeader`.                                                                                           |
+| `keys/`     | The algorithm table, the key registry, JWK and PEM checks, import, generation, export and thumbprints.                                                                                   |
+| `keysets/`  | Selection, local key sets, JWKS import, the remote key set, and the issuer's key ring.                                                                                                   |
+| `sign/`     | `sign`.                                                                                                                                                                                  |
+| `verify/`   | Option resolution, claim checks, and `createVerifier`.                                                                                                                                   |
+| `dpop/`     | `createDpopProof` and `createDpopVerifier`.                                                                                                                                              |
+| `jwe/`      | Compact JWE: its algorithm table, key registry, JWK checks and keys, content encryption, key management, parsing, `encrypt`, the decrypter and nested verifier, and encryption key sets. |
+| `interop/`  | A local copy of the Standard Schema v1 types, so the package has no dependency for them.                                                                                                 |
 
 ## Algorithm binding
 
@@ -185,6 +187,19 @@ The seed is read when the key set is created and imported at the first `select`.
 - **Body.** One leading UTF-8 byte order mark is dropped, since some servers write one, and the rest is parsed as a strict JSON object, as a token's header is. Token parsing drops nothing: a token's segments are base64url, where a byte order mark is never legitimate. A JWKS that imports no key for `algorithms` is `no_usable_keys` rather than an empty cache, which would turn every token into `unknown_kid` until the next fetch.
 - **`Cache-Control`.** `max-age` shortens the TTL, clamped to `cooldown` at least and `cacheTtl` at most, so an issuer that announces a short lifetime ahead of a rotation is fetched sooner, and neither a header nor its absence lifts the bound the consumer set. `no-store` and `no-cache` give the minimum. Directives are split on commas, names compared case-insensitively, and a `max-age` whose value is not all digits ignored; the first well-formed `max-age` wins, as RFC 9111 §4.2.1 allows. `s-maxage` is for shared caches and ignored.
 - **Never throws.** Every failure, including an unexpected exception from a stub, becomes `key_fetch_failed` with a `reason`. Rejections that arrive after the outcome is decided are caught so they are not reported as unhandled.
+
+## Encryption (JWE)
+
+`jwe/` holds compact JWE (decisions 63 to 69) beside the JWS code, sharing its encoding, strict JSON, result and option helpers and nothing that decides what a key may do.
+
+- **Separate keys.** JWE keys are registered in their own `WeakMap` (`jwe/registry.ts`), so `getKeyEntry` never finds one and `getJweKeyEntry` never finds a signing key: no JWS function accepts an encryption key, and the reverse, at the type and at the runtime level. Each key is bound to one key management `alg`, and a `dir` secret also to one `enc`. JWK checks (`jwe/jwk.ts`) reuse the signing checks' rules for `use`, `key_ops` (decision 52), `kid` and RSA moduli, with `enc` in place of `sig`.
+- **Algorithms.** `jwe/algorithms.ts` is the one table of key management and content algorithms, curves and parameter sizes. Content encryption (`jwe/content.ts`) is AES-GCM, or AES-CBC with HMAC as RFC 7518 §5.2 composes them, the tag checked in constant time before AES-CBC decrypts. Key management (`jwe/key-management.ts`) is AES key wrap, RSA-OAEP, and ephemeral-static ECDH with the Concat KDF over SHA-256. An `epk` is imported on the recipient key's curve, with only the members a public key has; an X25519 point of low order, and an all-zero shared secret on any curve, are refused.
+- **Parsing.** `jwe/compact.ts` caps the length before decoding, splits exactly five segments of strict base64url, parses the protected header with the strict JSON parser, and checks `alg`, `enc`, `zip`, `crit` and the typed members before any key is selected; the additional authenticated data is the header segment's ASCII. `alg` and `enc` come from the protected header only.
+- **One failure after selection.** Once a key is selected, every failure to recover the content key, and every tag failure, is the one frozen `DECRYPTION_FAILED` issue. When unwrapping fails, a random content key of the right length stands in and decryption proceeds to the tag (RFC 7516 §11.5), so neither the result nor the path taken says which step failed.
+- **Bytes out.** A decrypter returns the plaintext as a fresh `Uint8Array`, not frozen, since freezing a typed array's elements is not possible; header and result are frozen. `decodeJsonObject` and `createNestedVerifier` are the only readers of plaintext, and claims are trusted only after the nested verifier's signature check (decision 66).
+- **Recipient key sets.** `importKeySet` and `createRemoteKeySet` take `use: "enc"`, reusing the JWKS reader, cache and fetch path and swapping the per-JWK import for `importJwePublicKey` (`jwe/keyset.ts`). Selection is the generic `select` of `keysets/`, by `kid` and `alg`, with no trial decryption.
+
+The decrypter's default `maxLength` is 16384, twice a verifier's, since a nested token is a signed token grown by a third in base64url and a header; the range is the same, 1 through 65536.
 
 ## Limits
 

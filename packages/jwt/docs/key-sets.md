@@ -69,7 +69,7 @@ if (result.ok) {
 
 A JWKS is untrusted input, so the import never throws for it. It fails only when the document is not a JWKS at all: `malformed` when it is not an object or its `keys` is not an array (path `["keys"]`), and `too_large` with `{ limit: "keys", maximum: 100 }` when it lists more than 100 keys.
 
-Individual keys that cannot be used are skipped, not fatal, because an issuer's JWKS routinely holds keys meant for something else, such as encryption. Skipped are: `oct` keys (a JWKS is public, so a secret never comes from one), keys with `use` other than `sig`, keys with private members, weak, oversized or malformed keys, and keys whose `alg` is not in `algorithms`. A JWKS with no usable key gives an empty set, whose `select` always fails.
+Individual keys that cannot be used are skipped, not fatal, because an issuer's JWKS routinely holds keys meant for something else, such as encryption. Skipped are: `oct` keys (a JWKS is public, so a secret never comes from one), keys with `use` other than `sig`, keys with private members, weak, oversized or malformed keys, and keys whose `alg` is not in `algorithms`. A JWKS with no usable key gives an empty set, whose `select` always fails. To read a recipient's encryption keys instead, pass `use: "enc"`; [Encrypting tokens](encrypting.md#a-recipients-encryption-keys) explains.
 
 Each usable key becomes one key per algorithm it is bound to:
 

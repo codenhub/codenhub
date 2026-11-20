@@ -1,5 +1,8 @@
 import type { AsymmetricAlgorithm, Jwk, PrivateKey, PublicKey, SecretKey } from "../core/types";
 import { encodeBase64Url, encodeUtf8 } from "../encoding";
+import { jweKeyThumbprint } from "../jwe/keys";
+import { isJweKey } from "../jwe/registry";
+import type { JwePrivateKey, JwePublicKey } from "../jwe/types";
 import { ALGORITHM_PARAMS } from "./algorithms";
 import { exportWebCryptoJwk } from "./exported-jwk";
 import { isSingleSequence, readPemBlock } from "./pem";
@@ -37,12 +40,17 @@ const THUMBPRINT_URI_PREFIX = "urn:ietf:params:oauth:jwk-thumbprint:sha-256:";
  * const jkt = await jwkThumbprint(publicKey); // 43 base64url characters
  * ```
  *
- * @param key - A public, private or secret key created by this package.
+ * @param key - A public, private or secret key created by this package; a public or private one may be for encryption (JWE).
  * @returns The 43-character thumbprint.
  * @throws TypeError when `key` is not a key created by this package, or is a secret created without
  * `extractable: true`.
  */
-export async function jwkThumbprint(key: PublicKey | PrivateKey | SecretKey): Promise<string> {
+export async function jwkThumbprint(
+  key: PublicKey | PrivateKey | SecretKey | JwePublicKey | JwePrivateKey,
+): Promise<string> {
+  if (isJweKey(key)) {
+    return jweKeyThumbprint(key as JwePublicKey | JwePrivateKey);
+  }
   const entry = getKeyEntry(key);
   if (key.kind === "secret") {
     if (!key.extractable) {

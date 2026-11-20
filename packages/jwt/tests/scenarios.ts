@@ -290,6 +290,153 @@ const tamperedSignatures = Object.fromEntries(
   ]),
 );
 
+const CONTENT_ENCRYPTION = ["A128GCM", "A256GCM", "A128CBC-HS256", "A256CBC-HS512"] as const;
+const JWE_CURVES = ["P-256", "P-384", "P-521", "X25519"] as const;
+const ECDH_ALGORITHMS = ["ECDH-ES", "ECDH-ES+A128KW", "ECDH-ES+A256KW"] as const;
+
+/** Encrypts to `encryptionKey`, decrypts with `decryptionKey`, and checks the plaintext and header. */
+async function expectDecrypted(
+  module: Jwt,
+  encryptionKey: jwt.JweEncryptionKey,
+  decryptionKey: jwt.JweDecryptionKey,
+  enc: (typeof CONTENT_ENCRYPTION)[number] | undefined,
+): Promise<void> {
+  const token = await module.encrypt({ plaintext: "encrypted in this runtime", key: encryptionKey, enc });
+  const result = await module.createDecrypter({ keys: module.createJweKeySet([decryptionKey]) })(token);
+  check(result.ok, "decryption failed", result);
+  if (result.ok) {
+    check(new TextDecoder().decode(result.value.plaintext) === "encrypted in this runtime", "wrong plaintext", null);
+    check(result.value.header.alg === encryptionKey.alg, "wrong alg", result.value.header);
+  }
+  const [header, key, iv, ciphertext, tag] = token.split(".");
+  const tampered = [header, key, iv, ciphertext, `${tag?.startsWith("A") ? "B" : "A"}${tag?.slice(1)}`].join(".");
+  const refused = await module.createDecrypter({ keys: module.createJweKeySet([decryptionKey]) })(tampered);
+  check(!refused.ok && refused.error.issues[0]?.code === "decryption_failed", "tampered token was accepted", refused);
+}
+
+// Each curve under each ECDH algorithm: the curve decides whether the runtime can agree a key at all.
+const ecdhRoundtrips = Object.fromEntries(
+  ECDH_ALGORITHMS.flatMap((alg) =>
+    JWE_CURVES.map((crv): [string, Scenario] => [
+      `JWE ${alg} on ${crv} encrypts and decrypts`,
+      async (module) => {
+        const pair = await module.generateJweKeyPair({ alg, crv });
+        await expectDecrypted(module, pair.publicKey, pair.privateKey, "A128GCM");
+      },
+    ]),
+  ),
+);
+
+// Each content encryption algorithm under one wrapped key, RSA-OAEP and AES key wrap, and each dir key.
+const contentRoundtrips = Object.fromEntries([
+  ...CONTENT_ENCRYPTION.flatMap((enc): [string, Scenario][] => [
+    [
+      `JWE RSA-OAEP-256 with ${enc} encrypts and decrypts`,
+      async (module) => {
+        const pair = await module.generateJweKeyPair({ alg: "RSA-OAEP-256" });
+        await expectDecrypted(module, pair.publicKey, pair.privateKey, enc);
+      },
+    ],
+    [
+      `JWE A256KW with ${enc} encrypts and decrypts`,
+      async (module) => {
+        const key = await module.generateJweSecretKey({ alg: "A256KW" });
+        await expectDecrypted(module, key, key, enc);
+      },
+    ],
+    [
+      `JWE dir with ${enc} encrypts and decrypts`,
+      async (module) => {
+        const key = await module.generateJweSecretKey({ alg: "dir", enc });
+        await expectDecrypted(module, key, key, undefined);
+      },
+    ],
+  ]),
+  [
+    "JWE RSA-OAEP and A128KW encrypt and decrypt",
+    async (module: Jwt) => {
+      const pair = await module.generateJweKeyPair({ alg: "RSA-OAEP" });
+      const key = await module.generateJweSecretKey({ alg: "A128KW" });
+      await expectDecrypted(module, pair.publicKey, pair.privateKey, "A256GCM");
+      await expectDecrypted(module, key, key, "A128CBC-HS256");
+    },
+  ],
+]);
+
+const jweScenarios: Readonly<Record<string, Scenario>> = {
+  ...ecdhRoundtrips,
+  ...contentRoundtrips,
+  "JWE RFC 7516 A.3 vector decrypts": async (module) => {
+    const key = await module.importJweSecretKey({ kty: "oct", k: "GawgguFyGrWKav7AX4VKUg" }, { alg: "A128KW" });
+    check(key.ok, "key import failed", key);
+    if (key.ok) {
+      const result = await module.createDecrypter({ keys: module.createJweKeySet([key.value]) })(
+        "eyJhbGciOiJBMTI4S1ciLCJlbmMiOiJBMTI4Q0JDLUhTMjU2In0.6KB707dM9YTIgHtLvtgWQ8mKwboJW3of9locizkDTHzBC2IlrT1oOQ.AxY8DCtDaGlsbGljb3RoZQ.KDlTtXchhZTGufMYmOYGS4HffxPSUrfmqCHXaI9wOGY.U0m_YmjN04DJvceFICbCVQ",
+      );
+      check(
+        result.ok && new TextDecoder().decode(result.value.plaintext) === "Live long and prosper.",
+        "vector did not decrypt",
+        result,
+      );
+    }
+  },
+  "JWE RSA-OAEP and ECDH PEM keys import and decrypt": async (module) => {
+    const rsa = (await crypto.subtle.generateKey(
+      { name: "RSA-OAEP", modulusLength: 2048, publicExponent: new Uint8Array([1, 0, 1]), hash: "SHA-256" },
+      true,
+      ["encrypt", "decrypt"],
+    )) as CryptoKeyPair;
+    const ec = (await crypto.subtle.generateKey({ name: "ECDH", namedCurve: "P-384" }, true, [
+      "deriveBits",
+    ])) as CryptoKeyPair;
+    const cases = [
+      ["RSA-OAEP-256", rsa],
+      ["ECDH-ES+A256KW", ec],
+    ] as const;
+    await Promise.all(
+      cases.map(async ([alg, pair]) => {
+        const spki = pemOf("PUBLIC KEY", await crypto.subtle.exportKey("spki", pair.publicKey));
+        const pkcs8 = pemOf("PRIVATE KEY", await crypto.subtle.exportKey("pkcs8", pair.privateKey));
+        const publicKey = await module.importJwePublicKey(spki, { alg });
+        const privateKey = await module.importJwePrivateKey(pkcs8, { alg });
+        check(publicKey.ok && privateKey.ok, `${alg} PEM import failed`, [publicKey, privateKey]);
+        if (publicKey.ok && privateKey.ok) {
+          await expectDecrypted(module, publicKey.value, privateKey.value, "A256GCM");
+        }
+      }),
+    );
+  },
+  "JWE nested JWT signs, encrypts, decrypts and verifies": async (module) => {
+    const [signer, recipient] = await Promise.all([
+      module.generateKeyPair({ alg: "ES256" }),
+      module.generateJweKeyPair({ alg: "ECDH-ES+A128KW" }),
+    ]);
+    const token = await module.encryptJwt({
+      sign: { payload: PAYLOAD, key: signer.privateKey },
+      key: recipient.publicKey,
+      enc: "A256GCM",
+    });
+    const result = await module.createNestedVerifier({
+      decrypt: module.createDecrypter({ keys: module.createJweKeySet([recipient.privateKey]) }),
+      verify: module.createVerifier({ keys: module.createKeySet([signer.publicKey]) }),
+    })(token);
+    check(result.ok && result.value.payload.sub === PAYLOAD.sub, "nested verification failed", result);
+  },
+  "JWE low-order X25519 epk is refused": async (module) => {
+    const pair = await module.generateJweKeyPair({ alg: "ECDH-ES", crv: "X25519" });
+    const header = encodeSegment(
+      JSON.stringify({ alg: "ECDH-ES", enc: "A128GCM", epk: { kty: "OKP", crv: "X25519", x: "A".repeat(43) } }),
+    );
+    const token = [header, "", "AAAAAAAAAAAAAAAA", "AAAA", "AAAAAAAAAAAAAAAAAAAAAA"].join(".");
+    const result = await module.createDecrypter({ keys: module.createJweKeySet([pair.privateKey]) })(token);
+    check(
+      !result.ok && result.error.issues[0]?.code === "malformed" && result.error.issues[0]?.path?.[1] === "epk",
+      "low-order point was accepted",
+      result,
+    );
+  },
+};
+
 export const scenarios: Readonly<Record<string, Scenario>> = {
   ...roundtrips,
   ...jwkRoundtrips,
@@ -318,6 +465,7 @@ export const scenarios: Readonly<Record<string, Scenario>> = {
     check(result.ok && result.value.payload.sub === PAYLOAD.sub, "verification failed", result);
     check(JSON.stringify(requested) === '["https://issuer.example/jwks.json"]', "unexpected fetches", requested);
   },
+  ...jweScenarios,
 };
 
 /**

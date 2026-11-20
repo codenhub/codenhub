@@ -441,7 +441,7 @@ function currentSeconds(now: () => number): number {
  * descriptor, and the token is written from the copy, so a `Proxy` or a value changed meanwhile cannot show the
  * checks one value and the token another.
  */
-function snapshotJsonObject(object: unknown, label: string): Record<string, unknown> {
+export function snapshotJsonObject(object: unknown, label: string): Record<string, unknown> {
   return snapshot(object, label, 1) as Record<string, unknown>;
 }
 
