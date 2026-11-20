@@ -210,7 +210,7 @@ const token = await sign({ payload: { sub: "u1", exp }, key: signingKey });
 
 - `alg` and `kid` come from `publicKey`, so import it with the `kid` your JWKS publishes. `getPublicKey`, `jwkThumbprint` and `embedKey` work with the key; `exportPrivateJwk` throws, since the material is not here.
 - `sign` receives the JWS signing input, the bytes the service must sign with `alg`'s hash, and resolves to a `Uint8Array` or an `ArrayBuffer`. It is called once per token, and only then: creating the key calls nothing.
-- `signatureFormat: "der"` converts the DER `Ecdsa-Sig-Value` that AWS KMS, Google Cloud KMS and PKCS#11 tokens return for an ECDSA key into the `r || s` form JWS uses. It is only for `ES256`, `ES384` and `ES512`; RSA and EdDSA signatures have one form. The DER must be strict, or `sign` throws.
+- `signatureFormat: "der"` converts the DER `Ecdsa-Sig-Value` that AWS KMS and Google Cloud KMS return for an ECDSA key into the `r || s` form JWS uses. A PKCS#11 token's `CKM_ECDSA` signature is already `r || s`, so leave the default `"raw"` for it, unless an adapter in between returns DER. It is only for `ES256`, `ES384` and `ES512`; RSA and EdDSA signatures have one form. The DER must be strict, or `sign` throws.
 - Every signature is verified with `publicKey` before `sign` returns the token, so a function that signs with another key, or the wrong format, makes `sign` throw a `TypeError` rather than hand out a token no one can verify. A rejection from the function rejects `sign` unchanged.
 
 ## Exporting keys

@@ -356,7 +356,7 @@ A token is expired at the very second its `exp` names, as RFC 7519 §4.1.4 requi
 const verifyHint = createVerifier({ keys, issuer: "https://issuer.example", audience: clientId, allowExpired: true });
 ```
 
-`clockTolerance` exists because the issuer's clock and yours never agree exactly. Clocks drift; it is the one thing about them you can count on. It defaults to 0 for `exp` and `maxAge`, so a token never lives longer than it says unless you opt in. `nbf` and `iat` always allow at least 60 seconds: they come from the issuer's clock, and with no leeway a verifier a fraction of a second behind refuses a token the moment it is issued. Accepting a token early does not extend a life `exp` bounds. `maxAge` counts from `iat`, though, so a token whose `iat` is up to 60 seconds ahead of your clock is accepted until `iat + maxAge + clockTolerance` by your clock: up to 60 seconds longer than `maxAge` alone. Anything that remembers tokens for as long as they are accepted, such as a store of used `jti` values, keeps each one until that time. A tolerance of 30 to 60 seconds is common for tokens from another server; the cap of 300 seconds keeps a typo from turning a five-minute token into a much longer one.
+`clockTolerance` exists because the issuer's clock and yours never agree exactly. Clocks drift; it is the one thing about them you can count on. It defaults to 0 for `exp` and `maxAge`, so a token never lives longer than it says unless you opt in. `nbf` and `iat` always allow at least 60 seconds: they come from the issuer's clock, and with no leeway a verifier a fraction of a second behind refuses a token the moment it is issued. Accepting a token early does not extend a life `exp` bounds. `maxAge` counts from `iat`, though, so a token whose `iat` is up to `max(clockTolerance, 60)` seconds ahead of your clock is accepted until `iat + maxAge + clockTolerance` by your clock, inclusive: that much longer than `maxAge` alone. Anything that remembers tokens for as long as they are accepted, such as a store of used `jti` values, keeps each one until that time has passed; a store whose expiry is coarser than a second rounds it up. A tolerance of 30 to 60 seconds is common for tokens from another server; the cap of 300 seconds keeps a typo from turning a five-minute token into a much longer one.
 
 ### Issuer
 
@@ -550,7 +550,7 @@ async function verifyProof(proof: string) {
 }
 ```
 
-Limit `alg` to the algorithms you accept, as above. `jkt` is the value an access token's `cnf.jkt` must equal. Checking `htm`, `htu`, `ath`, `nonce` and that each `jti` is used once is the protocol's job, above this package. With `maxAge`, keep each `jti` until the proof's `iat + maxAge + clockTolerance`, not `maxAge` after you first saw it: a proof whose `iat` is up to 60 seconds ahead of your clock is accepted that much longer, as [Verifying tokens](docs/verifying.md) describes.
+Limit `alg` to the algorithms you accept, as above. `jkt` is the value an access token's `cnf.jkt` must equal. Checking `htm`, `htu`, `ath`, `nonce` and that each `jti` is used once is the protocol's job, above this package. With `maxAge`, keep each `jti` until the proof's `iat + maxAge + clockTolerance` has passed, not `maxAge` after you first saw it: a proof whose `iat` is up to `max(clockTolerance, 60)` seconds ahead of your clock is accepted that much longer, as [Verifying tokens](docs/verifying.md) describes.
 
 A proof's `ath` is the whole SHA-256 hash of the access token, base64url-encoded, which `encodeBase64Url` gives:
 
@@ -783,7 +783,7 @@ const token = await sign({ payload: { sub: "u1", exp }, key: signingKey });
 
 - `alg` and `kid` come from `publicKey`, so import it with the `kid` your JWKS publishes. `getPublicKey`, `jwkThumbprint` and `embedKey` work with the key; `exportPrivateJwk` throws, since the material is not here.
 - `sign` receives the JWS signing input, the bytes the service must sign with `alg`'s hash, and resolves to a `Uint8Array` or an `ArrayBuffer`. It is called once per token, and only then: creating the key calls nothing.
-- `signatureFormat: "der"` converts the DER `Ecdsa-Sig-Value` that AWS KMS, Google Cloud KMS and PKCS#11 tokens return for an ECDSA key into the `r || s` form JWS uses. It is only for `ES256`, `ES384` and `ES512`; RSA and EdDSA signatures have one form. The DER must be strict, or `sign` throws.
+- `signatureFormat: "der"` converts the DER `Ecdsa-Sig-Value` that AWS KMS and Google Cloud KMS return for an ECDSA key into the `r || s` form JWS uses. A PKCS#11 token's `CKM_ECDSA` signature is already `r || s`, so leave the default `"raw"` for it, unless an adapter in between returns DER. It is only for `ES256`, `ES384` and `ES512`; RSA and EdDSA signatures have one form. The DER must be strict, or `sign` throws.
 - Every signature is verified with `publicKey` before `sign` returns the token, so a function that signs with another key, or the wrong format, makes `sign` throw a `TypeError` rather than hand out a token no one can verify. A rejection from the function rejects `sign` unchanged.
 
 ## Exporting keys

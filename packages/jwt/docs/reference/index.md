@@ -605,7 +605,7 @@ Signs `data`, the JWS signing input, with the external key, and resolves to the 
 readonly signatureFormat?: "raw" | "der";
 ```
 
-The form of the signatures `sign` resolves to: `"raw"`, as JWS writes them, or `"der"`, the DER `Ecdsa-Sig-Value` (RFC 3279 §2.2.3) that AWS KMS, Google Cloud KMS and PKCS#11 tokens often return for an ECDSA key, which is converted. `"der"` is only for `ES256`, `ES384` and `ES512`.
+The form of the signatures `sign` resolves to: `"raw"`, as JWS writes them, or `"der"`, the DER `Ecdsa-Sig-Value` (RFC 3279 §2.2.3) that AWS KMS and Google Cloud KMS return for an ECDSA key, which is converted. A PKCS#11 `CKM_ECDSA` signature is already `r || s`, so it is `"raw"`. `"der"` is only for `ES256`, `ES384` and `ES512`.
 
 **Default** — `"raw"`
 

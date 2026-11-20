@@ -119,7 +119,7 @@ async function verifyProof(proof: string) {
 }
 ```
 
-Limit `alg` to the algorithms you accept, as above. `jkt` is the value an access token's `cnf.jkt` must equal. Checking `htm`, `htu`, `ath`, `nonce` and that each `jti` is used once is the protocol's job, above this package. With `maxAge`, keep each `jti` until the proof's `iat + maxAge + clockTolerance`, not `maxAge` after you first saw it: a proof whose `iat` is up to 60 seconds ahead of your clock is accepted that much longer, as [Verifying tokens](verifying.md) describes.
+Limit `alg` to the algorithms you accept, as above. `jkt` is the value an access token's `cnf.jkt` must equal. Checking `htm`, `htu`, `ath`, `nonce` and that each `jti` is used once is the protocol's job, above this package. With `maxAge`, keep each `jti` until the proof's `iat + maxAge + clockTolerance` has passed, not `maxAge` after you first saw it: a proof whose `iat` is up to `max(clockTolerance, 60)` seconds ahead of your clock is accepted that much longer, as [Verifying tokens](verifying.md) describes.
 
 A proof's `ath` is the whole SHA-256 hash of the access token, base64url-encoded, which `encodeBase64Url` gives:
 
