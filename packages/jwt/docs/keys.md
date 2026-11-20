@@ -237,6 +237,8 @@ const privateJwk = await exportPrivateJwk(privateKey); // store it as you would 
 
 Every exported JWK is frozen, names `kty`, `alg` and `use: "sig"`, includes `kid` when the key has one, lists its members in a stable order, and carries no `ext` or `key_ops`. Re-importing it with the same `alg` gives an equivalent key.
 
+The results are typed by what they hold: `exportPublicJwk` returns a `PublicJwk`, `exportPrivateJwk` a `PrivateJwk` and `exportSecretJwk` a `SecretJwk`, and `Jwk` is the union of all three. Narrow one on `kty` to reach its members: `EcPublicJwk` and `EcPrivateJwk` for `EC`, `OkpPublicJwk` and `OkpPrivateJwk` for `OKP`, `RsaPublicJwk` and `RsaPrivateJwk` for `RSA`, and `OctJwk` for `oct`. A member another key type has is typed as absent, so `jwk.n` is `undefined` on an `EC` JWK rather than a compile error, and `jwk.d !== undefined` narrows a `Jwk` to a `PrivateJwk`. The import functions take any value, so a JWK parsed from JSON needs none of these types.
+
 ## Thumbprints
 
 `jwkThumbprint` computes a key pair's JWK SHA-256 Thumbprint (RFC 7638): 43 base64url characters that name the key by its material alone, whatever its `alg` or `kid`. Pass the public key or the private key; both give the same thumbprint, and a private key need not be extractable.

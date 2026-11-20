@@ -1,3 +1,19 @@
+export type {
+  Jwk,
+  EcJwk,
+  EcPrivateJwk,
+  EcPublicJwk,
+  OctJwk,
+  OkpJwk,
+  OkpPrivateJwk,
+  OkpPublicJwk,
+  PrivateJwk,
+  PublicJwk,
+  RsaJwk,
+  RsaPrivateJwk,
+  RsaPublicJwk,
+  SecretJwk,
+} from "../core/types";
 export {
   ALGORITHM_PARAMS,
   ASYMMETRIC_ALGORITHMS,
