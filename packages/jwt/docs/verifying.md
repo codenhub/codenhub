@@ -150,6 +150,19 @@ if (result.ok) {
 
 The schema checks; it does not transform. The payload you get back is the token's own frozen payload, with every claim it carried, even ones the schema does not list, and never a value the schema produced. That is why the payload is typed by what the schema accepts, its input type.
 
+Without a schema, a type argument types the payload instead. Any object type works, an `interface` included, as long as its registered claims have their RFC 7519 types:
+
+```ts
+interface AccessClaims {
+  sub: string;
+  scope: string;
+}
+
+const verifyAccess = createVerifier<AccessClaims>({ keys: createKeySet([publicKey]), issuer: "https://issuer.example" });
+```
+
+That type is a promise you make, not one the verifier checks: only the registered claims are checked, so a token without `scope`, or with a number there, still verifies and reaches your code typed as a string. Pass a schema whenever the other claims come from a token you do not fully control.
+
 Each issue the schema reports becomes one `invalid_claims` issue whose path is `["payload", ...]` followed by the schema's path. The schema's messages are dropped, since a message such as "expected a number, received 'hunter2'" can quote the token. The paths are kept, though, and can name keys the payload chose, so do not show them to users unescaped. A schema that throws or rejects is not caught: the verifier's promise rejects with that error.
 
 ## Reading the header before verifying

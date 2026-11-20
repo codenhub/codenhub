@@ -326,7 +326,7 @@ export interface LocalKeySet extends KeySet {
 }
 
 /** A verified token. Frozen. */
-export interface VerifiedJwt<TPayload extends JwtPayload = JwtPayload> {
+export interface VerifiedJwt<TPayload extends JwtRegisteredClaims = JwtPayload> {
   /** The protected header. */
   readonly header: JwtHeader;
   /** The payload, after every configured claim check passed. */
@@ -432,12 +432,13 @@ export type VerifiedPayload<TSchema extends StandardSchemaV1 | undefined> = TSch
 
 /**
  * A configured verifier. Call it with any value; it never throws for a token, whatever its content.
+ * `TPayload` is the payload type {@link createVerifier} gave it, from its `claims` schema or its type argument.
  * Only caller code makes its promise reject: a `claims` schema that throws or rejects, or an
  * `options.now` that returns something other than a finite number.
  *
  * @returns The verified token, or every issue found. Structural, key, and signature failures stop at
  * the first issue; claim checks report every failing claim.
  */
-export type Verifier<TPayload extends JwtPayload = JwtPayload> = (
+export type Verifier<TPayload extends JwtRegisteredClaims = JwtPayload> = (
   token: unknown,
 ) => Promise<JwtResult<VerifiedJwt<TPayload>>>;

@@ -4,6 +4,7 @@ import type {
   JwtHeader,
   JwtIssue,
   JwtPayload,
+  JwtRegisteredClaims,
   JwtResult,
   KeySet,
   KeySetResolver,
@@ -56,6 +57,13 @@ const WRONG_ISSUER = fail({ code: "wrong_issuer", path: ["payload", "iss"] });
  * const { sub } = result.value.payload;
  * ```
  *
+ * The verified payload's type comes from `options.claims` when it is given: `createVerifier({ keys, claims:
+ * schema })` returns a `Verifier` whose payload is the schema's input type. Without a schema, a type argument
+ * names it: `createVerifier<AccessClaims>({ keys })`, with `AccessClaims` any object type, an `interface`
+ * included, whose registered claims have their RFC 7519 types. That type is not checked at runtime: only the
+ * registered claims are, so a claim the token lacks or holds with another type still reaches your code as
+ * typed. Give a schema when the payload's other claims must be checked.
+ *
  * @typeParam TSchema - The Standard Schema given as `options.claims`, which types the verified payload.
  * @param options - Where keys come from and which claims to require; see {@link VerifierOptions}.
  * @returns A {@link Verifier}. It resolves to the frozen `{ header, payload, key }`, or to a failure and
@@ -74,9 +82,23 @@ const WRONG_ISSUER = fail({ code: "wrong_issuer", path: ["payload", "iss"] });
  * `maxLength` is not an integer from 1 through 65536; `requiredClaims` is not an array of non-empty
  * strings; `claims` is not a version 1 Standard Schema; or `now` is not a function.
  */
-export function createVerifier<TSchema extends StandardSchemaV1 | undefined = undefined>(
-  options: VerifierOptions<TSchema>,
-): Verifier<VerifiedPayload<TSchema>> {
+export function createVerifier<TSchema extends StandardSchemaV1>(
+  options: VerifierOptions<TSchema> & { readonly claims: TSchema },
+): Verifier<VerifiedPayload<TSchema>>;
+/**
+ * Creates a verifier whose payload type is given rather than inferred from a `claims` schema; see the
+ * overload above for everything it checks. Options whose `claims` may or may not be set also come here.
+ *
+ * @typeParam TPayload - The verified payload's type, unchecked at runtime beyond the registered claims: an
+ * object type, an `interface` included, whose registered claims have their RFC 7519 types.
+ * @param options - Where keys come from and which claims to require; see {@link VerifierOptions}.
+ * @returns A {@link Verifier} whose payload is typed `TPayload`.
+ * @throws TypeError for the invalid options the overload above lists.
+ */
+export function createVerifier<TPayload extends JwtRegisteredClaims = JwtPayload>(
+  options: VerifierOptions<StandardSchemaV1 | undefined>,
+): Verifier<TPayload>;
+export function createVerifier(options: VerifierOptions<StandardSchemaV1 | undefined>): Verifier<JwtPayload> {
   const resolved = resolveOptions(options);
   const report = reporterOf(resolved.onKeySetError);
   return async (token) => {
@@ -128,11 +150,7 @@ export function createVerifier<TSchema extends StandardSchemaV1 | undefined = un
     }
     // The header and payload come deep-frozen from the parser and the key frozen from its registration, so
     // only the new objects are frozen: `ok` would walk the whole token again.
-    const verified: VerifiedJwt<VerifiedPayload<TSchema>> = Object.freeze({
-      header: jws.header,
-      payload: payload.value as VerifiedPayload<TSchema>,
-      key,
-    });
+    const verified: VerifiedJwt = Object.freeze({ header: jws.header, payload: payload.value, key });
     return frozenOk(verified);
   };
 }

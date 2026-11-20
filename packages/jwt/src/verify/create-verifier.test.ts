@@ -1,8 +1,17 @@
-import { beforeAll, describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, expectTypeOf, it } from "vitest";
 
 import { fail } from "../core/result";
-import type { AsymmetricAlgorithm, KeySet, SecretKey } from "../core/types";
+import type {
+  AsymmetricAlgorithm,
+  JwtPayload,
+  JwtResult,
+  KeySet,
+  SecretKey,
+  VerifiedJwt,
+  Verifier,
+} from "../core/types";
 import { decodeBase64Url, encodeBase64Url } from "../encoding/base64url";
+import type { StandardSchemaV1 } from "../interop/standard-schema";
 import { generateKeyPair, generateSecretKey, type KeyPair } from "../keys/generate";
 import { importSecretKey } from "../keys/import";
 import { getKeyEntry } from "../keys/registry";
@@ -449,5 +458,45 @@ describe("createVerifier onKeySetError", () => {
     expect(() => createVerifier({ keys: keySetOf(pairs.ES256.publicKey), onKeySetError: "log" as never })).toThrow(
       new TypeError("createVerifier: options.onKeySetError must be a function."),
     );
+  });
+});
+
+describe("createVerifier payload types", () => {
+  // Checked by `pnpm typecheck`; each verifier also runs, so the types describe what it returns.
+  interface AccessClaims {
+    sub: string;
+    tenant: string;
+    roles: string[];
+  }
+  const tenantSchema: StandardSchemaV1<{ tenant: string }> = {
+    "~standard": { version: 1, vendor: "test", validate: (value) => ({ value: value as { tenant: string } }) },
+  };
+
+  it("should type the payload by an interface given as the type argument", async () => {
+    const verify = createVerifier<AccessClaims>({ keys: keySetOf(secretKey), now: clockAt() });
+    const result = await verify(await sign({ payload: { ...PAYLOAD, tenant: "t1", roles: [] }, key: secretKey }));
+
+    expectTypeOf(verify).toEqualTypeOf<Verifier<AccessClaims>>();
+    expect(result.ok && result.value.payload.tenant).toBe("t1");
+  });
+
+  it("should infer the payload from a claims schema", () => {
+    const verify = createVerifier({ keys: keySetOf(secretKey), claims: tenantSchema });
+
+    expectTypeOf(verify).toEqualTypeOf<Verifier<JwtPayload & { tenant: string }>>();
+  });
+
+  it("should type the payload as JwtPayload without a schema or a type argument", () => {
+    expectTypeOf(createVerifier({ keys: keySetOf(secretKey) })).toEqualTypeOf<Verifier<JwtPayload>>();
+  });
+
+  it("should accept an interface payload in VerifiedJwt and Verifier", () => {
+    expectTypeOf<VerifiedJwt<AccessClaims>["payload"]>().toEqualTypeOf<AccessClaims>();
+    expectTypeOf<Verifier<AccessClaims>>().returns.resolves.toEqualTypeOf<JwtResult<VerifiedJwt<AccessClaims>>>();
+  });
+
+  it("should refuse a type argument whose registered claims have the wrong type", () => {
+    // @ts-expect-error exp is a number of seconds.
+    expect(typeof createVerifier<{ exp: string }>({ keys: keySetOf(secretKey) })).toBe("function");
   });
 });
