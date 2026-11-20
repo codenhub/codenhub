@@ -165,7 +165,17 @@ async function readTheme(browser, stylesheetPath, theme, temporaryRoot) {
     `<!doctype html><html data-theme="${theme}"><head><meta charset="utf-8" /><link rel="stylesheet" href="${stylesheetHref}" /><style>*, *::before, *::after { transition: none !important; animation: none !important; }</style></head><body>${body}</body></html>`,
   );
 
-  const page = await browser.newPage();
+  /* Every preference the palette reads, pinned. These are Playwright 1.63's
+     defaults, stated so that neither a change of default nor a shared
+     context option lets the contributor's own setting reach the palette:
+     under `prefers-contrast: more` a border reads its strong tone, and forced
+     colours repaint every probe. */
+  const page = await browser.newPage({
+    colorScheme: "light",
+    contrast: "no-preference",
+    forcedColors: "none",
+    reducedMotion: "no-preference",
+  });
 
   try {
     await page.goto(pathToFileURL(htmlPath).href, { waitUntil: "load" });
