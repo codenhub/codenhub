@@ -119,6 +119,7 @@ fetches; // 1
 - Node.js 26 or newer, or another runtime with Web Crypto, `TextEncoder` and `TextDecoder`, plus `fetch`, `AbortController` and `setTimeout` for remote key sets. No Node.js API is used, so browsers, Deno, Bun and Cloudflare Workers work too.
 - `EdDSA` and `Ed25519` need Web Crypto's Ed25519 support: Node.js 26, Chrome 137, Firefox 129 or Safari 17.
 - ESM-aware package resolution. The package is ESM only and marked `sideEffects: false`.
+- TypeScript 5.7 or newer, when you type-check against the package: its declarations use generic typed arrays such as `Uint8Array<ArrayBuffer>`, which earlier versions report as errors unless `skipLibCheck` is on.
 
 ## Notes
 

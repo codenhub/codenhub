@@ -125,6 +125,7 @@ There is no function that decodes a payload without verifying it. When you need 
 - Node.js 26 or newer, or another runtime with Web Crypto (`globalThis.crypto.subtle`), `TextEncoder`, `TextDecoder`, and, for remote key sets, `fetch`, `AbortController` and `setTimeout`. The package uses no Node.js API, so it also runs in browsers, Deno, Bun and Cloudflare Workers.
 - `EdDSA` and `Ed25519` need Web Crypto's Ed25519 support, which Node.js 26, Chrome 137, Firefox 129 and Safari 17 have. The other algorithms work wherever Web Crypto does.
 - ESM-aware package resolution. The package is ESM only and marked `sideEffects: false`.
+- TypeScript 5.7 or newer, when you type-check against the package: its declarations use generic typed arrays such as `Uint8Array<ArrayBuffer>`, which earlier versions report as errors unless `skipLibCheck` is on.
 
 ## Next steps
 
