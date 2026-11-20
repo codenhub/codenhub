@@ -2,7 +2,7 @@
 title: Botões
 description: Ações destrutivas e secundárias, botões de ícone, tamanhos, links com cara de botão, estados desabilitados e como carregar ícones.
 order: 1
-source: 204d1e79721e553fceb51ff03a7ca1879e990222
+source: 251edb4a60f8fdad7884f50b3feba88a184aee44
 ---
 
 # Botões
@@ -61,7 +61,7 @@ Quando um botão preenchido tem o foco do teclado, uma linha de 2px da cor da p�
 
 Uma classe de tamanho e uma de padding podem ser combinadas. Só o `.p-xs` remove a altura mínima de um botão com rótulo; todas as outras combinações a mantêm. Num botão de ícone, qualquer classe `.p-*` remove o tamanho mínimo, e o botão passa a ter o tamanho do ícone mais esse padding: 0.125rem, 0.25rem ou 0.75rem ao redor.
 
-Um rótulo fica numa linha enquanto couber. Quando o contêiner do botão é mais estreito que o rótulo, o rótulo quebra dentro do botão, com as linhas equilibradas, e o botão fica mais alto, então um rótulo longo nunca faz uma tela estreita rolar para o lado. Um botão numa fileira com outros itens, como uma barra de ferramentas ou um `.input-group`, não é espremido em duas linhas pelos vizinhos: ele só quebra quando é mais largo que a fileira inteira. Para manter um rótulo numa linha mesmo assim, adicione `white-space: nowrap` ao botão.
+Um rótulo fica numa linha enquanto couber. Quando o contêiner do botão é mais estreito que o rótulo, o rótulo quebra dentro do botão, com as linhas equilibradas, e o botão fica mais alto, então um rótulo longo nunca faz uma tela estreita rolar para o lado. Um botão numa fileira com outros itens, como uma barra de ferramentas, encolhe como qualquer item flex quando falta espaço na fileira, então o rótulo pode quebrar em duas linhas em vez de empurrar os vizinhos para fora da fileira e fazê-la rolar para o lado. Um botão de ícone não tem rótulo para quebrar, então mantém o formato quadrado e não encolhe. Para manter um rótulo numa linha mesmo assim, adicione `white-space: nowrap` ao botão: aí ele não encolhe abaixo da largura do rótulo.
 
 O visual base desenha cantos que acompanham o tamanho: um botão `.sm` ou `.p-sm` tem cantos um pouco menores que o padrão, e um `.lg`, um pouco maiores.
 
