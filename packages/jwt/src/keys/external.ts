@@ -1,5 +1,6 @@
 import { rejectUnknownOptions } from "../core/options";
 import type { PrivateKey, PublicKey } from "../core/types";
+import { copyBytes } from "../encoding/bytes";
 import { getKeyEntry, isRegisteredKey, kidMember, registerKey } from "./registry";
 
 /** Options of {@link createExternalSigningKey}. */
@@ -98,15 +99,13 @@ export function createExternalSigningKey(options: ExternalSigningKeyOptions): Pr
   );
 }
 
-/** A copy of the signer's bytes, so a buffer it reuses cannot change the token after the check. */
+/** A copy of the signer's bytes, from any realm, so a buffer it reuses cannot change the token after the check. */
 function toBytes(value: unknown): Uint8Array<ArrayBuffer> {
-  if (value instanceof Uint8Array) {
-    return new Uint8Array(value);
+  const bytes = copyBytes(value);
+  if (bytes === undefined) {
+    throw new TypeError("sign: the external signer must resolve to a Uint8Array or an ArrayBuffer.");
   }
-  if (value instanceof ArrayBuffer) {
-    return new Uint8Array(value.slice(0));
-  }
-  throw new TypeError("sign: the external signer must resolve to a Uint8Array or an ArrayBuffer.");
+  return bytes;
 }
 
 /**

@@ -1,5 +1,6 @@
 import { MAX_JSON_DEPTH } from "../core/limits";
 import { rejectUnknownOptions } from "../core/options";
+import { isPlainArray, isPlainObject } from "../core/plain";
 import type {
   JsonCompatible,
   JwsAlgorithm,
@@ -91,14 +92,6 @@ const NUMERIC_DATE_CLAIMS = ["exp", "nbf", "iat"] as const;
  */
 const MAX_NUMERIC_DATE = 253_402_300_799;
 const TEXT_CLAIMS = ["iss", "sub", "jti"] as const;
-
-const isPlainObject = (value: unknown): value is Record<string, unknown> => {
-  if (typeof value !== "object" || value === null || Array.isArray(value)) {
-    return false;
-  }
-  const prototype: unknown = Object.getPrototypeOf(value);
-  return prototype === Object.prototype || prototype === null;
-};
 
 /**
  * Signs a payload into a compact JWS (a JWT) with a key's own algorithm.
@@ -301,7 +294,7 @@ function assertJsonObject(object: Record<string, unknown>, label: string): void 
 function childrenOf(container: unknown, label: string): readonly unknown[] {
   const isArray = Array.isArray(container);
   // An Array subclass or a swapped prototype can carry a `toJSON` of its own.
-  if (isArray ? Object.getPrototypeOf(container) !== Array.prototype : !isPlainObject(container)) {
+  if (isArray ? !isPlainArray(container) : !isPlainObject(container)) {
     throw new TypeError(`sign: ${label} must hold only plain objects and arrays.`);
   }
   // `JSON.stringify` runs a `toJSON` it finds anywhere on the chain, own or inherited from a polluted

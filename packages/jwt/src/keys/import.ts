@@ -9,7 +9,7 @@ import type {
   SecretKey,
   SymmetricAlgorithm,
 } from "../core/types";
-import { isUint8Array } from "../encoding";
+import { copyBytes, isArrayBuffer, isUint8Array } from "../encoding";
 import { ALGORITHM_PARAMS } from "./algorithms";
 import { exportMaterialJwk, isCryptoKey } from "./exported-jwk";
 import type { KeyPair } from "./generate";
@@ -397,7 +397,7 @@ const PRIVATE_MEMBERS = ["d", "p", "q", "dp", "dq", "qi"] as const;
  * a string, or `options.extractable` is not a boolean.
  */
 export async function importSecretKey(
-  input: Uint8Array | CryptoKey | object,
+  input: Uint8Array | ArrayBuffer | ArrayBufferView | CryptoKey | object,
   options: ImportSecretKeyOptions,
 ): Promise<JwtResult<SecretKey>> {
   const checked = requireOptions(options, SECRET_KEY_OPTIONS, "importSecretKey");
@@ -410,14 +410,11 @@ export async function importSecretKey(
     ...kidMember(kid),
     extractable: isExtractable,
   });
-  let bytes: Uint8Array<ArrayBuffer> | undefined;
-  try {
-    // Copied from the typed array's own bytes: a subclass's iterator or `length` getter is never run.
-    if (isUint8Array(input)) {
-      bytes = new Uint8Array(input);
-    }
-  } catch {
-    // A detached buffer throws on the copy.
+  // A typed array, `DataView` or `ArrayBuffer` of any realm, copied through intrinsic getters, so an
+  // overridden iterator or `length` never runs. A detached buffer holds no bytes and is refused.
+  const isBytes = isUint8Array(input) || ArrayBuffer.isView(input) || isArrayBuffer(input);
+  const bytes = isBytes ? copyBytes(input) : undefined;
+  if (isBytes && bytes === undefined) {
     return fail({ code: "invalid_key" });
   }
   // RFC 7518 §3.2: at least as long as the hash output, which is the signature length.
