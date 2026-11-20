@@ -45,7 +45,7 @@
   --toast-default-color-btn-success-contrast: light-dark(oklab(0.985 0 0), oklab(0.985 0 0));
   --toast-default-color-btn-success-hover: light-dark(
     oklab(0.497872 -0.101989 0.029308),
-    oklab(0.572945 -0.116429 0.0314383)
+    oklab(0.446158 -0.0899286 0.022681)
   );
   --toast-default-color-btn-destructive: light-dark(oklab(0.514 0.212373 0.0646656), oklab(0.514 0.212373 0.0646656));
   --toast-default-color-btn-destructive-contrast: light-dark(oklab(0.985 0 0), oklab(0.985 0 0));
