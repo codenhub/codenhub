@@ -461,3 +461,43 @@ describe("sign values from another realm", () => {
     );
   });
 });
+
+describe("sign reads each value once", () => {
+  it("should sign the exp a Proxy showed the checks, not a later read", async () => {
+    let reads = 0;
+    const later = (value: unknown): unknown => {
+      reads += 1;
+      return reads > 1 ? Date.now() : value;
+    };
+    const payload = new Proxy(
+      { exp: 100 },
+      {
+        get: (target, name) => (name === "exp" ? later(target.exp) : Reflect.get(target, name)),
+        getOwnPropertyDescriptor: (target, name) => {
+          const descriptor = Reflect.getOwnPropertyDescriptor(target, name);
+          return name === "exp" && descriptor !== undefined ? { ...descriptor, value: later(target.exp) } : descriptor;
+        },
+      },
+    );
+
+    const token = await sign({ payload, key: secretKey });
+
+    expect(payloadTextOf(token)).toBe('{"exp":100}');
+    expect(reads).toBe(1);
+  });
+
+  it("should read each member's descriptor once", async () => {
+    const seen: string[] = [];
+    const trace = <T extends object>(target: T): T =>
+      new Proxy(target, {
+        getOwnPropertyDescriptor: (inner, name) => {
+          seen.push(String(name));
+          return Reflect.getOwnPropertyDescriptor(inner, name);
+        },
+      });
+
+    await sign({ payload: trace({ sub: "u", list: trace(["a"]) }), key: secretKey, header: trace({ typ: "JWT" }) });
+
+    expect(seen.toSorted()).toEqual(["0", "list", "sub", "typ"]);
+  });
+});

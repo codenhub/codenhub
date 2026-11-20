@@ -201,8 +201,7 @@ function serializeHeader(header: unknown, key: SigningKey, jwk: Record<string, s
   if (header !== undefined && !isPlainObject(header)) {
     throw new TypeError("sign: input.header must be a plain object.");
   }
-  const given = (header ?? {}) as Record<string, unknown>;
-  assertJsonObject(given, "input.header");
+  const given = snapshotJsonObject(header ?? {}, "input.header");
   if (Object.hasOwn(given, "alg") && given.alg !== key.alg) {
     throw new TypeError("sign: input.header.alg must equal the key's alg.");
   }
@@ -228,21 +227,21 @@ function serializeHeader(header: unknown, key: SigningKey, jwk: Record<string, s
     members.push(["jwk", jwk]);
   }
   const leading: readonly string[] = ["alg", ...TEXT_HEADER_MEMBERS];
-  for (const [name, value] of Object.entries(given)) {
+  for (const name of Object.keys(given)) {
     if (!leading.includes(name)) {
-      members.push([name, value]);
+      members.push([name, given[name]]);
     }
   }
   // Written member by member: an object would list integer-like names before `alg`.
-  return `{${members.map(([name, value]) => `${JSON.stringify(name)}:${JSON.stringify(value)}`).join(",")}}`;
+  return `{${members.map(([name, value]) => `${JSON.stringify(name)}:${writeJson(value)}`).join(",")}}`;
 }
 
 /** Validates the payload and its registered claims, and writes it as JSON. */
-function serializePayload(payload: unknown): string {
-  if (!isPlainObject(payload)) {
+function serializePayload(given: unknown): string {
+  if (!isPlainObject(given)) {
     throw new TypeError("sign: input.payload must be a plain object.");
   }
-  assertJsonObject(payload, "input.payload");
+  const payload = snapshotJsonObject(given, "input.payload");
   for (const name of NUMERIC_DATE_CLAIMS) {
     if (Object.hasOwn(payload, name) && typeof payload[name] !== "number") {
       throw new TypeError(`sign: input.payload.${name} must be a finite number of seconds.`);
@@ -261,7 +260,7 @@ function serializePayload(payload: unknown): string {
   if (Object.hasOwn(payload, "aud") && !isAudience(payload.aud)) {
     throw new TypeError("sign: input.payload.aud must be a string or an array of strings.");
   }
-  return JSON.stringify(payload);
+  return writeJson(payload);
 }
 
 // `Array.prototype.every` is called directly, so an array's own `every` cannot vouch for its entries.
@@ -270,58 +269,82 @@ const isAudience = (value: unknown): boolean =>
   (Array.isArray(value) && Array.prototype.every.call(value, (entry) => typeof entry === "string"));
 
 /**
- * Throws unless `object` holds only values `JSON.stringify` writes exactly and the strict parser reads
- * back the same, nested at most {@link MAX_JSON_DEPTH} deep. A cycle exceeds the depth, so it is caught too.
+ * Copies a plain object of JSON values, nested at most {@link MAX_JSON_DEPTH} deep, into prototype-less objects
+ * and plain arrays, throwing unless every value is one `JSON.stringify` writes exactly and the strict parser
+ * reads back the same. A cycle exceeds the depth, so it is caught too. Each member is read once, through its
+ * descriptor, and the token is written from the copy, so a `Proxy` or a value changed meanwhile cannot show the
+ * checks one value and the token another.
  */
-function assertJsonObject(object: Record<string, unknown>, label: string): void {
-  const pending: { readonly value: unknown; readonly depth: number }[] = [{ value: object, depth: 1 }];
-  while (pending.length > 0) {
-    const { value, depth } = pending.pop() as { readonly value: unknown; readonly depth: number };
-    for (const child of childrenOf(value, label)) {
-      if (typeof child === "object" && child !== null) {
-        if (depth + 1 > MAX_JSON_DEPTH) {
-          throw new TypeError(`sign: ${label} must not nest deeper than ${MAX_JSON_DEPTH} levels.`);
-        }
-        pending.push({ value: child, depth: depth + 1 });
-      } else {
-        assertJsonPrimitive(child, label);
-      }
-    }
-  }
+function snapshotJsonObject(object: unknown, label: string): Record<string, unknown> {
+  return snapshot(object, label, 1) as Record<string, unknown>;
 }
 
-/** Lists the member values of a JSON container, throwing for anything else. */
-function childrenOf(container: unknown, label: string): readonly unknown[] {
+function snapshot(container: unknown, label: string, depth: number): unknown {
   const isArray = Array.isArray(container);
   // An Array subclass or a swapped prototype can carry a `toJSON` of its own.
   if (isArray ? !isPlainArray(container) : !isPlainObject(container)) {
     throw new TypeError(`sign: ${label} must hold only plain objects and arrays.`);
   }
-  // `JSON.stringify` runs a `toJSON` it finds anywhere on the chain, own or inherited from a polluted
-  // `Object.prototype` or `Array.prototype`, so it would write a value never checked here.
+  // `JSON.stringify` runs a `toJSON` found anywhere on the chain, own or inherited from a polluted
+  // `Object.prototype` or `Array.prototype`; a caller who has one expects the token to say what it returns.
   if ("toJSON" in (container as object)) {
     throw new TypeError(`sign: ${label} must not hold toJSON methods.`);
   }
+  const copyOf = (descriptor: PropertyDescriptor): unknown => {
+    if (!("value" in descriptor)) {
+      throw new TypeError(`sign: ${label} must not hold accessor properties.`);
+    }
+    const child: unknown = descriptor.value;
+    if (typeof child !== "object" || child === null) {
+      assertJsonPrimitive(child, label);
+      return child;
+    }
+    if (depth + 1 > MAX_JSON_DEPTH) {
+      throw new TypeError(`sign: ${label} must not nest deeper than ${MAX_JSON_DEPTH} levels.`);
+    }
+    return snapshot(child, label, depth + 1);
+  };
   if (isArray) {
-    const array = container as readonly unknown[];
-    return Array.from({ length: array.length }, (_, index) => ownDataValue(array, String(index), label));
+    const { length } = container as readonly unknown[];
+    const copy: unknown[] = [];
+    for (let index = 0; index < length; index += 1) {
+      const descriptor = Object.getOwnPropertyDescriptor(container, String(index));
+      if (descriptor === undefined) {
+        throw new TypeError(`sign: ${label} must not hold array holes.`);
+      }
+      copy.push(copyOf(descriptor));
+    }
+    return copy;
   }
-  const object = container as object;
-  if (Object.getOwnPropertySymbols(object).length > 0) {
-    throw new TypeError(`sign: ${label} must not have symbol keys.`);
+  const copy = Object.create(null) as Record<string, unknown>;
+  // `Reflect.ownKeys` lists names in the order `Object.keys` does, without reading each descriptor a second time.
+  for (const name of Reflect.ownKeys(container as object)) {
+    if (typeof name === "symbol") {
+      throw new TypeError(`sign: ${label} must not have symbol keys.`);
+    }
+    const descriptor = Object.getOwnPropertyDescriptor(container, name);
+    if (descriptor?.enumerable === true) {
+      copy[name] = copyOf(descriptor);
+    }
   }
-  return Object.keys(object).map((name) => ownDataValue(object, name, label));
+  return copy;
 }
 
-function ownDataValue(container: object, name: string, label: string): unknown {
-  const descriptor = Object.getOwnPropertyDescriptor(container, name);
-  if (descriptor === undefined) {
-    throw new TypeError(`sign: ${label} must not hold array holes.`);
+/**
+ * Writes a {@link snapshot} copy, or a value this module built, as `JSON.stringify` would, without looking up
+ * `toJSON` anywhere: only primitives reach `JSON.stringify`.
+ */
+function writeJson(value: unknown): string {
+  if (Array.isArray(value)) {
+    return `[${value.map(writeJson).join(",")}]`;
   }
-  if (!("value" in descriptor)) {
-    throw new TypeError(`sign: ${label} must not hold accessor properties.`);
+  if (typeof value === "object" && value !== null) {
+    const object = value as Record<string, unknown>;
+    return `{${Object.keys(object)
+      .map((name) => `${JSON.stringify(name)}:${writeJson(object[name])}`)
+      .join(",")}}`;
   }
-  return descriptor.value;
+  return JSON.stringify(value);
 }
 
 function assertJsonPrimitive(value: unknown, label: string): void {
