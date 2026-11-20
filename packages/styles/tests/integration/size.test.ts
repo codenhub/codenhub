@@ -41,7 +41,10 @@ const COMPILED_CEILINGS: Record<string, number> = {
   "dist/theme.css": 13_200,
   "dist/palette.css": 26_800,
   "dist/aesthetics/index.css": 49_750,
-  "dist/aesthetics/chunky-tile.css": 5_600,
+  /* 5,600 until 0.11.0 kept the solo class's tracking off scripts that join
+     their letters or hang them from a headstroke: it ships without the
+     components, so it carries the language list itself. */
+  "dist/aesthetics/chunky-tile.css": 6_000,
   "dist/aesthetics/cyber.css": 4_900,
   "dist/aesthetics/glass.css": 14_500,
   "dist/aesthetics/neobrutalism.css": 4_750,
