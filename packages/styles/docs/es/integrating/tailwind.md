@@ -2,7 +2,7 @@
 title: Tailwind CSS v4
 description: Usar los puntos de entrada de código fuente /tw en un proyecto con Tailwind CSS v4.
 order: 1
-source: e0c6007fd1e46f14f1cfb1e9662025edfe97ecde
+source: 0158d4f1e67501dfd55ac903750bc3674650d412
 ---
 
 # Tailwind CSS v4
@@ -21,7 +21,7 @@ Los puntos de entrada `/tw` publican código fuente copiado y sin compilar desde
 @source "./src";
 ```
 
-`/tw` importa el propio Tailwind, así que sustituye a tu `@import "tailwindcss"` en lugar de sumarse a él: con los dos, el Preflight de Tailwind se emite dos veces. Todos los demás puntos de entrada `/*/tw` esperan que tu import vaya primero; consulta [Usar un punto de entrada específico](#usar-un-punto-de-entrada-específico).
+`/tw` importa el propio Tailwind, así que sustituye a tu `@import "tailwindcss"` en lugar de sumarse a él. Con los dos, el build sigue emitiendo una sola vez el Preflight y el tema de Tailwind, y solo repite un pequeño bloque de `::placeholder`, pero tu import no añade nada que `/tw` no traiga. Todos los demás puntos de entrada `/*/tw` esperan que tu import vaya primero; consulta [Usar un punto de entrada específico](#usar-un-punto-de-entrada-específico).
 
 Tailwind CSS v4 escanea tu proyecto automáticamente: la mayoría de los proyectos no necesita nada más que el import anterior. Las rutas de `@source` se resuelven respecto al archivo CSS que las declara, no respecto a la raíz de tu proyecto, así que aquí `./src` significa "el `src/` que está junto a esta hoja de estilos"; ajústalo según dónde esté realmente tu hoja de estilos global. Añade `@source` solo para el markup al que el escaneo automático de Tailwind no llega por sí solo: una ruta excluida por defecto (incluida en `.gitignore`, o dentro de `node_modules`, por ejemplo una librería de componentes externa) o, en un monorepo, una que está fuera del árbol de directorios de este archivo. Apúntalo al markup de tu aplicación, no a este paquete: el código fuente del paquete nombra cada clase que define, así que escanearlo las emite todas, las usen tus páginas o no.
 
@@ -123,8 +123,8 @@ El bloque deja fuera `neutral`, `emerald`, `amber`, `rose`, `indigo` y `white` a
 **Reglas de tokens y de reset duplicadas**
 
 - **Qué ha pasado:** la hoja de estilos generada es más grande de lo esperado, y las herramientas de desarrollo del navegador muestran las mismas custom properties o reglas de reset definidas dos veces.
-- **Por qué:** una de dos cosas. Importar en el mismo build un punto de entrada compilado (`@codenhub/styles`) y un punto de entrada `/tw` (`@codenhub/styles/tw`) compila los mismos tokens y el mismo reset desde dos fuentes independientes; el build de Tailwind no tiene forma de saber que describen el mismo paquete. O bien tu hoja de estilos importa `tailwindcss` junto a `/tw`, que ya lo importa, así que el Preflight se emite dos veces.
-- **Solución:** elige un camino por proyecto, los puntos de entrada `/tw` para un proyecto con Tailwind CSS v4 y los compilados en todos los demás casos, y quita tu propio `@import "tailwindcss"` cuando importes `/tw`.
+- **Por qué:** importar en el mismo build un punto de entrada compilado (`@codenhub/styles`) y un punto de entrada `/tw` (`@codenhub/styles/tw`) compila los mismos tokens y el mismo reset desde dos fuentes independientes; el build de Tailwind no tiene forma de saber que describen el mismo paquete.
+- **Solución:** elige un camino por proyecto, los puntos de entrada `/tw` para un proyecto con Tailwind CSS v4 y los compilados en todos los demás casos.
 
 **Una variante detrás de `before:` o `placeholder:` ignora el ajuste de la aplicación**
 

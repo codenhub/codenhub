@@ -20,7 +20,7 @@ A project that already runs Tailwind CSS v4 can compile this package's source in
 @source "./src";
 ```
 
-`/tw` imports Tailwind itself, so it replaces your own `@import "tailwindcss"` rather than joining it: with both, Tailwind's Preflight is emitted twice. Every other `/*/tw` entrypoint expects your import to come first; see [Using a focused entrypoint](#using-a-focused-entrypoint).
+`/tw` imports Tailwind itself, so it replaces your own `@import "tailwindcss"` rather than joining it. With both, the build still emits Preflight and Tailwind's theme once, and repeats only a small `::placeholder` block, but your import adds nothing `/tw` does not bring. Every other `/*/tw` entrypoint expects your import to come first; see [Using a focused entrypoint](#using-a-focused-entrypoint).
 
 Tailwind CSS v4 scans your project automatically — most projects need nothing beyond the import above. `@source` paths resolve relative to the CSS file that declares them, not your project root, so `./src` here means "the `src/` next to this stylesheet"; adjust it to match where your own global stylesheet actually lives. Add `@source` only for markup Tailwind's automatic scan won't reach on its own: a path excluded by default (`.gitignore`d, or inside `node_modules` — an external component library, for instance) or, in a monorepo, one outside this file's own directory tree. Point it at your app's markup, not at this package: the package's source names every class it defines, so scanning it emits all of them whether your pages use them or not.
 
@@ -122,8 +122,8 @@ The block leaves out `neutral`, `emerald`, `amber`, `rose`, `indigo`, and `white
 **Duplicate token and reset rules**
 
 - **What happened:** the built stylesheet is larger than expected, and browser devtools show the same custom properties or reset rules defined twice.
-- **Why:** one of two things. Importing both a compiled entrypoint (`@codenhub/styles`) and a `/tw` entrypoint (`@codenhub/styles/tw`) in the same build compiles the same tokens and reset from two independent sources; Tailwind's build has no way to know they describe the same package. Or your stylesheet imports `tailwindcss` beside `/tw`, which already imports it, so Preflight is emitted twice.
-- **Fix:** pick one path per project — `/tw` entrypoints for a project running Tailwind CSS v4, compiled entrypoints everywhere else — and drop your own `@import "tailwindcss"` when you import `/tw`.
+- **Why:** importing both a compiled entrypoint (`@codenhub/styles`) and a `/tw` entrypoint (`@codenhub/styles/tw`) in the same build compiles the same tokens and reset from two independent sources; Tailwind's build has no way to know they describe the same package.
+- **Fix:** pick one path per project — `/tw` entrypoints for a project running Tailwind CSS v4, compiled entrypoints everywhere else.
 
 **A variant after `before:` or `placeholder:` ignores the app's setting**
 
