@@ -294,11 +294,20 @@ export async function keepOwnership(
 
   if (previous.uid !== created.uid || previous.gid !== created.gid) {
     const kept = await chownAllowed(file, previous.uid, previous.gid);
+    /* The previous owner read the file by the owner's bit. Without the owner,
+       only the bits of the group, while it is kept, and of others still let
+       them, so a `0600` file of the web server's is one the server may no
+       longer read, which "its mode is kept" alone did not say. */
+    const stillRead = kept === "group" ? 0o044 : 0o004;
+    const unreadable =
+      (previous.mode & 0o400) !== 0 && (previous.mode & stillRead) === 0
+        ? `, so user ${previous.uid} may no longer be able to read it`
+        : "";
 
     if (kept === "group") {
-      warning = `${BIN}: warning: --output ${output} now belongs to user ${created.uid}, not ${previous.uid}, since only root can give a file to another user; its group and mode are kept.`;
+      warning = `${BIN}: warning: --output ${output} now belongs to user ${created.uid}, not ${previous.uid}, since only root can give a file to another user; its group and mode are kept${unreadable}.`;
     } else if (kept === "neither") {
-      warning = `${BIN}: warning: --output ${output} now belongs to user ${created.uid} and group ${created.gid}, not ${previous.uid} and ${previous.gid}, since only root can give a file to another user or to a group you are not in; its mode is kept.`;
+      warning = `${BIN}: warning: --output ${output} now belongs to user ${created.uid} and group ${created.gid}, not ${previous.uid} and ${previous.gid}, since only root can give a file to another user or to a group you are not in; its mode is kept${unreadable}.`;
     }
   }
   // After the owner: changing it can clear the set-user-ID and set-group-ID bits.

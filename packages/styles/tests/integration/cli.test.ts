@@ -718,6 +718,20 @@ describe("keepOwnership", () => {
     );
   });
 
+  /* A `0600` file of the web server's came back the deploy user's, which the
+     server could no longer read, under a warning that said the mode was kept.
+     With the group gone too, a group read bit no longer reaches it either. */
+  it.each([
+    ["0600 with the group kept", false, 0o600, "its group and mode are kept"],
+    ["0640 with the group changed", true, 0o640, "its mode is kept"],
+  ])("warns that the previous owner may no longer read a file of mode %s", async (_, refuseGroup, mode, kept) => {
+    const file = fileOf({ refuseOwner: true, refuseGroup });
+
+    expect(await keepOwnership(file, { uid: 33, gid: 33, mode: 0o100000 | mode }, "app.css")).toMatch(
+      new RegExp(`; ${kept}, so user 33 may no longer be able to read it\\.$`),
+    );
+  });
+
   it("throws a failure other than a refusal", async () => {
     const file = {
       ...fileOf({ refuseOwner: false, refuseGroup: false }),
