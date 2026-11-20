@@ -7,7 +7,7 @@ import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { classesOf, parse } from "../../src/cli/purge";
-import { findPackageRoot, keepOwnership, run } from "../../src/cli/run";
+import { findClasses, findPackageRoot, keepOwnership, run } from "../../src/cli/run";
 
 const { version } = createRequire(import.meta.url)("../../package.json") as { version: string };
 const packageRoot = path.resolve(import.meta.dirname, "../..");
@@ -644,6 +644,30 @@ describe("help and version", () => {
   it("prints the package version with --version and exits 0", async () => {
     expect(await build("--version")).toBe(0);
     expect(stdout).toEqual([version]);
+  });
+});
+
+describe("findClasses", () => {
+  it("finds the classes around each colon of a word", () => {
+    const known = new Set(["btn", "primary", "md:lg"]);
+
+    expect([...findClasses("class:primary btn: md:lg ::btn::", known)]).toEqual(["primary", "btn", "md:lg", "btn"]);
+  });
+
+  /* `split(":")` made an array of every part: a 160 MB file of colons aborted
+     Node.js with no `chs:` line, and a 192 MB one of `a:` took 1.6 GB. */
+  it("reads the parts of a word one at a time", () => {
+    let lookups = 0;
+    const known = {
+      has(name: string) {
+        lookups += 1;
+        return name === "btn";
+      },
+    };
+    const classes = findClasses(`btn${":".repeat(100_000)}`, known);
+
+    expect(classes.next()).toEqual({ done: false, value: "btn" });
+    expect(lookups).toBeLessThan(10);
   });
 });
 

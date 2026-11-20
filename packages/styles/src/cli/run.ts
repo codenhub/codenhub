@@ -457,13 +457,26 @@ function readContent(entries: readonly string[], cwd: string, output: string): G
    characters a class name can hold is a word, and a word counts when it is a
    class this package defines. A word that is not one is read again by its
    parts around each colon, so Svelte's `class:primary={isPrimary}` and a Ruby
-   `btn: true` are found. */
-function* findClasses(content: string, known: ReadonlySet<string>): Generator<string, void, undefined> {
+   `btn: true` are found. The parts are taken one at a time: a word can be as
+   long as the file, and `split(":")` made an array of every part, so a 160 MB
+   file of colons aborted Node.js and a 192 MB one of `a:` took 1.6 GB. */
+export function* findClasses(
+  content: string,
+  known: Pick<ReadonlySet<string>, "has">,
+): Generator<string, void, undefined> {
   for (const word of splitWords(content, String.raw`\w:-`)) {
     if (known.has(word)) {
       yield word;
-    } else if (word.includes(":")) {
-      yield* word.split(":").filter((part) => known.has(part));
+      continue;
+    }
+    for (let from = 0, colon = word.indexOf(":"); colon !== -1; from = colon + 1) {
+      colon = word.indexOf(":", from);
+
+      const part = word.slice(from, colon === -1 ? undefined : colon);
+
+      if (part !== "" && known.has(part)) {
+        yield part;
+      }
     }
   }
 }
