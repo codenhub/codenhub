@@ -250,24 +250,34 @@ function rsaMaterial(members: Members, role: KeyRole): Material {
       }
       importJwk[name] = members[name] as string;
     }
-    if (!isPrivateExponentConsistent(importJwk)) {
-      return issue("invalid_key", "d");
+    const inconsistent = inconsistentPrivateMember(importJwk);
+    if (inconsistent !== undefined) {
+      return issue("invalid_key", inconsistent);
     }
   }
   return { importJwk, signatureLength: significant.length };
 }
 
 /**
- * Whether `d` agrees with the CRT members: `d mod (p - 1) = dp` and `d mod (q - 1) = dq`. Web Crypto signs with
- * the CRT members alone, so the probe signature cannot see a wrong `d`, which the exported JWK would carry to a
- * library that signs with it. The probe proves the CRT members themselves.
+ * The first private member that disagrees with the others, or `undefined` when they agree: `d` must give
+ * `d mod (p - 1) = dp` and `d mod (q - 1) = dq`, and `qi` must be the inverse of `q` modulo `p`. The probe
+ * signature cannot see either: OpenSSL, behind Node's Web Crypto, checks a CRT signature and signs again with `d`
+ * when it is wrong, so a wrong `qi` signs correctly, and a signer that uses only the CRT members never reads `d`.
+ * The exported JWK would carry the wrong member to a library that signs with it.
  */
-function isPrivateExponentConsistent(jwk: JsonWebKey): boolean {
-  const [d, p, q, dp, dq] = [jwk.d, jwk.p, jwk.q, jwk.dp, jwk.dq].map(memberToBigInt);
-  if (d === undefined || p === undefined || q === undefined || dp === undefined || dq === undefined) {
-    return false;
+function inconsistentPrivateMember(jwk: JsonWebKey): "d" | "qi" | undefined {
+  const [d, p, q, dp, dq, qi] = [jwk.d, jwk.p, jwk.q, jwk.dp, jwk.dq, jwk.qi].map(memberToBigInt);
+  if (
+    d === undefined ||
+    p === undefined ||
+    q === undefined ||
+    dp === undefined ||
+    dq === undefined ||
+    !(p > 1n && q > 1n && d % (p - 1n) === dp && d % (q - 1n) === dq)
+  ) {
+    return "d";
   }
-  return p > 1n && q > 1n && d % (p - 1n) === dp && d % (q - 1n) === dq;
+  return qi !== undefined && qi < p && (q * qi) % p === 1n ? undefined : "qi";
 }
 
 function memberToBigInt(value: string | undefined): bigint | undefined {
