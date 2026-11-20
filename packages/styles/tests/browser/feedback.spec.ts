@@ -711,6 +711,39 @@ test.describe("feedback", () => {
     await expect(bubble).toHaveCSS("opacity", "0");
   });
 
+  /* tooltips.md tells a consumer with a positioning library to give its message
+     element the `.tooltip-bubble` classes for the look. Outside `.tooltip`
+     the bubble is that look alone: the hidden resting state, the scale, and
+     the position belong to `.tooltip`, so a popover the library opens shows. */
+  test("shows a tooltip bubble outside a tooltip when its popover opens", async ({ page }) => {
+    await page.goto(FEEDBACK_URL);
+
+    await page.evaluate(() => {
+      const bubble = document.createElement("div");
+      bubble.popover = "manual";
+      bubble.className = "tooltip-bubble primary";
+      bubble.dataset.probe = "popover";
+      bubble.textContent = "Message";
+      document.body.append(bubble);
+      bubble.showPopover();
+    });
+
+    const bubble = page.locator('[data-probe="popover"]');
+
+    await expect(bubble).toHaveCSS("visibility", "visible");
+    await expect(bubble).toHaveCSS("opacity", "1");
+    await expect(bubble).toHaveCSS("transform", "none");
+    const box = await bubble.boundingBox();
+    expect(box?.width, "the bubble has a size").toBeGreaterThan(0);
+    expect(box?.height, "the bubble has a size").toBeGreaterThan(0);
+    const onTop = await bubble.evaluate((element) => {
+      const rect = element.getBoundingClientRect();
+
+      return document.elementFromPoint(rect.left + rect.width / 2, rect.top + rect.height / 2) === element;
+    });
+    expect(onTop, "the bubble is under its own centre").toBe(true);
+  });
+
   /* `.alert-icon` sizes whatever icon is dropped in, including a glyph from
      `@codenhub/icons`, whose own sizing rule is unlayered. It does so through
      the icon set's `--ic-size` knob rather than `!important`, so a consumer's

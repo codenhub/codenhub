@@ -65,7 +65,7 @@ What to do:
 
 - Choose a side with room: on a table's first row, use `data-tooltip-position="bottom"`.
 - Move the tooltip's trigger out of the clipping container, or remove the `overflow` from a container that does not need it.
-- If the trigger's position cannot be known in advance, such as in a scrolling list or a resizable panel, use a positioning library or your framework's popover component, which can measure and flip. You can still give its message element the `.tooltip-bubble` classes for the look, but the showing, hiding, and positioning described on this page then come from that library, not from `.tooltip`.
+- If the trigger's position cannot be known in advance, such as in a scrolling list or a resizable panel, use a positioning library or your framework's popover component, which can measure and flip. You can still give its message element the `.tooltip-bubble` classes for the look. Outside `.tooltip`, the class is the look alone: no hidden resting state, position, or scaling, so a popover the library opens, such as `<div popover class="tooltip-bubble primary">`, shows as soon as it opens. The showing, hiding, and positioning described on this page then come from that library.
 
 ## Hover, linger, and Escape
 

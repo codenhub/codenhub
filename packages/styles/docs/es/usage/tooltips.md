@@ -2,7 +2,7 @@
 title: Tooltips
 description: Ayuda de campo que se abre con hover y con foco, cómo conectarla para los lectores de pantalla y la tecla Escape, y dónde queda recortado un tooltip.
 order: 4
-source: e9dba9085f67616a424f7cd1da1ddde579829945
+source: 50886f966b37f702f22914de7c1ca383b4f5c15f
 ---
 
 # Tooltips
@@ -66,7 +66,7 @@ Qué hacer:
 
 - Elige un lado con espacio: en la primera fila de una tabla, usa `data-tooltip-position="bottom"`.
 - Saca el disparador del tooltip del contenedor que recorta, o quita el `overflow` de un contenedor que no lo necesita.
-- Si la posición del disparador no se puede saber de antemano, como en una lista con scroll o en un panel redimensionable, usa una librería de posicionamiento o el componente de popover de tu framework, que pueden medir y cambiar de lado. Puedes seguir dando a su elemento de mensaje las clases `.tooltip-bubble` para el aspecto, pero entonces mostrar, ocultar y posicionar, como se describe en esta página, lo hace esa librería, no `.tooltip`.
+- Si la posición del disparador no se puede saber de antemano, como en una lista con scroll o en un panel redimensionable, usa una librería de posicionamiento o el componente de popover de tu framework, que pueden medir y cambiar de lado. Puedes seguir dando a su elemento de mensaje las clases `.tooltip-bubble` para el aspecto. Fuera de `.tooltip`, la clase es solo el aspecto: sin estado oculto en reposo, posición ni escala, así que un popover que abre la librería, como `<div popover class="tooltip-bubble primary">`, se ve en cuanto se abre. Mostrar, ocultar y posicionar, como se describe en esta página, lo hace entonces esa librería.
 
 ## Hover, permanencia y Escape
 

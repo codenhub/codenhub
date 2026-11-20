@@ -2,7 +2,7 @@
 title: Tooltips
 description: Ajuda de campo que abre no hover e no foco, como ligá-la a leitores de tela e à tecla Escape, e onde um tooltip é cortado.
 order: 4
-source: e9dba9085f67616a424f7cd1da1ddde579829945
+source: 50886f966b37f702f22914de7c1ca383b4f5c15f
 ---
 
 # Tooltips
@@ -66,7 +66,7 @@ O que fazer:
 
 - Escolha um lado com espaço: na primeira linha de uma tabela, use `data-tooltip-position="bottom"`.
 - Tire o gatilho do tooltip de dentro do contêiner que recorta, ou remova o `overflow` de um contêiner que não precisa dele.
-- Se a posição do gatilho não puder ser conhecida de antemão, como numa lista com rolagem ou num painel redimensionável, use uma biblioteca de posicionamento ou o componente de popover do seu framework, que consegue medir e virar. Você ainda pode dar ao elemento da mensagem as classes de `.tooltip-bubble` para o visual, mas mostrar, esconder e posicionar, como descrito nesta página, passam a ser trabalho dessa biblioteca, e não do `.tooltip`.
+- Se a posição do gatilho não puder ser conhecida de antemão, como numa lista com rolagem ou num painel redimensionável, use uma biblioteca de posicionamento ou o componente de popover do seu framework, que consegue medir e virar. Você ainda pode dar ao elemento da mensagem as classes de `.tooltip-bubble` para o visual. Fora do `.tooltip`, a classe é só o visual: sem estado oculto em repouso, posição ou escala, então um popover que a biblioteca abre, como `<div popover class="tooltip-bubble primary">`, aparece assim que abre. Mostrar, esconder e posicionar, como descrito nesta página, passam então a ser trabalho dessa biblioteca.
 
 ## Hover, permanência e Escape
 
