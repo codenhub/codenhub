@@ -63,3 +63,17 @@ export const REGISTERED_HEADER_NAMES: readonly string[] = Object.freeze([
   "p2s",
   "p2c",
 ]);
+
+/**
+ * The last second of 9999-12-31, the latest a numeric date may name (scope.md decision 45). Every timestamp in
+ * milliseconds since 1978 is larger, so `Date.now()` given in place of seconds is caught rather than signing a
+ * token that expires in some 55,000 years.
+ */
+export const MAX_NUMERIC_DATE = 253_402_300_799;
+
+/**
+ * The longest duration in seconds an option takes, ten years of 365 days. `Date.now()`, or a duration in
+ * milliseconds of four days or more, is larger, so either given in place of seconds throws (scope.md decision
+ * 55). A shorter duration in milliseconds passes as a longer one in seconds; the option names say seconds.
+ */
+export const MAX_DURATION_SECONDS = 315_360_000;

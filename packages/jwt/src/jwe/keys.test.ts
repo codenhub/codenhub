@@ -164,6 +164,39 @@ describe("importJwePublicKey and importJwePrivateKey", () => {
     expect(imported).toMatchObject({ ok: true, value: { kind: "jwe-public", alg: "RSA-OAEP-256", kid: "pem" } });
   });
 
+  it.each([
+    ["an Ed25519 key for ECDH-ES", { name: "Ed25519" }, "ECDH-ES", ["crv"]],
+    ["a P-256 key for RSA-OAEP", { name: "ECDSA", namedCurve: "P-256" }, "RSA-OAEP", ["kty"]],
+    ["an X25519 key for RSA-OAEP-256", { name: "X25519" }, "RSA-OAEP-256", ["kty"]],
+  ] as const)("should report unsupported_key for a PEM holding %s", async (_name, params, alg, path) => {
+    const pair = (await crypto.subtle.generateKey(
+      params,
+      true,
+      params.name === "X25519" ? ["deriveBits"] : ["sign", "verify"],
+    )) as CryptoKeyPair;
+    const der = Buffer.from(await crypto.subtle.exportKey("spki", pair.publicKey)).toString("base64");
+    const pem = `-----BEGIN PUBLIC KEY-----
+${der}
+-----END PUBLIC KEY-----
+`;
+
+    expect(await importJwePublicKey(pem, { alg })).toEqual({
+      ok: false,
+      error: { issues: [{ code: "unsupported_key", path }] },
+    });
+  });
+
+  it("should read an X25519 PEM key for ECDH-ES", async () => {
+    const pair = (await crypto.subtle.generateKey({ name: "X25519" }, true, ["deriveBits"])) as CryptoKeyPair;
+    const der = Buffer.from(await crypto.subtle.exportKey("spki", pair.publicKey)).toString("base64");
+    const pem = `-----BEGIN PUBLIC KEY-----
+${der}
+-----END PUBLIC KEY-----
+`;
+
+    expect((await importJwePublicKey(pem, { alg: "ECDH-ES" })).ok).toBe(true);
+  });
+
   it("should import an RSA-OAEP CryptoKey only with the hash alg names", async () => {
     const pair = await crypto.subtle.generateKey(
       { name: "RSA-OAEP", modulusLength: 2048, publicExponent: new Uint8Array([1, 0, 1]), hash: "SHA-256" },

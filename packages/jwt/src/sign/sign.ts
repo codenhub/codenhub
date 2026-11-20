@@ -1,4 +1,4 @@
-import { MAX_JSON_DEPTH } from "../core/limits";
+import { MAX_DURATION_SECONDS, MAX_JSON_DEPTH, MAX_NUMERIC_DATE } from "../core/limits";
 import { rejectUnknownOptions } from "../core/options";
 import { isPlainArray, isPlainObject } from "../core/plain";
 import type {
@@ -132,19 +132,7 @@ const FORBIDDEN_HEADER_MEMBERS = ["crit", "b64", "jwk", "jku", "x5u", "x5c"] as 
 const TEXT_HEADER_MEMBERS = ["kid", "typ", "cty"] as const;
 
 const NUMERIC_DATE_CLAIMS = ["exp", "nbf", "iat"] as const;
-/**
- * The last second of 9999-12-31, the latest a numeric date may name (scope.md decision 45). Every timestamp in
- * milliseconds since 1978 is larger, so `Date.now()` given in place of seconds is caught rather than signing a
- * token that expires in some 55,000 years.
- */
-const MAX_NUMERIC_DATE = 253_402_300_799;
 const TEXT_CLAIMS = ["iss", "sub", "jti"] as const;
-/**
- * The largest `expiresIn` or `notBefore`, ten years of 365 days. `Date.now()`, or a duration in milliseconds
- * of four days or more, is larger, so either given in place of seconds throws (scope.md decision 55). A
- * shorter duration in milliseconds passes as a longer one in seconds; the option names say seconds.
- */
-const MAX_RELATIVE_SECONDS = 315_360_000;
 const MILLISECONDS_PER_SECOND = 1000;
 
 /**
@@ -430,9 +418,9 @@ function addedClaims(input: Pick<SignInput, "issuedAt" | "notBefore" | "expiresI
     if (typeof value !== "number" || !Number.isInteger(value) || value < 0) {
       throw new TypeError(`sign: input.${option} must be a whole, non-negative number of seconds.`);
     }
-    if (value > MAX_RELATIVE_SECONDS) {
+    if (value > MAX_DURATION_SECONDS) {
       throw new TypeError(
-        `sign: input.${option} must be seconds, at most ${MAX_RELATIVE_SECONDS}, ten years; it looks like milliseconds.`,
+        `sign: input.${option} must be seconds, at most ${MAX_DURATION_SECONDS}, ten years; it looks like milliseconds.`,
       );
     }
   }
@@ -465,7 +453,7 @@ function currentSeconds(now: () => number): number {
   }
   const seconds = Math.floor(time / MILLISECONDS_PER_SECOND);
   // Leaves room for the largest offset, so no added claim passes the numeric date bound.
-  if (seconds < 0 || seconds > MAX_NUMERIC_DATE - MAX_RELATIVE_SECONDS) {
+  if (seconds < 0 || seconds > MAX_NUMERIC_DATE - MAX_DURATION_SECONDS) {
     throw new TypeError("sign: input.now must return milliseconds since the Unix epoch, before the year 9990.");
   }
   return seconds;

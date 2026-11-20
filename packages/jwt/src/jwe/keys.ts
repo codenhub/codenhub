@@ -3,7 +3,7 @@ import type { JwtIssue, JwtResult } from "../core/types";
 import { copyBytes, decodeBase64Url, encodeBase64Url, encodeUtf8, isArrayBuffer, isUint8Array } from "../encoding";
 import { isCryptoKey } from "../keys/exported-jwk";
 import { ownMember, readExtractable, readKid, requireOptions } from "../keys/options";
-import { readPemDer } from "../keys/pem";
+import { pemKeyIssue, readKeyType, readPemDer } from "../keys/pem";
 import { kidMember } from "../keys/registry";
 import {
   ASYMMETRIC_KEY_MANAGEMENT_ALGORITHMS,
@@ -652,6 +652,16 @@ async function pemJwk(
     return der.issue;
   }
   const format = role === "public" ? "spki" : "pkcs8";
+  // A key of another type or curve is unsupported_key, as for a signing key's PEM, not a bare invalid_key.
+  const read = readKeyType(der.value, format);
+  const typeIssue = isRsaAlgorithm(alg)
+    ? pemKeyIssue(read, "RSA", undefined)
+    : read?.kty === "OKP"
+      ? pemKeyIssue(read, "OKP", ["X25519"])
+      : pemKeyIssue(read, "EC", ["P-256", "P-384", "P-521"]);
+  if (typeIssue !== undefined) {
+    return typeIssue;
+  }
   const usages: KeyUsage[] = isRsaAlgorithm(alg)
     ? [role === "public" ? "encrypt" : "decrypt"]
     : role === "public"

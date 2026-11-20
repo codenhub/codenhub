@@ -282,6 +282,19 @@ function readSec1(der: Uint8Array<ArrayBuffer>): KeyDer {
  * tell, which Web Crypto then refuses.
  */
 function keyTypeIssue(der: Uint8Array, format: "spki" | "pkcs8", alg: AsymmetricAlgorithm): JwtIssue | undefined {
+  const { kty, crv } = ALGORITHM_PARAMS[alg];
+  return pemKeyIssue(readKeyType(der, format), kty, crv === undefined ? undefined : [crv]);
+}
+
+/**
+ * The key type and curve the `AlgorithmIdentifier` of an SPKI or PKCS#8 names: `RSA` for `rsaEncryption` and
+ * RSASSA-PSS, `EC` with its named curve, `OKP` for Ed25519 and X25519. `undefined` when the DER is not one Web
+ * Crypto could import either, which then refuses it itself; `kty` is `undefined` for an algorithm not listed.
+ */
+export function readKeyType(
+  der: Uint8Array,
+  format: "spki" | "pkcs8",
+): { readonly kty: string | undefined; readonly crv: string | undefined } | undefined {
   const outer = readElement(der, 0, der.length);
   if (outer?.tag !== DER_SEQUENCE) {
     return undefined;
@@ -296,21 +309,36 @@ function keyTypeIssue(der: Uint8Array, format: "spki" | "pkcs8", alg: Asymmetric
   }
   const parameters = readElement(der, oid.end, algorithm.end);
   const oidHex = contentHex(der, oid);
-  const { kty, crv } = ALGORITHM_PARAMS[alg];
-  const keyType =
-    oidHex === OID.rsaEncryption || oidHex === OID.rsassaPss
-      ? "RSA"
-      : oidHex === OID.ecPublicKey
-        ? "EC"
-        : oidHex === OID.ed25519
-          ? "OKP"
-          : undefined;
-  if (keyType !== kty) {
+  if (oidHex === OID.rsaEncryption || oidHex === OID.rsassaPss) {
+    return { kty: "RSA", crv: undefined };
+  }
+  if (oidHex === OID.ecPublicKey) {
+    return { kty: "EC", crv: parameters?.tag === DER_OID ? CURVE_BY_OID[contentHex(der, parameters)] : undefined };
+  }
+  if (oidHex === OID.ed25519 || oidHex === OID.x25519) {
+    return { kty: "OKP", crv: oidHex === OID.ed25519 ? "Ed25519" : "X25519" };
+  }
+  return { kty: undefined, crv: undefined };
+}
+
+/**
+ * `unsupported_key` at `["kty"]` when a PEM key read by {@link readKeyType} is not of type `kty`, or at
+ * `["crv"]` when `curves` is given and its curve is not one of them; `undefined` when it fits, or could not be read.
+ */
+export function pemKeyIssue(
+  read: ReturnType<typeof readKeyType>,
+  kty: string,
+  curves: readonly string[] | undefined,
+): JwtIssue | undefined {
+  if (read === undefined) {
+    return undefined;
+  }
+  if (read.kty !== kty) {
     return { code: "unsupported_key", path: ["kty"] };
   }
-  const curve =
-    keyType === "OKP" ? "Ed25519" : parameters?.tag === DER_OID ? CURVE_BY_OID[contentHex(der, parameters)] : undefined;
-  return crv !== undefined && curve !== crv ? { code: "unsupported_key", path: ["crv"] } : undefined;
+  return curves !== undefined && (read.crv === undefined || !curves.includes(read.crv))
+    ? { code: "unsupported_key", path: ["crv"] }
+    : undefined;
 }
 
 /** RFC 5280 §4.1: the fields of a `TBSCertificate` before `subjectPublicKeyInfo`, after the version. */

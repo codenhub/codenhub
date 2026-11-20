@@ -1,4 +1,5 @@
 import { deepFreeze } from "../core";
+import { MAX_DURATION_SECONDS, MAX_NUMERIC_DATE } from "../core/limits";
 import { rejectUnknownOptions } from "../core/options";
 import type { JwtHeader, JwtResult, KeySet, PrivateKey, PublicJwk, PublicKey, VerificationKey } from "../core/types";
 import { bindIssuer, exportPublicJwk, getKeyEntry, getPublicKey, readIssuer } from "../keys";
@@ -104,10 +105,6 @@ const KNOWN_OPTIONS: Readonly<Record<keyof KeyRingOptions, true>> = {
 
 const ENTRY_MEMBERS: Readonly<Record<keyof KeyRingEntry, true>> = { key: true, activeFrom: true, retiredAt: true };
 
-/** The last second of 9999-12-31, the latest numeric date this package accepts (scope.md decision 45). */
-const MAX_NUMERIC_DATE = 253_402_300_799;
-/** Ten years of 365 days, the longest duration `sign` accepts (scope.md decision 55). */
-const MAX_DURATION = 315_360_000;
 const MS_PER_SECOND = 1000;
 
 /** A ring key, checked, with the times it signs and is published. Times are seconds. */
@@ -218,8 +215,10 @@ export function createKeyRing(options: KeyRingOptions): KeyRing {
 /** Reads `publishAhead` or `publishAfter`, which have no default. */
 function readDuration(source: Record<string, unknown>, name: string): number {
   const value = source[name];
-  if (!Number.isInteger(value) || (value as number) < 0 || (value as number) > MAX_DURATION) {
-    throw new TypeError(`createKeyRing: options.${name} must be a whole number of seconds from 0 to ${MAX_DURATION}.`);
+  if (!Number.isInteger(value) || (value as number) < 0 || (value as number) > MAX_DURATION_SECONDS) {
+    throw new TypeError(
+      `createKeyRing: options.${name} must be a whole number of seconds from 0 to ${MAX_DURATION_SECONDS}.`,
+    );
   }
   return value as number;
 }
