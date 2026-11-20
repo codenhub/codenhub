@@ -7,7 +7,7 @@ JwtKit signs and verifies JSON Web Tokens with Web Crypto, imports and exports J
 - **Bad input is cheap and never throws.** A token's length is capped before it is decoded, JSON is parsed strictly and to a bounded depth, and a remote JWKS is fetched with a timeout, a size cap and a cooldown.
 - **Issues never hold a value of the input**, so logging a failed verification cannot log a token or a key.
 
-ES256, ES384, ES512, EdDSA, Ed25519, RS256, RS384, RS512, PS256, PS384, PS512, HS256, HS384 and HS512 are supported, keys are imported as JWK, PEM or Web Crypto keys, and DPoP proofs can be signed, with no dependencies.
+ES256, ES384, ES512, EdDSA, Ed25519, RS256, RS384, RS512, PS256, PS384, PS512, HS256, HS384 and HS512 are supported, keys are imported as JWK, PEM or Web Crypto keys, and DPoP proofs can be created and verified, with no dependencies.
 
 > **Experimental:** no real application has run on this API yet. Function names, option names, issue codes and their `params` are meant to hold, but a real consumer may still show that one of them must change; a breaking change ships in a new minor version, and the [changelog](docs/changelog/index.md) lists it with its migration. The security behavior above will not be weakened.
 
@@ -110,6 +110,7 @@ fetches; // 1
 - [Signing tokens](docs/signing.md)
 - [Keys](docs/keys.md)
 - [Key sets](docs/key-sets.md)
+- [DPoP proofs](docs/dpop.md)
 - [Issues](docs/errors.md)
 - [API reference](docs/reference/index.md)
 - [Changelog](docs/changelog/index.md)

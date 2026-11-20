@@ -1,7 +1,7 @@
 ---
 title: Issues
 description: The result shape, every issue code with its path and params, and which mistakes throw instead.
-order: 5
+order: 6
 ---
 
 # Issues
@@ -85,6 +85,22 @@ There are no messages: a code is the whole answer. Map codes to text yourself if
 
 [Verifying tokens](verifying.md#claim-checks) describes each check.
 
+### DPoP proofs
+
+From the verifier `createDpopVerifier` returns, besides the codes above.
+
+| Code                      | Path                   | Params       | Meaning                                                                                                                                               |
+| ------------------------- | ---------------------- | ------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `wrong_method`            | `["payload", "htm"]`   |              | `htm` is not the request's method, compared exactly.                                                                                                  |
+| `wrong_url`               | `["payload", "htu"]`   |              | `htu` is not the request's URL, once both are normalized and stripped of their query and fragment.                                                    |
+| `wrong_access_token_hash` | `["payload", "ath"]`   |              | `ath` is not the hash of the request's access token.                                                                                                  |
+| `wrong_nonce`             | `["payload", "nonce"]` |              | The verifier requires a nonce and the proof's is missing, not a string, or not one it accepts. Answer it with a fresh nonce and `use_dpop_nonce`.     |
+| `wrong_key`               | `["header", "jwk"]`    |              | The proof's key does not have the thumbprint of the access token's `cnf.jkt`, or the access token's claims have no string `cnf.jkt`.                  |
+| `replayed`                | `["payload", "jti"]`   |              | `acceptJti` returned `false`: the proof's `jti` was seen before.                                                                                      |
+| `callback_failed`         | none                   | `{ option }` | The `nonce` function or `acceptJti`, named by `option`, threw, rejected or returned something other than a boolean; `onCallbackError` gets the error. |
+
+A proof's `typ`, `alg`, signature and claims fail with the codes above, and a `jwk` header that does not import with the key import codes below, under `["header", "jwk"]`. [DPoP proofs](dpop.md#verifying-proofs) describes each check.
+
 ### Key import
 
 | Code                     | Path                                | Params                                 | Meaning                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
@@ -104,9 +120,10 @@ There are no messages: a code is the whole answer. Map codes to text yourself if
 
 A `TypeError` means a mistake in the calling code, not in the input, and is thrown as early as possible:
 
-- **Options.** Every option of `createVerifier`, `createRemoteKeySet`, `importKeySet`, `readHeader` and the key functions is checked when the function is called, and an invalid one throws, naming the option and its constraint. Every one of them, and `sign`'s input, also throws for a name that is not one of its options, so a typo such as `audiance` cannot silently disable a check or fall back to a default. Create verifiers and key sets at startup and a misconfiguration fails the deploy, not the first request.
+- **Options.** Every option of `createVerifier`, `createDpopVerifier`, `createRemoteKeySet`, `importKeySet`, `readHeader` and the key functions is checked when the function is called, and an invalid one throws, naming the option and its constraint. Every one of them, and the input of `sign` and `createDpopProof`, also throws for a name that is not one of its options, so a typo such as `audiance` cannot silently disable a check or fall back to a default. Create verifiers and key sets at startup and a misconfiguration fails the deploy, not the first request.
 - **Key objects.** Passing an object this package did not create where a key is expected, a key of the wrong kind (such as a public key to `sign`), or exporting a key created without `extractable: true`.
 - **What you sign.** A payload or header `sign` cannot write exactly as JSON, one that breaks the rules in [Signing tokens](signing.md), or an `embedKey` that is not the public half of the signing key.
+- **DPoP requests.** The request a DPoP verifier is called with: a member it does not know, an invalid method or URL, an empty `accessToken`, or `accessTokenClaims` that is not an object. The verifier's promise rejects; a proof never makes it reject.
 
 A `TypeError` message names the option or member and the rule it broke, never its value.
 
