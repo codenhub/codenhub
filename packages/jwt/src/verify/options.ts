@@ -85,7 +85,7 @@ export function readRouteChecks(route: {
 
 const isNonEmptyString = (value: unknown): value is string => typeof value === "string" && value.length > 0;
 
-const isIntegerInRange = (value: unknown, minimum: number, maximum: number): value is number =>
+export const isIntegerInRange = (value: unknown, minimum: number, maximum: number): value is number =>
   Number.isInteger(value) && (value as number) >= minimum && (value as number) <= maximum;
 
 /**
@@ -217,7 +217,7 @@ function readRequiredClaims(value: unknown): readonly string[] {
 }
 
 /** Copies an array by index, so a hole becomes `undefined` and fails the element check instead of being skipped. */
-const denseCopy = (array: readonly unknown[]): unknown[] =>
+export const denseCopy = (array: readonly unknown[]): unknown[] =>
   Array.from({ length: array.length }, (_, index) => array[index]);
 
 function readSchema(value: unknown): StandardSchemaV1 | undefined {
