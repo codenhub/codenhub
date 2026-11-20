@@ -20,7 +20,7 @@ A project that already runs Tailwind CSS v4 can compile this package's source in
 @source "./src";
 ```
 
-`/tw` imports Tailwind itself, so it replaces your own `@import "tailwindcss"` rather than joining it: with both, Tailwind's Preflight is emitted twice. Every other `/*/tw` entrypoint expects your import to come first; see [Using a focused entrypoint](#using-a-focused-entrypoint).
+`/tw` imports Tailwind itself, so it replaces your own `@import "tailwindcss"` rather than joining it. With both, the build still emits Preflight and Tailwind's theme once, and repeats only a small `::placeholder` block, but your import adds nothing `/tw` does not bring. Every other `/*/tw` entrypoint expects your import to come first; see [Using a focused entrypoint](#using-a-focused-entrypoint).
 
 Tailwind CSS v4 scans your project automatically — most projects need nothing beyond the import above. `@source` paths resolve relative to the CSS file that declares them, not your project root, so `./src` here means "the `src/` next to this stylesheet"; adjust it to match where your own global stylesheet actually lives. Add `@source` only for markup Tailwind's automatic scan won't reach on its own: a path excluded by default (`.gitignore`d, or inside `node_modules` — an external component library, for instance) or, in a monorepo, one outside this file's own directory tree. Point it at your app's markup, not at this package: the package's source names every class it defines, so scanning it emits all of them whether your pages use them or not.
 
@@ -122,8 +122,14 @@ The block leaves out `neutral`, `emerald`, `amber`, `rose`, `indigo`, and `white
 **Duplicate token and reset rules**
 
 - **What happened:** the built stylesheet is larger than expected, and browser devtools show the same custom properties or reset rules defined twice.
-- **Why:** one of two things. Importing both a compiled entrypoint (`@codenhub/styles`) and a `/tw` entrypoint (`@codenhub/styles/tw`) in the same build compiles the same tokens and reset from two independent sources; Tailwind's build has no way to know they describe the same package. Or your stylesheet imports `tailwindcss` beside `/tw`, which already imports it, so Preflight is emitted twice.
-- **Fix:** pick one path per project — `/tw` entrypoints for a project running Tailwind CSS v4, compiled entrypoints everywhere else — and drop your own `@import "tailwindcss"` when you import `/tw`.
+- **Why:** importing both a compiled entrypoint (`@codenhub/styles`) and a `/tw` entrypoint (`@codenhub/styles/tw`) in the same build compiles the same tokens and reset from two independent sources; Tailwind's build has no way to know they describe the same package.
+- **Fix:** pick one path per project — `/tw` entrypoints for a project running Tailwind CSS v4, compiled entrypoints everywhere else.
+
+**A variant after `before:` or `placeholder:` ignores the app's setting**
+
+- **What happened:** `before:motion-reduce:hidden` or `placeholder:dark:text-white` does not follow `data-motion` or `data-theme` on `<html>`, or never applies, while `motion-reduce:hidden` on the element itself works.
+- **Why:** the package's variant comes after a pseudo-element variant, and Tailwind then writes its condition where browsers reject it.
+- **Fix:** write the package's variant first: `motion-reduce:before:hidden`, `dark:placeholder:text-white`. [Contrast and motion variants](#contrast-and-motion-variants) has the details.
 
 **A class built at runtime has no styling**
 
@@ -157,6 +163,8 @@ The `/tw` entrypoints also replace Tailwind's `contrast-more:`, `contrast-less:`
 `data-motion="none"` counts as reduced motion, so `motion-reduce:` applies under it. As with the package's own rules, the attributes are read only on `<html>` and not from inside a shadow root.
 
 Tailwind cannot negate a variant that is both a selector and a media query, so under a `/tw` entrypoint `not-motion-safe:`, `not-motion-reduce:`, `not-contrast-more:`, and `not-dark:` compile to nothing, and Tailwind says nothing about it. Write the opposite variant instead: `motion-reduce:` for `not-motion-safe:`, and `motion-safe:` for `not-motion-reduce:`, which are exact opposites. For the others, give the utility unprefixed and undo it under the positive variant: `border-4 contrast-more:border-2` in place of `not-contrast-more:border-4`, and `bg-white dark:bg-black` in place of `not-dark:bg-white`. `not-contrast-less:` compiles as usual.
+
+Write these variants, `dark:` included, before a pseudo-element variant such as `before:`, `after:`, `placeholder:`, or `file:`: `motion-reduce:before:hidden` and `dark:placeholder:text-white`, not `before:motion-reduce:hidden` or `placeholder:dark:text-white`. Tailwind places a selector variant that follows a pseudo-element variant after the pseudo-element, where browsers reject it, and says nothing. The utility then ignores `data-theme`, `data-contrast`, and `data-motion`, and, depending on the browser and the pseudo-element, follows the system setting or never applies. Tailwind's own selector variants, such as `rtl:` and `aria-checked:`, need the same order.
 
 ## Next
 

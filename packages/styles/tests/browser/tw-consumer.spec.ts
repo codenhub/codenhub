@@ -180,6 +180,15 @@ const VARIANTS = `
 <p class="motion-safe:hidden" id="motion-safe">a</p>
 <p class="motion-reduce:hidden" id="motion-reduce">a</p>`;
 
+/* Read by the pseudo-element variant test alone. Each pair names one package
+   variant before the pseudo-element variant, as the docs say to write it, and
+   after it. */
+const PSEUDO_VARIANTS = `
+<p class="before:content-['a'] motion-reduce:before:hidden" id="motion-reduce-before">a</p>
+<p class="before:content-['a'] before:motion-reduce:hidden" id="before-motion-reduce">a</p>
+<input class="dark:placeholder:text-[rgb(255,0,0)]" id="dark-placeholder" placeholder="a" />
+<input class="placeholder:dark:text-[rgb(255,0,0)]" id="placeholder-dark" placeholder="a" />`;
+
 const fixtureFor = (side: "tw" | "dist") =>
   FIXTURE.replaceAll(/\{tw:([^|]*)\|dist:([^}]*)\}/g, (_, tw: string, dist: string) => (side === "tw" ? tw : dist));
 
@@ -527,6 +536,7 @@ test.beforeAll(async () => {
     await writeFile(path.join(temporaryRoot, "intents.html"), CUSTOM_INTENTS);
     await writeFile(path.join(temporaryRoot, "overrides.html"), OVERRIDES);
     await writeFile(path.join(temporaryRoot, "variants.html"), VARIANTS);
+    await writeFile(path.join(temporaryRoot, "pseudo-variants.html"), PSEUDO_VARIANTS);
     await writeFile(
       path.join(temporaryRoot, "input.css"),
       CONSUMER_CSS(
@@ -986,6 +996,73 @@ test.describe("/tw consumer build", () => {
       "contrast-more",
       "motion-reduce",
     ]);
+    /* oxlint-enable no-await-in-loop */
+  });
+
+  /* Tailwind writes a selector variant after the pseudo-element when it
+     follows one, which no browser accepts, and the package's preference and
+     `dark:` variants are selectors as well as queries. Written first, as
+     docs/integrating/tailwind.md says, they follow the attribute and the
+     query; written after, they never apply. `adapter.test.ts` pins the
+     compiled selectors for every pseudo-element variant. */
+  test("the package's variants follow the attribute before a pseudo-element variant, and not after it", async ({
+    page,
+  }) => {
+    const read = async (
+      media: {
+        colorScheme: "light" | "dark";
+        reducedMotion: "reduce" | "no-preference";
+      },
+      attributes: string,
+    ) => {
+      await page.emulateMedia(media);
+      await page.setContent(
+        `<!doctype html><html ${attributes}><head><meta charset="utf-8" /><style>${twCss}</style></head><body>${PSEUDO_VARIANTS}</body></html>`,
+      );
+
+      return page.evaluate(() => {
+        const before = (id: string) => getComputedStyle(document.getElementById(id)!, "::before").display === "none";
+        const placeholder = (id: string) =>
+          getComputedStyle(document.getElementById(id)!, "::placeholder").color === "rgb(255, 0, 0)";
+
+        return {
+          "motion-reduce:before:": before("motion-reduce-before"),
+          "before:motion-reduce:": before("before-motion-reduce"),
+          "dark:placeholder:": placeholder("dark-placeholder"),
+          "placeholder:dark:": placeholder("placeholder-dark"),
+        };
+      });
+    };
+    /* Written after the pseudo-element variant, the variant loses its
+       attribute arm. What is left is its query arm, as
+       `::placeholder:not(:where())` or `::before:not(:where())`, which
+       Chromium and Firefox accept and WebKit accepts only for `::placeholder`;
+       so the reversed order is read only where no engine applies it. */
+    const documented = (applied: boolean) => ({
+      "motion-reduce:before:": applied,
+      "dark:placeholder:": applied,
+    });
+    const neither = {
+      "before:motion-reduce:": false,
+      "placeholder:dark:": false,
+    };
+
+    /* oxlint-disable no-await-in-loop -- one page, read in turn. */
+    expect(
+      await read({ colorScheme: "light", reducedMotion: "no-preference" }, 'data-theme="dark" data-motion="reduce"'),
+      "the attributes set",
+    ).toEqual({ ...documented(true), ...neither });
+    expect(await read({ colorScheme: "dark", reducedMotion: "reduce" }, ""), "the queries alone").toMatchObject(
+      documented(true),
+    );
+    expect(
+      await read({ colorScheme: "dark", reducedMotion: "reduce" }, 'data-theme="light" data-motion="full"'),
+      "the attributes over the queries",
+    ).toMatchObject(documented(false));
+    expect(await read({ colorScheme: "light", reducedMotion: "no-preference" }, ""), "neither").toEqual({
+      ...documented(false),
+      ...neither,
+    });
     /* oxlint-enable no-await-in-loop */
   });
 
