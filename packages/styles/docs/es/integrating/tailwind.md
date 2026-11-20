@@ -2,7 +2,7 @@
 title: Tailwind CSS v4
 description: Usar los puntos de entrada de código fuente /tw en un proyecto con Tailwind CSS v4.
 order: 1
-source: edba47101bea9d5a24d7cf881035a4c3ffc22d3a
+source: e0c6007fd1e46f14f1cfb1e9662025edfe97ecde
 ---
 
 # Tailwind CSS v4
@@ -126,6 +126,12 @@ El bloque deja fuera `neutral`, `emerald`, `amber`, `rose`, `indigo` y `white` a
 - **Por qué:** una de dos cosas. Importar en el mismo build un punto de entrada compilado (`@codenhub/styles`) y un punto de entrada `/tw` (`@codenhub/styles/tw`) compila los mismos tokens y el mismo reset desde dos fuentes independientes; el build de Tailwind no tiene forma de saber que describen el mismo paquete. O bien tu hoja de estilos importa `tailwindcss` junto a `/tw`, que ya lo importa, así que el Preflight se emite dos veces.
 - **Solución:** elige un camino por proyecto, los puntos de entrada `/tw` para un proyecto con Tailwind CSS v4 y los compilados en todos los demás casos, y quita tu propio `@import "tailwindcss"` cuando importes `/tw`.
 
+**Una variante detrás de `before:` o `placeholder:` ignora el ajuste de la aplicación**
+
+- **Qué ha pasado:** `before:motion-reduce:hidden` o `placeholder:dark:text-white` no sigue `data-motion` ni `data-theme` en `<html>`, o no se aplica nunca, mientras que `motion-reduce:hidden` en el propio elemento funciona.
+- **Por qué:** la variante del paquete va detrás de una variante de pseudoelemento, y Tailwind escribe entonces su condición donde los navegadores la rechazan.
+- **Solución:** escribe primero la variante del paquete: `motion-reduce:before:hidden`, `dark:placeholder:text-white`. [Variantes de contraste y movimiento](#variantes-de-contraste-y-movimiento) tiene los detalles.
+
 **Una clase construida en tiempo de ejecución no tiene estilo**
 
 - **Qué ha pasado:** `<button class="btn primary">` tiene estilo, pero un botón cuya clase viene de una variable, como `"btn " + variant`, o de contenido de un CMS, no.
@@ -158,6 +164,8 @@ Los puntos de entrada `/tw` también reemplazan `contrast-more:`, `contrast-less
 `data-motion="none"` cuenta como movimiento reducido, así que `motion-reduce:` se aplica con él. Como con las reglas del propio paquete, los atributos se leen solo en `<html>` y no desde dentro de un shadow root.
 
 Tailwind no puede negar una variante que es a la vez un selector y una media query, así que con un punto de entrada `/tw` `not-motion-safe:`, `not-motion-reduce:`, `not-contrast-more:` y `not-dark:` no compilan a nada, y Tailwind no dice nada. Escribe la variante opuesta: `motion-reduce:` en lugar de `not-motion-safe:` y `motion-safe:` en lugar de `not-motion-reduce:`, que son opuestas exactas. Para las demás, pon la utilidad sin prefijo y deshazla con la variante positiva: `border-4 contrast-more:border-2` en lugar de `not-contrast-more:border-4`, y `bg-white dark:bg-black` en lugar de `not-dark:bg-white`. `not-contrast-less:` compila como siempre.
+
+Escribe estas variantes, `dark:` incluida, antes de una variante de pseudoelemento como `before:`, `after:`, `placeholder:` o `file:`: `motion-reduce:before:hidden` y `dark:placeholder:text-white`, no `before:motion-reduce:hidden` ni `placeholder:dark:text-white`. Tailwind coloca una variante de selector que sigue a una variante de pseudoelemento detrás del pseudoelemento, donde los navegadores la rechazan, y no dice nada. La utilidad ignora entonces `data-theme`, `data-contrast` y `data-motion` y, según el navegador y el pseudoelemento, sigue el ajuste del sistema o no se aplica nunca. Las variantes de selector del propio Tailwind, como `rtl:` y `aria-checked:`, necesitan el mismo orden.
 
 ## Siguiente paso
 

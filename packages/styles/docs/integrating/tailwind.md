@@ -125,6 +125,12 @@ The block leaves out `neutral`, `emerald`, `amber`, `rose`, `indigo`, and `white
 - **Why:** one of two things. Importing both a compiled entrypoint (`@codenhub/styles`) and a `/tw` entrypoint (`@codenhub/styles/tw`) in the same build compiles the same tokens and reset from two independent sources; Tailwind's build has no way to know they describe the same package. Or your stylesheet imports `tailwindcss` beside `/tw`, which already imports it, so Preflight is emitted twice.
 - **Fix:** pick one path per project — `/tw` entrypoints for a project running Tailwind CSS v4, compiled entrypoints everywhere else — and drop your own `@import "tailwindcss"` when you import `/tw`.
 
+**A variant after `before:` or `placeholder:` ignores the app's setting**
+
+- **What happened:** `before:motion-reduce:hidden` or `placeholder:dark:text-white` does not follow `data-motion` or `data-theme` on `<html>`, or never applies, while `motion-reduce:hidden` on the element itself works.
+- **Why:** the package's variant comes after a pseudo-element variant, and Tailwind then writes its condition where browsers reject it.
+- **Fix:** write the package's variant first: `motion-reduce:before:hidden`, `dark:placeholder:text-white`. [Contrast and motion variants](#contrast-and-motion-variants) has the details.
+
 **A class built at runtime has no styling**
 
 - **What happened:** `<button class="btn primary">` is styled, but a button whose class comes from a variable, such as `"btn " + variant`, or from CMS content, is not.
@@ -157,6 +163,8 @@ The `/tw` entrypoints also replace Tailwind's `contrast-more:`, `contrast-less:`
 `data-motion="none"` counts as reduced motion, so `motion-reduce:` applies under it. As with the package's own rules, the attributes are read only on `<html>` and not from inside a shadow root.
 
 Tailwind cannot negate a variant that is both a selector and a media query, so under a `/tw` entrypoint `not-motion-safe:`, `not-motion-reduce:`, `not-contrast-more:`, and `not-dark:` compile to nothing, and Tailwind says nothing about it. Write the opposite variant instead: `motion-reduce:` for `not-motion-safe:`, and `motion-safe:` for `not-motion-reduce:`, which are exact opposites. For the others, give the utility unprefixed and undo it under the positive variant: `border-4 contrast-more:border-2` in place of `not-contrast-more:border-4`, and `bg-white dark:bg-black` in place of `not-dark:bg-white`. `not-contrast-less:` compiles as usual.
+
+Write these variants, `dark:` included, before a pseudo-element variant such as `before:`, `after:`, `placeholder:`, or `file:`: `motion-reduce:before:hidden` and `dark:placeholder:text-white`, not `before:motion-reduce:hidden` or `placeholder:dark:text-white`. Tailwind places a selector variant that follows a pseudo-element variant after the pseudo-element, where browsers reject it, and says nothing. The utility then ignores `data-theme`, `data-contrast`, and `data-motion`, and, depending on the browser and the pseudo-element, follows the system setting or never applies. Tailwind's own selector variants, such as `rtl:` and `aria-checked:`, need the same order.
 
 ## Next
 
