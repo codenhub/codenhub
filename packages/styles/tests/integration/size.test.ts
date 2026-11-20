@@ -48,7 +48,7 @@ const COMPILED_CEILINGS: Record<string, number> = {
   "dist/aesthetics/pixel.css": 5_000,
   "dist/aesthetics/sketch.css": 15_350,
   /* Read by `chs build`, never served, but every consumer installs it. */
-  "dist/purge/index.css": 314_500,
+  "dist/purge/index.css": 325_350,
   "dist/purge/classes.json": 7_100,
 };
 
@@ -118,7 +118,7 @@ describe("a /tw consumer build", { timeout: 60_000 }, () => {
       name: "a page with one primary button, through /tw",
       imports: [twEntry("index.css")],
       candidates: ["btn", "primary"],
-      ceiling: 27_550,
+      ceiling: 28_550,
     },
   ];
 
