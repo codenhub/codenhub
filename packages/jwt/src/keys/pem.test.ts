@@ -92,6 +92,29 @@ describe("PEM import text", () => {
     }
   });
 
+  it("should read literal backslash-n and backslash-r-backslash-n escapes as line breaks", async () => {
+    const { importParams } = ALGORITHM_PARAMS.ES256;
+    const pair = (await crypto.subtle.generateKey(importParams, true, ["sign", "verify"])) as CryptoKeyPair;
+    const der = await crypto.subtle.exportKey("spki", pair.publicKey);
+    const results = [];
+    // As a .env file or a JSON-encoded secret often leaves a PEM: its line breaks written as escapes.
+    for (const escape of [String.raw`\n`, String.raw`\r\n`]) {
+      // oxlint-disable-next-line no-await-in-loop
+      results.push((await importPublicKey(pemOf("PUBLIC KEY", der, escape) + escape, { alg: "ES256" })).ok);
+    }
+    expect(results).toEqual([true, true]);
+  });
+
+  it("should refuse a backslash that is not a line break escape as invalid_key", async () => {
+    const { importParams } = ALGORITHM_PARAMS.ES256;
+    const pair = (await crypto.subtle.generateKey(importParams, true, ["sign", "verify"])) as CryptoKeyPair;
+    const der = await crypto.subtle.exportKey("spki", pair.publicKey);
+    expect(await importPublicKey(pemOf("PUBLIC KEY", der, String.raw`\t`), { alg: "ES256" })).toEqual({
+      ok: false,
+      error: { issues: [{ code: "invalid_key" }] },
+    });
+  });
+
   it("should refuse a private key where a public one is expected as unexpected_private_key", async () => {
     const { pkcs8 } = await pemPair("ES256");
     expect(issuesOf(await importPublicKey(pkcs8, { alg: "ES256" }))).toEqual([{ code: "unexpected_private_key" }]);

@@ -206,13 +206,13 @@
         "createRemoteKeySet": {
           "files": {
             "dist/index.js": {
-              "bytes": 23035,
+              "bytes": 23056,
               "declarations": {
                 "StrictJsonParser": 2804,
                 "createRemoteKeySet": 1658,
                 "checkHeaderMembers": 867,
                 "readRemoteOptions": 707,
-                "pemToJwk": 669,
+                "pemToJwk": 690,
                 "rsaMaterial": 594,
                 "requestJson": 424,
                 "encodeBase64Url": 412,
@@ -339,11 +339,11 @@
               }
             },
             "(unattributed)": {
-              "bytes": 36
+              "bytes": 38
             }
           },
-          "gzip": 8048,
-          "minified": 23071
+          "gzip": 8058,
+          "minified": 23094
         },
         "createVerifier": {
           "files": {
@@ -917,11 +917,11 @@
         "importKeyPair": {
           "files": {
             "dist/index.js": {
-              "bytes": 12960,
+              "bytes": 12981,
               "declarations": {
                 "checkHeaderMembers": 864,
+                "pemToJwk": 688,
                 "importPair": 679,
-                "pemToJwk": 667,
                 "rsaMaterial": 592,
                 "cryptoKeyPairHalves": 518,
                 "jwkHalves": 504,
@@ -1013,19 +1013,19 @@
               }
             },
             "(unattributed)": {
-              "bytes": 28
+              "bytes": 30
             }
           },
-          "gzip": 4553,
-          "minified": 12988
+          "gzip": 4568,
+          "minified": 13011
         },
         "importKeySet": {
           "files": {
             "dist/index.js": {
-              "bytes": 13962,
+              "bytes": 13983,
               "declarations": {
                 "checkHeaderMembers": 864,
-                "pemToJwk": 668,
+                "pemToJwk": 689,
                 "rsaMaterial": 592,
                 "encodeBase64Url": 412,
                 "cryptoKeyToJwk": 366,
@@ -1128,20 +1128,20 @@
               }
             },
             "(unattributed)": {
-              "bytes": 27
+              "bytes": 29
             }
           },
-          "gzip": 4943,
-          "minified": 13989
+          "gzip": 4956,
+          "minified": 14012
         },
         "importPrivateKey": {
           "files": {
             "dist/index.js": {
-              "bytes": 13004,
+              "bytes": 13025,
               "declarations": {
                 "checkHeaderMembers": 864,
+                "pemToJwk": 688,
                 "importPair": 679,
-                "pemToJwk": 667,
                 "rsaMaterial": 592,
                 "cryptoKeyPairHalves": 518,
                 "jwkHalves": 504,
@@ -1233,19 +1233,19 @@
               }
             },
             "(unattributed)": {
-              "bytes": 31
+              "bytes": 33
             }
           },
-          "gzip": 4571,
-          "minified": 13035
+          "gzip": 4586,
+          "minified": 13058
         },
         "importPublicKey": {
           "files": {
             "dist/index.js": {
-              "bytes": 11441,
+              "bytes": 11462,
               "declarations": {
                 "checkHeaderMembers": 864,
-                "pemToJwk": 666,
+                "pemToJwk": 687,
                 "rsaMaterial": 591,
                 "encodeBase64Url": 412,
                 "cryptoKeyToJwk": 366,
@@ -1334,11 +1334,11 @@
               }
             },
             "(unattributed)": {
-              "bytes": 30
+              "bytes": 32
             }
           },
-          "gzip": 4183,
-          "minified": 11471
+          "gzip": 4198,
+          "minified": 11494
         },
         "importSecretKey": {
           "files": {
@@ -1842,7 +1842,7 @@
       },
       "files": {
         "dist/index.js": {
-          "bytes": 44747,
+          "bytes": 44768,
           "declarations": {
             "StrictJsonParser": 2808,
             "createRemoteKeySet": 1663,
@@ -1852,9 +1852,9 @@
             "createVerifier": 816,
             "readRemoteOptions": 707,
             "createKeySet": 694,
+            "pemToJwk": 690,
             "importPair": 680,
             "serializePayload": 678,
-            "pemToJwk": 669,
             "importSecretKey": 640,
             "sign": 622,
             "checkClaims": 597,
@@ -2072,12 +2072,12 @@
           }
         },
         "(unattributed)": {
-          "bytes": 567
+          "bytes": 569
         }
       },
-      "gzip": 14095,
-      "minified": 45314,
-      "sha256": "5e24143aa4fa79d1e3c979a1fc4fbc15b5c5cbaa3abf27ecd23bc2ae09eb4863"
+      "gzip": 14105,
+      "minified": 45337,
+      "sha256": "f3b73eb215b475359aa3cec6f07939eda414a2d473443cc8b8c8f15c7ff927c0"
     }
   }
 }
