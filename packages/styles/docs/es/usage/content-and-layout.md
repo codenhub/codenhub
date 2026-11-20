@@ -2,7 +2,7 @@
 title: Contenido y layout
 description: Consulta de cada helper de layout con su espaciado, la escala tipográfica con sus tamaños, las tarjetas y los paneles con su relleno interior, las tablas, las citas, el código y las teclas.
 order: 10
-source: 40c0b1c34c19c3e52bc048cb0c5879c54afd4c41
+source: 6f9ed379b2dcd39868f2d18109f0261dcc6cdf38
 ---
 
 # Contenido y layout
@@ -48,7 +48,7 @@ Los dos tamaños mayores crecen en el breakpoint `md` de Tailwind, 48rem por def
 
 `.text-body` mide 0.875rem, menos que el texto de la página de 1rem; úsalo para texto secundario o denso, no para el texto principal de la página. `/native` es la excepción: define `.text-body` en `body`, así que ahí es el texto de la página, y los párrafos y los elementos de lista lo heredan del elemento en el que estén. Consulta [HTML sin clases](../setup.md#html-sin-clases).
 
-El espaciado de la tabla es `normal` en un idioma cuya escritura une sus letras: árabe, persa, urdu, pastún, sindhi, uigur, kurdo sorani, cachemir, siríaco, n'ko, mongol en su propia escritura (`mn-Mong`) y adlam (`ff-Adlm`). Separar las letras rompe sus uniones y una ligadura como "الله". El idioma viene de `lang`, en el elemento o en uno que lo contenga, así que defínelo: en `<html>` para una página en ese idioma, y en un pasaje en ese idioma dentro de una página en otro. El kurdo y el panyabí en escritura árabe necesitan la subetiqueta, como en `lang="ku-Arab"` y `lang="pa-Arab"`. Con `/native`, ese pasaje tampoco toma el espaciado de la página que lo rodea. Tu propia utilidad `tracking-*` sigue aplicándose.
+El espaciado de la tabla es `normal` en un idioma cuya escritura une sus letras: árabe, persa, urdu, pastún, sindhi, uigur, kurdo sorani, cachemir, siríaco, n'ko, mongol en su propia escritura (`mn-Mong`) y adlam (`ff-Adlm`). Separar las letras rompe sus uniones y una ligadura como "الله". También es `normal` en un idioma escrito en una escritura que cuelga sus letras de una línea superior, devanagari, bengalí o gurmukhi: hindi, maratí, nepalí, sánscrito, maithili, bhojpuri, konkani, bengalí, asamés y panyabí. Ahí el espaciado corta en pedazos la línea que recorre la parte de arriba de una palabra, y puede separar un signo vocálico de su letra. Lo mismo vale para el espaciado de `.label` y `.hint` en un campo, y para el espaciado de etiquetas que una estética da a botones y badges, incluida la clase solo de chunky tile. El idioma viene de `lang`, en el elemento o en uno que lo contenga, así que defínelo: en `<html>` para una página en ese idioma, y en un pasaje en ese idioma dentro de una página en otro. El kurdo en escritura árabe necesita la subetiqueta, como en `lang="ku-Arab"`. Con `/native`, ese pasaje tampoco toma el espaciado de la página que lo rodea. Tu propia utilidad `tracking-*` sigue aplicándose.
 
 `.selection-contrast` en un elemento cambia los colores del texto seleccionado dentro de él a `--color-primary` sobre `--color-primary-contrast`. Úsalo en una zona `.solid.primary`, donde el color de selección por defecto coincidiría con el fondo.
 

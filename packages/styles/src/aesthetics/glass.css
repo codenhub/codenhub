@@ -371,12 +371,26 @@
        reading it invalid at computed-value time, which is off. */
     --_glass-liquid-on: ;
     --_glass-liquid-backdrop: initial;
+    --_surface-stacks: ;
   }
 
   .glass:not(.glass-liquid),
   :is(.neobrutalism, .pixel, .chunky-tile, .cyber, .sketch) {
     --_glass-liquid-on: initial;
     --_glass-liquid-backdrop: var(--ui-backdrop);
+  }
+
+  /* Glass's blur, and liquid's isolation, make every surface a stacking
+     context, so a surface holding an open tooltip has to step above the next
+     one for the bubble to show. A space toggle `surface` and the table read;
+     the other aesthetics draw no surface as a stacking context and set it off,
+     so the nearest region decides. See `surface.rules.css`. */
+  .glass {
+    --_surface-stacks: ;
+  }
+
+  :is(.neobrutalism, .pixel, .chunky-tile, .cyber, .sketch) {
+    --_surface-stacks: initial;
   }
 
   :is(.glass-liquid:not(.glass-solo), .glass-liquid:not(.glass-solo) *):is(.glass, .glass *):is(

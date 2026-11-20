@@ -64,11 +64,11 @@
     /* A label stays on one line while it fits and wraps when its container is
        narrower: held on one line, a long one ran past a 320px page and
        scrolled it sideways (WCAG 1.4.10). `max-width` caps a button that is a
-       flex item, where `fit-content` does not reach, and `flex-shrink: 0`
-       keeps it from being squeezed into two lines by its siblings, which a
-       label held on one line never was. */
+       flex item, where `fit-content` does not reach. A labeled button still
+       shrinks beside its siblings, as a flex item does: held at its width, a
+       `width: 100%` button pushed the icon button beside it out of the row,
+       and a label squeezed onto two lines beats a row that scrolls sideways. */
     max-width: 100%;
-    flex-shrink: 0;
     text-align: center;
     text-wrap: balance;
     text-decoration-line: none;
@@ -108,7 +108,9 @@
        without a colour, so it takes the label's own and cannot lower its
        contrast. See docs/internal/model.md#cascade-layers. */
     font-weight: var(--ui-label-weight, var(--font-weight-semibold));
-    letter-spacing: var(--ui-label-tracking, normal);
+    /* An aesthetic's tracking is off in a joining script, as the text styles'
+       is; see `typography.rules.css`. */
+    letter-spacing: var(--_script-tracking, var(--ui-label-tracking, normal));
     text-transform: var(--ui-label-case, none);
     text-shadow: var(--ui-label-shadow, none);
 
@@ -182,6 +184,11 @@
     min-width: var(--_icon-floor, auto);
     --_icon-ratio: var(--_m-icon) 1 / 1;
     aspect-ratio: var(--_icon-ratio, auto);
+    /* An icon button has no label to wrap, so it keeps its square in a row
+       instead of shrinking: at a padding step its floor is gone and nothing
+       else holds its width. */
+    --_icon-shrink: var(--_m-icon) 0;
+    flex-shrink: var(--_icon-shrink, 1);
     padding-inline: var(
       --_plg-icon-px,
       var(

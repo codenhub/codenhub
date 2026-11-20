@@ -123,7 +123,7 @@
        is, so neither body copy's tracking nor a container's reaches the label;
        case and shadow inherit, as a badge's text always has. */
     font-weight: var(--ui-label-weight, var(--font-weight-bold));
-    letter-spacing: var(--ui-label-tracking, normal);
+    letter-spacing: var(--_script-tracking, var(--ui-label-tracking, normal));
     text-transform: var(--ui-label-case);
     text-shadow: var(--ui-label-shadow);
 

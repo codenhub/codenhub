@@ -161,24 +161,33 @@
        `::before` or `::after` of its own. See
        docs/internal/model.md#glass-liquid. */
     :where(&) {
-      --_layers-anchor: var(--_glass-liquid-on) relative;
+      --_layers-anchor: var(--_surface-stacks) relative;
       --_layers-isolation: var(--_glass-liquid-on) isolate;
 
       position: var(--_layers-anchor, revert-layer);
       isolation: var(--_layers-isolation, revert-layer);
     }
 
-    /* A surface holding an open tooltip rises to the popover layer. Glass's
-       backdrop filter, and liquid's isolation, make every surface a stacking
-       context, and the bubble's own `z-index` counts only inside it: an open
-       bubble in one card was painted under the next one. Raised while the
-       surface is hovered or holds focus, not only while the tooltip is, so the
-       pointer crossing the gap onto a bubble that overhangs the next surface
-       lands on the bubble. Zero specificity, after the anchor above, so a
-       surface's own positioning still wins. See docs/usage/tooltips.md. */
+    /* A surface holding an open tooltip steps above the next one, where
+       surfaces are stacking contexts. Glass's backdrop filter, and liquid's
+       isolation, make every surface one, and the bubble's own `z-index` counts
+       only inside it: an open bubble in one card was painted under the next
+       one. `--_surface-stacks` is the space-toggle flag a glass region sets on
+       and every other aesthetic sets off; with it on, the anchor above makes
+       the surface relative at rest, so hover changes nothing but this. Raised
+       while the surface is hovered or holds focus, not only while the tooltip
+       is, so the pointer crossing the gap onto a bubble that overhangs the next
+       surface lands on the bubble.
+
+       One step, not the popover layer: a sibling surface rests at `auto`, and
+       a sticky header or an open menu at `z-index: 10` stays above a card
+       whose field has focus. Elsewhere a surface is no stacking context, the
+       bubble's own `z-index` already reaches the page, and a surface that was
+       raised on hover moved an absolutely placed child anchored outside it.
+       Zero specificity, so a surface's own `z-index` still wins. See
+       docs/usage/tooltips.md. */
     :where(&:has(.tooltip):is(:hover, :focus-within), &:has(.tooltip[data-state="open"])) {
-      position: relative;
-      z-index: var(--z-popover);
+      z-index: var(--_surface-stacks) 1;
     }
 
     :where(&)::before,

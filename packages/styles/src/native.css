@@ -102,8 +102,9 @@
     @compose text-body;
   }
 
-  /* A passage in a script whose letters join takes no tracking from the
-     page around it either; see `typography.rules.css`. */
+  /* A passage in a script whose letters join, or that hangs them from a
+     headstroke, takes no tracking from the page around it either; see
+     `typography.rules.css`. */
   :where(
     :lang(ar),
     :lang(fa),
@@ -114,7 +115,16 @@
     :lang(ckb),
     :lang(ks),
     :lang(ku-Arab),
-    :lang(pa-Arab),
+    :lang(hi),
+    :lang(mr),
+    :lang(ne),
+    :lang(sa),
+    :lang(mai),
+    :lang(bho),
+    :lang(kok),
+    :lang(bn),
+    :lang(as),
+    :lang(pa),
     :lang(syr),
     :lang(nqo),
     :lang(mn-Mong),

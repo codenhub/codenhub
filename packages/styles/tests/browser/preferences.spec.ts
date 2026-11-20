@@ -378,6 +378,56 @@ test.describe("data-motion", () => {
       });
     }
 
+    /* A dialog fades out the same way, and keeps `allow-discrete` for the same
+       reason: it is one of the elements written to leave the top layer. */
+    test(`under ${label}, a dialog still fades out`, async ({ page }) => {
+      const read = async (motion: "reduce" | "no-preference", html: string) => {
+        await page.emulateMedia({ reducedMotion: motion });
+        await page.setContent(
+          `<!doctype html><html ${html}><body><style>
+          dialog { opacity: 0; transition: opacity 1s, transform 1s, overlay 1s allow-discrete, display 1s allow-discrete; }
+          dialog[open] { opacity: 1; }
+          @starting-style { dialog[open] { opacity: 0; } }
+        </style><dialog data-testid="dialog">Saved</dialog></body></html>`,
+        );
+        await page.addStyleTag({ content: await built("index.css") });
+
+        return page.getByTestId("dialog").evaluate(async (element: HTMLDialogElement) => {
+          element.showModal();
+          await Promise.allSettled(element.getAnimations().map((animation) => animation.finished));
+          element.close();
+          await new Promise(requestAnimationFrame);
+
+          return getComputedStyle(element).display;
+        });
+      };
+
+      // An engine that cannot animate `display` closes the dialog at once with no preference too.
+      expect(await read(reducedMotion, attributes)).toBe(await read("no-preference", ""));
+    });
+
+    /* Anything else keeps the behaviour its author wrote. Forced on every
+       element, `allow-discrete` paired `display` with the duration of a
+       `transform` transition, so a panel hidden with `display: none` stayed
+       on screen, and took clicks, for that long where full motion hides it at
+       once. */
+    test(`under ${label}, an element hidden with display: none hides at once`, async ({ page }) => {
+      await page.emulateMedia({ reducedMotion });
+      await page.setContent(
+        `<!doctype html><html ${attributes}><body><div data-testid="panel" style="transition: transform 300ms">Panel</div></body></html>`,
+      );
+      await page.addStyleTag({ content: await built("index.css") });
+
+      const display = await page.getByTestId("panel").evaluate(async (element) => {
+        element.style.display = "none";
+        await new Promise(requestAnimationFrame);
+
+        return getComputedStyle(element).display;
+      });
+
+      expect(display).toBe("none");
+    });
+
     /* The reset pairs its own properties with the author's durations and
        delays by position, as docs/accessibility.md says, so what survives is
        a hide that puts `opacity` first or gives every property one duration

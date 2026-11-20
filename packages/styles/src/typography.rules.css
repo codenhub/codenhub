@@ -1,17 +1,24 @@
 /* Letter spacing pulls apart the letters of a script that joins them:
    under `<html lang="ar">`, Chromium and WebKit broke the "الله" ligature at
-   0.05em, and WebKit spaced every letter. So each step below reads
+   0.05em, and WebKit spaced every letter. A headstroke script hangs its
+   letters from one line, the shirorekha, which spacing cuts: at 0.05em on
+   64px text in Nirmala UI, "नमस्ते", "ক্ষমতা", and "ਸ਼ਬਦ" each went from an
+   unbroken line to two gaps in Chromium and WebKit, and WebKit set the
+   i-matra of "हिन्दी" apart from its consonant. So each step below reads
    `--_script-tracking` before its own tracking, and an element in such a
-   language -- Arabic script, Syriac, N'Ko, Mongolian, Adlam -- sets it to
-   `normal`. A consumer's `tracking-*` sets `letter-spacing` itself and still
-   wins wherever it beats the class. Kurdish and Punjabi are written in Arabic
-   script only sometimes, so they need the `-Arab` subtag.
+   language -- Arabic script, Syriac, N'Ko, Mongolian, Adlam, Devanagari,
+   Bengali, Gurmukhi -- sets it to `normal`. A consumer's `tracking-*` sets
+   `letter-spacing` itself and still wins wherever it beats the class.
+   Kurdish is written in Arabic script only sometimes, so it needs the
+   `-Arab` subtag; Punjabi is in either Gurmukhi or Arabic script, so it is
+   matched whole.
 
    A custom property rather than a nested `&:lang()` rule in each step:
    `@compose` copies a step into every component that uses it, and the nested
    rule, with its fourteen languages, added 2 KB to `dist/purge/index.css`.
    It does not inherit, so a Latin passage (`lang="en"`) inside an Arabic page
-   keeps its tracking. */
+   keeps its tracking. The list is repeated in `native.css` and in chunky
+   tile's solo class. */
 @property --_script-tracking {
   syntax: "*";
   inherits: false;
@@ -28,7 +35,16 @@
     :lang(ckb),
     :lang(ks),
     :lang(ku-Arab),
-    :lang(pa-Arab),
+    :lang(hi),
+    :lang(mr),
+    :lang(ne),
+    :lang(sa),
+    :lang(mai),
+    :lang(bho),
+    :lang(kok),
+    :lang(bn),
+    :lang(as),
+    :lang(pa),
     :lang(syr),
     :lang(nqo),
     :lang(mn-Mong),

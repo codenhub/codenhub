@@ -930,3 +930,82 @@ test("tracks no cursive script, while a consumer's tracking still wins", async (
   expect(await read("body")).toBe("normal");
   expect(await read("h1"), "Latin headings keep theirs").not.toBe("normal");
 });
+
+/* The other tracking the package adds is off in a joining script too: a
+   field's label and hint, and the label tracking chunky tile gives buttons
+   and badges, its solo class's included. A Latin passage keeps each. */
+test("tracks no cursive script on labels, hints, and chunky tile's labels", async ({ page }) => {
+  const { readFile } = await import("node:fs/promises");
+  const [index, chunky] = await Promise.all(
+    ["index.css", "aesthetics/chunky-tile.css"].map((file) =>
+      readFile(new URL(`../../dist/${file}`, import.meta.url), "utf8"),
+    ),
+  );
+  const markup = (suffix: string) =>
+    `<label data-testid="label${suffix}" class="label">الله</label>
+     <span data-testid="hint${suffix}" class="hint">الله</span>
+     <div class="chunky-tile">
+       <button data-testid="btn${suffix}" class="btn">الله</button>
+       <span data-testid="badge${suffix}" class="badge">الله</span>
+     </div>
+     <button data-testid="solo${suffix}" class="chunky-tile-solo">الله</button>`;
+
+  await page.setContent(
+    `<!doctype html><html dir="rtl" lang="ar"><body>${markup("")}<div lang="en" dir="ltr">${markup("-latin")}</div></body></html>`,
+  );
+  await page.addStyleTag({ content: index });
+  await page.addStyleTag({ content: chunky });
+
+  const ids = ["label", "hint", "btn", "badge", "solo"];
+  const read = (id: string) => page.getByTestId(id).evaluate((element) => getComputedStyle(element).letterSpacing);
+
+  expect(await Promise.all(ids.map(read))).toEqual(ids.map(() => "normal"));
+
+  for (const id of ids) {
+    // oxlint-disable-next-line no-await-in-loop -- one page, read in turn.
+    expect(await read(`${id}-latin`), `a Latin ${id} keeps its tracking`).not.toBe("normal");
+  }
+});
+
+/* A headstroke script, Devanagari, Bengali, or Gurmukhi, runs its letters
+   along one line, the shirorekha, and tracking cuts it: at 0.05em on 64px
+   text in Nirmala UI, "नमस्ते", "ক্ষমতা", and "ਸ਼ਬਦ" each went from an unbroken
+   line to two gaps in Chromium and WebKit, and WebKit also set the i-matra of
+   "हिन्दी" apart from its consonant. So these languages track none either. */
+test("tracks no headstroke script", async ({ page }) => {
+  const { readFile } = await import("node:fs/promises");
+  const [index, native] = await Promise.all(
+    ["index.css", "native.css"].map((file) => readFile(new URL(`../../dist/${file}`, import.meta.url), "utf8")),
+  );
+  const samples = [
+    ["hi", "नमस्ते"],
+    ["mr", "नमस्कार"],
+    ["ne", "नमस्ते"],
+    ["bn", "ক্ষমতা"],
+    ["as", "অসমীয়া"],
+    ["pa", "ਸ਼ਬਦ"],
+    ["pa-Guru", "ਸ਼ਬਦ"],
+  ];
+
+  await page.setContent(
+    `<!doctype html><html><body>${samples
+      .map(
+        ([lang, word]) =>
+          `<div lang="${lang}"><p data-testid="${lang}-body">${word}</p><span data-testid="${lang}-text" class="text-label">${word}</span><label data-testid="${lang}-label" class="label">${word}</label></div>`,
+      )
+      .join("")}</body></html>`,
+  );
+  await page.addStyleTag({ content: native });
+  await page.addStyleTag({ content: index });
+
+  const spacing = await page.evaluate(() =>
+    Object.fromEntries(
+      [...document.querySelectorAll("[data-testid]")].map((element) => [
+        element.getAttribute("data-testid"),
+        getComputedStyle(element).letterSpacing,
+      ]),
+    ),
+  );
+
+  expect(spacing).toEqual(Object.fromEntries(Object.keys(spacing).map((id) => [id, "normal"])));
+});

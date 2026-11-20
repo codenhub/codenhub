@@ -2,7 +2,7 @@
 title: Tooltips
 description: Ayuda de campo que se abre con hover y con foco, cómo conectarla para los lectores de pantalla y la tecla Escape, y dónde queda recortado un tooltip.
 order: 4
-source: a6cd221c4332817a03cb3b3c5063781f558b9f84
+source: ae1c042c031c88173eabc55b79114c448ec57c29
 ---
 
 # Tooltips
@@ -61,7 +61,7 @@ La burbuja se posiciona solo con CSS, en el lado que elegiste. Nada mide la pág
 - **Un contenedor con scroll o con recorte la corta.** Un ancestro con `overflow: hidden`, `auto` o `scroll` recorta la burbuja en su borde. La tabla de claves de API de la pantalla de ajustes está dentro de un `.table-wrap`, que tiene scroll, así que un tooltip superior en la primera fila queda recortado en la parte de arriba del contenedor. Subir el `z-index` no ayuda: cambia sobre qué se pinta la burbuja, no si el contenedor la recorta.
 - **El borde de la ventana la corta.** Un tooltip superior en la primera línea de una página, o uno a la derecha cerca del borde derecho, se sale de la pantalla.
 - **Izquierda y derecha son lados físicos.** En una página de derecha a izquierda, `"left"` sigue significando el lado izquierdo de la pantalla.
-- **La tarjeta siguiente puede taparla, por un momento.** Bajo `.glass`, cada tarjeta, panel, alerta y tabla es su propia capa, así que una burbuja se pinta sobre las superficies que siguen a la suya solo mientras su superficie está elevada. El paquete eleva un `.card`, `.panel`, `.alert`, `.surface` o `.data-table` que contiene un tooltip mientras el tooltip está fijado abierto, o mientras la superficie tiene el puntero encima o contiene el foco, con `position: relative` y el `z-index` de los popovers. Una superficie que hayas posicionado tú conserva su propio `position`. Cuando el puntero sale de la superficie, la elevación termina al instante, así que una burbuja que sobresale sobre la tarjeta siguiente se desvanece debajo de ella durante `--tooltip-linger`.
+- **La tarjeta siguiente puede taparla, por un momento.** Bajo `.glass`, cada tarjeta, panel, alerta y tabla es su propia capa, así que una burbuja se pinta sobre las superficies que siguen a la suya solo mientras su superficie está elevada. Bajo glass esas superficies tienen `position: relative` en reposo, así que un hijo con posición absoluta se ubica respecto de su superficie, y el paquete eleva un paso, con `z-index: 1`, un `.card`, `.panel`, `.alert`, `.surface` o `.data-table` que contiene un tooltip mientras el tooltip está fijado abierto, o mientras la superficie tiene el puntero encima o contiene el foco. Un paso alcanza para pasar por encima de las superficies vecinas y queda por debajo de tus propias capas, como un encabezado sticky o un menú abierto. Fuera de glass una superficie no es una capa propia y no se eleva nada. Una superficie que hayas posicionado tú, o a la que hayas dado su propio `z-index`, lo conserva. Cuando el puntero sale de la superficie, la elevación termina al instante, así que una burbuja que sobresale sobre la tarjeta siguiente se desvanece debajo de ella durante `--tooltip-linger`.
 
 Qué hacer:
 

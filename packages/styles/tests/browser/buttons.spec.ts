@@ -710,3 +710,41 @@ test("wraps a long button label at a 320px viewport and keeps a short one on one
     expect.soft(value.grouped, `${value.region} grouped button stays on one line`).toBeLessThanOrEqual(value.group);
   }
 });
+
+/* A full-width button beside an icon button in a flex row shrinks to make
+   room, as a flex item does. Held at its width by `flex-shrink: 0`, it pushed
+   the icon button 48px out of a 300px row in every engine. The icon button
+   keeps its square, at every padding step. */
+test("shrinks a full-width button to fit its row beside an icon button", async ({ page }) => {
+  await page.goto(BUTTONS_URL);
+
+  const rows = await page.evaluate(() =>
+    ["", "p-xs", "p-sm", "p-lg"].map((padding) => {
+      const row = document.createElement("div");
+
+      /* Centred at the padding steps, so a short icon button is not stretched
+         to the row's height, which is not its square. */
+      row.style.cssText = `display: flex; gap: 8px; width: 300px${padding ? "; align-items: center" : ""}`;
+      row.innerHTML =
+        '<button class="btn" type="button" style="width: 100%">Continue</button>' +
+        `<button class="btn icon ${padding}" type="button" aria-label="More">…</button>`;
+      document.body.prepend(row);
+
+      const icon = row.lastElementChild!.getBoundingClientRect();
+      const values = {
+        padding: padding || "default",
+        overflow: icon.right - row.getBoundingClientRect().right,
+        icon: [icon.width, icon.height],
+      };
+
+      row.remove();
+
+      return values;
+    }),
+  );
+
+  for (const row of rows) {
+    expect.soft(row.overflow, `${row.padding} row holds both buttons`).toBeLessThanOrEqual(0);
+    expect.soft(row.icon[0], `${row.padding} icon button stays square`).toBeCloseTo(row.icon[1]!, 0);
+  }
+});

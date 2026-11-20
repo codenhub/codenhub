@@ -277,6 +277,39 @@
     box-shadow var(--motion-duration-normal, 200ms) var(--motion-ease, cubic-bezier(0.2, 0, 0, 1)),
     translate var(--motion-duration-normal, 200ms) var(--motion-ease, cubic-bezier(0.2, 0, 0, 1));
 
+  /* None in a script that joins its letters, or hangs them from a headstroke,
+     where spacing breaks the joins or the line.
+     The solo class carries its own list rather than reading the package's
+     `--_script-tracking`, which only a stylesheet with the components sets.
+     The list is `typography.rules.css`'s. */
+  &:where(
+    :lang(ar),
+    :lang(fa),
+    :lang(ur),
+    :lang(ps),
+    :lang(sd),
+    :lang(ug),
+    :lang(ckb),
+    :lang(ks),
+    :lang(ku-Arab),
+    :lang(hi),
+    :lang(mr),
+    :lang(ne),
+    :lang(sa),
+    :lang(mai),
+    :lang(bho),
+    :lang(kok),
+    :lang(bn),
+    :lang(as),
+    :lang(pa),
+    :lang(syr),
+    :lang(nqo),
+    :lang(mn-Mong),
+    :lang(ff-Adlm)
+  ) {
+    letter-spacing: normal;
+  }
+
   /* Reduced motion keeps the press and drops its motion: the tile lands on
      its bar at once. The near-zero duration `box` uses, so a `transitionend`
      still fires. */
