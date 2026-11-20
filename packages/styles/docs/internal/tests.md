@@ -150,7 +150,7 @@ Node-based Vitest checks validate every published target. Every compiled export 
 | `dist/aesthetics/neobrutalism.css`         | 4,586    | 1,265  | 4,750   |
 | `dist/aesthetics/pixel.css`                | 4,852    | 1,157  | 5,000   |
 | `dist/aesthetics/sketch.css`               | 14,905   | 2,094  | 15,350  |
-| `dist/purge/index.css`                     | 305,376  | 25,217 | 314,500 |
+| `dist/purge/index.css`                     | 314,531  | 25,195 | 324,000 |
 | `dist/purge/classes.json`                  | 6,855    | 1,626  | 7,100   |
 | `/button/tw`, a page with `btn primary`    | 21,949   |        | 22,600  |
 | `/button/tw`, a page with no package class | 9,610    |        | 9,900   |

@@ -2,7 +2,7 @@
 title: Conteúdo e layout
 description: Consulta de todos os helpers de layout com os seus espaçamentos, a escala tipográfica com os seus tamanhos, cards e painéis com o seu padding, tabelas, citações, código e teclas.
 order: 10
-source: 160ae54be3321154eca2f1ce22b843aa6b87314c
+source: 40c0b1c34c19c3e52bc048cb0c5879c54afd4c41
 ---
 
 # Conteúdo e layout
@@ -47,6 +47,8 @@ Um `.divider` aceita uma intenção, que o colore, e ignora as classes de aprese
 Os dois maiores tamanhos crescem no breakpoint `md` do Tailwind, 48rem por padrão. Com os entrypoints de código-fonte do Tailwind, vale o seu próprio breakpoint `md`. O pacote não define tamanho para texto sem classe: o texto do corpo e os títulos sem classe recebem o tamanho do navegador, ou o tamanho do texto em volta sob o reset; veja [Configuração → HTML sem classes](../setup.md#html-sem-classes) para o mapeamento sem classes.
 
 `.text-body` tem 0.875rem, menor que o texto de 1rem da página; use-o para texto secundário ou denso, não para o texto principal da página. O `/native` é a exceção: ele aplica `.text-body` ao `body`, então lá ele é o texto da página, e parágrafos e itens de lista o herdam do elemento em que estiverem. Veja [HTML sem classes](../setup.md#html-sem-classes).
+
+O espaçamento da tabela é `normal` num idioma cuja escrita une as letras: árabe, persa, urdu, pashto, sindi, uigur, curdo sorani, caxemira, siríaco, n'ko, mongol na sua própria escrita (`mn-Mong`) e adlam (`ff-Adlm`). Afastar as letras quebra as ligações entre elas e uma ligadura como "الله". O idioma vem de `lang`, no elemento ou num que o contenha, então defina-o: no `<html>` para uma página nesse idioma, e num trecho nesse idioma dentro de uma página em outro. Curdo e panjabi em escrita árabe precisam da subtag, como em `lang="ku-Arab"` e `lang="pa-Arab"`. Com `/native`, esse trecho também não recebe o espaçamento da página ao redor. A sua própria utility `tracking-*` continua valendo.
 
 `.selection-contrast` num elemento troca as cores do texto selecionado dentro dele para `--color-primary` sobre `--color-primary-contrast`. Use-o numa área `.solid.primary`, onde a cor de seleção padrão seria igual ao fundo.
 

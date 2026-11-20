@@ -48,7 +48,9 @@ const COMPILED_CEILINGS: Record<string, number> = {
   "dist/aesthetics/pixel.css": 5_000,
   "dist/aesthetics/sketch.css": 15_350,
   /* Read by `chs build`, never served, but every consumer installs it. */
-  "dist/purge/index.css": 314_500,
+  /* 314,500 until 0.11.0 kept tracking off scripts that join their letters,
+     a fallback in each of the eleven rules that copy a text style. */
+  "dist/purge/index.css": 324_000,
   "dist/purge/classes.json": 7_100,
 };
 

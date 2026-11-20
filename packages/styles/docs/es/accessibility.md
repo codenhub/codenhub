@@ -2,7 +2,7 @@
 title: Accesibilidad
 description: Lo que hace el CSS con el foco, los estados, el movimiento, el contraste, los colores forzados y el texto de derecha a izquierda, y lo que tu aplicación todavía les debe a sus usuarios.
 order: 5
-source: cb8fd9ad5be7ded555ccfe678032759d4aec836e
+source: 6766704dfc8a35e0c33d2ec8a0ce27e672cb640a
 ---
 
 # Accesibilidad
@@ -158,6 +158,7 @@ Las mediciones de abajo corresponden a los colores incluidos. En cuanto cambies 
 | ------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Colores forzados    | Con `forced-colors: active`, los bordes, los estados activados, el chevron de un `.select` y el valor de una barra de progreso siguen visibles, dibujados con colores del sistema, bajo cualquier estética. Una estética que dibuja su borde como una sombra interior, como `.pixel`, dibuja en su lugar un borde real. El cristal se vuelve opaco, porque los colores forzados conservan la transparencia de un fondo. |
 | Dirección del texto | Con `dir="rtl"`, la barra de las citas, el icono de la alerta, el relleno del progreso, el divisor vertical, la perilla del switch, la alineación de las tablas y el chevron de un select cambian de lado. No hace falta ninguna clase.                                                                                                                                                                                 |
+| Escrituras unidas   | Los estilos de texto no añaden espaciado entre letras en un idioma cuya escritura une sus letras, como el árabe, así que las uniones y las ligaduras se mantienen. Define `lang`; consulta [Contenido y layout](./usage/content-and-layout.md).                                                                                                                                                                         |
 
 Con colores forzados, `.text-control`, `.ipt`, `.textarea`, `.select`, los toggles y tu propia clase que hace `@apply text-control` muestran un contorno de foco `Highlight` de 2px. Dentro de un `.input-group`, el grupo dibuja el anillo del campo, dos píxeles por fuera de su propio borde, y el campo no dibuja ninguno, así que un campo con foco muestra un solo anillo; un checkbox, radio, switch o botón del grupo conserva su propio anillo, y el grupo quita el suyo mientras uno de ellos tiene el foco. El punto de entrada native da el mismo contorno a los inputs de texto, selects, textareas, checkboxes y radios sin clase.
 
