@@ -31,6 +31,8 @@ A secret key is never interchangeable with a public key. A key set holding publi
 
 Every key has an `alg`, the one algorithm it is bound to, and may have a `kid`, the identifier tokens use to name it. Private and secret keys also have `extractable`, which says whether their material may be exported again.
 
+Encryption keys are three further kinds, `"jwe-public"`, `"jwe-private"` and `"jwe-secret"`, made by their own functions; no signing or verifying function accepts them, and only `jwkThumbprint` takes both; [Encrypting tokens](encrypting.md#encryption-keys-are-their-own-kind) covers them.
+
 ## Generating keys
 
 ```ts
@@ -235,7 +237,7 @@ Every exported JWK is frozen, names `kty`, `alg` and `use: "sig"`, includes `kid
 
 ## Thumbprints
 
-`jwkThumbprint` computes a key pair's JWK SHA-256 Thumbprint (RFC 7638): 43 base64url characters that name the key by its material alone, whatever its `alg` or `kid`. Pass the public key or the private key; both give the same thumbprint, and a private key need not be extractable.
+`jwkThumbprint` computes a key pair's JWK SHA-256 Thumbprint (RFC 7638): 43 base64url characters that name the key by its material alone, whatever its `alg` or `kid`. Pass the public key or the private key; both give the same thumbprint, and a private key need not be extractable. JWE public and private keys work too.
 
 ```ts
 import { importPrivateKey, jwkThumbprint } from "@codenhub/jwt";
