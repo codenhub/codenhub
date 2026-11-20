@@ -273,7 +273,7 @@ const isAudience = (value: unknown): boolean =>
  * Throws unless `object` holds only values `JSON.stringify` writes exactly and the strict parser reads
  * back the same, nested at most {@link MAX_JSON_DEPTH} deep. A cycle exceeds the depth, so it is caught too.
  */
-function assertJsonObject(object: Record<string, unknown>, label: string): void {
+export function assertJsonObject(object: Record<string, unknown>, label: string): void {
   const pending: { readonly value: unknown; readonly depth: number }[] = [{ value: object, depth: 1 }];
   while (pending.length > 0) {
     const { value, depth } = pending.pop() as { readonly value: unknown; readonly depth: number };

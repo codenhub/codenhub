@@ -2,8 +2,9 @@ import { fail, ok } from "../core";
 import { rejectUnknownOptions } from "../core/options";
 import type { AsymmetricAlgorithm, JwtHeader, JwtIssue, JwtResult, KeySet, VerificationKey } from "../core/types";
 import { parseJsonObject } from "../encoding";
-import { readIssuer } from "../keys";
-import { importKeys, readAlgorithms } from "./local";
+import type { EncryptionKeySetOptions } from "../jwe/keyset";
+import type { EncryptionKeySet } from "../jwe/types";
+import { readKeyImporter } from "./local";
 import { lacksKid, selectKey } from "./select";
 
 /** How {@link createRemoteKeySet} fetches and caches a JWKS. Durations are in seconds. */
@@ -34,6 +35,13 @@ export interface RemoteKeySetOptions {
    * @defaultValue keys bound to no issuer
    */
   readonly issuer?: string;
+  /**
+   * Which keys to import, as for {@link ImportKeySetOptions.use}: `sig` for verification keys, or `enc` for a
+   * recipient's encryption keys, as {@link RemoteEncryptionKeySetOptions} describes.
+   *
+   * @defaultValue `"sig"`
+   */
+  readonly use?: "sig";
   /**
    * Seconds a fetched JWKS is used before it is fetched again. An integer of at least 1.
    *
@@ -103,6 +111,15 @@ export interface RemoteKeySetOptions {
   readonly waitUntil?: (promise: Promise<unknown>) => void;
 }
 
+/**
+ * How {@link createRemoteKeySet} fetches a recipient's JWKS of encryption keys, such as an OpenID client's
+ * `jwks_uri` an OpenID Provider encrypts ID tokens to. Every option of {@link RemoteKeySetOptions} applies but
+ * `issuer`; keys are imported as `importKeySet(jwks, { use: "enc" })` imports them, and `select` takes
+ * `{ alg, kid }`.
+ */
+export interface RemoteEncryptionKeySetOptions
+  extends Omit<RemoteKeySetOptions, "algorithms" | "issuer" | "use">, EncryptionKeySetOptions {}
+
 /** A fetched JWKS and when it was fetched, as {@link RemoteKeySetOptions.onFetch} receives it. */
 export interface RemoteKeySetSnapshot {
   /** The JWKS document, a JSON value. */
@@ -117,6 +134,7 @@ const KNOWN_OPTIONS: Readonly<Record<keyof RemoteKeySetOptions, true>> = {
   fetch: true,
   algorithms: true,
   issuer: true,
+  use: true,
   cacheTtl: true,
   cooldown: true,
   maxStale: true,
@@ -149,8 +167,8 @@ type FetchFailureReason = "timeout" | "network" | "status" | "too_large" | "inva
 interface RemoteConfig {
   readonly url: string;
   readonly fetch: typeof fetch | undefined;
-  readonly algorithms: ReadonlySet<AsymmetricAlgorithm>;
-  readonly issuer: string | undefined;
+  /** Imports a fetched JWKS, as verification keys or, with `use: "enc"`, as encryption keys. */
+  readonly importKeys: (jwks: unknown) => Promise<JwtResult<readonly VerificationKey[]>>;
   readonly cacheTtlMs: number;
   readonly cooldownMs: number;
   readonly maxStaleMs: number;
@@ -232,7 +250,11 @@ interface CachedKeys {
  * `fetchedAt`; `algorithms` is not a non-empty array of asymmetric algorithms; `issuer` is not a non-empty string; or `cacheTtl`, `cooldown`, `maxStale`, `timeout` or
  * `maxResponseBytes` is out of range.
  */
-export function createRemoteKeySet(options: RemoteKeySetOptions): KeySet {
+export function createRemoteKeySet(options: RemoteEncryptionKeySetOptions): EncryptionKeySet;
+export function createRemoteKeySet(options: RemoteKeySetOptions): KeySet;
+export function createRemoteKeySet(
+  options: RemoteKeySetOptions | RemoteEncryptionKeySetOptions,
+): KeySet | EncryptionKeySet {
   const config = readRemoteOptions(options);
   let cached: CachedKeys | undefined;
   let lastFailure: JwtResult<never> | undefined;
@@ -357,7 +379,7 @@ export function createRemoteKeySet(options: RemoteKeySetOptions): KeySet {
 
   /** Imports the seed once, unless a fetch has filled the cache first. */
   const importSeed = async (seed: RemoteKeySetSnapshot): Promise<void> => {
-    const imported = await importKeys(seed.jwks, config.algorithms, config.issuer);
+    const imported = await config.importKeys(seed.jwks);
     if (imported.ok && cached === undefined) {
       cached = { keys: imported.value, fetchedAt: seed.fetchedAt };
     }
@@ -423,7 +445,7 @@ async function fetchKeys(config: RemoteConfig): Promise<JwtResult<FetchedKeys>> 
   if (!fetched.ok) {
     return fetched;
   }
-  const imported = await importKeys(fetched.value, config.algorithms, config.issuer);
+  const imported = await config.importKeys(fetched.value);
   return imported.ok ? ok({ jwks: fetched.value, keys: imported.value }) : fetchFailure("invalid_response");
 }
 
@@ -610,8 +632,7 @@ function readRemoteOptions(options: unknown): RemoteConfig {
   return {
     url: readUrl(source.url),
     fetch: readFunction(source, "fetch") as typeof fetch | undefined,
-    algorithms: readAlgorithms(options, "createRemoteKeySet"),
-    issuer: readIssuer(options, "createRemoteKeySet"),
+    importKeys: readKeyImporter(options, "createRemoteKeySet"),
     cacheTtlMs: cacheTtl * MS_PER_SECOND,
     cooldownMs: cooldown * MS_PER_SECOND,
     maxStaleMs: readInteger(source, { name: "maxStale", fallback: DEFAULT_MAX_STALE, minimum: 0 }) * MS_PER_SECOND,

@@ -2,6 +2,13 @@ import { fail, ok } from "../core";
 import { rejectUnknownOptions } from "../core/options";
 import type { AsymmetricAlgorithm, JwtHeader, JwtResult, LocalKeySet, VerificationKey } from "../core/types";
 import {
+  encryptionKeySetOf,
+  importEncryptionKeys,
+  readEncryptionAlgorithms,
+  type EncryptionKeySetOptions,
+} from "../jwe/keyset";
+import type { LocalEncryptionKeySet } from "../jwe/types";
+import {
   ASYMMETRIC_ALGORITHMS,
   bindIssuer,
   compatibleAlgorithms,
@@ -34,9 +41,24 @@ export interface ImportKeySetOptions {
    * @defaultValue keys bound to no issuer
    */
   readonly issuer?: string;
+  /**
+   * Which keys to import: `sig` for verification keys. `{ use: "enc" }` instead imports encryption keys as JWE
+   * public keys, as {@link EncryptionKeySetOptions} describes.
+   *
+   * @defaultValue `"sig"`
+   */
+  readonly use?: "sig";
 }
 
-const IMPORT_KEY_SET_OPTIONS: Readonly<Record<keyof ImportKeySetOptions, true>> = { algorithms: true, issuer: true };
+const IMPORT_KEY_SET_OPTIONS: Readonly<Record<keyof ImportKeySetOptions, true>> = {
+  algorithms: true,
+  issuer: true,
+  use: true,
+};
+const IMPORT_ENCRYPTION_KEY_SET_OPTIONS: Readonly<Record<keyof EncryptionKeySetOptions, true>> = {
+  algorithms: true,
+  use: true,
+};
 
 /** How {@link createKeySet} builds its set. */
 export interface CreateKeySetOptions {
@@ -119,6 +141,11 @@ export function createKeySet(keys: readonly VerificationKey[], options?: CreateK
  * always fails. Two usable keys with the same `kid` and `alg` are kept; selecting them fails with
  * `ambiguous_key` rather than picking one.
  *
+ * With `{ use: "enc" }`, the JWKS's encryption keys are imported instead, as JWE public keys a sender encrypts
+ * to, such as the keys of an OpenID client's `jwks_uri` for encrypted ID tokens: only a JWK whose `use` is `enc`,
+ * or whose `key_ops` holds an encryption operation, is imported, bound to each allowed key management algorithm
+ * it fits, and the set's `select` takes `{ alg, kid }`.
+ *
  * @example
  * ```ts
  * const result = await importKeySet(await response.json(), { algorithms: ["RS256"] });
@@ -131,15 +158,80 @@ export function createKeySet(keys: readonly VerificationKey[], options?: CreateK
  * (path omitted) or its `keys` is not an array (path `["keys"]`), or `too_large` with
  * `{ limit: "keys", maximum: 100 }` for more than 100 keys. Never throws for any `jwks`.
  * @throws TypeError when `options` is not an object, `options.algorithms` is not a non-empty array of
- * asymmetric algorithms, or `options.issuer` is not a non-empty string.
+ * asymmetric algorithms (of asymmetric key management algorithms with `use: "enc"`), `options.issuer` is not a
+ * non-empty string or is given with `use: "enc"`, or `options.use` is neither `sig` nor `enc`.
  */
-export async function importKeySet(jwks: unknown, options?: ImportKeySetOptions): Promise<JwtResult<LocalKeySet>> {
+export async function importKeySet(
+  jwks: unknown,
+  options: EncryptionKeySetOptions,
+): Promise<JwtResult<LocalEncryptionKeySet>>;
+export async function importKeySet(jwks: unknown, options?: ImportKeySetOptions): Promise<JwtResult<LocalKeySet>>;
+export async function importKeySet(
+  jwks: unknown,
+  options?: ImportKeySetOptions | EncryptionKeySetOptions,
+): Promise<JwtResult<LocalKeySet | LocalEncryptionKeySet>> {
+  if (isEncryptionUse(options, "importKeySet")) {
+    rejectUnknownOptions(options, IMPORT_ENCRYPTION_KEY_SET_OPTIONS, "importKeySet");
+    const algorithms = readEncryptionAlgorithms(options, "importKeySet");
+    const entries = readEntries(jwks);
+    return entries.ok ? ok(encryptionKeySetOf(await importEncryptionKeys(entries.value, algorithms))) : entries;
+  }
   const algorithms = readAlgorithms(options, "importKeySet");
   if (options !== undefined) {
     rejectUnknownOptions(options, IMPORT_KEY_SET_OPTIONS, "importKeySet");
   }
   const imported = await importKeys(jwks, algorithms, readIssuer(options, "importKeySet"));
   return imported.ok ? ok(keySetOf(imported.value)) : imported;
+}
+
+/**
+ * Whether `options` asks for encryption keys. Reads `use` once, as an own data member.
+ *
+ * @throws TypeError when `use` is neither absent, `sig` nor `enc`, or is `enc` alongside `issuer`, which binds
+ * verification keys only.
+ */
+function isEncryptionUse(options: unknown, functionName: string): options is EncryptionKeySetOptions {
+  if (typeof options !== "object" || options === null) {
+    return false;
+  }
+  const use = ownDataValue(options, "use");
+  if (use === undefined || use === "sig") {
+    return false;
+  }
+  if (use !== "enc") {
+    throw new TypeError(`${functionName}: options.use must be "sig" or "enc".`);
+  }
+  if (Object.hasOwn(options, "issuer")) {
+    throw new TypeError(`${functionName}: options.issuer is not allowed with use "enc"; it binds verification keys.`);
+  }
+  return true;
+}
+
+/**
+ * Reads how a remote key set imports its JWKS: as verification keys, or with `use: "enc"` as encryption keys.
+ * The keys come back typed as verification keys, since a remote key set handles both kinds alike; selection
+ * reads only `kid` and `alg`.
+ *
+ * @throws TypeError as {@link importKeySet} does for the same options.
+ */
+export function readKeyImporter(
+  options: object,
+  functionName: string,
+): (jwks: unknown) => Promise<JwtResult<readonly VerificationKey[]>> {
+  if (isEncryptionUse(options, functionName)) {
+    const algorithms = readEncryptionAlgorithms(options, functionName);
+    return async (jwks) => {
+      const entries = readEntries(jwks);
+      if (!entries.ok) {
+        return entries;
+      }
+      const keys = await importEncryptionKeys(entries.value, algorithms);
+      return ok(keys as unknown as readonly VerificationKey[]);
+    };
+  }
+  const algorithms = readAlgorithms(options, functionName);
+  const issuer = readIssuer(options, functionName);
+  return async (jwks) => importKeys(jwks, algorithms, issuer);
 }
 
 /** Wraps keys, already checked, into a frozen key set. */
@@ -204,7 +296,7 @@ const MALFORMED_KEYS = fail({ code: "malformed", path: ["keys"] });
 const TOO_MANY_KEYS = fail({ code: "too_large", params: { limit: "keys", maximum: MAX_JWKS_KEYS } });
 
 /** Reads the entries of a JWKS. The result is not deep-frozen, since the entries belong to the caller. */
-function readEntries(jwks: unknown): JwtResult<readonly unknown[]> {
+export function readEntries(jwks: unknown): JwtResult<readonly unknown[]> {
   try {
     if (typeof jwks !== "object" || jwks === null || Array.isArray(jwks)) {
       return MALFORMED_JWKS;

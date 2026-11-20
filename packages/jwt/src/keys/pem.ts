@@ -43,6 +43,39 @@ export async function pemToJwk(
   kid: string | undefined,
 ): Promise<PemResult> {
   const invalid: PemResult = { ok: false, issue: { code: "invalid_key" } };
+  const read = readPemDer(pem, role);
+  if (!read.ok) {
+    return read;
+  }
+  const der = read.value;
+  try {
+    const { importParams } = ALGORITHM_PARAMS[alg];
+    const format = role === "public" ? "spki" : "pkcs8";
+    const cryptoKey = await crypto.subtle.importKey(format, der, importParams, true, [
+      role === "public" ? "verify" : "sign",
+    ]);
+    return { ok: true, value: await exportMaterialJwk(cryptoKey, alg, kid) };
+  } catch {
+    // Web Crypto rejects DER it cannot read or a key of another type or curve; its message may quote it.
+    return invalid;
+  }
+}
+
+/** The DER a PEM holds, or the one issue that refuses it. */
+export type PemDerResult =
+  | { readonly ok: true; readonly value: Uint8Array<ArrayBuffer> }
+  | { readonly ok: false; readonly issue: JwtIssue };
+
+/**
+ * Reads the DER of one PEM block: the SPKI of a `PUBLIC KEY` or of a `CERTIFICATE`'s key, or the PKCS#8 of a
+ * `PRIVATE KEY`. Web Crypto, not this function, then parses the key inside.
+ *
+ * @returns The DER; `unexpected_private_key` for a private key where a public one is expected; otherwise
+ * `invalid_key` for anything that is not one well-formed block of the expected label. Never throws, and an issue
+ * never quotes the input.
+ */
+export function readPemDer(pem: string, role: "public" | "private"): PemDerResult {
+  const invalid: PemDerResult = { ok: false, issue: { code: "invalid_key" } };
   if (pem.length > MAX_PEM_LENGTH) {
     return invalid;
   }
@@ -64,20 +97,7 @@ export async function pemToJwk(
     ? decodeBase64Url(base64.replaceAll("+", "-").replaceAll("/", "_").replace(/=+$/, ""))
     : undefined;
   const der = decoded !== undefined && label === "CERTIFICATE" ? subjectPublicKeyInfo(decoded) : decoded;
-  if (der === undefined || der.length === 0) {
-    return invalid;
-  }
-  try {
-    const { importParams } = ALGORITHM_PARAMS[alg];
-    const format = role === "public" ? "spki" : "pkcs8";
-    const cryptoKey = await crypto.subtle.importKey(format, der, importParams, true, [
-      role === "public" ? "verify" : "sign",
-    ]);
-    return { ok: true, value: await exportMaterialJwk(cryptoKey, alg, kid) };
-  } catch {
-    // Web Crypto rejects DER it cannot read or a key of another type or curve; its message may quote it.
-    return invalid;
-  }
+  return der === undefined || der.length === 0 ? invalid : { ok: true, value: der };
 }
 
 const DER_SEQUENCE = 0x30;

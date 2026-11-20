@@ -1,5 +1,8 @@
 import type { AsymmetricAlgorithm, Jwk, PrivateKey, PublicKey } from "../core/types";
 import { encodeBase64Url, encodeUtf8 } from "../encoding";
+import { jweKeyThumbprint } from "../jwe/keys";
+import { isJweKey } from "../jwe/registry";
+import type { JwePrivateKey, JwePublicKey } from "../jwe/types";
 import { ALGORITHM_PARAMS } from "./algorithms";
 import { exportWebCryptoJwk } from "./exported-jwk";
 import { getKeyEntry } from "./registry";
@@ -29,11 +32,14 @@ const THUMBPRINT_MEMBERS: Readonly<
  * const jkt = await jwkThumbprint(publicKey); // 43 base64url characters
  * ```
  *
- * @param key - A public or private key created by this package.
+ * @param key - A public or private key created by this package, for signing or for encryption (JWE).
  * @returns The 43-character thumbprint.
  * @throws TypeError when `key` is not a public or private key created by this package.
  */
-export async function jwkThumbprint(key: PublicKey | PrivateKey): Promise<string> {
+export async function jwkThumbprint(key: PublicKey | PrivateKey | JwePublicKey | JwePrivateKey): Promise<string> {
+  if (isJweKey(key)) {
+    return jweKeyThumbprint(key as JwePublicKey | JwePrivateKey);
+  }
   const entry = getKeyEntry(key);
   const publicCryptoKey = key.kind === "private" ? entry.publicCryptoKey : entry.cryptoKey;
   if ((key.kind !== "public" && key.kind !== "private") || publicCryptoKey === undefined) {
