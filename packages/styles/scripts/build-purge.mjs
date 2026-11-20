@@ -50,7 +50,8 @@ function createCompiler() {
    this way rather than from the selectors of an empty build, which name
    component classes inside rules Tailwind always emits. */
 const probe = await createCompiler();
-const completeTree = parse(readFileSync(path.join(packageRoot, "dist/index.css"), "utf8"));
+const completeCss = readFileSync(path.join(packageRoot, "dist/index.css"), "utf8");
+const completeTree = parse(completeCss);
 const complete = classesOf(completeTree);
 const base = [];
 let size = probe.build([]).length;
@@ -74,8 +75,16 @@ const variants = VARIANTS.flatMap((variant) => variantClasses.map((name) => `${v
 
 /* `/tw` ships the `--tw-*` registrations inside its theme, where Tailwind
    keeps them; the compiled build writes them last, so they move there, and a
-   page that names every class purges to `dist/index.css` byte for byte. */
+   page that names every class purges to `dist/index.css` byte for byte. They
+   move in its order too, the order its output first needs each one, rather
+   than the order `tw/theme.css` lists them in: a utility that sorts earlier
+   can change which comes first. */
 const REGISTRATION = /@property --tw-[\w-]+\{[^}]*\}/g;
+const registrationOrder = (registration) => {
+  const index = completeCss.indexOf(registration.slice(0, registration.indexOf("{") + 1));
+
+  return index === -1 ? Infinity : index;
+};
 
 /* Tailwind's theme values and Preflight are the copy in `src/base/` that
    `dist/index.css` carries, not those of the Tailwind installed here, which the
@@ -97,7 +106,10 @@ const compiled = serialize(
       : node,
   ),
 );
-const css = withNotice(compiled.replace(REGISTRATION, "") + (compiled.match(REGISTRATION) ?? []).join(""));
+const css = withNotice(
+  compiled.replace(REGISTRATION, "") +
+    (compiled.match(REGISTRATION) ?? []).toSorted((a, b) => registrationOrder(a) - registrationOrder(b)).join(""),
+);
 const droppable = [...base, ...variants].sort();
 
 mkdirSync(path.join(packageRoot, "dist/purge"), { recursive: true });
