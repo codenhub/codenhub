@@ -33,10 +33,19 @@ export interface SignHeader {
   readonly typ?: string;
   /** Media type of the payload. */
   readonly cty?: string;
-  /**
-   * Any other JSON header parameter. `crit`, `b64`, `jwk`, `jku`, `x5u` and `x5c` are refused: this
-   * package neither honours nor emits them.
-   */
+  /** Refused: this package implements no extension a verifier must understand. */
+  readonly crit?: never;
+  /** Refused: unencoded payloads (RFC 7797) are not supported. */
+  readonly b64?: never;
+  /** Refused: write it with `embedKey`, which proves it is the signing key's public half. */
+  readonly jwk?: never;
+  /** Refused: a verifier that trusts it lets the token choose its own key. */
+  readonly jku?: never;
+  /** Refused: a verifier that trusts it lets the token choose its own key. */
+  readonly x5u?: never;
+  /** Refused: a verifier that trusts it lets the token choose its own key. */
+  readonly x5c?: never;
+  /** Any other JSON header parameter. */
   readonly [parameter: string]: unknown;
 }
 

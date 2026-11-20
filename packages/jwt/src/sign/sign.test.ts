@@ -501,3 +501,29 @@ describe("sign reads each value once", () => {
     expect(seen.toSorted()).toEqual(["0", "list", "sub", "typ"]);
   });
 });
+
+describe("sign header types", () => {
+  // Each header below is a compile error that `pnpm typecheck` checks; at runtime each one still throws.
+  it("should refuse each refused member at compile time", async () => {
+    const refused: SignHeader[] = [
+      // @ts-expect-error crit is refused.
+      { crit: ["exp"] },
+      // @ts-expect-error b64 is refused.
+      { b64: false },
+      // @ts-expect-error jwk is refused; embedKey writes it.
+      { jwk: { kty: "EC" } },
+      // @ts-expect-error jku is refused.
+      { jku: "https://attacker.example/jwks" },
+      // @ts-expect-error x5u is refused.
+      { x5u: "https://attacker.example/cert" },
+      // @ts-expect-error x5c is refused.
+      { x5c: ["MII"] },
+    ];
+
+    await Promise.all(
+      refused.map((header) =>
+        expect(sign({ payload: {}, key: secretKey, header })).rejects.toThrow("is not supported."),
+      ),
+    );
+  });
+});
