@@ -198,16 +198,26 @@ A `CryptoKey` has no `kid`, so pass one as an option. A public key is always exp
 A key held by a cloud KMS or an HSM never leaves it: the service signs on request. `createExternalSigningKey` makes a private key from the public key and a function that asks the service for a signature, and `sign` uses it like any other private key:
 
 ```ts
+import { GetPublicKeyCommand, KMSClient, SignCommand } from "@aws-sdk/client-kms";
 import { createExternalSigningKey, importPublicKey, sign } from "@codenhub/jwt";
 
-const imported = await importPublicKey(kmsPublicKeyPem, { alg: "ES256", kid: "kms-2026" });
+const kms = new KMSClient({});
+const KeyId = "alias/jwt-signing";
+
+// KMS returns the public key as DER SPKI; import it through Web Crypto.
+const { PublicKey } = await kms.send(new GetPublicKeyCommand({ KeyId }));
+const spki = await crypto.subtle.importKey("spki", new Uint8Array(PublicKey!), { name: "ECDSA", namedCurve: "P-256" }, true, ["verify"]);
+const imported = await importPublicKey(spki, { alg: "ES256", kid: "kms-2026" });
 if (!imported.ok) throw new Error("The KMS public key could not be imported.");
 
 const signingKey = createExternalSigningKey({
   publicKey: imported.value,
   signatureFormat: "der",
   sign: async (data) => {
-    const { Signature } = await kms.send(new SignCommand({ KeyId, Message: data, MessageType: "RAW", SigningAlgorithm: "ECDSA_SHA_256" }));
+    // Send the SHA-256 digest: MessageType "RAW" caps the message at 4096 bytes, which a token can exceed.
+    const digest = new Uint8Array(await crypto.subtle.digest("SHA-256", data));
+    const command = new SignCommand({ KeyId, Message: digest, MessageType: "DIGEST", SigningAlgorithm: "ECDSA_SHA_256" });
+    const { Signature } = await kms.send(command);
     return Signature!;
   },
 });
