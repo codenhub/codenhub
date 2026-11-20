@@ -827,6 +827,16 @@ describe("keepOwnership", () => {
     );
   });
 
+  // The runner owns a `0640` file of a group it is not in: the owner never changed, so no reader lost it.
+  it("warns of the group alone when only the group could not be kept", async () => {
+    const file = fileOf({ refuseOwner: true, refuseGroup: true });
+
+    expect(await keepOwnership(file, { uid: 1000, gid: 33, mode: 0o100640 }, "app.css")).toBe(
+      "chs: warning: --output app.css now belongs to group 1000, not 33, since only root can give a file to a group you are not in; its owner and mode are kept.",
+    );
+    expect(file.calls).toEqual(["chown 1000 33", "chown -1 33", "chmod 640"]);
+  });
+
   it("throws a failure other than a refusal", async () => {
     const file = {
       ...fileOf({ refuseOwner: false, refuseGroup: false }),

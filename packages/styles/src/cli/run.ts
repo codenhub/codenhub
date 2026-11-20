@@ -352,7 +352,12 @@ export async function keepOwnership(
         ? `, so user ${previous.uid} may no longer be able to read it`
         : "";
 
-    if (kept === "group") {
+    if (previous.uid === created.uid) {
+      // Only the group was to change, and no owner's read bit was lost with it.
+      if (kept === "neither") {
+        warning = `${BIN}: warning: --output ${output} now belongs to group ${created.gid}, not ${previous.gid}, since only root can give a file to a group you are not in; its owner and mode are kept.`;
+      }
+    } else if (kept === "group") {
       warning = `${BIN}: warning: --output ${output} now belongs to user ${created.uid}, not ${previous.uid}, since only root can give a file to another user; its group and mode are kept${unreadable}.`;
     } else if (kept === "neither") {
       warning = `${BIN}: warning: --output ${output} now belongs to user ${created.uid} and group ${created.gid}, not ${previous.uid} and ${previous.gid}, since only root can give a file to another user or to a group you are not in; its mode is kept${unreadable}.`;
