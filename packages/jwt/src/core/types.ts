@@ -539,6 +539,8 @@ export interface JwsHeader extends JwtHeader {
   readonly b64?: boolean;
   /** Header parameters the signer marked as critical, each understood by the verifier. */
   readonly crit?: readonly string[];
+  /** Any other header parameter. Redeclared from {@link JwtHeader} so the API reference documents it here. */
+  readonly [parameter: string]: unknown;
 }
 
 /** A verified JWS. Frozen, except `payload`, a byte array no other result shares. */
