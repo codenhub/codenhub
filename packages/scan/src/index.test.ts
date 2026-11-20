@@ -157,6 +157,33 @@ describe("findFiles", () => {
     it("fails on a literal folder", () => {
       expect(() => findFiles(["app/views"], { cwd: root, failOnUnmatched: true })).toThrow(UnmatchedEntryError);
     });
+
+    // "Check the path" sent a reader to fix a path that was right: it names a folder, not the files in it.
+    it.each(["app/views", "app/views/"])("says %s is a folder and shows a glob for its files", (entry) => {
+      expect(() => findFiles([entry], { cwd: root, failOnUnmatched: true })).toThrow(
+        `"${entry}" is a folder in ${root}, not a file; name the files in it, as in "app/views/**/*".`,
+      );
+    });
+
+    it("says a wildcard skips node_modules when its only matches are there", () => {
+      fs.mkdirSync(path.join(root, "node_modules", "dep"), { recursive: true });
+      fs.writeFileSync(path.join(root, "node_modules", "dep", "demo.html"), "dependency");
+
+      expect(() => findFiles(["**/demo.html"], { cwd: root, skipNodeModules: true, failOnUnmatched: true })).toThrow(
+        `"**/demo.html" matches no file in ${root}; a * or ** does not enter node_modules, so name the folder to read one, as in "node_modules/<package>/**/*".`,
+      );
+    });
+
+    // `[locale]` is a set matching one of its letters; on Windows `\[` is a separator, not an escape.
+    it("says how to match a bracket when an entry holding one matches nothing", () => {
+      fs.mkdirSync(path.join(root, "app", "[locale]"));
+      fs.writeFileSync(path.join(root, "app", "[locale]", "page.tsx"), "locale");
+
+      expect(() => findFiles(["app/[locale]/**/*.tsx"], { cwd: root, failOnUnmatched: true })).toThrow(
+        `"app/[locale]/**/*.tsx" matches no file in ${root}; a [ in a glob starts a set of characters, so write [[] for a bracket in a name, as in "app/[[]locale]/**/*.tsx".`,
+      );
+      expect(relative(findFiles(["app/[[]locale]/**/*.tsx"], { cwd: root }))).toEqual(["app/[locale]/page.tsx"]);
+    });
   });
 });
 

@@ -1,3 +1,4 @@
+import { randomBytes } from "node:crypto";
 import { existsSync, readFileSync, realpathSync } from "node:fs";
 import * as fs from "node:fs/promises";
 import path from "node:path";
@@ -80,7 +81,7 @@ export async function run(argv: readonly string[], io: CliIo): Promise<number> {
 }
 
 function parseCommandLine(argv: readonly string[]): BuildOptions | "help" | "version" {
-  const { values, positionals } = parseFlags(argv);
+  const { values, positionals, tokens } = parseFlags(argv);
 
   if (values.help) {
     return "help";
@@ -106,6 +107,11 @@ function parseCommandLine(argv: readonly string[]): BuildOptions | "help" | "ver
     throw new Error(`missing --content; name the templates to scan, as in --content "app/views/**/*.erb".`);
   }
 
+  // parseArgs keeps the last value of a flag given twice, so `-o a.css -o b.css` wrote b.css alone.
+  if (tokens.filter((token) => token.kind === "option" && token.name === "output").length > 1) {
+    throw new Error("--output is given more than once; name one stylesheet to write.");
+  }
+
   const output = values.output?.trim();
 
   if (!output) {
@@ -114,6 +120,12 @@ function parseCommandLine(argv: readonly string[]): BuildOptions | "help" | "ver
   if (output === "-") {
     throw new Error(
       "--output - would write a file named -; this command writes no standard output, so name a stylesheet, as in --output public/app.css.",
+    );
+  }
+  // `path.resolve` drops a trailing separator, so `newdir/` wrote a file named `newdir` where none existed.
+  if ((process.platform === "win32" ? /[\\/]$/ : /\/$/).test(output)) {
+    throw new Error(
+      `--output ${output} ends with a folder separator, so it names a folder, not a file; name a stylesheet to write, as in --output ${output}app.css.`,
     );
   }
 
@@ -130,6 +142,7 @@ function parseFlags(argv: readonly string[]) {
     return parseArgs({
       args: [...argv],
       allowPositionals: true,
+      tokens: true,
       options: {
         content: { type: "string", short: "c", multiple: true },
         output: { type: "string", short: "o" },
@@ -148,6 +161,19 @@ function parseFlags(argv: readonly string[]) {
     }
 
     const code = (error as { code?: string }).code;
+    // As in "To specify an option argument starting with a dash use '--output=-XYZ' or '-o-XYZ'."
+    const name = (error as Error).message.includes("starting with a dash")
+      ? /'(--[\w-]+)=-XYZ'/.exec((error as Error).message)?.[1]
+      : undefined;
+
+    if (name !== undefined) {
+      const at = argv.findIndex((arg, index) => arg === flag && argv[index + 1]?.startsWith("-"));
+      const value = at === -1 ? "<value>" : argv[at + 1];
+
+      throw new Error(
+        `option "${name}" is missing its value; to give it a value that starts with a dash, write ${name}=${value}.`,
+      );
+    }
 
     throw new Error(
       code === "ERR_PARSE_ARGS_UNKNOWN_OPTION"
@@ -173,7 +199,7 @@ async function build(options: BuildOptions, io: CliIo): Promise<string> {
 
   // Through a link, the file it leads to is the one written, and the one no glob may read.
   const target = await realPathOf(output);
-  const contents = readContent(options.contentGlobs, io.cwd, target);
+  const contents = readContent(options.contentGlobs, io.cwd, target, options.output);
 
   const droppable = new Set(JSON.parse(await readPackageFile(PURGE_CLASSES)) as string[]);
   const found = new Set<string>();
@@ -196,34 +222,68 @@ async function build(options: BuildOptions, io: CliIo): Promise<string> {
   /* Written beside the output and renamed over it, so a write that fails
      partway, on a full disk say, leaves the previous stylesheet whole rather
      than a truncated one a deploy would ship. */
-  const temporary = `${target}.${process.pid}.tmp`;
+  let temporary: string | undefined;
+  let warning: string | undefined;
 
   try {
     await fs.mkdir(path.dirname(target), { recursive: true });
-    await fs.writeFile(temporary, css);
-    await keepOwnership(temporary, target, options.output, io);
+
+    const created = await createTemporary(target);
+
+    temporary = created.path;
+    try {
+      await created.handle.writeFile(css);
+      warning = await keepOwnershipOf(created.handle, target, options.output);
+    } finally {
+      await created.handle.close();
+    }
     await replaceFile(temporary, target);
   } catch (error) {
-    // Best effort: the error worth reporting is the one above.
-    await fs.rm(temporary, { force: true }).catch(() => undefined);
+    // Best effort, and only for a file this build created: the error worth reporting is the one above.
+    if (temporary !== undefined) {
+      await fs.rm(temporary, { force: true }).catch(() => undefined);
+    }
     throw new Error(`cannot write --output ${options.output}: ${describeWriteError(error)}`);
+  }
+
+  // After the rename, so a build that fails prints its one line and no warning.
+  if (warning !== undefined) {
+    io.stderr(warning);
   }
 
   return output;
 }
 
+/* A name anyone could guess, such as one from the process ID, let whoever can
+   write to the output's folder plant a link there first, and the write went
+   through it to a file the build was never given. The name is random, and the
+   file is created with `wx`, which fails on any entry already there, a link
+   included, so the file written is always one this build created. Everything
+   after goes through the handle, never the name. */
+async function createTemporary(target: string): Promise<{ path: string; handle: fs.FileHandle }> {
+  for (let attempt = 1; ; attempt += 1) {
+    const name = `${target}.${randomBytes(8).toString("hex")}.tmp`;
+
+    try {
+      // oxlint-disable-next-line no-await-in-loop -- a name is tried only once the one before it is taken
+      return { path: name, handle: await fs.open(name, "wx") };
+    } catch (error) {
+      if ((error as { code?: string }).code !== "EEXIST" || attempt === 5) {
+        throw error;
+      }
+    }
+  }
+}
+
 /* The stylesheet is renamed over the output, so it would come out with the mode
    and owner of a new file: a `0640` file of the web server's group would come
    back `0644` and the runner's. The temporary file takes the permission bits,
-   owner, and group of the file it replaces first. Only root can give a file to
-   another user, and only to a group its owner is in, so a runner without that
-   right keeps the group when it is in it, and says what changed on stderr
-   rather than fail a build that wrote the stylesheet. Windows keeps neither:
-   its mode is only the read-only attribute, which a rename over the file
-   refuses, and a new file takes its folder's permissions. */
-async function keepOwnership(temporary: string, target: string, output: string, io: CliIo): Promise<void> {
+   owner, and group of the file it replaces first. Windows keeps neither: its
+   mode is only the read-only attribute, which a rename over the file refuses,
+   and a new file takes its folder's permissions. */
+async function keepOwnershipOf(handle: fs.FileHandle, target: string, output: string): Promise<string | undefined> {
   if (process.platform === "win32") {
-    return;
+    return undefined;
   }
 
   const previous = await fs.stat(target).catch((error: unknown) => {
@@ -233,36 +293,61 @@ async function keepOwnership(temporary: string, target: string, output: string, 
     throw error;
   });
 
-  if (previous === undefined) {
-    return;
-  }
+  return previous === undefined ? undefined : keepOwnership(handle, previous, output);
+}
 
-  const created = await fs.stat(temporary);
+/** What {@link keepOwnership} changes: the temporary file, through its handle. */
+export interface OwnedFile {
+  stat(): Promise<{ uid: number; gid: number }>;
+  chown(uid: number, gid: number): Promise<void>;
+  chmod(mode: number): Promise<void>;
+}
+
+/**
+ * Gives `file` the owner, group, and permission bits of `previous`, and returns the warning to
+ * print when it could not keep them all. Only root can give a file to another user, and only to a
+ * group its owner is in, so a runner without that right keeps the group when it is in it, and says
+ * what changed rather than fail a build that wrote the stylesheet.
+ */
+export async function keepOwnership(
+  file: OwnedFile,
+  previous: { uid: number; gid: number; mode: number },
+  output: string,
+): Promise<string | undefined> {
+  const created = await file.stat();
+  let warning: string | undefined;
 
   if (previous.uid !== created.uid || previous.gid !== created.gid) {
-    const kept = await chownAllowed(temporary, previous.uid, previous.gid);
+    const kept = await chownAllowed(file, previous.uid, previous.gid);
+    /* The previous owner read the file by the owner's bit. Without the owner,
+       only the bits of the group, while it is kept, and of others still let
+       them, so a `0600` file of the web server's is one the server may no
+       longer read, which "its mode is kept" alone did not say. */
+    const stillRead = kept === "group" ? 0o044 : 0o004;
+    const unreadable =
+      (previous.mode & 0o400) !== 0 && (previous.mode & stillRead) === 0
+        ? `, so user ${previous.uid} may no longer be able to read it`
+        : "";
 
     if (kept === "group") {
-      io.stderr(
-        `${BIN}: warning: --output ${output} now belongs to user ${created.uid}, not ${previous.uid}, since only root can give a file to another user; its group and mode are kept.`,
-      );
+      warning = `${BIN}: warning: --output ${output} now belongs to user ${created.uid}, not ${previous.uid}, since only root can give a file to another user; its group and mode are kept${unreadable}.`;
     } else if (kept === "neither") {
-      io.stderr(
-        `${BIN}: warning: --output ${output} now belongs to user ${created.uid} and group ${created.gid}, not ${previous.uid} and ${previous.gid}, since only root can give a file to another user or to a group you are not in; its mode is kept.`,
-      );
+      warning = `${BIN}: warning: --output ${output} now belongs to user ${created.uid} and group ${created.gid}, not ${previous.uid} and ${previous.gid}, since only root can give a file to another user or to a group you are not in; its mode is kept${unreadable}.`;
     }
   }
   // After the owner: changing it can clear the set-user-ID and set-group-ID bits.
-  await fs.chmod(temporary, previous.mode & 0o777);
+  await file.chmod(previous.mode & 0o777);
+
+  return warning;
 }
 
 /* Gives the file to the user and group, or to the group alone when only root
    could give it to the user. Any failure but that refusal is thrown. */
-async function chownAllowed(file: string, uid: number, gid: number): Promise<"both" | "group" | "neither"> {
+async function chownAllowed(file: OwnedFile, uid: number, gid: number): Promise<"both" | "group" | "neither"> {
   const isRefused = (error: unknown) => (error as { code?: string }).code === "EPERM";
 
   try {
-    await fs.chown(file, uid, gid);
+    await file.chown(uid, gid);
     return "both";
   } catch (error) {
     if (!isRefused(error)) {
@@ -270,7 +355,7 @@ async function chownAllowed(file: string, uid: number, gid: number): Promise<"bo
     }
   }
   try {
-    await fs.chown(file, -1, gid);
+    await file.chown(-1, gid);
     return "group";
   } catch (error) {
     if (!isRefused(error)) {
@@ -386,33 +471,64 @@ function kindOf(stats: { isDirectory(): boolean; isFIFO(): boolean; isSocket(): 
    from missing content fails rather than writing a stylesheet without its
    classes. The output is left out: it names every class it keeps, so a glob
    that matches it would keep last build's classes, and the stylesheet would
-   grow with each build instead of following the templates. `path.relative` is
-   empty for the same file, in the case Windows ignores. A wildcard stays out
-   of `node_modules` unless the entry names it: a dependency's demo page, or
-   this package's own list of every class, would keep classes no template uses. */
-function readContent(entries: readonly string[], cwd: string, output: string): Generator<string> {
-  try {
-    const files = findFiles(entries, { cwd, failOnUnmatched: true, skipNodeModules: true }).filter(
-      (file) => path.relative(realPathSyncOf(file), output) !== "",
-    );
+   grow with each build instead of following the templates. An entry is checked
+   once the output is left out, so one that matched only the output, as
+   `public/*.css` does after a build into `public/`, fails rather than build
+   from nothing. `path.relative` is empty for the same file, in the case
+   Windows ignores. A wildcard stays out of `node_modules` unless the entry
+   names it: a dependency's demo page, or this package's own list of every
+   class, would keep classes no template uses. */
+function readContent(entries: readonly string[], cwd: string, output: string, given: string): Generator<string> {
+  const files = new Set<string>();
 
-    return readFiles(files, { cwd, failOnUnreadable: true });
-  } catch (error) {
-    throw error instanceof UnmatchedEntryError ? new Error(`--content ${error.message}`) : error;
+  for (const entry of entries) {
+    let matched: string[];
+
+    try {
+      matched = findFiles([entry], { cwd, failOnUnmatched: true, skipNodeModules: true });
+    } catch (error) {
+      throw error instanceof UnmatchedEntryError ? new Error(`--content ${error.message}`) : error;
+    }
+
+    const content = matched.filter((file) => path.relative(realPathSyncOf(file), output) !== "");
+
+    if (content.length === 0) {
+      throw new Error(
+        `--content "${entry}" matches only --output ${given}, which is never read for classes; name the templates to scan.`,
+      );
+    }
+    for (const file of content) {
+      files.add(file);
+    }
   }
+
+  return readFiles(files, { cwd, failOnUnreadable: true });
 }
 
 /* Content is read as text and never run, as Tailwind reads it: every run of
    characters a class name can hold is a word, and a word counts when it is a
    class this package defines. A word that is not one is read again by its
    parts around each colon, so Svelte's `class:primary={isPrimary}` and a Ruby
-   `btn: true` are found. */
-function* findClasses(content: string, known: ReadonlySet<string>): Generator<string, void, undefined> {
+   `btn: true` are found. The parts are taken one at a time: a word can be as
+   long as the file, and `split(":")` made an array of every part, so a 160 MB
+   file of colons aborted Node.js and a 192 MB one of `a:` took 1.6 GB. */
+export function* findClasses(
+  content: string,
+  known: Pick<ReadonlySet<string>, "has">,
+): Generator<string, void, undefined> {
   for (const word of splitWords(content, String.raw`\w:-`)) {
     if (known.has(word)) {
       yield word;
-    } else if (word.includes(":")) {
-      yield* word.split(":").filter((part) => known.has(part));
+      continue;
+    }
+    for (let from = 0, colon = word.indexOf(":"); colon !== -1; from = colon + 1) {
+      colon = word.indexOf(":", from);
+
+      const part = word.slice(from, colon === -1 ? undefined : colon);
+
+      if (part !== "" && known.has(part)) {
+        yield part;
+      }
     }
   }
 }

@@ -23,16 +23,43 @@ export interface ScanOptions {
   skipNodeModules?: boolean;
 }
 
+/**
+ * Why an entry named no file, when a likelier cause than a wrong path is known: it names a folder,
+ * its wildcard matched only files {@link ScanOptions.skipNodeModules} left out, or it holds a `[`,
+ * which a glob reads as the start of a set of characters.
+ */
+export type UnmatchedReason = "folder" | "nodeModules" | "bracket";
+
 /** An entry that names no file, thrown when {@link ScanOptions.failOnUnmatched} is on. */
 export class UnmatchedEntryError extends Error {
   readonly entry: string;
   readonly cwd: string;
+  readonly reason: UnmatchedReason | undefined;
 
-  constructor(entry: string, cwd: string) {
-    super(`"${entry}" matches no file in ${cwd}; check the path, or run from the project root.`);
+  constructor(entry: string, cwd: string, reason?: UnmatchedReason) {
+    super(describeUnmatched(entry, cwd, reason));
     this.name = "UnmatchedEntryError";
     this.entry = entry;
     this.cwd = cwd;
+    this.reason = reason;
+  }
+}
+
+/* "Check the path" sends a reader to fix a path that may be right, so a cause
+   more likely than a typo is named instead, with the entry that would work. */
+function describeUnmatched(entry: string, cwd: string, reason: UnmatchedReason | undefined): string {
+  const unmatched = `"${entry}" matches no file in ${cwd}`;
+
+  switch (reason) {
+    case "folder":
+      return `"${entry}" is a folder in ${cwd}, not a file; name the files in it, as in "${entry.replace(/[\\/]+$/, "")}/**/*".`;
+    case "nodeModules":
+      return `${unmatched}; a * or ** does not enter node_modules, so name the folder to read one, as in "node_modules/<package>/**/*".`;
+    case "bracket":
+      // `\[` escapes a bracket on POSIX only: Windows reads the backslash as a separator. `[[]` is a set of one `[` on both.
+      return `${unmatched}; a [ in a glob starts a set of characters, so write [[] for a bracket in a name, as in "${entry.replaceAll("[", "[[]")}".`;
+    default:
+      return `${unmatched}; check the path, or run from the project root.`;
   }
 }
 
@@ -53,13 +80,11 @@ export function findFiles(entries: Iterable<string>, options: ScanOptions = {}):
   const files = new Set<string>();
 
   for (const entry of entries) {
-    const named = resolveEntry(entry, cwd, {
-      isStrict: options.failOnUnmatched === true,
-      skipNodeModules: options.skipNodeModules === true && !NODE_MODULES_SEGMENT.test(entry),
-    });
+    const skipNodeModules = options.skipNodeModules === true && !NODE_MODULES_SEGMENT.test(entry);
+    const named = resolveEntry(entry, cwd, { isStrict: options.failOnUnmatched === true, skipNodeModules });
 
     if (named.length === 0 && options.failOnUnmatched) {
-      throw new UnmatchedEntryError(entry, cwd);
+      throw new UnmatchedEntryError(entry, cwd, reasonUnmatched(entry, cwd, skipNodeModules));
     }
     for (const file of named) {
       files.add(file);
@@ -175,6 +200,27 @@ function resolveEntry(
     }
     return [];
   }
+}
+
+/* Run only once an entry has failed, so the second walk a wildcard takes to
+   look inside node_modules costs nothing on a build that succeeds. */
+function reasonUnmatched(entry: string, cwd: string, skipNodeModules: boolean): UnmatchedReason | undefined {
+  try {
+    if (fs.statSync(path.resolve(cwd, entry), { throwIfNoEntry: false })?.isDirectory()) {
+      return "folder";
+    }
+    if (skipNodeModules && GLOB_CHARACTERS.test(entry)) {
+      const all = fs.globSync(entry, { cwd }).map((match) => path.resolve(cwd, match));
+
+      if (all.some(isFileOrUnknown)) {
+        return "nodeModules";
+      }
+    }
+  } catch {
+    // The entry's own failure is the one reported; a cause that cannot be checked is left out.
+  }
+
+  return entry.includes("[") ? "bracket" : undefined;
 }
 
 // Called for each folder the walk would enter too, so it never descends into one.
