@@ -7,6 +7,7 @@ import { generateKeyPair, generateSecretKey } from "./generate";
 import { importPrivateKey, importPublicKey, importSecretKey } from "./import";
 import { getKeyEntry } from "./registry";
 import { EC_P256_PUBLIC_JWK, ED25519_PUBLIC_JWK, RSA_2048_PUBLIC_JWK, valueOf } from "./test-fixtures";
+import { jwkThumbprint } from "./thumbprint";
 
 const ASYMMETRIC: readonly AsymmetricAlgorithm[] = [
   "ES256",
@@ -59,6 +60,14 @@ describe.each(ASYMMETRIC)("generateKeyPair and export for %s", (alg) => {
       publicKey: { kind: "public", alg, kid: "g1" },
     });
     expect([pair, pair.privateKey, pair.publicKey].every(Object.isFrozen)).toBe(true);
+  });
+
+  it('should name both keys by their RFC 7638 thumbprint for kid: "thumbprint"', async () => {
+    const pair = await generateKeyPair({ alg, kid: "thumbprint" });
+    const thumbprint = await jwkThumbprint(pair.publicKey);
+    expect(thumbprint).toMatch(/^[\w-]{43}$/);
+    expect([pair.privateKey.kid, pair.publicKey.kid]).toEqual([thumbprint, thumbprint]);
+    expect((await exportPublicJwk(pair.publicKey)).kid).toBe(thumbprint);
   });
 
   it("should produce keys whose signatures verify with the shared algorithm parameters", async () => {

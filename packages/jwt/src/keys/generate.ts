@@ -9,6 +9,7 @@ import {
   requireSymmetricAlg,
 } from "./options";
 import { kidMember, registerKey } from "./registry";
+import { cryptoKeyThumbprint } from "./thumbprint";
 
 /** RSA modulus lengths {@link generateKeyPair} accepts, in bits. */
 export type RsaModulusLength = 2048 | 3072 | 4096;
@@ -18,7 +19,9 @@ export interface GenerateKeyPairOptions {
   /** The one algorithm both keys are bound to. */
   readonly alg: AsymmetricAlgorithm;
   /**
-   * Key identifier given to both keys.
+   * Key identifier given to both keys. The literal `"thumbprint"` is reserved: it gives both keys the
+   * public key's RFC 7638 thumbprint, as {@link jwkThumbprint} computes it, so the `kid` is stable and
+   * derived from the key alone.
    *
    * @defaultValue no `kid`
    */
@@ -82,6 +85,8 @@ const RSA_PUBLIC_EXPONENT = new Uint8Array([1, 0, 1]);
 const BITS_PER_BYTE = 8;
 /** Retries after an `OperationError` from Ed25519 generation; four failures in a row are about 1 in 2^28. */
 const OKP_GENERATION_RETRIES = 3;
+/** The `kid` option value that names a generated pair by its RFC 7638 thumbprint. */
+const THUMBPRINT_KID = "thumbprint";
 
 /**
  * Generates a key pair bound to one asymmetric algorithm.
@@ -89,9 +94,10 @@ const OKP_GENERATION_RETRIES = 3;
  * @example
  * ```ts
  * const { privateKey, publicKey } = await generateKeyPair({ alg: "ES256", kid: "2026-10" });
+ * const named = await generateKeyPair({ alg: "ES256", kid: "thumbprint" }); // kid: the RFC 7638 thumbprint
  * ```
  *
- * @param options - The algorithm, an optional `kid`, whether the private key may be exported, and
+ * @param options - The algorithm, an optional `kid` (`"thumbprint"` for the key's thumbprint), whether the private key may be exported, and
  * the RSA modulus length.
  * @returns The frozen pair. Both keys carry the same `alg` and `kid`.
  * @remarks For `EdDSA` and `Ed25519`, a generation that Web Crypto rejects with `OperationError` is
@@ -103,7 +109,7 @@ const OKP_GENERATION_RETRIES = 3;
 export async function generateKeyPair(options: GenerateKeyPairOptions): Promise<KeyPair> {
   const checked = requireOptions(options, KEY_PAIR_OPTIONS, "generateKeyPair");
   const alg = requireAsymmetricAlg(checked, "generateKeyPair");
-  const kid = readKid(checked, "generateKeyPair");
+  const optionKid = readKid(checked, "generateKeyPair");
   const isExtractable = readExtractable(checked, "generateKeyPair");
   const modulusLength = readModulusLength(checked, alg);
   const params = ALGORITHM_PARAMS[alg];
@@ -113,6 +119,7 @@ export async function generateKeyPair(options: GenerateKeyPairOptions): Promise<
       : params.importParams;
   const pair = await generatePair(generateParams, isExtractable, params.kty === "OKP" ? OKP_GENERATION_RETRIES : 0);
   const signatureLength = params.kty === "RSA" ? modulusLength / BITS_PER_BYTE : (params.signatureBytes as number);
+  const kid = optionKid === THUMBPRINT_KID ? await cryptoKeyThumbprint(pair.publicKey, alg) : optionKid;
   return Object.freeze({
     privateKey: registerKey<PrivateKey>(
       { kind: "private", alg, ...kidMember(kid), extractable: isExtractable },

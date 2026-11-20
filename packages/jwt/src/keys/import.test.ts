@@ -524,8 +524,13 @@ describe("importSecretKey", () => {
   });
 
   it("should import an oct JWK, taking kid from the JWK", async () => {
-    const result = await importSecretKey({ ...HMAC_SECRET_JWK, kid: "j1" }, { alg: "HS256", kid: "ignored" });
+    const result = await importSecretKey({ ...HMAC_SECRET_JWK, kid: "j1" }, { alg: "HS256", kid: "j1" });
     expect(result).toEqual({ ok: true, value: { kind: "secret", alg: "HS256", kid: "j1", extractable: false } });
+  });
+
+  it("should refuse an oct JWK whose kid differs from options.kid as invalid_key at kid", async () => {
+    const result = await importSecretKey({ ...HMAC_SECRET_JWK, kid: "j1" }, { alg: "HS256", kid: "other" });
+    expect(issuesOf(result)).toEqual([{ code: "invalid_key", path: ["kid"] }]);
   });
 
   it("should report weak_key with path k for a 31-byte oct JWK", async () => {
@@ -737,9 +742,9 @@ describe("importSecretKey option and JWK interplay", () => {
     expect(signature.byteLength).toBe(32);
   });
 
-  it("should ignore the kid option for a JWK without a kid", async () => {
-    const result = await importSecretKey(HMAC_SECRET_JWK, { alg: "HS256", kid: "ignored" });
-    expect(valueOf(result).kid).toBeUndefined();
+  it("should give a JWK without a kid the kid option", async () => {
+    const result = await importSecretKey(HMAC_SECRET_JWK, { alg: "HS256", kid: "given" });
+    expect(valueOf(result).kid).toBe("given");
   });
 
   it("should accept an empty-string kid from the option and from a JWK", async () => {
