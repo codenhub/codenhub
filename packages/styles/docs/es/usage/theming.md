@@ -2,7 +2,7 @@
 title: Temas
 description: Modo claro y oscuro, reemplazar la paleta con los colores de marca, definir una intención propia, y cada token de color, intención, base y fuente con su valor por defecto.
 order: 5
-source: 86836142938cbddb71d5ebfa885b862678dd84a1
+source: d071d7088a90d81286d17d3af6aec720cbd1e5f7
 ---
 
 # Temas
@@ -136,11 +136,26 @@ La clase funciona en todo lo que acepta una intención: botones, badges, campos 
 - **Clases solo.** Una [clase solo](./solo.md) como `.neobrutalism-solo` solo toma una intención de las seis clases incorporadas, así que `.neobrutalism-solo.beta` se dibuja neutro.
 - **El texto del hint.** Un [`.hint`](./forms.md#mostrar-un-error-de-validación) solo se muestra en el tono legible de una intención con las seis clases incorporadas, así que `.hint.beta` se queda en el color secundario.
 - **Filas de tabla.** Una fila del cuerpo cambia el color de su texto, su línea y su hover solo con las clases de intención incorporadas. `<tr class="beta">` se ve como el resto de su tabla.
+- **Más contraste.** Con `prefers-contrast: more` o `data-contrast="more"`, el borde de una intención incorporada toma su tono strong, así que `.edged` sobre un componente `.soft` alcanza 3:1; consulta [Accesibilidad → Contraste aumentado](../accessibility.md#contraste-aumentado). `.beta` conserva su `--intent-border`, que puede quedar por debajo de 3:1 frente a su tinte.
 
 Si los necesitas, hay dos caminos:
 
 - **Cambia en su lugar el tema de una intención incorporada.** Define la familia `--color-info` (u otra) con tus colores, como en [Cambiar el color de marca](#cambiar-el-color-de-marca), y escribe `.info`. Todo, incluidos los casos anteriores, funciona entonces. El coste es que el cambio llega a cada `.info` dentro del elemento en el que lo defines, así que defínelo en el elemento más reducido que funcione, y no lo hagas con una intención que la página ya usa con su propio significado.
 - **Píntalo tú.** Escribe tu propio CSS para ese componente concreto, como un `background-color` en `.panel.beta`.
+
+Para más contraste, el segundo camino son dos reglas: una para el ajuste del sistema, que el `data-contrast="standard"` de una app desactiva, y otra para `data-contrast="more"`. El tono strong de arriba mide 7.57:1 y 5.93:1 sobre el tinte, así que el borde supera 3:1 en ambos temas.
+
+```css
+@media (prefers-contrast: more) {
+  .beta:not(:where(:root[data-contrast="standard"] *)) {
+    --intent-border: var(--intent-strong);
+  }
+}
+
+:root[data-contrast="more"] .beta {
+  --intent-border: var(--intent-strong);
+}
+```
 
 > **La intención no se hereda.** Cada componente restablece los huecos de intención en su propia raíz, así que un contenedor `.success` no cambia el color de un botón destructivo que contenga. Pon la clase de intención en el elemento que muestra el color.
 

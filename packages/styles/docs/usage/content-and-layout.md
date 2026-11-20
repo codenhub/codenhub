@@ -47,6 +47,8 @@ The two largest sizes grow at Tailwind's `md` breakpoint, 48rem by default. With
 
 `.text-body` is 0.875rem, smaller than the 1rem page text; use it for secondary or dense copy, not for the page's main text. `/native` is the exception: it sets `.text-body` on `body`, so there it is the page text, and paragraphs and list items inherit it from whatever they sit in. See [Classless HTML](../setup.md#classless-html).
 
+The tracking in the table is `normal` in a language whose script joins its letters: Arabic, Persian, Urdu, Pashto, Sindhi, Uyghur, Sorani Kurdish, Kashmiri, Syriac, N'Ko, Mongolian in its own script (`mn-Mong`), and Adlam (`ff-Adlm`). Spacing letters apart breaks the joins between them, and a ligature such as "الله". The language comes from `lang`, on the element or one around it, so set it: on `<html>` for a page in that language, and on a passage in it inside a page in another. Kurdish and Punjabi in Arabic script need the subtag, as in `lang="ku-Arab"` and `lang="pa-Arab"`. Under `/native`, such a passage also takes no tracking from the page around it. Your own `tracking-*` utility still applies.
+
 `.selection-contrast` on an element swaps the colors of selected text inside it to `--color-primary` on `--color-primary-contrast`. Use it on a `.solid.primary` area, where the default selection color would match the background.
 
 ## Surfaces

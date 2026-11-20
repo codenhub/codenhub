@@ -135,11 +135,26 @@ The class works on everything that takes an intent: buttons, badges, fields and 
 - **Solo classes.** A [solo class](./solo.md) such as `.neobrutalism-solo` takes an intent only from the six built-in classes, so `.neobrutalism-solo.beta` is drawn neutral.
 - **Hint text.** A [`.hint`](./forms.md#show-a-validation-error) prints in an intent's readable tone only for the six built-in classes, so `.hint.beta` stays secondary-colored.
 - **Table rows.** A body row recolors its text, line, and hover only for the built-in intent classes. `<tr class="beta">` looks like the rest of its table.
+- **More contrast.** Under `prefers-contrast: more` or `data-contrast="more"`, a built-in intent's border takes its strong tone, so `.edged` on a `.soft` component meets 3:1; see [Accessibility → Increased contrast](../accessibility.md#increased-contrast). `.beta` keeps its `--intent-border`, which can measure below 3:1 against its tint.
 
 If you need those, there are two ways:
 
 - **Retheme a built-in intent instead.** Set the `--color-info` family (or another one) to your colors, as in [Change the brand color](#change-the-brand-color), and write `.info`. Everything, including the cases above, then works. The cost is that the change reaches every `.info` inside the element you set it on, so set it on the narrowest element that works, and do not do it with an intent the page already uses for its own meaning.
 - **Paint it yourself.** Write your own CSS for that one component, such as a `background-color` on `.panel.beta`.
+
+For more contrast, the second way is two rules: one for the system's setting, which an app's `data-contrast="standard"` turns off, and one for `data-contrast="more"`. The strong tone above measures 7.57:1 and 5.93:1 on the tint, so the border clears 3:1 in both themes.
+
+```css
+@media (prefers-contrast: more) {
+  .beta:not(:where(:root[data-contrast="standard"] *)) {
+    --intent-border: var(--intent-strong);
+  }
+}
+
+:root[data-contrast="more"] .beta {
+  --intent-border: var(--intent-strong);
+}
+```
 
 > **Intent does not pass down.** Each component resets the intent slots at its own root, so a `.success` container does not recolor a destructive button inside it. Put the intent class on the element that shows the color.
 

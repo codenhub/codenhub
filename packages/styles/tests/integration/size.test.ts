@@ -48,7 +48,11 @@ const COMPILED_CEILINGS: Record<string, number> = {
   "dist/aesthetics/pixel.css": 5_000,
   "dist/aesthetics/sketch.css": 15_350,
   /* Read by `chs build`, never served, but every consumer installs it. */
-  "dist/purge/index.css": 325_350,
+  /* 314,500 until 0.11.0 kept tracking off scripts that join their letters,
+     a fallback in each of the eleven rules that copy a text style, and
+     raised a glass surface holding a tooltip, scoped the bubble to it, gave
+     a glass pane an opaque ground on a plate, and let a button label wrap. */
+  "dist/purge/index.css": 327_000,
   "dist/purge/classes.json": 7_100,
 };
 
@@ -118,7 +122,10 @@ describe("a /tw consumer build", { timeout: 60_000 }, () => {
       name: "a page with one primary button, through /tw",
       imports: [twEntry("index.css")],
       candidates: ["btn", "primary"],
-      ceiling: 28_550,
+      /* 27,550 until 0.11.0's reset reached a dialog's backdrop and a view
+         transition, rules every page with the reset carries, and the button
+         learned to wrap its label and a pane its ground on a plate. */
+      ceiling: 29_800,
     },
   ];
 

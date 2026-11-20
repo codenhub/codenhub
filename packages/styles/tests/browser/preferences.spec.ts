@@ -160,6 +160,58 @@ for (const theme of ["light", "dark"] as const) {
   });
 }
 
+/* docs/usage/theming.md's recipe for giving a custom intent the strong
+   border the six built-in ones take under more contrast, as written there:
+   the badge draws what one handed its strong tone as its border draws. */
+test("a custom intent takes its strong border with the theming recipe", async ({ page }) => {
+  const RECIPE = `
+    .beta {
+      --intent-color: #7c3aed;
+      --intent-contrast: #ffffff;
+      --intent-hover: #6d28d9;
+      --intent-strong: light-dark(#5b21b6, #c4b5fd);
+      --intent-subtle: light-dark(#ede9fe, #4c1d95);
+      --intent-border: light-dark(#7c3aed, #a78bfa);
+      --intent-fill-max: 100%;
+    }
+    @media (prefers-contrast: more) {
+      .beta:not(:where(:root[data-contrast="standard"] *)) {
+        --intent-border: var(--intent-strong);
+      }
+    }
+    :root[data-contrast="more"] .beta {
+      --intent-border: var(--intent-strong);
+    }`;
+  const read = async (contrast: "more" | "no-preference", attributes = "") => {
+    await page.emulateMedia({ contrast });
+    await page.setContent(
+      `<!doctype html><html data-theme="light" ${attributes}><body>
+        <span data-testid="beta" class="badge soft edged beta">Beta</span>
+        <span data-testid="strong" class="badge soft edged beta" style="--intent-border: var(--intent-strong)">Beta</span>
+      </body></html>`,
+    );
+    await page.addStyleTag({ content: await built("index.css") });
+    await page.addStyleTag({ content: RECIPE });
+
+    return page.evaluate(async () => {
+      await Promise.allSettled(document.getAnimations().map((animation) => animation.finished));
+
+      return {
+        border: getComputedStyle(document.querySelector('[data-testid="beta"]')!).borderTopColor,
+        strong: getComputedStyle(document.querySelector('[data-testid="strong"]')!).borderTopColor,
+      };
+    });
+  };
+
+  const standard = await read("no-preference");
+  const more = await read("more");
+
+  expect(more.border).toBe(more.strong);
+  expect(standard.border).not.toBe(more.border);
+  expect(await read("no-preference", 'data-contrast="more"')).toEqual(more);
+  expect(await read("more", 'data-contrast="standard"')).toEqual(standard);
+});
+
 test.describe("data-motion", () => {
   for (const sheet of ["components.css", "native.css"] as const) {
     test(`data-motion="reduce" moves as prefers-reduced-motion: reduce does, ${sheet}`, async ({ page }) => {
@@ -291,32 +343,141 @@ test.describe("data-motion", () => {
     });
 
     /* A popover or dialog fades out by keeping `display` and `overlay` for the
-       length of the fade; without them in the list it vanishes at once. They
-       follow `opacity`, where such a transition names them. */
-    test(`under ${label}, a popover still fades out`, async ({ page }) => {
-      const read = async (motion: "reduce" | "no-preference", html: string) => {
-        await page.emulateMedia({ reducedMotion: motion });
-        await page.setContent(
-          `<!doctype html><html ${html}><body><style>
-          [popover] { opacity: 0; transition: opacity 1s, display 1s allow-discrete, overlay 1s allow-discrete; }
-          [popover]:popover-open { opacity: 1; }
-          @starting-style { [popover]:popover-open { opacity: 0; } }
+       length of the fade; without them in the list it vanishes at once. The
+       reset gives both `allow-discrete` itself, since the behaviour the author
+       wrote for them sits at whatever position they named them in: MDN's
+       recipe names `transform` second, where the reset puts `display`. */
+    for (const transition of [
+      "opacity 1s, display 1s allow-discrete, overlay 1s allow-discrete",
+      "opacity 1s, transform 1s, overlay 1s allow-discrete, display 1s allow-discrete",
+    ]) {
+      test(`under ${label}, a popover still fades out, with ${transition}`, async ({ page }) => {
+        const read = async (motion: "reduce" | "no-preference", html: string) => {
+          await page.emulateMedia({ reducedMotion: motion });
+          await page.setContent(
+            `<!doctype html><html ${html}><body><style>
+          [popover] { opacity: 0; transform: scale(0.9); transition: ${transition}; }
+          [popover]:popover-open { opacity: 1; transform: none; }
+          @starting-style { [popover]:popover-open { opacity: 0; transform: scale(0.9); } }
         </style><div popover data-testid="pop">Saved</div></body></html>`,
+          );
+          await page.addStyleTag({ content: await built("index.css") });
+
+          return page.getByTestId("pop").evaluate(async (element: HTMLElement) => {
+            element.showPopover();
+            await Promise.allSettled(element.getAnimations().map((animation) => animation.finished));
+            element.hidePopover();
+            await new Promise(requestAnimationFrame);
+
+            return getComputedStyle(element).display;
+          });
+        };
+
+        // An engine that cannot animate `display` closes the popover at once with no preference too.
+        expect(await read(reducedMotion, attributes)).toBe(await read("no-preference", ""));
+      });
+    }
+
+    /* The reset pairs its own properties with the author's durations and
+       delays by position, as docs/accessibility.md says, so what survives is
+       a hide that puts `opacity` first or gives every property one duration
+       and no delay. Pinned so a change to the reset's order or to delays
+       shows here. */
+    for (const transition of ["opacity 1s, visibility 0s 1s", "visibility 1s, opacity 1s"]) {
+      test(`under ${label}, ${transition} still fades before it hides`, async ({ page }) => {
+        await page.emulateMedia({ reducedMotion });
+        await page.setContent(
+          `<!doctype html><html ${attributes}><body><style>
+          #m { transition: ${transition}; } #m.off { opacity: 0; visibility: hidden; }
+        </style><div id="m" data-testid="m">Saved</div></body></html>`,
         );
         await page.addStyleTag({ content: await built("index.css") });
 
-        return page.getByTestId("pop").evaluate(async (element: HTMLElement) => {
-          element.showPopover();
-          await Promise.allSettled(element.getAnimations().map((animation) => animation.finished));
-          element.hidePopover();
-          await new Promise(requestAnimationFrame);
+        const running = await page.getByTestId("m").evaluate((element) => {
+          element.classList.add("off");
 
-          return getComputedStyle(element).display;
+          return Object.fromEntries(
+            element.getAnimations().map((animation) => {
+              const timing = animation.effect!.getTiming();
+
+              return [(animation as CSSTransition).transitionProperty, [timing.duration, timing.delay]];
+            }),
+          );
         });
-      };
 
-      // An engine that cannot animate `display` closes the popover at once with no preference too.
-      expect(await read(reducedMotion, attributes)).toBe(await read("no-preference", ""));
-    });
+        expect(running.opacity, "opacity fades for its own duration, at once").toEqual([1000, 0]);
+        expect(running.visibility[0] + running.visibility[1], "visibility holds until the fade ends").toBe(1000);
+      });
+    }
   }
 });
+/* The reset reaches the pseudo-elements a page animates outside the element
+   tree: a dialog's `::backdrop`, and the view transition's tree on `:root`.
+   Under reduced motion a view transition's group stops gliding between the
+   two positions; under `none` everything ends at once. */
+for (const [label, attributes, reducedMotion] of [
+  ["the system's reduced motion", "", "reduce"],
+  ['data-motion="reduce"', 'data-motion="reduce"', "no-preference"],
+  ['data-motion="none"', 'data-motion="none"', "no-preference"],
+] as const) {
+  test.describe(`under ${label}`, () => {
+    test("a backdrop's animation ends at once", async ({ page }) => {
+      await page.emulateMedia({ reducedMotion });
+      await page.setContent(
+        `<!doctype html><html ${attributes}><body><style>
+        @keyframes fade { from { opacity: 0; } }
+        dialog::backdrop { animation: fade 1s forwards; }
+      </style><dialog data-testid="dialog">Saved</dialog></body></html>`,
+      );
+      await page.addStyleTag({ content: await built("index.css") });
+
+      /* Read from the computed style: WebKit lists no animation on a
+         `::backdrop` in `getAnimations()`. */
+      const duration = await page.getByTestId("dialog").evaluate((element: HTMLDialogElement) => {
+        element.showModal();
+
+        return getComputedStyle(element, "::backdrop").animationDuration;
+      });
+
+      expect(Number.parseFloat(duration)).toBeLessThan(0.001);
+    });
+
+    test("a view transition does not move", async ({ page }) => {
+      await page.emulateMedia({ reducedMotion });
+      await page.setContent(
+        `<!doctype html><html ${attributes}><body><style>
+        #box { view-transition-name: box; width: 50px; height: 50px; background: red; }
+      </style><div id="box" data-testid="box"></div></body></html>`,
+      );
+      await page.addStyleTag({ content: await built("index.css") });
+
+      const durations = await page.getByTestId("box").evaluate(async (element) => {
+        if (!("startViewTransition" in document)) {
+          return null;
+        }
+
+        const transition = document.startViewTransition(() => {
+          element.style.marginLeft = "300px";
+        });
+
+        await transition.ready;
+
+        return Object.fromEntries(
+          document
+            .getAnimations()
+            .map((animation) => [
+              (animation.effect as KeyframeEffect).pseudoElement,
+              animation.effect!.getComputedTiming().duration,
+            ])
+            .filter(([pseudo]) => String(pseudo).startsWith("::view-transition")),
+        );
+      });
+
+      test.skip(durations === null, "the engine has no view transitions");
+      expect(Object.keys(durations!).length, "the group and its two images animate").toBeGreaterThanOrEqual(3);
+      for (const [pseudo, duration] of Object.entries(durations!)) {
+        expect(Number(duration), pseudo).toBeLessThan(1);
+      }
+    });
+  });
+}

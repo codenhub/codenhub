@@ -890,3 +890,43 @@ test("renders a container's fill class on a table or a chip as the element's own
     expect(cascaded, label).toEqual(own);
   }
 });
+
+/* Letter-spacing pulls apart the letters of a script whose letters join:
+   Chromium and WebKit break the Arabic "الله" ligature at 0.05em, and WebKit
+   spaces every letter. So the package's own tracking is `normal` on an
+   element in a cursive script's language, and on one that would inherit the
+   page's, while a consumer's tracking utility still wins. */
+test("tracks no cursive script, while a consumer's tracking still wins", async ({ page }) => {
+  const { readFile } = await import("node:fs/promises");
+  const native = await readFile(new URL("../../dist/native.css", import.meta.url), "utf8");
+
+  await page.setContent(
+    `<!doctype html><html dir="rtl" lang="ar"><body>
+      <h1 data-testid="h1">الله</h1><h4 data-testid="h4">الله</h4>
+      <p data-testid="body">الله</p>
+      <span data-testid="label" class="text-label">الله</span>
+      <span data-testid="title" class="text-title">الله</span>
+      <span data-testid="consumer" class="text-label tracking-wide">الله</span>
+      <span data-testid="latin" class="text-label" lang="en">Label</span>
+    </body></html>`,
+  );
+  await page.addStyleTag({ content: native });
+  await page.addStyleTag({ content: "@layer utilities { .tracking-wide { letter-spacing: 3px; } }" });
+
+  const read = (id: string) => page.getByTestId(id).evaluate((element) => getComputedStyle(element).letterSpacing);
+
+  const cursive = await Promise.all(["h1", "h4", "body", "label", "title"].map(read));
+
+  expect(cursive).toEqual(["normal", "normal", "normal", "normal", "normal"]);
+  expect(await read("consumer")).toBe("3px");
+  expect(await read("latin"), "Latin text keeps its tracking").not.toBe("normal");
+
+  /* A cursive passage inside a Latin page does not inherit the body's. */
+  await page.evaluate(() => {
+    document.documentElement.lang = "en";
+    document.documentElement.dir = "ltr";
+    document.querySelector('[data-testid="body"]')!.setAttribute("lang", "ar");
+  });
+  expect(await read("body")).toBe("normal");
+  expect(await read("h1"), "Latin headings keep theirs").not.toBe("normal");
+});
