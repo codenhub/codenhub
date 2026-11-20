@@ -26,7 +26,7 @@ export interface ScanOptions {
 /**
  * Why an entry named no file, when a likelier cause than a wrong path is known: it names a folder,
  * its wildcard matched only files {@link ScanOptions.skipNodeModules} left out, or it holds a `[`,
- * which a glob reads as the start of a set of characters.
+ * which a glob reads as the start of a set of characters, and matches files once that is escaped.
  */
 export type UnmatchedReason = "folder" | "nodeModules" | "bracket";
 
@@ -57,10 +57,15 @@ function describeUnmatched(entry: string, cwd: string, reason: UnmatchedReason |
       return `${unmatched}; a * or ** does not enter node_modules, so name the folder to read one, as in "node_modules/<package>/**/*".`;
     case "bracket":
       // `\[` escapes a bracket on POSIX only: Windows reads the backslash as a separator. `[[]` is a set of one `[` on both.
-      return `${unmatched}; a [ in a glob starts a set of characters, so write [[] for a bracket in a name, as in "${entry.replaceAll("[", "[[]")}".`;
+      return `${unmatched}; a [ in a glob starts a set of characters, so write [[] for a bracket in a name, as in "${escapeBrackets(entry)}".`;
     default:
       return `${unmatched}; check the path, or run from the project root.`;
   }
+}
+
+// A `[[]` is a bracket escaped already, and escaping it again would make it `[[][[]]`.
+function escapeBrackets(entry: string): string {
+  return entry.replaceAll(/\[\[\]|\[/g, "[[]");
 }
 
 // `(` starts every extglob, such as `@(a|b)`, the one glob form with none of the other characters.
@@ -220,7 +225,12 @@ function reasonUnmatched(entry: string, cwd: string, skipNodeModules: boolean): 
     // The entry's own failure is the one reported; a cause that cannot be checked is left out.
   }
 
-  return entry.includes("[") ? "bracket" : undefined;
+  // Only an entry the escape makes match a file: one that names nothing either way has a wrong path.
+  const escaped = escapeBrackets(entry);
+
+  return escaped !== entry && resolveEntry(escaped, cwd, { isStrict: false, skipNodeModules }).length > 0
+    ? "bracket"
+    : undefined;
 }
 
 // Called for each folder the walk would enter too, so it never descends into one.

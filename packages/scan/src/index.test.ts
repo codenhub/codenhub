@@ -184,6 +184,28 @@ describe("findFiles", () => {
       );
       expect(relative(findFiles(["app/[[]locale]/**/*.tsx"], { cwd: root }))).toEqual(["app/[locale]/page.tsx"]);
     });
+
+    it("escapes only the brackets not escaped yet", () => {
+      fs.mkdirSync(path.join(root, "app", "[locale]", "[slug]"), { recursive: true });
+      fs.writeFileSync(path.join(root, "app", "[locale]", "[slug]", "page.tsx"), "slug");
+
+      expect(() => findFiles(["app/[[]locale]/[slug]/*.tsx"], { cwd: root, failOnUnmatched: true })).toThrow(
+        `as in "app/[[]locale]/[[]slug]/*.tsx".`,
+      );
+    });
+
+    // The escaped entry failed again and was escaped a second time, as `[[][[]]slug`.
+    it.each(["src/pages/[slug].astro", "src/pages/[[]slug].astro", "app/[locale]/*.css"])(
+      "tells %s, whose escaped form matches nothing either, to check the path",
+      (entry) => {
+        fs.mkdirSync(path.join(root, "app", "[locale]"));
+        fs.writeFileSync(path.join(root, "app", "[locale]", "page.tsx"), "locale");
+
+        expect(() => findFiles([entry], { cwd: root, failOnUnmatched: true })).toThrow(
+          `"${entry}" matches no file in ${root}; check the path, or run from the project root.`,
+        );
+      },
+    );
   });
 });
 
