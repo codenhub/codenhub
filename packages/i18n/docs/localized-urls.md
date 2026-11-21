@@ -432,7 +432,7 @@ A request can carry any of these, such as a scanner asking for `//wp-login.php`,
 Every method, `parse()` included, throws a `TypeError` for a value that is not a URL's pathname at all:
 
 - One that does not start with `/`, such as a full URL: `TypeError: [I18n] pathname must start with /; pass url.pathname`.
-- One that contains `?` or `#`, such as Node's `request.url` with its query string: `TypeError: [I18n] pathname "/search?…" must not contain ?, which starts a query; pass url.pathname`. Neither error quotes the URL's user info, query, or fragment, which can hold a credential.
+- One that contains `?` or `#`, such as Node's `request.url` with its query string: `TypeError: [I18n] pathname "/search?…" must not contain ?, which starts a query; pass url.pathname`. Neither error quotes the URL's user info, query, or fragment, which can hold a credential, and a path that starts with `//`, as a protocol-relative URL does, is not quoted at all: `TypeError: [I18n] pathname must not start with //, which starts a URL's host; pass url.pathname`.
 - One that is not a string: `TypeError: [I18n] pathname must be a string, received undefined`.
 
 That is a mistake in the calling code, not a request to answer, so it fails loudly instead of answering 404 to every URL with a query.

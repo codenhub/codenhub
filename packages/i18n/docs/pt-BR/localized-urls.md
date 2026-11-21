@@ -2,7 +2,7 @@
 title: URLs localizadas
 description: Coloque o locale no caminho, traduza o próprio caminho, leia os dois de volta, crie links para outros idiomas, gere todas as páginas localizadas e mande os visitantes para o idioma deles num site estático.
 order: 4
-source: d1982bce342d923a8dd150fcca2cdedb69755fc8
+source: 9631ff21a73a680787941415c4160732b2d7873e
 ---
 
 # URLs localizadas
@@ -433,7 +433,7 @@ Uma requisição pode trazer qualquer um desses, como um scanner pedindo `//wp-l
 Todo método, `parse()` incluído, lança um `TypeError` para um valor que nem é o pathname de uma URL:
 
 - Um que não começa com `/`, como uma URL inteira: `TypeError: [I18n] pathname must start with /; pass url.pathname`.
-- Um que contém `?` ou `#`, como o `request.url` do Node com a query string: `TypeError: [I18n] pathname "/search?…" must not contain ?, which starts a query; pass url.pathname`. Nenhum dos dois erros cita as informações de usuário, a query ou o fragmento da URL, que podem conter uma credencial.
+- Um que contém `?` ou `#`, como o `request.url` do Node com a query string: `TypeError: [I18n] pathname "/search?…" must not contain ?, which starts a query; pass url.pathname`. Nenhum dos dois erros cita as informações de usuário, a query ou o fragmento da URL, que podem conter uma credencial, e um caminho que começa com `//`, como uma URL relativa ao protocolo, não é citado: `TypeError: [I18n] pathname must not start with //, which starts a URL's host; pass url.pathname`.
 - Um que não é string: `TypeError: [I18n] pathname must be a string, received undefined`.
 
 Isso é um erro no código que chama, e não uma requisição a responder, então ele falha alto em vez de responder 404 a toda URL com query.

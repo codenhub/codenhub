@@ -218,6 +218,10 @@ export const createLocaleRouting = <TLocale extends string>(
       // Often a full URL, whose user info can hold a credential, so the value is not quoted.
       throw new TypeError(`[I18n] pathname must ${describePathnameRule(problem)}; pass url.pathname`);
     }
+    if (pathname.startsWith("//")) {
+      // A protocol-relative URL, whose user info can hold a credential, so the value is not quoted.
+      throw new TypeError("[I18n] pathname must not start with //, which starts a URL's host; pass url.pathname");
+    }
     if (problem === "query" || problem === "fragment") {
       // A URL passed where its pathname belongs. Its query or fragment can hold a token, so only the path is quoted.
       const path = `${pathname.slice(0, pathname.search(/[?#]/))}${problem === "query" ? "?" : "#"}…`;

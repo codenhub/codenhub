@@ -294,6 +294,11 @@ describe("createLocaleRouting", () => {
       // A value that isn't a path, or a query or fragment, can hold a credential, so it isn't quoted.
       ["https://user:secret@example.com/", "pathname must start with /; pass url.pathname"],
       ["", "pathname must start with /; pass url.pathname"],
+      ["//user:secret@example.com/a", "pathname must not start with //, which starts a URL's host; pass url.pathname"],
+      [
+        "//user:secret@example.com/a?b",
+        "pathname must not start with //, which starts a URL's host; pass url.pathname",
+      ],
       ["/about?token=secret", 'pathname "/about?…" must not contain ?, which starts a query; pass url.pathname'],
       ["/about#token=secret", 'pathname "/about#…" must not contain #, which starts a fragment; pass url.pathname'],
       ["/a\\b", 'pathname "/a\\\\b" must not contain a backslash'],
