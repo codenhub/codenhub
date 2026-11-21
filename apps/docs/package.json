@@ -45,6 +45,9 @@
         "from": "logo/logo-light.svg",
         "to": "public/assets/logo/logo-light.svg"
       }
-    ]
+    ],
+    "tools": {
+      "timeout": 900
+    }
   }
 }
