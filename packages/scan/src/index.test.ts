@@ -165,6 +165,17 @@ describe("findFiles", () => {
       );
     });
 
+    // Unescaped, the suggested `app/[locale]/**/*` reads `[locale]` as a set and matched nothing either.
+    it("shows a glob for a folder whose name holds a bracket that matches its files", () => {
+      fs.mkdirSync(path.join(root, "app", "[locale]"));
+      fs.writeFileSync(path.join(root, "app", "[locale]", "page.tsx"), "locale");
+
+      expect(() => findFiles(["app/[locale]"], { cwd: root, failOnUnmatched: true })).toThrow(
+        `as in "app/[[]locale]/**/*".`,
+      );
+      expect(relative(findFiles(["app/[[]locale]/**/*"], { cwd: root }))).toEqual(["app/[locale]/page.tsx"]);
+    });
+
     it("says a wildcard skips node_modules when its only matches are there", () => {
       fs.mkdirSync(path.join(root, "node_modules", "dep"), { recursive: true });
       fs.writeFileSync(path.join(root, "node_modules", "dep", "demo.html"), "dependency");

@@ -52,7 +52,7 @@ function describeUnmatched(entry: string, cwd: string, reason: UnmatchedReason |
 
   switch (reason) {
     case "folder":
-      return `"${entry}" is a folder in ${cwd}, not a file; name the files in it, as in "${entry.replace(/[\\/]+$/, "")}/**/*".`;
+      return `"${entry}" is a folder in ${cwd}, not a file; name the files in it, as in "${escapeBrackets(trimSeparators(entry))}/**/*".`;
     case "nodeModules":
       return `${unmatched}; a * or ** does not enter node_modules, so name the folder to read one, as in "node_modules/<package>/**/*".`;
     case "bracket":
@@ -61,6 +61,18 @@ function describeUnmatched(entry: string, cwd: string, reason: UnmatchedReason |
     default:
       return `${unmatched}; check the path, or run from the project root.`;
   }
+}
+
+/* A loop rather than `/[\\/]+$/`, which retries from every separator in a run
+   of them and takes quadratic time on an entry of many slashes. */
+function trimSeparators(entry: string): string {
+  let end = entry.length;
+
+  while (end > 0 && (entry[end - 1] === "/" || entry[end - 1] === "\\")) {
+    end -= 1;
+  }
+
+  return entry.slice(0, end);
 }
 
 // A `[[]` is a bracket escaped already, and escaping it again would make it `[[][[]]`.
