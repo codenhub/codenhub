@@ -1,3 +1,4 @@
+import { markEncryptionKey } from "../keys/registry";
 import type { ContentKey } from "./content";
 import type { JweCurve, JweDecryptionKey, JweEncryptionKey, JwePrivateKey, JwePublicKey, JweSecretKey } from "./types";
 
@@ -31,6 +32,10 @@ const registry = new WeakMap<object, JweKeyEntry>();
 export function registerJweKey<TKey extends AnyJweKey>(key: TKey, entry: JweKeyEntry): TKey {
   const frozen = Object.freeze(key);
   registry.set(frozen, Object.freeze({ ...entry }));
+  markEncryptionKey(
+    frozen,
+    key.kind === "jwe-private" ? entry.publicCryptoKey : key.kind === "jwe-public" ? entry.cryptoKey : undefined,
+  );
   return frozen;
 }
 

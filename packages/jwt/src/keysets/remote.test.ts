@@ -1,3 +1,5 @@
+import { runInNewContext } from "node:vm";
+
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { JwtHeader, JwtResult, KeySet, VerificationKey } from "../core/types";
@@ -729,10 +731,13 @@ describe("createRemoteKeySet when the clock steps back", () => {
       () => jwksResponse(EC_JWK),
       () => new Response(null, { status: 503 }),
     );
-    const keys = createSet({ fetch, now: clock.now, cacheTtl: 600, cooldown: 30 });
+    const onFetchError = vi.fn();
+    const keys = createSet({ fetch, now: clock.now, cacheTtl: 600, cooldown: 30, onFetchError });
     await keys.select(EC_HEADER);
     clock.set(700);
     await keys.select(EC_HEADER);
+    // The refetch runs in the background; a step back while it runs would only make it count as just started.
+    await vi.waitFor(() => expect(onFetchError).toHaveBeenCalledTimes(1));
     clock.set(650);
     await keys.select(EC_HEADER);
     expect(fetch).toHaveBeenCalledTimes(3);
@@ -804,6 +809,50 @@ describe("createRemoteKeySet when the clock steps back", () => {
     await keys.select(EC_HEADER);
     clock.set(0);
     expect(await keys.select(EC_HEADER)).toEqual(failure({ reason: "status", status: 503 }));
+  });
+});
+
+describe("createRemoteKeySet when the clock moves during a fetch", () => {
+  /** A fetch stub whose responses the test releases one at a time, in the order they were requested. */
+  const heldFetch = () => {
+    const pending: ((response: Response) => void)[] = [];
+    const fetch = vi.fn(
+      async (_url: string, _init: RequestInit) => new Promise<Response>((resolve) => pending.push(resolve)),
+    );
+    return { fetch, release: (response: Response) => (pending.shift() as (response: Response) => void)(response) };
+  };
+
+  it("should keep one fetch running when the clock steps back during it", async () => {
+    const clock = createClock();
+    clock.set(1000);
+    const { fetch, release } = heldFetch();
+    const keys = createSet({ fetch, now: clock.now });
+    const first = keys.select(EC_HEADER);
+    await vi.waitFor(() => expect(fetch).toHaveBeenCalledTimes(1));
+    clock.set(999);
+    const second = keys.select(EC_HEADER);
+    release(jwksResponse(EC_JWK));
+    expect([describeSelection(await first), describeSelection(await second), fetch.mock.calls.length]).toEqual([
+      { alg: "ES256", kid: "ec" },
+      { alg: "ES256", kid: "ec" },
+      1,
+    ]);
+  });
+
+  it("should answer from the keys of a fetch that a newer one replaced", async () => {
+    const clock = createClock();
+    const { fetch, release } = heldFetch();
+    const keys = createSet({ fetch, now: clock.now, cooldown: 0, timeout: 1 });
+    const first = keys.select(EC_HEADER);
+    await vi.waitFor(() => expect(fetch).toHaveBeenCalledTimes(1));
+    // Past the first fetch's deadline, so the next select replaces it.
+    clock.set(3);
+    const second = keys.select(EC_HEADER);
+    await vi.waitFor(() => expect(fetch).toHaveBeenCalledTimes(2));
+    release(jwksResponse(EC_JWK));
+    expect(describeSelection(await first)).toEqual({ alg: "ES256", kid: "ec" });
+    release(jwksResponse(EC_JWK));
+    expect(describeSelection(await second)).toEqual({ alg: "ES256", kid: "ec" });
   });
 });
 
@@ -1213,6 +1262,20 @@ describe("createRemoteKeySet callbacks", () => {
       },
     ],
     ["rejects", async () => Promise.reject(new Error("callback broke"))],
+    [
+      "rejects with a promise from another realm",
+      runInNewContext("(async () => { throw new Error('callback broke') })") as () => Promise<void>,
+    ],
+    [
+      "returns a thenable whose then getter throws",
+      () =>
+        ({
+          // oxlint-disable-next-line unicorn/no-thenable -- the case under test is a hostile thenable.
+          get then() {
+            throw new Error("callback broke");
+          },
+        }) as never,
+    ],
   ])("should select as usual when a callback %s", async (_name, callback) => {
     const unhandled = vi.fn();
     process.on("unhandledRejection", unhandled);
@@ -1220,8 +1283,13 @@ describe("createRemoteKeySet callbacks", () => {
       const failing = createSet({
         fetch: fetchSequence(() => new Response(null, { status: 503 })),
         onFetchError: callback,
+        waitUntil: callback,
       });
-      const working = createSet({ fetch: fetchSequence(() => jwksResponse(EC_JWK)), onFetch: callback });
+      const working = createSet({
+        fetch: fetchSequence(() => jwksResponse(EC_JWK)),
+        onFetch: callback,
+        waitUntil: callback,
+      });
       const results = [await failing.select(EC_HEADER), describeSelection(await working.select(EC_HEADER))];
       await new Promise((resolve) => setTimeout(resolve, 0));
       expect([...results, unhandled.mock.calls.length]).toEqual([

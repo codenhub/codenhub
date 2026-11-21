@@ -1,5 +1,8 @@
+import { ok } from "../core";
+import { rejectUnknownOptions } from "../core/options";
 import type { JwtResult } from "../core/types";
 import { ownDataValue } from "../keys/algorithms";
+import { readEntries } from "../keysets/local";
 import { selectKey } from "../keysets/select";
 import {
   ASYMMETRIC_KEY_MANAGEMENT_ALGORITHMS,
@@ -15,36 +18,84 @@ import type {
   LocalEncryptionKeySet,
 } from "./types";
 
-/** How `importKeySet` and `createRemoteKeySet` read a JWKS of encryption keys. */
-export interface EncryptionKeySetOptions {
-  /** Selects encryption keys: only JWKs that say they encrypt are imported, as JWE public keys. */
-  readonly use: "enc";
+/** How {@link importEncryptionKeySet} and `createRemoteEncryptionKeySet` read a JWKS of encryption keys. */
+export interface ImportEncryptionKeySetOptions {
   /**
    * Key management algorithms keys may be bound to. A JWK naming another in its `alg` is skipped, and a JWK
    * without `alg` is bound to each listed algorithm its `kty` and `crv` allow. Non-empty.
    *
-   * @defaultValue every asymmetric key management algorithm: `RSA-OAEP`, `RSA-OAEP-256`, `ECDH-ES`,
-   * `ECDH-ES+A128KW`, `ECDH-ES+A256KW`
+   * @defaultValue every asymmetric key management algorithm: `RSA-OAEP`, `RSA-OAEP-256`, `RSA-OAEP-384`,
+   * `RSA-OAEP-512`, `ECDH-ES`, `ECDH-ES+A128KW`, `ECDH-ES+A256KW`
    */
   readonly algorithms?: readonly AsymmetricKeyManagementAlgorithm[];
 }
 
+const IMPORT_ENCRYPTION_KEY_SET_OPTIONS: Readonly<Record<keyof ImportEncryptionKeySetOptions, true>> = {
+  algorithms: true,
+};
+
 /**
- * Reads `options.algorithms` for an encryption key set.
+ * Imports the public encryption keys of an untrusted JWKS, such as the `jwks_uri` document of an OpenID client
+ * that wants its ID tokens encrypted, as a key set a sender selects the key to encrypt to from.
  *
- * @throws TypeError when it is given and is not a non-empty array of asymmetric key management algorithms.
+ * @remarks
+ * Only a JWK that says it encrypts, by a `use` of `enc` or by a `key_ops` holding an encryption operation, is
+ * imported, so a JWKS that serves signing and encryption keys side by side never yields a signing key here; a
+ * JWK with an `alg` is bound to that algorithm when it is allowed, and a JWK without one to every allowed key
+ * management algorithm its `kty` and `crv` fit. JWKs that cannot be used are skipped rather than failing the
+ * import, as {@link importKeySet} skips them. The set's `select` takes `{ alg, kid }`.
+ *
+ * @example
+ * ```ts
+ * const result = await importEncryptionKeySet(clientJwks, { algorithms: ["ECDH-ES+A256KW"] });
+ * if (result.ok) {
+ *   const key = await result.value.select({ alg: "ECDH-ES+A256KW" });
+ * }
+ * ```
+ *
+ * @param jwks - The JWKS, an object with a `keys` array. Any value is accepted.
+ * @param options - Which key management algorithms keys may be bound to.
+ * @returns The frozen key set, or a failure with one issue, as {@link importKeySet} gives for a JWKS that is not
+ * one. Never throws for any `jwks`.
+ * @throws TypeError when `options` is not an object, has a member that is not an option, or its `algorithms` is
+ * not a non-empty array of asymmetric key management algorithms.
+ */
+export async function importEncryptionKeySet(
+  jwks: unknown,
+  options?: ImportEncryptionKeySetOptions,
+): Promise<JwtResult<LocalEncryptionKeySet>> {
+  const algorithms = readEncryptionAlgorithms(options, "importEncryptionKeySet");
+  if (options !== undefined) {
+    rejectUnknownOptions(options, IMPORT_ENCRYPTION_KEY_SET_OPTIONS, "importEncryptionKeySet");
+  }
+  const entries = readEntries(jwks);
+  return entries.ok ? ok(encryptionKeySetOf(await importEncryptionKeys(entries.value, algorithms))) : entries;
+}
+
+/**
+ * Reads and checks the `algorithms` option of `importEncryptionKeySet` and `createRemoteEncryptionKeySet`, as
+ * `readAlgorithms` does for signing; each caller checks its own option names.
+ *
+ * @throws TypeError when `options` is not an object, or `algorithms` is given and is not a non-empty array of
+ * asymmetric key management algorithms.
  */
 export function readEncryptionAlgorithms(
-  options: object,
+  options: unknown,
   functionName: string,
 ): ReadonlySet<AsymmetricKeyManagementAlgorithm> {
+  if (options === undefined) {
+    return new Set(ASYMMETRIC_KEY_MANAGEMENT_ALGORITHMS);
+  }
+  if (typeof options !== "object" || options === null) {
+    throw new TypeError(`${functionName}: options must be an object.`);
+  }
   const { algorithms } = options as { algorithms?: unknown };
   if (algorithms === undefined) {
     return new Set(ASYMMETRIC_KEY_MANAGEMENT_ALGORITHMS);
   }
   if (!Array.isArray(algorithms) || algorithms.length === 0 || !algorithms.every(isAsymmetricKeyManagementAlgorithm)) {
     throw new TypeError(
-      `${functionName}: options.algorithms must be a non-empty array of ${ASYMMETRIC_KEY_MANAGEMENT_ALGORITHMS.join(", ")} with use "enc".`,
+      `${functionName}: options.algorithms must be a non-empty array of ${ASYMMETRIC_KEY_MANAGEMENT_ALGORITHMS.join(", ")}.`,
     );
   }
   return new Set(algorithms);
@@ -57,7 +108,7 @@ const PUBLIC_ENCRYPTION_OPERATIONS = ["encrypt", "wrapKey", "deriveKey", "derive
  * Imports the encryption keys of a JWKS's entries: each JWK that says it encrypts, by `use: "enc"` or by
  * `key_ops`, once per allowed algorithm it fits. A JWK that says neither is skipped, so a JWKS that serves
  * signing and encryption keys side by side never yields a signing key here, nor the reverse. A JWK that fails
- * its checks is skipped, as `importKeySet` skips one.
+ * its checks is skipped, as `importKeySet` skips one. Never throws.
  */
 export async function importEncryptionKeys(
   entries: readonly unknown[],

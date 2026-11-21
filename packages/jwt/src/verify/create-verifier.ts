@@ -1,3 +1,5 @@
+import { quietly } from "../core/hooks";
+import { readKeySetIssues } from "../core/key-set-issues";
 import { fail, frozenOk } from "../core/result";
 import type {
   JwtErr,
@@ -70,7 +72,7 @@ const WRONG_ISSUER = fail({ code: "wrong_issuer", path: ["payload", "iss"] });
  * never throws for any token. A key set whose `select` throws or rejects, or returns something other than
  * a result holding a public or secret key this package created, makes the verifier fail with
  * `key_fetch_failed` and `{ reason: "key_set_error" }`, except that a failed result whose issues each have
- * a string `code` is passed through. Caller code is not caught: a rejection from
+ * a string `code`, and a `path` that is absent or an array of strings and finite numbers, is passed through. Caller code is not caught: a rejection from
  * `options.claims` propagates, and so does a `TypeError` when `options.now` returns something other than a
  * finite number, checked once per verification when the claims are checked, after the signature.
  * @throws TypeError when `options` is not an object; `options` has a member that is not an option, such as
@@ -228,24 +230,13 @@ export function reporterOf(onKeySetError: ((error: unknown) => void) | undefined
   return (error) => {
     if (onKeySetError !== undefined) {
       try {
-        const result: unknown = onKeySetError(error);
-        if (result instanceof Promise) {
-          void ignoreRejection(result);
-        }
+        void quietly(onKeySetError(error));
       } catch {
         // Deliberately ignored: the hook only observes the failure.
       }
     }
     return KEY_SET_ERROR;
   };
-}
-
-export async function ignoreRejection(promise: Promise<unknown>): Promise<void> {
-  try {
-    await promise;
-  } catch {
-    // Deliberately ignored: the hook only observes the failure.
-  }
 }
 
 /**
@@ -271,22 +262,15 @@ export async function selectKey(
             new TypeError("The key set's select returned a value that is not a public or secret key of this package."),
           );
     }
-    const issues = isOk === false ? error?.issues : undefined;
-    // Copied by index, so a hole becomes `undefined` and fails the check; `every` would skip it.
-    const list = Array.isArray(issues) ? Array.from({ length: issues.length }, (_, index) => issues[index]) : [];
-    return list.length > 0 && list.every(hasStringCode)
-      ? fail(...(list as [JwtIssue, ...JwtIssue[]]))
-      : report(new TypeError("The key set's select returned a failure without issues that each have a string code."));
+    const issues = readKeySetIssues(isOk === false ? error?.issues : undefined);
+    return issues !== undefined
+      ? fail(...issues)
+      : report(
+          new TypeError(
+            "The key set's select returned a failure without issues that each have a string code and a valid path.",
+          ),
+        );
   } catch (error) {
     return report(error);
   }
-}
-
-/** Whether `issue` is an object with an own data property `code` holding a string; a getter does not count. */
-function hasStringCode(issue: unknown): boolean {
-  if (typeof issue !== "object" || issue === null) {
-    return false;
-  }
-  const descriptor = Object.getOwnPropertyDescriptor(issue, "code");
-  return descriptor !== undefined && typeof descriptor.value === "string";
 }

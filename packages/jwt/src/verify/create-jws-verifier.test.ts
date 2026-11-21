@@ -526,6 +526,31 @@ describe("createJwsVerifier general serialization", () => {
   });
 });
 
+describe("createJwsVerifier key set issues", () => {
+  it.each([
+    ["a string", "tenant"],
+    ["a number", 0],
+  ])("should report key_set_error for a key set issue whose path is %s", async (_, path) => {
+    const keys = { select: async () => ({ ok: false, error: { issues: [{ code: "tenant_unknown", path }] } }) };
+    const jws = await signGeneralJws({ payload: "p", signers: [{ key: secret }] });
+
+    expect(await createJwsVerifier({ keys: keys as unknown as KeySet })(jws)).toEqual(
+      failure({ code: "key_fetch_failed", path: ["signatures", 0], params: { reason: "key_set_error" } }),
+    );
+  });
+
+  it("should prefix a key set issue's own path", async () => {
+    const keys = {
+      select: async () => ({ ok: false, error: { issues: [{ code: "tenant_unknown", path: ["tenant"] }] } }),
+    };
+    const jws = await signGeneralJws({ payload: "p", signers: [{ key: secret }] });
+
+    expect(await createJwsVerifier({ keys: keys as unknown as KeySet })(jws)).toEqual(
+      failure({ code: "tenant_unknown" as never, path: ["signatures", 0, "tenant"] }),
+    );
+  });
+});
+
 describe("createJwsVerifier input", () => {
   it.each([[undefined], [null], [1], [{}], [bytesOf("a.b.c")]])("should refuse %j as malformed", async (input) => {
     expect(await secretVerifier()(input)).toEqual(failure({ code: "malformed" }));

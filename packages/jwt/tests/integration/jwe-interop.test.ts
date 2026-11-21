@@ -23,8 +23,8 @@ import {
 const ENCS = CONTENT_ENCRYPTION_ALGORITHMS;
 const ECDH = ["ECDH-ES", "ECDH-ES+A128KW", "ECDH-ES+A256KW"] as const;
 const CURVES: readonly JweCurve[] = ["P-256", "P-384", "P-521", "X25519"];
-const RSA = ["RSA-OAEP", "RSA-OAEP-256"] as const;
-const KW = ["A128KW", "A256KW"] as const;
+const RSA = ["RSA-OAEP", "RSA-OAEP-256", "RSA-OAEP-384", "RSA-OAEP-512"] as const;
+const KW = ["A128KW", "A256KW", "A128GCMKW", "A256GCMKW"] as const;
 
 const PLAINTEXT = new TextEncoder().encode("Live long and prosper.");
 
@@ -97,7 +97,7 @@ describe("JWE interoperability with jose", () => {
     );
 
     expect(outcomes.filter((outcome) => !outcome.endsWith(": ok"))).toEqual([]);
-    expect(outcomes).toHaveLength(68);
+    expect(outcomes).toHaveLength(84);
   });
 
   it("should decrypt every token jose encrypts, for each alg and enc", async () => {
@@ -115,7 +115,7 @@ describe("JWE interoperability with jose", () => {
     );
 
     expect(outcomes.filter((outcome) => !outcome.endsWith(": ok"))).toEqual([]);
-    expect(outcomes).toHaveLength(68);
+    expect(outcomes).toHaveLength(84);
   });
 
   it("should import keys jose generates and decrypt its tokens", async () => {

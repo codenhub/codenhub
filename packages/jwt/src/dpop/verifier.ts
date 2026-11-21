@@ -1,3 +1,4 @@
+import { quietly } from "../core/hooks";
 import { DEFAULT_MAX_TOKEN_LENGTH, MAX_TOKEN_LENGTH_LIMIT } from "../core/limits";
 import { rejectUnknownOptions } from "../core/options";
 import { isPlainObject } from "../core/plain";
@@ -13,11 +14,10 @@ import type {
 } from "../core/types";
 import { parseCompact, parsePayload } from "../jws/compact";
 import { ALGORITHM_PARAMS, ASYMMETRIC_ALGORITHMS, isAsymmetricAlgorithm, ownDataValue } from "../keys/algorithms";
-import { importPublicKey } from "../keys/import";
+import { importPublicJwk } from "../keys/import";
 import { getKeyEntry } from "../keys/registry";
-import { jwkThumbprint } from "../keys/thumbprint";
+import { cryptoKeyThumbprint } from "../keys/thumbprint";
 import { checkClaims, type ClaimCheckOptions } from "../verify/claims";
-import { ignoreRejection } from "../verify/create-verifier";
 import { denseCopy, isIntegerInRange, MAX_CLOCK_TOLERANCE } from "../verify/options";
 import { accessTokenHash, DPOP_TYPE, isMethodToken, isNonEmptyString, normalizeHtu, urlText } from "./shared";
 
@@ -101,7 +101,8 @@ export interface DpopRequest {
    */
   readonly url: string | URL;
   /**
-   * The access token the request presents. The proof must then carry its hash as `ath`.
+   * The access token the request presents. The proof must then carry its hash as `ath`. Given together with
+   * `accessTokenClaims` or not at all.
    *
    * @defaultValue no `ath` check, as at the token endpoint
    */
@@ -109,6 +110,7 @@ export interface DpopRequest {
   /**
    * The verified access token's payload, or its token introspection response: an object whose `cnf.jkt` the
    * proof's key must have as its thumbprint. Claims without a string `cnf.jkt` fail the proof with `wrong_key`.
+   * Given together with `accessToken` or not at all.
    *
    * @defaultValue no key binding check
    */
@@ -147,8 +149,8 @@ export interface VerifiedDpopProof {
 /**
  * Verifies one DPoP proof for one request. Resolves to a result, and never rejects for any proof.
  *
- * @throws TypeError, as a rejected promise, for a `request` that is not one, or a clock that returns
- * something other than a finite number.
+ * @throws TypeError, as a rejected promise, for a `request` that is not one, or has only one of
+ * `accessToken` and `accessTokenClaims`, or a clock that returns something other than a finite number.
  */
 export type DpopVerifier = (proof: unknown, request: DpopRequest) => Promise<JwtResult<VerifiedDpopProof>>;
 
@@ -248,11 +250,10 @@ export function createDpopVerifier(options: DpopVerifierOptions = {}): DpopVerif
       return fail({ code: "unsupported_alg", path: ["header", "alg"] });
     }
     const jwk = Object.hasOwn(header, "jwk") ? header.jwk : undefined;
-    // Only an object: `importPublicKey` would also read a PEM string.
     if (!isPlainObject(jwk)) {
       return fail({ code: "malformed", path: ["header", "jwk"] });
     }
-    const imported = await importPublicKey(jwk, { alg });
+    const imported = await importPublicJwk(jwk, alg);
     if (!imported.ok) {
       const [issue] = imported.error.issues;
       return fail({ ...issue, path: ["header", "jwk", ...(issue.path ?? [])] });
@@ -270,7 +271,7 @@ export function createDpopVerifier(options: DpopVerifierOptions = {}): DpopVerif
       return parsedPayload;
     }
     const payload = parsedPayload.value;
-    const thumbprint = await jwkThumbprint(key);
+    const thumbprint = await cryptoKeyThumbprint(cryptoKey, alg);
     const issues = checkClaims(header, payload, resolved.claimChecks, key);
     issues.push(...requestIssues(payload, method, htu));
     if (accessToken !== undefined) {
@@ -401,10 +402,7 @@ function report(onCallbackError: ((error: unknown) => void) | undefined, error: 
     return;
   }
   try {
-    const result: unknown = onCallbackError(error);
-    if (result instanceof Promise) {
-      void ignoreRejection(result);
-    }
+    void quietly(onCallbackError(error));
   } catch {
     // Deliberately ignored: the hook only observes the failure.
   }
@@ -435,6 +433,11 @@ function readRequest(request: DpopRequest): {
   }
   if (accessTokenClaims !== undefined && (typeof accessTokenClaims !== "object" || accessTokenClaims === null)) {
     throwInvalid("request.accessTokenClaims must be an object.");
+  }
+  // One without the other would check `ath` without the key binding, or the binding without `ath`: a stolen
+  // token would then pass with the thief's own key.
+  if ((accessToken === undefined) !== (accessTokenClaims === undefined)) {
+    throwInvalid("request.accessToken and request.accessTokenClaims must be given together.");
   }
   return { method, htu, accessToken, accessTokenClaims };
 }

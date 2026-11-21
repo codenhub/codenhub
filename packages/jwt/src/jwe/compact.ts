@@ -6,9 +6,12 @@ import { parseJsonObject } from "../encoding/json";
 import { encodeUtf8 } from "../encoding/text";
 import {
   CONTENT_PARAMS,
+  GCM_KEY_WRAP_IV_BYTES,
+  GCM_KEY_WRAP_TAG_BYTES,
   hasEmptyEncryptedKey,
   isContentEncryptionAlgorithm,
   isEcdhAlgorithm,
+  isGcmKeyWrapAlgorithm,
   isKeyManagementAlgorithm,
 } from "./algorithms";
 import type { ContentEncryptionAlgorithm, JweHeader } from "./types";
@@ -40,9 +43,10 @@ const ownMember = (header: object, name: string): unknown =>
  * Checks a parsed JWE header, returning the first issue: an `alg` this package does not support, `RSA1_5` and
  * `PBES2-*` included, is `unsupported_alg`; an `enc` it does not support or the decrypter does not accept is
  * `unsupported_enc`; any `zip` is `malformed`, since decompressing is refused; any `crit` is `unsupported_crit`;
- * a `kid`, `typ` or `cty` that is not text, an `apu` or `apv` that is not base64url, or an `ECDH-ES` header whose
- * `epk` is not an object, is `malformed`. Both `alg` and `enc` are read from the protected header only, the one
- * header a compact JWE has.
+ * a `kid`, `typ` or `cty` that is not text, an `apu` or `apv` that is not base64url, an `ECDH-ES` header whose
+ * `epk` is not an object, or an AES-GCM key wrap header whose `iv` is not 96 bits or `tag` not 128 bits of
+ * base64url, is `malformed`. Every member is read from the protected header, the one header a compact JWE has, as
+ * RFC 7518 §4.7.1 requires of `iv` and `tag` there.
  */
 function headerIssue(header: object, accepted: ReadonlySet<ContentEncryptionAlgorithm>): JwtIssue | undefined {
   const alg = ownMember(header, "alg");
@@ -77,6 +81,17 @@ function headerIssue(header: object, accepted: ReadonlySet<ContentEncryptionAlgo
   }
   if (isEcdhAlgorithm(alg) && !isPlainObject(ownMember(header, "epk"))) {
     return { code: "malformed", path: ["header", "epk"] };
+  }
+  if (isGcmKeyWrapAlgorithm(alg)) {
+    for (const [name, length] of [
+      ["iv", GCM_KEY_WRAP_IV_BYTES],
+      ["tag", GCM_KEY_WRAP_TAG_BYTES],
+    ] as const) {
+      const value = ownMember(header, name);
+      if (typeof value !== "string" || decodeBase64Url(value)?.length !== length) {
+        return { code: "malformed", path: ["header", name] };
+      }
+    }
   }
   return undefined;
 }

@@ -14,8 +14,18 @@ import { ALGORITHM_PARAMS } from "./algorithms";
  * @returns The JWK as Web Crypto exported it, with `d` padded when it was short.
  */
 export async function exportWebCryptoJwk(cryptoKey: CryptoKey, alg: JwsAlgorithm): Promise<JsonWebKey> {
-  const exported = await crypto.subtle.exportKey("jwk", cryptoKey);
-  const { coordinateBytes } = ALGORITHM_PARAMS[alg];
+  return padPrivateScalar(await crypto.subtle.exportKey("jwk", cryptoKey), ALGORITHM_PARAMS[alg].coordinateBytes);
+}
+
+/**
+ * Pads an exported JWK's private scalar `d` with leading zero bytes to `coordinateBytes`, for the WebKit export
+ * {@link exportWebCryptoJwk} records. Shared by the JWS and JWE keys, so it takes the length rather than an
+ * algorithm.
+ *
+ * @param coordinateBytes - The curve's coordinate length, or undefined for a key without one, which is returned
+ * as it is.
+ */
+export function padPrivateScalar(exported: JsonWebKey, coordinateBytes: number | undefined): JsonWebKey {
   const scalar = typeof exported.d === "string" ? decodeBase64Url(exported.d) : undefined;
   if (coordinateBytes === undefined || scalar === undefined || scalar.length >= coordinateBytes) {
     return exported;
@@ -27,6 +37,15 @@ export async function exportWebCryptoJwk(cryptoKey: CryptoKey, alg: JwsAlgorithm
 
 /** The JWK members Web Crypto adds on export that say nothing about the material. */
 const EXPORT_METADATA = ["alg", "ext", "key_ops", "use"] as const;
+
+/** A copy of an exported JWK without the members Web Crypto adds on export. */
+export function withoutExportMetadata(jwk: JsonWebKey): Record<string, unknown> {
+  const material: Record<string, unknown> = { ...jwk };
+  for (const name of EXPORT_METADATA) {
+    delete material[name];
+  }
+  return material;
+}
 
 /**
  * Exports a key from Web Crypto as the JWK of its material alone, for the JWK checks to run on as on a JWK
@@ -41,10 +60,7 @@ export async function exportMaterialJwk(
   alg: JwsAlgorithm,
   kid: string | undefined,
 ): Promise<Record<string, unknown>> {
-  const jwk: Record<string, unknown> = { ...(await exportWebCryptoJwk(cryptoKey, alg)) };
-  for (const name of EXPORT_METADATA) {
-    delete jwk[name];
-  }
+  const jwk = withoutExportMetadata(await exportWebCryptoJwk(cryptoKey, alg));
   return kid === undefined ? jwk : { ...jwk, kid };
 }
 

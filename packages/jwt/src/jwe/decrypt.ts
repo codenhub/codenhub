@@ -1,7 +1,8 @@
+import { readKeySetIssues } from "../core/key-set-issues";
 import { MAX_TOKEN_LENGTH_LIMIT } from "../core/limits";
 import { rejectUnknownOptions } from "../core/options";
 import { fail, ok } from "../core/result";
-import type { JwtIssue, JwtPayload, JwtResult, Verifier } from "../core/types";
+import type { JwtIssue, JwtPathSegment, JwtPayload, JwtResult, Verifier } from "../core/types";
 import { copyBytes } from "../encoding/bytes";
 import { parseJsonObject, type JsonObject } from "../encoding/json";
 import { decodeUtf8 } from "../encoding/text";
@@ -163,21 +164,11 @@ async function selectFrom(keys: JweKeySet, header: JweHeader): Promise<JwtResult
     if (isOk === true) {
       return isJweDecryptionKey(value) ? ok(value) : KEY_SET_ERROR;
     }
-    const issues = isOk === false ? error?.issues : undefined;
-    // Copied by index, so a hole becomes `undefined` and fails the check; `every` would skip it.
-    const list = Array.isArray(issues) ? Array.from({ length: issues.length }, (_, index) => issues[index]) : [];
-    return list.length > 0 && list.every(hasStringCode) ? fail(...(list as [JwtIssue, ...JwtIssue[]])) : KEY_SET_ERROR;
+    const issues = readKeySetIssues(isOk === false ? error?.issues : undefined);
+    return issues === undefined ? KEY_SET_ERROR : fail(...issues);
   } catch {
     return KEY_SET_ERROR;
   }
-}
-
-function hasStringCode(issue: unknown): boolean {
-  if (typeof issue !== "object" || issue === null) {
-    return false;
-  }
-  const descriptor = Object.getOwnPropertyDescriptor(issue, "code");
-  return descriptor !== undefined && typeof descriptor.value === "string";
 }
 
 /**
@@ -258,8 +249,10 @@ const NESTED_OPTIONS: Readonly<Record<keyof NestedVerifierOptions, true>> = { de
  *
  * @returns A {@link NestedVerifier} resolving to the verified token, with the outer header and decryption key as
  * `encryption`, or to the first failure: the decrypter's, `wrong_type` at `["header", "cty"]` for another `cty`,
- * `malformed` at `["plaintext"]` for a plaintext that is not UTF-8, or the verifier's. Never throws for a token;
- * the verifier's own rejections, from caller code, propagate.
+ * `malformed` at `["plaintext"]` for a plaintext that is not UTF-8, or the verifier's, each of its issues with
+ * `"plaintext"` before its path (`["plaintext", "header", "kid"]`, or `["plaintext"]` for an issue without one),
+ * so an issue of the inner token is never mistaken for one of the JWE. Never throws for a token; the verifier's
+ * own rejections, from caller code, propagate.
  * @throws TypeError when `options` is not an object, has a member that is not an option, or `decrypt` or
  * `verify` is not a function.
  */
@@ -289,11 +282,25 @@ export function createNestedVerifier<TPayload extends JwtPayload = JwtPayload>(
     }
     const verified = await verify(inner);
     if (!verified.ok) {
-      return verified;
+      const issues: unknown = verified.error?.issues;
+      // A verifier is caller code; a failure that holds no list of issues is passed on as it came.
+      return Array.isArray(issues) && issues.length > 0 ? fail(...underPlaintext(issues)) : verified;
     }
     const value: DecryptedJwt<TPayload> = { ...verified.value, encryption: { header, key } };
     return ok(value);
   };
+}
+
+/**
+ * The inner verifier's issues, each with `"plaintext"` before its path, so a caller tells an inner failure from an
+ * outer one: `["header", "kid"]` of the signed token is `["plaintext", "header", "kid"]`, and an issue without a
+ * path gets `["plaintext"]`.
+ */
+function underPlaintext(issues: readonly JwtIssue[]): [JwtIssue, ...JwtIssue[]] {
+  return issues.map((issue): JwtIssue => {
+    const path: readonly JwtPathSegment[] = Array.isArray(issue.path) ? issue.path : [];
+    return { ...issue, path: ["plaintext", ...path] };
+  }) as [JwtIssue, ...JwtIssue[]];
 }
 
 /** RFC 7515 §4.1.10: compared case-insensitively, with the `application/` prefix optional. */

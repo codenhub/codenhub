@@ -6,7 +6,9 @@ import { createDecrypter, createJweKeySet } from "./decrypt";
 import { encrypt } from "./encrypt";
 import {
   exportJwePrivateJwk,
+  exportJwePrivatePem,
   exportJwePublicJwk,
+  exportJwePublicPem,
   exportJweSecretJwk,
   generateJweKeyPair,
   generateJweSecretKey,
@@ -110,6 +112,67 @@ describe("importJwePublicKey and importJwePrivateKey", () => {
       failure("invalid_key", ["key_ops"]),
     );
     expect(await importJwePublicKey(jwk, { alg: "ECDH-ES+A128KW" })).toEqual(failure("alg_mismatch", ["alg"]));
+  });
+
+  it.each([
+    ["P-256", { name: "ECDH", namedCurve: "P-256" }],
+    ["X25519", { name: "X25519" }],
+  ] as const)(
+    "should import a %s public JWK as Web Crypto exports it, with an empty key_ops",
+    async (_curve, params) => {
+      const pair = (await crypto.subtle.generateKey(params, true, ["deriveBits"])) as CryptoKeyPair;
+      const exported = await crypto.subtle.exportKey("jwk", pair.publicKey);
+
+      expect(exported.key_ops).toEqual([]);
+      expect((await importJwePublicKey(exported, { alg: "ECDH-ES" })).ok).toBe(true);
+      expect((await importJwePublicKey({ ...exported, use: "enc" }, { alg: "ECDH-ES+A128KW" })).ok).toBe(true);
+      expect(await importJwePublicKey({ ...exported, key_ops: ["verify"] }, { alg: "ECDH-ES" })).toEqual(
+        failure("wrong_use", ["key_ops"]),
+      );
+    },
+  );
+
+  it.each([
+    ["the zero point", new Uint8Array(32)],
+    ["the point of order 1, u = 1", Uint8Array.from({ length: 32 }, (_, index) => (index === 0 ? 1 : 0))],
+    ["a point of order 8", Buffer.from("e0eb7a7c3b41b8ae1656e3faf19fc46ada098deb9c32b1fd866205165f49b800", "hex")],
+  ])("should refuse a low-order X25519 public key, %s, as invalid_key in every form", async (_name, point) => {
+    const x = Buffer.from(point).toString("base64url");
+    const jwk = { kty: "OKP", crv: "X25519", x };
+    // SPKI of an X25519 key: the algorithm identifier, then the 32-byte point.
+    const spki = Buffer.concat([Buffer.from("302a300506032b656e032100", "hex"), point]);
+    const pem = `-----BEGIN PUBLIC KEY-----\n${spki.toString("base64")}\n-----END PUBLIC KEY-----\n`;
+
+    expect(await importJwePublicKey(jwk, { alg: "ECDH-ES" })).toEqual(failure("invalid_key"));
+    expect(await importJwePublicKey(jwk, { alg: "ECDH-ES+A256KW" })).toEqual(failure("invalid_key"));
+    expect(await importJwePublicKey(pem, { alg: "ECDH-ES" })).toEqual(failure("invalid_key"));
+  });
+
+  it("should refuse a CryptoKeyPair whose public half is a low-order X25519 point", async () => {
+    const [pair, lowOrder] = await Promise.all([
+      crypto.subtle.generateKey({ name: "X25519" }, true, ["deriveBits"]) as Promise<CryptoKeyPair>,
+      crypto.subtle.importKey("raw", new Uint8Array(32), { name: "X25519" }, true, []),
+    ]);
+
+    expect(await importJweKeyPair({ privateKey: pair.privateKey, publicKey: lowOrder }, { alg: "ECDH-ES" })).toEqual(
+      failure("invalid_key"),
+    );
+  });
+
+  it("should still refuse an empty key_ops on an RSA key, a private key and a secret", async () => {
+    const rsa = await generateJweKeyPair({ alg: "RSA-OAEP-256", extractable: true });
+    const ec = await generateJweKeyPair({ alg: "ECDH-ES", extractable: true });
+    const secret = await generateJweSecretKey({ alg: "A128KW", extractable: true });
+
+    expect(
+      await importJwePublicKey({ ...(await exportJwePublicJwk(rsa.publicKey)), key_ops: [] }, { alg: "RSA-OAEP-256" }),
+    ).toEqual(failure("wrong_use", ["key_ops"]));
+    expect(
+      await importJwePrivateKey({ ...(await exportJwePrivateJwk(ec.privateKey)), key_ops: [] }, { alg: "ECDH-ES" }),
+    ).toEqual(failure("wrong_use", ["key_ops"]));
+    expect(await importJweSecretKey({ ...(await exportJweSecretJwk(secret)), key_ops: [] }, { alg: "A128KW" })).toEqual(
+      failure("wrong_use", ["key_ops"]),
+    );
   });
 
   it("should accept a JWK without use or alg", async () => {
@@ -262,10 +325,128 @@ describe("importJweSecretKey", () => {
   });
 });
 
+describe("AES-GCM key wrap and the RSA-OAEP SHA-2 variants", () => {
+  it.each(["A128GCMKW", "A256GCMKW"] as const)("should generate, export and import a %s secret", async (alg) => {
+    const key = await generateJweSecretKey({ alg, kid: "gcm", extractable: true });
+    const jwk = await exportJweSecretJwk(key);
+    const imported = await importJweSecretKey(jwk, { alg });
+
+    expect(jwk).toMatchObject({ kty: "oct", alg, use: "enc", kid: "gcm" });
+    expect(Buffer.from(jwk.k as string, "base64url")).toHaveLength(alg === "A128GCMKW" ? 16 : 32);
+    expect(imported.ok && (await roundTrips(key, imported.value))).toBe(true);
+    expect(await importJweSecretKey(jwk, { alg: alg === "A128GCMKW" ? "A256GCMKW" : "A128GCMKW" })).toEqual(
+      failure("alg_mismatch", ["alg"]),
+    );
+  });
+
+  it("should import secrets of exactly the GCM key wrap's length, and an AES-GCM CryptoKey", async () => {
+    const cryptoKey = await crypto.subtle.generateKey({ name: "AES-GCM", length: 256 }, false, ["encrypt", "decrypt"]);
+    const imported = await importJweSecretKey(cryptoKey, { alg: "A256GCMKW" });
+
+    expect(imported.ok && (await roundTrips(imported.value, imported.value))).toBe(true);
+    expect((await importJweSecretKey(cryptoKey, { alg: "A128GCMKW" })).ok).toBe(false);
+    expect(await importJweSecretKey(new Uint8Array(15), { alg: "A128GCMKW" })).toMatchObject({
+      ok: false,
+      error: { issues: [{ code: "weak_key", params: { minimum: 16 } }] },
+    });
+    expect(
+      await importJweSecretKey({ kty: "oct", k: Buffer.alloc(17).toString("base64url") }, { alg: "A128GCMKW" }),
+    ).toEqual(failure("invalid_key", ["k"], { maximum: 16 }));
+    const aesKw = await crypto.subtle.generateKey({ name: "AES-KW", length: 128 }, false, ["wrapKey", "unwrapKey"]);
+    expect((await importJweSecretKey(aesKw, { alg: "A128GCMKW" })).ok).toBe(false);
+  });
+
+  it.each(["RSA-OAEP-384", "RSA-OAEP-512"] as const)(
+    "should generate, export, import and thumbprint a %s pair",
+    async (alg) => {
+      const pair = await generateJweKeyPair({ alg, kid: "thumbprint", extractable: true });
+      const imported = await importJweKeyPair(await exportJwePrivateJwk(pair.privateKey), { alg });
+
+      expect(await exportJwePublicJwk(pair.publicKey)).toMatchObject({ kty: "RSA", alg, use: "enc" });
+      expect(pair.publicKey.kid).toBe(await jwkThumbprint(pair.publicKey));
+      expect(imported.ok && (await roundTrips(imported.value.publicKey, pair.privateKey))).toBe(true);
+      expect(await importJwePublicKey(await exportJwePublicJwk(pair.publicKey), { alg: "RSA-OAEP-256" })).toEqual(
+        failure("alg_mismatch", ["alg"]),
+      );
+    },
+  );
+
+  it("should import an RSA-OAEP CryptoKey for RSA-OAEP-512 only with SHA-512", async () => {
+    const pair = await crypto.subtle.generateKey(
+      { name: "RSA-OAEP", modulusLength: 2048, publicExponent: new Uint8Array([1, 0, 1]), hash: "SHA-512" },
+      true,
+      ["encrypt", "decrypt"],
+    );
+
+    expect((await importJwePublicKey(pair.publicKey, { alg: "RSA-OAEP-512" })).ok).toBe(true);
+    expect((await importJwePublicKey(pair.publicKey, { alg: "RSA-OAEP-384" })).ok).toBe(false);
+    expect((await importJweKeyPair(pair, { alg: "RSA-OAEP-512" })).ok).toBe(true);
+  });
+});
+
+describe("exportJwePublicPem and exportJwePrivatePem", () => {
+  it.each([
+    ["RSA-OAEP-256", undefined],
+    ["ECDH-ES", "P-256"],
+    ["ECDH-ES+A256KW", "P-521"],
+    ["ECDH-ES+A128KW", "X25519"],
+  ] as const)("should round-trip a %s %s pair through SPKI and PKCS#8 PEM", async (alg, crv) => {
+    const pair = await generateJweKeyPair({ alg, ...(crv === undefined ? {} : { crv }), extractable: true });
+
+    const publicPem = await exportJwePublicPem(pair.publicKey);
+    const privatePem = await exportJwePrivatePem(pair.privateKey);
+
+    expect(publicPem).toMatch(/^-----BEGIN PUBLIC KEY-----\n([A-Za-z0-9+/=]{1,64}\n)+-----END PUBLIC KEY-----\n$/);
+    expect(privatePem).toMatch(/^-----BEGIN PRIVATE KEY-----\n([A-Za-z0-9+/=]{1,64}\n)+-----END PRIVATE KEY-----\n$/);
+    const publicKey = await importJwePublicKey(publicPem, { alg });
+    const privateKey = await importJwePrivateKey(privatePem, { alg });
+    if (!publicKey.ok || !privateKey.ok) {
+      throw new Error("a PEM export did not import again");
+    }
+    expect(await roundTrips(publicKey.value, privateKey.value)).toBe(true);
+    expect(await roundTrips(pair.publicKey, privateKey.value)).toBe(true);
+  });
+
+  it("should export the public half of a non-extractable pair, and refuse its private half", async () => {
+    const pair = await generateJweKeyPair({ alg: "ECDH-ES" });
+
+    await expect(exportJwePublicPem(pair.publicKey)).resolves.toContain("BEGIN PUBLIC KEY");
+    await expect(exportJwePrivatePem(pair.privateKey)).rejects.toThrow(
+      new TypeError("exportJwePrivatePem: the key was not created with extractable: true."),
+    );
+  });
+
+  it("should refuse a key of the wrong kind, a secret, a JWS key and a look-alike with TypeError", async () => {
+    const pair = await generateJweKeyPair({ alg: "ECDH-ES", extractable: true });
+    const secret = await generateJweSecretKey({ alg: "A128KW", extractable: true });
+    const signing = await generateKeyPair({ alg: "ES256", extractable: true });
+
+    await expect(exportJwePublicPem(pair.privateKey as never)).rejects.toThrow(/getJwePublicKey/);
+    await expect(exportJwePrivatePem(pair.publicKey as never)).rejects.toThrow(TypeError);
+    await expect(exportJwePublicPem(secret as never)).rejects.toThrow(TypeError);
+    await expect(exportJwePrivatePem(secret as never)).rejects.toThrow(TypeError);
+    await expect(exportJwePublicPem(signing.publicKey as never)).rejects.toThrow(TypeError);
+    await expect(exportJwePrivatePem({ ...pair.privateKey } as never)).rejects.toThrow(TypeError);
+  });
+});
+
 describe("every key management algorithm", () => {
   it("should be covered by a generator", () => {
     expect([...KEY_MANAGEMENT_ALGORITHMS].sort()).toEqual(
-      ["A128KW", "A256KW", "ECDH-ES", "ECDH-ES+A128KW", "ECDH-ES+A256KW", "RSA-OAEP", "RSA-OAEP-256", "dir"].sort(),
+      [
+        "A128KW",
+        "A256KW",
+        "A128GCMKW",
+        "A256GCMKW",
+        "ECDH-ES",
+        "ECDH-ES+A128KW",
+        "ECDH-ES+A256KW",
+        "RSA-OAEP",
+        "RSA-OAEP-256",
+        "RSA-OAEP-384",
+        "RSA-OAEP-512",
+        "dir",
+      ].sort(),
     );
   });
 });

@@ -18,6 +18,7 @@ import { readExtractable, readKid, requireAsymmetricAlg, requireOptions, require
 import { pemToJwk } from "./pem";
 import { kidMember, registerKey } from "./registry";
 import { materialThumbprint, THUMBPRINT_KID } from "./thumbprint";
+import { PAIR_PRIVATE_MEMBERS, readCryptoKeyPair, type CryptoKeyPairInput } from "./web-crypto";
 
 /** How {@link importPublicKey} binds the imported key. */
 export interface ImportPublicKeyOptions {
@@ -142,7 +143,20 @@ export async function importPublicKey(key: unknown, options: ImportPublicKeyOpti
   if (!jwk.ok) {
     return fail(jwk.issue);
   }
-  return importJwk(jwk.value, { alg, role: "public", isExtractable: true, kid }, (kid) => ({
+  return importPublicJwk(jwk.value, alg, kid);
+}
+
+/**
+ * Imports a public key from a JWK, with every check {@link importPublicKey} runs on one, for a caller that only
+ * ever holds a JWK, such as a JWKS entry or a DPoP proof's `jwk` header: it never reads a PEM string or a
+ * `CryptoKey`, so its caller's bundle leaves those readers out. Any other value is `invalid_key`. Never throws.
+ */
+export async function importPublicJwk(
+  jwk: unknown,
+  alg: AsymmetricAlgorithm,
+  kid?: string,
+): Promise<JwtResult<PublicKey>> {
+  return importJwk(jwk, { alg, role: "public", isExtractable: true, kid }, (kid) => ({
     kind: "public",
     alg,
     ...kidMember(kid),
@@ -297,7 +311,7 @@ async function jwkHalves(
   }
   const { importParams } = ALGORITHM_PARAMS[alg];
   const publicJwk: JsonWebKey = { ...material.importJwk };
-  for (const name of PRIVATE_MEMBERS) {
+  for (const name of PAIR_PRIVATE_MEMBERS) {
     delete publicJwk[name];
   }
   try {
@@ -360,29 +374,6 @@ async function cryptoKeyPairHalves(
     return { code: "invalid_key" };
   }
 }
-
-interface CryptoKeyPairInput {
-  readonly privateKey: CryptoKey;
-  readonly publicKey: unknown;
-}
-
-/** `key` as a Web Crypto key pair, when its own `privateKey` is a `CryptoKey`; never throws. */
-function readCryptoKeyPair(key: unknown): CryptoKeyPairInput | undefined {
-  if (typeof key !== "object" || key === null || isCryptoKey(key)) {
-    return undefined;
-  }
-  try {
-    const privateKey: unknown = Object.getOwnPropertyDescriptor(key, "privateKey")?.value;
-    const publicKey: unknown = Object.getOwnPropertyDescriptor(key, "publicKey")?.value;
-    return isCryptoKey(privateKey) ? { privateKey, publicKey } : undefined;
-  } catch {
-    // A proxy's trap may throw; such a value is no key pair.
-    return undefined;
-  }
-}
-
-/** Members that hold private material in an asymmetric JWK, removed to derive its public half. */
-const PRIVATE_MEMBERS = ["d", "p", "q", "dp", "dq", "qi"] as const;
 
 /**
  * Imports an HMAC secret, given as raw bytes (any typed array, `DataView` or `ArrayBuffer`, from any realm),

@@ -5,11 +5,13 @@ import {
   createJweKeySet,
   createKeySet,
   encrypt,
+  exportPublicPem,
   exportSecretJwk,
   generateJweKeyPair,
   generateJweSecretKey,
   generateKeyPair,
   generateSecretKey,
+  importEncryptionKeySet,
   importKeySet,
   jwkThumbprint,
   sign,
@@ -124,7 +126,7 @@ describe("refused algorithms and parameters", () => {
   it.each([
     ["RSA1_5", "A128CBC-HS256"],
     ["PBES2-HS256+A128KW", "A128GCM"],
-    ["A128GCMKW", "A128GCM"],
+    ["A192GCMKW", "A128GCM"],
     ["A192KW", "A128GCM"],
     ["none", "A128GCM"],
     ["HS256", "A128GCM"],
@@ -258,6 +260,18 @@ describe("ephemeral public keys", () => {
     ).toEqual(MALFORMED_EPK);
   });
 
+  it("should report malformed epk for an X25519 epk whose high bit is set, which runtimes treat differently", async () => {
+    // RFC 7748 §5 masks the bit, so the point is u = 9 to a runtime that masks it and refused by one that does not.
+    const bytes = new Uint8Array(32);
+    bytes[0] = 9;
+    bytes[31] = 0x80;
+    const epk = { kty: "OKP", crv: "X25519", x: base64Url(bytes) };
+
+    expect(
+      await decrypt(forged({ alg: "ECDH-ES+A128KW", enc: "A128GCM", kid: "x25519", epk }, randomSegment(24))),
+    ).toEqual(MALFORMED_EPK);
+  });
+
   it("should report malformed epk for an X25519 epk with a y member", async () => {
     const epk = { kty: "OKP", crv: "X25519", x: coordinate(32, 9), y: coordinate(32, 9) };
 
@@ -343,6 +357,16 @@ describe("JWS and JWE key confusion", () => {
     await expect(exportSecretJwk(kw as never)).rejects.toThrow(TypeError);
   });
 
+  it("should say a JWE key passed to a JWS function is an encryption key, and name the JWE functions", async () => {
+    const encryptionKey = /an encryption \(JWE\) key.*exportJwePublicJwk/;
+
+    expect(() => createKeySet([p256.publicKey as never])).toThrow(encryptionKey);
+    await expect(sign({ payload: {}, key: p256.privateKey as never })).rejects.toThrow(encryptionKey);
+    await expect(exportSecretJwk(kw as never)).rejects.toThrow(encryptionKey);
+    await expect(exportPublicPem(p256.publicKey as never)).rejects.toThrow(encryptionKey);
+    expect(() => createKeySet([{ ...p256.publicKey } as never])).toThrow(/not a look-alike object\.$/);
+  });
+
   it("should refuse a private key for encryption and a public key in a decryption key set", async () => {
     await expect(encrypt({ plaintext: "x", key: p256.privateKey as never, enc: "A128GCM" })).rejects.toThrow(TypeError);
     expect(() => createJweKeySet([p256.publicKey as never])).toThrow(TypeError);
@@ -354,7 +378,7 @@ describe("JWS and JWE key confusion", () => {
     const sigJwk = { ...(await exportPublicJwk(signing.publicKey)), use: "sig" };
     const encJwk = { ...sigJwk, use: "enc", alg: "ECDH-ES" };
 
-    const enc = await importKeySet({ keys: [sigJwk, encJwk] }, { use: "enc" });
+    const enc = await importEncryptionKeySet({ keys: [sigJwk, encJwk] });
     const sig = await importKeySet({ keys: [sigJwk, encJwk] });
 
     expect(enc.ok && enc.value.keys.map((key) => key.alg)).toEqual(["ECDH-ES"]);

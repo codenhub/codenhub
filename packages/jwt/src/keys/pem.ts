@@ -124,19 +124,34 @@ type KeyDer = { readonly der: Uint8Array<ArrayBuffer>; readonly format: "spki" |
 const READERS: Readonly<
   Record<string, { readonly role: "public" | "private"; readonly read: (der: Uint8Array<ArrayBuffer>) => KeyDer }>
 > = {
-  "PUBLIC KEY": { role: "public", read: (der) => ({ der, format: "spki" }) },
+  "PUBLIC KEY": { role: "public", read: (der) => strictly(der, () => ({ der, format: "spki" })) },
   CERTIFICATE: {
     role: "public",
     read: (der) => {
       const spki = subjectPublicKeyInfo(der);
-      return spki === undefined ? { code: "invalid_key" } : { der: spki, format: "spki" };
+      return spki === undefined || !isSingleSequence(spki) ? { code: "invalid_key" } : { der: spki, format: "spki" };
     },
   },
-  "RSA PUBLIC KEY": { role: "public", read: (der) => ({ der: wrapSpki(rsaAlgorithm(), der), format: "spki" }) },
-  "PRIVATE KEY": { role: "private", read: (der) => ({ der, format: "pkcs8" }) },
-  "RSA PRIVATE KEY": { role: "private", read: (der) => ({ der: wrapPkcs8(rsaAlgorithm(), der), format: "pkcs8" }) },
+  "RSA PUBLIC KEY": {
+    role: "public",
+    read: (der) => strictly(der, () => ({ der: wrapSpki(rsaAlgorithm(), der), format: "spki" })),
+  },
+  "PRIVATE KEY": { role: "private", read: (der) => strictly(der, () => ({ der, format: "pkcs8" })) },
+  "RSA PRIVATE KEY": {
+    role: "private",
+    read: (der) => strictly(der, () => ({ der: wrapPkcs8(rsaAlgorithm(), der), format: "pkcs8" })),
+  },
   "EC PRIVATE KEY": { role: "private", read: readSec1 },
 };
+
+/**
+ * `read()` when `der` is one `SEQUENCE` in minimal DER with nothing after it, and `invalid_key` otherwise. Web
+ * Crypto engines disagree on the rest: Node imports an SPKI with bytes after it and browsers refuse it, Firefox
+ * alone imports a PKCS#8 with a byte after it, and Node and WebKit alone an SPKI whose outer length is not minimal.
+ */
+function strictly(der: Uint8Array<ArrayBuffer>, read: () => KeyDer): KeyDer {
+  return isSingleSequence(der) ? read() : { code: "invalid_key" };
+}
 
 /**
  * Reads a PEM key as the JWK of its material, for the JWK checks to run on exactly as on a JWK given directly:
@@ -374,8 +389,11 @@ function subjectPublicKeyInfo(der: Uint8Array<ArrayBuffer>): Uint8Array<ArrayBuf
   return key?.tag === DER_SEQUENCE ? der.subarray(key.start, key.end) : undefined;
 }
 
-/** Whether `der` is exactly one DER `SEQUENCE`, as a certificate is; its content is not read. */
+/**
+ * Whether `der` is exactly one DER `SEQUENCE`, as a certificate or a key is, its length in the minimal form and
+ * nothing after it; its content is not read.
+ */
 export function isSingleSequence(der: Uint8Array): boolean {
-  const element = readElement(der, 0, der.length);
+  const element = readElement(der, 0, der.length, true);
   return element?.tag === DER_SEQUENCE && element.end === der.length;
 }

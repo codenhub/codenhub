@@ -1,12 +1,10 @@
 import type { AsymmetricAlgorithm, Jwk, PrivateKey, PublicKey, SecretKey } from "../core/types";
 import { encodeBase64Url, encodeUtf8 } from "../encoding";
-import { jweKeyThumbprint } from "../jwe/keys";
-import { isJweKey } from "../jwe/registry";
 import type { JwePrivateKey, JwePublicKey } from "../jwe/types";
 import { ALGORITHM_PARAMS } from "./algorithms";
 import { exportWebCryptoJwk } from "./exported-jwk";
 import { isSingleSequence, readPemBlock } from "./pem";
-import { getKeyEntry } from "./registry";
+import { encryptionPublicCryptoKey, getKeyEntry, isEncryptionKey } from "./registry";
 
 /** RFC 7638 §3.2: the required members of each key type, in lexicographic order. */
 const THUMBPRINT_MEMBERS: Readonly<Record<Jwk["kty"], readonly ("crv" | "e" | "k" | "kty" | "n" | "x" | "y")[]>> = {
@@ -31,8 +29,9 @@ const THUMBPRINT_URI_PREFIX = "urn:ietf:params:oauth:jwk-thumbprint:sha-256:";
  * key imported for two algorithms has one thumbprint. It is what DPoP binds a token to (RFC 9449 §6.1, the
  * `jkt` of a `cnf` claim), and it makes a stable `kid`. A private key gives the thumbprint of its public
  * half, also when it is not extractable. A secret's thumbprint is computed from the secret itself, so the
- * secret must be extractable; a thumbprint reveals nothing of a secret with enough entropy, which every
- * secret this package accepts has.
+ * secret must be extractable. A thumbprint reveals nothing of a random secret; this package enforces a minimum
+ * length for secrets, not their entropy, so use secrets from `generateSecretKey` or another random source, never
+ * chosen by hand.
  *
  * @example
  * ```ts
@@ -48,8 +47,14 @@ const THUMBPRINT_URI_PREFIX = "urn:ietf:params:oauth:jwk-thumbprint:sha-256:";
 export async function jwkThumbprint(
   key: PublicKey | PrivateKey | SecretKey | JwePublicKey | JwePrivateKey,
 ): Promise<string> {
-  if (isJweKey(key)) {
-    return jweKeyThumbprint(key as JwePublicKey | JwePrivateKey);
+  if (isEncryptionKey(key)) {
+    // Read from the mark the JWE registry leaves here, so a JWS-only bundle carries no JWE code.
+    const publicCryptoKey = encryptionPublicCryptoKey(key);
+    if (publicCryptoKey === undefined) {
+      throw new TypeError("jwkThumbprint: key must be a public or private key created by this package.");
+    }
+    const jwk = await crypto.subtle.exportKey("jwk", publicCryptoKey);
+    return materialThumbprint(jwk, jwk.kty as Jwk["kty"]);
   }
   const entry = getKeyEntry(key);
   if (key.kind === "secret") {

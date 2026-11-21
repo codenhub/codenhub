@@ -211,9 +211,9 @@ export async function signToken<TPayload extends object = JwtPayload>(
 }
 
 /**
- * Signs with Web Crypto, or with an external signer, whose signature is verified with the public key first,
- * since a signer holding another key, or a DER conversion gone wrong, would otherwise give tokens no one can
- * verify.
+ * Signs with Web Crypto, or with an external signer, whose signature is checked for the key's signature length
+ * and verified with the public key first, since a signer holding another key, or a DER conversion gone wrong,
+ * would otherwise give tokens no one can verify.
  */
 export async function signatureOf(
   entry: KeyEntry,
@@ -226,6 +226,11 @@ export async function signatureOf(
   }
   // A copy: a signer that changes its input would otherwise sign, and pass the check on, bytes the token lacks.
   const signature = await entry.externalSign(signedBytes.slice());
+  // The verifiers refuse a signature of another length before Web Crypto, and some engines would verify one, such
+  // as an RSA signature without its leading zero byte; so a token no verifier accepts is never written.
+  if (signature.byteLength !== entry.signatureLength) {
+    throw new TypeError(`${caller}: the external signer's signature is not ${entry.signatureLength} bytes long.`);
+  }
   if (!(await crypto.subtle.verify(signParams, entry.cryptoKey, signature, signedBytes))) {
     throw new TypeError(`${caller}: the external signer's signature does not verify with its public key.`);
   }

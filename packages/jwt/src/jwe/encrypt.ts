@@ -7,7 +7,7 @@ import { encodeUtf8 } from "../encoding/text";
 import { sign, snapshotJsonObject, type SignInput } from "../sign/sign";
 import { CONTENT_ENCRYPTION_ALGORITHMS, isContentEncryptionAlgorithm } from "./algorithms";
 import { encryptContent } from "./content";
-import { wrapContentKey } from "./key-management";
+import { wrapContentKey, type ManagedKey } from "./key-management";
 import { getJweKeyEntry } from "./registry";
 import type { ContentEncryptionAlgorithm, JweEncryptionKey, KeyManagementAlgorithm } from "./types";
 
@@ -180,7 +180,7 @@ async function encryptBytes(
     throw new TypeError(`${functionName}: input.header.cty must be "${cty}" or absent.`);
   }
   const managed = await wrapContentKey(key.alg, enc, entry);
-  const headerJson = serializeHeader(given, key, enc, cty, managed.epk);
+  const headerJson = serializeHeader(given, key, enc, cty, managed);
   const headerSegment = encodeBase64Url(encodeUtf8(headerJson));
   const content = await encryptContent(enc, managed.contentKey, plaintext, encodeUtf8(headerSegment));
   return [
@@ -244,13 +244,16 @@ function readHeader(
   return given;
 }
 
-/** Writes the header as JSON with `alg`, `enc`, `kid`, `typ`, `cty` and `epk` first, then the caller's others. */
+/**
+ * Writes the header as JSON with `alg`, `enc`, `kid`, `typ`, `cty`, then the members key management sets
+ * (`epk`, or `iv` and `tag`), then the caller's others.
+ */
 function serializeHeader(
   given: Record<string, unknown>,
   key: JweEncryptionKey,
   enc: ContentEncryptionAlgorithm,
   cty: string | undefined,
-  epk: Readonly<Record<string, string>> | undefined,
+  managed: ManagedKey,
 ): string {
   const members: [string, unknown][] = [
     ["alg", key.alg],
@@ -267,8 +270,11 @@ function serializeHeader(
   if (contentType !== undefined) {
     members.push(["cty", contentType]);
   }
-  if (epk !== undefined) {
-    members.push(["epk", epk]);
+  if (managed.epk !== undefined) {
+    members.push(["epk", managed.epk]);
+  }
+  if (managed.gcm !== undefined) {
+    members.push(["iv", managed.gcm.iv], ["tag", managed.gcm.tag]);
   }
   const leading: readonly string[] = ["alg", "enc", ...TEXT_HEADER_MEMBERS];
   for (const [name, value] of Object.entries(given)) {

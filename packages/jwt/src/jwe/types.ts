@@ -3,18 +3,23 @@ import type { JwtPayload, JwtResult, VerifiedJwt } from "../core/types";
 /**
  * JWE key management algorithms (RFC 7518 §4) this package encrypts and decrypts with.
  *
- * `RSA1_5`, the `PBES2-*` algorithms and the 192-bit and AES-GCM key wraps are never among them. A minor release
- * may add one, so code that switches over it keeps a default branch.
+ * `RSA1_5`, the `PBES2-*` algorithms and the 192-bit key wraps (`A192KW`, `A192GCMKW`, `ECDH-ES+A192KW`) are
+ * never among them. A minor release may add one, so code that switches over it keeps a default branch.
  */
 export type KeyManagementAlgorithm = SymmetricKeyManagementAlgorithm | AsymmetricKeyManagementAlgorithm;
 
-/** Key management algorithms whose key is a shared secret: `dir` uses it as the content key, `A*KW` wraps one. */
-export type SymmetricKeyManagementAlgorithm = "dir" | "A128KW" | "A256KW";
+/**
+ * Key management algorithms whose key is a shared secret: `dir` uses it as the content key, and `A*KW` (AES key
+ * wrap) and `A*GCMKW` (AES-GCM) wrap a fresh one for each token.
+ */
+export type SymmetricKeyManagementAlgorithm = "dir" | "A128KW" | "A256KW" | "A128GCMKW" | "A256GCMKW";
 
 /** Key management algorithms whose key is a key pair: the sender encrypts to the recipient's public key. */
 export type AsymmetricKeyManagementAlgorithm =
   | "RSA-OAEP"
   | "RSA-OAEP-256"
+  | "RSA-OAEP-384"
+  | "RSA-OAEP-512"
   | "ECDH-ES"
   | "ECDH-ES+A128KW"
   | "ECDH-ES+A256KW";
@@ -58,8 +63,8 @@ export interface JwePrivateKey {
 
 /**
  * A shared secret bound to exactly one key management algorithm. With `dir` it is the content key itself, and is
- * also bound to one `enc`; with `A128KW` or `A256KW` it wraps a fresh content key for each token. It encrypts and
- * decrypts, never signs, and is never interchangeable with a JWS {@link SecretKey}.
+ * also bound to one `enc`; with `A128KW`, `A256KW`, `A128GCMKW` or `A256GCMKW` it wraps a fresh content key for
+ * each token. It encrypts and decrypts, never signs, and is never interchangeable with a JWS {@link SecretKey}.
  */
 export interface JweSecretKey {
   /** Discriminates the JWE key kinds from each other and from the JWS ones. */
@@ -150,7 +155,7 @@ export interface EncryptionKeyQuery {
 
 /**
  * A source of a recipient's public encryption keys, such as the JWKS of a client an OpenID Provider encrypts ID
- * tokens to. `importKeySet(jwks, { use: "enc" })` and `createRemoteKeySet({ url, use: "enc" })` return one.
+ * tokens to. `importEncryptionKeySet(jwks)` and `createRemoteEncryptionKeySet({ url })` return one.
  */
 export interface EncryptionKeySet {
   /**
@@ -162,7 +167,7 @@ export interface EncryptionKeySet {
   select(query: EncryptionKeyQuery): Promise<JwtResult<JwePublicKey>>;
 }
 
-/** An encryption key set over a fixed list of keys, from `importKeySet(jwks, { use: "enc" })`. Frozen. */
+/** An encryption key set over a fixed list of keys, from `importEncryptionKeySet(jwks)`. Frozen. */
 export interface LocalEncryptionKeySet extends EncryptionKeySet {
   /** One key per JWK and algorithm it was bound to, in JWKS order. Frozen. */
   readonly keys: readonly JwePublicKey[];

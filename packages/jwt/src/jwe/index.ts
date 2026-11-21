@@ -13,10 +13,12 @@ export {
   type NestedVerifierOptions,
 } from "./decrypt";
 export { encrypt, encryptJwt, type EncryptHeader, type EncryptInput, type EncryptJwtInput } from "./encrypt";
-export type { EncryptionKeySetOptions } from "./keyset";
+export { importEncryptionKeySet, type ImportEncryptionKeySetOptions } from "./keyset";
 export {
   exportJwePrivateJwk,
+  exportJwePrivatePem,
   exportJwePublicJwk,
+  exportJwePublicPem,
   exportJweSecretJwk,
   generateJweKeyPair,
   generateJweSecretKey,
@@ -32,4 +34,5 @@ export {
   type ImportJweSecretKeyOptions,
   type JweKeyPair,
 } from "./keys";
+export { readJweHeader, type ReadJweHeaderOptions } from "./read-header";
 export type * from "./types";

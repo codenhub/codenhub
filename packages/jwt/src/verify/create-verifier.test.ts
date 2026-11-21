@@ -1,4 +1,6 @@
-import { beforeAll, describe, expect, expectTypeOf, it } from "vitest";
+import { runInNewContext } from "node:vm";
+
+import { beforeAll, describe, expect, expectTypeOf, it, vi } from "vitest";
 
 import { fail } from "../core/result";
 import type {
@@ -363,6 +365,38 @@ describe("createVerifier key set", () => {
       }),
     ],
     [
+      "returns a failure whose issue path is a string",
+      async () => ({ ok: false, error: { issues: [{ code: "tenant_unknown", path: "tenant" }] } }),
+    ],
+    [
+      "returns a failure whose issue path is a number",
+      async () => ({ ok: false, error: { issues: [{ code: "tenant_unknown", path: 0 }] } }),
+    ],
+    [
+      "returns a failure whose issue path holds an object",
+      async () => ({ ok: false, error: { issues: [{ code: "tenant_unknown", path: ["tenant", {}] }] } }),
+    ],
+    [
+      "returns a failure whose issue path holds NaN",
+      async () => ({ ok: false, error: { issues: [{ code: "tenant_unknown", path: [Number.NaN] }] } }),
+    ],
+    [
+      "returns a failure whose issue path is a getter",
+      async () => ({
+        ok: false,
+        error: {
+          issues: [
+            {
+              code: "tenant_unknown",
+              get path() {
+                return ["tenant"];
+              },
+            },
+          ],
+        },
+      }),
+    ],
+    [
       "returns a look-alike key",
       async () => ({ ok: true, value: { kind: "secret", alg: "HS256", extractable: false } }),
     ],
@@ -381,6 +415,15 @@ describe("createVerifier key set", () => {
     const token = await sign({ payload: {}, key: secretKey });
 
     expect(await verifierFor(keys)(token)).toEqual(failure({ code: "unknown_kid" }, { code: "no_matching_key" }));
+  });
+
+  it("should pass through an issue whose path is an array of strings and numbers", async () => {
+    const keys = {
+      select: async () => ({ ok: false, error: { issues: [{ code: "tenant_unknown", path: ["tenants", 2] }] } }),
+    } as unknown as KeySet;
+    const token = await sign({ payload: {}, key: secretKey });
+
+    expect(await verifierFor(keys)(token)).toEqual(failure({ code: "tenant_unknown" as never, path: ["tenants", 2] }));
   });
 
   it("should report key_fetch_failed when select returns a private key", async () => {
@@ -444,6 +487,40 @@ describe("createVerifier onKeySetError", () => {
     const keys = { select: async () => null } as unknown as KeySet;
     const verify = createVerifier({ keys, now: clockAt(), onKeySetError });
     expect(await verify(await tokenFor())).toEqual(KEY_SET_ERROR);
+  });
+
+  it.each([
+    ["a promise from another realm that rejects", () => runInNewContext("(async () => { throw new Error('x') })")()],
+    [
+      "a thenable whose then getter throws",
+      () => ({
+        // oxlint-disable-next-line unicorn/no-thenable -- the case under test is a hostile thenable.
+        get then() {
+          throw new Error("x");
+        },
+      }),
+    ],
+    [
+      "a thenable whose then throws",
+      () => ({
+        // oxlint-disable-next-line unicorn/no-thenable -- the case under test is a hostile thenable.
+        then() {
+          throw new Error("x");
+        },
+      }),
+    ],
+  ])("should leave no unhandled rejection when onKeySetError returns %s", async (_name, onKeySetError) => {
+    const unhandled = vi.fn();
+    process.on("unhandledRejection", unhandled);
+    try {
+      const keys = { select: async () => null } as unknown as KeySet;
+      const verify = createVerifier({ keys, now: clockAt(), onKeySetError });
+      expect(await verify(await tokenFor())).toEqual(KEY_SET_ERROR);
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      expect(unhandled).not.toHaveBeenCalled();
+    } finally {
+      process.off("unhandledRejection", unhandled);
+    }
   });
 
   it("should not call onKeySetError for a key set's own failure", async () => {

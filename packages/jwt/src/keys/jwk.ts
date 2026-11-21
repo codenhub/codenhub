@@ -184,7 +184,8 @@ function materialFor(members: Members, alg: JwsAlgorithm, role: KeyRole): Materi
     case "EC":
       return curveMaterial(members, ["x", "y"], role, params);
     case "OKP":
-      return curveMaterial(members, ["x"], role, params);
+      // An OKP key has no y (RFC 8037 §2); the JWE X25519 import refuses one too.
+      return members.y === undefined ? curveMaterial(members, ["x"], role, params) : issue("invalid_key", "y");
     case "RSA":
       return rsaMaterial(members, role);
     case "oct":
@@ -245,7 +246,9 @@ export function rsaMaterial(members: Members, role: KeyRole): Material {
       return issue("unsupported_key", "oth");
     }
     for (const name of RSA_PRIVATE_MEMBERS) {
-      if (!isNonEmptyMember(members[name])) {
+      // Every private member is below n, so one longer than n is refused before any arithmetic on it: the
+      // BigInt checks below took seconds on members of a few megabytes. n itself is at most 1 KB.
+      if (!isNonEmptyMember(members[name]) || !fitsIn(members[name], significant.length)) {
         return issue("invalid_key", name);
       }
       importJwk[name] = members[name] as string;
@@ -258,15 +261,22 @@ export function rsaMaterial(members: Members, role: KeyRole): Material {
   return { importJwk, signatureLength: significant.length };
 }
 
+/** Whether a member's integer, without its leading zero bytes, is at most `bytes` long. */
+function fitsIn(value: unknown, bytes: number): boolean {
+  const decoded = decodeMember(value);
+  return decoded !== undefined && stripLeadingZeros(decoded).length <= bytes;
+}
+
 /**
  * The first private member that disagrees with the others, or `undefined` when they agree: `d` must give
- * `d mod (p - 1) = dp` and `d mod (q - 1) = dq`, and `qi` must be the inverse of `q` modulo `p`. The probe
+ * `d mod (p - 1) = dp` and `d mod (q - 1) = dq`, `qi` must be the inverse of `q` modulo `p`, and `p q` must be
+ * `n`, which the probe signature would otherwise be the first to find wrong. The probe
  * signature cannot see either: OpenSSL, behind Node's Web Crypto, checks a CRT signature and signs again with `d`
  * when it is wrong, so a wrong `qi` signs correctly, and a signer that uses only the CRT members never reads `d`.
  * The exported JWK would carry the wrong member to a library that signs with it.
  */
-function inconsistentPrivateMember(jwk: JsonWebKey): "d" | "qi" | undefined {
-  const [d, p, q, dp, dq, qi] = [jwk.d, jwk.p, jwk.q, jwk.dp, jwk.dq, jwk.qi].map(memberToBigInt);
+function inconsistentPrivateMember(jwk: JsonWebKey): "d" | "qi" | "n" | undefined {
+  const [n, d, p, q, dp, dq, qi] = [jwk.n, jwk.d, jwk.p, jwk.q, jwk.dp, jwk.dq, jwk.qi].map(memberToBigInt);
   if (
     d === undefined ||
     p === undefined ||
@@ -277,7 +287,10 @@ function inconsistentPrivateMember(jwk: JsonWebKey): "d" | "qi" | undefined {
   ) {
     return "d";
   }
-  return qi !== undefined && qi < p && (q * qi) % p === 1n ? undefined : "qi";
+  if (qi === undefined || qi >= p || (q * qi) % p !== 1n) {
+    return "qi";
+  }
+  return p * q === n ? undefined : "n";
 }
 
 function memberToBigInt(value: string | undefined): bigint | undefined {

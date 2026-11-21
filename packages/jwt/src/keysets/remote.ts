@@ -1,11 +1,13 @@
 import { fail, ok } from "../core";
+import { quietly } from "../core/hooks";
 import { rejectUnknownOptions } from "../core/options";
-import type { AsymmetricAlgorithm, JwtHeader, JwtIssue, JwtResult, KeySet, VerificationKey } from "../core/types";
+import type { AsymmetricAlgorithm, JwtIssue, JwtResult, KeySet } from "../core/types";
 import { parseJsonObject } from "../encoding";
-import type { EncryptionKeySetOptions } from "../jwe/keyset";
+import { importEncryptionKeys, readEncryptionAlgorithms, type ImportEncryptionKeySetOptions } from "../jwe/keyset";
 import type { EncryptionKeySet } from "../jwe/types";
-import { readKeyImporter } from "./local";
-import { lacksKid, selectKey } from "./select";
+import { readIssuer } from "../keys/registry";
+import { importKeys, readAlgorithms, readEntries } from "./local";
+import { lacksKid, selectKey, type SelectableKey, type SelectionQuery } from "./select";
 
 /**
  * The `fetch` a remote key set calls: the JWKS URL, normalized, and a `GET` request init. The global `fetch`
@@ -41,13 +43,6 @@ export interface RemoteKeySetOptions {
    * @defaultValue keys bound to no issuer
    */
   readonly issuer?: string;
-  /**
-   * Which keys to import, as for {@link ImportKeySetOptions.use}: `sig` for verification keys, or `enc` for a
-   * recipient's encryption keys, as {@link RemoteEncryptionKeySetOptions} describes.
-   *
-   * @defaultValue `"sig"`
-   */
-  readonly use?: "sig";
   /**
    * Seconds a fetched JWKS is used before it is fetched again. An integer of at least 1. A response whose
    * `Cache-Control` has a shorter `max-age` is used for that long instead, but never for less than
@@ -121,13 +116,12 @@ export interface RemoteKeySetOptions {
 }
 
 /**
- * How {@link createRemoteKeySet} fetches a recipient's JWKS of encryption keys, such as an OpenID client's
- * `jwks_uri` an OpenID Provider encrypts ID tokens to. Every option of {@link RemoteKeySetOptions} applies but
- * `issuer`; keys are imported as `importKeySet(jwks, { use: "enc" })` imports them, and `select` takes
- * `{ alg, kid }`.
+ * How {@link createRemoteEncryptionKeySet} fetches a recipient's JWKS of encryption keys, such as an OpenID
+ * client's `jwks_uri` an OpenID Provider encrypts ID tokens to. Every option of {@link RemoteKeySetOptions}
+ * applies but `issuer`, and `algorithms` lists key management algorithms, as for `importEncryptionKeySet`.
  */
 export interface RemoteEncryptionKeySetOptions
-  extends Omit<RemoteKeySetOptions, "algorithms" | "issuer" | "use">, EncryptionKeySetOptions {}
+  extends Omit<RemoteKeySetOptions, "algorithms" | "issuer">, ImportEncryptionKeySetOptions {}
 
 /** A fetched JWKS, where from and when, as {@link RemoteKeySetOptions.onFetch} receives it. */
 export interface RemoteKeySetSnapshot {
@@ -139,13 +133,10 @@ export interface RemoteKeySetSnapshot {
   readonly fetchedAt: number;
 }
 
-/** Every documented option; typed so adding one to `RemoteKeySetOptions` fails to compile until listed. */
-const KNOWN_OPTIONS: Readonly<Record<keyof RemoteKeySetOptions, true>> = {
+/** The options both kinds of remote key set take; typed so a new one fails to compile until listed. */
+const SHARED_OPTIONS: Readonly<Record<keyof Omit<RemoteKeySetOptions, "algorithms" | "issuer">, true>> = {
   url: true,
   fetch: true,
-  algorithms: true,
-  issuer: true,
-  use: true,
   cacheTtl: true,
   cooldown: true,
   maxStale: true,
@@ -156,6 +147,17 @@ const KNOWN_OPTIONS: Readonly<Record<keyof RemoteKeySetOptions, true>> = {
   onFetch: true,
   onFetchError: true,
   waitUntil: true,
+};
+
+const KNOWN_OPTIONS: Readonly<Record<keyof RemoteKeySetOptions, true>> = {
+  ...SHARED_OPTIONS,
+  algorithms: true,
+  issuer: true,
+};
+
+const KNOWN_ENCRYPTION_OPTIONS: Readonly<Record<keyof RemoteEncryptionKeySetOptions, true>> = {
+  ...SHARED_OPTIONS,
+  algorithms: true,
 };
 
 const MS_PER_SECOND = 1000;
@@ -175,11 +177,17 @@ const CLOCK_STEP_BACK_TOLERANCE_MS = 60_000;
 /** Why a fetch failed, as `params.reason` of a `key_fetch_failed` issue. */
 type FetchFailureReason = "timeout" | "network" | "status" | "too_large" | "invalid_response" | "no_usable_keys";
 
+/**
+ * Imports a fetched JWKS. The keys come back as what selection reads of them, since a remote key set handles
+ * verification and encryption keys alike; each public function types its set's `select` with its own kind.
+ */
+type KeyImporter = (jwks: unknown) => Promise<JwtResult<readonly SelectableKey[]>>;
+
 interface RemoteConfig {
   readonly url: string;
   readonly fetch: JwksFetch | undefined;
-  /** Imports a fetched JWKS, as verification keys or, with `use: "enc"`, as encryption keys. */
-  readonly importKeys: (jwks: unknown) => Promise<JwtResult<readonly VerificationKey[]>>;
+  /** Imports a fetched JWKS, as verification keys or as encryption keys. */
+  readonly importKeys: KeyImporter;
   readonly cacheTtlMs: number;
   readonly cooldownMs: number;
   readonly maxStaleMs: number;
@@ -200,12 +208,12 @@ interface FetchedJwks {
 
 /** A JWKS that was fetched and imported. */
 interface FetchedKeys extends FetchedJwks {
-  readonly keys: readonly VerificationKey[];
+  readonly keys: readonly SelectableKey[];
 }
 
 /** The last JWKS fetched successfully. */
 interface CachedKeys {
-  readonly keys: readonly VerificationKey[];
+  readonly keys: readonly SelectableKey[];
   /** When the fetch that produced `keys` completed, from `now()`. */
   readonly fetchedAt: number;
   /** How long `keys` are fresh: `cacheTtl`, or less when the response's `Cache-Control` said so. */
@@ -278,16 +286,57 @@ interface FetchState {
  * `http:` URL on a loopback host, or carries credentials; `fetch`, `now`, `onFetch`, `onFetchError` or `waitUntil` is not a function; `algorithms` is not a non-empty array of asymmetric algorithms; `issuer` is not a non-empty string; or `cacheTtl`, `cooldown`, `maxStale`, `timeout` or
  * `maxResponseBytes` is out of range.
  */
-export function createRemoteKeySet(options: RemoteEncryptionKeySetOptions): EncryptionKeySet;
-export function createRemoteKeySet(options: RemoteKeySetOptions): KeySet;
-export function createRemoteKeySet(
-  options: RemoteKeySetOptions | RemoteEncryptionKeySetOptions,
-): KeySet | EncryptionKeySet {
-  const config = readRemoteOptions(options);
+export function createRemoteKeySet(options: RemoteKeySetOptions): KeySet {
+  const config = readRemoteOptions(options, KNOWN_OPTIONS, "createRemoteKeySet");
+  const algorithms = readAlgorithms(options, "createRemoteKeySet");
+  const issuer = readIssuer(options, "createRemoteKeySet");
+  return createRemoteSet({ ...config, importKeys: async (jwks) => importKeys(jwks, algorithms, issuer) }) as KeySet;
+}
+
+/**
+ * Builds an encryption key set that fetches a recipient's public encryption keys from a JWKS URL, such as the
+ * `jwks_uri` of an OpenID client that wants its ID tokens encrypted, caches them, and refetches on expiry or on
+ * an unknown `kid`.
+ *
+ * @remarks
+ * It fetches, caches, refetches and fails exactly as {@link createRemoteKeySet} does, with the same options but
+ * `issuer`. The JWKS is imported as `importEncryptionKeySet` imports one: only a JWK that says it encrypts is
+ * imported, bound to each allowed key management algorithm it fits, so a JWKS without one is `no_usable_keys`.
+ * Its `select` takes `{ alg, kid }`.
+ *
+ * @example
+ * ```ts
+ * const recipientKeys = createRemoteEncryptionKeySet({ url: client.jwks_uri, algorithms: ["ECDH-ES+A256KW"] });
+ * const key = await recipientKeys.select({ alg: "ECDH-ES+A256KW" });
+ * if (key.ok) token = await encrypt({ plaintext, key: key.value, enc: "A256GCM" });
+ * ```
+ *
+ * @param options - Where to fetch the JWKS from, how to cache it, and which key management algorithms keys may be
+ * bound to.
+ * @returns A frozen encryption key set, whose `select` resolves as {@link createRemoteKeySet}'s does.
+ * @throws TypeError as {@link createRemoteKeySet} does, except that `issuer` is not an option and `algorithms`
+ * must be a non-empty array of asymmetric key management algorithms.
+ */
+export function createRemoteEncryptionKeySet(options: RemoteEncryptionKeySetOptions): EncryptionKeySet {
+  const config = readRemoteOptions(options, KNOWN_ENCRYPTION_OPTIONS, "createRemoteEncryptionKeySet");
+  const algorithms = readEncryptionAlgorithms(options, "createRemoteEncryptionKeySet");
+  return createRemoteSet({
+    ...config,
+    importKeys: async (jwks) => {
+      const entries = readEntries(jwks);
+      return entries.ok ? ok(await importEncryptionKeys(entries.value, algorithms)) : entries;
+    },
+  }) as EncryptionKeySet;
+}
+
+/** The fetching, caching key set both public functions build, over keys of either kind. */
+function createRemoteSet(config: RemoteConfig): {
+  readonly select: (query: SelectionQuery) => Promise<JwtResult<SelectableKey>>;
+} {
   let cached: CachedKeys | undefined;
   let lastFailure: JwtResult<never> | undefined;
   let lastFetchStartedAt: number | undefined;
-  let inFlight: Promise<JwtResult<readonly VerificationKey[]>> | undefined;
+  let inFlight: Promise<JwtResult<readonly SelectableKey[]>> | undefined;
   // Counts fetches started, so a fetch that settles after a newer one replaced it changes nothing.
   let generation = 0;
   let seeding: Promise<void> | undefined;
@@ -317,7 +366,7 @@ export function createRemoteKeySet(
     return age >= -CLOCK_STEP_BACK_TOLERANCE_MS && Math.max(age, 0) < cached.ttlMs + staleMs;
   };
 
-  const runFetch = async (started: number): Promise<JwtResult<readonly VerificationKey[]>> => {
+  const runFetch = async (started: number): Promise<JwtResult<readonly SelectableKey[]>> => {
     let outcome: JwtResult<FetchedKeys>;
     try {
       outcome = await fetchKeys(config, fetchState);
@@ -344,13 +393,21 @@ export function createRemoteKeySet(
     return ok(outcome.value.keys);
   };
 
-  /** Whether a fetch is running and still within its deadline, so it may yet settle. */
+  /**
+   * Whether a fetch is running and still within its deadline, so it may yet settle. A clock that stepped back
+   * behind the running fetch's start makes it count as just started, from the new clock: replacing it would
+   * discard what it fetches, and leaving its deadline where it was would hold back new fetches for as long as
+   * the step.
+   */
   const hasLiveFetch = (): boolean => {
     if (inFlight === undefined || lastFetchStartedAt === undefined) {
       return false;
     }
-    const elapsed = config.now() - lastFetchStartedAt;
-    return elapsed >= 0 && elapsed < config.timeoutMs + ABANDONED_FETCH_GRACE_MS;
+    const now = config.now();
+    if (now < lastFetchStartedAt) {
+      lastFetchStartedAt = now;
+    }
+    return now - lastFetchStartedAt < config.timeoutMs + ABANDONED_FETCH_GRACE_MS;
   };
 
   /**
@@ -360,7 +417,7 @@ export function createRemoteKeySet(
   const isFetching = (): boolean => inFlight !== undefined && (hasLiveFetch() || isCoolingDown());
 
   /** Starts a fetch unless one is running, and returns the running one. */
-  const refetch = (): Promise<JwtResult<readonly VerificationKey[]>> => {
+  const refetch = (): Promise<JwtResult<readonly SelectableKey[]>> => {
     if (inFlight === undefined || !isFetching()) {
       lastFetchStartedAt = config.now();
       generation += 1;
@@ -375,7 +432,7 @@ export function createRemoteKeySet(
    * ended never settles, or rejects when awaited from another request; either way this select fetches
    * again, once, from its own request.
    */
-  const awaitFetch = async (): Promise<JwtResult<readonly VerificationKey[]>> => {
+  const awaitFetch = async (): Promise<JwtResult<readonly SelectableKey[]>> => {
     if (inFlight === undefined || !isFetching()) {
       return refetch();
     }
@@ -421,19 +478,19 @@ export function createRemoteKeySet(
   };
 
   /** The keys to select from now, or why there are none. */
-  const usableKeys = (): JwtResult<readonly VerificationKey[]> => {
+  const usableKeys = (): JwtResult<readonly SelectableKey[]> => {
     if (cached !== undefined && isCachedWithin(config.maxStaleMs)) {
       return ok(cached.keys);
     }
     return lastFailure ?? fetchFailure("network");
   };
 
-  const select = async (header: JwtHeader): Promise<JwtResult<VerificationKey>> => {
+  const select = async (header: SelectionQuery): Promise<JwtResult<SelectableKey>> => {
     if (config.seed !== undefined) {
       seeding ??= importSeed(config.seed);
       await seeding;
     }
-    let hasFetched = false;
+    let fetched: JwtResult<readonly SelectableKey[]> | undefined;
     if (isFetching()) {
       // A cache that is still usable and holds the key needs no wait for the fetch that is running, and
       // neither does a missing kid while a fetch past its deadline holds the cooldown.
@@ -443,18 +500,22 @@ export function createRemoteKeySet(
           return selected;
         }
       }
-      await awaitFetch();
-      hasFetched = true;
+      fetched = await awaitFetch();
     } else if (!isCachedWithin(0) && !isCoolingDown()) {
       if (isCachedWithin(config.maxStaleMs)) {
         // The expired keys answer now; the refetch replaces them for later selects.
         void ignoreRejection(refetch());
       } else {
-        await awaitFetch();
-        hasFetched = true;
+        fetched = await awaitFetch();
       }
     }
-    const keys = usableKeys();
+    const hasFetched = fetched !== undefined;
+    // A fetch that a newer one replaced left the cache as it was, so its own keys, or its own failure when the
+    // cache has nothing usable either, answer this select.
+    let keys = usableKeys();
+    if (fetched !== undefined && (fetched.ok || !keys.ok)) {
+      keys = fetched;
+    }
     if (!keys.ok) {
       return keys;
     }
@@ -503,9 +564,8 @@ function notify<T>(
     return;
   }
   try {
-    const result: unknown = callback(value);
-    if (result instanceof Promise) {
-      const settled = ignoreRejection(result);
+    const settled = quietly(callback(value));
+    if (settled !== undefined) {
       notify(waitUntil, settled);
     }
   } catch {
@@ -734,39 +794,47 @@ function fetchFailure(reason: FetchFailureReason, extra?: { readonly status: num
 }
 
 /** Checks every option once, so a misconfiguration throws when the key set is created. */
-function readRemoteOptions(options: unknown): RemoteConfig {
+/**
+ * Reads the options both kinds of remote key set share. Each caller then reads `algorithms`, and `issuer` where
+ * it has one, and builds its importer.
+ *
+ * @throws TypeError, its message naming `caller`, as {@link createRemoteKeySet} describes.
+ */
+function readRemoteOptions(
+  options: unknown,
+  known: Readonly<Record<string, true>>,
+  caller: string,
+): Omit<RemoteConfig, "importKeys"> {
   if (typeof options !== "object" || options === null) {
-    throw new TypeError("createRemoteKeySet: options must be an object.");
+    throw new TypeError(`${caller}: options must be an object.`);
   }
-  rejectUnknownOptions(options, KNOWN_OPTIONS, "createRemoteKeySet");
+  rejectUnknownOptions(options, known, caller);
   const source = options as Record<string, unknown>;
-  const cacheTtl = readInteger(source, { name: "cacheTtl", fallback: DEFAULT_CACHE_TTL, minimum: 1 });
-  const cooldown = readInteger(source, {
-    name: "cooldown",
-    fallback: Math.min(DEFAULT_COOLDOWN, cacheTtl),
-    minimum: 0,
-    maximum: cacheTtl,
-  });
-  const url = readUrl(source.url);
+  const cacheTtl = readInteger(source, { name: "cacheTtl", fallback: DEFAULT_CACHE_TTL, minimum: 1 }, caller);
+  const cooldown = readInteger(
+    source,
+    { name: "cooldown", fallback: Math.min(DEFAULT_COOLDOWN, cacheTtl), minimum: 0, maximum: cacheTtl },
+    caller,
+  );
+  const url = readUrl(source.url, caller);
+  const maxStale = readInteger(source, { name: "maxStale", fallback: DEFAULT_MAX_STALE, minimum: 0 }, caller);
   return {
     url,
-    fetch: readFunction(source, "fetch") as JwksFetch | undefined,
-    importKeys: readKeyImporter(options, "createRemoteKeySet"),
+    fetch: readFunction(source, "fetch", caller) as JwksFetch | undefined,
     cacheTtlMs: cacheTtl * MS_PER_SECOND,
     cooldownMs: cooldown * MS_PER_SECOND,
-    maxStaleMs: readInteger(source, { name: "maxStale", fallback: DEFAULT_MAX_STALE, minimum: 0 }) * MS_PER_SECOND,
-    timeoutMs: readTimeout(source.timeout) * MS_PER_SECOND,
-    maxResponseBytes: readInteger(source, {
-      name: "maxResponseBytes",
-      fallback: DEFAULT_MAX_RESPONSE_BYTES,
-      minimum: 1,
-      maximum: MAX_RESPONSE_BYTES_LIMIT,
-    }),
-    now: checkedClock((readFunction(source, "now") as (() => number) | undefined) ?? Date.now),
+    maxStaleMs: maxStale * MS_PER_SECOND,
+    timeoutMs: readTimeout(source.timeout, caller) * MS_PER_SECOND,
+    maxResponseBytes: readInteger(
+      source,
+      { name: "maxResponseBytes", fallback: DEFAULT_MAX_RESPONSE_BYTES, minimum: 1, maximum: MAX_RESPONSE_BYTES_LIMIT },
+      caller,
+    ),
+    now: checkedClock((readFunction(source, "now", caller) as (() => number) | undefined) ?? Date.now, caller),
     seed: readSeed(source.seed, url),
-    onFetch: readFunction(source, "onFetch") as RemoteConfig["onFetch"],
-    onFetchError: readFunction(source, "onFetchError") as RemoteConfig["onFetchError"],
-    waitUntil: readFunction(source, "waitUntil") as RemoteConfig["waitUntil"],
+    onFetch: readFunction(source, "onFetch", caller) as RemoteConfig["onFetch"],
+    onFetchError: readFunction(source, "onFetchError", caller) as RemoteConfig["onFetchError"],
+    waitUntil: readFunction(source, "waitUntil", caller) as RemoteConfig["waitUntil"],
   };
 }
 
@@ -797,11 +865,11 @@ function readSeed(value: unknown, url: string): RemoteKeySetSnapshot | undefined
  * every cooldown and expiry comparison false, so the cache would never expire. The clock is caller code,
  * so the rejection propagates from `select` (decisions 10 and 23).
  */
-function checkedClock(now: () => number): () => number {
+function checkedClock(now: () => number, caller: string): () => number {
   return () => {
     const time: unknown = now();
     if (typeof time !== "number" || !Number.isFinite(time)) {
-      throw new TypeError("createRemoteKeySet: options.now must return a finite number of milliseconds.");
+      throw new TypeError(`${caller}: options.now must return a finite number of milliseconds.`);
     }
     return time;
   };
@@ -814,9 +882,8 @@ function checkedClock(now: () => number): () => number {
 const isLoopbackHost = (hostname: string): boolean =>
   hostname === "localhost" || hostname === "[::1]" || /^127\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(hostname);
 
-function readUrl(value: unknown): string {
-  const message =
-    "createRemoteKeySet: options.url must be an absolute https: URL without credentials, or http: on a loopback host.";
+function readUrl(value: unknown, caller: string): string {
+  const message = `${caller}: options.url must be an absolute https: URL without credentials, or http: on a loopback host.`;
   if (typeof value !== "string" && !(value instanceof URL)) {
     throw new TypeError(message);
   }
@@ -833,10 +900,10 @@ function readUrl(value: unknown): string {
   return url.href;
 }
 
-function readFunction(source: Record<string, unknown>, name: string): unknown {
+function readFunction(source: Record<string, unknown>, name: string, caller: string): unknown {
   const value = source[name];
   if (value !== undefined && typeof value !== "function") {
-    throw new TypeError(`createRemoteKeySet: options.${name} must be a function.`);
+    throw new TypeError(`${caller}: options.${name} must be a function.`);
   }
   return value;
 }
@@ -848,23 +915,21 @@ interface IntegerOption {
   readonly maximum?: number;
 }
 
-function readInteger(source: Record<string, unknown>, option: IntegerOption): number {
+function readInteger(source: Record<string, unknown>, option: IntegerOption, caller: string): number {
   const given = source[option.name];
   const value = given === undefined ? option.fallback : given;
   const maximum = option.maximum ?? Number.MAX_SAFE_INTEGER;
   if (!Number.isSafeInteger(value) || (value as number) < option.minimum || (value as number) > maximum) {
     const range = option.maximum === undefined ? `at least ${option.minimum}` : `${option.minimum} through ${maximum}`;
-    throw new TypeError(`createRemoteKeySet: options.${option.name} must be an integer ${range}.`);
+    throw new TypeError(`${caller}: options.${option.name} must be an integer ${range}.`);
   }
   return value as number;
 }
 
-function readTimeout(value: unknown): number {
+function readTimeout(value: unknown, caller: string): number {
   const timeout = value === undefined ? DEFAULT_TIMEOUT : value;
   if (typeof timeout !== "number" || !(timeout > 0) || timeout > MAX_TIMEOUT) {
-    throw new TypeError(
-      `createRemoteKeySet: options.timeout must be a number greater than 0 and at most ${MAX_TIMEOUT}.`,
-    );
+    throw new TypeError(`${caller}: options.timeout must be a number greater than 0 and at most ${MAX_TIMEOUT}.`);
   }
   return timeout;
 }

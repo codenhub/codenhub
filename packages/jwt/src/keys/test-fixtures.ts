@@ -31,6 +31,27 @@ export const ED25519_PUBLIC_JWK = {
   x: "11qYAYKxCrfVS_7TyWQHOg7hcvPapiMlrwIaaPcHURo",
 };
 
+/**
+ * Private JWKs whose `d` starts with a zero byte, the keys Web Crypto may export with a short `d` (packages/jwt/AGENTS.md).
+ * The Ed25519 key is the one `LEADING_ZERO_JWKS.d` in `tests/scenarios.ts` holds, which imports nothing at run time;
+ * the P-521 key was generated once with Web Crypto in Node.js.
+ */
+export const LEADING_ZERO_D_JWKS = {
+  ES512: {
+    kty: "EC",
+    crv: "P-521",
+    x: "AX0On1cAn5W5n-VlP3cm1yqdjekrbKGIkjveA49oWchntBpMjdLuT0MQkFNwwXLYF2smv-xsRa-yB0MX4xk8R9r9",
+    y: "AXchFYPEDiq2URb-_7gB0r-mN69JFyJN0IdQ_UmRecl3G22MzXAHretbn-hvlx6PApqxT4lKzvAq7MY1aTaAGIup",
+    d: "ALONrPbpMtjAff6HC4tccFr6C0zBoRsLIRwuAT7SJNLYybJKEJ1HAQ8arroP76MLeq6t32exAjfd_oDQiivl3gt1",
+  },
+  Ed25519: {
+    kty: "OKP",
+    crv: "Ed25519",
+    x: "IXrb5y4gcDKi6QL8it18SajsJcRPrscBDPxUlgEcpPI",
+    d: "ABtcYTg6wRtEwtEbyoZNuObWNwSBReWBtnldrQ8NxdE",
+  },
+} as const;
+
 export const RSA_2048_PRIVATE_JWK = {
   kty: "RSA",
   n: "qksZJVak1zK0eXJ5m66L6-ffLwIdcBRZsCvMxuVyTc2aMKwVoNhahqK_l55jDyduV9P21swvt-CRylF8Ha4H-P3M9cjLI3JnRGvhDqp_1Ljn6JDp4x0-aOiK9yLNdS79DPhgAQlzhbCC66er9uGBVcrvyiuuDFruNWG0Xz9CyM7j2CaO1djjhX9m_FC9RMEE7tt4k6Bn1aXGhXmrkbVavgvvyUqPpbEe24LQmK2rRIp_IjJSkYIj92I0q8Zpg2-NJl79L1u7eu6FzTfXNYAF2HRahzPfuCAW3C57UBhyAXuv0QboPrTm78-F8u82ZcLqqc6tJ2YGin4C8dY0aJG5Rw",

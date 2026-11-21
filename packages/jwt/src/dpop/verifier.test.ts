@@ -26,11 +26,18 @@ const ATH = "fUHyO2r2Z3DZ53EsNrWBb0xWXoaNy59IiKCAqksmQEo";
 
 let pair: KeyPair;
 let jwk: Record<string, string>;
+/** A resource server's request with an access token bound to `pair`. */
+let BOUND: DpopRequest;
 
 beforeAll(async () => {
   pair = await generateKeyPair({ alg: "ES256" });
   const { kty, crv, x, y } = await exportPublicJwk(pair.publicKey);
   jwk = { kty, crv, x, y } as Record<string, string>;
+  BOUND = {
+    ...REQUEST,
+    accessToken: ACCESS_TOKEN,
+    accessTokenClaims: { cnf: { jkt: await jwkThumbprint(pair.publicKey) } },
+  };
 });
 
 const proofOf = (input: Partial<Parameters<typeof createDpopProof>[0]> = {}): Promise<string> =>
@@ -324,21 +331,21 @@ describe("createDpopVerifier", () => {
       it("should accept the hash of the access token", async () => {
         const proof = await proofOf({ accessToken: ACCESS_TOKEN });
 
-        const result = await createDpopVerifier({ now: clockAt() })(proof, { ...REQUEST, accessToken: ACCESS_TOKEN });
+        const result = await createDpopVerifier({ now: clockAt() })(proof, BOUND);
 
         expect(valueOf(result).payload.ath).toBe(ATH);
       });
 
       it("should require ath when an access token is given", async () => {
-        expect(
-          await createDpopVerifier({ now: clockAt() })(await proofOf(), { ...REQUEST, accessToken: ACCESS_TOKEN }),
-        ).toEqual(failure({ code: "missing_claim", path: ["payload", "ath"], params: { claim: "ath" } }));
+        expect(await createDpopVerifier({ now: clockAt() })(await proofOf(), BOUND)).toEqual(
+          failure({ code: "missing_claim", path: ["payload", "ath"], params: { claim: "ath" } }),
+        );
       });
 
       it("should refuse the hash of another access token", async () => {
         const proof = await proofOf({ accessToken: "another-token" });
 
-        expect(await createDpopVerifier({ now: clockAt() })(proof, { ...REQUEST, accessToken: ACCESS_TOKEN })).toEqual(
+        expect(await createDpopVerifier({ now: clockAt() })(proof, BOUND)).toEqual(
           failure({ code: "wrong_access_token_hash", path: ["payload", "ath"] }),
         );
       });
@@ -346,7 +353,7 @@ describe("createDpopVerifier", () => {
       it("should refuse an ath that is not a string", async () => {
         const proof = await rawProof({}, { ...CLAIMS, ath: 1 });
 
-        expect(await createDpopVerifier({ now: clockAt() })(proof, { ...REQUEST, accessToken: ACCESS_TOKEN })).toEqual(
+        expect(await createDpopVerifier({ now: clockAt() })(proof, BOUND)).toEqual(
           failure({ code: "invalid_claim", path: ["payload", "ath"] }),
         );
       });
@@ -426,11 +433,21 @@ describe("createDpopVerifier", () => {
 
     describe("key binding", () => {
       it("should accept a proof whose key the access token is bound to", async () => {
-        const accessTokenClaims = { cnf: { jkt: await jwkThumbprint(pair.publicKey) } };
-
         expect(
-          (await createDpopVerifier({ now: clockAt() })(await proofOf(), { ...REQUEST, accessTokenClaims })).ok,
+          (await createDpopVerifier({ now: clockAt() })(await proofOf({ accessToken: ACCESS_TOKEN }), BOUND)).ok,
         ).toBe(true);
+      });
+
+      it("should refuse a stolen access token presented with another key's proof", async () => {
+        const attacker = await generateKeyPair({ alg: "ES256" });
+        const proof = await proofOf({ key: attacker.privateKey, accessToken: ACCESS_TOKEN });
+
+        expect(await createDpopVerifier({ now: clockAt() })(proof, BOUND)).toEqual(
+          failure({ code: "wrong_key", path: ["header", "jwk"] }),
+        );
+        await expect(
+          createDpopVerifier({ now: clockAt() })(proof, { ...REQUEST, accessToken: ACCESS_TOKEN }),
+        ).rejects.toThrow(TypeError);
       });
 
       it.each([
@@ -441,7 +458,10 @@ describe("createDpopVerifier", () => {
         ["a cnf that is a string", { cnf: "jkt" }],
       ])("should refuse an access token with %s as wrong_key", async (_, accessTokenClaims) => {
         expect(
-          await createDpopVerifier({ now: clockAt() })(await proofOf(), { ...REQUEST, accessTokenClaims }),
+          await createDpopVerifier({ now: clockAt() })(await proofOf({ accessToken: ACCESS_TOKEN }), {
+            ...BOUND,
+            accessTokenClaims,
+          }),
         ).toEqual(failure({ code: "wrong_key", path: ["header", "jwk"] }));
       });
 
@@ -453,7 +473,10 @@ describe("createDpopVerifier", () => {
         };
 
         expect(
-          await createDpopVerifier({ now: clockAt() })(await proofOf(), { ...REQUEST, accessTokenClaims }),
+          await createDpopVerifier({ now: clockAt() })(await proofOf({ accessToken: ACCESS_TOKEN }), {
+            ...BOUND,
+            accessTokenClaims,
+          }),
         ).toEqual(failure({ code: "wrong_key", path: ["header", "jwk"] }));
       });
     });
@@ -537,6 +560,20 @@ describe("createDpopVerifier", () => {
           ).ok,
         ).toBe(false);
         expect((await verify(() => Promise.reject(new Error("logger down")))(await proofOf(), REQUEST)).ok).toBe(false);
+      });
+
+      it("should leave no unhandled rejection when onCallbackError rejects with a promise from another realm", async () => {
+        const unhandled = vi.fn();
+        process.on("unhandledRejection", unhandled);
+        try {
+          const onCallbackError = runInNewContext("(async () => { throw new Error('logger down') })") as () => unknown;
+          const verify = createDpopVerifier({ acceptJti: () => "yes" as never, onCallbackError, now: clockAt() });
+          expect((await verify(await proofOf(), REQUEST)).ok).toBe(false);
+          await new Promise((resolve) => setTimeout(resolve, 0));
+          expect(unhandled).not.toHaveBeenCalled();
+        } finally {
+          process.off("unhandledRejection", unhandled);
+        }
       });
     });
   });
@@ -671,8 +708,18 @@ describe("createDpopVerifier", () => {
       ],
       [
         "accessTokenClaims that are not an object",
-        { ...REQUEST, accessTokenClaims: "jkt" },
+        { ...REQUEST, accessToken: ACCESS_TOKEN, accessTokenClaims: "jkt" },
         "createDpopVerifier: request.accessTokenClaims must be an object.",
+      ],
+      [
+        "an accessToken without accessTokenClaims",
+        { ...REQUEST, accessToken: ACCESS_TOKEN },
+        "createDpopVerifier: request.accessToken and request.accessTokenClaims must be given together.",
+      ],
+      [
+        "accessTokenClaims without an accessToken",
+        { ...REQUEST, accessTokenClaims: { cnf: { jkt: "x" } } },
+        "createDpopVerifier: request.accessToken and request.accessTokenClaims must be given together.",
       ],
     ])("should reject for %s", async (_, request, message) => {
       await expect(createDpopVerifier()(await proofOf(), request as never)).rejects.toThrow(new TypeError(message));

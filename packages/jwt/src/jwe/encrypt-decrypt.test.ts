@@ -198,6 +198,39 @@ describe("createDecrypter", () => {
     });
   });
 
+  it.each([
+    ["a path that is a string", { code: "unknown_kid", path: "kid" }],
+    ["a path that is a number", { code: "unknown_kid", path: 0 }],
+    ["a path holding an object", { code: "unknown_kid", path: [{}] }],
+    ["a path holding NaN", { code: "unknown_kid", path: [Number.NaN] }],
+    [
+      "a path behind a getter",
+      Object.defineProperty({ code: "unknown_kid" }, "path", { enumerable: true, get: () => ["kid"] }),
+    ],
+  ])("should report key_set_error for a key set failure whose issue has %s", async (_name, issue) => {
+    const token = await encrypt({ plaintext: "", key: kw, enc: "A256GCM" });
+    const decrypt = createDecrypter({
+      keys: { select: async () => ({ ok: false, error: { issues: [issue] } }) } as never,
+    });
+
+    expect(await decrypt(token)).toEqual({
+      ok: false,
+      error: { issues: [{ code: "key_fetch_failed", params: { reason: "key_set_error" } }] },
+    });
+  });
+
+  it("should pass on a copy of a key set issue whose path is an array of strings and numbers", async () => {
+    const token = await encrypt({ plaintext: "", key: kw, enc: "A256GCM" });
+    const path = ["tenant", 0];
+    const decrypt = createDecrypter({
+      keys: { select: async () => ({ ok: false, error: { issues: [{ code: "unknown_kid", path }] } }) } as never,
+    });
+
+    const result = await decrypt(token);
+    path.push("later");
+    expect(result).toEqual({ ok: false, error: { issues: [{ code: "unknown_kid", path: ["tenant", 0] }] } });
+  });
+
   it("should refuse options that are not valid", () => {
     const keys = createJweKeySet([kw]);
 
@@ -205,6 +238,91 @@ describe("createDecrypter", () => {
     expect(() => createDecrypter({ keys, enc: ["A192GCM" as never] })).toThrow(TypeError);
     expect(() => createDecrypter({ keys, maxLength: 0 })).toThrow(TypeError);
     expect(() => createDecrypter({ keys: {} as never })).toThrow(TypeError);
+  });
+});
+
+describe("AES-GCM key wrap", () => {
+  const withHeader = (token: string, change: (header: Record<string, unknown>) => void): string => {
+    const header = headerOf(token) as Record<string, unknown>;
+    change(header);
+    return [Buffer.from(JSON.stringify(header)).toString("base64url"), ...token.split(".").slice(1)].join(".");
+  };
+  const decryptWith = (key: JweSecretKey) => createDecrypter({ keys: createJweKeySet([key]) });
+
+  it("should write a 96-bit iv and a 128-bit tag to the protected header, and decrypt", async () => {
+    const key = await generateJweSecretKey({ alg: "A128GCMKW", kid: "gcm" });
+    const token = await encrypt({ plaintext: "wrapped", key, enc: "A256CBC-HS512" });
+    const header = headerOf(token) as { iv: string; tag: string };
+
+    expect(rawHeaderOf(token)).toMatch(
+      /^\{"alg":"A128GCMKW","enc":"A256CBC-HS512","kid":"gcm","iv":"[^"]+","tag":"[^"]+"\}$/,
+    );
+    expect(Buffer.from(header.iv, "base64url")).toHaveLength(12);
+    expect(Buffer.from(header.tag, "base64url")).toHaveLength(16);
+    expect(Buffer.from(token.split(".")[1] as string, "base64url")).toHaveLength(64);
+    const result = await decryptWith(key)(token);
+    expect(result.ok && new TextDecoder().decode(result.value.plaintext)).toBe("wrapped");
+  });
+
+  it.each([
+    ["a missing iv", (header: Record<string, unknown>): void => void delete header.iv, "iv"],
+    ["a missing tag", (header: Record<string, unknown>): void => void delete header.tag, "tag"],
+    ["an iv that is not text", (header: Record<string, unknown>): void => void (header.iv = 12), "iv"],
+    ["an iv of 64 bits", (header: Record<string, unknown>): void => void (header.iv = "AAAAAAAAAAA"), "iv"],
+    ["a tag of 96 bits", (header: Record<string, unknown>): void => void (header.tag = "AAAAAAAAAAAAAAAA"), "tag"],
+    [
+      "a tag that is not canonical base64url",
+      (header: Record<string, unknown>): void => void (header.tag = "AAAAAAAAAAAAAAAAAAAAAB"),
+      "tag",
+    ],
+  ] as const)("should report malformed at the header for %s", async (_name, change, member) => {
+    const key = await generateJweSecretKey({ alg: "A256GCMKW" });
+    const token = withHeader(await encrypt({ plaintext: "x", key, enc: "A128GCM" }), change);
+
+    expect(await decryptWith(key)(token)).toEqual({
+      ok: false,
+      error: { issues: [{ code: "malformed", path: ["header", member] }] },
+    });
+  });
+
+  it("should report decryption_failed for a wrong key, a tampered tag or encrypted key, and a key of the wrong length", async () => {
+    const [key, other] = await Promise.all([
+      generateJweSecretKey({ alg: "A256GCMKW" }),
+      generateJweSecretKey({ alg: "A256GCMKW" }),
+    ]);
+    const token = await encrypt({ plaintext: "x", key, enc: "A128GCM" });
+    const [header, encryptedKey, ...rest] = token.split(".") as [string, string, ...string[]];
+    const flipped = Buffer.from(encryptedKey, "base64url");
+    flipped[0] = (flipped[0] as number) ^ 1;
+    const tampered = [header, flipped.toString("base64url"), ...rest].join(".");
+    const longer = [header, Buffer.alloc(32).toString("base64url"), ...rest].join(".");
+    const otherTag = withHeader(token, (value) => (value.tag = Buffer.alloc(16).toString("base64url")));
+
+    const failed = { ok: false, error: { issues: [{ code: "decryption_failed" }] } };
+    expect(await decryptWith(other)(token)).toEqual(failed);
+    expect(await decryptWith(key)(tampered)).toEqual(failed);
+    expect(await decryptWith(key)(longer)).toEqual(failed);
+    expect(await decryptWith(key)(otherTag)).toEqual(failed);
+  });
+
+  it("should refuse iv and tag in the caller's header", async () => {
+    const key = await generateJweSecretKey({ alg: "A128GCMKW" });
+
+    await expect(encrypt({ plaintext: "", key, enc: "A128GCM", header: { iv: "AAAAAAAAAAAAAAAA" } })).rejects.toThrow(
+      TypeError,
+    );
+  });
+});
+
+describe("RSA-OAEP-384 and RSA-OAEP-512", () => {
+  it.each(["RSA-OAEP-384", "RSA-OAEP-512"] as const)("should encrypt and decrypt with %s", async (alg) => {
+    const pair = await generateJweKeyPair({ alg });
+    const token = await encrypt({ plaintext: "oaep", key: pair.publicKey, enc: "A256GCM" });
+    const result = await createDecrypter({ keys: createJweKeySet([pair.privateKey]) })(token);
+
+    expect(headerOf(token)).toEqual({ alg, enc: "A256GCM" });
+    expect(Buffer.from(token.split(".")[1] as string, "base64url")).toHaveLength(256);
+    expect(result.ok && new TextDecoder().decode(result.value.plaintext)).toBe("oaep");
   });
 });
 
@@ -310,7 +428,43 @@ describe("encryptJwt and createNestedVerifier", () => {
     });
     expect(await nested()(wrongAudience)).toEqual({
       ok: false,
-      error: { issues: [{ code: "wrong_audience", path: ["payload", "aud"] }] },
+      error: { issues: [{ code: "wrong_audience", path: ["plaintext", "payload", "aud"] }] },
+    });
+  });
+
+  it("should put every inner issue under plaintext, and leave the outer JWE's issues as they are", async () => {
+    const unknownKid = await encryptJwt({
+      sign: { payload: { aud: "api", exp }, key: signer.privateKey, header: { kid: "missing" } },
+      key: recipient.publicKey,
+      enc: "A128GCM",
+    });
+    const notJws = await encrypt({ plaintext: "not a token", key: recipient.publicKey, enc: "A128GCM" });
+    const custom = createNestedVerifier({
+      decrypt: createDecrypter({ keys: createJweKeySet([recipient.privateKey]) }),
+      verify: async () => ({ ok: false, error: { issues: [{ code: "custom" }, { code: "other", path: ["x"] }] } }),
+    } as never);
+    const outer = await encrypt({ plaintext: "x", key: kw, enc: "A128GCM" });
+
+    expect(await nested()(unknownKid)).toEqual({
+      ok: false,
+      error: { issues: [{ code: "unknown_kid", path: ["plaintext", "header", "kid"] }] },
+    });
+    expect(await nested()(notJws)).toEqual({
+      ok: false,
+      error: { issues: [{ code: "malformed", path: ["plaintext"] }] },
+    });
+    expect(await custom(notJws)).toEqual({
+      ok: false,
+      error: {
+        issues: [
+          { code: "custom", path: ["plaintext"] },
+          { code: "other", path: ["plaintext", "x"] },
+        ],
+      },
+    });
+    expect(await nested()(outer)).toEqual({
+      ok: false,
+      error: { issues: [{ code: "unknown_kid", path: ["header", "kid"] }] },
     });
   });
 

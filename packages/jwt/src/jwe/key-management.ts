@@ -1,23 +1,31 @@
 import type { JwtIssue } from "../core/types";
-import { decodeBase64Url, encodeUtf8 } from "../encoding";
+import { decodeBase64Url, encodeBase64Url, encodeUtf8 } from "../encoding";
 import {
   CONTENT_PARAMS,
   CURVE_PARAMS,
+  GCM_KEY_WRAP_IV_BYTES,
+  GCM_KEY_WRAP_TAG_BYTES,
   isEcdhAlgorithm,
+  isGcmKeyWrapAlgorithm,
   isRsaAlgorithm,
   KEY_WRAP_BYTES,
   OAEP_HASH,
   type EcdhKeyManagementAlgorithm,
+  type RsaKeyManagementAlgorithm,
 } from "./algorithms";
 import { concatBytes, importContentKey, type ContentKey } from "./content";
 import type { JweKeyEntry } from "./registry";
 import type { ContentEncryptionAlgorithm, JweCurve, JweHeader, KeyManagementAlgorithm } from "./types";
 
-/** What key management gives the sender: the content key, the encrypted key segment, and an `epk` to write. */
+/**
+ * What key management gives the sender: the content key, the encrypted key segment, and the header members it
+ * sets: `epk` for the `ECDH-ES` algorithms, `iv` and `tag` for the AES-GCM key wraps.
+ */
 export interface ManagedKey {
   readonly contentKey: ContentKey;
   readonly encryptedKey: Uint8Array<ArrayBuffer>;
   readonly epk?: Readonly<Record<string, string>>;
+  readonly gcm?: { readonly iv: string; readonly tag: string };
 }
 
 /** The HMAC container a raw content key is wrapped and unwrapped as: it accepts any length, unlike AES. */
@@ -61,6 +69,14 @@ export async function wrapContentKey(
     return { contentKey: await importContentKey(enc, cek, false), encryptedKey: await aesWrap(kek, cek), epk };
   }
   const cek = crypto.getRandomValues(new Uint8Array(keyBytes));
+  if (isGcmKeyWrapAlgorithm(alg)) {
+    const { encryptedKey, iv, tag } = await gcmWrap(entry.cryptoKey as CryptoKey, cek);
+    return {
+      contentKey: await importContentKey(enc, cek, false),
+      encryptedKey,
+      gcm: { iv: encodeBase64Url(iv), tag: encodeBase64Url(tag) },
+    };
+  }
   const encryptedKey = isRsaAlgorithm(alg)
     ? new Uint8Array(await crypto.subtle.encrypt({ name: "RSA-OAEP" }, entry.cryptoKey as CryptoKey, cek))
     : await aesWrap(entry.cryptoKey as CryptoKey, cek);
@@ -110,6 +126,17 @@ export async function unwrapContentKey(
       return { issue: DECRYPTION_FAILED };
     }
     cek = await rsaDecrypt(kek, encryptedKey);
+  } else if (isGcmKeyWrapAlgorithm(alg)) {
+    // GCM does not lengthen what it encrypts. The header checks already fixed `iv` and `tag` to their lengths.
+    if (encryptedKey.length !== keyBytes) {
+      return { issue: DECRYPTION_FAILED };
+    }
+    cek = await gcmUnwrap(
+      kek,
+      encryptedKey,
+      decodeBase64Url(header.iv as string) as Uint8Array<ArrayBuffer>,
+      decodeBase64Url(header.tag as string) as Uint8Array<ArrayBuffer>,
+    );
   } else {
     if (encryptedKey.length !== keyBytes + 8) {
       return { issue: DECRYPTION_FAILED };
@@ -140,6 +167,42 @@ async function aesUnwrap(
   }
 }
 
+/** RFC 7518 §4.7: AES-GCM over the content key, with a fresh 96-bit IV, no additional data and a 128-bit tag. */
+async function gcmWrap(
+  kek: CryptoKey,
+  cek: Uint8Array<ArrayBuffer>,
+): Promise<{
+  readonly encryptedKey: Uint8Array<ArrayBuffer>;
+  readonly iv: Uint8Array<ArrayBuffer>;
+  readonly tag: Uint8Array<ArrayBuffer>;
+}> {
+  const iv = crypto.getRandomValues(new Uint8Array(GCM_KEY_WRAP_IV_BYTES));
+  const sealed = new Uint8Array(
+    await crypto.subtle.encrypt({ name: "AES-GCM", iv, tagLength: GCM_KEY_WRAP_TAG_BYTES * 8 }, kek, cek),
+  );
+  return { encryptedKey: sealed.slice(0, cek.length), iv, tag: sealed.slice(cek.length) };
+}
+
+async function gcmUnwrap(
+  kek: CryptoKey,
+  encryptedKey: Uint8Array<ArrayBuffer>,
+  iv: Uint8Array<ArrayBuffer>,
+  tag: Uint8Array<ArrayBuffer>,
+): Promise<Uint8Array<ArrayBuffer> | undefined> {
+  try {
+    return new Uint8Array(
+      await crypto.subtle.decrypt(
+        { name: "AES-GCM", iv, tagLength: GCM_KEY_WRAP_TAG_BYTES * 8 },
+        kek,
+        concatBytes(encryptedKey, tag),
+      ),
+    );
+  } catch {
+    // A tag that does not verify: answered with a random key, like a wrong content tag.
+    return undefined;
+  }
+}
+
 async function rsaDecrypt(
   key: CryptoKey,
   encryptedKey: Uint8Array<ArrayBuffer>,
@@ -153,7 +216,7 @@ async function rsaDecrypt(
 }
 
 /** The `hash` an RSA key management algorithm imports its key with. */
-export function oaepImportParams(alg: "RSA-OAEP" | "RSA-OAEP-256"): RsaHashedImportParams {
+export function oaepImportParams(alg: RsaKeyManagementAlgorithm): RsaHashedImportParams {
   return { name: "RSA-OAEP", hash: OAEP_HASH[alg] };
 }
 
@@ -211,6 +274,11 @@ async function importEpk(epk: unknown, curve: JweCurve): Promise<CryptoKey | und
       return undefined;
     }
     (jwk as Record<string, unknown>)[name] = value;
+    // RFC 7748 §5 has X25519 mask the top bit of u; Node 26 does, and Web Crypto does not require every engine to.
+    // No sender's runtime sets it, so it is refused here, the same way on every runtime.
+    if (curve === "X25519" && ((bytes[bytes.length - 1] as number) & 0x80) !== 0) {
+      return undefined;
+    }
   }
   try {
     return await crypto.subtle.importKey("jwk", jwk, params.importParams, true, []);

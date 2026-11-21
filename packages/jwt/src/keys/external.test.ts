@@ -1,6 +1,6 @@
 import { runInNewContext } from "node:vm";
 
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import type { AsymmetricAlgorithm, PrivateKey } from "../core/types";
 import { createKeySet } from "../keysets/local";
@@ -154,6 +154,24 @@ describe("createExternalSigningKey", () => {
       new TypeError("sign: the external signer's signature does not verify with its public key."),
     );
   });
+
+  // Node's Web Crypto refuses a signature of the wrong length; the stub stands in for an engine that would verify
+  // an RSA signature without its leading zero byte, which every verifier of this package then refuses.
+  it.each(["RS256", "ES256"] as const)(
+    "should throw from sign when an %s signature is not as long as the key's signatures",
+    async (alg) => {
+      const { publicKey, signRaw } = await kmsKey(alg);
+      const key = createExternalSigningKey({ publicKey, sign: async (data) => (await signRaw(data)).subarray(1) });
+      const verify = vi.spyOn(crypto.subtle, "verify").mockResolvedValue(true);
+      try {
+        await expect(sign({ payload: { exp: EXP() }, key })).rejects.toThrow(
+          new TypeError(`sign: the external signer's signature is not ${alg === "RS256" ? 256 : 64} bytes long.`),
+        );
+      } finally {
+        verify.mockRestore();
+      }
+    },
+  );
 
   it.each<[string, (der: number[]) => number[]]>([
     ["no sequence", (der) => der.slice(2)],

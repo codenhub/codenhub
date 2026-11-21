@@ -100,17 +100,23 @@ export {
   type RsaModulusLength,
 } from "./keys";
 export {
+  createEncryptionKeyRing,
   createKeyRing,
   createKeySet,
+  createRemoteEncryptionKeySet,
   createRemoteKeySet,
   importKeySet,
   type CreateKeySetOptions,
+  type EncryptionKeyRing,
+  type EncryptionKeyRingEntry,
+  type EncryptionKeyRingOptions,
   type ImportKeySetOptions,
   type JwksFetch,
   type KeyRing,
   type KeyRingEntry,
   type KeyRingOptions,
   type PublicJwks,
+  type RemoteEncryptionKeySetOptions,
   type RemoteKeySetOptions,
   type RemoteKeySetSnapshot,
 } from "./keysets";
@@ -127,4 +133,3 @@ export {
 } from "./sign";
 export { createJwsVerifier, createVerifier } from "./verify";
 export * from "./jwe";
-export type { RemoteEncryptionKeySetOptions } from "./keysets/remote";

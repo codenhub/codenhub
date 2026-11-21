@@ -20,6 +20,7 @@ import {
   generateKeyPair,
   importJwePrivateKey,
   importJwePublicKey,
+  importEncryptionKeySet,
   importJweSecretKey,
   importKeySet,
   importPrivateKey,
@@ -508,7 +509,7 @@ describe("JWE failures carry no input", () => {
       ],
     };
 
-    expect(leakedBy(await importKeySet(jwks, { use: "enc" }))).toEqual([]);
+    expect(leakedBy(await importEncryptionKeySet(jwks))).toEqual([]);
   });
 
   it.each([

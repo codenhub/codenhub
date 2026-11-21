@@ -435,6 +435,32 @@ const jweScenarios: Readonly<Record<string, Scenario>> = {
       result,
     );
   },
+  "JWE X25519 epk with the high bit set is refused": async (module) => {
+    const pair = await module.generateJweKeyPair({ alg: "ECDH-ES", crv: "X25519" });
+    // u = 9 with the top bit set, which RFC 7748 masks: one runtime would agree on it and another refuse it.
+    const x = `CQ${"A".repeat(39)}IA`;
+    const header = encodeSegment(
+      JSON.stringify({ alg: "ECDH-ES", enc: "A128GCM", epk: { kty: "OKP", crv: "X25519", x } }),
+    );
+    const token = [header, "", "AAAAAAAAAAAAAAAA", "AAAA", "AAAAAAAAAAAAAAAAAAAAAA"].join(".");
+    const result = await module.createDecrypter({ keys: module.createJweKeySet([pair.privateKey]) })(token);
+    check(
+      !result.ok && result.error.issues[0]?.code === "malformed" && result.error.issues[0]?.path?.[1] === "epk",
+      "a high-bit point was accepted",
+      result,
+    );
+  },
+  "JWE low-order X25519 public key is refused at import": async (module) => {
+    await module.generateJweKeyPair({ alg: "ECDH-ES", crv: "X25519" });
+    const results = await Promise.all(
+      ["A".repeat(43), `AQ${"A".repeat(41)}`].map((x) =>
+        module.importJwePublicKey({ kty: "OKP", crv: "X25519", x }, { alg: "ECDH-ES" }),
+      ),
+    );
+    for (const result of results) {
+      check(!result.ok && result.error.issues[0]?.code === "invalid_key", "a low-order key was imported", result);
+    }
+  },
 };
 
 export const scenarios: Readonly<Record<string, Scenario>> = {

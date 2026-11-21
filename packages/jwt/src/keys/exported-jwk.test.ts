@@ -1,12 +1,10 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import type { AsymmetricAlgorithm } from "../core/types";
 import { decodeBase64Url, encodeBase64Url } from "../encoding";
 import { ALGORITHM_PARAMS } from "./algorithms";
 import { exportPrivateJwk } from "./export";
-import { generateKeyPair } from "./generate";
 import { importKeyPair, importPrivateKey } from "./import";
-import { valueOf } from "./test-fixtures";
+import { LEADING_ZERO_D_JWKS, valueOf } from "./test-fixtures";
 
 const originalExportKey = crypto.subtle.exportKey.bind(crypto.subtle);
 
@@ -26,17 +24,11 @@ function stripLeadingZerosOfD(): void {
   }) as typeof crypto.subtle.exportKey);
 }
 
-/** A key pair whose `d` starts with a zero byte, so the stub above shortens it. */
-async function pairWithLeadingZeroD(alg: AsymmetricAlgorithm) {
-  for (;;) {
-    // oxlint-disable-next-line no-await-in-loop
-    const pair = await generateKeyPair({ alg, extractable: true });
-    // oxlint-disable-next-line no-await-in-loop
-    const { d } = await exportPrivateJwk(pair.privateKey);
-    if (decodeBase64Url(d as string)?.[0] === 0) {
-      return pair;
-    }
-  }
+/** A fixed key pair whose `d` starts with a zero byte, so the stub above shortens it. */
+async function pairWithLeadingZeroD(alg: "ES512" | "Ed25519") {
+  const pair = valueOf(await importKeyPair(LEADING_ZERO_D_JWKS[alg], { alg, extractable: true }));
+  expect(decodeBase64Url(LEADING_ZERO_D_JWKS[alg].d)?.[0]).toBe(0);
+  return pair;
 }
 
 function pkcs8Pem(der: ArrayBuffer): string {
@@ -48,9 +40,8 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-// P-256 and P-384 keys have a leading zero byte in 1 of 256; P-521 keys in about 1 of 2, so ES512 finds one
-// at once. The fix is the same code for every curve.
-describe.each<AsymmetricAlgorithm>(["ES512", "Ed25519"])("a %s d that Web Crypto exports short", (alg) => {
+// The fix is the same code for every curve, so one EC curve and Ed25519 stand for all.
+describe.each(["ES512", "Ed25519"] as const)("a %s d that Web Crypto exports short", (alg) => {
   const coordinateBytes = ALGORITHM_PARAMS[alg].coordinateBytes;
 
   it("should be exported at full length by exportPrivateJwk and import again", async () => {

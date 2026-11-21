@@ -348,3 +348,46 @@ describe("PEM import of encrypted and unsupported keys", () => {
     ]);
   });
 });
+
+/** `der` with its outer length written one byte longer than it needs: `30 81 59` for `30 59`, `30 82 00 87` for `30 81 87`. */
+function withNonMinimalLength(der: Uint8Array): Uint8Array {
+  const first = der[1] as number;
+  const count = first < 0x80 ? 0 : first & 0x7f;
+  const lengthBytes = first < 0x80 ? [first] : [0, ...der.subarray(2, 2 + count)];
+  return Uint8Array.from([der[0] as number, 0x80 | lengthBytes.length, ...lengthBytes, ...der.subarray(2 + count)]);
+}
+
+// Web Crypto engines disagree on these: Node imports an SPKI with bytes after it, Firefox a PKCS#8 with one, and
+// Node and WebKit an SPKI whose outer length is not minimal. The package refuses them all before Web Crypto reads them.
+describe("PEM import of DER that is not one minimal element", () => {
+  const changes: readonly [string, (der: Uint8Array) => Uint8Array][] = [
+    ["a byte after the key", (der) => Uint8Array.from([...der, 0])],
+    ["a non-minimal outer length", withNonMinimalLength],
+  ];
+
+  it.each(changes)("should refuse a PUBLIC KEY and a PRIVATE KEY with %s as invalid_key", async (_, change) => {
+    const { spki, pkcs8 } = await pemPair("ES256");
+    const publicPem = pemOf("PUBLIC KEY", Uint8Array.from(change(derOfPem(spki))).buffer);
+    const privatePem = pemOf("PRIVATE KEY", Uint8Array.from(change(derOfPem(pkcs8))).buffer);
+    expect(issuesOf(await importPublicKey(publicPem, { alg: "ES256" }))).toEqual([{ code: "invalid_key" }]);
+    expect(issuesOf(await importPrivateKey(privatePem, { alg: "ES256" }))).toEqual([{ code: "invalid_key" }]);
+  });
+
+  it.each(changes)(
+    "should refuse an RSA PUBLIC KEY and an RSA PRIVATE KEY with %s as invalid_key",
+    async (_, change) => {
+      const { publicKey, privateKey } = nodePair("rsa") as unknown as { publicKey: string; privateKey: string };
+      const publicPem = pemOf("RSA PUBLIC KEY", Uint8Array.from(change(derOfPem(publicKey))).buffer);
+      const privatePem = pemOf("RSA PRIVATE KEY", Uint8Array.from(change(derOfPem(privateKey))).buffer);
+      expect(issuesOf(await importPublicKey(publicPem, { alg: "RS256" }))).toEqual([{ code: "invalid_key" }]);
+      expect(issuesOf(await importPrivateKey(privatePem, { alg: "RS256" }))).toEqual([{ code: "invalid_key" }]);
+    },
+  );
+
+  it("should still import the unchanged DER of each", async () => {
+    const { spki, pkcs8 } = await pemPair("ES256");
+    expect(withNonMinimalLength(Uint8Array.of(0x30, 0x01, 0x05))).toEqual(Uint8Array.of(0x30, 0x81, 0x01, 0x05));
+    expect((await importPublicKey(pemOf("PUBLIC KEY", derOfPem(spki).buffer), { alg: "ES256" })).ok).toBe(true);
+    expect((await importPrivateKey(pemOf("PRIVATE KEY", derOfPem(pkcs8).buffer), { alg: "ES256" })).ok).toBe(true);
+  });
+});

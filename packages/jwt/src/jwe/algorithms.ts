@@ -12,8 +12,12 @@ export const KEY_MANAGEMENT_ALGORITHMS: readonly KeyManagementAlgorithm[] = Obje
   "dir",
   "A128KW",
   "A256KW",
+  "A128GCMKW",
+  "A256GCMKW",
   "RSA-OAEP",
   "RSA-OAEP-256",
+  "RSA-OAEP-384",
+  "RSA-OAEP-512",
   "ECDH-ES",
   "ECDH-ES+A128KW",
   "ECDH-ES+A256KW",
@@ -31,11 +35,15 @@ export const SYMMETRIC_KEY_MANAGEMENT_ALGORITHMS: readonly SymmetricKeyManagemen
   "dir",
   "A128KW",
   "A256KW",
+  "A128GCMKW",
+  "A256GCMKW",
 ] as const);
 
 export const ASYMMETRIC_KEY_MANAGEMENT_ALGORITHMS: readonly AsymmetricKeyManagementAlgorithm[] = Object.freeze([
   "RSA-OAEP",
   "RSA-OAEP-256",
+  "RSA-OAEP-384",
+  "RSA-OAEP-512",
   "ECDH-ES",
   "ECDH-ES+A128KW",
   "ECDH-ES+A256KW",
@@ -99,21 +107,44 @@ export function isJweCurve(value: unknown): value is JweCurve {
   return typeof value === "string" && (JWE_CURVES as readonly string[]).includes(value);
 }
 
-/** The RSA-OAEP hash of each RSA key management algorithm (RFC 7518 §4.3). */
-export const OAEP_HASH: Readonly<Record<"RSA-OAEP" | "RSA-OAEP-256", "SHA-1" | "SHA-256">> = Object.freeze({
-  "RSA-OAEP": "SHA-1",
-  "RSA-OAEP-256": "SHA-256",
+export type RsaKeyManagementAlgorithm = "RSA-OAEP" | "RSA-OAEP-256" | "RSA-OAEP-384" | "RSA-OAEP-512";
+export type EcdhKeyManagementAlgorithm = "ECDH-ES" | "ECDH-ES+A128KW" | "ECDH-ES+A256KW";
+export type GcmKeyWrapAlgorithm = "A128GCMKW" | "A256GCMKW";
+
+/**
+ * The hash of each RSA key management algorithm, for OAEP and its MGF1 alike: RFC 7518 §4.3 for `RSA-OAEP` and
+ * `RSA-OAEP-256`, and the IANA JOSE registry for `RSA-OAEP-384` and `RSA-OAEP-512`.
+ */
+export const OAEP_HASH: Readonly<Record<RsaKeyManagementAlgorithm, "SHA-1" | "SHA-256" | "SHA-384" | "SHA-512">> =
+  Object.freeze({
+    "RSA-OAEP": "SHA-1",
+    "RSA-OAEP-256": "SHA-256",
+    "RSA-OAEP-384": "SHA-384",
+    "RSA-OAEP-512": "SHA-512",
+  });
+
+/** Length of the key-encryption key a key wrap uses, in bytes: AES key wrap (RFC 7518 §4.4) or AES-GCM (§4.7). */
+export const KEY_WRAP_BYTES: Readonly<
+  Record<"A128KW" | "A256KW" | GcmKeyWrapAlgorithm | "ECDH-ES+A128KW" | "ECDH-ES+A256KW", number>
+> = Object.freeze({
+  A128KW: 16,
+  A256KW: 32,
+  A128GCMKW: 16,
+  A256GCMKW: 32,
+  "ECDH-ES+A128KW": 16,
+  "ECDH-ES+A256KW": 32,
 });
 
-/** Length of the key-encryption key an AES key wrap uses, in bytes. */
-export const KEY_WRAP_BYTES: Readonly<Record<"A128KW" | "A256KW" | "ECDH-ES+A128KW" | "ECDH-ES+A256KW", number>> =
-  Object.freeze({ A128KW: 16, A256KW: 32, "ECDH-ES+A128KW": 16, "ECDH-ES+A256KW": 32 });
-
-export type RsaKeyManagementAlgorithm = "RSA-OAEP" | "RSA-OAEP-256";
-export type EcdhKeyManagementAlgorithm = "ECDH-ES" | "ECDH-ES+A128KW" | "ECDH-ES+A256KW";
+/** RFC 7518 §4.7.1: the `iv` header of an AES-GCM key wrap is 96 bits long, and its `tag` header 128 bits. */
+export const GCM_KEY_WRAP_IV_BYTES = 12;
+export const GCM_KEY_WRAP_TAG_BYTES = 16;
 
 export function isRsaAlgorithm(alg: KeyManagementAlgorithm): alg is RsaKeyManagementAlgorithm {
-  return alg === "RSA-OAEP" || alg === "RSA-OAEP-256";
+  return alg === "RSA-OAEP" || alg === "RSA-OAEP-256" || alg === "RSA-OAEP-384" || alg === "RSA-OAEP-512";
+}
+
+export function isGcmKeyWrapAlgorithm(alg: KeyManagementAlgorithm): alg is GcmKeyWrapAlgorithm {
+  return alg === "A128GCMKW" || alg === "A256GCMKW";
 }
 
 export function isEcdhAlgorithm(alg: KeyManagementAlgorithm): alg is EcdhKeyManagementAlgorithm {

@@ -1,10 +1,17 @@
 import { fail, ok } from "../core/result";
 import type { JwtIssue, JwtResult } from "../core/types";
-import { copyBytes, decodeBase64Url, encodeBase64Url, encodeUtf8, isArrayBuffer, isUint8Array } from "../encoding";
-import { isCryptoKey } from "../keys/exported-jwk";
+import { copyBytes, encodeBase64Url, encodeUtf8, isArrayBuffer, isUint8Array } from "../encoding";
+import { isCryptoKey, padPrivateScalar, withoutExportMetadata } from "../keys/exported-jwk";
 import { ownMember, readExtractable, readKid, requireOptions } from "../keys/options";
-import { pemKeyIssue, readKeyType, readPemDer } from "../keys/pem";
+import { pemKeyIssue, readKeyType, readPemDer, writePem } from "../keys/pem";
 import { kidMember } from "../keys/registry";
+import {
+  generatePair,
+  OKP_GENERATION_RETRIES,
+  PAIR_PRIVATE_MEMBERS,
+  readCryptoKeyPair,
+  RSA_PUBLIC_EXPONENT,
+} from "../keys/web-crypto";
 import {
   ASYMMETRIC_KEY_MANAGEMENT_ALGORITHMS,
   CONTENT_ENCRYPTION_ALGORITHMS,
@@ -13,6 +20,7 @@ import {
   isAsymmetricKeyManagementAlgorithm,
   isContentEncryptionAlgorithm,
   isEcdhAlgorithm,
+  isGcmKeyWrapAlgorithm,
   isJweCurve,
   isRsaAlgorithm,
   isSymmetricKeyManagementAlgorithm,
@@ -164,11 +172,8 @@ const SECRET_OPTIONS: Readonly<Record<keyof ImportJweSecretKeyOptions, true>> = 
 };
 
 const RSA_MODULUS_LENGTHS: readonly number[] = [2048, 3072, 4096];
-const RSA_PUBLIC_EXPONENT = new Uint8Array([1, 0, 1]);
 const THUMBPRINT_KID = "thumbprint";
 /** Retries after an `OperationError` from X25519 generation, as for Ed25519 (see `generateKeyPair`). */
-const OKP_GENERATION_RETRIES = 3;
-const PRIVATE_MEMBERS = ["d", "p", "q", "dp", "dq", "qi"] as const;
 const INVALID_KEY: JwtIssue = Object.freeze({ code: "invalid_key" });
 
 /** The Web Crypto algorithm and usages a key of `alg` is imported with, by role. */
@@ -289,32 +294,13 @@ export async function generateJweKeyPair(options: GenerateJweKeyPairOptions): Pr
   });
 }
 
-async function generatePair(
-  algorithm: RsaHashedKeyGenParams | EcKeyGenParams | Algorithm,
-  isExtractable: boolean,
-  usages: KeyUsage[],
-  retries: number,
-): Promise<CryptoKeyPair> {
-  for (let attempt = 0; ; attempt++) {
-    try {
-      // Each attempt runs only after the previous one failed.
-      // oxlint-disable-next-line no-await-in-loop
-      return (await crypto.subtle.generateKey(algorithm, isExtractable, usages)) as CryptoKeyPair;
-    } catch (error) {
-      if (attempt >= retries || !(error instanceof Error) || error.name !== "OperationError") {
-        throw error;
-      }
-    }
-  }
-}
-
 /**
- * Generates a random secret for `dir`, `A128KW` or `A256KW`, exactly as long as its algorithm needs: 16 or 32
- * bytes to wrap with, or the content key length of `enc` for `dir`.
+ * Generates a random secret for `dir`, `A128KW`, `A256KW`, `A128GCMKW` or `A256GCMKW`, exactly as long as its
+ * algorithm needs: 16 or 32 bytes to wrap with, or the content key length of `enc` for `dir`.
  *
  * @returns The frozen secret.
- * @throws TypeError when `options` is not an object, has a member that is not an option, `alg` is not `dir`,
- * `A128KW` or `A256KW`, `enc` is missing or unsupported for `dir` or given for another `alg`, `kid` is not a
+ * @throws TypeError when `options` is not an object, has a member that is not an option, `alg` is not a symmetric
+ * key management algorithm, `enc` is missing or unsupported for `dir` or given for another `alg`, `kid` is not a
  * string, or `extractable` is not a boolean.
  */
 export async function generateJweSecretKey(options: GenerateJweSecretKeyOptions): Promise<JweSecretKey> {
@@ -327,6 +313,19 @@ export async function generateJweSecretKey(options: GenerateJweSecretKeyOptions)
   return secretKeyOf(alg, enc, kid, isExtractable, bytes);
 }
 
+/**
+ * The Web Crypto algorithm and usages a secret of `alg` is held as: AES-GCM for `dir` and the GCM key wraps, AES-KW
+ * for the others.
+ */
+function wrapKeyParams(alg: SymmetricKeyManagementAlgorithm): {
+  readonly name: "AES-GCM" | "AES-KW";
+  readonly usages: readonly KeyUsage[];
+} {
+  return alg === "dir" || isGcmKeyWrapAlgorithm(alg)
+    ? { name: "AES-GCM", usages: ["encrypt", "decrypt"] }
+    : { name: "AES-KW", usages: ["wrapKey", "unwrapKey"] };
+}
+
 async function secretKeyOf(
   alg: SymmetricKeyManagementAlgorithm,
   enc: ContentEncryptionAlgorithm | undefined,
@@ -334,10 +333,11 @@ async function secretKeyOf(
   isExtractable: boolean,
   bytes: Uint8Array<ArrayBuffer>,
 ): Promise<JweSecretKey> {
+  const { name, usages } = wrapKeyParams(alg);
   const entry: JweKeyEntry =
     alg === "dir"
       ? { contentKey: await importContentKey(enc as ContentEncryptionAlgorithm, bytes, isExtractable) }
-      : { cryptoKey: await crypto.subtle.importKey("raw", bytes, "AES-KW", isExtractable, ["wrapKey", "unwrapKey"]) };
+      : { cryptoKey: await crypto.subtle.importKey("raw", bytes, name, isExtractable, [...usages]) };
   return registerJweKey<JweSecretKey>(
     { kind: "jwe-secret", alg, ...(enc === undefined ? {} : { enc }), ...kidMember(kid), extractable: isExtractable },
     entry,
@@ -351,7 +351,9 @@ async function secretKeyOf(
  * @remarks
  * The checks are those of {@link importPublicKey}, for encryption: the JWK's `kty` must fit `alg` (`RSA` for
  * `RSA-OAEP*`; `EC` on P-256, P-384 or P-521, or `OKP` on X25519, for `ECDH-ES*`); `use`, when present, must be
- * `enc`; `key_ops`, when present, must hold only encryption operations and one a public key performs. RSA moduli
+ * `enc`; `key_ops`, when present, must hold only encryption operations and one a public key performs, except that
+ * an empty `key_ops` on an `EC` or `OKP` key, which is how Web Crypto exports an ECDH or X25519 public key, is
+ * taken as absent. RSA moduli
  * must be 2048 to 8192 bits. A `CryptoKey` must be an RSA-OAEP key with the hash `alg` names, or an ECDH or
  * X25519 key.
  *
@@ -379,6 +381,9 @@ export async function importJwePublicKey(
   const usages = webCryptoParams(alg, material.curve);
   try {
     const cryptoKey = await crypto.subtle.importKey("jwk", material.importJwk, usages.params, true, usages.public);
+    if (material.curve === "X25519" && !(await agreesWithFreshKey(cryptoKey, material.curve))) {
+      return fail(INVALID_KEY);
+    }
     return ok(
       registerJweKey<JwePublicKey>(
         { kind: "jwe-public", alg, ...kidMember(material.kid) },
@@ -491,7 +496,7 @@ async function privateHalves(
   }
   const usages = webCryptoParams(alg, material.curve);
   const publicJwk: JsonWebKey = { ...material.importJwk };
-  for (const member of PRIVATE_MEMBERS) {
+  for (const member of PAIR_PRIVATE_MEMBERS) {
     delete publicJwk[member];
   }
   try {
@@ -566,40 +571,52 @@ async function halvesMatch(alg: AsymmetricKeyManagementAlgorithm, halves: Halves
       const opened = new Uint8Array(await crypto.subtle.decrypt({ name: "RSA-OAEP" }, halves.privateCryptoKey, sealed));
       return constantTimeEqual(opened, probe);
     }
-    const params = CURVE_PARAMS[halves.curve as JweCurve];
-    const ephemeral = (await crypto.subtle.generateKey(params.importParams, false, ["deriveBits"])) as CryptoKeyPair;
-    const bits = params.coordinateBytes * 8;
-    const derive = async (privateKey: CryptoKey, publicKey: CryptoKey): Promise<Uint8Array> =>
-      new Uint8Array(
-        await crypto.subtle.deriveBits(
-          { name: params.importParams.name, public: publicKey } as EcdhKeyDeriveParams,
-          privateKey,
-          bits,
-        ),
-      );
+    const curve = halves.curve as JweCurve;
+    const ephemeral = await ephemeralPair(curve);
     const [ours, theirs] = await Promise.all([
-      derive(halves.privateCryptoKey, ephemeral.publicKey),
-      derive(ephemeral.privateKey, halves.publicCryptoKey),
+      agree(curve, halves.privateCryptoKey, ephemeral.publicKey),
+      agree(curve, ephemeral.privateKey, halves.publicCryptoKey),
     ]);
-    return constantTimeEqual(ours, theirs);
+    return !isAllZero(ours) && constantTimeEqual(ours, theirs);
   } catch {
     // Web Crypto refuses a key of another algorithm or without the usage; its message may quote it.
     return false;
   }
 }
 
-function readCryptoKeyPair(key: unknown): { readonly privateKey: CryptoKey; readonly publicKey: unknown } | undefined {
-  if (typeof key !== "object" || key === null || isCryptoKey(key)) {
-    return undefined;
-  }
+/**
+ * Whether a recipient's public key agrees on a non-zero secret with a fresh ephemeral key, as every sender's will
+ * have to. A low-order X25519 point fails: Web Crypto refuses the agreement or gives an all-zero secret (RFC 7748
+ * §6.1), and `encrypt` would fail the same way on every token. NIST curves need no such check, since Web Crypto
+ * refuses a point off the curve on import and their order is prime. Never throws.
+ */
+async function agreesWithFreshKey(publicKey: CryptoKey, curve: JweCurve): Promise<boolean> {
   try {
-    const privateKey: unknown = Object.getOwnPropertyDescriptor(key, "privateKey")?.value;
-    const publicKey: unknown = Object.getOwnPropertyDescriptor(key, "publicKey")?.value;
-    return isCryptoKey(privateKey) ? { privateKey, publicKey } : undefined;
+    const ephemeral = await ephemeralPair(curve);
+    return !isAllZero(await agree(curve, ephemeral.privateKey, publicKey));
   } catch {
-    // A proxy's trap may throw; such a value is no key pair.
-    return undefined;
+    // Web Crypto refuses a low-order point on some engines; its message may quote it.
+    return false;
   }
+}
+
+async function ephemeralPair(curve: JweCurve): Promise<CryptoKeyPair> {
+  return (await crypto.subtle.generateKey(CURVE_PARAMS[curve].importParams, false, ["deriveBits"])) as CryptoKeyPair;
+}
+
+async function agree(curve: JweCurve, privateKey: CryptoKey, publicKey: CryptoKey): Promise<Uint8Array> {
+  const params = CURVE_PARAMS[curve];
+  return new Uint8Array(
+    await crypto.subtle.deriveBits(
+      { name: params.importParams.name, public: publicKey } as EcdhKeyDeriveParams,
+      privateKey,
+      params.coordinateBytes * 8,
+    ),
+  );
+}
+
+function isAllZero(bytes: Uint8Array): boolean {
+  return bytes.every((byte) => byte === 0);
 }
 
 function checkWithKid(
@@ -728,40 +745,26 @@ function purposeIssue(cryptoKey: CryptoKey, alg: AsymmetricKeyManagementAlgorith
  */
 async function materialJwk(cryptoKey: CryptoKey): Promise<Record<string, unknown>> {
   const exported = await crypto.subtle.exportKey("jwk", cryptoKey);
-  const jwk: Record<string, unknown> = { ...padScalar(exported) };
-  for (const member of ["alg", "ext", "key_ops", "use"]) {
-    delete jwk[member];
-  }
-  return jwk;
-}
-
-function padScalar(exported: JsonWebKey): JsonWebKey {
   const curve = exported.crv;
-  const scalar = typeof exported.d === "string" ? decodeBase64Url(exported.d) : undefined;
-  if (!isJweCurve(curve) || scalar === undefined) {
-    return exported;
-  }
-  const { coordinateBytes } = CURVE_PARAMS[curve];
-  if (scalar.length >= coordinateBytes) {
-    return exported;
-  }
-  const padded = new Uint8Array(coordinateBytes);
-  padded.set(scalar, coordinateBytes - scalar.length);
-  return { ...exported, d: encodeBase64Url(padded) };
+  return withoutExportMetadata(
+    padPrivateScalar(exported, isJweCurve(curve) ? CURVE_PARAMS[curve].coordinateBytes : undefined),
+  );
 }
 
 /**
- * Imports an untrusted secret for `dir`, `A128KW` or `A256KW`: raw bytes, an `oct` JWK, or a Web Crypto
- * `CryptoKey` (an AES-KW key for `A*KW`, an AES-GCM key for `dir` with an AES-GCM `enc`).
+ * Imports an untrusted secret for `dir`, `A128KW`, `A256KW`, `A128GCMKW` or `A256GCMKW`: raw bytes, an `oct`
+ * JWK, or a Web Crypto `CryptoKey` (an AES-KW key for `A*KW`, an AES-GCM key for `A*GCMKW`, and for `dir` with an
+ * AES-GCM `enc`).
  *
  * @remarks
- * The secret must be exactly as long as its algorithm's key: 16 bytes for `A128KW`, 32 for `A256KW`, and for
- * `dir` the content key length of `enc` (16 for `A128GCM`, 32 for `A256GCM` and `A128CBC-HS256`, 64 for
- * `A256CBC-HS512`). Shorter is `weak_key`, longer `invalid_key`. A JWK's `use`, when present, must be `enc`.
+ * The secret must be exactly as long as its algorithm's key: 16 bytes for `A128KW` and `A128GCMKW`, 32 for
+ * `A256KW` and `A256GCMKW`, and for `dir` the content key length of `enc` (16 for `A128GCM`, 32 for `A256GCM` and
+ * `A128CBC-HS256`, 64 for `A256CBC-HS512`). Shorter is `weak_key`, longer `invalid_key`. A JWK's `use`, when
+ * present, must be `enc`.
  *
  * @returns The frozen secret, or a failure with one issue. Never throws for any `input`.
- * @throws TypeError when `options` is not an object, has a member that is not an option, `alg` is not `dir`,
- * `A128KW` or `A256KW`, `enc` is missing or unsupported for `dir` or given for another `alg`, `kid` is not a
+ * @throws TypeError when `options` is not an object, has a member that is not an option, `alg` is not a symmetric
+ * key management algorithm, `enc` is missing or unsupported for `dir` or given for another `alg`, `kid` is not a
  * string, or `extractable` is not a boolean.
  */
 export async function importJweSecretKey(
@@ -811,8 +814,7 @@ function secretCryptoKey(
 ): JwtResult<JweSecretKey> {
   const algorithm = cryptoKey.algorithm as Partial<AesKeyAlgorithm>;
   const isGcm = enc !== undefined && CONTENT_PARAMS[enc].hash === undefined;
-  const [expected, usages] =
-    alg === "dir" ? ["AES-GCM", ["encrypt", "decrypt"] as const] : ["AES-KW", ["wrapKey", "unwrapKey"] as const];
+  const { name: expected, usages } = wrapKeyParams(alg);
   if (
     cryptoKey.type !== "secret" ||
     (alg === "dir" && !isGcm) ||
@@ -912,6 +914,50 @@ export async function exportJweSecretJwk(key: JweSecretKey): Promise<JweJwk> {
   return Object.freeze(jwk) as unknown as JweJwk;
 }
 
+/**
+ * Exports a JWE public key as a PEM `PUBLIC KEY` block (SPKI, RFC 7468 §13), for tools and services that take PEM
+ * rather than a JWK. The PEM carries the key material only, without `alg` or `kid`.
+ *
+ * @example
+ * ```ts
+ * const pem = await exportJwePublicPem(getJwePublicKey(privateKey));
+ * ```
+ *
+ * @param key - A public key from {@link importJwePublicKey}, {@link importJweKeyPair} or {@link generateJweKeyPair}.
+ * @returns The PEM text: the base64 in 64-character lines, with LF line endings and a final line break.
+ * @throws TypeError when `key` is not a JWE public key created by this package. For a private key, the message
+ * points to {@link getJwePublicKey}.
+ */
+export async function exportJwePublicPem(key: JwePublicKey): Promise<string> {
+  const entry = getJweKeyEntry(key, "exportJwePublicPem");
+  if (key.kind !== "jwe-public") {
+    throw new TypeError(
+      "exportJwePublicPem: key must be a JWE public key; export a private key's public half with getJwePublicKey(key).",
+    );
+  }
+  return writePem("PUBLIC KEY", new Uint8Array(await crypto.subtle.exportKey("spki", entry.cryptoKey as CryptoKey)));
+}
+
+/**
+ * Exports a JWE private key as a PEM `PRIVATE KEY` block (PKCS#8, RFC 7468 §10), unencrypted, without `alg` or
+ * `kid`. Handle the result as a secret.
+ *
+ * @param key - A private key imported or generated with `extractable: true`.
+ * @returns The PEM text: the base64 in 64-character lines, with LF line endings and a final line break.
+ * @throws TypeError when `key` is not a JWE private key created by this package, or was not made extractable. A
+ * secret key has no PEM form; export it with {@link exportJweSecretJwk}.
+ */
+export async function exportJwePrivatePem(key: JwePrivateKey): Promise<string> {
+  const entry = getJweKeyEntry(key, "exportJwePrivatePem");
+  if (key.kind !== "jwe-private") {
+    throw new TypeError("exportJwePrivatePem: key must be a JWE private key.");
+  }
+  if (!key.extractable) {
+    throw new TypeError("exportJwePrivatePem: the key was not created with extractable: true.");
+  }
+  return writePem("PRIVATE KEY", new Uint8Array(await crypto.subtle.exportKey("pkcs8", entry.cryptoKey as CryptoKey)));
+}
+
 function toJwk(
   key: JwePublicKey | JwePrivateKey,
   exported: Record<string, unknown>,
@@ -936,21 +982,6 @@ const THUMBPRINT_MEMBERS: Readonly<Record<string, readonly string[]>> = {
   OKP: ["crv", "kty", "x"],
   RSA: ["e", "kty", "n"],
 };
-
-/**
- * The RFC 7638 thumbprint of a JWE public or private key, by its public half. `jwkThumbprint` calls this for a
- * JWE key.
- *
- * @throws TypeError when `key` is not a JWE public or private key created by this package.
- */
-export async function jweKeyThumbprint(key: JwePublicKey | JwePrivateKey): Promise<string> {
-  const entry = getJweKeyEntry(key, "jwkThumbprint");
-  const publicCryptoKey = key.kind === "jwe-private" ? entry.publicCryptoKey : entry.cryptoKey;
-  if ((key.kind !== "jwe-public" && key.kind !== "jwe-private") || publicCryptoKey === undefined) {
-    throw new TypeError("jwkThumbprint: key must be a public or private key created by this package.");
-  }
-  return publicThumbprint(publicCryptoKey, key.alg);
-}
 
 async function publicThumbprint(publicCryptoKey: CryptoKey, alg: AsymmetricKeyManagementAlgorithm): Promise<string> {
   const exported = (await crypto.subtle.exportKey("jwk", publicCryptoKey)) as Record<string, unknown>;

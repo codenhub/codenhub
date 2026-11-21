@@ -129,9 +129,13 @@ function checkHeaderMembers(members: Members, alg: KeyManagementAlgorithm, role:
     ) {
       return issue("invalid_key", "key_ops");
     }
+    // Web Crypto exports an ECDH or X25519 public key with `key_ops: []`, since such a key has no usage of its own:
+    // only the private key derives. An empty list on that key states no constraint, so it is taken as absent.
+    const isAgreementPublicKey = role === "public" && kty === "EC/OKP" && operations.length === 0;
     if (
-      !REQUIRED_OPERATION[role].some((op) => operations.includes(op)) ||
-      !operations.every((op) => ENCRYPTION_OPERATIONS.has(op))
+      !isAgreementPublicKey &&
+      (!REQUIRED_OPERATION[role].some((op) => operations.includes(op)) ||
+        !operations.every((op) => ENCRYPTION_OPERATIONS.has(op)))
     ) {
       return issue("wrong_use", "key_ops");
     }
