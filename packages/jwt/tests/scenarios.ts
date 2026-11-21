@@ -199,6 +199,114 @@ const pemImports = Object.fromEntries(
   ]),
 );
 
+/*
+ * SEC 1 and PKCS#1 keys, which Web Crypto cannot export, so these were made once with Node.js
+ * (`generateKeyPairSync` and `export({ type: "sec1" | "pkcs1", format: "pem" })`). The package rewraps each
+ * as PKCS#8 or SPKI before the runtime parses it. Test keys only.
+ */
+const LEGACY_PEMS = {
+  ES256: [
+    "-----BEGIN EC PRIVATE KEY-----",
+    "MHcCAQEEIKgP1RXbQbX4Mqfplx+bEPpEkb8otwIX+4D2E0HSu0uKoAoGCCqGSM49",
+    "AwEHoUQDQgAEcK3nOLCSm1T8n/huGnhai5x7TwHAY0xS5mAADJokklrk78C+kpP0",
+    "MGgW7IQGlZvd2Q9Bb06oAWxXNOwyE9WMfw==",
+    "-----END EC PRIVATE KEY-----",
+  ],
+  ES384: [
+    "-----BEGIN EC PRIVATE KEY-----",
+    "MIGkAgEBBDAMkyeoioPBDpr18nTD4Zv9cG+/g4UMRwwFJm9G06etf59A6XOw/weY",
+    "C/s0fxV6uhCgBwYFK4EEACKhZANiAATwFJBWf/iCnqCvgoQ15wWi9+SASnQIiBKN",
+    "DIjrYSU8j09FrboWblg8BLx5wxZK2nmBvn+5c8XdKhjhKG/A/MG+jR2MUn6PgQlb",
+    "hy4/9X0lt//nObsvTu7GKw56DE8WTVs=",
+    "-----END EC PRIVATE KEY-----",
+  ],
+  ES512: [
+    "-----BEGIN EC PRIVATE KEY-----",
+    "MIHcAgEBBEIA4y96+adnODBkRy36J4vst7JvkGgXNZEhaoJgGSuJsunVS+itLFxK",
+    "KU8PVKgbBQffZl23ng46r83VDtO/ccnFKtCgBwYFK4EEACOhgYkDgYYABAGJpP+n",
+    "q13UAC/tFREYGGpaL4rQTAaRUnNND3M4nUoC3b4KFeshzns6IxckTNGfBT76XP2k",
+    "/Kx6rHJySmk1hmjC8wAVz5+Rzgt2CyLusGAukKvsZVuwMGJPO59+YKdY8qoHbZVs",
+    "WTDZ8ZvZXod0lZpTBqXxUqd/RwzQeDhmSq0DadDkFQ==",
+    "-----END EC PRIVATE KEY-----",
+  ],
+  rsaPrivate: [
+    "-----BEGIN RSA PRIVATE KEY-----",
+    "MIIEpQIBAAKCAQEA0YVGE30i2EPhdGONKeyLLKrG46xxXuf7dD4znc1fwFkmEqSs",
+    "D6oXGOTI7QBCLzPztL6PWYTDe/w3aK8sQINynrBJrmy4suXCc/rI1r4xr4HIc0zs",
+    "4LBrANSx7j1qAiKP5CAJ+Te9IK5Rtq5FXCrTl641wbN/LmNhnBZqSYkhn3kzeBkk",
+    "UlBR0U565NfFLQXVjTo8axl5o0Jcq1+gDTUBG5Xqswp3bc4eG3RwV66n8xEq+YDD",
+    "cYo/jNRcGlYk3jZxdrIJEgMjM9L4MdnRx02qdT1hunrSElM9FiP9QhQWdQmum2Ip",
+    "wSKohKqxWaveNR7N6J2ITkhf80maFqu5SBW3KwIDAQABAoIBABPS7n/z5ELzx+uu",
+    "wFGvVLXBDM4dkqEpBZTd48gHrApzhOjZACyqlRfhDGpxjqblB/yEgToLl+wYakJd",
+    "51Z3+XWD9ty+4wo44gP+Plgkfmf9jsfrXIhKjj1HDUoeMR8K7R69B083aQ4kCuLk",
+    "LKIyrSWEsV0RTN8d6RjkfWGqzMMdVRvHt4guGDL6yTz3x3vUJizY08Fq63Yh08dd",
+    "lWYC4TPltuTFmhx4OleDq5nIqioV8wB1B6LjvXtjmYPDbiD6Z9IT+4uVvS9KmO0D",
+    "sSwQX6Uy4QnLLPAGe78EUvBtkl4LX+bqpiXC09q3aH2gPTFFMtcZyrj8nPuwuD3n",
+    "bjIkzO0CgYEA/cQCmuVO6bnWLnthRiOUUBjVkz6OTc01XtamcrDFFukFJWh4qlWM",
+    "QytUp3CJOdM+PCnNVY3v1d4QNdWKERHuEOOr7kK+VWfDIy7oqRnMiCPAZtwtzqm9",
+    "qBRvdJl2pkyKCXJCov/ZUGi5/bUvOHL94cE50V/0z2lG4w/or29MXYcCgYEA012I",
+    "6ssWmPoHEOV3xWxH1JV/IkeXeOKYpdha7w0zQHUet2LBdl3Cim+6XvDIOZ0Ofwzp",
+    "QP0DHcZ5W/VXC9x/1LyQf/0sLh7AH3NAnFHQ4Xa9ZSKXPZyc/sc6tEsK6ADLFqIy",
+    "DcDJBPr9tGsslUrMqZ4znkP8P6EKBK2PGt+soj0CgYEA0y8oK9fhkEkDobM0BLbf",
+    "WrkQJHXO35iDbeWcp53Mp4BMtBD5OmfvTobk8GOLEABorpDrPOPeUFF5lBOdzw7o",
+    "3E1ca/BHjbPIhaMoJHI/8JwwJmneBTrlhtda2eJNB6Byz+Gy6wuYwn4lKqp6HbQ0",
+    "7Idton0Eswed4qD+t+Eb4EkCgYEAguOBTiTFsaXjiksPiGotcS/Csu+ylWF9NfZt",
+    "GWwLOPdONjIpq6sUNbZKq1BgLY1c1MCiEWSc8Wte69taNDYv0wWSVi/plAXm45Lz",
+    "h9oCiByH3IE3Nygs8HlfmRZ/gnw7R6DZbjrcQQFM6tUTnr/bTY5yWKexJZYMJil0",
+    "XSf2N+ECgYEAt4CbyMqsYItcxDtP/ykCyUN8V1Q/a9GBtZqCVAKrCVKOVrc97tqw",
+    "ViWTiXxvz/4Ym4qbDpwtlDYQil6OrrohdvgpAUZF5VK2OwgtQ1EaJ1DsTq9MfJb7",
+    "LqvDmc+rNDKhnjkXkXAPKZLROPWtjOklHM1YoZc0sWB7YXAJfv1poCg=",
+    "-----END RSA PRIVATE KEY-----",
+  ],
+  rsaPublic: [
+    "-----BEGIN RSA PUBLIC KEY-----",
+    "MIIBCgKCAQEA0YVGE30i2EPhdGONKeyLLKrG46xxXuf7dD4znc1fwFkmEqSsD6oX",
+    "GOTI7QBCLzPztL6PWYTDe/w3aK8sQINynrBJrmy4suXCc/rI1r4xr4HIc0zs4LBr",
+    "ANSx7j1qAiKP5CAJ+Te9IK5Rtq5FXCrTl641wbN/LmNhnBZqSYkhn3kzeBkkUlBR",
+    "0U565NfFLQXVjTo8axl5o0Jcq1+gDTUBG5Xqswp3bc4eG3RwV66n8xEq+YDDcYo/",
+    "jNRcGlYk3jZxdrIJEgMjM9L4MdnRx02qdT1hunrSElM9FiP9QhQWdQmum2IpwSKo",
+    "hKqxWaveNR7N6J2ITkhf80maFqu5SBW3KwIDAQAB",
+    "-----END RSA PUBLIC KEY-----",
+  ],
+} as const;
+
+const legacyPem = (lines: readonly string[]): string => `${lines.join("\n")}\n`;
+
+const legacyPemImports = Object.fromEntries([
+  ...(["ES256", "ES384", "ES512"] as const).map((alg): [string, Scenario] => [
+    `${alg} PEM SEC 1 EC PRIVATE KEY import, sign and verify`,
+    async (module) => {
+      const keyPair = await module.importKeyPair(legacyPem(LEGACY_PEMS[alg]), { alg, kid: "pem" });
+      check(keyPair.ok, "SEC 1 import failed", keyPair);
+      if (keyPair.ok) {
+        await expectVerified(
+          module,
+          await module.sign({ payload: PAYLOAD, key: keyPair.value.privateKey }),
+          keyPair.value.publicKey,
+          alg,
+        );
+      }
+    },
+  ]),
+  [
+    "RS256 PEM PKCS#1 RSA PRIVATE KEY and RSA PUBLIC KEY import, sign and verify",
+    async (module: Jwt) => {
+      const keyPair = await module.importKeyPair(legacyPem(LEGACY_PEMS.rsaPrivate), { alg: "RS256", kid: "pem" });
+      const publicKey = await module.importPublicKey(legacyPem(LEGACY_PEMS.rsaPublic), { alg: "RS256", kid: "pem" });
+      check(keyPair.ok, "PKCS#1 private import failed", keyPair);
+      check(publicKey.ok, "PKCS#1 public import failed", publicKey);
+      if (keyPair.ok && publicKey.ok) {
+        await expectVerified(
+          module,
+          await module.sign({ payload: PAYLOAD, key: keyPair.value.privateKey }),
+          publicKey.value,
+          "RS256",
+        );
+      }
+    },
+  ],
+]);
+
 const keyPairImports = Object.fromEntries(
   ASYMMETRIC.map((alg): [string, Scenario] => [
     `${alg} key pair import from one private JWK, refusing mismatched halves`,
@@ -361,6 +469,20 @@ const contentRoundtrips = Object.fromEntries([
       await expectDecrypted(module, key, key, "A128CBC-HS256");
     },
   ],
+  ...(["A128GCMKW", "A256GCMKW"] as const).map((alg): [string, Scenario] => [
+    `JWE ${alg} encrypts and decrypts`,
+    async (module) => {
+      const key = await module.generateJweSecretKey({ alg });
+      await expectDecrypted(module, key, key, "A128CBC-HS256");
+    },
+  ]),
+  ...(["RSA-OAEP-384", "RSA-OAEP-512"] as const).map((alg): [string, Scenario] => [
+    `JWE ${alg} encrypts and decrypts`,
+    async (module) => {
+      const pair = await module.generateJweKeyPair({ alg });
+      await expectDecrypted(module, pair.publicKey, pair.privateKey, "A256GCM");
+    },
+  ]),
 ]);
 
 const jweScenarios: Readonly<Record<string, Scenario>> = {
@@ -450,6 +572,18 @@ const jweScenarios: Readonly<Record<string, Scenario>> = {
       result,
     );
   },
+  "JWE P-256 epk not on the curve is refused": async (module) => {
+    const pair = await module.generateJweKeyPair({ alg: "ECDH-ES", crv: "P-256" });
+    // The x of the P-256 generator as both coordinates: well formed, but not a point on the curve.
+    const x = "axfR8uEsQkf4vOblY6RA8ncDfYEt6zOg9KE5RdiYwpY";
+    const header = encodeSegment(
+      JSON.stringify({ alg: "ECDH-ES", enc: "A128GCM", epk: { kty: "EC", crv: "P-256", x, y: x } }),
+    );
+    const token = [header, "", "AAAAAAAAAAAAAAAA", "AAAA", "AAAAAAAAAAAAAAAAAAAAAA"].join(".");
+    const result = await module.createDecrypter({ keys: module.createJweKeySet([pair.privateKey]) })(token);
+    const expected = { ok: false, error: { issues: [{ code: "malformed", path: ["header", "epk"] }] } };
+    check(JSON.stringify(result) === JSON.stringify(expected), "an off-curve point was accepted", result);
+  },
   "JWE low-order X25519 public key is refused at import": async (module) => {
     await module.generateJweKeyPair({ alg: "ECDH-ES", crv: "X25519" });
     const results = await Promise.all(
@@ -470,6 +604,7 @@ export const scenarios: Readonly<Record<string, Scenario>> = {
   ...leadingZeroImports,
   ...keyPairImports,
   ...pemImports,
+  ...legacyPemImports,
   "alg none is refused": async (module) => {
     const { verifying } = await keysFor(module, "HS256");
     const token = `${encodeSegment('{"alg":"none"}')}.${encodeSegment('{"sub":"admin"}')}.AAAA`;
