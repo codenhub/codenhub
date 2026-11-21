@@ -291,10 +291,11 @@ describe("createLocaleRouting", () => {
     });
     const cases: [string, string][] = [
       ["/help//x", 'pathname "/help//x" must not contain an empty segment, as // makes'],
-      ["about", 'pathname "about" must start with /'],
-      ["", 'pathname "" must start with /'],
-      ["/about?tab=1", 'pathname "/about?tab=1" must not contain ?, which starts a query; pass url.pathname'],
-      ["/about#top", 'pathname "/about#top" must not contain #, which starts a fragment; pass url.pathname'],
+      // A value that isn't a path, or a query or fragment, can hold a credential, so it isn't quoted.
+      ["https://user:secret@example.com/", "pathname must start with /; pass url.pathname"],
+      ["", "pathname must start with /; pass url.pathname"],
+      ["/about?token=secret", 'pathname "/about?…" must not contain ?, which starts a query; pass url.pathname'],
+      ["/about#token=secret", 'pathname "/about#…" must not contain #, which starts a fragment; pass url.pathname'],
       ["/a\\b", 'pathname "/a\\\\b" must not contain a backslash'],
       ["/a\nb", 'pathname "/a\\nb" must not contain a control character'],
       ["/a%2Fb", 'pathname "/a%2Fb" must not contain an encoded slash, %2F'],
@@ -311,7 +312,7 @@ describe("createLocaleRouting", () => {
     for (const [pathname, message] of cases) {
       expect(() => routing.localize(pathname, "en-US")).toThrow(new TypeError(`[I18n] ${message}`));
     }
-    expect(() => routing.parse("about")).toThrow(new TypeError('[I18n] pathname "about" must start with /'));
+    expect(() => routing.parse("about")).toThrow(new TypeError("[I18n] pathname must start with /; pass url.pathname"));
     expect(() => routing.parse(42 as unknown as string)).toThrow(
       new TypeError("[I18n] pathname must be a string, received number"),
     );

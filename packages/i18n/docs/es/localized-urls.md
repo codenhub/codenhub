@@ -2,7 +2,7 @@
 title: URLs localizadas
 description: Pon el locale en la ruta, traduce la propia ruta, lee ambas de vuelta, enlaza a otros idiomas, genera cada página localizada y lleva a cada visitante a su propio idioma en un sitio estático.
 order: 4
-source: 5e9f6697e0cca1fa395347959d0950a9ba818d0e
+source: d1982bce342d923a8dd150fcca2cdedb69755fc8
 ---
 
 # URLs localizadas
@@ -432,8 +432,8 @@ Una solicitud puede traer cualquiera de estas, como un escáner que pide `//wp-l
 
 Todos los métodos, `parse()` incluido, lanzan un `TypeError` para un valor que ni siquiera es el pathname de una URL:
 
-- Uno que no empieza con `/`, como una URL completa: `TypeError: [I18n] pathname "https://example.com/" must start with /`.
-- Uno que contiene `?` o `#`, como el `request.url` de Node con su query string: `TypeError: [I18n] pathname "/search?q=shoes" must not contain ?, which starts a query; pass url.pathname`.
+- Uno que no empieza con `/`, como una URL completa: `TypeError: [I18n] pathname must start with /; pass url.pathname`.
+- Uno que contiene `?` o `#`, como el `request.url` de Node con su query string: `TypeError: [I18n] pathname "/search?…" must not contain ?, which starts a query; pass url.pathname`. Ninguno de los dos errores cita la información de usuario, la query ni el fragmento de la URL, que pueden contener una credencial.
 - Uno que no es un string: `TypeError: [I18n] pathname must be a string, received undefined`.
 
 Eso es un error del código que llama, no una solicitud que haya que responder, así que falla de forma ruidosa en lugar de responder 404 a cada URL con query string.

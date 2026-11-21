@@ -214,12 +214,19 @@ export const createLocaleRouting = <TLocale extends string>(
     if (problem === "not-string") {
       throw new TypeError(`[I18n] pathname must be a string, received ${pathname === null ? "null" : typeof pathname}`);
     }
-    if (problem !== undefined) {
-      // A query or a fragment is a URL passed where its pathname belongs.
-      const advice = problem === "query" || problem === "fragment" ? "; pass url.pathname" : "";
+    if (problem === "not-absolute") {
+      // Often a full URL, whose user info can hold a credential, so the value is not quoted.
+      throw new TypeError(`[I18n] pathname must ${describePathnameRule(problem)}; pass url.pathname`);
+    }
+    if (problem === "query" || problem === "fragment") {
+      // A URL passed where its pathname belongs. Its query or fragment can hold a token, so only the path is quoted.
+      const path = `${pathname.slice(0, pathname.search(/[?#]/))}${problem === "query" ? "?" : "#"}…`;
       throw new TypeError(
-        `[I18n] pathname ${formatReportedKey(pathname)} must ${describePathnameRule(problem)}${advice}`,
+        `[I18n] pathname ${formatReportedKey(path)} must ${describePathnameRule(problem)}; pass url.pathname`,
       );
+    }
+    if (problem !== undefined) {
+      throw new TypeError(`[I18n] pathname ${formatReportedKey(pathname)} must ${describePathnameRule(problem)}`);
     }
   };
 
