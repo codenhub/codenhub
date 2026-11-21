@@ -61,21 +61,24 @@ export interface Pathnames<TLocale extends string> {
   }>;
 }
 
-/** The values matched by a pattern's parameters, as written in the path; a catch-all's segments are joined by `/`. @internal */
-export type Parameters = ReadonlyMap<string, string>;
+/**
+ * The segments matched by each of a pattern's parameters, as written in the path: one for a parameter, one or more for
+ * a catch-all. They are kept as segments rather than joined, so a long catch-all is not joined and split again. @internal
+ */
+export type Parameters = ReadonlyMap<string, readonly string[]>;
 
 /**
- * Reads the raw text of each parameter of the pattern that the index found for these segments; the index already
+ * Reads the segments of each parameter of the pattern that the index found for these segments; the index already
  * matched the segment count and every fixed segment.
  */
 const readParameters = (pattern: Pattern, segments: readonly string[]): Parameters => {
-  const parameters = new Map<string, string>();
+  const parameters = new Map<string, readonly string[]>();
 
   for (const [index, segment] of pattern.segments.entries()) {
     if (segment.kind === "param") {
-      parameters.set(segment.name, segments[index]!);
+      parameters.set(segment.name, [segments[index]!]);
     } else if (segment.kind === "rest") {
-      parameters.set(segment.name, segments.slice(index).join("/"));
+      parameters.set(segment.name, segments.slice(index));
     }
   }
 
@@ -84,13 +87,7 @@ const readParameters = (pattern: Pattern, segments: readonly string[]): Paramete
 
 /** @internal */
 export const buildPattern = (pattern: Pattern, parameters: Parameters): string[] =>
-  pattern.segments.flatMap((segment) => {
-    if (segment.kind === "static") {
-      return [segment.value];
-    }
-    const value = parameters.get(segment.name)!;
-    return segment.kind === "rest" ? value.split("/") : [value];
-  });
+  pattern.segments.flatMap((segment) => (segment.kind === "static" ? [segment.value] : parameters.get(segment.name)!));
 
 interface IndexEntry<T> {
   readonly item: T;

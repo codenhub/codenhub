@@ -31,6 +31,23 @@ const hasTooManySegments = (pathname: string): boolean => {
 export const isPathnameTooLong = (pathname: string): boolean =>
   pathname.length > MAX_PATHNAME_LENGTH || hasTooManySegments(pathname);
 
+/**
+ * Whether the pathname that {@link joinPathname} makes of segments, none of which contains `/`, is too long, as
+ * {@link isPathnameTooLong} says, without joining them.
+ *
+ * @internal
+ */
+export const areSegmentsTooLong = (segments: readonly string[], hasTrailingSlash: boolean): boolean => {
+  if (segments.length > MAX_PATHNAME_SEGMENTS) {
+    return true;
+  }
+  let length = segments.length === 0 ? 1 : segments.length + (hasTrailingSlash ? 1 : 0);
+  for (const segment of segments) {
+    length += segment.length;
+  }
+  return length > MAX_PATHNAME_LENGTH;
+};
+
 /** Why a value is not an absolute application pathname. @internal */
 export type PathnameProblem =
   | "not-string"
