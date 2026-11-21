@@ -625,3 +625,142 @@ for (const theme of THEMES) {
     });
   }
 }
+
+/* Pressed is the third state the text rule holds in. Read with the standard
+   contrast only, for the reason hover is above, and in every presentation,
+   `.solid` included, since no other test presses one. One test per aesthetic
+   and theme, for the pointer moves. */
+const PRESSABLE = TEXT_COMPONENTS.filter(([, , hovers]) => hovers);
+
+for (const theme of THEMES) {
+  for (const [name, region] of SOLID_REGIONS) {
+    test(`prints every pressable component's text at 4.5:1 when pressed, ${name}, ${theme}`, async ({ page }) => {
+      await loadIn(
+        page,
+        theme,
+        "standard",
+        `<div class="${region}" style="padding: 1rem">${INTENTS.flatMap((intent) =>
+          PRESENTATIONS.flatMap((presentation) =>
+            PRESSABLE.map(([component, markup]) =>
+              markup(`${presentation} ${intent}`).replace(
+                /^<(\w+)/,
+                `<$1 data-testid="${caseId(name, component, intent, presentation)}"`,
+              ),
+            ),
+          ),
+        ).join("")}</div>`,
+      );
+
+      for (const intent of INTENTS) {
+        for (const presentation of PRESENTATIONS) {
+          for (const [component] of PRESSABLE) {
+            const testId = caseId(name, component, intent, presentation);
+            // oxlint-disable-next-line no-await-in-loop -- one pointer, moved in turn.
+            await page.getByTestId(testId).hover();
+            // oxlint-disable-next-line no-await-in-loop -- one pointer, pressed in turn.
+            await page.mouse.down();
+            // oxlint-disable-next-line no-await-in-loop -- read while the pointer is down.
+            const { [testId]: painted } = await paint(page, [testId]);
+            // oxlint-disable-next-line no-await-in-loop -- released before the next press.
+            await page.mouse.up();
+
+            expect.soft(textRatio(painted!), `${testId} pressed`).toBeGreaterThanOrEqual(4.5);
+          }
+        }
+      }
+    });
+  }
+}
+
+/* A state mark -- a checkbox's tick or dash, a radio's dot, a switch's knob,
+   on or off -- at 3:1 against every fill its presentation can give the
+   toggle. Each mark is the toggle's `::after`, painted as its background. */
+const MARKED = [
+  ["checkbox-checked", `<input type="checkbox" class="checkbox`, `" checked />`],
+  ["checkbox-mixed", `<input type="checkbox" class="checkbox`, `" data-indeterminate />`],
+  ["radio-checked", `<input type="radio" class="radio`, `" checked />`],
+  ["switch-on", `<input type="checkbox" class="switch`, `" checked />`],
+  ["switch-off", `<input type="checkbox" class="switch`, `" />`],
+] as const;
+
+for (const theme of THEMES) {
+  for (const contrast of CONTRASTS) {
+    test(`draws every toggle's state mark at 3:1 on its fill, ${theme}, ${contrast} contrast`, async ({ page }) => {
+      await loadIn(
+        page,
+        theme,
+        contrast,
+        SOLID_REGIONS.map(
+          ([name, region]) =>
+            `<div class="${region}" style="padding: 1rem">${INTENTS.flatMap((intent) =>
+              PRESENTATIONS.flatMap((presentation) =>
+                MARKED.map(
+                  ([mark, open, close]) =>
+                    `${open} ${presentation} ${intent}" data-testid="${name}-${mark}-${intent}-${presentation || "default"}${close}`,
+                ),
+              ),
+            ).join("")}</div>`,
+        ).join(""),
+      );
+      await page.evaluate(() => {
+        for (const element of document.querySelectorAll<HTMLInputElement>("[data-indeterminate]")) {
+          element.indeterminate = true;
+        }
+      });
+
+      const grounds = await paint(page);
+      const marks = await page.evaluate(() =>
+        Object.fromEntries(
+          [...document.querySelectorAll("[data-testid]")].map((element) => [
+            element.getAttribute("data-testid")!,
+            getComputedStyle(element, "::after").backgroundColor,
+          ]),
+        ),
+      );
+
+      for (const [testId, painted] of Object.entries(grounds)) {
+        const { fill } = groundsOf(painted);
+        expect
+          .soft(getContrastRatio(flattenColor(marks[testId]!, fill), fill), `${testId} mark`)
+          .toBeGreaterThanOrEqual(MINIMUM);
+      }
+    });
+  }
+}
+
+/* A progress bar's value against its track. At rest the filled part is a
+   recorded exception (docs/guidelines/accessibility.md); with more contrast
+   asked for it takes the intent's strong tone and has to clear 3:1. */
+for (const theme of THEMES) {
+  test(`fills every progress bar at 3:1 against its track under increased contrast, ${theme}`, async ({ page }) => {
+    await loadIn(
+      page,
+      theme,
+      "more",
+      SOLID_REGIONS.map(
+        ([name, region]) =>
+          `<div class="${region}" style="padding: 1rem">${INTENTS.map(
+            (intent) =>
+              `<div class="progress ${intent}" data-testid="${name}-progress-${intent}" style="--progress-value: 40%"></div>`,
+          ).join("")}</div>`,
+      ).join(""),
+    );
+
+    const grounds = await paint(page);
+    const values = await page.evaluate(() =>
+      Object.fromEntries(
+        [...document.querySelectorAll("[data-testid]")].map((element) => [
+          element.getAttribute("data-testid")!,
+          getComputedStyle(element, "::after").backgroundColor,
+        ]),
+      ),
+    );
+
+    for (const [testId, painted] of Object.entries(grounds)) {
+      const { fill: track } = groundsOf(painted);
+      expect
+        .soft(getContrastRatio(flattenColor(values[testId]!, track), track), `${testId} value`)
+        .toBeGreaterThanOrEqual(MINIMUM);
+    }
+  });
+}
