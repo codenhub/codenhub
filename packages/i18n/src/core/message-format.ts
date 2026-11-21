@@ -17,6 +17,12 @@ const PLURAL_KEYWORDS = new Set(["zero", "one", "two", "few", "many", "other"]);
 const NAME_PATTERN = /[A-Za-z0-9_]/;
 const SELECT_KEY_PATTERN = /[A-Za-z0-9_-]/;
 const EXACT_VALUE_PATTERN = /^=-?[0-9]+(\.[0-9]+)?$/;
+
+/** An exact plural key's value, as the plural's lookup spells it: an integer in full, any other number as a number. */
+const exactKey = (value: string): string => {
+  const [whole, fraction = ""] = value.split(".");
+  return /^0*$/.test(fraction) ? `=${BigInt(whole!)}` : `=${Number(value)}`;
+};
 const MAX_NESTING = 10;
 // What a parsed message keeps, in characters of its text, which V8 keeps at about 2 bytes each. Measured on Node.js
 // 26.13: a node, such as `{a}` or `#`, keeps 47 to 140 bytes, and a plural or select keeps about 330 bytes with one
@@ -45,7 +51,8 @@ type MessageNode =
       readonly kind: "plural";
       readonly name: string;
       readonly isOrdinal: boolean;
-      readonly offset: number;
+      /** Exact, as a bigint count needs it; a number count subtracts it as a number. */
+      readonly offset: bigint;
       readonly options: ReadonlyMap<string, readonly MessageNode[]>;
       readonly source: string;
     }
@@ -232,7 +239,7 @@ class Parser {
       case "selectordinal": {
         this.expect(",");
         this.skipSpace();
-        let offset = 0;
+        let offset = 0n;
         if (this.message.startsWith("offset:", this.index)) {
           this.index += "offset:".length;
           this.skipSpace();
@@ -240,14 +247,15 @@ class Parser {
           if (digits.length === 0) {
             this.fail("Expected an offset");
           }
-          offset = Number(digits);
+          offset = BigInt(digits);
         }
         const options = this.parseOptions(depth, true, (key) => {
           if (key.startsWith("=") ? !EXACT_VALUE_PATTERN.test(key) : !PLURAL_KEYWORDS.has(key)) {
             this.fail(`Unknown plural form ${key}`);
           }
-          // ICU compares exact values as numbers, so `=1.0` and `=01` select 1, as the value's own spelling does.
-          return key.startsWith("=") ? `=${Number(key.slice(1))}` : key;
+          // ICU compares exact values as numbers, so `=1.0` and `=01` select 1, as the value's own spelling does. An
+          // integer is kept exact, so `=9007199254740993` selects that bigint rather than its rounded neighbor.
+          return key.startsWith("=") ? exactKey(key.slice(1)) : key;
         });
         return {
           kind: "plural",
@@ -757,8 +765,10 @@ const formatNodes = (nodes: Message, state: FormatState, pound: number | bigint 
           output.fill(node.source);
           break;
         }
-        const exact = node.options.get(`=${value}`);
-        const shown = typeof value === "bigint" ? value - BigInt(node.offset) : value - node.offset;
+        const exact = node.options.get(
+          typeof value === "bigint" || Number.isInteger(value) ? `=${BigInt(value)}` : `=${value}`,
+        );
+        const shown = typeof value === "bigint" ? value - node.offset : value - Number(node.offset);
         // A locale Intl rejects uses `other`, as plural groups do, rather than the root locale's English-like rules.
         const category =
           intlLocale(locale) === "und"
