@@ -3540,3 +3540,105 @@ test("positions a glass surface with a utility or an unlayered rule, not a compo
 
   expect([await read(0), await read(1), await read(2)]).toEqual(["relative", "sticky", "sticky"]);
 });
+
+/* The glass anchor leaves the top layer alone. Its `relative` beat the user
+   agent's `position: fixed` on a modal dialog and a popover, so on a page
+   scrolled 2000px a `<dialog class="card">` opened 1683px above the window in
+   WebKit, a `.card.floating` popover 2000px above it, and a toast pinned to
+   the window's corner scrolled with the page in every engine. A non-modal
+   dialog keeps the user agent's `absolute`. */
+test("keeps a surface dialog and popover where the top layer places them under .glass", async ({ page }) => {
+  await page.goto(FEEDBACK_URL);
+  await page.evaluate(() => {
+    const host = document.createElement("main");
+
+    host.className = "glass";
+    host.innerHTML =
+      '<div style="height: 6000px"></div>' +
+      '<dialog class="card" data-probe="modal">Modal</dialog>' +
+      '<dialog class="panel" data-probe="dialog">Dialog</dialog>' +
+      '<div class="card floating" popover data-probe="popover">Popover</div>' +
+      '<div class="alert success" popover="manual" data-probe="toast" style="inset: auto 1rem 1rem auto; margin: 0">Toast</div>' +
+      '<div class="tooltip-bubble" popover data-probe="bubble">Bubble</div>';
+    document.body.prepend(host);
+    window.scrollTo(0, 2000);
+  });
+
+  const open = (probe: string, how: "showModal" | "show" | "showPopover") =>
+    page.locator(`[data-probe="${probe}"]`).evaluate((element, method) => {
+      (element as unknown as Record<string, () => void>)[method]!();
+      const rect = element.getBoundingClientRect();
+      const read = {
+        position: getComputedStyle(element).position,
+        top: rect.top,
+        bottom: rect.bottom,
+        inView: rect.top >= 0 && rect.bottom <= window.innerHeight,
+        fromBottom: Math.round(window.innerHeight - rect.bottom),
+      };
+      if (method === "showPopover") {
+        (element as HTMLElement).hidePopover();
+      } else {
+        (element as HTMLDialogElement).close();
+      }
+
+      return read;
+    }, how);
+
+  const modal = await open("modal", "showModal");
+  expect.soft(modal.position, "modal dialog").toBe("fixed");
+  expect.soft(modal.inView, `modal dialog in the window, at ${modal.top}`).toBe(true);
+
+  expect.soft((await open("dialog", "show")).position, "non-modal dialog").toBe("absolute");
+
+  const popover = await open("popover", "showPopover");
+  expect.soft(popover.position, "popover").toBe("fixed");
+  expect.soft(popover.inView, `popover in the window, at ${popover.top}`).toBe(true);
+
+  const toast = await open("toast", "showPopover");
+  expect.soft(toast.position, "toast").toBe("fixed");
+  expect.soft(toast.fromBottom, "toast pinned 1rem above the window's bottom").toBe(16);
+
+  expect.soft((await open("bubble", "showPopover")).position, "popover bubble").toBe("fixed");
+});
+
+/* Under glass every surface is a stacking context, so whatever overhangs one
+   -- a menu, a listbox -- is painted under the next surface whatever its own
+   `z-index`. A glass surface steps up while it holds focus, or holds an open
+   popover, a `[data-state="open"]` widget, or an `[open]` element, as it
+   does for a tooltip. */
+for (const region of ["glass", "glass glass-liquid"]) {
+  test(`paints a menu overhanging a card over the next card under .${region.replace(" ", ".")}`, async ({ page }) => {
+    await page.goto(FEEDBACK_URL);
+    await page.evaluate((classes) => {
+      const host = document.createElement("div");
+      host.className = classes;
+      host.style.cssText = "padding: 2rem";
+      const card = (state: string, probe: string) =>
+        `<div class="card"><div style="position: relative"${state}><button type="button" class="btn" data-probe="${probe}-button">Menu</button>` +
+        `<div data-probe="${probe}" style="position: absolute; top: 100%; left: 0; z-index: 50; width: 12rem; height: 8rem; background: white">menu</div></div></div>` +
+        `<div class="card" data-probe="${probe}-next" style="min-height: 8rem">Next card</div>`;
+      host.innerHTML = card("", "focused") + card(' data-state="open"', "stated");
+      document.body.prepend(host);
+    }, region);
+    await page.locator('[data-probe="focused-button"]').focus();
+    await settleAnimations(page);
+
+    for (const probe of ["focused", "stated"]) {
+      // oxlint-disable-next-line no-await-in-loop -- one page, read in turn.
+      const paint = await page.locator(`[data-probe="${probe}"]`).evaluate((element, nextProbe) => {
+        const rect = element.getBoundingClientRect();
+        const below = document.querySelector(`[data-probe="${nextProbe}"]`)!.getBoundingClientRect();
+        const x = rect.left + 8;
+        const y = rect.bottom - 4;
+
+        return {
+          overlaps: y > below.top && y < below.bottom,
+          onTop: document.elementFromPoint(x, y) === element,
+        };
+      }, `${probe}-next`);
+
+      expect.soft(paint.overlaps, `${probe} menu reaches over the next card`).toBe(true);
+      expect.soft(paint.onTop, `${probe} menu is painted on top`).toBe(true);
+    }
+  });
+}
