@@ -2,7 +2,7 @@
 title: Sem bundler
 description: Como referenciar as folhas de estilos compiladas a partir de HTML puro, Rails, Laravel, Django ou qualquer aplicação renderizada no servidor, e o build por linha de comando.
 order: 6
-source: 84f57157d286cfd2adcb7b4f5adb2b8eb5ac668c
+source: cd41cef0848efcdef21e9d17f62f9113f049c243
 ---
 
 # Sem bundler
