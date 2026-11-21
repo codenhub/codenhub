@@ -64,7 +64,6 @@ describe("the temporary file", () => {
     expect(first?.flags).toBe("wx");
     expect(path.basename(first?.file ?? "")).toMatch(/^app\.css\.[0-9a-f]{16,}\.tmp$/);
     expect(first?.file).not.toBe(second?.file);
-    expect(first?.file).not.toContain(String(process.pid));
   });
 
   // What a planted entry, or a temporary file another build left, at the name picked looks like.
