@@ -76,6 +76,10 @@
     &:where(:root[data-contrast="more"] *) {
       --_line-rest: 100%;
     }
+    /* The colour the line rests in. A toggle takes its intent's strong tone
+       here, `--_line-strong` (`intent.css`): its line is all that shows an
+       unchecked box. */
+    --_rest-line: var(--intent-border);
     /* Two seams rather than one composed result. `--_line-tone` is what colour
        the line is, and the states below move it; `--_line` folds in the fill,
        walking the line toward the intent colour by the fill amount, so a state
@@ -88,7 +92,7 @@
        composed from -- the same failure as the edge below. */
     --_line-tone: color-mix(
       in oklab,
-      color-mix(in oklab, var(--_held-ink) var(--_through), var(--intent-border)) var(--_line-rest),
+      color-mix(in oklab, var(--_held-ink) var(--_through), var(--_rest-line)) var(--_line-rest),
       transparent
     );
     --_line: color-mix(in oklab, var(--intent-color) var(--_fill), var(--_line-tone));
@@ -304,6 +308,7 @@
       --intent-hover: var(--color-destructive-hover);
       --intent-border: var(--color-destructive);
       --intent-strong: var(--color-destructive-strong);
+      --_line-strong: var(--color-destructive-strong);
       --intent-subtle: var(--color-destructive-subtle);
       --intent-fill-max: 100%;
     }
@@ -462,6 +467,7 @@
     --intent-hover: var(--color-destructive-hover);
     --intent-border: var(--color-destructive);
     --intent-strong: var(--color-destructive-strong);
+    --_line-strong: var(--color-destructive-strong);
     --intent-subtle: var(--color-destructive-subtle);
     --intent-fill-max: 100%;
   }
@@ -1039,6 +1045,7 @@
     /* Absolute, whatever the element's own edge class: see `text-control`. */
     --_edge-floor: 100%;
     --_line-rest: 100%;
+    --_rest-line: var(--_line-strong, var(--intent-border));
     --_d-border: 100%;
     --_d-elevation: 0;
 
@@ -1184,6 +1191,7 @@
     /* Absolute, whatever the element's own edge class: see `text-control`. */
     --_edge-floor: 100%;
     --_line-rest: 100%;
+    --_rest-line: var(--_line-strong, var(--intent-border));
     --_d-border: 100%;
     --_d-elevation: 0;
 
@@ -1312,6 +1320,7 @@
     --_d-fill: 12%;
     --_d-fg-on-fill: 0%;
     --_line-rest: 100%;
+    --_rest-line: var(--_line-strong, var(--intent-border));
     --_d-border: 100%;
     --_d-elevation: 0;
 
@@ -1464,18 +1473,6 @@
         }
       }
     }
-  }
-}
-
-@layer utilities {
-  /* An unchecked toggle has nothing but its line to show it, so a named
-     intent draws that line in its strong tone, as increased contrast does for
-     every line. The intent's own tone measured 2.7:1 for warning in light and
-     2.9:1 for info in dark against the page (docs/guidelines/accessibility.md,
-     "A control's boundary"). Neutral keeps the control line, already above
-     3:1. A checked toggle's line walks to its full fill, so it is unchanged. */
-  :is(.checkbox, .radio, .switch):is(.primary, .secondary, .success, .warning, .destructive, .info) {
-    --intent-border: var(--intent-strong);
   }
 }
 
