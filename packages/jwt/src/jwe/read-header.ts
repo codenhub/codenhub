@@ -57,8 +57,9 @@ function resolveMaxLength(options: unknown): number {
  * decrypter checks it up to its cryptography: its length before any decoding, exactly five canonical base64url
  * segments, a header that is a JSON object without repeated members, a supported `alg` and `enc` (any of
  * {@link CONTENT_ENCRYPTION_ALGORITHMS}, since no decrypter's `enc` list applies), no `zip` or `crit`, an `epk`
- * where `alg` needs one, and an encrypted key, IV and tag of the lengths `alg` and `enc` make them. Only the
- * protected header is returned; no key is used and nothing is decrypted.
+ * where `alg` needs one, an encrypted key that is empty exactly when `alg` writes none, and an IV and tag of the
+ * lengths `enc` makes them. The encrypted key's own length is checked only by decryption. Only the protected
+ * header is returned; no key is used and nothing is decrypted.
  *
  * @example
  * ```ts

@@ -36,3 +36,4 @@ export {
 } from "./keys";
 export { readJweHeader, type ReadJweHeaderOptions } from "./read-header";
 export type * from "./types";
+export type { JsonObject } from "../encoding/json";

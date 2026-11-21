@@ -5,6 +5,8 @@ import { beforeAll, describe, expect, it } from "vitest";
 import type { PrivateKey, PublicKey, SecretKey } from "../core/types";
 import { decodeBase64Url, encodeBase64Url } from "../encoding/base64url";
 import { generateKeyPair, generateSecretKey } from "../keys/generate";
+import { createKeySet } from "../keysets/local";
+import { createJwsVerifier } from "../verify/create-jws-verifier";
 import { signGeneralJws, signJws } from "./sign-jws";
 
 const textOf = (segment: string): string => new TextDecoder().decode(decodeBase64Url(segment));
@@ -370,5 +372,40 @@ describe("signGeneralJws", () => {
     await expect(
       signGeneralJws({ payload: "", signers: [{ key: secretKey }], serialization: "general" } as never),
     ).rejects.toThrow("signGeneralJws: input.serialization is not an option.");
+  });
+});
+
+describe("unprotected header depth", () => {
+  /** An object `levels` deep: `{ x: { x: … {} } }`. */
+  const nested = (levels: number): Record<string, unknown> => {
+    let value: Record<string, unknown> = {};
+    for (let level = 1; level < levels; level += 1) {
+      value = { x: value };
+    }
+    return value;
+  };
+  const verify = (jws: string) => createJwsVerifier({ keys: createKeySet([secretKey]) })(jws);
+
+  it("should sign only flattened unprotected headers its verifier reads back", async () => {
+    const deepest = await signJws({
+      payload: "",
+      key: secretKey,
+      serialization: "flattened",
+      unprotectedHeader: nested(31),
+    });
+
+    expect((await verify(deepest)).ok).toBe(true);
+    await expect(
+      signJws({ payload: "", key: secretKey, serialization: "flattened", unprotectedHeader: nested(32) }),
+    ).rejects.toThrow("must not nest deeper than 32 levels");
+  });
+
+  it("should sign only general unprotected headers its verifier reads back", async () => {
+    const deepest = await signGeneralJws({ payload: "", signers: [{ key: secretKey, unprotectedHeader: nested(29) }] });
+
+    expect((await verify(deepest)).ok).toBe(true);
+    await expect(
+      signGeneralJws({ payload: "", signers: [{ key: secretKey, unprotectedHeader: nested(30) }] }),
+    ).rejects.toThrow("must not nest deeper than 32 levels");
   });
 });

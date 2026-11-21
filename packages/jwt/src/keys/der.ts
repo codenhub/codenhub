@@ -10,6 +10,8 @@ export const DER_SEQUENCE = 0x30;
 export const DER_CONTEXT_0 = 0xa0;
 /** `[1] EXPLICIT`, such as an `ECPrivateKey`'s public key. */
 export const DER_CONTEXT_1 = 0xa1;
+/** `[1] IMPLICIT` of a primitive type, such as a PKCS#8 version 2 public key's `BIT STRING` (RFC 5958). */
+export const DER_IMPLICIT_1 = 0x81;
 
 /** Longest DER length field read, in bytes; four already exceed any PEM this package accepts. */
 const MAX_DER_LENGTH_BYTES = 4;
@@ -52,6 +54,51 @@ export function readElement(der: Uint8Array, offset: number, limit: number, isSt
   }
   const end = contentStart + length;
   return end > limit ? undefined : { tag, start: offset, contentStart, end };
+}
+
+/** Deepest nesting {@link isStrictDer} reads; a key nests far less, and the cap bounds the recursion. */
+const MAX_DER_DEPTH = 16;
+
+/**
+ * Whether `der` from `start` to `end` is a run of whole elements in strict DER, read to the bottom: each tag one
+ * byte, each length definite and in its shortest form, each constructed element's content such a run itself,
+ * each `INTEGER` in its shortest form and not negative, each `NULL` empty, and each `BIT STRING` without unused
+ * bits. The last three are what every `INTEGER`, `NULL` and `BIT STRING` in a key is. The content of a primitive
+ * element, such as a key's own DER inside a `BIT STRING` or an `OCTET STRING`, is not read.
+ */
+export function isStrictDer(der: Uint8Array, start: number, end: number, depth = 0): boolean {
+  if (depth > MAX_DER_DEPTH) {
+    return false;
+  }
+  for (let offset = start; offset < end;) {
+    const element = readElement(der, offset, end, true);
+    if (element === undefined || !isStrictElement(der, element, depth)) {
+      return false;
+    }
+    offset = element.end;
+  }
+  return true;
+}
+
+function isStrictElement(der: Uint8Array, { tag, contentStart, end }: DerElement, depth: number): boolean {
+  const length = end - contentStart;
+  const first = der[contentStart] as number;
+  if ((tag & 0x1f) === 0x1f) {
+    return false;
+  }
+  if ((tag & 0x20) !== 0) {
+    return isStrictDer(der, contentStart, end, depth + 1);
+  }
+  switch (tag) {
+    case DER_INTEGER:
+      return length > 0 && first < 0x80 && !(first === 0 && length > 1 && (der[contentStart + 1] as number) < 0x80);
+    case DER_NULL:
+      return length === 0;
+    case DER_BIT_STRING:
+      return length > 0 && first === 0;
+    default:
+      return true;
+  }
 }
 
 /** One DER element of `tag` holding `content`, its length in the shortest form. */

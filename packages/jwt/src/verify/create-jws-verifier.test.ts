@@ -638,6 +638,16 @@ describe("createJwsVerifier options", () => {
   it.each([
     ["an unknown member", { payloads: "a" }, "JWS verifier: options.payloads is not an option."],
     ["a payload that is a number", { payload: 1 }, "JWS verifier: options.payload must be a string or a Uint8Array."],
+    [
+      "a payload that is an ArrayBuffer",
+      { payload: new Uint8Array([1]).buffer },
+      "JWS verifier: options.payload must be a string or a Uint8Array.",
+    ],
+    [
+      "a payload that is another view",
+      { payload: new DataView(new ArrayBuffer(1)) },
+      "JWS verifier: options.payload must be a string or a Uint8Array.",
+    ],
     ["options that are not an object", "a", "JWS verifier: options must be an object."],
   ])("should reject a verification for %s", async (_, options, message) => {
     await expect(secretVerifier()("a.b.c", options as never)).rejects.toThrow(new TypeError(message));

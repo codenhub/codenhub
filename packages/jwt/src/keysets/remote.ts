@@ -20,7 +20,9 @@ export interface RemoteKeySetOptions {
   /**
    * Absolute `https:` URL of the JWKS, such as an issuer's `jwks_uri`. Plain `http:` is accepted only on a
    * loopback host (`localhost`, `127.0.0.0/8` or `[::1]`), for a development issuer on the same machine.
-   * Credentials in the URL are refused.
+   * Credentials in the URL are refused. The package cannot tell an internal address from a public one, so a
+   * URL someone else supplied, such as a client's registered `jwks_uri`, must be checked by the caller first:
+   * otherwise they choose where your server sends requests.
    */
   readonly url: string | URL;
   /**

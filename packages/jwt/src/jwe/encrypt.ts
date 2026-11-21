@@ -128,7 +128,8 @@ export async function encrypt(input: EncryptInput): Promise<string> {
   }
   rejectUnknownOptions(input, INPUT_MEMBERS, "encrypt", "input");
   const plaintext = readPlaintext(input.plaintext);
-  return encryptBytes(plaintext, input.key, input.enc, input.header, "encrypt", undefined);
+  const prepared = prepareEncryption(input.key, input.enc, input.header, "encrypt", undefined);
+  return encryptBytes(plaintext, prepared);
 }
 
 /**
@@ -147,7 +148,8 @@ export async function encrypt(input: EncryptInput): Promise<string> {
  *
  * @returns The compact JWE holding the signed token.
  * @throws TypeError as {@link sign} does for `input.sign`, and as {@link encrypt} does for the rest, also when
- * `header.cty` is anything but `JWT`.
+ * `header.cty` is anything but `JWT`. The encryption half is checked first, so a mistake there never calls the
+ * signer.
  */
 export async function encryptJwt<TPayload extends object = JwtPayload>(
   input: EncryptJwtInput<TPayload>,
@@ -156,20 +158,28 @@ export async function encryptJwt<TPayload extends object = JwtPayload>(
     throw new TypeError("encryptJwt: input must be an object.");
   }
   rejectUnknownOptions(input, JWT_INPUT_MEMBERS, "encryptJwt", "input");
-  // Checked before signing, so a key of the wrong family fails before any work.
-  getJweKeyEntry(input.key, "encryptJwt");
+  // Checked before signing, so a mistake in the encryption half never costs a signature, which an external
+  // signer may bill for.
+  const prepared = prepareEncryption(input.key, input.enc, input.header, "encryptJwt", "JWT");
   const signed = await sign(input.sign);
-  return encryptBytes(encodeUtf8(signed), input.key, input.enc, input.header, "encryptJwt", "JWT");
+  return encryptBytes(encodeUtf8(signed), prepared);
 }
 
-async function encryptBytes(
-  plaintext: Uint8Array<ArrayBuffer>,
+interface PreparedEncryption {
+  readonly key: JweEncryptionKey;
+  readonly entry: ReturnType<typeof getJweKeyEntry>;
+  readonly enc: ContentEncryptionAlgorithm;
+  readonly given: Readonly<Record<string, unknown>>;
+  readonly cty: "JWT" | undefined;
+}
+
+function prepareEncryption(
   key: JweEncryptionKey,
   encOption: unknown,
   header: unknown,
   functionName: string,
   cty: "JWT" | undefined,
-): Promise<string> {
+): PreparedEncryption {
   const entry = getJweKeyEntry(key, functionName);
   if (key.kind !== "jwe-public" && key.kind !== "jwe-secret") {
     throw new TypeError(`${functionName}: input.key must be a JWE public or secret key, not a private key.`);
@@ -179,6 +189,13 @@ async function encryptBytes(
   if (cty !== undefined && Object.hasOwn(given, "cty") && given.cty !== cty) {
     throw new TypeError(`${functionName}: input.header.cty must be "${cty}" or absent.`);
   }
+  return { key, entry, enc, given, cty };
+}
+
+async function encryptBytes(
+  plaintext: Uint8Array<ArrayBuffer>,
+  { key, entry, enc, given, cty }: PreparedEncryption,
+): Promise<string> {
   const managed = await wrapContentKey(key.alg, enc, entry);
   const headerJson = serializeHeader(given, key, enc, cty, managed);
   const headerSegment = encodeBase64Url(encodeUtf8(headerJson));

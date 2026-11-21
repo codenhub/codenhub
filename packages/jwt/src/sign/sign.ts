@@ -467,12 +467,17 @@ function currentSeconds(now: () => number): number {
 /**
  * Copies a plain object of JSON values, nested at most {@link MAX_JSON_DEPTH} deep, into prototype-less objects
  * and plain arrays, throwing unless every value is one `JSON.stringify` writes exactly and the strict parser
- * reads back the same. A cycle exceeds the depth, so it is caught too. Each member is read once, through its
+ * reads back the same. `depth` is the object's own level in the JSON text it is written into. A cycle exceeds the depth, so it is caught too. Each member is read once, through its
  * descriptor, and the token is written from the copy, so a `Proxy` or a value changed meanwhile cannot show the
  * checks one value and the token another.
  */
-export function snapshotJsonObject(object: unknown, label: string, caller = "sign"): Record<string, unknown> {
-  return snapshot(object, label, 1, caller) as Record<string, unknown>;
+export function snapshotJsonObject(
+  object: unknown,
+  label: string,
+  caller = "sign",
+  depth = 1,
+): Record<string, unknown> {
+  return snapshot(object, label, depth, caller) as Record<string, unknown>;
 }
 
 function snapshot(container: unknown, label: string, depth: number, caller: string): unknown {

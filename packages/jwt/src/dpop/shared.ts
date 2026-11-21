@@ -29,6 +29,22 @@ export function normalizeHtu(value: string): string | undefined {
   return url.href;
 }
 
+/** RFC 3986 §2.3: the characters percent-encoding never changes the meaning of. */
+const UNRESERVED = /^[A-Za-z0-9\-._~]$/;
+const PERCENT_ENCODED = /%[0-9A-Fa-f]{2}/g;
+
+/**
+ * An `htu` form, from {@link normalizeHtu}, as the verifier compares it: each percent-encoded unreserved character
+ * decoded and the rest written with uppercase hex digits (RFC 3986 §6.2.2.1 and §6.2.2.2), which RFC 9449 §4.3
+ * asks for and the WHATWG parser does not do. Reserved characters stay encoded, so `%2F` never becomes a `/`.
+ */
+export function comparableHtu(htu: string): string {
+  return htu.replace(PERCENT_ENCODED, (encoded) => {
+    const character = String.fromCharCode(Number.parseInt(encoded.slice(1), 16));
+    return UNRESERVED.test(character) ? character : encoded.toUpperCase();
+  });
+}
+
 /**
  * Reads a caller's URL, a string or a `URL` of any realm, as text. A `URL` is read through its own `href`, so
  * one from another realm, which `instanceof URL` would refuse, works the same.

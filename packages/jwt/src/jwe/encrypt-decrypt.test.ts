@@ -1,7 +1,15 @@
 import * as jose from "jose";
 import { beforeAll, describe, expect, it } from "vitest";
 
-import { createKeySet, createVerifier, generateKeyPair, sign, type KeyPair } from "../index";
+import {
+  createExternalSigningKey,
+  createKeySet,
+  createVerifier,
+  generateKeyPair,
+  importPublicKey,
+  sign,
+  type KeyPair,
+} from "../index";
 import { createDecrypter, createJweKeySet, createNestedVerifier, decodeJsonObject } from "./decrypt";
 import { encrypt, encryptJwt } from "./encrypt";
 import { exportJwePrivateJwk, generateJweKeyPair, generateJweSecretKey } from "./keys";
@@ -482,5 +490,26 @@ describe("encryptJwt and createNestedVerifier", () => {
 
     await expect(encryptJwt({ ...input, header: { cty: "json" } })).rejects.toThrow(TypeError);
     await expect(encryptJwt({ ...input, key: signer.publicKey as never })).rejects.toThrow(TypeError);
+  });
+
+  it("should refuse a private key, a missing enc and a refused header member without calling the signer", async () => {
+    const pair = await crypto.subtle.generateKey({ name: "ECDSA", namedCurve: "P-256" }, false, ["sign", "verify"]);
+    const publicKey = valueOf(await importPublicKey(pair.publicKey, { alg: "ES256" }));
+    let calls = 0;
+    const external = createExternalSigningKey({
+      publicKey,
+      sign: async (data) => {
+        calls += 1;
+        return crypto.subtle.sign({ name: "ECDSA", hash: "SHA-256" }, pair.privateKey, data);
+      },
+    });
+    const input = { sign: { payload: {}, key: external }, key: recipient.publicKey, enc: "A128GCM" } as const;
+
+    await expect(encryptJwt({ ...input, key: recipient.privateKey as never })).rejects.toThrow(TypeError);
+    await expect(encryptJwt({ ...input, enc: undefined })).rejects.toThrow(TypeError);
+    await expect(encryptJwt({ ...input, header: { zip: "DEF" } })).rejects.toThrow(TypeError);
+    expect(calls).toBe(0);
+    await expect(encryptJwt(input)).resolves.toEqual(expect.any(String));
+    expect(calls).toBe(1);
   });
 });

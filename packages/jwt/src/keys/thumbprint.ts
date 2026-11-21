@@ -3,7 +3,7 @@ import { encodeBase64Url, encodeUtf8 } from "../encoding";
 import type { JwePrivateKey, JwePublicKey } from "../jwe/types";
 import { ALGORITHM_PARAMS } from "./algorithms";
 import { exportWebCryptoJwk } from "./exported-jwk";
-import { isSingleSequence, readPemBlock } from "./pem";
+import { isSingleSequence, MAX_PEM_LENGTH, readPemBlock } from "./pem";
 import { encryptionPublicCryptoKey, getKeyEntry, isEncryptionKey } from "./registry";
 
 /** RFC 7638 §3.2: the required members of each key type, in lexicographic order. */
@@ -82,11 +82,13 @@ export async function jwkThumbprint(
  * // "urn:ietf:params:oauth:jwk-thumbprint:sha-256:NzbLsXh8uDCcd-6MNwXF4W_7noWXFZAfHkxZsRGC9Xs"
  * ```
  *
- * @param key - A public, private or secret key created by this package.
+ * @param key - A public, private or secret key created by this package; a public or private one may be for encryption (JWE).
  * @returns The URI.
  * @throws TypeError as {@link jwkThumbprint} does.
  */
-export async function jwkThumbprintUri(key: PublicKey | PrivateKey | SecretKey): Promise<string> {
+export async function jwkThumbprintUri(
+  key: PublicKey | PrivateKey | SecretKey | JwePublicKey | JwePrivateKey,
+): Promise<string> {
   return `${THUMBPRINT_URI_PREFIX}${await jwkThumbprint(key)}`;
 }
 
@@ -106,9 +108,13 @@ export async function jwkThumbprintUri(key: PublicKey | PrivateKey | SecretKey):
  * @param pem - One `CERTIFICATE` PEM block, with LF or CRLF line breaks, or with `\n` escapes as in an
  * environment variable.
  * @returns The 43-character thumbprint.
- * @throws TypeError when `pem` is not a single `CERTIFICATE` block holding one DER `SEQUENCE`.
+ * @throws TypeError when `pem` is longer than 16384 characters, or is not a single `CERTIFICATE` block holding
+ * one DER `SEQUENCE`.
  */
 export async function certificateThumbprint(pem: string): Promise<string> {
+  if (typeof pem === "string" && pem.length > MAX_PEM_LENGTH) {
+    throw new TypeError(`certificateThumbprint: pem must be at most ${MAX_PEM_LENGTH} characters.`);
+  }
   const block = typeof pem === "string" ? readPemBlock(pem) : undefined;
   if (block?.label !== "CERTIFICATE" || block.hasHeaders || block.der === undefined || !isSingleSequence(block.der)) {
     throw new TypeError("certificateThumbprint: pem must be a single CERTIFICATE PEM block.");

@@ -14,7 +14,7 @@ import type {
   VerifiedJws,
 } from "../core/types";
 import { decodeBase64Url, encodeBase64Url } from "../encoding/base64url";
-import { copyBytes } from "../encoding/bytes";
+import { copyBytes, isUint8Array } from "../encoding/bytes";
 import { encodeUtf8 } from "../encoding/text";
 import { algIssue, ownMember } from "../jws/compact";
 import { parseJws, type JwsSignature, type ParsedJws } from "../jws/parse-jws";
@@ -170,7 +170,8 @@ function readVerifyOptions(options: unknown): Uint8Array<ArrayBuffer> | string |
   if (payload === undefined || typeof payload === "string") {
     return payload;
   }
-  const bytes = copyBytes(payload);
+  // The same check `signJws` makes: `copyBytes` alone would also take an ArrayBuffer or another view.
+  const bytes = isUint8Array(payload) ? copyBytes(payload) : undefined;
   if (bytes === undefined) {
     throw new TypeError(`${VERIFIER}: options.payload must be a string or a Uint8Array.`);
   }

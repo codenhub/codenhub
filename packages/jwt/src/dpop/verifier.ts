@@ -19,7 +19,15 @@ import { getKeyEntry } from "../keys/registry";
 import { cryptoKeyThumbprint } from "../keys/thumbprint";
 import { checkClaims, type ClaimCheckOptions } from "../verify/claims";
 import { denseCopy, isIntegerInRange, MAX_CLOCK_TOLERANCE } from "../verify/options";
-import { accessTokenHash, DPOP_TYPE, isMethodToken, isNonEmptyString, normalizeHtu, urlText } from "./shared";
+import {
+  accessTokenHash,
+  comparableHtu,
+  DPOP_TYPE,
+  isMethodToken,
+  isNonEmptyString,
+  normalizeHtu,
+  urlText,
+} from "./shared";
 
 /** What a DPoP verifier's `nonce` function and `acceptJti` are told about the proof besides the value. */
 export interface DpopProofContext {
@@ -97,7 +105,8 @@ export interface DpopRequest {
   readonly method: string;
   /**
    * The request's URL, absolute, as a string or a `URL`. Compared with `htu` after both are normalized, without
-   * their query and fragment.
+   * their query and fragment: percent-encoded unreserved characters are decoded and other percent-encodings
+   * compared in either case, and nothing else is decoded.
    */
   readonly url: string | URL;
   /**
@@ -331,7 +340,7 @@ function requestIssues(payload: JwtPayload, method: string, htu: string): JwtIss
     const claimed = typeof payload.htu === "string" ? normalizeHtu(payload.htu) : undefined;
     if (claimed === undefined) {
       issues.push(at("htu", "invalid_claim"));
-    } else if (claimed !== htu) {
+    } else if (comparableHtu(claimed) !== htu) {
       issues.push(at("htu", "wrong_url"));
     }
   }
@@ -424,10 +433,11 @@ function readRequest(request: DpopRequest): {
     throwInvalid("request.method must be an HTTP method token.");
   }
   const text = urlText(url);
-  const htu = text === undefined ? undefined : normalizeHtu(text);
-  if (htu === undefined) {
+  const normalized = text === undefined ? undefined : normalizeHtu(text);
+  if (normalized === undefined) {
     throwInvalid("request.url must be an absolute http: or https: URL.");
   }
+  const htu = comparableHtu(normalized);
   if (accessToken !== undefined && !isNonEmptyString(accessToken)) {
     throwInvalid("request.accessToken must be a non-empty string.");
   }

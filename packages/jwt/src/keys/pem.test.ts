@@ -3,11 +3,20 @@ import { createPublicKey, generateKeyPairSync, randomUUID } from "node:crypto";
 import { describe, expect, it } from "vitest";
 
 import type { AsymmetricAlgorithm } from "../core/types";
+import { importJwePublicKey } from "../jwe/keys";
 import { createKeySet } from "../keysets/local";
 import { sign } from "../sign/sign";
 import { createVerifier } from "../verify/create-verifier";
 import { ALGORITHM_PARAMS } from "./algorithms";
-import { DER_SEQUENCE, encodeElement } from "./der";
+import {
+  DER_BIT_STRING,
+  DER_CONTEXT_1,
+  DER_INTEGER,
+  DER_OCTET_STRING,
+  DER_SEQUENCE,
+  encodeElement,
+  readElement,
+} from "./der";
 import { exportPrivateJwk, exportPublicJwk } from "./export";
 import { generateKeyPair } from "./generate";
 import { importKeyPair, importPrivateKey, importPublicKey } from "./import";
@@ -389,5 +398,157 @@ describe("PEM import of DER that is not one minimal element", () => {
     expect(withNonMinimalLength(Uint8Array.of(0x30, 0x01, 0x05))).toEqual(Uint8Array.of(0x30, 0x81, 0x01, 0x05));
     expect((await importPublicKey(pemOf("PUBLIC KEY", derOfPem(spki).buffer), { alg: "ES256" })).ok).toBe(true);
     expect((await importPrivateKey(pemOf("PRIVATE KEY", derOfPem(pkcs8).buffer), { alg: "ES256" })).ok).toBe(true);
+  });
+});
+
+/** The DER of each element inside the one constructed element `der` is. */
+function childrenOf(der: Uint8Array): Uint8Array[] {
+  const outer = readElement(der, 0, der.length);
+  if (outer === undefined) {
+    throw new Error("the fixture is not DER");
+  }
+  const children: Uint8Array[] = [];
+  for (let offset = outer.contentStart; offset < outer.end;) {
+    const child = readElement(der, offset, outer.end);
+    if (child === undefined) {
+      throw new Error("the fixture is not DER");
+    }
+    children.push(der.subarray(child.start, child.end));
+    offset = child.end;
+  }
+  return children;
+}
+
+/** The content of the one DER element `der` is. */
+const contentOf = (der: Uint8Array): Uint8Array => der.subarray(readElement(der, 0, der.length)?.contentStart);
+
+const pemOfBytes = (label: string, der: Uint8Array): string => pemOf(label, Uint8Array.from(der).buffer);
+
+/** An RSA `SubjectPublicKeyInfo` made by OpenSSL, its modulus `n` replaced by `change(n)`. */
+function rsaSpkiWithModulus(change: (n: Uint8Array) => Uint8Array): Uint8Array {
+  const { publicKey } = generateKeyPairSync("rsa", {
+    modulusLength: 2048,
+    publicKeyEncoding: { type: "spki", format: "der" },
+    privateKeyEncoding: { type: "pkcs8", format: "der" },
+  });
+  const [algorithm, bitString] = childrenOf(Uint8Array.from(publicKey)) as [Uint8Array, Uint8Array];
+  const [n, e] = childrenOf(contentOf(bitString).subarray(1)) as [Uint8Array, Uint8Array];
+  expect(contentOf(n)[0]).toBe(0);
+  const rsaPublicKey = encodeElement(DER_SEQUENCE, change(n), e);
+  return encodeElement(DER_SEQUENCE, algorithm, encodeElement(DER_BIT_STRING, Uint8Array.of(0), rsaPublicKey));
+}
+
+/** `n` with one more leading zero byte than DER allows. */
+const withExtraZero = (n: Uint8Array) => encodeElement(DER_INTEGER, Uint8Array.of(0), contentOf(n));
+/** `n` without the leading zero byte that keeps it positive, so DER reads it as negative. */
+const asNegative = (n: Uint8Array) => encodeElement(DER_INTEGER, contentOf(n).subarray(1));
+
+/** A P-256 `SubjectPublicKeyInfo` made by OpenSSL, its `AlgorithmIdentifier` rewritten by `change`. */
+function ecSpkiWithAlgorithm(change: (algorithm: Uint8Array) => Uint8Array): Uint8Array {
+  const { publicKey } = generateKeyPairSync("ec", {
+    namedCurve: "prime256v1",
+    publicKeyEncoding: { type: "spki", format: "der" },
+    privateKeyEncoding: { type: "pkcs8", format: "der" },
+  });
+  const [algorithm, bitString] = childrenOf(Uint8Array.from(publicKey)) as [Uint8Array, Uint8Array];
+  return encodeElement(DER_SEQUENCE, change(algorithm), bitString);
+}
+
+/** An Ed25519 PKCS#8 made by OpenSSL, as its fields, and the raw public key of its SPKI. */
+function ed25519Pkcs8(): { version: Uint8Array; algorithm: Uint8Array; privateKey: Uint8Array; publicKey: Uint8Array } {
+  const pair = generateKeyPairSync("ed25519", {
+    publicKeyEncoding: { type: "spki", format: "der" },
+    privateKeyEncoding: { type: "pkcs8", format: "der" },
+  });
+  const [version, algorithm, privateKey] = childrenOf(Uint8Array.from(pair.privateKey)) as [
+    Uint8Array,
+    Uint8Array,
+    Uint8Array,
+  ];
+  const publicKey = contentOf(childrenOf(Uint8Array.from(pair.publicKey))[1] as Uint8Array).subarray(1);
+  return { version, algorithm, privateKey, publicKey };
+}
+
+// Web Crypto engines disagree on these too, so the package reads the whole key strictly before they do: Node and
+// WebKit import a non-minimal or indefinite inner length that Chromium and Firefox refuse, Node alone a modulus with
+// an extra zero byte or an Ed25519 private key with a byte after it, and WebKit reads a negative modulus as another.
+describe("PEM import of a key whose inner DER is not strict", () => {
+  const invalid = [{ code: "invalid_key" }];
+
+  it("should refuse an AlgorithmIdentifier whose length is not minimal as invalid_key", async () => {
+    const der = ecSpkiWithAlgorithm((algorithm) => Uint8Array.from([0x30, 0x81, ...algorithm.subarray(1)]));
+    expect(der.subarray(2, 5)).toEqual(Uint8Array.of(0x30, 0x81, 0x13));
+    expect(issuesOf(await importPublicKey(pemOfBytes("PUBLIC KEY", der), { alg: "ES256" }))).toEqual(invalid);
+  });
+
+  it("should refuse an AlgorithmIdentifier of indefinite length as invalid_key", async () => {
+    const der = ecSpkiWithAlgorithm((algorithm) => Uint8Array.from([0x30, 0x80, ...contentOf(algorithm), 0, 0]));
+    expect(issuesOf(await importPublicKey(pemOfBytes("PUBLIC KEY", der), { alg: "ES256" }))).toEqual(invalid);
+  });
+
+  it.each([
+    ["an extra leading zero byte", withExtraZero],
+    ["a negative value", asNegative],
+  ])("should refuse an RSA modulus with %s as invalid_key", async (_, change) => {
+    const pem = pemOfBytes("PUBLIC KEY", rsaSpkiWithModulus(change));
+    expect(issuesOf(await importPublicKey(pem, { alg: "RS256" }))).toEqual(invalid);
+  });
+
+  it("should refuse an Ed25519 private key with a byte after it inside its OCTET STRING as invalid_key", async () => {
+    const { version, algorithm, privateKey } = ed25519Pkcs8();
+    const padded = encodeElement(DER_OCTET_STRING, contentOf(privateKey), Uint8Array.of(0));
+    const pem = pemOfBytes("PRIVATE KEY", encodeElement(DER_SEQUENCE, version, algorithm, padded));
+    expect(issuesOf(await importPrivateKey(pem, { alg: "Ed25519" }))).toEqual(invalid);
+  });
+
+  it("should refuse an RSA PRIVATE KEY whose modulus has an extra leading zero byte as invalid_key", async () => {
+    const { privateKey } = nodePair("rsa") as unknown as { privateKey: string };
+    const [version, n, ...rest] = childrenOf(derOfPem(privateKey)) as [Uint8Array, Uint8Array, ...Uint8Array[]];
+    const der = encodeElement(DER_SEQUENCE, version, withExtraZero(n), ...rest);
+    expect(issuesOf(await importPrivateKey(pemOfBytes("RSA PRIVATE KEY", der), { alg: "RS256" }))).toEqual(invalid);
+  });
+
+  it("should refuse an EC PRIVATE KEY whose public key has unused bits as invalid_key", async () => {
+    const [version, privateKey, parameters, publicKey] = childrenOf(derOfPem(ec256())) as [
+      Uint8Array,
+      Uint8Array,
+      Uint8Array,
+      Uint8Array,
+    ];
+    const bitString = Uint8Array.from(contentOf(publicKey));
+    expect(bitString.subarray(0, 3)).toEqual(Uint8Array.of(DER_BIT_STRING, 0x42, 0));
+    bitString[2] = 1;
+    const der = encodeElement(DER_SEQUENCE, version, privateKey, parameters, encodeElement(DER_CONTEXT_1, bitString));
+    expect(issuesOf(await importPrivateKey(pemOfBytes("EC PRIVATE KEY", der), { alg: "ES256" }))).toEqual(invalid);
+  });
+
+  it("should refuse a JWE PEM whose RSA modulus is negative as invalid_key", async () => {
+    const pem = pemOfBytes("PUBLIC KEY", rsaSpkiWithModulus(asNegative));
+    expect(await importJwePublicKey(pem, { alg: "RSA-OAEP-256" })).toEqual({ ok: false, error: { issues: invalid } });
+  });
+
+  it("should still import the strict DER of each, and a PKCS#8 version 2 key with its public key", async () => {
+    const rsa = pemOfBytes(
+      "PUBLIC KEY",
+      rsaSpkiWithModulus((n) => n),
+    );
+    expect((await importPublicKey(rsa, { alg: "RS256" })).ok).toBe(true);
+    expect((await importJwePublicKey(rsa, { alg: "RSA-OAEP-256" })).ok).toBe(true);
+    const ec = pemOfBytes(
+      "PUBLIC KEY",
+      ecSpkiWithAlgorithm((algorithm) => algorithm),
+    );
+    expect((await importPublicKey(ec, { alg: "ES256" })).ok).toBe(true);
+    const { algorithm, privateKey, publicKey } = ed25519Pkcs8();
+    // RFC 5958's OneAsymmetricKey: version 1, and the public key as `[1] IMPLICIT BIT STRING`.
+    const v2 = encodeElement(
+      DER_SEQUENCE,
+      Uint8Array.of(DER_INTEGER, 1, 1),
+      algorithm,
+      privateKey,
+      encodeElement(0x81, Uint8Array.of(0), publicKey),
+    );
+    const pair = valueOf(await importKeyPair(pemOfBytes("PRIVATE KEY", v2), { alg: "Ed25519" }));
+    expect((await exportPublicJwk(pair.publicKey)).x).toBe(Buffer.from(publicKey).toString("base64url"));
   });
 });

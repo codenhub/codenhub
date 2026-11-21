@@ -283,6 +283,33 @@ describe("createDpopVerifier", () => {
       expect((await createDpopVerifier({ now: clockAt() })(await proofOf(), { ...REQUEST, url })).ok).toBe(true);
     });
 
+    // RFC 3986 §6.2.2.1 and §6.2.2.2: hex digits compare in either case, and an unreserved character is the same
+    // whether percent-encoded or not.
+    it.each([
+      ["lowercase hex against uppercase", "https://rs.example/%7euser/a%2fb", "https://rs.example/%7Euser/a%2Fb"],
+      [
+        "an encoded unreserved character against the character",
+        "https://rs.example/%7Euser",
+        "https://rs.example/~user",
+      ],
+      ["an encoded letter against the letter", "https://rs.example/%6Frders", "https://rs.example/orders"],
+    ])("should accept %s", async (_, htu, url) => {
+      const proof = await rawProof({}, { ...CLAIMS, htu });
+
+      expect((await createDpopVerifier({ now: clockAt() })(proof, { ...REQUEST, url })).ok).toBe(true);
+    });
+
+    it.each([
+      ["an encoded slash against a slash", "https://rs.example/a%2Fb", "https://rs.example/a/b"],
+      ["an encoded reserved character against the character", "https://rs.example/a%3Fb", "https://rs.example/a?b"],
+    ])("should refuse %s as wrong_url", async (_, htu, url) => {
+      const proof = await rawProof({}, { ...CLAIMS, htu });
+
+      expect(await createDpopVerifier({ now: clockAt() })(proof, { ...REQUEST, url })).toEqual(
+        failure({ code: "wrong_url", path: ["payload", "htu"] }),
+      );
+    });
+
     it("should accept an htu with a query, which the comparison ignores", async () => {
       const proof = await rawProof({}, { ...CLAIMS, htu: "https://RS.example:443/orders?a=1#f" });
 

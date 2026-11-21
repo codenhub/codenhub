@@ -126,6 +126,14 @@ const FORBIDDEN_UNPROTECTED = ["alg", "crit", "b64", "jwk", "jku", "x5u", "x5c"]
 
 const TEXT_MEMBERS = ["kid", "typ", "cty"] as const;
 
+/**
+ * Levels of the JWS JSON an unprotected header sits at, counting the outer object as one: `{ header }` in the
+ * flattened serialization, `{ signatures: [{ header }] }` in the general one. The verifier bounds the whole JSON,
+ * so a header is bounded from where it is written.
+ */
+const FLATTENED_HEADER_DEPTH = 2;
+const GENERAL_HEADER_DEPTH = 4;
+
 /** A period, and every character outside printable ASCII: what RFC 7797 §5.2 keeps out of a compact payload. */
 const NOT_COMPACT_SAFE = /[^\x20-\x2d\x2f-\x7e]/;
 
@@ -184,7 +192,7 @@ export async function signJws(input: SignJwsInput): Promise<string> {
     throw new TypeError(`${caller}: input.unprotectedHeader needs the flattened serialization.`);
   }
   const payload = preparePayload(input, serialization, caller);
-  const entry = await signEntry(input, payload, caller, "input");
+  const entry = await signEntry(input, payload, caller, "input", FLATTENED_HEADER_DEPTH);
   if (serialization === "compact") {
     return `${entry.protected}.${payload.detached ? "" : payload.carried}.${entry.signature}`;
   }
@@ -235,7 +243,9 @@ export async function signGeneralJws(input: SignGeneralJwsInput): Promise<string
   }
   // Each call checks its signer's headers before its first await, so the first bad signer in order throws.
   const entries = await Promise.all(
-    list.map((signer, index) => signEntry(signer as JwsSigner, payload, caller, `input.signers[${index}]`)),
+    list.map((signer, index) =>
+      signEntry(signer as JwsSigner, payload, caller, `input.signers[${index}]`, GENERAL_HEADER_DEPTH),
+    ),
   );
   const signatures = `[${entries.map((entry) => jsonObject(entryMembers(entry))).join(",")}]`;
   return jsonObject([...payloadMember(payload), ["signatures", signatures]]);
@@ -311,13 +321,14 @@ async function signEntry(
   payload: PreparedPayload,
   caller: string,
   label: string,
+  depth: number,
 ): Promise<SignedEntry> {
   const { key } = signer;
   const entry = getKeyEntry(key);
   if (key.kind !== "private" && key.kind !== "secret") {
     throw new TypeError(`${caller}: ${label}.key must be a private or secret key.`);
   }
-  const unprotected = readUnprotectedHeader(signer.unprotectedHeader, caller, `${label}.unprotectedHeader`);
+  const unprotected = readUnprotectedHeader(signer.unprotectedHeader, caller, `${label}.unprotectedHeader`, depth);
   const headerLabel = `${label}.header`;
   const { given, leading, rest } = readSignHeader(signer.header, key, {
     caller,
@@ -380,15 +391,23 @@ function readCrit(given: Record<string, unknown>, caller: string, label: string)
   return crit as string[];
 }
 
-/** Validates an unprotected header into a copy, or undefined when none is given. */
-function readUnprotectedHeader(header: unknown, caller: string, label: string): Record<string, unknown> | undefined {
+/**
+ * Validates an unprotected header into a copy, or undefined when none is given. `depth` is the header's level in
+ * the JWS JSON, which the verifier bounds as a whole.
+ */
+function readUnprotectedHeader(
+  header: unknown,
+  caller: string,
+  label: string,
+  depth: number,
+): Record<string, unknown> | undefined {
   if (header === undefined) {
     return undefined;
   }
   if (!isPlainObject(header)) {
     throw new TypeError(`${caller}: ${label} must be a plain object.`);
   }
-  const copy = snapshotJsonObject(header, label, caller);
+  const copy = snapshotJsonObject(header, label, caller, depth);
   const forbidden = FORBIDDEN_UNPROTECTED.find((name) => Object.hasOwn(copy, name));
   if (forbidden !== undefined) {
     throw new TypeError(`${caller}: ${label}.${forbidden} is not supported.`);

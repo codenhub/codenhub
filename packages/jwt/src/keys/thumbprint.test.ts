@@ -3,6 +3,7 @@ import { createHash } from "node:crypto";
 import { describe, expect, it } from "vitest";
 
 import { decodeBase64Url } from "../encoding";
+import { generateJweKeyPair } from "../jwe/keys";
 import { generateKeyPair, generateSecretKey } from "./generate";
 import { importKeyPair, importPrivateKey, importPublicKey, importSecretKey } from "./import";
 import {
@@ -127,6 +128,14 @@ describe("jwkThumbprintUri", () => {
       // oxlint-disable-next-line no-await-in-loop
       expect(await jwkThumbprintUri(key)).toBe(`urn:ietf:params:oauth:jwk-thumbprint:sha-256:${thumbprint}`);
     }
+  });
+
+  it("should give a JWE public and private key the URI of their thumbprint", async () => {
+    const { publicKey, privateKey } = await generateJweKeyPair({ alg: "ECDH-ES", crv: "P-256" });
+    const thumbprint = await jwkThumbprint(publicKey);
+
+    expect(await jwkThumbprintUri(publicKey)).toBe(`urn:ietf:params:oauth:jwk-thumbprint:sha-256:${thumbprint}`);
+    expect(await jwkThumbprintUri(privateKey)).toBe(`urn:ietf:params:oauth:jwk-thumbprint:sha-256:${thumbprint}`);
   });
 
   it("should throw a TypeError for a look-alike", async () => {

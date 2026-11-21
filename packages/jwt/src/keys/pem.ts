@@ -7,13 +7,16 @@ import {
   DER_BIT_STRING,
   DER_CONTEXT_0,
   DER_CONTEXT_1,
+  DER_IMPLICIT_1,
   DER_INTEGER,
   DER_NULL,
   DER_OCTET_STRING,
   DER_OID,
   DER_SEQUENCE,
   encodeElement,
+  type DerElement,
   hexBytes,
+  isStrictDer,
   OID,
   readElement,
 } from "./der";
@@ -124,33 +127,79 @@ type KeyDer = { readonly der: Uint8Array<ArrayBuffer>; readonly format: "spki" |
 const READERS: Readonly<
   Record<string, { readonly role: "public" | "private"; readonly read: (der: Uint8Array<ArrayBuffer>) => KeyDer }>
 > = {
-  "PUBLIC KEY": { role: "public", read: (der) => strictly(der, () => ({ der, format: "spki" })) },
+  "PUBLIC KEY": { role: "public", read: (der) => ({ der, format: "spki" }) },
   CERTIFICATE: {
     role: "public",
     read: (der) => {
       const spki = subjectPublicKeyInfo(der);
-      return spki === undefined || !isSingleSequence(spki) ? { code: "invalid_key" } : { der: spki, format: "spki" };
+      return spki === undefined ? { code: "invalid_key" } : { der: spki, format: "spki" };
     },
   },
-  "RSA PUBLIC KEY": {
-    role: "public",
-    read: (der) => strictly(der, () => ({ der: wrapSpki(rsaAlgorithm(), der), format: "spki" })),
-  },
-  "PRIVATE KEY": { role: "private", read: (der) => strictly(der, () => ({ der, format: "pkcs8" })) },
-  "RSA PRIVATE KEY": {
-    role: "private",
-    read: (der) => strictly(der, () => ({ der: wrapPkcs8(rsaAlgorithm(), der), format: "pkcs8" })),
-  },
+  "RSA PUBLIC KEY": { role: "public", read: (der) => ({ der: wrapSpki(rsaAlgorithm(), der), format: "spki" }) },
+  "PRIVATE KEY": { role: "private", read: (der) => ({ der, format: "pkcs8" }) },
+  "RSA PRIVATE KEY": { role: "private", read: (der) => ({ der: wrapPkcs8(rsaAlgorithm(), der), format: "pkcs8" }) },
   "EC PRIVATE KEY": { role: "private", read: readSec1 },
 };
 
 /**
- * `read()` when `der` is one `SEQUENCE` in minimal DER with nothing after it, and `invalid_key` otherwise. Web
- * Crypto engines disagree on the rest: Node imports an SPKI with bytes after it and browsers refuse it, Firefox
- * alone imports a PKCS#8 with a byte after it, and Node and WebKit alone an SPKI whose outer length is not minimal.
+ * Whether `der` is an SPKI or a PKCS#8 that Web Crypto engines all read alike: one `SEQUENCE` in strict DER to the
+ * bottom ({@link isStrictDer}) with nothing after it, its fields in order and none other, and, for the algorithms
+ * this package imports, the key's own DER inside it strict too: an RSA SPKI's `RSAPublicKey` in its `BIT STRING`,
+ * and a PKCS#8's `RSAPrivateKey`, `ECPrivateKey` or 32-byte `CurvePrivateKey` (RFC 8410 §7) in its `OCTET STRING`.
+ * A PKCS#1 or SEC 1 key is read here once wrapped. Engines disagree on the rest: Node imports an SPKI with bytes
+ * after it and browsers refuse it, Firefox alone imports a PKCS#8 with a byte after it, Node and WebKit alone a
+ * length that is not minimal, outer or inner, or indefinite, Node alone an RSA modulus with an extra zero byte or
+ * an Ed25519 private key with a byte after it, and WebKit reads a negative modulus as another.
  */
-function strictly(der: Uint8Array<ArrayBuffer>, read: () => KeyDer): KeyDer {
-  return isSingleSequence(der) ? read() : { code: "invalid_key" };
+function isStrictKey(der: Uint8Array, format: "spki" | "pkcs8"): boolean {
+  const outer = readElement(der, 0, der.length, true);
+  if (outer?.tag !== DER_SEQUENCE || outer.end !== der.length || !isStrictDer(der, 0, der.length)) {
+    return false;
+  }
+  let algorithm = readElement(der, outer.contentStart, outer.end);
+  if (format === "pkcs8") {
+    algorithm = algorithm?.tag === DER_INTEGER ? readElement(der, algorithm.end, outer.end) : undefined;
+  }
+  const oid = algorithm?.tag === DER_SEQUENCE ? readElement(der, algorithm.contentStart, algorithm.end) : undefined;
+  const key = algorithm === undefined ? undefined : readElement(der, algorithm.end, outer.end);
+  if (oid?.tag !== DER_OID || key === undefined) {
+    return false;
+  }
+  const oidHex = contentHex(der, oid);
+  const isRsa = oidHex === OID.rsaEncryption || oidHex === OID.rsassaPss;
+  if (format === "spki") {
+    // The BIT STRING's first byte, its unused bits, is 0: isStrictDer read it.
+    return key.tag === DER_BIT_STRING && key.end === outer.end && (!isRsa || isOneStrict(der, key, 1, DER_SEQUENCE));
+  }
+  if (key.tag !== DER_OCTET_STRING || !hasOnlyPkcs8Trailer(der, key.end, outer.end)) {
+    return false;
+  }
+  if (isRsa || oidHex === OID.ecPublicKey) {
+    return isOneStrict(der, key, 0, DER_SEQUENCE);
+  }
+  if (oidHex === OID.ed25519 || oidHex === OID.x25519) {
+    return isOneStrict(der, key, 0, DER_OCTET_STRING) && key.end - key.contentStart === 34;
+  }
+  return true;
+}
+
+/** Whether the content of `outer`, after its first `skip` bytes, is exactly one element of `tag` in strict DER. */
+function isOneStrict(der: Uint8Array, outer: DerElement, skip: number, tag: number): boolean {
+  const start = outer.contentStart + skip;
+  const inner = readElement(der, start, outer.end, true);
+  return inner?.tag === tag && inner.end === outer.end && isStrictDer(der, start, outer.end);
+}
+
+/** Whether what follows a PKCS#8's private key is at most its `[0]` attributes, then its `[1]` public key (RFC 5958). */
+function hasOnlyPkcs8Trailer(der: Uint8Array, start: number, end: number): boolean {
+  let offset = start;
+  for (const tag of [DER_CONTEXT_0, DER_IMPLICIT_1]) {
+    const field = offset < end ? readElement(der, offset, end) : undefined;
+    if (field?.tag === tag) {
+      offset = field.end;
+    }
+  }
+  return offset === end;
 }
 
 /**
@@ -201,7 +250,8 @@ export type PemDerResult =
 /**
  * Reads the DER of one PEM key block: SPKI for the `public` role, from a `PUBLIC KEY`, a `CERTIFICATE`'s key or an
  * `RSA PUBLIC KEY`, and PKCS#8 for the `private` role, from a `PRIVATE KEY`, an `RSA PRIVATE KEY` or an
- * `EC PRIVATE KEY`, with PKCS#1 and SEC 1 wrapped first. Web Crypto, not this function, then parses the key inside.
+ * `EC PRIVATE KEY`, with PKCS#1 and SEC 1 wrapped first. The DER is read strictly to the bottom, as
+ * {@link isStrictKey} says, so that every Web Crypto engine imports the same key from it or none does.
  *
  * @returns The DER, or the issues {@link pemToJwk} names for the block itself: `unexpected_private_key`,
  * `invalid_key` with `{ reason: "encrypted" }` or `{ reason: "unsupported_format" }`, or a plain `invalid_key`.
@@ -230,7 +280,10 @@ export function readPemDer(pem: string, role: "public" | "private"): PemDerResul
     return invalid();
   }
   const key = reader.read(block.der);
-  return "code" in key ? { ok: false, issue: key } : { ok: true, value: key.der };
+  if ("code" in key) {
+    return { ok: false, issue: key };
+  }
+  return isStrictKey(key.der, key.format) ? { ok: true, value: key.der } : invalid();
 }
 
 /** The `AlgorithmIdentifier` of an RSA key: `rsaEncryption` with `NULL` parameters (RFC 8017 Appendix A.1). */

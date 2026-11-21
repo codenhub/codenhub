@@ -201,4 +201,12 @@ describe("certificateThumbprint", () => {
       new TypeError("certificateThumbprint: pem must be a single CERTIFICATE PEM block."),
     );
   });
+
+  it("should name the length limit for a PEM longer than 16384 characters", async () => {
+    const padded = `${EC_CERTIFICATE}${" ".repeat(16_385 - EC_CERTIFICATE.length)}`;
+
+    await expect(certificateThumbprint(padded)).rejects.toThrow(
+      new TypeError("certificateThumbprint: pem must be at most 16384 characters."),
+    );
+  });
 });
