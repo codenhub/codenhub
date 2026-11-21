@@ -101,6 +101,9 @@ const FIXTURE = `
   <input type="checkbox" class="{tw:my-check|dist:checkbox}" />
   <input type="checkbox" class="{tw:my-check|dist:checkbox}" checked />
   <input type="checkbox" class="{tw:my-check|dist:checkbox}" checked disabled />
+  <input type="checkbox" class="{tw:my-warning-check|dist:checkbox warning}" />
+  <input type="radio" class="{tw:my-info-radio|dist:radio info}" />
+  <input type="checkbox" class="{tw:my-warning-switch|dist:switch warning}" />
   <input type="radio" class="{tw:my-radio|dist:radio}" checked />
   <input type="checkbox" class="{tw:my-switch|dist:switch}" />
   <input type="checkbox" class="{tw:my-switch|dist:switch}" checked />
@@ -278,6 +281,18 @@ const CONSUMER_CSS = (twEntry: string, glassEntry: string) => `@import "${twEntr
 
 .my-radio {
   @apply radio;
+}
+
+.my-warning-check {
+  @apply checkbox warning;
+}
+
+.my-info-radio {
+  @apply radio info;
+}
+
+.my-warning-switch {
+  @apply switch warning;
 }
 
 .my-switch {

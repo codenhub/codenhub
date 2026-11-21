@@ -19,6 +19,7 @@ This repository is docs-first. [`docs/README.md`](docs/README.md) indexes every 
 - Documentation records decisions; it does not prove them right. Follow a decision while it stands, and judge it too: when reviewing or auditing, ask both whether the work matches the decision and whether the decision is right, and report each finding as the one it is. [`docs/guidelines/documentation.md`](docs/guidelines/documentation.md) owns this distinction and the rules for recording and reversing decisions.
 - Recorded decisions carry across sessions; a session's preferences do not. Do not reverse a recorded decision, or recommend reversing it, without naming what it did not weigh.
 - Ground each finding in a realistic case: the input or calling code, what goes wrong, and for whom. A concern you cannot ground is a question; state it as one.
+- A contrast finding is a defect only when it shows what [`docs/guidelines/accessibility.md`](docs/guidelines/accessibility.md#what-a-finding-has-to-show) asks for: the rule, the pair, the measured ratio, and the test. Anything else is a design opinion; label it as one.
 - A fix that adds or changes a contract, such as an export, an option, a default, a limit, a persisted format, or a dependency, is a decision, not a fix. Present it as the problem, the options, your recommendation, and why, and wait for approval before making it.
 
 ## Project specifics

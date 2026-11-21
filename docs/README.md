@@ -26,6 +26,7 @@ Package-specific consumer and maintainer documentation lives with each workspace
 | [Stack](guidelines/stack.md)                 | The conventions of the project's languages and the tools that check them.                                                |
 | [Documentation](guidelines/documentation.md) | Metadata, prompts, status and authority, recording decisions, exceptions, document roles, layout, and the writing voice. |
 | [Security](guidelines/security.md)           | Secrets, untrusted input, what stays out of logs, and reviewing a change.                                                |
+| [Accessibility](guidelines/accessibility.md) | The contrast pairs a package must meet, recorded exceptions, what is exempt, and what a contrast finding must show.      |
 
 | Document                                                 | Contains                                                                                   |
 | -------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
