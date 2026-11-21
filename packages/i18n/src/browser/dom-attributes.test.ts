@@ -257,3 +257,207 @@ describe("initializeBrowserI18n attribute translation", () => {
     binding.disconnect();
   });
 });
+
+describe("initializeBrowserI18n messages that need values", () => {
+  const createMessageManager = () =>
+    createManager({
+      loadLocale: (locale) =>
+        locale === "en"
+          ? { items: "{count, plural, one {# item} other {# items}}", hello: "Hello {name}", quoted: "Type '{name}'" }
+          : {},
+    });
+
+  it("keeps the fallback and warns once per key for a message that needs values", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    document.body.innerHTML = [
+      '<p id="first" data-i18n="items">Your items</p>',
+      '<p id="second" data-i18n="items">Your items</p>',
+      '<input id="field" data-i18n-placeholder="hello" placeholder="Name">',
+    ].join("");
+
+    const binding = await initializeBrowserI18n({ i18n: createMessageManager(), locale: "en", root: document.body });
+
+    expect(document.querySelector("#first")?.textContent).toBe("Your items");
+    expect(document.querySelector("#second")?.textContent).toBe("Your items");
+    expect(document.querySelector("#field")?.getAttribute("placeholder")).toBe("Name");
+    const messages = warn.mock.calls.map((call) => String(call[1]));
+    expect(messages.filter((message) => message.includes('needs values, "items"'))).toHaveLength(1);
+    expect(messages.filter((message) => message.includes('needs values, "hello"'))).toHaveLength(1);
+    binding.disconnect();
+  });
+
+  it("shows a message whose braces are quoted, which needs no values", async () => {
+    document.body.innerHTML = '<p data-i18n="quoted">Fallback</p>';
+
+    const binding = await initializeBrowserI18n({ i18n: createMessageManager(), locale: "en", root: document.body });
+
+    expect(document.querySelector("p")?.textContent).toBe("Type {name}");
+    binding.disconnect();
+  });
+});
+
+describe("initializeBrowserI18n fallback language", () => {
+  it("marks text from a fallback locale with its lang, and removes it once the text is in the page's locale", async () => {
+    document.body.innerHTML =
+      '<p id="fallback" data-i18n="fallbackOnly">Text</p><p id="own" data-i18n="greeting">Text</p>';
+    const i18n = createManager();
+    const binding = await initializeBrowserI18n({ i18n, locale: "fr", root: document.body, persistLocale: false });
+
+    expect(document.querySelector("#fallback")?.getAttribute("lang")).toBe("en");
+    expect(document.querySelector("#own")?.hasAttribute("lang")).toBe(false);
+
+    await i18n.setLocale("en");
+
+    expect(document.querySelector("#fallback")?.hasAttribute("lang")).toBe(false);
+    binding.disconnect();
+  });
+
+  it("restores the element's own lang, and keeps one the application set since", async () => {
+    document.body.innerHTML = [
+      '<p id="own" lang="la" data-i18n="fallbackOnly">Text</p>',
+      '<p id="changed" data-i18n="fallbackOnly">Text</p>',
+    ].join("");
+    const i18n = createManager();
+    const binding = await initializeBrowserI18n({ i18n, locale: "fr", root: document.body, persistLocale: false });
+    expect(document.querySelector("#own")?.getAttribute("lang")).toBe("en");
+    document.querySelector("#changed")?.setAttribute("lang", "de");
+
+    await i18n.setLocale("en");
+
+    expect(document.querySelector("#own")?.getAttribute("lang")).toBe("la");
+    expect(document.querySelector("#changed")?.getAttribute("lang")).toBe("de");
+    binding.disconnect();
+  });
+
+  it("marks an element without children by its attributes, and not an element whose children it would mislabel", async () => {
+    document.body.innerHTML = [
+      '<img id="image" data-i18n-alt="fallbackOnly" alt="Image">',
+      '<div id="box" data-i18n-title="fallbackOnly"><span>Texte</span></div>',
+      '<abbr id="mixed" data-i18n="greeting" data-i18n-title="fallbackOnly">Text</abbr>',
+    ].join("");
+    const i18n = createManager();
+
+    const binding = await initializeBrowserI18n({ i18n, locale: "fr", root: document.body, persistLocale: false });
+
+    expect(document.querySelector("#image")?.getAttribute("lang")).toBe("en");
+    expect(document.querySelector("#box")?.hasAttribute("lang")).toBe(false);
+    expect(document.querySelector("#mixed")?.hasAttribute("lang")).toBe(false);
+    binding.disconnect();
+  });
+
+  it("does not mark an element showing its own text after a miss", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    document.body.innerHTML = '<p data-i18n="nowhere">Text</p>';
+
+    const binding = await initializeBrowserI18n({ i18n: createManager(), locale: "fr", root: document.body });
+
+    expect(document.querySelector("p")?.hasAttribute("lang")).toBe(false);
+    binding.disconnect();
+  });
+
+  it("does not mark an element by its attributes when its text key throws", async () => {
+    document.body.innerHTML = '<abbr data-i18n="missing" data-i18n-title="fallbackOnly">Text</abbr>';
+    const i18n = createManager({
+      onMissingKey: () => {
+        throw new Error("missing key");
+      },
+    });
+
+    await expect(initializeBrowserI18n({ i18n, locale: "fr", root: document.body })).rejects.toThrow("missing key");
+
+    expect(document.querySelector("abbr")?.textContent).toBe("Text");
+    expect(document.querySelector("abbr")?.hasAttribute("lang")).toBe(false);
+  });
+
+  it("leaves a lang the application set over a marked element", async () => {
+    document.body.innerHTML = '<p data-i18n="fallbackOnly">Text</p>';
+    const paragraph = document.querySelector("p")!;
+    const i18n = createManager();
+    const binding = await initializeBrowserI18n({ i18n, locale: "fr", root: document.body, persistLocale: false });
+    paragraph.setAttribute("lang", "de");
+
+    await i18n.setLocale("ar");
+    expect(paragraph.getAttribute("lang")).toBe("de");
+    await i18n.setLocale("en");
+    expect(paragraph.getAttribute("lang")).toBe("de");
+    await i18n.setLocale("fr");
+    expect(paragraph.getAttribute("lang")).toBe("de");
+    binding.disconnect();
+  });
+
+  it("marks an element whose missed attribute shows nothing", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    document.body.innerHTML = '<button data-i18n="fallbackOnly" data-i18n-title="nowhere">Button</button>';
+
+    const binding = await initializeBrowserI18n({ i18n: createManager(), locale: "fr", root: document.body });
+
+    expect(document.querySelector("button")?.hasAttribute("title")).toBe(false);
+    expect(document.querySelector("button")?.getAttribute("lang")).toBe("en");
+    binding.disconnect();
+  });
+
+  it("restores the element's lang when an observed key is removed", async () => {
+    document.body.innerHTML = '<p data-i18n="fallbackOnly">Text</p>';
+    const paragraph = document.querySelector("p")!;
+    const binding = await initializeBrowserI18n({
+      i18n: createManager(),
+      locale: "fr",
+      root: document.body,
+      observe: true,
+    });
+    expect(paragraph.getAttribute("lang")).toBe("en");
+
+    paragraph.removeAttribute("data-i18n");
+    await flushMutations();
+
+    expect(paragraph.hasAttribute("lang")).toBe(false);
+    expect(paragraph.textContent).toBe("Text");
+    binding.disconnect();
+  });
+});
+
+describe("initializeBrowserI18n style sheet titles", () => {
+  it.each([
+    ["style", null],
+    ["link", "stylesheet"],
+    ["link", "Alternate StyleSheet"],
+  ])("does not translate the title of <%s rel=%s>, which names a style sheet set", async (name, rel) => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const element = document.createElement(name);
+    if (rel !== null) {
+      element.setAttribute("rel", rel);
+    }
+    element.setAttribute("title", "Default");
+    element.setAttribute("data-i18n-title", "greeting");
+    document.head.append(element);
+
+    const binding = await initializeBrowserI18n({
+      i18n: createManager(),
+      locale: "fr",
+      root: document.documentElement,
+    });
+
+    expect(element.getAttribute("title")).toBe("Default");
+    expect(String(warn.mock.calls[0]?.[1])).toContain("names a style sheet set");
+    binding.disconnect();
+    element.remove();
+  });
+
+  it("translates the title of a link that is not a style sheet, such as a feed", async () => {
+    const element = document.createElement("link");
+    element.setAttribute("rel", "alternate");
+    element.setAttribute("title", "Feed");
+    element.setAttribute("data-i18n-title", "greeting");
+    document.head.append(element);
+
+    const binding = await initializeBrowserI18n({
+      i18n: createManager(),
+      locale: "fr",
+      root: document.documentElement,
+    });
+
+    expect(element.getAttribute("title")).toBe("Bonjour");
+    binding.disconnect();
+    element.remove();
+  });
+});

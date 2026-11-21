@@ -2,7 +2,7 @@
 title: URLs localizadas
 description: Coloque o locale no caminho, traduza o próprio caminho, leia os dois de volta, crie links para outros idiomas, gere todas as páginas localizadas e mande os visitantes para o idioma deles num site estático.
 order: 4
-source: 634cc878a98ebcde653e1664e29ee8d1333076b3
+source: c8bde08e89440832aa0f8103fa0ba85782934856
 ---
 
 # URLs localizadas
@@ -178,7 +178,7 @@ if (fallback !== undefined) {
 }
 ```
 
-Escape os dois valores como faria com qualquer texto no HTML, ou deixe o seu framework criar as tags. Um caminho pode conter caracteres, como `"` ou `&`, que são permitidos numa URL mas não crus dentro de um atributo.
+Escape os dois valores como faria com qualquer texto no HTML, ou deixe o seu framework criar as tags. Um caminho pode conter caracteres, como `&` ou `'`, que são permitidos numa URL mas não crus dentro de um atributo.
 
 ## Traduza caminhos
 

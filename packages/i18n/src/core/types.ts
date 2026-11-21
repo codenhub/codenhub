@@ -257,7 +257,8 @@ export interface I18n<TLocale extends string = string, TKey extends string = str
    * `{n, selectordinal, …}` with `=N` and CLDR category options, an optional `offset:N`, and `#` for the number in the
    * plural's own forms, and `{v, select, …}`. Plural categories and every format use the locale of the dictionary that has the text. An
    * apostrophe before `{`, `}`, or, in a plural, `#` quotes them, and `''` is one apostrophe. A message that is not
-   * valid syntax warns once, unless silent, and only its `{name}` placeholders are filled.
+   * valid syntax warns once per process for its locale and text, unless silent, and only its `{name}` placeholders are
+   * filled.
    *
    * When `params.count` is a number and the key is a group of plural forms rather than a text, such as
    * `{ one: "{count} item", other: "{count} items" }`, the form is chosen with `Intl.PluralRules` for the locale of the
@@ -274,7 +275,7 @@ export interface I18n<TLocale extends string = string, TKey extends string = str
    * for `{n, number}`, is left as written. A string in `{name}` is inserted as written, a number as `{name, number}`
    * would format it, and a date as `{name, date}` would. A numeric `count` also selects a plural form.
    * @returns The translated text, or the trimmed key when no dictionary has it. A miss calls `onMissingKey`, or
-   * warns once per recent locale/key pair unless silent.
+   * warns once per recent locale/key pair in the process unless silent.
    * @throws {Error} When called before successful initialization.
    * @throws {TypeError} When the key is empty, not a string, longer than 1,000 characters once trimmed or 10,000
    * before, or contains ASCII controls.

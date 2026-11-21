@@ -2,7 +2,7 @@
 title: Solución de problemas
 description: Qué significa cada error y cada advertencia, y cómo solucionarlo.
 order: 5
-source: 2d1643a4c47855d4636065591d926e6cdf415b36
+source: f3a1e38b48aa9722f1d98a83ca2ced23b1d574bc
 ---
 
 # Solución de problemas
@@ -100,7 +100,7 @@ La configuración no es válida. La mayoría de los mensajes tienen la forma `[I
 - `loadLocale` sea una función.
 - `timeZone`, cuando está definido, sea uno que `Intl` conoce. Una errata da `timeZone: Must be a time zone Intl supports, such as "America/Sao_Paulo" or "UTC"`.
 - `dictionaryLimits` nombre solo límites conocidos, cada uno un número entero positivo. `maxKeys` da `dictionaryLimits.maxKeys: Is not a recognized limit`, y `maxDepth: 0` da `dictionaryLimits.maxDepth: Must be a positive whole number`. [Límites de tamaño](translations.md#límites-de-tamaño) enumera los nombres.
-- `isSilent`, cuando está definido, sea un booleano. `isSilent: "true"` da `isSilent: Expected boolean, received string`.
+- `isSilent`, cuando está definido, sea un booleano. `isSilent: "true"` da `isSilent: Expected boolean, received "true"`.
 - `getLocaleDirection` y `onMissingKey`, cuando están definidos, sean funciones; si no, el mensaje dice `getLocaleDirection: Must be a function` o `onMissingKey: Must be a function`.
 - La configuración sea un objeto simple. Una instancia de una clase, o un objeto que hereda sus opciones, se rechaza para que no se cuelen valores heredados.
 
@@ -122,7 +122,7 @@ Lo mismo pasa con `localePrefix` en una configuración de routing guardada en un
 
 ## Un mensaje muestra su texto sin procesar
 
-Ves `{count, plural, one {# item} other {# items}` o `{first-name}` en pantalla, y la consola advierte sobre un mensaje inválido. El texto no tiene una sintaxis de mensaje válida, así que se muestra tal como está escrito, con solo sus placeholders `{name}` simples completados, en lugar de formateado a medias. La advertencia aparece una vez por texto y locale.
+Ves `{count, plural, one {# item} other {# items}` o `{first-name}` en pantalla, y la consola advierte sobre un mensaje inválido. El texto no tiene una sintaxis de mensaje válida, así que se muestra tal como está escrito, con solo sus placeholders `{name}` simples completados, en lugar de formateado a medias. La advertencia aparece una vez por texto y locale en cada proceso, sin importar cuántos gestores lo muestren.
 
 Causas comunes:
 
@@ -169,7 +169,8 @@ Ves `Ouvrir l{app}` donde esperabas `Ouvrir l'éditeur`, y la consola está en s
 - **"Skipping translation on <p> because translated elements must be leaves"**: el elemento con `data-i18n` tiene elementos hijos. Pon la clave en un elemento que contenga solo texto, o tradúcelo con `t()`.
 - **"Skipping translation on <style> because the element can run, hide, or reparse its text as HTML"**: hay una clave `data-i18n` en un elemento `<script>`, `<style>`, `<noscript>`, `<template>`, `<iframe>`, `<noembed>`, `<noframes>`, `<xmp>` o `<plaintext>`, cuyo texto se ejecuta como código, decide qué se muestra o se escribe sin escapar cuando la página se guarda como HTML. La advertencia nombra la clave y pasa el elemento, así que la consola apunta a él. Mueve la clave a un elemento normal. Sus claves `data-i18n-<atributo>`, como el `data-i18n-title` de un `<iframe>`, se siguen traduciendo.
 - **"Skipping translation because data-i18n contains an invalid key"**, o lo mismo para un `data-i18n-<attribute>`: la clave está vacía, tiene más de 1000 caracteres o contiene un carácter de control ASCII, así que ningún diccionario puede contenerla. El elemento conserva su texto actual. Corrige la clave en el HTML.
-- **El texto de `data-i18n` muestra `{name}`**: la traducción de HTML no puede completar placeholders. Renderiza ese texto con `t()` y pasa los valores.
+- **"Skipping translation because data-i18n names a message that needs values"**: el mensaje tiene un placeholder, un plural o un select, y la traducción de HTML no tiene valores para completarlos. El elemento conserva su texto del HTML, y la advertencia aparece una vez por clave. Renderiza ese texto con `t()` y pasa los valores.
+- **"Skipping translation of the title of <style> because it names a style sheet set"**: hay una clave `data-i18n-title` en un elemento `<style>` o `<link rel="stylesheet">`, cuyo `title` agrupa hojas de estilo entre las que el navegador alterna, así que traducirlo cambiaría cuáles se aplican. El elemento conserva su `title`. Quita la clave.
 - **Un atributo `data-i18n-href` no hace nada**: solo se pueden traducir los atributos de texto. Consulta [Traduce HTML sin un framework](browser.md#traduce-html-sin-un-framework).
 
 Las advertencias del navegador se silencian junto con todas las demás cuando el gestor tiene `isSilent: true`.

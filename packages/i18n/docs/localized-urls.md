@@ -177,7 +177,7 @@ if (fallback !== undefined) {
 }
 ```
 
-Escape both values as you would any text in HTML, or let your framework create the tags. A path can contain characters, such as `"` or `&`, that are allowed in a URL but not raw inside an attribute.
+Escape both values as you would any text in HTML, or let your framework create the tags. A path can contain characters, such as `&` or `'`, that are allowed in a URL but not raw inside an attribute.
 
 ## Translate paths
 

@@ -38,8 +38,25 @@ interface ChainDictionary<TLocale extends string> {
 
 const MAX_MISSING_KEY_DIAGNOSTICS = 1_000;
 const MAX_MESSAGE_DIAGNOSTICS = 1_000;
-// Shared by every manager, since a server creates one per request and would otherwise log a miss once per visitor.
+// Shared by every manager, since a server creates one per request and would otherwise log a warning once per visitor.
 const warnedMissingKeys = new Map<string, undefined>();
+const warnedMessages = new Map<string, undefined>();
+
+/**
+ * Records a warning among the most recent `limit`, returning whether it is new. A repeat moves to the newest end, so the
+ * record drops the warning least recently seen.
+ */
+const rememberWarning = (record: Map<string, undefined>, warningKey: string, limit: number): boolean => {
+  if (record.delete(warningKey)) {
+    record.set(warningKey, undefined);
+    return false;
+  }
+  record.set(warningKey, undefined);
+  if (record.size > limit) {
+    record.delete(record.keys().next().value!);
+  }
+  return true;
+};
 const PLACEHOLDER_PATTERN = /{([A-Za-z0-9_]+)}/g;
 // The form every plural group has, used when the count's category has none.
 const PLURAL_FALLBACK_FORM = "other";
@@ -68,6 +85,20 @@ const interpolate = ({ text, params, locale, timeZone }: InterpolateOptions): st
     const value: unknown = Object.hasOwn(params, name) ? params[name] : undefined;
     return formatPlainValue(value, locale, timeZone) ?? placeholder;
   });
+};
+
+/**
+ * Whether a message has an argument, which formatting without values leaves as written: any argument of valid ICU
+ * syntax, or a `{name}` placeholder of invalid syntax, which is filled as `interpolate` fills it.
+ */
+const needsValues = (text: string): boolean => {
+  if (isPlainMessage(text)) {
+    return false;
+  }
+  const message = parseCachedMessage(text);
+  return typeof message === "string"
+    ? new RegExp(PLACEHOLDER_PATTERN.source).test(text)
+    : message.some((node) => node.kind !== "text");
 };
 
 class CoreCustomEvent<TDetail> extends Event implements CustomEvent<TDetail> {
@@ -122,7 +153,6 @@ class I18nInstance<TLocale extends string, TKey extends string = string>
   private readonly loader: LocaleLoader<TLocale>;
 
   readonly t: (key: string, params?: MessageValues) => string;
-  private readonly warnedMessages = new Set<string>();
 
   constructor(config: I18nConfig<TLocale>) {
     super();
@@ -177,7 +207,9 @@ class I18nInstance<TLocale extends string, TKey extends string = string>
       },
       lookup: (key) => {
         const found = this.lookup("translate", key);
-        return found === undefined ? undefined : this.format(key, found, {});
+        return found === undefined
+          ? undefined
+          : { text: this.format(key, found, {}), locale: found.locale, needsValues: needsValues(found.text) };
       },
     });
   }
@@ -298,15 +330,9 @@ class I18nInstance<TLocale extends string, TKey extends string = string>
   }
 
   private reportInvalidMessage(key: string, found: FoundTranslation<TLocale>, reason: string): void {
-    const warningKey = `${found.locale}\0${found.text}`;
-
-    if (this.isSilent || this.warnedMessages.has(warningKey)) {
+    if (this.isSilent || !rememberWarning(warnedMessages, `${found.locale}\0${found.text}`, MAX_MESSAGE_DIAGNOSTICS)) {
       return;
     }
-    if (this.warnedMessages.size >= MAX_MESSAGE_DIAGNOSTICS) {
-      this.warnedMessages.delete(this.warnedMessages.values().next().value!);
-    }
-    this.warnedMessages.add(warningKey);
     console.warn(
       `[I18n] Invalid message for ${quoteKey(key.trim())} in locale "${found.locale}": ${reason}; only {name} ` +
         "placeholders are filled. " +
@@ -488,24 +514,10 @@ class I18nInstance<TLocale extends string, TKey extends string = string>
       return;
     }
 
-    const warningKey = `${this.currentLocale}\0${key}`;
-
-    if (!this.isSilent) {
-      if (warnedMissingKeys.delete(warningKey)) {
-        warnedMissingKeys.set(warningKey, undefined);
-        return;
-      }
-
-      warnedMissingKeys.set(warningKey, undefined);
-
-      if (warnedMissingKeys.size > MAX_MISSING_KEY_DIAGNOSTICS) {
-        const oldestWarningKey = warnedMissingKeys.keys().next().value;
-
-        if (oldestWarningKey !== undefined) {
-          warnedMissingKeys.delete(oldestWarningKey);
-        }
-      }
-
+    if (
+      !this.isSilent &&
+      rememberWarning(warnedMissingKeys, `${this.currentLocale}\0${key}`, MAX_MISSING_KEY_DIAGNOSTICS)
+    ) {
       console.warn(`[I18n] Missing key ${quoteKey(key)} in locale "${this.currentLocale}".`);
     }
   }
