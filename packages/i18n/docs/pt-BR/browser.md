@@ -2,7 +2,7 @@
 title: Traduza um app no navegador
 description: Detecte e lembre o idioma do visitante, mantenha lang e dir em sincronia, renderize de novo um framework, traduza HTML e rode num Web Worker.
 order: 2
-source: 032303a4b9f9e4ba67b0645fffbefa5e0c5f7260
+source: 3f61176770f045618c178c16faabb283c0548b56
 ---
 
 # Traduza um app no navegador
@@ -223,7 +223,9 @@ Deixe `observe` desligado quando um framework renderiza a página: o framework j
 
 ### Custom elements
 
-O binding não olha dentro de custom elements, com ou sem shadow root, e não avisa quando pula um deles. Isso vale para tags com hífen, como `<my-widget>`, e para elementos nativos customizados, seja quando o HTML marca um com `is`, como em `<button is="my-button">`, seja quando o seu código cria um com `document.createElement("button", { is: "my-button" })`, que não coloca nenhum atributo `is`. Num navegador sem `customElements.getName()`, um que o seu código cria é traduzido como um elemento comum.
+O binding não olha dentro de custom elements e não avisa quando pula um deles. Isso vale para tags com hífen, como `<my-widget>`, e para elementos nativos customizados, seja quando o HTML marca um com `is`, como em `<button is="my-button">`, seja quando o seu código cria um com `document.createElement("button", { is: "my-button" })`, que não coloca nenhum atributo `is`. Num navegador sem `customElements.getName()`, um que o seu código cria é traduzido como um elemento comum.
+
+O binding também nunca entra num shadow root, seja de um custom element ou de qualquer outro. Um shadow root pode ser ele mesmo o `root` que você passa, quando essa é a parte da página que o binding traduz.
 
 Um componente tem vida própria: ele pode renderizar depois que a página foi traduzida, e acrescenta e remove texto conforme as pessoas o usam, texto que ele vai ter de traduzir sozinho de qualquer jeito. Então o componente traduz o próprio conteúdo: chame `i18n.t()` quando ele renderizar e renderize de novo a partir de `i18n.subscribe()`. O card de produto da loja faz exatamente isso:
 
