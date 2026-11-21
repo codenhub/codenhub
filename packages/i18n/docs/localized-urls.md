@@ -259,7 +259,7 @@ for (const { locale, pathname } of routing.localizeAll("/products/:id")) {
 
 `@codenhub/router` takes the first route that matches, in the order you register them. When two of a locale's paths can match the same URL, such as `/pt/produtos/novo` and `/pt/produtos/:id`, register the one with fixed words first.
 
-`localizeAll()` writes a catch-all as `:name*`. Translate that into your framework's own syntax when you register it, such as `[...path]` in a file-based router. `@codenhub/router` has no catch-all, so with it, route such paths by rewriting to the canonical path instead.
+A pattern that ends in `:name*` is translated through the table's catch-all, never through a parameter: with `/help/:id` and `/help/:path*` both listed, `localizeAll("/help/:path*")` gives the Portuguese `/pt/ajuda/:path*`, not the one-segment `/pt/ajuda/artigo/:path*`. `localizeAll()` writes a catch-all as `:name*`. Translate that into your framework's own syntax when you register it, such as `[...path]` in a file-based router. `@codenhub/router` has no catch-all, so with it, route such paths by rewriting to the canonical path instead.
 
 ## Drop the prefix
 

@@ -2,7 +2,7 @@
 title: URLs localizadas
 description: Coloque o locale no caminho, traduza o próprio caminho, leia os dois de volta, crie links para outros idiomas, gere todas as páginas localizadas e mande os visitantes para o idioma deles num site estático.
 order: 4
-source: c8bde08e89440832aa0f8103fa0ba85782934856
+source: db7ca16cabaf9e8e8c5339951a7bebf088eeacd4
 ---
 
 # URLs localizadas
@@ -260,7 +260,7 @@ for (const { locale, pathname } of routing.localizeAll("/products/:id")) {
 
 O `@codenhub/router` pega a primeira rota que corresponder, na ordem em que você as registra. Quando dois caminhos de um locale podem corresponder à mesma URL, como `/pt/produtos/novo` e `/pt/produtos/:id`, registre primeiro o que tem palavras fixas.
 
-`localizeAll()` escreve um catch-all como `:name*`. Traduza isso para a sintaxe do seu framework quando registrá-lo, como `[...path]` num router baseado em arquivos. O `@codenhub/router` não tem catch-all, então, com ele, roteie esses caminhos reescrevendo para o caminho canônico.
+Um padrão que termina em `:name*` é traduzido pelo catch-all da tabela, nunca por um parâmetro: com `/help/:id` e `/help/:path*` na tabela, `localizeAll("/help/:path*")` dá o português `/pt/ajuda/:path*`, e não o `/pt/ajuda/artigo/:path*` de um segmento. `localizeAll()` escreve um catch-all como `:name*`. Traduza isso para a sintaxe do seu framework quando registrá-lo, como `[...path]` num router baseado em arquivos. O `@codenhub/router` não tem catch-all, então, com ele, roteie esses caminhos reescrevendo para o caminho canônico.
 
 ## Dispense o prefixo
 

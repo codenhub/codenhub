@@ -947,6 +947,69 @@ describe("translated pathnames", () => {
       ]);
     });
 
+    it("should translate a catch-all route pattern through a catch-all, not a parameter that matches one segment", () => {
+      const routing = create({
+        localePrefix: "always",
+        pathnames: {
+          "/help/:id": { pt: "/ajuda/artigo/:id" },
+          "/help/:path*": { pt: "/ajuda/:path*" },
+        },
+      });
+
+      expect(routing.localizeAll("/help/:path*")).toEqual([
+        { locale: "en", pathname: "/en/help/:path*" },
+        { locale: "pt", pathname: "/pt/ajuda/:path*" },
+        { locale: "es", pathname: "/es/help/:path*" },
+      ]);
+      expect(routing.localizeAll("/help/:id")).toEqual([
+        { locale: "en", pathname: "/en/help/:id" },
+        { locale: "pt", pathname: "/pt/ajuda/artigo/:id" },
+        { locale: "es", pathname: "/es/help/:id" },
+      ]);
+      // The pattern each locale registers matches the URLs `parse` reads as that route.
+      expect(routing.parse("/pt/ajuda/a/b")).toMatchObject({
+        locale: "pt",
+        pathname: "/help/a/b",
+      });
+      expect(routing.parse("/pt/ajuda/a/b")?.alternates).toContainEqual({
+        locale: "pt",
+        pathname: "/pt/ajuda/a/b",
+      });
+      expect(routing.parse("/pt/ajuda/artigo/a")).toMatchObject({
+        locale: "pt",
+        pathname: "/help/a",
+      });
+    });
+
+    it("should read a catch-all route pattern back through the catch-all", () => {
+      // The Portuguese `/b/:path*` and `/b/:id` overlap; `/pt/b/:path*` is the catch-all's pattern, not an article.
+      const routing = create({
+        pathnames: {
+          "/articles/:id": { pt: "/b/:id" },
+          "/docs/:path*": { pt: "/b/:path*" },
+        },
+      });
+
+      expect(routing.localize("/docs/:path*", "pt")).toBe("/pt/b/:path*");
+      expect(routing.parse("/pt/b/:path*")).toMatchObject({
+        locale: "pt",
+        pathname: "/docs/:path*",
+      });
+      expect(routing.localize("/articles/:id", "pt")).toBe("/pt/b/:id");
+      expect(routing.localize("/docs/a/b", "pt")).toBe("/pt/b/a/b");
+    });
+
+    it("should keep the words of a catch-all route pattern the table lists no catch-all for", () => {
+      const routing = create({
+        pathnames: { "/help/:id": { pt: "/ajuda/:id" } },
+      });
+
+      // `/help/a/b` is unlisted, so its Portuguese URL keeps the English words, and the pattern does too.
+      expect(routing.localize("/help/:path*", "pt")).toBe("/pt/help/:path*");
+      expect(routing.localize("/help/a/b", "pt")).toBe("/pt/help/a/b");
+      expect(routing.localize("/help/:id", "pt")).toBe("/pt/ajuda/:id");
+    });
+
     it("should drop the prefix with `when-ambiguous` when no other locale's path overlaps", () => {
       const routing = create({ localePrefix: "when-ambiguous", pathnames: docs });
 

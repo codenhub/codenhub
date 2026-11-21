@@ -2,7 +2,7 @@
 title: URLs localizadas
 description: Pon el locale en la ruta, traduce la propia ruta, lee ambas de vuelta, enlaza a otros idiomas, genera cada página localizada y lleva a cada visitante a su propio idioma en un sitio estático.
 order: 4
-source: c8bde08e89440832aa0f8103fa0ba85782934856
+source: db7ca16cabaf9e8e8c5339951a7bebf088eeacd4
 ---
 
 # URLs localizadas
@@ -260,7 +260,7 @@ for (const { locale, pathname } of routing.localizeAll("/products/:id")) {
 
 `@codenhub/router` toma la primera ruta que coincide, en el orden en que las registras. Cuando dos rutas de un locale pueden coincidir con la misma URL, como `/pt/produtos/novo` y `/pt/produtos/:id`, registra primero la que tiene palabras fijas.
 
-`localizeAll()` escribe un comodín como `:name*`. Tradúcelo a la sintaxis de tu framework cuando lo registres, como `[...path]` en un router basado en archivos. `@codenhub/router` no tiene comodines, así que con él enruta esas rutas reescribiéndolas a la ruta canónica.
+Un patrón que termina en `:name*` se traduce por el comodín de la tabla, nunca por un parámetro: con `/help/:id` y `/help/:path*` en la tabla, `localizeAll("/help/:path*")` da el portugués `/pt/ajuda/:path*`, no el `/pt/ajuda/artigo/:path*` de un segmento. `localizeAll()` escribe un comodín como `:name*`. Tradúcelo a la sintaxis de tu framework cuando lo registres, como `[...path]` en un router basado en archivos. `@codenhub/router` no tiene comodines, así que con él enruta esas rutas reescribiéndolas a la ruta canónica.
 
 ## Quita el prefijo
 

@@ -40,7 +40,9 @@ export interface LocaleRoutingConfig<TLocale extends string> {
    * `{ "/products/:id": { pt: "/produtos/:id" } }`. Paths have fixed segments, `:name` parameters, and a last
    * `:name*` catch-all that matches one or more segments, and every form uses the canonical path's parameters, in any
    * order. Fixed segments match case-sensitively, Unicode matches its percent-encoding, and a fixed segment wins over a
-   * parameter, which wins over a catch-all. A locale or path the table doesn't list keeps the canonical words.
+   * parameter, which wins over a catch-all. A path whose last segment is written `:name*`, such as `/help/:path*`, is
+   * matched only by a catch-all, so it keeps its own form. A locale or path the table doesn't list keeps the canonical
+   * words.
    */
   pathnames?: Readonly<Record<string, Readonly<Partial<Record<NoInfer<TLocale>, string>>>>> | undefined;
   /**

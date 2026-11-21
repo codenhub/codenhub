@@ -3,6 +3,8 @@ import { formatReportedKey } from "../locale/dictionary";
 import { findPathnameProblem, normalizeSegment, splitPathname } from "./path";
 
 const PARAMETER_NAME_PATTERN = /^[A-Za-z0-9_]+$/;
+// A segment written as a catch-all, as a route pattern passed to `localize` ends.
+const REST_KEY_PATTERN = /^:[A-Za-z0-9_]+\*$/;
 const RESERVED_PARAMETER_NAMES = new Set(["__proto__", "constructor", "prototype"]);
 
 /** A fixed segment, a `:name` parameter, or a last `:name*` catch-all matching one or more segments. */
@@ -33,7 +35,11 @@ export interface Route<TLocale extends string> {
  * @internal
  */
 export interface ShapeIndex<T> {
-  /** The first item whose pattern matches the normalized segments `keys`, with its parameters read from `segments`. */
+  /**
+   * The first item whose pattern matches the normalized segments `keys`, with its parameters read from `segments`. A
+   * last key written as a catch-all, such as `:path*`, matches only a catch-all, so a route pattern such as
+   * `/help/:path*` is read as the catch-all route it names, not as a parameter route of one segment.
+   */
   find(
     keys: readonly string[],
     segments: readonly string[],
@@ -130,6 +136,7 @@ const indexByShape = <T>(items: readonly T[], patternOf: (item: T) => Pattern): 
   // one node match the same paths, so only the first of them can be found.
   return {
     find(keys, segments) {
+      const restDepth = REST_KEY_PATTERN.test(keys.at(-1) ?? "") ? keys.length - 1 : undefined;
       const pending: ({ readonly node: ShapeNode<T>; readonly depth: number } | IndexEntry<T>)[] = [
         { node: root, depth: 0 },
       ];
@@ -149,6 +156,9 @@ const indexByShape = <T>(items: readonly T[], patternOf: (item: T) => Pattern): 
         const rest = node.rests[0];
         if (rest !== undefined) {
           pending.push(rest);
+        }
+        if (depth === restDepth) {
+          continue;
         }
         if (node.param !== undefined) {
           pending.push({ node: node.param, depth: depth + 1 });
