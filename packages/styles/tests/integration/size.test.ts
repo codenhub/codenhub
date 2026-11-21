@@ -39,11 +39,18 @@ const twEntry = (file: string) => pathToFileURL(path.join(packageRoot, "tw", fil
    native, components, aesthetics, glass, and pixel files, and the three
    consumer builds below. */
 const COMPILED_CEILINGS: Record<string, number> = {
-  "dist/index.css": 238_000,
-  "dist/components.css": 191_400,
-  "dist/native.css": 355_400,
-  "dist/theme.css": 13_200,
-  "dist/palette.css": 26_800,
+  /* The four below set again, with `/tw` and `/button/tw`'s button pages,
+     after 0.11.0's reduced-motion reset reached scroll-driven animations and
+     three more pseudo-elements, and a plate began handing its colour down
+     beside its ink for the selection, one declaration in every component
+     that composes `box`: 238,000, 191,400, 355,400, and 13,200 until then. */
+  "dist/index.css": 247_100,
+  "dist/components.css": 195_900,
+  "dist/native.css": 367_000,
+  "dist/theme.css": 13_650,
+  /* 26,800 until 0.11.0 wrote each value once, as a `light-dark()` pair,
+     where a light and a dark block each wrote all of them. */
+  "dist/palette.css": 19_650,
   "dist/aesthetics/index.css": 50_450,
   /* 5,600 until 0.11.0 kept the solo class's tracking off scripts that join
      their letters or hang them from a headstroke: it ships without the
@@ -59,8 +66,10 @@ const COMPILED_CEILINGS: Record<string, number> = {
   /* 314,500 until 0.11.0 kept tracking off scripts that join their letters,
      a fallback in each of the eleven rules that copy a text style, and
      raised a glass surface holding a tooltip, scoped the bubble to it, gave
-     a glass pane an opaque ground on a plate, and let a button label wrap. */
-  "dist/purge/index.css": 327_000,
+     a glass pane an opaque ground on a plate, and let a button label wrap;
+     327,000 until the reset and the selection grew as the complete file's
+     did. */
+  "dist/purge/index.css": 339_200,
   "dist/purge/classes.json": 7_100,
 };
 
@@ -117,14 +126,16 @@ describe("a /tw consumer build", { timeout: 60_000 }, () => {
       imports: [tailwindCss, twEntry("components/button.css")],
       candidates: ["btn", "primary"],
       /* 21,800 until 0.11.0 capped a held neutral box's fill, 18 bytes more;
-         22,600 since its held boxes and toggles drew a surface's ink. */
-      ceiling: 22_950,
+         22,600 since its held boxes and toggles drew a surface's ink;
+         22,950 until the reduced-motion reset and the selection grew. */
+      ceiling: 23_500,
     },
     {
       name: "a page that names no package class, through /button/tw",
       imports: [tailwindCss, twEntry("components/button.css")],
       candidates: [],
-      ceiling: 10_150,
+      // 10,150 until the reduced-motion reset grew.
+      ceiling: 10_350,
     },
     {
       name: "a page with one primary button, through /tw",
@@ -133,8 +144,10 @@ describe("a /tw consumer build", { timeout: 60_000 }, () => {
       /* 27,550 until 0.11.0's reset reached a dialog's backdrop and a view
          transition, rules every page with the reset carries, and the button
          learned to wrap its label and a pane its ground on a plate, and the
-         view transition reset and the no-tracking language list grew. */
-      ceiling: 31_400,
+         view transition reset and the no-tracking language list grew;
+         31,400 until the reset reached scroll-driven animations and three
+         more pseudo-elements and the selection read the plate. */
+      ceiling: 35_700,
     },
   ];
 
