@@ -73,7 +73,7 @@ A detached compact JWS verified without its payload fails with `bad_signature`, 
 
 ## Verifying
 
-`createJwsVerifier({ keys, crit?, maxLength?, onKeySetError? })` reads any of the three serializations: a string that starts with `{`, after JSON whitespace, is JSON, and anything else is compact. It takes the JSON serializations as their raw text, not as a parsed object: only the text shows a member repeated, which `JSON.parse` would resolve silently to its last value, and a JWS that repeats a member is refused. `keys` is a key set, as for `createVerifier`; a function that routes by issuer is not accepted, since a JWS has no `iss`, and the key set's issuer bindings are not applied. `maxLength`, 8192 characters by default and at most 65536, bounds the JWS, not a detached payload.
+`createJwsVerifier({ keys, crit?, maxLength?, onKeySetError? })` reads any of the three serializations: a string that starts with `{`, after JSON whitespace, is JSON, and anything else is compact. It takes the JSON serializations as their raw text, not as a parsed object: only the text shows a member repeated, which `JSON.parse` would resolve silently to its last value, and a JWS that repeats a member is refused. `keys` is a key set, as for `createVerifier`; a function that routes by issuer is not accepted, since a JWS has no `iss`, and the key set's issuer bindings are not applied. To verify each sender's JWS with its own keys, choose the verifier from the request, such as the webhook's URL or the sender's credentials, and keep one verifier per key set: there is no reader for a JSON or unencoded JWS's header before verification, and a header the signature has not covered would be the sender's word for whose key to trust. `maxLength`, 8192 characters by default and at most 65536, bounds the JWS, not a detached payload.
 
 A JWS verifier also accepts a JWT signed by a key in its set, so the warning in [Signing](#signing) applies here too: a verifier that trusts a token signing key accepts that key's JWTs as JWS payloads, and a token verifier without `type` accepts that key's JWS over JSON claims as tokens.
 
@@ -82,7 +82,7 @@ Each JWS goes through, in order:
 1. The length cap, before any decoding, and the input's type and well-formedness.
 2. Strict parsing of its structure and of every signature's headers. JSON that repeats a member name, at any depth, or nests deeper than 32 levels is refused, and a general JWS may hold at most 8 signatures. Members of the JWS object that RFC 7515 does not define are ignored.
 3. The header rules below, for every signature. Any issue here fails the whole JWS, even when another signature is good.
-4. The payload: one given to the verifier is used only when the JWS carries none.
+4. The payload: one given to the verifier is used only when the JWS carries none, and giving one for a JWS that carries its own is `malformed` at `["payload"]`.
 5. Each signature in turn, until one verifies: its `alg`, its `crit` names, key selection from both of its headers, the key's algorithm, and the signature.
 6. The payload's bytes, decoded only now.
 

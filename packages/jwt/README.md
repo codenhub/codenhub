@@ -8,7 +8,7 @@ JwtKit signs, verifies, encrypts and decrypts JSON Web Tokens with Web Crypto, i
 - **Issues never hold a value of the input**, so logging a failed verification cannot log a token or a key.
 - **A forged encrypted token learns nothing.** Every failure to unwrap its key or check its tag is the one `decryption_failed`, and `RSA1_5`, `PBES2`, `zip` and `crit` are refused before any cryptography.
 
-ES256, ES384, ES512, EdDSA, Ed25519, RS256, RS384, RS512, PS256, PS384, PS512, HS256, HS384 and HS512 are supported, keys are imported as JWK, PEM or Web Crypto keys, and DPoP proofs can be created and verified, with no dependencies. Compact JWE supports `dir`, `A128KW`, `A256KW`, `ECDH-ES` (alone and with key wrap, on P-256, P-384, P-521 and X25519), `RSA-OAEP` and `RSA-OAEP-256`, with `A128GCM`, `A256GCM`, `A128CBC-HS256` and `A256CBC-HS512`.
+ES256, ES384, ES512, EdDSA, Ed25519, RS256, RS384, RS512, PS256, PS384, PS512, HS256, HS384 and HS512 are supported, keys are imported as JWK, PEM or Web Crypto keys, and DPoP proofs can be created and verified, with no dependencies. Compact JWE supports `dir`, `A128KW`, `A256KW`, `A128GCMKW`, `A256GCMKW`, `ECDH-ES` (alone and with key wrap, on P-256, P-384, P-521 and X25519), `RSA-OAEP`, `RSA-OAEP-256`, `RSA-OAEP-384` and `RSA-OAEP-512`, with `A128GCM`, `A256GCM`, `A128CBC-HS256` and `A256CBC-HS512`.
 
 > **Experimental:** no real application has run on this API yet. Function names, option names, issue codes and their `params` are meant to hold, but a real consumer may still show that one of them must change; a breaking change ships in a new minor version, and the [changelog](docs/changelog/index.md) lists it with its migration. The security behavior above will not be weakened.
 
@@ -65,7 +65,7 @@ Times in claims are seconds since the Unix epoch. `sign` adds only the claims yo
 Each line runs against the built package with the result its comment states:
 
 ```ts
-import { createKeySet, createRemoteKeySet, createVerifier, generateKeyPair, generateSecretKey, sign } from "@codenhub/jwt";
+import { createKeySet, createRemoteKeySet, createVerifier, exportPublicJwk, generateKeyPair, generateSecretKey, sign } from "@codenhub/jwt";
 
 const { privateKey, publicKey } = await generateKeyPair({ alg: "RS256" });
 const verify = createVerifier({ keys: createKeySet([publicKey]) });
@@ -94,7 +94,7 @@ const remote = createRemoteKeySet({
   url: "https://issuer.example/jwks.json",
   fetch: async () => {
     fetches += 1;
-    return Response.json({ keys: [] });
+    return Response.json({ keys: [{ ...(await exportPublicJwk(publicKey)), kid: "real" }] });
   },
 });
 const viaRemote = createVerifier({ keys: remote });

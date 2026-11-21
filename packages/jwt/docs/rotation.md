@@ -25,7 +25,12 @@ const ring = createKeyRing({
   publishAfter: 7_200, // two hours: the longest token lifetime plus clock tolerance
 });
 
-const token = await sign({ payload: { sub: "user-1" }, key: ring.signingKey(), issuedAt: true, expiresIn: 3600 });
+const token = await sign({
+  payload: { iss: "https://issuer.example", sub: "user-1" },
+  key: ring.signingKey(),
+  issuedAt: true,
+  expiresIn: 3600,
+});
 
 const verify = createVerifier({ keys: ring, issuer: "https://issuer.example" });
 
@@ -56,7 +61,7 @@ return new Response(JSON.stringify(await ring.jwks()), {
 });
 ```
 
-A remote key set never caches longer than the `max-age` it is sent, or its `cooldown` when that is longer, so this also bounds how long a key you removed stays trusted elsewhere: `max-age` plus the verifier's `maxStale`.
+A remote key set never caches longer than the `max-age` it is sent, or its `cooldown` when that is longer, so this also bounds how long a key you removed stays trusted elsewhere: `max-age` plus the verifier's `maxStale`. A set started from a [`seed`](key-sets.md#persisting-the-cache) is the exception: a snapshot does not record `max-age`, so the seeded keys are kept for the verifier's `cacheTtl`, and a removed key stays trusted for up to `cacheTtl` plus `maxStale` there. Count on the longer bound when verifiers you do not run may seed their sets.
 
 ## Rotating
 

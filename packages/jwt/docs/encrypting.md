@@ -82,8 +82,8 @@ The decrypter resolves to `{ header, plaintext, key }`: the protected header, th
 A decrypter's checks run in a fixed order and stop at the first failure:
 
 1. The token is a string no longer than `maxLength`.
-2. It has exactly five segments of strict base64url, and its header is a JSON object without repeated member names, with a supported `alg` and an accepted `enc`, and no `zip` or `crit`. For `A128GCMKW` and `A256GCMKW`, the header's `iv` is 96 bits and its `tag` 128 bits of strict base64url, or the token is `malformed` at `["header", "iv"]` or `["header", "tag"]`. The header is the protected one, the only header a compact token has.
-3. The key set selects one key by `kid` and `alg`, as [Key sets](key-sets.md#how-a-key-is-selected) describes. Keys are never tried in turn.
+2. It has exactly five segments of strict base64url, and its header is a JSON object without repeated member names, with a supported `alg` and an accepted `enc`, and no `zip` or `crit`. For `A128GCMKW` and `A256GCMKW`, the header's `iv` is 96 bits and its `tag` 128 bits of strict base64url, or the token is `malformed` at `["header", "iv"]` or `["header", "tag"]`. The encrypted key is empty exactly when `alg` is `dir` or `ECDH-ES`, or the token is `malformed` at `["encrypted_key"]`, and the IV and tag have the lengths `enc` sets, or it is `malformed` at `["iv"]` or `["tag"]`; the encrypted key's own length is checked at step 5. The header is the protected one, the only header a compact token has.
+3. The key set selects one key by `kid` and `alg`, as [Key sets](key-sets.md#how-a-key-is-selected) describes. Keys are never tried in turn. A `dir` key is selected the same way, not by `enc`, so `createJweKeySet` refuses two `dir` keys without a `kid`, even for different `enc` values. Give them distinct `kid`s, or, when the sender writes none, as an OpenID Provider deriving keys from a `client_secret` may, use one decrypter per endpoint, each with its own key.
 4. For `ECDH-ES`, the header's `epk` is imported as a public key on the private key's curve, or fails with `malformed` at `["header", "epk"]`. So does an X25519 `epk` of low order, and one with the top bit of `x` set: RFC 7748 has X25519 ignore that bit, runtimes differ in whether they do, and no sender sets it, so it is refused on every runtime alike.
 5. The content key is recovered, and the authentication tag is checked before any plaintext exists.
 
@@ -107,7 +107,7 @@ Refused before any cryptography, with a result rather than a throw:
 A token that must be both private and authentic is signed, then encrypted (RFC 7519 §5.2). `encryptJwt` does both, taking `sign`'s input as `sign` and writing `cty: "JWT"`:
 
 ```ts
-import { createNestedVerifier, createVerifier, encryptJwt } from "@codenhub/jwt";
+import { createDecrypter, createJweKeySet, createNestedVerifier, createVerifier, encryptJwt } from "@codenhub/jwt";
 
 const token = await encryptJwt({
   sign: { payload: { iss: "https://issuer.example", sub: "user-1", aud: "client-1", exp }, key: signingKey },

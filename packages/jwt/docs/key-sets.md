@@ -138,6 +138,8 @@ const verify = createVerifier({ keys, issuer: "https://issuer.example", audience
 
 Nothing is fetched until the first token needs a key. Create the key set once and share it between requests, so they share its cache.
 
+The URL is fetched as given. The package refuses plain `http:` except on a loopback host, but it cannot tell whether a name or address is internal to your network. When the URL comes from someone else, such as the `jwks_uri` a client registered with your OpenID Provider for `private_key_jwt` or encrypted tokens, check it before creating the set: require `https:`, and refuse hosts that resolve to loopback, private or link-local addresses, or allow only hosts you know. Otherwise a client chooses where your server sends requests, and learns from the failures whether something answered there.
+
 On Cloudflare Workers, also pass `waitUntil` from `cloudflare:workers`. A Worker cancels a request's unfinished I/O once the request has responded, and that includes a JWKS fetch the key set started in the background. With `waitUntil`, each fetch keeps running until it is done:
 
 ```ts

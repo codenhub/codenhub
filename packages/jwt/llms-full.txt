@@ -10,7 +10,7 @@ JwtKit signs, verifies, encrypts and decrypts JSON Web Tokens with Web Crypto, i
 - **Issues never hold a value of the input**, so logging a failed verification cannot log a token or a key.
 - **A forged encrypted token learns nothing.** Every failure to unwrap its key or check its tag is the one `decryption_failed`, and `RSA1_5`, `PBES2`, `zip` and `crit` are refused before any cryptography.
 
-ES256, ES384, ES512, EdDSA, Ed25519, RS256, RS384, RS512, PS256, PS384, PS512, HS256, HS384 and HS512 are supported, keys are imported as JWK, PEM or Web Crypto keys, and DPoP proofs can be created and verified, with no dependencies. Compact JWE supports `dir`, `A128KW`, `A256KW`, `ECDH-ES` (alone and with key wrap, on P-256, P-384, P-521 and X25519), `RSA-OAEP` and `RSA-OAEP-256`, with `A128GCM`, `A256GCM`, `A128CBC-HS256` and `A256CBC-HS512`.
+ES256, ES384, ES512, EdDSA, Ed25519, RS256, RS384, RS512, PS256, PS384, PS512, HS256, HS384 and HS512 are supported, keys are imported as JWK, PEM or Web Crypto keys, and DPoP proofs can be created and verified, with no dependencies. Compact JWE supports `dir`, `A128KW`, `A256KW`, `A128GCMKW`, `A256GCMKW`, `ECDH-ES` (alone and with key wrap, on P-256, P-384, P-521 and X25519), `RSA-OAEP`, `RSA-OAEP-256`, `RSA-OAEP-384` and `RSA-OAEP-512`, with `A128GCM`, `A256GCM`, `A128CBC-HS256` and `A256CBC-HS512`.
 
 > **Experimental:** no real application has run on this API yet. Function names, option names, issue codes and their `params` are meant to hold, but a real consumer may still show that one of them must change; a breaking change ships in a new minor version, and the [changelog](docs/changelog/index.md) lists it with its migration. The security behavior above will not be weakened.
 
@@ -67,7 +67,7 @@ Times in claims are seconds since the Unix epoch. `sign` adds only the claims yo
 Each line runs against the built package with the result its comment states:
 
 ```ts
-import { createKeySet, createRemoteKeySet, createVerifier, generateKeyPair, generateSecretKey, sign } from "@codenhub/jwt";
+import { createKeySet, createRemoteKeySet, createVerifier, exportPublicJwk, generateKeyPair, generateSecretKey, sign } from "@codenhub/jwt";
 
 const { privateKey, publicKey } = await generateKeyPair({ alg: "RS256" });
 const verify = createVerifier({ keys: createKeySet([publicKey]) });
@@ -96,7 +96,7 @@ const remote = createRemoteKeySet({
   url: "https://issuer.example/jwks.json",
   fetch: async () => {
     fetches += 1;
-    return Response.json({ keys: [] });
+    return Response.json({ keys: [{ ...(await exportPublicJwk(publicKey)), kid: "real" }] });
   },
 });
 const viaRemote = createVerifier({ keys: remote });
@@ -243,7 +243,7 @@ That closes the best-known class of JWT attacks. In the "`alg: none`" attack a f
 
 `EdDSA` and `Ed25519` produce identical signatures. RFC 9864 replaces the older, curve-agnostic `EdDSA` identifier with `Ed25519`, and issuers still use both, so both are supported, but a key is bound to one of them: a key bound to `Ed25519` does not verify a token whose header says `EdDSA`.
 
-Encryption keys follow the same rule, with their own algorithms and their own key kinds, which no signing function accepts: [Encrypting tokens](docs/encrypting.md#algorithms) lists `dir`, `A128KW`, `A256KW`, `ECDH-ES` (alone and with `A128KW` or `A256KW`, on P-256, P-384, P-521 and X25519), `RSA-OAEP` and `RSA-OAEP-256`, with `A128GCM`, `A256GCM`, `A128CBC-HS256` and `A256CBC-HS512` content encryption.
+Encryption keys follow the same rule, with their own algorithms and their own key kinds, which no signing function accepts: [Encrypting tokens](docs/encrypting.md#algorithms) lists `dir`, `A128KW`, `A256KW`, `A128GCMKW`, `A256GCMKW`, `ECDH-ES` (alone and with `A128KW` or `A256KW`, on P-256, P-384, P-521 and X25519), `RSA-OAEP`, `RSA-OAEP-256`, `RSA-OAEP-384` and `RSA-OAEP-512`, with `A128GCM`, `A256GCM`, `A128CBC-HS256` and `A256CBC-HS512` content encryption.
 
 Asymmetric keys can also be imported from PEM, and any key from a Web Crypto `CryptoKey`. The list of algorithms may grow in a minor release, which widens `JwsAlgorithm` and the types built on it, so give a `switch` over an `alg` a default branch.
 
@@ -719,7 +719,7 @@ The PEM is read into the JWK of its key and every check in the table above runs 
 
 - with `{ reason: "encrypted" }`, an encrypted key: an `ENCRYPTED PRIVATE KEY` block, or a block whose headers say `Proc-Type: 4,ENCRYPTED`. Decrypt it first, such as with `openssl pkcs8 -topk8 -nocrypt -in key.pem`, and keep it in a secret store instead.
 - with `{ reason: "unsupported_format" }`, a label this package does not read, such as `OPENSSH PRIVATE KEY` or `DSA PRIVATE KEY`, headers that do not say the key is encrypted, and an `EC PRIVATE KEY` without its curve.
-- without `params`, anything malformed, and a public key block given to a private import. The DER of a `PUBLIC KEY`, `PRIVATE KEY`, `RSA PUBLIC KEY` or `RSA PRIVATE KEY` block, and the key inside a `CERTIFICATE`, must be one element with its length in the shortest form and nothing after it, as an `EC PRIVATE KEY` must: Web Crypto engines disagree on the rest, such as Node.js importing a `PUBLIC KEY` with bytes after it that browsers refuse, so the same PEM would import on one runtime and fail on another.
+- without `params`, anything malformed, and a public key block given to a private import. The DER of a `PUBLIC KEY`, `PRIVATE KEY`, `RSA PUBLIC KEY` or `RSA PRIVATE KEY` block, and the key inside a `CERTIFICATE`, must be strict DER all the way down, as an `EC PRIVATE KEY` must: every length in its shortest form, every element exactly filling the one around it, every integer minimal and not negative, nothing after the key, and the same for the DER inside it, such as an RSA key's modulus or an Ed25519 private key's octet string. Web Crypto engines disagree on the rest: Node.js imports a `PUBLIC KEY` with bytes after it that browsers refuse, and WebKit reads a negative RSA modulus as a different key, so the same PEM would import on one runtime and fail, or import as another key, on the next.
 
 From a certificate, `importPublicKey` takes the public key and nothing else. It does not check the certificate's dates, issuer, chain, extensions or signature, so a certificate is exactly as trusted as the key in it would be: use one you got from a source you already trust, such as an identity provider's admin console, and not one a token or a client sent you. A `CERTIFICATE` given to a private import is `invalid_key`.
 
@@ -882,7 +882,7 @@ A secret has a thumbprint too, of its `oct` JWK, so `jwkThumbprint` takes a secr
 
 `jwkThumbprintUri` gives the same thumbprint as a JWK Thumbprint URI (RFC 9278), `urn:ietf:params:oauth:jwk-thumbprint:sha-256:` followed by the thumbprint, for a protocol that names a key by URI.
 
-`certificateThumbprint` computes the SHA-256 thumbprint of an X.509 certificate, the base64url SHA-256 of its DER: the `x5t#S256` of a JOSE header, or the `x5t#S256` of the `cnf` claim that binds an access token to a client certificate (RFC 8705). It takes one `CERTIFICATE` PEM block and throws a `TypeError` for anything else. It hashes the certificate as given and checks nothing in it, such as its validity period or its chain.
+`certificateThumbprint` computes the SHA-256 thumbprint of an X.509 certificate, the base64url SHA-256 of its DER: the `x5t#S256` of a JOSE header, or the `x5t#S256` of the `cnf` claim that binds an access token to a client certificate (RFC 8705). It takes one `CERTIFICATE` PEM block of at most 16384 characters, as the importers do, and throws a `TypeError` for anything else. It hashes the certificate as given and checks nothing in it, such as its validity period or its chain.
 
 ```ts
 import { certificateThumbprint } from "@codenhub/jwt";
@@ -1038,6 +1038,8 @@ const verify = createVerifier({ keys, issuer: "https://issuer.example", audience
 
 Nothing is fetched until the first token needs a key. Create the key set once and share it between requests, so they share its cache.
 
+The URL is fetched as given. The package refuses plain `http:` except on a loopback host, but it cannot tell whether a name or address is internal to your network. When the URL comes from someone else, such as the `jwks_uri` a client registered with your OpenID Provider for `private_key_jwt` or encrypted tokens, check it before creating the set: require `https:`, and refuse hosts that resolve to loopback, private or link-local addresses, or allow only hosts you know. Otherwise a client chooses where your server sends requests, and learns from the failures whether something answered there.
+
 On Cloudflare Workers, also pass `waitUntil` from `cloudflare:workers`. A Worker cancels a request's unfinished I/O once the request has responded, and that includes a JWKS fetch the key set started in the background. With `waitUntil`, each fetch keeps running until it is done:
 
 ```ts
@@ -1167,7 +1169,12 @@ const ring = createKeyRing({
   publishAfter: 7_200, // two hours: the longest token lifetime plus clock tolerance
 });
 
-const token = await sign({ payload: { sub: "user-1" }, key: ring.signingKey(), issuedAt: true, expiresIn: 3600 });
+const token = await sign({
+  payload: { iss: "https://issuer.example", sub: "user-1" },
+  key: ring.signingKey(),
+  issuedAt: true,
+  expiresIn: 3600,
+});
 
 const verify = createVerifier({ keys: ring, issuer: "https://issuer.example" });
 
@@ -1198,7 +1205,7 @@ return new Response(JSON.stringify(await ring.jwks()), {
 });
 ```
 
-A remote key set never caches longer than the `max-age` it is sent, or its `cooldown` when that is longer, so this also bounds how long a key you removed stays trusted elsewhere: `max-age` plus the verifier's `maxStale`.
+A remote key set never caches longer than the `max-age` it is sent, or its `cooldown` when that is longer, so this also bounds how long a key you removed stays trusted elsewhere: `max-age` plus the verifier's `maxStale`. A set started from a [`seed`](docs/key-sets.md#persisting-the-cache) is the exception: a snapshot does not record `max-age`, so the seeded keys are kept for the verifier's `cacheTtl`, and a removed key stays trusted for up to `cacheTtl` plus `maxStale` there. Count on the longer bound when verifiers you do not run may seed their sets.
 
 ## Rotating
 
@@ -1310,7 +1317,7 @@ Then the claims, with every failure reported together:
 - `jti`, `htm`, `htu` and `iat` are present (`missing_claim`) and of their types (`invalid_claim`). `exp` is checked when present.
 - `iat` is at most `maxAge` seconds old, 60 by default, plus `clockTolerance` (`too_old`), and at most `max(clockTolerance, 60)` seconds ahead (`issued_in_future`).
 - `htm` equals the request's method exactly (`wrong_method`).
-- `htu` equals the request's URL once both are normalized and stripped of their query and fragment (`wrong_url`). Normalizing lowercases the scheme and host, drops a default port and removes dot segments; it does not decode percent-encoding.
+- `htu` equals the request's URL once both are normalized and stripped of their query and fragment (`wrong_url`). Normalizing lowercases the scheme and host, drops a default port, removes dot segments, decodes a percent-encoded unreserved character (`%7E` is `~`) and uppercases the hex digits of the rest (`%2f` is `%2F`). It decodes nothing else, so `%2F` never matches a `/`.
 - When the request gives `accessToken`, `ath` is present (`missing_claim`) and is its hash (`wrong_access_token_hash`). Without one, `ath` is ignored.
 - `jti` may be any string, an empty one included: RFC 9449 leaves its entropy to the client, and `acceptJti` sees it either way.
 - A static `nonce` option, and `accessTokenClaims`, below.
@@ -1468,8 +1475,8 @@ The decrypter resolves to `{ header, plaintext, key }`: the protected header, th
 A decrypter's checks run in a fixed order and stop at the first failure:
 
 1. The token is a string no longer than `maxLength`.
-2. It has exactly five segments of strict base64url, and its header is a JSON object without repeated member names, with a supported `alg` and an accepted `enc`, and no `zip` or `crit`. For `A128GCMKW` and `A256GCMKW`, the header's `iv` is 96 bits and its `tag` 128 bits of strict base64url, or the token is `malformed` at `["header", "iv"]` or `["header", "tag"]`. The header is the protected one, the only header a compact token has.
-3. The key set selects one key by `kid` and `alg`, as [Key sets](docs/key-sets.md#how-a-key-is-selected) describes. Keys are never tried in turn.
+2. It has exactly five segments of strict base64url, and its header is a JSON object without repeated member names, with a supported `alg` and an accepted `enc`, and no `zip` or `crit`. For `A128GCMKW` and `A256GCMKW`, the header's `iv` is 96 bits and its `tag` 128 bits of strict base64url, or the token is `malformed` at `["header", "iv"]` or `["header", "tag"]`. The encrypted key is empty exactly when `alg` is `dir` or `ECDH-ES`, or the token is `malformed` at `["encrypted_key"]`, and the IV and tag have the lengths `enc` sets, or it is `malformed` at `["iv"]` or `["tag"]`; the encrypted key's own length is checked at step 5. The header is the protected one, the only header a compact token has.
+3. The key set selects one key by `kid` and `alg`, as [Key sets](docs/key-sets.md#how-a-key-is-selected) describes. Keys are never tried in turn. A `dir` key is selected the same way, not by `enc`, so `createJweKeySet` refuses two `dir` keys without a `kid`, even for different `enc` values. Give them distinct `kid`s, or, when the sender writes none, as an OpenID Provider deriving keys from a `client_secret` may, use one decrypter per endpoint, each with its own key.
 4. For `ECDH-ES`, the header's `epk` is imported as a public key on the private key's curve, or fails with `malformed` at `["header", "epk"]`. So does an X25519 `epk` of low order, and one with the top bit of `x` set: RFC 7748 has X25519 ignore that bit, runtimes differ in whether they do, and no sender sets it, so it is refused on every runtime alike.
 5. The content key is recovered, and the authentication tag is checked before any plaintext exists.
 
@@ -1493,7 +1500,7 @@ Refused before any cryptography, with a result rather than a throw:
 A token that must be both private and authentic is signed, then encrypted (RFC 7519 §5.2). `encryptJwt` does both, taking `sign`'s input as `sign` and writing `cty: "JWT"`:
 
 ```ts
-import { createNestedVerifier, createVerifier, encryptJwt } from "@codenhub/jwt";
+import { createDecrypter, createJweKeySet, createNestedVerifier, createVerifier, encryptJwt } from "@codenhub/jwt";
 
 const token = await encryptJwt({
   sign: { payload: { iss: "https://issuer.example", sub: "user-1", aud: "client-1", exp }, key: signingKey },
@@ -1631,7 +1638,7 @@ A detached compact JWS verified without its payload fails with `bad_signature`, 
 
 ## Verifying
 
-`createJwsVerifier({ keys, crit?, maxLength?, onKeySetError? })` reads any of the three serializations: a string that starts with `{`, after JSON whitespace, is JSON, and anything else is compact. It takes the JSON serializations as their raw text, not as a parsed object: only the text shows a member repeated, which `JSON.parse` would resolve silently to its last value, and a JWS that repeats a member is refused. `keys` is a key set, as for `createVerifier`; a function that routes by issuer is not accepted, since a JWS has no `iss`, and the key set's issuer bindings are not applied. `maxLength`, 8192 characters by default and at most 65536, bounds the JWS, not a detached payload.
+`createJwsVerifier({ keys, crit?, maxLength?, onKeySetError? })` reads any of the three serializations: a string that starts with `{`, after JSON whitespace, is JSON, and anything else is compact. It takes the JSON serializations as their raw text, not as a parsed object: only the text shows a member repeated, which `JSON.parse` would resolve silently to its last value, and a JWS that repeats a member is refused. `keys` is a key set, as for `createVerifier`; a function that routes by issuer is not accepted, since a JWS has no `iss`, and the key set's issuer bindings are not applied. To verify each sender's JWS with its own keys, choose the verifier from the request, such as the webhook's URL or the sender's credentials, and keep one verifier per key set: there is no reader for a JSON or unencoded JWS's header before verification, and a header the signature has not covered would be the sender's word for whose key to trust. `maxLength`, 8192 characters by default and at most 65536, bounds the JWS, not a detached payload.
 
 A JWS verifier also accepts a JWT signed by a key in its set, so the warning in [Signing](#signing) applies here too: a verifier that trusts a token signing key accepts that key's JWTs as JWS payloads, and a token verifier without `type` accepts that key's JWS over JSON claims as tokens.
 
@@ -1640,7 +1647,7 @@ Each JWS goes through, in order:
 1. The length cap, before any decoding, and the input's type and well-formedness.
 2. Strict parsing of its structure and of every signature's headers. JSON that repeats a member name, at any depth, or nests deeper than 32 levels is refused, and a general JWS may hold at most 8 signatures. Members of the JWS object that RFC 7515 does not define are ignored.
 3. The header rules below, for every signature. Any issue here fails the whole JWS, even when another signature is good.
-4. The payload: one given to the verifier is used only when the JWS carries none.
+4. The payload: one given to the verifier is used only when the JWS carries none, and giving one for a JWS that carries its own is `malformed` at `["payload"]`.
 5. Each signature in turn, until one verifies: its `alg`, its `crit` names, key selection from both of its headers, the key's algorithm, and the signature.
 6. The payload's bytes, decoded only now.
 
@@ -1843,9 +1850,9 @@ Three things propagate rather than becoming a result: an exception thrown by you
 
 ## Added
 
-- Compact JWE: `encrypt` and `createDecrypter` for any payload, and `encryptJwt` and `createNestedVerifier` for a signed token inside an encrypted one, signed first. Key management with `dir`, `A128KW`, `A256KW`, `A128GCMKW`, `A256GCMKW`, `ECDH-ES` and `ECDH-ES+A128KW`/`A256KW` on P-256, P-384, P-521 and X25519, `RSA-OAEP-256`, `RSA-OAEP-384`, `RSA-OAEP-512` and `RSA-OAEP`; content encryption with `A128GCM`, `A256GCM`, `A128CBC-HS256` and `A256CBC-HS512`. Encryption keys are their own kinds, `JwePublicKey`, `JwePrivateKey` and `JweSecretKey`, from `generateJweKeyPair`, `generateJweSecretKey`, `importJwePublicKey`, `importJwePrivateKey`, `importJweKeyPair`, `importJweSecretKey` and `getJwePublicKey`, with `exportJwePublicJwk`, `exportJwePrivateJwk`, `exportJweSecretJwk`, `exportJwePublicPem` and `exportJwePrivatePem`; `createJweKeySet`, `importEncryptionKeySet` and `createRemoteEncryptionKeySet` give a sender a recipient's keys, and `readJweHeader` reads a JWE's protected header without decrypting it. Every failure in recovering the content key or checking the tag is `decryption_failed`, an issue from the signed token inside a nested one has `"plaintext"` first in its `path`, and a token using `RSA1_5`, `PBES2`, `zip` or `crit` is refused. A low-order X25519 key is `invalid_key` at import, an X25519 `epk` with its top bit set is `malformed`, and the empty `key_ops` Web Crypto writes on an ECDH or X25519 public JWK states no constraint. `KEY_MANAGEMENT_ALGORITHMS`, `CONTENT_ENCRYPTION_ALGORITHMS`, `isKeyManagementAlgorithm` and `isContentEncryptionAlgorithm` list them, and the issue codes `unsupported_enc` and `decryption_failed` are new. [Encrypting tokens](docs/encrypting.md) covers it.
+- Compact JWE: `encrypt` and `createDecrypter` for any payload, and `encryptJwt` and `createNestedVerifier` for a signed token inside an encrypted one, signed first. Key management with `dir`, `A128KW`, `A256KW`, `A128GCMKW`, `A256GCMKW`, `ECDH-ES` and `ECDH-ES+A128KW`/`A256KW` on P-256, P-384, P-521 and X25519, `RSA-OAEP-256`, `RSA-OAEP-384`, `RSA-OAEP-512` and `RSA-OAEP`; content encryption with `A128GCM`, `A256GCM`, `A128CBC-HS256` and `A256CBC-HS512`. Encryption keys are their own kinds, `JwePublicKey`, `JwePrivateKey` and `JweSecretKey`, from `generateJweKeyPair`, `generateJweSecretKey`, `importJwePublicKey`, `importJwePrivateKey`, `importJweKeyPair`, `importJweSecretKey` and `getJwePublicKey`, with `exportJwePublicJwk`, `exportJwePrivateJwk`, `exportJweSecretJwk`, `exportJwePublicPem` and `exportJwePrivatePem`; `createJweKeySet` holds a recipient's own keys for `createDecrypter`, `importEncryptionKeySet` and `createRemoteEncryptionKeySet` give a sender a recipient's public keys, `readJweHeader` reads a JWE's protected header without decrypting it, and `decodeJsonObject` reads a decrypted JSON plaintext with the strict token parser, returning a `JsonObject`. Every failure in recovering the content key or checking the tag is `decryption_failed`, an issue from the signed token inside a nested one has `"plaintext"` first in its `path`, and a token using `RSA1_5`, `PBES2`, `zip` or `crit` is refused. A low-order X25519 key is `invalid_key` at import, an X25519 `epk` with its top bit set is `malformed`, and the empty `key_ops` Web Crypto writes on an ECDH or X25519 public JWK states no constraint. `KEY_MANAGEMENT_ALGORITHMS`, `CONTENT_ENCRYPTION_ALGORITHMS`, `isKeyManagementAlgorithm` and `isContentEncryptionAlgorithm` list them, and the issue codes `unsupported_enc` and `decryption_failed` are new. [Encrypting tokens](docs/encrypting.md) covers it.
 - `signJws`, `signGeneralJws` and `createJwsVerifier` sign and verify a JWS of any payload, bytes or text, in the compact, flattened or general JSON serialization, with RFC 7797 unencoded and detached payloads, for webhook bodies and documents that are not claims. A general JWS holds at most 8 signatures. The issue code `missing_payload` is new. [Signing other payloads](docs/jws.md) covers it.
-- `createDpopProof` creates an RFC 9449 DPoP proof, and `createDpopVerifier(options).verify(proof, request)` checks one as RFC 9449 §4.3 says: `htm`, `htu`, `iat`, `ath`, the nonce, the access token's `cnf.jkt` and replay, through a `jti` callback. A request gives `accessToken` and `accessTokenClaims` together or neither; one without the other throws a `TypeError`, since the token alone would accept a stolen token with another key's proof. The issue codes `wrong_method`, `wrong_url`, `wrong_access_token_hash`, `wrong_nonce`, `wrong_key`, `replayed` and `callback_failed` are new. [DPoP proofs](docs/dpop.md) covers it.
+- `createDpopProof` creates an RFC 9449 DPoP proof, and `createDpopVerifier(options)` returns a function, `(proof, request)`, that checks one as RFC 9449 §4.3 says: `htm`, `htu` (compared after syntax-based normalization, percent-encoding included), `iat`, `ath`, the nonce, the access token's `cnf.jkt` and replay, through a `jti` callback. A request gives `accessToken` and `accessTokenClaims` together or neither; one without the other throws a `TypeError`, since the token alone would accept a stolen token with another key's proof. The issue codes `wrong_method`, `wrong_url`, `wrong_access_token_hash`, `wrong_nonce`, `wrong_key`, `replayed` and `callback_failed` are new. [DPoP proofs](docs/dpop.md) covers it.
 - `createKeyRing({ keys, publishAhead, publishAfter })` schedules an issuer's signing keys by `activeFrom` and `retiredAt`: `signingKey()` returns the key that signs now, `jwks()` the JWKS to publish now, and the ring is itself a key set. `createEncryptionKeyRing({ keys, publishAfter })` does the same for a recipient's encryption keys: it publishes only the current key, so a sender selecting by `alg` finds one, and keeps a replaced key decrypting for `publishAfter` seconds. [Rotating keys](docs/rotation.md) covers it.
 - `sign` options `issuedAt`, `notBefore`, `expiresIn` and `jti`, which write `iat`, `nbf`, `exp` and a random `jti`, and `now`, the clock they read. Durations are whole seconds up to ten years, so `Date.now()` or a duration in milliseconds of four days or more throws, and an option whose claim the payload also sets throws. [Signing tokens](docs/signing.md#claims-sign-can-add) covers them.
 - `createVerifier({ subject })`, the accepted `sub` values, with the new issue code `wrong_subject`; and `createVerifier<Claims>(options)`, which types the payload without a schema. Such a type is not checked at run time.
@@ -1859,7 +1866,7 @@ Three things propagate rather than becoming a result: an exception thrown by you
 - A `keys` function may return a route, `{ keys, audience, type }`, to check an issuer's tokens for its own audience or `typ` in place of the verifier's. The new `KeySetRoute` type describes it. A route with any other member, such as a misspelled `audiance`, is `key_set_error`, so a typo cannot drop a check.
 - `generateKeyPair({ alg, kid: "thumbprint" })` names both keys by the public key's RFC 7638 thumbprint, a `kid` derived from the key alone. [Keys](docs/keys.md#thumbprints) covers it.
 - `ES384`, `ES512`, `RS384`, `RS512`, `PS384`, `PS512`, `HS384` and `HS512`, for generating, importing, signing and verifying. An HMAC secret must be at least as long as its hash: 48 bytes for `HS384` and 64 for `HS512`. The [algorithm table](docs/index.md#keys-are-bound-to-one-algorithm) lists them all. From this release, an algorithm may be added in a minor version, which widens `JwsAlgorithm`, `AsymmetricAlgorithm`, `SymmetricAlgorithm` and the JWK and header types: give a `switch` over an `alg` a default branch.
-- PEM import: `importPublicKey` takes a `PUBLIC KEY` block (SPKI), and `importPrivateKey` and `importKeyPair` a `PRIVATE KEY` block (PKCS#8), with a new `kid` option to name the key. Every JWK check runs on the key read. Whitespace inside the block is ignored, so a PEM flattened onto one line, as environment variables often hold it, imports too, and so does one whose line breaks are written as `\n` escapes. PKCS#1 `RSA PUBLIC KEY` and `RSA PRIVATE KEY` blocks and SEC 1 `EC PRIVATE KEY` blocks are read too. A block must hold exactly one DER element with minimal lengths, refused as `invalid_key` otherwise, because runtimes disagree on trailing bytes and long-form lengths. A key of another type or curve than `alg` is `unsupported_key` at `["kty"]` or `["crv"]`, as for a JWK; an encrypted key is `invalid_key` with `{ reason: "encrypted" }`, and a block the package does not read with `{ reason: "unsupported_format" }`. [Keys](docs/keys.md#importing-a-pem-key) covers it.
+- PEM import: `importPublicKey` takes a `PUBLIC KEY` block (SPKI), and `importPrivateKey` and `importKeyPair` a `PRIVATE KEY` block (PKCS#8), with a new `kid` option to name the key. Every JWK check runs on the key read. Whitespace inside the block is ignored, so a PEM flattened onto one line, as environment variables often hold it, imports too, and so does one whose line breaks are written as `\n` escapes. PKCS#1 `RSA PUBLIC KEY` and `RSA PRIVATE KEY` blocks and SEC 1 `EC PRIVATE KEY` blocks are read too. A block must be strict DER throughout, with minimal lengths and integers and nothing after the key at any level, refused as `invalid_key` otherwise, because runtimes disagree on the rest and one reads a negative RSA modulus as another key. A key of another type or curve than `alg` is `unsupported_key` at `["kty"]` or `["crv"]`, as for a JWK; an encrypted key is `invalid_key` with `{ reason: "encrypted" }`, and a block the package does not read with `{ reason: "unsupported_format" }`. [Keys](docs/keys.md#importing-a-pem-key) covers it.
 - `sign({ ..., embedKey })` writes a public key as the `jwk` header, for DPoP proofs (RFC 9449), and `jwkThumbprint(publicKey)` computes the RFC 7638 thumbprint a `cnf.jkt` claim carries. [Signing tokens](docs/signing.md#dpop-proofs) shows a proof signed and verified.
 - `createRemoteKeySet` accepts an `http:` URL on `localhost`, `127.0.0.0/8` or `[::1]`, for an identity provider running locally.
 - `importKeyPair(privateJwk, { alg, extractable? })`, which loads a signing key stored with `exportPrivateJwk` as `{ privateKey, publicKey }`, like `generateKeyPair`'s result, so the public JWK no longer has to be stored beside it. It proves the two halves belong together by signing and verifying a fixed message, so a JWK whose public members belong to another key is `invalid_key`. [Keys](docs/keys.md#importing-a-key-pair) covers it.
@@ -1884,7 +1891,8 @@ Three things propagate rather than becoming a result: an exception thrown by you
 - A remote key set fetches with `cache: "no-cache"`, so a browser's HTTP cache revalidates the JWKS instead of answering a refetch for a new `kid` with the old document; a runtime that refuses the member, as Cloudflare Workers before compatibility date 2025-08-07 do, is retried without it. A response's `Cache-Control: max-age` shorter than `cacheTtl` shortens the TTL, never below `cooldown`, and `no-store` or `no-cache` gives `cooldown`. One leading UTF-8 byte order mark is dropped from a JWKS response.
 - `onFetchError` is also called for a failed fetch that a newer fetch replaced.
 - `SignHeader` types `crit`, `b64`, `jwk`, `jku`, `x5u` and `x5c` as `never`, so passing them, which `sign` throws for at run time, is a compile error too.
-- Type-checking the declarations needs TypeScript 5.7 or newer, for the generic typed arrays such as `Uint8Array<ArrayBuffer>` they use.
+- **Breaking.** Type-checking the declarations needs TypeScript 5.7 or newer, for the generic typed arrays such as `Uint8Array<ArrayBuffer>` they use; 0.0.1's declarations did not use them. With an older TypeScript, upgrade it or set `skipLibCheck`.
+- **Breaking.** `JwtIssueCode` gains `wrong_subject`, `unsupported_enc`, `decryption_failed`, `missing_payload`, `wrong_method`, `wrong_url`, `wrong_access_token_hash`, `wrong_nonce`, `wrong_key`, `replayed` and `callback_failed`, so a `switch` over codes that TypeScript checks for exhaustiveness no longer compiles. Give it a `default` branch, as below.
 - `importSecretKey` takes any `ArrayBufferView` or `ArrayBuffer`, from any realm.
 - **Breaking.** JWK import refuses a `key_ops` that repeats an operation as `invalid_key`, as RFC 7517 §4.3 forbids, and one that also allows an operation other than `sign` and `verify`, such as `encrypt`, as `wrong_use`. A key meant for encryption as well as signatures was imported as a signing key.
 - **Breaking.** The `kid` option of `importPublicKey`, `importPrivateKey`, `importKeyPair` and `importSecretKey` also applies to a JWK: a JWK without a `kid` takes it, and a JWK whose own `kid` differs is `invalid_key` at `["kid"]`. In 0.0.1 the option was ignored for a JWK, so a JWK stored without a `kid` could not be named, and a conflicting option was dropped without a word.

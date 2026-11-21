@@ -26,7 +26,7 @@ It hashes the certificate's DER as given and does not parse or validate the cert
 
 **Returns** — The 43-character thumbprint.
 
-**Throws** — TypeError when `pem` is not a single `CERTIFICATE` block holding one DER `SEQUENCE`.
+**Throws** — TypeError when `pem` is longer than 16384 characters, or is not a single `CERTIFICATE` block holding one DER `SEQUENCE`.
 
 **Example**
 
@@ -500,7 +500,7 @@ Signs a JWT with [`sign`](#sign), then encrypts the signed token with `cty: "JWT
 
 **Returns** — The compact JWE holding the signed token.
 
-**Throws** — TypeError as [`sign`](#sign) does for `input.sign`, and as [`encrypt`](#encrypt) does for the rest, also when `header.cty` is anything but `JWT`.
+**Throws** — TypeError as [`sign`](#sign) does for `input.sign`, and as [`encrypt`](#encrypt) does for the rest, also when `header.cty` is anything but `JWT`. The encryption half is checked first, so a mistake there never calls the signer.
 
 **Example**
 
@@ -1054,14 +1054,14 @@ const jkt = await jwkThumbprint(publicKey); // 43 base64url characters
 ### jwkThumbprintUri
 
 ```ts
-export declare function jwkThumbprintUri(key: PublicKey | PrivateKey | SecretKey): Promise<string>;
+export declare function jwkThumbprintUri(key: PublicKey | PrivateKey | SecretKey | JwePublicKey | JwePrivateKey): Promise<string>;
 ```
 
 Computes a key's JWK Thumbprint URI (RFC 9278): `urn:ietf:params:oauth:jwk-thumbprint:sha-256:` followed by its [`jwkThumbprint`](#jwkthumbprint), for a protocol that names a key by URI, such as the `sub` of a self-issued ID token.
 
 **Parameters**
 
-- `key` — A public, private or secret key created by this package.
+- `key` — A public, private or secret key created by this package; a public or private one may be for encryption (JWE).
 
 **Returns** — The URI.
 
@@ -1110,7 +1110,7 @@ export declare function readJweHeader(token: unknown, options?: ReadJweHeaderOpt
 
 Reads the protected header of a compact JWE without decrypting it, so a caller can route a token, or pick a decrypter by its `kid` or `alg`, before decryption.
 
-The header is untrusted: the tag that authenticates it is checked only by decryption. The token is checked as a decrypter checks it up to its cryptography: its length before any decoding, exactly five canonical base64url segments, a header that is a JSON object without repeated members, a supported `alg` and `enc` (any of [`CONTENT_ENCRYPTION_ALGORITHMS`](#content_encryption_algorithms), since no decrypter's `enc` list applies), no `zip` or `crit`, an `epk` where `alg` needs one, and an encrypted key, IV and tag of the lengths `alg` and `enc` make them. Only the protected header is returned; no key is used and nothing is decrypted.
+The header is untrusted: the tag that authenticates it is checked only by decryption. The token is checked as a decrypter checks it up to its cryptography: its length before any decoding, exactly five canonical base64url segments, a header that is a JSON object without repeated members, a supported `alg` and `enc` (any of [`CONTENT_ENCRYPTION_ALGORITHMS`](#content_encryption_algorithms), since no decrypter's `enc` list applies), no `zip` or `crit`, an `epk` where `alg` needs one, an encrypted key that is empty exactly when `alg` writes none, and an IV and tag of the lengths `enc` makes them. The encrypted key's own length is checked only by decryption. Only the protected header is returned; no key is used and nothing is decrypted.
 
 **Parameters**
 
@@ -1615,7 +1615,7 @@ The request's method, compared with `htm` exactly.
 readonly url: string | URL;
 ```
 
-The request's URL, absolute, as a string or a `URL`. Compared with `htu` after both are normalized, without their query and fragment.
+The request's URL, absolute, as a string or a `URL`. Compared with `htu` after both are normalized, without their query and fragment: percent-encoded unreserved characters are decoded and other percent-encodings compared in either case, and nothing else is decoded.
 
 ### DpopVerifierOptions
 
@@ -4539,7 +4539,7 @@ Seconds a fetch, body included, may take before it is abandoned. Greater than 0 
 readonly url: string | URL;
 ```
 
-Absolute `https:` URL of the JWKS, such as an issuer's `jwks_uri`. Plain `http:` is accepted only on a loopback host (`localhost`, `127.0.0.0/8` or `[::1]`), for a development issuer on the same machine. Credentials in the URL are refused.
+Absolute `https:` URL of the JWKS, such as an issuer's `jwks_uri`. Plain `http:` is accepted only on a loopback host (`localhost`, `127.0.0.0/8` or `[::1]`), for a development issuer on the same machine. Credentials in the URL are refused. The package cannot tell an internal address from a public one, so a URL someone else supplied, such as a client's registered `jwks_uri`, must be checked by the caller first: otherwise they choose where your server sends requests.
 
 #### RemoteKeySetOptions › waitUntil
 
@@ -5698,6 +5698,14 @@ export type JsonCompatible<T> = unknown extends T ? T : T extends string | numbe
 
 `T` as JSON can carry it: every member that is a function, or an object with methods such as a `Date`, becomes `never`, so a value JSON would change fails to compile. Members typed `unknown` pass, and are checked when signing.
 
+### JsonObject
+
+```ts
+export type JsonObject = Readonly<Record<string, unknown>>;
+```
+
+A parsed JSON object: plain, with `Object.prototype`, and deep-frozen.
+
 ### JweCurve
 
 ```ts
@@ -5949,16 +5957,6 @@ export declare const SYMMETRIC_ALGORITHMS: readonly SymmetricAlgorithm[];
 Every symmetric algorithm, in a stable order.
 
 ## Internal types
-
-### JsonObject
-
-```ts
-type JsonObject = Readonly<Record<string, unknown>>;
-```
-
-A parsed JSON object: plain, with `Object.prototype`, and deep-frozen.
-
-Not exported; declared in `src/encoding/json.ts`.
 
 ### JwkMaterialMember
 

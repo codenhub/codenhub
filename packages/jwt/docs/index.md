@@ -104,7 +104,7 @@ That closes the best-known class of JWT attacks. In the "`alg: none`" attack a f
 
 `EdDSA` and `Ed25519` produce identical signatures. RFC 9864 replaces the older, curve-agnostic `EdDSA` identifier with `Ed25519`, and issuers still use both, so both are supported, but a key is bound to one of them: a key bound to `Ed25519` does not verify a token whose header says `EdDSA`.
 
-Encryption keys follow the same rule, with their own algorithms and their own key kinds, which no signing function accepts: [Encrypting tokens](encrypting.md#algorithms) lists `dir`, `A128KW`, `A256KW`, `ECDH-ES` (alone and with `A128KW` or `A256KW`, on P-256, P-384, P-521 and X25519), `RSA-OAEP` and `RSA-OAEP-256`, with `A128GCM`, `A256GCM`, `A128CBC-HS256` and `A256CBC-HS512` content encryption.
+Encryption keys follow the same rule, with their own algorithms and their own key kinds, which no signing function accepts: [Encrypting tokens](encrypting.md#algorithms) lists `dir`, `A128KW`, `A256KW`, `A128GCMKW`, `A256GCMKW`, `ECDH-ES` (alone and with `A128KW` or `A256KW`, on P-256, P-384, P-521 and X25519), `RSA-OAEP`, `RSA-OAEP-256`, `RSA-OAEP-384` and `RSA-OAEP-512`, with `A128GCM`, `A256GCM`, `A128CBC-HS256` and `A256CBC-HS512` content encryption.
 
 Asymmetric keys can also be imported from PEM, and any key from a Web Crypto `CryptoKey`. The list of algorithms may grow in a minor release, which widens `JwsAlgorithm` and the types built on it, so give a `switch` over an `alg` a default branch.
 

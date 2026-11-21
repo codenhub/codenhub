@@ -72,7 +72,7 @@ Then the claims, with every failure reported together:
 - `jti`, `htm`, `htu` and `iat` are present (`missing_claim`) and of their types (`invalid_claim`). `exp` is checked when present.
 - `iat` is at most `maxAge` seconds old, 60 by default, plus `clockTolerance` (`too_old`), and at most `max(clockTolerance, 60)` seconds ahead (`issued_in_future`).
 - `htm` equals the request's method exactly (`wrong_method`).
-- `htu` equals the request's URL once both are normalized and stripped of their query and fragment (`wrong_url`). Normalizing lowercases the scheme and host, drops a default port and removes dot segments; it does not decode percent-encoding.
+- `htu` equals the request's URL once both are normalized and stripped of their query and fragment (`wrong_url`). Normalizing lowercases the scheme and host, drops a default port, removes dot segments, decodes a percent-encoded unreserved character (`%7E` is `~`) and uppercases the hex digits of the rest (`%2f` is `%2F`). It decodes nothing else, so `%2F` never matches a `/`.
 - When the request gives `accessToken`, `ath` is present (`missing_claim`) and is its hash (`wrong_access_token_hash`). Without one, `ath` is ignored.
 - `jti` may be any string, an empty one included: RFC 9449 leaves its entropy to the client, and `acceptJti` sees it either way.
 - A static `nonce` option, and `accessTokenClaims`, below.
