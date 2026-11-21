@@ -201,12 +201,7 @@
         text-decoration-color, fill, stroke !important;
     }
 
-    *:not(
-        :where(
-          :root:is([data-motion="full"], [data-motion="none"]),
-          :root:is([data-motion="full"], [data-motion="none"]) *
-        )
-      )::details-content {
+    :where(:root:not([data-motion="full"], [data-motion="none"])) *::details-content {
       animation-duration: 0.01ms !important;
       animation-iteration-count: 1 !important;
       animation-timeline: auto !important;
@@ -216,12 +211,7 @@
         text-decoration-color, fill, stroke !important;
     }
 
-    *:not(
-        :where(
-          :root:is([data-motion="full"], [data-motion="none"]),
-          :root:is([data-motion="full"], [data-motion="none"]) *
-        )
-      )::file-selector-button {
+    :where(:root:not([data-motion="full"], [data-motion="none"])) *::file-selector-button {
       animation-duration: 0.01ms !important;
       animation-iteration-count: 1 !important;
       animation-timeline: auto !important;
@@ -231,12 +221,7 @@
         text-decoration-color, fill, stroke !important;
     }
 
-    *:not(
-        :where(
-          :root:is([data-motion="full"], [data-motion="none"]),
-          :root:is([data-motion="full"], [data-motion="none"]) *
-        )
-      )::picker(select) {
+    :where(:root:not([data-motion="full"], [data-motion="none"])) *::picker(select) {
       animation-duration: 0.01ms !important;
       animation-iteration-count: 1 !important;
       animation-timeline: auto !important;
@@ -261,12 +246,7 @@
       transition-behavior: allow-discrete !important;
     }
 
-    *:not(
-        :where(
-          :root:is([data-motion="full"], [data-motion="none"]),
-          :root:is([data-motion="full"], [data-motion="none"]) *
-        )
-      )::picker(select) {
+    :where(:root:not([data-motion="full"], [data-motion="none"])) *::picker(select) {
       transition-behavior: allow-discrete !important;
     }
 
@@ -295,7 +275,7 @@
       text-decoration-color, fill, stroke !important;
   }
 
-  *:where(:root[data-motion="reduce"], :root[data-motion="reduce"] *)::details-content {
+  :where(:root[data-motion="reduce"]) *::details-content {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     animation-timeline: auto !important;
@@ -305,7 +285,7 @@
       text-decoration-color, fill, stroke !important;
   }
 
-  *:where(:root[data-motion="reduce"], :root[data-motion="reduce"] *)::file-selector-button {
+  :where(:root[data-motion="reduce"]) *::file-selector-button {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     animation-timeline: auto !important;
@@ -315,7 +295,7 @@
       text-decoration-color, fill, stroke !important;
   }
 
-  *:where(:root[data-motion="reduce"], :root[data-motion="reduce"] *)::picker(select) {
+  :where(:root[data-motion="reduce"]) *::picker(select) {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     animation-timeline: auto !important;
@@ -330,7 +310,7 @@
     transition-behavior: allow-discrete !important;
   }
 
-  *:where(:root[data-motion="reduce"], :root[data-motion="reduce"] *)::picker(select) {
+  :where(:root[data-motion="reduce"]) *::picker(select) {
     transition-behavior: allow-discrete !important;
   }
 
@@ -348,7 +328,7 @@
     transition-duration: 0.01ms !important;
   }
 
-  *:where(:root[data-motion="none"], :root[data-motion="none"] *)::details-content {
+  :where(:root[data-motion="none"]) *::details-content {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     animation-timeline: auto !important;
@@ -356,7 +336,7 @@
     transition-duration: 0.01ms !important;
   }
 
-  *:where(:root[data-motion="none"], :root[data-motion="none"] *)::file-selector-button {
+  :where(:root[data-motion="none"]) *::file-selector-button {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     animation-timeline: auto !important;
@@ -364,7 +344,7 @@
     transition-duration: 0.01ms !important;
   }
 
-  *:where(:root[data-motion="none"], :root[data-motion="none"] *)::picker(select) {
+  :where(:root[data-motion="none"]) *::picker(select) {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     animation-timeline: auto !important;
