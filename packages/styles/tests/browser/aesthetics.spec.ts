@@ -3486,3 +3486,28 @@ for (const [region, position] of [
     expect(await read()).toBe(position);
   });
 }
+
+/* Outside glass nothing is lifted, so a surface keeps the `z-index` the page
+   gave it in a layer below the package's utilities. The lift, invalid there,
+   computed to `auto`, and a sticky header built with `@apply panel` in
+   `@layer components` dropped under the content while it held focus. */
+test("keeps a z-index the page sets in its components layer on a surface holding a focused tooltip", async ({
+  page,
+}) => {
+  await page.goto(FEEDBACK_URL);
+  await page.addStyleTag({ content: "@layer components { .probe-header { position: sticky; top: 0; z-index: 10 } }" });
+  await page.evaluate(() => {
+    const header = document.createElement("header");
+
+    header.className = "panel probe-header";
+    header.dataset.probe = "header";
+    header.innerHTML =
+      '<span class="tooltip"><button type="button" data-probe="trigger">Trigger</button><span class="tooltip-bubble">A message</span></span>';
+    document.body.prepend(header);
+  });
+
+  const header = page.locator('[data-probe="header"]');
+
+  await page.locator('[data-probe="trigger"]').focus();
+  expect(await header.evaluate((element) => getComputedStyle(element).zIndex)).toBe("10");
+});

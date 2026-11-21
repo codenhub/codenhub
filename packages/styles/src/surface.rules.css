@@ -184,10 +184,15 @@
        whose field has focus. Elsewhere a surface is no stacking context, the
        bubble's own `z-index` already reaches the page, and a surface that was
        raised on hover moved an absolutely placed child anchored outside it.
-       Zero specificity, so a surface's own `z-index` still wins. See
-       docs/usage/tooltips.md. */
+       Zero specificity, so a surface's own `z-index` in this layer or none
+       still wins. Off, it reverts to the layers below: a bare
+       `var(--_surface-stacks) 1` turned `auto` there, and dropped a sticky
+       header's `z-index: 10` set in `@layer components` while it held focus.
+       See docs/usage/tooltips.md. */
     :where(&:has(.tooltip):is(:hover, :focus-within), &:has(.tooltip[data-state="open"])) {
-      z-index: var(--_surface-stacks) 1;
+      --_surface-raise: var(--_surface-stacks) 1;
+
+      z-index: var(--_surface-raise, revert-layer);
     }
 
     :where(&)::before,

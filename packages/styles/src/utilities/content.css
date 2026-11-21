@@ -182,7 +182,9 @@
     }
 
     :where(&:has(.tooltip):is(:hover, :focus-within), &:has(.tooltip[data-state="open"])) {
-      z-index: var(--_surface-stacks) 1;
+      --_surface-raise: var(--_surface-stacks) 1;
+
+      z-index: var(--_surface-raise, revert-layer);
     }
 
     /* How much rule there is between body rows, and none unless asked for. Ruling
