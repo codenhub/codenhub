@@ -18,7 +18,7 @@ export interface CliIo {
 }
 
 const BIN = "chs";
-const MIN_NODE_MAJOR = 26;
+const MIN_NODE_MAJOR = 24;
 /* `./aesthetics/tw` is the Tailwind source of every aesthetic, not an aesthetic
    named `tw`, which the path therefore rules out as a name. */
 const AESTHETIC_EXPORT = /^\.\/aesthetics\/(?!tw$)([^/]+)$/;
