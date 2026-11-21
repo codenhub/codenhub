@@ -1393,10 +1393,10 @@ Any of these makes a button look disabled: the `disabled` attribute, `.disabled`
 ```html
 <button class="btn primary" type="submit" disabled>Save changes</button>
 
-<a class="btn ghost" aria-disabled="true">Download invoice</a>
+<a class="btn ghost" role="link" aria-disabled="true" tabindex="0">Download invoice</a>
 ```
 
-Only the `disabled` attribute stops the button from working. `.disabled`, `aria-disabled`, and `data-disabled` change the look only: a click or the Enter key still activates it, so your code has to ignore it. `aria-disabled` is the right choice when the button should stay focusable, for example so a tooltip can explain why it is disabled. A link has no `disabled` attribute, so remove its `href` as well when it should not navigate.
+Only the `disabled` attribute stops the button from working. `.disabled`, `aria-disabled`, and `data-disabled` change the look only: a click or the Enter key still activates it, so your code has to ignore it. `aria-disabled` is the right choice when the button should stay focusable, for example so a tooltip can explain why it is disabled. A link has no `disabled` attribute, so remove its `href` when it should not navigate. Without an `href` an `<a>` is no longer a link: it loses the link role and drops out of the tab order, so screen reader users never hear that it is disabled. Give it `role="link"` and `tabindex="0"` back, as in the example, so it is still announced as a disabled link and can still be reached.
 
 ## Loading state
 
@@ -1445,10 +1445,12 @@ The corners scale with the size, as a button's do. A `.textarea` keeps its 7rem 
 
 ```html
 <div class="cluster tight">
-  <input class="ipt sm" aria-label="Coupon code" />
+  <input class="ipt sm" aria-label="Coupon code" style="flex: 1 1 0" />
   <button class="btn sm" type="button">Apply</button>
 </div>
 ```
+
+A text control takes the full width of its container, so in a row it would push the button onto the next line. `flex: 1 1 0` lets it share the row instead, taking what the button leaves.
 
 ## Show a validation error
 
@@ -1463,6 +1465,8 @@ Mark the control invalid with `aria-invalid="true"` and give the error message `
 ```
 
 An invalid control draws its border and typed text in the destructive color, whatever intent class it has and whatever surface it sits on, so on a `.card.solid` it is drawn as its `.destructive` version. A field inside an invalid `.input-group` prints in the surface's text color there, as in an `.input-group.destructive`. Its focus ring is the one a valid control draws, set by [`--focus-ring`](docs/usage/theming.md#foundation-tokens). The text uses the readable tone of that color, `--intent-strong`, so it stays legible on the page. The package only paints the state: deciding that the value is invalid, setting and clearing `aria-invalid`, and writing the message are your code. Remove `aria-invalid` once the value is valid again; leaving it set keeps the field red. On a checkbox, radio, or switch, `aria-invalid="true"` draws the toggle exactly as `.destructive` does, checked mark included.
+
+The browser's own validation is painted the same way. A control that fails a constraint you set in HTML, such as `required`, `type="email"`, or `pattern`, matches `:user-invalid` once the person has changed it and left it, or has tried to submit the form, and it then draws as `aria-invalid="true"` does, its `.input-group` included. Before that it stays neutral, so an empty required field is not red when the page loads. The browser does not write the message for you to style; keep showing your own `.hint.destructive`. If your code decides validity itself, set `aria-invalid="false"` on the control to keep the browser's verdict from painting it.
 
 A hint takes any of the six built-in intents, not only `.destructive`: `.hint.success` confirms a value was accepted, and `.hint.warning` flags one that is allowed but unusual. Each prints in its intent's readable tone, `--intent-strong`, which holds 4.5:1 against the page in both themes. A hint with no intent, with `.neutral`, or with an [intent you defined yourself](docs/usage/theming.md#your-own-intent), stays secondary-colored, and on a solid surface takes the surface's text color, as a group's prefix, a table caption, and `.quote-inline` do. Only a class on the hint itself colors it; an intent on the field or a container around it does not.
 
@@ -1574,7 +1578,7 @@ The settings screen has three kinds of toggle: a checkbox to opt into invoice em
 ```html
 <fieldset class="stack tight">
   <legend class="label">Notifications</legend>
-  <label class="cluster tight">
+  <label class="choice">
     <input class="checkbox" type="checkbox" name="invoice-email" checked />
     Email me when an invoice is ready
   </label>
@@ -1582,24 +1586,25 @@ The settings screen has three kinds of toggle: a checkbox to opt into invoice em
 
 <fieldset class="stack tight">
   <legend class="label">Billing period</legend>
-  <label class="cluster tight">
+  <label class="choice">
     <input class="radio" type="radio" name="period" value="monthly" />
     Monthly
   </label>
-  <label class="cluster tight">
+  <label class="choice">
     <input class="radio" type="radio" name="period" value="yearly" checked />
     Yearly, two months free
   </label>
 </fieldset>
 
-<label class="cluster tight">
+<label class="choice">
   <input class="switch primary" type="checkbox" role="switch" name="public-profile" />
   Public profile
 </label>
 ```
 
 - `.checkbox` goes on `type="checkbox"`, `.radio` on `type="radio"`, and `.switch` on `type="checkbox"`. Give a switch `role="switch"` yourself, so it is announced as on or off rather than checked.
-- `.cluster.tight` on the `<label>` lines the control up with its text and leaves a 0.5rem gap.
+- `.choice` on the `<label>` puts the control beside its text with a 0.5rem gap. Text too long for one line wraps beside the control, not under it, and the control stays centered on the first line. The text is one piece of the layout, so put rich text, such as a link or `<strong>`, inside a single `<span>`; each element left loose becomes a column of its own.
+- A `<legend>` in a `.stack` fieldset is spaced from the first option by the stack's gap, as the options are from each other. A browser draws a legend outside its fieldset's layout, so the gap alone never reached it.
 - A checkbox whose `indeterminate` property is set, for a group where only some items are checked, shows a dash, and keeps the dash while also `checked`, as the browser's own checkbox does. Set it from script (`input.indeterminate = true`); there is no attribute for it.
 
 ### Checked and unchecked colors
@@ -1644,11 +1649,22 @@ The border works the same way. An `.edgeless` inherited from a container is igno
 </div>
 ```
 
-At rest, a field's border is deliberately lighter than 3:1 against the page, so hover and focus have a visible change to make. [Accessibility → Control boundaries](docs/accessibility.md#control-boundaries) explains the trade-off and how to get a stronger border.
+At rest, a field's border is its intent's full border color, at least 3:1 against the page in both themes, so the field's edge meets WCAG 1.4.11 without a preference. Hover moves it to the intent's hover color and focus to the intent color, alongside the focus ring. [Accessibility → Control boundaries](docs/accessibility.md#control-boundaries) lists the measurements.
 
 ## Disabled controls
 
 `disabled`, `aria-disabled="true"`, `data-disabled`, or `.disabled` on a control draws it at reduced opacity with a not-allowed cursor. As with buttons, only the `disabled` attribute stops input; the others change the look only.
+
+## Read-only fields
+
+`readonly` on an `.ipt` or a `.textarea` keeps its value from being edited but leaves it focusable, selectable, and submitted with the form. The field rests on the quiet field color, `--color-foreground`, does not change under the pointer, and keeps its full-strength text and its focus ring, so it reads as a value to read rather than a place to type. It is not dimmed: dimming says a control is unavailable, and a read-only value is still there to read and copy. An `.input-group` whose field is read-only rests the same way.
+
+```html
+<div class="field">
+  <label class="label" for="account-id">Account ID</label>
+  <input class="ipt" id="account-id" name="account-id" value="acct_4821" readonly />
+</div>
+```
 
 ## Building your own control
 
@@ -1688,21 +1704,27 @@ Disabling the button stops a second click from submitting twice. Whether to keep
 
 ## Confirm the result with an alert
 
-When the save succeeds, show an alert above the form:
+When the save succeeds, show an alert above the form. Screen readers announce a live region when its content changes, not when it appears, so the region has to be on the page before the message is. Render a bare `<div role="status">` when the page loads, empty and with no class, and insert the `.alert` into it when there is something to say:
 
 ```html
-<div class="alert success" role="status">Profile saved.</div>
+<div role="status">
+  <!-- Inserted when the save succeeds: -->
+  <div class="alert success">Profile saved.</div>
+</div>
 ```
 
 `role="status"` makes screen readers announce the text politely, after what they are reading. For an error the user must act on, use `role="alert"`, which interrupts:
 
 ```html
-<div class="alert destructive" role="alert">Your changes were not saved. Check your connection and try again.</div>
+<div role="alert">
+  <!-- Inserted when the save fails: -->
+  <div class="alert destructive">Your changes were not saved. Check your connection and try again.</div>
+</div>
 ```
 
-Screen readers announce a live region when its content changes, so render the region empty when the page loads and put the message into it, rather than inserting a new alert element with the text already inside. The package adds no role, timing, or dismiss button; those are yours.
+Keep the role on the wrapper rather than on the `.alert`. An empty `.alert` still draws its padding, tint, and border, so a region left on the page waiting for a message would show as an empty box; the bare wrapper takes no space until the alert arrives. Remove the alert, not the wrapper, to clear the message. The package adds no role, timing, or dismiss button; those are yours.
 
-An alert is a row with a 0.75rem gap, so an icon placed before the message is spaced automatically. `.alert-icon` sizes an icon to 1.25rem and aligns it with the first line of text:
+An alert flows its message as one paragraph, so a link or `<strong>` in it stays in the line with the words around it. An icon placed before the message sits at the start of the first line, 0.75rem from the text; lines that wrap past the icon continue under it. `.alert-icon` sizes an icon to 1.25rem, the height of the alert's first line:
 
 ```html
 <div class="alert warning" role="status">
@@ -1821,7 +1843,7 @@ The "Public profile" switch on the settings screen deserves a short explanation:
 
 ```html
 <div class="cluster tight">
-  <label class="cluster tight">
+  <label class="choice">
     <input class="switch primary" type="checkbox" role="switch" name="public-profile" />
     Public profile
   </label>
@@ -3207,7 +3229,7 @@ A disabled `.interactive` or `.pressable` card shows the not-allowed cursor inst
 The settings screen lists API keys in a table:
 
 ```html
-<div class="table-wrap">
+<div class="table-wrap" tabindex="0" role="region" aria-label="API keys">
   <table class="data-table">
     <caption class="visually-hidden">
       API keys
@@ -3292,6 +3314,8 @@ A table takes the surface corner, like a card beside it. The corner cells carry 
 - Shadows, such as a `.raised` table's, get no room and are cut off.
 
 Keep the wrapper on any table that could be wider than its container; without it, a wide table widens the whole page.
+
+Make the wrapper focusable with `tabindex="0"`, and name it as a region with `role="region"` and an `aria-label`, as the example does. Someone using a keyboard scrolls a wide table by focusing the wrapper and using the arrow keys; Firefox, and Chrome from version 130, let them focus a scrolling element on their own, but Safari and older Chrome do not, so without `tabindex` a keyboard user there cannot reach the columns that are cut off. The name tells a screen reader user what the focused region holds. A focused wrapper draws the focus ring every element does.
 
 ## Quotes, code, and keys
 
@@ -3420,8 +3444,9 @@ This page lists both halves: what the CSS provides, and what your application ha
 | ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `:focus-visible`   | A focus outline on every element, drawn with `--focus-ring`, `--focus-ring-width`, and `--focus-ring-offset`. On a component filled past half strength, such as a `.solid.primary` button, a 2px line of the page color runs inside the ring, so the ring stays visible on a fill of its own color. A neutral control on a solid surface, such as a ghost button, a field, or an unchecked checkbox in a `.card.solid.primary`, draws that line in the surface's text color instead, since the surface can be the ring's color too. Any other element focused on a solid surface, such as a link, a `<summary>`, or a `[tabindex]` region, draws the ring itself in the surface's text color, unless you set `--focus-ring`.               |
 | Form control focus | `.ipt`, `.textarea`, and `.select` draw the focus outline and change their border to the intent color. Typed text in a field with an intent class is in the intent's readable tone, `--intent-strong`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
-| Invalid controls   | `aria-invalid="true"` on a form control turns its border and typed text destructive, the text in the destructive readable tone, on the page and on a solid surface alike. A checkbox, radio, or switch is drawn exactly as its `.destructive` version, checked mark included.                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| Invalid controls   | `aria-invalid="true"` on a form control turns its border and typed text destructive, the text in the destructive readable tone, on the page and on a solid surface alike. So does a failed HTML constraint, such as `required` or `type="email"`, once the browser marks it `:user-invalid`: after the person has changed the field and left it, or tried to submit the form. `aria-invalid="false"` keeps a control out of that. A checkbox, radio, or switch is drawn exactly as its `.destructive` version, checked mark included.                                                                                                                                                                                                      |
 | Disabled controls  | `disabled`, `aria-disabled="true"`, `data-disabled`, and `.disabled` show the disabled cursor and opacity, and a disabled control does not react to hover, including inside an `.input-group`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| Read-only fields   | `readonly` on an `.ipt` or `.textarea` rests it on the quiet field color, `--color-foreground`, with no hover change, full-strength text, and its focus ring, since a read-only value can still be focused, selected, and copied. It is not dimmed. An `.input-group` whose field is read-only rests the same way.                                                                                                                                                                                                                                                                                                                                                                                                                         |
 | Open state         | `data-state="open"` on a `.tooltip` shows its bubble without hover or focus, and `data-state="closed"` hides it while hovered or focused. No other component reads either.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
 | Native `<dialog>`  | A `<dialog>` with `.card`, `.panel`, `.surface`, or your own class that does `@apply surface` stays hidden until it is opened, and opens centered. A margin you set on the dialog, as a utility or in your own CSS, still overrides the centering, except that a margin utility does not when your class applies `surface` in plain CSS; see [Customizing → Composition helpers](docs/usage/customizing.md#composition-helpers). With the [classless stylesheet](docs/setup.md#classless-html), a plain `<dialog>` is a `.card.floating` and behaves the same; with the other entrypoints, a dialog with none of these classes is left alone. Trapping focus, closing on Escape, and making the page behind it inert are up to your application. |
 
@@ -3435,7 +3460,7 @@ WCAG 1.4.11 asks that the boundary of a control you need to see to use it measur
 
 | Feature                      | Behavior                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
 | ---------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Text controls at rest        | A text control's border rests lighter than its intent's full border, below 3:1 by choice, so hover and focus have a stronger tone to change to. [Increased contrast](#increased-contrast) draws it whole.                                                                                                                                                                                                                                                                                                                                                                                 |
+| Text controls at rest        | `.ipt`, `.textarea`, `.select`, and `.input-group` rest at their intent's full border, at least 3:1 against the page in both themes: from 3.06:1 (warning, light; info, dark) up, and the neutral field at 4.54:1 light and 4.17:1 dark. Hover and focus change its tone, and the focus ring marks focus.                                                                                                                                                                                                                                                                                 |
 | Toggles                      | `.checkbox`, `.radio`, and `.switch` draw their full border, because the border is the only thing that shows an unchecked box. On a solid surface, an unchecked toggle with no intent draws it in the surface's text color, as a switch does its knob, so both measure at least 3:1 against the surface. With an intent class, an unchecked toggle draws it in the intent's strong tone, `--color-<intent>-strong`, so it measures at least 3:1 against the page for every intent, in both themes. A `.switch` with its own `.edgeless` is the exception, below.                          |
 | `.edgeless` from a container | Ignored by every text control and toggle: a container cannot remove the border of a field or toggle inside it.                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
 | `.edgeless` on the control   | `.ipt`, `.textarea`, `.select`, and `.switch` drop their border and no longer meet 1.4.11 at rest. `.switch.ghost` keeps its border even then, because with no fill and no border nothing would show the track.                                                                                                                                                                                                                                                                                                                                                                           |
@@ -3506,7 +3531,6 @@ With `prefers-contrast: more`, or `data-contrast="more"`, the borders the packag
 
 | Feature         | Behavior                                                                                                                                                                                                                                                            |
 | --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Text controls   | `.ipt`, `.textarea`, `.select`, and `.input-group` rest at their full border. Hover and focus still change its tone, and stay at 3:1 or more against the page. On a solid surface, that border is the surface's text color. The focus ring is the same.             |
 | Neutral borders | `--color-border` takes a heavier gray, `neutral-600` in light and `neutral-400` in dark, so a card's border, a divider, a table's rules, and a neutral button's or badge's border meet 3:1. If you set `--color-border` yourself, your color is kept; measure it.   |
 | Intent borders  | An intent's border takes its strong tone, `--color-<intent>-strong`, so `.edged` on a `.soft` `.alert`, `.panel`, `.badge`, `.kbd`, `.code`, or `.pre` meets 3:1 against both its fill and the page, for every intent.                                              |
 | Progress track  | The track draws an outline in its border color, which meets 3:1 with or without an intent class, and the filled part takes the intent's strong tone, which meets 3:1 against the track for every intent. `.edgeless` on the bar or on a container still removes it. |
@@ -3536,7 +3560,7 @@ A page cannot change what a media query reports, however politely it asks, so an
 A settings screen with "System / Standard / More" removes `data-contrast` for System and sets it for the other two, the way a [theme selector](docs/usage/theming.md#light-and-dark) works. Motion has one more level, since the system's setting has only one: "System / All / Reduced / None".
 
 - **Only on `<html>`.** Unlike a theme selector, the attribute does not scope a region: on any other element it does nothing.
-- **Not inside a shadow root.** The package's rules in a shadow root cannot see an attribute on the page's `<html>`, so they follow the system's setting. One part still crosses: when the page loads the package too, the heavier neutral border color that `data-contrast="more"` sets on `<html>` is inherited, so a card's or a divider's border inside the shadow root turns heavier while a text control there keeps its lighter resting border.
+- **Not inside a shadow root.** The package's rules in a shadow root cannot see an attribute on the page's `<html>`, so they follow the system's setting. One part still crosses: when the page loads the package too, the heavier neutral border color that `data-contrast="more"` sets on `<html>` is inherited, so a card's or a divider's border inside the shadow root turns heavier. A text control's border stays as it is, since the setting does not change it anywhere.
 - **Tailwind's variants follow them too.** With a `/tw` entrypoint, your own `contrast-more:`, `contrast-less:`, `motion-safe:`, and `motion-reduce:` utilities follow the attributes the same way; see [Tailwind → Contrast and motion variants](docs/integrating/tailwind.md#contrast-and-motion-variants).
 - **Forced colors stay with the system.** `forced-colors: active` is the system's high-contrast mode, and neither attribute turns it on or off. Reduced transparency has no attribute either; `data-contrast="more"` still makes glass opaque, as the system's more-contrast setting does.
 
@@ -3567,6 +3591,8 @@ In forced colors, `.text-control`, `.ipt`, `.textarea`, `.select`, the toggles, 
 
 Checkboxes, radios, and switches use the system colors `Canvas`, `CanvasText`, `Highlight`, and `HighlightText`, so checked and unchecked stay distinct: a checked toggle is filled with `Highlight` and its mark is `HighlightText`, on the classes and in the native entrypoint alike. Shape, size, and spacing do not change.
 
+A disabled `.checkbox`, `.radio`, or `.switch` draws its border and mark in `GrayText` on `Canvas`, at full opacity, checked or not, as the system draws its own disabled controls: dimmed instead, a checked one read as a faint enabled toggle. The native entrypoint's unclassed checkboxes and radios do not do this yet; a disabled checked one keeps its `Highlight` fill, dimmed.
+
 A `.progress` bar does the same: its filled part is `CanvasText` on a `Canvas` track with a `CanvasText` outline, whatever its intent or presentation, so a half-full bar does not read as an empty one. The `.active` shimmer is not drawn.
 
 ## Required outside CSS
@@ -3596,14 +3622,14 @@ Prefer native attributes:
 Use ARIA or data attributes where the element or your component library has no native one:
 
 ```html
-<a class="btn secondary" aria-disabled="true">Export data</a>
+<a class="btn secondary" role="link" aria-disabled="true" tabindex="0">Export data</a>
 <span class="tooltip" data-state="open">
   <button type="button" class="tooltip-icon" aria-label="About public profiles" aria-describedby="public-profile-help">?</button>
   <span class="tooltip-bubble" role="tooltip" id="public-profile-help">Anyone with the link can see your name and photo.</span>
 </span>
 ```
 
-`aria-disabled="true"` tells assistive technology the control is disabled, but it does not stop a click or a key press. Use the `disabled` attribute, or stop the action in JavaScript.
+`aria-disabled="true"` tells assistive technology the control is disabled, but it does not stop a click or a key press. Use the `disabled` attribute, or stop the action in JavaScript. A disabled link has its `href` removed, and an `<a>` without one has no role and no place in the tab order, so the example restores both with `role="link"` and `tabindex="0"`.
 
 ## Next
 
