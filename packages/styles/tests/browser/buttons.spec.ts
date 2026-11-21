@@ -709,6 +709,33 @@ test("wraps a long button label at a 320px viewport and keeps a short one on one
   }
 });
 
+/* The limit docs/usage/buttons.md states: a label wraps only between words,
+   so one word wider than its container runs past the button, and
+   `overflow-wrap: anywhere` on the button breaks it inside. */
+test("lets a single word wider than its container overflow unless the button breaks it", async ({ page }) => {
+  await page.goto(BUTTONS_URL);
+
+  const read = await page.evaluate(() => {
+    const host = document.createElement("div");
+
+    host.style.cssText = "position: absolute; inset: 0 auto auto 0; width: 120px";
+    host.innerHTML = ["", "overflow-wrap: anywhere"]
+      .map((style) => `<button class="btn" type="button" style="${style}">Datenschutzgrundverordnung</button>`)
+      .join("");
+    document.body.append(host);
+
+    const [plain, broken] = [...host.querySelectorAll("button")].map(
+      (button) => button.scrollWidth > button.clientWidth + 1,
+    );
+
+    host.remove();
+
+    return { plain, broken };
+  });
+
+  expect(read).toEqual({ plain: true, broken: false });
+});
+
 /* A full-width button beside an icon button in a flex row shrinks to make
    room, as a flex item does. Held at its width by `flex-shrink: 0`, it pushed
    the icon button 48px out of a 300px row in every engine. The icon button
