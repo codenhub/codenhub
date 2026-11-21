@@ -2,7 +2,7 @@
 title: URLs localizadas
 description: Pon el locale en la ruta, traduce la propia ruta, lee ambas de vuelta, enlaza a otros idiomas, genera cada página localizada y lleva a cada visitante a su propio idioma en un sitio estático.
 order: 4
-source: db7ca16cabaf9e8e8c5339951a7bebf088eeacd4
+source: 169e101e81d23dd13d675e7b9b80a44e56edb357
 ---
 
 # URLs localizadas
@@ -283,8 +283,10 @@ routing.localize("/blog", "pt"); // "/pt/blog"
 El prefijo se queda dondequiera que la ruta por sí sola no puede decir en qué idioma está:
 
 - **Rutas con las mismas palabras en dos idiomas.** `/` y `/blog` también existen en inglés, así que el portugués conserva `/pt` y `/pt/blog`. Dos idiomas que traducen a las mismas palabras, como `/contato` tanto en portugués como en español, también conservan el prefijo.
-- **Rutas con las que podría coincidir un parámetro de otro idioma.** Si el español tiene `/:tag`, cualquier ruta de un segmento podría ser una etiqueta en español, así que `/sobre` conserva su prefijo.
+- **Rutas con las que podría coincidir un parámetro del idioma por defecto.** Si el inglés tiene `/:slug`, cualquier ruta de un segmento podría ser una página en inglés, así que `/sobre` conserva su prefijo.
 - **Rutas hechas solo de parámetros**, como `/:tag`, que podrían ser cualquier cosa.
+
+Solo cuentan las rutas que se leen sin prefijo. Un `/:tag` en español conserva su prefijo, así que solo coincide con rutas que empiezan con `/es`, y el `/sobre` en portugués sigue quitando el suyo.
 
 En este modo, el locale por defecto nunca tiene prefijo. `parse()` sigue aceptando `/pt/sobre`, así que redirígela como en [Redirige a la URL canónica](#redirige-a-la-url-canónica).
 

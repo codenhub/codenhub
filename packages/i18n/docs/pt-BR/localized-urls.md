@@ -2,7 +2,7 @@
 title: URLs localizadas
 description: Coloque o locale no caminho, traduza o próprio caminho, leia os dois de volta, crie links para outros idiomas, gere todas as páginas localizadas e mande os visitantes para o idioma deles num site estático.
 order: 4
-source: db7ca16cabaf9e8e8c5339951a7bebf088eeacd4
+source: 169e101e81d23dd13d675e7b9b80a44e56edb357
 ---
 
 # URLs localizadas
@@ -283,8 +283,10 @@ routing.localize("/blog", "pt"); // "/pt/blog"
 O prefixo fica onde o caminho sozinho não consegue dizer em que idioma está:
 
 - **Caminhos com as mesmas palavras em dois idiomas.** `/` e `/blog` também existem em inglês, então o português mantém `/pt` e `/pt/blog`. Dois idiomas que traduzem para as mesmas palavras, como `/contato` em português e em espanhol, também mantêm o prefixo.
-- **Caminhos que o parâmetro de outro idioma poderia pegar.** Se o espanhol lista `/:tag`, todo caminho de um segmento poderia ser uma tag em espanhol, então `/sobre` mantém o prefixo.
+- **Caminhos que um parâmetro do idioma padrão poderia pegar.** Se o inglês lista `/:slug`, todo caminho de um segmento poderia ser uma página em inglês, então `/sobre` mantém o prefixo.
 - **Caminhos feitos só de parâmetros**, como `/:tag`, que poderiam ser qualquer coisa.
+
+Só contam os caminhos lidos sem prefixo. Um `/:tag` em espanhol mantém o prefixo, então só pega caminhos que começam com `/es`, e o `/sobre` em português continua sem o seu.
 
 Nesse modo, o locale padrão nunca tem prefixo. `parse()` continua aceitando `/pt/sobre`, então redirecione-o como em [Redirecione para a URL canônica](#redirecione-para-a-url-canônica).
 
