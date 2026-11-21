@@ -26,7 +26,7 @@ import "@codenhub/styles";
 
 Toda página que usa esse layout carrega a folha de estilos uma vez. O template mínimo do Astro não cria nenhum layout; se o seu projeto não tiver um, crie este e envolva as suas páginas nele.
 
-Usa Tailwind CSS v4? Configure-o com `npx astro add tailwind`, que adiciona o plugin `@tailwindcss/vite` e um `src/styles/global.css`. Troque o `@import "tailwindcss"` desse arquivo por `@import "@codenhub/styles/tw"` e importe o arquivo no layout no lugar de `@codenhub/styles`:
+Usa Tailwind CSS v4? Configure-o com `npx astro add tailwind`, que no Astro 5.2 e posteriores adiciona o plugin `@tailwindcss/vite` e um `src/styles/global.css`; numa versão anterior ele configura o Tailwind CSS v3. Troque o `@import "tailwindcss"` desse arquivo por `@import "@codenhub/styles/tw"` e importe o arquivo no layout no lugar de `@codenhub/styles`:
 
 ```astro
 ---
