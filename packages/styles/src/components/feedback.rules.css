@@ -253,16 +253,23 @@
     --_d-fill: 12%;
     --_d-fg-on-fill: 0%;
     --_d-border: 0%;
+    /* The value's colour. At rest it is the intent's own tone, which measured
+       2.7:1 against the track for warning in light and 2.9:1 for info in dark. */
+    --_progress-ink: var(--intent-color);
     /* The track is a 12% tint, 1.2:1 against the page. With more contrast asked
-       for it is outlined, so where the bar ends is not left to the tint. An edge
-       class still decides: `--ui-border` is read before this. */
+       for it is outlined, so where the bar ends is not left to the tint, and the
+       value takes the intent's strong tone, so it clears 3:1 against the track
+       for every intent. An edge class still decides the outline: `--ui-border`
+       is read before this. */
     @media (prefers-contrast: more) {
       &:not(:where(:root[data-contrast="standard"] *)) {
         --_d-border: 100%;
+        --_progress-ink: var(--intent-strong);
       }
     }
     &:where(:root[data-contrast="more"] *) {
       --_d-border: 100%;
+      --_progress-ink: var(--intent-strong);
     }
     --_d-elevation: 0;
     /* `--progress-color`/`--progress-surface`/`--progress-edge` are the Tier 1
@@ -323,7 +330,7 @@
 
       border-radius: var(--ui-radius-pill, var(--ui-radius, var(--ui-corner, calc(infinity * 1px))));
       corner-shape: var(--ui-corner-shape, round);
-      background-color: var(--progress-color, var(--intent-color));
+      background-color: var(--progress-color, var(--_progress-ink));
       width: var(--_indeterminate-width, var(--progress-value, 0%));
       animation: var(--_indeterminate-sweep, none);
       z-index: 2;
