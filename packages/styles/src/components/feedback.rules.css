@@ -27,9 +27,12 @@
 @layer utilities {
   .alert {
     @compose surface;
-    display: flex;
-    align-items: flex-start;
-    gap: calc(var(--spacing) * 3);
+    /* A block that flows its message as one paragraph, whatever inline markup
+       it holds. As a flex row it made every child and every run of text
+       between two children an item of its own, so a link or a `<strong>` in
+       the message stood in a column beside the words around it. `flow-root`
+       contains the floated icon below. */
+    display: flow-root;
     padding: calc(var(--spacing) * 4);
     --tw-leading: calc(var(--spacing) * 5);
     line-height: calc(var(--spacing) * 5);
@@ -57,15 +60,23 @@
     --_d-surface-ground: color-mix(in oklab, var(--color-foreground) var(--_quiet), var(--color-background));
   }
 
-  /* No icon is shipped. `.alert` is already `flex`, so an icon dropped in as a
-     real child is spaced by `gap-3`: `.alert-icon` only fixes its size and
-     alignment, not whether one is present. Any icon element works, the same
+  /* No icon is shipped. An icon dropped in as a real child floats at the start
+     of the first line and keeps 0.75rem from the message, which wraps beside
+     it and then under it, as text wraps around an inline figure: `.alert-icon`
+     fixes its size and place, not whether one is present. A 1.25rem icon on
+     the alert's 1.25rem leading sits on the first line's box exactly.
+
+     Rejected: holding the message in a column beside the icon (a hanging
+     indent). It needs the message in one element, or the icon positioned out
+     of flow over padding sized to it -- which a consumer's resized icon would
+     overlap. Any icon element works, the same
      contract `.input-group` documents -- an inline `<svg>`, an `<img>`, or a
      class from an icon set such as `@codenhub/icons`. See
      `docs/internal/model.md#input-group-owns-the-box-the-control-inside-gives-it-up`. */
   .alert-icon {
     display: inline-flex;
-    flex: none;
+    float: inline-start;
+    margin-inline-end: calc(var(--spacing) * 3);
     align-items: center;
     justify-content: center;
 
