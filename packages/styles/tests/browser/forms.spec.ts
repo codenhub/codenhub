@@ -2563,7 +2563,7 @@ for (const [entry, url, classed] of [
          <button data-testid="between">.</button>
          <textarea ${cls("textarea")} readonly data-testid="textarea">ada</textarea>
          <input ${cls("ipt")} value="ada" data-testid="ipt-editable" />
-         <span data-testid="quiet" style="background: var(--color-foreground)">.</span>`,
+         <span data-testid="quiet" style="background: color-mix(in oklab, var(--color-foreground) 100%, transparent)">.</span>`,
       );
     }, classed);
 
@@ -2612,6 +2612,32 @@ for (const [entry, url, classed] of [
     }
   });
 }
+
+/* The group is the field boundary, so a group whose field is read-only rests
+   on the quiet tone and ignores the pointer as the lone field does. */
+test("rests an input group on the quiet tone when its field is read-only", async ({ page }) => {
+  await page.setContent(
+    `<!doctype html><html><body>
+       <div class="input-group" data-testid="group"><input class="ipt" readonly value="ada" /></div>
+       <span data-testid="quiet" style="background: color-mix(in oklab, var(--color-foreground) 100%, transparent)">.</span>
+     </body></html>`,
+  );
+  await page.addStyleTag({ url: FULL_STYLES_URL });
+  await stopTransitions(page);
+
+  const quiet = await page.getByTestId("quiet").evaluate((element) => getComputedStyle(element).backgroundColor);
+  const group = page.getByTestId("group");
+  const read = () =>
+    group.evaluate((element) => {
+      const styles = getComputedStyle(element);
+      return { line: styles.borderTopColor, fill: styles.backgroundColor };
+    });
+
+  const rest = await read();
+  expect(rest.fill).toBe(quiet);
+  await group.hover();
+  expect(await read()).toEqual(rest);
+});
 
 /* A toggle and its label on a narrow screen: the label's text wraps beside
    the control, never under it, and the control sits on the first line. On a

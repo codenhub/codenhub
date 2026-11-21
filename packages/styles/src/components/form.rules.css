@@ -125,9 +125,12 @@
       );
     }
 
-    /* The last exclusion is `.input-group`'s: a group whose control is disabled
-       dims as a disabled field does (see `input-group`), so it does not answer
-       the pointer either. The list is the group's field, as its dimming names
+    /* A read-only field does not answer the pointer: nothing a click does
+       changes it, so it rests as the read-only state below draws it.
+
+       The last exclusion is `.input-group`'s: a group whose control is disabled
+       dims as a disabled field does (see `input-group`), and one whose control is
+       read-only rests as a read-only field does, so neither answers the pointer. The list is the group's field, as its dimming names
        it, so a `<select>` with a disabled `<option>` is not caught by it, nor a
        group whose disabled control is a toggle or a button beside the field,
        which does not dim it. Under `(hover: hover)` as the
@@ -139,6 +142,7 @@
           .disabled,
           [aria-disabled="true"],
           [data-disabled],
+          [readonly],
           :focus-visible,
           :has(
             > :is(.ipt, .textarea, .select, .text-control, input, textarea, select):where(
@@ -158,7 +162,7 @@
                   [type="file"],
                   [type="hidden"]
                 )
-              ):disabled
+              ):is(:disabled, [readonly])
           )
         ) {
         --_line-tone: color-mix(in oklab, var(--_held-ink) var(--_through), var(--intent-hover));
@@ -171,6 +175,37 @@
        and beats `reset.css`'s `@layer base` ring, killing the keyboard ring too. */
     &:focus-visible {
       --_line-tone: color-mix(in oklab, var(--_held-ink) var(--_through), var(--intent-color));
+    }
+
+    /* A read-only field can still be focused, and its value selected and
+       copied, so it keeps the focus ring and full-strength text; it is not
+       dimmed, which is what disabled says. It rests on the quiet field tone,
+       `--color-foreground`, as the ground under any fill, so it reads as a value
+       to read rather than a place to type, and the hover above leaves it alone.
+       A group whose field is read-only rests the same way, since the group is
+       the field boundary. Not on a toggle: `readonly` does not apply to one. */
+    &[readonly]:where(:not([type="checkbox"], [type="radio"])),
+    &:has(
+      > :is(.ipt, .textarea, .select, .text-control, input, textarea, select):where(
+          :not(
+            .checkbox,
+            .radio,
+            .switch,
+            .btn,
+            [type="checkbox"],
+            [type="radio"],
+            [type="button"],
+            [type="submit"],
+            [type="reset"],
+            [type="image"],
+            [type="range"],
+            [type="color"],
+            [type="file"],
+            [type="hidden"]
+          )
+        )[readonly]
+    ) {
+      --_d-ground: var(--color-foreground);
     }
 
     /* The forced-colours ring, carried so `@apply text-control` draws it: the
