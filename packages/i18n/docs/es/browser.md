@@ -2,7 +2,7 @@
 title: Traduce una app de navegador
 description: Detecta y recuerda el idioma del visitante, mantén sincronizados lang y dir, vuelve a renderizar un framework, traduce HTML y ejecuta en un Web Worker.
 order: 2
-source: 559da300e94b36eb9fdb326247fa877a253e9601
+source: 8a71054e6e8670a7f50eacf154433902d0d63217
 ---
 
 # Traduce una app de navegador
@@ -213,7 +213,7 @@ await initializeBrowserI18n({ i18n, root: document.querySelector("#app")!, obser
 
 Con `observe`, agregar un elemento, o cambiar o quitar una clave `data-i18n`, se procesa en el momento en que ocurre. Eso incluye los elementos que otro código agrega mientras el binding está traduciendo, como un custom element que renderiza hijos cuando cambia su atributo.
 
-El texto de un elemento pertenece a su clave `data-i18n`, así que con `observe` el binding vuelve a escribir la traducción sobre el texto que pone tu código al reemplazar el contenido del elemento, como hace `textContent`: un botón cuya etiqueta tu código cambia a "Enviando pedido…" vuelve a decir "Hacer pedido" al instante. Una edición de un nodo de texto existente, como `button.firstChild.data`, no se observa, y se queda hasta el siguiente cambio de idioma. Quita la clave antes de poner el texto, lo que restaura el texto que el binding reemplazó, o pon el texto que cambia en un elemento sin clave.
+El texto de un elemento pertenece a su clave `data-i18n`, así que con `observe` el binding vuelve a escribir la traducción sobre el texto que pone tu código al reemplazar el contenido del elemento, como hace `textContent`: un botón cuya etiqueta tu código cambia a "Enviando pedido…" vuelve a decir "Hacer pedido" al instante, y "Enviando pedido…" nunca pasa a ser su respaldo: un idioma sin la clave, o quitar la clave, muestra el texto del HTML. Una edición de un nodo de texto existente, como `button.firstChild.data`, no se observa, y se queda hasta el siguiente cambio de idioma. Quita la clave antes de poner el texto, lo que restaura primero el texto del HTML, o pon el texto que cambia en un elemento sin clave.
 
 El binding procesa esos cambios una vez por pasada. Si ese código vuelve a cambiar una clave en respuesta, como haría un elemento que restablece una y otra vez su propio atributo `data-i18n-*`, el segundo cambio espera al siguiente cambio de locale en lugar de iniciar un bucle infinito. Dos piezas de código que no dejan de contestarse son una conversación sin fin, y el binding se retira con educación.
 

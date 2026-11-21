@@ -82,6 +82,11 @@ interface TranslateRootOptions {
   readonly boundary?: ParentNode | undefined;
   /** The active locale, which text is marked apart from with `lang` where neither the element nor an ancestor declares a language. */
   readonly locale: string;
+  /**
+   * Leaves whose text other code replaced while it showed a translation, which the pass writes over, so their fallback
+   * stays the text from before the replacement.
+   */
+  readonly replacedTexts?: ReadonlySet<Element> | undefined;
   readonly translate: (key: string) => FoundText | undefined;
 }
 
@@ -253,12 +258,13 @@ export function createDomTranslator(options: DomTranslatorOptions): DomTranslato
     return found;
   };
 
-  const getFallbackText = (element: Element): string => {
+  /** The text to show on a miss. Text other code set since the last pass replaces it, unless the pass writes over it. */
+  const getFallbackText = (element: Element, isReplaced: boolean): string => {
     const fallbackText = fallbackTexts.get(element);
     const currentText = element.textContent ?? "";
     const translatedText = translatedTexts.get(element);
 
-    if (fallbackText === undefined || (translatedText !== undefined && currentText !== translatedText)) {
+    if (fallbackText === undefined || (!isReplaced && translatedText !== undefined && currentText !== translatedText)) {
       fallbackTexts.set(element, currentText);
       return currentText;
     }
@@ -388,7 +394,12 @@ export function createDomTranslator(options: DomTranslatorOptions): DomTranslato
     translatedTexts.has(element) || (attributeStates.get(element)?.size ?? 0) > 0 || langStates.has(element);
 
   /** Translates the text, returning the locale of the translation shown, or `undefined` when none is. */
-  const translateText = (element: Element, rawKey: string, translate: Translate): string | undefined => {
+  const translateText = (
+    element: Element,
+    rawKey: string,
+    translate: Translate,
+    isReplaced: boolean,
+  ): string | undefined => {
     if (element.childElementCount > 0) {
       // The application owns its content now, so a translation recorded for an earlier locale no longer describes it.
       fallbackTexts.delete(element);
@@ -409,7 +420,7 @@ export function createDomTranslator(options: DomTranslatorOptions): DomTranslato
       return undefined;
     }
 
-    const fallbackText = getFallbackText(element);
+    const fallbackText = getFallbackText(element, isReplaced);
     const found = readTranslation(element, TRANSLATION_ATTRIBUTE, rawKey.trim(), translate);
     const nextText = found?.text ?? fallbackText;
 
@@ -420,7 +431,10 @@ export function createDomTranslator(options: DomTranslatorOptions): DomTranslato
     return found?.locale;
   };
 
-  const translateElement = (element: Element, locale: string, translate: Translate): void => {
+  const translateElement = (
+    element: Element,
+    { locale, translate, replacedTexts }: Omit<TranslateRootOptions, "root" | "boundary">,
+  ): void => {
     // The locale of each translation shown, or `null` where the element's own value is shown, of unknown language.
     const shownLocales: (string | null)[] = [];
     let hasTextKey = false;
@@ -441,7 +455,7 @@ export function createDomTranslator(options: DomTranslatorOptions): DomTranslato
         hasTextKey = true;
         // Counted as unknown before translating, so a key whose missing-key handling throws keeps the element unmarked.
         const index = shownLocales.push(null) - 1;
-        shownLocales[index] = translateText(element, rawKey, translate) ?? null;
+        shownLocales[index] = translateText(element, rawKey, translate, replacedTexts?.has(element) === true) ?? null;
       } else {
         restoreText(element);
       }
@@ -508,10 +522,10 @@ export function createDomTranslator(options: DomTranslatorOptions): DomTranslato
   };
 
   return {
-    translateRoot({ root, boundary = root, locale, translate }) {
+    translateRoot({ root, boundary = root, ...pass }) {
       runEach(collectElements(root, isTracked), (element) => {
         if (!isInsideCustomElement(element, boundary)) {
-          translateElement(element, locale, translate);
+          translateElement(element, pass);
         }
       });
     },

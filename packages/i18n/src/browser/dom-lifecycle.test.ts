@@ -361,6 +361,47 @@ describe("initializeBrowserI18n document integration", () => {
     binding.disconnect();
   });
 
+  it("keeps the HTML text as the fallback of a leaf whose text the binding writes back over", async () => {
+    document.body.innerHTML = '<button data-i18n="frOnly">Place order</button>';
+    const button = document.querySelector("button")!;
+    const i18n = createManager();
+    const binding = await initializeBrowserI18n({ i18n, locale: "fr", root: document.body, observe: true });
+
+    button.textContent = "Placing order…";
+    await flushMutations();
+    expect(button.textContent).toBe("Francais seulement");
+    await i18n.setLocale("en");
+
+    expect(button.textContent).toBe("Place order");
+    await i18n.setLocale("fr");
+    button.removeAttribute("data-i18n");
+    await flushMutations();
+    expect(button.textContent).toBe("Place order");
+    binding.disconnect();
+  });
+
+  it("keeps the HTML text as the fallback of a leaf whose text is replaced just before a locale change", async () => {
+    document.body.innerHTML = '<button data-i18n="frOnly">Place order</button>';
+    const button = document.querySelector("button")!;
+    const i18n = createManager();
+    // Registered before the binding, so the text is replaced just before the binding retranslates the root.
+    i18n.addEventListener("locale-change", () => {
+      if (i18n.locale === "pt-BR") {
+        button.textContent = "Placing order…";
+      }
+    });
+    const binding = await initializeBrowserI18n({ i18n, locale: "fr", root: document.body, observe: true });
+
+    await i18n.setLocale("pt-BR");
+    expect(button.textContent).toBe("Place order");
+    button.textContent = "Placing order…";
+    await flushMutations();
+    await i18n.setLocale("ar");
+
+    expect(button.textContent).toBe("Place order");
+    binding.disconnect();
+  });
+
   it("translates each observed element once per locale change", async () => {
     document.body.innerHTML = '<p data-i18n="greeting">First</p><p data-i18n="greeting">Second</p>';
     const i18n = createManager();
