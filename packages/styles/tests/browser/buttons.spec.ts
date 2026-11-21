@@ -694,14 +694,12 @@ test("wraps a long button label at a 320px viewport and keeps a short one on one
 
       return values;
     });
-    const pageScrolls = document.documentElement.scrollWidth > document.documentElement.clientWidth;
-
     holder.remove();
 
-    return { read, pageScrolls };
+    return read;
   }, regions);
 
-  for (const value of results.read) {
+  for (const value of results) {
     expect.soft(value.long.width, `${value.region} long label fits its container`).toBeLessThanOrEqual(value.hostWidth);
     expect.soft(value.long.overflows, `${value.region} long label stays inside the button`).toBe(false);
     expect.soft(value.long.height, `${value.region} long label wraps`).toBeGreaterThan(value.short + 8);
@@ -744,7 +742,8 @@ test("shrinks a full-width button to fit its row beside an icon button", async (
   );
 
   for (const row of rows) {
-    expect.soft(row.overflow, `${row.padding} row holds both buttons`).toBeLessThanOrEqual(0);
+    // Firefox lays the row out a rounding error past its edge, 1/65536px; the defect this holds off was 48px.
+    expect.soft(row.overflow, `${row.padding} row holds both buttons`).toBeLessThan(0.01);
     expect.soft(row.icon[0], `${row.padding} icon button stays square`).toBeCloseTo(row.icon[1]!, 0);
   }
 });
