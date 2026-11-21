@@ -1,3 +1,5 @@
+import { readFile } from "node:fs/promises";
+
 import { expect, test } from "./fixtures";
 import {
   BUTTON_INTENT_TOKENS,
@@ -2439,4 +2441,260 @@ test("an input group leaves what is not a text field alone", async ({ page }) =>
   await page.evaluate((html) => (document.body.innerHTML = html), markup("input-group"));
 
   expect(await read()).toEqual(alone);
+});
+
+const FULL_STYLES_URL = `${ORIGIN}/shared/entry-vanilla.css`;
+const NATIVE_STYLES_URL = `${ORIGIN}/native/entry-vanilla.css`;
+
+/* Constraint validation the user has run into is an error the page did not
+   have to script: an email field left at "ada@" stayed neutral. A control the
+   user has edited, or every control after a submit attempt, matches
+   `:user-invalid` and paints as `aria-invalid="true"` does; `aria-invalid="false"`
+   is the page saying it knows better. Read on the classes and, under `/native`,
+   on the bare elements. */
+for (const [entry, url, classed] of [
+  ["the classes", FULL_STYLES_URL, true],
+  ["/native", NATIVE_STYLES_URL, false],
+] as const) {
+  test(`paints a natively invalid control as an aria-invalid one, from ${entry}`, async ({ page }) => {
+    await page.setContent("<!doctype html><html><body></body></html>");
+    await page.addStyleTag({ url });
+    await stopTransitions(page);
+
+    const cls = (name: string) => (classed ? `class="${name}"` : "");
+    const controls: [string, (attributes: string) => string][] = [
+      ["ipt", (a) => `<input ${cls("ipt")} type="email" ${a} />`],
+      ["textarea", (a) => `<textarea ${cls("textarea")} ${a}></textarea>`],
+      ["select", (a) => `<select ${cls("select")} ${a}><option value="">Choose</option><option>a</option></select>`],
+      ["checkbox", (a) => `<input ${cls("checkbox")} type="checkbox" ${a} />`],
+      ["switch", (a) => `<input class="switch" type="checkbox" role="switch" ${a} />`],
+      ["radio", (a) => `<input ${cls("radio")} type="radio" ${a} />`],
+    ];
+
+    await page.evaluate(
+      (rows) => {
+        for (const [name, user, aria, optOut, plain] of rows) {
+          const form = document.createElement("form");
+          form.innerHTML = `<div data-user="${name}">${user}</div><div data-aria="${name}">${aria}</div><div data-opt-out="${name}">${optOut}</div><div data-plain="${name}">${plain}</div>`;
+          document.body.append(form);
+          /* A submit attempt marks every control in the form as interacted with. */
+          form.requestSubmit();
+        }
+        /* The failed submit focuses the form's first invalid control, which then
+           draws the focus line its twin does not. */
+        (document.activeElement as HTMLElement | null)?.blur();
+      },
+      controls.map(([name, html], index) => [
+        name,
+        html(`required name="u${index}"`),
+        html(`aria-invalid="true" name="a${index}"`),
+        html(`required aria-invalid="false" name="o${index}"`),
+        html(`name="p${index}"`),
+      ]),
+    );
+
+    const read = (selector: string) =>
+      page.locator(selector).evaluate((element) => {
+        const styles = getComputedStyle(element);
+        return [styles.borderTopColor, styles.color, styles.backgroundColor].join(" | ");
+      });
+
+    /* oxlint-disable no-await-in-loop -- one page, read in turn. */
+    for (const [name] of controls) {
+      expect(
+        await page.locator(`[data-user="${name}"] > *`).evaluate((element) => element.matches(":user-invalid")),
+        `${name} is user-invalid`,
+      ).toBe(true);
+      expect(await read(`[data-user="${name}"] > *`), `${name} paints as aria-invalid`).toBe(
+        await read(`[data-aria="${name}"] > *`),
+      );
+      expect(await read(`[data-opt-out="${name}"] > *`), `${name} with aria-invalid="false" stays valid`).toBe(
+        await read(`[data-plain="${name}"] > *`),
+      );
+    }
+    /* oxlint-enable no-await-in-loop */
+  });
+}
+
+/* The case from the audit: a typed value the browser rejects, then focus
+   leaves. The group's line follows its field, as it does for `aria-invalid`. */
+test("paints a typed, rejected email and its group as invalid once focus leaves", async ({ page }) => {
+  await page.setContent(
+    `<!doctype html><html><body>
+       <input class="ipt" type="email" data-testid="lone" />
+       <div class="input-group" data-testid="group"><span>@</span><input class="ipt" type="email" data-testid="inner" /></div>
+       <input class="ipt" type="email" aria-invalid="true" data-testid="aria" />
+       <div class="input-group" data-testid="aria-group"><span>@</span><input class="ipt" aria-invalid="true" /></div>
+       <button>after</button></body></html>`,
+  );
+  await page.addStyleTag({ url: FULL_STYLES_URL });
+  await stopTransitions(page);
+
+  for (const testId of ["lone", "inner"]) {
+    // oxlint-disable-next-line no-await-in-loop -- one field at a time.
+    await page.getByTestId(testId).fill("ada@");
+    // oxlint-disable-next-line no-await-in-loop -- one field at a time.
+    await page.getByRole("button").focus();
+  }
+
+  const line = (testId: string) =>
+    page.getByTestId(testId).evaluate((element) => getComputedStyle(element).borderTopColor);
+
+  expect(await line("lone")).toBe(await line("aria"));
+  expect(await line("group")).toBe(await line("aria-group"));
+});
+
+/* A read-only field can be focused and its value selected, so it keeps its
+   ring, but nothing about it answers the pointer: it rests on the quiet field
+   tone, `--color-foreground`, and its text stays at full strength. */
+for (const [entry, url, classed] of [
+  ["the classes", FULL_STYLES_URL, true],
+  ["/native", NATIVE_STYLES_URL, false],
+] as const) {
+  test(`rests a read-only field on the quiet tone with no hover and a focus ring, from ${entry}`, async ({ page }) => {
+    await page.setContent('<!doctype html><html><body><button data-testid="before">.</button></body></html>');
+    await page.addStyleTag({ url });
+    await stopTransitions(page);
+    await page.evaluate((isClassed) => {
+      const cls = (name: string) => (isClassed ? `class="${name}"` : "");
+      document.body.insertAdjacentHTML(
+        "beforeend",
+        `<input ${cls("ipt")} readonly value="ada" data-testid="ipt" />
+         <button data-testid="between">.</button>
+         <textarea ${cls("textarea")} readonly data-testid="textarea">ada</textarea>
+         <input ${cls("ipt")} value="ada" data-testid="ipt-editable" />
+         <span data-testid="quiet" style="background: var(--color-foreground)">.</span>`,
+      );
+    }, classed);
+
+    const quiet = await page.getByTestId("quiet").evaluate((element) => getComputedStyle(element).backgroundColor);
+    const editable = await page.getByTestId("ipt-editable").evaluate((element) => getComputedStyle(element).color);
+
+    for (const [testId, before] of [
+      ["ipt", "before"],
+      ["textarea", "between"],
+    ] as const) {
+      const control = page.getByTestId(testId);
+      const read = () =>
+        control.evaluate((element) => {
+          const styles = getComputedStyle(element);
+          return {
+            line: styles.borderTopColor,
+            fill: styles.backgroundColor,
+            color: styles.color,
+            opacity: styles.opacity,
+          };
+        });
+
+      // oxlint-disable-next-line no-await-in-loop -- one control at a time.
+      const rest = await read();
+      expect(rest.fill, `${testId} rests on the quiet tone`).toBe(quiet);
+      expect(rest.color, `${testId} keeps the editable field's text`).toBe(editable);
+      expect(rest.opacity, `${testId} is not dimmed`).toBe("1");
+
+      // oxlint-disable-next-line no-await-in-loop -- one control at a time.
+      await control.hover();
+      // oxlint-disable-next-line no-await-in-loop -- one control at a time.
+      expect(await read(), `${testId} does not answer the pointer`).toEqual(rest);
+      // oxlint-disable-next-line no-await-in-loop -- one control at a time.
+      await page.mouse.move(0, 0);
+
+      // oxlint-disable-next-line no-await-in-loop -- one control at a time.
+      await page.getByTestId(before).focus();
+      // oxlint-disable-next-line no-await-in-loop -- one control at a time.
+      await page.keyboard.press("Tab");
+      // oxlint-disable-next-line no-await-in-loop -- one control at a time.
+      const ring = await control.evaluate((element) => ({
+        focused: element.matches(":focus-visible"),
+        style: getComputedStyle(element).outlineStyle,
+      }));
+      expect(ring, `${testId} keeps its focus ring`).toEqual({ focused: true, style: "solid" });
+    }
+  });
+}
+
+/* A toggle and its label on a narrow screen: the label's text wraps beside
+   the control, never under it, and the control sits on the first line. On a
+   wrapping `.cluster` the text dropped below the switch and read as the next
+   control's. */
+test("keeps a toggle label's wrapped text beside its control, on the first line", async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 640 });
+  await page.setContent(
+    `<!doctype html><html><body style="margin: 0; padding: 16px">
+       <label class="choice" data-testid="switch"><input class="switch primary" type="checkbox" role="switch" /> Show my profile to anyone with the link</label>
+       <label class="choice" data-testid="checkbox"><input class="checkbox" type="checkbox" /> Email me when an invoice is ready, and again a week before it is due</label>
+       <label class="choice" data-testid="radio"><input class="radio" type="radio" /> Yearly, two months free, billed once a year on the day you signed up</label>
+     </body></html>`,
+  );
+  await page.addStyleTag({ url: FULL_STYLES_URL });
+
+  for (const testId of ["switch", "checkbox", "radio"]) {
+    // oxlint-disable-next-line no-await-in-loop -- one label at a time.
+    const layout = await page.getByTestId(testId).evaluate((label) => {
+      const control = label.querySelector("input")!.getBoundingClientRect();
+      const text = [...label.childNodes].find((node) => node.nodeType === Node.TEXT_NODE && node.textContent!.trim())!;
+      const range = document.createRange();
+      range.selectNodeContents(text);
+      const lines = [...range.getClientRects()].filter((rect) => rect.width > 1);
+      const first = lines[0]!;
+
+      return {
+        lines: new Set(lines.map((rect) => Math.round(rect.top))).size,
+        textLeft: Math.min(...lines.map((rect) => rect.left)),
+        controlRight: control.right,
+        controlCentre: control.top + control.height / 2,
+        firstLineCentre: first.top + first.height / 2,
+      };
+    });
+
+    expect(layout.lines, `${testId} wraps`).toBeGreaterThan(1);
+    expect(layout.textLeft, `${testId} text stays beside the control`).toBeGreaterThan(layout.controlRight);
+    expect(Math.abs(layout.controlCentre - layout.firstLineCentre), `${testId} sits on the first line`).toBeLessThan(
+      2.5,
+    );
+  }
+});
+
+/* A rendered legend is not one of its fieldset's flex items, so a `.stack`
+   gap never reached it and it sat flush against the first option. */
+test("spaces a fieldset's legend from its first option as the stack spaces the rest", async ({ page }) => {
+  await page.setContent(
+    `<!doctype html><html><body>
+       <fieldset class="stack tight" data-testid="set">
+         <legend class="label">Billing period</legend>
+         <label class="choice"><input class="radio" type="radio" name="p" /> Monthly</label>
+         <label class="choice"><input class="radio" type="radio" name="p" /> Yearly</label>
+       </fieldset></body></html>`,
+  );
+  await page.addStyleTag({ url: FULL_STYLES_URL });
+
+  const gaps = await page.getByTestId("set").evaluate((set) => {
+    const [legend, first, second] = [...set.children].map((element) => element.getBoundingClientRect());
+    return { legend: first!.top - legend!.bottom, options: second!.top - first!.bottom };
+  });
+
+  expect(gaps.options).toBeCloseTo(8, 1);
+  expect(gaps.legend).toBeCloseTo(gaps.options, 1);
+});
+
+/* docs/usage/forms.md, "Sizes": the example promises a small field and a
+   small button in one row, and `.ipt` is full width, so the button wrapped. */
+test("lines the sizes example's small field and button up in one row at 320px", async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 640 });
+  const docs = await readFile(new URL("../../docs/usage/forms.md", import.meta.url), "utf8");
+  const example = docs.split("### Sizes")[1]!.split("```html")[1]!.split("```")[0]!;
+
+  await page.setContent(`<!doctype html><html><body style="margin: 0; padding: 16px">${example}</body></html>`);
+  await page.addStyleTag({ url: FULL_STYLES_URL });
+
+  const [field, button] = await page.evaluate(() =>
+    [document.querySelector("input")!, document.querySelector("button")!].map((element) => {
+      const rect = element.getBoundingClientRect();
+      return { top: rect.top, height: rect.height, right: rect.right };
+    }),
+  );
+
+  expect(button!.top, "the button shares the field's row").toBe(field!.top);
+  expect(button!.height).toBe(field!.height);
+  expect(button!.right).toBeLessThanOrEqual(304);
 });
