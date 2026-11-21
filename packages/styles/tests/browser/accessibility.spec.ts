@@ -1073,3 +1073,115 @@ test("draws a skeleton's outline in forced colours", async ({ page }) => {
   expect(styles.style).toBe("solid");
   expect(styles.width).toBe("1px");
 });
+
+/* The system draws a disabled control in GrayText, at full strength: a
+   disabled checked toggle once kept its Highlight plate and dimmed it to 0.58,
+   which read as a faint enabled one. Checked or not, the line and the mark
+   are GrayText on Canvas. The classes only: the bare `/native` elements take
+   their forced colours from `native.css`'s own unlayered block. */
+test("draws a disabled toggle in GrayText, undimmed, in forced colours", async ({ page }) => {
+  await page.emulateMedia({ forcedColors: "active" });
+
+  for (const [stylesUrl, classed] of [[COMPONENT_STYLES_URL, true]] as const) {
+    /* oxlint-disable no-await-in-loop -- one entrypoint at a time keeps the failure naming it. */
+    await page.setContent("<!doctype html><html><body></body></html>");
+    test.skip(
+      !(await page.evaluate(
+        () => matchMedia("(forced-colors: active)").matches && CSS.supports("forced-color-adjust", "none"),
+      )),
+      "engine cannot emulate forced colors",
+    );
+    await page.addStyleTag({ url: stylesUrl });
+    await page.addStyleTag({ content: "*, *::before, *::after { transition: none !important; }" });
+
+    const drawn = await page.evaluate((isClassed) => {
+      const probe = document.createElement("span");
+      document.body.append(probe);
+      const system = (name: string) => {
+        probe.style.color = name;
+        return getComputedStyle(probe).color;
+      };
+      const colors = { gray: system("GrayText"), canvas: system("Canvas") };
+      const toggles = [
+        ["checkbox", "checkbox", isClassed ? "checkbox" : ""],
+        ["radio", "radio", isClassed ? "radio" : ""],
+        ["switch", "checkbox", "switch"],
+      ] as const;
+
+      return {
+        colors,
+        rows: toggles.flatMap(([name, type, className]) =>
+          [true, false].map((checked) => {
+            const input = document.createElement("input");
+            input.type = type;
+            input.className = className;
+            input.checked = checked;
+            input.disabled = true;
+            document.body.append(input);
+            const styles = getComputedStyle(input);
+            const mark = getComputedStyle(input, "::after");
+            /* The checkbox draws its mark through a mask on `::after`, the
+               radio its dot, the switch its knob. Unchecked, only the knob shows. */
+            return {
+              label: `${name} ${checked ? "checked" : "unchecked"}`,
+              opacity: styles.opacity,
+              border: styles.borderTopColor,
+              fill: styles.backgroundColor,
+              mark: name === "switch" || checked ? mark.backgroundColor : null,
+            };
+          }),
+        ),
+      };
+    }, classed);
+    /* oxlint-enable no-await-in-loop */
+
+    for (const row of drawn.rows) {
+      const label = `${classed ? "class" : "native"} ${row.label}`;
+      expect.soft(row.opacity, `${label} opacity`).toBe("1");
+      expect.soft(row.border, `${label} line`).toBe(drawn.colors.gray);
+      expect.soft(row.fill, `${label} plate`).toBe(drawn.colors.canvas);
+      if (row.mark !== null) {
+        expect.soft(row.mark, `${label} mark`).toBe(drawn.colors.gray);
+      }
+    }
+  }
+});
+
+/* A table wider than its box scrolls in `.table-wrap`, and a keyboard user has
+   to reach that scroll: Safari does not make a scroll container focusable, so
+   the docs give the wrapper `tabindex="0"`, a role, and a name. Focused from
+   the keyboard it draws the package's ring. */
+test("rings a focusable table wrapper from the keyboard", async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 640 });
+  await page.setContent(
+    `<!doctype html><html><body><button>before</button>
+       <div class="table-wrap" tabindex="0" role="region" aria-label="API keys">
+         <table class="data-table" style="width: 900px"><tr><td>key</td></tr></table>
+       </div></body></html>`,
+  );
+  await page.addStyleTag({ url: `${ORIGIN}/shared/entry-vanilla.css` });
+  await page.getByRole("button").focus();
+  await page.keyboard.press("Tab");
+
+  const ring = await page.getByRole("region", { name: "API keys" }).evaluate((element) => {
+    const styles = getComputedStyle(element);
+    const probe = document.createElement("span");
+    probe.style.width = "var(--focus-ring-width)";
+    probe.style.display = "block";
+    document.body.append(probe);
+    const width = getComputedStyle(probe).width;
+    probe.remove();
+    return {
+      focused: element.matches(":focus-visible"),
+      scrolls: element.scrollWidth > element.clientWidth,
+      style: styles.outlineStyle,
+      width: styles.outlineWidth,
+      expected: width,
+    };
+  });
+
+  expect(ring.focused).toBe(true);
+  expect(ring.scrolls).toBe(true);
+  expect(ring.style).toBe("solid");
+  expect(ring.width).toBe(ring.expected);
+});

@@ -1201,6 +1201,23 @@
           background-color: HighlightText;
         }
       }
+
+      /* Disabled is the system's GrayText at full strength, checked or not,
+         as a native control draws it: the 0.58 dimming over a Highlight plate
+         read as a faint enabled toggle, and over Canvas it lowered the line
+         the system colours exist to keep. */
+      &:disabled,
+      &.disabled,
+      &[aria-disabled="true"],
+      &[data-disabled] {
+        opacity: 1;
+        background-color: Canvas;
+        border-color: GrayText;
+
+        &::after {
+          background-color: GrayText;
+        }
+      }
     }
   }
 
@@ -1335,6 +1352,23 @@
 
         &::after {
           background-color: HighlightText;
+        }
+      }
+
+      /* Disabled is the system's GrayText at full strength, checked or not,
+         as a native control draws it: the 0.58 dimming over a Highlight plate
+         read as a faint enabled toggle, and over Canvas it lowered the line
+         the system colours exist to keep. */
+      &:disabled,
+      &.disabled,
+      &[aria-disabled="true"],
+      &[data-disabled] {
+        opacity: 1;
+        background-color: Canvas;
+        border-color: GrayText;
+
+        &::after {
+          background-color: GrayText;
         }
       }
     }
@@ -1512,6 +1546,23 @@
           background-color: HighlightText;
         }
       }
+
+      /* Disabled is the system's GrayText at full strength, checked or not,
+         as a native control draws it: the 0.58 dimming over a Highlight plate
+         read as a faint enabled toggle, and over Canvas it lowered the line
+         the system colours exist to keep. */
+      &:disabled,
+      &.disabled,
+      &[aria-disabled="true"],
+      &[data-disabled] {
+        opacity: 1;
+        background-color: Canvas;
+        border-color: GrayText;
+
+        &::after {
+          background-color: GrayText;
+        }
+      }
     }
   }
 }
@@ -1551,6 +1602,17 @@
 
     &::after {
       background-color: HighlightText;
+    }
+  }
+
+  /* After the checked rule, so a disabled checked toggle is GrayText too. */
+  :is(.checkbox, .radio, .switch):is(:disabled, .disabled, [aria-disabled="true"], [data-disabled]) {
+    opacity: 1;
+    background-color: Canvas;
+    border-color: GrayText;
+
+    &::after {
+      background-color: GrayText;
     }
   }
 
