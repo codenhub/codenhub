@@ -6,6 +6,7 @@ import {
   getColorDistance,
   isTransparent,
   ORIGIN,
+  pixelStep,
   readSrgb,
   settleAnimations,
   stopTransitions,
@@ -535,7 +536,13 @@ test.describe("aesthetics", () => {
 
         const styles = getComputedStyle(bubble);
 
-        return { boxShadow: styles.boxShadow, clipPath: styles.clipPath, filter: styles.filter };
+        return {
+          boxShadow: styles.boxShadow,
+          clipPath: styles.clipPath,
+          filter: styles.filter,
+          borderTopLeftRadius: styles.borderTopLeftRadius,
+          cornerShape: styles.getPropertyValue("corner-shape"),
+        };
       }, extraClass);
     };
 
@@ -547,7 +554,7 @@ test.describe("aesthetics", () => {
     /* The silhouette reaches the bubble, because `--ui-clip` is a plain material
        token the bubble resolves at its own root. */
     expect(plain.clipPath, "default bubble clip").toBe("none");
-    expect(stepped.clipPath, "pixel bubble clip").toContain("polygon(");
+    expect(pixelStep(stepped), "pixel bubble step").toBe("4px");
 
     /* Shape and edge material reach the bubble; part-based depth does not, because
        the bubble rests flat and depth is opt-in. The plain and brutalist bubbles
@@ -595,6 +602,8 @@ test.describe("aesthetics", () => {
         const result = {
           backdrop: styles.backdropFilter || styles.getPropertyValue("-webkit-backdrop-filter"),
           borderRadius: styles.borderRadius,
+          borderTopLeftRadius: styles.borderTopLeftRadius,
+          cornerShape: styles.getPropertyValue("corner-shape"),
           borderWidth: styles.borderTopWidth,
           boxShadow: styles.boxShadow,
           clipPath: styles.clipPath,
@@ -619,9 +628,8 @@ test.describe("aesthetics", () => {
       ["direct pixel", bubbles.directPixel],
       ["glass ancestor, pixel tooltip", bubbles.glassOverPixel],
     ] as const) {
-      expect(styles.clipPath, `${label} clip`).toContain("polygon(");
+      expect(pixelStep(styles), `${label} step`).toBe("4px");
       expect(styles.borderWidth, `${label} border`).toBe("0px");
-      expect(styles.borderRadius, `${label} radius`).toBe("0px");
       expect(styles.backdrop === "" || styles.backdrop === "none", `${label} backdrop`).toBe(true);
     }
 
@@ -630,6 +638,7 @@ test.describe("aesthetics", () => {
       ["pixel ancestor, glass tooltip", bubbles.pixelOverGlass],
     ] as const) {
       expect(styles.clipPath, `${label} clip`).toBe("none");
+      expect(pixelStep(styles), `${label} step`).toBeNull();
       expect(styles.filter, `${label} filter`).toBe("none");
       expect(styles.borderRadius, `${label} radius`).toBe("12px");
       /* Glass declares a border width and the bubble is a box that reads it --
@@ -1583,14 +1592,8 @@ test.describe("aesthetics", () => {
     test("cuts stepped corners and draws the edge as an inset ring", async ({ page }) => {
       await page.goto(withAesthetic(BUTTONS_URL, "pixel"));
 
-      const button = await readStyles(page, "btn-default-none", [
-        "clip-path",
-        "border-top-width",
-        "box-shadow",
-        "border-radius",
-      ]);
-
-      const properties = ["clip-path", "border-top-width", "box-shadow", "border-radius"];
+      const properties = ["clip-path", "border-top-width", "box-shadow", "border-top-left-radius", "corner-shape"];
+      const button = await readStyles(page, "btn-default-none", properties);
 
       await page.goto(withAesthetic(SURFACES_URL, "pixel"));
 
@@ -1603,14 +1606,21 @@ test.describe("aesthetics", () => {
       for (const [testId, styles] of [["btn-default-none", button] as const, ...card, ...input]) {
         /* A surface holds other things -- a tooltip, a menu, a child's focus
            ring and shadow -- and a clip cuts all of them, so it is square. */
+        const step = pixelStep({
+          clipPath: styles["clip-path"]!,
+          borderTopLeftRadius: styles["border-top-left-radius"]!,
+          cornerShape: styles["corner-shape"]!,
+        });
         if (testId.startsWith("card")) {
           expect(styles["clip-path"], `${testId} clip`).toBe("none");
+          expect(step, `${testId} step`).toBeNull();
+          expect(styles["border-top-left-radius"], `${testId} radius`).toBe("0px");
         } else {
-          expect(styles["clip-path"], `${testId} clip`).toContain("polygon(");
+          expect(step, `${testId} step`).toBe("4px");
         }
-        /* `clip-path` clips a border away, so the element must not draw one. */
+        /* The ring draws the edge: a clip would cut a border away at the
+           straight sides, and the notch draws the same edge. */
         expect(styles["border-top-width"], `${testId} border`).toBe("0px");
-        expect(styles["border-radius"], `${testId} radius`).toBe("0px");
         expect(styles["box-shadow"], `${testId} ring`).toMatch(/inset/);
         /* The ring must be as deep as the corner cut, or the staircase shows
            through and the edge reads as broken at every corner. */
@@ -1625,12 +1635,20 @@ test.describe("aesthetics", () => {
     test("cuts one square grid unit off each corner", async ({ page }) => {
       await page.goto(withAesthetic(BUTTONS_URL, "pixel"));
 
-      const structural = await readStyles(page, "btn-default-none", ["clip-path"]);
+      const structural = await readStyles(page, "btn-default-none", ["clip-path", "border-radius", "corner-shape"]);
 
-      /* Left edge to the cut, across the corner square, then up to the top edge:
-         two vertices where the staircase needed four. The unit is the ring's own
-         depth, so the cut and what covers it agree by construction. */
-      expect(structural["clip-path"], "button clip").toContain("polygon(0px 4px, 4px 4px, 4px 0px");
+      if (await page.evaluate(() => CSS.supports("corner-shape", "notch"))) {
+        /* A `notch` corner one unit long on each corner: the same square cut,
+           drawn as the shape rather than clipped. */
+        expect(structural["clip-path"], "button clip").toBe("none");
+        expect(structural["border-radius"], "button corner").toBe("4px");
+        expect(structural["corner-shape"], "button corner shape").toMatch(/notch|superellipse\(-infinity\)/);
+      } else {
+        /* Left edge to the cut, across the corner square, then up to the top
+           edge: two vertices where the staircase needed four. The unit is the
+           ring's own depth, so the cut and what covers it agree by construction. */
+        expect(structural["clip-path"], "button clip").toContain("polygon(0px 4px, 4px 4px, 4px 0px");
+      }
     });
 
     /* A clip cuts everything inside the element, not only its own corners: a
@@ -1638,6 +1656,36 @@ test.describe("aesthetics", () => {
        shadow, a child's focus outline and a consumer's menu went with it. A
        surface is the one box whose job is to hold other things, so it takes
        no clip and is square with the ring, as a table is. */
+    /* The polygon cut a button's own children with its corners: a badge
+       pinned past an icon button's corner was trimmed at the button's edge.
+       Where `corner-shape: notch` is drawn, the step is the shape and nothing
+       is clipped; elsewhere the polygon is the only way to draw it. */
+    test("paints a badge pinned past a button's corner where the notch is drawn", async ({ page }) => {
+      await page.goto(withAesthetic(BUTTONS_URL, "pixel"));
+      test.skip(!(await page.evaluate(() => CSS.supports("corner-shape", "notch"))), "no corner-shape: notch");
+
+      const hit = await page.getByTestId("preview-root").evaluate((root) => {
+        const holder = document.createElement("div");
+
+        holder.style.padding = "2rem";
+        holder.innerHTML =
+          '<button type="button" class="btn icon ghost edged" style="position: relative" aria-label="Mail">M' +
+          '<span class="badge solid destructive" style="position: absolute; top: -8px; right: -10px">3</span></button>';
+        root.append(holder);
+
+        const button = holder.querySelector("button")!;
+        button.scrollIntoView({ block: "center" });
+        const box = button.getBoundingClientRect();
+        const result = document.elementFromPoint(box.right + 4, box.top - 4) === button.querySelector(".badge");
+
+        holder.remove();
+
+        return result;
+      });
+
+      expect(hit, "the badge past the corner is painted").toBe(true);
+    });
+
     test("leaves a surface unclipped so what it holds is not cut", async ({ page }) => {
       await page.goto(withAesthetic(SURFACES_URL, "pixel"));
 
@@ -1684,21 +1732,23 @@ test.describe("aesthetics", () => {
           ancestor.append(host);
           document.querySelector('[data-testid="preview-root"]')!.append(ancestor);
 
-          const { clipPath, boxShadow } = getComputedStyle(card);
+          const styles = getComputedStyle(card);
+          const read = {
+            clipPath: styles.clipPath,
+            boxShadow: styles.boxShadow,
+            borderTopLeftRadius: styles.borderTopLeftRadius,
+            cornerShape: styles.getPropertyValue("corner-shape"),
+          };
 
           ancestor.remove();
-          return { clipPath, boxShadow };
+          return read;
         };
 
         return { ancestor: build("ancestor"), self: build("self") };
       });
 
-      expect(measured.ancestor.clipPath, "an ancestor's knob cuts the corner").toContain(
-        "polygon(0px 6px, 6px 6px, 6px 0px",
-      );
-      expect(measured.self.clipPath, "so does one on the element itself").toContain(
-        "polygon(0px 6px, 6px 6px, 6px 0px",
-      );
+      expect(pixelStep(measured.ancestor), "an ancestor's knob cuts the corner").toBe("6px");
+      expect(pixelStep(measured.self), "so does one on the element itself").toBe("6px");
       /* One knob, and the ring follows it too -- the cut and what covers it are the
          same unit by construction, which is the reason there is only one. */
       expect(measured.ancestor.boxShadow, "and the ring it covers with").toContain("6px");
@@ -1869,7 +1919,8 @@ test.describe("aesthetics", () => {
 
           return {
             selector,
-            clipped: styles.clipPath.startsWith("polygon("),
+            clipPath: styles.clipPath,
+            cornerShape: styles.getPropertyValue("corner-shape"),
             ring: styles.boxShadow,
             borderTopWidth: styles.borderTopWidth,
             borderTopLeftRadius: styles.borderTopLeftRadius,
@@ -1881,15 +1932,15 @@ test.describe("aesthetics", () => {
 
       for (const shape of shapes) {
         expect(shape.borderTopWidth, `${shape.selector} border`).toBe("0px");
-        expect(shape.borderTopLeftRadius, `${shape.selector} radius`).toBe("0px");
       }
 
       /* The structural silhouette on the two structural elements, and the chip
          one -- squared, under this aesthetic -- on the content chip. Both are
          material tokens, so both travel. */
-      expect(button!.clipped, "button clip").toBe(true);
-      expect(input!.clipped, "input clip").toBe(true);
-      expect(code!.clipped, "code clip").toBe(false);
+      expect(pixelStep(button!), "button step").toBe("4px");
+      expect(pixelStep(input!), "input step").toBe("4px");
+      expect(pixelStep(code!), "code step").toBeNull();
+      expect(code!.borderTopLeftRadius, "code radius").toBe("0px");
 
       /* A clip removes a border, so the edge has to be the inset ring instead or
          the element loses its outline entirely. The ring travels through the

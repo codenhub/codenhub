@@ -118,6 +118,10 @@
       calc(var(--_corner-surface) * var(--ui-corner-tl, 1)) calc(var(--_corner-surface) * var(--ui-corner-tr, 1))
         calc(var(--_corner-surface) * var(--ui-corner-br, 1)) calc(var(--_corner-surface) * var(--ui-corner-bl, 1))
     );
+    /* The aesthetic's shape without pixel's notch, which `box` reads with the
+       notch's own length: the surface replaces that length above, and a surface
+       is square under `.pixel`. */
+    corner-shape: var(--ui-corner-shape, round);
     /* No silhouette clip, whatever the aesthetic's `--ui-clip`: a clip cuts
        everything inside the element, and a surface is the box that holds other
        things. Under `.pixel` a tooltip in a card computed visible and was never
