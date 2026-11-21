@@ -340,3 +340,224 @@ for (const theme of THEMES) {
     });
   }
 }
+
+/* The contrast policy, `docs/guidelines/accessibility.md`: text at 4.5:1 on
+   the ground it sits on in every state, the edge that is a toggle's only
+   boundary at 3:1, and a focus ring at 3:1 against what is next to it, in both
+   themes, with the standard contrast and with more. Every aesthetic is read,
+   since one may restate a fill, an ink, a line, or the ring. */
+const CONTRASTS = ["standard", "more"] as const;
+const PRESENTATIONS = ["", "soft", "ghost", "solid"] as const;
+
+const loadIn = async (page: Page, theme: string, contrast: string, markup: string) => {
+  await page.setContent(
+    `<!doctype html><html data-theme="${theme}" data-contrast="${contrast}" data-motion="none"><body>${markup}</body></html>`,
+  );
+  await page.addStyleTag({ content: await built("index.css") });
+  await page.addStyleTag({ content: await built("aesthetics/index.css") });
+  await page.addStyleTag({ content: "*, *::before, *::after { transition: none !important; }" });
+  await settleAnimations(page);
+};
+
+/* What an element is painted on: every background from the root down to its
+   parent, laid over the page in turn, then its own fill over that. */
+const grounds = async (page: Page, testId: string) => {
+  const layers = await page.getByTestId(testId).evaluate((element) => {
+    const stack: string[] = [];
+    for (let node = element.parentElement; node; node = node.parentElement) {
+      stack.unshift(getComputedStyle(node).backgroundColor);
+    }
+
+    return { stack, fill: getComputedStyle(element).backgroundColor };
+  });
+  let under = await pageColor(page);
+  for (const layer of layers.stack) {
+    under = flattenColor(layer, under);
+  }
+
+  return { under, fill: flattenColor(layers.fill, under) };
+};
+
+const textRatio = async (page: Page, testId: string) => {
+  const { fill } = await grounds(page, testId);
+
+  return getContrastRatio(flattenColor(await style(page, testId, "color"), fill), fill);
+};
+
+const TEXT_COMPONENTS = [
+  ["btn", (classes: string) => `<button class="btn ${classes}">Label</button>`, true],
+  ["card", (classes: string) => `<div class="card interactive ${classes}">Text</div>`, true],
+  ["badge", (classes: string) => `<span class="badge ${classes}">Badge</span>`, false],
+  ["alert", (classes: string) => `<div class="alert ${classes}">Text</div>`, false],
+  ["panel", (classes: string) => `<div class="panel ${classes}">Text</div>`, false],
+  ["kbd", (classes: string) => `<kbd class="kbd ${classes}">K</kbd>`, false],
+  ["code", (classes: string) => `<code class="code ${classes}">c</code>`, false],
+] as const;
+
+const caseId = (name: string, component: string, intent: string, presentation: string) =>
+  `${name}-${component}-${intent}-${presentation || "default"}`;
+
+/* One test per aesthetic, as the focus rings below: the eight regions on one
+   page ran past the test timeout in Firefox and WebKit. */
+for (const theme of THEMES) {
+  for (const contrast of CONTRASTS) {
+    for (const [name, region] of SOLID_REGIONS) {
+      test(`prints every component's text at 4.5:1 at rest and on hover, ${name}, ${theme}, ${contrast} contrast`, async ({
+        page,
+      }) => {
+        await loadIn(
+          page,
+          theme,
+          contrast,
+          `<div class="${region}" style="padding: 1rem">${INTENTS.flatMap((intent) =>
+            PRESENTATIONS.flatMap((presentation) =>
+              TEXT_COMPONENTS.map(([component, markup]) =>
+                markup(`${presentation} ${intent}`).replace(
+                  /^<(\w+)/,
+                  `<$1 data-testid="${caseId(name, component, intent, presentation)}"`,
+                ),
+              ),
+            ),
+          ).join("")}</div>`,
+        );
+
+        for (const intent of INTENTS) {
+          for (const presentation of PRESENTATIONS) {
+            for (const [component, , hovers] of TEXT_COMPONENTS) {
+              const testId = caseId(name, component, intent, presentation);
+              // oxlint-disable-next-line no-await-in-loop -- one pointer, moved in turn.
+              expect.soft(await textRatio(page, testId), `${testId} at rest`).toBeGreaterThanOrEqual(4.5);
+              if (hovers) {
+                // oxlint-disable-next-line no-await-in-loop -- one pointer, moved in turn.
+                await page.getByTestId(testId).hover();
+                // oxlint-disable-next-line no-await-in-loop -- one pointer, moved in turn.
+                expect.soft(await textRatio(page, testId), `${testId} on hover`).toBeGreaterThanOrEqual(4.5);
+              }
+            }
+          }
+        }
+      });
+    }
+  }
+}
+
+/* An unchecked toggle's border is the only thing that shows it, so it is the
+   one resting edge the policy holds at 3:1 without the preference. */
+const TOGGLES = [
+  ["checkbox", `type="checkbox" class="checkbox`],
+  ["radio", `type="radio" class="radio`],
+  ["switch", `type="checkbox" class="switch`],
+] as const;
+
+for (const theme of THEMES) {
+  for (const contrast of CONTRASTS) {
+    test(`rests an unchecked toggle's line at 3:1, ${theme}, ${contrast} contrast`, async ({ page }) => {
+      await loadIn(
+        page,
+        theme,
+        contrast,
+        SOLID_REGIONS.map(
+          ([name, region]) =>
+            `<div class="${region}" style="padding: 1rem">${INTENTS.flatMap((intent) =>
+              TOGGLES.map(
+                ([toggle, attributes]) =>
+                  `<input data-testid="${name}-${toggle}-${intent}" ${attributes} ${intent}" />`,
+              ),
+            ).join("")}</div>`,
+        ).join(""),
+      );
+
+      for (const [name] of SOLID_REGIONS) {
+        for (const intent of INTENTS) {
+          for (const [toggle] of TOGGLES) {
+            const testId = `${name}-${toggle}-${intent}`;
+            // oxlint-disable-next-line no-await-in-loop -- one page, read in turn.
+            const { under, fill } = await grounds(page, testId);
+            // oxlint-disable-next-line no-await-in-loop -- one page, read in turn.
+            const width = Number.parseFloat(await style(page, testId, "border-top-width"));
+            /* Pixel draws the line as an inset shadow and no border. */
+            // oxlint-disable-next-line no-await-in-loop -- one page, read in turn.
+            const inset = (await style(page, testId, "box-shadow")).match(
+              /((?:rgba?|oklch|oklab|color)\([^)]*\))[^,]*\binset\b/,
+            )?.[1];
+            // oxlint-disable-next-line no-await-in-loop -- one page, read in turn.
+            const drawn = width > 0 ? await style(page, testId, "border-top-color") : inset;
+
+            expect.soft(drawn, `${testId} draws a line`).toBeDefined();
+            const line = flattenColor(drawn ?? "transparent", fill);
+            expect
+              .soft(Math.min(getContrastRatio(line, under), getContrastRatio(line, fill)), testId)
+              .toBeGreaterThanOrEqual(MINIMUM);
+          }
+        }
+      }
+    });
+  }
+}
+
+/* A ring is an outline or, on the toggles, a box shadow of one or more
+   layers. One layer at 3:1 against the ground outside the control is enough:
+   a ring may lay a gap in the page's colour under its colour. */
+const COLOR_PATTERN = /(?:rgba?|oklch|oklab|color)\([^)]*\)/g;
+const ringRatio = async (page: Page, testId: string) => {
+  const { under } = await grounds(page, testId);
+  const outline = await style(page, testId, "outline-style");
+  const outlineWidth = Number.parseFloat(await style(page, testId, "outline-width"));
+  const colors =
+    outline !== "none" && outlineWidth > 0
+      ? [await style(page, testId, "outline-color")]
+      : ((await style(page, testId, "box-shadow")).match(COLOR_PATTERN) ?? []);
+
+  return Math.max(0, ...colors.map((color) => getContrastRatio(flattenColor(color, under), under)));
+};
+
+const FOCUSABLE = [
+  ...PRESENTATIONS.map(
+    (presentation) =>
+      [`btn-${presentation || "default"}`, `<button class="btn ${presentation}`, `">Label</button>`] as const,
+  ),
+  ["ipt", `<input class="ipt`, `" />`],
+  ["select", `<select class="select`, `"><option>a</option></select>`],
+  ["checkbox", `<input type="checkbox" class="checkbox`, `" />`],
+  ["radio", `<input type="radio" class="radio`, `" />`],
+  ["switch", `<input type="checkbox" class="switch`, `" />`],
+] as const;
+
+/* One test per aesthetic: a key press per control is slow, and the eight
+   regions on one page ran past the test timeout. */
+for (const theme of THEMES) {
+  for (const contrast of CONTRASTS) {
+    for (const [name, region] of SOLID_REGIONS) {
+      test(`draws every focus ring at 3:1 against its ground, ${name}, ${theme}, ${contrast} contrast`, async ({
+        page,
+      }) => {
+        await loadIn(
+          page,
+          theme,
+          contrast,
+          `<button data-testid="before">.</button><div class="${region}" style="padding: 1rem">${INTENTS.flatMap(
+            (intent) =>
+              FOCUSABLE.map(
+                ([control, open, close]) => `${open} ${intent}" data-testid="${name}-${control}-${intent}${close}`,
+              ),
+          ).join("")}</div>`,
+        );
+
+        await page.getByTestId("before").focus();
+        for (const intent of INTENTS) {
+          for (const [control] of FOCUSABLE) {
+            const testId = `${name}-${control}-${intent}`;
+            // oxlint-disable-next-line no-await-in-loop -- one control holds focus at a time.
+            await page.keyboard.press("Tab");
+            // oxlint-disable-next-line no-await-in-loop -- one control holds focus at a time.
+            const focused = await page.getByTestId(testId).evaluate((element) => element.matches(":focus-visible"));
+
+            expect.soft(focused, `${testId} has focus`).toBe(true);
+            // oxlint-disable-next-line no-await-in-loop -- one control holds focus at a time.
+            expect.soft(await ringRatio(page, testId), `${testId} ring`).toBeGreaterThanOrEqual(MINIMUM);
+          }
+        }
+      });
+    }
+  }
+}
