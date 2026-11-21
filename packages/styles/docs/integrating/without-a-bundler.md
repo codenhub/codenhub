@@ -115,7 +115,7 @@ The package carries a command, `chs`, that reads your templates for class names 
 
 The command works with a bundler too. A project whose bundler does not run Tailwind, such as a plain Vite or webpack build, can write the stylesheet into its sources, `--output src/stylekit.css`, and import that file where it would import `@codenhub/styles`. A project that runs Tailwind CSS v4 gets the same trimming from the [source entrypoint](./tailwind.md) and does not need the command.
 
-It needs Node.js 26 or newer on the machine that builds the CSS, whether that is your laptop, a CI job, or a deploy step, and nothing else: the package is the whole install, with no Tailwind and no configuration. Install it as a development dependency from your project root; npm creates a `package.json` if you have none:
+It needs Node.js 24 or newer on the machine that builds the CSS, whether that is your laptop, a CI job, or a deploy step, and nothing else: the package is the whole install, with no Tailwind and no configuration. Install it as a development dependency from your project root; npm creates a `package.json` if you have none:
 
 ```sh
 npm install --save-dev @codenhub/styles
@@ -233,7 +233,7 @@ Each prefix is a fixed copy of those classes, built into the package, so the lis
 
 ### In a deploy
 
-Build the stylesheet before whatever step collects or fingerprints your assets, such as `rails assets:precompile`, `php artisan optimize`, or `python manage.py collectstatic`. Either commit the output, so the servers need no Node.js at all at the cost of a generated file someone has to remember to rebuild, or build it on deploy, so the build machine needs Node.js 26 or newer.
+Build the stylesheet before whatever step collects or fingerprints your assets, such as `rails assets:precompile`, `php artisan optimize`, or `python manage.py collectstatic`. Either commit the output, so the servers need no Node.js at all at the cost of a generated file someone has to remember to rebuild, or build it on deploy, so the build machine needs Node.js 24 or newer.
 
 Pin the version. Below 1.0 a minor release may rename or remove a class, so the same command can write a different stylesheet with a newer version. The output depends on nothing but the package's version and your templates, so commit `package.json` and the lockfile npm writes, and install with `npm ci` on the build machine, so every build uses the version you tested.
 
@@ -251,7 +251,7 @@ Every failure prints one line starting with `chs:` to standard error and exits w
 - **`--output is given more than once`.** Only one stylesheet is written per build. Keep one `--output`, and run the command again for another file.
 - **`unknown aesthetic "<name>"; choose from ...`.** Pick one of the names listed. They are lowercase and hyphenated, as in `chunky-tile`.
 - **`missing command` or `unknown command "<name>"`.** The first word after `chs` has to be `build`.
-- **`this command needs Node.js 26 or newer`.** Update Node.js on the machine that builds the CSS.
+- **`this command needs Node.js 24 or newer`.** Update Node.js on the machine that builds the CSS.
 - **`cannot write --output <file>: <reason> (<code>); <what to do>`.** `<reason>` and `<code>` are Node.js's own. `EACCES` or `EPERM` means you cannot write there, and on Windows also that the file is read-only; `ENOSPC` means the disk is full.
 - **`--output <file> is a folder, not a file`**, or a device, a pipe, or a socket, or **`--output <file> ends with a folder separator`**, or **`ends with a . or .. segment`**. Name a stylesheet file, such as one inside the folder.
 - **`--output <file> holds something this command did not write`.** The file is not a stylesheet this command wrote, such as one you wrote by hand or a vendor's, so replacing it would lose it. Name another file, or move this one away. A copy of `@codenhub/styles`, `/components`, or `/native` from the package starts with the same notice, so it is replaced as one the command wrote; a copy of another entrypoint, such as `/theme` or an aesthetic, does not, and is refused.
