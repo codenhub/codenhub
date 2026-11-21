@@ -40,7 +40,11 @@ const twEntry = (file: string) => pathToFileURL(path.join(packageRoot, "tw", fil
    consumer builds below. */
 const COMPILED_CEILINGS: Record<string, number> = {
   "dist/index.css": 238_000,
-  "dist/components.css": 191_400,
+  /* 191,400 until 0.11.0 painted a control's :user-invalid state as
+     aria-invalid="true", gave a read-only field its quiet tone, added
+     `.choice`, drew a disabled toggle in GrayText in forced colours, and held
+     a closed tooltip at no size under reduced motion. */
+  "dist/components.css": 197_500,
   "dist/native.css": 355_400,
   "dist/theme.css": 13_200,
   "dist/palette.css": 26_800,
@@ -59,8 +63,9 @@ const COMPILED_CEILINGS: Record<string, number> = {
   /* 314,500 until 0.11.0 kept tracking off scripts that join their letters,
      a fallback in each of the eleven rules that copy a text style, and
      raised a glass surface holding a tooltip, scoped the bubble to it, gave
-     a glass pane an opaque ground on a plate, and let a button label wrap. */
-  "dist/purge/index.css": 327_000,
+     a glass pane an opaque ground on a plate, let a button label wrap, and
+     took the component fixes `dist/components.css` names. */
+  "dist/purge/index.css": 337_400,
   "dist/purge/classes.json": 7_100,
 };
 

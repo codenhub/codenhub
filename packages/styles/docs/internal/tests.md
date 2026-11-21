@@ -139,7 +139,7 @@ Node-based Vitest checks validate every published target. Every compiled export 
 | Measured                                   | Minified | Gzip   | Ceiling |
 | ------------------------------------------ | -------- | ------ | ------- |
 | `dist/index.css`                           | 232,385  | 20,156 | 238,000 |
-| `dist/components.css`                      | 186,298  | 15,283 | 191,400 |
+| `dist/components.css`                      | 191,744  | 15,274 | 197,500 |
 | `dist/native.css`                          | 346,596  | 26,583 | 355,400 |
 | `dist/theme.css`                           | 12,863   | 2,582  | 13,200  |
 | `dist/palette.css`                         | 25,968   | 3,021  | 26,800  |
@@ -150,7 +150,7 @@ Node-based Vitest checks validate every published target. Every compiled export 
 | `dist/aesthetics/neobrutalism.css`         | 4,586    | 1,289  | 4,750   |
 | `dist/aesthetics/pixel.css`                | 4,964    | 1,229  | 5,100   |
 | `dist/aesthetics/sketch.css`               | 14,905   | 2,094  | 15,350  |
-| `dist/purge/index.css`                     | 319,310  | 26,481 | 327,000 |
+| `dist/purge/index.css`                     | 327,594  | 26,626 | 337,400 |
 | `dist/purge/classes.json`                  | 6,855    | 1,626  | 7,100   |
 | `/button/tw`, a page with `btn primary`    | 22,297   |        | 22,950  |
 | `/button/tw`, a page with no package class | 9,853    |        | 10,150  |
