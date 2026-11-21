@@ -2,7 +2,7 @@
 title: Tailwind CSS v4
 description: Usar los puntos de entrada de código fuente /tw en un proyecto con Tailwind CSS v4.
 order: 1
-source: 0158d4f1e67501dfd55ac903750bc3674650d412
+source: bcb7ef9efbaa5e492c44ea8b5a721d6b1a0afe5c
 ---
 
 # Tailwind CSS v4
@@ -46,6 +46,8 @@ A diferencia de `/tw`, los puntos de entrada específicos y `/native/tw` no impo
 @import "tailwindcss";
 @import "@codenhub/styles/button/tw";
 ```
+
+Un punto de entrada específico es para una sola familia. Cada uno trae el tema y las reglas compartidas sobre las que se construyen sus clases, así que dos de ellos los traen dos veces, y Tailwind conserva las dos copias. Con Tailwind 4.3.2, `/button/tw`, `/form/tw`, `/surface/tw` y `/feedback/tw` juntos compilaron una página pequeña a 85.192 bytes minificados, mientras que `/components/tw`, que contiene los cuatro y además los tooltips, la compiló a 82.915. Para dos familias o más, importa `/components/tw`, o `/tw`.
 
 ## Construir tus propios componentes con `@apply`
 
@@ -144,7 +146,7 @@ El bloque deja fuera `neutral`, `emerald`, `amber`, `rose`, `indigo` y `white` a
 @source inline("btn alert badge primary destructive soft");
 ```
 
-Todos los puntos de entrada `/tw` requieren Tailwind CSS 4.3.2 o posterior, por debajo de 5 (`>=4.3.2 <5`).
+Todos los puntos de entrada `/tw` requieren Tailwind CSS 4.3.2 o posterior, por debajo de 5 (`>=4.3.2 <5`), el rango con el que CI los compila. El paquete no declara Tailwind como peer dependency, así que tu gestor de paquetes no comprueba la versión por ti; `npm ls tailwindcss` te muestra la tuya. Una peer opcional la habría comprobado, pero entonces npm se negaba a instalar el paquete en cualquier proyecto con un Tailwind anterior, incluso en uno que solo enlaza el CSS compilado.
 
 ## La variante `dark:`
 

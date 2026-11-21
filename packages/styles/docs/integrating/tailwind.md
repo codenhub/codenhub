@@ -46,6 +46,8 @@ Unlike `/tw`, the focused entrypoints and `/native/tw` do not import Tailwind, s
 @import "@codenhub/styles/button/tw";
 ```
 
+A focused entrypoint is for one family. Each one brings the theme and the shared rules its classes are built on, so two of them bring those twice, and Tailwind keeps both copies. With Tailwind 4.3.2, `/button/tw`, `/form/tw`, `/surface/tw`, and `/feedback/tw` together compiled a small page to 85,192 bytes minified, where `/components/tw`, which holds all four and the tooltips too, compiled it to 82,915. For two families or more, import `/components/tw`, or `/tw`.
+
 ## Build your own components with `@apply`
 
 On `/tw`, every component, helper, and axis class is a Tailwind utility. That includes the intents (`neutral`, `primary`, `secondary`, `success`, `warning`, `destructive`, `info`), the presentation (`solid`, `soft`, `ghost`, `edged`, `edgeless`), the elevation (`flat`, `raised`, `floating`), the corner patterns (`cut-diagonal`, `cut-diagonal-reverse`), and the sizes (`sm`, `lg`). So one class of yours can carry a whole recipe:
@@ -143,7 +145,7 @@ The block leaves out `neutral`, `emerald`, `amber`, `rose`, `indigo`, and `white
 @source inline("btn alert badge primary destructive soft");
 ```
 
-Every `/tw` entrypoint requires Tailwind CSS 4.3.2 or newer, below 5 (`>=4.3.2 <5`).
+Every `/tw` entrypoint requires Tailwind CSS 4.3.2 or newer, below 5 (`>=4.3.2 <5`), the range CI compiles it with. The package does not declare Tailwind as a peer dependency, so your package manager does not check the version for you; `npm ls tailwindcss` shows yours. An optional peer would have checked it, but npm then refused to install the package in any project on an older Tailwind, even one that only links the compiled CSS.
 
 ## The `dark:` variant
 
