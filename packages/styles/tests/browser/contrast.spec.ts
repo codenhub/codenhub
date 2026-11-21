@@ -224,11 +224,33 @@ for (const theme of THEMES) {
   });
 }
 
-test("leaves a text control's resting line quiet without the preference", async ({ page }) => {
-  await load(page, "light", `<input data-testid="ipt" class="ipt" />`);
+/* WCAG 1.4.11 holds for a field at rest without asking for more contrast. A
+   field once rested at 60% of its line, so hover had a step to take: 2.2:1 for
+   a neutral field in both themes, and under 3:1 for most intents. Every text
+   control and every intent, against the page and the field's own fill. */
+for (const theme of THEMES) {
+  test(`rests every text control's line at 3:1 without the preference, ${theme}`, async ({ page }) => {
+    await load(
+      page,
+      theme,
+      INTENTS.map(
+        (intent) =>
+          `<input data-testid="ipt-${intent}" class="ipt ${intent}" />
+           <textarea data-testid="textarea-${intent}" class="textarea ${intent}"></textarea>
+           <select data-testid="select-${intent}" class="select ${intent}"><option>a</option></select>
+           <div data-testid="group-${intent}" class="input-group ${intent}"><input class="ipt" /></div>`,
+      ).join(""),
+    );
 
-  expect(await lineContrast(page, "ipt")).toBeLessThan(MINIMUM);
-});
+    for (const intent of INTENTS) {
+      for (const control of ["ipt", "textarea", "select", "group"]) {
+        // oxlint-disable-next-line no-await-in-loop -- one page, read in turn.
+        const ratio = await lineContrast(page, `${control}-${intent}`);
+        expect.soft(ratio, `${control} ${intent}`).toBeGreaterThanOrEqual(MINIMUM);
+      }
+    }
+  });
+}
 
 /* docs/accessibility.md promises every intent's `.solid` label 4.5:1 in both
    themes. Hover swaps the plate for `--intent-hover`, a tone baked per theme,
