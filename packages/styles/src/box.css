@@ -138,6 +138,11 @@
        A component that rests on a ground of its own restates all three after
        `@apply box`. See docs/internal/model.md#the-ink-of-the-plate-beneath. */
     --_held-ink: var(--_holds-ink, var(--_d-holds-ink)) var(--_fg-own);
+    /* The plate, as the page would show it: the capped fill over the page
+       ground. Opaque, so the selected text it colours reads on the ink, where
+       `--_bg` thinned by an aesthetic's alpha would not. */
+    --_held-plate: var(--_holds-ink, var(--_d-holds-ink))
+      color-mix(in oklab, var(--intent-color) var(--_capped), var(--color-background));
     --_held-on: var(--_holds-ink, var(--_d-holds-ink)) 100%;
     --_own-hold: var(--_holds-ink, var(--_d-holds-ink)) 100%;
     --_on-plate: var(--_holds-ink, var(--_d-holds-ink)) 100%;

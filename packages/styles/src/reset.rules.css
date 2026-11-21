@@ -70,9 +70,14 @@
     }
   }
 
+  /* On a plate the selection inverts it: the plate's ink as the highlight,
+     the plate's colour as the text, the pair the plate already prints its
+     text in. The brand colour painted a `.solid.primary` button's selection
+     primary on primary, at 1:1, and could land near any other solid plate.
+     Off a plate, `--_held-on` is 0% and the brand colour stays. */
   ::selection {
-    background: var(--color-primary);
-    color: var(--color-primary-contrast);
+    background: color-mix(in srgb, var(--_held-ink, transparent) var(--_held-on, 0%), var(--color-primary));
+    color: color-mix(in srgb, var(--_held-plate, transparent) var(--_held-on, 0%), var(--color-primary-contrast));
   }
 
   /* Negative, so the ring is drawn over the edge rather than beside it: at a

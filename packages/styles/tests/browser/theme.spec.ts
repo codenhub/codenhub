@@ -1,5 +1,5 @@
 import { expect, test } from "./fixtures";
-import { getColorDistance, ORIGIN, settleAnimations } from "./test-utils";
+import { getColorDistance, getContrastRatio, ORIGIN, settleAnimations } from "./test-utils";
 
 const COMPONENTS_URL = `${ORIGIN}/components/?env=vanilla`;
 
@@ -484,3 +484,48 @@ test("styles components inside a shadow root", async ({ page }) => {
   expect(ring.focused).toBe(true);
   expect(ring.outline, "the focus ring").not.toBe("none");
 });
+
+/* Selected text on a solid plate: the page's highlight is the brand colour,
+   so on a `.solid.primary` button it painted primary on primary, and on the
+   other intents it could land near the plate too. On a plate the highlight is
+   the plate's own ink and the selected text the plate's colour, the pair the
+   plate already prints its text in, inverted. */
+for (const theme of ["light", "dark"] as const) {
+  test(`selected text on every solid plate reads and stands out, ${theme} theme`, async ({ page }) => {
+    const intents = ["neutral", "primary", "secondary", "success", "warning", "destructive", "info"];
+
+    await page.setContent(
+      `<!doctype html><html class="theme-${theme}"><head><link rel="stylesheet" href="${ORIGIN}/shared/entry-vanilla.css" /></head><body><p data-plate="page">Page</p>${intents
+        .map(
+          (intent) =>
+            `<button class="btn solid ${intent}" data-plate="btn-${intent}">Go</button><span class="badge solid ${intent}" data-plate="badge-${intent}">New</span><div class="card solid ${intent}" data-plate="card-${intent}"><p data-text>Text</p></div>`,
+        )
+        .join("")}</body></html>`,
+    );
+    await page.waitForLoadState("load");
+    await settleAnimations(page);
+
+    const reads = await page.evaluate(() =>
+      [...document.querySelectorAll<HTMLElement>("[data-plate]")].map((plate) => {
+        const text = plate.querySelector<HTMLElement>("[data-text]") ?? plate;
+        const selection = getComputedStyle(text, "::selection");
+
+        return {
+          name: plate.dataset.plate!,
+          plate: getComputedStyle(plate.dataset.plate === "page" ? document.body : plate).backgroundColor,
+          highlight: selection.backgroundColor,
+          text: selection.color,
+        };
+      }),
+    );
+
+    for (const { name, plate, highlight, text } of reads) {
+      const label = `${name}: ${text} on ${highlight} over ${plate}`;
+
+      expect(getContrastRatio(text, highlight), label).toBeGreaterThanOrEqual(4.5);
+      if (name !== "page") {
+        expect(getContrastRatio(highlight, plate), label).toBeGreaterThanOrEqual(3);
+      }
+    }
+  });
+}

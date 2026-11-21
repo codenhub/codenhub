@@ -2,7 +2,7 @@
 title: Conteúdo e layout
 description: Consulta de todos os helpers de layout com os seus espaçamentos, a escala tipográfica com os seus tamanhos, cards e painéis com o seu padding, tabelas, citações, código e teclas.
 order: 10
-source: 1824a62b8e0ed662dd7f1bbe4330fa002281c184
+source: a929c85000a850ab8b93af8c3da6bd3241468ba2
 ---
 
 # Conteúdo e layout
@@ -51,7 +51,7 @@ Os dois maiores tamanhos crescem no breakpoint `md` do Tailwind, 48rem por padr�
 
 O espaçamento da tabela é `normal` num idioma cuja escrita une as letras: árabe, persa, urdu, pashto, sindi, uigur, curdo sorani, caxemira, siríaco, n'ko, mongol na sua própria escrita (`mn-Mong`), adlam (`ff-Adlm`) e idiomas regionais em escrita árabe: árabe egípcio e marroquino (`arz`, `ary`), panjabi ocidental (`pnb`), dari (`prs`), azeri do sul (`azb`), saraiki (`skr`), balúchi (`bal`, `bcc`, `bgn`), mazandarani (`mzn`), gilaki (`glk`), luri (`lrc`, `luz`), curdo do sul (`sdh`), bakhtiari (`bqi`), hindko (`hno`), khowar (`khw`) e brahui (`brh`), e rohingya (`rhg`), em hanifi rohingya. Afastar as letras quebra as ligações entre elas e uma ligadura como "الله". Também é `normal` num idioma escrito numa escrita que pendura as letras numa linha superior, devanágari, bengali ou gurmukhi: hindi, marati, nepali, sânscrito, maithili, bhojpuri, concani, dogri, bodo, newari, bengali, assamês e panjabi. Ali o espaçamento corta em pedaços a linha que corre no alto de uma palavra, e pode separar um sinal de vogal da sua letra. O mesmo vale para o espaçamento de `.label` e `.hint` num campo, e para o espaçamento de rótulos que uma estética dá a botões e badges, incluindo a classe solo do chunky tile. O idioma vem de `lang`, no elemento ou num que o contenha, então defina-o: no `<html>` para uma página nesse idioma, e num trecho nesse idioma dentro de uma página em outro. Um idioma escrito numa dessas escritas só às vezes precisa da subtag de escrita, e o pacote nomeia as comuns: `ku-Arab`, `ms-Arab`, `kk-Arab`, `az-Arab`, `uz-Arab`, `tg-Arab`, `sat-Deva` e `mni-Beng`. Um idioma ou uma subtag que ele não nomeia, como `ha-Arab`, mantém o espaçamento; dê `tracking-normal` a esse texto. Com `/native`, esse trecho também não recebe o espaçamento da página ao redor. A sua própria utility `tracking-*` continua valendo.
 
-`.selection-contrast` num elemento troca as cores do texto selecionado dentro dele para `--color-primary` sobre `--color-primary-contrast`. Use-o numa área `.solid.primary`, onde a cor de seleção padrão seria igual ao fundo.
+O texto selecionado é `--color-primary-contrast` sobre `--color-primary`. Sobre uma placa sólida, como um botão `.solid.primary` ou um card `.solid` e o texto dentro dele, a seleção inverte a placa: a cor do texto da placa como destaque e a cor da placa como texto, então ela se destaca em todas as intenções.
 
 ## Superfícies
 

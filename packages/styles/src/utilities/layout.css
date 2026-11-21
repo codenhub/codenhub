@@ -190,14 +190,6 @@
     border-inline-start-width: var(--_vertical-line, 0px);
   }
 
-  .selection-contrast {
-    &::selection,
-    & *::selection {
-      background: var(--color-primary-contrast);
-      color: var(--color-primary);
-    }
-  }
-
   /* `.visually-hidden`, the standard clip-based recipe. Tailwind's `sr-only` does
      nothing on the vanilla entries (`.`, `/native`), which compile real CSS from
      a scan of `src/` alone with no Tailwind utility layer to reach, so the
