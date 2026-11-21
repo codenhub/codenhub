@@ -70,7 +70,7 @@ In a Web Worker, the root entry point and `@codenhub/i18n/routing` work as anywh
 ## Notes
 
 - On a server or in a static build, create one manager per request or page, not a shared one. A shared manager is how one visitor ends up reading another visitor's language.
-- The package does not render HTML from translations: text always comes back as text.
+- The package does not render HTML from translations: text always comes back as text. For a link or bold text inside a sentence, `rich()` returns the text and its tags as data for your code to render; see [Links and bold text inside a sentence](docs/translations.md#links-and-bold-text-inside-a-sentence).
 - ICU messages cover `number`, `date`, `time`, `plural`, `selectordinal`, and `select`, without number skeletons or styles such as `{n, number, currency}`, which are shown as written with a warning. Format such a value with `formatNumber()` and pass the result in.
 
 ## License

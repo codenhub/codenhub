@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { describe, expect, expectTypeOf, it } from "vitest";
 
-import { createI18n, type I18n } from "../index";
+import { createI18n, type I18n, type RichText } from "../index";
 import type { TranslateParams } from "./message-params";
 
 const en = {
@@ -130,6 +130,23 @@ describe("typed placeholder values", () => {
     expect(typed.translate<"greeting">("greeting", { name: "Ana", title: "Dr." })).toBe("Hello, Ana!");
     // @ts-expect-error -- `name` is required.
     typed.t<"greeting">("greeting", { title: "Dr." });
+  });
+
+  it("should check rich() values as t() checks them", async () => {
+    const typed = createI18n({
+      locales: ["en"] as const,
+      defaultLocale: "en",
+      loadLocale: () => ({ reply: "<b>{name}</b> replied", total: "<b>{amount, number}</b>" }) as const,
+      isSilent: true,
+    });
+    await typed.init();
+
+    expect(typed.rich("reply", { name: "Ana" })).toEqual([{ tag: "b", children: ["Ana"] }, " replied"]);
+    expectTypeOf(typed.rich("total", { amount: 3n })).toEqualTypeOf<RichText>();
+    // @ts-expect-error -- `name` is required.
+    typed.rich("reply");
+    // @ts-expect-error -- {amount, number} needs a number.
+    typed.rich("total", { amount: "3" });
   });
 
   it("should take values typed by an interface, and still check each value", async () => {

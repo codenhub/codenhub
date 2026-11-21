@@ -1,8 +1,8 @@
 ---
 title: Escribe tus traducciones
-description: Diccionarios, archivos JSON, placeholders, mensajes ICU, plurales, formateadores, claves y valores tipados, cómo detectar claves sin traducir y límites de tamaño.
+description: Diccionarios, archivos JSON, placeholders, mensajes ICU, enlaces y negritas, plurales, formateadores, claves y valores tipados, cómo detectar claves sin traducir y límites de tamaño.
 order: 1
-source: 29b380f64cf0e7828f2c1d2390e7e9364778ce9f
+source: 7afe7d06f7c2b1f64b4c34dcaf6e8435703b028d
 ---
 
 # Escribe tus traducciones
@@ -134,7 +134,7 @@ t("order.confirmed", { name: "Ana", orderId: "1042" });
 
 Los valores pueden ser strings, números, bigints o fechas. Un bigint va donde va un número, y se formatea sin perder dígitos. Los nombres de los placeholders usan letras ASCII, dígitos y `_`, como `{firstName}` o `{first_name}`. Un nombre con cualquier otra cosa, como `{first-name}` o `{nome_ç}`, no es un placeholder: el mensaje tiene sintaxis inválida, registra una advertencia y muestra `{first-name}` tal como está escrito.
 
-Usa placeholders en lugar de juntar fragmentos. `t("before") + name + t("after")` obliga a todos los idiomas a seguir el orden de palabras del inglés, mientras que una oración entera con un placeholder deja que cada traducción ponga el valor donde corresponde. El orden de las palabras es lo primero que todo traductor quiere cambiar, y casi siempre tiene razón.
+Usa placeholders en lugar de juntar fragmentos. `t("before") + name + t("after")` obliga a todos los idiomas a seguir el orden de palabras del inglés, mientras que una oración entera con un placeholder deja que cada traducción ponga el valor donde corresponde. El orden de las palabras es lo primero que todo traductor quiere cambiar, y casi siempre tiene razón. Para un enlace o una negrita dentro de la oración, consulta [Enlaces y negritas dentro de una oración](#enlaces-y-negritas-dentro-de-una-oración).
 
 Algunos detalles:
 
@@ -232,6 +232,49 @@ Dentro de las formas de un plural, `#` representa el número; escribe `'#'` para
 El texto entre comillas también es texto para los tipos: en `'{it''s {x}'`, que muestra `{it's {x}`, `x` no es un valor que `t()` pida.
 
 Un texto que no es sintaxis válida, como una `{` sin cerrar o una `}` suelta, registra una advertencia, salvo que el gestor esté en silencio, y se muestra con solo sus placeholders `{name}` completados. La advertencia nombra la clave y el locale, y aparece una vez por cada texto en cada locale, entre los 1000 más recientes. [Encuentra claves sin traducir](#encuentra-claves-sin-traducir) muestra un test que comprueba cada mensaje.
+
+### Enlaces y negritas dentro de una oración
+
+Una oración con un enlace en el medio sigue siendo una sola oración. Partirla en `t("before")`, un enlace y `t("after")` fija el orden de las palabras, igual que juntar fragmentos. Marca la parte con una etiqueta y llama a `rich()`, que devuelve el texto y sus etiquetas como datos para que tu framework los renderice:
+
+```json
+{ "signup": { "terms": "Al registrarte aceptas los <terms>términos de uso</terms>." } }
+```
+
+```ts
+i18n.rich("signup.terms");
+// ["Al registrarte aceptas los ", { tag: "terms", children: ["términos de uso"] }, "."]
+```
+
+Una etiqueta es `<nombre>…</nombre>`, o `<nombre/>` para una sin contenido, como un salto de línea. Los nombres usan letras ASCII, dígitos y `_`. Una etiqueta dice qué es la parte, y tu código decide cómo se renderiza, así que una traducción no puede añadir un enlace, un script ni marcado que tu código no renderice. En React, por ejemplo:
+
+```tsx
+import { Fragment, type ReactNode } from "react";
+import type { RichText } from "@codenhub/i18n";
+
+type Tags = Readonly<Record<string, (children: ReactNode) => ReactNode>>;
+
+// Una etiqueta que tu código no renderiza muestra su contenido sin ella.
+const render = (parts: RichText, tags: Tags): ReactNode[] =>
+  parts.map((part, index) => {
+    if (typeof part === "string") {
+      return part;
+    }
+    const tag = tags[part.tag] ?? ((children: ReactNode) => children);
+    return <Fragment key={index}>{tag(render(part.children, tags))}</Fragment>;
+  });
+
+<p>{render(i18n.rich("signup.terms"), { terms: (children) => <a href="/terms">{children}</a> })}</p>;
+```
+
+Algunos detalles:
+
+- `rich()` acepta las mismas claves y valores que `t()`, comprobados de la misma forma. Un valor siempre es texto: un `<b>` en el nombre de un visitante se muestra tal como está escrito y nunca se lee como etiqueta.
+- Una etiqueta puede envolver placeholders, un plural o un select, y puede ir dentro de una forma de un plural o un select, pero una etiqueta abierta en una forma tiene que cerrarse en esa forma.
+- Un `<` que no forma una etiqueta, como en `1 < 2`, es texto.
+- Un mensaje cuyas etiquetas no cuadran, como `<b>negrita` sin `</b>`, o se anidan más de 10 niveles, registra una advertencia una vez por cada texto en cada locale, salvo que el gestor sea silencioso, y vuelve como una sola parte: el texto tal como lo muestra `t()`, con las etiquetas. Una clave que falta y la sintaxis inválida también vuelven como la única parte que devolvería `t()`.
+- Las etiquetas no se comprueban en los tipos, porque una traducción puede usar etiquetas que el texto por defecto no tiene. Renderiza todas las etiquetas que usan tus mensajes y ten un respaldo para las demás, como arriba.
+- `t()` y el binding de `data-i18n` muestran las etiquetas tal como están escritas. Renderiza desde tu código un mensaje con etiquetas usando `rich()`.
 
 ## Plurales
 

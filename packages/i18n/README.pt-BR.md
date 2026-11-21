@@ -1,4 +1,4 @@
-<!-- source: 3d7826bf052864f0c1f742d6b46e0f247726a390 -->
+<!-- source: 21a72bc2e3c7a4b3cecc1a9d026be4de6a85ecce -->
 
 # @codenhub/i18n
 
@@ -72,7 +72,7 @@ Em um Web Worker, o entry point raiz e `@codenhub/i18n/routing` funcionam como e
 ## Observações
 
 - No servidor ou num build estático, crie um gerenciador por requisição ou por página, e não um compartilhado. Um gerenciador compartilhado é o caminho para um visitante acabar lendo no idioma de outro.
-- O pacote não renderiza HTML vindo das traduções: o texto sempre volta como texto.
+- O pacote não renderiza HTML vindo das traduções: o texto sempre volta como texto. Para um link ou negrito dentro de uma frase, `rich()` devolve o texto e as tags dele como dados para o seu código renderizar; veja [Links e negrito dentro de uma frase](docs/pt-BR/translations.md#links-e-negrito-dentro-de-uma-frase).
 - As mensagens ICU cobrem `number`, `date`, `time`, `plural`, `selectordinal` e `select`, sem skeletons de número nem estilos como `{n, number, currency}`, que aparecem como foram escritos, com um aviso. Formate um valor desses com `formatNumber()` e passe o resultado.
 
 ## Licença

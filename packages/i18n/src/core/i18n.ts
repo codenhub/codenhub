@@ -8,6 +8,7 @@ import {
   copyDateTimeFormatOptions,
   formatMessage,
   formatPlainValue,
+  formatRichMessage,
   getDateTimeFormat,
   getListFormat,
   getNumberFormat,
@@ -16,6 +17,8 @@ import {
   MAX_FILLED_ARGUMENTS,
   type MessageValues,
   parseCachedMessage,
+  type RichText,
+  textMessage,
   toPluralOperand,
 } from "./message-format";
 import { MAX_TRANSLATION_KEY_LENGTH, MAX_UNTRIMMED_KEY_LENGTH, normalizeTranslationKey } from "./string-validation";
@@ -164,6 +167,7 @@ class I18nInstance<TLocale extends string, TKey extends string = string>
     this.resolveLocale = this.resolveLocale.bind(this);
     this.matchLocale = this.matchLocale.bind(this);
     this.translate = this.translate.bind(this);
+    this.rich = this.rich.bind(this);
     this.has = this.has.bind(this) as I18nInstance<TLocale, TKey>["has"];
     this.subscribe = this.subscribe.bind(this);
     this.formatNumber = this.formatNumber.bind(this);
@@ -253,18 +257,51 @@ class I18nInstance<TLocale extends string, TKey extends string = string>
   }
 
   translate(key: string, params?: MessageValues): string {
+    const found = this.find("translate", key, params);
+    return found === undefined ? key.trim() : this.format(key, found, params ?? {});
+  }
+
+  rich(key: string, params?: MessageValues): RichText {
+    const found = this.find("rich", key, params);
+    if (found === undefined) {
+      return [key.trim()];
+    }
+
+    const message = isPlainMessage(found.text) ? textMessage(found.text) : parseCachedMessage(found.text);
+    if (typeof message === "string") {
+      return [this.format(key, found, params ?? {})];
+    }
+
+    const { parts, reason, text } = formatRichMessage(message, params ?? {}, found.locale, this.config.timeZone);
+    if (reason === undefined) {
+      return parts;
+    }
+    if (!this.isSilent && rememberWarning(warnedMessages, `${found.locale}\0${found.text}`, MAX_MESSAGE_DIAGNOSTICS)) {
+      console.warn(
+        `[I18n] Invalid tags for ${quoteKey(key.trim())} in locale "${found.locale}": ${reason}; the text is shown with ` +
+          "its tags as written. " +
+          quoteKey(found.text.slice(0, 200)),
+      );
+    }
+    return [text];
+  }
+
+  /** Checks a call's values and finds its key, or with a numeric `count`, its plural form. */
+  private find(
+    caller: "translate" | "rich",
+    key: string,
+    params: MessageValues | undefined,
+  ): FoundTranslation<TLocale> | undefined {
     // `null` or a primitive is a mistake in the calling code, such as plain JavaScript passing a missing value through.
     if (params !== undefined && (typeof params !== "object" || params === null)) {
       throw new TypeError("[I18n] Translation values must be an object or undefined.");
     }
     const count = params !== undefined && Object.hasOwn(params, "count") ? params["count"] : undefined;
-    const found = this.lookup(
-      "translate",
+    return this.lookup(
+      caller,
       key,
       typeof count === "number" || typeof count === "bigint" ? toPluralOperand(count) : undefined,
     );
-
-    return found === undefined ? key.trim() : this.format(key, found, params ?? {});
   }
 
   has(key: TKey): boolean;
@@ -443,9 +480,13 @@ class I18nInstance<TLocale extends string, TKey extends string = string>
 
   /**
    * Finds a key, or with a count, a plural group's form, through the active fallback chain. Errors name `caller`, and a
-   * miss is reported only for `translate`, since `has` exists to check silently.
+   * miss is reported except for `has`, which exists to check silently.
    */
-  private lookup(caller: "translate" | "has", key: string, count?: number): FoundTranslation<TLocale> | undefined {
+  private lookup(
+    caller: "translate" | "rich" | "has",
+    key: string,
+    count?: number,
+  ): FoundTranslation<TLocale> | undefined {
     if (!this.isReadyState || this.dictionaries === undefined) {
       throw new Error(`[I18n] ${caller}() requires successful initialization.`);
     }
@@ -470,7 +511,7 @@ class I18nInstance<TLocale extends string, TKey extends string = string>
       }
     }
 
-    if (caller === "translate") {
+    if (caller !== "has") {
       this.reportMissingKey(normalizedKey);
     }
     return undefined;

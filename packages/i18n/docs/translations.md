@@ -1,6 +1,6 @@
 ---
 title: Write your translations
-description: Dictionaries, JSON files, placeholders, ICU messages, plurals, formatters, typed keys and values, checking for untranslated keys, and size limits.
+description: Dictionaries, JSON files, placeholders, ICU messages, links and bold text, plurals, formatters, typed keys and values, checking for untranslated keys, and size limits.
 order: 1
 ---
 
@@ -133,7 +133,7 @@ t("order.confirmed", { name: "Ana", orderId: "1042" });
 
 Values can be strings, numbers, bigints, or dates. A bigint goes wherever a number does, and is formatted without losing digits. Placeholder names use ASCII letters, digits, and `_`, such as `{firstName}` or `{first_name}`. A name with anything else, such as `{first-name}` or `{nome_ç}`, is not a placeholder: the message is invalid syntax, logs a warning, and shows `{first-name}` as written.
 
-Use placeholders instead of joining fragments. `t("before") + name + t("after")` locks every language into English word order, while a whole sentence with a placeholder lets each translation put the value where it belongs. Word order is the first thing every translator wants to change, and they are usually right.
+Use placeholders instead of joining fragments. `t("before") + name + t("after")` locks every language into English word order, while a whole sentence with a placeholder lets each translation put the value where it belongs. Word order is the first thing every translator wants to change, and they are usually right. For a link or bold text inside the sentence, see [Links and bold text inside a sentence](#links-and-bold-text-inside-a-sentence).
 
 A few details:
 
@@ -231,6 +231,49 @@ Inside a plural's forms, `#` stands for the number; write `'#'` for a literal `#
 Quoted text is text to the types too: in `'{it''s {x}'`, which shows `{it's {x}`, `x` is not a value `t()` asks for.
 
 Text that is not valid syntax, such as an unclosed `{` or a stray `}`, logs a warning, unless the manager is silent, and is shown with only its `{name}` placeholders filled. The warning names the key and the locale, and comes once for each text in each locale, among the 1,000 most recent. [Find untranslated keys](#find-untranslated-keys) shows a test that checks every message.
+
+### Links and bold text inside a sentence
+
+A sentence with a link in the middle is still one sentence. Splitting it into `t("before")`, a link, and `t("after")` locks the word order, as joining fragments does. Mark the part with a tag and call `rich()`, which returns the text and its tags as data for your framework to render:
+
+```json
+{ "signup": { "terms": "By signing up you accept the <terms>terms of use</terms>." } }
+```
+
+```ts
+i18n.rich("signup.terms");
+// ["By signing up you accept the ", { tag: "terms", children: ["terms of use"] }, "."]
+```
+
+A tag is `<name>…</name>`, or `<name/>` for one with no content, such as a line break. Names use ASCII letters, digits, and `_`. A tag names what the part is, and your code decides how it renders, so a translation can't add a link, a script, or markup your code doesn't render. In React, for example:
+
+```tsx
+import { Fragment, type ReactNode } from "react";
+import type { RichText } from "@codenhub/i18n";
+
+type Tags = Readonly<Record<string, (children: ReactNode) => ReactNode>>;
+
+// A tag your code doesn't render shows its content without it.
+const render = (parts: RichText, tags: Tags): ReactNode[] =>
+  parts.map((part, index) => {
+    if (typeof part === "string") {
+      return part;
+    }
+    const tag = tags[part.tag] ?? ((children: ReactNode) => children);
+    return <Fragment key={index}>{tag(render(part.children, tags))}</Fragment>;
+  });
+
+<p>{render(i18n.rich("signup.terms"), { terms: (children) => <a href="/terms">{children}</a> })}</p>;
+```
+
+A few details:
+
+- `rich()` takes the same keys and values as `t()`, checked the same way. A value is always text: a `<b>` in a visitor's name is shown as written, never read as a tag.
+- A tag can wrap placeholders, a plural, or a select, and can sit inside a plural or select form, but a tag opened in a form must close in that form.
+- A `<` that doesn't form a tag, as in `1 < 2`, is text.
+- A message whose tags don't balance, such as `<b>bold` without `</b>`, or nest more than 10 levels deep, logs a warning once for each text in each locale, unless the manager is silent, and comes back as one part: the text as `t()` shows it, tags included. A missing key and invalid syntax also come back as the one part `t()` would return.
+- Tags aren't type-checked, since a translation can use tags the default text doesn't. Render every tag your messages use, and keep a fallback for the rest, as above.
+- `t()` and the `data-i18n` binding show tags as written. Render a message with tags from your code with `rich()`.
 
 ## Plurals
 
