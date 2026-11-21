@@ -2,7 +2,7 @@
 title: Clases solo
 description: Cómo pintar una estética sobre un elemento de otra librería, como un toast o un diálogo, y qué lee e ignora una clase solo.
 order: 7
-source: 7000ca9bda4fc54b3a2dbc6be9ca7bfd80062f5a
+source: 0d3f010a71bf55feee22ff8a5aa91d3a018822a5
 ---
 
 # Clases solo
@@ -79,7 +79,7 @@ Sin ninguna de esas clases, una clase solo pinta solo el material (borde, esquin
 - **Gana a los estilos de la otra librería.** Las reglas no tienen capa y tienen un solo nivel de clase, así que ganan a las reglas con capa de un componente, y a las de especificidad cero, se carguen donde se carguen. Una regla ajena sin capa que sea más específica, o igual de específica y posterior en la página, sigue ganando. La otra cara es que una utilidad de Tailwind en el mismo elemento, como `rounded-none`, pierde frente a la clase solo: ajústalo mediante sus controles.
 - **Solo pulsa una acción.** Neobrutalism, chunky tile y cyber pulsan un `button`, un `a[href]`, un `[role="button"]`, un `summary` o un `input` de tipo botón salvo que lleve el atributo `disabled`, `.disabled`, `aria-disabled="true"` o `data-disabled`. Solo el atributo deshabilita un botón; la pulsación ignora también los otros tres, ya que una página los usa para marcar uno que trata como deshabilitado. Todo lo demás se queda quieto, así que un toast no se hunde al hacer clic. La etiqueta más gruesa de chunky tile sigue la misma regla.
 - **No toca el movimiento de un contenedor.** Solo una acción toma la `transition` de la pulsación, y la pulsación mueve el elemento mediante las propiedades `translate` y `scale`, no `transform`. Un toast conserva sus propias transiciones y su propio `transform`. En una acción, la `transition` de la pulsación reemplaza la que tuviera el elemento.
-- **Pixel solo recorta una acción.** `.pixel-solo` recorta su esquina escalonada en las mismas acciones, porque un `clip-path` también corta todo lo que sobresale del elemento: un menú abierto, una insignia fijada a su borde o el anillo de un hijo enfocado. Cualquier otro elemento conserva las esquinas rectas y el anillo, como una superficie bajo `.pixel`.
+- **Pixel solo escalona una acción.** `.pixel-solo` dibuja su esquina escalonada en las mismas acciones. Donde el navegador dibuja `corner-shape`, como hace Chromium, el escalón es una esquina con muesca y no se recorta nada. Firefox y Safari la recortan con un `clip-path`, que también corta todo lo que sobresale del elemento: un menú abierto, una insignia fijada a su borde o el anillo de un hijo enfocado. Por eso solo la lleva una acción: cualquier otro elemento conserva las esquinas rectas y el anillo, como una superficie bajo `.pixel`.
 - **El movimiento reducido conserva la pulsación y quita su movimiento.** Con `prefers-reduced-motion: reduce`, o con `data-motion="reduce"` o `data-motion="none"` en `<html>`, neobrutalism, chunky tile y cyber siguen pulsando, pero al instante: el elemento cae en su sombra o su barra, o se encoge, sin recorrer la distancia. `data-motion="full"` mantiene el recorrido aunque el sistema pida movimiento reducido; [Ajustes de la app](../accessibility.md#ajustes-de-la-app) describe el atributo.
 
 ## Siguiente paso
