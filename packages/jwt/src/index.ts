@@ -1,5 +1,5 @@
 /**
- * Sign and verify JSON Web Tokens with Web Crypto, and manage the keys they need: generate, import, export and select them, including from a remote JWKS.
+ * Sign, verify, encrypt and decrypt JSON Web Tokens with Web Crypto, and manage the keys they need: generate, import, export and select them, including from a remote JWKS.
  *
  * @packageDocumentation
  */
@@ -7,6 +7,10 @@ export type {
   AsymmetricAlgorithm,
   JsonCompatible,
   JwsAlgorithm,
+  JwsHeader,
+  JwsVerifier,
+  JwsVerifierOptions,
+  JwsVerifyOptions,
   Jwk,
   JwtErr,
   JwtFailure,
@@ -28,20 +32,50 @@ export type {
   SigningKey,
   SymmetricAlgorithm,
   VerificationKey,
+  VerifiedJws,
   VerifiedJwt,
   VerifiedPayload,
   Verifier,
   VerifierOptions,
 } from "./core/types";
+export type {
+  EcJwk,
+  EcPrivateJwk,
+  EcPublicJwk,
+  OctJwk,
+  OkpJwk,
+  OkpPrivateJwk,
+  OkpPublicJwk,
+  PrivateJwk,
+  PublicJwk,
+  RsaJwk,
+  RsaPrivateJwk,
+  RsaPublicJwk,
+  SecretJwk,
+} from "./core/types";
 export type { StandardSchemaV1 } from "./interop/standard-schema";
 export { JWS_ALGORITHMS, isJwsAlgorithm } from "./core/limits";
+export {
+  createDpopProof,
+  createDpopVerifier,
+  type DpopProofContext,
+  type DpopProofInput,
+  type DpopProofPayload,
+  type DpopRequest,
+  type DpopVerifier,
+  type DpopVerifierOptions,
+  type VerifiedDpopProof,
+} from "./dpop";
 export { decodeBase64Url, encodeBase64Url } from "./encoding";
 export { readHeader, type ReadHeaderOptions } from "./jws/read-header";
 export {
   ASYMMETRIC_ALGORITHMS,
+  certificateThumbprint,
   createExternalSigningKey,
   exportPrivateJwk,
+  exportPrivatePem,
   exportPublicJwk,
+  exportPublicPem,
   exportSecretJwk,
   generateKeyPair,
   generateSecretKey,
@@ -53,6 +87,7 @@ export {
   isAsymmetricAlgorithm,
   isSymmetricAlgorithm,
   jwkThumbprint,
+  jwkThumbprintUri,
   SYMMETRIC_ALGORITHMS,
   tokenHash,
   type ExternalSigningKeyOptions,
@@ -65,13 +100,36 @@ export {
   type RsaModulusLength,
 } from "./keys";
 export {
+  createEncryptionKeyRing,
+  createKeyRing,
   createKeySet,
+  createRemoteEncryptionKeySet,
   createRemoteKeySet,
   importKeySet,
   type CreateKeySetOptions,
+  type EncryptionKeyRing,
+  type EncryptionKeyRingEntry,
+  type EncryptionKeyRingOptions,
   type ImportKeySetOptions,
+  type JwksFetch,
+  type KeyRing,
+  type KeyRingEntry,
+  type KeyRingOptions,
+  type PublicJwks,
+  type RemoteEncryptionKeySetOptions,
   type RemoteKeySetOptions,
   type RemoteKeySetSnapshot,
 } from "./keysets";
-export { sign, type SignHeader, type SignInput } from "./sign";
-export { createVerifier } from "./verify";
+export {
+  sign,
+  signGeneralJws,
+  signJws,
+  type JwsSigner,
+  type JwsSignHeader,
+  type SignGeneralJwsInput,
+  type SignHeader,
+  type SignInput,
+  type SignJwsInput,
+} from "./sign";
+export { createJwsVerifier, createVerifier } from "./verify";
+export * from "./jwe";

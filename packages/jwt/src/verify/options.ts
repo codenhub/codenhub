@@ -1,6 +1,6 @@
 import { DEFAULT_MAX_TOKEN_LENGTH, MAX_TOKEN_LENGTH_LIMIT } from "../core/limits";
 import { rejectUnknownOptions } from "../core/options";
-import type { KeySet, KeySetResolver, VerifierOptions } from "../core/types";
+import type { KeySet, KeySetResolver, KeySetRoute, VerifierOptions } from "../core/types";
 import type { StandardSchemaV1 } from "../interop/standard-schema";
 
 /** Largest `clockTolerance`, in seconds. */
@@ -10,6 +10,7 @@ export const MAX_CLOCK_TOLERANCE = 300;
 export interface ResolvedOptions {
   readonly keys: KeySet | KeySetResolver;
   readonly issuers?: readonly string[];
+  readonly subjects?: readonly string[];
   /** The accepted audiences; `false` skips the check, and unset rejects every token that has `aud`. */
   readonly audiences?: readonly string[] | false;
   /** The accepted `typ` values, already normalized by {@link normalizeType}; `null` accepts a missing `typ`. */
@@ -29,6 +30,7 @@ export interface ResolvedOptions {
 const KNOWN_OPTIONS: Readonly<Record<keyof VerifierOptions, true>> = {
   keys: true,
   issuer: true,
+  subject: true,
   audience: true,
   type: true,
   requireExpiration: true,
@@ -61,11 +63,20 @@ function throwInvalid(message: string): never {
   throw new TypeError(`createVerifier: ${message}`);
 }
 
-// A route's audiences and types, checked as the verifier options are; throws a TypeError naming the member.
+/** Every member a {@link KeySetRoute} may have; typed so adding one fails to compile until listed. */
+const ROUTE_MEMBERS: Readonly<Record<keyof KeySetRoute, true>> = { keys: true, audience: true, type: true };
+
+/**
+ * A route's audiences and types, checked as the verifier options are. A member that is not one of the route's,
+ * such as a misspelled `audiance`, is refused rather than ignored, which would silently drop the check.
+ *
+ * @throws TypeError naming the first unknown or invalid member, never its value.
+ */
 export function readRouteChecks(route: {
   readonly audience?: unknown;
   readonly type?: unknown;
 }): Pick<ResolvedOptions, "audiences" | "types"> {
+  rejectUnknownOptions(route, ROUTE_MEMBERS, "createVerifier", "route");
   return {
     ...optional("audiences", readAudience(route.audience, "route")),
     ...optional("types", readTypes(route.type, "route")),
@@ -74,7 +85,7 @@ export function readRouteChecks(route: {
 
 const isNonEmptyString = (value: unknown): value is string => typeof value === "string" && value.length > 0;
 
-const isIntegerInRange = (value: unknown, minimum: number, maximum: number): value is number =>
+export const isIntegerInRange = (value: unknown, minimum: number, maximum: number): value is number =>
   Number.isInteger(value) && (value as number) >= minimum && (value as number) <= maximum;
 
 /**
@@ -90,6 +101,7 @@ export function resolveOptions(options: VerifierOptions<StandardSchemaV1 | undef
   const {
     keys,
     issuer,
+    subject,
     audience,
     type,
     requireExpiration,
@@ -131,6 +143,7 @@ export function resolveOptions(options: VerifierOptions<StandardSchemaV1 | undef
   return {
     keys,
     ...optional("issuers", readStringList(issuer, "issuer")),
+    ...optional("subjects", readStringList(subject, "subject")),
     ...optional("audiences", readAudience(audience)),
     ...optional("types", readTypes(type)),
     requireExpiration: requireExpiration ?? maxAge === undefined,
@@ -204,7 +217,7 @@ function readRequiredClaims(value: unknown): readonly string[] {
 }
 
 /** Copies an array by index, so a hole becomes `undefined` and fails the element check instead of being skipped. */
-const denseCopy = (array: readonly unknown[]): unknown[] =>
+export const denseCopy = (array: readonly unknown[]): unknown[] =>
   Array.from({ length: array.length }, (_, index) => array[index]);
 
 function readSchema(value: unknown): StandardSchemaV1 | undefined {

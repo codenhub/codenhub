@@ -1,6 +1,6 @@
 ---
 title: Signing tokens
-description: What sign writes into the header, which payloads it accepts, and why it adds no claims of its own.
+description: What sign writes into the header, which payloads it accepts, and the claims it adds only when asked.
 order: 2
 ---
 
@@ -26,9 +26,9 @@ The payload, key and header are your own data, not input from outside, so a mist
 
 ## The payload is signed as given
 
-`sign` adds no claim. It does not set `iat`, `exp` or `jti`, and does not check that `exp` is in the future. Every claim the token should carry is one you write, which keeps what a token says visible at the call that signs it. Write times as whole seconds since the Unix epoch, `Math.floor(Date.now() / 1000)`, since that is what verifiers, this one included, read them as. An `exp`, `nbf` or `iat` past 253402300799, the last second of year 9999, throws: it is almost certainly `Date.now()` in milliseconds, which would sign a token that expires in some 55,000 years.
+`sign` adds no claim unless you ask for one with the options below, and does not check that `exp` is in the future. Write times as seconds since the Unix epoch, `Math.floor(Date.now() / 1000)`, since that is what verifiers, this one included, read them as. Write them as whole seconds: RFC 7519 allows fractions, but many verifiers parse numeric dates as integers and refuse or misread `1700000000.5`. An `exp`, `nbf` or `iat` past 253402300799, the last second of year 9999, throws: it is almost certainly `Date.now()` in milliseconds, which would sign a token that expires in some 55,000 years.
 
-The payload must be a plain object whose values JSON represents exactly: strings, finite numbers, booleans, `null`, arrays and plain objects, nested at most 32 levels deep. `undefined`, functions, symbols, bigints, `NaN`, `Infinity` and `-0`, `Date`s and other class instances, getters, sparse arrays and cycles all throw. `JSON.stringify` would drop or rewrite most of these silently, so the token would not say what your code meant. A `Date` in `exp` is the classic: it would sign as a string, and every verifier would then refuse a token whose expiry is not a number.
+The payload must be a plain object whose values JSON represents exactly: strings, finite numbers, booleans, `null`, arrays and plain objects, nested at most 32 levels deep. `undefined`, functions, symbols, bigints, `NaN`, `Infinity` and `-0`, `Date`s and other class instances, getters, sparse arrays and cycles all throw. `JSON.stringify` would drop or rewrite most of these silently, so the token would not say what your code meant. A `Date` in `exp` is the classic: it would sign as a string, and every verifier would then refuse a token whose expiry is not a number. Objects and arrays from another realm, such as a `vm` context or an iframe, are plain too. `sign` reads each member once, through its property descriptor, and writes the token from the values it checked, so a `Proxy` cannot show the checks one value and the token another.
 
 In TypeScript, the payload may have any object type, an `interface` included, as long as its registered claims have their RFC 7519 types and every member is a JSON value: a `Date` member or an `exp` typed as a string is a compile error, before it is a `TypeError`.
 
@@ -47,6 +47,31 @@ The registered claims are checked for the types RFC 7519 gives them: `exp`, `nbf
 
 `sign` does not limit a token's length, but verifiers do: a token longer than the verifier's `maxLength`, 8192 characters by default, fails with `too_large`. A payload of a few kilobytes reaches that, so raise `maxLength` on the verifier, up to 65536, when your tokens are large.
 
+## Claims sign can add
+
+Four options write a claim for you, after the payload's own members:
+
+| Option              | Writes                                          |
+| ------------------- | ----------------------------------------------- |
+| `issuedAt: true`    | `iat`, the current time                         |
+| `notBefore: number` | `nbf`, that many seconds after the current time |
+| `expiresIn: number` | `exp`, that many seconds after the current time |
+| `jti: true`         | `jti`, a random UUID from `crypto.randomUUID()` |
+
+```ts
+const token = await sign({
+  payload: { iss: "https://issuer.example", sub: "user-1", aud: "api" },
+  key: privateKey,
+  issuedAt: true,
+  expiresIn: 300,
+});
+// payload: {"iss":"https://issuer.example","sub":"user-1","aud":"api","iat":1700000000,"exp":1700000300}
+```
+
+The times are whole seconds, the clock read once and rounded down, so `exp - iat` is exactly `expiresIn`. `notBefore` and `expiresIn` are seconds, never milliseconds, from 0 to 315360000, ten years; a larger one throws, since it is almost certainly a duration in milliseconds. That bound catches milliseconds only from four days up: `expiresIn: 300_000`, meant as five minutes, signs a token that lasts three and a half days, so write durations in seconds. Setting an option and the claim it writes in the payload too throws, rather than choosing one of them.
+
+The clock is `Date.now` unless you pass `now`, a function that returns milliseconds since the Unix epoch, as a verifier's `now` does. It is called only when `issuedAt`, `notBefore` or `expiresIn` is given.
+
 ## The header
 
 The header's `alg` always comes from the key. You may repeat it in `header.alg`, but a different value throws: a key signs under its own algorithm only.
@@ -57,13 +82,15 @@ Other header parameters are written as given, with the same JSON rules as the pa
 
 | Parameter                  | Why it is refused                                                                                                                                                                     |
 | -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `crit`                     | It asks the verifier to understand an extension. This package implements none, and its own verifier rejects every token with `crit`.                                                  |
-| `b64`                      | Unencoded payloads (RFC 7797) are not supported.                                                                                                                                      |
+| `crit`                     | It asks the verifier to understand an extension. No JWT extension is implemented, and `createVerifier` rejects every token with `crit`; [JWS](jws.md) supports it.                    |
+| `b64`                      | RFC 7797 §7 keeps unencoded payloads out of JWTs; [JWS](jws.md) supports them for other payloads.                                                                                     |
 | `jwk`, `jku`, `x5u`, `x5c` | They tell the verifier where to find the key. A verifier that trusts them lets the token choose its own key, so this package never reads them, and writes `jwk` only from `embedKey`. |
+
+In TypeScript, `SignHeader` types these members as `never`, so writing one is a compile error too.
 
 The header is written in a fixed order: `alg`, then `kid`, `typ` and `cty` when present, then `jwk` for an `embedKey`, then the other parameters in the order you gave them.
 
-`sign`'s input takes only `payload`, `key`, `header` and `embedKey`; any other member throws (`sign: input.headers is not an option.`).
+`sign`'s input takes only `payload`, `key`, `header`, `embedKey`, `issuedAt`, `notBefore`, `expiresIn`, `jti` and `now`; any other member throws (`sign: input.headers is not an option.`).
 
 ## Which key signs
 
@@ -87,47 +114,17 @@ A key held by a cloud KMS or an HSM signs through `createExternalSigningKey`; [K
 
 ## DPoP proofs
 
-A DPoP proof (RFC 9449) is a token that carries the public key it was signed with, in a `jwk` header, so a server can bind an access token to the client's key. Sign one with `embedKey`, the public half of the signing key:
+A DPoP proof (RFC 9449) is a token that carries the public key it was signed with, in a `jwk` header. `createDpopProof` signs one and `createDpopVerifier` checks one, as [DPoP proofs](dpop.md) describes; use those rather than `sign`.
+
+Underneath, `createDpopProof` signs with `embedKey`, which any token can use to carry its key:
 
 ```ts
-import { generateKeyPair, sign } from "@codenhub/jwt";
+import { getPublicKey, sign } from "@codenhub/jwt";
 
-const { privateKey, publicKey } = await generateKeyPair({ alg: "ES256" });
-
-const proof = await sign({
-  payload: { jti: crypto.randomUUID(), htm: "POST", htu: "https://issuer.example/token", iat: Math.floor(Date.now() / 1000) },
-  key: privateKey,
-  header: { typ: "dpop+jwt" },
-  embedKey: publicKey,
-});
+const token = await sign({ payload, key: privateKey, header: { typ: "example+jwt" }, embedKey: getPublicKey(privateKey) });
 ```
 
-`embedKey` must be a public key this package created, bound to the same `alg` as `key`, and its pair: `sign` verifies the signature with it before returning, and throws otherwise. Only the key's material is written, never a private member, `alg`, `use` or `kid`.
-
-A verifier never uses the key a token carries. On the server, trust the proof's key explicitly, for that one proof:
-
-```ts
-import { createKeySet, createVerifier, importPublicKey, jwkThumbprint, readHeader } from "@codenhub/jwt";
-
-async function verifyProof(proof: string) {
-  const header = readHeader(proof);
-  if (!header.ok || header.value.alg !== "ES256") return undefined;
-  const key = await importPublicKey(header.value.jwk, { alg: "ES256" });
-  if (!key.ok) return undefined;
-  const verified = await createVerifier({ keys: createKeySet([key.value]), type: "dpop+jwt", maxAge: 60 })(proof);
-  return verified.ok ? { payload: verified.value.payload, jkt: await jwkThumbprint(key.value) } : undefined;
-}
-```
-
-Limit `alg` to the algorithms you accept, as above. `jkt` is the value an access token's `cnf.jkt` must equal. Checking `htm`, `htu`, `ath`, `nonce` and that each `jti` is used once is the protocol's job, above this package. With `maxAge`, keep each `jti` until the proof's `iat + maxAge + clockTolerance` has passed, not `maxAge` after you first saw it: a proof whose `iat` is up to `max(clockTolerance, 60)` seconds ahead of your clock is accepted that much longer, as [Verifying tokens](verifying.md) describes.
-
-A proof's `ath` is the whole SHA-256 hash of the access token, base64url-encoded, which `encodeBase64Url` gives:
-
-```ts
-import { encodeBase64Url } from "@codenhub/jwt";
-
-const ath = encodeBase64Url(new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(accessToken))));
-```
+`embedKey` must be a public key this package created, bound to the same `alg` as `key`, and its pair: `sign` verifies the signature with it before returning, and throws otherwise. Only the key's material is written, never a private member, `alg`, `use` or `kid`. A verifier from `createVerifier` never uses the key a token carries; `createDpopVerifier` does, because showing the client holds that key is what a proof is for.
 
 ## Token hashes in ID tokens
 

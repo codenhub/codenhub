@@ -1,5 +1,6 @@
-import { MAX_JSON_DEPTH } from "../core/limits";
+import { MAX_DURATION_SECONDS, MAX_JSON_DEPTH, MAX_NUMERIC_DATE } from "../core/limits";
 import { rejectUnknownOptions } from "../core/options";
+import { isPlainArray, isPlainObject } from "../core/plain";
 import type {
   JsonCompatible,
   JwsAlgorithm,
@@ -32,10 +33,19 @@ export interface SignHeader {
   readonly typ?: string;
   /** Media type of the payload. */
   readonly cty?: string;
-  /**
-   * Any other JSON header parameter. `crit`, `b64`, `jwk`, `jku`, `x5u` and `x5c` are refused: this
-   * package neither honours nor emits them.
-   */
+  /** Refused: this package implements no extension a verifier must understand. */
+  readonly crit?: never;
+  /** Refused: unencoded payloads (RFC 7797) are not supported. */
+  readonly b64?: never;
+  /** Refused: write it with `embedKey`, which proves it is the signing key's public half. */
+  readonly jwk?: never;
+  /** Refused: a verifier that trusts it lets the token choose its own key. */
+  readonly jku?: never;
+  /** Refused: a verifier that trusts it lets the token choose its own key. */
+  readonly x5u?: never;
+  /** Refused: a verifier that trusts it lets the token choose its own key. */
+  readonly x5c?: never;
+  /** Any other JSON header parameter. */
   readonly [parameter: string]: unknown;
 }
 
@@ -65,6 +75,39 @@ export interface SignInput<TPayload extends object = JwtPayload> {
    * @defaultValue no `jwk` header
    */
   readonly embedKey?: PublicKey;
+  /**
+   * Writes `iat`, the current time in whole seconds. The payload must not set `iat` too.
+   *
+   * @defaultValue false, no `iat` unless the payload has one
+   */
+  readonly issuedAt?: boolean;
+  /**
+   * Writes `nbf` this many whole seconds after the current time, at most 315360000 (ten years), so a time in
+   * milliseconds throws. The payload must not set `nbf` too.
+   *
+   * @defaultValue no `nbf` unless the payload has one
+   */
+  readonly notBefore?: number;
+  /**
+   * Writes `exp` this many whole seconds after the current time, the same time `issuedAt` writes, at most
+   * 315360000 (ten years), so a time in milliseconds throws. The payload must not set `exp` too.
+   *
+   * @defaultValue no `exp` unless the payload has one
+   */
+  readonly expiresIn?: number;
+  /**
+   * Writes `jti`, a random UUID from `crypto.randomUUID()`. The payload must not set `jti` too.
+   *
+   * @defaultValue false, no `jti` unless the payload has one
+   */
+  readonly jti?: boolean;
+  /**
+   * The clock `issuedAt`, `notBefore` and `expiresIn` read, in milliseconds since the Unix epoch, as a
+   * verifier's `now` is. It is called once, and only when one of them is given.
+   *
+   * @defaultValue `Date.now`
+   */
+  readonly now?: () => number;
 }
 
 const INPUT_MEMBERS: Readonly<Record<keyof SignInput, true>> = {
@@ -72,6 +115,11 @@ const INPUT_MEMBERS: Readonly<Record<keyof SignInput, true>> = {
   key: true,
   header: true,
   embedKey: true,
+  issuedAt: true,
+  notBefore: true,
+  expiresIn: true,
+  jti: true,
+  now: true,
 };
 
 /** The members of an embedded public key, in the order {@link exportPublicJwk} writes them. */
@@ -84,21 +132,8 @@ const FORBIDDEN_HEADER_MEMBERS = ["crit", "b64", "jwk", "jku", "x5u", "x5c"] as 
 const TEXT_HEADER_MEMBERS = ["kid", "typ", "cty"] as const;
 
 const NUMERIC_DATE_CLAIMS = ["exp", "nbf", "iat"] as const;
-/**
- * The last second of 9999-12-31, the latest a numeric date may name (scope.md decision 45). Every timestamp in
- * milliseconds since 1978 is larger, so `Date.now()` given in place of seconds is caught rather than signing a
- * token that expires in some 55,000 years.
- */
-const MAX_NUMERIC_DATE = 253_402_300_799;
 const TEXT_CLAIMS = ["iss", "sub", "jti"] as const;
-
-const isPlainObject = (value: unknown): value is Record<string, unknown> => {
-  if (typeof value !== "object" || value === null || Array.isArray(value)) {
-    return false;
-  }
-  const prototype: unknown = Object.getPrototypeOf(value);
-  return prototype === Object.prototype || prototype === null;
-};
+const MILLISECONDS_PER_SECOND = 1000;
 
 /**
  * Signs a payload into a compact JWS (a JWT) with a key's own algorithm.
@@ -106,19 +141,23 @@ const isPlainObject = (value: unknown): value is Record<string, unknown> => {
  * @remarks
  * The header's `alg` always comes from the key, so a key can never sign under another algorithm. The
  * header is written as `alg`, then `kid`, `typ` and `cty` when present, then `jwk` for an `embedKey`,
- * then the other parameters in the order given. The payload is signed exactly as given: no claim, such as `iat`, is added.
+ * then the other parameters in the order given. The payload is signed as given, plus only the claims
+ * `issuedAt`, `notBefore`, `expiresIn` and `jti` ask for, written after the payload's own members.
  *
  * @example
  * ```ts
  * const { privateKey } = await generateKeyPair({ alg: "ES256", kid: "2026-10" });
  * const token = await sign({
- *   payload: { iss: "https://issuer.example", sub: "user-1", exp: Math.floor(Date.now() / 1000) + 300 },
+ *   payload: { iss: "https://issuer.example", sub: "user-1" },
  *   key: privateKey,
  *   header: { typ: "JWT" },
+ *   issuedAt: true,
+ *   expiresIn: 300,
  * });
  * ```
  *
- * @param input - The payload, the signing key, optional header parameters, and an optional public key to embed.
+ * @param input - The payload, the signing key, optional header parameters, an optional public key to embed,
+ * and the claims to add.
  * @returns The compact token, `<header>.<payload>.<signature>` in base64url.
  * @throws TypeError, as a rejected promise, when `input` is not an object; `input.key` is not a private
  * or secret key this package created; `input.header` is not a plain object, names an `alg` other than the
@@ -128,11 +167,25 @@ const isPlainObject = (value: unknown): value is Record<string, unknown> => {
  * accessor) or nests deeper than 32 levels; or a registered claim has the wrong type (`exp`, `nbf`, `iat`
  * not finite numbers, or past 253402300799, the end of year 9999, as a time in milliseconds is; `iss`,
  * `sub`, `jti` not strings; `aud` neither a string nor an array of strings);
- * `input` has a member other than `payload`, `key`, `header` and `embedKey`; or `input.embedKey` is not a
- * public key this package created, `input.key` is not a private key, or the two are not one key pair bound to
- * one algorithm.
+ * `input` has a member other than `payload`, `key`, `header`, `embedKey`, `issuedAt`, `notBefore`,
+ * `expiresIn`, `jti` and `now`; `input.issuedAt` or `input.jti` is not a boolean, `input.notBefore` or
+ * `input.expiresIn` is not a whole number of seconds from 0 to 315360000, `input.now` is not a function or
+ * returns something other than milliseconds before the year 9990, or one of these options adds a claim the
+ * payload already has; or `input.embedKey` is not a public key this package created, `input.key` is not a
+ * private key, or the two are not one key pair bound to one algorithm.
  */
 export async function sign<TPayload extends object = JwtPayload>(input: SignInput<TPayload>): Promise<string> {
+  return signToken(input, true);
+}
+
+/**
+ * {@link sign}, with the choice to leave the key's own `kid` out of the header: a DPoP proof names its key by
+ * the `jwk` it embeds, so `createDpopProof` writes no `kid`. A `kid` in `input.header` is still written.
+ */
+export async function signToken<TPayload extends object = JwtPayload>(
+  input: SignInput<TPayload>,
+  writeKeyKid: boolean,
+): Promise<string> {
   if (typeof input !== "object" || input === null) {
     throw new TypeError("sign: input must be an object.");
   }
@@ -143,8 +196,8 @@ export async function sign<TPayload extends object = JwtPayload>(input: SignInpu
     throw new TypeError("sign: input.key must be a private or secret key.");
   }
   const embedded = input.embedKey === undefined ? undefined : await embeddedJwk(input.embedKey, key);
-  const headerJson = serializeHeader(input.header, key, embedded?.jwk);
-  const payloadJson = serializePayload(input.payload);
+  const headerJson = serializeHeader(input.header, key, embedded?.jwk, writeKeyKid);
+  const payloadJson = serializePayload(input.payload, addedClaims(input));
   const signingInput = `${encodeBase64Url(encodeUtf8(headerJson))}.${encodeBase64Url(encodeUtf8(payloadJson))}`;
   const signedBytes = encodeUtf8(signingInput);
   const { signParams } = ALGORITHM_PARAMS[key.alg];
@@ -158,22 +211,28 @@ export async function sign<TPayload extends object = JwtPayload>(input: SignInpu
 }
 
 /**
- * Signs with Web Crypto, or with an external signer, whose signature is verified with the public key first,
- * since a signer holding another key, or a DER conversion gone wrong, would otherwise give tokens no one can
- * verify.
+ * Signs with Web Crypto, or with an external signer, whose signature is checked for the key's signature length
+ * and verified with the public key first, since a signer holding another key, or a DER conversion gone wrong,
+ * would otherwise give tokens no one can verify.
  */
-async function signatureOf(
+export async function signatureOf(
   entry: KeyEntry,
   signParams: AlgorithmParams["signParams"],
   signedBytes: Uint8Array<ArrayBuffer>,
+  caller = "sign",
 ): Promise<ArrayBuffer | Uint8Array<ArrayBuffer>> {
   if (entry.externalSign === undefined) {
     return crypto.subtle.sign(signParams, entry.cryptoKey, signedBytes);
   }
   // A copy: a signer that changes its input would otherwise sign, and pass the check on, bytes the token lacks.
   const signature = await entry.externalSign(signedBytes.slice());
+  // The verifiers refuse a signature of another length before Web Crypto, and some engines would verify one, such
+  // as an RSA signature without its leading zero byte; so a token no verifier accepts is never written.
+  if (signature.byteLength !== entry.signatureLength) {
+    throw new TypeError(`${caller}: the external signer's signature is not ${entry.signatureLength} bytes long.`);
+  }
   if (!(await crypto.subtle.verify(signParams, entry.cryptoKey, signature, signedBytes))) {
-    throw new TypeError("sign: the external signer's signature does not verify with its public key.");
+    throw new TypeError(`${caller}: the external signer's signature does not verify with its public key.`);
   }
   return signature;
 }
@@ -203,53 +262,93 @@ async function embeddedJwk(
   return { jwk, cryptoKey: getKeyEntry(embedKey).cryptoKey };
 }
 
-/** Validates the caller's header and writes it as JSON with `alg`, `kid`, `typ`, `cty` first. */
-function serializeHeader(header: unknown, key: SigningKey, jwk: Record<string, string> | undefined): string {
+/** Where a signing header comes from, for the messages {@link readSignHeader} throws. */
+export interface SignHeaderContext {
+  /** The function name messages start with, such as `sign`. */
+  readonly caller: string;
+  /** The header's place in the input, such as `input.header`. */
+  readonly label: string;
+  /** Members the caller may not set. */
+  readonly forbidden: readonly string[];
+  /** Whether a key's `kid` is written when the header sets none. */
+  readonly defaultKid: boolean;
+}
+
+/**
+ * Validates the caller's protected header and lists its members in the order they are written: `alg` from
+ * the key, `kid`, `typ` and `cty` first (`leading`), then every other member in the order given (`rest`).
+ *
+ * @throws TypeError when the header is not a plain object of JSON values, names another `alg` than the
+ * key's, holds a forbidden member, or holds a `kid`, `typ` or `cty` that is not a string.
+ */
+export function readSignHeader(
+  header: unknown,
+  key: SigningKey,
+  context: SignHeaderContext,
+): {
+  readonly given: Record<string, unknown>;
+  readonly leading: [string, unknown][];
+  readonly rest: [string, unknown][];
+} {
+  const { caller, label } = context;
   if (header !== undefined && !isPlainObject(header)) {
-    throw new TypeError("sign: input.header must be a plain object.");
+    throw new TypeError(`${caller}: ${label} must be a plain object.`);
   }
-  const given = (header ?? {}) as Record<string, unknown>;
-  assertJsonObject(given, "input.header");
+  const given = snapshotJsonObject(header ?? {}, label, caller);
   if (Object.hasOwn(given, "alg") && given.alg !== key.alg) {
-    throw new TypeError("sign: input.header.alg must equal the key's alg.");
+    throw new TypeError(`${caller}: ${label}.alg must equal the key's alg.`);
   }
-  const forbidden = FORBIDDEN_HEADER_MEMBERS.find((name) => Object.hasOwn(given, name));
+  const forbidden = context.forbidden.find((name) => Object.hasOwn(given, name));
   if (forbidden !== undefined) {
-    throw new TypeError(`sign: input.header.${forbidden} is not supported.`);
+    throw new TypeError(`${caller}: ${label}.${forbidden} is not supported.`);
   }
   const notText = TEXT_HEADER_MEMBERS.find((name) => Object.hasOwn(given, name) && typeof given[name] !== "string");
   if (notText !== undefined) {
-    throw new TypeError(`sign: input.header.${notText} must be a string.`);
+    throw new TypeError(`${caller}: ${label}.${notText} must be a string.`);
   }
-  const kid = Object.hasOwn(given, "kid") ? given.kid : key.kid;
-  const members: [string, unknown][] = [["alg", key.alg]];
+  const kid = Object.hasOwn(given, "kid") ? given.kid : context.defaultKid ? key.kid : undefined;
+  const leading: [string, unknown][] = [["alg", key.alg]];
   if (kid !== undefined) {
-    members.push(["kid", kid]);
+    leading.push(["kid", kid]);
   }
   for (const name of ["typ", "cty"] as const) {
     if (Object.hasOwn(given, name)) {
-      members.push([name, given[name]]);
+      leading.push([name, given[name]]);
     }
   }
-  if (jwk !== undefined) {
-    members.push(["jwk", jwk]);
-  }
-  const leading: readonly string[] = ["alg", ...TEXT_HEADER_MEMBERS];
-  for (const [name, value] of Object.entries(given)) {
-    if (!leading.includes(name)) {
-      members.push([name, value]);
-    }
-  }
-  // Written member by member: an object would list integer-like names before `alg`.
-  return `{${members.map(([name, value]) => `${JSON.stringify(name)}:${JSON.stringify(value)}`).join(",")}}`;
+  const leadingNames: readonly string[] = ["alg", ...TEXT_HEADER_MEMBERS];
+  const rest = Object.keys(given)
+    .filter((name) => !leadingNames.includes(name))
+    .map((name): [string, unknown] => [name, given[name]]);
+  return { given, leading, rest };
 }
 
-/** Validates the payload and its registered claims, and writes it as JSON. */
-function serializePayload(payload: unknown): string {
-  if (!isPlainObject(payload)) {
+/** Writes members as a JSON object in the order listed: an object would list integer-like names before `alg`. */
+export const writeMembers = (members: readonly (readonly [string, unknown])[]): string =>
+  `{${members.map(([name, value]) => `${JSON.stringify(name)}:${writeJson(value)}`).join(",")}}`;
+
+/** Validates the caller's header and writes it as JSON with `alg`, `kid`, `typ`, `cty` first. */
+function serializeHeader(
+  header: unknown,
+  key: SigningKey,
+  jwk: Record<string, string> | undefined,
+  writeKeyKid: boolean,
+): string {
+  const { leading, rest } = readSignHeader(header, key, {
+    caller: "sign",
+    label: "input.header",
+    forbidden: FORBIDDEN_HEADER_MEMBERS,
+    defaultKid: writeKeyKid,
+  });
+  return writeMembers(jwk === undefined ? [...leading, ...rest] : [...leading, ["jwk", jwk], ...rest]);
+}
+
+/** Validates the payload and its registered claims, adds the claims `input` asks for, and writes it as JSON. */
+function serializePayload(given: unknown, claims: AddedClaims): string {
+  if (!isPlainObject(given)) {
     throw new TypeError("sign: input.payload must be a plain object.");
   }
-  assertJsonObject(payload, "input.payload");
+  const payload = snapshotJsonObject(given, "input.payload");
   for (const name of NUMERIC_DATE_CLAIMS) {
     if (Object.hasOwn(payload, name) && typeof payload[name] !== "number") {
       throw new TypeError(`sign: input.payload.${name} must be a finite number of seconds.`);
@@ -268,7 +367,15 @@ function serializePayload(payload: unknown): string {
   if (Object.hasOwn(payload, "aud") && !isAudience(payload.aud)) {
     throw new TypeError("sign: input.payload.aud must be a string or an array of strings.");
   }
-  return JSON.stringify(payload);
+  for (const [claim, value] of Object.entries(claims)) {
+    if (Object.hasOwn(payload, claim)) {
+      throw new TypeError(
+        `sign: input.${ADDED_CLAIM_OPTIONS[claim as keyof AddedClaims]} and input.payload.${claim} both set ${claim}; give one.`,
+      );
+    }
+    payload[claim] = value;
+  }
+  return writeJson(payload);
 }
 
 // `Array.prototype.every` is called directly, so an array's own `every` cannot vouch for its entries.
@@ -276,74 +383,184 @@ const isAudience = (value: unknown): boolean =>
   typeof value === "string" ||
   (Array.isArray(value) && Array.prototype.every.call(value, (entry) => typeof entry === "string"));
 
-/**
- * Throws unless `object` holds only values `JSON.stringify` writes exactly and the strict parser reads
- * back the same, nested at most {@link MAX_JSON_DEPTH} deep. A cycle exceeds the depth, so it is caught too.
- */
-function assertJsonObject(object: Record<string, unknown>, label: string): void {
-  const pending: { readonly value: unknown; readonly depth: number }[] = [{ value: object, depth: 1 }];
-  while (pending.length > 0) {
-    const { value, depth } = pending.pop() as { readonly value: unknown; readonly depth: number };
-    for (const child of childrenOf(value, label)) {
-      if (typeof child === "object" && child !== null) {
-        if (depth + 1 > MAX_JSON_DEPTH) {
-          throw new TypeError(`sign: ${label} must not nest deeper than ${MAX_JSON_DEPTH} levels.`);
-        }
-        pending.push({ value: child, depth: depth + 1 });
-      } else {
-        assertJsonPrimitive(child, label);
+/** Claims `sign` writes for its `issuedAt`, `notBefore`, `expiresIn` and `jti` options. */
+interface AddedClaims {
+  iat?: number;
+  nbf?: number;
+  exp?: number;
+  jti?: string;
+}
+
+const ADDED_CLAIM_OPTIONS: Readonly<Record<keyof AddedClaims, string>> = {
+  iat: "issuedAt",
+  nbf: "notBefore",
+  exp: "expiresIn",
+  jti: "jti",
+};
+
+/** Validates the claim options of `input` and computes the claims they add, reading the clock at most once. */
+function addedClaims(input: Pick<SignInput, "issuedAt" | "notBefore" | "expiresIn" | "jti" | "now">): AddedClaims {
+  const { issuedAt, notBefore, expiresIn, jti, now } = input;
+  for (const [option, value] of [
+    ["issuedAt", issuedAt],
+    ["jti", jti],
+  ] as const) {
+    if (value !== undefined && typeof value !== "boolean") {
+      throw new TypeError(`sign: input.${option} must be a boolean.`);
+    }
+  }
+  if (now !== undefined && typeof now !== "function") {
+    throw new TypeError("sign: input.now must be a function.");
+  }
+  const relative = [
+    ["nbf", "notBefore", notBefore],
+    ["exp", "expiresIn", expiresIn],
+  ] as const;
+  for (const [, option, value] of relative) {
+    if (value === undefined) {
+      continue;
+    }
+    if (typeof value !== "number" || !Number.isInteger(value) || value < 0) {
+      throw new TypeError(`sign: input.${option} must be a whole, non-negative number of seconds.`);
+    }
+    if (value > MAX_DURATION_SECONDS) {
+      throw new TypeError(
+        `sign: input.${option} must be seconds, at most ${MAX_DURATION_SECONDS}, ten years; it looks like milliseconds.`,
+      );
+    }
+  }
+  const claims: AddedClaims = {};
+  if (issuedAt === true || notBefore !== undefined || expiresIn !== undefined) {
+    const seconds = currentSeconds(now ?? Date.now);
+    if (issuedAt === true) {
+      claims.iat = seconds;
+    }
+    for (const [claim, , value] of relative) {
+      if (value !== undefined) {
+        claims[claim] = seconds + value;
       }
     }
   }
+  if (jti === true) {
+    claims.jti = crypto.randomUUID();
+  }
+  return claims;
 }
 
-/** Lists the member values of a JSON container, throwing for anything else. */
-function childrenOf(container: unknown, label: string): readonly unknown[] {
+/**
+ * Reads the clock, caller code when `input.now` is given, as whole seconds since the Unix epoch: RFC 7519
+ * allows fractions, but many verifiers read numeric dates as integers.
+ */
+function currentSeconds(now: () => number): number {
+  const time: unknown = now();
+  if (typeof time !== "number" || !Number.isFinite(time)) {
+    throw new TypeError("sign: input.now must return a finite number of milliseconds.");
+  }
+  const seconds = Math.floor(time / MILLISECONDS_PER_SECOND);
+  // Leaves room for the largest offset, so no added claim passes the numeric date bound.
+  if (seconds < 0 || seconds > MAX_NUMERIC_DATE - MAX_DURATION_SECONDS) {
+    throw new TypeError("sign: input.now must return milliseconds since the Unix epoch, before the year 9990.");
+  }
+  return seconds;
+}
+
+/**
+ * Copies a plain object of JSON values, nested at most {@link MAX_JSON_DEPTH} deep, into prototype-less objects
+ * and plain arrays, throwing unless every value is one `JSON.stringify` writes exactly and the strict parser
+ * reads back the same. `depth` is the object's own level in the JSON text it is written into. A cycle exceeds the depth, so it is caught too. Each member is read once, through its
+ * descriptor, and the token is written from the copy, so a `Proxy` or a value changed meanwhile cannot show the
+ * checks one value and the token another.
+ */
+export function snapshotJsonObject(
+  object: unknown,
+  label: string,
+  caller = "sign",
+  depth = 1,
+): Record<string, unknown> {
+  return snapshot(object, label, depth, caller) as Record<string, unknown>;
+}
+
+function snapshot(container: unknown, label: string, depth: number, caller: string): unknown {
   const isArray = Array.isArray(container);
   // An Array subclass or a swapped prototype can carry a `toJSON` of its own.
-  if (isArray ? Object.getPrototypeOf(container) !== Array.prototype : !isPlainObject(container)) {
-    throw new TypeError(`sign: ${label} must hold only plain objects and arrays.`);
+  if (isArray ? !isPlainArray(container) : !isPlainObject(container)) {
+    throw new TypeError(`${caller}: ${label} must hold only plain objects and arrays.`);
   }
-  // `JSON.stringify` runs a `toJSON` it finds anywhere on the chain, own or inherited from a polluted
-  // `Object.prototype` or `Array.prototype`, so it would write a value never checked here.
+  // `JSON.stringify` runs a `toJSON` found anywhere on the chain, own or inherited from a polluted
+  // `Object.prototype` or `Array.prototype`; a caller who has one expects the token to say what it returns.
   if ("toJSON" in (container as object)) {
-    throw new TypeError(`sign: ${label} must not hold toJSON methods.`);
+    throw new TypeError(`${caller}: ${label} must not hold toJSON methods.`);
   }
+  const copyOf = (descriptor: PropertyDescriptor): unknown => {
+    if (!("value" in descriptor)) {
+      throw new TypeError(`${caller}: ${label} must not hold accessor properties.`);
+    }
+    const child: unknown = descriptor.value;
+    if (typeof child !== "object" || child === null) {
+      assertJsonPrimitive(child, label, caller);
+      return child;
+    }
+    if (depth + 1 > MAX_JSON_DEPTH) {
+      throw new TypeError(`${caller}: ${label} must not nest deeper than ${MAX_JSON_DEPTH} levels.`);
+    }
+    return snapshot(child, label, depth + 1, caller);
+  };
   if (isArray) {
-    const array = container as readonly unknown[];
-    return Array.from({ length: array.length }, (_, index) => ownDataValue(array, String(index), label));
+    const { length } = container as readonly unknown[];
+    const copy: unknown[] = [];
+    for (let index = 0; index < length; index += 1) {
+      const descriptor = Object.getOwnPropertyDescriptor(container, String(index));
+      if (descriptor === undefined) {
+        throw new TypeError(`${caller}: ${label} must not hold array holes.`);
+      }
+      copy.push(copyOf(descriptor));
+    }
+    return copy;
   }
-  const object = container as object;
-  if (Object.getOwnPropertySymbols(object).length > 0) {
-    throw new TypeError(`sign: ${label} must not have symbol keys.`);
+  const copy = Object.create(null) as Record<string, unknown>;
+  // `Reflect.ownKeys` lists names in the order `Object.keys` does, without reading each descriptor a second time.
+  for (const name of Reflect.ownKeys(container as object)) {
+    if (typeof name === "symbol") {
+      throw new TypeError(`${caller}: ${label} must not have symbol keys.`);
+    }
+    const descriptor = Object.getOwnPropertyDescriptor(container, name);
+    if (descriptor?.enumerable === true) {
+      copy[name] = copyOf(descriptor);
+    }
   }
-  return Object.keys(object).map((name) => ownDataValue(object, name, label));
+  return copy;
 }
 
-function ownDataValue(container: object, name: string, label: string): unknown {
-  const descriptor = Object.getOwnPropertyDescriptor(container, name);
-  if (descriptor === undefined) {
-    throw new TypeError(`sign: ${label} must not hold array holes.`);
+/**
+ * Writes a {@link snapshot} copy, or a value this module built, as `JSON.stringify` would, without looking up
+ * `toJSON` anywhere: only primitives reach `JSON.stringify`.
+ */
+export function writeJson(value: unknown): string {
+  if (Array.isArray(value)) {
+    return `[${value.map(writeJson).join(",")}]`;
   }
-  if (!("value" in descriptor)) {
-    throw new TypeError(`sign: ${label} must not hold accessor properties.`);
+  if (typeof value === "object" && value !== null) {
+    const object = value as Record<string, unknown>;
+    return `{${Object.keys(object)
+      .map((name) => `${JSON.stringify(name)}:${writeJson(object[name])}`)
+      .join(",")}}`;
   }
-  return descriptor.value;
+  return JSON.stringify(value);
 }
 
-function assertJsonPrimitive(value: unknown, label: string): void {
+function assertJsonPrimitive(value: unknown, label: string, caller: string): void {
   if (typeof value === "string" || typeof value === "boolean" || value === null) {
     return;
   }
   if (typeof value === "number") {
     if (!Number.isFinite(value)) {
-      throw new TypeError(`sign: ${label} must not hold a non-finite number.`);
+      throw new TypeError(`${caller}: ${label} must not hold a non-finite number.`);
     }
     if (Object.is(value, -0)) {
       // `JSON.stringify` writes -0 as 0, so the token would not carry the value that was given.
-      throw new TypeError(`sign: ${label} must not hold negative zero.`);
+      throw new TypeError(`${caller}: ${label} must not hold negative zero.`);
     }
     return;
   }
-  throw new TypeError(`sign: ${label} must hold only JSON values, not ${typeof value}.`);
+  throw new TypeError(`${caller}: ${label} must hold only JSON values, not ${typeof value}.`);
 }

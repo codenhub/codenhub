@@ -1,4 +1,6 @@
-import { describe, expect, it } from "vitest";
+import { runInNewContext } from "node:vm";
+
+import { describe, expect, it, vi } from "vitest";
 
 import type { AsymmetricAlgorithm, PrivateKey } from "../core/types";
 import { createKeySet } from "../keysets/local";
@@ -101,6 +103,23 @@ describe("createExternalSigningKey", () => {
     expect(await verifies(await sign({ payload: { exp: EXP() }, key }), key)).toBe(true);
   });
 
+  it.each([
+    ["Uint8Array", "new Uint8Array(raw)"],
+    ["ArrayBuffer", "new Uint8Array(raw).buffer"],
+    ["DataView", "new DataView(new Uint8Array(raw).buffer)"],
+  ])("should accept a %s from another realm from the signer", async (_name, expression) => {
+    const { publicKey, signRaw } = await kmsKey("ES256");
+    const key = createExternalSigningKey({
+      publicKey,
+      sign: async (data) => {
+        const foreign = runInNewContext(expression, { raw: [...(await signRaw(data))] }) as Uint8Array;
+        expect(foreign instanceof Object).toBe(false);
+        return foreign;
+      },
+    });
+    expect(await verifies(await sign({ payload: { exp: EXP() }, key }), key)).toBe(true);
+  });
+
   it("should throw from sign when the signer signs other bytes than the ones it was given", async () => {
     const { publicKey, signRaw } = await kmsKey("ES256");
     const key = createExternalSigningKey({
@@ -135,6 +154,24 @@ describe("createExternalSigningKey", () => {
       new TypeError("sign: the external signer's signature does not verify with its public key."),
     );
   });
+
+  // Node's Web Crypto refuses a signature of the wrong length; the stub stands in for an engine that would verify
+  // an RSA signature without its leading zero byte, which every verifier of this package then refuses.
+  it.each(["RS256", "ES256"] as const)(
+    "should throw from sign when an %s signature is not as long as the key's signatures",
+    async (alg) => {
+      const { publicKey, signRaw } = await kmsKey(alg);
+      const key = createExternalSigningKey({ publicKey, sign: async (data) => (await signRaw(data)).subarray(1) });
+      const verify = vi.spyOn(crypto.subtle, "verify").mockResolvedValue(true);
+      try {
+        await expect(sign({ payload: { exp: EXP() }, key })).rejects.toThrow(
+          new TypeError(`sign: the external signer's signature is not ${alg === "RS256" ? 256 : 64} bytes long.`),
+        );
+      } finally {
+        verify.mockRestore();
+      }
+    },
+  );
 
   it.each<[string, (der: number[]) => number[]]>([
     ["no sequence", (der) => der.slice(2)],

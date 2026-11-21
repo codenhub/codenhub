@@ -1,5 +1,5 @@
 import { isJwsAlgorithm } from "../core/limits";
-import { fail, ok } from "../core/result";
+import { fail, frozenOk } from "../core/result";
 import type { JwtHeader, JwtIssue, JwtPayload, JwtResult } from "../core/types";
 import { decodeBase64Url, isBase64Url } from "../encoding/base64url";
 import { parseJsonObject } from "../encoding/json";
@@ -31,17 +31,30 @@ const SEGMENT_NAMES = ["header", "payload", "signature"] as const;
 const TEXT_MEMBERS = ["kid", "typ", "cty"] as const;
 
 /** Reads a member the header itself holds, never one inherited from `Object.prototype`. */
-const ownMember = (header: object, name: string): unknown =>
+export const ownMember = (header: object, name: string): unknown =>
   Object.hasOwn(header, name) ? (header as Record<string, unknown>)[name] : undefined;
 
+/** An `unsupported_alg` issue unless the header's own `alg` is one this package supports, compared exactly. */
+export const algIssue = (header: object): JwtIssue | undefined =>
+  isJwsAlgorithm(ownMember(header, "alg")) ? undefined : { code: "unsupported_alg", path: ["header", "alg"] };
+
+/** A `malformed` issue for the first of `kid`, `typ` and `cty` the header holds as something other than text. */
+export function textMemberIssue(header: object): JwtIssue | undefined {
+  const notText = TEXT_MEMBERS.find(
+    (name) => Object.hasOwn(header, name) && typeof ownMember(header, name) !== "string",
+  );
+  return notText === undefined ? undefined : { code: "malformed", path: ["header", notText] };
+}
+
 /**
- * Checks a parsed header against what this package supports, returning the first issue found: an
- * unsupported or missing `alg`, any `crit` (no extension is understood), any `b64` (RFC 7797 is not
- * supported), or a `kid`, `typ` or `cty` that is not text.
+ * Checks a parsed JWT header against what this package supports, returning the first issue found: an
+ * unsupported or missing `alg`, any `crit` (a JWT understands no extension), any `b64` (RFC 7797 §7 keeps
+ * unencoded payloads out of JWTs), or a `kid`, `typ` or `cty` that is not text.
  */
 function headerIssue(header: object): JwtIssue | undefined {
-  if (!isJwsAlgorithm(ownMember(header, "alg"))) {
-    return { code: "unsupported_alg", path: ["header", "alg"] };
+  const unsupported = algIssue(header);
+  if (unsupported !== undefined) {
+    return unsupported;
   }
   if (Object.hasOwn(header, "crit")) {
     return { code: "unsupported_crit", path: ["header", "crit"] };
@@ -49,10 +62,7 @@ function headerIssue(header: object): JwtIssue | undefined {
   if (Object.hasOwn(header, "b64")) {
     return { code: "malformed", path: ["header", "b64"] };
   }
-  const notText = TEXT_MEMBERS.find(
-    (name) => Object.hasOwn(header, name) && typeof ownMember(header, name) !== "string",
-  );
-  return notText === undefined ? undefined : { code: "malformed", path: ["header", notText] };
+  return textMemberIssue(header);
 }
 
 /**
@@ -85,7 +95,10 @@ export function checkSegments(token: unknown, maxLength: number): JwtResult<Chec
   if (issue !== undefined) {
     return fail(issue);
   }
-  return ok({ header: parsed.value as JwtHeader, headerSegment, payloadSegment, signatureSegment });
+  // The parsed header is deep-frozen already, and the rest are strings.
+  return frozenOk(
+    Object.freeze({ header: parsed.value as JwtHeader, headerSegment, payloadSegment, signatureSegment }),
+  );
 }
 
 /**
@@ -103,12 +116,15 @@ export function parseCompact(token: unknown, maxLength: number): JwtResult<Compa
     return checked;
   }
   const { header, headerSegment, payloadSegment, signatureSegment } = checked.value;
-  return ok({
-    header,
-    payloadSegment,
-    signingInput: encodeUtf8(`${headerSegment}.${payloadSegment}`),
-    signature: decodeBase64Url(signatureSegment) as Uint8Array<ArrayBuffer>,
-  });
+  // The header is deep-frozen already; byte arrays are never frozen, as with `ok`.
+  return frozenOk(
+    Object.freeze({
+      header,
+      payloadSegment,
+      signingInput: encodeUtf8(`${headerSegment}.${payloadSegment}`),
+      signature: decodeBase64Url(signatureSegment) as Uint8Array<ArrayBuffer>,
+    }),
+  );
 }
 
 /**

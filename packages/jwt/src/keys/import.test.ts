@@ -1,3 +1,4 @@
+import { generateKeyPairSync } from "node:crypto";
 import { runInNewContext } from "node:vm";
 
 import { describe, expect, it, vi } from "vitest";
@@ -451,15 +452,18 @@ describe.each(CASES)("importKeyPair for $alg", ({ alg, privateJwk, publicJwk }) 
 
 describe("importKeyPair halves", () => {
   it.each([
-    { alg: "ES256", privateJwk: EC_P256_PRIVATE_JWK, members: ["x", "y"] },
-    { alg: "Ed25519", privateJwk: ED25519_PRIVATE_JWK, members: ["x"] },
-    { alg: "RS256", privateJwk: RSA_2048_PRIVATE_JWK, members: ["n"] },
+    { alg: "ES256", privateJwk: EC_P256_PRIVATE_JWK, members: ["x", "y"], path: undefined },
+    { alg: "Ed25519", privateJwk: ED25519_PRIVATE_JWK, members: ["x"], path: undefined },
+    // p q is checked against n before the probe signature, so a foreign n is named.
+    { alg: "RS256", privateJwk: RSA_2048_PRIVATE_JWK, members: ["n"], path: ["n"] },
   ] as const)(
     "should report invalid_key for an $alg JWK whose public members belong to another key",
-    async ({ alg, privateJwk, members }) => {
+    async ({ alg, privateJwk, members, path }) => {
       const other = await exportPrivateJwk((await generateKeyPair({ alg, extractable: true })).privateKey);
       const mixed = withMembers(privateJwk, Object.fromEntries(members.map((name) => [name, other[name]])));
-      expect(issuesOf(await importKeyPair(mixed, { alg }))).toEqual([{ code: "invalid_key" }]);
+      expect(issuesOf(await importKeyPair(mixed, { alg }))).toEqual([
+        { code: "invalid_key", ...(path === undefined ? {} : { path }) },
+      ]);
     },
   );
 
@@ -641,6 +645,17 @@ describe("cross-realm inputs", () => {
     expect(encodeBase64Url(new Uint8Array(40).fill(7))).toBe((await exportSecretJwk(valueOf(result))).k);
   });
 
+  it.each([
+    ["ArrayBuffer", "new Uint8Array(40).fill(7).buffer"],
+    ["DataView", "new DataView(new Uint8Array(48).fill(7).buffer, 8)"],
+    ["Uint16Array", "new Uint16Array(20).fill(0x0707)"],
+  ])("should import a %s from another realm as raw bytes", async (_name, expression) => {
+    const foreign = runInNewContext(expression) as ArrayBuffer;
+    expect(foreign instanceof Object).toBe(false);
+    const result = await importSecretKey(foreign, { alg: "HS256", extractable: true });
+    expect(encodeBase64Url(new Uint8Array(40).fill(7))).toBe((await exportSecretJwk(valueOf(result))).k);
+  });
+
   it("should report weak_key for a short Uint8Array from another realm", async () => {
     const foreign = runInNewContext("new Uint8Array(31)");
     expect(issuesOf(await importSecretKey(foreign, { alg: "HS256" }))).toEqual([
@@ -780,15 +795,18 @@ describe("importSecretKey option and JWK interplay", () => {
 
 describe("importPrivateKey halves", () => {
   it.each([
-    { alg: "ES256", privateJwk: EC_P256_PRIVATE_JWK, members: ["x", "y"] },
-    { alg: "Ed25519", privateJwk: ED25519_PRIVATE_JWK, members: ["x"] },
-    { alg: "RS256", privateJwk: RSA_2048_PRIVATE_JWK, members: ["n"] },
+    { alg: "ES256", privateJwk: EC_P256_PRIVATE_JWK, members: ["x", "y"], path: undefined },
+    { alg: "Ed25519", privateJwk: ED25519_PRIVATE_JWK, members: ["x"], path: undefined },
+    // p q is checked against n before the probe signature, so a foreign n is named.
+    { alg: "RS256", privateJwk: RSA_2048_PRIVATE_JWK, members: ["n"], path: ["n"] },
   ] as const)(
     "should report invalid_key for an $alg JWK whose public members belong to another key",
-    async ({ alg, privateJwk, members }) => {
+    async ({ alg, privateJwk, members, path }) => {
       const other = await exportPrivateJwk((await generateKeyPair({ alg, extractable: true })).privateKey);
       const mixed = withMembers(privateJwk, Object.fromEntries(members.map((name) => [name, other[name]])));
-      expect(issuesOf(await importPrivateKey(mixed, { alg }))).toEqual([{ code: "invalid_key" }]);
+      expect(issuesOf(await importPrivateKey(mixed, { alg }))).toEqual([
+        { code: "invalid_key", ...(path === undefined ? {} : { path }) },
+      ]);
     },
   );
 
@@ -815,13 +833,91 @@ describe("importPrivateKey with a mismatched d", () => {
     expect(issuesOf(await importPrivateKey({ ...jwk, d }, { alg }))).toEqual([{ code: "invalid_key" }]);
   });
 
-  // Web Crypto signs RSA with the CRT members alone, so the probe signature cannot see a wrong d; another
+  // OpenSSL signs again with d when a CRT signature is wrong, so the probe signature cannot see a wrong qi;
+  // another library that signs with the CRT members of the exported JWK would.
+  it("should report invalid_key with path qi for RSA when qi is not the inverse of q modulo p", async () => {
+    expect(
+      issuesOf(await importPrivateKey({ ...RSA_2048_PRIVATE_JWK, qi: RSA_2048_PRIVATE_JWK.dp }, { alg: "RS256" })),
+    ).toEqual([{ code: "invalid_key", path: ["qi"] }]);
+  });
+
+  it("should report invalid_key with path qi for RSA when p and q are swapped but qi is kept", async () => {
+    const { p, q, dp, dq } = RSA_2048_PRIVATE_JWK;
+    const swapped = { ...RSA_2048_PRIVATE_JWK, p: q, q: p, dp: dq, dq: dp };
+    expect(issuesOf(await importPrivateKey(swapped, { alg: "RS256" }))).toEqual([
+      { code: "invalid_key", path: ["qi"] },
+    ]);
+  });
+
+  // A signer that uses only the CRT members never reads d, so the probe signature cannot see a wrong d; another
   // library that signs with d from the exported JWK would.
   it("should report invalid_key with path d for RSA when d does not fit p and q", async () => {
     const other = await generateKeyPair({ alg: "RS256", extractable: true });
     const { d } = await exportPrivateJwk(other.privateKey);
     expect(issuesOf(await importPrivateKey({ ...RSA_2048_PRIVATE_JWK, d }, { alg: "RS256" }))).toEqual([
       { code: "invalid_key", path: ["d"] },
+    ]);
+  });
+});
+
+describe("importPrivateKey RSA member sizes and n", () => {
+  /** `bytes` bytes of 0xff, an integer longer than any member of the key it is put into. */
+  const longMember = (bytes: number) => encodeBase64Url(new Uint8Array(bytes).fill(0xff));
+  const nBytes = decodeBase64Url(RSA_2048_PRIVATE_JWK.n)?.length as number;
+
+  it.each(["d", "p", "q", "dp", "dq", "qi"])(
+    "should report invalid_key with path %s when that member is longer than n",
+    async (member) => {
+      const jwk = { ...RSA_2048_PRIVATE_JWK, [member]: longMember(nBytes + 1) };
+      expect(issuesOf(await importPrivateKey(jwk, { alg: "RS256" }))).toEqual([
+        { code: "invalid_key", path: [member] },
+      ]);
+    },
+  );
+
+  // Before the size check, members of 4 MB took seconds of BigInt work to refuse.
+  it("should refuse a megabyte-long p before any arithmetic on it", async () => {
+    const started = performance.now();
+    const jwk = { ...RSA_2048_PRIVATE_JWK, p: longMember(1_000_000) };
+    expect(issuesOf(await importPrivateKey(jwk, { alg: "RS256" }))).toEqual([{ code: "invalid_key", path: ["p"] }]);
+    expect(performance.now() - started).toBeLessThan(1000);
+  });
+
+  it("should accept private members with leading zero bytes up to the length of n", async () => {
+    const padded = (value: string, bytes: number) => {
+      const decoded = decodeBase64Url(value) as Uint8Array;
+      return encodeBase64Url(Uint8Array.from([...new Uint8Array(bytes - decoded.length), ...decoded]));
+    };
+    const jwk = {
+      ...RSA_2048_PRIVATE_JWK,
+      d: padded(RSA_2048_PRIVATE_JWK.d, nBytes),
+      p: padded(RSA_2048_PRIVATE_JWK.p, nBytes),
+    };
+    expect((await importPrivateKey(jwk, { alg: "RS256" })).ok).toBe(true);
+  });
+
+  it("should report invalid_key with path n when p times q is not n", async () => {
+    const other = await exportPrivateJwk((await generateKeyPair({ alg: "RS256", extractable: true })).privateKey);
+    expect(issuesOf(await importPrivateKey({ ...RSA_2048_PRIVATE_JWK, n: other.n }, { alg: "RS256" }))).toEqual([
+      { code: "invalid_key", path: ["n"] },
+    ]);
+  });
+
+  it.each([2048, 3072, 4096])("should import a %i-bit key OpenSSL generates", async (modulusLength) => {
+    const { privateKey } = generateKeyPairSync("rsa", { modulusLength });
+    const jwk = privateKey.export({ format: "jwk" });
+    expect((await importKeyPair(jwk, { alg: "PS256" })).ok).toBe(true);
+  });
+});
+
+describe("importPublicKey and importPrivateKey for an OKP JWK with y", () => {
+  it("should report invalid_key with path y, as the JWE X25519 import does", async () => {
+    const y = ED25519_PUBLIC_JWK.x;
+    expect(issuesOf(await importPublicKey({ ...ED25519_PUBLIC_JWK, y }, { alg: "Ed25519" }))).toEqual([
+      { code: "invalid_key", path: ["y"] },
+    ]);
+    expect(issuesOf(await importPrivateKey({ ...ED25519_PRIVATE_JWK, y }, { alg: "EdDSA" }))).toEqual([
+      { code: "invalid_key", path: ["y"] },
     ]);
   });
 });

@@ -52,7 +52,7 @@ const jwks = {
 // Serve JSON.stringify(jwks) at your jwks_uri.
 ```
 
-The filter keeps secret keys out of the document, where `exportPublicJwk` would refuse them anyway.
+The filter keeps secret keys out of the document, where `exportPublicJwk` would refuse them anyway. To also choose the key that signs, and when each key is published, use a key ring instead: [Key rotation](rotation.md).
 
 ## Importing a JWKS
 
@@ -69,7 +69,7 @@ if (result.ok) {
 
 A JWKS is untrusted input, so the import never throws for it. It fails only when the document is not a JWKS at all: `malformed` when it is not an object or its `keys` is not an array (path `["keys"]`), and `too_large` with `{ limit: "keys", maximum: 100 }` when it lists more than 100 keys.
 
-Individual keys that cannot be used are skipped, not fatal, because an issuer's JWKS routinely holds keys meant for something else, such as encryption. Skipped are: `oct` keys (a JWKS is public, so a secret never comes from one), keys with `use` other than `sig`, keys with private members, weak, oversized or malformed keys, and keys whose `alg` is not in `algorithms`. A JWKS with no usable key gives an empty set, whose `select` always fails.
+Individual keys that cannot be used are skipped, not fatal, because an issuer's JWKS routinely holds keys meant for something else, such as encryption. Skipped are: `oct` keys (a JWKS is public, so a secret never comes from one), keys with `use` other than `sig`, keys with private members, weak, oversized or malformed keys, and keys whose `alg` is not in `algorithms`. A JWKS with no usable key gives an empty set, whose `select` always fails. To read a recipient's encryption keys instead, use `importEncryptionKeySet` or `createRemoteEncryptionKeySet`; [Encrypting tokens](encrypting.md#a-recipients-encryption-keys) explains.
 
 Each usable key becomes one key per algorithm it is bound to:
 
@@ -108,7 +108,7 @@ const verify = createVerifier({ keys: (issuer) => tenants.get(issuer), audience:
 
 The verifier reads `iss` from the payload before the signature is checked, only to route the token: a token without `iss` is `missing_claim` with `{ claim: "iss" }`, one whose `iss` is not a string is `invalid_claim`, and an `iss` the function returns `undefined` for is `wrong_issuer`. When the verifier also has an `issuer` option, an `iss` it does not list is `wrong_issuer` before the function is called. The function may be `async`. If it throws, rejects, or returns something other than a key set or a route, the token fails with `key_fetch_failed` and `{ reason: "key_set_error" }`, and `onKeySetError` gets the error.
 
-When issuers' tokens name different audiences or `typ` values, as tenants with their own client IDs do, return a route instead of the key set: `{ keys, audience, type }`. A route's `audience` and `type` take the same values as the verifier options and replace them for that issuer's tokens; one it leaves out keeps the verifier's. An invalid route is `key_set_error`, like any other mistake in the function.
+When issuers' tokens name different audiences or `typ` values, as tenants with their own client IDs do, return a route instead of the key set: `{ keys, audience, type }`. A route's `audience` and `type` take the same values as the verifier options and replace them for that issuer's tokens; one it leaves out keeps the verifier's. A route that is invalid, including one with any member besides `keys`, `audience` and `type`, such as a misspelled `audiences`, is `key_set_error`, like any other mistake in the function.
 
 ```ts
 const verify = createVerifier({
@@ -138,6 +138,8 @@ const verify = createVerifier({ keys, issuer: "https://issuer.example", audience
 
 Nothing is fetched until the first token needs a key. Create the key set once and share it between requests, so they share its cache.
 
+The URL is fetched as given. The package refuses plain `http:` except on a loopback host, but it cannot tell whether a name or address is internal to your network. When the URL comes from someone else, such as the `jwks_uri` a client registered with your OpenID Provider for `private_key_jwt` or encrypted tokens, check it before creating the set: require `https:`, and refuse hosts that resolve to loopback, private or link-local addresses, or allow only hosts you know. Otherwise a client chooses where your server sends requests, and learns from the failures whether something answered there.
+
 On Cloudflare Workers, also pass `waitUntil` from `cloudflare:workers`. A Worker cancels a request's unfinished I/O once the request has responded, and that includes a JWKS fetch the key set started in the background. With `waitUntil`, each fetch keeps running until it is done:
 
 ```ts
@@ -152,26 +154,26 @@ Without it, nothing breaks. The cache is just replaced later: background fetches
 
 Durations are in seconds. Every option is checked when the key set is created, and an invalid one throws a `TypeError`, as does a name that is not an option below (`createRemoteKeySet: options.cachettl is not an option.`).
 
-| Option             | Default                        | What it does                                                                                                                                                                                      |
-| ------------------ | ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `url`              | required                       | An absolute `https:` URL, as a string or a `URL`, or `http:` on `localhost`, `127.0.0.0/8` or `[::1]` for local development. Anything else, and URLs with a user name or password, throw.         |
-| `fetch`            | `globalThis.fetch`             | The `fetch` to call, for runtimes or tests that supply their own. The global is looked up at each fetch.                                                                                          |
-| `algorithms`       | every asymmetric algorithm     | As for [`importKeySet`](#importing-a-jwks).                                                                                                                                                       |
-| `issuer`           | none                           | The issuer whose JWKS this is. Each key is bound to it, so a token it verifies must carry that `iss`. See [keys of several issuers](#keys-of-several-issuers).                                    |
-| `cacheTtl`         | `600`                          | How long a fetched JWKS is used before it is fetched again. An integer of at least 1.                                                                                                             |
-| `cooldown`         | `30`, or `cacheTtl` if smaller | Least time between the starts of two fetches caused by a failure or an unknown `kid`. An integer from 0 through `cacheTtl`.                                                                       |
-| `maxStale`         | `3600`                         | How long after `cacheTtl` ran out the last JWKS is still used while a new one is fetched, or while fetching it fails. An integer of at least 0; 0 never uses an expired JWKS.                     |
-| `timeout`          | `5`                            | How long one fetch, body included, may take. Greater than 0 and at most 60; fractions are allowed.                                                                                                |
-| `maxResponseBytes` | `65536`                        | Largest response body accepted, in bytes. An integer from 1 through 1048576.                                                                                                                      |
-| `now`              | `Date.now`                     | The current time in milliseconds, for tests.                                                                                                                                                      |
-| `seed`             | none                           | `{ jwks, fetchedAt }`, a JWKS fetched earlier and when, in milliseconds, used as if this key set had fetched it. A `jwks` that is not a JWKS is ignored. See [persisting](#persisting-the-cache). |
-| `onFetch`          | none                           | Called with `{ jwks, fetchedAt }` after each successful fetch.                                                                                                                                    |
-| `onFetchError`     | none                           | Called with the `key_fetch_failed` issue after each failed fetch, including fetches no token waited for.                                                                                          |
-| `waitUntil`        | none                           | Called with each fetch as it starts, to keep it running after the request that started it has responded. On Cloudflare Workers, pass `waitUntil` from `cloudflare:workers`.                       |
+| Option             | Default                        | What it does                                                                                                                                                                                                       |
+| ------------------ | ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `url`              | required                       | An absolute `https:` URL, as a string or a `URL`, or `http:` on `localhost`, `127.0.0.0/8` or `[::1]` for local development. Anything else, and URLs with a user name or password, throw.                          |
+| `fetch`            | `globalThis.fetch`             | A `JwksFetch`, `(url: string, init: RequestInit) => Promise<Response>`, for runtimes or tests that supply their own. The global is looked up at each fetch.                                                        |
+| `algorithms`       | every asymmetric algorithm     | As for [`importKeySet`](#importing-a-jwks).                                                                                                                                                                        |
+| `issuer`           | none                           | The issuer whose JWKS this is. Each key is bound to it, so a token it verifies must carry that `iss`. See [keys of several issuers](#keys-of-several-issuers).                                                     |
+| `cacheTtl`         | `600`                          | Most time a fetched JWKS is used before it is fetched again; a shorter `max-age` shortens it, to `cooldown` at least. An integer of at least 1.                                                                    |
+| `cooldown`         | `30`, or `cacheTtl` if smaller | Least time between the starts of two fetches caused by a failure or an unknown `kid`. An integer from 0 through `cacheTtl`.                                                                                        |
+| `maxStale`         | `3600`                         | How long after `cacheTtl` ran out the last JWKS is still used while a new one is fetched, or while fetching it fails. An integer of at least 0; 0 never uses an expired JWKS.                                      |
+| `timeout`          | `5`                            | How long one fetch, body included, may take. Greater than 0 and at most 60; fractions are allowed.                                                                                                                 |
+| `maxResponseBytes` | `65536`                        | Largest response body accepted, in bytes. An integer from 1 through 1048576.                                                                                                                                       |
+| `now`              | `Date.now`                     | The current time in milliseconds, for tests.                                                                                                                                                                       |
+| `seed`             | none                           | `{ url, jwks, fetchedAt }` as `onFetch` got it, used as if this key set had fetched it. `null` is none; one of another shape or `url`, or with no usable key, is ignored. See [persisting](#persisting-the-cache). |
+| `onFetch`          | none                           | Called with `{ url, jwks, fetchedAt }` after each successful fetch.                                                                                                                                                |
+| `onFetchError`     | none                           | Called with the `key_fetch_failed` issue after each failed fetch, including fetches no token waited for and fetches a newer one replaced.                                                                          |
+| `waitUntil`        | none                           | Called with each fetch as it starts, to keep it running after the request that started it has responded. On Cloudflare Workers, pass `waitUntil` from `cloudflare:workers`.                                        |
 
 ### Caching and rotation
 
-- **Expiry.** A fetched JWKS is used for `cacheTtl` seconds, counted from when the fetch finished. The first token after that is still verified with it, at once, and starts a fetch in the background that replaces it for later tokens. Past `maxStale`, tokens wait for the fetch instead.
+- **Expiry.** A fetched JWKS is used for `cacheTtl` seconds, counted from when the fetch finished. When the response's `Cache-Control` has a shorter `max-age`, it is used for that long instead, but never for less than `cooldown`, which is also what `no-store` and `no-cache` give it; `s-maxage` and a malformed `max-age` are ignored. So an issuer that announces a short lifetime before a rotation is fetched again sooner, and `cacheTtl` stays the upper bound. The first token after that is still verified with it, at once, and starts a fetch in the background that replaces it for later tokens. Past `maxStale`, tokens wait for the fetch instead.
 - **One fetch at a time.** While a fetch is running, a token waits for it only when the cached JWKS cannot give its key; concurrent requests never start a second fetch. A token waits at most until a second past the fetch's `timeout`. If the fetch has not finished by then, or fails because the request that started it has ended, the token's request fetches again itself, unless the cooldown is running and the cached JWKS is still usable: then it selects from the cache. A fetch that has not settled a second past its `timeout`, and past the cooldown, no longer counts as running. Both happen on Cloudflare Workers when the request that started the fetch ended and took its I/O with it, unless `waitUntil` kept it alive.
 - **Unknown `kid`.** When an issuer rotates in a new key, the first token signed with it names a `kid` your cached JWKS does not hold. The key set then fetches the JWKS once more and selects again from the result, also when a key without a `kid` could stand in for it; if that refetch fails, the stand-in still answers. A header without a `kid` never causes a refetch.
 - **Cooldown.** A refetch for an unknown `kid`, and a retry after a failed fetch, only starts once `cooldown` seconds have passed since the last fetch started. Inside that window an unknown `kid` fails with `unknown_kid` at once. Anyone can send you tokens with invented `kid`s; with the cooldown, a flood of them costs the issuer at most one request per window, however many tokens arrive.
@@ -182,32 +184,33 @@ Durations are in seconds. Every option is checked when the key set is created, a
 A process that lives for one request, such as a serverless function, starts with an empty cache and fetches the JWKS on its first token. To skip that, save what `onFetch` receives and pass it back as `seed`:
 
 ```ts
-const saved = await store.get("jwks"); // whatever you stored last time, or undefined
+const saved = await store.get("jwks"); // the string stored last time, or null when there is none
 
 const keys = createRemoteKeySet({
   url: "https://issuer.example/.well-known/jwks.json",
-  seed: saved === undefined ? undefined : JSON.parse(saved),
+  seed: saved ? JSON.parse(saved) : null,
   onFetch: (snapshot) => store.put("jwks", JSON.stringify(snapshot)),
 });
 ```
 
-A seed is treated exactly like a JWKS this key set fetched at `fetchedAt`: fresh for `cacheTtl`, then stale for `maxStale`, then not used at all. A seed whose `jwks` does not import is ignored, and the key set fetches. `onFetch` and `onFetchError` may return a promise, which is handed to `waitUntil` so a save outlives the request on Workers; what they throw or reject with is ignored, so a broken store or logger never fails a token.
+A seed is treated exactly like a JWKS this key set fetched at `fetchedAt`: fresh for `cacheTtl`, then stale for `maxStale`, then not used at all. `null` and `undefined` mean no seed. A seed that is not a snapshot, such as one an older build saved without `url`, is ignored, and so is one whose `jwks` imports no key this set can use: the key set fetches as it would without one. A seed whose `url` is not this key set's, compared as the URL parser normalizes both, is ignored too, so a staging key set's snapshot saved under the same store key never gets its keys bound to the production `issuer`. Give each key set its own store key anyway, or they keep overwriting each other's snapshot. `onFetch` and `onFetchError` may return a promise, which is handed to `waitUntil` so a save outlives the request on Workers; what they throw or reject with is ignored, so a broken store or logger never fails a token.
 
-A seed or cache whose `fetchedAt` is up to a minute ahead of the clock, as after a small clock correction or from a host whose clock runs ahead, counts as just fetched. Further ahead, it is expired: a clock that jumps back that far could otherwise keep a removed key trusted past `cacheTtl` plus `maxStale`.
+A seed or cache whose `fetchedAt` is up to a minute ahead of the clock, as after a small clock correction or from a host whose clock runs ahead, counts as just fetched. Further ahead, it is expired: a clock that jumps back that far could otherwise keep a removed key trusted past `cacheTtl` plus `maxStale`. A clock that steps back while a fetch is running makes that fetch count as just started, so it is neither replaced by a second one nor held running for as long as the step; a cooldown that is not covering a running fetch ends when the clock steps back before its start.
 
 ### When fetching fails
 
-A fetch is a `GET` with `accept: application/json`. It does not follow redirects and accepts only status 200. The body is read up to `maxResponseBytes` and abandoned as soon as it grows past that, and the whole fetch, body included, is abandoned after `timeout`. The body must be a strict JSON object, parsed with the same rules as a token's header, and then a JWKS.
+A fetch is a `GET` with `accept: application/json` and `cache: "no-cache"`, so a browser's HTTP cache revalidates the JWKS with the issuer rather than answering a refetch from its copy. A runtime that rejects the `cache` member, as Cloudflare Workers does before compatibility date 2025-08-07, is asked again without it, and the key set leaves it out from then on. A fetch does not follow redirects and accepts only status 200. The body is read up to `maxResponseBytes` and abandoned as soon as it grows past that, and the whole fetch, body included, is abandoned after `timeout`. The body must be a strict JSON object, parsed with the same rules as a token's header, after one leading UTF-8 byte order mark, which some servers write, is dropped; then a JWKS with at least one key the set can use. The response's `Content-Type` is not checked: only the configured URL is ever fetched, and the body has to parse as a JWKS whatever it is labelled. A failed fetch never replaces the keys the set already has.
 
 A failure the stale keys cannot cover is `key_fetch_failed`, whose `params.reason` says what happened:
 
-| `reason`           | Cause                                                                                       |
-| ------------------ | ------------------------------------------------------------------------------------------- |
-| `timeout`          | The fetch took longer than `timeout`.                                                       |
-| `network`          | `fetch` rejected, for example because the host could not be reached.                        |
-| `status`           | The response status was not 200, redirects included. `params.status` holds the status code. |
-| `too_large`        | The `Content-Length` header or the body exceeded `maxResponseBytes`.                        |
-| `invalid_response` | The body was not a strict JSON object, was not a JWKS, or listed more than 100 keys.        |
+| `reason`           | Cause                                                                                            |
+| ------------------ | ------------------------------------------------------------------------------------------------ |
+| `timeout`          | The fetch took longer than `timeout`.                                                            |
+| `network`          | `fetch` rejected, for example because the host could not be reached.                             |
+| `status`           | The response status was not 200, redirects included. `params.status` holds the status code.      |
+| `too_large`        | The `Content-Length` header or the body exceeded `maxResponseBytes`.                             |
+| `invalid_response` | The body was not a strict JSON object, was not a JWKS, or listed more than 100 keys.             |
+| `no_usable_keys`   | The JWKS held no key this set can use: none at all, none for `algorithms`, or none that imports. |
 
 The issue holds nothing from the response. `select` never throws and never rejects, whatever the server sends. The one exception is a bug in your own `now` option: when it returns something other than a finite number, `select` rejects with a `TypeError`, because a `NaN` clock would keep the cache from ever expiring. A verifier that calls such a key set turns the rejection into `key_fetch_failed` with `{ reason: "key_set_error" }`, so it fails closed.
 
@@ -233,7 +236,7 @@ const keys: KeySet = {
 
 Each tenant's set has its `issuer`, so tenant A's key verifies only tokens whose `iss` is tenant A's, whichever `kid` the token names. Without it, a token signed with tenant A's key and claiming tenant B's `iss` would pass, as the `kid` alone picks the key. A verifier's `issuer` option still says which issuers it accepts at all.
 
-A verifier treats a custom key set as code that may be wrong. If `select` throws, rejects, or returns anything other than a result holding a public or secret key this package created, the verifier fails with `key_fetch_failed` and `{ reason: "key_set_error" }` instead of throwing or using what it returned. A failed result is passed through as returned, so keep its issues free of token values as this package's own are.
+A verifier treats a custom key set as code that may be wrong. If `select` throws, rejects, or returns anything other than a result holding a public or secret key this package created, the verifier fails with `key_fetch_failed` and `{ reason: "key_set_error" }` instead of throwing or using what it returned. A failed result is passed through when each of its issues has a string `code`, and a `path` that is absent or an array of strings and finite numbers, such as `{ code: "tenant_unknown", path: ["tenant"] }`; any other failure is `key_set_error` too. Each issue is copied with its `code`, `path` and `params`, so keep them free of token values as this package's own are.
 
 The issue never carries the error, which may hold anything. To log it, pass `onKeySetError` to `createVerifier`: it is called with what `select` or the `keys` function threw or rejected with, or with a `TypeError` naming what it returned instead. It is not called for a failure the key set returns itself, such as `unknown_kid`, and its own errors are ignored.
 

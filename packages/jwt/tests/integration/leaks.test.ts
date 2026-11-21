@@ -3,18 +3,33 @@ import { inspect } from "node:util";
 import { beforeAll, describe, expect, it } from "vitest";
 
 import {
+  createDecrypter,
+  createJweKeySet,
+  createJwsVerifier,
   createKeySet,
+  createNestedVerifier,
   createRemoteKeySet,
   createVerifier,
+  decodeJsonObject,
+  encrypt,
+  exportJweSecretJwk,
   exportPrivateJwk,
   exportSecretJwk,
+  generateJweKeyPair,
+  generateJweSecretKey,
   generateKeyPair,
+  importJwePrivateKey,
+  importJwePublicKey,
+  importEncryptionKeySet,
+  importJweSecretKey,
   importKeySet,
   importPrivateKey,
   importPublicKey,
   importSecretKey,
   readHeader,
   sign,
+  signGeneralJws,
+  signJws,
   type KeyPair,
   type SecretKey,
   type StandardSchemaV1,
@@ -185,7 +200,7 @@ describe("token failures carry no input", () => {
     });
     const result = await verify(await hmacToken('{"alg":"HS256"}', `{"role":"${MARKER}"}`));
 
-    expect(result).toEqual({ ok: false, error: { issues: [{ code: "invalid_claims", path: ["payload", "role"] }] } });
+    expect(result).toEqual({ ok: false, error: { issues: [{ code: "schema_failed", path: ["payload", "role"] }] } });
   });
 });
 
@@ -399,5 +414,226 @@ describe("keys carry no material", () => {
     const error = await exportSecretJwk(secretKey).catch((caught: unknown) => caught);
 
     expect([error instanceof TypeError, String(error).includes(base64Url(secretBytes))]).toEqual([true, false]);
+  });
+});
+
+describe("JWE failures carry no input", () => {
+  const encoder = new TextEncoder();
+  const marked = (header: Record<string, unknown>, encryptedKey: string): string =>
+    [
+      segmentOf(JSON.stringify(header)),
+      encryptedKey,
+      base64Url(encoder.encode(MARKER).slice(0, 12)),
+      segmentOf(MARKER.repeat(3)),
+      base64Url(encoder.encode(`${MARKER}zz`)),
+    ].join(".");
+
+  it.each([
+    ["a marker alg", { alg: MARKER, enc: "A128GCM" }],
+    ["a marker enc", { alg: "A128KW", enc: MARKER }],
+    ["a marker zip", { alg: "A128KW", enc: "A128GCM", zip: MARKER }],
+    ["a marker crit", { alg: "A128KW", enc: "A128GCM", crit: [MARKER], [MARKER]: 1 }],
+    ["a marker kid", { alg: "A128KW", enc: "A128GCM", kid: MARKER }],
+    ["a kid that is not text", { alg: "A128KW", enc: "A128GCM", kid: { [MARKER]: MARKER } }],
+    ["a marker typ that is not text", { alg: "A128KW", enc: "A128GCM", typ: [MARKER] }],
+    ["a marker apu", { alg: "ECDH-ES", enc: "A128GCM", apu: MARKER }],
+    ["a marker epk", { alg: "ECDH-ES", enc: "A128GCM", epk: { kty: "EC", crv: MARKER, x: MARKER, y: MARKER } }],
+  ])("should not echo the marker decrypting a token with %s", async (_, header) => {
+    const [kw, ecdh] = await Promise.all([
+      generateJweSecretKey({ alg: "A128KW", kid: "kw" }),
+      generateJweKeyPair({ alg: "ECDH-ES", kid: "ec" }),
+    ]);
+    const decrypt = createDecrypter({ keys: createJweKeySet([kw, ecdh.privateKey]) });
+    const encryptedKey = header.alg === "ECDH-ES" ? "" : base64Url(encoder.encode(MARKER.repeat(2)).slice(0, 24));
+    const result = await decrypt(marked(header, encryptedKey));
+
+    expect(result.ok).toBe(false);
+    expect(leakedBy(result)).toEqual([]);
+  });
+
+  it("should report only decryption_failed for a token whose IV, ciphertext and tag hold the marker", async () => {
+    const key = await generateJweSecretKey({ alg: "dir", enc: "A128GCM" });
+    const [header] = (await encrypt({ plaintext: "x", key })).split(".");
+    const result = await createDecrypter({ keys: createJweKeySet([key]) })(
+      marked({}, "").replace(/^[^.]*/, header as string),
+    );
+
+    expect(result).toEqual({ ok: false, error: { issues: [{ code: "decryption_failed" }] } });
+  });
+
+  it("should not echo the marker of a plaintext that is not a JSON object", () => {
+    expect(leakedBy(decodeJsonObject(encoder.encode(`{"${MARKER}":`)))).toEqual([]);
+    expect(leakedBy(decodeJsonObject(encoder.encode(`["${MARKER}"]`)))).toEqual([]);
+    expect(leakedBy(decodeJsonObject(encoder.encode(`{"a":1,"a":"${MARKER}"}`)))).toEqual([]);
+  });
+
+  it("should not echo the marker of a nested token's cty or plaintext", async () => {
+    const key = await generateJweSecretKey({ alg: "A128KW" });
+    const verifyNested = createNestedVerifier({
+      decrypt: createDecrypter({ keys: createJweKeySet([key]) }),
+      verify: createVerifier({ keys: createKeySet([secretKey]) }),
+    });
+    const wrongType = await encrypt({ plaintext: MARKER, key, enc: "A128GCM", header: { cty: MARKER } });
+    const notAJwt = await encrypt({ plaintext: `${MARKER}.${MARKER}.${MARKER}`, key, enc: "A128GCM" });
+
+    expect(leakedBy(await verifyNested(wrongType))).toEqual([]);
+    expect(leakedBy(await verifyNested(notAJwt))).toEqual([]);
+  });
+
+  it.each([
+    ["a marker kid that is not text", { kty: "oct", k: MARKER, kid: [MARKER], use: "enc" }],
+    ["a marker k", { kty: "oct", k: `${MARKER}!`, use: "enc" }],
+    ["a marker use", { kty: "oct", k: base64Url(new Uint8Array(16)), use: MARKER }],
+    ["a marker alg", { kty: "oct", k: base64Url(new Uint8Array(16)), alg: MARKER, use: "enc" }],
+    ["a marker kty", { kty: MARKER, k: MARKER, use: "enc" }],
+    ["marker key_ops", { kty: "oct", k: base64Url(new Uint8Array(16)), key_ops: [MARKER], use: "enc" }],
+  ])("should not echo the marker importing a JWE secret JWK with %s", async (_, jwk) => {
+    expect(leakedBy(await importJweSecretKey(jwk, { alg: "A128KW" }))).toEqual([]);
+  });
+
+  it("should not echo the marker importing JWE keys built from marker material", async () => {
+    const ec = { kty: "EC", crv: "P-256", x: MARKER, y: MARKER, d: MARKER, use: "enc", kid: 7 };
+    const pem = ["-----BEGIN PUBLIC KEY-----", MARKER, "-----END PUBLIC KEY-----"].join("\n");
+
+    expect(leakedBy(await importJwePublicKey(ec, { alg: "ECDH-ES" }))).toEqual([]);
+    expect(leakedBy(await importJwePrivateKey(ec, { alg: "ECDH-ES" }))).toEqual([]);
+    expect(leakedBy(await importJwePublicKey(pem, { alg: "RSA-OAEP" }))).toEqual([]);
+    expect(leakedBy(await importJweSecretKey(MARKER as never, { alg: "A128KW" }))).toEqual([]);
+  });
+
+  it("should not echo the marker importing an encryption JWKS of failing marker keys", async () => {
+    const jwks = {
+      keys: [
+        { kty: "EC", crv: MARKER, x: MARKER, use: "enc" },
+        { kty: "RSA", n: MARKER, e: MARKER, use: "enc" },
+      ],
+    };
+
+    expect(leakedBy(await importEncryptionKeySet(jwks))).toEqual([]);
+  });
+
+  it.each([
+    ["a marker enc", () => encrypt({ plaintext: "", key: undefined as never, enc: MARKER as never })],
+    [
+      "a forged key",
+      () => encrypt({ plaintext: "", key: { kind: "jwe-public", alg: MARKER, kid: MARKER } as never, enc: "A128GCM" }),
+    ],
+    ["a marker alg", () => generateJweKeyPair({ alg: MARKER as never })],
+    ["a marker crv", () => generateJweKeyPair({ alg: "ECDH-ES", crv: MARKER as never })],
+    ["a marker secret alg", () => generateJweSecretKey({ alg: MARKER as never })],
+    ["a marker import alg", () => importJweSecretKey(new Uint8Array(16), { alg: MARKER as never })],
+  ])("should reject with a TypeError without the marker for %s", async (_, run) => {
+    expect(await leakedByRejection(run)).toEqual([]);
+  });
+
+  it.each([
+    ["zip", { zip: MARKER }],
+    ["kid", { kid: [MARKER] }],
+    ["alg", { alg: MARKER }],
+    ["enc", { enc: MARKER }],
+    ["epk", { epk: MARKER }],
+    ["a function", { x: () => MARKER }],
+  ])("should reject a marker %s header member with a TypeError without the marker", async (_, header) => {
+    const key = await generateJweSecretKey({ alg: "A128KW" });
+
+    expect(
+      await leakedByRejection(() => encrypt({ plaintext: "", key, enc: "A128GCM", header: header as never })),
+    ).toEqual([]);
+  });
+
+  it("should throw a TypeError without the marker for marker decrypter options and forged keys", async () => {
+    const key = await generateJweSecretKey({ alg: "A128KW" });
+
+    expect(leakedByThrow(() => createDecrypter({ keys: createJweKeySet([key]), enc: [MARKER as never] }))).toEqual([]);
+    expect(leakedByThrow(() => createDecrypter({ keys: createJweKeySet([key]), maxLength: MARKER as never }))).toEqual(
+      [],
+    );
+    expect(leakedByThrow(() => createDecrypter({ keys: MARKER as never }))).toEqual([]);
+    expect(leakedByThrow(() => createJweKeySet([{ kind: "jwe-private", alg: MARKER, kid: MARKER }] as never))).toEqual(
+      [],
+    );
+  });
+
+  it("should not put a JWE secret in the export error of a key that is not extractable", async () => {
+    const bytes = crypto.getRandomValues(new Uint8Array(16));
+    const imported = await importJweSecretKey(bytes, { alg: "A128KW" });
+    const error = imported.ok ? await exportJweSecretJwk(imported.value).catch((caught: unknown) => caught) : undefined;
+
+    expect([error instanceof TypeError, String(error).includes(base64Url(bytes))]).toEqual([true, false]);
+  });
+});
+
+describe("JWS failures carry no input", () => {
+  const verifier = () => createJwsVerifier({ keys: createKeySet([secretKey, pair.publicKey]) });
+  const hs = segmentOf('{"alg":"HS256"}');
+  const unencoded = segmentOf('{"alg":"HS256","b64":false,"crit":["b64"]}');
+
+  const corpus: [string, string][] = [
+    [
+      "a marker unprotected alg",
+      JSON.stringify({ payload: "YQ", protected: hs, header: { alg: MARKER }, signature: "AAAA" }),
+    ],
+    [
+      "a marker in both headers",
+      JSON.stringify({
+        payload: "YQ",
+        protected: segmentOf(`{"alg":"HS256","${MARKER}":1}`),
+        header: { [MARKER]: 1 },
+        signature: "AAAA",
+      }),
+    ],
+    [
+      "a marker kid unknown to the key set",
+      JSON.stringify({ payload: "YQ", protected: hs, header: { kid: MARKER }, signature: "AAAA" }),
+    ],
+    ["a marker in crit", `${segmentOf(`{"alg":"HS256","crit":["${MARKER}"],"${MARKER}":1}`)}.YQ.AAAA`],
+    ["a marker b64 outside crit", `${segmentOf(`{"alg":"HS256","b64":"${MARKER}"}`)}.YQ.AAAA`],
+    ["a marker unencoded payload with a bad signature", `${unencoded}.${MARKER}.AAAA`],
+    ["a marker unencoded payload holding a period", `${unencoded}.${MARKER}.${MARKER}.AAAA`],
+    [
+      "a marker JSON payload that is not base64url",
+      JSON.stringify({ payload: `${MARKER}=`, protected: hs, signature: "AAAA" }),
+    ],
+    ["a duplicate marker member", `{"${MARKER}":1,"${MARKER}":2,"protected":"${hs}","signature":"AAAA"}`],
+    [
+      "marker signatures",
+      JSON.stringify({
+        payload: segmentOf(MARKER),
+        signatures: [{ protected: segmentOf(MARKER), signature: segmentOf(MARKER) }],
+      }),
+    ],
+    ["too long, full of markers", `{"payload":"${MARKER.repeat(1000)}"}`],
+  ];
+
+  it.each(corpus)("should not echo the marker for %s", async (_, jws) => {
+    const result = await verifier()(jws);
+
+    expect([result.ok, leakedBy(result)]).toEqual([false, []]);
+  });
+
+  it("should not echo a marker detached payload whose signature fails", async () => {
+    const result = await verifier()(`${hs}..AAAA`, { payload: MARKER });
+
+    expect([result.ok, leakedBy(result)]).toEqual([false, []]);
+  });
+
+  it.each([
+    ["an unprotected marker alg", { unprotectedHeader: { alg: MARKER } }],
+    ["a marker crit", { header: { crit: [MARKER] } }],
+    [
+      "a marker member in both headers",
+      { header: { [MARKER]: 1 }, unprotectedHeader: { [MARKER]: 1 }, serialization: "flattened" },
+    ],
+    ["a marker unencoded compact payload", { b64: false, payload: `${MARKER}.` }],
+  ])("should reject signJws with a TypeError without the marker for %s", async (_, input) => {
+    expect(await leakedByRejection(() => signJws({ payload: MARKER, key: secretKey, ...input } as never))).toEqual([]);
+  });
+
+  it("should reject signGeneralJws with a TypeError without the marker for a marker signer header", async () => {
+    expect(
+      await leakedByRejection(() =>
+        signGeneralJws({ payload: MARKER, signers: [{ key: secretKey, header: { jku: MARKER } }] } as never),
+      ),
+    ).toEqual([]);
   });
 });

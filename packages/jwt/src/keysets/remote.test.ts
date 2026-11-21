@@ -1,3 +1,5 @@
+import { runInNewContext } from "node:vm";
+
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { JwtHeader, JwtResult, KeySet, VerificationKey } from "../core/types";
@@ -24,7 +26,7 @@ const failure = (params: Record<string, string | number>): JwtResult<never> => (
 /** A fetch stub that answers each call with the next response factory, repeating the last. */
 const fetchSequence = (...responders: (() => Response | Promise<Response>)[]) => {
   let calls = 0;
-  return vi.fn(async (_url: string | URL | Request, _init?: RequestInit): Promise<Response> => {
+  return vi.fn(async (_url: string, _init: RequestInit): Promise<Response> => {
     const responder = responders[Math.min(calls, responders.length - 1)] as () => Response | Promise<Response>;
     calls += 1;
     return responder();
@@ -120,11 +122,6 @@ describe("createRemoteKeySet options", () => {
     ["onFetch that is not a function", { onFetch: "log" }],
     ["onFetchError that is not a function", { onFetchError: {} }],
     ["waitUntil that is not a function", { waitUntil: true }],
-    ["seed that is not an object", { seed: "{}" }],
-    ["seed null", { seed: null }],
-    ["seed without fetchedAt", { seed: { jwks: { keys: [] } } }],
-    ["seed with a NaN fetchedAt", { seed: { jwks: { keys: [] }, fetchedAt: Number.NaN } }],
-    ["seed with a string fetchedAt", { seed: { jwks: { keys: [] }, fetchedAt: "0" } }],
     ["empty algorithms", { algorithms: [] }],
     ["algorithms with HS256", { algorithms: ["HS256"] }],
   ])("should throw TypeError for %s", (_name, options) => {
@@ -218,15 +215,21 @@ describe("createRemoteKeySet fetching", () => {
     const [url, init] = fetch.mock.calls[0] as [string, RequestInit];
     expect({ url, init: { ...init, signal: init.signal instanceof AbortSignal } }).toEqual({
       url: URL_STRING,
-      init: { method: "GET", headers: { accept: "application/json" }, redirect: "manual", signal: true },
+      init: {
+        method: "GET",
+        headers: { accept: "application/json" },
+        redirect: "manual",
+        cache: "no-cache",
+        signal: true,
+      },
     });
   });
 
-  it("should pass no credentials or cache option", async () => {
+  it("should pass no credentials", async () => {
     const fetch = fetchSequence(() => jwksResponse(EC_JWK));
     await createSet({ fetch }).select(EC_HEADER);
     const init = fetch.mock.calls[0]?.[1] as RequestInit;
-    expect(Object.keys(init).sort()).toEqual(["headers", "method", "redirect", "signal"]);
+    expect(Object.keys(init).sort()).toEqual(["cache", "headers", "method", "redirect", "signal"]);
   });
 
   it("should use globalThis.fetch as it is when select runs", async () => {
@@ -264,6 +267,122 @@ describe("createRemoteKeySet fetching", () => {
     await keys.select(EC_HEADER);
     clock.set(600);
     expect(describeSelection(await keys.select(ED_HEADER))).toEqual({ alg: "EdDSA", kid: "ed" });
+  });
+});
+
+describe("createRemoteKeySet cache mode", () => {
+  /** A fetch that refuses `cache` with `refusal`, as Workers before compatibility date 2025-08-07 do. */
+  const refusingCacheMode = (refusal: Error) =>
+    vi.fn(async (_url: string, init: RequestInit): Promise<Response> => {
+      if (init.cache !== undefined) {
+        throw refusal;
+      }
+      return jwksResponse(EC_JWK);
+    });
+
+  it.each([
+    ["a TypeError", new TypeError("Unsupported cache mode: no-cache")],
+    ["an Error", new Error("The 'cache' field on 'RequestInitializerDict' is not implemented.")],
+  ])(
+    "should fetch without cache when the runtime refuses it with %s, and keep leaving it out",
+    async (_name, refusal) => {
+      const clock = createClock();
+      const fetch = refusingCacheMode(refusal);
+      const keys = createSet({ fetch, now: clock.now, cacheTtl: 600 });
+      const first = describeSelection(await keys.select(EC_HEADER));
+      clock.set(1200);
+      await keys.select(EC_HEADER);
+      await vi.waitFor(() => expect(fetch).toHaveBeenCalledTimes(3));
+      expect([first, fetch.mock.calls.map(([, init]) => init.cache)]).toEqual([
+        { alg: "ES256", kid: "ec" },
+        ["no-cache", undefined, undefined],
+      ]);
+    },
+  );
+
+  it("should not retry a network failure, and keep sending cache after it", async () => {
+    const clock = createClock();
+    const fetch = fetchSequence(
+      () => Promise.reject(new TypeError("Failed to fetch")),
+      () => jwksResponse(EC_JWK),
+    );
+    const keys = createSet({ fetch, now: clock.now, cooldown: 30 });
+    const failed = await keys.select(EC_HEADER);
+    clock.set(30);
+    const selected = describeSelection(await keys.select(EC_HEADER));
+    expect([failed, selected, fetch.mock.calls.map(([, init]) => init.cache)]).toEqual([
+      failure({ reason: "network" }),
+      { alg: "ES256", kid: "ec" },
+      ["no-cache", "no-cache"],
+    ]);
+  });
+});
+
+describe("createRemoteKeySet Cache-Control", () => {
+  const withCacheControl = (value: string) => () =>
+    new Response(JSON.stringify({ keys: [EC_JWK] }), { status: 200, headers: { "cache-control": value } });
+
+  /** The first second, from 0 up, at which the set refetches a JWKS served with `value`. */
+  const ttlOf = async (value: string, options: Partial<RemoteKeySetOptions> = {}) => {
+    const clock = createClock();
+    const fetch = fetchSequence(withCacheControl(value));
+    const keys = createSet({ fetch, now: clock.now, cacheTtl: 600, cooldown: 30, ...options });
+    await keys.select(EC_HEADER);
+    for (const second of [29, 30, 59, 60, 599, 600]) {
+      clock.set(second);
+      // oxlint-disable-next-line no-await-in-loop
+      await keys.select(EC_HEADER);
+      if (fetch.mock.calls.length > 1) {
+        return second;
+      }
+    }
+    return undefined;
+  };
+
+  it.each<[string, number | undefined]>([
+    ["max-age=60", 60],
+    ["public, MAX-AGE=60, must-revalidate", 60],
+    ["max-age=5", 30],
+    ["max-age=0", 30],
+    ["max-age=6000", 600],
+    ["max-age=99999999999999999999999", 600],
+    ["no-store", 30],
+    ["no-cache", 30],
+    ['no-cache="set-cookie", max-age=60', 30],
+    ["max-age=60, max-age=600", 60],
+    ["max-age=abc", 600],
+    ['max-age="60"', 600],
+    ["max-age=-1", 600],
+    ["max-age=6 0", 600],
+    ["max-age", 600],
+    ["s-maxage=60", 600],
+    ["private", 600],
+  ])("should keep a JWKS served with Cache-Control %s fresh until second %s", async (value, refetchAt) => {
+    expect(await ttlOf(value)).toBe(refetchAt);
+  });
+
+  it("should use cacheTtl when there is no Cache-Control", async () => {
+    const clock = createClock();
+    const fetch = fetchSequence(() => jwksResponse(EC_JWK));
+    const keys = createSet({ fetch, now: clock.now, cacheTtl: 600 });
+    await keys.select(EC_HEADER);
+    clock.set(599);
+    await keys.select(EC_HEADER);
+    expect(fetch).toHaveBeenCalledTimes(1);
+  });
+
+  it("should keep the stale window after a shortened TTL", async () => {
+    const clock = createClock();
+    const fetch = fetchSequence(withCacheControl("max-age=60"), () => new Response(null, { status: 503 }));
+    const keys = createSet({ fetch, now: clock.now, cacheTtl: 600, maxStale: 100 });
+    await keys.select(EC_HEADER);
+    clock.set(159);
+    const stale = describeSelection(await keys.select(EC_HEADER));
+    clock.set(200);
+    expect([stale, await keys.select(EC_HEADER)]).toEqual([
+      { alg: "ES256", kid: "ec" },
+      failure({ reason: "status", status: 503 }),
+    ]);
   });
 });
 
@@ -459,6 +578,52 @@ describe("createRemoteKeySet failures", () => {
     expect(await keys.select(EC_HEADER)).toEqual(failure({ reason: "invalid_response" }));
   });
 
+  it("should accept a body that starts with a UTF-8 byte order mark", async () => {
+    const body = new Uint8Array([0xef, 0xbb, 0xbf, ...new TextEncoder().encode(JSON.stringify({ keys: [EC_JWK] }))]);
+    const keys = createSet({ fetch: fetchSequence(() => new Response(body, { status: 200 })) });
+    expect(describeSelection(await keys.select(EC_HEADER))).toEqual({ alg: "ES256", kid: "ec" });
+  });
+
+  it("should report invalid_response for a body that starts with two byte order marks", async () => {
+    const bom = [0xef, 0xbb, 0xbf];
+    const body = new Uint8Array([...bom, ...bom, ...new TextEncoder().encode(JSON.stringify({ keys: [EC_JWK] }))]);
+    const keys = createSet({ fetch: fetchSequence(() => new Response(body, { status: 200 })) });
+    expect(await keys.select(EC_HEADER)).toEqual(failure({ reason: "invalid_response" }));
+  });
+
+  it.each<[string, object]>([
+    ["no keys", { keys: [] }],
+    ["only keys of other algorithms", { keys: [ED_JWK] }],
+    ["only keys that do not import", { keys: [{ kty: "EC", crv: "P-256", x: "AA", y: "AA", kid: "ec" }] }],
+  ])("should report no_usable_keys for a JWKS with %s", async (_name, jwks) => {
+    const keys = createSet({
+      fetch: fetchSequence(() => new Response(JSON.stringify(jwks), { status: 200 })),
+      algorithms: ["ES256"],
+    });
+    expect(await keys.select(EC_HEADER)).toEqual(failure({ reason: "no_usable_keys" }));
+  });
+
+  it("should keep the cached JWKS when a refetch returns no usable keys", async () => {
+    const clock = createClock();
+    const onFetchError = vi.fn();
+    const fetch = fetchSequence(
+      () => jwksResponse(EC_JWK),
+      () => jwksResponse(),
+    );
+    const keys = createSet({ fetch, now: clock.now, cacheTtl: 600, cooldown: 30, onFetchError });
+    await keys.select(EC_HEADER);
+    clock.set(600);
+    await keys.select(EC_HEADER);
+    await vi.waitFor(() => expect(onFetchError).toHaveBeenCalledTimes(1));
+    clock.set(620);
+    const inCooldown = describeSelection(await keys.select(EC_HEADER));
+    expect([inCooldown, fetch.mock.calls.length, onFetchError.mock.calls]).toEqual([
+      { alg: "ES256", kid: "ec" },
+      2,
+      [[{ code: "key_fetch_failed", params: { reason: "no_usable_keys" } }]],
+    ]);
+  });
+
   it("should report network when fetch rejects", async () => {
     const fetch = vi.fn(async (): Promise<Response> => {
       throw new TypeError(`connect failed ${SECRET_MARKER}`);
@@ -566,10 +731,13 @@ describe("createRemoteKeySet when the clock steps back", () => {
       () => jwksResponse(EC_JWK),
       () => new Response(null, { status: 503 }),
     );
-    const keys = createSet({ fetch, now: clock.now, cacheTtl: 600, cooldown: 30 });
+    const onFetchError = vi.fn();
+    const keys = createSet({ fetch, now: clock.now, cacheTtl: 600, cooldown: 30, onFetchError });
     await keys.select(EC_HEADER);
     clock.set(700);
     await keys.select(EC_HEADER);
+    // The refetch runs in the background; a step back while it runs would only make it count as just started.
+    await vi.waitFor(() => expect(onFetchError).toHaveBeenCalledTimes(1));
     clock.set(650);
     await keys.select(EC_HEADER);
     expect(fetch).toHaveBeenCalledTimes(3);
@@ -619,7 +787,11 @@ describe("createRemoteKeySet when the clock steps back", () => {
     const clock = createClock();
     clock.set(1000);
     const fetch = fetchSequence(() => jwksResponse(ED_JWK));
-    const keys = createSet({ fetch, now: clock.now, seed: { jwks: { keys: [EC_JWK] }, fetchedAt: 1_030_000 } });
+    const keys = createSet({
+      fetch,
+      now: clock.now,
+      seed: { url: URL_STRING, jwks: { keys: [EC_JWK] }, fetchedAt: 1_030_000 },
+    });
     expect([describeSelection(await keys.select(EC_HEADER)), fetch.mock.calls.length]).toEqual([
       { alg: "ES256", kid: "ec" },
       0,
@@ -637,6 +809,50 @@ describe("createRemoteKeySet when the clock steps back", () => {
     await keys.select(EC_HEADER);
     clock.set(0);
     expect(await keys.select(EC_HEADER)).toEqual(failure({ reason: "status", status: 503 }));
+  });
+});
+
+describe("createRemoteKeySet when the clock moves during a fetch", () => {
+  /** A fetch stub whose responses the test releases one at a time, in the order they were requested. */
+  const heldFetch = () => {
+    const pending: ((response: Response) => void)[] = [];
+    const fetch = vi.fn(
+      async (_url: string, _init: RequestInit) => new Promise<Response>((resolve) => pending.push(resolve)),
+    );
+    return { fetch, release: (response: Response) => (pending.shift() as (response: Response) => void)(response) };
+  };
+
+  it("should keep one fetch running when the clock steps back during it", async () => {
+    const clock = createClock();
+    clock.set(1000);
+    const { fetch, release } = heldFetch();
+    const keys = createSet({ fetch, now: clock.now });
+    const first = keys.select(EC_HEADER);
+    await vi.waitFor(() => expect(fetch).toHaveBeenCalledTimes(1));
+    clock.set(999);
+    const second = keys.select(EC_HEADER);
+    release(jwksResponse(EC_JWK));
+    expect([describeSelection(await first), describeSelection(await second), fetch.mock.calls.length]).toEqual([
+      { alg: "ES256", kid: "ec" },
+      { alg: "ES256", kid: "ec" },
+      1,
+    ]);
+  });
+
+  it("should answer from the keys of a fetch that a newer one replaced", async () => {
+    const clock = createClock();
+    const { fetch, release } = heldFetch();
+    const keys = createSet({ fetch, now: clock.now, cooldown: 0, timeout: 1 });
+    const first = keys.select(EC_HEADER);
+    await vi.waitFor(() => expect(fetch).toHaveBeenCalledTimes(1));
+    // Past the first fetch's deadline, so the next select replaces it.
+    clock.set(3);
+    const second = keys.select(EC_HEADER);
+    await vi.waitFor(() => expect(fetch).toHaveBeenCalledTimes(2));
+    release(jwksResponse(EC_JWK));
+    expect(describeSelection(await first)).toEqual({ alg: "ES256", kid: "ec" });
+    release(jwksResponse(EC_JWK));
+    expect(describeSelection(await second)).toEqual({ alg: "ES256", kid: "ec" });
   });
 });
 
@@ -984,13 +1200,40 @@ describe("createRemoteKeySet callbacks", () => {
     const onFetch = vi.fn();
     const keys = createSet({ fetch: fetchSequence(() => jwksResponse(EC_JWK)), now: clock.now, onFetch });
     await keys.select(EC_HEADER);
-    expect(onFetch.mock.calls).toEqual([[{ jwks: { keys: [EC_JWK] }, fetchedAt: 42_000 }]]);
+    expect(onFetch.mock.calls).toEqual([[{ url: URL_STRING, jwks: { keys: [EC_JWK] }, fetchedAt: 42_000 }]]);
   });
 
   it("should call onFetchError with the issue of each failed fetch", async () => {
     const onFetchError = vi.fn();
     const keys = createSet({ fetch: fetchSequence(() => new Response(null, { status: 503 })), onFetchError });
     await keys.select(EC_HEADER);
+    expect(onFetchError.mock.calls).toEqual([
+      [{ code: "key_fetch_failed", params: { reason: "status", status: 503 } }],
+    ]);
+  });
+
+  it("should call onFetchError for a failed fetch that a newer fetch replaced", async () => {
+    const clock = createClock();
+    const onFetchError = vi.fn();
+    let answerLate: (response: Response) => void = () => undefined;
+    const fetch = fetchSequence(
+      () => jwksResponse(EC_JWK),
+      () =>
+        new Promise<Response>((resolve) => {
+          answerLate = resolve;
+        }),
+      () => jwksResponse(EC_JWK),
+    );
+    const keys = createSet({ fetch, now: clock.now, cacheTtl: 600, cooldown: 30, timeout: 5, onFetchError });
+    await keys.select(EC_HEADER);
+    vi.useFakeTimers();
+    clock.set(600);
+    await keys.select(EC_HEADER);
+    clock.set(631);
+    await keys.select(EC_HEADER);
+    await vi.waitFor(() => expect(fetch).toHaveBeenCalledTimes(3));
+    answerLate(new Response(null, { status: 503 }));
+    await vi.advanceTimersByTimeAsync(0);
     expect(onFetchError.mock.calls).toEqual([
       [{ code: "key_fetch_failed", params: { reason: "status", status: 503 } }],
     ]);
@@ -1019,6 +1262,20 @@ describe("createRemoteKeySet callbacks", () => {
       },
     ],
     ["rejects", async () => Promise.reject(new Error("callback broke"))],
+    [
+      "rejects with a promise from another realm",
+      runInNewContext("(async () => { throw new Error('callback broke') })") as () => Promise<void>,
+    ],
+    [
+      "returns a thenable whose then getter throws",
+      () =>
+        ({
+          // oxlint-disable-next-line unicorn/no-thenable -- the case under test is a hostile thenable.
+          get then() {
+            throw new Error("callback broke");
+          },
+        }) as never,
+    ],
   ])("should select as usual when a callback %s", async (_name, callback) => {
     const unhandled = vi.fn();
     process.on("unhandledRejection", unhandled);
@@ -1026,8 +1283,13 @@ describe("createRemoteKeySet callbacks", () => {
       const failing = createSet({
         fetch: fetchSequence(() => new Response(null, { status: 503 })),
         onFetchError: callback,
+        waitUntil: callback,
       });
-      const working = createSet({ fetch: fetchSequence(() => jwksResponse(EC_JWK)), onFetch: callback });
+      const working = createSet({
+        fetch: fetchSequence(() => jwksResponse(EC_JWK)),
+        onFetch: callback,
+        waitUntil: callback,
+      });
       const results = [await failing.select(EC_HEADER), describeSelection(await working.select(EC_HEADER))];
       await new Promise((resolve) => setTimeout(resolve, 0));
       expect([...results, unhandled.mock.calls.length]).toEqual([
@@ -1046,7 +1308,11 @@ describe("createRemoteKeySet seed", () => {
     const clock = createClock();
     clock.set(100);
     const fetch = fetchSequence(() => jwksResponse(ED_JWK));
-    const keys = createSet({ fetch, now: clock.now, seed: { jwks: { keys: [EC_JWK] }, fetchedAt: 0 } });
+    const keys = createSet({
+      fetch,
+      now: clock.now,
+      seed: { url: URL_STRING, jwks: { keys: [EC_JWK] }, fetchedAt: 0 },
+    });
     expect([describeSelection(await keys.select(EC_HEADER)), fetch.mock.calls.length]).toEqual([
       { alg: "ES256", kid: "ec" },
       0,
@@ -1076,7 +1342,12 @@ describe("createRemoteKeySet seed", () => {
     const clock = createClock();
     clock.set(700);
     const fetch = fetchSequence(() => jwksResponse(ED_JWK));
-    const keys = createSet({ fetch, now: clock.now, cacheTtl: 600, seed: { jwks: { keys: [EC_JWK] }, fetchedAt: 0 } });
+    const keys = createSet({
+      fetch,
+      now: clock.now,
+      cacheTtl: 600,
+      seed: { url: URL_STRING, jwks: { keys: [EC_JWK] }, fetchedAt: 0 },
+    });
     expect([describeSelection(await keys.select(EC_HEADER)), fetch.mock.calls.length]).toEqual([
       { alg: "ES256", kid: "ec" },
       1,
@@ -1087,7 +1358,11 @@ describe("createRemoteKeySet seed", () => {
     const clock = createClock();
     clock.set(600 + 3600);
     const fetch = fetchSequence(() => jwksResponse(ED_JWK));
-    const keys = createSet({ fetch, now: clock.now, seed: { jwks: { keys: [EC_JWK] }, fetchedAt: 0 } });
+    const keys = createSet({
+      fetch,
+      now: clock.now,
+      seed: { url: URL_STRING, jwks: { keys: [EC_JWK] }, fetchedAt: 0 },
+    });
     expect(describeSelection(await keys.select(EC_HEADER))).toEqual({
       ok: false,
       error: { issues: [{ code: "unknown_kid", path: ["header", "kid"] }] },
@@ -1098,18 +1373,91 @@ describe("createRemoteKeySet seed", () => {
     ["not a JWKS", { keys: "none" }],
     ["a JWKS with more than 100 keys", { keys: Array.from({ length: 101 }, () => EC_JWK) }],
     ["null", null],
+    ["a JWKS without keys", { keys: [] }],
+    ["a JWKS of keys for other algorithms", { keys: [ED_JWK] }],
   ])("should ignore a seed whose jwks is %s and fetch", async (_name, jwks) => {
     const fetch = fetchSequence(() => jwksResponse(EC_JWK));
-    const keys = createSet({ fetch, seed: { jwks, fetchedAt: 0 } });
+    const keys = createSet({ fetch, algorithms: ["ES256"], seed: { url: URL_STRING, jwks, fetchedAt: 0 } });
     expect([describeSelection(await keys.select(EC_HEADER)), fetch.mock.calls.length]).toEqual([
       { alg: "ES256", kid: "ec" },
       1,
     ]);
   });
 
+  const throwingGetter = {
+    url: URL_STRING,
+    jwks: { keys: [ED_JWK] },
+    get fetchedAt(): number {
+      throw new Error("storage broke");
+    },
+  };
+
+  it.each<[string, unknown]>([
+    ["null", null],
+    ["undefined", undefined],
+    ["a string", JSON.stringify({ url: URL_STRING, jwks: { keys: [ED_JWK] }, fetchedAt: 0 })],
+    ["without fetchedAt", { url: URL_STRING, jwks: { keys: [ED_JWK] } }],
+    ["with a NaN fetchedAt", { url: URL_STRING, jwks: { keys: [ED_JWK] }, fetchedAt: Number.NaN }],
+    ["with a string fetchedAt", { url: URL_STRING, jwks: { keys: [ED_JWK] }, fetchedAt: "0" }],
+    ["without url, as an older build saved it", { jwks: { keys: [ED_JWK] }, fetchedAt: 0 }],
+    ["of another url", { url: "https://staging.issuer.example/jwks.json", jwks: { keys: [ED_JWK] }, fetchedAt: 0 }],
+    ["with a url that does not parse", { url: "not a url", jwks: { keys: [ED_JWK] }, fetchedAt: 0 }],
+    ["with a URL object as url", { url: new URL(URL_STRING), jwks: { keys: [ED_JWK] }, fetchedAt: 0 }],
+    ["whose getter throws", throwingGetter],
+  ])("should ignore a seed that is %s and fetch", async (_name, seed) => {
+    const fetch = fetchSequence(() => jwksResponse(EC_JWK));
+    const keys = createSet({ fetch, now: () => 0, seed: seed as RemoteKeySetOptions["seed"] });
+    expect([describeSelection(await keys.select(ED_HEADER)), fetch.mock.calls.length]).toEqual([
+      { ok: false, error: { issues: [{ code: "unknown_kid", path: ["header", "kid"] }] } },
+      1,
+    ]);
+  });
+
+  it("should use a seed whose url differs only in spelling the URL parser normalizes", async () => {
+    const fetch = fetchSequence(() => jwksResponse(ED_JWK));
+    const seed = { url: "HTTPS://ISSUER.example:443/jwks.json", jwks: { keys: [EC_JWK] }, fetchedAt: 0 };
+    const keys = createSet({ fetch, now: () => 0, seed });
+    expect([describeSelection(await keys.select(EC_HEADER)), fetch.mock.calls.length]).toEqual([
+      { alg: "ES256", kid: "ec" },
+      0,
+    ]);
+  });
+
+  it("should not bind keys a staging set saved under a shared store key to the production issuer", async () => {
+    const store = new Map<string, string>();
+    const staging = createRemoteKeySet({
+      url: "https://staging.issuer.example/jwks.json",
+      issuer: "https://staging.issuer.example",
+      fetch: fetchSequence(() => jwksResponse(ED_JWK)),
+      now: () => 0,
+      onFetch: (snapshot) => {
+        store.set("jwks", JSON.stringify(snapshot));
+      },
+    });
+    await staging.select(ED_HEADER);
+    const saved = store.get("jwks");
+    const fetch = fetchSequence(() => jwksResponse(EC_JWK));
+    const production = createRemoteKeySet({
+      url: URL_STRING,
+      issuer: "https://issuer.example",
+      fetch,
+      now: () => 0,
+      seed: saved === undefined ? null : (JSON.parse(saved) as RemoteKeySetOptions["seed"]),
+    });
+    expect([describeSelection(await production.select(ED_HEADER)), fetch.mock.calls.length]).toEqual([
+      { ok: false, error: { issues: [{ code: "unknown_kid", path: ["header", "kid"] }] } },
+      1,
+    ]);
+  });
+
   it("should treat a seed fetched over 60 seconds later than the clock as expired", async () => {
     const fetch = fetchSequence(() => jwksResponse(ED_JWK));
-    const keys = createSet({ fetch, now: () => 0, maxStale: 0, seed: { jwks: { keys: [EC_JWK] }, fetchedAt: 60_001 } });
+    const keys = createSet({
+      fetch,
+      now: () => 0,
+      maxStale: 0,
+      seed: { url: URL_STRING, jwks: { keys: [EC_JWK] }, fetchedAt: 60_001 },
+    });
     await keys.select(EC_HEADER);
     expect(fetch).toHaveBeenCalledTimes(1);
   });
@@ -1143,7 +1491,8 @@ describe("createRemoteKeySet stale keys after other failures", () => {
     await keys.select(EC_HEADER);
     clock.set(600);
     expect(describeSelection(await keys.select(EC_HEADER))).toEqual({ alg: "ES256", kid: "ec" });
-    expect(fetch).toHaveBeenCalledTimes(2);
+    // A network failure is not retried, so a failing issuer costs one request per fetch.
+    await vi.waitFor(() => expect(fetch).toHaveBeenCalledTimes(2));
   });
 });
 
@@ -1161,7 +1510,7 @@ describe("createRemoteKeySet issuer", () => {
       fetch: fetchSequence(() => jwksResponse(ED_JWK)),
       issuer: ISSUER,
       now: () => 0,
-      seed: { jwks: { keys: [EC_JWK] }, fetchedAt: 0 },
+      seed: { url: URL_STRING, jwks: { keys: [EC_JWK] }, fetchedAt: 0 },
     });
     const selected = await keys.select(EC_HEADER);
     expect(selected.ok && selected.value.issuer).toBe(ISSUER);

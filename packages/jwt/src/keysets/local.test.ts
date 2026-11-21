@@ -1,7 +1,7 @@
 import { beforeAll, describe, expect, it } from "vitest";
 
 import type { JwtHeader, PublicKey, SecretKey, VerificationKey } from "../core/types";
-import { exportPublicJwk, generateKeyPair, generateSecretKey } from "../keys";
+import { exportPublicJwk, exportPublicPem, generateKeyPair, generateSecretKey } from "../keys";
 import {
   EC_P256_PRIVATE_JWK,
   EC_P256_PUBLIC_JWK,
@@ -193,6 +193,11 @@ describe("importKeySet", () => {
   it("should skip entries that are not objects", async () => {
     const keys = valueOf(await importKeySet({ keys: [null, "x", 1, { ...EC_P256_PUBLIC_JWK, kid: "e" }] }));
     expect(await selection(keys, { alg: "ES256", kid: "e" })).toEqual({ kind: "public", alg: "ES256", kid: "e" });
+  });
+
+  it("should skip an entry that is a PEM string, which only importPublicKey reads", async () => {
+    const pem = await exportPublicPem(ecA);
+    expect(valueOf(await importKeySet({ keys: [pem] })).keys).toEqual([]);
   });
 
   it("should give an empty set when no key is usable", async () => {

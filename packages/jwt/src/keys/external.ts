@@ -1,5 +1,6 @@
 import { rejectUnknownOptions } from "../core/options";
 import type { PrivateKey, PublicKey } from "../core/types";
+import { copyBytes } from "../encoding/bytes";
 import { getKeyEntry, isRegisteredKey, kidMember, registerKey } from "./registry";
 
 /** Options of {@link createExternalSigningKey}. */
@@ -50,13 +51,16 @@ const DER_LONG_LENGTH_ONE_BYTE = 0x81;
  *
  * @example
  * ```ts
- * const imported = await importPublicKey(kmsPublicKeyPem, { alg: "ES256", kid: "kms-2026" });
+ * // `spki` is the KMS public key, imported with crypto.subtle.importKey("spki", …).
+ * const imported = await importPublicKey(spki, { alg: "ES256", kid: "kms-2026" });
  * if (!imported.ok) throw new Error("The KMS public key could not be imported.");
  * const signingKey = createExternalSigningKey({
  *   publicKey: imported.value,
  *   signatureFormat: "der",
- *   sign: async (data) => (await kms.sign({ KeyId, Message: data, MessageType: "RAW",
- *     SigningAlgorithm: "ECDSA_SHA_256" })).Signature!,
+ *   // A digest, not the message: MessageType "RAW" caps the message at 4096 bytes.
+ *   sign: async (data) => (await kms.send(new SignCommand({ KeyId, MessageType: "DIGEST",
+ *     Message: new Uint8Array(await crypto.subtle.digest("SHA-256", data)),
+ *     SigningAlgorithm: "ECDSA_SHA_256" }))).Signature!,
  * });
  * const token = await sign({ payload: { sub: "u1", exp }, key: signingKey });
  * ```
@@ -98,15 +102,13 @@ export function createExternalSigningKey(options: ExternalSigningKeyOptions): Pr
   );
 }
 
-/** A copy of the signer's bytes, so a buffer it reuses cannot change the token after the check. */
+/** A copy of the signer's bytes, from any realm, so a buffer it reuses cannot change the token after the check. */
 function toBytes(value: unknown): Uint8Array<ArrayBuffer> {
-  if (value instanceof Uint8Array) {
-    return new Uint8Array(value);
+  const bytes = copyBytes(value);
+  if (bytes === undefined) {
+    throw new TypeError("sign: the external signer must resolve to a Uint8Array or an ArrayBuffer.");
   }
-  if (value instanceof ArrayBuffer) {
-    return new Uint8Array(value.slice(0));
-  }
-  throw new TypeError("sign: the external signer must resolve to a Uint8Array or an ArrayBuffer.");
+  return bytes;
 }
 
 /**

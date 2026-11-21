@@ -1,5 +1,17 @@
 import { fail, ok } from "../core";
-import type { JwtHeader, JwtResult, VerificationKey } from "../core/types";
+import type { JwtResult } from "../core/types";
+
+/** What selection reads of a key: a JWS verification key, or a JWE key, of either kind. */
+export interface SelectableKey {
+  readonly alg: string;
+  readonly kid?: string;
+}
+
+/** What selection reads of a header or a query: its `alg` and `kid`, whatever their type. */
+export interface SelectionQuery {
+  readonly alg?: unknown;
+  readonly kid?: unknown;
+}
 
 const UNKNOWN_KID = fail({ code: "unknown_kid", path: ["header", "kid"] });
 const ALG_MISMATCH = fail({ code: "alg_mismatch", path: ["header", "alg"] });
@@ -16,7 +28,7 @@ const AMBIGUOUS_KEY = fail({ code: "ambiguous_key" });
  * key only matches `HS256` and a public key only its own algorithm, since both follow from `alg`
  * equality. Never throws, whatever `header` holds.
  */
-export function selectKey(keys: readonly VerificationKey[], header: JwtHeader): JwtResult<VerificationKey> {
+export function selectKey<TKey extends SelectableKey>(keys: readonly TKey[], header: SelectionQuery): JwtResult<TKey> {
   if (typeof header !== "object" || header === null) {
     return NO_MATCHING_KEY;
   }
@@ -45,18 +57,18 @@ export function selectKey(keys: readonly VerificationKey[], header: JwtHeader): 
   );
 }
 
-function single(candidates: readonly VerificationKey[], whenNone: JwtResult<never>): JwtResult<VerificationKey> {
+function single<TKey>(candidates: readonly TKey[], whenNone: JwtResult<never>): JwtResult<TKey> {
   if (candidates.length === 0) {
     return whenNone;
   }
-  return candidates.length === 1 ? ok(candidates[0] as VerificationKey) : AMBIGUOUS_KEY;
+  return candidates.length === 1 ? ok(candidates[0] as TKey) : AMBIGUOUS_KEY;
 }
 
 /**
  * Whether the header names a `kid` that no key in `keys` carries, so a refetch may bring it, whatever
  * the selection gave: `unknown_kid`, a key without a `kid` standing in, or several such keys.
  */
-export function lacksKid(keys: readonly VerificationKey[], header: JwtHeader): boolean {
+export function lacksKid(keys: readonly SelectableKey[], header: SelectionQuery): boolean {
   if (typeof header !== "object" || header === null) {
     return false;
   }

@@ -1,15 +1,22 @@
+import { createHash } from "node:crypto";
+
 import { describe, expect, it } from "vitest";
 
+import { decodeBase64Url } from "../encoding";
+import { generateJweKeyPair } from "../jwe/keys";
 import { generateKeyPair, generateSecretKey } from "./generate";
-import { importKeyPair, importPrivateKey, importPublicKey } from "./import";
+import { importKeyPair, importPrivateKey, importPublicKey, importSecretKey } from "./import";
 import {
   EC_P256_PRIVATE_JWK,
   EC_P256_PUBLIC_JWK,
   ED25519_PRIVATE_JWK,
+  HMAC_SECRET_JWK,
+  issuesOf,
   RSA_2048_PRIVATE_JWK,
   valueOf,
+  withMembers,
 } from "./test-fixtures";
-import { jwkThumbprint } from "./thumbprint";
+import { jwkThumbprint, jwkThumbprintUri } from "./thumbprint";
 
 /** RFC 7638 §3.1: the RSA key of the example, and its thumbprint. */
 const RFC7638_RSA_JWK = {
@@ -79,11 +86,138 @@ describe("jwkThumbprint", () => {
     expect(await jwkThumbprint(valueOf(await importPrivateKey(jwk, { alg })))).toBe(await jwkThumbprint(publicKey));
   });
 
-  it("should throw TypeError for a secret key and a look-alike", async () => {
+  it("should give an extractable secret its oct thumbprint (RFC 7638 §3.2)", async () => {
+    const secret = valueOf(await importSecretKey(HMAC_SECRET_JWK, { alg: "HS256", extractable: true }));
+    expect(await jwkThumbprint(secret)).toBe(sha256Of(`{"k":"${HMAC_SECRET_JWK.k}","kty":"oct"}`));
+  });
+
+  it("should throw a TypeError for a secret that is not extractable", async () => {
     const secret = await generateSecretKey({ alg: "HS256" });
-    for (const key of [secret, { kind: "public", alg: "ES256" }, { kind: "private", alg: "ES256" }]) {
+    await expect(jwkThumbprint(secret)).rejects.toThrow(
+      new TypeError("jwkThumbprint: a secret key's thumbprint reads its material; create it with extractable: true."),
+    );
+  });
+
+  it("should throw TypeError for a look-alike", async () => {
+    const lookAlikes = [
+      { kind: "public", alg: "ES256" },
+      { kind: "private", alg: "ES256" },
+      { kind: "secret", alg: "HS256", extractable: true },
+    ];
+    for (const key of lookAlikes) {
       // oxlint-disable-next-line no-await-in-loop
       await expect(jwkThumbprint(key as never)).rejects.toThrow(TypeError);
     }
+  });
+});
+
+describe("jwkThumbprintUri", () => {
+  it("should give the RFC 9278 §3 URI of the RFC 7638 §3.1 key", async () => {
+    const key = valueOf(await importPublicKey(RFC7638_RSA_JWK, { alg: "RS256" }));
+    expect(await jwkThumbprintUri(key)).toBe(
+      "urn:ietf:params:oauth:jwk-thumbprint:sha-256:NzbLsXh8uDCcd-6MNwXF4W_7noWXFZAfHkxZsRGC9Xs",
+    );
+  });
+
+  it("should give a private key and an extractable secret the URI of their thumbprint", async () => {
+    const { privateKey } = await generateKeyPair({ alg: "Ed25519" });
+    const secret = await generateSecretKey({ alg: "HS256", extractable: true });
+    for (const key of [privateKey, secret]) {
+      // oxlint-disable-next-line no-await-in-loop
+      const thumbprint = await jwkThumbprint(key);
+      // oxlint-disable-next-line no-await-in-loop
+      expect(await jwkThumbprintUri(key)).toBe(`urn:ietf:params:oauth:jwk-thumbprint:sha-256:${thumbprint}`);
+    }
+  });
+
+  it("should give a JWE public and private key the URI of their thumbprint", async () => {
+    const { publicKey, privateKey } = await generateJweKeyPair({ alg: "ECDH-ES", crv: "P-256" });
+    const thumbprint = await jwkThumbprint(publicKey);
+
+    expect(await jwkThumbprintUri(publicKey)).toBe(`urn:ietf:params:oauth:jwk-thumbprint:sha-256:${thumbprint}`);
+    expect(await jwkThumbprintUri(privateKey)).toBe(`urn:ietf:params:oauth:jwk-thumbprint:sha-256:${thumbprint}`);
+  });
+
+  it("should throw a TypeError for a look-alike", async () => {
+    await expect(jwkThumbprintUri({ kind: "public", alg: "ES256" } as never)).rejects.toThrow(TypeError);
+  });
+});
+
+/** The RFC 7638 thumbprint of `members`, computed with node:crypto, apart from the package's own code. */
+const sha256Of = (canonical: string): string => createHash("sha256").update(canonical).digest("base64url");
+
+describe('kid: "thumbprint" on import', () => {
+  it("should name a public key by the RFC 7638 §3.1 thumbprint", async () => {
+    const jwk = withMembers(RFC7638_RSA_JWK, { kid: undefined });
+    expect(valueOf(await importPublicKey(jwk, { alg: "RS256", kid: "thumbprint" })).kid).toBe(RFC7638_THUMBPRINT);
+  });
+
+  it("should accept a JWK whose own kid is its thumbprint, and refuse one with another kid at kid", async () => {
+    const own = { ...RFC8037_PUBLIC_JWK, kid: RFC8037_THUMBPRINT };
+    expect(valueOf(await importPublicKey(own, { alg: "EdDSA", kid: "thumbprint" })).kid).toBe(RFC8037_THUMBPRINT);
+    const other = { ...RFC8037_PUBLIC_JWK, kid: "2026-11" };
+    expect(issuesOf(await importPublicKey(other, { alg: "EdDSA", kid: "thumbprint" }))).toEqual([
+      { code: "invalid_key", path: ["kid"] },
+    ]);
+    const literal = { ...RFC8037_PUBLIC_JWK, kid: "thumbprint" };
+    expect(issuesOf(await importPublicKey(literal, { alg: "EdDSA", kid: "thumbprint" }))).toEqual([
+      { code: "invalid_key", path: ["kid"] },
+    ]);
+    const conflicting = { ...EC_P256_PRIVATE_JWK, kid: "2026-11" };
+    expect(issuesOf(await importKeyPair(conflicting, { alg: "ES256", kid: "thumbprint" }))).toEqual([
+      { code: "invalid_key", path: ["kid"] },
+    ]);
+  });
+
+  it.each([
+    ["ES256", EC_P256_PRIVATE_JWK],
+    ["Ed25519", ED25519_PRIVATE_JWK],
+    ["RS256", RSA_2048_PRIVATE_JWK],
+  ] as const)("should name both halves of a %s private JWK by the public key's thumbprint", async (alg, jwk) => {
+    const pair = valueOf(await importKeyPair(jwk, { alg, kid: "thumbprint" }));
+    const expected = await jwkThumbprint(pair.publicKey);
+    expect([pair.privateKey.kid, pair.publicKey.kid]).toEqual([expected, expected]);
+    expect(valueOf(await importPrivateKey(jwk, { alg, kid: "thumbprint" })).kid).toBe(expected);
+  });
+
+  it("should name a PEM key and a CryptoKeyPair by their thumbprint", async () => {
+    const pair = (await crypto.subtle.generateKey({ name: "ECDSA", namedCurve: "P-256" }, true, [
+      "sign",
+      "verify",
+    ])) as CryptoKeyPair;
+    const der = new Uint8Array(await crypto.subtle.exportKey("spki", pair.publicKey));
+    const pem = `-----BEGIN PUBLIC KEY-----\n${btoa(String.fromCharCode(...der))}\n-----END PUBLIC KEY-----`;
+    const fromPem = valueOf(await importPublicKey(pem, { alg: "ES256", kid: "thumbprint" }));
+    const fromPair = valueOf(await importKeyPair(pair, { alg: "ES256", kid: "thumbprint" }));
+    const fromCryptoKey = valueOf(await importPublicKey(pair.publicKey, { alg: "ES256", kid: "thumbprint" }));
+    const expected = await jwkThumbprint(fromPem);
+    expect([fromPem.kid, fromPair.privateKey.kid, fromPair.publicKey.kid, fromCryptoKey.kid]).toEqual([
+      expected,
+      expected,
+      expected,
+      expected,
+    ]);
+  });
+
+  it("should name a secret by its oct thumbprint (RFC 7638 §3.2), from a JWK, bytes or a CryptoKey", async () => {
+    const expected = sha256Of(`{"k":"${HMAC_SECRET_JWK.k}","kty":"oct"}`);
+    const bytes = decodeBase64Url(HMAC_SECRET_JWK.k) as Uint8Array<ArrayBuffer>;
+    const cryptoKey = await crypto.subtle.importKey("raw", bytes, { name: "HMAC", hash: "SHA-256" }, true, [
+      "sign",
+      "verify",
+    ]);
+    const kids = await Promise.all(
+      [HMAC_SECRET_JWK, bytes, cryptoKey].map(async (input) => {
+        return valueOf(await importSecretKey(input, { alg: "HS256", kid: "thumbprint" })).kid;
+      }),
+    );
+    expect(kids).toEqual([expected, expected, expected]);
+  });
+
+  it("should refuse a non-extractable secret CryptoKey, whose thumbprint cannot be read, as invalid_key", async () => {
+    const cryptoKey = await crypto.subtle.generateKey({ name: "HMAC", hash: "SHA-256" }, false, ["sign", "verify"]);
+    expect(issuesOf(await importSecretKey(cryptoKey, { alg: "HS256", kid: "thumbprint" }))).toEqual([
+      { code: "invalid_key" },
+    ]);
   });
 });

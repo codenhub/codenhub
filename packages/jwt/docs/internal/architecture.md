@@ -16,7 +16,7 @@ In scope, and the package must get right:
 - **Algorithm substitution**: `alg: none`, RS/HS confusion, and any token that tries to choose how it is verified, including through `jwk`, `jku`, `x5u` or `x5c` headers.
 - **Parser differentials**: input that one JSON or base64 parser reads differently from another, such as duplicate member names, padding, or non-canonical trailing bits, so that what was signed and what is read could differ.
 - **Leaks through failures**: no issue, `TypeError` message or result holds a value of a token, claim, header, JWK or response.
-- **Forced work against an issuer**: a stream of tokens with invented `kid`s costs the issuer at most one fetch per cooldown window.
+- **Forced work against an issuer**: while the cache is usable, a stream of tokens with invented `kid`s costs the issuer at most one fetch per cooldown window. A fetch that misses its deadline or is cancelled with its request (decision 42) may be fetched again inside the window, but only when no usable cache can answer, so invented `kid`s alone never reach that path. `cooldown: 0` gives the bound up, never more than one fetch at a time.
 
 Out of scope, and documented rather than defended:
 
@@ -26,16 +26,18 @@ Out of scope, and documented rather than defended:
 
 ## Module layout
 
-| Folder      | Owns                                                                                                          |
-| ----------- | ------------------------------------------------------------------------------------------------------------- |
-| `core/`     | The public type contract (`types.ts`), limits, and the internal `ok`/`fail` helpers that deep-freeze results. |
-| `encoding/` | Strict base64url, the strict JSON object parser, and UTF-8 helpers.                                           |
-| `jws/`      | Compact parsing (`checkSegments`, `parseCompact`, `parsePayload`) and the public `readHeader`.                |
-| `keys/`     | The algorithm table, the key registry, JWK and PEM checks, import, generation, export and thumbprints.        |
-| `keysets/`  | Selection, local key sets, JWKS import, and the remote key set.                                               |
-| `sign/`     | `sign`.                                                                                                       |
-| `verify/`   | Option resolution, claim checks, and `createVerifier`.                                                        |
-| `interop/`  | A local copy of the Standard Schema v1 types, so the package has no dependency for them.                      |
+| Folder      | Owns                                                                                                                                                                                     |
+| ----------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `core/`     | The public type contract (`types.ts`), limits, and the internal `ok`/`fail` helpers that deep-freeze results.                                                                            |
+| `encoding/` | Strict base64url, the strict JSON object parser, and UTF-8 helpers.                                                                                                                      |
+| `jws/`      | Compact parsing (`checkSegments`, `parseCompact`, `parsePayload`), the public `readHeader`, and `parseJws`, which reads a JWS in any serialization.                                      |
+| `keys/`     | The algorithm table, the key registry, JWK and PEM checks, import, generation, export and thumbprints.                                                                                   |
+| `keysets/`  | Selection, local key sets, JWKS import, the remote key set, and the issuer's key ring.                                                                                                   |
+| `sign/`     | `sign`, and `signJws` and `signGeneralJws` for a JWS of any payload.                                                                                                                     |
+| `verify/`   | Option resolution, claim checks, `createVerifier`, and `createJwsVerifier`.                                                                                                              |
+| `dpop/`     | `createDpopProof` and `createDpopVerifier`.                                                                                                                                              |
+| `jwe/`      | Compact JWE: its algorithm table, key registry, JWK checks and keys, content encryption, key management, parsing, `encrypt`, the decrypter and nested verifier, and encryption key sets. |
+| `interop/`  | A local copy of the Standard Schema v1 types, so the package has no dependency for them.                                                                                                 |
 
 ## Algorithm binding
 
@@ -88,7 +90,7 @@ Rejected: `JSON.parse` with a reviver. A reviver sees the object after duplicate
 
 ### Headers
 
-`jws/compact.ts` checks, in order: the value is a string; its length is at most `maxLength`, before anything else; exactly three segments, each non-empty and canonical base64url; a header that parses under the rules above; a supported `alg`; no `crit`; no `b64`; and text `kid`, `typ` and `cty`. Members are read with `Object.hasOwn`, so a header can never pick up a value from `Object.prototype`. The payload segment's characters are checked here, but it is not decoded until the signature verifies.
+`jws/compact.ts` checks a JWT, in order: the value is a string; its length is at most `maxLength`, before anything else; exactly three segments, each non-empty and canonical base64url; a header that parses under the rules above; a supported `alg`; no `crit`; no `b64`; and text `kid`, `typ` and `cty`. Members are read with `Object.hasOwn`, so a header can never pick up a value from `Object.prototype`. The payload segment's characters are checked here, but it is not decoded until the signature verifies.
 
 `readHeader` runs exactly this function, so it can never accept a token a verifier would reject before key selection.
 
@@ -113,9 +115,20 @@ Time is `now() / 1000`, fractional seconds, compared with the numeric date claim
 
 The verified result is `ok({ header, payload, key })`, deep-frozen; header and payload are already frozen by the parser.
 
+## JWS verification flow
+
+`createJwsVerifier` (`verify/create-jws-verifier.ts`, decision 70) shares key selection, the key-set wrapper and the reporting of key-set errors with `createVerifier`, and the `alg` and text-member checks with `jws/compact.ts`. Its options are checked once; each call's options are checked when it is made. For each JWS:
+
+1. `parseJws` (`jws/parse-jws.ts`): the type, the length cap and well-formedness; then the compact form, or, when the text starts with `{` after JSON whitespace, the JSON form, parsed whole by the strict parser. A general JWS's `signatures` is counted before any entry is read. Every signature's structure and headers are checked here, and any issue fails the whole JWS: `alg`, `crit` and `b64` outside the protected header, a member in both headers, a `crit` that breaks RFC 7515 §4.1.11, a `b64` that is not a boolean, is missing from `crit`, or differs between signatures, and the payload's characters for its `b64`.
+2. The payload part of the signing input, from the JWS or from the detached payload the call gives, once for every signature.
+3. Each signature in order: `algIssue`, the `crit` names the verifier understands, `selectKey` with the merged headers, the key's `alg`, the signature's length, and `crypto.subtle.verify`. The first that verifies ends the loop; the others' issues are collected, prefixed with `["signatures", index]` in the general serialization.
+4. The payload's bytes, decoded only now, a new array per call.
+
+Signatures are checked one at a time rather than together, so a general JWS whose first signature verifies costs one key selection.
+
 ## Embedded keys and thumbprints
 
-A DPoP proof (RFC 9449) carries its public key in a `jwk` header. `sign` writes that member only from `embedKey`, a registered public key, never from `header`: it requires a private signing key of the same `alg`, writes the public members of the key's type in a fixed order, and verifies the signature it just made with `embedKey`, so a proof can never carry a key that does not verify it. The verifier still ignores `jwk`; a server that accepts a proof imports `header.jwk` itself, which keeps trusting a token's own key a choice the caller writes out (decision 30).
+A DPoP proof (RFC 9449) carries its public key in a `jwk` header. `sign` writes that member only from `embedKey`, a registered public key, never from `header`: it requires a private signing key of the same `alg`, writes the public members of the key's type in a fixed order, and verifies the signature it just made with `embedKey`, so a proof can never carry a key that does not verify it. A verifier from `createVerifier` still ignores `jwk`. `createDpopProof` signs through the same path, with `writeKeyKid` off so the proof carries no `kid`. `createDpopVerifier` is the one place a token's own key is trusted, and only for a proof (decision 62): it parses with `parseCompact`, refuses an `alg` outside its asymmetric allowlist before importing `header.jwk` for that `alg` with `importPublicKey`, verifies the signature itself, and then runs `checkClaims` with `maxAge` and `jti`, `htm` and `htu` required. The DPoP checks follow, collected with the claim issues; the caller's `nonce` function and `acceptJti` run only once the issues are empty, so a refused proof records nothing.
 
 `jwkThumbprint` exports the key's JWK and hashes only the members RFC 7638 §3.2 requires, in lexicographic order. Those members are base64url strings and fixed names, so `JSON.stringify` already writes the canonical form.
 
@@ -123,12 +136,13 @@ A DPoP proof (RFC 9449) carries its public key in a `jwk` header. `sign` writes 
 
 `keysets/select.ts` is shared by every built-in key set:
 
-- With a `kid`: candidates are the keys with that `kid`; none is `unknown_kid`. Among them, exactly one must have the header's `alg`: none is `alg_mismatch`, several `ambiguous_key`.
+- With a `kid`: candidates are the keys with that `kid`. Among them, exactly one must have the header's `alg`: none is `alg_mismatch`, several `ambiguous_key`.
+- With a `kid` no key has: a key without a `kid` stands in (decision 35), as a PEM key has none. Exactly one key without a `kid` must have the header's `alg`: several is `ambiguous_key`, none `unknown_kid`. A `kid` that is not a string never gets a stand-in.
 - Without a `kid`: exactly one key in the set must have the header's `alg`: none is `no_matching_key`, several `ambiguous_key`.
 
 Keys are never tried in turn. Trial verification would accept a token under a key it did not name, would make the cost of a forged token grow with the size of the set, and would make the outcome depend on the order of the set.
 
-`alg_mismatch` for a known `kid` is distinct from `unknown_kid` because only the latter can be fixed by refetching a JWKS; a remote key set refetches on `unknown_kid` alone.
+`alg_mismatch` for a known `kid` is distinct from `unknown_kid` because only the latter can be fixed by refetching a JWKS. A remote key set refetches when `lacksKid` holds: the header names a `kid` that no key in the cache carries, whatever the selection gave, `unknown_kid`, a stand-in key, or `ambiguous_key` among several stand-ins. Refetching only on `unknown_kid` would let a stand-in answer a rotated-in `kid` with `bad_signature` until the cache expired.
 
 Scope section 4 asked selection to filter by `use` and `key_ops` too. That filter runs once, at import: a JWK with `use` other than `sig` or `key_ops` without the needed operation is refused (`wrong_use`) or, in a JWKS, skipped, so every key that reaches a set is a signature key and selection needs no second filter.
 
@@ -140,33 +154,63 @@ Scope section 4 asked selection to filter by `use` and `key_ops` too. That filte
 
 ## Remote key set
 
-`keysets/remote.ts` keeps four pieces of state in the closure of `createRemoteKeySet`; the returned object is frozen and holds only `select`:
+`keysets/remote.ts` keeps its state in the closure of `createRemoteKeySet`; the returned object is frozen and holds only `select`:
 
-| State                | Meaning                                                                  |
-| -------------------- | ------------------------------------------------------------------------ |
-| `cached`             | The last successfully fetched keys and when they expire.                 |
-| `lastFailure`        | The failure of the last fetch, cleared by the next success.              |
-| `lastFetchStartedAt` | When the last fetch started, for the cooldown.                           |
-| `inFlight`           | The running fetch, shared by every caller that needs keys while it runs. |
+| State                | Meaning                                                                                                                                           |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `cached`             | The last keys fetched successfully, or imported from the seed: the keys, `fetchedAt` (from `now()` when the fetch completed) and `ttlMs`.         |
+| `lastFailure`        | The failure of the last fetch, cleared by the next success.                                                                                       |
+| `lastFetchStartedAt` | When the last fetch started, for the cooldown and for the fetch's deadline.                                                                       |
+| `inFlight`           | The running fetch, shared by every caller that needs keys while it runs.                                                                          |
+| `generation`         | Counts fetches started. A fetch that settles after a newer one replaced it changes no state; a failure it ends with still reaches `onFetchError`. |
+| `seeding`            | The import of the seed, started by the first `select` and awaited by every one.                                                                   |
+| `fetchState`         | Whether to pass `cache: "no-cache"`, cleared for the key set's life when the runtime refused it ([fetching](#fetching)).                          |
+
+The terms the steps use:
+
+- The cache is **fresh** while its age is under `ttlMs`, and **usable** while it is under `ttlMs` plus `maxStale`. The age is `now()` minus `fetchedAt`; an age down to minus a minute counts as 0, and a cache further in the future is neither.
+- The **cooldown** runs while less than `cooldown` has passed since `lastFetchStartedAt`; a clock earlier than that start ends it.
+- A fetch is **live** while it is in flight and its **deadline**, its start plus `timeout` plus a second, has not passed. It **counts as running** while it is live or the cooldown runs, so invented `kid`s cannot start fetches faster than one per cooldown even when fetches hang.
 
 A `select` call:
 
-1. If a fetch is running, answers from the cache when it is fresh and the selection is not `unknown_kid`, and otherwise waits for the fetch. Otherwise, if there is no cache or it has expired, fetches, unless the cooldown since the last fetch start has not passed.
-2. Takes the usable keys: the cache while `now < expiresAt + maxStale`, otherwise the last failure.
-3. Selects. If the result is `unknown_kid`, this call has not fetched yet, and the cooldown has passed, it refetches once (sharing any fetch in flight) and selects again from the fresh keys.
+1. Awaits the seed's import, once per key set.
+2. If a fetch counts as running: when the cache is usable, selects from it and answers, unless the header lacks a `kid` the cache carries and the fetch is live; otherwise joins the fetch. If none runs and the cache is not fresh, outside the cooldown: a usable cache answers this call and a fetch starts in the background to replace it (decision 37); without one, the call joins a new fetch.
+3. Takes the usable keys: the cache while it is usable, otherwise the last failure.
+4. Selects. When the header lacks a `kid` the keys carry, as `lacksKid` decides, this call has not fetched, and the cooldown is not running with no live fetch to join, it joins a fetch once more and selects from its keys. If that fetch fails, a stand-in key the first selection found still answers; otherwise the failure does.
 
-So each `select` starts at most one fetch, concurrent callers never start a second, and fetches caused by failures or unknown `kid`s are at least `cooldown` apart. A header without `kid` never refetches: `no_matching_key` cannot be fixed by a rotation the issuer announces through `kid`s, and refetching on it would let any token without a `kid` force fetches.
+Joining a fetch (decision 42) starts one when none counts as running. Otherwise it waits for the running fetch until its deadline. A fetch that settles in time gives its result. One that misses the deadline, or rejects, as on Workers when the request that started it ended, is given up: inside the cooldown a usable cache answers instead, and otherwise the call starts a fetch of its own, once.
 
-The TTL counts from when a fetch completes. Stale keys are served under the bound of decision 5 and are never re-dated: `expiresAt` only moves on a successful fetch, so `maxStale` is a hard limit from the last success. The default cooldown is `min(30, cacheTtl)`, since a cooldown longer than the TTL would keep an expired cache from refreshing.
+So each `select` starts at most two fetches, the second only after the first was given up, concurrent callers never start a second fetch while one is live, and fetches caused by failures or unknown `kid`s are at least `cooldown` apart. A header without `kid` never refetches: `no_matching_key` cannot be fixed by a rotation the issuer announces through `kid`s, and refetching on it would let any token without a `kid` force fetches.
+
+The TTL counts from when a fetch completes. `ttlMs` is `cacheTtl`, shortened by the response's `Cache-Control` ([fetching](#fetching)); a seed gets `cacheTtl`, since a snapshot does not record the response's headers. Stale keys are served under the bound of decision 5 and are never re-dated: `fetchedAt` only moves on a successful fetch, so `maxStale` is a hard limit from the last success. A failed fetch, `no_usable_keys` included, leaves `cached` as it was. The default cooldown is `min(30, cacheTtl)`, since a cooldown longer than the TTL would keep an expired cache from refreshing.
+
+The seed is read when the key set is created and imported at the first `select`. Anything but an object with a finite `fetchedAt` and a string `url` whose normalized `href` is the key set's own is no seed, and neither is a `jwks` that imports no usable key (decision 38): a seed comes from storage, which another key set or an older build may have written.
 
 ### Fetching
 
-- **`GET` with `accept: application/json`, `redirect: "manual"`.** A redirect is a `status` failure: following one would let whoever controls the redirect target supply keys, and the URL is what the consumer configured. `credentials` and `cache` are not passed, because Cloudflare Workers rejects some of their values, and neither is needed for a public JWKS.
+- **`GET` with `accept: application/json`, `redirect: "manual"`.** A redirect is a `status` failure: following one would let whoever controls the redirect target supply keys, and the URL is what the consumer configured. `credentials` is not passed: a public JWKS needs none, and Cloudflare Workers rejects some of its values.
+- **`cache: "no-cache"`.** A browser's HTTP cache honours the issuer's `Cache-Control`, so without it a refetch for a rotated-in `kid` or after `cacheTtl` could be answered from the browser's copy, and the TTL, the refetch on an unknown `kid` and `maxStale` would no longer bound how old the keys are. A `Cache-Control: no-cache` request header would do the same but is not CORS-safelisted, so a cross-origin JWKS would need a preflight. Workers before compatibility date 2025-08-07 reject the member (see the trap in the package's `AGENTS.md`), so a rejection whose message names `cache` is tried once more without it, and `fetchState` then leaves `cache` out for the key set's life. A network failure also rejects with a `TypeError` but names no `cache`, so it is not retried and a failing issuer still costs one request per fetch.
 - **HTTPS only, no credentials in the URL**, checked at creation. `http:` is accepted on a loopback host, `localhost`, `127.0.0.0/8` or `[::1]`, matched on the parsed URL's `hostname` so that spellings such as `127.1` normalize first (decision 29). A URL with a user name or password would put a secret where logs and error trackers print URLs.
 - **`fetch` is looked up at each call** when not injected, so test stubs and polyfills installed after creation are used, and it is called through a local so a browser's `fetch` never runs with a foreign `this`.
 - **Timeout** by racing the request against a timer that aborts the `AbortController`. The race, not the abort signal alone, bounds the time: a `fetch` or body stream that ignores the signal still cannot hold the caller past `timeout`.
 - **Size cap.** A `Content-Length` over the cap fails before the body is read. The body is read from its stream, and the read stops and the stream is cancelled as soon as the total passes the cap, so a server that lies about or omits `Content-Length` still cannot make the package buffer more than the cap plus one chunk. A response without a body stream falls back to `arrayBuffer()` and is checked after.
+- **Body.** One leading UTF-8 byte order mark is dropped, since some servers write one, and the rest is parsed as a strict JSON object, as a token's header is. Token parsing drops nothing: a token's segments are base64url, where a byte order mark is never legitimate. A JWKS that imports no key for `algorithms` is `no_usable_keys` rather than an empty cache, which would turn every token into `unknown_kid` until the next fetch.
+- **`Cache-Control`.** `max-age` shortens the TTL, clamped to `cooldown` at least and `cacheTtl` at most, so an issuer that announces a short lifetime ahead of a rotation is fetched sooner, and neither a header nor its absence lifts the bound the consumer set. `no-store` and `no-cache` give the minimum. Directives are split on commas, names compared case-insensitively, and a `max-age` whose value is not all digits ignored; the first well-formed `max-age` wins, as RFC 9111 §4.2.1 allows. `s-maxage` is for shared caches and ignored.
 - **Never throws.** Every failure, including an unexpected exception from a stub, becomes `key_fetch_failed` with a `reason`. Rejections that arrive after the outcome is decided are caught so they are not reported as unhandled.
+
+## Encryption (JWE)
+
+`jwe/` holds compact JWE (decisions 63 to 69) beside the JWS code, sharing its encoding, strict JSON, result and option helpers and nothing that decides what a key may do.
+
+- **Separate keys.** JWE keys are registered in their own `WeakMap` (`jwe/registry.ts`), so `getKeyEntry` never finds one and `getJweKeyEntry` never finds a signing key: no JWS function accepts an encryption key, and the reverse, at the type and at the runtime level. Each key is bound to one key management `alg`, and a `dir` secret also to one `enc`. JWK checks (`jwe/jwk.ts`) reuse the signing checks' rules for `use`, `key_ops` (decision 52), `kid` and RSA moduli, with `enc` in place of `sig`.
+- **Algorithms.** `jwe/algorithms.ts` is the one table of key management and content algorithms, curves and parameter sizes. Content encryption (`jwe/content.ts`) is AES-GCM, or AES-CBC with HMAC as RFC 7518 §5.2 composes them, the tag checked in constant time before AES-CBC decrypts. Key management (`jwe/key-management.ts`) is AES key wrap, RSA-OAEP, and ephemeral-static ECDH with the Concat KDF over SHA-256. An `epk` is imported on the recipient key's curve, with only the members a public key has; an X25519 point of low order, and an all-zero shared secret on any curve, are refused.
+- **Parsing.** `jwe/compact.ts` caps the length before decoding, splits exactly five segments of strict base64url, parses the protected header with the strict JSON parser, and checks `alg`, `enc`, `zip`, `crit` and the typed members before any key is selected; the additional authenticated data is the header segment's ASCII. `alg` and `enc` come from the protected header only.
+- **One failure after selection.** Once a key is selected, every failure to recover the content key, and every tag failure, is the one frozen `DECRYPTION_FAILED` issue. When unwrapping fails, a random content key of the right length stands in and decryption proceeds to the tag (RFC 7516 §11.5), so neither the result nor the path taken says which step failed.
+- **Bytes out.** A decrypter returns the plaintext as a fresh `Uint8Array`, not frozen, since freezing a typed array's elements is not possible; header and result are frozen. `decodeJsonObject` and `createNestedVerifier` are the only readers of plaintext, and claims are trusted only after the nested verifier's signature check (decision 66).
+- **Recipient key sets.** `importEncryptionKeySet` (`jwe/keyset.ts`) and `createRemoteEncryptionKeySet` reuse the JWKS reader, cache and fetch path of `importKeySet` and `createRemoteKeySet` and swap the per-JWK import for `importJwePublicKey`. They are separate functions so a verifier bundle does not carry JWE import code. Selection is the generic `select` of `keysets/`, by `kid` and `alg`, with no trial decryption.
+
+The decrypter's default `maxLength` is 16384, twice a verifier's, since a nested token is a signed token grown by a third in base64url and a header; the range is the same, 1 through 65536.
 
 ## Limits
 
@@ -174,12 +218,13 @@ The TTL counts from when a fetch completes. Stale keys are served under the boun
 | ----------------------------- | -------------------------- | ---------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Token length                  | 8192 characters            | `maxLength`, 1 to 65536            | Large enough for ID tokens with many claims; the ceiling stops a typo from lifting the bound.                                                                                                                                             |
 | JSON depth                    | 32                         | no                                 | JWT claims are shallow; 32 leaves room for nested custom claims. The parser keeps open containers on its own stack, so depth never threatens the call stack; the limit bounds what consumers walking the payload recursively must handle. |
+| Signatures in a general JWS   | 8                          | no                                 | Each costs a key selection and a signature check; a JWS signed for a few recipients needs a handful.                                                                                                                                      |
 | Keys in a JWKS                | 100                        | no                                 | Issuers publish a handful; each key costs an import.                                                                                                                                                                                      |
 | RSA modulus                   | 2048 to 8192 bit           | no                                 | NIST minimum below; above, verification cost grows with no security need.                                                                                                                                                                 |
 | HMAC secret                   | 32, 48 or 64 bytes minimum | no                                 | RFC 7518 §3.2 requires a key at least as long as the hash output of `HS256`, `HS384` or `HS512`.                                                                                                                                          |
 | PEM text                      | 16384 characters           | no                                 | A PKCS#8 RSA-8192 key, the largest imported, is about 6.4 KB; the cap bounds the scan before any decoding.                                                                                                                                |
 | Clock tolerance               | 0 s, at most 300 s         | `clockTolerance`                   | Decision 6. `nbf` and `iat` use at least 60 s (decision 26).                                                                                                                                                                              |
-| Remote TTL / cooldown / stale | 600 s / 30 s / 3600 s      | `cacheTtl`, `cooldown`, `maxStale` | Typical issuer rotation windows; decision 5 for stale.                                                                                                                                                                                    |
+| Remote TTL / cooldown / stale | 600 s / 30 s / 3600 s      | `cacheTtl`, `cooldown`, `maxStale` | Typical issuer rotation windows; decision 5 for stale. A response's `max-age` shortens the TTL, never below `cooldown`.                                                                                                                   |
 | Remote timeout                | 5 s, at most 60 s          | `timeout`                          | A JWKS is small; a slow issuer should fail a request, not hold it.                                                                                                                                                                        |
 | Remote response               | 65536 bytes, at most 1 MiB | `maxResponseBytes`                 | A typical JWKS is a few kilobytes; the 1 MiB ceiling holds 100 RSA-8192 JWKs with room to spare.                                                                                                                                          |
 
@@ -196,7 +241,7 @@ The source uses only `globalThis.crypto.subtle`, `TextEncoder`, `TextDecoder`, `
 
 - **No `Buffer` and no `node:` imports**, so the package runs unchanged in browsers, Deno, Bun and workerd.
 - **No `atob`/`btoa`**, because their leniency is exactly what the strict decoder exists to refuse.
-- **No `credentials` or `cache` in `fetch` options**, for workerd (see [Fetching](#fetching)).
+- **No `credentials` in `fetch` options, and `cache` only while the runtime takes it**, for workerd (see [Fetching](#fetching)).
 
 `tsconfig.src.json` sets `types: []`, so a Node.js global used in `src/` fails the type check.
 

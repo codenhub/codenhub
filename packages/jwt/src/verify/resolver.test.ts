@@ -146,6 +146,19 @@ describe("createVerifier with a key set resolver", () => {
     expect(counted.calls.count).toBe(2);
   });
 
+  it("should deep-freeze the result, whose payload was read to route the token", async () => {
+    const result = await verifierWith((issuer) => sets.get(issuer))(
+      await tokenFor(pairA, { iss: ISSUER_A, roles: ["admin"], profile: { name: "n" } }),
+    );
+    const value = result.ok ? result.value : undefined;
+    const payload = value?.payload as { roles: string[]; profile: object } | undefined;
+
+    expect(
+      payload !== undefined &&
+        [result, value, value?.header, payload, payload.roles, payload.profile, value?.key].every(Object.isFrozen),
+    ).toBe(true);
+  });
+
   it("should still run the claim checks on the routed token", async () => {
     const token = await sign({ payload: { iss: ISSUER_A, exp: NOW_SECONDS - 1 }, key: pairA.privateKey });
 
@@ -203,5 +216,29 @@ describe("createVerifier with a resolver that returns a route", () => {
       failure({ code: "key_fetch_failed", params: { reason: "key_set_error" } }),
     );
     expect(errors.map((error) => error instanceof TypeError)).toEqual([true]);
+  });
+
+  it.each([
+    ["a misspelled audience", { audiance: "tenant-a" }, "audiance"],
+    ["typ in place of type", { typ: "at+jwt" }, "typ"],
+    ["an option the route does not take", { issuer: ISSUER_A }, "issuer"],
+    ["an unknown member set to undefined", { audiance: undefined }, "audiance"],
+    ["a long unknown member", { ["x".repeat(100)]: 1 }, `${"x".repeat(64)}...`],
+  ])("should fail with key_set_error for a route with %s, naming the member", async (_name, extra, shown) => {
+    const errors: unknown[] = [];
+    const verify = createVerifier({
+      keys: () => ({ keys: sets.get(ISSUER_A), ...extra }) as never,
+      now: clockAt(),
+      onKeySetError: (error) => errors.push(error),
+    });
+    expect(await verify(await tokenFor(pairA, { iss: ISSUER_A }))).toEqual(
+      failure({ code: "key_fetch_failed", params: { reason: "key_set_error" } }),
+    );
+    expect(errors).toEqual([new TypeError(`createVerifier: route.${shown} is not an option.`)]);
+  });
+
+  it("should ignore symbol members of a route", async () => {
+    const route = { keys: sets.get(ISSUER_A), [Symbol("tag")]: true };
+    expect((await routeVerifier(route)(await tokenFor(pairA, { iss: ISSUER_A }))).ok).toBe(true);
   });
 });

@@ -2,7 +2,7 @@
   "name": "@codenhub/jwt",
   "version": "0.1.0",
   "private": false,
-  "description": "JWS signing and verification, JWK import and export, and key sets on Web Crypto, for untrusted tokens.",
+  "description": "JWT and JWS signing and verification, JWE encryption, JWK import and export, key sets, key rotation and DPoP on Web Crypto, for untrusted tokens.",
   "keywords": [
     "dpop",
     "jose",
@@ -43,7 +43,7 @@
     "access": "public"
   },
   "scripts": {
-    "build": "tsdown src/index.ts --tsconfig tsconfig.src.json --format esm --dts --clean --no-fixed-extension",
+    "build": "tsdown src/index.ts --tsconfig tsconfig.src.json --format esm --dts --clean --no-fixed-extension --unbundle",
     "prepublishOnly": "pnpm build && pnpm typecheck",
     "status:npm": "npm view @codenhub/jwt version dist-tags time --json && npm dist-tag ls @codenhub/jwt && npm access get status @codenhub/jwt",
     "status:pack": "npm pack --dry-run --ignore-scripts",

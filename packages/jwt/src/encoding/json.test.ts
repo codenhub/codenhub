@@ -26,6 +26,21 @@ describe("parseJsonObject", () => {
     expect(result.ok && Object.isFrozen((result.value["a"] as { b: object[] }).b[0])).toBe(true);
   });
 
+  it("should freeze the result and every container in it, the empty and the last ones included", () => {
+    const result = parse('{"a":[[],{}],"b":{"c":[1,{"d":[]}]},"e":{}}');
+    const containers: object[] = [result];
+    for (let index = 0; index < containers.length; index++) {
+      for (const child of Object.values(containers[index] as object)) {
+        if (typeof child === "object" && child !== null) {
+          containers.push(child as object);
+        }
+      }
+    }
+
+    expect(containers).toHaveLength(10);
+    expect(containers.every(Object.isFrozen)).toBe(true);
+  });
+
   it("should give parsed objects Object.prototype, as JSON.parse does", () => {
     const result = parse('{"a":{}}');
 

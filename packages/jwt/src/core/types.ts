@@ -6,7 +6,7 @@ export type JwtPathSegment = string | number;
 /**
  * Stable category of a failure that callers can branch on without parsing messages.
  *
- * Token codes come from {@link Verifier} and {@link readHeader}; key codes from the `import*`
+ * Token codes come from {@link Verifier}, {@link JwsVerifier} and {@link readHeader}; key codes from the `import*`
  * functions and key sets; `key_fetch_failed` from any key set that fails, remote or custom.
  *
  * A minor release may add codes, and values of `params.reason`, when a new check or failure needs its own
@@ -19,6 +19,7 @@ export type JwtIssueCode =
   | "duplicate_key"
   | "unsupported_crit"
   | "unsupported_alg"
+  | "missing_payload"
   // Key selection and signature
   | "unknown_kid"
   | "no_matching_key"
@@ -26,17 +27,29 @@ export type JwtIssueCode =
   | "alg_mismatch"
   | "bad_signature"
   | "key_fetch_failed"
+  // Encryption (JWE)
+  | "unsupported_enc"
+  | "decryption_failed"
   // Claims
   | "expired"
   | "not_yet_valid"
   | "issued_in_future"
   | "too_old"
   | "wrong_issuer"
+  | "wrong_subject"
   | "wrong_audience"
   | "wrong_type"
   | "missing_claim"
   | "invalid_claim"
-  | "invalid_claims"
+  | "schema_failed"
+  // DPoP proofs
+  | "wrong_method"
+  | "wrong_url"
+  | "wrong_access_token_hash"
+  | "wrong_nonce"
+  | "wrong_key"
+  | "replayed"
+  | "callback_failed"
   // Key import
   | "invalid_key"
   | "unsupported_key"
@@ -49,7 +62,7 @@ export type JwtIssueCode =
  *
  * An issue this package creates never holds a value taken from the input: no token segment, claim value,
  * header value, or key material. It names which check failed and, where useful, the limit or the claim the
- * check used. An `invalid_claims` path is whatever the caller's schema reports, which for a record-style
+ * check used. A `schema_failed` path is whatever the caller's schema reports, which for a record-style
  * schema can include claim names from the token. A custom key set's issues are passed through, so those
  * hold only what the caller's code puts in them.
  */
@@ -178,25 +191,102 @@ export type SigningKey = PrivateKey | SecretKey;
 /** A key that can verify. */
 export type VerificationKey = PublicKey | SecretKey;
 
-/** A JSON Web Key as this package exports it. Every exported JWK is frozen. */
-export interface Jwk {
-  readonly kty: "EC" | "OKP" | "RSA" | "oct";
-  readonly alg: JwsAlgorithm;
+/** The key material members of a JWK, across every key type. */
+type JwkMaterialMember = "crv" | "x" | "y" | "n" | "e" | "d" | "p" | "q" | "dp" | "dq" | "qi" | "k";
+
+/**
+ * The members every JWK this package exports has, and every material member of other key types as absent, so
+ * a member of any JWK can still be read by name: `jwk.n` is `undefined` on an `EC` key rather than a compile
+ * error, and `jwk.d !== undefined` tells a private JWK from a public one.
+ */
+type JwkMembers<TAlgorithm extends JwsAlgorithm, TOwn extends JwkMaterialMember> = {
+  readonly alg: TAlgorithm;
   readonly use: "sig";
   readonly kid?: string;
-  readonly crv?: "P-256" | "P-384" | "P-521" | "Ed25519";
-  readonly x?: string;
-  readonly y?: string;
-  readonly n?: string;
-  readonly e?: string;
-  readonly d?: string;
-  readonly p?: string;
-  readonly q?: string;
-  readonly dp?: string;
-  readonly dq?: string;
-  readonly qi?: string;
-  readonly k?: string;
+} & { readonly [TMember in Exclude<JwkMaterialMember, TOwn>]?: never };
+
+/** An elliptic-curve public key (RFC 7518 §6.2), as {@link exportPublicJwk} exports an `ES*` key. */
+export interface EcPublicJwk extends JwkMembers<Extract<AsymmetricAlgorithm, `ES${string}`>, "crv" | "x" | "y"> {
+  readonly kty: "EC";
+  readonly crv: "P-256" | "P-384" | "P-521";
+  readonly x: string;
+  readonly y: string;
 }
+
+/** An elliptic-curve private key, as {@link exportPrivateJwk} exports an `ES*` key. */
+export interface EcPrivateJwk
+  extends
+    JwkMembers<Extract<AsymmetricAlgorithm, `ES${string}`>, "crv" | "x" | "y" | "d">,
+    Pick<EcPublicJwk, "kty" | "crv" | "x" | "y"> {
+  readonly d: string;
+}
+
+/** An Ed25519 public key (RFC 8037 §2), as {@link exportPublicJwk} exports an `EdDSA` or `Ed25519` key. */
+export interface OkpPublicJwk extends JwkMembers<Extract<AsymmetricAlgorithm, `Ed${string}`>, "crv" | "x"> {
+  readonly kty: "OKP";
+  readonly crv: "Ed25519";
+  readonly x: string;
+}
+
+/** An Ed25519 private key, as {@link exportPrivateJwk} exports an `EdDSA` or `Ed25519` key. */
+export interface OkpPrivateJwk
+  extends
+    JwkMembers<Extract<AsymmetricAlgorithm, `Ed${string}`>, "crv" | "x" | "d">,
+    Pick<OkpPublicJwk, "kty" | "crv" | "x"> {
+  readonly d: string;
+}
+
+/** An RSA public key (RFC 7518 §6.3), as {@link exportPublicJwk} exports an `RS*` or `PS*` key. */
+export interface RsaPublicJwk extends JwkMembers<
+  Extract<AsymmetricAlgorithm, `RS${string}` | `PS${string}`>,
+  "n" | "e"
+> {
+  readonly kty: "RSA";
+  readonly n: string;
+  readonly e: string;
+}
+
+/** An RSA private key with its CRT members, as {@link exportPrivateJwk} exports an `RS*` or `PS*` key. */
+export interface RsaPrivateJwk
+  extends
+    JwkMembers<
+      Extract<AsymmetricAlgorithm, `RS${string}` | `PS${string}`>,
+      "n" | "e" | "d" | "p" | "q" | "dp" | "dq" | "qi"
+    >,
+    Pick<RsaPublicJwk, "kty" | "n" | "e"> {
+  readonly d: string;
+  readonly p: string;
+  readonly q: string;
+  readonly dp: string;
+  readonly dq: string;
+  readonly qi: string;
+}
+
+/** An HMAC secret (RFC 7518 §6.4), as {@link exportSecretJwk} exports it. */
+export interface OctJwk extends JwkMembers<SymmetricAlgorithm, "k"> {
+  readonly kty: "oct";
+  readonly k: string;
+}
+
+/** An elliptic-curve JWK, public or private. */
+export type EcJwk = EcPublicJwk | EcPrivateJwk;
+/** An Ed25519 JWK, public or private. */
+export type OkpJwk = OkpPublicJwk | OkpPrivateJwk;
+/** An RSA JWK, public or private. */
+export type RsaJwk = RsaPublicJwk | RsaPrivateJwk;
+
+/** A public JWK, as {@link exportPublicJwk} exports it. Narrow it on `kty`. */
+export type PublicJwk = EcPublicJwk | OkpPublicJwk | RsaPublicJwk;
+/** A private JWK, its public members included, as {@link exportPrivateJwk} exports it. Narrow it on `kty`. */
+export type PrivateJwk = EcPrivateJwk | OkpPrivateJwk | RsaPrivateJwk;
+/** A secret JWK, as {@link exportSecretJwk} exports it. */
+export type SecretJwk = OctJwk;
+
+/**
+ * A JSON Web Key as this package exports it: one of the shapes above, told apart by `kty`, and by `d` or `k`
+ * for private material. Every exported JWK is frozen.
+ */
+export type Jwk = PublicJwk | PrivateJwk | SecretJwk;
 
 /** A verified or inspected JWS protected header. Frozen. */
 export interface JwtHeader {
@@ -294,7 +384,8 @@ export type KeySetResolver = (
 /**
  * What a {@link KeySetResolver} returns for an issuer whose tokens are checked differently from the verifier's
  * defaults, such as a tenant whose tokens name its own audience:
- * `{ keys: tenant.keySet, audience: tenant.clientId }`.
+ * `{ keys: tenant.keySet, audience: tenant.clientId }`. A route with any other member, such as a misspelled
+ * `audiance` or a `typ`, is invalid rather than ignored, like a route whose members have invalid values.
  */
 export interface KeySetRoute {
   /** The issuer's key set. */
@@ -326,7 +417,7 @@ export interface LocalKeySet extends KeySet {
 }
 
 /** A verified token. Frozen. */
-export interface VerifiedJwt<TPayload extends JwtPayload = JwtPayload> {
+export interface VerifiedJwt<TPayload extends JwtRegisteredClaims = JwtPayload> {
   /** The protected header. */
   readonly header: JwtHeader;
   /** The payload, after every configured claim check passed. */
@@ -344,6 +435,11 @@ export interface VerifierOptions<TSchema extends StandardSchemaV1 | undefined = 
   readonly keys: KeySet | KeySetResolver;
   /** Accepted `iss` values. When set, `iss` is required and must equal one exactly. */
   readonly issuer?: string | readonly string[];
+  /**
+   * Accepted `sub` values, for a verifier that accepts tokens about known subjects only, such as a client
+   * assertion whose `sub` must be the client's own id. When set, `sub` is required and must equal one exactly.
+   */
+  readonly subject?: string | readonly string[];
   /**
    * Accepted audiences. When set, `aud` is required, and a token passes when its `aud` (a string or
    * an array) contains at least one of them.
@@ -402,7 +498,7 @@ export interface VerifierOptions<TSchema extends StandardSchemaV1 | undefined = 
   readonly requiredClaims?: readonly string[];
   /**
    * Standard Schema run on the payload after every other check passed. Its issues become
-   * `invalid_claims` issues carrying only their path; its messages are dropped, since they may quote
+   * `schema_failed` issues carrying only their path; its messages are dropped, since they may quote
    * the input. The schema checks; it does not transform: the returned payload is the token's own.
    */
   readonly claims?: TSchema;
@@ -432,12 +528,97 @@ export type VerifiedPayload<TSchema extends StandardSchemaV1 | undefined> = TSch
 
 /**
  * A configured verifier. Call it with any value; it never throws for a token, whatever its content.
+ * `TPayload` is the payload type {@link createVerifier} gave it, from its `claims` schema or its type argument.
  * Only caller code makes its promise reject: a `claims` schema that throws or rejects, or an
  * `options.now` that returns something other than a finite number.
  *
  * @returns The verified token, or every issue found. Structural, key, and signature failures stop at
  * the first issue; claim checks report every failing claim.
  */
-export type Verifier<TPayload extends JwtPayload = JwtPayload> = (
+export type Verifier<TPayload extends JwtRegisteredClaims = JwtPayload> = (
   token: unknown,
 ) => Promise<JwtResult<VerifiedJwt<TPayload>>>;
+
+/**
+ * The protected header of a verified JWS (RFC 7515), as {@link createJwsVerifier} returns it. Frozen.
+ *
+ * Beyond {@link JwtHeader}, it may carry `b64` (RFC 7797) and `crit`, which the verifier has checked: every
+ * name in `crit` is `b64` or one the verifier's `crit` option lists, and is present in this header.
+ */
+export interface JwsHeader extends JwtHeader {
+  /** `false` when the payload was signed as is rather than base64url-encoded (RFC 7797). */
+  readonly b64?: boolean;
+  /** Header parameters the signer marked as critical, each understood by the verifier. */
+  readonly crit?: readonly string[];
+  /** Any other header parameter. Redeclared from {@link JwtHeader} so the API reference documents it here. */
+  readonly [parameter: string]: unknown;
+}
+
+/** A verified JWS. Frozen, except `payload`, a byte array no other result shares. */
+export interface VerifiedJws {
+  /**
+   * The payload's bytes, after the signature verified: decoded from base64url, the unencoded payload's UTF-8
+   * bytes when `b64` is `false`, or a copy of the detached payload given to the verifier. Decode text with
+   * `new TextDecoder("utf-8", { fatal: true }).decode(payload)`.
+   */
+  readonly payload: Uint8Array<ArrayBuffer>;
+  /** The protected header of the signature that verified. */
+  readonly header: JwsHeader;
+  /**
+   * The unprotected header of that signature, in the JSON serialization, when it has one. The signature does
+   * not cover it: anyone who handles the JWS can change it.
+   */
+  readonly unprotectedHeader?: Readonly<Record<string, unknown>>;
+  /** The key whose signature matched. */
+  readonly key: VerificationKey;
+  /** The index of the signature that verified in the general JSON serialization's `signatures`; otherwise 0. */
+  readonly signatureIndex: number;
+}
+
+/** How {@link createJwsVerifier} checks a JWS. Invalid options throw `TypeError` when the verifier is created. */
+export interface JwsVerifierOptions {
+  /** Where verification keys come from. Each signature's key is selected from its header, as a JWT's is. */
+  readonly keys: KeySet;
+  /**
+   * Extension header parameters your code understands and processes, so a JWS that lists them in `crit` is
+   * accepted; a JWS whose `crit` names any other parameter fails with `unsupported_crit`. `b64` is always
+   * understood and may not be listed, nor may a parameter RFC 7515 or RFC 7518 defines.
+   *
+   * @defaultValue none: only `b64` may be critical
+   */
+  readonly crit?: readonly string[];
+  /**
+   * Maximum length of the JWS in characters, compact or JSON, checked before any decoding. An integer from 1
+   * through 65536. A detached payload does not count.
+   *
+   * @defaultValue 8192
+   */
+  readonly maxLength?: number;
+  /**
+   * Called with what went wrong when the key set fails with `key_set_error`, as
+   * {@link VerifierOptions.onKeySetError} is.
+   */
+  readonly onKeySetError?: (error: unknown) => void;
+}
+
+/** Per-call input to a {@link JwsVerifier}. Unknown members throw `TypeError`. */
+export interface JwsVerifyOptions {
+  /**
+   * The detached payload (RFC 7515 Appendix F), for a JWS that carries none: a compact JWS whose payload
+   * segment is empty, or a JSON one without `payload` or with an empty one. A string is signed as its UTF-8
+   * bytes. A JWS that carries a payload of its own fails with `malformed` when this is given.
+   *
+   * @defaultValue none: the JWS must carry its payload
+   */
+  readonly payload?: Uint8Array | string;
+}
+
+/**
+ * A configured JWS verifier. Call it with any value; it never throws for a JWS, whatever its content. Its
+ * promise rejects only for caller mistakes: `options` that is not an object, holds an unknown member, or has
+ * a `payload` that is neither a string nor a `Uint8Array`.
+ *
+ * @returns The verified JWS, or every issue found. In the general JSON serialization, a failure lists each
+ * signature's issue under `["signatures", index]`.
+ */
+export type JwsVerifier = (jws: unknown, options?: JwsVerifyOptions) => Promise<JwtResult<VerifiedJws>>;

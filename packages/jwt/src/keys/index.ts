@@ -1,3 +1,19 @@
+export type {
+  Jwk,
+  EcJwk,
+  EcPrivateJwk,
+  EcPublicJwk,
+  OctJwk,
+  OkpJwk,
+  OkpPrivateJwk,
+  OkpPublicJwk,
+  PrivateJwk,
+  PublicJwk,
+  RsaJwk,
+  RsaPrivateJwk,
+  RsaPublicJwk,
+  SecretJwk,
+} from "../core/types";
 export {
   ALGORITHM_PARAMS,
   ASYMMETRIC_ALGORITHMS,
@@ -8,10 +24,10 @@ export {
   SYMMETRIC_ALGORITHMS,
   type AlgorithmParams,
 } from "./algorithms";
-export { exportPrivateJwk, exportPublicJwk, exportSecretJwk } from "./export";
+export { exportPrivateJwk, exportPrivatePem, exportPublicJwk, exportPublicPem, exportSecretJwk } from "./export";
 export { createExternalSigningKey, type ExternalSigningKeyOptions } from "./external";
 export { getPublicKey } from "./public-key";
-export { jwkThumbprint } from "./thumbprint";
+export { certificateThumbprint, jwkThumbprint, jwkThumbprintUri } from "./thumbprint";
 export { tokenHash } from "./token-hash";
 export {
   generateKeyPair,
