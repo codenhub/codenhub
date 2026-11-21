@@ -400,6 +400,39 @@ test("every component is in an intent reset", async () => {
   expect(problems).toEqual([]);
 });
 
+/* A component's `native` list says which bare elements `/native` maps onto it,
+   so it has to be the selectors `native.css` composes the component into. The
+   `ipt` entry once claimed every `<input>` but the toggles and buttons, range,
+   colour, file, image, and hidden included, where `native.css` names only the
+   typed text fields. Compared as sets, with a `:where()` the rule wraps a
+   refinement in left out, since it adds no element; a component listing no
+   native element is not held to it. */
+test("every component's native list is what native.css composes into it", async () => {
+  const composed = new Map<string, Set<string>>();
+
+  postcss.parse(await read("src/native.css")).walkAtRules("compose", (rule) => {
+    const name = rule.params.split(/\s+/)[0]!;
+    const selectors = (rule.parent as { selectors?: string[] }).selectors ?? [];
+    const set = composed.get(name) ?? new Set<string>();
+
+    for (const selector of selectors) {
+      set.add(selector.replace(/:where\((?:[^()]|\([^()]*\))*\)/g, "").replace(/\s+/g, ""));
+    }
+    composed.set(name, set);
+  });
+
+  const mismatches = registry.components
+    .filter((component) => component.native.length > 0)
+    .map((component) => ({
+      class: component.class,
+      registry: [...component.native].map((selector) => selector.replace(/\s+/g, "")).sort(),
+      native: [...(composed.get(component.class) ?? [])].sort(),
+    }))
+    .filter((entry) => JSON.stringify(entry.registry) !== JSON.stringify(entry.native));
+
+  expect(mismatches).toEqual([]);
+});
+
 /* Every utility in `src/` -- a rule directly in `@layer utilities` whose
    selector is one class, as `scripts/lib/compile.mjs` reads it -- with its rule
    as written, from the selector to the closing brace. */
