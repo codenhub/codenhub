@@ -1467,6 +1467,18 @@
   }
 }
 
+@layer utilities {
+  /* An unchecked toggle has nothing but its line to show it, so a named
+     intent draws that line in its strong tone, as increased contrast does for
+     every line. The intent's own tone measured 2.7:1 for warning in light and
+     2.9:1 for info in dark against the page (docs/guidelines/accessibility.md,
+     "A control's boundary"). Neutral keeps the control line, already above
+     3:1. A checked toggle's line walks to its full fill, so it is unchanged. */
+  :is(.checkbox, .radio, .switch):is(.primary, .secondary, .success, .warning, .destructive, .info) {
+    --intent-border: var(--intent-strong);
+  }
+}
+
 @media (forced-colors: active) {
   .checkbox,
   .radio,
