@@ -238,16 +238,26 @@ test.describe("generated palette", () => {
     });
   }
 
-  /* The nearest explicit theme wins, as it does for the package's own tokens:
-     a light subtree inside a dark one reads the light values, a dark one
-     inside it the dark values again, and dark wins on an element carrying
-     both, as `color-scheme` does. */
+  /* Each value is a `light-dark()` pair, so it follows `color-scheme` as the
+     package's own tokens do: the nearest explicit theme wins at any depth, and
+     with no theme selector the system's setting decides. Read through a
+     colour, since the custom property itself holds the unresolved pair. */
   test("follows the nearest explicit theme, nested either way", async ({ page }) => {
     const values = await page.evaluate(() => {
-      const read = (element: Element) => getComputedStyle(element).getPropertyValue("--palette-text").trim();
+      const read = (element: Element) => {
+        const probe = document.createElement("span");
+
+        probe.style.color = "var(--palette-text)";
+        element.append(probe);
+        const value = getComputedStyle(probe).color;
+
+        probe.remove();
+
+        return value;
+      };
       document.body.insertAdjacentHTML(
         "beforeend",
-        '<div data-theme="dark" id="outer"><div class="light" id="light"><div class="theme-dark" id="dark"></div></div></div><div class="light dark" id="both"></div>',
+        '<div data-theme="dark" id="outer"><div class="theme-light" id="light"><div class="theme-dark" id="dark"></div></div></div><div class="theme-light theme-dark" id="both"></div><div data-theme="light" id="plain"></div>',
       );
 
       return {
@@ -255,13 +265,46 @@ test.describe("generated palette", () => {
         dark: read(document.getElementById("dark")!),
         light: read(document.getElementById("light")!),
         outer: read(document.getElementById("outer")!),
-        root: read(document.documentElement),
+        plain: read(document.getElementById("plain")!),
       };
     });
 
-    expect(values.outer).not.toBe(values.root);
-    expect(values.light, "light inside dark").toBe(values.root);
+    expect(values.outer).not.toBe(values.plain);
+    expect(values.light, "light inside dark").toBe(values.plain);
     expect(values.dark, "dark inside light inside dark").toBe(values.outer);
     expect(values.both, "both classes on one element").toBe(values.outer);
+  });
+
+  /* The palette was light unless a theme selector said dark, so under a dark
+     system setting a consumer's toast took the light `neutral-solid-bg` while
+     the page's `.badge.solid` rendered dark. */
+  test("follows the system's dark setting with no theme selector", async ({ page }) => {
+    await page.emulateMedia({ colorScheme: "dark" });
+
+    const values = await page.evaluate(() => {
+      const root = document.documentElement;
+
+      root.classList.remove("dark", "theme-dark", "theme-light");
+      root.removeAttribute("data-theme");
+      const badge = document.createElement("span");
+      const probe = document.createElement("span");
+
+      badge.className = "badge solid";
+      badge.textContent = "Badge";
+      probe.style.color = "var(--palette-neutral-solid-bg)";
+      document.body.append(badge, probe);
+
+      return {
+        scheme: getComputedStyle(root).colorScheme,
+        live: getComputedStyle(badge).backgroundColor,
+        generated: getComputedStyle(probe).color,
+      };
+    });
+
+    expect(values.scheme, "the page follows the system").toBe("light dark");
+    expect(
+      getColorDistance(values.live, values.generated),
+      `live ${values.live} vs generated ${values.generated}`,
+    ).toBeLessThanOrEqual(2);
   });
 });

@@ -1,6 +1,6 @@
 ---
 status: IMPLEMENTED
-last_updated: 2026-11-09
+last_updated: 2026-11-21
 scope: The generated, flat `./palette` output of `@codenhub/styles`' composed colors, for consumers that cannot depend on the Tailwind pipeline that produces them.
 ---
 
@@ -49,7 +49,9 @@ Examples: `--palette-success-soft-bg` (transparent ground), `--palette-success-s
 
 ## Dark mode
 
-Light values are the unscoped default, declared on `:root` and on the explicit light selectors (`.light`, `.theme-light`, `[data-theme="light"]`) in one block; dark values are re-declared under `.dark`, `.theme-dark`, and `[data-theme="dark"]`, the selector set `theme.css` uses for its explicit-override arm. The light block comes first, so the nearest explicit theme wins at any depth and dark wins on an element carrying both, as `color-scheme` does. No `@media (prefers-color-scheme: dark)` fallback is generated: a consumer reaching for a standalone palette handles its own theme switching, and the OS-only case belongs to `@codenhub/styles`' own `light-dark()` tokens when that package is in use.
+Each value is one `light-dark(light, dark)` pair, declared on `:root`, or the bare value where both schemes read the same. A custom property holding `light-dark()` is not resolved where it is declared but where it is used, against that element's computed `color-scheme`, so the palette follows the system's setting, every theme selector `theme.css` defines, and a nested region, exactly as the package's own `--color-*` tokens do. A consumer that uses the palette without the package switches themes by setting `color-scheme`, the platform's own switch, on the root or on a region.
+
+This replaces, on 2026-11-21 and before 0.11.0 shipped, a light block on `:root` and the light selectors with a dark block under the dark ones and no `prefers-color-scheme` arm. That design assumed a standalone consumer switches themes with a class, and did not weigh the default theme: under a dark system setting with no selector, the package renders dark while the palette stayed light, so `--palette-neutral-solid-bg` was light grey beside a dark `.badge.solid`. `@codenhub/toaster`, the named consumer, already re-baked the values as `light-dark()` pairs to follow `color-scheme`, which is what the palette now ships. Adding a `@media (prefers-color-scheme: dark)` block instead was rejected: it repeats every value a third time, and a media query cannot see a region a selector forced light, so a light card on a dark system would read dark values; `light-dark()` answers both at the point of use.
 
 ## Verifying the output
 
