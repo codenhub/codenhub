@@ -54,6 +54,8 @@ const BASE_COMPONENT = GROUNDS[0].component;
    so it follows `color-scheme` as the package's own tokens do -- the doc's
    "Dark mode" section. */
 const THEMES = ["light", "dark"];
+/* The repository's `oxfmt` print width, in `.oxfmtrc.json`. */
+const PRINT_WIDTH = 120;
 /* The three flat neutral tokens (`docs/internal/generated-palette.md`, "Flat
    neutral values"): no intent, no presentation, no ground, no hover -- so each
    is one flat probe reading straight off its `theme.css` token, not a
@@ -276,7 +278,18 @@ function pairDeclarations(light, dark) {
         throw new Error(`The two schemes disagree on the declaration order: ${name} and ${darkName}.`);
       }
 
-      return `  ${name}: ${lightValue === darkValue ? lightValue : `light-dark(${lightValue}, ${darkValue})`};`;
+      if (lightValue === darkValue) {
+        return `  ${name}: ${lightValue};`;
+      }
+
+      const paired = `  ${name}: light-dark(${lightValue}, ${darkValue});`;
+
+      /* Wrapped as the formatter wraps it, so the file the drift check
+         compares is the one `oxfmt` leaves: a line past the print width,
+         once `indent()` nests it, takes one argument per line. */
+      return paired.length + 2 <= PRINT_WIDTH
+        ? paired
+        : `  ${name}: light-dark(\n    ${lightValue},\n    ${darkValue}\n  );`;
     })
     .join("\n");
 }
