@@ -77,6 +77,23 @@ describe("typed placeholder values", () => {
     expectTypeOf<{}>().not.toExtend<Values<"welcome">>();
   });
 
+  it("should require a numeric count for a plural group whose forms it can't read, as from JSON", () => {
+    type Json = {
+      readonly cart: { readonly items: { readonly one: string; readonly other: string }; readonly title: string };
+    };
+    type JsonValues = NonNullable<TranslateParams<Json, "cart.items">[0]>;
+    expectTypeOf<TranslateParams<Json, "cart.items">["length"]>().toEqualTypeOf<1>();
+    expectTypeOf<{ count: 3 }>().toExtend<JsonValues>();
+    expectTypeOf<{ count: 3; anything: "else" }>().toExtend<JsonValues>();
+    expectTypeOf<{}>().not.toExtend<JsonValues>();
+    expectTypeOf<{ count: "3" }>().not.toExtend<JsonValues>();
+    expectTypeOf<TranslateParams<Json, "cart.title">>().toEqualTypeOf<Loose>();
+    expectTypeOf<TranslateParams<Json, "cart.items.one">>().toEqualTypeOf<Loose>();
+    // A key that is a text in one dictionary and a group in another needs `count` too, which never changes the text.
+    type Mixed = Json | { readonly cart: { readonly items: string } };
+    expectTypeOf<{}>().not.toExtend<NonNullable<TranslateParams<Mixed, "cart.items">[0]>>();
+  });
+
   it("should accept any values for a message it can't read, a key union, or untyped dictionaries", () => {
     expectTypeOf<Params<"broken">>().toEqualTypeOf<Loose>();
     expectTypeOf<Params<"plain" | "greeting">>().toEqualTypeOf<Loose>();

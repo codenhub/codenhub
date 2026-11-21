@@ -2,7 +2,7 @@
 title: Escreva as suas traduções
 description: Dicionários, arquivos JSON, placeholders, mensagens ICU, plurais, formatadores, chaves e valores tipados, verificação de chaves não traduzidas e limites de tamanho.
 order: 1
-source: c7f13bdaf19725a0e60bfcc193823ab5bb951c03
+source: ffb96688e5833ea3a0cedff1f54d09e5ac33f699
 ---
 
 # Escreva as suas traduções
@@ -379,7 +379,7 @@ Quais valores cada argumento aceita:
 
 Valores a mais são permitidos. Quando vários dicionários são tipados, uma chave precisa dos valores de todos os que a têm.
 
-Um import de JSON tipa todo texto como `string`, já que o TypeScript não guarda os valores das strings de um JSON, então um dicionário JSON confere as chaves mas aceita quaisquer valores. Para conferir os valores, escreva o idioma padrão em TypeScript com `as const` e mantenha os outros idiomas em JSON, tipados como o padrão:
+Um import de JSON tipa todo texto como `string`, já que o TypeScript não guarda os valores das strings de um JSON, então um dicionário JSON confere as chaves mas aceita quaisquer valores, exceto que um grupo de plural ainda pede um `count` numérico. Para conferir os valores, escreva o idioma padrão em TypeScript com `as const` e mantenha os outros idiomas em JSON, tipados como o padrão:
 
 ```ts
 import en from "./locales/en";
@@ -394,7 +394,7 @@ O tipo de retorno do loader é o que tipa `t()`, então uma tradução precisa u
 Ler os argumentos de uma mensagem acontece inteiramente no sistema de tipos, o que é muito esperto até o momento em que ele não consegue ver a mensagem. Nestes casos, `t()` aceita quaisquer valores, ou nenhum, para aquela chave. Nada deixa de compilar; a verificação simplesmente fica desligada:
 
 - **A chave é uma entre várias.** Em `t(hasFailed ? "checkout.failed" : "checkout.done")`, o TypeScript vê uma união de duas chaves e não tem como saber de qual mensagem vêm os valores. Chame `t()` com cada chave no seu próprio ramo, `hasFailed ? t("checkout.failed", { orderId }) : t("checkout.done")`, e cada chamada é conferida.
-- **A mensagem é uma `string` simples**, como todo texto de um dicionário JSON. Escreva o idioma padrão em TypeScript com `as const`, como acima.
+- **A mensagem é uma `string` simples**, como todo texto de um dicionário JSON. Um grupo de plural ainda pede um `count` numérico, já que o formato dele diz isso. Escreva o idioma padrão em TypeScript com `as const`, como acima.
 - **A mensagem tem sintaxe inválida**, como uma `{` sem fechamento, um nome de placeholder que não é feito de letras ASCII, dígitos e `_` (`{first-name}`), `{n, number, currency}`, ou um `select` ou `plural` sem `other`. Algumas sintaxes inválidas, como uma opção escrita duas vezes, uma forma de plural desconhecida ou aninhamento além de 10 níveis, ainda podem pedir valores. De um jeito ou de outro, o runtime também não consegue lê-la: ele registra um aviso e mostra o texto com apenas os placeholders `{name}` válidos preenchidos. Conserte a mensagem; a [verificação de mensagens](#encontre-chaves-não-traduzidas) encontra esses casos.
 - **A mensagem é longa demais para os tipos lerem**: uns 900 apóstrofos, 450 argumentos ou 900 espaços dentro das chaves de um argumento, num só texto. O TypeScript tem um limite de profundidade para os tipos, e a leitura para antes de chegar nele em vez de quebrar o seu build. Em tempo de execução, a mensagem funciona normalmente. Se você tem uma dessas, ela provavelmente são três mensagens disfarçadas de uma; dividi-la traz as verificações de volta.
 - **O tipo do gerenciador foi escrito à mão, sem o dicionário.** `I18n<"en" | "pt", Key>` confere as chaves, mas não os valores. Passe o tipo do dicionário como terceiro argumento de tipo, `I18n<"en" | "pt", Key, typeof en>`, para mantê-los conferidos.

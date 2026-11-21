@@ -308,9 +308,19 @@ type Simplify<T> = { readonly [K in keyof T]: Narrow<T[K]> } & {};
 // which the marker is assignable to.
 type IsUnreadable<U> = [Extract<U, Unreadable>] extends [never] ? false : true;
 
-// Any dictionary whose message can't be read makes the values loose; otherwise every dictionary's arguments apply.
-type ParamsFor<U, TValues> =
-  IsUnreadable<U> extends true ? AnyValues<TValues> : ParamsOf<UnionToIntersection<U>, TValues>;
+// Whether any dictionary has a plural group at the key, which `t()` reads only with a numeric `count`.
+type HasGroup<V> = true extends (V extends string ? false : V extends { readonly other: string } ? true : false)
+  ? true
+  : false;
+
+// Any dictionary whose message can't be read makes the values loose, except the `count` a plural group needs, as one
+// from JSON, whose forms are only `string`; otherwise every dictionary's arguments apply.
+type ParamsFor<U, TValues, TIsGroup> =
+  IsUnreadable<U> extends true
+    ? TIsGroup extends true
+      ? [params: { readonly count: number } & Values<TValues>]
+      : AnyValues<TValues>
+    : ParamsOf<UnionToIntersection<U>, TValues>;
 type ParamsOf<A, TValues> = keyof A extends never
   ? AnyValues<TValues>
   : [params: Readonly<Simplify<A>> & Values<TValues>];
@@ -328,4 +338,8 @@ export type TranslateParams<TMessages, TKey extends string, TValues = {}> = unkn
     : string extends TKey
       ? AnyValues<TValues>
       : // An optional key, as in a `Partial` dictionary type, is checked as the message it has where present.
-        ParamsFor<ValueArguments<Exclude<ValueAt<TMessages, TKey>, undefined>>, TValues>;
+        ParamsFor<
+          ValueArguments<Exclude<ValueAt<TMessages, TKey>, undefined>>,
+          TValues,
+          HasGroup<Exclude<ValueAt<TMessages, TKey>, undefined>>
+        >;
