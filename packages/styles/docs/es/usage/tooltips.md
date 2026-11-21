@@ -2,7 +2,7 @@
 title: Tooltips
 description: Ayuda de campo que se abre con hover y con foco, cómo conectarla para los lectores de pantalla y la tecla Escape, y dónde queda recortado un tooltip.
 order: 4
-source: e9dba9085f67616a424f7cd1da1ddde579829945
+source: cbc106fe776da614d0b1b65062a7ee807078bed6
 ---
 
 # Tooltips
@@ -56,17 +56,18 @@ Una burbuja es tan ancha como su texto, hasta 18rem, y a partir de ahí el texto
 
 ### Dónde queda recortado un tooltip
 
-La burbuja se posiciona solo con CSS, en el lado que elegiste. Nada mide la página: no se desplaza para quedarse dentro de la ventana, no cambia al otro lado cuando no hay espacio y no pasa a la capa superior de la página. Eso tiene tres consecuencias:
+La burbuja se posiciona solo con CSS, en el lado que elegiste. Nada mide la página: no se desplaza para quedarse dentro de la ventana, no cambia al otro lado cuando no hay espacio y no pasa a la capa superior de la página. Eso tiene cuatro consecuencias:
 
 - **Un contenedor con scroll o con recorte la corta.** Un ancestro con `overflow: hidden`, `auto` o `scroll` recorta la burbuja en su borde. La tabla de claves de API de la pantalla de ajustes está dentro de un `.table-wrap`, que tiene scroll, así que un tooltip superior en la primera fila queda recortado en la parte de arriba del contenedor. Subir el `z-index` no ayuda: cambia sobre qué se pinta la burbuja, no si el contenedor la recorta.
 - **El borde de la ventana la corta.** Un tooltip superior en la primera línea de una página, o uno a la derecha cerca del borde derecho, se sale de la pantalla.
 - **Izquierda y derecha son lados físicos.** En una página de derecha a izquierda, `"left"` sigue significando el lado izquierdo de la pantalla.
+- **La tarjeta siguiente puede taparla, por un momento.** Bajo `.glass`, cada tarjeta, panel, alerta y tabla es su propia capa, así que una burbuja se pinta sobre las superficies que siguen a la suya solo mientras su superficie está elevada. Bajo glass esas superficies tienen `position: relative` en reposo, así que un hijo con posición absoluta se ubica respecto de su superficie, y el paquete eleva un paso, con `z-index: 1`, un `.card`, `.panel`, `.alert`, `.surface` o `.data-table` que contiene un tooltip mientras el tooltip está fijado abierto, o mientras la superficie tiene el puntero encima o contiene el foco. Un paso alcanza para pasar por encima de las superficies vecinas y queda por debajo de tus propias capas, como un encabezado sticky o un menú abierto. Fuera de glass una superficie no es una capa propia y no se eleva nada. Una superficie que hayas posicionado tú, o a la que hayas dado su propio `z-index`, lo conserva, con una excepción bajo glass: una posición que defines en tu propio `@layer components` sobre un elemento que también lleva una clase de superficie del paquete, como en `class="panel my-header"`, pierde ante el `relative` del paquete. Define esa posición con una utilidad como `sticky`, o en una regla fuera de toda capa. Cuando el puntero sale de la superficie, la elevación termina al instante, así que una burbuja que sobresale sobre la tarjeta siguiente se desvanece debajo de ella durante `--tooltip-linger`.
 
 Qué hacer:
 
 - Elige un lado con espacio: en la primera fila de una tabla, usa `data-tooltip-position="bottom"`.
 - Saca el disparador del tooltip del contenedor que recorta, o quita el `overflow` de un contenedor que no lo necesita.
-- Si la posición del disparador no se puede saber de antemano, como en una lista con scroll o en un panel redimensionable, usa una librería de posicionamiento o el componente de popover de tu framework, que pueden medir y cambiar de lado. Puedes seguir dando a su elemento de mensaje las clases `.tooltip-bubble` para el aspecto, pero entonces mostrar, ocultar y posicionar, como se describe en esta página, lo hace esa librería, no `.tooltip`.
+- Si la posición del disparador no se puede saber de antemano, como en una lista con scroll o en un panel redimensionable, usa una librería de posicionamiento o el componente de popover de tu framework, que pueden medir y cambiar de lado. Puedes seguir dando a su elemento de mensaje las clases `.tooltip-bubble` para el aspecto. Fuera de `.tooltip`, la clase es solo el aspecto: sin estado oculto en reposo, posición ni escala, así que un popover que abre la librería, como `<div popover class="tooltip-bubble primary">`, se ve en cuanto se abre. Mostrar, ocultar y posicionar, como se describe en esta página, lo hace entonces esa librería.
 
 ## Hover, permanencia y Escape
 

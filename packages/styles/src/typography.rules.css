@@ -1,3 +1,80 @@
+/* Letter spacing pulls apart the letters of a script that joins them:
+   under `<html lang="ar">`, Chromium and WebKit broke the "الله" ligature at
+   0.05em, and WebKit spaced every letter. A headstroke script hangs its
+   letters from one line, the shirorekha, which spacing cuts: at 0.05em on
+   64px text in Nirmala UI, "नमस्ते", "ক্ষমতা", and "ਸ਼ਬਦ" each went from an
+   unbroken line to two gaps in Chromium and WebKit, and WebKit set the
+   i-matra of "हिन्दी" apart from its consonant. So each step below reads
+   `--_script-tracking` before its own tracking, and an element in such a
+   language -- Arabic script, Syriac, N'Ko, Mongolian, Adlam, Devanagari,
+   Bengali, Gurmukhi -- sets it to `normal`. A consumer's `tracking-*` sets
+   `letter-spacing` itself and still wins wherever it beats the class.
+   Kurdish is written in Arabic script only sometimes, so it needs the
+   `-Arab` subtag, as do the other languages named with a subtag; Punjabi is
+   in either Gurmukhi or Arabic script, so it is matched whole.
+
+   Each subtag is named rather than matched by a wildcard such as
+   `:lang("*-Arab")`: Chromium matched none (measured on 2026-11-21 against
+   the Playwright browsers), and Lightning CSS 1.33.0, which this build and
+   Tailwind's both run, writes it as `:lang(*-Arab)`, the literal tag, so
+   Firefox and WebKit matched none either.
+
+   A custom property rather than a nested `&:lang()` rule in each step:
+   `@compose` copies a step into every component that uses it, and the nested
+   rule, with fourteen languages, added 2 KB to `dist/purge/index.css`.
+   It does not inherit, so a Latin passage (`lang="en"`) inside an Arabic page
+   keeps its tracking. The list is repeated in `native.css` and in chunky
+   tile's solo class. */
+@property --_script-tracking {
+  syntax: "*";
+  inherits: false;
+}
+
+@layer base {
+  :where(
+    :lang(ar),
+    :lang(fa),
+    :lang(ur),
+    :lang(ps),
+    :lang(sd),
+    :lang(ug),
+    :lang(ckb),
+    :lang(ks),
+    :lang(ku-Arab),
+    :lang(hi),
+    :lang(mr),
+    :lang(ne),
+    :lang(sa),
+    :lang(mai),
+    :lang(bho),
+    :lang(kok),
+    :lang(bn),
+    :lang(as),
+    :lang(pa),
+    :lang(syr),
+    :lang(nqo),
+    :lang(mn-Mong),
+    :lang(ff-Adlm),
+    :lang(arz),
+    :lang(ary),
+    :lang(pnb),
+    :lang(prs),
+    :lang(azb),
+    :lang(doi),
+    :lang(brx),
+    :lang(new),
+    :lang(ms-Arab),
+    :lang(kk-Arab),
+    :lang(az-Arab),
+    :lang(uz-Arab),
+    :lang(tg-Arab),
+    :lang(sat-Deva),
+    :lang(mni-Beng)
+  ) {
+    --_script-tracking: normal;
+  }
+}
+
 /* `text-6xl` and up bundle `line-height: 1`, which sets a heading's line box to
    the font size exactly: descenders reach the box edge and a wrapped heading's
    lines collide. The two largest steps set an explicit leading that still
@@ -11,7 +88,7 @@
     --tw-font-weight: var(--font-weight-bold);
     font-weight: var(--font-weight-bold);
     --tw-tracking: var(--tracking-tight);
-    letter-spacing: var(--tracking-tight);
+    letter-spacing: var(--_script-tracking, var(--tracking-tight));
     @media (width >= 48rem) {
       font-size: var(--text-8xl);
       line-height: var(--tw-leading, var(--text-8xl--line-height));
@@ -26,7 +103,7 @@
     --tw-font-weight: var(--font-weight-bold);
     font-weight: var(--font-weight-bold);
     --tw-tracking: var(--tracking-tight);
-    letter-spacing: var(--tracking-tight);
+    letter-spacing: var(--_script-tracking, var(--tracking-tight));
     @media (width >= 48rem) {
       font-size: var(--text-6xl);
       line-height: var(--tw-leading, var(--text-6xl--line-height));
@@ -39,7 +116,7 @@
     --tw-font-weight: var(--font-weight-bold);
     font-weight: var(--font-weight-bold);
     --tw-tracking: var(--tracking-tight);
-    letter-spacing: var(--tracking-tight);
+    letter-spacing: var(--_script-tracking, var(--tracking-tight));
   }
 
   .text-title-sm {
@@ -48,7 +125,7 @@
     --tw-font-weight: var(--font-weight-semibold);
     font-weight: var(--font-weight-semibold);
     --tw-tracking: var(--tracking-tight);
-    letter-spacing: var(--tracking-tight);
+    letter-spacing: var(--_script-tracking, var(--tracking-tight));
   }
 
   .text-label-lg {
@@ -57,7 +134,7 @@
     --tw-font-weight: var(--font-weight-medium);
     font-weight: var(--font-weight-medium);
     --tw-tracking: var(--tracking-wide);
-    letter-spacing: var(--tracking-wide);
+    letter-spacing: var(--_script-tracking, var(--tracking-wide));
   }
 
   .text-label {
@@ -66,7 +143,7 @@
     --tw-font-weight: var(--font-weight-medium);
     font-weight: var(--font-weight-medium);
     --tw-tracking: var(--tracking-wide);
-    letter-spacing: var(--tracking-wide);
+    letter-spacing: var(--_script-tracking, var(--tracking-wide));
   }
 
   .text-body {
@@ -75,6 +152,6 @@
     --tw-font-weight: var(--font-weight-normal);
     font-weight: var(--font-weight-normal);
     --tw-tracking: var(--tracking-wider);
-    letter-spacing: var(--tracking-wider);
+    letter-spacing: var(--_script-tracking, var(--tracking-wider));
   }
 }

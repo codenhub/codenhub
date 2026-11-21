@@ -34,21 +34,33 @@ const tailwindCss = pathToFileURL(fileURLToPath(import.meta.resolve("tailwindcss
 const twEntry = (file: string) => pathToFileURL(path.join(packageRoot, "tw", file)).href;
 
 // Minified bytes, measured with Tailwind 4.3.4 on the dates `docs/internal/tests.md` records.
+/* 0.11.0 set again, about 3% above the release's final measurement, the
+   ceilings its growth had left with less than 2% to spare: the complete,
+   native, components, aesthetics, glass, and pixel files, and the three
+   consumer builds below. */
 const COMPILED_CEILINGS: Record<string, number> = {
-  "dist/index.css": 233_000,
-  "dist/components.css": 188_300,
-  "dist/native.css": 348_500,
+  "dist/index.css": 238_000,
+  "dist/components.css": 191_400,
+  "dist/native.css": 355_400,
   "dist/theme.css": 13_200,
   "dist/palette.css": 26_800,
-  "dist/aesthetics/index.css": 49_750,
-  "dist/aesthetics/chunky-tile.css": 5_600,
+  "dist/aesthetics/index.css": 50_450,
+  /* 5,600 until 0.11.0 kept the solo class's tracking off scripts that join
+     their letters or hang them from a headstroke: it ships without the
+     components, so it carries the language list itself, regional languages
+     and script subtags included. */
+  "dist/aesthetics/chunky-tile.css": 6_200,
   "dist/aesthetics/cyber.css": 4_900,
-  "dist/aesthetics/glass.css": 14_500,
+  "dist/aesthetics/glass.css": 14_700,
   "dist/aesthetics/neobrutalism.css": 4_750,
-  "dist/aesthetics/pixel.css": 5_000,
+  "dist/aesthetics/pixel.css": 5_100,
   "dist/aesthetics/sketch.css": 15_350,
   /* Read by `chs build`, never served, but every consumer installs it. */
-  "dist/purge/index.css": 314_500,
+  /* 314,500 until 0.11.0 kept tracking off scripts that join their letters,
+     a fallback in each of the eleven rules that copy a text style, and
+     raised a glass surface holding a tooltip, scoped the bubble to it, gave
+     a glass pane an opaque ground on a plate, and let a button label wrap. */
+  "dist/purge/index.css": 327_000,
   "dist/purge/classes.json": 7_100,
 };
 
@@ -106,19 +118,23 @@ describe("a /tw consumer build", { timeout: 60_000 }, () => {
       candidates: ["btn", "primary"],
       /* 21,800 until 0.11.0 capped a held neutral box's fill, 18 bytes more;
          22,600 since its held boxes and toggles drew a surface's ink. */
-      ceiling: 22_600,
+      ceiling: 22_950,
     },
     {
       name: "a page that names no package class, through /button/tw",
       imports: [tailwindCss, twEntry("components/button.css")],
       candidates: [],
-      ceiling: 9_900,
+      ceiling: 10_150,
     },
     {
       name: "a page with one primary button, through /tw",
       imports: [twEntry("index.css")],
       candidates: ["btn", "primary"],
-      ceiling: 27_550,
+      /* 27,550 until 0.11.0's reset reached a dialog's backdrop and a view
+         transition, rules every page with the reset carries, and the button
+         learned to wrap its label and a pane its ground on a plate, and the
+         view transition reset and the no-tracking language list grew. */
+      ceiling: 31_400,
     },
   ];
 

@@ -2,7 +2,7 @@
 title: Vue
 description: Como carregar a folha de estilos numa aplicação Vue / Vite.
 order: 3
-source: 9cc23f66518b0aa3ce886602f39d05820b2b8bcf
+source: f41a743332c1bd5a0133f67ba22875f1b3f0f829
 ---
 
 # Vue
@@ -24,7 +24,7 @@ Usa Tailwind CSS v4? Importe `@codenhub/styles/tw` a partir de um arquivo CSS de
 
 ## Force um tema
 
-Aplique `.dark` ou `.light` no elemento raiz para forçar um tema em vez de seguir a preferência do sistema; veja [Temas → Claro e escuro](../usage/theming.md#claro-e-escuro).
+Aplique `.dark` ou `.light` no `<html>` do `index.html` para forçar um tema em vez de seguir a preferência do sistema; veja [Temas → Claro e escuro](../usage/theming.md#claro-e-escuro).
 
 ## A seguir
 

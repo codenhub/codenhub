@@ -7,6 +7,7 @@ import {
   isTransparent,
   ORIGIN,
   readSrgb,
+  settleAnimations,
   stopTransitions,
 } from "./test-utils";
 
@@ -3357,4 +3358,185 @@ test("keeps a small icon button's icon in sight when focused under pixel", async
       .soft(focused / resting, `${name}: share of the icon still in sight when focused`)
       .toBeGreaterThanOrEqual(0.5);
   }
+});
+
+/* A glass surface's backdrop filter, and a liquid one's isolation, make it a
+   stacking context, which traps the bubble's `z-index` inside it: an open
+   tooltip in one card was painted under the next card. The surface holding an
+   open tooltip is lifted to the popover layer. Every aesthetic is read, since
+   any of them may make a surface a stacking context. */
+for (const region of ["", "chunky-tile", "cyber", "glass", "glass glass-liquid", "neobrutalism", "pixel", "sketch"]) {
+  test(`paints an open tooltip over the next surface${region ? ` under .${region.replace(" ", ".")}` : ""}`, async ({
+    page,
+  }) => {
+    await page.goto(FEEDBACK_URL);
+    await page.evaluate((classes) => {
+      const host = document.createElement("div");
+      host.className = classes;
+      host.style.cssText = "padding: 2rem";
+      host.innerHTML =
+        '<div class="card"><span class="tooltip" data-state="open" data-tooltip-position="bottom">' +
+        '<button type="button">Trigger</button>' +
+        '<span class="tooltip-bubble" data-probe="bubble">A message long enough to cover the card below</span>' +
+        "</span></div>" +
+        '<div class="card" data-probe="next">Next card</div>' +
+        '<table class="data-table"><tbody><tr><td><span class="tooltip" data-state="open" data-tooltip-position="bottom">' +
+        '<button type="button">Cell</button><span class="tooltip-bubble" data-probe="cell-bubble">Below the table</span>' +
+        '</span></td></tr></tbody></table><div class="card" data-probe="after-table" style="min-height: 4rem">After the table</div>';
+      document.body.prepend(host);
+    }, region);
+    await settleAnimations(page);
+
+    for (const [probe, next] of [
+      ["bubble", "next"],
+      ["cell-bubble", "after-table"],
+    ]) {
+      // oxlint-disable-next-line no-await-in-loop -- one page, read in turn.
+      const paint = await page.locator(`[data-probe="${probe}"]`).evaluate((element, nextProbe) => {
+        const rect = element.getBoundingClientRect();
+        const below = document.querySelector(`[data-probe="${nextProbe}"]`)!.getBoundingClientRect();
+        const x = rect.left + rect.width / 2;
+        const y = rect.bottom - 2;
+        const hit = document.elementFromPoint(x, y);
+
+        return {
+          overlaps: y > below.top && y < below.bottom && x > below.left && x < below.right,
+          onTop: hit === element || element.contains(hit),
+        };
+      }, next);
+
+      expect(paint.overlaps, `${probe} reaches over the surface after it`).toBe(true);
+      expect(paint.onTop, `${probe} is painted on top`).toBe(true);
+    }
+  });
+}
+
+/* The lift stays under the page's own layers. A card holding a tooltip and a
+   focused field took the popover layer, and painted over a sticky header and
+   an open menu at `z-index: 10` above it, taking their clicks. The lift is a
+   step above the next surface, not a layer of its own. */
+for (const region of ["", "glass"]) {
+  test(`keeps a sticky header and an open menu over a card holding a focused tooltip${region ? ` under .${region}` : ""}`, async ({
+    page,
+  }) => {
+    await page.goto(FEEDBACK_URL);
+    await page.evaluate((classes) => {
+      const host = document.createElement("div");
+      host.className = classes;
+      host.style.cssText = "position: relative; padding: 0 2rem 2rem";
+      host.innerHTML =
+        '<header data-probe="header" style="position: sticky; top: 0; z-index: 10; height: 3rem; background: white">Header</header>' +
+        '<div data-probe="menu" style="position: absolute; z-index: 10; top: 5rem; left: 2rem; width: 12rem; height: 3rem; background: white">Menu</div>' +
+        '<div class="card" data-probe="card" style="margin-top: -1.5rem; min-height: 8rem">' +
+        '<span class="tooltip"><button type="button">Trigger</button><span class="tooltip-bubble">A message</span></span>' +
+        '<input class="ipt" data-probe="field" aria-label="Field"></div>';
+      document.body.prepend(host);
+    }, region);
+    await page.locator('[data-probe="field"]').focus();
+    await settleAnimations(page);
+
+    const hits = await page.evaluate(() =>
+      ["header", "menu"].map((probe) => {
+        const element = document.querySelector(`[data-probe="${probe}"]`)!;
+        const card = document.querySelector('[data-probe="card"]')!.getBoundingClientRect();
+        const rect = element.getBoundingClientRect();
+        const x = rect.left + 8;
+        const y = Math.max(rect.top, card.top) + 4;
+
+        return {
+          probe,
+          overlaps: y > card.top && y < card.bottom && y < rect.bottom,
+          onTop: document.elementFromPoint(x, y) === element,
+        };
+      }),
+    );
+
+    for (const hit of hits) {
+      expect(hit.overlaps, `${hit.probe} overlaps the card`).toBe(true);
+      expect(hit.onTop, `${hit.probe} is painted over the card`).toBe(true);
+    }
+  });
+}
+
+/* Hover moves nothing. Hovering a card with a tooltip turned it from static to
+   relative, so an absolutely positioned child anchored to a wrapper outside
+   the card jumped to the card. A glass surface is a stacking context at rest,
+   so it is anchored at rest as well, and hover changes only its `z-index`. */
+for (const [region, position] of [
+  ["", "static"],
+  ["glass", "relative"],
+] as const) {
+  test(`keeps a card's position through hover${region ? ` under .${region}` : ""}`, async ({ page }) => {
+    await page.goto(FEEDBACK_URL);
+    await page.evaluate((classes) => {
+      const host = document.createElement("div");
+      host.className = classes;
+      host.style.cssText = "padding: 2rem";
+      host.innerHTML =
+        '<div class="card" data-probe="card"><span class="tooltip"><button type="button">Trigger</button>' +
+        '<span class="tooltip-bubble">A message</span></span></div>';
+      document.body.prepend(host);
+    }, region);
+
+    const card = page.locator('[data-probe="card"]');
+    const read = () => card.evaluate((element) => getComputedStyle(element).position);
+
+    expect(await read()).toBe(position);
+    await card.hover();
+    expect(await read()).toBe(position);
+  });
+}
+
+/* Outside glass nothing is lifted, so a surface keeps the `z-index` the page
+   gave it in a layer below the package's utilities. The lift, invalid there,
+   computed to `auto`, and a sticky header built with `@apply panel` in
+   `@layer components` dropped under the content while it held focus. */
+test("keeps a z-index the page sets in its components layer on a surface holding a focused tooltip", async ({
+  page,
+}) => {
+  await page.goto(FEEDBACK_URL);
+  await page.addStyleTag({ content: "@layer components { .probe-header { position: sticky; top: 0; z-index: 10 } }" });
+  await page.evaluate(() => {
+    const header = document.createElement("header");
+
+    header.className = "panel probe-header";
+    header.dataset.probe = "header";
+    header.innerHTML =
+      '<span class="tooltip"><button type="button" data-probe="trigger">Trigger</button><span class="tooltip-bubble">A message</span></span>';
+    document.body.prepend(header);
+  });
+
+  const header = page.locator('[data-probe="header"]');
+
+  await page.locator('[data-probe="trigger"]').focus();
+  expect(await header.evaluate((element) => getComputedStyle(element).zIndex)).toBe("10");
+});
+
+/* Under glass the package sets a surface `relative` at rest from its utilities
+   layer, so it beats a position the page sets in `@layer components` on an
+   element carrying a package surface class. A layer nested in a Tailwind
+   `@utility` body is a sublayer of utilities, so the anchor cannot sit below
+   `components`. A utility -- here a rule in `@layer utilities` as Tailwind
+   writes `sticky` -- or a rule outside any layer still positions it.
+   docs/usage/tooltips.md documents the exception; this pins it. */
+test("positions a glass surface with a utility or an unlayered rule, not a components-layer one", async ({ page }) => {
+  await page.goto(FEEDBACK_URL);
+  await page.addStyleTag({
+    content:
+      "@layer components { .probe-layered { position: sticky } } @layer utilities { .probe-utility { position: sticky } } .probe-unlayered { position: sticky }",
+  });
+  await page.evaluate(() => {
+    const host = document.createElement("div");
+
+    host.className = "glass";
+    host.innerHTML = ["panel probe-layered", "panel probe-utility", "panel probe-unlayered"]
+      .map((classes, index) => `<div class="${classes}" data-probe="p${index}">Panel</div>`)
+      .join("");
+    document.body.prepend(host);
+  });
+
+  const read = (index: number) =>
+    page.locator(`[data-probe="p${index}"]`).evaluate((element) => getComputedStyle(element).position);
+
+  expect([await read(0), await read(1), await read(2)]).toEqual(["relative", "sticky", "sticky"]);
 });

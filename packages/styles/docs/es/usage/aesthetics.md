@@ -2,7 +2,7 @@
 title: Estéticas
 description: Los seis aspectos opcionales, lo que cada uno cambia en un componente, sus controles y sus límites.
 order: 6
-source: d10fa0628ac9627856be765250bbc4c24682793c
+source: 22bdaf42bfaf87e96f07b1c1c950b1cee169fa58
 ---
 
 # Estéticas
@@ -92,6 +92,7 @@ La sombra se proyecta en la propia intención del componente, así que un botón
 
 - Toda superficie en una región glass es de vidrio, incluidas una `.card.soft`, un `.panel` y una `.alert` neutros.
 - El vidrio es el fondo, no el relleno. Una presentación conserva todo su relleno, así que un botón `.solid`, un toggle marcado y una tarjeta o tabla `.solid` son opacos; los cristales esmerilados son los de por defecto, `.soft` y `.ghost`.
+- Un cristal dentro de una tarjeta, panel o alerta `.solid` es opaco: a través de un cristal translúcido se ve la superficie rellena que hay detrás, y el texto del cristal bajaba de 4.5:1. Descansa sobre el fondo de la página, así que su texto conserva el contraste que tiene sobre la página.
 - El desenfoque solo se aplica a `.card`, `.panel`, `.alert`, la burbuja del tooltip y una `.data-table` por defecto o `.soft`. Los controles se quedan sólidos y se apoyan sobre el vidrio: un desenfoque bajo cada control de un grupo denso cuesta una capa compuesta por cada uno y se percibe como ruido. Los controles siguen tomando el radio, el borde y la sombra de la estética.
 - Con `prefers-reduced-transparency: reduce`, y con colores forzados, las superficies de vidrio pierden el desenfoque y se vuelven opacas. Los colores forzados reemplazan los colores pero conservan su transparencia, así que sin esto un panel dejaría ver la página a través del fondo del sistema.
 - Los botones y una `.card` que lo active se pulsan con el `scale(0.97)` simple; con movimiento reducido la pulsación sigue ocurriendo, al instante.

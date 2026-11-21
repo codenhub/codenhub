@@ -2,7 +2,7 @@
 title: Vue
 description: Cargar la hoja de estilos en una aplicación Vue / Vite.
 order: 3
-source: 9cc23f66518b0aa3ce886602f39d05820b2b8bcf
+source: f41a743332c1bd5a0133f67ba22875f1b3f0f829
 ---
 
 # Vue
@@ -24,7 +24,7 @@ createApp(App).mount("#app");
 
 ## Forzar un tema
 
-Aplica `.dark` o `.light` en el elemento raíz para forzar un tema en lugar de seguir la preferencia del sistema; consulta [Temas → Claro y oscuro](../usage/theming.md#claro-y-oscuro).
+Aplica `.dark` o `.light` en `<html>`, en `index.html`, para forzar un tema en lugar de seguir la preferencia del sistema; consulta [Temas → Claro y oscuro](../usage/theming.md#claro-y-oscuro).
 
 ## Siguiente paso
 

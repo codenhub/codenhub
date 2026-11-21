@@ -2,7 +2,7 @@
 title: Next.js
 description: Cargar la hoja de estilos en una aplicación Next.js / React.
 order: 2
-source: fd8dc12652c64995638c5b902a1ca35787f9a37c
+source: b229c0204095ccf30396f20e8b7f8033f7004285
 ---
 
 # Next.js
@@ -52,6 +52,12 @@ Aplica `.dark` o `.light` en `<html>` para forzar un tema en lugar de seguir la 
 
 ```tsx
 <html lang="en" className="dark">
+```
+
+En el Pages Router, `<html>` lo renderiza `pages/_document.tsx`, así que pon la clase en su componente `<Html>`:
+
+```tsx
+<Html lang="en" className="dark">
 ```
 
 ## Solución de problemas

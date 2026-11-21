@@ -91,6 +91,7 @@ The shadow is cast in the component's own intent, so a success button throws a g
 
 - Every surface in a glass region is glass, a neutral `.card.soft`, `.panel`, and `.alert` included.
 - The glass is the ground, not the fill. A presentation keeps its whole fill, so a `.solid` button, a checked toggle, and a `.solid` card or table are opaque; the default, `.soft`, and `.ghost` panes are the frosted ones.
+- A pane inside a `.solid` card, panel, or alert is opaque instead: through a translucent pane the filled surface behind it shows, and the pane's text fell below 4.5:1. It rests on the page background, so its text keeps the contrast it has on the page.
 - The blur applies to `.card`, `.panel`, `.alert`, the tooltip bubble, and a default or `.soft` `.data-table` only. Controls stay solid and sit on the glass: a blur under every control of a dense cluster costs a composited layer apiece and reads as noise. Controls still take the aesthetic's radius, border, and shadow.
 - Under `prefers-reduced-transparency: reduce`, and in forced colors, glass surfaces drop the blur and become opaque. Forced colors replace the colors but keep their transparency, so without this a pane would show the page through the system's background.
 - Buttons and an opted-in `.card` press with the plain `scale(0.97)`; under reduced motion the press still happens, at once.

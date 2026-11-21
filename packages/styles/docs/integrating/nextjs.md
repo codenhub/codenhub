@@ -53,6 +53,12 @@ Apply `.dark` or `.light` on `<html>` to force a theme instead of following the 
 <html lang="en" className="dark">
 ```
 
+In the Pages Router, `pages/_document.tsx` renders `<html>`, so put the class on its `<Html>` component:
+
+```tsx
+<Html lang="en" className="dark">
+```
+
 ## Troubleshooting
 
 **Pages Router build fails with "Global CSS cannot be imported from files other than your Custom `<App>`"**

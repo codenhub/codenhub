@@ -2,7 +2,7 @@
 title: Temas
 description: Modo claro y oscuro, reemplazar la paleta con los colores de marca, definir una intención propia, y cada token de color, intención, base y fuente con su valor por defecto.
 order: 5
-source: e4ecd755cc2e249fe99284d6b43244d908ac13e1
+source: d071d7088a90d81286d17d3af6aec720cbd1e5f7
 ---
 
 # Temas
@@ -136,11 +136,26 @@ La clase funciona en todo lo que acepta una intención: botones, badges, campos 
 - **Clases solo.** Una [clase solo](./solo.md) como `.neobrutalism-solo` solo toma una intención de las seis clases incorporadas, así que `.neobrutalism-solo.beta` se dibuja neutro.
 - **El texto del hint.** Un [`.hint`](./forms.md#mostrar-un-error-de-validación) solo se muestra en el tono legible de una intención con las seis clases incorporadas, así que `.hint.beta` se queda en el color secundario.
 - **Filas de tabla.** Una fila del cuerpo cambia el color de su texto, su línea y su hover solo con las clases de intención incorporadas. `<tr class="beta">` se ve como el resto de su tabla.
+- **Más contraste.** Con `prefers-contrast: more` o `data-contrast="more"`, el borde de una intención incorporada toma su tono strong, así que `.edged` sobre un componente `.soft` alcanza 3:1; consulta [Accesibilidad → Contraste aumentado](../accessibility.md#contraste-aumentado). `.beta` conserva su `--intent-border`, que puede quedar por debajo de 3:1 frente a su tinte.
 
 Si los necesitas, hay dos caminos:
 
 - **Cambia en su lugar el tema de una intención incorporada.** Define la familia `--color-info` (u otra) con tus colores, como en [Cambiar el color de marca](#cambiar-el-color-de-marca), y escribe `.info`. Todo, incluidos los casos anteriores, funciona entonces. El coste es que el cambio llega a cada `.info` dentro del elemento en el que lo defines, así que defínelo en el elemento más reducido que funcione, y no lo hagas con una intención que la página ya usa con su propio significado.
 - **Píntalo tú.** Escribe tu propio CSS para ese componente concreto, como un `background-color` en `.panel.beta`.
+
+Para más contraste, el segundo camino son dos reglas: una para el ajuste del sistema, que el `data-contrast="standard"` de una app desactiva, y otra para `data-contrast="more"`. El tono strong de arriba mide 7.57:1 y 5.93:1 sobre el tinte, así que el borde supera 3:1 en ambos temas.
+
+```css
+@media (prefers-contrast: more) {
+  .beta:not(:where(:root[data-contrast="standard"] *)) {
+    --intent-border: var(--intent-strong);
+  }
+}
+
+:root[data-contrast="more"] .beta {
+  --intent-border: var(--intent-strong);
+}
+```
 
 > **La intención no se hereda.** Cada componente restablece los huecos de intención en su propia raíz, así que un contenedor `.success` no cambia el color de un botón destructivo que contenga. Pon la clase de intención en el elemento que muestra el color.
 
@@ -177,7 +192,7 @@ Cada fila es un punto de sobrescritura: defínelo en `:root` para cambiar el tem
 | `--color-tooltip-contrast`     | `neutral-900`, `neutral-100` | Texto sobre `--color-tooltip`.                                                                                   |
 | `--color-success`              | `emerald-700`                | Relleno de `.success`.                                                                                           |
 | `--color-success-contrast`     | `neutral-50`                 | Texto sobre un relleno success completo: 5.14:1.                                                                 |
-| `--color-success-hover`        | `#007552`, `#008e66`         | Relleno success bajo el puntero.                                                                                 |
+| `--color-success-hover`        | `#007552`, `#006448`         | Relleno success bajo el puntero.                                                                                 |
 | `--color-success-subtle`       | `emerald-100`, `emerald-900` | Tinte success detrás de los componentes soft.                                                                    |
 | `--color-success-strong`       | `emerald-800`, `emerald-300` | Texto, iconos y bordes success donde el relleno no es completo.                                                  |
 | `--color-warning`              | `amber-600`                  | Relleno de `.warning`.                                                                                           |

@@ -55,6 +55,16 @@
   initial-value: 0%;
 }
 
+/* Whether a plate lies beneath, as `--_held-on` says before a surface
+   restates that as its own hold to block the ink. A surface reads it to set
+   a translucent ground opaque on a plate. Registered and inheriting, for
+   the same pass-through. */
+@property --_on-plate {
+  syntax: "<percentage>";
+  inherits: true;
+  initial-value: 0%;
+}
+
 /* Filled with the intent color. Text is the contrast tone. `--_holds-ink` is
    the same answer as a toggle `box` can read: empty where the fill is a
    plate, `none` where it is not. A percentage cannot make a declaration

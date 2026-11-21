@@ -170,6 +170,23 @@
       backdrop-filter: var(--ui-backdrop, none);
     }
 
+    /* Raised a step while it holds an open tooltip, as a surface is: under
+       glass the blur makes the table a stacking context too, so there it is
+       anchored at rest and hover changes only its `z-index`. Off, the anchor
+       reverts to the layer below, where liquid glass anchors its layers. See
+       `surface.rules.css`. */
+    :where(&) {
+      --_table-anchor: var(--_surface-stacks) relative;
+
+      position: var(--_table-anchor, revert-layer);
+    }
+
+    :where(&:has(.tooltip):is(:hover, :focus-within), &:has(.tooltip[data-state="open"])) {
+      --_surface-raise: var(--_surface-stacks) 1;
+
+      z-index: var(--_surface-raise, revert-layer);
+    }
+
     /* How much rule there is between body rows, and none unless asked for. Ruling
        every row is a style choice rather than part of what a table is, so it is
        not tied to the edge axis: `.ruled` asks for it, `.ruleless` is its

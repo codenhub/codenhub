@@ -644,3 +644,133 @@ test("sizes an icon button with the size step and keeps it square", async ({ pag
     [48, 48],
   ]);
 });
+
+/* WCAG 1.4.10 asks content to reflow at 320 CSS pixels without scrolling
+   sideways. A label held on one line made a long button wider than the
+   page. A label that fits stays on one line; one that does not wraps inside
+   the button, under every aesthetic, while a button beside a field in a
+   group and an icon button keep their size. */
+test("wraps a long button label at a 320px viewport and keeps a short one on one line", async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 800 });
+  await page.goto(BUTTONS_URL);
+
+  const regions = ["", "chunky-tile", "cyber", "glass", "neobrutalism", "pixel", "sketch", "sketch sketch-rounded"];
+  const results = await page.evaluate((classes) => {
+    const holder = document.createElement("div");
+
+    holder.style.cssText =
+      "position: absolute; inset: 0 auto auto 0; width: 320px; padding: 16px; box-sizing: border-box";
+    document.body.append(holder);
+
+    const read = classes.map((region) => {
+      const host = document.createElement("div");
+
+      host.className = region;
+      host.innerHTML =
+        '<button class="btn" type="button" data-probe="long">Save the changes to every selected project and notify the team</button>' +
+        '<button class="btn" type="button" data-probe="short">Save</button><input class="ipt" data-probe="field" />' +
+        '<button class="btn icon" type="button" aria-label="Close" data-probe="icon">X</button>' +
+        '<div class="input-group" data-probe="group"><input class="ipt" /><button class="btn" type="button" data-probe="grouped">Subscribe</button></div>';
+      holder.append(host);
+
+      const rect = (probe: string) => host.querySelector(`[data-probe="${probe}"]`)!.getBoundingClientRect();
+      const long = host.querySelector<HTMLElement>('[data-probe="long"]')!;
+      const values = {
+        region: region || "default",
+        hostWidth: host.getBoundingClientRect().width,
+        long: {
+          width: rect("long").width,
+          height: rect("long").height,
+          overflows: long.scrollWidth > long.clientWidth,
+        },
+        short: rect("short").height,
+        icon: [rect("icon").width, rect("icon").height],
+        group: rect("group").height,
+        grouped: rect("grouped").height,
+        field: rect("field").height,
+      };
+
+      host.remove();
+
+      return values;
+    });
+    holder.remove();
+
+    return read;
+  }, regions);
+
+  for (const value of results) {
+    expect.soft(value.long.width, `${value.region} long label fits its container`).toBeLessThanOrEqual(value.hostWidth);
+    expect.soft(value.long.overflows, `${value.region} long label stays inside the button`).toBe(false);
+    expect.soft(value.long.height, `${value.region} long label wraps`).toBeGreaterThan(value.short + 8);
+    expect.soft(value.short, `${value.region} short label stays on one line`).toBeCloseTo(value.field, 0);
+    expect.soft(value.icon[0], `${value.region} icon button stays square`).toBeCloseTo(value.icon[1]!, 0);
+    expect.soft(value.grouped, `${value.region} grouped button stays on one line`).toBeLessThanOrEqual(value.group);
+  }
+});
+
+/* The limit docs/usage/buttons.md states: a label wraps only between words,
+   so one word wider than its container runs past the button, and
+   `overflow-wrap: anywhere` on the button breaks it inside. */
+test("lets a single word wider than its container overflow unless the button breaks it", async ({ page }) => {
+  await page.goto(BUTTONS_URL);
+
+  const read = await page.evaluate(() => {
+    const host = document.createElement("div");
+
+    host.style.cssText = "position: absolute; inset: 0 auto auto 0; width: 120px";
+    host.innerHTML = ["", "overflow-wrap: anywhere"]
+      .map((style) => `<button class="btn" type="button" style="${style}">Datenschutzgrundverordnung</button>`)
+      .join("");
+    document.body.append(host);
+
+    const [plain, broken] = [...host.querySelectorAll("button")].map(
+      (button) => button.scrollWidth > button.clientWidth + 1,
+    );
+
+    host.remove();
+
+    return { plain, broken };
+  });
+
+  expect(read).toEqual({ plain: true, broken: false });
+});
+
+/* A full-width button beside an icon button in a flex row shrinks to make
+   room, as a flex item does. Held at its width by `flex-shrink: 0`, it pushed
+   the icon button 48px out of a 300px row in every engine. The icon button
+   keeps its square, at every padding step. */
+test("shrinks a full-width button to fit its row beside an icon button", async ({ page }) => {
+  await page.goto(BUTTONS_URL);
+
+  const rows = await page.evaluate(() =>
+    ["", "p-xs", "p-sm", "p-lg"].map((padding) => {
+      const row = document.createElement("div");
+
+      /* Centred at the padding steps, so a short icon button is not stretched
+         to the row's height, which is not its square. */
+      row.style.cssText = `display: flex; gap: 8px; width: 300px${padding ? "; align-items: center" : ""}`;
+      row.innerHTML =
+        '<button class="btn" type="button" style="width: 100%">Continue</button>' +
+        `<button class="btn icon ${padding}" type="button" aria-label="More">…</button>`;
+      document.body.prepend(row);
+
+      const icon = row.lastElementChild!.getBoundingClientRect();
+      const values = {
+        padding: padding || "default",
+        overflow: icon.right - row.getBoundingClientRect().right,
+        icon: [icon.width, icon.height],
+      };
+
+      row.remove();
+
+      return values;
+    }),
+  );
+
+  for (const row of rows) {
+    // Firefox lays the row out a rounding error past its edge, 1/65536px; the defect this holds off was 48px.
+    expect.soft(row.overflow, `${row.padding} row holds both buttons`).toBeLessThan(0.01);
+    expect.soft(row.icon[0], `${row.padding} icon button stays square`).toBeCloseTo(row.icon[1]!, 0);
+  }
+});

@@ -526,11 +526,13 @@
 
   .label {
     /* In `:where()`: a label's type is a default, and Tailwind emits this rule
-       after its own type utilities, so at 0-1-0 `.label.text-sm` stayed 16px. */
+       after its own type utilities, so at 0-1-0 `.label.text-sm` stayed 16px.
+       The tracking reads `--_script-tracking` first, as the text styles do, so
+       it is off in a script that joins its letters; see `typography.rules.css`. */
     :where(&) {
       font-size: 1rem;
       font-weight: 500;
-      letter-spacing: 0.025em;
+      letter-spacing: var(--_script-tracking, 0.025em);
     }
   }
 
@@ -544,7 +546,8 @@
        placeholder takes it: the page's grey read at 1.0 to 3.24:1 there. */
     color: color-mix(in oklab, var(--_held-ink, transparent) var(--_held-on, 0%), var(--color-text-secondary));
     font-weight: 400;
-    letter-spacing: 0.05em;
+    /* Off in a joining script, as a label's is. */
+    letter-spacing: var(--_script-tracking, 0.05em);
 
     /* A named intent prints its readable tone, `--intent-strong`, the colour
        typed text takes: a hint is text on the page, and `--intent-color` is a

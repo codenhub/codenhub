@@ -140,6 +140,7 @@
     --_held-ink: var(--_holds-ink, var(--_d-holds-ink)) var(--_fg-own);
     --_held-on: var(--_holds-ink, var(--_d-holds-ink)) 100%;
     --_own-hold: var(--_holds-ink, var(--_d-holds-ink)) 100%;
+    --_on-plate: var(--_holds-ink, var(--_d-holds-ink)) 100%;
     --_through: min(
       var(--_held-on),
       calc(100% - var(--_own-hold)),

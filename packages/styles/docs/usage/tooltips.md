@@ -55,17 +55,18 @@ A bubble is as wide as its text, up to 18rem, and then wraps.
 
 ### Where a tooltip gets cut off
 
-The bubble is positioned with CSS only, on the side you chose. Nothing measures the page: it does not move to stay inside the window, flip to the other side when there is no room, or move to the top layer of the page. That has three consequences:
+The bubble is positioned with CSS only, on the side you chose. Nothing measures the page: it does not move to stay inside the window, flip to the other side when there is no room, or move to the top layer of the page. That has four consequences:
 
 - **A scrolling or clipping container cuts it off.** An ancestor with `overflow: hidden`, `auto`, or `scroll` clips the bubble at its edge. The API keys table on the settings screen sits in a `.table-wrap`, which scrolls, so a top tooltip on the first row is cut off at the top of the wrapper. Raising `z-index` does not help: it changes what the bubble is painted above, not whether the container clips it.
 - **The window edge cuts it off.** A top tooltip on the first line of a page, or a right tooltip near the right edge, extends off screen.
 - **Left and right are physical sides.** In a right-to-left page, `"left"` still means the left side of the screen.
+- **The next card can cover it, briefly.** Under `.glass`, every card, panel, alert, and table is its own layer, so a bubble is painted above the surfaces after its own only while its surface is lifted. Under glass those surfaces are `position: relative` at rest, so an absolutely positioned child is placed against its surface, and the package lifts a `.card`, `.panel`, `.alert`, `.surface`, or `.data-table` that holds a tooltip by one step, `z-index: 1`, while the tooltip is pinned open, or while the surface is hovered or holds focus. One step clears the surfaces beside it and stays under your own layers, such as a sticky header or an open menu. Outside glass a surface is not its own layer, and nothing is lifted. A surface you positioned yourself, or gave its own `z-index`, keeps it, with one exception under glass: a position set in your own `@layer components` on an element that also carries a package surface class, as in `class="panel my-header"`, loses to the package's `relative`. Set that position with a utility such as `sticky`, or in a rule outside any layer. Once the pointer leaves the surface, the lift ends at once, so a bubble that overhangs the next card fades out beneath it during `--tooltip-linger`.
 
 What to do:
 
 - Choose a side with room: on a table's first row, use `data-tooltip-position="bottom"`.
 - Move the tooltip's trigger out of the clipping container, or remove the `overflow` from a container that does not need it.
-- If the trigger's position cannot be known in advance, such as in a scrolling list or a resizable panel, use a positioning library or your framework's popover component, which can measure and flip. You can still give its message element the `.tooltip-bubble` classes for the look, but the showing, hiding, and positioning described on this page then come from that library, not from `.tooltip`.
+- If the trigger's position cannot be known in advance, such as in a scrolling list or a resizable panel, use a positioning library or your framework's popover component, which can measure and flip. You can still give its message element the `.tooltip-bubble` classes for the look. Outside `.tooltip`, the class is the look alone: no hidden resting state, position, or scaling, so a popover the library opens, such as `<div popover class="tooltip-bubble primary">`, shows as soon as it opens. The showing, hiding, and positioning described on this page then come from that library.
 
 ## Hover, linger, and Escape
 
