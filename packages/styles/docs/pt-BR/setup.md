@@ -2,7 +2,7 @@
 title: Configuração
 description: Instale o pacote, escolha entre CSS compilado ou código-fonte do Tailwind e renderize a estrutura da página de configurações.
 order: 1
-source: eb93e34cf0905c9c3a75c565337d18f9a615e2e6
+source: 48c6ecafabeaec09803731e6246683ab4c010cb6
 ---
 
 # Configuração
@@ -72,7 +72,7 @@ A ordem dos dois imports não importa, porque todo entrypoint declara as [camada
 
 ## Requisitos
 
-- **Navegadores:** Chrome 123, Safari 17.5 ou Firefox 128 e mais recentes. As cores usam `light-dark()` e `color-scheme` (Firefox 120). O `.input-group` lê o estado inválido e desabilitado de um controle aninhado com `:has()` (Firefox 121). As classes de elevação registram uma propriedade sem herança com `@property` (Firefox 128); sem isso, uma classe de elevação também atingiria os elementos sem classe dentro dela.
+- **Navegadores:** Chrome 123, Safari 17.5 ou Firefox 128 e mais recentes. As cores usam `light-dark()` e `color-scheme` (Firefox 120). O `.input-group` lê o estado inválido e desabilitado de um controle aninhado com `:has()` (Firefox 121). As classes de elevação registram uma propriedade sem herança com `@property` (Firefox 128); sem isso, uma classe de elevação também atingiria os elementos sem classe dentro dela. Alguns recursos mais recentes são usados onde o navegador os tem e ignorados onde não tem, sem quebrar nada no mínimo: `corner-shape`, sem o qual os cantos chanfrados de `.cyber` ficam retos, `scrollbar-color` e `scrollbar-width`, sem os quais o Safari 17.5 desenha a própria barra de rolagem, e as partes que a configuração de movimento reduzido interrompe, como uma animação guiada pela rolagem, que um navegador sem elas nunca anima.
 - **Ferramental:** um `@import` com nome de pacote precisa de uma ferramenta que resolva imports de CSS de pacotes pelo mapa `exports` deles. Sem ela, referencie o arquivo compilado pelo caminho ou a partir de uma CDN; veja [Sem bundler](./integrating/without-a-bundler.md). Duas ferramentas comuns precisam de um ajuste, descrito em [Integração → Bundlers que precisam de um empurrão](./integrating/index.md#bundlers-que-precisam-de-um-empurrão): o Parcel e o PostCSS com `postcss-import`.
 - **Tailwind:** 4.3.2 ou mais recente, abaixo da 5, só para os entrypoints de código-fonte `/tw`. É uma peer dependency opcional, então os entrypoints compilados e o comando `chs build` não o instalam.
 - **Node.js:** 26 ou mais recente na máquina que roda o comando `chs build`. As folhas de estilos não precisam dele, mas o pacote o declara como sua engine, então o Yarn 1, e o npm com `engine-strict`, recusam a instalação num Node.js mais antigo.

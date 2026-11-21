@@ -2,7 +2,7 @@
 title: Configuración inicial
 description: Instala el paquete, elige entre CSS compilado o código fuente de Tailwind y renderiza la estructura base de la página de ajustes.
 order: 1
-source: eb93e34cf0905c9c3a75c565337d18f9a615e2e6
+source: 48c6ecafabeaec09803731e6246683ab4c010cb6
 ---
 
 # Configuración inicial
@@ -72,7 +72,7 @@ El orden de los dos imports no importa, porque cada punto de entrada declara las
 
 ## Requisitos
 
-- **Navegadores:** Chrome 123, Safari 17.5 o Firefox 128 y posteriores. Los colores usan `light-dark()` y `color-scheme` (Firefox 120). `.input-group` lee el estado inválido y deshabilitado de un control anidado con `:has()` (Firefox 121). Las clases de elevación registran una propiedad que no se hereda con `@property` (Firefox 128); sin ella, una clase de elevación también llegaría a los elementos sin clase que contiene.
+- **Navegadores:** Chrome 123, Safari 17.5 o Firefox 128 y posteriores. Los colores usan `light-dark()` y `color-scheme` (Firefox 120). `.input-group` lee el estado inválido y deshabilitado de un control anidado con `:has()` (Firefox 121). Las clases de elevación registran una propiedad que no se hereda con `@property` (Firefox 128); sin ella, una clase de elevación también llegaría a los elementos sin clase que contiene. Algunas características más recientes se usan donde el navegador las tiene y se omiten donde no, sin romper nada en el mínimo: `corner-shape`, sin la cual las esquinas biseladas de `.cyber` son rectas, `scrollbar-color` y `scrollbar-width`, sin las cuales Safari 17.5 dibuja su propia barra de desplazamiento, y las partes que detiene el ajuste de movimiento reducido, como una animación guiada por el desplazamiento, que un navegador sin ellas nunca anima.
 - **Herramientas:** un `@import` con un nombre de paquete necesita una herramienta que resuelva imports de CSS desde paquetes a través de su mapa `exports`. Si no tienes una, enlaza el archivo compilado por su ruta o desde un CDN; consulta [Sin bundler](./integrating/without-a-bundler.md). Dos herramientas habituales necesitan un pequeño ajuste, descrito en [Integración → Bundlers que necesitan un empujón](./integrating/index.md#bundlers-que-necesitan-un-empujón): Parcel, y PostCSS con `postcss-import`.
 - **Tailwind:** 4.3.2 o posterior, por debajo de 5, solo para los puntos de entrada de código fuente `/tw`. Es una peer dependency opcional, así que ni los puntos de entrada compilados ni el comando `chs build` la instalan.
 - **Node.js:** 26 o posterior en la máquina que ejecuta el comando `chs build`. Las hojas de estilos no lo necesitan, pero el paquete lo declara como su engine, así que Yarn 1, y npm con `engine-strict`, rechazan la instalación en un Node.js anterior.

@@ -1098,4 +1098,5 @@ This does not apply to a class or attribute that is itself a direction choice an
 - [Roadmap](./roadmap.md)
 - [Tests](./tests.md)
 - [Generated palette](./generated-palette.md)
+- [Browser support](./browser-support.md)
 - [Accessibility](../accessibility.md)
