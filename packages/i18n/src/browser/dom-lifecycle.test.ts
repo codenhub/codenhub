@@ -564,14 +564,13 @@ describe("initializeBrowserI18n document integration", () => {
       }
     }
     customElements.define("echo-button", EchoButton, { extends: "button" });
-    document.body.innerHTML = "<div></div>";
-    const root = document.querySelector("div")!;
-    const i18n = createManager();
-    const binding = await initializeBrowserI18n({ i18n, locale: "fr", root, observe: true });
     const button = document.createElement("button", { is: "echo-button" });
-    button.setAttribute("data-i18n-aria-label", "greeting");
+    document.body.append(button);
+    const i18n = createManager();
+    // A component is translated only as the root itself, since the binding never reads into one from outside.
+    const binding = await initializeBrowserI18n({ i18n, locale: "fr", root: button, observe: true });
 
-    root.append(button);
+    button.setAttribute("data-i18n-aria-label", "greeting");
     await flushMutations();
     await flushMutations();
 

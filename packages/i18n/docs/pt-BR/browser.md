@@ -2,7 +2,7 @@
 title: Traduza um app no navegador
 description: Detecte e lembre o idioma do visitante, mantenha lang e dir em sincronia, renderize de novo um framework, traduza HTML e rode num Web Worker.
 order: 2
-source: 1e4596dff94c131820f59b47095e3e1bbe943078
+source: 3c1817a77b12096de091ec2f6c06354065e10b7c
 ---
 
 # Traduza um app no navegador
@@ -223,7 +223,7 @@ Deixe `observe` desligado quando um framework renderiza a página: o framework j
 
 ### Custom elements
 
-O binding não olha dentro de custom elements, com ou sem shadow root, e não avisa quando pula um deles. Isso vale para tags com hífen, como `<my-widget>`, e para elementos nativos customizados com `is`, como `<button is="my-button">`.
+O binding não olha dentro de custom elements, com ou sem shadow root, e não avisa quando pula um deles. Isso vale para tags com hífen, como `<my-widget>`, e para elementos nativos customizados, seja quando o HTML marca um com `is`, como em `<button is="my-button">`, seja quando o seu código cria um com `document.createElement("button", { is: "my-button" })`, que não coloca nenhum atributo `is`. Num navegador sem `customElements.getName()`, um que o seu código cria é traduzido como um elemento comum.
 
 Um componente tem vida própria: ele pode renderizar depois que a página foi traduzida, e acrescenta e remove texto conforme as pessoas o usam, texto que ele vai ter de traduzir sozinho de qualquer jeito. Então o componente traduz o próprio conteúdo: chame `i18n.t()` quando ele renderizar e renderize de novo a partir de `i18n.subscribe()`. O card de produto da loja faz exatamente isso:
 

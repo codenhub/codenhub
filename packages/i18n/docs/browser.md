@@ -222,7 +222,7 @@ Leave `observe` off when a framework renders the page: the framework already cal
 
 ### Custom elements
 
-The binding does not look inside custom elements, with or without a shadow root, and doesn't warn when it skips one. That covers tags with a dash, such as `<my-widget>`, and built-in elements customized with `is`, such as `<button is="my-button">`.
+The binding does not look inside custom elements, with or without a shadow root, and doesn't warn when it skips one. That covers tags with a dash, such as `<my-widget>`, and customized built-in elements, whether the HTML marks one with `is`, as in `<button is="my-button">`, or your code creates one with `document.createElement("button", { is: "my-button" })`, which sets no `is` attribute. In a browser without `customElements.getName()`, one your code creates is translated like a plain element.
 
 A component has a life of its own: it can render after the page was translated, and it adds and removes text as people use it, which it has to translate itself anyway. So the component translates its own content: call `i18n.t()` when it renders, and render again from `i18n.subscribe()`. The shop's product card does exactly that:
 

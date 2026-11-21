@@ -121,12 +121,29 @@ export const runEach = <T>(items: Iterable<T>, run: (item: T) => void): void => 
 
 const isElementNode = (node: ParentNode): node is Element => node.nodeType === ELEMENT_NODE;
 
+/**
+ * Whether the element was defined as a custom element, which also finds a customized built-in created from script,
+ * such as `document.createElement("button", { is: "x-button" })`, since that sets no `is` attribute.
+ */
+const isDefinedCustomElement = (element: Element): boolean => {
+  const registry = element.ownerDocument.defaultView?.customElements;
+  // `getName()` is missing from browsers before 2024, where only the tag and the `is` attribute tell.
+  return (
+    typeof registry?.getName === "function" &&
+    registry.getName(element.constructor as CustomElementConstructor) !== null
+  );
+};
+
 const isInsideCustomElement = (element: Element, root: ParentNode): boolean => {
   let currentElement: Element | null = element;
 
   while (currentElement !== null && currentElement !== root) {
     // A customized built-in element, such as `<button is="x-button">`, is a component too.
-    if (currentElement.tagName.includes("-") || currentElement.hasAttribute("is")) {
+    if (
+      currentElement.tagName.includes("-") ||
+      currentElement.hasAttribute("is") ||
+      isDefinedCustomElement(currentElement)
+    ) {
       return true;
     }
 

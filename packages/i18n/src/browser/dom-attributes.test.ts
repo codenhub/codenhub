@@ -143,6 +143,26 @@ describe("initializeBrowserI18n attribute translation", () => {
     binding.disconnect();
   });
 
+  it("skips customized built-in elements created from script, which have no is attribute", async () => {
+    class ScriptButton extends HTMLButtonElement {}
+    class ScriptList extends HTMLUListElement {}
+    customElements.define("script-button", ScriptButton, { extends: "button" });
+    customElements.define("script-list", ScriptList, { extends: "ul" });
+    const created = document.createElement("button", { is: "script-button" });
+    created.setAttribute("data-i18n", "greeting");
+    created.textContent = "Own";
+    const constructed = new ScriptList();
+    constructed.innerHTML = '<li data-i18n="greeting">Item</li>';
+    document.body.append(created, constructed);
+    expect(created.hasAttribute("is")).toBe(false);
+
+    const binding = await initializeBrowserI18n({ i18n: createManager(), locale: "fr", root: document.body });
+
+    expect(created.textContent).toBe("Own");
+    expect(constructed.querySelector("li")?.textContent).toBe("Item");
+    binding.disconnect();
+  });
+
   it("translates observed additions and attribute key changes", async () => {
     const i18n = createManager();
     const binding = await initializeBrowserI18n({ i18n, locale: "fr", root: document.body, observe: true });
