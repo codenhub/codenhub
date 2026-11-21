@@ -356,6 +356,30 @@ export function renderLlmsFull(sections: readonly LlmsFullSection[]): string {
     .join("\n");
 }
 
+const CHANGELOG_PAGE = /^docs\/changelog\/(?<name>[^/]+)\.md$/;
+
+/** The manifest `version` of the package at `rootPath`, when it has one. */
+async function readManifestVersion(rootPath: string): Promise<string | undefined> {
+  try {
+    const manifest: unknown = JSON.parse(await readFile(join(rootPath, "package.json"), "utf8"));
+    const version = (manifest as { version?: unknown }).version;
+    return typeof version === "string" ? version : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+/**
+ * Whether a document belongs in the compilation as far as the changelog goes:
+ * of `docs/changelog/`'s version pages, only the one for the manifest's
+ * version is compiled, as `docs/specs/packages-documentation.md`, "LLM
+ * documentation", records. Every other document passes.
+ */
+function isCompiledChangelogPage(sourcePath: string, version: string | undefined): boolean {
+  const name = CHANGELOG_PAGE.exec(sourcePath)?.groups?.name;
+  return name === undefined || name === "index" || name === version;
+}
+
 /**
  * Builds the `llms-full.txt` a package should publish.
  * @param rootPath Absolute package directory.
@@ -364,7 +388,10 @@ export function renderLlmsFull(sections: readonly LlmsFullSection[]): string {
  * @throws When a source document cannot be read.
  */
 export async function buildLlmsFull(rootPath: string, packageFiles: readonly string[]): Promise<string> {
-  const sourcePaths = orderLlmsFullSources(packageFiles);
+  const version = await readManifestVersion(rootPath);
+  const sourcePaths = orderLlmsFullSources(packageFiles).filter((sourcePath) =>
+    isCompiledChangelogPage(sourcePath, version),
+  );
   const parsed = await Promise.all(
     sourcePaths.map(async (sourcePath): Promise<LlmsFullSection | LlmsFullDocument> => {
       const source = await readFile(join(rootPath, sourcePath), "utf8");
