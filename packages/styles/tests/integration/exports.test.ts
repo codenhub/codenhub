@@ -12,6 +12,8 @@ import { expect, test } from "vitest";
 interface PackageManifest {
   exports: Record<string, string | Record<string, string>>;
   bin?: Record<string, string>;
+  peerDependencies?: Record<string, string>;
+  peerDependenciesMeta?: Record<string, unknown>;
 }
 
 interface TailwindExportContract {
@@ -212,6 +214,14 @@ const compiledExportContracts: Record<string, CompiledExportContract> = {
 const aggregateExportTargets = ["dist/components.css", "dist/index.css"];
 const representativePublicRules = [".box{--_fill-cap:100%;--_cap-lift:0%;--_d-fill:0%;"];
 
+/* An optional peer still takes part in npm's resolution: a project on Tailwind
+   3, or on 4.x below the documented floor, failed `npm install` with ERESOLVE
+   even when it only linked the compiled CSS. The floor is documented instead. */
+test("declares no peer dependency, so no consumer's Tailwind blocks the install", () => {
+  expect(manifest.peerDependencies).toBeUndefined();
+  expect(manifest.peerDependenciesMeta).toBeUndefined();
+});
+
 test("every declared package export target exists after build", async () => {
   await Promise.all(
     exportTargets.map(({ exportName, target }) =>
@@ -251,6 +261,40 @@ test(
     expect(expected.filter((file) => !files.has(file))).toEqual([]);
   },
 );
+
+/* `tw/` copies the comments of `src/`, which point maintainers at
+   `docs/internal/`, the tests, and the build scripts, none of which ship: a
+   reader of the installed `tw/button.css` was sent to a file they do not have.
+   Every path a shipped comment names is in the tarball, or is a link. */
+test("every path a comment in tw/ names ships, or is a link to the repository", { timeout: 60_000 }, async () => {
+  const { stdout } = await executeFile("npm", ["pack", "--dry-run", "--json", "--ignore-scripts"], {
+    cwd: packageRoot,
+    shell: process.platform === "win32",
+  });
+  const [packed] = JSON.parse(stdout) as [{ files: { path: string }[] }];
+  const files = new Set(packed.files.map((file) => file.path));
+  const ships = (reference: string) =>
+    files.has(reference) ||
+    [...files].some((file) => file.startsWith(reference.endsWith("/") ? reference : `${reference}/`));
+  const unshipped: string[] = [];
+
+  for (const file of await shippedStylesheets("tw")) {
+    // oxlint-disable-next-line no-await-in-loop -- one file at a time keeps the failure list ordered.
+    postcss.parse(await readFile(path.resolve(packageRoot, file), "utf8")).walkComments((comment) => {
+      const withoutLinks = comment.text.replaceAll(/https:\/\/\S+/g, "");
+
+      for (const [reference] of withoutLinks.matchAll(
+        /(?<![\w./-])(?:docs|tests|scripts|src)\/(?:[\w.-]+\/)*(?:[\w.-]*[\w-])?/g,
+      )) {
+        if (!ships(reference)) {
+          unshipped.push(`${file}: ${reference}`);
+        }
+      }
+    });
+  }
+
+  expect(unshipped).toEqual([]);
+});
 
 /* Every CSS file under one of the package's published directories, as
    package-relative paths with forward slashes. */
