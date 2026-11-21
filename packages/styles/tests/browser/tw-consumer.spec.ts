@@ -705,8 +705,12 @@ test.describe("/tw consumer build", () => {
       "tooltip-icon",
     ]) {
       expect(twCss, `.${unused} is unused`).not.toMatch(new RegExp(String.raw`(?:^|[{}])\.${unused}(?![\w-])`));
+      /* After a comma too: the minifier merges a rule into one that shares
+         its declarations, as `.visually-hidden-focusable:not(…)` joins
+         `.visually-hidden`. Not in the check above, where a comma also
+         precedes a class an intent's `:is()` list only names. */
       expect(distCss, `the compiled sheet emits .${unused}`).toMatch(
-        new RegExp(String.raw`(?:^|[{}])\.${unused}(?![\w-])`),
+        new RegExp(String.raw`(?:^|[{},])\.${unused}(?![\w-])`),
       );
     }
   });

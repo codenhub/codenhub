@@ -480,36 +480,35 @@ for (const [label, attributes, reducedMotion] of [
        near-zero duration alone left it following the page as it scrolled. */
     test("a scroll-driven animation does not follow the scroll", async ({ page }) => {
       await page.emulateMedia({ reducedMotion });
+      /* The sheet in the head, before the animation exists, as a page loads
+         it. Added after, WebKit 26 at times left the running animation on the
+         scroll timeline its `animation-timeline` no longer named. */
       await page.setContent(
-        `<!doctype html><html ${attributes}><body style="margin: 0"><style>
+        `<!doctype html><html ${attributes}><head><style>${await built("index.css")}</style></head><body style="margin: 0"><style>
         @keyframes slide { to { translate: 300px; } }
         #a { animation: slide linear both; animation-timeline: scroll(root); width: 10px; height: 10px; }
       </style><div id="a" data-testid="a"></div><div style="height: 4000px"></div></body></html>`,
       );
-      await page.addStyleTag({ content: await built("index.css") });
 
       const supported = await page.evaluate(() => CSS.supports("animation-timeline: scroll()"));
 
       test.skip(!supported, "the engine has no scroll-driven animations");
 
-      /* Two frames, so a pending animation has started: before it does, its
-         backwards fill still shows the first keyframe. */
-      const settle = () =>
-        page.evaluate(async () => {
-          await new Promise(requestAnimationFrame);
-          await new Promise(requestAnimationFrame);
-        });
       const read = () => page.getByTestId("a").evaluate((element) => getComputedStyle(element).translate);
 
-      await settle();
-      const top = await read();
+      /* Polled, not read after a fixed number of frames: WebKit can take a
+         few more to move the animation onto the document's timeline, and
+         until then its backwards fill shows the first keyframe. An animation
+         still following the scroll stays there at the top and never ends. */
+      await expect.poll(read, { message: "it ends where its keyframes end" }).toBe("300px");
 
       await page.evaluate(() => window.scrollTo(0, 1800));
-      await settle();
-      const middle = await read();
+      await page.evaluate(async () => {
+        await new Promise(requestAnimationFrame);
+        await new Promise(requestAnimationFrame);
+      });
 
-      expect(middle, "the scroll moves nothing").toBe(top);
-      expect(top, "it ends where its keyframes end").toBe("300px");
+      expect(await read(), "the scroll moves nothing").toBe("300px");
     });
 
     /* Each pseudo-element in a rule of its own in the reset, since an engine
