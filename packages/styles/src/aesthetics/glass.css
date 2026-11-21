@@ -365,13 +365,17 @@
      `.edgeless`. Its fill is still presentation's: `.solid` stays an opaque
      plate under the rim, and `.soft` and `.ghost` are the clear panes. A
      disabled one is dimmed by `opacity`, which makes it a backdrop root, so it
-     keeps the ground and the rim and bends nothing. */
+     keeps the ground and the rim and bends nothing.
+
+     The element's own `.glass-liquid` turns the flag on only where glass is
+     the nearest region, which `--_surface-stacks` says: glass sets it on and
+     every other aesthetic off, below. Turned on outright, a liquid button in a
+     pixel region nested in glass matched `.glass *` and kept both layers. */
   .glass-liquid:not(.glass-solo):is(.glass, .glass *) {
     /* A space toggle: empty is on, and `initial` makes every declaration
        reading it invalid at computed-value time, which is off. */
-    --_glass-liquid-on: ;
+    --_glass-liquid-on: var(--_surface-stacks);
     --_glass-liquid-backdrop: initial;
-    --_surface-stacks: ;
   }
 
   .glass:not(.glass-liquid),
@@ -445,7 +449,9 @@
    docs/internal/model.md#cascade-layers. */
 @layer utilities {
   .btn.glass-liquid:is(.glass, .glass *) {
-    --_d-ground: var(--ui-surface-ground, transparent);
+    /* Only where the layers are on, so the nearest region decides here too. */
+    --_glass-liquid-ground: var(--_glass-liquid-on) var(--ui-surface-ground, transparent);
+    --_d-ground: var(--_glass-liquid-ground, transparent);
   }
 }
 

@@ -1303,6 +1303,54 @@ test.describe("aesthetics", () => {
         }
       });
 
+      /* A liquid button asks for the layers itself, and the nearest region
+         still decides: inside a pixel region nested in glass, a
+         `.btn.glass-liquid` matched `.glass *` and kept both layers, the
+         anchor, and the isolation. */
+      test("layers a liquid button by the nearest region", async ({ page, browserName }) => {
+        await allowTransparency(page, browserName);
+        await page.goto(SURFACES_URL);
+
+        const read = await page.getByTestId("preview-root").evaluate((root) => {
+          const others = ["neobrutalism", "pixel", "chunky-tile", "cyber", "sketch"];
+          const paint = (regions: string[]) => {
+            const wrapper = document.createElement("div");
+
+            wrapper.innerHTML = `${regions.map((region) => `<div class="${region}">`).join("")}<button class="btn ghost glass-liquid">x</button>${"</div>".repeat(regions.length)}`;
+            root.append(wrapper);
+
+            const button = wrapper.querySelector("button")!;
+            const styles = getComputedStyle(button);
+            const result = {
+              before: getComputedStyle(button, "::before").content,
+              after: getComputedStyle(button, "::after").content,
+              position: styles.position,
+              isolation: styles.isolation,
+              ground: styles.backgroundColor,
+            };
+
+            wrapper.remove();
+
+            return result;
+          };
+
+          return {
+            alone: paint(["glass"]),
+            nested: Object.fromEntries(others.map((other) => [other, paint(["glass", other])])),
+            reference: Object.fromEntries(others.map((other) => [other, paint([other])])),
+            reentered: Object.fromEntries(others.map((other) => [other, paint(["glass", other, "glass"])])),
+          };
+        });
+
+        expect(read.alone.before, "a liquid button in glass").toBe('""');
+        for (const other of Object.keys(read.nested)) {
+          expect.soft(read.nested[other], `a liquid button in ${other} inside glass`).toEqual(read.reference[other]);
+          expect
+            .soft(read.reentered[other], `a liquid button in glass inside ${other} inside glass`)
+            .toEqual(read.alone);
+        }
+      });
+
       test("changes only the corners where glass is not in scope", async ({ page }) => {
         await page.goto(SURFACES_URL);
 
