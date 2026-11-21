@@ -1,4 +1,4 @@
-<!-- source: 1314d1a05d15aa23229207613ed71375b5f0bb41 -->
+<!-- source: 587a4437bae37fa25da494a59d753378f2fcffc9 -->
 
 # @codenhub/styles
 
@@ -45,13 +45,13 @@ La documentación construye una pantalla de ajustes de cuenta de principio a fin
 
 ## Requisitos
 
-| Requisito      | Detalles                                                                                                                                                                                                                                     |
-| -------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Imports de CSS | Las herramientas del proyecto deben resolver los imports de CSS de paquetes.                                                                                                                                                                 |
-| Navegadores    | Chrome 123, Safari 17.5 o Firefox 128 y posteriores (`light-dark()` para los temas; `:has()` para el estado de `.input-group`; `@property` para una elevación que no se hereda).                                                             |
-| Tailwind CSS   | 4.3.2 o posterior, por debajo de 5, solo para los puntos de entrada de código fuente `/tw`. Instálalo tú; el paquete no lo instala.                                                                                                          |
-| Node.js        | 26 o posterior en la máquina que ejecuta el comando `chs build`. Las hojas de estilos no lo necesitan, pero el paquete lo declara como su engine, así que Yarn 1, y npm con `engine-strict`, rechazan la instalación en un Node.js anterior. |
-| Accesibilidad  | Tu proyecto aporta el HTML semántico, ARIA, el comportamiento de teclado y la gestión del foco.                                                                                                                                              |
+| Requisito      | Detalles                                                                                                                                                                                                                                            |
+| -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Imports de CSS | Las herramientas del proyecto deben resolver los imports de CSS de paquetes.                                                                                                                                                                        |
+| Navegadores    | Chrome 123, Safari 17.5 o Firefox 128 y posteriores (`light-dark()` para los temas; `:has()` para el estado de `.input-group`; `@property` para una elevación que no se hereda).                                                                    |
+| Tailwind CSS   | 4.3.2 o posterior, por debajo de 5, solo para los puntos de entrada de código fuente `/tw`. Instálalo tú; el paquete no lo instala.                                                                                                                 |
+| Node.js        | 24 o posterior en la máquina que ejecuta el comando `chs build`. Las hojas de estilos no lo necesitan, pero el paquete lo declara como su engine, así que Yarn 1, y npm o pnpm con `engine-strict`, rechazan la instalación en un Node.js anterior. |
+| Accesibilidad  | Tu proyecto aporta el HTML semántico, ARIA, el comportamiento de teclado y la gestión del foco.                                                                                                                                                     |
 
 ## Notas
 
@@ -59,4 +59,4 @@ Este paquete no tiene comportamiento en JavaScript. No incluye alias de compatib
 
 ## Licencia
 
-Este proyecto tiene licencia [Apache-2.0](LICENSE). Los valores del tema, el Preflight y los registros de propiedades de Tailwind, incluidos en las hojas de estilos compiladas de `dist/`, y los registros de propiedades de `tw/theme.css` provienen de [Tailwind CSS](https://tailwindcss.com) (MIT). Las marcas de checkbox incrustadas derivan de los iconos `check` y `minus` de [Lucide](https://lucide.dev) (ISC), que Lucide deriva de [Feather](https://github.com/feathericons/feather) (MIT). Consulta [NOTICE](NOTICE) para los avisos obligatorios. Cada hoja de estilos de `dist/` y de `tw/` que contiene las marcas los lleva en un comentario `/*!`, pero el minificador de una compilación de `/tw` puede quitar un comentario que no esté al principio de su salida, como hace el propio `--minify` de Tailwind, así que una compilación que incluya el checkbox debe conservar los avisos por otra vía.
+Este proyecto tiene licencia [Apache-2.0](LICENSE). Los valores del tema, el Preflight y los registros de propiedades de Tailwind, incluidos en las hojas de estilos compiladas de `dist/`, y los registros de propiedades de `tw/theme.css` provienen de [Tailwind CSS](https://tailwindcss.com) (MIT). Las marcas de checkbox incrustadas derivan de los iconos `check` y `minus` de [Lucide](https://lucide.dev) (ISC), que Lucide deriva de [Feather](https://github.com/feathericons/feather) (MIT). Consulta [NOTICE](NOTICE) para los avisos obligatorios. Cada hoja de estilos de `dist/` y de `tw/` que contiene las marcas los lleva en un comentario `/*!`, pero la mayoría de los bundlers quitan ese comentario en cuanto el CSS del paquete no es lo primero de la salida, tanto con los puntos de entrada compilados como con `/tw`: Vite 8 lo hace cuando otra hoja de estilos se importa antes que la del paquete, el `--minify` de la CLI de Tailwind lo hace después de `@import "tailwindcss"`, y Next.js 16 con Turbopack lo hace en su chunk. Así que una compilación que incluya el checkbox debe conservar los avisos por otra vía. Lo más sencillo es servir `NOTICE` con tu app, por ejemplo copiando `node_modules/@codenhub/styles/NOTICE` a tu carpeta pública, o añadir su texto a la página de licencias de tu app. El `build.license` de Vite lista el `LICENSE` del paquete, no `NOTICE`, así que no los lleva. En Vite, `build.cssMinify: false` deja el comentario donde está, a cambio de dejar tu propio CSS sin minificar; el del paquete ya viene minificado.

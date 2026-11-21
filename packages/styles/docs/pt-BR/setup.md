@@ -2,7 +2,7 @@
 title: Configuração
 description: Instale o pacote, escolha entre CSS compilado ou código-fonte do Tailwind e renderize a estrutura da página de configurações.
 order: 1
-source: 758d82616cd50ae0d21cfff1c30647042236efe1
+source: 0698f24ec8f6da13b5e44f0c4d42ac64400d5ee6
 ---
 
 # Configuração
@@ -44,7 +44,7 @@ A folha de estilos completa inclui o reset, os tokens, os utilitários de layout
 
 Escolha um:
 
-- **CSS compilado** (`@codenhub/styles`, mostrado acima). Use este, a menos que tenha um motivo para não usar. Qualquer bundler que resolva imports de CSS de pacotes funciona, como Vite, webpack ou a CLI do Tailwind. Ele traz todas as classes, sejam usadas pelas suas páginas ou não.
+- **CSS compilado** (`@codenhub/styles`, mostrado acima). Use este, a menos que tenha um motivo para não usar. Qualquer bundler que resolva imports de CSS de pacotes funciona, como Vite, webpack ou a CLI do Tailwind. Ele traz todas as classes, sejam usadas pelas suas páginas ou não. Pela CLI do Tailwind ele cresce cerca de um quinto: a CLI escreve cada `color-mix()` duas vezes, uma alternativa e o original dentro de `@supports (color: color-mix(in lab, red, red))`, e todo navegador que o pacote suporta usa o original. Com o Tailwind 4.3.2, a folha de estilos completa e uma estética saíram com 282.209 bytes, de 238.722. Num projeto que já roda Tailwind, use o código-fonte abaixo, ou importe o arquivo compilado fora do pipeline do Tailwind, por exemplo a partir da entrada JavaScript do app.
 - **Código-fonte do Tailwind CSS v4** (`@codenhub/styles/tw`). Use quando o seu projeto já roda Tailwind v4. O seu build compila o pacote junto com os seus próprios utilitários, então você fica com uma única folha de estilos e a variante `dark:` do Tailwind acompanha o tema do pacote. Exige Tailwind 4.3.2 ou mais recente, abaixo da 5.
 - **Sem bundler.** Referencie o arquivo compilado a partir do `node_modules` ou de uma CDN com uma tag `<link>`; veja [Sem bundler](./integrating/without-a-bundler.md).
 
@@ -74,8 +74,8 @@ A ordem dos dois imports não importa, porque todo entrypoint declara as [camada
 
 - **Navegadores:** Chrome 123, Safari 17.5 ou Firefox 128 e mais recentes. As cores usam `light-dark()` e `color-scheme` (Firefox 120). O `.input-group` lê o estado inválido e desabilitado de um controle aninhado com `:has()` (Firefox 121). As classes de elevação registram uma propriedade sem herança com `@property` (Firefox 128); sem isso, uma classe de elevação também atingiria os elementos sem classe dentro dela.
 - **Ferramental:** um `@import` com nome de pacote precisa de uma ferramenta que resolva imports de CSS de pacotes pelo mapa `exports` deles. Sem ela, referencie o arquivo compilado pelo caminho ou a partir de uma CDN; veja [Sem bundler](./integrating/without-a-bundler.md). Duas ferramentas comuns precisam de um ajuste, descrito em [Integração → Bundlers que precisam de um empurrão](./integrating/index.md#bundlers-que-precisam-de-um-empurrão): o Parcel e o PostCSS com `postcss-import`.
-- **Tailwind:** 4.3.2 ou mais recente, abaixo da 5, só para os entrypoints de código-fonte `/tw`. É uma peer dependency opcional, então os entrypoints compilados e o comando `chs build` não o instalam.
-- **Node.js:** 26 ou mais recente na máquina que roda o comando `chs build`. As folhas de estilos não precisam dele, mas o pacote o declara como sua engine, então o Yarn 1, e o npm com `engine-strict`, recusam a instalação num Node.js mais antigo.
+- **Tailwind:** 4.3.2 ou mais recente, abaixo da 5, só para os entrypoints de código-fonte `/tw`. O pacote não depende dele, então os entrypoints compilados e o comando `chs build` funcionam num projeto com qualquer Tailwind ou sem nenhum, e nada confere a versão por você.
+- **Node.js:** 24 ou mais recente na máquina que roda o comando `chs build`. As folhas de estilos não precisam dele, mas o pacote o declara como sua engine, então o Yarn 1, e o npm ou o pnpm com `engine-strict`, recusam a instalação num Node.js mais antigo.
 - **Sua aplicação:** o pacote não tem JavaScript. HTML semântico, ARIA, comportamento de teclado, gerenciamento de foco, validação e anúncios ficam com você; veja [Acessibilidade](./accessibility.md).
 
 ## Quando nada é estilizado
@@ -95,7 +95,7 @@ Isso não vale para os arquivos `/tw`. Eles são código-fonte do Tailwind, não
 
 ## Todos os entrypoints
 
-Os entrypoints compilados são CSS pronto. Os entrypoints `/tw` publicam o código-fonte não compilado de `tw/`, ao lado de `dist/`, que um build do Tailwind v4 precisa processar. Cada um é um caminho compilado com `/tw` no final, como `@codenhub/styles/native/tw` é o código-fonte de `@codenhub/styles/native`; os específicos, como `/button/tw`, só existem como código-fonte, e `/palette` só compilado. Um entrypoint `/tw` de um componente específico inclui os tokens do tema, então as classes dele não precisam de mais nada do pacote, mas ele precisa de `@import "tailwindcss";` antes; veja [Tailwind CSS v4 → Usando um entrypoint específico](./integrating/tailwind.md#usando-um-entrypoint-específico).
+Os entrypoints compilados são CSS pronto. Os entrypoints `/tw` publicam o código-fonte não compilado de `tw/`, ao lado de `dist/`, que um build do Tailwind v4 precisa processar. Cada um é um caminho compilado com `/tw` no final, como `@codenhub/styles/native/tw` é o código-fonte de `@codenhub/styles/native`; os específicos, como `/button/tw`, só existem como código-fonte, e `/palette` só compilado. Um entrypoint `/tw` de um componente específico inclui os tokens do tema, então as classes dele não precisam de mais nada do pacote, mas ele precisa de `@import "tailwindcss";` antes; veja [Tailwind CSS v4 → Usando um entrypoint específico](./integrating/tailwind.md#usando-um-entrypoint-específico). Um entrypoint específico é para uma família só: dois ou mais trazem cada um de novo o tema e as regras compartilhadas, então para duas famílias ou mais importe o `/components/tw`, ou o `/tw`.
 
 Cada caminho de import resolve para o mesmo arquivo nas condições de export `style`, `import` e `default`. Uma condição `types` vem primeiro e aponta para uma declaração vazia, para que o TypeScript aceite um import de efeito colateral como `import "@codenhub/styles";` com `noUncheckedSideEffectImports`, que o TypeScript 6 ativa por padrão. Um import de CSS é um efeito colateral, então garanta que o seu bundler não o descarte como não usado.
 

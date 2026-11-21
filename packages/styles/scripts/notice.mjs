@@ -5,8 +5,11 @@
  * licence each ask that their copyright and permission notices appear in every
  * copy, and a consumer who serves a compiled file ships a copy without
  * `NOTICE`, so the comment carries those notices in full, read from `NOTICE`
- * so the two cannot drift. A `/*!` comment survives minifiers, and
- * `chs build` keeps comments between rules.
+ * so the two cannot drift. `chs build` keeps comments between rules, but a
+ * consumer's bundler need not: Lightning CSS keeps a `/*!` comment only at the
+ * head of its output, so Vite 8 drops it when another stylesheet comes first,
+ * and so does the Tailwind CLI's `--minify` after `@import "tailwindcss"`.
+ * The README's License section tells a consumer how to keep the notices.
  */
 
 import { readFileSync } from "node:fs";
