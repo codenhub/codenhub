@@ -345,7 +345,10 @@ for (const theme of THEMES) {
    the ground it sits on in every state, the edge that is a toggle's only
    boundary at 3:1, and a focus ring at 3:1 against what is next to it, in both
    themes, with the standard contrast and with more. Every aesthetic is read,
-   since one may restate a fill, an ink, a line, or the ring. */
+   since one may restate a fill, an ink, a line, or the ring.
+
+   Each page is read in one call rather than a property at a time: read one
+   by one, these tests took the browser suite past `hub`'s 30-minute limit. */
 const CONTRASTS = ["standard", "more"] as const;
 const PRESENTATIONS = ["", "soft", "ghost", "solid"] as const;
 
@@ -359,29 +362,75 @@ const loadIn = async (page: Page, theme: string, contrast: string, markup: strin
   await settleAnimations(page);
 };
 
-/* What an element is painted on: every background from the root down to its
-   parent, laid over the page in turn, then its own fill over that. */
-const grounds = async (page: Page, testId: string) => {
-  const layers = await page.getByTestId(testId).evaluate((element) => {
-    const stack: string[] = [];
-    for (let node = element.parentElement; node; node = node.parentElement) {
-      stack.unshift(getComputedStyle(node).backgroundColor);
-    }
-
-    return { stack, fill: getComputedStyle(element).backgroundColor };
-  });
-  let under = await pageColor(page);
-  for (const layer of layers.stack) {
-    under = flattenColor(layer, under);
-  }
-
-  return { under, fill: flattenColor(layers.fill, under) };
+type Painted = {
+  page: string;
+  /* Every background from the root down to the element's parent. */
+  stack: string[];
+  fill: string;
+  color: string;
+  borderColor: string;
+  borderWidth: number;
+  shadow: string;
+  outlineStyle: string;
+  outlineWidth: number;
+  outlineColor: string;
+  focused: boolean;
 };
 
-const textRatio = async (page: Page, testId: string) => {
-  const { fill } = await grounds(page, testId);
+/* What the elements named by `testIds`, or every `[data-testid]`, are painted
+   with, read in the page in one call. */
+const paint = (page: Page, testIds?: string[]) =>
+  page.evaluate((ids) => {
+    const probe = document.createElement("div");
+    probe.style.backgroundColor = "var(--color-background)";
+    document.body.append(probe);
+    const ground = getComputedStyle(probe).backgroundColor;
+    probe.remove();
 
-  return getContrastRatio(flattenColor(await style(page, testId, "color"), fill), fill);
+    const elements = ids
+      ? ids.map((id) => document.querySelector(`[data-testid="${id}"]`)!)
+      : [...document.querySelectorAll("[data-testid]")];
+
+    return Object.fromEntries(
+      elements.map((element) => {
+        const styles = getComputedStyle(element);
+        const stack: string[] = [];
+        for (let node = element.parentElement; node; node = node.parentElement) {
+          stack.unshift(getComputedStyle(node).backgroundColor);
+        }
+
+        return [
+          element.getAttribute("data-testid")!,
+          {
+            page: ground,
+            stack,
+            fill: styles.backgroundColor,
+            color: styles.color,
+            borderColor: styles.borderTopColor,
+            borderWidth: Number.parseFloat(styles.borderTopWidth),
+            shadow: styles.boxShadow,
+            outlineStyle: styles.outlineStyle,
+            outlineWidth: Number.parseFloat(styles.outlineWidth),
+            outlineColor: styles.outlineColor,
+            focused: element.matches(":focus-visible"),
+          },
+        ];
+      }),
+    ) as Record<string, Painted>;
+  }, testIds);
+
+/* The ground under an element, its stack laid over the page in turn, and its
+   own fill over that. */
+const groundsOf = ({ page, stack, fill }: Painted) => {
+  const under = stack.reduce((below, layer) => flattenColor(layer, below), page);
+
+  return { under, fill: flattenColor(fill, under) };
+};
+
+const textRatio = (painted: Painted) => {
+  const { fill } = groundsOf(painted);
+
+  return getContrastRatio(flattenColor(painted.color, fill), fill);
 };
 
 const TEXT_COMPONENTS = [
@@ -397,12 +446,16 @@ const TEXT_COMPONENTS = [
 const caseId = (name: string, component: string, intent: string, presentation: string) =>
   `${name}-${component}-${intent}-${presentation || "default"}`;
 
-/* One test per aesthetic, as the focus rings below: the eight regions on one
-   page ran past the test timeout in Firefox and WebKit. */
+/* One test per aesthetic: every hover is a pointer move, and the eight
+   regions on one page ran past the test timeout in Firefox and WebKit.
+   Hover is read with the standard contrast only, since increased contrast
+   changes lines and leaves text and fills alone (docs/accessibility.md,
+   "Increased contrast"), and not on `.solid`, whose hover the test above
+   reads in every aesthetic. */
 for (const theme of THEMES) {
   for (const contrast of CONTRASTS) {
     for (const [name, region] of SOLID_REGIONS) {
-      test(`prints every component's text at 4.5:1 at rest and on hover, ${name}, ${theme}, ${contrast} contrast`, async ({
+      test(`prints every component's text at 4.5:1 ${contrast === "standard" ? "at rest and on hover" : "at rest"}, ${name}, ${theme}, ${contrast} contrast`, async ({
         page,
       }) => {
         await loadIn(
@@ -421,18 +474,22 @@ for (const theme of THEMES) {
           ).join("")}</div>`,
         );
 
+        const rest = await paint(page);
+        for (const [testId, painted] of Object.entries(rest)) {
+          expect.soft(textRatio(painted), `${testId} at rest`).toBeGreaterThanOrEqual(4.5);
+        }
+
+        const hovered = contrast === "standard" ? PRESENTATIONS.filter((presentation) => presentation !== "solid") : [];
         for (const intent of INTENTS) {
-          for (const presentation of PRESENTATIONS) {
-            for (const [component, , hovers] of TEXT_COMPONENTS) {
+          for (const presentation of hovered) {
+            for (const [component] of TEXT_COMPONENTS.filter(([, , hovers]) => hovers)) {
               const testId = caseId(name, component, intent, presentation);
               // oxlint-disable-next-line no-await-in-loop -- one pointer, moved in turn.
-              expect.soft(await textRatio(page, testId), `${testId} at rest`).toBeGreaterThanOrEqual(4.5);
-              if (hovers) {
-                // oxlint-disable-next-line no-await-in-loop -- one pointer, moved in turn.
-                await page.getByTestId(testId).hover();
-                // oxlint-disable-next-line no-await-in-loop -- one pointer, moved in turn.
-                expect.soft(await textRatio(page, testId), `${testId} on hover`).toBeGreaterThanOrEqual(4.5);
-              }
+              await page.getByTestId(testId).hover();
+              // oxlint-disable-next-line no-await-in-loop -- one pointer, moved in turn.
+              const { [testId]: painted } = await paint(page, [testId]);
+
+              expect.soft(textRatio(painted!), `${testId} on hover`).toBeGreaterThanOrEqual(4.5);
             }
           }
         }
@@ -448,6 +505,9 @@ const TOGGLES = [
   ["radio", `type="radio" class="radio`],
   ["switch", `type="checkbox" class="switch`],
 ] as const;
+
+/* Pixel draws the line as an inset shadow and no border. */
+const INSET_PATTERN = /((?:rgba?|oklch|oklab|color)\([^)]*\))[^,]*\binset\b/;
 
 for (const theme of THEMES) {
   for (const contrast of CONTRASTS) {
@@ -467,29 +527,15 @@ for (const theme of THEMES) {
         ).join(""),
       );
 
-      for (const [name] of SOLID_REGIONS) {
-        for (const intent of INTENTS) {
-          for (const [toggle] of TOGGLES) {
-            const testId = `${name}-${toggle}-${intent}`;
-            // oxlint-disable-next-line no-await-in-loop -- one page, read in turn.
-            const { under, fill } = await grounds(page, testId);
-            // oxlint-disable-next-line no-await-in-loop -- one page, read in turn.
-            const width = Number.parseFloat(await style(page, testId, "border-top-width"));
-            /* Pixel draws the line as an inset shadow and no border. */
-            // oxlint-disable-next-line no-await-in-loop -- one page, read in turn.
-            const inset = (await style(page, testId, "box-shadow")).match(
-              /((?:rgba?|oklch|oklab|color)\([^)]*\))[^,]*\binset\b/,
-            )?.[1];
-            // oxlint-disable-next-line no-await-in-loop -- one page, read in turn.
-            const drawn = width > 0 ? await style(page, testId, "border-top-color") : inset;
+      for (const [testId, painted] of Object.entries(await paint(page))) {
+        const { under, fill } = groundsOf(painted);
+        const drawn = painted.borderWidth > 0 ? painted.borderColor : painted.shadow.match(INSET_PATTERN)?.[1];
 
-            expect.soft(drawn, `${testId} draws a line`).toBeDefined();
-            const line = flattenColor(drawn ?? "transparent", fill);
-            expect
-              .soft(Math.min(getContrastRatio(line, under), getContrastRatio(line, fill)), testId)
-              .toBeGreaterThanOrEqual(MINIMUM);
-          }
-        }
+        expect.soft(drawn, `${testId} draws a line`).toBeDefined();
+        const line = flattenColor(drawn ?? "transparent", fill);
+        expect
+          .soft(Math.min(getContrastRatio(line, under), getContrastRatio(line, fill)), testId)
+          .toBeGreaterThanOrEqual(MINIMUM);
       }
     });
   }
@@ -499,14 +545,12 @@ for (const theme of THEMES) {
    layers. One layer at 3:1 against the ground outside the control is enough:
    a ring may lay a gap in the page's colour under its colour. */
 const COLOR_PATTERN = /(?:rgba?|oklch|oklab|color)\([^)]*\)/g;
-const ringRatio = async (page: Page, testId: string) => {
-  const { under } = await grounds(page, testId);
-  const outline = await style(page, testId, "outline-style");
-  const outlineWidth = Number.parseFloat(await style(page, testId, "outline-width"));
+const ringRatio = (painted: Painted) => {
+  const { under } = groundsOf(painted);
   const colors =
-    outline !== "none" && outlineWidth > 0
-      ? [await style(page, testId, "outline-color")]
-      : ((await style(page, testId, "box-shadow")).match(COLOR_PATTERN) ?? []);
+    painted.outlineStyle !== "none" && painted.outlineWidth > 0
+      ? [painted.outlineColor]
+      : (painted.shadow.match(COLOR_PATTERN) ?? []);
 
   return Math.max(0, ...colors.map((color) => getContrastRatio(flattenColor(color, under), under)));
 };
@@ -523,41 +567,61 @@ const FOCUSABLE = [
   ["switch", `<input type="checkbox" class="switch`, `" />`],
 ] as const;
 
-/* One test per aesthetic: a key press per control is slow, and the eight
-   regions on one page ran past the test timeout. */
+/* One key press puts the page in keyboard modality, so focus moved by a
+   script after it is keyboard focus and every control is read in one call.
+   `focused` is asserted, so an engine that drops the modality fails here
+   rather than passing on a ring it never drew. */
+const paintFocused = (page: Page) =>
+  page.evaluate(() => {
+    const ids = [...document.querySelectorAll("[data-testid]:not([data-testid='before'])")].map((element) =>
+      element.getAttribute("data-testid")!,
+    );
+    const read: Record<
+      string,
+      { outlineStyle: string; outlineWidth: number; outlineColor: string; shadow: string; focused: boolean }
+    > = {};
+    for (const id of ids) {
+      const element = document.querySelector<HTMLElement>(`[data-testid="${id}"]`)!;
+      element.focus();
+      const styles = getComputedStyle(element);
+      read[id] = {
+        outlineStyle: styles.outlineStyle,
+        outlineWidth: Number.parseFloat(styles.outlineWidth),
+        outlineColor: styles.outlineColor,
+        shadow: styles.boxShadow,
+        focused: element.matches(":focus-visible"),
+      };
+    }
+
+    return read;
+  });
+
 for (const theme of THEMES) {
   for (const contrast of CONTRASTS) {
-    for (const [name, region] of SOLID_REGIONS) {
-      test(`draws every focus ring at 3:1 against its ground, ${name}, ${theme}, ${contrast} contrast`, async ({
+    test(`draws every focus ring at 3:1 against its ground, ${theme}, ${contrast} contrast`, async ({ page }) => {
+      await loadIn(
         page,
-      }) => {
-        await loadIn(
-          page,
-          theme,
-          contrast,
-          `<button data-testid="before">.</button><div class="${region}" style="padding: 1rem">${INTENTS.flatMap(
-            (intent) =>
+        theme,
+        contrast,
+        `<button data-testid="before">.</button>${SOLID_REGIONS.map(
+          ([name, region]) =>
+            `<div class="${region}" style="padding: 1rem">${INTENTS.flatMap((intent) =>
               FOCUSABLE.map(
                 ([control, open, close]) => `${open} ${intent}" data-testid="${name}-${control}-${intent}${close}`,
               ),
-          ).join("")}</div>`,
-        );
+            ).join("")}</div>`,
+        ).join("")}`,
+      );
 
-        await page.getByTestId("before").focus();
-        for (const intent of INTENTS) {
-          for (const [control] of FOCUSABLE) {
-            const testId = `${name}-${control}-${intent}`;
-            // oxlint-disable-next-line no-await-in-loop -- one control holds focus at a time.
-            await page.keyboard.press("Tab");
-            // oxlint-disable-next-line no-await-in-loop -- one control holds focus at a time.
-            const focused = await page.getByTestId(testId).evaluate((element) => element.matches(":focus-visible"));
+      await page.getByTestId("before").focus();
+      await page.keyboard.press("Tab");
+      const grounds = await paint(page);
+      const focused = await paintFocused(page);
 
-            expect.soft(focused, `${testId} has focus`).toBe(true);
-            // oxlint-disable-next-line no-await-in-loop -- one control holds focus at a time.
-            expect.soft(await ringRatio(page, testId), `${testId} ring`).toBeGreaterThanOrEqual(MINIMUM);
-          }
-        }
-      });
-    }
+      for (const [testId, ring] of Object.entries(focused)) {
+        expect.soft(ring.focused, `${testId} has focus`).toBe(true);
+        expect.soft(ringRatio({ ...grounds[testId]!, ...ring }), `${testId} ring`).toBeGreaterThanOrEqual(MINIMUM);
+      }
+    });
   }
 }
