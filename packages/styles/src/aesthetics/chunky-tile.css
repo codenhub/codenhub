@@ -305,7 +305,22 @@
     :lang(syr),
     :lang(nqo),
     :lang(mn-Mong),
-    :lang(ff-Adlm)
+    :lang(ff-Adlm),
+    :lang(arz),
+    :lang(ary),
+    :lang(pnb),
+    :lang(prs),
+    :lang(azb),
+    :lang(doi),
+    :lang(brx),
+    :lang(new),
+    :lang(ms-Arab),
+    :lang(kk-Arab),
+    :lang(az-Arab),
+    :lang(uz-Arab),
+    :lang(tg-Arab),
+    :lang(sat-Deva),
+    :lang(mni-Beng)
   ) {
     letter-spacing: normal;
   }

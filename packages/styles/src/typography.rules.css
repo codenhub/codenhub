@@ -10,12 +10,18 @@
    Bengali, Gurmukhi -- sets it to `normal`. A consumer's `tracking-*` sets
    `letter-spacing` itself and still wins wherever it beats the class.
    Kurdish is written in Arabic script only sometimes, so it needs the
-   `-Arab` subtag; Punjabi is in either Gurmukhi or Arabic script, so it is
-   matched whole.
+   `-Arab` subtag, as do the other languages named with a subtag; Punjabi is
+   in either Gurmukhi or Arabic script, so it is matched whole.
+
+   Each subtag is named rather than matched by a wildcard such as
+   `:lang("*-Arab")`: Chromium matched none (measured on 2026-11-21 against
+   the Playwright browsers), and Lightning CSS 1.33.0, which this build and
+   Tailwind's both run, writes it as `:lang(*-Arab)`, the literal tag, so
+   Firefox and WebKit matched none either.
 
    A custom property rather than a nested `&:lang()` rule in each step:
    `@compose` copies a step into every component that uses it, and the nested
-   rule, with its fourteen languages, added 2 KB to `dist/purge/index.css`.
+   rule, with fourteen languages, added 2 KB to `dist/purge/index.css`.
    It does not inherit, so a Latin passage (`lang="en"`) inside an Arabic page
    keeps its tracking. The list is repeated in `native.css` and in chunky
    tile's solo class. */
@@ -48,7 +54,22 @@
     :lang(syr),
     :lang(nqo),
     :lang(mn-Mong),
-    :lang(ff-Adlm)
+    :lang(ff-Adlm),
+    :lang(arz),
+    :lang(ary),
+    :lang(pnb),
+    :lang(prs),
+    :lang(azb),
+    :lang(doi),
+    :lang(brx),
+    :lang(new),
+    :lang(ms-Arab),
+    :lang(kk-Arab),
+    :lang(az-Arab),
+    :lang(uz-Arab),
+    :lang(tg-Arab),
+    :lang(sat-Deva),
+    :lang(mni-Beng)
   ) {
     --_script-tracking: normal;
   }

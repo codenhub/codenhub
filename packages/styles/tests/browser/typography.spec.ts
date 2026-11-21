@@ -1009,3 +1009,52 @@ test("tracks no headstroke script", async ({ page }) => {
 
   expect(spacing).toEqual(Object.fromEntries(Object.keys(spacing).map((id) => [id, "normal"])));
 });
+
+/* Egyptian and Moroccan Arabic, Shahmukhi Punjabi, Dari, South Azerbaijani,
+   Jawi Malay, Dogri, Bodo, Newari, and Meitei in Bengali script were still
+   tracked: the list named their scripts' larger languages only. A script
+   subtag now reaches any language written in one of these scripts. */
+test("tracks no joining or headstroke script named by a script subtag or a regional language", async ({ page }) => {
+  const { readFile } = await import("node:fs/promises");
+  const [index, native, chunky] = await Promise.all(
+    ["index.css", "native.css", "aesthetics/chunky-tile.css"].map((file) =>
+      readFile(new URL(`../../dist/${file}`, import.meta.url), "utf8"),
+    ),
+  );
+  const samples = [
+    ["arz", "الله"],
+    ["ary", "الله"],
+    ["pnb", "الله"],
+    ["prs", "الله"],
+    ["azb", "الله"],
+    ["ms-Arab", "الله"],
+    ["doi", "डोगरी"],
+    ["brx", "बड़ो"],
+    ["new", "नेपाल"],
+    ["mni-Beng", "মৈতৈ"],
+    ["sat-Deva", "संताली"],
+  ];
+
+  await page.setContent(
+    `<!doctype html><html><body>${samples
+      .map(
+        ([lang, word]) =>
+          `<div lang="${lang}"><p data-testid="${lang}-body">${word}</p><span data-testid="${lang}-text" class="text-label">${word}</span><label data-testid="${lang}-label" class="label">${word}</label><button data-testid="${lang}-solo" class="chunky-tile-solo">${word}</button></div>`,
+      )
+      .join("")}</body></html>`,
+  );
+  await page.addStyleTag({ content: native });
+  await page.addStyleTag({ content: index });
+  await page.addStyleTag({ content: chunky });
+
+  const spacing = await page.evaluate(() =>
+    Object.fromEntries(
+      [...document.querySelectorAll("[data-testid]")].map((element) => [
+        element.getAttribute("data-testid"),
+        getComputedStyle(element).letterSpacing,
+      ]),
+    ),
+  );
+
+  expect(spacing).toEqual(Object.fromEntries(Object.keys(spacing).map((id) => [id, "normal"])));
+});
