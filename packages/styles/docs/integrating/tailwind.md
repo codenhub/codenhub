@@ -131,6 +131,12 @@ The block leaves out `neutral`, `emerald`, `amber`, `rose`, `indigo`, and `white
 - **Why:** the package's variant comes after a pseudo-element variant, and Tailwind then writes its condition where browsers reject it.
 - **Fix:** write the package's variant first: `motion-reduce:before:hidden`, `dark:placeholder:text-white`. [Contrast and motion variants](#contrast-and-motion-variants) has the details.
 
+**A token override stops at a shadow root**
+
+- **What happened:** `--color-primary` set on `:root` in your stylesheet colors the page's buttons, but a button inside a shadow root that loads the same stylesheet keeps the package's color.
+- **Why:** Tailwind writes the theme on `:root, :host`, so the shadow root's copy of the stylesheet declares every token again on its host, and the page's value is not inherited past it. The compiled entrypoints declare the tokens on `:root` alone, so there the page's value crosses.
+- **Fix:** set the override in `@theme`, such as `@theme { --color-primary: oklch(49% 0.24 293); }`, which Tailwind writes on `:root, :host` too, or write your own rule on `:root, :host`.
+
 **A class built at runtime has no styling**
 
 - **What happened:** `<button class="btn primary">` is styled, but a button whose class comes from a variable, such as `"btn " + variant`, or from CMS content, is not.

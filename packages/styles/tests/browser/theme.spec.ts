@@ -1,5 +1,5 @@
 import { expect, test } from "./fixtures";
-import { ORIGIN, settleAnimations } from "./test-utils";
+import { getColorDistance, ORIGIN, settleAnimations } from "./test-utils";
 
 const COMPONENTS_URL = `${ORIGIN}/components/?env=vanilla`;
 
@@ -380,11 +380,57 @@ test("prints a filled quotation with its plate", async ({ page }) => {
   expect(quote.adjust).toBe("exact");
 });
 
-/* Inside a shadow root, the sheet's `:root` matches nothing, so every token
-   block names `:host` beside it: with one missing, a button lost its height and
-   a focused control its ring. The page loads the sheet too, as
-   docs/setup.md asks, because a browser ignores `@property` in a shadow root,
-   and without those registrations a card lost its line. */
+/* A token set on the page reaches a shadow root that loads the sheet too, as
+   docs/setup.md asks: the tokens are declared on the page's `:root` alone and
+   inherit into the shadow tree. Declared on `:host` as well, the shadow
+   root's copy redeclared every colour token on the host, so a page's
+   `--color-primary` stopped at the boundary while `--radius-control`, declared
+   on `:root` only, crossed it. */
+test("a page's token override reaches a shadow root that loads the sheet", async ({ page }) => {
+  await page.setContent(
+    `<!doctype html><html><head><link rel="stylesheet" href="${ORIGIN}/shared/entry-vanilla.css" /><style>:root { --color-primary: rgb(109, 40, 217); --radius-control: 3px; }</style></head><body><button class="btn solid primary" id="light">Go</button><div data-host></div></body></html>`,
+  );
+  await page.waitForLoadState("load");
+
+  await page.evaluate(async (origin) => {
+    const root = document.querySelector("[data-host]")!.attachShadow({ mode: "open" });
+    const link = document.createElement("link");
+
+    link.rel = "stylesheet";
+    link.href = `${origin}/shared/entry-vanilla.css`;
+    const loaded = new Promise((resolve) => link.addEventListener("load", resolve));
+
+    root.append(link);
+    await loaded;
+    // After the sheet, or the button transitions from its unstyled face.
+    root.append(Object.assign(document.createElement("button"), { className: "btn solid primary", textContent: "Go" }));
+  }, ORIGIN);
+  await settleAnimations(page);
+
+  const read = await page.evaluate(() => {
+    const inside = getComputedStyle(document.querySelector("[data-host]")!.shadowRoot!.querySelector(".btn")!);
+    const outside = getComputedStyle(document.getElementById("light")!);
+
+    return {
+      inside: { background: inside.backgroundColor, radius: inside.borderTopLeftRadius },
+      outside: { background: outside.backgroundColor, radius: outside.borderTopLeftRadius },
+    };
+  });
+
+  expect(getColorDistance(read.outside.background, "rgb(109, 40, 217)"), "the page's own button").toBeLessThanOrEqual(
+    2,
+  );
+  expect(
+    getColorDistance(read.inside.background, read.outside.background),
+    `in the shadow root ${read.inside.background}`,
+  ).toBeLessThanOrEqual(2);
+  expect(read.inside.radius, "the radius crosses too").toBe(read.outside.radius);
+});
+
+/* Inside a shadow root, the sheet's `:root` matches nothing, so the tokens
+   reach it by inheritance from the page, which loads the sheet too, as
+   docs/setup.md asks: a browser ignores `@property` in a shadow root, and
+   without those registrations a card lost its line. */
 test("styles components inside a shadow root", async ({ page }) => {
   await page.emulateMedia({ colorScheme: "dark" });
   await page.setContent(

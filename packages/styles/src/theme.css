@@ -157,12 +157,12 @@
    token replaces both and still wins.
 
    `data-contrast` on `<html>` decides in place of the query: `more` sets the
-   slot, `standard` leaves it out. `:host` follows the query alone, since a
-   shadow root cannot see the page's `<html>`. See docs/accessibility.md. */
+   slot, `standard` leaves it out. A shadow root inherits the page's
+   `--color-border`, already resolved on `:root`, so it follows the page's
+   `<html>` too. See docs/accessibility.md. */
 @layer theme {
   @media (prefers-contrast: more) {
-    :root:not(:where([data-contrast="standard"])),
-    :host {
+    :root:not(:where([data-contrast="standard"])) {
       --_contrast-border: light-dark(var(--color-neutral-600), var(--color-neutral-400));
     }
   }

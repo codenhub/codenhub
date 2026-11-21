@@ -2,7 +2,7 @@
 title: Accesibilidad
 description: Lo que hace el CSS con el foco, los estados, el movimiento, el contraste, los colores forzados y el texto de derecha a izquierda, y lo que tu aplicación todavía les debe a sus usuarios.
 order: 5
-source: 8581f3f8c597a7af3f3d636cf24cc4575d5230b4
+source: a8c46725397ca5a641becdffbbc2346a10ee5b69
 ---
 
 # Accesibilidad
@@ -135,7 +135,7 @@ Una página no puede cambiar lo que informa una media query, por muy amablemente
 Una pantalla de ajustes con "Sistema / Estándar / Más" quita `data-contrast` para Sistema y lo pone para las otras dos, como un [selector de tema](./usage/theming.md#claro-y-oscuro). El movimiento tiene un nivel más, porque el ajuste del sistema tiene solo uno: "Sistema / Todo / Reducido / Ninguno".
 
 - **Solo en `<html>`.** A diferencia de un selector de tema, el atributo no delimita una región: en cualquier otro elemento no hace nada.
-- **No dentro de un shadow root.** Las reglas del paquete dentro de un shadow root no pueden ver un atributo en el `<html>` de la página, así que siguen el ajuste del sistema. Una parte sí cruza: cuando la página también carga el paquete, el gris de borde neutro más oscuro que `data-contrast="more"` pone en `<html>` se hereda, así que el borde de una card o de un divisor dentro del shadow root se oscurece mientras un control de texto ahí conserva su borde de reposo más claro.
+- **No dentro de un shadow root.** Las reglas del paquete dentro de un shadow root no pueden ver un atributo en el `<html>` de la página, así que siguen el ajuste del sistema. Una parte sí cruza: cuando la página también carga el paquete, el color de borde neutro se hereda de `<html>`, así que el borde de una card o de un divisor dentro del shadow root sigue `data-contrast` en ambos sentidos, más oscuro con `more` y estándar con `standard`, mientras un control de texto ahí conserva el borde de reposo que le da el ajuste del sistema.
 - **Las variantes de Tailwind también los siguen.** Con un punto de entrada `/tw`, tus propias utilidades `contrast-more:`, `contrast-less:`, `motion-safe:` y `motion-reduce:` siguen los atributos de la misma forma; consulta [Tailwind → Variantes de contraste y movimiento](./integrating/tailwind.md#variantes-de-contraste-y-movimiento).
 - **Los colores forzados siguen siendo del sistema.** `forced-colors: active` es el modo de alto contraste del sistema, y ninguno de los dos atributos lo activa ni lo desactiva. La transparencia reducida tampoco tiene atributo; `data-contrast="more"` sigue volviendo opaco el glass, como lo hace el ajuste de más contraste del sistema.
 

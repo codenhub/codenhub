@@ -281,7 +281,7 @@ function themeStatic(file) {
   const header = root.nodes.filter((node) => node.type === "comment");
   let tokens;
 
-  root.walkRules(/^:root,\s*:host$/, (rule) => {
+  root.walkRules(/^:root$/, (rule) => {
     tokens = rule;
   });
 

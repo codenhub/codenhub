@@ -2,7 +2,7 @@
 title: Tailwind CSS v4
 description: Como usar os entrypoints de código-fonte /tw num projeto com Tailwind CSS v4.
 order: 1
-source: 0158d4f1e67501dfd55ac903750bc3674650d412
+source: b4f920a1cfff74fbe624bd5e0fdc7e7aeb56f6cf
 ---
 
 # Tailwind CSS v4
@@ -131,6 +131,12 @@ O bloco deixa de fora `neutral`, `emerald`, `amber`, `rose`, `indigo` e `white` 
 - **O que aconteceu:** `before:motion-reduce:hidden` ou `placeholder:dark:text-white` não segue `data-motion` nem `data-theme` no `<html>`, ou nunca se aplica, enquanto `motion-reduce:hidden` no próprio elemento funciona.
 - **Por quê:** a variante do pacote vem depois de uma variante de pseudoelemento, e o Tailwind então escreve a condição dela onde os navegadores a rejeitam.
 - **Como resolver:** escreva a variante do pacote primeiro: `motion-reduce:before:hidden`, `dark:placeholder:text-white`. [Variantes de contraste e movimento](#variantes-de-contraste-e-movimento) tem os detalhes.
+
+**Uma sobrescrita de token para num shadow root**
+
+- **O que aconteceu:** `--color-primary` definido em `:root` na sua folha de estilos colore os botões da página, mas um botão dentro de um shadow root que carrega a mesma folha mantém a cor do pacote.
+- **Por quê:** o Tailwind escreve o tema em `:root, :host`, então a cópia da folha no shadow root declara cada token de novo no host, e o valor da página não é herdado além dele. Os entrypoints compilados declaram os tokens só em `:root`, então ali o valor da página atravessa.
+- **Como resolver:** defina a sobrescrita em `@theme`, como `@theme { --color-primary: oklch(49% 0.24 293); }`, que o Tailwind também escreve em `:root, :host`, ou escreva sua própria regra em `:root, :host`.
 
 **Uma classe montada em tempo de execução fica sem estilo**
 
