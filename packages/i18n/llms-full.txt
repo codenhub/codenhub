@@ -653,7 +653,8 @@ const render = (parts: RichText, tags: Tags): ReactNode[] =>
     if (typeof part === "string") {
       return part;
     }
-    const tag = tags[part.tag] ?? ((children: ReactNode) => children);
+    // An own property only, so a tag such as `<constructor>` never reaches an inherited function.
+    const tag = Object.hasOwn(tags, part.tag) ? tags[part.tag]! : (children: ReactNode) => children;
     return <Fragment key={index}>{tag(render(part.children, tags))}</Fragment>;
   });
 

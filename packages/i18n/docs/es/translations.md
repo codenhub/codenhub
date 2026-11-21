@@ -2,7 +2,7 @@
 title: Escribe tus traducciones
 description: Diccionarios, archivos JSON, placeholders, mensajes ICU, enlaces y negritas, plurales, formateadores, claves y valores tipados, cómo detectar claves sin traducir y límites de tamaño.
 order: 1
-source: 7afe7d06f7c2b1f64b4c34dcaf6e8435703b028d
+source: 39f0fb571e8d70c2a721f079a53cf1bda981fc9d
 ---
 
 # Escribe tus traducciones
@@ -260,7 +260,8 @@ const render = (parts: RichText, tags: Tags): ReactNode[] =>
     if (typeof part === "string") {
       return part;
     }
-    const tag = tags[part.tag] ?? ((children: ReactNode) => children);
+    // Solo una propiedad propia, para que una etiqueta como `<constructor>` nunca llegue a una función heredada.
+    const tag = Object.hasOwn(tags, part.tag) ? tags[part.tag]! : (children: ReactNode) => children;
     return <Fragment key={index}>{tag(render(part.children, tags))}</Fragment>;
   });
 

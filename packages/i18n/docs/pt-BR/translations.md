@@ -2,7 +2,7 @@
 title: Escreva as suas traduções
 description: Dicionários, arquivos JSON, placeholders, mensagens ICU, links e negrito, plurais, formatadores, chaves e valores tipados, verificação de chaves não traduzidas e limites de tamanho.
 order: 1
-source: 7afe7d06f7c2b1f64b4c34dcaf6e8435703b028d
+source: 39f0fb571e8d70c2a721f079a53cf1bda981fc9d
 ---
 
 # Escreva as suas traduções
@@ -260,7 +260,8 @@ const render = (parts: RichText, tags: Tags): ReactNode[] =>
     if (typeof part === "string") {
       return part;
     }
-    const tag = tags[part.tag] ?? ((children: ReactNode) => children);
+    // Só uma propriedade própria, para que uma tag como `<constructor>` nunca chegue a uma função herdada.
+    const tag = Object.hasOwn(tags, part.tag) ? tags[part.tag]! : (children: ReactNode) => children;
     return <Fragment key={index}>{tag(render(part.children, tags))}</Fragment>;
   });
 
