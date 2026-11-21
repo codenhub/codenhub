@@ -3511,3 +3511,32 @@ test("keeps a z-index the page sets in its components layer on a surface holding
   await page.locator('[data-probe="trigger"]').focus();
   expect(await header.evaluate((element) => getComputedStyle(element).zIndex)).toBe("10");
 });
+
+/* Under glass the package sets a surface `relative` at rest from its utilities
+   layer, so it beats a position the page sets in `@layer components` on an
+   element carrying a package surface class. A layer nested in a Tailwind
+   `@utility` body is a sublayer of utilities, so the anchor cannot sit below
+   `components`. A utility -- here a rule in `@layer utilities` as Tailwind
+   writes `sticky` -- or a rule outside any layer still positions it.
+   docs/usage/tooltips.md documents the exception; this pins it. */
+test("positions a glass surface with a utility or an unlayered rule, not a components-layer one", async ({ page }) => {
+  await page.goto(FEEDBACK_URL);
+  await page.addStyleTag({
+    content:
+      "@layer components { .probe-layered { position: sticky } } @layer utilities { .probe-utility { position: sticky } } .probe-unlayered { position: sticky }",
+  });
+  await page.evaluate(() => {
+    const host = document.createElement("div");
+
+    host.className = "glass";
+    host.innerHTML = ["panel probe-layered", "panel probe-utility", "panel probe-unlayered"]
+      .map((classes, index) => `<div class="${classes}" data-probe="p${index}">Panel</div>`)
+      .join("");
+    document.body.prepend(host);
+  });
+
+  const read = (index: number) =>
+    page.locator(`[data-probe="p${index}"]`).evaluate((element) => getComputedStyle(element).position);
+
+  expect([await read(0), await read(1), await read(2)]).toEqual(["relative", "sticky", "sticky"]);
+});
