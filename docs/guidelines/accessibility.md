@@ -14,12 +14,13 @@ A package's own accessibility documentation states the values it measures and th
 
 Each pair is measured on the colors as painted: a translucent color is laid over what is under it, down to the page, before its ratio is taken. Each holds in every theme, with the standard contrast and with increased contrast, in every aesthetic or variant the package ships, at rest, on hover, and when pressed, unless a rule says otherwise.
 
-| Rule                 | Pair                                                                                                                                      | Minimum                                           | Source      |
-| -------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------- | ----------- |
-| Text                 | Text, and an icon that carries meaning the text does not, against the ground directly under it.                                           | 4.5:1; 3:1 for large text (24px, or 18.66px bold) | WCAG 1.4.3  |
-| A control's boundary | The edge or fill that is the only thing showing a control is there, or the only thing showing its state, against what is next to it.      | 3:1                                               | WCAG 1.4.11 |
-| Focus                | A focus indicator against the ground next to it, on every control that can take keyboard focus.                                           | 3:1                                               | WCAG 1.4.11 |
-| State marks          | A mark that carries a control's state, such as a check, a radio dot, or a switch's knob, against every fill its presentation can give it. | 3:1                                               | WCAG 1.4.11 |
+| Rule                 | Pair                                                                                                                                                               | Minimum                                           | Source      |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------- | ----------- |
+| Text                 | Text, and an icon that carries meaning the text does not, against the ground directly under it.                                                                    | 4.5:1; 3:1 for large text (24px, or 18.66px bold) | WCAG 1.4.3  |
+| A control's boundary | The edge or fill that is the only thing showing a control is there, or the only thing showing its state, against what is next to it.                               | 3:1                                               | WCAG 1.4.11 |
+| Focus                | A focus indicator against the ground next to it, on every control that can take keyboard focus.                                                                    | 3:1                                               | WCAG 1.4.11 |
+| State marks          | A mark that carries a control's state, such as a check, a radio dot, or a switch's knob, against every fill its presentation can give it.                          | 3:1                                               | WCAG 1.4.11 |
+| Graphics             | A part of a graphic that is needed to understand content, such as a progress bar's filled part against its track, or a chart's segment against the one next to it. | 3:1                                               | WCAG 1.4.11 |
 
 "The only thing" is the test for a boundary. A button whose label already says it is a button does not need its edge; an unchecked checkbox has nothing but its edge, so it does.
 
