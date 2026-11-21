@@ -838,24 +838,34 @@ describe("keepOwnership", () => {
      server could no longer read, under a warning that said the mode was kept.
      With the group gone too, a group read bit no longer reaches it either. */
   it.each([
-    ["0600 with the group kept", false, 0o600, "its group and mode are kept"],
-    ["0640 with the group changed", true, 0o640, "its mode is kept"],
-  ])("warns that the previous owner may no longer read a file of mode %s", async (_, refuseGroup, mode, kept) => {
+    ["0600 with the group kept", false, 0o600, "its group and mode are kept, so user 33"],
+    ["0640 with the group changed", true, 0o640, "its mode is kept, so user 33 and the members of group 33"],
+  ])("warns that the previous readers may no longer read a file of mode %s", async (_, refuseGroup, mode, kept) => {
     const file = fileOf({ refuseOwner: true, refuseGroup });
 
     expect(await keepOwnership(file, { uid: 33, gid: 33, mode: 0o100000 | mode }, "app.css")).toMatch(
-      new RegExp(`; ${kept}, so user 33 may no longer be able to read it\\.$`),
+      new RegExp(`; ${kept} may no longer be able to read it\\.$`),
     );
   });
 
-  // The runner owns a `0640` file of a group it is not in: the owner never changed, so no reader lost it.
-  it("warns of the group alone when only the group could not be kept", async () => {
+  /* The runner owns a `0640` file of a group it is not in, such as the web
+     server's, which read it through the group bit and no longer can. */
+  it("warns of the group alone, and of its members' read, when only the group could not be kept", async () => {
     const file = fileOf({ refuseOwner: true, refuseGroup: true });
 
     expect(await keepOwnership(file, { uid: 1000, gid: 33, mode: 0o100640 }, "app.css")).toBe(
-      "chs: warning: --output app.css now belongs to group 1000, not 33, since only root can give a file to a group you are not in; its owner and mode are kept.",
+      "chs: warning: --output app.css now belongs to group 1000, not 33, since only root can give a file to a group you are not in; its owner and mode are kept, so the members of group 33 may no longer be able to read it.",
     );
     expect(file.calls).toEqual(["chown 1000 33", "chown -1 33", "chmod 640"]);
+  });
+
+  // Anyone may read a `0644` file, so a group lost takes no reader with it.
+  it("warns of the group alone with no lost reader when others may read the file", async () => {
+    const file = fileOf({ refuseOwner: true, refuseGroup: true });
+
+    expect(await keepOwnership(file, { uid: 1000, gid: 33, mode: 0o100644 }, "app.css")).toMatch(
+      /; its owner and mode are kept\.$/,
+    );
   });
 
   it("throws a failure other than a refusal", async () => {

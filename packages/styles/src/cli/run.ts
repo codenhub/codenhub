@@ -347,15 +347,26 @@ export async function keepOwnership(
        them, so a `0600` file of the web server's is one the server may no
        longer read, which "its mode is kept" alone did not say. */
     const stillRead = kept === "group" ? 0o044 : 0o004;
+    /* The same for the previous group: a `0640` file the web server reads
+       through its group is one it may no longer read once the group is gone. */
+    const lostReaders = [
+      previous.uid !== created.uid && (previous.mode & 0o400) !== 0 && (previous.mode & stillRead) === 0
+        ? `user ${previous.uid}`
+        : undefined,
+      previous.gid !== created.gid &&
+      kept === "neither" &&
+      (previous.mode & 0o040) !== 0 &&
+      (previous.mode & 0o004) === 0
+        ? `the members of group ${previous.gid}`
+        : undefined,
+    ].filter((reader) => reader !== undefined);
     const unreadable =
-      (previous.mode & 0o400) !== 0 && (previous.mode & stillRead) === 0
-        ? `, so user ${previous.uid} may no longer be able to read it`
-        : "";
+      lostReaders.length === 0 ? "" : `, so ${lostReaders.join(" and ")} may no longer be able to read it`;
 
     if (previous.uid === created.uid) {
-      // Only the group was to change, and no owner's read bit was lost with it.
+      // Only the group was to change.
       if (kept === "neither") {
-        warning = `${BIN}: warning: --output ${output} now belongs to group ${created.gid}, not ${previous.gid}, since only root can give a file to a group you are not in; its owner and mode are kept.`;
+        warning = `${BIN}: warning: --output ${output} now belongs to group ${created.gid}, not ${previous.gid}, since only root can give a file to a group you are not in; its owner and mode are kept${unreadable}.`;
       }
     } else if (kept === "group") {
       warning = `${BIN}: warning: --output ${output} now belongs to user ${created.uid}, not ${previous.uid}, since only root can give a file to another user; its group and mode are kept${unreadable}.`;
