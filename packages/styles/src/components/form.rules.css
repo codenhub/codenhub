@@ -1323,6 +1323,9 @@
     --_rest-line: var(--_line-strong, var(--intent-border));
     --_d-border: 100%;
     --_d-elevation: 0;
+    /* 100% when the switch itself asks for `.solid`, 0% otherwise: `.soft`'s
+       12% and `.ghost`'s 0% are not a plate. See the knob below. */
+    --_knob-hold: clamp(0%, calc((var(--_own-fill) - 99%) * 100), 100%);
 
     /* 40%, measured: at `text-control`'s 6% the three resting fills collapse to
        two looks, so the switch would have to vary its *line* per fill class --
@@ -1392,8 +1395,16 @@
          unchecked track is unfilled, so a knob in that colour would be the same
          tone as the label beside it. Checked, it takes the mark colour like the
          other two toggles. On a solid surface it takes the surface's ink, as
-         the line does: the page's grey read at 1.1 to 2.3:1 there. */
-      background-color: color-mix(in oklab, var(--_held-ink) var(--_through), var(--color-text-secondary));
+         the line does: the page's grey read at 1.1 to 2.3:1 there. On a plate
+         of its own, `.solid`, the track is filled, so the knob takes the
+         plate's ink: the grey read 2.1:1 on a neutral or primary plate in the
+         dark theme. `--_own-fill` does not inherit, so the track hands it to
+         the knob as `--_knob-hold`. */
+      background-color: color-mix(
+        in oklab,
+        currentcolor var(--_knob-hold),
+        color-mix(in oklab, var(--_held-ink) var(--_through), var(--color-text-secondary))
+      );
       border-radius: var(--ui-radius-pill, var(--ui-radius, var(--ui-corner, calc(infinity * 1px))));
       /* A pseudo-element is not a box: the knob takes the track's corner shape
          itself, so the two stay the same shape. */
