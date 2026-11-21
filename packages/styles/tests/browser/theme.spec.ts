@@ -87,9 +87,8 @@ test.describe("theme", () => {
       };
 
       return {
-        dark: readTheme("dark"),
-        dataDark: readTheme("theme-dark"),
-        light: readTheme("light"),
+        dark: readTheme("theme-dark"),
+        light: readTheme("theme-light"),
         unthemed: readTheme(""),
       };
     });
@@ -99,9 +98,6 @@ test.describe("theme", () => {
 
     expect(resolved.dark.text).not.toBe(resolved.light.text);
     expect(resolved.dark.background).not.toBe(resolved.light.background);
-
-    // Aliases must land on exactly the same palette as the canonical selector.
-    expect(resolved.dataDark.text).toBe(resolved.dark.text);
 
     // With no selector, the root follows the system preference.
     expect(resolved.unthemed.text).toBe(resolved.light.text);
@@ -138,9 +134,9 @@ test.describe("theme", () => {
 
     const nested = await page.evaluate(() => {
       const outer = document.createElement("section");
-      outer.className = "dark";
+      outer.className = "theme-dark";
       const inner = document.createElement("section");
-      inner.className = "light";
+      inner.className = "theme-light";
       const darkProbe = document.createElement("span");
       const lightProbe = document.createElement("span");
 
@@ -163,7 +159,7 @@ test.describe("theme", () => {
   });
 
   /* Setting only `color-scheme` left a region's own text on the ink it
-     inherited from the page: `<aside class="dark"><p>` on a light page kept the
+     inherited from the page: `<aside class="theme-dark"><p>` on a light page kept the
      light theme's near-black and printed it on the region's dark ground. */
   test("re-resolves the text colour of a region a theme selector forces", async ({ page }) => {
     await page.goto(COMPONENTS_URL);
@@ -173,7 +169,7 @@ test.describe("theme", () => {
 
       root.classList.remove("dark", "theme-dark");
       root.removeAttribute("data-theme");
-      root.classList.add("light");
+      root.classList.add("theme-light");
 
       const read = (setup: (host: HTMLElement) => void) => {
         const host = document.createElement("aside");
@@ -194,17 +190,16 @@ test.describe("theme", () => {
 
       return {
         page: getComputedStyle(document.body).color,
-        dark: read((host) => host.classList.add("dark")),
-        themeDark: read((host) => host.classList.add("theme-dark")),
+        dark: read((host) => host.classList.add("theme-dark")),
         dataDark: read((host) => host.setAttribute("data-theme", "dark")),
         lightInDark: read((host) => {
-          root.classList.replace("light", "dark");
-          host.classList.add("light");
+          root.classList.replace("theme-light", "dark");
+          host.classList.add("theme-light");
         }),
       };
     });
 
-    for (const spelling of ["dark", "themeDark", "dataDark", "lightInDark"] as const) {
+    for (const spelling of ["dark", "dataDark", "lightInDark"] as const) {
       expect(resolved[spelling].paragraph, `${spelling} region text`).toBe(resolved[spelling].token);
     }
 
@@ -212,9 +207,59 @@ test.describe("theme", () => {
     /* Each alias has to switch the region, not only agree with itself: a
        spelling that stopped matching left text and token on the page's ink
        together. */
-    expect(resolved.themeDark.paragraph, ".theme-dark is .dark").toBe(resolved.dark.paragraph);
-    expect(resolved.dataDark.paragraph, "data-theme=dark is .dark").toBe(resolved.dark.paragraph);
-    expect(resolved.lightInDark.paragraph, ".light inside a dark page is the light page").toBe(resolved.page);
+    expect(resolved.dataDark.paragraph, "data-theme=dark is .theme-dark").toBe(resolved.dark.paragraph);
+    expect(resolved.lightInDark.paragraph, ".theme-light inside a dark page is the light page").toBe(resolved.page);
+  });
+
+  /* `.light` and `.dark` are ordinary words for a class: a `<span
+     class="light">` in a price on a dark page switched to the light scheme and
+     printed its near-black text on the dark ground, at 1.00:1. `.dark` themes
+     only the root, Tailwind's convention; `.light` is not a theme selector. */
+  test("themes nothing with a bare light or dark class below the root", async ({ page }) => {
+    await page.goto(COMPONENTS_URL);
+
+    const resolved = await page.evaluate(() => {
+      const root = document.documentElement;
+
+      root.classList.remove("dark", "light", "theme-dark", "theme-light");
+      root.setAttribute("data-theme", "dark");
+
+      const read = (className: string) => {
+        const span = document.createElement("span");
+
+        span.className = className;
+        document.body.append(span);
+        const style = getComputedStyle(span);
+        const values = { colorScheme: style.colorScheme, color: style.color };
+
+        span.remove();
+
+        return values;
+      };
+
+      const page = {
+        colorScheme: getComputedStyle(document.body).colorScheme,
+        color: getComputedStyle(document.body).color,
+      };
+      const light = read("light");
+
+      root.removeAttribute("data-theme");
+      root.classList.add("theme-light");
+      const dark = read("dark");
+      const lightPage = {
+        colorScheme: getComputedStyle(document.body).colorScheme,
+        color: getComputedStyle(document.body).color,
+      };
+
+      root.classList.replace("theme-light", "dark");
+      const rootDark = getComputedStyle(document.body).colorScheme;
+
+      return { page, light, lightPage, dark, rootDark };
+    });
+
+    expect(resolved.light, "a .light span on a dark page").toEqual(resolved.page);
+    expect(resolved.dark, "a .dark span on a light page").toEqual(resolved.lightPage);
+    expect(resolved.rootDark, ".dark on the root still themes the page").toBe("dark");
   });
 
   /* `--focus-ring` was resolved once at `:root`, so a container that set its
@@ -278,7 +323,7 @@ test("prints a dark page in the light theme, and a filled box with its plate", a
   const read = async (theme: string) => {
     await page.setContent(
       `<!doctype html><html data-theme="${theme}"><body><p id="text">Text</p>` +
-        '<section class="dark"><p id="region">Region</p></section>' +
+        '<section class="theme-dark"><p id="region">Region</p></section>' +
         '<button class="btn solid primary" id="button">Save</button></body></html>',
     );
     await page.addStyleTag({ url: `${ORIGIN}/shared/entry-vanilla.css` });

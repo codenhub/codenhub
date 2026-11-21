@@ -104,17 +104,23 @@
 
   /* A forced theme re-resolves the region's own text as well as its scheme.
      `color` inherits as a computed colour, already resolved against the scheme
-     above, so a `<p>` in an `<aside class="dark">` on a light page kept the
-     light theme's near-black. No background: a region that wants the theme's
-     ground says so. In `theme`, so every utility and component still wins. */
-  .light,
+     above, so a `<p>` in an `<aside class="theme-dark">` on a light page kept
+     the light theme's near-black. No background: a region that wants the
+     theme's ground says so. In `theme`, so every utility and component still
+     wins.
+
+     `.dark` is read on the root alone, as Tailwind's `dark:` convention puts
+     it there, and there is no bare `.light`: both are ordinary words for a
+     class, and a `<span class="light">` in a price on a dark page switched to
+     the light scheme and printed its near-black text on the dark ground, at
+     1.00:1. A region takes `.theme-*` or `[data-theme]`. */
   .theme-light,
   [data-theme="light"] {
     color-scheme: light;
     color: var(--color-text);
   }
 
-  .dark,
+  :root.dark,
   .theme-dark,
   [data-theme="dark"] {
     color-scheme: dark;
@@ -132,7 +138,7 @@
 @layer theme {
   @media print {
     :root,
-    .dark,
+    :root.dark,
     .theme-dark,
     [data-theme="dark"] {
       color-scheme: light;
