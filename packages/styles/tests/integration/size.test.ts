@@ -47,8 +47,9 @@ const COMPILED_CEILINGS: Record<string, number> = {
   "dist/aesthetics/index.css": 50_450,
   /* 5,600 until 0.11.0 kept the solo class's tracking off scripts that join
      their letters or hang them from a headstroke: it ships without the
-     components, so it carries the language list itself. */
-  "dist/aesthetics/chunky-tile.css": 6_000,
+     components, so it carries the language list itself, regional languages
+     and script subtags included. */
+  "dist/aesthetics/chunky-tile.css": 6_200,
   "dist/aesthetics/cyber.css": 4_900,
   "dist/aesthetics/glass.css": 14_700,
   "dist/aesthetics/neobrutalism.css": 4_750,
@@ -131,8 +132,9 @@ describe("a /tw consumer build", { timeout: 60_000 }, () => {
       candidates: ["btn", "primary"],
       /* 27,550 until 0.11.0's reset reached a dialog's backdrop and a view
          transition, rules every page with the reset carries, and the button
-         learned to wrap its label and a pane its ground on a plate. */
-      ceiling: 30_400,
+         learned to wrap its label and a pane its ground on a plate, and the
+         view transition reset and the no-tracking language list grew. */
+      ceiling: 31_400,
     },
   ];
 
