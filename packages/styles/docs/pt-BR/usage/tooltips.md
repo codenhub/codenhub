@@ -2,7 +2,7 @@
 title: Tooltips
 description: Ajuda de campo que abre no hover e no foco, como ligá-la a leitores de tela e à tecla Escape, e onde um tooltip é cortado.
 order: 4
-source: cbc106fe776da614d0b1b65062a7ee807078bed6
+source: 6a7e99ca0733216daf45563170816fcc713d6359
 ---
 
 # Tooltips
@@ -13,7 +13,7 @@ O switch "Public profile" da tela de configurações merece uma explicação cur
 
 ```html
 <div class="cluster tight">
-  <label class="cluster tight">
+  <label class="choice">
     <input class="switch primary" type="checkbox" role="switch" name="public-profile" />
     Public profile
   </label>

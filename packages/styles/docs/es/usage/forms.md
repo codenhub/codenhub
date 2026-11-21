@@ -2,7 +2,7 @@
 title: Formularios
 description: Campos con etiqueta, pistas y errores, iconos y prefijos fijos, selects y toggles de checkbox, radio y switch.
 order: 2
-source: f91a53bc38fba0047f74d883388a36f2bc3d22ae
+source: a2d604165d6c2eb3ab1a03c095d5b975b4db15ce
 ---
 
 # Formularios
@@ -42,10 +42,12 @@ Las esquinas escalan con el tamaño, como las de un botón. Un `.textarea` conse
 
 ```html
 <div class="cluster tight">
-  <input class="ipt sm" aria-label="Coupon code" />
+  <input class="ipt sm" aria-label="Coupon code" style="flex: 1 1 0" />
   <button class="btn sm" type="button">Apply</button>
 </div>
 ```
+
+Un control de texto ocupa todo el ancho de su contenedor, así que en una fila empujaría el botón a la línea siguiente. `flex: 1 1 0` le permite compartir la fila, ocupando lo que deja el botón.
 
 ## Mostrar un error de validación
 
@@ -60,6 +62,8 @@ Marca el control como inválido con `aria-invalid="true"` y dale al mensaje de e
 ```
 
 Un control inválido dibuja su borde y el texto escrito en el color destructivo, tenga la clase de intención que tenga y esté sobre la superficie que esté, así que en una `.card.solid` se dibuja como su versión `.destructive`. Ahí, un campo dentro de un `.input-group` inválido muestra el texto en el color de texto de la superficie, como en un `.input-group.destructive`. Su anillo de foco es el mismo que dibuja un control válido, definido por [`--focus-ring`](./theming.md#tokens-base). El texto usa el tono legible de ese color, `--intent-strong`, para que siga siendo legible sobre la página. El paquete solo pinta el estado: decidir que el valor es inválido, poner y quitar `aria-invalid` y escribir el mensaje es cosa de tu código. Quita `aria-invalid` en cuanto el valor vuelva a ser válido; si lo dejas puesto, el campo sigue en rojo. En un checkbox, un radio o un switch, `aria-invalid="true"` dibuja el toggle exactamente igual que `.destructive`, marca de activado incluida.
+
+La validación propia del navegador se pinta de la misma forma. Un control que no cumple una restricción que defines en HTML, como `required`, `type="email"` o `pattern`, coincide con `:user-invalid` en cuanto la persona lo ha cambiado y ha salido de él, o ha intentado enviar el formulario, y entonces se dibuja como lo hace `aria-invalid="true"`, incluido su `.input-group`. Antes de eso sigue neutro, así que un campo obligatorio vacío no está en rojo al cargar la página. El navegador no escribe un mensaje que puedas estilizar; sigue mostrando tu propio `.hint.destructive`. Si es tu código el que decide la validez, pon `aria-invalid="false"` en el control para que el veredicto del navegador no lo pinte.
 
 Un `.hint` acepta cualquiera de las seis intenciones incorporadas, no solo `.destructive`: `.hint.success` confirma que se aceptó un valor, y `.hint.warning` señala uno que está permitido pero es inusual. Cada uno se muestra en el tono legible de su intención, `--intent-strong`, que mantiene 4.5:1 frente a la página en los dos temas. Un `.hint` sin intención, con `.neutral` o con una [intención que definiste tú](./theming.md#tu-propia-intención), se queda en el color secundario, y sobre una superficie sólida toma el color de texto de la superficie, como el prefijo de un grupo, el título de una tabla y `.quote-inline`. Solo lo colorea una clase en el propio `.hint`; una intención en el campo o en un contenedor que lo rodee no lo hace.
 
@@ -171,7 +175,7 @@ La pantalla de ajustes tiene tres tipos de toggle: un checkbox para activar los 
 ```html
 <fieldset class="stack tight">
   <legend class="label">Notifications</legend>
-  <label class="cluster tight">
+  <label class="choice">
     <input class="checkbox" type="checkbox" name="invoice-email" checked />
     Email me when an invoice is ready
   </label>
@@ -179,24 +183,25 @@ La pantalla de ajustes tiene tres tipos de toggle: un checkbox para activar los 
 
 <fieldset class="stack tight">
   <legend class="label">Billing period</legend>
-  <label class="cluster tight">
+  <label class="choice">
     <input class="radio" type="radio" name="period" value="monthly" />
     Monthly
   </label>
-  <label class="cluster tight">
+  <label class="choice">
     <input class="radio" type="radio" name="period" value="yearly" checked />
     Yearly, two months free
   </label>
 </fieldset>
 
-<label class="cluster tight">
+<label class="choice">
   <input class="switch primary" type="checkbox" role="switch" name="public-profile" />
   Public profile
 </label>
 ```
 
 - `.checkbox` va en `type="checkbox"`, `.radio` en `type="radio"` y `.switch` en `type="checkbox"`. Dale tú mismo `role="switch"` a un switch, para que se anuncie como activado o desactivado en lugar de marcado.
-- `.cluster.tight` en el `<label>` alinea el control con su texto y deja una separación de 0.5rem.
+- `.choice` en el `<label>` pone el control junto a su texto con una separación de 0.5rem. Un texto demasiado largo para una línea se ajusta junto al control, no por debajo de él, y el control sigue centrado en la primera línea. El texto es una sola pieza del layout, así que pon el texto enriquecido, como un enlace o un `<strong>`, dentro de un único `<span>`; cada elemento que quede suelto se convierte en una columna propia.
+- Un `<legend>` en un fieldset `.stack` queda separado de la primera opción por la separación del stack, igual que las opciones entre sí. Un navegador dibuja una leyenda fuera del layout de su fieldset, así que la separación por sí sola nunca le llegaba.
 - Un checkbox con la propiedad `indeterminate` activada, para un grupo en el que solo algunos elementos están marcados, muestra un guion, y lo mantiene aunque también esté `checked`, como hace el checkbox propio del navegador. Actívala desde un script (`input.indeterminate = true`); no hay atributo para ello.
 
 ### Colores marcado y sin marcar
@@ -241,11 +246,22 @@ El borde funciona igual. Un `.edgeless` heredado de un contenedor se ignora, par
 </div>
 ```
 
-En reposo, el borde de un campo es deliberadamente más claro que 3:1 frente a la página, para que el hover y el foco tengan un cambio visible que hacer. [Accesibilidad → Límites de los controles](../accessibility.md#límites-de-los-controles) explica esta contrapartida y cómo conseguir un borde más intenso.
+En reposo, el borde de un campo es el color de borde completo de su intención, al menos 3:1 frente a la página en ambos temas, así que el borde del campo cumple WCAG 1.4.11 sin ninguna preferencia. El hover lo lleva al color de hover de la intención y el foco al color de la intención, junto con el anillo de foco. [Accesibilidad → Límites de los controles](../accessibility.md#límites-de-los-controles) recoge las mediciones.
 
 ## Controles deshabilitados
 
 `disabled`, `aria-disabled="true"`, `data-disabled` o `.disabled` en un control lo dibujan con opacidad reducida y un cursor de no permitido. Como con los botones, solo el atributo `disabled` impide la entrada; los demás solo cambian el aspecto.
+
+## Campos de solo lectura
+
+`readonly` en un `.ipt` o un `.textarea` impide editar su valor, pero lo deja enfocable, seleccionable y enviado con el formulario. El campo reposa sobre el tono de fondo discreto de los campos, `--color-foreground`, no cambia bajo el puntero y conserva el texto a plena intensidad y su anillo de foco, así que se lee como un valor que leer y no como un lugar donde escribir. No se atenúa: atenuar dice que un control no está disponible, y un valor de solo lectura sigue ahí para leerlo y copiarlo. Un `.input-group` cuyo campo es de solo lectura reposa de la misma forma.
+
+```html
+<div class="field">
+  <label class="label" for="account-id">Account ID</label>
+  <input class="ipt" id="account-id" name="account-id" value="acct_4821" readonly />
+</div>
+```
 
 ## Construir tu propio control
 

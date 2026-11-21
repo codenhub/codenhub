@@ -32,21 +32,27 @@ Disabling the button stops a second click from submitting twice. Whether to keep
 
 ## Confirm the result with an alert
 
-When the save succeeds, show an alert above the form:
+When the save succeeds, show an alert above the form. Screen readers announce a live region when its content changes, not when it appears, so the region has to be on the page before the message is. Render a bare `<div role="status">` when the page loads, empty and with no class, and insert the `.alert` into it when there is something to say:
 
 ```html
-<div class="alert success" role="status">Profile saved.</div>
+<div role="status">
+  <!-- Inserted when the save succeeds: -->
+  <div class="alert success">Profile saved.</div>
+</div>
 ```
 
 `role="status"` makes screen readers announce the text politely, after what they are reading. For an error the user must act on, use `role="alert"`, which interrupts:
 
 ```html
-<div class="alert destructive" role="alert">Your changes were not saved. Check your connection and try again.</div>
+<div role="alert">
+  <!-- Inserted when the save fails: -->
+  <div class="alert destructive">Your changes were not saved. Check your connection and try again.</div>
+</div>
 ```
 
-Screen readers announce a live region when its content changes, so render the region empty when the page loads and put the message into it, rather than inserting a new alert element with the text already inside. The package adds no role, timing, or dismiss button; those are yours.
+Keep the role on the wrapper rather than on the `.alert`. An empty `.alert` still draws its padding, tint, and border, so a region left on the page waiting for a message would show as an empty box; the bare wrapper takes no space until the alert arrives. Remove the alert, not the wrapper, to clear the message. The package adds no role, timing, or dismiss button; those are yours.
 
-An alert is a row with a 0.75rem gap, so an icon placed before the message is spaced automatically. `.alert-icon` sizes an icon to 1.25rem and aligns it with the first line of text:
+An alert flows its message as one paragraph, so a link or `<strong>` in it stays in the line with the words around it. An icon placed before the message sits at the start of the first line, 0.75rem from the text; lines that wrap past the icon continue under it. `.alert-icon` sizes an icon to 1.25rem, the height of the alert's first line:
 
 ```html
 <div class="alert warning" role="status">

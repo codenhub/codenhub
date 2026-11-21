@@ -2,7 +2,7 @@
 title: Conteúdo e layout
 description: Consulta de todos os helpers de layout com os seus espaçamentos, a escala tipográfica com os seus tamanhos, cards e painéis com o seu padding, tabelas, citações, código e teclas.
 order: 10
-source: 90d3ac564b32aaa79ae8ddb063bc10e1aba4a19d
+source: 31efb1396c86e133a2113887e7d907bed7119ea3
 ---
 
 # Conteúdo e layout
@@ -113,7 +113,7 @@ Um card `.interactive` ou `.pressable` desabilitado mostra o cursor de não perm
 A tela de configurações lista as chaves de API numa tabela:
 
 ```html
-<div class="table-wrap">
+<div class="table-wrap" tabindex="0" role="region" aria-label="API keys">
   <table class="data-table">
     <caption class="visually-hidden">
       API keys
@@ -198,6 +198,8 @@ Uma tabela recebe o canto de superfície, como um card ao lado dela. As células
 - Sombras, como a de uma tabela `.raised`, não ganham espaço e são cortadas.
 
 Mantenha o wrapper em qualquer tabela que possa ficar mais larga que o seu contêiner; sem ele, uma tabela larga alarga a página inteira.
+
+Deixe o wrapper focável com `tabindex="0"` e nomeie-o como uma região com `role="region"` e um `aria-label`, como faz o exemplo. Quem usa o teclado rola uma tabela larga dando foco ao wrapper e usando as setas; o Firefox, e o Chrome a partir da versão 130, deixam a pessoa dar foco a um elemento com rolagem por conta própria, mas o Safari e versões mais antigas do Chrome não, então, sem `tabindex`, quem usa o teclado nesses navegadores não consegue chegar às colunas cortadas. O nome diz a quem usa leitor de tela o que a região focada contém. Um wrapper focado desenha o anel de foco que todo elemento desenha.
 
 ## Citações, código e teclas
 
