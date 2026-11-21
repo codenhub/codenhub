@@ -234,7 +234,10 @@ describe("createLocaleRouting", () => {
 
     expect(() => routing.localize(pathname, "pt-BR")).toThrow(RangeError);
     expect(() => routing.localize(pathname, "pt-BR")).toThrow(
-      '[I18n] the path in "pt-BR" would be longer than 8,192 characters or 100 segments',
+      new RangeError(
+        `[I18n] "/${"a".repeat(99)}"... in "pt-BR" would be longer than 8,192 characters or 100 segments; its URL ` +
+          "there would have 8,198 characters in 2 segments",
+      ),
     );
   });
 
@@ -246,7 +249,10 @@ describe("createLocaleRouting", () => {
     });
 
     expect(() => routing.localize("/a".repeat(100), "pt-BR")).toThrow(
-      '[I18n] the path in "pt-BR" would be longer than 8,192 characters or 100 segments',
+      new RangeError(
+        `[I18n] "${"/a".repeat(50)}"... in "pt-BR" would be longer than 8,192 characters or 100 segments; its URL ` +
+          "there would have 206 characters in 101 segments",
+      ),
     );
     expect(routing.localize("/a".repeat(99), "pt-BR")).toBe(`/pt-BR${"/a".repeat(99)}`);
   });
@@ -261,6 +267,57 @@ describe("createLocaleRouting", () => {
     expect(() => routing.parse("about")).toThrow(/^\[I18n\] /);
     expect(() => routing.localize("/../admin", "en-US")).toThrow(/^\[I18n\] /);
     expect(() => routing.localize("/about", "fr" as (typeof LOCALES)[number])).toThrow(/^\[I18n\] /);
+  });
+
+  it("should name the unsupported locale, as the manager does", () => {
+    const routing = createLocaleRouting({
+      defaultLocale: "en-US",
+      locales: LOCALES,
+      localePrefix: "always",
+    });
+    const localize = (locale: unknown) => () => routing.localize("/about", locale as (typeof LOCALES)[number]);
+
+    expect(localize("fr")).toThrow(new RangeError('[I18n] Unsupported locale "fr".'));
+    expect(localize("f r")).toThrow(new RangeError('[I18n] Unsupported locale "f\\u2028r".'));
+    expect(localize("x".repeat(150))).toThrow(new RangeError(`[I18n] Unsupported locale "${"x".repeat(100)}"....`));
+    expect(localize(42)).toThrow(new RangeError("[I18n] Unsupported locale of type number."));
+  });
+
+  it("should name the pathname and the rule it breaks", () => {
+    const routing = createLocaleRouting({
+      defaultLocale: "en-US",
+      locales: LOCALES,
+      localePrefix: "always",
+    });
+    const cases: [string, string][] = [
+      ["/help//x", 'pathname "/help//x" must not contain an empty segment, as // makes'],
+      ["about", 'pathname "about" must start with /'],
+      ["", 'pathname "" must start with /'],
+      ["/about?tab=1", 'pathname "/about?tab=1" must not contain ?, which starts a query; pass url.pathname'],
+      ["/about#top", 'pathname "/about#top" must not contain #, which starts a fragment; pass url.pathname'],
+      ["/a\\b", 'pathname "/a\\\\b" must not contain a backslash'],
+      ["/a\nb", 'pathname "/a\\nb" must not contain a control character'],
+      ["/a%2Fb", 'pathname "/a%2Fb" must not contain an encoded slash, %2F'],
+      ["/a%5cb", 'pathname "/a%5cb" must not contain an encoded backslash, %5C'],
+      ["/a%25b", 'pathname "/a%25b" must not contain an encoded %, %25'],
+      ["/a%0Ab", 'pathname "/a%0Ab" must not contain an encoded control character, %00 to %1F or %7F'],
+      ["/50%off", 'pathname "/50%off" must not contain a % that two hex digits don\'t follow'],
+      ["/a/../b", 'pathname "/a/../b" must not contain a dot segment, . or ..'],
+      ["/a/%2e/b", 'pathname "/a/%2e/b" must not contain a dot segment, . or ..'],
+      [`/${"a".repeat(8_192)}`, `pathname "/${"a".repeat(99)}"... must be at most 8,192 characters`],
+      ["/a".repeat(101), `pathname "${"/a".repeat(50)}"... must have at most 100 segments`],
+    ];
+
+    for (const [pathname, message] of cases) {
+      expect(() => routing.localize(pathname, "en-US")).toThrow(new TypeError(`[I18n] ${message}`));
+    }
+    expect(() => routing.parse("about")).toThrow(new TypeError('[I18n] pathname "about" must start with /'));
+    expect(() => routing.parse(42 as unknown as string)).toThrow(
+      new TypeError("[I18n] pathname must be a string, received number"),
+    );
+    expect(() => routing.localize(null as unknown as string, "en-US")).toThrow(
+      new TypeError("[I18n] pathname must be a string, received null"),
+    );
   });
 
   it("should generate canonical prefixed pathnames and preserve non-root trailing slashes", () => {

@@ -2,7 +2,7 @@
 title: Solução de problemas
 description: O que cada erro e aviso quer dizer, e como resolver.
 order: 5
-source: 51965144a82b6ec2cf3356c49d4a3fad9d529c8a
+source: 1bc41e2fb9ef984fd04b9dcbd5a70900efd818fe
 ---
 
 # Solução de problemas
@@ -137,7 +137,7 @@ Causas comuns:
 
 Vindo de `parse()`, o valor não é o pathname de uma URL: ele não começa com `/`, ou contém `?` ou `#`. Passe `url.pathname` em vez da URL inteira ou de um caminho com a query string, como o `request.url` do Node. Um caminho que é um pathname mas contém algo que o roteamento recusa, como `//` ou um segmento de ponto, faz `parse()` devolver `undefined`, então a URL estranha de um visitante vira um 404 em vez de um crash.
 
-Vindo de `localize()` ou `localizeAll()`, o caminho é um desses, ou contém algo que o roteamento recusa. [Caminhos que ele aceita](localized-urls.md#caminhos-que-ele-aceita) tem a lista completa, com o conserto de cada um.
+Vindo de `localize()` ou `localizeAll()`, o caminho é um desses, ou contém algo que o roteamento recusa. A mensagem cita o caminho e diz qual regra ele quebra, como `[I18n] pathname "/help/../admin" must not contain a dot segment, . or ..`. [Caminhos que ele aceita](localized-urls.md#caminhos-que-ele-aceita) tem a lista completa, com o conserto de cada um.
 
 ## `localize()` lança `RangeError`: "would be read as"
 
@@ -148,7 +148,7 @@ O caminho que `localize()` montaria abre uma página diferente, ou a mesma pági
 
 ## `localize()` lança `RangeError`: "would be longer than 8,192 characters or 100 segments"
 
-O caminho que você passou é válido, mas o prefixo do locale ou as palavras traduzidas deixam o resultado mais longo do que o `parse()` aceita. Encurte o caminho; um link desse tamanho também tende a ser cortado por servidores e proxies muito antes de alguém lê-lo.
+O caminho que você passou é válido, mas o prefixo do locale ou as palavras traduzidas deixam o resultado mais longo do que o `parse()` aceita. A mensagem termina com o tamanho que a URL teria, como `its URL there would have 8,198 characters in 2 segments`. Encurte o caminho; um link desse tamanho também tende a ser cortado por servidores e proxies muito antes de alguém lê-lo.
 
 ## Um placeholder aparece como foi escrito e nada avisa
 

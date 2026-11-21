@@ -1126,14 +1126,15 @@ describe("translated pathnames", () => {
     });
 
     it("should name an invalid pathname", () => {
-      expect(invalid({ about: { pt: "/sobre" } })).toThrow(
-        'pathnames["about"]: Must be a valid absolute application pathname',
-      );
+      expect(invalid({ about: { pt: "/sobre" } })).toThrow('pathnames["about"]: Must start with /');
       expect(invalid({ "/about": { pt: "/sobre?x" } })).toThrow(
-        'pathnames["/about"].pt: Must be a valid absolute application pathname',
+        'pathnames["/about"].pt: Must not contain ?, which starts a query',
+      );
+      expect(invalid({ "/about": { pt: "/sobre//x" } })).toThrow(
+        'pathnames["/about"].pt: Must not contain an empty segment, as // makes',
       );
       expect(invalid({ "/about": { pt: "/../sobre" } })).toThrow(
-        'pathnames["/about"].pt: Must not contain dot segments',
+        'pathnames["/about"].pt: Must not contain a dot segment, . or ..',
       );
     });
 

@@ -2,7 +2,7 @@
 title: Solución de problemas
 description: Qué significa cada error y cada advertencia, y cómo solucionarlo.
 order: 5
-source: 51965144a82b6ec2cf3356c49d4a3fad9d529c8a
+source: 1bc41e2fb9ef984fd04b9dcbd5a70900efd818fe
 ---
 
 # Solución de problemas
@@ -137,7 +137,7 @@ Causas comunes:
 
 Si viene de `parse()`, el valor no es el pathname de una URL: no empieza con `/`, o contiene `?` o `#`. Pasa `url.pathname` en lugar de la URL completa o de una ruta con su query string, como el `request.url` de Node. Una ruta que sí es un pathname pero contiene algo que el routing rechaza, como `//` o un segmento de punto, hace en cambio que `parse()` devuelva `undefined`, así que la URL rara de un visitante se convierte en un 404 y no en un fallo de la app.
 
-Si viene de `localize()` o de `localizeAll()`, la ruta es una de esas, o contiene algo que el routing rechaza. [Rutas que acepta](localized-urls.md#rutas-que-acepta) tiene la lista completa, con la solución para cada caso.
+Si viene de `localize()` o de `localizeAll()`, la ruta es una de esas, o contiene algo que el routing rechaza. El mensaje cita la ruta y nombra la regla que incumple, como `[I18n] pathname "/help/../admin" must not contain a dot segment, . or ..`. [Rutas que acepta](localized-urls.md#rutas-que-acepta) tiene la lista completa, con la solución para cada caso.
 
 ## `localize()` lanza `RangeError`: "would be read as"
 
@@ -148,7 +148,7 @@ La ruta que construiría `localize()` abre otra página, o la misma página en o
 
 ## `localize()` lanza `RangeError`: "would be longer than 8,192 characters or 100 segments"
 
-La ruta que pasaste es válida, pero el prefijo del locale o las palabras traducidas hacen que el resultado sea más largo de lo que acepta `parse()`. Acorta la ruta; un enlace tan largo probablemente también lo corten los servidores y los proxies mucho antes de que alguien lo lea.
+La ruta que pasaste es válida, pero el prefijo del locale o las palabras traducidas hacen que el resultado sea más largo de lo que acepta `parse()`. El mensaje termina con la longitud que tendría la URL, como `its URL there would have 8,198 characters in 2 segments`. Acorta la ruta; un enlace tan largo probablemente también lo corten los servidores y los proxies mucho antes de que alguien lo lea.
 
 ## Un placeholder se muestra tal cual y nada advierte
 

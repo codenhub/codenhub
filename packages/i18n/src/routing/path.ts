@@ -7,17 +7,10 @@ export const MAX_PATHNAME_LENGTH = 8_192;
  * segments, which fit in 8,192 characters, took about 39 ms a `parse()` with 20 locales. @internal
  */
 export const MAX_PATHNAME_SEGMENTS = 100;
+// A `%` without two hex digits after it, or an escape of `/`, `\`, `%`, or a control character.
 const DISALLOWED_ESCAPE_PATTERN = /%(?![0-9a-f]{2})|%(?:0[0-9a-f]|1[0-9a-f]|25|2f|5c|7f)/i;
 
-/**
- * Whether a pathname is longer than 8,192 characters or has more than 100 segments, which routing refuses.
- *
- * @internal
- */
-export const isPathnameTooLong = (pathname: string): boolean => {
-  if (pathname.length > MAX_PATHNAME_LENGTH) {
-    return true;
-  }
+const hasTooManySegments = (pathname: string): boolean => {
   // Each segment follows a slash; a trailing slash, or `/` itself, starts none.
   const maxSlashes = pathname.endsWith("/") ? MAX_PATHNAME_SEGMENTS + 1 : MAX_PATHNAME_SEGMENTS;
   let slashes = 0;
@@ -31,24 +24,110 @@ export const isPathnameTooLong = (pathname: string): boolean => {
 };
 
 /**
- * Says why a value is not an absolute application pathname, or returns `undefined` when it is one.
+ * Whether a pathname is longer than 8,192 characters or has more than 100 segments, which routing refuses.
  *
  * @internal
  */
-export const findPathnameProblem = (pathname: unknown): "invalid" | "dot-segment" | undefined => {
-  if (
-    typeof pathname !== "string" ||
-    pathname.length === 0 ||
-    isPathnameTooLong(pathname) ||
-    !pathname.startsWith("/") ||
-    pathname.includes("//") ||
-    pathname.includes("?") ||
-    pathname.includes("#") ||
-    pathname.includes("\\") ||
-    hasAsciiControlCharacter(pathname) ||
-    DISALLOWED_ESCAPE_PATTERN.test(pathname)
-  ) {
-    return "invalid";
+export const isPathnameTooLong = (pathname: string): boolean =>
+  pathname.length > MAX_PATHNAME_LENGTH || hasTooManySegments(pathname);
+
+/** Why a value is not an absolute application pathname. @internal */
+export type PathnameProblem =
+  | "not-string"
+  | "not-absolute"
+  | "query"
+  | "fragment"
+  | "too-long"
+  | "too-many-segments"
+  | "empty-segment"
+  | "backslash"
+  | "control-character"
+  | "encoded-slash"
+  | "encoded-backslash"
+  | "encoded-percent"
+  | "encoded-control-character"
+  | "malformed-escape"
+  | "dot-segment";
+
+/** What a problem's path must do, worded to follow "must". */
+const PATHNAME_RULES: Readonly<Record<PathnameProblem, string>> = {
+  "not-string": "be a string",
+  "not-absolute": "start with /",
+  query: "not contain ?, which starts a query",
+  fragment: "not contain #, which starts a fragment",
+  "too-long": "be at most 8,192 characters",
+  "too-many-segments": "have at most 100 segments",
+  "empty-segment": "not contain an empty segment, as // makes",
+  backslash: "not contain a backslash",
+  "control-character": "not contain a control character",
+  "encoded-slash": "not contain an encoded slash, %2F",
+  "encoded-backslash": "not contain an encoded backslash, %5C",
+  "encoded-percent": "not contain an encoded %, %25",
+  "encoded-control-character": "not contain an encoded control character, %00 to %1F or %7F",
+  "malformed-escape": "not contain a % that two hex digits don't follow",
+  "dot-segment": "not contain a dot segment, . or ..",
+};
+
+/**
+ * The rule a pathname with this problem breaks, worded to follow "must", such as "not contain a backslash".
+ *
+ * @internal
+ */
+export const describePathnameRule = (problem: PathnameProblem): string => PATHNAME_RULES[problem];
+
+const findEscapeProblem = (pathname: string): PathnameProblem | undefined => {
+  const escape = DISALLOWED_ESCAPE_PATTERN.exec(pathname)?.[0].toLowerCase();
+  // The pattern matches a malformed escape as its `%` alone.
+  return escape === undefined
+    ? undefined
+    : escape === "%"
+      ? "malformed-escape"
+      : escape === "%2f"
+        ? "encoded-slash"
+        : escape === "%5c"
+          ? "encoded-backslash"
+          : escape === "%25"
+            ? "encoded-percent"
+            : "encoded-control-character";
+};
+
+/**
+ * Says why a value is not an absolute application pathname, or returns `undefined` when it is one. The first four
+ * problems are ones a URL's pathname never has.
+ *
+ * @internal
+ */
+export const findPathnameProblem = (pathname: unknown): PathnameProblem | undefined => {
+  if (typeof pathname !== "string") {
+    return "not-string";
+  }
+  if (!pathname.startsWith("/")) {
+    return "not-absolute";
+  }
+  if (pathname.includes("?")) {
+    return "query";
+  }
+  if (pathname.includes("#")) {
+    return "fragment";
+  }
+  if (pathname.length > MAX_PATHNAME_LENGTH) {
+    return "too-long";
+  }
+  if (hasTooManySegments(pathname)) {
+    return "too-many-segments";
+  }
+  if (pathname.includes("//")) {
+    return "empty-segment";
+  }
+  if (pathname.includes("\\")) {
+    return "backslash";
+  }
+  if (hasAsciiControlCharacter(pathname)) {
+    return "control-character";
+  }
+  const escapeProblem = findEscapeProblem(pathname);
+  if (escapeProblem !== undefined) {
+    return escapeProblem;
   }
 
   const hasDotSegment = pathname.split("/").some((segment) => [".", ".."].includes(segment.replaceAll(/%2e/gi, ".")));

@@ -1,6 +1,13 @@
 import { assertConfig, localeRoutingConfig } from "../locale/config-validators";
 import { formatReportedKey } from "../locale/dictionary";
-import { findPathnameProblem, isPathnameTooLong, joinPathname, normalizeSegment, splitPathname } from "./path";
+import {
+  describePathnameRule,
+  findPathnameProblem,
+  isPathnameTooLong,
+  joinPathname,
+  normalizeSegment,
+  splitPathname,
+} from "./path";
 import { buildPattern, compilePathnames, type ShapeIndex } from "./pathnames";
 
 /** Normalizes a segment as {@link normalizeSegment} does. */
@@ -177,14 +184,19 @@ export const createLocaleRouting = <TLocale extends string>(
     subject,
   );
 
+  /** Throws a `TypeError` naming the pathname and the rule it breaks, or returns when it is valid. */
   const validatePathname = (pathname: string): void => {
     const problem = findPathnameProblem(pathname);
 
-    if (problem === "invalid") {
-      throw new TypeError("[I18n] pathname must be a valid absolute application pathname");
+    if (problem === "not-string") {
+      throw new TypeError(`[I18n] pathname must be a string, received ${pathname === null ? "null" : typeof pathname}`);
     }
-    if (problem === "dot-segment") {
-      throw new TypeError("[I18n] pathname must not contain dot segments");
+    if (problem !== undefined) {
+      // A query or a fragment is a URL passed where its pathname belongs.
+      const advice = problem === "query" || problem === "fragment" ? "; pass url.pathname" : "";
+      throw new TypeError(
+        `[I18n] pathname ${formatReportedKey(pathname)} must ${describePathnameRule(problem)}${advice}`,
+      );
     }
   };
 
@@ -367,7 +379,10 @@ export const createLocaleRouting = <TLocale extends string>(
     const canonicalLocale = typeof locale === "string" ? findLocale(locale, true) : undefined;
 
     if (canonicalLocale === undefined) {
-      throw new RangeError("[I18n] locale must be a supported string");
+      // The value is calling code's, often from a URL or a header, so it is quoted and truncated, as the manager does.
+      throw new RangeError(
+        `[I18n] Unsupported locale ${typeof locale === "string" ? formatReportedKey(locale) : `of type ${typeof locale}`}.`,
+      );
     }
 
     // Every path is canonical. One that starts with a locale, such as an English `/my/orders` when Burmese, `my`, is
@@ -386,8 +401,11 @@ export const createLocaleRouting = <TLocale extends string>(
     const built = localizeCanonical(canonical, hasTrailingSlash, canonicalLocale, normalize);
 
     if (built.problem === "too-long") {
+      const segmentCount = splitPathname(built.url).segments.length;
       throw new RangeError(
-        `[I18n] the path in ${formatReportedKey(canonicalLocale)} would be longer than 8,192 characters or 100 segments`,
+        `[I18n] ${formatReportedKey(pathname)} in ${formatReportedKey(canonicalLocale)} would be longer than 8,192 ` +
+          `characters or 100 segments; its URL there would have ${built.url.length.toLocaleString("en-US")} ` +
+          `characters in ${segmentCount.toLocaleString("en-US")} segments`,
       );
     }
     if (built.problem === "clash") {

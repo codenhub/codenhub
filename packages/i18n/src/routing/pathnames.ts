@@ -1,6 +1,6 @@
 import { type CheckedPathnameEntry, fail } from "../locale/config-validators";
 import { formatReportedKey } from "../locale/dictionary";
-import { findPathnameProblem, normalizeSegment, splitPathname } from "./path";
+import { describePathnameRule, findPathnameProblem, normalizeSegment, splitPathname } from "./path";
 
 const PARAMETER_NAME_PATTERN = /^[A-Za-z0-9_]+$/;
 // A segment written as a catch-all, as a route pattern passed to `localize` ends.
@@ -326,10 +326,7 @@ const parsePattern = (pathname: string, path: string, isLocale: (segment: string
   const problem = findPathnameProblem(pathname);
 
   if (problem !== undefined) {
-    fail(
-      path,
-      problem === "invalid" ? "Must be a valid absolute application pathname" : "Must not contain dot segments",
-    );
+    fail(path, `Must ${describePathnameRule(problem)}`);
   }
 
   const names = new Set<string>();

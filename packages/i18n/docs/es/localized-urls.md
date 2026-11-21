@@ -2,7 +2,7 @@
 title: URLs localizadas
 description: Pon el locale en la ruta, traduce la propia ruta, lee ambas de vuelta, enlaza a otros idiomas, genera cada página localizada y lleva a cada visitante a su propio idioma en un sitio estático.
 order: 4
-source: 169e101e81d23dd13d675e7b9b80a44e56edb357
+source: 5e9f6697e0cca1fa395347959d0950a9ba818d0e
 ---
 
 # URLs localizadas
@@ -428,12 +428,13 @@ Esta es la parte aburrida de la página. También es la parte que decide si una 
 - **Un escape mal formado**, un `%` que no va seguido de dos dígitos hexadecimales, como en `/50%off`. Escribe `%25` para un `%` literal… que también se rechaza, según la regla anterior, así que saca el `%` de la ruta.
 - **Más de 8192 caracteres o 100 segmentos**, o una ruta cuya ruta canónica sería más larga que eso, como puede pasar con una ruta traducida corta cuando su entrada en la tabla es larga. De todos modos, los servidores y los proxies cortan las URLs alrededor de esa longitud, y ninguna página está 100 carpetas abajo; una petición de miles de segmentos de una letra costaría trabajo en cada locale.
 
-Una solicitud puede traer cualquiera de estas, como un escáner que pide `//wp-login.php`, así que `parse()` devuelve `undefined` para ellas, y el mismo 404 las responde como a cualquier otra ruta que no es una página. `localize()` y `localizeAll()` construyen enlaces a partir de tus propias rutas en lugar de leer solicitudes, así que con esas mismas rutas lanzan un `TypeError`, como `TypeError: [I18n] pathname must not contain dot segments`, y corriges la ruta en tu código.
+Una solicitud puede traer cualquiera de estas, como un escáner que pide `//wp-login.php`, así que `parse()` devuelve `undefined` para ellas, y el mismo 404 las responde como a cualquier otra ruta que no es una página. `localize()` y `localizeAll()` construyen enlaces a partir de tus propias rutas en lugar de leer solicitudes, así que con esas mismas rutas lanzan un `TypeError` que cita la ruta y nombra la regla, como `TypeError: [I18n] pathname "/help/../admin" must not contain a dot segment, . or ..`, y corriges la ruta en tu código.
 
-Todos los métodos, `parse()` incluido, lanzan `TypeError: [I18n] pathname must be a valid absolute application pathname` para un valor que ni siquiera es el pathname de una URL:
+Todos los métodos, `parse()` incluido, lanzan un `TypeError` para un valor que ni siquiera es el pathname de una URL:
 
-- Uno que no empieza con `/`, como una URL completa `https://…`.
-- Uno que contiene `?` o `#`, como el `request.url` de Node con su query string.
+- Uno que no empieza con `/`, como una URL completa: `TypeError: [I18n] pathname "https://example.com/" must start with /`.
+- Uno que contiene `?` o `#`, como el `request.url` de Node con su query string: `TypeError: [I18n] pathname "/search?q=shoes" must not contain ?, which starts a query; pass url.pathname`.
+- Uno que no es un string: `TypeError: [I18n] pathname must be a string, received undefined`.
 
 Eso es un error del código que llama, no una solicitud que haya que responder, así que falla de forma ruidosa en lugar de responder 404 a cada URL con query string.
 

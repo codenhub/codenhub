@@ -427,12 +427,13 @@ This is the boring part of the page. It is also the part that decides whether a 
 - **A malformed escape**, a `%` not followed by two hex digits, as in `/50%off`. Write `%25` for a literal `%`… which is also refused, per the previous rule, so take the `%` out of the path.
 - **More than 8,192 characters or 100 segments**, or a path whose canonical path would be longer than that, as a short translated path can be when its table entry is long. Servers and proxies cut off URLs around this length anyway, and no page is 100 folders deep; a request of thousands of one-letter segments would otherwise cost work in every locale.
 
-A request can carry any of these, such as a scanner asking for `//wp-login.php`, so `parse()` returns `undefined` for them, and the same 404 answers them as any other path that is no page. `localize()` and `localizeAll()` build links from your own paths rather than read requests, so for the same paths they throw a `TypeError`, such as `TypeError: [I18n] pathname must not contain dot segments`, and you fix the path in your code.
+A request can carry any of these, such as a scanner asking for `//wp-login.php`, so `parse()` returns `undefined` for them, and the same 404 answers them as any other path that is no page. `localize()` and `localizeAll()` build links from your own paths rather than read requests, so for the same paths they throw a `TypeError` that quotes the path and names the rule, such as `TypeError: [I18n] pathname "/help/../admin" must not contain a dot segment, . or ..`, and you fix the path in your code.
 
-Every method, `parse()` included, throws `TypeError: [I18n] pathname must be a valid absolute application pathname` for a value that is not a URL's pathname at all:
+Every method, `parse()` included, throws a `TypeError` for a value that is not a URL's pathname at all:
 
-- One that does not start with `/`, such as a full URL `https://…`.
-- One that contains `?` or `#`, such as Node's `request.url` with its query string.
+- One that does not start with `/`, such as a full URL: `TypeError: [I18n] pathname "https://example.com/" must start with /`.
+- One that contains `?` or `#`, such as Node's `request.url` with its query string: `TypeError: [I18n] pathname "/search?q=shoes" must not contain ?, which starts a query; pass url.pathname`.
+- One that is not a string: `TypeError: [I18n] pathname must be a string, received undefined`.
 
 That is a mistake in the calling code, not a request to answer, so it fails loudly instead of answering 404 to every URL with a query.
 

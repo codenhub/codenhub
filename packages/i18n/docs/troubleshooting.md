@@ -136,7 +136,7 @@ Common causes:
 
 From `parse()`, the value is not a URL's pathname: it doesn't start with `/`, or it contains `?` or `#`. Pass `url.pathname` rather than the full URL or a path with its query string, such as Node's `request.url`. A path that is a pathname but contains something routing refuses, such as `//` or a dot segment, makes `parse()` return `undefined` instead, so a visitor's odd URL becomes a 404 rather than a crash.
 
-From `localize()` or `localizeAll()`, the path is one of those, or contains something routing refuses. [Paths it accepts](localized-urls.md#paths-it-accepts) has the full list, with the fix for each.
+From `localize()` or `localizeAll()`, the path is one of those, or contains something routing refuses. The message quotes the path and names the rule it breaks, such as `[I18n] pathname "/help/../admin" must not contain a dot segment, . or ..`. [Paths it accepts](localized-urls.md#paths-it-accepts) has the full list, with the fix for each.
 
 ## `localize()` throws `RangeError`: "would be read as"
 
@@ -147,7 +147,7 @@ The path `localize()` would build opens a different page, or the same page in an
 
 ## `localize()` throws `RangeError`: "would be longer than 8,192 characters or 100 segments"
 
-The path you passed is valid, but the locale prefix or the translated words make the result longer than `parse()` accepts. Shorten the path; a link that long is also likely to be cut off by servers and proxies long before anyone reads it.
+The path you passed is valid, but the locale prefix or the translated words make the result longer than `parse()` accepts. The message ends with the length the URL would have, such as `its URL there would have 8,198 characters in 2 segments`. Shorten the path; a link that long is also likely to be cut off by servers and proxies long before anyone reads it.
 
 ## A placeholder shows as written and nothing warns
 
