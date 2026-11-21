@@ -2,7 +2,7 @@
 title: URLs localizadas
 description: Coloque o locale no caminho, traduza o próprio caminho, leia os dois de volta, crie links para outros idiomas, gere todas as páginas localizadas e mande os visitantes para o idioma deles num site estático.
 order: 4
-source: c8bde08e89440832aa0f8103fa0ba85782934856
+source: 9631ff21a73a680787941415c4160732b2d7873e
 ---
 
 # URLs localizadas
@@ -260,7 +260,7 @@ for (const { locale, pathname } of routing.localizeAll("/products/:id")) {
 
 O `@codenhub/router` pega a primeira rota que corresponder, na ordem em que você as registra. Quando dois caminhos de um locale podem corresponder à mesma URL, como `/pt/produtos/novo` e `/pt/produtos/:id`, registre primeiro o que tem palavras fixas.
 
-`localizeAll()` escreve um catch-all como `:name*`. Traduza isso para a sintaxe do seu framework quando registrá-lo, como `[...path]` num router baseado em arquivos. O `@codenhub/router` não tem catch-all, então, com ele, roteie esses caminhos reescrevendo para o caminho canônico.
+Um padrão que termina em `:name*` é traduzido pelo catch-all da tabela, nunca por um parâmetro: com `/help/:id` e `/help/:path*` na tabela, `localizeAll("/help/:path*")` dá o português `/pt/ajuda/:path*`, e não o `/pt/ajuda/artigo/:path*` de um segmento. `localizeAll()` escreve um catch-all como `:name*`. Traduza isso para a sintaxe do seu framework quando registrá-lo, como `[...path]` num router baseado em arquivos. O `@codenhub/router` não tem catch-all, então, com ele, roteie esses caminhos reescrevendo para o caminho canônico.
 
 ## Dispense o prefixo
 
@@ -283,8 +283,10 @@ routing.localize("/blog", "pt"); // "/pt/blog"
 O prefixo fica onde o caminho sozinho não consegue dizer em que idioma está:
 
 - **Caminhos com as mesmas palavras em dois idiomas.** `/` e `/blog` também existem em inglês, então o português mantém `/pt` e `/pt/blog`. Dois idiomas que traduzem para as mesmas palavras, como `/contato` em português e em espanhol, também mantêm o prefixo.
-- **Caminhos que o parâmetro de outro idioma poderia pegar.** Se o espanhol lista `/:tag`, todo caminho de um segmento poderia ser uma tag em espanhol, então `/sobre` mantém o prefixo.
+- **Caminhos que um parâmetro do idioma padrão poderia pegar.** Se o inglês lista `/:slug`, todo caminho de um segmento poderia ser uma página em inglês, então `/sobre` mantém o prefixo.
 - **Caminhos feitos só de parâmetros**, como `/:tag`, que poderiam ser qualquer coisa.
+
+Só contam os caminhos lidos sem prefixo. Um `/:tag` em espanhol mantém o prefixo, então só pega caminhos que começam com `/es`, e o `/sobre` em português continua sem o seu.
 
 Nesse modo, o locale padrão nunca tem prefixo. `parse()` continua aceitando `/pt/sobre`, então redirecione-o como em [Redirecione para a URL canônica](#redirecione-para-a-url-canônica).
 
@@ -426,12 +428,13 @@ Esta é a parte chata da página. Também é a parte que decide se uma URL forja
 - **Um escape malformado**, um `%` que não é seguido por dois dígitos hexadecimais, como em `/50%off`. Escreva `%25` para um `%` literal… que também é recusado, pela regra anterior, então tire o `%` do caminho.
 - **Mais de 8.192 caracteres ou 100 segmentos**, ou um caminho cujo caminho canônico teria mais do que isso, como pode acontecer com um caminho traduzido curto quando a entrada dele na tabela é longa. Servidores e proxies cortam as URLs por volta desse tamanho de qualquer jeito, e nenhuma página fica 100 pastas abaixo; um pedido com milhares de segmentos de uma letra custaria trabalho em cada locale.
 
-Uma requisição pode trazer qualquer um desses, como um scanner pedindo `//wp-login.php`, então `parse()` devolve `undefined` para eles, e o mesmo 404 os responde como a qualquer outro caminho que não é página. `localize()` e `localizeAll()` montam links a partir dos seus próprios caminhos, em vez de ler requisições, então, para os mesmos caminhos, eles lançam um `TypeError`, como `TypeError: [I18n] pathname must not contain dot segments`, e você corrige o caminho no seu código.
+Uma requisição pode trazer qualquer um desses, como um scanner pedindo `//wp-login.php`, então `parse()` devolve `undefined` para eles, e o mesmo 404 os responde como a qualquer outro caminho que não é página. `localize()` e `localizeAll()` montam links a partir dos seus próprios caminhos, em vez de ler requisições, então, para os mesmos caminhos, eles lançam um `TypeError` que cita o caminho e diz a regra, como `TypeError: [I18n] pathname "/help/../admin" must not contain a dot segment, . or ..`, e você corrige o caminho no seu código.
 
-Todo método, `parse()` incluído, lança `TypeError: [I18n] pathname must be a valid absolute application pathname` para um valor que nem é o pathname de uma URL:
+Todo método, `parse()` incluído, lança um `TypeError` para um valor que nem é o pathname de uma URL:
 
-- Um que não começa com `/`, como uma URL inteira `https://…`.
-- Um que contém `?` ou `#`, como o `request.url` do Node com a query string.
+- Um que não começa com `/`, como uma URL inteira: `TypeError: [I18n] pathname must start with /; pass url.pathname`.
+- Um que contém `?` ou `#`, como o `request.url` do Node com a query string: `TypeError: [I18n] pathname "/search?…" must not contain ?, which starts a query; pass url.pathname`. Nenhum dos dois erros cita as informações de usuário, a query ou o fragmento da URL, que podem conter uma credencial, e um caminho que começa com `//`, como uma URL relativa ao protocolo, não é citado: `TypeError: [I18n] pathname must not start with //, which starts a URL's host; pass url.pathname`.
+- Um que não é string: `TypeError: [I18n] pathname must be a string, received undefined`.
 
 Isso é um erro no código que chama, e não uma requisição a responder, então ele falha alto em vez de responder 404 a toda URL com query.
 

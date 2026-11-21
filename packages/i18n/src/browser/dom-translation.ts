@@ -10,8 +10,10 @@ const ELEMENT_NODE = 1;
 /**
  * Elements whose text can run, stay hidden, or be read as HTML. The HTML serializer writes the text of `xmp`, `iframe`,
  * `noembed`, `noframes`, and `plaintext` unescaped, so a page saved through `innerHTML`, as a prerender does, would turn
- * a translation such as `</xmp><img onerror=...>` into markup. Their attributes are still translated, since the
- * serializer escapes every attribute value.
+ * a translation such as `</xmp><img onerror=...>` into markup. Their own attributes are still translated, since the
+ * serializer escapes an attribute value outside them. An element inside one, which only the DOM can put there, is
+ * skipped whole: the serializer writes its attributes unescaped too, and before 2025 the HTML standard did not escape
+ * `<` in an attribute value either.
  */
 const BLOCKED_ELEMENT_NAMES = new Set([
   "iframe",
@@ -80,8 +82,13 @@ interface DomTranslatorOptions {
 interface TranslateRootOptions {
   readonly root: ParentNode;
   readonly boundary?: ParentNode | undefined;
-  /** The active locale, which text from another dictionary is marked apart from with `lang`. */
+  /** The active locale, which text is marked apart from with `lang` where neither the element nor an ancestor declares a language. */
   readonly locale: string;
+  /**
+   * Leaves whose text other code replaced while it showed a translation, which the pass writes over, so their fallback
+   * stays the text from before the replacement.
+   */
+  readonly replacedTexts?: ReadonlySet<Element> | undefined;
   readonly translate: (key: string) => FoundText | undefined;
 }
 
@@ -91,10 +98,11 @@ type Translate = TranslateRootOptions["translate"];
 export interface DomTranslator {
   /**
    * Translates safe leaves and attributes at and below the root, restoring the fallback where a key was removed, and
-   * marks an element whose translations come from another locale's dictionary with that locale's `lang`. A message
-   * that needs values keeps the fallback, with a warning. A text or attribute whose translation throws, such as from a
-   * throwing `onMissingKey`, keeps its value; every other key is still translated, and the first error is thrown after
-   * the pass.
+   * marks an element whose translations come from a locale other than the language it has without the mark, its own
+   * `lang` or the nearest ancestor's, with that locale's `lang`. An element inside one whose text is blocked, such as
+   * `<xmp>`, is skipped with a warning. A message that needs values keeps the fallback, with a warning. A text or
+   * attribute whose translation throws, such as from a throwing `onMissingKey`, keeps its value; every other key is
+   * still translated, and the first error is thrown after the pass.
    */
   translateRoot(options: TranslateRootOptions): void;
 }
@@ -121,12 +129,29 @@ export const runEach = <T>(items: Iterable<T>, run: (item: T) => void): void => 
 
 const isElementNode = (node: ParentNode): node is Element => node.nodeType === ELEMENT_NODE;
 
+/**
+ * Whether the element was defined as a custom element, which also finds a customized built-in created from script,
+ * such as `document.createElement("button", { is: "x-button" })`, since that sets no `is` attribute.
+ */
+const isDefinedCustomElement = (element: Element): boolean => {
+  const registry = element.ownerDocument.defaultView?.customElements;
+  // `getName()` is missing from browsers before 2024, where only the tag and the `is` attribute tell.
+  return (
+    typeof registry?.getName === "function" &&
+    registry.getName(element.constructor as CustomElementConstructor) !== null
+  );
+};
+
 const isInsideCustomElement = (element: Element, root: ParentNode): boolean => {
   let currentElement: Element | null = element;
 
   while (currentElement !== null && currentElement !== root) {
     // A customized built-in element, such as `<button is="x-button">`, is a component too.
-    if (currentElement.tagName.includes("-") || currentElement.hasAttribute("is")) {
+    if (
+      currentElement.tagName.includes("-") ||
+      currentElement.hasAttribute("is") ||
+      isDefinedCustomElement(currentElement)
+    ) {
       return true;
     }
 
@@ -135,6 +160,43 @@ const isInsideCustomElement = (element: Element, root: ParentNode): boolean => {
 
   return false;
 };
+
+/** The nearest ancestor whose content the serializer writes unescaped, or that the page never shows as text. */
+const findBlockedAncestor = (element: Element): Element | undefined => {
+  for (let ancestor = element.parentElement; ancestor !== null; ancestor = ancestor.parentElement) {
+    if (BLOCKED_ELEMENT_NAMES.has(ancestor.localName)) {
+      return ancestor;
+    }
+  }
+  return undefined;
+};
+
+/**
+ * The language declared by the nearest ancestor's `lang`, through the hosts of shadow roots, or `undefined` when none
+ * declares one. An empty `lang` counts as none.
+ */
+const readInheritedLang = (element: Element): string | undefined => {
+  let scope: Element | null = element.parentElement;
+  let node: Node = element;
+
+  for (;;) {
+    const declaring = scope?.closest("[lang]");
+    if (declaring !== null && declaring !== undefined) {
+      const lang = declaring.getAttribute(LANG_ATTRIBUTE);
+      return lang === null || lang === "" ? undefined : lang;
+    }
+    // A shadow root's text inherits its host's language.
+    const host = (node.getRootNode() as Partial<ShadowRoot>).host;
+    if (host === undefined || host === null) {
+      return undefined;
+    }
+    scope = host;
+    node = host;
+  }
+};
+
+// Language tags are case-insensitive, so `pt-br` names the same language as `pt-BR`.
+const isSameLanguage = (left: string, right: string): boolean => left.toLowerCase() === right.toLowerCase();
 
 const collectElements = (root: ParentNode, isTracked: (element: Element) => boolean): Element[] => {
   const descendants = Array.from(root.querySelectorAll(TRANSLATION_KEY_SELECTOR));
@@ -209,12 +271,13 @@ export function createDomTranslator(options: DomTranslatorOptions): DomTranslato
     return found;
   };
 
-  const getFallbackText = (element: Element): string => {
+  /** The text to show on a miss. Text other code set since the last pass replaces it, unless the pass writes over it. */
+  const getFallbackText = (element: Element, isReplaced: boolean): string => {
     const fallbackText = fallbackTexts.get(element);
     const currentText = element.textContent ?? "";
     const translatedText = translatedTexts.get(element);
 
-    if (fallbackText === undefined || (translatedText !== undefined && currentText !== translatedText)) {
+    if (fallbackText === undefined || (!isReplaced && translatedText !== undefined && currentText !== translatedText)) {
       fallbackTexts.set(element, currentText);
       return currentText;
     }
@@ -344,7 +407,12 @@ export function createDomTranslator(options: DomTranslatorOptions): DomTranslato
     translatedTexts.has(element) || (attributeStates.get(element)?.size ?? 0) > 0 || langStates.has(element);
 
   /** Translates the text, returning the locale of the translation shown, or `undefined` when none is. */
-  const translateText = (element: Element, rawKey: string, translate: Translate): string | undefined => {
+  const translateText = (
+    element: Element,
+    rawKey: string,
+    translate: Translate,
+    isReplaced: boolean,
+  ): string | undefined => {
     if (element.childElementCount > 0) {
       // The application owns its content now, so a translation recorded for an earlier locale no longer describes it.
       fallbackTexts.delete(element);
@@ -365,7 +433,7 @@ export function createDomTranslator(options: DomTranslatorOptions): DomTranslato
       return undefined;
     }
 
-    const fallbackText = getFallbackText(element);
+    const fallbackText = getFallbackText(element, isReplaced);
     const found = readTranslation(element, TRANSLATION_ATTRIBUTE, rawKey.trim(), translate);
     const nextText = found?.text ?? fallbackText;
 
@@ -376,7 +444,10 @@ export function createDomTranslator(options: DomTranslatorOptions): DomTranslato
     return found?.locale;
   };
 
-  const translateElement = (element: Element, locale: string, translate: Translate): void => {
+  const translateElement = (
+    element: Element,
+    { locale, translate, replacedTexts }: Omit<TranslateRootOptions, "root" | "boundary">,
+  ): void => {
     // The locale of each translation shown, or `null` where the element's own value is shown, of unknown language.
     const shownLocales: (string | null)[] = [];
     let hasTextKey = false;
@@ -397,7 +468,7 @@ export function createDomTranslator(options: DomTranslatorOptions): DomTranslato
         hasTextKey = true;
         // Counted as unknown before translating, so a key whose missing-key handling throws keeps the element unmarked.
         const index = shownLocales.push(null) - 1;
-        shownLocales[index] = translateText(element, rawKey, translate) ?? null;
+        shownLocales[index] = translateText(element, rawKey, translate, replacedTexts?.has(element) === true) ?? null;
       } else {
         restoreText(element);
       }
@@ -429,17 +500,27 @@ export function createDomTranslator(options: DomTranslatorOptions): DomTranslato
     };
 
     // `lang` names the language of the element's text and attributes alike, so it is written only when every
-    // translation shown comes from one other locale's dictionary. An element with children but no translated text,
-    // such as a `<div>` with a translated `title`, is left alone, since `lang` would mislabel its children too.
+    // translation shown comes from one locale, and that locale is not the language the element has without the mark:
+    // its own `lang`, or else the nearest ancestor's, or else the active locale. An element with children but no
+    // translated text, such as a `<div>` with a translated `title`, is left alone, since `lang` would mislabel its
+    // children too.
     const markLanguage = (): void => {
       const [first] = shownLocales;
       const isMarkable = hasTextKey || element.childNodes.length === 0;
-      applyLang(
-        element,
-        isMarkable && typeof first === "string" && first !== locale && shownLocales.every((shown) => shown === first)
-          ? first
-          : undefined,
-      );
+      if (
+        !isMarkable ||
+        typeof first !== "string" ||
+        !shownLocales.every((shown) => shown === first) ||
+        appOwnedLangs.has(element)
+      ) {
+        applyLang(element, undefined);
+        return;
+      }
+      const state = langStates.get(element);
+      // A `lang` the binding wrote is not the element's; a `lang` it copied as a clone of a marked element is.
+      const ownLang = state === undefined ? element.getAttribute(LANG_ATTRIBUTE) : state.original;
+      const unmarkedLang = (ownLang === null || ownLang === "" ? undefined : ownLang) ?? readInheritedLang(element);
+      applyLang(element, isSameLanguage(first, unmarkedLang ?? locale) ? undefined : first);
     };
 
     // The text and each attribute are translated even when another of the element's keys throws.
@@ -453,11 +534,31 @@ export function createDomTranslator(options: DomTranslatorOptions): DomTranslato
     );
   };
 
+  const warnBlockedAncestor = (element: Element, ancestor: Element): void => {
+    const keyAttribute = TRANSLATION_KEY_ATTRIBUTES.find((attribute) => element.hasAttribute(attribute));
+    if (options.isSilent || keyAttribute === undefined) {
+      return;
+    }
+    console.warn(
+      "%s",
+      `[I18n] Skipping translation on <${element.localName}> because it is inside <${ancestor.localName}>, which can ` +
+        `run, hide, or reparse its content as HTML; its ${keyAttribute} is ` +
+        `${formatReportedKey(element.getAttribute(keyAttribute) ?? "")}.`,
+      element,
+    );
+  };
+
   return {
-    translateRoot({ root, boundary = root, locale, translate }) {
+    translateRoot({ root, boundary = root, ...pass }) {
       runEach(collectElements(root, isTracked), (element) => {
-        if (!isInsideCustomElement(element, boundary)) {
-          translateElement(element, locale, translate);
+        if (isInsideCustomElement(element, boundary)) {
+          return;
+        }
+        const blockedAncestor = findBlockedAncestor(element);
+        if (blockedAncestor === undefined) {
+          translateElement(element, pass);
+        } else {
+          warnBlockedAncestor(element, blockedAncestor);
         }
       });
     },

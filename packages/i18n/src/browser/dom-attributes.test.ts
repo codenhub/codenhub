@@ -143,6 +143,26 @@ describe("initializeBrowserI18n attribute translation", () => {
     binding.disconnect();
   });
 
+  it("skips customized built-in elements created from script, which have no is attribute", async () => {
+    class ScriptButton extends HTMLButtonElement {}
+    class ScriptList extends HTMLUListElement {}
+    customElements.define("script-button", ScriptButton, { extends: "button" });
+    customElements.define("script-list", ScriptList, { extends: "ul" });
+    const created = document.createElement("button", { is: "script-button" });
+    created.setAttribute("data-i18n", "greeting");
+    created.textContent = "Own";
+    const constructed = new ScriptList();
+    constructed.innerHTML = '<li data-i18n="greeting">Item</li>';
+    document.body.append(created, constructed);
+    expect(created.hasAttribute("is")).toBe(false);
+
+    const binding = await initializeBrowserI18n({ i18n: createManager(), locale: "fr", root: document.body });
+
+    expect(created.textContent).toBe("Own");
+    expect(constructed.querySelector("li")?.textContent).toBe("Item");
+    binding.disconnect();
+  });
+
   it("translates observed additions and attribute key changes", async () => {
     const i18n = createManager();
     const binding = await initializeBrowserI18n({ i18n, locale: "fr", root: document.body, observe: true });
@@ -314,17 +334,20 @@ describe("initializeBrowserI18n fallback language", () => {
 
   it("restores the element's own lang, and keeps one the application set since", async () => {
     document.body.innerHTML = [
-      '<p id="own" lang="la" data-i18n="fallbackOnly">Text</p>',
+      '<p id="own" lang="fr" data-i18n="greeting">Texte</p>',
       '<p id="changed" data-i18n="fallbackOnly">Text</p>',
     ].join("");
     const i18n = createManager();
-    const binding = await initializeBrowserI18n({ i18n, locale: "fr", root: document.body, persistLocale: false });
+    const binding = await initializeBrowserI18n({ i18n, locale: "en", root: document.body, persistLocale: false });
     expect(document.querySelector("#own")?.getAttribute("lang")).toBe("en");
+    await i18n.setLocale("fr");
+    expect(document.querySelector("#own")?.getAttribute("lang")).toBe("fr");
+    expect(document.querySelector("#changed")?.getAttribute("lang")).toBe("en");
     document.querySelector("#changed")?.setAttribute("lang", "de");
 
     await i18n.setLocale("en");
 
-    expect(document.querySelector("#own")?.getAttribute("lang")).toBe("la");
+    expect(document.querySelector("#own")?.getAttribute("lang")).toBe("en");
     expect(document.querySelector("#changed")?.getAttribute("lang")).toBe("de");
     binding.disconnect();
   });
@@ -393,6 +416,100 @@ describe("initializeBrowserI18n fallback language", () => {
 
     expect(document.querySelector("button")?.hasAttribute("title")).toBe(false);
     expect(document.querySelector("button")?.getAttribute("lang")).toBe("en");
+    binding.disconnect();
+  });
+
+  it("marks text by the language it inherits rather than by the active locale", async () => {
+    document.documentElement.lang = "en";
+    document.body.innerHTML = [
+      '<div id="widget">',
+      '<p id="active" data-i18n="greeting">Text</p>',
+      '<p id="inherited" data-i18n="fallbackOnly">Text</p>',
+      '<div lang="FR"><p id="upper" data-i18n="greeting">Text</p></div>',
+      "</div>",
+    ].join("");
+    const i18n = createManager();
+
+    const binding = await initializeBrowserI18n({
+      i18n,
+      locale: "fr",
+      root: document.querySelector("#widget")!,
+      syncDocument: false,
+      persistLocale: false,
+    });
+
+    expect(document.querySelector("#active")?.getAttribute("lang")).toBe("fr");
+    expect(document.querySelector("#inherited")?.hasAttribute("lang")).toBe(false);
+    expect(document.querySelector("#upper")?.hasAttribute("lang")).toBe(false);
+    await i18n.setLocale("en");
+    expect(document.querySelector("#active")?.hasAttribute("lang")).toBe(false);
+    expect(document.querySelector("#upper")?.getAttribute("lang")).toBe("en");
+    binding.disconnect();
+  });
+
+  it("marks text by the active locale when no ancestor declares a language", async () => {
+    document.documentElement.removeAttribute("lang");
+    document.body.innerHTML =
+      '<p id="fallback" data-i18n="fallbackOnly">Text</p><p id="own" data-i18n="greeting">Text</p>';
+
+    const binding = await initializeBrowserI18n({
+      i18n: createManager(),
+      locale: "fr",
+      root: document.body,
+      syncDocument: false,
+      persistLocale: false,
+    });
+
+    expect(document.querySelector("#fallback")?.getAttribute("lang")).toBe("en");
+    expect(document.querySelector("#own")?.hasAttribute("lang")).toBe(false);
+    binding.disconnect();
+  });
+
+  it("marks text in a shadow root by the language its host inherits", async () => {
+    document.documentElement.lang = "en";
+    document.body.innerHTML = "<div></div>";
+    const shadowRoot = document.querySelector("div")!.attachShadow({ mode: "open" });
+    shadowRoot.innerHTML =
+      '<p id="active" data-i18n="greeting">Text</p><p id="inherited" data-i18n="fallbackOnly">Text</p>';
+
+    const binding = await initializeBrowserI18n({
+      i18n: createManager(),
+      locale: "fr",
+      root: shadowRoot,
+      syncDocument: false,
+      persistLocale: false,
+    });
+
+    expect(shadowRoot.querySelector("#active")?.getAttribute("lang")).toBe("fr");
+    expect(shadowRoot.querySelector("#inherited")?.hasAttribute("lang")).toBe(false);
+    binding.disconnect();
+  });
+
+  it("marks a clone of a marked element by the text it shows rather than the lang it copied", async () => {
+    document.body.innerHTML = '<ul><li data-i18n="fallbackOnly">Text</li></ul>';
+    const item = document.querySelector("li")!;
+    const i18n = createManager();
+    const binding = await initializeBrowserI18n({
+      i18n,
+      locale: "fr",
+      root: document.body,
+      observe: true,
+      persistLocale: false,
+    });
+    expect(item.getAttribute("lang")).toBe("en");
+
+    const clone = item.cloneNode(true) as Element;
+    clone.setAttribute("data-i18n", "greeting");
+    item.after(clone);
+    await flushMutations();
+
+    expect(clone.textContent).toBe("Bonjour");
+    expect(clone.getAttribute("lang")).toBe("fr");
+    // The copied lang is the clone's own, and labels its English fallback text once the key is gone.
+    clone.removeAttribute("data-i18n");
+    await flushMutations();
+    expect(clone.textContent).toBe("English fallback");
+    expect(clone.getAttribute("lang")).toBe("en");
     binding.disconnect();
   });
 

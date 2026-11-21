@@ -125,7 +125,7 @@ The trimmed, case-insensitively matched locale used for unprefixed paths; its ty
 localePrefix: "always" | "except-default" | "when-ambiguous";
 ```
 
-Which paths start with their locale: `"always"` every path; `"except-default"` every path but the default locale's; `"when-ambiguous"` like `"except-default"`, except that a translated path with a fixed segment that no other locale's path could match drops the prefix, such as `/sobre`. A path the table doesn't list is read as the default locale's, so with `"when-ambiguous"`, `localize` throws when such a path would be read as another page.
+Which paths start with their locale: `"always"` every path; `"except-default"` every path but the default locale's; `"when-ambiguous"` like `"except-default"`, except that a translated path with a fixed segment drops the prefix, such as `/sobre`, when no other path read without a prefix could match it: no default-locale path, and no other locale's path that drops its prefix. A path the table doesn't list is read as the default locale's, so with `"when-ambiguous"`, `localize` throws when such a path would be read as another page.
 
 #### LocaleRoutingConfig › locales
 
@@ -141,7 +141,7 @@ ASCII locale identifiers with alphanumeric hyphen-separated subtags, preserved i
 pathnames?: Readonly<Record<string, Readonly<Partial<Record<NoInfer<TLocale>, string>>>>> | undefined;
 ```
 
-Translated paths, keyed by the canonical path the application routes on, with each locale's form, such as `{ "/products/:id": { pt: "/produtos/:id" } }`. Paths have fixed segments, `:name` parameters, and a last `:name*` catch-all that matches one or more segments, and every form uses the canonical path's parameters, in any order. Fixed segments match case-sensitively, Unicode matches its percent-encoding, and a fixed segment wins over a parameter, which wins over a catch-all. A locale or path the table doesn't list keeps the canonical words.
+Translated paths, keyed by the canonical path the application routes on, with each locale's form, such as `{ "/products/:id": { pt: "/produtos/:id" } }`. Paths have fixed segments, `:name` parameters, and a last `:name*` catch-all that matches one or more segments, and every form uses the canonical path's parameters, in any order. Fixed segments match case-sensitively, Unicode matches its percent-encoding, and a fixed segment wins over a parameter, which wins over a catch-all. A path whose last segment is written `:name*`, such as `/help/:path*`, is matched only by a catch-all, so it keeps its own form. A locale or path the table doesn't list keeps the canonical words.
 
 #### LocaleRoutingConfig › trailingSlash
 

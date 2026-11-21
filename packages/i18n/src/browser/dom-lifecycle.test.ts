@@ -209,6 +209,89 @@ describe("initializeBrowserI18n document integration", () => {
     }
   });
 
+  it("keeps a translated attribute inside a raw-text element out of the HTML when the page is serialized", async () => {
+    // Only the DOM can put an element inside <xmp>, and the serializer writes the attribute's `<` unescaped there.
+    const xmp = document.createElement("xmp");
+    const paragraph = document.createElement("p");
+    paragraph.setAttribute("data-i18n-title", "tip");
+    const span = document.createElement("span");
+    span.setAttribute("data-i18n", "tip");
+    span.textContent = "Own";
+    xmp.append(paragraph, span);
+    const container = document.createElement("div");
+    container.append(xmp);
+    document.body.append(container);
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const i18n = createManager({
+      loadLocale: (locale) => (locale === "fr" ? { tip: "</xmp><img src=x>" } : {}),
+    });
+
+    const binding = await initializeBrowserI18n({ i18n, locale: "fr", root: document.body });
+    try {
+      expect(paragraph.hasAttribute("title")).toBe(false);
+      expect(span.textContent).toBe("Own");
+      const reparsed = document.createElement("div");
+      reparsed.innerHTML = container.innerHTML;
+      expect(reparsed.querySelectorAll("img")).toHaveLength(0);
+      expect(warn).toHaveBeenCalledWith(
+        "%s",
+        "[I18n] Skipping translation on <p> because it is inside <xmp>, which can run, hide, or reparse its content " +
+          'as HTML; its data-i18n-title is "tip".',
+        paragraph,
+      );
+    } finally {
+      binding.disconnect();
+    }
+  });
+
+  it("skips an element inside <noscript> in a document parsed without scripting", async () => {
+    const parsed = new DOMParser().parseFromString(
+      '<p data-i18n="greeting">Text</p><noscript><img data-i18n-alt="greeting" alt="Own"></noscript>',
+      "text/html",
+    );
+    vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const i18n = createManager();
+
+    const binding = await initializeBrowserI18n({ i18n, locale: "fr", root: parsed.body, syncDocument: false });
+    try {
+      expect(parsed.querySelector("noscript img")?.getAttribute("alt")).toBe("Own");
+      expect(parsed.querySelector("p")?.textContent).toBe("Bonjour");
+    } finally {
+      binding.disconnect();
+    }
+  });
+
+  it("skips an element appended to a <template> itself, which the page never serializes", async () => {
+    const template = document.createElement("template");
+    const paragraph = document.createElement("p");
+    paragraph.setAttribute("data-i18n", "greeting");
+    paragraph.textContent = "Own";
+    template.append(paragraph);
+    document.body.append(template);
+    vi.spyOn(console, "warn").mockImplementation(() => undefined);
+
+    const binding = await initializeBrowserI18n({ i18n: createManager(), locale: "fr", root: document.body });
+
+    expect(paragraph.textContent).toBe("Own");
+    binding.disconnect();
+  });
+
+  it("translates a template's content passed as the root", async () => {
+    const template = document.createElement("template");
+    template.innerHTML = '<p data-i18n="greeting">Own</p>';
+    document.body.append(template);
+
+    const binding = await initializeBrowserI18n({
+      i18n: createManager(),
+      locale: "fr",
+      root: template.content,
+      syncDocument: false,
+    });
+
+    expect(template.content.querySelector("p")?.textContent).toBe("Bonjour");
+    binding.disconnect();
+  });
+
   it("settles when two observing bindings share an element", async () => {
     document.body.innerHTML = '<div id="widget"></div>';
     const widget = document.querySelector("#widget")!;
@@ -358,6 +441,47 @@ describe("initializeBrowserI18n document integration", () => {
     await flushMutations();
 
     expect(paragraph.textContent).toBe("Ola");
+    binding.disconnect();
+  });
+
+  it("keeps the HTML text as the fallback of a leaf whose text the binding writes back over", async () => {
+    document.body.innerHTML = '<button data-i18n="frOnly">Place order</button>';
+    const button = document.querySelector("button")!;
+    const i18n = createManager();
+    const binding = await initializeBrowserI18n({ i18n, locale: "fr", root: document.body, observe: true });
+
+    button.textContent = "Placing order…";
+    await flushMutations();
+    expect(button.textContent).toBe("Francais seulement");
+    await i18n.setLocale("en");
+
+    expect(button.textContent).toBe("Place order");
+    await i18n.setLocale("fr");
+    button.removeAttribute("data-i18n");
+    await flushMutations();
+    expect(button.textContent).toBe("Place order");
+    binding.disconnect();
+  });
+
+  it("keeps the HTML text as the fallback of a leaf whose text is replaced just before a locale change", async () => {
+    document.body.innerHTML = '<button data-i18n="frOnly">Place order</button>';
+    const button = document.querySelector("button")!;
+    const i18n = createManager();
+    // Registered before the binding, so the text is replaced just before the binding retranslates the root.
+    i18n.addEventListener("locale-change", () => {
+      if (i18n.locale === "pt-BR") {
+        button.textContent = "Placing order…";
+      }
+    });
+    const binding = await initializeBrowserI18n({ i18n, locale: "fr", root: document.body, observe: true });
+
+    await i18n.setLocale("pt-BR");
+    expect(button.textContent).toBe("Place order");
+    button.textContent = "Placing order…";
+    await flushMutations();
+    await i18n.setLocale("ar");
+
+    expect(button.textContent).toBe("Place order");
     binding.disconnect();
   });
 
@@ -564,14 +688,13 @@ describe("initializeBrowserI18n document integration", () => {
       }
     }
     customElements.define("echo-button", EchoButton, { extends: "button" });
-    document.body.innerHTML = "<div></div>";
-    const root = document.querySelector("div")!;
-    const i18n = createManager();
-    const binding = await initializeBrowserI18n({ i18n, locale: "fr", root, observe: true });
     const button = document.createElement("button", { is: "echo-button" });
-    button.setAttribute("data-i18n-aria-label", "greeting");
+    document.body.append(button);
+    const i18n = createManager();
+    // A component is translated only as the root itself, since the binding never reads into one from outside.
+    const binding = await initializeBrowserI18n({ i18n, locale: "fr", root: button, observe: true });
 
-    root.append(button);
+    button.setAttribute("data-i18n-aria-label", "greeting");
     await flushMutations();
     await flushMutations();
 

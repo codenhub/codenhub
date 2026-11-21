@@ -1,6 +1,6 @@
 ---
 title: Write your translations
-description: Dictionaries, JSON files, placeholders, ICU messages, plurals, formatters, typed keys and values, checking for untranslated keys, and size limits.
+description: Dictionaries, JSON files, placeholders, ICU messages, links and bold text, plurals, formatters, typed keys and values, checking for untranslated keys, and size limits.
 order: 1
 ---
 
@@ -131,9 +131,9 @@ t("order.confirmed", { name: "Ana", orderId: "1042" });
 // "Thanks, Ana. Order 1042 ships tomorrow."
 ```
 
-Values can be strings, numbers, or dates. Placeholder names use ASCII letters, digits, and `_`, such as `{firstName}` or `{first_name}`. A name with anything else, such as `{first-name}` or `{nome_ç}`, is not a placeholder: the message is invalid syntax, logs a warning, and shows `{first-name}` as written.
+Values can be strings, numbers, bigints, or dates. A bigint goes wherever a number does, and is formatted without losing digits. Placeholder names use ASCII letters, digits, and `_`, such as `{firstName}` or `{first_name}`. A name with anything else, such as `{first-name}` or `{nome_ç}`, is not a placeholder: the message is invalid syntax, logs a warning, and shows `{first-name}` as written.
 
-Use placeholders instead of joining fragments. `t("before") + name + t("after")` locks every language into English word order, while a whole sentence with a placeholder lets each translation put the value where it belongs. Word order is the first thing every translator wants to change, and they are usually right.
+Use placeholders instead of joining fragments. `t("before") + name + t("after")` locks every language into English word order, while a whole sentence with a placeholder lets each translation put the value where it belongs. Word order is the first thing every translator wants to change, and they are usually right. For a link or bold text inside the sentence, see [Links and bold text inside a sentence](#links-and-bold-text-inside-a-sentence).
 
 A few details:
 
@@ -164,14 +164,14 @@ t("cart.discount", { rate: 0.15 }); // "15% off"
 t("order.shipped", { date: new Date() });
 ```
 
-| Argument                | Styles                                                             | Value                 |
-| ----------------------- | ------------------------------------------------------------------ | --------------------- |
-| `{n, number}`           | none, `integer`, `percent`                                         | number                |
-| `{d, date}`             | `short`, `medium` (the default), `long`, `full`                    | `Date` or a timestamp |
-| `{d, time}`             | `short`, `medium` (the default), `long`, `full`                    | `Date` or a timestamp |
-| `{n, plural, …}`        | see [Plurals](#plurals)                                            | number                |
-| `{n, selectordinal, …}` | ordinal forms, such as `one {#st} two {#nd} few {#rd} other {#th}` | number                |
-| `{v, select, …}`        | any words, plus `other`                                            | string or number      |
+| Argument                | Styles                                                             | Value                     |
+| ----------------------- | ------------------------------------------------------------------ | ------------------------- |
+| `{n, number}`           | none, `integer`, `percent`                                         | number or bigint          |
+| `{d, date}`             | `short`, `medium` (the default), `long`, `full`                    | `Date` or a timestamp     |
+| `{d, time}`             | `short`, `medium` (the default), `long`, `full`                    | `Date` or a timestamp     |
+| `{n, plural, …}`        | see [Plurals](#plurals)                                            | number or bigint          |
+| `{n, selectordinal, …}` | ordinal forms, such as `one {#st} two {#nd} few {#rd} other {#th}` | number or bigint          |
+| `{v, select, …}`        | any words, plus `other`                                            | string, number, or bigint |
 
 Formatting uses the language of the dictionary the text came from, so English text that fills in for a missing Portuguese key is written the English way. An argument whose value has the wrong type, such as a string for `{n, number}`, stays as written.
 
@@ -232,6 +232,50 @@ Quoted text is text to the types too: in `'{it''s {x}'`, which shows `{it's {x}`
 
 Text that is not valid syntax, such as an unclosed `{` or a stray `}`, logs a warning, unless the manager is silent, and is shown with only its `{name}` placeholders filled. The warning names the key and the locale, and comes once for each text in each locale, among the 1,000 most recent. [Find untranslated keys](#find-untranslated-keys) shows a test that checks every message.
 
+### Links and bold text inside a sentence
+
+A sentence with a link in the middle is still one sentence. Splitting it into `t("before")`, a link, and `t("after")` locks the word order, as joining fragments does. Mark the part with a tag and call `rich()`, which returns the text and its tags as data for your framework to render:
+
+```json
+{ "signup": { "terms": "By signing up you accept the <terms>terms of use</terms>." } }
+```
+
+```ts
+i18n.rich("signup.terms");
+// ["By signing up you accept the ", { tag: "terms", children: ["terms of use"] }, "."]
+```
+
+A tag is `<name>…</name>`, or `<name/>` for one with no content, such as a line break. Names use ASCII letters, digits, and `_`. A tag names what the part is, and your code decides how it renders, so a translation can't add a link, a script, or markup your code doesn't render. In React, for example:
+
+```tsx
+import { Fragment, type ReactNode } from "react";
+import type { RichText } from "@codenhub/i18n";
+
+type Tags = Readonly<Record<string, (children: ReactNode) => ReactNode>>;
+
+// A tag your code doesn't render shows its content without it.
+const render = (parts: RichText, tags: Tags): ReactNode[] =>
+  parts.map((part, index) => {
+    if (typeof part === "string") {
+      return part;
+    }
+    // An own property only, so a tag such as `<constructor>` never reaches an inherited function.
+    const tag = Object.hasOwn(tags, part.tag) ? tags[part.tag]! : (children: ReactNode) => children;
+    return <Fragment key={index}>{tag(render(part.children, tags))}</Fragment>;
+  });
+
+<p>{render(i18n.rich("signup.terms"), { terms: (children) => <a href="/terms">{children}</a> })}</p>;
+```
+
+A few details:
+
+- `rich()` takes the same keys and values as `t()`, checked the same way. A value is always text: a `<b>` in a visitor's name is shown as written, never read as a tag.
+- A tag can wrap placeholders, a plural, or a select, and can sit inside a plural or select form, but a tag opened in a form must close in that form.
+- A `<` that doesn't form a tag, as in `1 < 2`, is text.
+- A message whose tags don't balance, such as `<b>bold` without `</b>`, or nest more than 10 levels deep, logs a warning once for each text in each locale, unless the manager is silent, and comes back as one part: the text as `t()` shows it, tags included. A missing key and invalid syntax also come back as the one part `t()` would return.
+- Tags aren't type-checked, since a translation can use tags the default text doesn't. Render every tag your messages use, and keep a fallback for the rest, as above.
+- `t()` and the `data-i18n` binding show tags as written. Render a message with tags from your code with `rich()`.
+
 ## Plurals
 
 "1 items" is wrong in English, and other languages have more forms than English does. Arabic has six. To let each language choose, write the key as a group of forms instead of a single string. The shop's cart already does:
@@ -271,7 +315,7 @@ When a plural group is missing from the current locale, the default locale's gro
 
 Three things to watch for:
 
-- **`count` must be a number.** A string such as `"5"` does not select a form; the group is then treated as a missing key. Convert it where it comes in, such as `Number(params.get("count"))`. The manager doesn't guess, since `"1,5"` is one and a half in Portuguese and not a number at all to JavaScript.
+- **`count` must be a number or bigint.** A string such as `"5"` does not select a form; the group is then treated as a missing key. Convert it where it comes in, such as `Number(params.get("count"))`. The manager doesn't guess, since `"1,5"` is one and a half in Portuguese and not a number at all to JavaScript.
 - **A plain string under the same key wins over forms.** If `cart.items` is a string, `count` only fills `{count}`.
 - **Without `other`, it is not a plural group.** `{ "one": "…", "two": "…" }` works only for counts whose form happens to be there; any other count shows the key. `has()` says such a group is not a key, and typed keys don't offer it. Add `other`.
 
@@ -371,14 +415,14 @@ t("cart.items", { count: 2 }); // ok: a plural group requires a numeric count
 
 Which values each argument takes:
 
-- `number`, `plural`, and `selectordinal` arguments take a number.
+- `number`, `plural`, and `selectordinal` arguments take a number or bigint.
 - `date` and `time` take a `Date` or a timestamp.
-- `select` takes a string or number.
+- `select` takes a string, number, or bigint.
 - A plain `{name}` takes any of these.
 
 Extra values are allowed. When several dictionaries are typed, a key needs the values of every one that has it.
 
-A JSON import types every text as `string`, since TypeScript doesn't keep JSON string values, so a JSON dictionary checks keys but accepts any values. To check values, write the default language as `as const` TypeScript and keep the other languages in JSON, typed as the default:
+A JSON import types every text as `string`, since TypeScript doesn't keep JSON string values, so a JSON dictionary checks keys but accepts any values, except that a plural group still needs a number `count`. To check values, write the default language as `as const` TypeScript and keep the other languages in JSON, typed as the default:
 
 ```ts
 import en from "./locales/en";
@@ -393,7 +437,7 @@ The loader's return type is what types `t()`, so a translation must use the same
 Reading a message's arguments happens entirely in the type system, which is clever right up until it can't see the message. In these cases `t()` accepts any values, or none, for that key. Nothing fails to compile; the check is just off:
 
 - **The key is one of several.** In `t(hasFailed ? "checkout.failed" : "checkout.done")`, TypeScript sees a union of two keys and can't know which message's values apply. Call `t()` with each key in its own branch, `hasFailed ? t("checkout.failed", { orderId }) : t("checkout.done")`, and each call is checked.
-- **The message is a plain `string`**, as every text in a JSON dictionary is. Write the default language as `as const` TypeScript, as above.
+- **The message is a plain `string`**, as every text in a JSON dictionary is. A plural group still needs a number `count`, since its shape says so. Write the default language as `as const` TypeScript, as above.
 - **The message has invalid syntax**, such as an unclosed `{`, a placeholder name that isn't ASCII letters, digits, and `_` (`{first-name}`), `{n, number, currency}`, or a `select` or `plural` without `other`. Some invalid syntax, such as an option written twice, an unknown plural form, or nesting past 10 levels, may still ask for values. Either way, the runtime can't read it either: it logs a warning and shows the text with only valid `{name}` placeholders filled. Fix the message; the [message check](#find-untranslated-keys) finds these.
 - **The message is too long for the types to read**: about 900 apostrophes, 450 arguments, or 900 spaces inside one argument's braces, in one text. TypeScript has a limit on how deep a type can go, and the reading stops short of it instead of failing your build. At runtime the message works normally. If you have one of these, it is probably three messages in a trench coat; splitting it brings the checks back.
 - **The manager's type is written by hand without the dictionary.** `I18n<"en" | "pt", Key>` checks keys but not values. Pass the dictionary type as a third type argument, `I18n<"en" | "pt", Key, typeof en>`, to keep them checked.

@@ -1,8 +1,10 @@
 import { type CheckedPathnameEntry, fail } from "../locale/config-validators";
 import { formatReportedKey } from "../locale/dictionary";
-import { findPathnameProblem, normalizeSegment, splitPathname } from "./path";
+import { describePathnameRule, findPathnameProblem, normalizeSegment, splitPathname } from "./path";
 
 const PARAMETER_NAME_PATTERN = /^[A-Za-z0-9_]+$/;
+// A segment written as a catch-all, as a route pattern passed to `localize` ends.
+const REST_KEY_PATTERN = /^:[A-Za-z0-9_]+\*$/;
 const RESERVED_PARAMETER_NAMES = new Set(["__proto__", "constructor", "prototype"]);
 
 /** A fixed segment, a `:name` parameter, or a last `:name*` catch-all matching one or more segments. */
@@ -33,7 +35,11 @@ export interface Route<TLocale extends string> {
  * @internal
  */
 export interface ShapeIndex<T> {
-  /** The first item whose pattern matches the normalized segments `keys`, with its parameters read from `segments`. */
+  /**
+   * The first item whose pattern matches the normalized segments `keys`, with its parameters read from `segments`. A
+   * last key written as a catch-all, such as `:path*`, matches only a catch-all, so a route pattern such as
+   * `/help/:path*` is read as the catch-all route it names, not as a parameter route of one segment.
+   */
   find(
     keys: readonly string[],
     segments: readonly string[],
@@ -55,21 +61,24 @@ export interface Pathnames<TLocale extends string> {
   }>;
 }
 
-/** The values matched by a pattern's parameters, as written in the path; a catch-all's segments are joined by `/`. @internal */
-export type Parameters = ReadonlyMap<string, string>;
+/**
+ * The segments matched by each of a pattern's parameters, as written in the path: one for a parameter, one or more for
+ * a catch-all. They are kept as segments rather than joined, so a long catch-all is not joined and split again. @internal
+ */
+export type Parameters = ReadonlyMap<string, readonly string[]>;
 
 /**
- * Reads the raw text of each parameter of the pattern that the index found for these segments; the index already
+ * Reads the segments of each parameter of the pattern that the index found for these segments; the index already
  * matched the segment count and every fixed segment.
  */
 const readParameters = (pattern: Pattern, segments: readonly string[]): Parameters => {
-  const parameters = new Map<string, string>();
+  const parameters = new Map<string, readonly string[]>();
 
   for (const [index, segment] of pattern.segments.entries()) {
     if (segment.kind === "param") {
-      parameters.set(segment.name, segments[index]!);
+      parameters.set(segment.name, [segments[index]!]);
     } else if (segment.kind === "rest") {
-      parameters.set(segment.name, segments.slice(index).join("/"));
+      parameters.set(segment.name, segments.slice(index));
     }
   }
 
@@ -78,13 +87,7 @@ const readParameters = (pattern: Pattern, segments: readonly string[]): Paramete
 
 /** @internal */
 export const buildPattern = (pattern: Pattern, parameters: Parameters): string[] =>
-  pattern.segments.flatMap((segment) => {
-    if (segment.kind === "static") {
-      return [segment.value];
-    }
-    const value = parameters.get(segment.name)!;
-    return segment.kind === "rest" ? value.split("/") : [value];
-  });
+  pattern.segments.flatMap((segment) => (segment.kind === "static" ? [segment.value] : parameters.get(segment.name)!));
 
 interface IndexEntry<T> {
   readonly item: T;
@@ -130,6 +133,7 @@ const indexByShape = <T>(items: readonly T[], patternOf: (item: T) => Pattern): 
   // one node match the same paths, so only the first of them can be found.
   return {
     find(keys, segments) {
+      const restDepth = REST_KEY_PATTERN.test(keys.at(-1) ?? "") ? keys.length - 1 : undefined;
       const pending: ({ readonly node: ShapeNode<T>; readonly depth: number } | IndexEntry<T>)[] = [
         { node: root, depth: 0 },
       ];
@@ -149,6 +153,9 @@ const indexByShape = <T>(items: readonly T[], patternOf: (item: T) => Pattern): 
         const rest = node.rests[0];
         if (rest !== undefined) {
           pending.push(rest);
+        }
+        if (depth === restDepth) {
+          continue;
         }
         if (node.param !== undefined) {
           pending.push({ node: node.param, depth: depth + 1 });
@@ -316,10 +323,7 @@ const parsePattern = (pathname: string, path: string, isLocale: (segment: string
   const problem = findPathnameProblem(pathname);
 
   if (problem !== undefined) {
-    fail(
-      path,
-      problem === "invalid" ? "Must be a valid absolute application pathname" : "Must not contain dot segments",
-    );
+    fail(path, `Must ${describePathnameRule(problem)}`);
   }
 
   const names = new Set<string>();
@@ -426,20 +430,26 @@ export const compilePathnames = <TLocale extends string>({
     );
   }
 
-  // Under `when-ambiguous`, a translated form drops the prefix only when it has a fixed segment and no other locale's
-  // path could match it. No other policy reads the decision, so it is not made.
+  // Under `when-ambiguous`, a path without a prefix is read as a form that dropped its prefix, else as the default
+  // locale's, so a translated form with a fixed segment drops its prefix only when no form read that way could match
+  // it too. Comparing it with a form that keeps its prefix would only take the prefix from paths that need none.
+  // Which forms drop it depends on which others do, so it is settled in two steps that no table order changes: a form
+  // a default-locale form overlaps keeps its prefix, and of the rest, a form that overlaps another locale's keeps it
+  // too, even where that other one keeps it as well. No other policy reads the decision, so it is not made.
   if (localePrefix === "when-ambiguous") {
-    const allForms = routes.flatMap((route) =>
-      locales.map((locale) => ({ route, locale, pattern: route.forms.get(locale)! })),
+    const formsIn = (locale: TLocale) => routes.map((route) => ({ route, locale, pattern: route.forms.get(locale)! }));
+    const candidates = locales.flatMap((locale) =>
+      locale === defaultLocale
+        ? []
+        : formsIn(locale).filter(
+            ({ route, pattern }) =>
+              translated.get(route)!.includes(locale) && pattern.segments.some((segment) => segment.kind === "static"),
+          ),
     );
-    const candidates = allForms.filter(
-      ({ route, locale, pattern }) =>
-        locale !== defaultLocale &&
-        translated.get(route)!.includes(locale) &&
-        pattern.segments.some((segment) => segment.kind === "static"),
-    );
-    const overlapped = findOverlapped(allForms, candidates);
-    for (const candidate of candidates) {
+    const overlappedByDefault = findOverlapped(formsIn(defaultLocale), candidates);
+    const eligible = candidates.filter((candidate) => !overlappedByDefault.has(candidate));
+    const overlapped = findOverlapped(eligible, eligible);
+    for (const candidate of eligible) {
       if (!overlapped.has(candidate)) {
         (candidate.route.unprefixed as Set<TLocale>).add(candidate.locale);
       }

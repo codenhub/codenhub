@@ -259,7 +259,7 @@ for (const { locale, pathname } of routing.localizeAll("/products/:id")) {
 
 `@codenhub/router` takes the first route that matches, in the order you register them. When two of a locale's paths can match the same URL, such as `/pt/produtos/novo` and `/pt/produtos/:id`, register the one with fixed words first.
 
-`localizeAll()` writes a catch-all as `:name*`. Translate that into your framework's own syntax when you register it, such as `[...path]` in a file-based router. `@codenhub/router` has no catch-all, so with it, route such paths by rewriting to the canonical path instead.
+A pattern that ends in `:name*` is translated through the table's catch-all, never through a parameter: with `/help/:id` and `/help/:path*` both listed, `localizeAll("/help/:path*")` gives the Portuguese `/pt/ajuda/:path*`, not the one-segment `/pt/ajuda/artigo/:path*`. `localizeAll()` writes a catch-all as `:name*`. Translate that into your framework's own syntax when you register it, such as `[...path]` in a file-based router. `@codenhub/router` has no catch-all, so with it, route such paths by rewriting to the canonical path instead.
 
 ## Drop the prefix
 
@@ -282,8 +282,10 @@ routing.localize("/blog", "pt"); // "/pt/blog"
 The prefix stays wherever the path alone can't say which language it is in:
 
 - **Paths with the same words in two languages.** `/` and `/blog` exist in English too, so Portuguese keeps `/pt` and `/pt/blog`. Two languages translating to the same words, such as `/contato` in both Portuguese and Spanish, keep the prefix as well.
-- **Paths another language's parameter could match.** If Spanish lists `/:tag`, every one-segment path could be a Spanish tag, so `/sobre` keeps its prefix.
+- **Paths a default-language parameter could match.** If English lists `/:slug`, every one-segment path could be an English page, so `/sobre` keeps its prefix.
 - **Paths made only of parameters**, such as `/:tag`, which could be anything.
+
+Only paths read without a prefix count. A Spanish `/:tag` keeps its prefix, so it only matches paths that start with `/es`, and the Portuguese `/sobre` still drops its own.
 
 The default locale never has a prefix in this mode. `parse()` still accepts `/pt/sobre`, so redirect it as in [Redirect to the canonical URL](#redirect-to-the-canonical-url).
 
@@ -425,12 +427,13 @@ This is the boring part of the page. It is also the part that decides whether a 
 - **A malformed escape**, a `%` not followed by two hex digits, as in `/50%off`. Write `%25` for a literal `%`… which is also refused, per the previous rule, so take the `%` out of the path.
 - **More than 8,192 characters or 100 segments**, or a path whose canonical path would be longer than that, as a short translated path can be when its table entry is long. Servers and proxies cut off URLs around this length anyway, and no page is 100 folders deep; a request of thousands of one-letter segments would otherwise cost work in every locale.
 
-A request can carry any of these, such as a scanner asking for `//wp-login.php`, so `parse()` returns `undefined` for them, and the same 404 answers them as any other path that is no page. `localize()` and `localizeAll()` build links from your own paths rather than read requests, so for the same paths they throw a `TypeError`, such as `TypeError: [I18n] pathname must not contain dot segments`, and you fix the path in your code.
+A request can carry any of these, such as a scanner asking for `//wp-login.php`, so `parse()` returns `undefined` for them, and the same 404 answers them as any other path that is no page. `localize()` and `localizeAll()` build links from your own paths rather than read requests, so for the same paths they throw a `TypeError` that quotes the path and names the rule, such as `TypeError: [I18n] pathname "/help/../admin" must not contain a dot segment, . or ..`, and you fix the path in your code.
 
-Every method, `parse()` included, throws `TypeError: [I18n] pathname must be a valid absolute application pathname` for a value that is not a URL's pathname at all:
+Every method, `parse()` included, throws a `TypeError` for a value that is not a URL's pathname at all:
 
-- One that does not start with `/`, such as a full URL `https://…`.
-- One that contains `?` or `#`, such as Node's `request.url` with its query string.
+- One that does not start with `/`, such as a full URL: `TypeError: [I18n] pathname must start with /; pass url.pathname`.
+- One that contains `?` or `#`, such as Node's `request.url` with its query string: `TypeError: [I18n] pathname "/search?…" must not contain ?, which starts a query; pass url.pathname`. Neither error quotes the URL's user info, query, or fragment, which can hold a credential, and a path that starts with `//`, as a protocol-relative URL does, is not quoted at all: `TypeError: [I18n] pathname must not start with //, which starts a URL's host; pass url.pathname`.
+- One that is not a string: `TypeError: [I18n] pathname must be a string, received undefined`.
 
 That is a mistake in the calling code, not a request to answer, so it fails loudly instead of answering 404 to every URL with a query.
 
