@@ -695,7 +695,15 @@ test.describe("/tw consumer build", () => {
      classes it never names say whether the build was tree-shaken. */
   test("is tree-shaken: classes the page never names are not emitted", () => {
     expect(twCss).toMatch(/(?:^|[{}])\.btn\{/);
-    for (const unused of ["skeleton", "quote", "auto-grid", "section", "visually-hidden", "tooltip-icon"]) {
+    for (const unused of [
+      "skeleton",
+      "quote",
+      "auto-grid",
+      "section",
+      "visually-hidden",
+      "visually-hidden-focusable",
+      "tooltip-icon",
+    ]) {
       expect(twCss, `.${unused} is unused`).not.toMatch(new RegExp(String.raw`(?:^|[{}])\.${unused}(?![\w-])`));
       expect(distCss, `the compiled sheet emits .${unused}`).toMatch(
         new RegExp(String.raw`(?:^|[{}])\.${unused}(?![\w-])`),

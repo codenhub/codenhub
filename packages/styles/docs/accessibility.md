@@ -27,6 +27,14 @@ This page lists both halves: what the CSS provides, and what your application ha
 
 `.visually-hidden` hides content on screen and keeps it for screen readers, as the API keys table's `<caption>` does in [Content and layout → Tables](./usage/content-and-layout.md#tables). It ships with the layout utilities: in `.`, `./native`, `./tw`, `./native/tw`, and `./utilities/tw`. It is not in `./components` or the `./components/tw` and `./*/tw` component entrypoints.
 
+`.visually-hidden-focusable` hides content the same way until it, or an element inside it, has focus, and then shows it where it stands. Use it for a skip link, the first element on the page, which lets a keyboard user jump past the navigation to the main content:
+
+```html
+<a class="visually-hidden-focusable" href="#main">Skip to content</a>
+```
+
+The class only hides and shows the element; place and style it yourself while it shows. It ships wherever `.visually-hidden` does.
+
 ### Control boundaries
 
 WCAG 1.4.11 asks that the boundary of a control you need to see to use it measures at least 3:1 against what is next to it.

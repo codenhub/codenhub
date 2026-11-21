@@ -2,7 +2,7 @@
 title: Conteúdo e layout
 description: Consulta de todos os helpers de layout com os seus espaçamentos, a escala tipográfica com os seus tamanhos, cards e painéis com o seu padding, tabelas, citações, código e teclas.
 order: 10
-source: db2129e6cfdac970550aad0faa370c7b5318764c
+source: 1824a62b8e0ed662dd7f1bbe4330fa002281c184
 ---
 
 # Conteúdo e layout
@@ -13,16 +13,17 @@ Esta é uma página de consulta para as classes que organizam uma página e defi
 
 O espaçamento de todo helper de layout é `--layout-gap`, `1rem` por padrão. Definir `--layout-gap` num elemento muda o espaçamento de todos os layouts dentro dele. `.tight` e `.loose` mudam só o layout em que estão; um layout aninhado dentro dele mantém o seu próprio espaçamento.
 
-| Classe             | Layout                                                                                                                                  | Espaçamento                                      |
-| ------------------ | --------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------ |
-| `.stack`           | Uma coluna vertical.                                                                                                                    | `--layout-gap`, `.tight` 0.5rem, `.loose` 1.5rem |
-| `.cluster`         | Uma linha que quebra, com os itens centralizados na vertical. `.between` espalha os itens até as duas pontas.                           | Igual                                            |
-| `.view`            | Um contêiner flex. `.vertical` o transforma numa coluna; `.horizontal`, numa linha que quebra, com itens centralizados.                 | Igual                                            |
-| `.auto-grid`       | Um grid de colunas iguais, cada uma com pelo menos `--layout-grid-min` (16rem) de largura, quantas couberem.                            | Igual                                            |
-| `.section`         | Padding em volta de uma seção da página: `--layout-gutter` nas laterais, `--layout-section-block` em cima e embaixo.                    | Nenhum                                           |
-| `.section-content` | Centraliza o seu conteúdo numa largura de `--container-max` (80rem). `.narrow` usa 48rem, `.wide` 90rem.                                | Nenhum                                           |
-| `.divider`         | Uma linha horizontal, tão larga quanto o seu contêiner. `.vertical` a transforma numa linha vertical tão alta quanto a linha do layout. | Nenhum                                           |
-| `.visually-hidden` | Esconde o conteúdo na tela e o mantém para leitores de tela.                                                                            | Nenhum                                           |
+| Classe                       | Layout                                                                                                                                                | Espaçamento                                      |
+| ---------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------ |
+| `.stack`                     | Uma coluna vertical.                                                                                                                                  | `--layout-gap`, `.tight` 0.5rem, `.loose` 1.5rem |
+| `.cluster`                   | Uma linha que quebra, com os itens centralizados na vertical. `.between` espalha os itens até as duas pontas.                                         | Igual                                            |
+| `.view`                      | Um contêiner flex. `.vertical` o transforma numa coluna; `.horizontal`, numa linha que quebra, com itens centralizados.                               | Igual                                            |
+| `.auto-grid`                 | Um grid de colunas iguais, cada uma com pelo menos `--layout-grid-min` (16rem) de largura, quantas couberem.                                          | Igual                                            |
+| `.section`                   | Padding em volta de uma seção da página: `--layout-gutter` nas laterais, `--layout-section-block` em cima e embaixo.                                  | Nenhum                                           |
+| `.section-content`           | Centraliza o seu conteúdo numa largura de `--container-max` (80rem). `.narrow` usa 48rem, `.wide` 90rem.                                              | Nenhum                                           |
+| `.divider`                   | Uma linha horizontal, tão larga quanto o seu contêiner. `.vertical` a transforma numa linha vertical tão alta quanto a linha do layout.               | Nenhum                                           |
+| `.visually-hidden`           | Esconde o conteúdo na tela e o mantém para leitores de tela.                                                                                          | Nenhum                                           |
+| `.visually-hidden-focusable` | Esconde o conteúdo do mesmo jeito até que ele ou um elemento dentro dele tenha o foco, e então o mostra, como faz um link para pular para o conteúdo. | Nenhum                                           |
 
 `.auto-grid` acomoda duas colunas de 16rem quando o seu contêiner tem 32rem mais o espaçamento de largura, três com 48rem mais dois espaçamentos, e assim por diante. Abaixo da largura de uma coluna, a coluna encolhe para caber. Defina `--layout-grid-min` no grid para mudar a largura das colunas.
 

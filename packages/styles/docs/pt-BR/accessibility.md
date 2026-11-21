@@ -2,7 +2,7 @@
 title: Acessibilidade
 description: O que o CSS faz por foco, estados, movimento, contraste, cores forçadas e texto da direita para a esquerda, e o que a sua aplicação ainda deve aos seus usuários.
 order: 5
-source: a8c46725397ca5a641becdffbbc2346a10ee5b69
+source: 7ee12cbfc7573b48261322d8c8b4e057ff5ec243
 ---
 
 # Acessibilidade
@@ -27,6 +27,14 @@ Esta página lista as duas metades: o que o CSS fornece e o que a sua aplicaçã
 ### Conteúdo visualmente oculto
 
 `.visually-hidden` esconde o conteúdo na tela e o mantém para leitores de tela, como faz a `<caption>` da tabela de chaves de API em [Conteúdo e layout → Tabelas](./usage/content-and-layout.md#tabelas). Ela vem com os utilitários de layout: em `.`, `./native`, `./tw`, `./native/tw` e `./utilities/tw`. Ela não está em `./components` nem nos entrypoints de componentes `./components/tw` e `./*/tw`.
+
+`.visually-hidden-focusable` esconde o conteúdo do mesmo jeito até que ele, ou um elemento dentro dele, tenha o foco, e então o mostra onde está. Use-a para um link de pular para o conteúdo, o primeiro elemento da página, que deixa quem usa o teclado passar pela navegação e chegar ao conteúdo principal:
+
+```html
+<a class="visually-hidden-focusable" href="#main">Pular para o conteúdo</a>
+```
+
+A classe só esconde e mostra o elemento; posicione e estilize você mesmo enquanto ele aparece. Ela vem onde quer que `.visually-hidden` venha.
 
 ### Limites dos controles
 
