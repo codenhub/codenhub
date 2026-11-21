@@ -419,6 +419,8 @@ test.describe("data-motion", () => {
       await page.addStyleTag({ content: await built("index.css") });
 
       const display = await page.getByTestId("panel").evaluate(async (element) => {
+        // Settles the style before the change, with the reset in it, so a transition the reset allows would start.
+        void getComputedStyle(element).display;
         element.style.display = "none";
         await new Promise(requestAnimationFrame);
 
@@ -444,6 +446,8 @@ test.describe("data-motion", () => {
         await page.addStyleTag({ content: await built("index.css") });
 
         const running = await page.getByTestId("m").evaluate((element) => {
+          // Settles the style before the change, with the reset in it, so the transitions start from it.
+          void getComputedStyle(element).opacity;
           element.classList.add("off");
 
           return Object.fromEntries(
@@ -528,6 +532,59 @@ for (const [label, attributes, reducedMotion] of [
       expect(Object.keys(durations!).length, "the group and its two images animate").toBeGreaterThanOrEqual(3);
       for (const [pseudo, duration] of Object.entries(durations!)) {
         expect(Number(duration), pseudo).toBeLessThan(1);
+      }
+    });
+
+    /* A page may animate the transition's root and image pair too, which the
+       browser leaves still, and loop an image: an endless one never let the
+       transition finish. */
+    test("a view transition the page animates itself ends at once", async ({ page }) => {
+      await page.emulateMedia({ reducedMotion });
+      await page.setContent(
+        `<!doctype html><html ${attributes}><body><style>
+        @keyframes dim { to { opacity: 0.5; } }
+        #box { view-transition-name: box; width: 50px; height: 50px; background: red; }
+        ::view-transition { animation: dim 1s; }
+        ::view-transition-image-pair(box) { animation: dim 1s; }
+        ::view-transition-old(box) { animation: dim 1s infinite; }
+      </style><div id="box" data-testid="box"></div></body></html>`,
+      );
+      await page.addStyleTag({ content: await built("index.css") });
+
+      const timings = await page.getByTestId("box").evaluate(async (element) => {
+        if (!("startViewTransition" in document)) {
+          return null;
+        }
+
+        const transition = document.startViewTransition(() => {
+          element.style.marginLeft = "300px";
+        });
+
+        await transition.ready;
+
+        return Object.fromEntries(
+          document
+            .getAnimations()
+            .map((animation) => {
+              const timing = animation.effect!.getComputedTiming();
+
+              return [(animation.effect as KeyframeEffect).pseudoElement, [Number(timing.duration), timing.iterations]];
+            })
+            .filter(([pseudo]) => String(pseudo).startsWith("::view-transition")),
+        ) as Record<string, [number, number]>;
+      });
+
+      test.skip(timings === null, "the engine has no view transitions");
+      expect(Object.keys(timings!), "the root and image pair animate").toEqual(
+        expect.arrayContaining([
+          "::view-transition",
+          "::view-transition-image-pair(box)",
+          "::view-transition-old(box)",
+        ]),
+      );
+      for (const [pseudo, [duration, iterations]] of Object.entries(timings!)) {
+        expect(duration, pseudo).toBeLessThan(1);
+        expect(iterations, pseudo).toBe(1);
       }
     });
   });

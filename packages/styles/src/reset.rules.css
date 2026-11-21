@@ -207,10 +207,13 @@
 
     /* Rules of their own: an engine that does not know a pseudo-element drops
        the whole rule that names it. */
+    :root:not([data-motion="full"])::view-transition,
     :root:not([data-motion="full"])::view-transition-group(*),
+    :root:not([data-motion="full"])::view-transition-image-pair(*),
     :root:not([data-motion="full"])::view-transition-old(*),
     :root:not([data-motion="full"])::view-transition-new(*) {
       animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
     }
   }
 
@@ -244,10 +247,13 @@
     transition-duration: 0.01ms !important;
   }
 
+  :root:is([data-motion="reduce"], [data-motion="none"])::view-transition,
   :root:is([data-motion="reduce"], [data-motion="none"])::view-transition-group(*),
+  :root:is([data-motion="reduce"], [data-motion="none"])::view-transition-image-pair(*),
   :root:is([data-motion="reduce"], [data-motion="none"])::view-transition-old(*),
   :root:is([data-motion="reduce"], [data-motion="none"])::view-transition-new(*) {
     animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
   }
 }
 
