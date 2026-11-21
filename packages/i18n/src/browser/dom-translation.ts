@@ -80,7 +80,7 @@ interface DomTranslatorOptions {
 interface TranslateRootOptions {
   readonly root: ParentNode;
   readonly boundary?: ParentNode | undefined;
-  /** The active locale, which text from another dictionary is marked apart from with `lang`. */
+  /** The active locale, which text is marked apart from with `lang` where neither the element nor an ancestor declares a language. */
   readonly locale: string;
   readonly translate: (key: string) => FoundText | undefined;
 }
@@ -91,10 +91,10 @@ type Translate = TranslateRootOptions["translate"];
 export interface DomTranslator {
   /**
    * Translates safe leaves and attributes at and below the root, restoring the fallback where a key was removed, and
-   * marks an element whose translations come from another locale's dictionary with that locale's `lang`. A message
-   * that needs values keeps the fallback, with a warning. A text or attribute whose translation throws, such as from a
-   * throwing `onMissingKey`, keeps its value; every other key is still translated, and the first error is thrown after
-   * the pass.
+   * marks an element whose translations come from a locale other than the language it has without the mark, its own
+   * `lang` or the nearest ancestor's, with that locale's `lang`. A message that needs values keeps the fallback,
+   * with a warning. A text or attribute whose translation throws, such as from a throwing `onMissingKey`, keeps its
+   * value; every other key is still translated, and the first error is thrown after the pass.
    */
   translateRoot(options: TranslateRootOptions): void;
 }
@@ -152,6 +152,33 @@ const isInsideCustomElement = (element: Element, root: ParentNode): boolean => {
 
   return false;
 };
+
+/**
+ * The language declared by the nearest ancestor's `lang`, through the hosts of shadow roots, or `undefined` when none
+ * declares one. An empty `lang` counts as none.
+ */
+const readInheritedLang = (element: Element): string | undefined => {
+  let scope: Element | null = element.parentElement;
+  let node: Node = element;
+
+  for (;;) {
+    const declaring = scope?.closest("[lang]");
+    if (declaring !== null && declaring !== undefined) {
+      const lang = declaring.getAttribute(LANG_ATTRIBUTE);
+      return lang === null || lang === "" ? undefined : lang;
+    }
+    // A shadow root's text inherits its host's language.
+    const host = (node.getRootNode() as Partial<ShadowRoot>).host;
+    if (host === undefined || host === null) {
+      return undefined;
+    }
+    scope = host;
+    node = host;
+  }
+};
+
+// Language tags are case-insensitive, so `pt-br` names the same language as `pt-BR`.
+const isSameLanguage = (left: string, right: string): boolean => left.toLowerCase() === right.toLowerCase();
 
 const collectElements = (root: ParentNode, isTracked: (element: Element) => boolean): Element[] => {
   const descendants = Array.from(root.querySelectorAll(TRANSLATION_KEY_SELECTOR));
@@ -446,17 +473,27 @@ export function createDomTranslator(options: DomTranslatorOptions): DomTranslato
     };
 
     // `lang` names the language of the element's text and attributes alike, so it is written only when every
-    // translation shown comes from one other locale's dictionary. An element with children but no translated text,
-    // such as a `<div>` with a translated `title`, is left alone, since `lang` would mislabel its children too.
+    // translation shown comes from one locale, and that locale is not the language the element has without the mark:
+    // its own `lang`, or else the nearest ancestor's, or else the active locale. An element with children but no
+    // translated text, such as a `<div>` with a translated `title`, is left alone, since `lang` would mislabel its
+    // children too.
     const markLanguage = (): void => {
       const [first] = shownLocales;
       const isMarkable = hasTextKey || element.childNodes.length === 0;
-      applyLang(
-        element,
-        isMarkable && typeof first === "string" && first !== locale && shownLocales.every((shown) => shown === first)
-          ? first
-          : undefined,
-      );
+      if (
+        !isMarkable ||
+        typeof first !== "string" ||
+        !shownLocales.every((shown) => shown === first) ||
+        appOwnedLangs.has(element)
+      ) {
+        applyLang(element, undefined);
+        return;
+      }
+      const state = langStates.get(element);
+      // A `lang` the binding wrote is not the element's; a `lang` it copied as a clone of a marked element is.
+      const ownLang = state === undefined ? element.getAttribute(LANG_ATTRIBUTE) : state.original;
+      const unmarkedLang = (ownLang === null || ownLang === "" ? undefined : ownLang) ?? readInheritedLang(element);
+      applyLang(element, isSameLanguage(first, unmarkedLang ?? locale) ? undefined : first);
     };
 
     // The text and each attribute are translated even when another of the element's keys throws.
