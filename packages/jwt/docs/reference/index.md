@@ -123,6 +123,37 @@ const result = await verifyProof(request.headers.get("dpop"), {
 });
 ```
 
+### createEncryptionKeyRing
+
+```ts
+export declare function createEncryptionKeyRing(options: EncryptionKeyRingOptions): EncryptionKeyRing;
+```
+
+Builds a key ring from a recipient's encryption keys and when senders encrypt to each one, for rotating the keys tokens are encrypted to without a window in which a token arrives for a key the recipient dropped.
+
+`encryptionKey()` picks the key to encrypt to as [`createKeyRing`](#createkeyring)'s `signingKey()` picks the key to sign with, and `jwks()` publishes that key alone, so a sender choosing by algorithm never meets two. A key decrypts from its `activeFrom` until `publishAfter` seconds after the next key's `activeFrom` or its own `retiredAt`, for senders that still hold an older JWKS and tokens still on their way. The ring is the decryption key set: pass it as `createDecrypter`'s `keys`. Signing and encryption keys rotate in separate rings, so a signing ring's bundle carries no JWE code. [Key rotation](https://github.com/codenhub/codenhub/blob/main/packages/jwt/docs/rotation.md) gives the steps.
+
+**Parameters**
+
+- `options` — The keys and their times, how long a key decrypts after it is replaced, and the clock.
+
+**Returns** — The frozen ring.
+
+**Throws** — TypeError as [`createKeyRing`](#createkeyring) does, with `issuer` and `publishAhead` not options and a `key` that must be a JWE private key created by this package; a signing key's message names `createKeyRing`.
+
+**Example**
+
+```ts
+const ring = createEncryptionKeyRing({
+  keys: [
+    { key: currentKey, activeFrom: 1_798_761_600 },
+    { key: nextKey, activeFrom: 1_801_440_000 },
+  ],
+  publishAfter: 172_800,
+});
+const decrypt = createDecrypter({ keys: ring });
+```
+
 ### createExternalSigningKey
 
 ```ts
@@ -271,14 +302,39 @@ Creates a decrypt-then-verify function for a signed JWT inside a JWE (RFC 7519 �
 
 The JWE is decrypted, its `cty` must be `JWT` (compared case-insensitively, with an `application/` prefix ignored) or absent, and its plaintext is handed to an ordinary verifier, which checks the inner token exactly as it would a bare one, signature and claims included. Encryption never stands in for a signature: a token that decrypts but does not verify fails.
 
-**Returns** — A [`NestedVerifier`](#nestedverifier) resolving to the verified token, with the outer header and decryption key as `encryption`, or to the first failure: the decrypter's, `wrong_type` at `["header", "cty"]` for another `cty`, `malformed` at `["plaintext"]` for a plaintext that is not UTF-8, or the verifier's. Never throws for a token; the verifier's own rejections, from caller code, propagate.
+**Returns** — A [`NestedVerifier`](#nestedverifier) resolving to the verified token, with the outer header and decryption key as `encryption`, or to the first failure: the decrypter's, `wrong_type` at `["header", "cty"]` for another `cty`, `malformed` at `["plaintext"]` for a plaintext that is not UTF-8, or the verifier's, each of its issues with `"plaintext"` before its path (`["plaintext", "header", "kid"]`, or `["plaintext"]` for an issue without one), so an issue of the inner token is never mistaken for one of the JWE. Never throws for a token; the verifier's own rejections, from caller code, propagate.
 
 **Throws** — TypeError when `options` is not an object, has a member that is not an option, or `decrypt` or `verify` is not a function.
+
+### createRemoteEncryptionKeySet
+
+```ts
+export declare function createRemoteEncryptionKeySet(options: RemoteEncryptionKeySetOptions): EncryptionKeySet;
+```
+
+Builds an encryption key set that fetches a recipient's public encryption keys from a JWKS URL, such as the `jwks_uri` of an OpenID client that wants its ID tokens encrypted, caches them, and refetches on expiry or on an unknown `kid`.
+
+It fetches, caches, refetches and fails exactly as [`createRemoteKeySet`](#createremotekeyset) does, with the same options but `issuer`. The JWKS is imported as `importEncryptionKeySet` imports one: only a JWK that says it encrypts is imported, bound to each allowed key management algorithm it fits, so a JWKS without one is `no_usable_keys`. Its `select` takes `{ alg, kid }`.
+
+**Parameters**
+
+- `options` — Where to fetch the JWKS from, how to cache it, and which key management algorithms keys may be bound to.
+
+**Returns** — A frozen encryption key set, whose `select` resolves as [`createRemoteKeySet`](#createremotekeyset)'s does.
+
+**Throws** — TypeError as [`createRemoteKeySet`](#createremotekeyset) does, except that `issuer` is not an option and `algorithms` must be a non-empty array of asymmetric key management algorithms.
+
+**Example**
+
+```ts
+const recipientKeys = createRemoteEncryptionKeySet({ url: client.jwks_uri, algorithms: ["ECDH-ES+A256KW"] });
+const key = await recipientKeys.select({ alg: "ECDH-ES+A256KW" });
+if (key.ok) token = await encrypt({ plaintext, key: key.value, enc: "A256GCM" });
+```
 
 ### createRemoteKeySet
 
 ```ts
-export declare function createRemoteKeySet(options: RemoteEncryptionKeySetOptions): EncryptionKeySet;
 export declare function createRemoteKeySet(options: RemoteKeySetOptions): KeySet;
 ```
 
@@ -334,7 +390,7 @@ Times compare in fractional seconds, `options.now() / 1000`, against the numeric
 
 - `TSchema` — The Standard Schema given as `options.claims`, which types the verified payload.
 
-**Returns** — A [`Verifier`](#verifier). It resolves to the frozen `{ header, payload, key }`, or to a failure and never throws for any token. A key set whose `select` throws or rejects, or returns something other than a result holding a public or secret key this package created, makes the verifier fail with `key_fetch_failed` and `{ reason: "key_set_error" }`, except that a failed result whose issues each have a string `code` is passed through. Caller code is not caught: a rejection from `options.claims` propagates, and so does a `TypeError` when `options.now` returns something other than a finite number, checked once per verification when the claims are checked, after the signature.
+**Returns** — A [`Verifier`](#verifier). It resolves to the frozen `{ header, payload, key }`, or to a failure and never throws for any token. A key set whose `select` throws or rejects, or returns something other than a result holding a public or secret key this package created, makes the verifier fail with `key_fetch_failed` and `{ reason: "key_set_error" }`, except that a failed result whose issues each have a string `code`, and a `path` that is absent or an array of strings and finite numbers, is passed through. Caller code is not caught: a rejection from `options.claims` propagates, and so does a `TypeError` when `options.now` returns something other than a finite number, checked once per verification when the claims are checked, after the signature.
 
 **Throws** — TypeError when `options` is not an object; `options` has a member that is not an option, such as a misspelled `audiance`; `keys` is neither a function nor an object with a `select` function; `issuer` or `subject` is neither a non-empty string nor a non-empty array of them; `audience` is neither `false` nor one of those; `type` is neither a non-empty string other than `application/` nor a non-empty array of such strings and `null`; `requireExpiration` or `allowExpired` is not a boolean; `clockTolerance` is not an integer from 0 through 300; `maxAge` is not a positive integer; `maxLength` is not an integer from 1 through 65536; `requiredClaims` is not an array of non-empty strings; `claims` is not a version 1 Standard Schema; `now` is not a function; or `onKeySetError` is not a function.
 
@@ -466,6 +522,22 @@ Exports a JWE private key as a frozen JWK, private members included.
 
 **Throws** — TypeError when `key` is not a JWE private key created by this package, or was not made extractable.
 
+### exportJwePrivatePem
+
+```ts
+export declare function exportJwePrivatePem(key: JwePrivateKey): Promise<string>;
+```
+
+Exports a JWE private key as a PEM `PRIVATE KEY` block (PKCS#8, RFC 7468 §10), unencrypted, without `alg` or `kid`. Handle the result as a secret.
+
+**Parameters**
+
+- `key` — A private key imported or generated with `extractable: true`.
+
+**Returns** — The PEM text: the base64 in 64-character lines, with LF line endings and a final line break.
+
+**Throws** — TypeError when `key` is not a JWE private key created by this package, or was not made extractable. A secret key has no PEM form; export it with [`exportJweSecretJwk`](#exportjwesecretjwk).
+
 ### exportJwePublicJwk
 
 ```ts
@@ -475,6 +547,28 @@ export declare function exportJwePublicJwk(key: JwePublicKey): Promise<JweJwk>;
 Exports a JWE public key as a frozen JWK with `alg`, `use: "enc"` and `kid`, ready for a JWKS a sender encrypts to.
 
 **Throws** — TypeError when `key` is not a JWE public key created by this package.
+
+### exportJwePublicPem
+
+```ts
+export declare function exportJwePublicPem(key: JwePublicKey): Promise<string>;
+```
+
+Exports a JWE public key as a PEM `PUBLIC KEY` block (SPKI, RFC 7468 §13), for tools and services that take PEM rather than a JWK. The PEM carries the key material only, without `alg` or `kid`.
+
+**Parameters**
+
+- `key` — A public key from [`importJwePublicKey`](#importjwepublickey), [`importJweKeyPair`](#importjwekeypair) or [`generateJweKeyPair`](#generatejwekeypair).
+
+**Returns** — The PEM text: the base64 in 64-character lines, with LF line endings and a final line break.
+
+**Throws** — TypeError when `key` is not a JWE public key created by this package. For a private key, the message points to [`getJwePublicKey`](#getjwepublickey).
+
+**Example**
+
+```ts
+const pem = await exportJwePublicPem(getJwePublicKey(privateKey));
+```
 
 ### exportJweSecretJwk
 
@@ -596,11 +690,11 @@ const { publicKey, privateKey } = await generateJweKeyPair({ alg: "ECDH-ES+A256K
 export declare function generateJweSecretKey(options: GenerateJweSecretKeyOptions): Promise<JweSecretKey>;
 ```
 
-Generates a random secret for `dir`, `A128KW` or `A256KW`, exactly as long as its algorithm needs: 16 or 32 bytes to wrap with, or the content key length of `enc` for `dir`.
+Generates a random secret for `dir`, `A128KW`, `A256KW`, `A128GCMKW` or `A256GCMKW`, exactly as long as its algorithm needs: 16 or 32 bytes to wrap with, or the content key length of `enc` for `dir`.
 
 **Returns** — The frozen secret.
 
-**Throws** — TypeError when `options` is not an object, has a member that is not an option, `alg` is not `dir`, `A128KW` or `A256KW`, `enc` is missing or unsupported for `dir` or given for another `alg`, `kid` is not a string, or `extractable` is not a boolean.
+**Throws** — TypeError when `options` is not an object, has a member that is not an option, `alg` is not a symmetric key management algorithm, `enc` is missing or unsupported for `dir` or given for another `alg`, `kid` is not a string, or `extractable` is not a boolean.
 
 ### generateKeyPair
 
@@ -679,6 +773,34 @@ if (!result.ok) throw new Error("The signing key could not be imported.");
 const jwks = { keys: [await exportPublicJwk(getPublicKey(result.value))] };
 ```
 
+### importEncryptionKeySet
+
+```ts
+export declare function importEncryptionKeySet(jwks: unknown, options?: ImportEncryptionKeySetOptions): Promise<JwtResult<LocalEncryptionKeySet>>;
+```
+
+Imports the public encryption keys of an untrusted JWKS, such as the `jwks_uri` document of an OpenID client that wants its ID tokens encrypted, as a key set a sender selects the key to encrypt to from.
+
+Only a JWK that says it encrypts, by a `use` of `enc` or by a `key_ops` holding an encryption operation, is imported, so a JWKS that serves signing and encryption keys side by side never yields a signing key here; a JWK with an `alg` is bound to that algorithm when it is allowed, and a JWK without one to every allowed key management algorithm its `kty` and `crv` fit. JWKs that cannot be used are skipped rather than failing the import, as [`importKeySet`](#importkeyset) skips them. The set's `select` takes `{ alg, kid }`.
+
+**Parameters**
+
+- `jwks` — The JWKS, an object with a `keys` array. Any value is accepted.
+- `options` — Which key management algorithms keys may be bound to.
+
+**Returns** — The frozen key set, or a failure with one issue, as [`importKeySet`](#importkeyset) gives for a JWKS that is not one. Never throws for any `jwks`.
+
+**Throws** — TypeError when `options` is not an object, has a member that is not an option, or its `algorithms` is not a non-empty array of asymmetric key management algorithms.
+
+**Example**
+
+```ts
+const result = await importEncryptionKeySet(clientJwks, { algorithms: ["ECDH-ES+A256KW"] });
+if (result.ok) {
+  const key = await result.value.select({ alg: "ECDH-ES+A256KW" });
+}
+```
+
 ### importJweKeyPair
 
 ```ts
@@ -713,7 +835,7 @@ export declare function importJwePublicKey(key: unknown, options: ImportJwePubli
 
 Imports an untrusted public JWK, a PEM `PUBLIC KEY` or `CERTIFICATE`, or an extractable public `CryptoKey`, as an encryption key bound to one key management algorithm.
 
-The checks are those of [`importPublicKey`](#importpublickey), for encryption: the JWK's `kty` must fit `alg` (`RSA` for `RSA-OAEP*`; `EC` on P-256, P-384 or P-521, or `OKP` on X25519, for `ECDH-ES*`); `use`, when present, must be `enc`; `key_ops`, when present, must hold only encryption operations and one a public key performs. RSA moduli must be 2048 to 8192 bits. A `CryptoKey` must be an RSA-OAEP key with the hash `alg` names, or an ECDH or X25519 key.
+The checks are those of [`importPublicKey`](#importpublickey), for encryption: the JWK's `kty` must fit `alg` (`RSA` for `RSA-OAEP*`; `EC` on P-256, P-384 or P-521, or `OKP` on X25519, for `ECDH-ES*`); `use`, when present, must be `enc`; `key_ops`, when present, must hold only encryption operations and one a public key performs, except that an empty `key_ops` on an `EC` or `OKP` key, which is how Web Crypto exports an ECDH or X25519 public key, is taken as absent. RSA moduli must be 2048 to 8192 bits. A `CryptoKey` must be an RSA-OAEP key with the hash `alg` names, or an ECDH or X25519 key.
 
 **Returns** — The frozen key, or a failure with one issue, by the codes [`importPublicKey`](#importpublickey) uses; `wrong_use` for `use: "sig"` or a signing operation in `key_ops`. Never throws for any `key`.
 
@@ -725,13 +847,13 @@ The checks are those of [`importPublicKey`](#importpublickey), for encryption: t
 export declare function importJweSecretKey(input: Uint8Array | ArrayBuffer | ArrayBufferView | CryptoKey | object, options: ImportJweSecretKeyOptions): Promise<JwtResult<JweSecretKey>>;
 ```
 
-Imports an untrusted secret for `dir`, `A128KW` or `A256KW`: raw bytes, an `oct` JWK, or a Web Crypto `CryptoKey` (an AES-KW key for `A*KW`, an AES-GCM key for `dir` with an AES-GCM `enc`).
+Imports an untrusted secret for `dir`, `A128KW`, `A256KW`, `A128GCMKW` or `A256GCMKW`: raw bytes, an `oct` JWK, or a Web Crypto `CryptoKey` (an AES-KW key for `A*KW`, an AES-GCM key for `A*GCMKW`, and for `dir` with an AES-GCM `enc`).
 
-The secret must be exactly as long as its algorithm's key: 16 bytes for `A128KW`, 32 for `A256KW`, and for `dir` the content key length of `enc` (16 for `A128GCM`, 32 for `A256GCM` and `A128CBC-HS256`, 64 for `A256CBC-HS512`). Shorter is `weak_key`, longer `invalid_key`. A JWK's `use`, when present, must be `enc`.
+The secret must be exactly as long as its algorithm's key: 16 bytes for `A128KW` and `A128GCMKW`, 32 for `A256KW` and `A256GCMKW`, and for `dir` the content key length of `enc` (16 for `A128GCM`, 32 for `A256GCM` and `A128CBC-HS256`, 64 for `A256CBC-HS512`). Shorter is `weak_key`, longer `invalid_key`. A JWK's `use`, when present, must be `enc`.
 
 **Returns** — The frozen secret, or a failure with one issue. Never throws for any `input`.
 
-**Throws** — TypeError when `options` is not an object, has a member that is not an option, `alg` is not `dir`, `A128KW` or `A256KW`, `enc` is missing or unsupported for `dir` or given for another `alg`, `kid` is not a string, or `extractable` is not a boolean.
+**Throws** — TypeError when `options` is not an object, has a member that is not an option, `alg` is not a symmetric key management algorithm, `enc` is missing or unsupported for `dir` or given for another `alg`, `kid` is not a string, or `extractable` is not a boolean.
 
 ### importKeyPair
 
@@ -765,15 +887,12 @@ const { privateKey, publicKey } = result.value;
 ### importKeySet
 
 ```ts
-export declare function importKeySet(jwks: unknown, options: EncryptionKeySetOptions): Promise<JwtResult<LocalEncryptionKeySet>>;
 export declare function importKeySet(jwks: unknown, options?: ImportKeySetOptions): Promise<JwtResult<LocalKeySet>>;
 ```
 
 Imports the public keys of an untrusted JWKS, such as an issuer's `jwks_uri` document, as a key set.
 
-A JWK with an `alg` is bound to that algorithm when it is allowed; a JWK without one is bound to every allowed algorithm its `kty` and `crv` fit, so an RSA key may become an `RS256`, `RS384`, `RS512`, `PS256`, `PS384` and `PS512` key. JWKs that cannot be used are skipped rather than failing the import: `oct` keys and the HMAC algorithms (secrets never come from a JWKS), keys for encryption, keys carrying private members, weak or malformed keys, and keys whose `alg` is not allowed. A JWKS with no usable key gives an empty set, whose `select` always fails. Two usable keys with the same `kid` and `alg` are kept; selecting them fails with `ambiguous_key` rather than picking one.
-
-With `{ use: "enc" }`, the JWKS's encryption keys are imported instead, as JWE public keys a sender encrypts to, such as the keys of an OpenID client's `jwks_uri` for encrypted ID tokens: only a JWK whose `use` is `enc`, or whose `key_ops` holds an encryption operation, is imported, bound to each allowed key management algorithm it fits, and the set's `select` takes `{ alg, kid }`.
+A JWK with an `alg` is bound to that algorithm when it is allowed; a JWK without one is bound to every allowed algorithm its `kty` and `crv` fit, so an RSA key may become an `RS256`, `RS384`, `RS512`, `PS256`, `PS384` and `PS512` key. JWKs that cannot be used are skipped rather than failing the import: `oct` keys and the HMAC algorithms (secrets never come from a JWKS), keys for encryption, keys carrying private members, weak or malformed keys, and keys whose `alg` is not allowed. A JWKS with no usable key gives an empty set, whose `select` always fails. Two usable keys with the same `kid` and `alg` are kept; selecting them fails with `ambiguous_key` rather than picking one. [`importEncryptionKeySet`](#importencryptionkeyset) imports a JWKS's encryption keys.
 
 **Parameters**
 
@@ -782,7 +901,7 @@ With `{ use: "enc" }`, the JWKS's encryption keys are imported instead, as JWE p
 
 **Returns** — The frozen key set, or a failure with one issue: `malformed` when `jwks` is not an object (path omitted) or its `keys` is not an array (path `["keys"]`), or `too_large` with `{ limit: "keys", maximum: 100 }` for more than 100 keys. Never throws for any `jwks`.
 
-**Throws** — TypeError when `options` is not an object, `options.algorithms` is not a non-empty array of asymmetric algorithms (of asymmetric key management algorithms with `use: "enc"`), `options.issuer` is not a non-empty string or is given with `use: "enc"`, or `options.use` is neither `sig` nor `enc`.
+**Throws** — TypeError when `options` is not an object, has a member that is not an option, `options.algorithms` is not a non-empty array of asymmetric algorithms, or `options.issuer` is not a non-empty string.
 
 **Example**
 
@@ -915,7 +1034,7 @@ export declare function jwkThumbprint(key: PublicKey | PrivateKey | SecretKey | 
 
 Computes a key's JWK SHA-256 Thumbprint (RFC 7638), base64url-encoded without padding: a key pair's from its public key or its private key, or a secret's from its `oct` material.
 
-The thumbprint names the key by its material alone: `alg`, `kid` and `use` do not change it, so the same key imported for two algorithms has one thumbprint. It is what DPoP binds a token to (RFC 9449 §6.1, the `jkt` of a `cnf` claim), and it makes a stable `kid`. A private key gives the thumbprint of its public half, also when it is not extractable. A secret's thumbprint is computed from the secret itself, so the secret must be extractable; a thumbprint reveals nothing of a secret with enough entropy, which every secret this package accepts has.
+The thumbprint names the key by its material alone: `alg`, `kid` and `use` do not change it, so the same key imported for two algorithms has one thumbprint. It is what DPoP binds a token to (RFC 9449 §6.1, the `jkt` of a `cnf` claim), and it makes a stable `kid`. A private key gives the thumbprint of its public half, also when it is not extractable. A secret's thumbprint is computed from the secret itself, so the secret must be extractable. A thumbprint reveals nothing of a random secret; this package enforces a minimum length for secrets, not their entropy, so use secrets from `generateSecretKey` or another random source, never chosen by hand.
 
 **Parameters**
 
@@ -980,6 +1099,34 @@ The header is untrusted until a verifier accepts the token. The token is checked
 const result = readHeader(token);
 if (result.ok) {
   console.log(result.value.alg, result.value.kid);
+}
+```
+
+### readJweHeader
+
+```ts
+export declare function readJweHeader(token: unknown, options?: ReadJweHeaderOptions): JwtResult<JweHeader>;
+```
+
+Reads the protected header of a compact JWE without decrypting it, so a caller can route a token, or pick a decrypter by its `kid` or `alg`, before decryption.
+
+The header is untrusted: the tag that authenticates it is checked only by decryption. The token is checked as a decrypter checks it up to its cryptography: its length before any decoding, exactly five canonical base64url segments, a header that is a JSON object without repeated members, a supported `alg` and `enc` (any of [`CONTENT_ENCRYPTION_ALGORITHMS`](#content_encryption_algorithms), since no decrypter's `enc` list applies), no `zip` or `crit`, an `epk` where `alg` needs one, and an encrypted key, IV and tag of the lengths `alg` and `enc` make them. Only the protected header is returned; no key is used and nothing is decrypted.
+
+**Parameters**
+
+- `token` — The untrusted token. Any value is accepted; a value that is not a string is `malformed`.
+- `options` — Limits for reading the token.
+
+**Returns** — The frozen header, or a failure with the first issue found: `too_large` with `{ limit: "length", maximum }`, `malformed`, `duplicate_key`, `too_large` with `{ limit: "depth", maximum: 32 }`, `unsupported_alg`, `unsupported_enc` or `unsupported_crit`. It reports a bad token by its result and never throws for one.
+
+**Throws** — `TypeError` — When `options` is not an object, holds a member that is not an option, or has a `maxLength` that is not an integer from 1 through 65536.
+
+**Example**
+
+```ts
+const result = readJweHeader(token);
+if (result.ok) {
+  console.log(result.value.alg, result.value.enc, result.value.kid);
 }
 ```
 
@@ -1440,7 +1587,7 @@ The HTTP request a DPoP proof came with.
 readonly accessToken?: string;
 ```
 
-The access token the request presents. The proof must then carry its hash as `ath`.
+The access token the request presents. The proof must then carry its hash as `ath`. Given together with `accessTokenClaims` or not at all.
 
 **Default** — no `ath` check, as at the token endpoint
 
@@ -1450,7 +1597,7 @@ The access token the request presents. The proof must then carry its hash as `at
 readonly accessTokenClaims?: object;
 ```
 
-The verified access token's payload, or its token introspection response: an object whose `cnf.jkt` the proof's key must have as its thumbprint. Claims without a string `cnf.jkt` fail the proof with `wrong_key`.
+The verified access token's payload, or its token introspection response: an object whose `cnf.jkt` the proof's key must have as its thumbprint. Claims without a string `cnf.jkt` fail the proof with `wrong_key`. Given together with `accessToken` or not at all.
 
 **Default** — no key binding check
 
@@ -1863,6 +2010,111 @@ readonly alg: AsymmetricKeyManagementAlgorithm;
 readonly kid?: string;
 ```
 
+### EncryptionKeyRing
+
+```ts
+export interface EncryptionKeyRing extends JweKeySet {
+    encryptionKey(): JwePublicKey;
+    jwks(): Promise<{
+        readonly keys: readonly JweJwk[];
+    }>;
+    select(header: JweHeader): Promise<JwtResult<JweDecryptionKey>>;
+}
+```
+
+A recipient's encryption keys over time: which one senders encrypt to now, the JWKS that publishes it, and a key set that decrypts every token senders may still encrypt to an older key. Frozen, and stateless as a [`KeyRing`](#keyring) is.
+
+#### EncryptionKeyRing › encryptionKey
+
+```ts
+encryptionKey(): JwePublicKey;
+```
+
+The public key to encrypt to now, as `KeyRing.signingKey` picks a signing key: of the keys whose `activeFrom` has come, the one with the latest, unless its `retiredAt` has come too. The same object at every call that picks the same key.
+
+**Throws** — TypeError when no key encrypts now, or when `now` returns something other than a finite number.
+
+#### EncryptionKeyRing › jwks
+
+```ts
+jwks(): Promise<{
+    readonly keys: readonly JweJwk[];
+}>;
+```
+
+The JWKS to serve where senders read your encryption keys, such as your `jwks_uri`: only the key `EncryptionKeyRing.encryptionKey` returns, exported as `exportJwePublicJwk` exports it, with `use: "enc"`. One key, so a sender that picks a key by its algorithm never finds two.
+
+**Returns** — A frozen JWKS, with no key when none is active.
+
+**Throws** — TypeError, as a rejected promise, when `now` returns something other than a finite number.
+
+#### EncryptionKeyRing › select
+
+```ts
+select(header: JweHeader): Promise<JwtResult<JweDecryptionKey>>;
+```
+
+Selects the private key for a token's header from every key that decrypts now: from its `activeFrom` until `publishAfter` seconds after the next key's `activeFrom` or its own `retiredAt`. A sender holding an older copy of your JWKS still encrypts to the key it replaced, and its tokens decrypt until then; a key not yet active decrypts nothing, since no sender has been given it.
+
+**Throws** — TypeError, as a rejected promise, when `now` returns something other than a finite number.
+
+### EncryptionKeyRingEntry
+
+```ts
+export interface EncryptionKeyRingEntry extends Omit<KeyRingEntry, "key"> {
+    readonly key: JwePrivateKey;
+}
+```
+
+One encryption key of an [`EncryptionKeyRing`](#encryptionkeyring) and when senders encrypt to it, as for a signing key.
+
+#### EncryptionKeyRingEntry › activeFrom
+
+Inherited from [`KeyRingEntry`](#keyringentry--activefrom).
+
+#### EncryptionKeyRingEntry › key
+
+```ts
+readonly key: JwePrivateKey;
+```
+
+A JWE private key from `generateJweKeyPair`, `importJwePrivateKey` or `importJweKeyPair`, with a unique `kid`.
+
+#### EncryptionKeyRingEntry › retiredAt
+
+Inherited from [`KeyRingEntry`](#keyringentry--retiredat).
+
+### EncryptionKeyRingOptions
+
+```ts
+export interface EncryptionKeyRingOptions extends Omit<KeyRingOptions, "keys" | "issuer" | "publishAhead" | "publishAfter"> {
+    readonly keys: readonly EncryptionKeyRingEntry[];
+    readonly publishAfter: number;
+}
+```
+
+How [`createEncryptionKeyRing`](#createencryptionkeyring) schedules a recipient's encryption keys: as [`KeyRingOptions`](#keyringoptions), without `issuer`, which concerns who signs, and without `publishAhead`, since only the current key is published.
+
+#### EncryptionKeyRingOptions › keys
+
+```ts
+readonly keys: readonly EncryptionKeyRingEntry[];
+```
+
+The keys, in any order. Between 1 and 100.
+
+#### EncryptionKeyRingOptions › now
+
+Inherited from [`KeyRingOptions`](#keyringoptions--now).
+
+#### EncryptionKeyRingOptions › publishAfter
+
+```ts
+readonly publishAfter: number;
+```
+
+Seconds a key keeps decrypting after senders should stop encrypting to it: at least the `max-age` of your JWKS, plus how long senders keep a JWKS they cannot refresh, plus how long a token may take to reach you. A whole number from 0 to 315360000.
+
 ### EncryptionKeySet
 
 ```ts
@@ -1871,7 +2123,7 @@ export interface EncryptionKeySet {
 }
 ```
 
-A source of a recipient's public encryption keys, such as the JWKS of a client an OpenID Provider encrypts ID tokens to. `importKeySet(jwks, { use: "enc" })` and `createRemoteKeySet({ url, use: "enc" })` return one.
+A source of a recipient's public encryption keys, such as the JWKS of a client an OpenID Provider encrypts ID tokens to. `importEncryptionKeySet(jwks)` and `createRemoteEncryptionKeySet({ url })` return one.
 
 #### EncryptionKeySet › select
 
@@ -1882,35 +2134,6 @@ select(query: EncryptionKeyQuery): Promise<JwtResult<JwePublicKey>>;
 Selects the single key for an algorithm and an optional `kid`, by the rules of `KeySet.select`.
 
 **Returns** — The key, or a failure with `unknown_kid`, `alg_mismatch`, `no_matching_key`, `ambiguous_key` or `key_fetch_failed`. Never throws.
-
-### EncryptionKeySetOptions
-
-```ts
-export interface EncryptionKeySetOptions {
-    readonly use: "enc";
-    readonly algorithms?: readonly AsymmetricKeyManagementAlgorithm[];
-}
-```
-
-How `importKeySet` and `createRemoteKeySet` read a JWKS of encryption keys.
-
-#### EncryptionKeySetOptions › algorithms
-
-```ts
-readonly algorithms?: readonly AsymmetricKeyManagementAlgorithm[];
-```
-
-Key management algorithms keys may be bound to. A JWK naming another in its `alg` is skipped, and a JWK without `alg` is bound to each listed algorithm its `kty` and `crv` allow. Non-empty.
-
-**Default** — every asymmetric key management algorithm: `RSA-OAEP`, `RSA-OAEP-256`, `ECDH-ES`, `ECDH-ES+A128KW`, `ECDH-ES+A256KW`
-
-#### EncryptionKeySetOptions › use
-
-```ts
-readonly use: "enc";
-```
-
-Selects encryption keys: only JWKs that say they encrypt are imported, as JWE public keys.
 
 ### EncryptJwtInput
 
@@ -2197,6 +2420,26 @@ Key identifier.
 
 **Default** — no `kid`
 
+### ImportEncryptionKeySetOptions
+
+```ts
+export interface ImportEncryptionKeySetOptions {
+    readonly algorithms?: readonly AsymmetricKeyManagementAlgorithm[];
+}
+```
+
+How [`importEncryptionKeySet`](#importencryptionkeyset) and `createRemoteEncryptionKeySet` read a JWKS of encryption keys.
+
+#### ImportEncryptionKeySetOptions › algorithms
+
+```ts
+readonly algorithms?: readonly AsymmetricKeyManagementAlgorithm[];
+```
+
+Key management algorithms keys may be bound to. A JWK naming another in its `alg` is skipped, and a JWK without `alg` is bound to each listed algorithm its `kty` and `crv` allow. Non-empty.
+
+**Default** — every asymmetric key management algorithm: `RSA-OAEP`, `RSA-OAEP-256`, `RSA-OAEP-384`, `RSA-OAEP-512`, `ECDH-ES`, `ECDH-ES+A128KW`, `ECDH-ES+A256KW`
+
 ### ImportJwePrivateKeyOptions
 
 ```ts
@@ -2309,7 +2552,6 @@ Key identifier. A JWK without a `kid` takes this one, and a JWK whose own `kid` 
 export interface ImportKeySetOptions {
     readonly algorithms?: readonly AsymmetricAlgorithm[];
     readonly issuer?: string;
-    readonly use?: "sig";
 }
 ```
 
@@ -2334,16 +2576,6 @@ readonly issuer?: string;
 The issuer whose keys these are. Each key is bound to it (see `PublicKey.issuer`), so a token verified with one of them must carry this `iss`. Give it whenever keys of several issuers can reach one verifier.
 
 **Default** — keys bound to no issuer
-
-#### ImportKeySetOptions › use
-
-```ts
-readonly use?: "sig";
-```
-
-Which keys to import: `sig` for verification keys. `{ use: "enc" }` instead imports encryption keys as JWE public keys, as [`EncryptionKeySetOptions`](#encryptionkeysetoptions) describes.
-
-**Default** — `"sig"`
 
 ### ImportPrivateKeyOptions
 
@@ -2807,7 +3039,7 @@ export interface JweSecretKey {
 }
 ```
 
-A shared secret bound to exactly one key management algorithm. With `dir` it is the content key itself, and is also bound to one `enc`; with `A128KW` or `A256KW` it wraps a fresh content key for each token. It encrypts and decrypts, never signs, and is never interchangeable with a JWS [`SecretKey`](#secretkey).
+A shared secret bound to exactly one key management algorithm. With `dir` it is the content key itself, and is also bound to one `enc`; with `A128KW`, `A256KW`, `A128GCMKW` or `A256GCMKW` it wraps a fresh content key for each token. It encrypts and decrypts, never signs, and is never interchangeable with a JWS [`SecretKey`](#secretkey).
 
 #### JweSecretKey › alg
 
@@ -3631,7 +3863,7 @@ export interface LocalEncryptionKeySet extends EncryptionKeySet {
 }
 ```
 
-An encryption key set over a fixed list of keys, from `importKeySet(jwks, { use: "enc" })`. Frozen.
+An encryption key set over a fixed list of keys, from `importEncryptionKeySet(jwks)`. Frozen.
 
 #### LocalEncryptionKeySet › keys
 
@@ -4083,18 +4315,38 @@ Maximum token length in characters, checked before any decoding. An integer from
 
 **Default** — 8192
 
-### RemoteEncryptionKeySetOptions
+### ReadJweHeaderOptions
 
 ```ts
-export interface RemoteEncryptionKeySetOptions extends Omit<RemoteKeySetOptions, "algorithms" | "issuer" | "use">, EncryptionKeySetOptions {
+export interface ReadJweHeaderOptions {
+    readonly maxLength?: number;
 }
 ```
 
-How [`createRemoteKeySet`](#createremotekeyset) fetches a recipient's JWKS of encryption keys, such as an OpenID client's `jwks_uri` an OpenID Provider encrypts ID tokens to. Every option of [`RemoteKeySetOptions`](#remotekeysetoptions) applies but `issuer`; keys are imported as `importKeySet(jwks, { use: "enc" })` imports them, and `select` takes `{ alg, kid }`.
+How [`readJweHeader`](#readjweheader) reads a token. Invalid options throw `TypeError`.
+
+#### ReadJweHeaderOptions › maxLength
+
+```ts
+readonly maxLength?: number;
+```
+
+Maximum token length in characters, checked before any decoding. An integer from 1 through 65536.
+
+**Default** — 16384
+
+### RemoteEncryptionKeySetOptions
+
+```ts
+export interface RemoteEncryptionKeySetOptions extends Omit<RemoteKeySetOptions, "algorithms" | "issuer">, ImportEncryptionKeySetOptions {
+}
+```
+
+How [`createRemoteEncryptionKeySet`](#createremoteencryptionkeyset) fetches a recipient's JWKS of encryption keys, such as an OpenID client's `jwks_uri` an OpenID Provider encrypts ID tokens to. Every option of [`RemoteKeySetOptions`](#remotekeysetoptions) applies but `issuer`, and `algorithms` lists key management algorithms, as for `importEncryptionKeySet`.
 
 #### RemoteEncryptionKeySetOptions › algorithms
 
-Inherited from [`EncryptionKeySetOptions`](#encryptionkeysetoptions--algorithms).
+Inherited from [`ImportEncryptionKeySetOptions`](#importencryptionkeysetoptions--algorithms).
 
 #### RemoteEncryptionKeySetOptions › cacheTtl
 
@@ -4140,10 +4392,6 @@ Inherited from [`RemoteKeySetOptions`](#remotekeysetoptions--timeout).
 
 Inherited from [`RemoteKeySetOptions`](#remotekeysetoptions--url).
 
-#### RemoteEncryptionKeySetOptions › use
-
-Inherited from [`EncryptionKeySetOptions`](#encryptionkeysetoptions--use).
-
 #### RemoteEncryptionKeySetOptions › waitUntil
 
 Inherited from [`RemoteKeySetOptions`](#remotekeysetoptions--waituntil).
@@ -4156,7 +4404,6 @@ export interface RemoteKeySetOptions {
     readonly fetch?: JwksFetch;
     readonly algorithms?: readonly AsymmetricAlgorithm[];
     readonly issuer?: string;
-    readonly use?: "sig";
     readonly cacheTtl?: number;
     readonly cooldown?: number;
     readonly maxStale?: number;
@@ -4293,16 +4540,6 @@ readonly url: string | URL;
 ```
 
 Absolute `https:` URL of the JWKS, such as an issuer's `jwks_uri`. Plain `http:` is accepted only on a loopback host (`localhost`, `127.0.0.0/8` or `[::1]`), for a development issuer on the same machine. Credentials in the URL are refused.
-
-#### RemoteKeySetOptions › use
-
-```ts
-readonly use?: "sig";
-```
-
-Which keys to import, as for `ImportKeySetOptions.use`: `sig` for verification keys, or `enc` for a recipient's encryption keys, as [`RemoteEncryptionKeySetOptions`](#remoteencryptionkeysetoptions) describes.
-
-**Default** — `"sig"`
 
 #### RemoteKeySetOptions › waitUntil
 
@@ -5412,7 +5649,7 @@ A minor release may add an algorithm to this union, so code that switches over i
 ### AsymmetricKeyManagementAlgorithm
 
 ```ts
-export type AsymmetricKeyManagementAlgorithm = "RSA-OAEP" | "RSA-OAEP-256" | "ECDH-ES" | "ECDH-ES+A128KW" | "ECDH-ES+A256KW";
+export type AsymmetricKeyManagementAlgorithm = "RSA-OAEP" | "RSA-OAEP-256" | "RSA-OAEP-384" | "RSA-OAEP-512" | "ECDH-ES" | "ECDH-ES+A128KW" | "ECDH-ES+A256KW";
 ```
 
 Key management algorithms whose key is a key pair: the sender encrypts to the recipient's public key.
@@ -5441,7 +5678,7 @@ export type DpopVerifier = (proof: unknown, request: DpopRequest) => Promise<Jwt
 
 Verifies one DPoP proof for one request. Resolves to a result, and never rejects for any proof.
 
-**Throws** — TypeError, as a rejected promise, for a `request` that is not one, or a clock that returns something other than a finite number.
+**Throws** — TypeError, as a rejected promise, for a `request` that is not one, or has only one of `accessToken` and `accessTokenClaims`, or a clock that returns something other than a finite number.
 
 ### EcJwk
 
@@ -5553,7 +5790,7 @@ export type KeyManagementAlgorithm = SymmetricKeyManagementAlgorithm | Asymmetri
 
 JWE key management algorithms (RFC 7518 §4) this package encrypts and decrypts with.
 
-`RSA1_5`, the `PBES2-*` algorithms and the 192-bit and AES-GCM key wraps are never among them. A minor release may add one, so code that switches over it keeps a default branch.
+`RSA1_5`, the `PBES2-*` algorithms and the 192-bit key wraps (`A192KW`, `A192GCMKW`, `ECDH-ES+A192KW`) are never among them. A minor release may add one, so code that switches over it keeps a default branch.
 
 ### KeySetResolver
 
@@ -5640,10 +5877,10 @@ Symmetric (HMAC) JWS algorithms this package signs and verifies with. A minor re
 ### SymmetricKeyManagementAlgorithm
 
 ```ts
-export type SymmetricKeyManagementAlgorithm = "dir" | "A128KW" | "A256KW";
+export type SymmetricKeyManagementAlgorithm = "dir" | "A128KW" | "A256KW" | "A128GCMKW" | "A256GCMKW";
 ```
 
-Key management algorithms whose key is a shared secret: `dir` uses it as the content key, `A*KW` wraps one.
+Key management algorithms whose key is a shared secret: `dir` uses it as the content key, and `A*KW` (AES key wrap) and `A*GCMKW` (AES-GCM) wrap a fresh one for each token.
 
 ### VerificationKey
 

@@ -8,7 +8,7 @@ order: 8
 
 A JWT is one use of a JSON Web Signature (JWS, RFC 7515): a JSON payload, compact form, read as claims. `signJws`, `signGeneralJws` and `createJwsVerifier` handle the rest of RFC 7515: any payload, bytes or text, in the compact serialization or the JSON one, with payloads left unencoded (RFC 7797) or kept out of the JWS altogether (detached, RFC 7515 Appendix F).
 
-Use them when the thing you sign is not a set of claims: a webhook body, a document, a request digest, a payload another protocol defines. A JWS has no claims, so the verifier checks no `exp`, `aud` or `iss`, and a key set's issuer binding does not apply. For tokens, use [`sign`](signing.md) and [`createVerifier`](verifying.md), which stay compact-only.
+Use them when the thing you sign is not a set of claims: a webhook body, a document, a request digest, a payload another protocol defines. A JWS has no claims, so the verifier checks no `exp`, `aud` or `iss`, and a key set's issuer binding does not apply: a key bound to one issuer verifies a JWS like any other key in its set. A multi-tenant service picks the tenant's own key set, and the verifier made from it, before it verifies. For tokens, use [`sign`](signing.md) and [`createVerifier`](verifying.md), which stay compact-only.
 
 ```ts
 import { createJwsVerifier, createKeySet, generateKeyPair, signJws } from "@codenhub/jwt";
@@ -53,6 +53,8 @@ const jws = await signGeneralJws({
 
 Both return the JWS as a string, JSON text for the JSON serializations, and reject with a `TypeError` for a mistake in their input, as `sign` does.
 
+Do not sign a JWS and a JWT with the same key. Neither `signJws` nor `sign` writes a `typ`, and a verifier without `type` requires none, so a compact JWS over JSON that holds `sub` and `exp` verifies as a JWT under `createVerifier` with that key, and a webhook body could be presented as an access token. Use a separate key for JWS, or give the JWS a distinct type with `header: { typ: "…" }` and set [`type`](verifying.md#token-type) on every token verifier that trusts the key (RFC 8725 §3.11 and §3.12).
+
 ## Unencoded and detached payloads
 
 With `b64: false`, the payload is signed as its bytes instead of its base64url text, and the protected header says so with `"b64":false` and `"crit":["b64"]`, which `signJws` writes for you. RFC 7797 lists it in `crit` so a verifier that does not understand `b64` refuses the JWS instead of checking the wrong bytes.
@@ -67,9 +69,13 @@ const jws = await signJws({ payload: body, key: privateKey, b64: false, detached
 const result = await verify(jws, { payload: body });
 ```
 
+A detached compact JWS verified without its payload fails with `bad_signature`, not `missing_payload`: in the compact form an empty middle segment is the empty payload, which is a payload a JWS may sign, so the verifier checks the signature over it. Only a JSON JWS without a `payload` member is `missing_payload`.
+
 ## Verifying
 
-`createJwsVerifier({ keys, crit?, maxLength?, onKeySetError? })` reads any of the three serializations: a string that starts with `{`, after JSON whitespace, is JSON, and anything else is compact. `keys` is a key set, as for `createVerifier`; a function that routes by issuer is not accepted, since a JWS has no `iss`. `maxLength`, 8192 characters by default and at most 65536, bounds the JWS, not a detached payload.
+`createJwsVerifier({ keys, crit?, maxLength?, onKeySetError? })` reads any of the three serializations: a string that starts with `{`, after JSON whitespace, is JSON, and anything else is compact. It takes the JSON serializations as their raw text, not as a parsed object: only the text shows a member repeated, which `JSON.parse` would resolve silently to its last value, and a JWS that repeats a member is refused. `keys` is a key set, as for `createVerifier`; a function that routes by issuer is not accepted, since a JWS has no `iss`, and the key set's issuer bindings are not applied. `maxLength`, 8192 characters by default and at most 65536, bounds the JWS, not a detached payload.
+
+A JWS verifier also accepts a JWT signed by a key in its set, so the warning in [Signing](#signing) applies here too: a verifier that trusts a token signing key accepts that key's JWTs as JWS payloads, and a token verifier without `type` accepts that key's JWS over JSON claims as tokens.
 
 Each JWS goes through, in order:
 

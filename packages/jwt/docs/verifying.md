@@ -128,9 +128,15 @@ Some tokens look alike but mean different things, such as an ID token and an acc
 
 `type` also takes an array of accepted values. `null` in it accepts a token without `typ`, which helps while an issuer moves to explicit types: `type: ["at+jwt", null]` accepts RFC 9068 access tokens and older ones that carried no `typ`, but not an ID token typed `JWT`.
 
+Without `type`, a verifier also accepts a JWS that was never meant as a token: [`signJws`](jws.md#signing) over JSON that holds `sub` and `exp` gives a compact JWS `createVerifier` verifies with the same key, since neither writes `typ`. Use a separate key for each, or [type the JWS](jws.md#signing) and set `type` here (RFC 8725 §3.11 and §3.12).
+
 ### Required claims
 
 `requiredClaims` lists claims that must be present, whatever their value. Each missing one is `missing_claim` with `{ claim }` and path `["payload", claim]`. A claim already reported missing by `issuer`, `subject`, `audience`, `maxAge` or the `exp` requirement is not reported twice.
+
+### Identifying a token
+
+A token's text does not identify it. An ECDSA signature (`ES256`, `ES384`, `ES512`) has a twin: anyone who holds the token can replace its `s` with `n − s`, the curve order minus `s`, and the changed token verifies just as well, with the same claims. A revocation list, a replay check or a dedupe store keyed on the token string, or on a hash of it, therefore misses the twin. Key them on `jti`, with `requiredClaims: ["jti"]`, or on the claims that identify the token, never on its text.
 
 ## Checking your own claims
 

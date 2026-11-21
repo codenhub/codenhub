@@ -27,7 +27,7 @@ Only compact serialization is supported. As with signing, what you encrypt is yo
 
 ## Encryption keys are their own kind
 
-JWE has its own three kinds of key, `JwePublicKey` (`kind: "jwe-public"`), `JwePrivateKey` (`"jwe-private"`) and `JweSecretKey` (`"jwe-secret"`), and they are never interchangeable with the signing keys of [Keys](keys.md): `sign`, `createKeySet` and a verifier throw for an encryption key, and `encrypt` and `createJweKeySet` throw for a signing key. Using one key both to sign and to encrypt is a cross-protocol mistake, and the types catch it before the code runs.
+JWE has its own three kinds of key, `JwePublicKey` (`kind: "jwe-public"`), `JwePrivateKey` (`"jwe-private"`) and `JweSecretKey` (`"jwe-secret"`), and they are never interchangeable with the signing keys of [Keys](keys.md): `sign`, `createKeySet` and a verifier throw for an encryption key, with a message that says it is one and names the JWE functions, and `encrypt` and `createJweKeySet` throw for a signing key. Using one key both to sign and to encrypt is a cross-protocol mistake, and the types catch it before the code runs.
 
 Each key is bound to exactly one **key management algorithm** (`alg`), the way a signing key is bound to one signature algorithm. The token's header never chooses: a decrypter fails a token whose `alg` is not its key's with `alg_mismatch`. The **content encryption algorithm** (`enc`) is chosen when encrypting, and a decrypter accepts the list in its `enc` option.
 
@@ -44,7 +44,7 @@ const wrapping = await generateJweSecretKey({ alg: "A256KW", kid: "kek-1" });
 const direct = await importJweSecretKey(thirtyTwoBytes, { alg: "dir", enc: "A256GCM" }); // result
 ```
 
-The import functions take what their signing counterparts take, JWK, PEM and Web Crypto `CryptoKey`, and run the same checks for encryption: a JWK's `use`, when present, must be `enc`, its `key_ops` may hold only encryption operations, its `alg`, when present, must be the key's own, and an RSA modulus must be 2048 to 8192 bits. A key whose type or curve does not fit `alg`, as a JWK or a PEM, is `unsupported_key` at `["kty"]` or `["crv"]`: `RSA-OAEP` and `RSA-OAEP-256` take RSA, and the `ECDH-ES` algorithms take EC on P-256, P-384 or P-521, or OKP on X25519. `importJweKeyPair` returns both halves, `getJwePublicKey` the public half of a private key, and `exportJwePublicJwk`, `exportJwePrivateJwk` and `exportJweSecretJwk` write JWKs with `use: "enc"`. `jwkThumbprint` takes JWE keys too. A secret must be exactly as long as its algorithm's key: 16 bytes for `A128KW`, 32 for `A256KW`, and for `dir` the length of its `enc` key.
+The import functions take what their signing counterparts take, JWK, PEM and Web Crypto `CryptoKey`, and run the same checks for encryption: a JWK's `use`, when present, must be `enc`, its `key_ops` may hold only encryption operations, its `alg`, when present, must be the key's own, and an RSA modulus must be 2048 to 8192 bits. A key whose type or curve does not fit `alg`, as a JWK or a PEM, is `unsupported_key` at `["kty"]` or `["crv"]`: the `RSA-OAEP` algorithms take RSA, and the `ECDH-ES` algorithms take EC on P-256, P-384 or P-521, or OKP on X25519. An `EC` or `OKP` public JWK with an empty `key_ops`, which is how Web Crypto exports an ECDH or X25519 public key, is taken as stating no operations rather than as `wrong_use`. An X25519 public key of low order, one every sender would agree on an all-zero secret with, is `invalid_key`: each import runs one agreement with a fresh key to find out, as the import of a pair already does to prove its halves match. `importJweKeyPair` returns both halves, `getJwePublicKey` the public half of a private key, `exportJwePublicJwk`, `exportJwePrivateJwk` and `exportJweSecretJwk` write JWKs with `use: "enc"`, and `exportJwePublicPem` and `exportJwePrivatePem` write SPKI and PKCS#8 PEM, without `alg` or `kid`; a secret has no PEM form. `jwkThumbprint` takes JWE keys too. A secret must be exactly as long as its algorithm's key: 16 bytes for `A128KW` and `A128GCMKW`, 32 for `A256KW` and `A256GCMKW`, and for `dir` the length of its `enc` key.
 
 A `dir` secret is the content key itself, so it is also bound to one `enc`: `encrypt` uses it, and a decrypter fails a token naming another `enc` for it with `alg_mismatch` at `["header", "enc"]`. A JWK of a `dir` key whose `alg` names the content algorithm, as RFC 7520's cookbook writes one, is `alg_mismatch`; drop its `alg` and pass `enc` instead.
 
@@ -63,6 +63,8 @@ const token = await encrypt({
 
 `alg` comes from the key, and `enc` is required except with a `dir` key, which already names its own. A fresh content key and IV are drawn for each token, and for `ECDH-ES` a fresh ephemeral key. The whole protected header is authenticated, so changing any byte of it makes the token fail.
 
+The IVs of AES-GCM are random 96-bit values, so a key that encrypts with AES-GCM must be replaced before it has encrypted 2^32 times, the limit NIST SP 800-38D sets on random IVs under one key. That applies to a `dir` key with `A128GCM` or `A256GCM`, whose every token is encrypted with the key itself, and to an `A128GCMKW` or `A256GCMKW` key, which wraps every token's content key with AES-GCM. The other algorithms draw a fresh content key for each token, so the limit does not build up across tokens.
+
 `kid` defaults to the key's `kid`; `kid`, `typ` and `cty` must be strings. Other header parameters are written as given, with the JSON rules of [Signing tokens](signing.md), except those that change how a token is decrypted or ask the recipient to trust a key, which throw: `crit`, `zip`, `epk`, `apu`, `apv`, `iv`, `tag`, `p2s`, `p2c`, `b64`, `jwk`, `jku`, `x5u` and `x5c`.
 
 ## Decrypting
@@ -80,16 +82,18 @@ The decrypter resolves to `{ header, plaintext, key }`: the protected header, th
 A decrypter's checks run in a fixed order and stop at the first failure:
 
 1. The token is a string no longer than `maxLength`.
-2. It has exactly five segments of strict base64url, and its header is a JSON object without repeated member names, with a supported `alg` and an accepted `enc`, and no `zip` or `crit`. The header is the protected one, the only header a compact token has.
+2. It has exactly five segments of strict base64url, and its header is a JSON object without repeated member names, with a supported `alg` and an accepted `enc`, and no `zip` or `crit`. For `A128GCMKW` and `A256GCMKW`, the header's `iv` is 96 bits and its `tag` 128 bits of strict base64url, or the token is `malformed` at `["header", "iv"]` or `["header", "tag"]`. The header is the protected one, the only header a compact token has.
 3. The key set selects one key by `kid` and `alg`, as [Key sets](key-sets.md#how-a-key-is-selected) describes. Keys are never tried in turn.
-4. For `ECDH-ES`, the header's `epk` is imported as a public key on the private key's curve, or fails with `malformed` at `["header", "epk"]`.
+4. For `ECDH-ES`, the header's `epk` is imported as a public key on the private key's curve, or fails with `malformed` at `["header", "epk"]`. So does an X25519 `epk` of low order, and one with the top bit of `x` set: RFC 7748 has X25519 ignore that bit, runtimes differ in whether they do, and no sender sets it, so it is refused on every runtime alike.
 5. The content key is recovered, and the authentication tag is checked before any plaintext exists.
 
 A decrypted token is not a verified one. Encrypting to a public key needs only the public key, which anyone can have, so a plaintext's claims say nothing about who wrote them until a signature does; that is what the next section is for. There is deliberately no function that reads claims from a bare JWE.
 
+`readJweHeader(token)` reads the protected header without any key, to route a token or pick a decrypter by its `kid` or `alg` first. It checks the token as steps 1 and 2 do, with every supported `enc` accepted, takes the same `maxLength` option and default, and never decrypts. The header it returns is untrusted, since only decryption checks the tag that authenticates it.
+
 ### What a forged token learns
 
-Steps 1 to 4 fail with codes that describe the token's shape, which the attacker already knows. Step 5 is where a forger probes the key, so every failure there is the same: a key that does not unwrap, an RSA ciphertext that does not decrypt, a wrong tag, a tampered header, IV or ciphertext all give `decryption_failed`, with no path. When unwrapping fails, a random content key stands in and the token fails on its tag (RFC 7516 §11.5), so the answer is the same either way, and the CBC tag is compared in constant time. Log `decryption_failed` freely; it never holds a byte of the token.
+Steps 1 to 4 fail with codes that describe the token's shape, which the attacker already knows: a key set's `alg_mismatch` at step 3, and a bad `epk` as `malformed` at `["header", "epk"]` at step 4, stay what they are. Step 5 is where a forger probes the key, so every failure in recovering the content key or checking the tag is the same: a key that does not unwrap, an AES-GCM key wrap whose tag fails, an RSA ciphertext that does not decrypt, a wrong tag, a tampered header, IV or ciphertext all give `decryption_failed`, with no path. When unwrapping fails, a random content key stands in and the token fails on its tag (RFC 7516 §11.5), so the answer is the same either way, and the CBC tag is compared in constant time. Log `decryption_failed` freely; it never holds a byte of the token.
 
 Refused before any cryptography, with a result rather than a throw:
 
@@ -122,23 +126,25 @@ if (result.ok) {
 }
 ```
 
-The nested verifier decrypts, requires a `cty` of `JWT` (in any casing, with or without `application/`) or none, and hands the plaintext to your verifier, which checks the inner token exactly as it would a bare one. A token that decrypts but does not verify fails with the verifier's issue; a different `cty` is `wrong_type` at `["header", "cty"]`.
+The nested verifier decrypts, requires a `cty` of `JWT` (in any casing, with or without `application/`) or none, and hands the plaintext to your verifier, which checks the inner token exactly as it would a bare one. A token that decrypts but does not verify fails with the verifier's issues, each with its path under `["plaintext", ...]`, so an inner `["header", "kid"]` is `["plaintext", "header", "kid"]` and an issue without a path gets `["plaintext"]`; the outer token's issues keep their own paths. A different `cty` is `wrong_type` at `["header", "cty"]`.
 
 ## A recipient's encryption keys
 
-To encrypt to someone, such as the client an OpenID Provider encrypts ID tokens for, you need their public key, usually from their JWKS. `importKeySet` and `createRemoteKeySet` read one with `use: "enc"`, and give an `EncryptionKeySet` whose `select` takes the algorithm you will use and, when you know it, the `kid`:
+To encrypt to someone, such as the client an OpenID Provider encrypts ID tokens for, you need their public key, usually from their JWKS. `importEncryptionKeySet` and `createRemoteEncryptionKeySet` read one, and give an `EncryptionKeySet` whose `select` takes the algorithm you will use and, when you know it, the `kid`:
 
 ```ts
-import { createRemoteKeySet, encrypt } from "@codenhub/jwt";
+import { createRemoteEncryptionKeySet, encrypt } from "@codenhub/jwt";
 
-const clientKeys = createRemoteKeySet({ url: client.jwks_uri, use: "enc", algorithms: ["RSA-OAEP-256"] });
+const clientKeys = createRemoteEncryptionKeySet({ url: client.jwks_uri, algorithms: ["RSA-OAEP-256"] });
 const selected = await clientKeys.select({ alg: "RSA-OAEP-256" });
 if (selected.ok) {
   const token = await encrypt({ plaintext: idToken, key: selected.value, enc: "A256GCM" });
 }
 ```
 
-Only JWKs that say they encrypt are imported: `use: "enc"`, or, without `use`, a `key_ops` holding `encrypt`, `wrapKey`, `deriveKey` or `deriveBits`. A JWK with neither is skipped, so a JWKS that also lists signing keys never lends one to encryption. A JWK without `alg` is bound to each listed algorithm its key type fits, and `algorithms` defaults to every asymmetric key management algorithm. `issuer` is a signing option and throws here. Fetching, caching and cooldown work as [Key sets](key-sets.md#a-remote-key-set) describes.
+Only JWKs that say they encrypt are imported: `use: "enc"`, or, without `use`, a `key_ops` holding `encrypt`, `wrapKey`, `deriveKey` or `deriveBits`. A JWK with neither is skipped, so a JWKS that also lists signing keys never lends one to encryption. A JWK without `alg` is bound to each listed algorithm its key type fits, and `algorithms` defaults to every asymmetric key management algorithm. `issuer` is a signing option and throws here, and `importKeySet` and `createRemoteKeySet` never import an encryption key. Fetching, caching and cooldown work as [Key sets](key-sets.md#a-remote-key-set) describes.
+
+To rotate your own encryption keys as a recipient, publishing the current one and decrypting with older ones until senders no longer use them, see [Key rotation](rotation.md#encryption-keys).
 
 ## Algorithms
 
@@ -147,11 +153,15 @@ Only JWKs that say they encrypt are imported: `use: "enc"`, or, without `use`, a
 | `dir`            | the secret is the content key                         | secret as long as its `enc` key          |
 | `A128KW`         | AES key wrap                                          | 16-byte secret                           |
 | `A256KW`         | AES key wrap                                          | 32-byte secret                           |
+| `A128GCMKW`      | AES-GCM key wrap, `iv` and `tag` in the header        | 16-byte secret                           |
+| `A256GCMKW`      | AES-GCM key wrap, `iv` and `tag` in the header        | 32-byte secret                           |
 | `ECDH-ES`        | ephemeral ECDH, Concat KDF derives the content key    | `EC` on P-256, P-384 or P-521, or X25519 |
 | `ECDH-ES+A128KW` | ephemeral ECDH, Concat KDF derives a 16-byte wrap key | `EC` on P-256, P-384 or P-521, or X25519 |
 | `ECDH-ES+A256KW` | ephemeral ECDH, Concat KDF derives a 32-byte wrap key | `EC` on P-256, P-384 or P-521, or X25519 |
 | `RSA-OAEP`       | RSAES-OAEP with SHA-1                                 | `RSA`, 2048 to 8192 bit                  |
 | `RSA-OAEP-256`   | RSAES-OAEP with SHA-256                               | `RSA`, 2048 to 8192 bit                  |
+| `RSA-OAEP-384`   | RSAES-OAEP with SHA-384                               | `RSA`, 2048 to 8192 bit                  |
+| `RSA-OAEP-512`   | RSAES-OAEP with SHA-512                               | `RSA`, 2048 to 8192 bit                  |
 
 | `enc`           | Content encryption                     | Content key |
 | --------------- | -------------------------------------- | ----------- |
@@ -160,6 +170,6 @@ Only JWKs that say they encrypt are imported: `use: "enc"`, or, without `use`, a
 | `A128CBC-HS256` | AES-CBC with HMAC SHA-256, 16-byte tag | 32 bytes    |
 | `A256CBC-HS512` | AES-CBC with HMAC SHA-512, 32-byte tag | 64 bytes    |
 
-`RSA-OAEP` is here because providers still publish it; SHA-1's weaknesses do not reach OAEP, but prefer `RSA-OAEP-256` where both sides support it. The 192-bit variants, `A192KW`, `ECDH-ES+A192KW`, `A192GCM` and `A192CBC-HS384`, are not supported, because Chromium's Web Crypto has no 192-bit AES; a token using one fails with `unsupported_alg` or `unsupported_enc`.
+`RSA-OAEP` is here because providers still publish it; SHA-1's weaknesses do not reach OAEP, but prefer `RSA-OAEP-256` where both sides support it. The 192-bit variants, `A192KW`, `A192GCMKW`, `ECDH-ES+A192KW`, `A192GCM` and `A192CBC-HS384`, are not supported, because Chromium's Web Crypto has no 192-bit AES; a token using one fails with `unsupported_alg` or `unsupported_enc`.
 
 X25519 needs Web Crypto's X25519 support: Node.js 26, Cloudflare Workers, Chrome and Firefox have it, and Playwright's WebKit on Windows does not. The other algorithms work wherever Web Crypto does. The lists may grow in a minor release, so give a `switch` over an `alg` or `enc` a default branch.

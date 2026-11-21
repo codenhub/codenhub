@@ -74,6 +74,7 @@ Then the claims, with every failure reported together:
 - `htm` equals the request's method exactly (`wrong_method`).
 - `htu` equals the request's URL once both are normalized and stripped of their query and fragment (`wrong_url`). Normalizing lowercases the scheme and host, drops a default port and removes dot segments; it does not decode percent-encoding.
 - When the request gives `accessToken`, `ath` is present (`missing_claim`) and is its hash (`wrong_access_token_hash`). Without one, `ath` is ignored.
+- `jti` may be any string, an empty one included: RFC 9449 leaves its entropy to the client, and `acceptJti` sees it either way.
 - A static `nonce` option, and `accessTokenClaims`, below.
 
 Last, only for a proof that passed everything else: a `nonce` function, then `acceptJti`.
@@ -82,7 +83,7 @@ A request URL behind a proxy is the URL the client used, not the one your server
 
 ### Binding the access token
 
-At a resource server, pass the verified access token's claims as `accessTokenClaims`. The proof's key must then have the thumbprint the token's `cnf.jkt` carries, or the proof fails with `wrong_key` at `["header", "jwk"]`:
+At a resource server, pass the access token as `accessToken` and its verified claims as `accessTokenClaims`, always both. The proof must then carry the token's hash as `ath`, and its key must have the thumbprint the token's `cnf.jkt` carries, or the proof fails with `wrong_key` at `["header", "jwk"]`:
 
 ```ts
 const token = await verifyAccessToken(accessToken);
@@ -95,6 +96,8 @@ const proof = await verifyProof(request.headers.get("dpop"), {
   accessTokenClaims: token.value.payload,
 });
 ```
+
+The verifier rejects with a `TypeError` when a request gives only one of the two. The token alone would check `ath` but never `cnf.jkt`, so a stolen token would pass with a proof signed by the thief's own key; the claims alone would leave the proof unbound to the token it came with. At the token endpoint, give neither.
 
 Claims without a string `cnf.jkt` fail with `wrong_key` too, so a token that was never bound cannot pass as a DPoP one. A token introspection response (RFC 7662) carries `cnf.jkt` the same way and can be passed as it is.
 
@@ -145,4 +148,4 @@ Treat `callback_failed` as a server error, not the client's: answer 500 or 503.
 
 `createDpopProof` rejects with a `TypeError` for an input that is not one: a member that is not an option, a key that is not a private key of an asymmetric algorithm, a method that is not an HTTP method token, a URL that is not an absolute `http:` or `https:` URL, an empty `accessToken`, `nonce` or `jti`, or a clock that does not return milliseconds.
 
-`createDpopVerifier` throws a `TypeError` for an invalid or unknown option. The verifier it returns resolves to a result for every proof, but rejects with a `TypeError` for a request that is not one, since the request comes from your code: a member that is not one of `method`, `url`, `accessToken` and `accessTokenClaims`, an invalid method or URL, an empty `accessToken`, or `accessTokenClaims` that is not an object. [Issues](errors.md) lists every code.
+`createDpopVerifier` throws a `TypeError` for an invalid or unknown option. The verifier it returns resolves to a result for every proof, but rejects with a `TypeError` for a request that is not one, since the request comes from your code: a member that is not one of `method`, `url`, `accessToken` and `accessTokenClaims`, an invalid method or URL, an empty `accessToken`, `accessTokenClaims` that is not an object, or only one of `accessToken` and `accessTokenClaims`. [Issues](errors.md) lists every code.
