@@ -2,7 +2,7 @@
 title: Botones
 description: Acciones destructivas y secundarias, botones de icono, tamaños, enlaces con aspecto de botón, estados deshabilitados e iconos de carga.
 order: 1
-source: 251edb4a60f8fdad7884f50b3feba88a184aee44
+source: 6cde544bb49cfd22089ca1973a87cd9b2aaeb123
 ---
 
 # Botones
@@ -61,7 +61,7 @@ Cuando un botón con relleno tiene el foco del teclado, una línea de 2px del co
 
 Una clase de tamaño y una de relleno se pueden combinar. Solo `.p-xs` quita la altura mínima de un botón con texto; cualquier otra combinación la conserva. En un botón de icono, cualquier clase `.p-*` quita el tamaño mínimo y el botón toma el tamaño de su icono más ese relleno: 0.125rem, 0.25rem o 0.75rem alrededor.
 
-Una etiqueta se queda en una línea mientras cabe. Cuando el contenedor del botón es más estrecho que la etiqueta, la etiqueta pasa a varias líneas dentro del botón, equilibradas entre sí, y el botón crece en altura, así que una etiqueta larga nunca hace que una pantalla estrecha se desplace hacia los lados. Un botón en una fila con otros elementos, como una barra de herramientas, se encoge como cualquier elemento flex cuando a la fila le falta espacio, así que su etiqueta puede pasar a dos líneas en lugar de empujar a sus vecinos fuera de la fila y hacer que se desplace hacia los lados. Un botón de icono no tiene etiqueta que repartir, así que conserva su forma cuadrada y no se encoge. Para mantener una etiqueta en una línea de todos modos, añade `white-space: nowrap` al botón: entonces no se encoge más allá del ancho de su etiqueta.
+Una etiqueta se queda en una línea mientras cabe. Cuando el contenedor del botón es más estrecho que la etiqueta, la etiqueta pasa a varias líneas dentro del botón, equilibradas entre sí, y el botón crece en altura, así que una etiqueta larga no hace que una pantalla estrecha se desplace hacia los lados. Una etiqueta solo se parte entre palabras: una sola palabra más ancha que el contenedor, como un compuesto largo en alemán, sigue saliéndose del borde del botón. Para partir también esa palabra, añade `overflow-wrap: anywhere` al botón; en una fila deja además que el botón se encoja por debajo de su palabra más larga, así que una etiqueta corta puede partirse a mitad de palabra cuando la fila va justa. Un botón en una fila con otros elementos, como una barra de herramientas, se encoge como cualquier elemento flex cuando a la fila le falta espacio, así que su etiqueta puede pasar a dos líneas en lugar de empujar a sus vecinos fuera de la fila y hacer que se desplace hacia los lados. Un botón de icono no tiene etiqueta que repartir, así que conserva su forma cuadrada y no se encoge. Para mantener una etiqueta en una línea de todos modos, añade `white-space: nowrap` al botón: entonces no se encoge más allá del ancho de su etiqueta.
 
 El aspecto base dibuja esquinas que escalan con el tamaño: un botón `.sm` o `.p-sm` tiene esquinas algo más pequeñas que uno por defecto, y `.lg` algo más grandes.
 
