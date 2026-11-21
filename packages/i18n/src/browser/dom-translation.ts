@@ -10,8 +10,10 @@ const ELEMENT_NODE = 1;
 /**
  * Elements whose text can run, stay hidden, or be read as HTML. The HTML serializer writes the text of `xmp`, `iframe`,
  * `noembed`, `noframes`, and `plaintext` unescaped, so a page saved through `innerHTML`, as a prerender does, would turn
- * a translation such as `</xmp><img onerror=...>` into markup. Their attributes are still translated, since the
- * serializer escapes every attribute value.
+ * a translation such as `</xmp><img onerror=...>` into markup. Their own attributes are still translated, since the
+ * serializer escapes an attribute value outside them. An element inside one, which only the DOM can put there, is
+ * skipped whole: the serializer writes its attributes unescaped too, and before 2025 the HTML standard did not escape
+ * `<` in an attribute value either.
  */
 const BLOCKED_ELEMENT_NAMES = new Set([
   "iframe",
@@ -97,9 +99,10 @@ export interface DomTranslator {
   /**
    * Translates safe leaves and attributes at and below the root, restoring the fallback where a key was removed, and
    * marks an element whose translations come from a locale other than the language it has without the mark, its own
-   * `lang` or the nearest ancestor's, with that locale's `lang`. A message that needs values keeps the fallback,
-   * with a warning. A text or attribute whose translation throws, such as from a throwing `onMissingKey`, keeps its
-   * value; every other key is still translated, and the first error is thrown after the pass.
+   * `lang` or the nearest ancestor's, with that locale's `lang`. An element inside one whose text is blocked, such as
+   * `<xmp>`, is skipped with a warning. A message that needs values keeps the fallback, with a warning. A text or
+   * attribute whose translation throws, such as from a throwing `onMissingKey`, keeps its value; every other key is
+   * still translated, and the first error is thrown after the pass.
    */
   translateRoot(options: TranslateRootOptions): void;
 }
@@ -156,6 +159,16 @@ const isInsideCustomElement = (element: Element, root: ParentNode): boolean => {
   }
 
   return false;
+};
+
+/** The nearest ancestor whose content the serializer writes unescaped, or that the page never shows as text. */
+const findBlockedAncestor = (element: Element): Element | undefined => {
+  for (let ancestor = element.parentElement; ancestor !== null; ancestor = ancestor.parentElement) {
+    if (BLOCKED_ELEMENT_NAMES.has(ancestor.localName)) {
+      return ancestor;
+    }
+  }
+  return undefined;
 };
 
 /**
@@ -521,11 +534,31 @@ export function createDomTranslator(options: DomTranslatorOptions): DomTranslato
     );
   };
 
+  const warnBlockedAncestor = (element: Element, ancestor: Element): void => {
+    const keyAttribute = TRANSLATION_KEY_ATTRIBUTES.find((attribute) => element.hasAttribute(attribute));
+    if (options.isSilent || keyAttribute === undefined) {
+      return;
+    }
+    console.warn(
+      "%s",
+      `[I18n] Skipping translation on <${element.localName}> because it is inside <${ancestor.localName}>, which can ` +
+        `run, hide, or reparse its content as HTML; its ${keyAttribute} is ` +
+        `${formatReportedKey(element.getAttribute(keyAttribute) ?? "")}.`,
+      element,
+    );
+  };
+
   return {
     translateRoot({ root, boundary = root, ...pass }) {
       runEach(collectElements(root, isTracked), (element) => {
-        if (!isInsideCustomElement(element, boundary)) {
+        if (isInsideCustomElement(element, boundary)) {
+          return;
+        }
+        const blockedAncestor = findBlockedAncestor(element);
+        if (blockedAncestor === undefined) {
           translateElement(element, pass);
+        } else {
+          warnBlockedAncestor(element, blockedAncestor);
         }
       });
     },
