@@ -260,7 +260,7 @@ export interface I18n<TLocale extends string = string, TKey extends string = str
    * valid syntax warns once per process for its locale and text, unless silent, and only its `{name}` placeholders are
    * filled.
    *
-   * When `params.count` is a number and the key is a group of plural forms rather than a text, such as
+   * When `params.count` is a number or bigint and the key is a group of plural forms rather than a text, such as
    * `{ one: "{count} item", other: "{count} items" }`, the form is chosen with `Intl.PluralRules` for the locale of the
    * dictionary that has the group, falling back to its `other` form. Forms are named by CLDR plural category: `zero`,
    * `one`, `two`, `few`, `many`, and `other`.
@@ -270,10 +270,11 @@ export interface I18n<TLocale extends string = string, TKey extends string = str
    * t("cart.items", { count: 3 }); // "3 items"
    * ```
    *
-   * @param key - Translation key, or the key of a plural group when `params.count` is a number.
+   * @param key - Translation key, or the key of a plural group when `params.count` is a number or bigint.
    * @param params - Argument values, read from own properties. An argument without a usable value, such as a string
    * for `{n, number}`, is left as written. A string in `{name}` is inserted as written, a number as `{name, number}`
-   * would format it, and a date as `{name, date}` would. A numeric `count` also selects a plural form.
+   * would format it, and a date as `{name, date}` would. A bigint is taken wherever a number is. A numeric `count`
+   * also selects a plural form.
    * @returns The translated text, or the trimmed key when no dictionary has it. A miss calls `onMissingKey`, or
    * warns once per recent locale/key pair in the process unless silent.
    * @throws {Error} When called before successful initialization.
@@ -282,7 +283,7 @@ export interface I18n<TLocale extends string = string, TKey extends string = str
    * @throws {TypeError} When `params` is neither `undefined` nor an object, such as `null` passed from plain
    * JavaScript.
    */
-  translate<K extends TKey, TValues extends object = Readonly<Record<string, string | number | Date>>>(
+  translate<K extends TKey, TValues extends object = Readonly<Record<string, string | number | bigint | Date>>>(
     key: K,
     ...params: TranslateParams<TMessages, K, TValues>
   ): string;
@@ -312,7 +313,7 @@ export interface I18n<TLocale extends string = string, TKey extends string = str
   has(key: string): key is TKey;
 
   /** Short alias of {@link I18n.translate}, the same bound function. */
-  t<K extends TKey, TValues extends object = Readonly<Record<string, string | number | Date>>>(
+  t<K extends TKey, TValues extends object = Readonly<Record<string, string | number | bigint | Date>>>(
     key: K,
     ...params: TranslateParams<TMessages, K, TValues>
   ): string;

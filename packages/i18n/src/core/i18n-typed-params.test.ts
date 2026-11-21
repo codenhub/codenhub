@@ -40,16 +40,16 @@ describe("typed placeholder values", () => {
 
   it("should require each argument with the type its format needs", () => {
     expectTypeOf<Params<"total">["length"]>().toEqualTypeOf<1>();
-    expectTypeOf<Value<"spaced", "name">>().toEqualTypeOf<string | number | Date>();
+    expectTypeOf<Value<"spaced", "name">>().toEqualTypeOf<string | number | bigint | Date>();
     expectTypeOf<Params<"unicodeSpaced">["length"]>().toEqualTypeOf<1>();
-    expectTypeOf<Value<"unicodeSpaced", "name">>().toEqualTypeOf<string | number | Date>();
-    expectTypeOf<Value<"total", "amount">>().toEqualTypeOf<number>();
+    expectTypeOf<Value<"unicodeSpaced", "name">>().toEqualTypeOf<string | number | bigint | Date>();
+    expectTypeOf<Value<"total", "amount">>().toEqualTypeOf<number | bigint>();
     expectTypeOf<Value<"shipped", "when">>().toEqualTypeOf<Date | number>();
-    expectTypeOf<Value<"inbox", "count">>().toEqualTypeOf<number>();
-    expectTypeOf<Value<"inbox", "sender">>().toEqualTypeOf<string | number | Date>();
-    expectTypeOf<Value<"place", "n">>().toEqualTypeOf<number>();
-    expectTypeOf<Value<"replied", "gender">>().toEqualTypeOf<string | number>();
-    expectTypeOf<Value<"apostrophe", "name">>().toEqualTypeOf<string | number | Date>();
+    expectTypeOf<Value<"inbox", "count">>().toEqualTypeOf<number | bigint>();
+    expectTypeOf<Value<"inbox", "sender">>().toEqualTypeOf<string | number | bigint | Date>();
+    expectTypeOf<Value<"place", "n">>().toEqualTypeOf<number | bigint>();
+    expectTypeOf<Value<"replied", "gender">>().toEqualTypeOf<string | number | bigint>();
+    expectTypeOf<Value<"apostrophe", "name">>().toEqualTypeOf<string | number | bigint | Date>();
     expectTypeOf<{ count: 1; sender: "Ana" }>().toExtend<Values<"inbox">>();
     expectTypeOf<{ count: 1 }>().not.toExtend<Values<"inbox">>();
   });
@@ -63,7 +63,7 @@ describe("typed placeholder values", () => {
     expectTypeOf<{ count: 1; place: "cart" }>().toExtend<Values<"cart.items">>();
     expectTypeOf<{ place: "cart" }>().not.toExtend<Values<"cart.items">>();
     expectTypeOf<{ count: 1 }>().not.toExtend<Values<"cart.items">>();
-    expectTypeOf<Value<"cart.items", "count">>().toEqualTypeOf<number>();
+    expectTypeOf<Value<"cart.items", "count">>().toEqualTypeOf<number | bigint>();
   });
 
   it("should still check a key when one of its forms or dictionaries has no arguments", () => {
@@ -84,6 +84,7 @@ describe("typed placeholder values", () => {
     type JsonValues = NonNullable<TranslateParams<Json, "cart.items">[0]>;
     expectTypeOf<TranslateParams<Json, "cart.items">["length"]>().toEqualTypeOf<1>();
     expectTypeOf<{ count: 3 }>().toExtend<JsonValues>();
+    expectTypeOf<{ count: 3n }>().toExtend<JsonValues>();
     expectTypeOf<{ count: 3; anything: "else" }>().toExtend<JsonValues>();
     expectTypeOf<{}>().not.toExtend<JsonValues>();
     expectTypeOf<{ count: "3" }>().not.toExtend<JsonValues>();
@@ -204,7 +205,7 @@ describe("typed placeholder values", () => {
   it("should accept any values for an argument name the runtime can't read", () => {
     expectTypeOf<TranslateParams<{ readonly m: "{first-name}" }, "m">>().toEqualTypeOf<Loose>();
     expectTypeOf<TranslateParams<{ readonly m: "{nome_ç}" }, "m">>().toEqualTypeOf<Loose>();
-    expectTypeOf<Value<"spaced", "name">>().toEqualTypeOf<string | number | Date>();
+    expectTypeOf<Value<"spaced", "name">>().toEqualTypeOf<string | number | bigint | Date>();
     expectTypeOf<TranslateParams<{ readonly m: "{Name_2}" }, "m">["length"]>().toEqualTypeOf<1>();
   });
 

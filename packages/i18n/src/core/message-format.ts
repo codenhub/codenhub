@@ -6,7 +6,7 @@
  */
 
 /** A value a message argument accepts. @internal */
-export type MessageValue = string | number | Date;
+export type MessageValue = string | number | bigint | Date;
 
 /** Values for a message's arguments, read from own properties. @internal */
 export type MessageValues = Readonly<Record<string, MessageValue>>;
@@ -613,6 +613,24 @@ const getPluralRules = (locale: string, isOrdinal: boolean): Intl.PluralRules =>
     () => new Intl.PluralRules(intlLocale(locale), { type: isOrdinal ? "ordinal" : "cardinal" }),
   );
 
+const MILLION = 1_000_000n;
+
+/**
+ * A count as the number `Intl.PluralRules` selects by. It rejects a bigint, and one past `Number.MAX_SAFE_INTEGER` loses
+ * its last digits as a number, which rules such as `n % 10` and French `i % 1000000` read. CLDR rules read at most the
+ * last six digits of an integer and compare the whole value only with small numbers, so a large bigint selects as the
+ * number a million above its last six digits.
+ *
+ * @internal
+ */
+export const toPluralOperand = (count: number | bigint): number => {
+  if (typeof count === "number") {
+    return count;
+  }
+  const size = count < 0n ? -count : count;
+  return Number(size <= BigInt(Number.MAX_SAFE_INTEGER) ? size : (size % MILLION) + MILLION);
+};
+
 // The largest time a `Date` holds, in milliseconds either side of the epoch. `Intl` throws past it.
 const MAX_TIME = 8_640_000_000_000_000;
 
@@ -644,7 +662,7 @@ export const formatPlainValue = (value: unknown, locale: string, timeZone: strin
   if (typeof value === "string") {
     return value;
   }
-  if (typeof value === "number") {
+  if (typeof value === "number" || typeof value === "bigint") {
     return getNumberFormat(locale).format(value);
   }
   const time = readDateTime(value);
@@ -668,7 +686,7 @@ interface FormatState {
   filledArguments: number;
 }
 
-const formatNodes = (nodes: Message, state: FormatState, pound: number | undefined): string => {
+const formatNodes = (nodes: Message, state: FormatState, pound: number | bigint | undefined): string => {
   const { values, locale, timeZone } = state;
   let result = "";
   // Formatted once, so a form that repeats `#` costs no formatting step per `#`, which the argument limit doesn't count.
@@ -698,7 +716,7 @@ const formatNodes = (nodes: Message, state: FormatState, pound: number | undefin
         break;
       case "number":
         result +=
-          typeof value === "number"
+          typeof value === "number" || typeof value === "bigint"
             ? getNumberFormat(
                 locale,
                 node.style === "percent"
@@ -722,20 +740,23 @@ const formatNodes = (nodes: Message, state: FormatState, pound: number | undefin
         break;
       }
       case "plural": {
-        if (typeof value !== "number") {
+        if (typeof value !== "number" && typeof value !== "bigint") {
           result += node.source;
           break;
         }
         const exact = node.options.get(`=${value}`);
+        const shown = typeof value === "bigint" ? value - BigInt(node.offset) : value - node.offset;
         // A locale Intl rejects uses `other`, as plural groups do, rather than the root locale's English-like rules.
         const category =
-          intlLocale(locale) === "und" ? "other" : getPluralRules(locale, node.isOrdinal).select(value - node.offset);
+          intlLocale(locale) === "und"
+            ? "other"
+            : getPluralRules(locale, node.isOrdinal).select(toPluralOperand(shown));
         const option = exact ?? node.options.get(category) ?? node.options.get("other")!;
-        result += formatNodes(option, state, value - node.offset);
+        result += formatNodes(option, state, shown);
         break;
       }
       case "select": {
-        if (typeof value !== "string" && typeof value !== "number") {
+        if (typeof value !== "string" && typeof value !== "number" && typeof value !== "bigint") {
           result += node.source;
           break;
         }

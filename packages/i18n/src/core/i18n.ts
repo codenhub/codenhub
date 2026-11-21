@@ -16,6 +16,7 @@ import {
   MAX_FILLED_ARGUMENTS,
   type MessageValues,
   parseCachedMessage,
+  toPluralOperand,
 } from "./message-format";
 import { MAX_TRANSLATION_KEY_LENGTH, MAX_UNTRIMMED_KEY_LENGTH, normalizeTranslationKey } from "./string-validation";
 import type {
@@ -257,7 +258,11 @@ class I18nInstance<TLocale extends string, TKey extends string = string>
       throw new TypeError("[I18n] Translation values must be an object or undefined.");
     }
     const count = params !== undefined && Object.hasOwn(params, "count") ? params["count"] : undefined;
-    const found = this.lookup("translate", key, typeof count === "number" ? count : undefined);
+    const found = this.lookup(
+      "translate",
+      key,
+      typeof count === "number" || typeof count === "bigint" ? toPluralOperand(count) : undefined,
+    );
 
     return found === undefined ? key.trim() : this.format(key, found, params ?? {});
   }

@@ -107,10 +107,10 @@ export interface I18n<TLocale extends string = string, TKey extends string = str
     setLocale(locale: TLocale): Promise<void>;
     resolveLocale(value: string): TLocale | undefined;
     matchLocale(preferences: readonly string[]): TLocale | undefined;
-    translate<K extends TKey, TValues extends object = Readonly<Record<string, string | number | Date>>>(key: K, ...params: TranslateParams<TMessages, K, TValues>): string;
+    translate<K extends TKey, TValues extends object = Readonly<Record<string, string | number | bigint | Date>>>(key: K, ...params: TranslateParams<TMessages, K, TValues>): string;
     has(key: TKey): boolean;
     has(key: string): key is TKey;
-    t<K extends TKey, TValues extends object = Readonly<Record<string, string | number | Date>>>(key: K, ...params: TranslateParams<TMessages, K, TValues>): string;
+    t<K extends TKey, TValues extends object = Readonly<Record<string, string | number | bigint | Date>>>(key: K, ...params: TranslateParams<TMessages, K, TValues>): string;
     formatNumber(value: number | bigint, options?: Intl.NumberFormatOptions): string;
     formatDate(value: Date | number, options?: Intl.DateTimeFormatOptions): string;
     formatRelativeTime(value: number, unit: Intl.RelativeTimeFormatUnit, options?: Intl.RelativeTimeFormatOptions): string;
@@ -431,7 +431,7 @@ Calls a listener after every applied `init()` and every applied locale change, s
 #### I18n › t
 
 ```ts
-t<K extends TKey, TValues extends object = Readonly<Record<string, string | number | Date>>>(key: K, ...params: TranslateParams<TMessages, K, TValues>): string;
+t<K extends TKey, TValues extends object = Readonly<Record<string, string | number | bigint | Date>>>(key: K, ...params: TranslateParams<TMessages, K, TValues>): string;
 ```
 
 Short alias of `I18n.translate`, the same bound function.
@@ -439,7 +439,7 @@ Short alias of `I18n.translate`, the same bound function.
 #### I18n › translate
 
 ```ts
-translate<K extends TKey, TValues extends object = Readonly<Record<string, string | number | Date>>>(key: K, ...params: TranslateParams<TMessages, K, TValues>): string;
+translate<K extends TKey, TValues extends object = Readonly<Record<string, string | number | bigint | Date>>>(key: K, ...params: TranslateParams<TMessages, K, TValues>): string;
 ```
 
 Resolves a trimmed key against the active locale's dictionary, then each configured parent locale's, such as `pt` for `pt-BR`, then the default locale's, and formats it as an ICU message.
@@ -448,12 +448,12 @@ A parent is made by dropping subtags and is skipped when its likely script diffe
 
 Messages use ICU syntax: `{name}`, `{n, number}` with an optional `integer` or `percent` style, `{d, date}` and `{d, time}` with an optional `short`, `medium` (the default), `long`, or `full` style, `{n, plural, …}` and `{n, selectordinal, …}` with `=N` and CLDR category options, an optional `offset:N`, and `#` for the number in the plural's own forms, and `{v, select, …}`. Plural categories and every format use the locale of the dictionary that has the text. An apostrophe before `{`, `}`, or, in a plural, `#` quotes them, and `''` is one apostrophe. A message that is not valid syntax warns once per process for its locale and text, unless silent, and only its `{name}` placeholders are filled.
 
-When `params.count` is a number and the key is a group of plural forms rather than a text, such as `{ one: "{count} item", other: "{count} items" }`, the form is chosen with `Intl.PluralRules` for the locale of the dictionary that has the group, falling back to its `other` form. Forms are named by CLDR plural category: `zero`, `one`, `two`, `few`, `many`, and `other`.
+When `params.count` is a number or bigint and the key is a group of plural forms rather than a text, such as `{ one: "{count} item", other: "{count} items" }`, the form is chosen with `Intl.PluralRules` for the locale of the dictionary that has the group, falling back to its `other` form. Forms are named by CLDR plural category: `zero`, `one`, `two`, `few`, `many`, and `other`.
 
 **Parameters**
 
-- `key` — Translation key, or the key of a plural group when `params.count` is a number.
-- `params` — Argument values, read from own properties. An argument without a usable value, such as a string for `{n, number}`, is left as written. A string in `{name}` is inserted as written, a number as `{name, number}` would format it, and a date as `{name, date}` would. A numeric `count` also selects a plural form.
+- `key` — Translation key, or the key of a plural group when `params.count` is a number or bigint.
+- `params` — Argument values, read from own properties. An argument without a usable value, such as a string for `{n, number}`, is left as written. A string in `{name}` is inserted as written, a number as `{name, number}` would format it, and a date as `{name, date}` would. A bigint is taken wherever a number is. A numeric `count` also selects a plural form.
 
 **Returns** — The translated text, or the trimmed key when no dictionary has it. A miss calls `onMissingKey`, or warns once per recent locale/key pair in the process unless silent.
 
@@ -857,6 +857,16 @@ type Frame = "m" | "o" | "O";
 
 Not exported; declared in `src/core/message-params.ts`.
 
+### HasGroup
+
+```ts
+type HasGroup<V> = true extends (V extends string ? false : V extends {
+    readonly other: string;
+} ? true : false) ? true : false;
+```
+
+Not exported; declared in `src/core/message-params.ts`.
+
 ### IsName
 
 ```ts
@@ -910,7 +920,7 @@ Not exported; declared in `src/core/message-params.ts`.
 ### MessageValue
 
 ```ts
-type MessageValue = string | number | Date;
+type MessageValue = string | number | bigint | Date;
 ```
 
 Not exported; declared in `src/core/message-params.ts`.
@@ -926,7 +936,7 @@ Not exported; declared in `src/core/message-params.ts`.
 ### Narrow
 
 ```ts
-type Narrow<T> = [T] extends [number] ? number : [T] extends [Date | number] ? Date | number : [T] extends [string | number] ? string | number : T;
+type Narrow<T> = [T] extends [number] ? number : [T] extends [number | bigint] ? number | bigint : [T] extends [Date | number] ? Date | number : [T] extends [string | number | bigint] ? string | number | bigint : T;
 ```
 
 Not exported; declared in `src/core/message-params.ts`.
@@ -958,7 +968,9 @@ Not exported; declared in `src/core/message-params.ts`.
 ### ParamsFor
 
 ```ts
-type ParamsFor<U, TValues> = IsUnreadable<U> extends true ? AnyValues<TValues> : ParamsOf<UnionToIntersection<U>, TValues>;
+type ParamsFor<U, TValues, TIsGroup> = IsUnreadable<U> extends true ? TIsGroup extends true ? [params: {
+    readonly count: number | bigint;
+} & Values<TValues>] : AnyValues<TValues> : ParamsOf<UnionToIntersection<U>, TValues>;
 ```
 
 Not exported; declared in `src/core/message-params.ts`.
@@ -1074,7 +1086,7 @@ Not exported; declared in `src/core/message-params.ts`.
 ### TranslateParams
 
 ```ts
-type TranslateParams<TMessages, TKey extends string, TValues = {}> = unknown extends TMessages ? AnyValues<TValues> : IsUnion<TKey> extends true ? AnyValues<TValues> : string extends TKey ? AnyValues<TValues> : ParamsFor<ValueArguments<Exclude<ValueAt<TMessages, TKey>, undefined>>, TValues>;
+type TranslateParams<TMessages, TKey extends string, TValues = {}> = unknown extends TMessages ? AnyValues<TValues> : IsUnion<TKey> extends true ? AnyValues<TValues> : string extends TKey ? AnyValues<TValues> : ParamsFor<ValueArguments<Exclude<ValueAt<TMessages, TKey>, undefined>>, TValues, HasGroup<Exclude<ValueAt<TMessages, TKey>, undefined>>>;
 ```
 
 The parameters `t(key, …)` takes: required values when every dictionary type's message at `key` is a literal with arguments, otherwise optional values of any name.
@@ -1137,7 +1149,7 @@ Not exported; declared in `src/core/message-params.ts`.
 type ValueArguments<V> = V extends string ? MessageArguments<V> : V extends {
     readonly other: string;
 } ? IsUnreadable<FormArguments<V>> extends true ? Unreadable : UnionToIntersection<FormArguments<V>> & {
-    readonly count: number;
+    readonly count: number | bigint;
 } : Unreadable;
 ```
 
@@ -1154,7 +1166,7 @@ Not exported; declared in `src/core/message-params.ts`.
 ### ValueOfType
 
 ```ts
-type ValueOfType<T> = T extends "number" | "plural" | "selectordinal" ? number : T extends "date" | "time" ? Date | number : T extends "select" ? string | number : Unreadable;
+type ValueOfType<T> = T extends "number" | "plural" | "selectordinal" ? number | bigint : T extends "date" | "time" ? Date | number : T extends "select" ? string | number | bigint : Unreadable;
 ```
 
 Not exported; declared in `src/core/message-params.ts`.

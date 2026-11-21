@@ -8,7 +8,7 @@
  * gives up after a step budget and the message accepts any values.
  */
 
-type MessageValue = string | number | Date;
+type MessageValue = string | number | bigint | Date;
 /**
  * The values passed, `TValues`, with each one checked as a message value. Read from the argument rather than written as
  * an index signature, which an `interface` or a class instance lacks, so `t("greeting", user)` takes a `User`.
@@ -115,11 +115,11 @@ type NextBrace<S extends string> = S extends `${infer A}{${infer B}`
     : undefined;
 
 type ValueOfType<T> = T extends "number" | "plural" | "selectordinal"
-  ? number
+  ? number | bigint
   : T extends "date" | "time"
     ? Date | number
     : T extends "select"
-      ? string | number
+      ? string | number | bigint
       : Unreadable;
 
 // The styles the runtime reads; another, such as `{n, number, currency}`, is invalid syntax.
@@ -277,7 +277,7 @@ type ValueArguments<V> = V extends string
   : V extends { readonly other: string }
     ? IsUnreadable<FormArguments<V>> extends true
       ? Unreadable
-      : UnionToIntersection<FormArguments<V>> & { readonly count: number }
+      : UnionToIntersection<FormArguments<V>> & { readonly count: number | bigint }
     : Unreadable;
 type FormArguments<V> = { [K in keyof V]-?: MessageArguments<V[K]> }[keyof V];
 
@@ -297,18 +297,20 @@ type IsUnion<T, U = T> = T extends unknown ? ([U] extends [T] ? false : true) : 
 // An argument used twice, such as `{count}` and `{count, plural, …}`, takes the narrower type.
 type Narrow<T> = [T] extends [number]
   ? number
-  : [T] extends [Date | number]
-    ? Date | number
-    : [T] extends [string | number]
-      ? string | number
-      : T;
+  : [T] extends [number | bigint]
+    ? number | bigint
+    : [T] extends [Date | number]
+      ? Date | number
+      : [T] extends [string | number | bigint]
+        ? string | number | bigint
+        : T;
 type Simplify<T> = { readonly [K in keyof T]: Narrow<T[K]> } & {};
 
 // Whether any member is the marker. `Unreadable extends U` is not that test: a message without arguments reads as `{}`,
 // which the marker is assignable to.
 type IsUnreadable<U> = [Extract<U, Unreadable>] extends [never] ? false : true;
 
-// Whether any dictionary has a plural group at the key, which `t()` reads only with a numeric `count`.
+// Whether any dictionary has a plural group at the key, which `t()` reads only with a numeric or bigint `count`.
 type HasGroup<V> = true extends (V extends string ? false : V extends { readonly other: string } ? true : false)
   ? true
   : false;
@@ -318,7 +320,7 @@ type HasGroup<V> = true extends (V extends string ? false : V extends { readonly
 type ParamsFor<U, TValues, TIsGroup> =
   IsUnreadable<U> extends true
     ? TIsGroup extends true
-      ? [params: { readonly count: number } & Values<TValues>]
+      ? [params: { readonly count: number | bigint } & Values<TValues>]
       : AnyValues<TValues>
     : ParamsOf<UnionToIntersection<U>, TValues>;
 type ParamsOf<A, TValues> = keyof A extends never
