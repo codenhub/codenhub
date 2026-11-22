@@ -2,7 +2,7 @@
 title: Solução de problemas
 description: O que cada erro e aviso quer dizer, e como resolver.
 order: 5
-source: 86b4a82a11e323f173118710ebf19ce48e7962c1
+source: 8aadb9318e886e1349b31742eebc2024948883b3
 ---
 
 # Solução de problemas
@@ -169,7 +169,7 @@ Você vê `Ouvrir l{app}` onde esperava `Ouvrir l'éditeur`, e o console está q
 - **"Skipping translation on <p> because translated elements must be leaves"**: o elemento com `data-i18n` tem elementos filhos. Coloque a chave num elemento que contenha só texto, ou traduza com `t()`.
 - **"Skipping translation on <style> because the element can run, hide, or reparse its text as HTML"**: uma chave `data-i18n` está num elemento `<script>`, `<style>`, `<noscript>`, `<template>`, `<iframe>`, `<noembed>`, `<noframes>`, `<xmp>` ou `<plaintext>`, cujo texto roda como código, decide o que aparece ou é escrito sem escape quando a página é salva como HTML. O aviso nomeia a chave e passa o elemento, então o console aponta para ele. Mude a chave para um elemento comum. As chaves `data-i18n-<attribute>` dele, como o `data-i18n-title` de um `<iframe>`, continuam sendo traduzidas.
 - **"Skipping translation on <p> because it is inside <xmp>, which can run, hide, or reparse its content as HTML"**: um elemento com chave está dentro de um dos elementos que a entrada anterior lista, ou dentro de um `<textarea>` ou de um `<title>`, o que só código consegue fazer, por exemplo ao acrescentá-lo a um `<xmp>` ou a um `<template>` em vez de ao `content` dele. Nem o texto nem os atributos dele são traduzidos, já que uma tradução poderia fechar o elemento em volta dele e virar marcação quando a página é salva como HTML, ou nunca apareceria. Tire o elemento de lá.
-- **"Skipping translation because data-i18n contains an invalid key"**, ou o mesmo para um `data-i18n-<attribute>`: a chave está em branco, tem mais de 1.000 caracteres ou contém um caractere de controle ASCII, então nenhum dicionário consegue guardá-la. O elemento fica com o texto atual. Corrija a chave no HTML.
+- **"Skipping translation because data-i18n contains an invalid key"**, ou o mesmo para um `data-i18n-<attribute>`: a chave está em branco, tem mais de 1.000 caracteres ou contém um caractere de controle ASCII, então nenhum dicionário consegue guardá-la. O elemento mostra o texto do HTML, como com uma chave que nenhum dicionário tem, inclusive quando uma chave cuja tradução ele mostrava muda para uma inválida. Corrija a chave no HTML.
 - **"Skipping translation because data-i18n names a message that needs values"**: a mensagem tem um placeholder, um plural ou um select, e a tradução de HTML não tem valores para preenchê-los. O elemento mantém o texto do HTML, e o aviso aparece uma vez por chave. Renderize esse texto com `t()` e passe os valores.
 - **"Skipping translation of the title of <style> because it names a style sheet set"**: uma chave `data-i18n-title` está num elemento `<style>` ou `<link rel="stylesheet">`, cujo `title` agrupa folhas de estilo entre as quais o navegador alterna, então traduzi-lo mudaria quais se aplicam. O elemento mantém o `title`. Remova a chave.
 - **Um atributo `data-i18n-href` não faz nada**: só atributos de texto podem ser traduzidos. Veja [Traduza HTML sem framework](browser.md#traduza-html-sem-framework).
