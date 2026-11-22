@@ -5,6 +5,13 @@
 import fs from "node:fs";
 import path from "node:path";
 
+/**
+ * The most patterns an entry's braces may expand to. `fs.globSync` walks once per pattern, and its
+ * time grows faster than their number: in an empty folder on Node.js 26.13, 1,024 took 0.06 to
+ * 0.2 seconds, 4,096 took 0.3, 16,384 took 2.7 to 8.7, and 32,768 took 41.
+ */
+export const MAX_BRACE_EXPANSIONS = 1024;
+
 /** How entries are resolved and read. */
 export interface ScanOptions {
   /** The folder relative entries are read from. Defaults to the working directory. */
@@ -92,7 +99,8 @@ const NODE_MODULES_SEGMENT = /(^|[\\/{,(|])node_modules([\\/},)|]|$)/;
  *
  * An entry is tried as a literal path first, so a real file whose name holds a bracket, such as
  * `app/[id]/page.tsx`, is read rather than taken as a pattern. Only when no such file exists is it
- * expanded as a glob. Folders are never listed.
+ * expanded as a glob. Folders are never listed. An entry whose braces expand to more than
+ * {@link MAX_BRACE_EXPANSIONS} patterns throws a `RangeError`, with or without the strict options.
  */
 export function findFiles(entries: Iterable<string>, options: ScanOptions = {}): string[] {
   const cwd = options.cwd ?? process.cwd();
@@ -208,6 +216,9 @@ function resolveEntry(
 ): string[] {
   let matches: string[];
 
+  // Outside the catch: an entry that would take minutes fails even where an unmatched one is skipped.
+  assertBraceExpansions(entry);
+
   try {
     const literal = path.resolve(cwd, entry);
 
@@ -255,9 +266,17 @@ function assertListable(entry: string, cwd: string, matches: readonly string[], 
 
   for (let index = first; index < segments.length - 1 || segments[index] === "**"; index += 1) {
     const prefix = segments.slice(0, index + 1).join("/");
+    // Folders only: a `**` matches every file below it too, and opening each of them made the check about three times slower.
+    const matched = fs.globSync(prefix, {
+      cwd,
+      withFileTypes: true,
+      exclude: skipNodeModules ? isNodeModules : undefined,
+    });
 
-    for (const match of fs.globSync(prefix, { cwd, exclude: skipNodeModules ? isNodeModules : undefined })) {
-      folders.add(path.resolve(cwd, match));
+    for (const match of matched) {
+      if (match.isDirectory()) {
+        folders.add(path.resolve(cwd, match.parentPath, match.name));
+      }
     }
   }
 
@@ -329,9 +348,82 @@ function reasonUnmatched(entry: string, cwd: string, skipNodeModules: boolean): 
     : undefined;
 }
 
-// Called for each folder the walk would enter too, so it never descends into one.
-function isNodeModules(match: string): boolean {
-  return path.basename(match) === "node_modules";
+// Called for each folder the walk would enter too, so it never descends into one. With `withFileTypes`, it is given a `Dirent`.
+function isNodeModules(match: string | fs.Dirent): boolean {
+  return (typeof match === "string" ? path.basename(match) : match.name) === "node_modules";
+}
+
+/* Counts the patterns an entry's braces expand to without expanding them:
+   a list is the sum of its alternatives, a range `{1..9}`, `{a..e}`, or
+   `{1..9..2}` the number of its steps, and groups side by side multiply. A
+   `{` without its `}`, or a group with neither a comma nor a range, as in
+   `{a}`, is text, as the glob reads it, though braces inside it still count. */
+function countBraceExpansions(entry: string): number {
+  const closing = new Map<number, number>();
+  const open: number[] = [];
+
+  for (let index = 0; index < entry.length; index += 1) {
+    if (entry[index] === "{") {
+      open.push(index);
+    } else if (entry[index] === "}" && open.length > 0) {
+      closing.set(open.pop()!, index);
+    }
+  }
+
+  const sequence = (start: number, end: number): number => {
+    let count = 1;
+
+    for (let index = start; index < end; index += 1) {
+      const close = closing.get(index);
+
+      if (close !== undefined) {
+        count *= group(index + 1, close);
+        index = close;
+      }
+    }
+    return count;
+  };
+
+  const group = (start: number, end: number): number => {
+    const commas: number[] = [];
+
+    for (let index = start; index < end; index += 1) {
+      const close = closing.get(index);
+
+      if (close !== undefined) {
+        index = close;
+      } else if (entry[index] === ",") {
+        commas.push(index);
+      }
+    }
+    if (commas.length > 0) {
+      const bounds = [start - 1, ...commas, end];
+
+      return bounds.slice(1).reduce((sum, bound, index) => sum + sequence(bounds[index]! + 1, bound), 0);
+    }
+
+    const range = /^(-?\d+|[a-z])\.\.(-?\d+|[a-z])(?:\.\.(-?\d+))?$/i.exec(entry.slice(start, end));
+
+    if (range !== null && /\d/.test(range[1]!) === /\d/.test(range[2]!)) {
+      const position = (bound: string) => (/\d/.test(bound) ? Number(bound) : bound.codePointAt(0)!);
+      const step = Math.abs(Number(range[3] ?? 1)) || 1;
+
+      return Math.floor(Math.abs(position(range[2]!) - position(range[1]!)) / step) + 1;
+    }
+    return sequence(start, end);
+  };
+
+  return sequence(0, entry.length);
+}
+
+function assertBraceExpansions(entry: string): void {
+  const count = countBraceExpansions(entry);
+
+  if (count > MAX_BRACE_EXPANSIONS) {
+    throw new RangeError(
+      `"${entry}" expands to ${count} patterns through its braces, more than the ${MAX_BRACE_EXPANSIONS} a glob may; use fewer alternatives, or a * in place of a list.`,
+    );
+  }
 }
 
 /* A link is followed, so a linked file is read and a linked folder is not, and
