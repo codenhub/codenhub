@@ -107,7 +107,7 @@ body {
 
 .icon-card:hover {
   background-color: var(--color-surface-hover, rgba(125, 125, 125, 0.14));
-  border-color: var(--color-border-hover, rgba(125, 125, 125, 0.35));
+  border-color: light-dark(var(--color-neutral-600), var(--color-neutral-500));
   transform: scale(1.06);
 }
 

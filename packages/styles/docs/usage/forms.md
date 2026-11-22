@@ -253,7 +253,7 @@ At rest, a field's border is its intent's full border color, at least 3:1 agains
 
 ## Read-only fields
 
-`readonly` on an `.ipt` or a `.textarea` keeps its value from being edited but leaves it focusable, selectable, and submitted with the form. The field rests on the quiet field color, `--color-foreground`, does not change under the pointer, and keeps its full-strength text and its focus ring, so it reads as a value to read rather than a place to type. It is not dimmed: dimming says a control is unavailable, and a read-only value is still there to read and copy. An `.input-group` whose field is read-only rests the same way.
+`readonly` on an `.ipt` or a `.textarea` keeps its value from being edited but leaves it focusable, selectable, and submitted with the form. The field rests on the quiet field color, `--color-background-subtle`, does not change under the pointer, and keeps its full-strength text and its focus ring, so it reads as a value to read rather than a place to type. It is not dimmed: dimming says a control is unavailable, and a read-only value is still there to read and copy. An `.input-group` whose field is read-only rests the same way.
 
 ```html
 <div class="field">

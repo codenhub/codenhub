@@ -2,7 +2,7 @@
 title: Personalização
 description: Consulta sobre tokens de apresentação e de material, ajustes das estéticas, as variáveis públicas de componente, a paleta gerada e os helpers para criar os seus próprios componentes.
 order: 9
-source: 2d12af657dedaf597c47d7c0fbe8f77bee13a6d3
+source: 3a327891cf7ee86f1ec634459eb6f3e953cf39e8
 ---
 
 # Personalização
@@ -235,7 +235,7 @@ Nomenclatura: `--palette-<intent>-<presentation>-<slot>`, em que `<intent>` é u
 
 - Um sufixo `-hover`, só em `bg` e `edge`, porque a cor do texto não muda no hover: `--palette-success-soft-page-bg-hover`. `.alert`, `.kbd`, `.code` e `.pre` não têm hover próprio, então os seus valores de hover são o que o componente desenha quando você adiciona `box-hover` a ele.
 
-Cada valor é um par `light-dark()`, definido em `:root`, então segue o `color-scheme` de onde é usado, como os tokens de cor do próprio pacote: a configuração do sistema quando nada escolhe um tema, e senão o seletor de tema mais próximo, então uma área clara dentro de uma escura lê os valores claros. Código que usa a paleta sem o pacote troca de tema definindo `color-scheme`, por exemplo `color-scheme: dark` na raiz ou numa área.
+Cada valor é um par `light-dark()`, definido em `:root`, e é resolvido conforme o `color-scheme` do elemento que o usa, como os tokens de cor do próprio pacote. A paleta define esse `color-scheme` nos seletores de tema do pacote: `.theme-light` e `[data-theme="light"]` escolhem os valores claros, e `.theme-dark`, `[data-theme="dark"]` e `.dark` no `<html>` os escuros, na raiz ou numa região, então vence o mais próximo e uma área clara dentro de uma escura lê os valores claros. Ela não define `color-scheme` num `:root` sem mais nada, então uma página sem seletor de tema lê os valores claros, seja qual for a configuração do sistema. Para seguir o sistema, defina você mesmo `color-scheme: light dark` na raiz, como faz a folha de estilos do próprio pacote. Definir `color-scheme` você mesmo em qualquer elemento, como `color-scheme: dark` numa região, escolhe os valores dele do mesmo jeito. Uma página impressa lê os valores claros, como o pacote; veja [Temas → Impressão](./theming.md#impressão).
 
 Ele também não segue `prefers-contrast: more` nem `data-contrast="more"`. Com essa preferência, o pacote desenha a borda de cada intenção no seu tom forte, então um valor `-edge` fica mais fraco que a borda que o componente desenha. Código que precisa respeitar a preferência escolhe uma cor mais forte por conta própria.
 

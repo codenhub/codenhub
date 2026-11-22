@@ -2,7 +2,7 @@
 title: Temas
 description: Modo claro y oscuro, reemplazar la paleta con los colores de marca, definir una intención propia, y cada token de color, intención, base y fuente con su valor por defecto.
 order: 5
-source: 059c7efb0eda78e0564d17ec30ccb0a225d7aad8
+source: 11818fb6c0d117f7c999fe2fa7cac9f211d86c1a
 ---
 
 # Temas
@@ -50,6 +50,8 @@ Cada color de componente viene de un token o de `currentColor`, así que los com
 
 Una página se imprime con el tema claro, sea cual sea el tema que muestra en pantalla. Dentro de `@media print`, la raíz y cada selector oscuro definen `color-scheme: light`, así que cada token se resuelve a su valor claro, también el de una barra lateral forzada a oscuro. El papel es claro, y un texto oscuro sobre él gasta menos tinta que una página oscura impresa.
 
+La regla de la raíz es `!important`, así que también gana a un `color-scheme` que definas tú en `<html>`: en línea, como lo escribe `@codenhub/theme`, en tu propio CSS sin capa o con `scheme-dark` de Tailwind. Un `color-scheme` que definas en un elemento dentro de la página te toca restablecerlo para imprimir, por ejemplo con `print:scheme-light` o con una regla `@media print` propia.
+
 Los componentes con relleno imprimen su fondo. Por defecto, un navegador quita los fondos de una página impresa, lo que deja el texto de contraste de un botón sólido sobre nada, así que cada componente define `print-color-adjust: exact`. La propiedad se hereda, de modo que el contenido de un componente también conserva sus colores.
 
 Un límite: una utilidad `dark:` se sigue aplicando al imprimir. Se compara por selector, no por `color-scheme`, así que con `<html class="dark">` y `dark:bg-black` en un elemento, ese fondo se imprime negro. Escribe una utilidad `print:` a su lado si la página impresa importa.
@@ -70,6 +72,8 @@ Con los puntos de entrada de código fuente de Tailwind (`/tw`), el paquete reem
 ```
 
 Se diferencia de los tokens en un caso: un tema explícito anidado dentro del opuesto. Un elemento `.theme-light` dentro de uno `.theme-dark` tiene tokens claros, porque gana el `color-scheme` más cercano. Pero `dark:` coincide por selector, y `.theme-dark *` coincide con cada elemento dentro de `.theme-dark`, así que una utilidad `dark:` dentro de ese elemento `.theme-light` se sigue aplicando. Si una página usa a la vez tokens y utilidades `dark:`, no anides temas opuestos.
+
+`dark:` lee solo los selectores de tema, nunca `color-scheme`, así que un tema al que le das tu propio nombre también tiene que llevar uno de ellos. Con `@codenhub/theme` y temas con nombres distintos de `light` y `dark`, como un `paper` claro y un `ink` oscuro, la raíz recibe `data-theme="paper"`, la clase `theme-paper` y un `color-scheme: light` en línea, y `dark:` no lee ninguno de ellos: con una preferencia oscura del sistema, cada utilidad `dark:` se aplica en la página `paper` aunque sus tokens sean claros. Da también a la raíz `.theme-light` o `.theme-dark`, según el esquema del tema. `@codenhub/theme` aplica una clase por tema, así que define su opción `className` como `` ({ colorScheme }) => `theme-${colorScheme}` `` y selecciona un tema concreto por su atributo, como `[data-theme="paper"]`, que sigue escribiendo. Su opción `darkClass` añade `.dark` a un tema oscuro, lo que cubre `ink` con el sistema claro, pero no `paper` con el sistema oscuro.
 
 Los puntos de entrada compilados no definen una variante `dark:`; no tienen un build de Tailwind en el que definirla. El [comando `chs build`](../integrating/without-a-bundler.md#variantes) sí ofrece `dark:`, con los mismos selectores, solo en las clases de intención, presentación y modificador.
 
@@ -180,10 +184,9 @@ Cada fila es un punto de sobrescritura: defínelo en `:root` para cambiar el tem
 | `--color-accent-subtle`        | `neutral-100`, `neutral-800` | Tinte secundario detrás de los componentes soft.                                                                 |
 | `--color-accent-strong`        | `neutral-800`, `neutral-200` | Texto, iconos y bordes secundarios donde el relleno no es completo.                                              |
 | `--color-border`               | `neutral-400`, `neutral-700` | Borde de las superficies neutras, tablas, divisores y teclas.                                                    |
-| `--color-border-hover`         | `neutral-600`, `neutral-500` | Borde bajo el puntero.                                                                                           |
 | `--color-control-border`       | `neutral-500`                | Borde en reposo de los controles de texto y toggles neutros.                                                     |
 | `--color-background`           | `neutral-50`, `neutral-950`  | La página.                                                                                                       |
-| `--color-foreground`           | `neutral-100`, `neutral-900` | El tono de fondo discreto un paso por encima de la página: tarjetas soft, paneles y alertas neutros.             |
+| `--color-background-subtle`    | `neutral-100`, `neutral-900` | El tono de fondo discreto un paso por encima de la página: tarjetas soft, paneles y alertas neutros.             |
 | `--color-surface`              | `neutral-200`, `neutral-800` | Un paso más: superficies anidadas y atenuadas, y el tinte de la intención neutra.                                |
 | `--color-text`                 | `neutral-950`, `neutral-50`  | Texto del cuerpo, y el color de la intención neutra.                                                             |
 | `--color-text-secondary`       | `neutral-700`, `neutral-400` | Texto secundario, como `.hint`.                                                                                  |
@@ -196,22 +199,22 @@ Cada fila es un punto de sobrescritura: defínelo en `:root` para cambiar el tem
 | `--color-success-contrast`     | `neutral-50`                 | Texto sobre un relleno success completo: 5.14:1.                                                                 |
 | `--color-success-hover`        | `#007552`, `#006448`         | Relleno success bajo el puntero.                                                                                 |
 | `--color-success-subtle`       | `emerald-100`, `emerald-900` | Tinte success detrás de los componentes soft.                                                                    |
-| `--color-success-strong`       | `emerald-800`, `emerald-300` | Texto, iconos y bordes success donde el relleno no es completo.                                                  |
+| `--color-success-strong`       | `emerald-950`, `emerald-300` | Texto, iconos y bordes success donde el relleno no es completo.                                                  |
 | `--color-warning`              | `amber-600`                  | Relleno de `.warning`.                                                                                           |
 | `--color-warning-contrast`     | `neutral-950`                | Texto sobre un relleno warning completo: casi negro, no el color de la página. 6.19:1.                           |
 | `--color-warning-hover`        | `#d46700`, `#e78300`         | Relleno warning bajo el puntero.                                                                                 |
 | `--color-warning-subtle`       | `amber-100`, `amber-900`     | Tinte warning detrás de los componentes soft.                                                                    |
-| `--color-warning-strong`       | `amber-800`, `amber-300`     | Texto, iconos y bordes warning donde el relleno no es completo.                                                  |
+| `--color-warning-strong`       | `amber-950`, `amber-300`     | Texto, iconos y bordes warning donde el relleno no es completo.                                                  |
 | `--color-destructive`          | `rose-700`                   | Relleno de `.destructive`.                                                                                       |
 | `--color-destructive-contrast` | `neutral-50`                 | Texto sobre un relleno destructive completo: 5.78:1.                                                             |
 | `--color-destructive-hover`    | `#c00036`, `#d1054b`         | Relleno destructive bajo el puntero.                                                                             |
 | `--color-destructive-subtle`   | `rose-100`, `rose-900`       | Tinte destructive detrás de los componentes soft.                                                                |
-| `--color-destructive-strong`   | `rose-800`, `rose-300`       | Texto, iconos y bordes destructive donde el relleno no es completo.                                              |
+| `--color-destructive-strong`   | `rose-950`, `rose-300`       | Texto, iconos y bordes destructive donde el relleno no es completo.                                              |
 | `--color-info`                 | `indigo-600`                 | Relleno de `.info`.                                                                                              |
 | `--color-info-contrast`        | `neutral-50`                 | Texto sobre un relleno info completo: 6.19:1.                                                                    |
 | `--color-info-hover`           | `#4b36e9`, `#5e4ff9`         | Relleno info bajo el puntero.                                                                                    |
 | `--color-info-subtle`          | `indigo-100`, `indigo-900`   | Tinte info detrás de los componentes soft.                                                                       |
-| `--color-info-strong`          | `indigo-800`, `indigo-300`   | Texto, iconos y bordes info donde el relleno no es completo.                                                     |
+| `--color-info-strong`          | `indigo-950`, `indigo-300`   | Texto, iconos y bordes info donde el relleno no es completo.                                                     |
 
 Los cambios de tema van en estos valores, no en reglas de componente que comprueban el tema.
 
@@ -229,7 +232,7 @@ Una clase de intención define estos siete huecos, y los componentes los leen. C
 | `--intent-border`   | Color de línea. Sin intención es el `--ui-ink` de la estética y, si no, `--color-border`; los controles de texto y los toggles leen `--ui-control-ink`, después `--ui-ink` y después `--color-control-border`, y las tablas leen primero `--ui-rule-ink`. |
 | `--intent-fill-max` | Hasta dónde puede llegar un relleno de esta intención. `100%` para todas las intenciones excepto la neutra.                                                                                                                                               |
 
-`--intent-color` e `--intent-strong` no son intercambiables. El color base se elige para rellenar con él; el tono strong se elige para leerse sobre la página. Un componente soft o ghost imprime el tono strong, y por eso un warning soft se lee en amber-800 mientras que uno sólido se rellena con amber-600.
+`--intent-color` e `--intent-strong` no son intercambiables. El color base se elige para rellenar con él; el tono strong se elige para leerse sobre la página, y sobre una superficie `.solid` neutra, donde un componente con intención conserva su propio color de texto. Un componente soft o ghost imprime el tono strong, y por eso un warning soft se lee en amber-950 mientras que uno sólido se rellena con amber-600.
 
 El tono strong también tiene que seguir siendo reconociblemente de su propio matiz. En una página oscura, el tono `-100` de cada familia es un tinte pálido casi sin color en tamaños pequeños: un badge success soft y uno destructive soft se leerían los dos como blancos. Por eso los tonos strong oscuros son `-300`, y los tintes bajo ellos son `-900`, que mide 5.0:1 o más dondequiera que un relleno parcial contenga texto, y más de 9:1 sobre la página.
 

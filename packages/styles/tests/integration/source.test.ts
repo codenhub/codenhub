@@ -126,3 +126,47 @@ test("every selector that names :disabled names every disabled spelling", async 
 
   expect(lonely).toEqual([]);
 });
+
+/* The colour tokens `src/tokens.css` declares, each the package's public
+   surface: every one is listed in `docs/usage/theming.md`'s colour table, and
+   every one is read by a rule of the package. `--color-border-hover` was
+   documented as the border under the pointer while nothing drew it, and a
+   token nothing reads is a promise no test holds. */
+const declaredColorTokens = async () => {
+  const tokens = await readFile(path.join(packageRoot, "src/tokens.css"), "utf8");
+
+  return [...tokens.matchAll(/^\s*(--color-[a-z0-9-]+)\s*:/gm)].map(([, name]) => name!);
+};
+
+test("every colour token tokens.css declares is documented in theming.md", async () => {
+  const theming = await readFile(path.join(packageRoot, "docs/usage/theming.md"), "utf8");
+  const start = theming.indexOf("## Color tokens");
+  const table = theming.slice(start, theming.indexOf("\n## ", start + 1));
+  const documented = new Set([...table.matchAll(/^\| `(--[a-z0-9-]+)`/gm)].map(([, name]) => name));
+  const declared = await declaredColorTokens();
+
+  expect(declared.length).toBeGreaterThan(30);
+  expect(declared.filter((name) => !documented.has(name))).toEqual([]);
+  expect([...documented].filter((name) => name.startsWith("--color-") && !declared.includes(name))).toEqual([]);
+});
+
+test("every colour token tokens.css declares is read by the package", async () => {
+  const { readdir } = await import("node:fs/promises");
+  const sourceDirectory = path.join(packageRoot, "src");
+  const files = (await readdir(sourceDirectory, { recursive: true })).filter(
+    (entry): entry is string => typeof entry === "string" && entry.endsWith(".css") && entry !== "palette.css",
+  );
+  const source = (await Promise.all(files.map((file) => readFile(path.join(sourceDirectory, file), "utf8")))).join(
+    "\n",
+  );
+  const read = new Set([...source.matchAll(/var\((--color-[a-z0-9-]+)/g)].map(([, name]) => name));
+
+  expect((await declaredColorTokens()).filter((name) => !read.has(name))).toEqual([]);
+});
+
+/* `--color-foreground` named a background tone, the opposite of the meaning
+   Tailwind and shadcn give `foreground`: `bg-background text-foreground`
+   printed neutral-100 on neutral-50, at 1.04:1. */
+test("no colour token is named foreground", async () => {
+  expect((await declaredColorTokens()).filter((name) => name.includes("foreground"))).toEqual([]);
+});

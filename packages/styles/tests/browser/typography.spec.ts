@@ -493,7 +493,7 @@ test("ends a table after its footer rather than after its body", async ({ page }
   expect(tables.withoutFoot.at(-1)?.section, "the row that ends a footless table").toBe("TBODY");
 });
 
-/* A hovered row used to mix into `--color-foreground`, a tone the page owns and
+/* A hovered row used to mix into `--color-background-subtle`, a tone the page owns and
    the table may not be wearing. On a solid table -- whose body is the intent --
    that put a near-black band across a white table. The step is relative now, so
    the assertion is relative too: a hovered row stays near its own table and well
@@ -532,13 +532,13 @@ test("steps a hovered table row from its own table rather than the page", async 
     const values = ["primary", "secondary", "neutral"].map(read);
 
     const probe = document.createElement("span");
-    probe.style.color = "var(--color-foreground)";
+    probe.style.color = "var(--color-background-subtle)";
     document.body.append(probe);
-    const tokenForeground = getComputedStyle(probe).color;
+    const tokenBackgroundSubtle = getComputedStyle(probe).color;
     probe.remove();
     host.remove();
 
-    return { page: getComputedStyle(document.body).backgroundColor, tokenForeground, values };
+    return { page: getComputedStyle(document.body).backgroundColor, tokenBackgroundSubtle, values };
   });
 
   for (const row of rows.values) {
@@ -552,10 +552,10 @@ test("steps a hovered table row from its own table rather than the page", async 
 
     expect(getColorDistance(painted, plate), `${row.intent} hovered row moves`).toBeGreaterThan(2);
     expect(getColorDistance(painted, plate), `${row.intent} hovered row stays near its table`).toBeLessThanOrEqual(40);
-    /* The bug this test was written for: mixed into `--color-foreground` the step
+    /* The bug this test was written for: mixed into `--color-background-subtle` the step
        was absolute, so a solid primary table in the dark theme is white and its
        hovered row came out near-black. */
-    expect(getColorDistance(painted, rows.tokenForeground), `${row.intent} hovered row`).toBeGreaterThan(40);
+    expect(getColorDistance(painted, rows.tokenBackgroundSubtle), `${row.intent} hovered row`).toBeGreaterThan(40);
   }
 });
 

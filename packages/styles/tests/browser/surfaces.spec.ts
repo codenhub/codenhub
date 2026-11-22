@@ -50,7 +50,7 @@ test.describe("surfaces", () => {
     expect(styles.outlineBorderWidth).toBe("1px");
   });
 
-  /* `.card.soft` rests untinted (`--color-foreground`, `--ui-fill` effectively
+  /* `.card.soft` rests untinted (`--color-background-subtle`, `--ui-fill` effectively
      0%) and only reveals the intent tint together with a `--color-surface`
      ground on `.interactive`/`.hoverable` `:hover` -- see the comment in
      `box.css` above `--_fill-cap` and in `surface.css` above `.card`'s
@@ -78,17 +78,17 @@ test.describe("surfaces", () => {
       return {
         restBackground: getComputedStyle(document.querySelector('[data-testid="card-soft-edged-none"]')!)
           .backgroundColor,
-        tokenForeground: resolveToken("foreground"),
+        tokenBackgroundSubtle: resolveToken("background-subtle"),
       };
     });
 
-    expectSameColor(styles.restBackground, styles.tokenForeground, "neutral soft card rests untinted");
+    expectSameColor(styles.restBackground, styles.tokenBackgroundSubtle, "neutral soft card rests untinted");
 
     const card = page.locator('[data-testid="card-soft-edged-none-interactive"]');
     const background = () => card.evaluate((element) => getComputedStyle(element).backgroundColor);
 
     const restBackground = await background();
-    expectSameColor(restBackground, styles.tokenForeground, "interactive soft card rests untinted too");
+    expectSameColor(restBackground, styles.tokenBackgroundSubtle, "interactive soft card rests untinted too");
 
     await card.hover();
 

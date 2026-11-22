@@ -72,10 +72,10 @@
      and starts on it too, so the see-through header sits on a band of its own. */
   background: linear-gradient(
     to bottom,
-    var(--color-foreground),
+    var(--color-background-subtle),
     var(--color-background) 30%,
     var(--color-background) 55%,
-    var(--color-foreground)
+    var(--color-background-subtle)
   );
 }
 
@@ -153,7 +153,7 @@
 }
 
 .landing-band {
-  background: var(--color-foreground);
+  background: var(--color-background-subtle);
 }
 
 .landing-principles {
@@ -209,7 +209,7 @@
   gap: 0.75rem;
   padding: 1.75rem;
   border-radius: var(--radius-surface);
-  background: var(--color-foreground);
+  background: var(--color-background-subtle);
 }
 
 .landing-area h3 {

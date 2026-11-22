@@ -180,7 +180,7 @@
     /* A read-only field can still be focused, and its value selected and
        copied, so it keeps the focus ring and full-strength text; it is not
        dimmed, which is what disabled says. It rests on the quiet field tone,
-       `--color-foreground`, as the ground under any fill, so it reads as a value
+       `--color-background-subtle`, as the ground under any fill, so it reads as a value
        to read rather than a place to type, and the hover above leaves it alone.
        A group whose field is read-only rests the same way, since the group is
        the field boundary. Not on a toggle: `readonly` does not apply to one. */
@@ -205,7 +205,7 @@
           )
         )[readonly]
     ) {
-      --_d-ground: var(--color-foreground);
+      --_d-ground: var(--color-background-subtle);
     }
 
     /* The forced-colours ring, carried so `@apply text-control` draws it: the

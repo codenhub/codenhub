@@ -1,3 +1,9 @@
+import { execFileSync } from "node:child_process";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+
 import { expect, test } from "./fixtures";
 import { getColorDistance, getContrastRatio, ORIGIN, settleAnimations } from "./test-utils";
 
@@ -355,6 +361,107 @@ test("prints a dark page in the light theme, and a filled box with its plate", a
   expect(dark.plate, "the plate is the light theme's").toBe(light.plate);
 });
 
+const packageRoot = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
+
+/* `chs build` output for a page with one button, compiled once per worker. */
+const chsBuild = (() => {
+  let css: string | undefined;
+
+  return () => {
+    if (css === undefined) {
+      const folder = mkdtempSync(path.join(tmpdir(), "chs-print-"));
+
+      try {
+        writeFileSync(path.join(folder, "index.html"), '<button class="btn solid primary">Save</button>');
+        execFileSync(
+          process.execPath,
+          [path.join(packageRoot, "dist", "cli.js"), "build", "-c", "index.html", "-o", "app.css"],
+          {
+            cwd: folder,
+            stdio: "pipe",
+          },
+        );
+        css = readFileSync(path.join(folder, "app.css"), "utf8");
+      } finally {
+        rmSync(folder, { force: true, recursive: true });
+      }
+    }
+
+    return css;
+  };
+})();
+
+/* Every path a page takes the theme through: the compiled files, the
+   Tailwind builds the dev server compiles, and `chs build`. */
+const THEME_PATHS: { name: string; style: () => { content: string } | { url: string } }[] = [
+  ...["index.css", "theme.css", "native.css", "components.css", "purge/index.css"].map((file) => ({
+    name: `dist/${file}`,
+    style: () => ({ content: readFileSync(path.join(packageRoot, "dist", file), "utf8") }),
+  })),
+  { name: "/tw", style: () => ({ url: `${ORIGIN}/shared/entry-tw.css` }) },
+  { name: "/native/tw", style: () => ({ url: `${ORIGIN}/native/entry-tw.css` }) },
+  { name: "chs build", style: () => ({ content: chsBuild() }) },
+];
+
+/* Every way a page asks for dark: the package's own selectors, an inline
+   `color-scheme` as `@codenhub/theme` writes it, and a consumer's own rule,
+   unlayered or in `utilities` as Tailwind's `scheme-dark` is. Each printed
+   near-white on paper while it set the scheme with more weight than the
+   theme layer's print rule had. */
+const DARK_ROOTS = [
+  { name: 'data-theme="dark"', html: 'data-theme="dark"', css: "" },
+  { name: ".dark", html: 'class="dark"', css: "" },
+  { name: ".theme-dark", html: 'class="theme-dark"', css: "" },
+  { name: "inline color-scheme", html: 'data-theme="dark" style="color-scheme: dark"', css: "" },
+  { name: "unlayered rule", html: "", css: ":root { color-scheme: dark; }" },
+  { name: "utilities rule", html: "", css: "@layer utilities { :root { color-scheme: dark; } }" },
+];
+
+for (const themePath of THEME_PATHS) {
+  test(`prints the light theme however the root asks for dark, ${themePath.name}`, async ({ page }) => {
+    await page.emulateMedia({ media: "print" });
+
+    const failures: string[] = [];
+
+    for (const root of DARK_ROOTS) {
+      // oxlint-disable-next-line no-await-in-loop -- one page per root, named in the failure.
+      await page.setContent(
+        `<!doctype html><html ${root.html}><head></head><body>` +
+          '<span id="text" style="color: var(--color-text)">Text</span>' +
+          '<section class="theme-dark"><span id="region" style="color: var(--color-text)">Region</span></section>' +
+          '<div style="color-scheme: light"><span id="light" style="color: var(--color-text)">Light</span></div>' +
+          "</body></html>",
+      );
+      // oxlint-disable-next-line no-await-in-loop -- as above.
+      await page.addStyleTag(themePath.style());
+      if (root.css) {
+        // oxlint-disable-next-line no-await-in-loop -- as above.
+        await page.addStyleTag({ content: root.css });
+      }
+
+      // oxlint-disable-next-line no-await-in-loop -- as above.
+      const read = await page.evaluate(() => {
+        const color = (id: string) => getComputedStyle(document.getElementById(id)!).color;
+
+        return {
+          light: color("light"),
+          region: color("region"),
+          scheme: getComputedStyle(document.documentElement).colorScheme,
+          text: color("text"),
+        };
+      });
+
+      if (read.scheme !== "light" || read.text !== read.light || read.region !== read.light) {
+        failures.push(
+          `${root.name}: scheme ${read.scheme}, text ${read.text}, region ${read.region}, light ${read.light}`,
+        );
+      }
+    }
+
+    expect(failures).toEqual([]);
+  });
+}
+
 /* `.quote` hand-composes `box`'s formula rather than applying it, so it did not
    carry `box`'s exact print: a solid quotation printed its contrast text, white
    in the light theme, on paper with no plate behind it. */
@@ -426,6 +533,118 @@ test("a page's token override reaches a shadow root that loads the sheet", async
   ).toBeLessThanOrEqual(2);
   expect(read.inside.radius, "the radius crosses too").toBe(read.outside.radius);
 });
+
+/* Tailwind's Preflight sets its own type on `html, :host`, and the reset puts
+   the brand font back on `html` alone, so a shadow root took Tailwind's sans
+   stack while the page beside it took `--font-default`. Inside a region that
+   sets its own type, an aesthetic's font or a utility's leading, every other
+   property of that rule stopped at the host too. Each one is read off the
+   rule itself, so a property Preflight adds is checked without a list here
+   growing. A value for each, distinct from Preflight's, is what the region
+   sets; one without a value fails rather than going unchecked. */
+const PREFLIGHT_HOST_VALUES: Record<string, string> = {
+  "-webkit-tap-highlight-color": "rgb(255, 0, 0)",
+  "-webkit-text-size-adjust": "50%",
+  "text-size-adjust": "50%",
+  "font-family": "monospace",
+  "font-feature-settings": '"smcp"',
+  "font-variation-settings": '"wght" 500',
+  "line-height": "37px",
+  "tab-size": "7",
+};
+
+const SHADOW_PATHS = THEME_PATHS.filter(({ name }) =>
+  ["dist/index.css", "dist/purge/index.css", "/tw", "chs build"].includes(name),
+);
+
+test("Preflight's html, :host rule sets only properties this suite gives a value", async ({ page }) => {
+  await page.setContent("<!doctype html><html><head></head><body></body></html>");
+  await page.addStyleTag({ content: readFileSync(path.join(packageRoot, "dist", "index.css"), "utf8") });
+
+  const properties = await page.evaluate(() => {
+    const found: string[] = [];
+    const walk = (rules: CSSRuleList) => {
+      for (const rule of rules) {
+        if (rule instanceof CSSStyleRule && rule.selectorText.replaceAll(" ", "") === "html,:host") {
+          found.push(...Array.from(rule.style));
+        }
+        if ("cssRules" in rule && !(rule instanceof CSSStyleRule)) {
+          walk((rule as CSSGroupingRule).cssRules);
+        }
+      }
+    };
+
+    for (const sheet of document.styleSheets) {
+      walk(sheet.cssRules);
+    }
+
+    return found;
+  });
+
+  expect(properties.length, "the rule is found").toBeGreaterThan(0);
+  expect(properties.filter((name) => !(name in PREFLIGHT_HOST_VALUES))).toEqual([]);
+});
+
+for (const themePath of SHADOW_PATHS) {
+  test(`a shadow root takes the page's type, on the page and in a region, ${themePath.name}`, async ({ page }) => {
+    const style = themePath.style();
+    const region = Object.entries(PREFLIGHT_HOST_VALUES)
+      .map(([name, value]) => `${name}: ${value}`)
+      .join("; ");
+
+    await page.setContent(
+      `<!doctype html><html><head></head><body>` +
+        '<span id="page-light">Text</span><div id="page-host"></div>' +
+        `<div style='${region}'><span id="region-light">Text</span><div id="region-host"></div></div>` +
+        "</body></html>",
+    );
+    await page.addStyleTag(style);
+
+    const read = await page.evaluate(
+      async ({ properties, style }) => {
+        const results: Record<string, { light: string; shadow: string }> = {};
+
+        for (const where of ["page", "region"]) {
+          const root = document.getElementById(`${where}-host`)!.attachShadow({ mode: "open" });
+          const sheet = document.createElement(style.url ? "link" : "style");
+
+          if (style.url) {
+            Object.assign(sheet, { href: style.url, rel: "stylesheet" });
+          } else {
+            sheet.textContent = style.content!;
+          }
+          const loaded = style.url ? new Promise((resolve) => sheet.addEventListener("load", resolve)) : null;
+
+          root.append(sheet);
+          // oxlint-disable-next-line no-await-in-loop -- each shadow root is read once its sheet applies.
+          await loaded;
+          const span = document.createElement("span");
+
+          span.textContent = "Text";
+          root.append(span);
+          const light = getComputedStyle(document.getElementById(`${where}-light`)!);
+          const shadow = getComputedStyle(span);
+
+          for (const name of properties) {
+            results[`${where} ${name}`] = {
+              light: light.getPropertyValue(name),
+              shadow: shadow.getPropertyValue(name),
+            };
+          }
+        }
+
+        return results;
+      },
+      { properties: Object.keys(PREFLIGHT_HOST_VALUES), style: style as { content?: string; url?: string } },
+    );
+
+    const differ = Object.entries(read)
+      .filter(([, { light, shadow }]) => light !== shadow)
+      .map(([name, { light, shadow }]) => `${name}: page ${light}, shadow ${shadow}`);
+
+    expect(differ).toEqual([]);
+  });
+}
 
 /* Inside a shadow root, the sheet's `:root` matches nothing, so the tokens
    reach it by inheritance from the page, which loads the sheet too, as

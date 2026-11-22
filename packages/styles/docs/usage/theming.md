@@ -49,6 +49,8 @@ Every component color comes from a token or from `currentColor`, so components f
 
 A page prints in the light theme, whatever theme it shows on screen. Under `@media print`, the root and every dark selector set `color-scheme: light`, so every token resolves to its light value, a forced-dark sidebar's included. Paper is light, and dark text on it costs less ink than a printed dark page.
 
+The root's rule is `!important`, so it also wins over a `color-scheme` you set on `<html>` yourself: inline, as `@codenhub/theme` writes it, in your own unlayered CSS, or with Tailwind's `scheme-dark`. A `color-scheme` you set on an element inside the page is yours to reset for print, such as with `print:scheme-light` or a `@media print` rule of your own.
+
 Filled components print their background. A browser drops backgrounds from a printed page by default, which leaves a solid button's contrast text on nothing, so every component sets `print-color-adjust: exact`. The property inherits, so the content inside a component keeps its colors too.
 
 One limit: a `dark:` utility still applies in print. It matches by selector, not by `color-scheme`, so `<html class="dark">` with `dark:bg-black` on an element prints that background black. Write a `print:` utility beside it if the printed page matters.
@@ -69,6 +71,8 @@ With the Tailwind source entrypoints (`/tw`), the package replaces Tailwind's `d
 ```
 
 It differs from the tokens in one case: an explicit theme nested inside the opposite one. A `.theme-light` element inside a `.theme-dark` one has light tokens, because the nearest `color-scheme` wins. But `dark:` matches by selector, and `.theme-dark *` matches every element inside `.theme-dark`, so a `dark:` utility inside that `.theme-light` element still applies. If a page uses both tokens and `dark:` utilities, do not nest opposite themes.
+
+`dark:` reads only the theme selectors, never `color-scheme`, so a theme you name yourself has to carry one of them too. With `@codenhub/theme` and themes named other than `light` and `dark`, such as a light `paper` and a dark `ink`, the root gets `data-theme="paper"`, the class `theme-paper`, and an inline `color-scheme: light`, and `dark:` reads none of them: under a dark system preference, every `dark:` utility applies on the `paper` page although its tokens are light. Give the root `.theme-light` or `.theme-dark` as well, matching the theme's scheme. `@codenhub/theme` applies one class per theme, so set its `className` option to `` ({ colorScheme }) => `theme-${colorScheme}` ``, and select a single theme by its attribute, such as `[data-theme="paper"]`, which it still writes. Its `darkClass` option adds `.dark` to a dark theme, which covers `ink` on a light system but not `paper` on a dark one.
 
 The compiled entrypoints do not define a `dark:` variant; they have no Tailwind build to define it in. The [`chs build` command](../integrating/without-a-bundler.md#variants) does offer `dark:`, with the same selectors, on the intent, presentation, and modifier classes only.
 
@@ -179,10 +183,9 @@ Each row is an override point: set it on `:root` to retheme the page, or on any 
 | `--color-accent-subtle`        | `neutral-100`, `neutral-800` | Secondary tint behind soft components.                                                         |
 | `--color-accent-strong`        | `neutral-800`, `neutral-200` | Secondary text, icons, and borders where the fill is not full.                                 |
 | `--color-border`               | `neutral-400`, `neutral-700` | Border of neutral surfaces, tables, dividers, and key caps.                                    |
-| `--color-border-hover`         | `neutral-600`, `neutral-500` | Border under the pointer.                                                                      |
 | `--color-control-border`       | `neutral-500`                | Resting border of neutral text controls and toggles.                                           |
 | `--color-background`           | `neutral-50`, `neutral-950`  | The page.                                                                                      |
-| `--color-foreground`           | `neutral-100`, `neutral-900` | The quiet background tone one step off the page: neutral soft cards, panels, and alerts.       |
+| `--color-background-subtle`    | `neutral-100`, `neutral-900` | The quiet background tone one step off the page: neutral soft cards, panels, and alerts.       |
 | `--color-surface`              | `neutral-200`, `neutral-800` | A further step: nested and muted surfaces, and the neutral intent's tint.                      |
 | `--color-text`                 | `neutral-950`, `neutral-50`  | Body text, and the neutral intent's color.                                                     |
 | `--color-text-secondary`       | `neutral-700`, `neutral-400` | Secondary text, such as `.hint`.                                                               |
@@ -195,22 +198,22 @@ Each row is an override point: set it on `:root` to retheme the page, or on any 
 | `--color-success-contrast`     | `neutral-50`                 | Text on a full success fill: 5.14:1.                                                           |
 | `--color-success-hover`        | `#007552`, `#006448`         | Success fill under the pointer.                                                                |
 | `--color-success-subtle`       | `emerald-100`, `emerald-900` | Success tint behind soft components.                                                           |
-| `--color-success-strong`       | `emerald-800`, `emerald-300` | Success text, icons, and borders where the fill is not full.                                   |
+| `--color-success-strong`       | `emerald-950`, `emerald-300` | Success text, icons, and borders where the fill is not full.                                   |
 | `--color-warning`              | `amber-600`                  | Fill of `.warning`.                                                                            |
 | `--color-warning-contrast`     | `neutral-950`                | Text on a full warning fill: near-black, not the page color. 6.19:1.                           |
 | `--color-warning-hover`        | `#d46700`, `#e78300`         | Warning fill under the pointer.                                                                |
 | `--color-warning-subtle`       | `amber-100`, `amber-900`     | Warning tint behind soft components.                                                           |
-| `--color-warning-strong`       | `amber-800`, `amber-300`     | Warning text, icons, and borders where the fill is not full.                                   |
+| `--color-warning-strong`       | `amber-950`, `amber-300`     | Warning text, icons, and borders where the fill is not full.                                   |
 | `--color-destructive`          | `rose-700`                   | Fill of `.destructive`.                                                                        |
 | `--color-destructive-contrast` | `neutral-50`                 | Text on a full destructive fill: 5.78:1.                                                       |
 | `--color-destructive-hover`    | `#c00036`, `#d1054b`         | Destructive fill under the pointer.                                                            |
 | `--color-destructive-subtle`   | `rose-100`, `rose-900`       | Destructive tint behind soft components.                                                       |
-| `--color-destructive-strong`   | `rose-800`, `rose-300`       | Destructive text, icons, and borders where the fill is not full.                               |
+| `--color-destructive-strong`   | `rose-950`, `rose-300`       | Destructive text, icons, and borders where the fill is not full.                               |
 | `--color-info`                 | `indigo-600`                 | Fill of `.info`.                                                                               |
 | `--color-info-contrast`        | `neutral-50`                 | Text on a full info fill: 6.19:1.                                                              |
 | `--color-info-hover`           | `#4b36e9`, `#5e4ff9`         | Info fill under the pointer.                                                                   |
 | `--color-info-subtle`          | `indigo-100`, `indigo-900`   | Info tint behind soft components.                                                              |
-| `--color-info-strong`          | `indigo-800`, `indigo-300`   | Info text, icons, and borders where the fill is not full.                                      |
+| `--color-info-strong`          | `indigo-950`, `indigo-300`   | Info text, icons, and borders where the fill is not full.                                      |
 
 Theme changes belong in these values, not in component rules that check the theme.
 
@@ -228,7 +231,7 @@ An intent class sets these seven slots, and components read them. Because every 
 | `--intent-border`   | Line color. With no intent it is the aesthetic's `--ui-ink`, then `--color-border`; text controls and toggles read `--ui-control-ink`, then `--ui-ink`, then `--color-control-border`, and tables read `--ui-rule-ink` first. |
 | `--intent-fill-max` | How far a fill of this intent may go. `100%` for every intent except neutral.                                                                                                                                                 |
 
-`--intent-color` and `--intent-strong` are not interchangeable. The base color is chosen to be filled with; the strong tone is chosen to be read against the page. A soft or ghost component prints the strong tone, which is why a soft warning reads in amber-800 while a solid one is filled with amber-600.
+`--intent-color` and `--intent-strong` are not interchangeable. The base color is chosen to be filled with; the strong tone is chosen to be read against the page, and against a neutral `.solid` surface, where a component with an intent keeps its own text color. A soft or ghost component prints the strong tone, which is why a soft warning reads in amber-950 while a solid one is filled with amber-600.
 
 The strong tone also has to stay recognizably its own hue. On a dark page, the `-100` shade of every family is a pale tint with almost no color at small sizes: a soft success badge and a soft destructive one would both read as white. The dark strong tones are `-300` for that reason, and the tints under them are `-900`, which measures 5.0:1 or better wherever a partial fill holds text, and over 9:1 on the page.
 

@@ -2,7 +2,7 @@
 title: Composição
 description: Consulta sobre como intenção, apresentação, estética e elevação se combinam, o visual padrão de cada componente e quais classes cada componente lê.
 order: 8
-source: 2493c7c14124565b565b1226e99d4b3de3b087b2
+source: 4b39b54fc10896007bbe68ed0c51cff0695a345d
 ---
 
 # Composição
@@ -77,7 +77,7 @@ A borda é o contorno do componente e nada mais. Linhas dentro de um componente,
 
 ### Superfícies neutras ficam sem tom em repouso
 
-Um `.card.soft`, um `.panel` e um `.alert` neutros não mostram tom em repouso. Em vez disso, eles usam o tom de fundo discreto um passo distante da página (`--color-foreground`), porque um tom cinza em toda caixa neutra parece sujo, e não discreto.
+Um `.card.soft`, um `.panel` e um `.alert` neutros não mostram tom em repouso. Em vez disso, eles usam o tom de fundo discreto um passo distante da página (`--color-background-subtle`), porque um tom cinza em toda caixa neutra parece sujo, e não discreto.
 
 - Um `.card.soft` com `.interactive` ou `.hoverable` mostra o tom no hover. Um `.card.soft` simples e um `.panel` não têm estado de hover.
 - A apresentação pode vir do elemento ou de um contêiner: `<div class="soft"><div class="card">` fica em repouso como `.card.soft`, e um contêiner `.ghost` ou `.solid` dá a um `.panel` ou `.alert` a placa que a própria classe daria.

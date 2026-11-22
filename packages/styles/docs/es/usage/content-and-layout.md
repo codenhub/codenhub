@@ -184,7 +184,7 @@ Una tabla lee la [presentación](./composing.md#presentación) en su encabezado,
 </table>
 ```
 
-- `.soft`, el valor por defecto, da al encabezado el tono de fondo discreto, `--color-foreground`, con cualquier intención. Una tabla no tiene estado de hover para un tinte, así que una `.data-table.success.soft` no se vuelve verde; sus líneas y su borde sí.
+- `.soft`, el valor por defecto, da al encabezado el tono de fondo discreto, `--color-background-subtle`, con cualquier intención. Una tabla no tiene estado de hover para un tinte, así que una `.data-table.success.soft` no se vuelve verde; sus líneas y su borde sí.
 - `.ghost` quita el fondo del encabezado y deja las líneas y el texto.
 - `.solid` rellena el encabezado con el color de la intención.
 

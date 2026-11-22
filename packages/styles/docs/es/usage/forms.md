@@ -254,7 +254,7 @@ En reposo, el borde de un campo es el color de borde completo de su intención, 
 
 ## Campos de solo lectura
 
-`readonly` en un `.ipt` o un `.textarea` impide editar su valor, pero lo deja enfocable, seleccionable y enviado con el formulario. El campo reposa sobre el tono de fondo discreto de los campos, `--color-foreground`, no cambia bajo el puntero y conserva el texto a plena intensidad y su anillo de foco, así que se lee como un valor que leer y no como un lugar donde escribir. No se atenúa: atenuar dice que un control no está disponible, y un valor de solo lectura sigue ahí para leerlo y copiarlo. Un `.input-group` cuyo campo es de solo lectura reposa de la misma forma.
+`readonly` en un `.ipt` o un `.textarea` impide editar su valor, pero lo deja enfocable, seleccionable y enviado con el formulario. El campo reposa sobre el tono de fondo discreto de los campos, `--color-background-subtle`, no cambia bajo el puntero y conserva el texto a plena intensidad y su anillo de foco, así que se lee como un valor que leer y no como un lugar donde escribir. No se atenúa: atenuar dice que un control no está disponible, y un valor de solo lectura sigue ahí para leerlo y copiarlo. Un `.input-group` cuyo campo es de solo lectura reposa de la misma forma.
 
 ```html
 <div class="field">

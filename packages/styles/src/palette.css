@@ -6,8 +6,11 @@
    order -- see `src/theme.css` and docs/internal/model.md#cascade-layers.
 
    Each value is a `light-dark()` pair, resolved where it is used against
-   that element's `color-scheme`, so it follows the system and every theme
-   selector the way the package's own tokens do. */
+   that element's `color-scheme`. The theme selectors the package's own
+   stylesheet answers set it here too, so a page that loads only the palette
+   follows `data-theme`, `.theme-light`, `.theme-dark`, and `.dark` on
+   the root, and prints light. A bare `:root` is left to the page:
+   following the system takes `color-scheme: light dark` on it. */
 @layer theme, base, components, utilities;
 
 @layer theme {
@@ -109,19 +112,19 @@
     --palette-success-solid-fg: oklab(0.985 0 0);
     --palette-success-solid-edge: oklab(0 0 0 / 0);
     --palette-success-solid-bg-hover: light-dark(
-      oklab(0.497872 -0.101989 0.029308),
+      oklab(0.470478 -0.0960275 0.0268432),
       oklab(0.446158 -0.0899286 0.022681)
     );
     --palette-success-solid-edge-hover: oklab(0 0 0 / 0);
-    --palette-success-soft-fg: light-dark(oklab(0.432 -0.0925326 0.0215109), oklab(0.845 -0.138113 0.0370641));
+    --palette-success-soft-fg: light-dark(oklab(0.262 -0.0505697 0.00661093), oklab(0.845 -0.138113 0.0370641));
     --palette-success-soft-bg: oklab(0.508 -0.114299 0.0293215 / 0.12);
     --palette-success-soft-edge: oklab(0.508 -0.114299 0.0293215 / 0.88);
     --palette-success-soft-bg-hover: light-dark(
-      oklab(0.497872 -0.101989 0.029308 / 0.26),
+      oklab(0.470478 -0.0960275 0.0268432 / 0.26),
       oklab(0.446158 -0.0899286 0.022681 / 0.26)
     );
     --palette-success-soft-edge-hover: light-dark(
-      oklab(0.497872 -0.101989 0.029308 / 0.88),
+      oklab(0.470478 -0.0960275 0.0268432 / 0.88),
       oklab(0.446158 -0.0899286 0.022681 / 0.88)
     );
     --palette-success-soft-page-bg: light-dark(
@@ -130,11 +133,11 @@
     );
     --palette-success-soft-page-edge: oklab(0.508 -0.114299 0.0293215 / 0.88);
     --palette-success-soft-page-bg-hover: light-dark(
-      oklab(0.858347 -0.0265171 0.00762008),
+      oklab(0.851224 -0.0249671 0.00697924),
       oklab(0.223301 -0.0233814 0.00589705)
     );
     --palette-success-soft-page-edge-hover: light-dark(
-      oklab(0.497872 -0.101989 0.029308 / 0.88),
+      oklab(0.470478 -0.0960275 0.0268432 / 0.88),
       oklab(0.446158 -0.0899286 0.022681 / 0.88)
     );
     --palette-success-soft-subtle-bg: light-dark(
@@ -143,68 +146,68 @@
     );
     --palette-success-soft-subtle-edge: oklab(0.508 -0.114299 0.0293215 / 0.88);
     --palette-success-soft-subtle-bg-hover: light-dark(
-      oklab(0.832447 -0.0633257 0.0188378),
+      oklab(0.825324 -0.0617758 0.0181969),
       oklab(0.395721 -0.0793031 0.0168279)
     );
     --palette-success-soft-subtle-edge-hover: light-dark(
-      oklab(0.497872 -0.101989 0.029308 / 0.88),
+      oklab(0.470478 -0.0960275 0.0268432 / 0.88),
       oklab(0.446158 -0.0899286 0.022681 / 0.88)
     );
-    --palette-success-ghost-fg: light-dark(oklab(0.432 -0.0925326 0.0215109), oklab(0.845 -0.138113 0.0370641));
+    --palette-success-ghost-fg: light-dark(oklab(0.262 -0.0505697 0.00661093), oklab(0.845 -0.138113 0.0370641));
     --palette-success-ghost-bg: oklab(0 0 0 / 0);
     --palette-success-ghost-edge: oklab(0.508 -0.114299 0.0293215);
     --palette-success-ghost-bg-hover: light-dark(
-      oklab(0.497872 -0.101989 0.029308 / 0.14),
+      oklab(0.470478 -0.0960275 0.0268432 / 0.14),
       oklab(0.446158 -0.0899286 0.022681 / 0.14)
     );
     --palette-success-ghost-edge-hover: light-dark(
-      oklab(0.497872 -0.101989 0.029308),
+      oklab(0.470478 -0.0960275 0.0268432),
       oklab(0.446158 -0.0899286 0.022681)
     );
     --palette-success-ghost-page-bg: light-dark(oklab(0.985 0 0), oklab(0.145 0 0));
     --palette-success-ghost-page-edge: oklab(0.508 -0.114299 0.0293215);
     --palette-success-ghost-page-bg-hover: light-dark(
-      oklab(0.916802 -0.0142784 0.00410312),
+      oklab(0.912967 -0.0134438 0.00375805),
       oklab(0.187162 -0.01259 0.00317534)
     );
     --palette-success-ghost-page-edge-hover: light-dark(
-      oklab(0.497872 -0.101989 0.029308),
+      oklab(0.470478 -0.0960275 0.0268432),
       oklab(0.446158 -0.0899286 0.022681)
     );
     --palette-success-ghost-subtle-bg: light-dark(oklab(0.95 -0.0497414 0.0151591), oklab(0.378 -0.0755699 0.0147714));
     --palette-success-ghost-subtle-edge: oklab(0.508 -0.114299 0.0293215);
     --palette-success-ghost-subtle-bg-hover: light-dark(
-      oklab(0.886702 -0.057056 0.0171399),
+      oklab(0.882867 -0.0562214 0.0167948),
       oklab(0.387542 -0.0775801 0.0158788)
     );
     --palette-success-ghost-subtle-edge-hover: light-dark(
-      oklab(0.497872 -0.101989 0.029308),
+      oklab(0.470478 -0.0960275 0.0268432),
       oklab(0.446158 -0.0899286 0.022681)
     );
     --palette-warning-solid-bg: oklab(0.666 0.0940116 0.152325);
     --palette-warning-solid-fg: oklab(0.145 0 0);
     --palette-warning-solid-edge: oklab(0 0 0 / 0);
-    --palette-warning-solid-bg-hover: light-dark(oklab(0.633155 0.100794 0.128308), oklab(0.70431 0.0802 0.143076));
+    --palette-warning-solid-bg-hover: light-dark(oklab(0.602078 0.0927152 0.122045), oklab(0.70431 0.0802 0.143076));
     --palette-warning-solid-edge-hover: oklab(0 0 0 / 0);
-    --palette-warning-soft-fg: light-dark(oklab(0.473 0.0948219 0.0988828), oklab(0.879 -0.00473352 0.168934));
+    --palette-warning-soft-fg: light-dark(oklab(0.279 0.0538405 0.0550473), oklab(0.879 -0.00473352 0.168934));
     --palette-warning-soft-bg: oklab(0.666 0.0940116 0.152325 / 0.12);
     --palette-warning-soft-edge: oklab(0.666 0.0940116 0.152325 / 0.88);
     --palette-warning-soft-bg-hover: light-dark(
-      oklab(0.633155 0.100794 0.128308 / 0.26),
+      oklab(0.602078 0.0927152 0.122045 / 0.26),
       oklab(0.70431 0.0802 0.143076 / 0.26)
     );
     --palette-warning-soft-edge-hover: light-dark(
-      oklab(0.633155 0.100794 0.128308 / 0.88),
+      oklab(0.602078 0.0927152 0.122045 / 0.88),
       oklab(0.70431 0.0802 0.143076 / 0.88)
     );
     --palette-warning-soft-page-bg: light-dark(oklab(0.94672 0.0112814 0.018279), oklab(0.20752 0.0112814 0.018279));
     --palette-warning-soft-page-edge: oklab(0.666 0.0940116 0.152325 / 0.88);
     --palette-warning-soft-page-bg-hover: light-dark(
-      oklab(0.89352 0.0262064 0.0333601),
+      oklab(0.88544 0.024106 0.0317316),
       oklab(0.290421 0.020852 0.0371997)
     );
     --palette-warning-soft-page-edge-hover: light-dark(
-      oklab(0.633155 0.100794 0.128308 / 0.88),
+      oklab(0.602078 0.0927152 0.122045 / 0.88),
       oklab(0.70431 0.0802 0.143076 / 0.88)
     );
     --palette-warning-soft-subtle-bg: light-dark(
@@ -213,58 +216,58 @@
     );
     --palette-warning-soft-subtle-edge: oklab(0.666 0.0940116 0.152325 / 0.88);
     --palette-warning-soft-subtle-bg-hover: light-dark(
-      oklab(0.8765 0.0219331 0.0768105),
+      oklab(0.86842 0.0198326 0.0751819),
       oklab(0.489481 0.0785251 0.0967221)
     );
     --palette-warning-soft-subtle-edge-hover: light-dark(
-      oklab(0.633155 0.100794 0.128308 / 0.88),
+      oklab(0.602078 0.0927152 0.122045 / 0.88),
       oklab(0.70431 0.0802 0.143076 / 0.88)
     );
-    --palette-warning-ghost-fg: light-dark(oklab(0.473 0.0948219 0.0988828), oklab(0.879 -0.00473352 0.168934));
+    --palette-warning-ghost-fg: light-dark(oklab(0.279 0.0538405 0.0550473), oklab(0.879 -0.00473352 0.168934));
     --palette-warning-ghost-bg: oklab(0 0 0 / 0);
     --palette-warning-ghost-edge: oklab(0.666 0.0940116 0.152325);
     --palette-warning-ghost-bg-hover: light-dark(
-      oklab(0.633155 0.100794 0.128308 / 0.14),
+      oklab(0.602078 0.0927152 0.122045 / 0.14),
       oklab(0.70431 0.0802 0.143076 / 0.14)
     );
-    --palette-warning-ghost-edge-hover: light-dark(oklab(0.633155 0.100794 0.128308), oklab(0.70431 0.0802 0.143076));
+    --palette-warning-ghost-edge-hover: light-dark(oklab(0.602078 0.0927152 0.122045), oklab(0.70431 0.0802 0.143076));
     --palette-warning-ghost-page-bg: light-dark(oklab(0.985 0 0), oklab(0.145 0 0));
     --palette-warning-ghost-page-edge: oklab(0.666 0.0940116 0.152325);
     --palette-warning-ghost-page-bg-hover: light-dark(
-      oklab(0.935742 0.0141112 0.0179631),
+      oklab(0.931391 0.0129801 0.0170862),
       oklab(0.223303 0.011228 0.0200306)
     );
     --palette-warning-ghost-page-edge-hover: light-dark(
-      oklab(0.633155 0.100794 0.128308),
+      oklab(0.602078 0.0927152 0.122045),
       oklab(0.70431 0.0802 0.143076)
     );
     --palette-warning-ghost-subtle-bg: light-dark(oklab(0.962 -0.0057748 0.0587167), oklab(0.414 0.0779366 0.0804356));
     --palette-warning-ghost-subtle-edge: oklab(0.666 0.0940116 0.152325);
     --palette-warning-ghost-subtle-bg-hover: light-dark(
-      oklab(0.915962 0.00914482 0.0684595),
+      oklab(0.911611 0.0080138 0.0675826),
       oklab(0.454643 0.0782535 0.0892052)
     );
     --palette-warning-ghost-subtle-edge-hover: light-dark(
-      oklab(0.633155 0.100794 0.128308),
+      oklab(0.602078 0.0927152 0.122045),
       oklab(0.70431 0.0802 0.143076)
     );
     --palette-destructive-solid-bg: oklab(0.514 0.212373 0.0646656);
     --palette-destructive-solid-fg: oklab(0.985 0 0);
     --palette-destructive-solid-edge: oklab(0 0 0 / 0);
     --palette-destructive-solid-bg-hover: light-dark(
-      oklab(0.51189 0.194868 0.0640785),
+      oklab(0.48168 0.183039 0.0615314),
       oklab(0.549356 0.21195 0.0500346)
     );
     --palette-destructive-solid-edge-hover: oklab(0 0 0 / 0);
-    --palette-destructive-soft-fg: light-dark(oklab(0.455 0.182654 0.044516), oklab(0.81 0.114595 0.0236021));
+    --palette-destructive-soft-fg: light-dark(oklab(0.271 0.10267 0.0219992), oklab(0.81 0.114595 0.0236021));
     --palette-destructive-soft-bg: oklab(0.514 0.212373 0.0646656 / 0.12);
     --palette-destructive-soft-edge: oklab(0.514 0.212373 0.0646656 / 0.88);
     --palette-destructive-soft-bg-hover: light-dark(
-      oklab(0.51189 0.194868 0.0640785 / 0.26),
+      oklab(0.48168 0.183039 0.0615314 / 0.26),
       oklab(0.549356 0.21195 0.0500346 / 0.26)
     );
     --palette-destructive-soft-edge-hover: light-dark(
-      oklab(0.51189 0.194868 0.0640785 / 0.88),
+      oklab(0.48168 0.183039 0.0615314 / 0.88),
       oklab(0.549356 0.21195 0.0500346 / 0.88)
     );
     --palette-destructive-soft-page-bg: light-dark(
@@ -273,11 +276,11 @@
     );
     --palette-destructive-soft-page-edge: oklab(0.514 0.212373 0.0646656 / 0.88);
     --palette-destructive-soft-page-bg-hover: light-dark(
-      oklab(0.861991 0.0506656 0.0166604),
+      oklab(0.854137 0.0475901 0.0159982),
       oklab(0.250132 0.0551069 0.013009)
     );
     --palette-destructive-soft-page-edge-hover: light-dark(
-      oklab(0.51189 0.194868 0.0640785 / 0.88),
+      oklab(0.48168 0.183039 0.0615314 / 0.88),
       oklab(0.549356 0.21195 0.0500346 / 0.88)
     );
     --palette-destructive-soft-subtle-bg: light-dark(
@@ -286,32 +289,32 @@
     );
     --palette-destructive-soft-subtle-edge: oklab(0.514 0.212373 0.0646656 / 0.88);
     --palette-destructive-soft-subtle-bg-hover: light-dark(
-      oklab(0.829431 0.0723327 0.0214956),
+      oklab(0.821577 0.0692571 0.0208334),
       oklab(0.446232 0.170881 0.0339903)
     );
     --palette-destructive-soft-subtle-edge-hover: light-dark(
-      oklab(0.51189 0.194868 0.0640785 / 0.88),
+      oklab(0.48168 0.183039 0.0615314 / 0.88),
       oklab(0.549356 0.21195 0.0500346 / 0.88)
     );
-    --palette-destructive-ghost-fg: light-dark(oklab(0.455 0.182654 0.044516), oklab(0.81 0.114595 0.0236021));
+    --palette-destructive-ghost-fg: light-dark(oklab(0.271 0.10267 0.0219992), oklab(0.81 0.114595 0.0236021));
     --palette-destructive-ghost-bg: oklab(0 0 0 / 0);
     --palette-destructive-ghost-edge: oklab(0.514 0.212373 0.0646656);
     --palette-destructive-ghost-bg-hover: light-dark(
-      oklab(0.51189 0.194868 0.0640785 / 0.14),
+      oklab(0.48168 0.183039 0.0615314 / 0.14),
       oklab(0.549356 0.21195 0.0500346 / 0.14)
     );
     --palette-destructive-ghost-edge-hover: light-dark(
-      oklab(0.51189 0.194868 0.0640785),
+      oklab(0.48168 0.183039 0.0615314),
       oklab(0.549356 0.21195 0.0500346)
     );
     --palette-destructive-ghost-page-bg: light-dark(oklab(0.985 0 0), oklab(0.145 0 0));
     --palette-destructive-ghost-page-edge: oklab(0.514 0.212373 0.0646656);
     --palette-destructive-ghost-page-bg-hover: light-dark(
-      oklab(0.918765 0.0272815 0.00897099),
+      oklab(0.914535 0.0256254 0.0086144),
       oklab(0.20161 0.0296729 0.00700485)
     );
     --palette-destructive-ghost-page-edge-hover: light-dark(
-      oklab(0.51189 0.194868 0.0640785),
+      oklab(0.48168 0.183039 0.0615314),
       oklab(0.549356 0.21195 0.0500346)
     );
     --palette-destructive-ghost-subtle-bg: light-dark(
@@ -320,82 +323,104 @@
     );
     --palette-destructive-ghost-subtle-edge: oklab(0.514 0.212373 0.0646656);
     --palette-destructive-ghost-subtle-bg-hover: light-dark(
-      oklab(0.880925 0.0524621 0.0145903),
+      oklab(0.876695 0.0508061 0.0142337),
       oklab(0.42951 0.164221 0.0313885)
     );
     --palette-destructive-ghost-subtle-edge-hover: light-dark(
-      oklab(0.51189 0.194868 0.0640785),
+      oklab(0.48168 0.183039 0.0615314),
       oklab(0.549356 0.21195 0.0500346)
     );
     --palette-info-solid-bg: oklab(0.511 0.0317755 -0.260066);
     --palette-info-solid-fg: oklab(0.985 0 0);
     --palette-info-solid-edge: oklab(0 0 0 / 0);
-    --palette-info-solid-bg-hover: light-dark(oklab(0.490714 0.0309565 -0.24875), oklab(0.551929 0.0373722 -0.238521));
+    --palette-info-solid-bg-hover: light-dark(oklab(0.467537 0.0294154 -0.23233), oklab(0.551929 0.0373722 -0.238521));
     --palette-info-solid-edge-hover: oklab(0 0 0 / 0);
-    --palette-info-soft-fg: light-dark(oklab(0.398 0.0250004 -0.193391), oklab(0.785 0.00944898 -0.114611));
+    --palette-info-soft-fg: light-dark(oklab(0.257 0.0176167 -0.088259), oklab(0.785 0.00944898 -0.114611));
     --palette-info-soft-bg: oklab(0.511 0.0317755 -0.260066 / 0.12);
     --palette-info-soft-edge: oklab(0.511 0.0317755 -0.260066 / 0.88);
     --palette-info-soft-bg-hover: light-dark(
-      oklab(0.490714 0.0309565 -0.24875 / 0.26),
+      oklab(0.467537 0.0294154 -0.23233 / 0.26),
       oklab(0.551929 0.0373722 -0.238521 / 0.26)
     );
     --palette-info-soft-edge-hover: light-dark(
-      oklab(0.490714 0.0309565 -0.24875 / 0.88),
+      oklab(0.467537 0.0294154 -0.23233 / 0.88),
       oklab(0.551929 0.0373722 -0.238521 / 0.88)
     );
     --palette-info-soft-page-bg: light-dark(oklab(0.92812 0.00381305 -0.0312079), oklab(0.18892 0.00381305 -0.0312079));
     --palette-info-soft-page-edge: oklab(0.511 0.0317755 -0.260066 / 0.88);
     --palette-info-soft-page-bg-hover: light-dark(
-      oklab(0.856486 0.0080487 -0.0646751),
+      oklab(0.85046 0.007648 -0.0604059),
       oklab(0.250801 0.00971677 -0.0620155)
     );
     --palette-info-soft-page-edge-hover: light-dark(
-      oklab(0.490714 0.0309565 -0.24875 / 0.88),
+      oklab(0.467537 0.0294154 -0.23233 / 0.88),
       oklab(0.551929 0.0373722 -0.238521 / 0.88)
     );
     --palette-info-soft-subtle-bg: light-dark(oklab(0.87972 0.00526838 -0.0610925), oklab(0.37724 0.0229742 -0.156471));
     --palette-info-soft-subtle-edge: oklab(0.511 0.0317755 -0.260066 / 0.88);
     --palette-info-soft-subtle-bg-hover: light-dark(
-      oklab(0.815786 0.0092725 -0.0898053),
+      oklab(0.809759 0.00887179 -0.0855361),
       oklab(0.409161 0.0258296 -0.16735)
     );
     --palette-info-soft-subtle-edge-hover: light-dark(
-      oklab(0.490714 0.0309565 -0.24875 / 0.88),
+      oklab(0.467537 0.0294154 -0.23233 / 0.88),
       oklab(0.551929 0.0373722 -0.238521 / 0.88)
     );
-    --palette-info-ghost-fg: light-dark(oklab(0.398 0.0250004 -0.193391), oklab(0.785 0.00944898 -0.114611));
+    --palette-info-ghost-fg: light-dark(oklab(0.257 0.0176167 -0.088259), oklab(0.785 0.00944898 -0.114611));
     --palette-info-ghost-bg: oklab(0 0 0 / 0);
     --palette-info-ghost-edge: oklab(0.511 0.0317755 -0.260066);
     --palette-info-ghost-bg-hover: light-dark(
-      oklab(0.490714 0.0309565 -0.24875 / 0.14),
+      oklab(0.467536 0.0294154 -0.23233 / 0.14),
       oklab(0.551929 0.0373722 -0.238521 / 0.14)
     );
     --palette-info-ghost-edge-hover: light-dark(
-      oklab(0.490714 0.0309565 -0.24875),
+      oklab(0.467537 0.0294154 -0.23233),
       oklab(0.551929 0.0373722 -0.238521)
     );
     --palette-info-ghost-page-bg: light-dark(oklab(0.985 0 0), oklab(0.145 0 0));
     --palette-info-ghost-page-edge: oklab(0.511 0.0317755 -0.260066);
     --palette-info-ghost-page-bg-hover: light-dark(
-      oklab(0.9158 0.00433391 -0.034825),
+      oklab(0.912555 0.00411815 -0.0325262),
       oklab(0.20197 0.00523211 -0.033393)
     );
     --palette-info-ghost-page-edge-hover: light-dark(
-      oklab(0.490714 0.0309565 -0.24875),
+      oklab(0.467537 0.0294154 -0.23233),
       oklab(0.551929 0.0373722 -0.238521)
     );
     --palette-info-ghost-subtle-bg: light-dark(oklab(0.93 0.00165378 -0.0339598), oklab(0.359 0.0217741 -0.142344));
     --palette-info-ghost-subtle-edge: oklab(0.511 0.0317755 -0.260066);
     --palette-info-ghost-subtle-bg-hover: light-dark(
-      oklab(0.8685 0.00575617 -0.0640304),
+      oklab(0.865255 0.0055404 -0.0617316),
       oklab(0.38601 0.0239578 -0.155809)
     );
     --palette-info-ghost-subtle-edge-hover: light-dark(
-      oklab(0.490714 0.0309565 -0.24875),
+      oklab(0.467537 0.0294154 -0.23233),
       oklab(0.551929 0.0373722 -0.238521)
     );
     --palette-border: light-dark(oklch(0.708 0 none), oklch(0.371 0 none));
     --palette-surface: light-dark(oklch(0.922 0 none), oklch(0.269 0 none));
     --palette-text: light-dark(oklch(0.145 0 none), oklch(0.985 0 none));
+  }
+
+  .theme-light,
+  [data-theme="light"] {
+    color-scheme: light;
+  }
+
+  :root.dark,
+  .theme-dark,
+  [data-theme="dark"] {
+    color-scheme: dark;
+  }
+
+  @media print {
+    :root {
+      color-scheme: light !important;
+    }
+
+    .theme-dark,
+    [data-theme="dark"] {
+      color-scheme: light;
+    }
   }
 }
