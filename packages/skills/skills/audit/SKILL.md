@@ -26,6 +26,7 @@ Before judging anything, establish:
 - **Stage.** Unreleased, experimental, or stable. The stage decides what a breaking change costs and which surface is about to freeze; it never turns a defect into a non-defect.
 - **Recorded decisions** in the area, with their reasons and the alternatives they rejected.
 - **Recent history.** Commits, pull requests, and earlier audit results that touched the area, and why. An audit that undoes last week's fix, or reopens a decision on arguments already heard, is the failure this skill exists to prevent.
+- **Earlier fixes, first.** When the target was audited before, check each fix merged since then before auditing the rest: whether it covers every member of its finding's class (see "Evidence"), whether the same pattern survives elsewhere, and whether each claim its docs and changelog added holds beyond the case its test used. A fix covers the example it was given far more often than the class, so this is where a re-audit finds the most.
 
 ## Questions
 
@@ -48,6 +49,7 @@ Every finding states a case:
 - **Input or calling code:** concrete and minimal.
 - **Result:** what happens, and what should happen.
 - **Reach:** who hits it (see the severity table).
+- **Class:** every input, call site, and code location that shares the case's cause, so the fix removes the cause rather than the example. Find it from the rule of the code that reads the value, not from the example's spelling: a URL parser reads `//`, `/\`, and `/` plus a tab plus `/` alike as the start of a host; a serializer re-reads the content of raw-text elements and of `textarea` and `title` alike. Search the codebase for the same pattern, such as another process-wide record keyed by unbounded text, and list each place. Run each member you can.
 
 Run the case when you can; a failing test or a script settles what reasoning cannot. Mark a finding `verified` only when you executed its case in this session and saw the result, and `traced` otherwise; without a way to run code, every finding is `traced`. A `traced` finding stands when the code you read and the language or a documented API contract settle its result, such as a call to a function that does not exist. A concern you cannot turn into a case is a question, and so is a `traced` case whose result rests on tool behavior you assumed rather than read or ran, such as whether a compiler reports an error or how a third-party library handles an input.
 
@@ -122,7 +124,7 @@ When the audit is split across workers, or results from another audit are in han
 
 ## Report
 
-Open with the verdict and the counts, then the scope. List findings by severity, `blocker` first. Number them so the user can answer by number.
+Open with the verdict and the counts, then the scope. When the target was audited before, say next how many findings trace to a fix merged since then, naming the commits: a high share means the fixes, not the code, are where the next audit's findings come from. List findings by severity, `blocker` first. Number them so the user can answer by number.
 
 ```markdown
 **Verdict: not ready.** 1 blocker, 1 major, 1 question.
@@ -132,8 +134,9 @@ Open with the verdict and the counts, then the scope. List findings by severity,
 
 1. **`parseCsv()` hangs on an unterminated quote.** `vulnerability` · `blocker` · `default` · `verified` · `src/csv.ts:88`
    - Case: a 40 KB upload whose first field opens a quote and never closes it takes 90 seconds in `parseCsv(text)`, blocking the event loop.
+   - Class: every scan that looks for a closing character: the quote scan in `parseCsv` and the same loop copied into `parseTsv` (`src/tsv.ts:52`).
    - Why: one upload stalls every other request on the server.
-   - Fix: stop at the end of input and report the unterminated quote.
+   - Fix: stop each scan at the end of input and report the unterminated quote.
 
 2. **Retrying every request method.** `decision` · `major` · `default` · `traced` · `src/retry.ts:41`
    - Problem: `fetchJson` retries a timed-out request whatever its method, so a `POST` that reached the server is sent twice and creates a duplicate order.
@@ -151,7 +154,8 @@ Open with the verdict and the counts, then the scope. List findings by severity,
 ```
 
 - **Title:** what is wrong, in plain words.
-- **Tag line:** kind, severity, reach, `verified` or `traced`, and location, in that order. Add `pre-existing` when it applies.
+- **Tag line:** kind, severity, reach, `verified` or `traced`, and location, in that order. Add `pre-existing` when it applies, and `from <commit>` when an earlier fix introduced the finding or left it incomplete.
+- **Class** is required for every finding except a question. Write "only this case" when the search found no other member, so the reader knows the search ran.
 - **`decision` findings** always give the problem, what was not weighed, the options, the recommendation, and why.
 - **Ruled out** lists what you checked and found sound that a reader might expect to see flagged, with the reason. It keeps the next audit from raising it again. Write "None" when empty.
 - Leave out praise, summaries of what the code does, and hedging. When unsure, write a question.
@@ -172,6 +176,7 @@ Write `vulnerability` and `decision` findings as a short paragraph instead, sinc
 ## After the Report
 
 - Fix only the findings the user approves.
+- Fix the finding's cause for its whole class, not the case that illustrated it. Test every member of the class, as a table where they share one assertion, and search again for the pattern before calling the fix complete.
 - Give each fix that changes behavior a test that fails before it and passes after. When no test can be written, ask the user before shipping the fix without one, and say so in the report.
 - When a fix turns out to need new public surface, stop and bring it back as a decision.
 - Record each decision the user takes where the project records decisions, with its reason and the alternatives rejected.
