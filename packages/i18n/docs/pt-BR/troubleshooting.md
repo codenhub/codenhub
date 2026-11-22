@@ -2,7 +2,7 @@
 title: Solução de problemas
 description: O que cada erro e aviso quer dizer, e como resolver.
 order: 5
-source: 1bc41e2fb9ef984fd04b9dcbd5a70900efd818fe
+source: 663dcefbeca29e2dc1e87c9222075b8dcc3a8e6c
 ---
 
 # Solução de problemas
@@ -127,7 +127,7 @@ Você vê `{count, plural, one {# item} other {# items}` ou `{first-name}` na te
 Causas comuns:
 
 - **Falta uma chave, ou sobra uma.** Conte; toda `{` precisa da sua `}`.
-- **Um nome de placeholder tem outros caracteres.** Os nomes são letras ASCII, dígitos e sublinhados, então `{first-name}` e `{nome_ç}` aparecem como foram escritos. Use `{firstName}` ou `{nome}`.
+- **Um nome de placeholder tem outros caracteres.** Os nomes são letras, dígitos e sublinhados, de qualquer escrita, então `{first-name}` e `{price€}` aparecem como foram escritos. Use `{firstName}` ou `{price}`.
 - **Um formato que este pacote não suporta**, como `{n, number, currency}` ou um skeleton `::`. Formate o valor com `formatNumber()` e passe o resultado como um placeholder simples.
 - **Aninhamento com mais de 10 níveis**, ou a mesma opção `=1` duas vezes. Simplifique a mensagem.
 

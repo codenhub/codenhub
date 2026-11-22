@@ -328,8 +328,8 @@ export interface I18n<TLocale extends string = string, TKey extends string = str
   /**
    * Translates a key as {@link I18n.translate} does, and returns its text and tags as parts for a framework to render,
    * so a translation can mark a link or bold text inside a sentence without HTML. Tags are `<name>…</name>` and
-   * `<name/>`, with a name of ASCII letters, digits, and `_`, written anywhere in the message's text, including inside a
-   * plural or select form. Values are text: a tag inside a value is never read, nor is one in quoted text, such as
+   * `<name/>`, with a name of letters and digits in any script, and `_`, written anywhere in the message's text,
+   * including inside a plural or select form. Values are text: a tag inside a value is never read, nor is one in quoted text, such as
    * `'<b>'`. A `<` that doesn't form a tag, as in `a < b`, is text.
    *
    * A message whose tags don't balance, nest past 10 levels, or cross the edge of a plural or select form warns once per

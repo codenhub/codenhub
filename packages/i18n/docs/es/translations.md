@@ -2,7 +2,7 @@
 title: Escribe tus traducciones
 description: Diccionarios, archivos JSON, placeholders, mensajes ICU, enlaces y negritas, plurales, formateadores, claves y valores tipados, cómo detectar claves sin traducir y límites de tamaño.
 order: 1
-source: 9d4ac76a5c73ad02f582acf7866ade61671e4b71
+source: 4223b6ff8ce5b2f0699b97a720caf2f4ae7f2ba6
 ---
 
 # Escribe tus traducciones
@@ -132,7 +132,7 @@ t("order.confirmed", { name: "Ana", orderId: "1042" });
 // "Thanks, Ana. Order 1042 ships tomorrow."
 ```
 
-Los valores pueden ser strings, números, bigints o fechas. Un bigint va donde va un número, y se formatea sin perder dígitos. Los nombres de los placeholders usan letras ASCII, dígitos y `_`, como `{firstName}` o `{first_name}`. Un nombre con cualquier otra cosa, como `{first-name}` o `{nome_ç}`, no es un placeholder: el mensaje tiene sintaxis inválida, registra una advertencia y muestra `{first-name}` tal como está escrito.
+Los valores pueden ser strings, números, bigints o fechas. Un bigint va donde va un número, y se formatea sin perder dígitos. Los nombres de los placeholders usan letras y dígitos de cualquier escritura, y `_`, como `{firstName}`, `{first_name}` o `{año}`. Un nombre con cualquier otra cosa, como `{first-name}` o `{price€}`, no es un placeholder: el mensaje tiene sintaxis inválida, registra una advertencia y muestra `{first-name}` tal como está escrito.
 
 Usa placeholders en lugar de juntar fragmentos. `t("before") + name + t("after")` obliga a todos los idiomas a seguir el orden de palabras del inglés, mientras que una oración entera con un placeholder deja que cada traducción ponga el valor donde corresponde. El orden de las palabras es lo primero que todo traductor quiere cambiar, y casi siempre tiene razón. Para un enlace o una negrita dentro de la oración, consulta [Enlaces y negritas dentro de una oración](#enlaces-y-negritas-dentro-de-una-oración).
 
@@ -247,7 +247,7 @@ i18n.rich("signup.terms");
 // ["Al registrarte aceptas los ", { tag: "terms", children: ["términos de uso"] }, "."]
 ```
 
-Una etiqueta es `<nombre>…</nombre>`, o `<nombre/>` para una sin contenido, como un salto de línea. Los nombres usan letras ASCII, dígitos y `_`. Una etiqueta dice qué es la parte, y tu código decide cómo se renderiza, así que una traducción no puede añadir un enlace, un script ni marcado que tu código no renderice. En React, por ejemplo:
+Una etiqueta es `<nombre>…</nombre>`, o `<nombre/>` para una sin contenido, como un salto de línea. Los nombres usan letras y dígitos de cualquier escritura, y `_`. Una etiqueta dice qué es la parte, y tu código decide cómo se renderiza, así que una traducción no puede añadir un enlace, un script ni marcado que tu código no renderice. En React, por ejemplo:
 
 ```tsx
 import { Fragment, type ReactNode } from "react";
@@ -440,7 +440,8 @@ Leer los argumentos de un mensaje ocurre por completo en el sistema de tipos, lo
 
 - **La clave es una de varias.** En `t(hasFailed ? "checkout.failed" : "checkout.done")`, TypeScript ve una unión de dos claves y no puede saber los valores de qué mensaje aplican. Llama a `t()` con cada clave en su propia rama, `hasFailed ? t("checkout.failed", { orderId }) : t("checkout.done")`, y cada llamada se comprueba.
 - **El mensaje es un `string` simple**, como lo es todo texto en un diccionario JSON. Un grupo de plurales sigue pidiendo un `count` numérico, porque su forma lo dice. Escribe el idioma por defecto como TypeScript `as const`, como arriba.
-- **El mensaje tiene sintaxis inválida**, como una `{` sin cerrar, un nombre de placeholder que no está hecho de letras ASCII, dígitos y `_` (`{first-name}`), `{n, number, currency}`, o un `select` o `plural` sin `other`. Alguna sintaxis inválida, como una opción escrita dos veces, una forma plural desconocida o un anidamiento de más de 10 niveles, puede igual pedir valores. En cualquier caso, el runtime tampoco puede leerlo: registra una advertencia y muestra el texto con solo los placeholders `{name}` válidos completados. Corrige el mensaje; la [comprobación de mensajes](#encuentra-claves-sin-traducir) los encuentra.
+- **El mensaje tiene sintaxis inválida**, como una `{` sin cerrar, un nombre de placeholder con un carácter que no es una letra, un dígito ni `_` (`{first-name}`), `{n, number, currency}`, o un `select` o `plural` sin `other`. Alguna sintaxis inválida, como una opción escrita dos veces, una forma plural desconocida o un anidamiento de más de 10 niveles, puede igual pedir valores. En cualquier caso, el runtime tampoco puede leerlo: registra una advertencia y muestra el texto con solo los placeholders `{name}` válidos completados. Corrige el mensaje; la [comprobación de mensajes](#encuentra-claves-sin-traducir) los encuentra.
+- **El nombre de un placeholder tiene una letra fuera de ASCII**, como `{año}`. El runtime lo lee, pero fuera de ASCII los tipos no distinguen una letra de un símbolo como `€`, que hace inválido el mensaje, así que dejan el mensaje sin leer en lugar de pedir un valor que el runtime nunca lee. Usa un nombre ASCII donde quieras la comprobación.
 - **El mensaje es demasiado largo para que los tipos lo lean**: unos 900 apóstrofos, 450 argumentos o 900 espacios dentro de las llaves de un argumento, en un mismo texto. TypeScript tiene un límite de cuán profundo puede llegar un tipo, y la lectura se detiene antes de alcanzarlo en lugar de hacer fallar tu build. En tiempo de ejecución el mensaje funciona con normalidad. Si tienes uno de estos, probablemente sean tres mensajes disfrazados de uno; dividirlo devuelve las comprobaciones.
 - **El tipo del gestor está escrito a mano sin el diccionario.** `I18n<"en" | "pt", Key>` comprueba las claves pero no los valores. Pasa el tipo del diccionario como tercer argumento de tipo, `I18n<"en" | "pt", Key, typeof en>`, para que sigan comprobándose.
 

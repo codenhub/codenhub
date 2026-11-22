@@ -126,7 +126,7 @@ You see `{count, plural, one {# item} other {# items}` or `{first-name}` on scre
 Common causes:
 
 - **A brace is missing or extra.** Count them; every `{` needs its `}`.
-- **A placeholder name has other characters.** Names are ASCII letters, digits, and underscores, so `{first-name}` and `{nome_ç}` are shown as written. Use `{firstName}` or `{nome}`.
+- **A placeholder name has other characters.** Names are letters, digits, and underscores, in any script, so `{first-name}` and `{price€}` are shown as written. Use `{firstName}` or `{price}`.
 - **A format this package doesn't support**, such as `{n, number, currency}` or a `::` skeleton. Format the value with `formatNumber()` and pass the result as a plain placeholder.
 - **Nesting deeper than 10 levels**, or the same `=1` option twice. Simplify the message.
 

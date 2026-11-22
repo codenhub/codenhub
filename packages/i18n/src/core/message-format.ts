@@ -15,8 +15,15 @@ export const readValue = (values: MessageValues, name: string): unknown =>
 const NUMBER_STYLES = ["integer", "percent"] as const;
 const DATE_STYLES = ["short", "medium", "long", "full"] as const;
 const PLURAL_KEYWORDS = new Set(["zero", "one", "two", "few", "many", "other"]);
-const NAME_PATTERN = /[A-Za-z0-9_]/;
-const SELECT_KEY_PATTERN = /[A-Za-z0-9_-]/;
+/**
+ * A character of a name, an argument's, a select key's, or a tag's: a letter, a combining mark, a decimal digit, in any
+ * script, or `_`. Marks are included since a Devanagari or Thai word writes its vowels with them.
+ *
+ * @internal
+ */
+export const NAME_CHARACTER = String.raw`[\p{L}\p{M}\p{Nd}_]`;
+const NAME_PATTERN = new RegExp(NAME_CHARACTER, "u");
+const SELECT_KEY_PATTERN = new RegExp(String.raw`[\p{L}\p{M}\p{Nd}_-]`, "u");
 const EXACT_VALUE_PATTERN = /^=-?[0-9]+(\.[0-9]+)?$/;
 
 /** An exact plural key's value, as the plural's lookup spells it: an integer in full, any other number as a number. */
@@ -111,10 +118,15 @@ class Parser {
     this.index += 1;
   }
 
+  /** Reads code points while they match, so a letter outside the BMP, a surrogate pair, is one character. */
   private readWhile(pattern: RegExp): string {
     const start = this.index;
-    while (pattern.test(this.peek() ?? "")) {
-      this.index += 1;
+    while (this.index < this.message.length) {
+      const character = String.fromCodePoint(this.message.codePointAt(this.index)!);
+      if (!pattern.test(character)) {
+        break;
+      }
+      this.index += character.length;
     }
     return this.message.slice(start, this.index);
   }
@@ -844,7 +856,7 @@ export const formatMessage = (
 
 /** A tag in a rich message, `<name>…</name>` or `<name/>`, with what it encloses. */
 export interface RichElement {
-  /** The tag's name, as written: ASCII letters, digits, and `_`. */
+  /** The tag's name, as written: letters, combining marks, and decimal digits in any script, and `_`. */
   readonly tag: string;
   /** The text and tags it encloses, empty for `<name/>`. */
   readonly children: RichText;
@@ -857,7 +869,7 @@ export type RichText = readonly (string | RichElement)[];
 export const MAX_TAG_NESTING = 10;
 
 // `<b>`, `</b>`, or `<b/>`. Anything else that starts with `<`, such as `a < b` or `</b/>`, is text.
-const TAG_PATTERN = /<(\/?)([A-Za-z0-9_]+)(\/?)>/g;
+const TAG_PATTERN = new RegExp(String.raw`<(/?)(${NAME_CHARACTER}+)(/?)>`, "gu");
 
 interface Frame {
   readonly tag: string;

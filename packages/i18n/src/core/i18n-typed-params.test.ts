@@ -263,6 +263,16 @@ describe("typed placeholder values", () => {
     expectTypeOf<{}>().not.toExtend<NonNullable<TranslateParams<{ readonly m: "'{it''s}' {x}" }, "m">[0]>>();
   });
 
+  it("should accept any values for a name outside ASCII, and read a select key outside ASCII", () => {
+    expectTypeOf<TranslateParams<{ readonly m: "Hola, {año}" }, "m">>().toEqualTypeOf<Loose>();
+    expectTypeOf<TranslateParams<{ readonly m: "{a€}" }, "m">>().toEqualTypeOf<Loose>();
+    type Select = NonNullable<
+      TranslateParams<{ readonly m: "{g, select, niño {él} niña {ella} other {elle}}" }, "m">[0]
+    >;
+    expectTypeOf<{ g: "niño" }>().toExtend<Select>();
+    expectTypeOf<{}>().not.toExtend<Select>();
+  });
+
   it("should not require an argument the runtime prints as text quoted by an apostrophe before <", () => {
     expectTypeOf<TranslateParams<{ readonly m: "'<b>{name}</b>'" }, "m">>().toEqualTypeOf<Loose>();
     expectTypeOf<{ x: 1 }>().toExtend<NonNullable<TranslateParams<{ readonly m: "'<b>{name}</b>' {x}" }, "m">[0]>>();

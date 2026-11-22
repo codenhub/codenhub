@@ -157,7 +157,9 @@ type Letter =
   | "z";
 type NameCharacter = Digit | Letter | Uppercase<Letter> | "_";
 
-// The runtime reads only ASCII letters, digits, and `_` as a name, so a message with `{first-name}` is invalid syntax.
+// The runtime reads letters, marks, and digits in any script, and `_`, as a name, so `{first-name}` is invalid syntax.
+// These types read only ASCII ones: they can't tell a letter outside ASCII from a symbol such as `€`, which makes the
+// message invalid, so a message with `{año}` is left unread and accepts any values rather than requiring a wrong one.
 type IsName<N, TSteps extends Steps = []> = TSteps["length"] extends MaxSteps
   ? false
   : N extends `${infer C}${infer R}`

@@ -16,6 +16,7 @@ import {
   isPlainMessage,
   MAX_FILLED_ARGUMENTS,
   type MessageValues,
+  NAME_CHARACTER,
   parseCachedMessage,
   readValue,
   type RichText,
@@ -45,7 +46,8 @@ interface ChainDictionary<TLocale extends string> {
 /** Whether an invalid message is new to the process-wide record, by locale, trimmed key, and a hash of its text. */
 const isNewInvalidMessage = (key: string, found: FoundTranslation<string>): boolean =>
   warnedMessages.remember(`${found.locale}\0${key.trim()}\0${hashText(found.text)}`);
-const PLACEHOLDER_PATTERN = /{([A-Za-z0-9_]+)}/g;
+// A `{name}` with a name the parser reads, so invalid syntax fills the names valid syntax would.
+const PLACEHOLDER_PATTERN = new RegExp(String.raw`\{(${NAME_CHARACTER}+)\}`, "gu");
 // The form every plural group has, used when the count's category has none.
 const PLURAL_FALLBACK_FORM = "other";
 
@@ -84,7 +86,7 @@ const needsValues = (text: string): boolean => {
   }
   const message = parseCachedMessage(text);
   return typeof message === "string"
-    ? new RegExp(PLACEHOLDER_PATTERN.source).test(text)
+    ? new RegExp(PLACEHOLDER_PATTERN.source, "u").test(text)
     : message.some((node) => node.kind !== "text");
 };
 
