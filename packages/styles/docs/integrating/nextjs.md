@@ -9,7 +9,7 @@ order: 2
 Next.js has two router architectures, and they treat global CSS differently:
 
 - **App Router** (an `app/` directory): global CSS — including an external package's stylesheet like this one — can be imported from any layout, page, or component under `app/`. Importing it from the root layout is only a recommendation, for predictable CSS ordering across routes; Next.js does not enforce it and no error occurs if you import it elsewhere.
-- **Pages Router** (a `pages/` directory, no `app/`): global CSS is restricted to `pages/_app.tsx`. Importing it from anywhere else fails the build — Next.js enforces this itself, not this package; see [Troubleshooting](#troubleshooting).
+- **Pages Router** (a `pages/` directory, no `app/`): a stylesheet from a package, like this one, can be imported from any page or component too. Your own global `.css` files are the restricted ones: they can be imported only from `pages/_app.tsx`, and importing one anywhere else fails the build. That matters for `/tw`, which lives in a CSS file of yours. Next.js enforces this itself, not this package; see [Troubleshooting](#troubleshooting). Import the stylesheet from `pages/_app.tsx` anyway, for the same predictable order.
 - **Both directories present** (mid-migration): import the stylesheet in both root files. The two routers serve their own routes independently, so a route under `pages/` never sees a stylesheet imported only in `app/layout.tsx`, and vice versa.
 
 ## Import the stylesheet
@@ -47,7 +47,7 @@ Running Tailwind CSS v4? `@import "@codenhub/styles/tw"` is a CSS directive, so 
 
 ## Force a theme
 
-Apply `.dark` or `.light` on `<html>` to force a theme instead of following the system preference; see [Theming → Light and dark](../usage/theming.md#light-and-dark).
+Apply `.theme-dark` or `.theme-light` (or `data-theme="dark"` or `"light"`) on `<html>` to force a theme instead of following the system preference; see [Theming → Light and dark](../usage/theming.md#light-and-dark).
 
 ```tsx
 <html lang="en" className="dark">
@@ -63,9 +63,9 @@ In the Pages Router, `pages/_document.tsx` renders `<html>`, so put the class on
 
 **Pages Router build fails with "Global CSS cannot be imported from files other than your Custom `<App>`"**
 
-- **What happened:** Next.js rejected a global CSS `import` statement outside `pages/_app.tsx`. This restriction is specific to the Pages Router — Next.js enforces it itself, not this package, and it applies to any global CSS import, not specifically to `@codenhub/styles`. It does not apply to the App Router, where the same import works from any layout, page, or component.
-- **Why:** the Pages Router has no per-route CSS boundary the way the App Router does, so Next.js requires one predictable file for global stylesheets to avoid ordering conflicts between pages.
-- **Fix:** move the `import "@codenhub/styles"` line to `pages/_app.tsx`, and remove it from wherever it currently is.
+- **What happened:** Next.js rejected an `import` of one of your own global `.css` files outside `pages/_app.tsx`, such as the file that holds `@import "@codenhub/styles/tw"`. This restriction is specific to the Pages Router, and Next.js enforces it itself, not this package. It does not cover a stylesheet imported straight from a package, so `import "@codenhub/styles"` builds from any page or component, and it does not apply to the App Router at all. Checked with Next.js 16.4, with Turbopack and with webpack.
+- **Why:** the Pages Router has no per-route CSS boundary the way the App Router does, so Next.js requires one predictable file for your global stylesheets to avoid ordering conflicts between pages.
+- **Fix:** move the import of your CSS file to `pages/_app.tsx`, and remove it from wherever it currently is.
 
 ## Next
 
