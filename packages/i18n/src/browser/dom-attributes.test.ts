@@ -278,6 +278,106 @@ describe("initializeBrowserI18n attribute translation", () => {
   });
 });
 
+describe("initializeBrowserI18n keys that become invalid", () => {
+  interface KeyChange {
+    readonly element: Element;
+    readonly i18n: ReturnType<typeof createManager>;
+    readonly invalidKey: string;
+  }
+
+  const INVALID_KEYS = [
+    ["empty", ""],
+    ["blank once trimmed", "   "],
+    ["over 1,000 characters once trimmed", "k".repeat(1_001)],
+    ["over 10,000 characters before trimming", `${" ".repeat(10_000)}greeting`],
+    ["holding an ASCII control", "greeting\n"],
+  ] as const;
+
+  const setKeys = ({ element, invalidKey }: KeyChange): void => {
+    element.setAttribute("data-i18n", invalidKey);
+    element.setAttribute("data-i18n-title", invalidKey);
+  };
+
+  // Each way the binding reads the key again after it showed a translation for the valid key.
+  const REREADS: readonly (readonly [string, (change: KeyChange) => Promise<{ disconnect(): void }>])[] = [
+    [
+      "a later binding's first pass",
+      async (change) => {
+        const first = await initializeBrowserI18n({ i18n: change.i18n, locale: "fr", root: document.body });
+        first.disconnect();
+        setKeys(change);
+        return initializeBrowserI18n({ i18n: change.i18n, locale: "fr", root: document.body });
+      },
+    ],
+    [
+      "an observed key change",
+      async (change) => {
+        const binding = await initializeBrowserI18n({
+          i18n: change.i18n,
+          locale: "fr",
+          root: document.body,
+          observe: true,
+        });
+        setKeys(change);
+        await flushMutations();
+        return binding;
+      },
+    ],
+    [
+      "a locale change",
+      async (change) => {
+        const binding = await initializeBrowserI18n({ i18n: change.i18n, locale: "fr", root: document.body });
+        setKeys(change);
+        await change.i18n.setLocale("pt-BR");
+        return binding;
+      },
+    ],
+    [
+      "moving the element back in",
+      async (change) => {
+        const binding = await initializeBrowserI18n({
+          i18n: change.i18n,
+          locale: "fr",
+          root: document.body,
+          observe: true,
+        });
+        change.element.remove();
+        setKeys(change);
+        document.body.append(change.element);
+        await flushMutations();
+        return binding;
+      },
+    ],
+  ];
+
+  it.each(REREADS.flatMap(([path, reread]) => INVALID_KEYS.map(([kind, key]) => [path, kind, key, reread] as const)))(
+    "shows the HTML text and title after %s reads a key that is %s",
+    async (_path, _kind, invalidKey, reread) => {
+      document.body.innerHTML =
+        '<p data-i18n="greeting" data-i18n-title="greeting" title="Original title">Original</p>';
+      const element = document.querySelector("p")!;
+      const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+
+      const binding = await reread({ element, i18n: createManager(), invalidKey });
+      try {
+        expect(element.textContent).toBe("Original");
+        expect(element.getAttribute("title")).toBe("Original title");
+        for (const keyAttribute of ["data-i18n", "data-i18n-title"]) {
+          expect(warn).toHaveBeenCalledWith(
+            "%s",
+            expect.stringMatching(
+              new RegExp(`^\\[I18n\\] Skipping translation because ${keyAttribute} contains an invalid key, "`, "u"),
+            ),
+            element,
+          );
+        }
+      } finally {
+        binding.disconnect();
+      }
+    },
+  );
+});
+
 describe("initializeBrowserI18n messages that need values", () => {
   const createMessageManager = () =>
     createManager({
