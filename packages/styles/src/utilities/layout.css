@@ -190,14 +190,6 @@
     border-inline-start-width: var(--_vertical-line, 0px);
   }
 
-  .selection-contrast {
-    &::selection,
-    & *::selection {
-      background: var(--color-primary-contrast);
-      color: var(--color-primary);
-    }
-  }
-
   /* `.visually-hidden`, the standard clip-based recipe. Tailwind's `sr-only` does
      nothing on the vanilla entries (`.`, `/native`), which compile real CSS from
      a scan of `src/` alone with no Tailwind utility layer to reach, so the
@@ -206,9 +198,7 @@
      It is not named `.sr-only`: on a `/tw` entry the consumer's own Tailwind
      build supplies that utility, and two same-named utilities in one cascade
      collide silently -- the collision `registry.test.ts` polices (see
-     `data-table`'s `renamedFrom` in `registry.json`). `@source
-     inline("visually-hidden")` in `utilities/index.css` force-emits it on the
-     entries with no scannable markup of their own. */
+     `data-table`'s `renamedFrom` in `registry.json`). */
   .visually-hidden {
     position: absolute;
     width: 1px;
@@ -219,5 +209,23 @@
     clip: rect(0, 0, 0, 0);
     white-space: nowrap;
     border-width: 0;
+  }
+
+  /* `.visually-hidden` until the element or something inside it has focus,
+     then shown where it stands: a skip link, or a group of links a keyboard
+     reaches. `:focus` and not `:focus-visible`, so a click that focuses it
+     shows it too rather than leaving a focused element nobody can see. */
+  .visually-hidden-focusable {
+    &:not(:focus, :focus-within) {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border-width: 0;
+    }
   }
 }

@@ -190,6 +190,30 @@ export const getContrastRatio = (foreground: string, background: string) => {
    naming the engines that support it. */
 export const drawsCornerShape = (page: Page) => page.evaluate(() => CSS.supports("corner-shape", "bevel"));
 
+/* The length pixel's stepped corner is cut at, or `null` where an element is
+   not stepped. The step is a one-unit `notch` corner where the engine draws
+   `corner-shape: notch`, which clips nothing, and a `clip-path` polygon
+   elsewhere. `notch` computes to its `superellipse()` form (CSS Borders 4). */
+export const pixelStep = ({
+  clipPath,
+  borderTopLeftRadius,
+  cornerShape,
+}: {
+  clipPath: string;
+  borderTopLeftRadius: string;
+  cornerShape: string;
+}) => {
+  const polygon = /^polygon\(0px ([\d.]+px)/.exec(clipPath);
+  if (polygon) {
+    return polygon[1]!;
+  }
+  if (/notch|superellipse\(-infinity\)/.test(cornerShape) && borderTopLeftRadius !== "0px") {
+    return borderTopLeftRadius;
+  }
+
+  return null;
+};
+
 /* Presentation and intent resolve colors through `color-mix`, so a computed
    value carries the same color as its token in a different syntax, and can land
    a rounding step away in 8-bit sRGB. Colors are compared by distance. */

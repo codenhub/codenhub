@@ -476,6 +476,96 @@ for (const [label, attributes, reducedMotion] of [
   ['data-motion="none"', 'data-motion="none"', "no-preference"],
 ] as const) {
   test.describe(`under ${label}`, () => {
+    /* A scroll-driven animation runs on the scroll position, not on time, so a
+       near-zero duration alone left it following the page as it scrolled. */
+    test("a scroll-driven animation does not follow the scroll", async ({ page }) => {
+      await page.emulateMedia({ reducedMotion });
+      /* The sheet in the head, before the animation exists, as a page loads
+         it. Added after, WebKit 26 at times left the running animation on the
+         scroll timeline its `animation-timeline` no longer named. */
+      await page.setContent(
+        `<!doctype html><html ${attributes}><head><style>${await built("index.css")}</style></head><body style="margin: 0"><style>
+        @keyframes slide { to { translate: 300px; } }
+        #a { animation: slide linear both; animation-timeline: scroll(root); width: 10px; height: 10px; }
+      </style><div id="a" data-testid="a"></div><div style="height: 4000px"></div></body></html>`,
+      );
+
+      const supported = await page.evaluate(() => CSS.supports("animation-timeline: scroll()"));
+
+      test.skip(!supported, "the engine has no scroll-driven animations");
+
+      const read = () => page.getByTestId("a").evaluate((element) => getComputedStyle(element).translate);
+
+      /* Polled, not read after a fixed number of frames: WebKit can take a
+         few more to move the animation onto the document's timeline, and
+         until then its backwards fill shows the first keyframe. An animation
+         still following the scroll stays there at the top and never ends. */
+      await expect.poll(read, { message: "it ends where its keyframes end" }).toBe("300px");
+
+      await page.evaluate(() => window.scrollTo(0, 1800));
+      await page.evaluate(async () => {
+        await new Promise(requestAnimationFrame);
+        await new Promise(requestAnimationFrame);
+      });
+
+      expect(await read(), "the scroll moves nothing").toBe("300px");
+    });
+
+    /* Each pseudo-element in a rule of its own in the reset, since an engine
+       that does not know one drops the whole rule. Read where the engine
+       knows the pseudo-element; the others are skipped. */
+    for (const [pseudo, markup, selector] of [
+      ["::file-selector-button", '<input type="file" data-testid="target" />', "#t::file-selector-button"],
+      [
+        "::details-content",
+        '<details data-testid="target" open><summary>More</summary><p>Body</p></details>',
+        "#t::details-content",
+      ],
+      [
+        "::picker(select)",
+        '<select data-testid="target"><option>a</option><option>b</option></select>',
+        "#t::picker(select)",
+      ],
+    ] as const) {
+      test(`${pseudo} stops moving`, async ({ page }) => {
+        await page.emulateMedia({ reducedMotion });
+        await page.setContent(
+          `<!doctype html><html ${attributes}><body><style>
+          @keyframes spin { to { rotate: 1turn; } }
+          ${pseudo === "::picker(select)" ? "#t, #t::picker(select) { appearance: base-select; }" : ""}
+          ${selector} { transition: transform 400ms, block-size 400ms; animation: spin 1s infinite; }
+        </style>${markup.replace('data-testid="target"', 'id="t" data-testid="target"')}</body></html>`,
+        );
+        await page.addStyleTag({ content: await built("index.css") });
+
+        const styles = await page.getByTestId("target").evaluate((element, name) => {
+          if (!CSS.supports(`selector(${name})`)) {
+            return null;
+          }
+
+          const style = getComputedStyle(element, name);
+
+          return {
+            property: style.transitionProperty,
+            duration: style.transitionDuration,
+            animation: style.animationDuration,
+            iterations: style.animationIterationCount,
+          };
+        }, pseudo);
+
+        test.skip(styles === null || styles.animation === "", `the engine has no ${pseudo}`);
+        expect(Number.parseFloat(styles!.animation), "the animation ends at once").toBeLessThan(0.001);
+        expect(styles!.iterations).toBe("1");
+        if (attributes.includes("none")) {
+          for (const duration of styles!.duration.split(",")) {
+            expect(Number.parseFloat(duration)).toBeLessThan(0.001);
+          }
+        } else {
+          expect(styles!.property, "a move or a size lands at once").not.toMatch(/\b(transform|block-size)\b/);
+        }
+      });
+    }
+
     test("a backdrop's animation ends at once", async ({ page }) => {
       await page.emulateMedia({ reducedMotion });
       await page.setContent(

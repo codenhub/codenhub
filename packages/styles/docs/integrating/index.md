@@ -59,6 +59,25 @@ Then import the package with Parcel's `npm:` prefix, which tells it the name is 
 
 The other compiled entrypoints work the same way, such as `@codenhub/styles/dist/aesthetics/neobrutalism.css`.
 
+### Test runners
+
+A component test that imports a file which imports `@codenhub/styles` loads the stylesheet too. Vitest needs nothing: it resolves the package's `exports` map to the `.css` file and, by default, processes no CSS in tests. Jest does not process CSS at all, and the usual `moduleNameMapper` line for `.css` files misses this import, since `@codenhub/styles` and `@codenhub/styles/aesthetics/pixel` have no extension; Jest then reads the stylesheet as JavaScript and fails with `SyntaxError: Invalid or unexpected token`. Map the package's specifiers to the same empty module:
+
+```js
+// jest.config.js
+module.exports = {
+  moduleNameMapper: {
+    "^@codenhub/styles(/.*)?$": "<rootDir>/styleMock.js",
+    "\\.css$": "<rootDir>/styleMock.js",
+  },
+};
+```
+
+```js
+// styleMock.js
+module.exports = {};
+```
+
 ## Verifying it worked
 
 After the import, render one styled element and confirm it picked up the package's tokens rather than the browser default:

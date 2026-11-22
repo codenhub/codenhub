@@ -143,6 +143,36 @@
     --ui-label-case: initial;
     --ui-label-shadow: initial;
   }
+
+  /* The stepped corner drawn as the element's shape where the engine draws
+     `corner-shape`: a `notch` corner of one unit is the same square cut, and
+     it clips nothing. The polygon cut everything outside it, the element's
+     own children too, so a badge pinned to an icon button's corner, an open
+     menu, or a child's ring was trimmed at the button's edge. The polygon
+     stays the fallback, where it is the only way to draw the step.
+
+     Read by `box` alone, through two privates, rather than as the corner
+     tokens: `--ui-corner-shape` reaches a radio's dot and every pill, which a
+     notch would turn into crosses, and `--ui-corner` reaches the chips, which
+     stay square. The unit is not scaled by the size step, as the polygon was
+     not: one unit or nothing. A radio and a pill take their own round corner
+     back. Not under forced colours, which square every corner the clip would
+     have cut; see `theme.css`. */
+  @supports (corner-shape: notch) {
+    @media not (forced-colors: active) {
+      .pixel {
+        --ui-clip: none;
+        --_notch: var(--_pixel-unit);
+        --_notch-shape: notch;
+      }
+    }
+  }
+
+  /* Every other region draws its own corner. */
+  :is(.neobrutalism, .glass, .chunky-tile, .cyber, .sketch) {
+    --_notch: initial;
+    --_notch-shape: initial;
+  }
 }
 
 /* Solo: the same look painted onto the one element carrying the class, for an
@@ -199,7 +229,10 @@
    container it cut off what the element holds as well as its corners: an open
    menu, a badge pinned to the edge, a child's focus ring. A container keeps
    square corners and the ring. `:where()` keeps it one class deep, so the
-   forced-colours `clip-path: none` below still wins. */
+   forced-colours `clip-path: none` below still wins.
+
+   Where the engine draws `corner-shape`, the corner is the element's shape
+   instead, as under `.pixel`, and an action clips nothing either: below. */
 .pixel-solo:where(
   button,
   a[href],
@@ -223,6 +256,24 @@
     var(--_pixel-unit) calc(100% - var(--_pixel-unit)),
     0 calc(100% - var(--_pixel-unit))
   );
+}
+
+@supports (corner-shape: notch) {
+  @media not (forced-colors: active) {
+    .pixel-solo:where(
+      button,
+      a[href],
+      [role="button"],
+      summary,
+      input[type="button"],
+      input[type="submit"],
+      input[type="reset"]
+    ) {
+      border-radius: var(--_pixel-unit);
+      corner-shape: notch;
+      clip-path: none;
+    }
+  }
 }
 
 /* An intent class on the element colours it, as on a component. Named rather

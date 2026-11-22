@@ -1,7 +1,20 @@
 import { execFileSync, spawnSync } from "node:child_process";
-import { chmod, chown, lstat, mkdir, mkdtemp, readdir, readFile, rm, stat, symlink, writeFile } from "node:fs/promises";
+import {
+  chmod,
+  chown,
+  cp,
+  lstat,
+  mkdir,
+  mkdtemp,
+  readdir,
+  readFile,
+  rm,
+  stat,
+  symlink,
+  writeFile,
+} from "node:fs/promises";
 import { createRequire } from "node:module";
-import { tmpdir } from "node:os";
+import { tmpdir, userInfo } from "node:os";
 import path from "node:path";
 
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
@@ -264,6 +277,92 @@ describe("build", () => {
     expect(await readOutput("app/views/app.css")).toBe(first);
   });
 
+  /* Django's collectstatic copies the package's dist/ into staticfiles/, and a
+     second build can name the first one's output: each names every class it
+     holds, so read as content the whole stylesheet shipped. */
+  it("does not read a copy of the package's stylesheets, class list, or another build's output", async () => {
+    expect(await build("build", "-c", "app/views/**/*", "-o", "alone.css")).toBe(0);
+    const alone = await readOutput("alone.css");
+
+    // Every file the package ships, as collectstatic copies them: the aesthetics and the theme carry no notice.
+    await cp(path.join(packageRoot, "dist"), path.join(project, "staticfiles"), { recursive: true });
+    // An older version's class list, which this version's does not match byte for byte.
+    const classes = JSON.parse(
+      await readFile(path.join(packageRoot, "dist", "purge", "classes.json"), "utf8"),
+    ) as string[];
+
+    await writeFile(
+      path.join(project, "staticfiles", "classes.old.json"),
+      JSON.stringify(classes.slice(1), undefined, 2),
+    );
+
+    expect(
+      await build("build", "-c", "app/views/**/*", "-c", "staticfiles/**/*", "-c", "alone.css", "-o", "app.css"),
+    ).toBe(0);
+    expect(await readOutput()).toBe(alone);
+  });
+
+  it("still reads a safelist written as a JSON list of classes", async () => {
+    await writeFile(path.join(project, "safelist.json"), '["data-table"]\n');
+
+    expect(await build("build", "-c", "app/views/**/*.erb", "-c", "safelist.json", "-o", "app.css")).toBe(0);
+    expect(await readOutput()).toMatch(ruleFor("data-table"));
+  });
+
+  // `fs.globSync` skipped a folder it could not list, so its classes were lost and the build succeeded.
+  it.skipIf(process.platform !== "win32" && process.getuid?.() === 0)(
+    "fails on a folder a --content glob cannot list, naming it",
+    async () => {
+      const locked = path.join(project, "app", "views", "locked");
+
+      await mkdir(locked);
+      await writeFile(path.join(locked, "table.html.erb"), '<table class="data-table">\n');
+      if (process.platform === "win32") {
+        execFileSync("icacls", [locked, "/deny", `${userInfo().username}:(RD)`], { stdio: "ignore" });
+      } else {
+        await chmod(locked, 0o000);
+      }
+
+      try {
+        expect(await build("build", "-c", "app/views/**/*.erb", "-o", "app.css")).toBe(1);
+        expect(stderr).toHaveLength(1);
+        expect(stderr[0]).toMatch(/^chs: (EACCES|EPERM): /);
+        expect(stderr[0]).toContain(locked);
+      } finally {
+        if (process.platform === "win32") {
+          execFileSync("icacls", [locked, "/remove:d", userInfo().username], { stdio: "ignore" });
+        } else {
+          await chmod(locked, 0o755);
+        }
+      }
+    },
+  );
+
+  // A template that names no class wrote the theme and the reset alone, and said nothing.
+  it("warns when the content names no StyleKit class, and still builds", async () => {
+    await writeFile(path.join(project, "empty.html"), '<div id="root"></div>\n');
+
+    expect(await build("build", "-c", "empty.html", "-o", "app.css")).toBe(0);
+    expect(stderr).toEqual([
+      'chs: warning: --content "empty.html" names no StyleKit class, so the stylesheet holds only the theme and the reset; check that the globs name your templates.',
+    ]);
+    expect(stdout).toHaveLength(1);
+  });
+
+  // An aesthetic is added only on request, so a template naming its class got an unstyled element.
+  it("warns of an aesthetic class the content names without its --aesthetic", async () => {
+    await writeFile(path.join(project, "app", "views", "card.html.erb"), '<div class="card glass glass-liquid">\n');
+
+    expect(await build("build", "-c", "app/views/**/*.erb", "-o", "app.css")).toBe(0);
+    expect(stderr).toEqual([
+      'chs: warning: --content names "glass" and "glass-liquid", which only --aesthetic glass styles; add --aesthetic glass, or leave the class out.',
+    ]);
+
+    stderr = [];
+    expect(await build("build", "-c", "app/views/**/*.erb", "-o", "app.css", "--aesthetic", "glass")).toBe(0);
+    expect(stderr).toEqual([]);
+  });
+
   // A build killed before its rename leaves its temporary file, which held the last build's classes.
   it("does not read a temporary file a killed build left beside the output", async () => {
     await mkdir(path.join(project, "public"));
@@ -425,6 +524,24 @@ describe("failures", () => {
     expect(await failureOf("build", "-c", "app/views/**/*.erb")).toMatch(/--output/);
   });
 
+  // A quoted variable left empty by a script was told to read "/**/*", the whole disk.
+  it.each(["", "  "])("takes a --content of %j as missing", async (entry) => {
+    expect(await failureOf("build", "-c", "app/views/**/*.erb", "-c", entry, "-o", "app.css")).toBe(
+      'chs: missing --content; name the templates to scan, as in --content "app/views/**/*.erb".',
+    );
+  });
+
+  // `-o NUL` wrote a file named NUL, which `del` cannot remove.
+  it.skipIf(process.platform !== "win32").each(["NUL", "nul.css", "public/Com1.txt", "LPT9", "CON .css", "conout$"])(
+    "refuses an --output that names a Windows device, as %s",
+    async (output) => {
+      expect(await failureOf("build", "-c", "app/views/**/*.erb", "-o", output)).toBe(
+        `chs: --output ${output} is a device, not a file; name a stylesheet to write.`,
+      );
+      expect(await readdir(project)).toEqual(["app"]);
+    },
+  );
+
   // A quoted variable left empty by a script; written as given, it names a file of spaces.
   it("takes an --output of only spaces as missing", async () => {
     expect(await failureOf("build", "-c", "app/views/**/*.erb", "-o", "  ")).toBe(
@@ -554,11 +671,13 @@ describe("failures", () => {
     expect(await failureOf("watch", "-c", "app/views/**/*.erb", "-o", "app.css")).toMatch(/"watch"/);
   });
 
-  it("rejects a Node.js older than it supports, naming both versions", async () => {
-    nodeVersion = "24.22.1";
+  it("rejects a Node.js older than the engines floor, naming both versions", async () => {
+    const manifest = JSON.parse(await readFile(new URL("../../package.json", import.meta.url), "utf8"));
+    const floor = Number(/^>=(\d+)$/.exec(manifest.engines.node)?.[1]);
+    nodeVersion = `${floor - 1}.12.0`;
 
     expect(await failureOf("build", "-c", "app/views/**/*.erb", "-o", "app.css")).toBe(
-      "chs: this command needs Node.js 26 or newer; this is Node.js 24.22.1.",
+      `chs: this command needs Node.js ${floor} or newer; this is Node.js ${floor - 1}.12.0.`,
     );
   });
 

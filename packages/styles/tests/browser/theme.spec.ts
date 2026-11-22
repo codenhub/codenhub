@@ -1,5 +1,5 @@
 import { expect, test } from "./fixtures";
-import { ORIGIN, settleAnimations } from "./test-utils";
+import { getColorDistance, getContrastRatio, ORIGIN, settleAnimations } from "./test-utils";
 
 const COMPONENTS_URL = `${ORIGIN}/components/?env=vanilla`;
 
@@ -87,9 +87,8 @@ test.describe("theme", () => {
       };
 
       return {
-        dark: readTheme("dark"),
-        dataDark: readTheme("theme-dark"),
-        light: readTheme("light"),
+        dark: readTheme("theme-dark"),
+        light: readTheme("theme-light"),
         unthemed: readTheme(""),
       };
     });
@@ -99,9 +98,6 @@ test.describe("theme", () => {
 
     expect(resolved.dark.text).not.toBe(resolved.light.text);
     expect(resolved.dark.background).not.toBe(resolved.light.background);
-
-    // Aliases must land on exactly the same palette as the canonical selector.
-    expect(resolved.dataDark.text).toBe(resolved.dark.text);
 
     // With no selector, the root follows the system preference.
     expect(resolved.unthemed.text).toBe(resolved.light.text);
@@ -138,9 +134,9 @@ test.describe("theme", () => {
 
     const nested = await page.evaluate(() => {
       const outer = document.createElement("section");
-      outer.className = "dark";
+      outer.className = "theme-dark";
       const inner = document.createElement("section");
-      inner.className = "light";
+      inner.className = "theme-light";
       const darkProbe = document.createElement("span");
       const lightProbe = document.createElement("span");
 
@@ -163,7 +159,7 @@ test.describe("theme", () => {
   });
 
   /* Setting only `color-scheme` left a region's own text on the ink it
-     inherited from the page: `<aside class="dark"><p>` on a light page kept the
+     inherited from the page: `<aside class="theme-dark"><p>` on a light page kept the
      light theme's near-black and printed it on the region's dark ground. */
   test("re-resolves the text colour of a region a theme selector forces", async ({ page }) => {
     await page.goto(COMPONENTS_URL);
@@ -173,7 +169,7 @@ test.describe("theme", () => {
 
       root.classList.remove("dark", "theme-dark");
       root.removeAttribute("data-theme");
-      root.classList.add("light");
+      root.classList.add("theme-light");
 
       const read = (setup: (host: HTMLElement) => void) => {
         const host = document.createElement("aside");
@@ -194,17 +190,16 @@ test.describe("theme", () => {
 
       return {
         page: getComputedStyle(document.body).color,
-        dark: read((host) => host.classList.add("dark")),
-        themeDark: read((host) => host.classList.add("theme-dark")),
+        dark: read((host) => host.classList.add("theme-dark")),
         dataDark: read((host) => host.setAttribute("data-theme", "dark")),
         lightInDark: read((host) => {
-          root.classList.replace("light", "dark");
-          host.classList.add("light");
+          root.classList.replace("theme-light", "dark");
+          host.classList.add("theme-light");
         }),
       };
     });
 
-    for (const spelling of ["dark", "themeDark", "dataDark", "lightInDark"] as const) {
+    for (const spelling of ["dark", "dataDark", "lightInDark"] as const) {
       expect(resolved[spelling].paragraph, `${spelling} region text`).toBe(resolved[spelling].token);
     }
 
@@ -212,9 +207,59 @@ test.describe("theme", () => {
     /* Each alias has to switch the region, not only agree with itself: a
        spelling that stopped matching left text and token on the page's ink
        together. */
-    expect(resolved.themeDark.paragraph, ".theme-dark is .dark").toBe(resolved.dark.paragraph);
-    expect(resolved.dataDark.paragraph, "data-theme=dark is .dark").toBe(resolved.dark.paragraph);
-    expect(resolved.lightInDark.paragraph, ".light inside a dark page is the light page").toBe(resolved.page);
+    expect(resolved.dataDark.paragraph, "data-theme=dark is .theme-dark").toBe(resolved.dark.paragraph);
+    expect(resolved.lightInDark.paragraph, ".theme-light inside a dark page is the light page").toBe(resolved.page);
+  });
+
+  /* `.light` and `.dark` are ordinary words for a class: a `<span
+     class="light">` in a price on a dark page switched to the light scheme and
+     printed its near-black text on the dark ground, at 1.00:1. `.dark` themes
+     only the root, Tailwind's convention; `.light` is not a theme selector. */
+  test("themes nothing with a bare light or dark class below the root", async ({ page }) => {
+    await page.goto(COMPONENTS_URL);
+
+    const resolved = await page.evaluate(() => {
+      const root = document.documentElement;
+
+      root.classList.remove("dark", "light", "theme-dark", "theme-light");
+      root.setAttribute("data-theme", "dark");
+
+      const read = (className: string) => {
+        const span = document.createElement("span");
+
+        span.className = className;
+        document.body.append(span);
+        const style = getComputedStyle(span);
+        const values = { colorScheme: style.colorScheme, color: style.color };
+
+        span.remove();
+
+        return values;
+      };
+
+      const page = {
+        colorScheme: getComputedStyle(document.body).colorScheme,
+        color: getComputedStyle(document.body).color,
+      };
+      const light = read("light");
+
+      root.removeAttribute("data-theme");
+      root.classList.add("theme-light");
+      const dark = read("dark");
+      const lightPage = {
+        colorScheme: getComputedStyle(document.body).colorScheme,
+        color: getComputedStyle(document.body).color,
+      };
+
+      root.classList.replace("theme-light", "dark");
+      const rootDark = getComputedStyle(document.body).colorScheme;
+
+      return { page, light, lightPage, dark, rootDark };
+    });
+
+    expect(resolved.light, "a .light span on a dark page").toEqual(resolved.page);
+    expect(resolved.dark, "a .dark span on a light page").toEqual(resolved.lightPage);
+    expect(resolved.rootDark, ".dark on the root still themes the page").toBe("dark");
   });
 
   /* `--focus-ring` was resolved once at `:root`, so a container that set its
@@ -278,7 +323,7 @@ test("prints a dark page in the light theme, and a filled box with its plate", a
   const read = async (theme: string) => {
     await page.setContent(
       `<!doctype html><html data-theme="${theme}"><body><p id="text">Text</p>` +
-        '<section class="dark"><p id="region">Region</p></section>' +
+        '<section class="theme-dark"><p id="region">Region</p></section>' +
         '<button class="btn solid primary" id="button">Save</button></body></html>',
     );
     await page.addStyleTag({ url: `${ORIGIN}/shared/entry-vanilla.css` });
@@ -335,11 +380,57 @@ test("prints a filled quotation with its plate", async ({ page }) => {
   expect(quote.adjust).toBe("exact");
 });
 
-/* Inside a shadow root, the sheet's `:root` matches nothing, so every token
-   block names `:host` beside it: with one missing, a button lost its height and
-   a focused control its ring. The page loads the sheet too, as
-   docs/setup.md asks, because a browser ignores `@property` in a shadow root,
-   and without those registrations a card lost its line. */
+/* A token set on the page reaches a shadow root that loads the sheet too, as
+   docs/setup.md asks: the tokens are declared on the page's `:root` alone and
+   inherit into the shadow tree. Declared on `:host` as well, the shadow
+   root's copy redeclared every colour token on the host, so a page's
+   `--color-primary` stopped at the boundary while `--radius-control`, declared
+   on `:root` only, crossed it. */
+test("a page's token override reaches a shadow root that loads the sheet", async ({ page }) => {
+  await page.setContent(
+    `<!doctype html><html><head><link rel="stylesheet" href="${ORIGIN}/shared/entry-vanilla.css" /><style>:root { --color-primary: rgb(109, 40, 217); --radius-control: 3px; }</style></head><body><button class="btn solid primary" id="light">Go</button><div data-host></div></body></html>`,
+  );
+  await page.waitForLoadState("load");
+
+  await page.evaluate(async (origin) => {
+    const root = document.querySelector("[data-host]")!.attachShadow({ mode: "open" });
+    const link = document.createElement("link");
+
+    link.rel = "stylesheet";
+    link.href = `${origin}/shared/entry-vanilla.css`;
+    const loaded = new Promise((resolve) => link.addEventListener("load", resolve));
+
+    root.append(link);
+    await loaded;
+    // After the sheet, or the button transitions from its unstyled face.
+    root.append(Object.assign(document.createElement("button"), { className: "btn solid primary", textContent: "Go" }));
+  }, ORIGIN);
+  await settleAnimations(page);
+
+  const read = await page.evaluate(() => {
+    const inside = getComputedStyle(document.querySelector("[data-host]")!.shadowRoot!.querySelector(".btn")!);
+    const outside = getComputedStyle(document.getElementById("light")!);
+
+    return {
+      inside: { background: inside.backgroundColor, radius: inside.borderTopLeftRadius },
+      outside: { background: outside.backgroundColor, radius: outside.borderTopLeftRadius },
+    };
+  });
+
+  expect(getColorDistance(read.outside.background, "rgb(109, 40, 217)"), "the page's own button").toBeLessThanOrEqual(
+    2,
+  );
+  expect(
+    getColorDistance(read.inside.background, read.outside.background),
+    `in the shadow root ${read.inside.background}`,
+  ).toBeLessThanOrEqual(2);
+  expect(read.inside.radius, "the radius crosses too").toBe(read.outside.radius);
+});
+
+/* Inside a shadow root, the sheet's `:root` matches nothing, so the tokens
+   reach it by inheritance from the page, which loads the sheet too, as
+   docs/setup.md asks: a browser ignores `@property` in a shadow root, and
+   without those registrations a card lost its line. */
 test("styles components inside a shadow root", async ({ page }) => {
   await page.emulateMedia({ colorScheme: "dark" });
   await page.setContent(
@@ -393,3 +484,48 @@ test("styles components inside a shadow root", async ({ page }) => {
   expect(ring.focused).toBe(true);
   expect(ring.outline, "the focus ring").not.toBe("none");
 });
+
+/* Selected text on a solid plate: the page's highlight is the brand colour,
+   so on a `.solid.primary` button it painted primary on primary, and on the
+   other intents it could land near the plate too. On a plate the highlight is
+   the plate's own ink and the selected text the plate's colour, the pair the
+   plate already prints its text in, inverted. */
+for (const theme of ["light", "dark"] as const) {
+  test(`selected text on every solid plate reads and stands out, ${theme} theme`, async ({ page }) => {
+    const intents = ["neutral", "primary", "secondary", "success", "warning", "destructive", "info"];
+
+    await page.setContent(
+      `<!doctype html><html class="theme-${theme}"><head><link rel="stylesheet" href="${ORIGIN}/shared/entry-vanilla.css" /></head><body><p data-plate="page">Page</p>${intents
+        .map(
+          (intent) =>
+            `<button class="btn solid ${intent}" data-plate="btn-${intent}">Go</button><span class="badge solid ${intent}" data-plate="badge-${intent}">New</span><div class="card solid ${intent}" data-plate="card-${intent}"><p data-text>Text</p></div>`,
+        )
+        .join("")}</body></html>`,
+    );
+    await page.waitForLoadState("load");
+    await settleAnimations(page);
+
+    const reads = await page.evaluate(() =>
+      [...document.querySelectorAll<HTMLElement>("[data-plate]")].map((plate) => {
+        const text = plate.querySelector<HTMLElement>("[data-text]") ?? plate;
+        const selection = getComputedStyle(text, "::selection");
+
+        return {
+          name: plate.dataset.plate!,
+          plate: getComputedStyle(plate.dataset.plate === "page" ? document.body : plate).backgroundColor,
+          highlight: selection.backgroundColor,
+          text: selection.color,
+        };
+      }),
+    );
+
+    for (const { name, plate, highlight, text } of reads) {
+      const label = `${name}: ${text} on ${highlight} over ${plate}`;
+
+      expect(getContrastRatio(text, highlight), label).toBeGreaterThanOrEqual(4.5);
+      if (name !== "page") {
+        expect(getContrastRatio(highlight, plate), label).toBeGreaterThanOrEqual(3);
+      }
+    }
+  });
+}

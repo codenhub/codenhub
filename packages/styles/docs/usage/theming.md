@@ -20,10 +20,12 @@ To let the user choose, put a theme selector on the root element:
 </html>
 ```
 
-| Theme | Equivalent selectors                             |
-| ----- | ------------------------------------------------ |
-| Light | `.light`, `.theme-light`, `[data-theme="light"]` |
-| Dark  | `.dark`, `.theme-dark`, `[data-theme="dark"]`    |
+| Theme | Equivalent selectors                                          |
+| ----- | ------------------------------------------------------------- |
+| Light | `.theme-light`, `[data-theme="light"]`                        |
+| Dark  | `.theme-dark`, `[data-theme="dark"]`, and `.dark` on `<html>` |
+
+`.dark` themes only the root element, where Tailwind's convention puts it, and there is no `.light`. Both are words a class name often holds for other reasons: a `<span class="light">` for a lighter weight would otherwise switch its text to the light theme's near-black on a dark page. To theme a region, use `.theme-*` or `data-theme`.
 
 A settings screen with a "System / Light / Dark" choice removes the attribute for System and sets it for the other two.
 
@@ -32,9 +34,9 @@ Contrast and motion settings work the same way, through `data-contrast` and `dat
 How it resolves:
 
 - A theme selector sets the CSS `color-scheme` property, and the element's text color to `--color-text`. Every color token holds its light and its dark value at once, through `light-dark()`, and the element's `color-scheme` picks one.
-- `color-scheme` inherits, so a selector themes everything inside it. A selector on any element themes that part of the page: a dark sidebar on a light page is `<aside class="dark">`, and the text inside it takes the dark theme's text color.
+- `color-scheme` inherits, so a selector themes everything inside it. A selector on any element themes that part of the page: a dark sidebar on a light page is `<aside class="theme-dark">`, and the text inside it takes the dark theme's text color.
 - A selector sets no background. Give the region its ground yourself, such as `background: var(--color-background)`. Any utility or component class on the same element overrides the selector's text color.
-- The nearest selector wins, at any depth. A `.light` card inside a `.dark` page is light.
+- The nearest selector wins, at any depth. A `.theme-light` card inside a dark page is light.
 - With no selector, the root has `color-scheme: light dark`, which follows the system.
 - Put one theme on an element. If an element carries both a light and a dark selector, dark wins, but do not rely on that.
 - Setting `color-scheme` yourself on an element themes the tokens the same way, because it is the only thing the palette reads. It also themes native parts such as scrollbars and the inside of form controls. Plain text inside keeps the color it inherited until you also set `color: var(--color-text)`.
@@ -59,14 +61,14 @@ With the Tailwind source entrypoints (`/tw`), the package replaces Tailwind's `d
 <html>
   <body>
     <p class="dark:text-white">Follows the system preference</p>
-    <div class="light">
+    <div class="theme-light">
       <p class="dark:text-white">Stays light: this part of the page chose a theme</p>
     </div>
   </body>
 </html>
 ```
 
-It differs from the tokens in one case: an explicit theme nested inside the opposite one. A `.light` element inside a `.dark` one has light tokens, because the nearest `color-scheme` wins. But `dark:` matches by selector, and `.dark *` matches every element inside `.dark`, so a `dark:` utility inside that `.light` element still applies. If a page uses both tokens and `dark:` utilities, do not nest opposite themes.
+It differs from the tokens in one case: an explicit theme nested inside the opposite one. A `.theme-light` element inside a `.theme-dark` one has light tokens, because the nearest `color-scheme` wins. But `dark:` matches by selector, and `.theme-dark *` matches every element inside `.theme-dark`, so a `dark:` utility inside that `.theme-light` element still applies. If a page uses both tokens and `dark:` utilities, do not nest opposite themes.
 
 The compiled entrypoints do not define a `dark:` variant; they have no Tailwind build to define it in. The [`chs build` command](../integrating/without-a-bundler.md#variants) does offer `dark:`, with the same selectors, on the intent, presentation, and modifier classes only.
 

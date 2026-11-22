@@ -134,6 +134,20 @@
     :lang(pnb),
     :lang(prs),
     :lang(azb),
+    :lang(skr),
+    :lang(bal),
+    :lang(bcc),
+    :lang(bgn),
+    :lang(mzn),
+    :lang(glk),
+    :lang(lrc),
+    :lang(luz),
+    :lang(sdh),
+    :lang(bqi),
+    :lang(hno),
+    :lang(khw),
+    :lang(brh),
+    :lang(rhg),
     :lang(doi),
     :lang(brx),
     :lang(new),
@@ -378,6 +392,20 @@
 
     &::after {
       background-color: HighlightText;
+    }
+  }
+
+  /* Disabled is GrayText at full strength, checked or not, as `.checkbox` and
+     `.radio` are in `form.css`: a dimmed Highlight plate read as a faint
+     enabled toggle. After the checked rule, so it wins. */
+  input[type="checkbox"]:disabled,
+  input[type="radio"]:disabled {
+    opacity: 1;
+    background-color: Canvas;
+    border-color: GrayText;
+
+    &::after {
+      background-color: GrayText;
     }
   }
 

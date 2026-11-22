@@ -3,7 +3,7 @@ title: Visão geral
 description: Como a folha de estilos é carregada no build de um framework e qual guia seguir.
 group: Integração
 order: 2
-source: 90c207e467034bfeb56dba5cfdfa6ad749158af7
+source: 5af237896ccc0da753e402313a176df02820a62c
 ---
 
 # Integração
@@ -59,6 +59,25 @@ Depois importe o pacote com o prefixo `npm:` do Parcel, que diz a ele que o nome
 ```
 
 Os outros entrypoints compilados funcionam do mesmo jeito, como `@codenhub/styles/dist/aesthetics/neobrutalism.css`.
+
+### Executores de testes
+
+Um teste de componente que importa um arquivo que importa `@codenhub/styles` carrega a folha de estilos também. O Vitest não precisa de nada: ele resolve o mapa de `exports` do pacote para o arquivo `.css` e, por padrão, não processa CSS nos testes. O Jest não processa CSS nenhum, e a linha de `moduleNameMapper` de costume para arquivos `.css` não pega esse import, já que `@codenhub/styles` e `@codenhub/styles/aesthetics/pixel` não têm extensão; aí o Jest lê a folha de estilos como JavaScript e falha com `SyntaxError: Invalid or unexpected token`. Mapeie os especificadores do pacote para o mesmo módulo vazio:
+
+```js
+// jest.config.js
+module.exports = {
+  moduleNameMapper: {
+    "^@codenhub/styles(/.*)?$": "<rootDir>/styleMock.js",
+    "\\.css$": "<rootDir>/styleMock.js",
+  },
+};
+```
+
+```js
+// styleMock.js
+module.exports = {};
+```
 
 ## Conferindo se funcionou
 

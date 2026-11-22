@@ -11,6 +11,16 @@
    real `id`. A real bubble can carry `role="tooltip"` and be referenced by the
    trigger's own `aria-describedby`; wiring that association is the consumer's,
    this package only styles the bubble. See docs/usage/tooltips.md. */
+
+/* A closing bubble's full size under reduced motion, held through the linger
+   by the animation's delay: see the bubble's hidden state. */
+@keyframes anim-tooltip-hold {
+  from,
+  to {
+    transform: var(--_tooltip-transform) scale(1);
+  }
+}
+
 @layer utilities {
   .tooltip {
     /* `--tooltip-gap` and `--tooltip-linger` are public, read with their
@@ -116,6 +126,9 @@
       calc(var(--_corner) * var(--ui-corner-tl, 1)) calc(var(--_corner) * var(--ui-corner-tr, 1))
         calc(var(--_corner) * var(--ui-corner-br, 1)) calc(var(--_corner) * var(--ui-corner-bl, 1))
     );
+    /* And the shape `box` gives that corner, pixel's notch included, which
+       `surface` leaves off. */
+    corner-shape: var(--_notch-shape, var(--ui-corner-shape, round));
 
     /* Inside `.tooltip`, at the class's own specificity: placed beside the
        trigger, hidden at rest, and grown in. `:where()` keeps the host out of
@@ -142,23 +155,40 @@
       transition-delay: var(--tooltip-linger, var(--_tooltip-linger));
 
       /* The bubble appears without growing under reduced motion, for the
-         entries without the reset; see `box.css`. It also rests at full size,
-         hidden by its fade alone: a `transform` left out of the transition
-         lands at once, ignoring the linger, so a bubble that shrank on close
-         would be gone from under the pointer before it could cross the gap
-         (WCAG 1.4.13). */
+         entries without the reset; see `box.css`. It still rests at no size,
+         so a closed bubble does not widen the page: at full size and merely
+         hidden it overflowed wherever it would have, a horizontal scroll on a
+         narrow screen for a message nobody opened.
+
+         A `transform` left out of the transition lands at once, ignoring the
+         linger, so a bubble that shrank on close would be gone from under the
+         pointer before it could cross the gap (WCAG 1.4.13). The hold
+         animation keeps it at full size instead: its `from` fills the delay,
+         the linger and the fade, and its duration is the one the reset forces
+         on every animation, which keeps delays. The open state clears it, so
+         it starts over on every close.
+
+         It also runs once when the page loads, so for that half second the
+         hidden bubble still reaches out. Rejected: taking a closed bubble out
+         of the layout with a discrete `display` transition, which has no such
+         start -- an element on its way to `display: none` is not hit-tested in
+         Chromium, so the pointer crossing onto the lingering bubble found the
+         page under it. */
       @media (prefers-reduced-motion: reduce) {
         &:not(:where(:root[data-motion="full"] *)) {
-          transform: var(--_tooltip-transform) scale(1);
           transition-property: opacity, visibility;
+          animation: anim-tooltip-hold 0.01ms linear
+            calc(var(--tooltip-linger, var(--_tooltip-linger)) + var(--motion-duration-normal)) backwards;
         }
       }
       &:where(:root:is([data-motion="reduce"], [data-motion="none"]) *) {
-        transform: var(--_tooltip-transform) scale(1);
         transition-property: opacity, visibility;
+        animation: anim-tooltip-hold 0.01ms linear
+          calc(var(--tooltip-linger, var(--_tooltip-linger)) + var(--motion-duration-normal)) backwards;
       }
       &:where(:root[data-motion="none"] *) {
         transition-duration: 0.01ms;
+        animation-delay: var(--tooltip-linger, var(--_tooltip-linger));
       }
     }
 
@@ -197,6 +227,7 @@
       transform: var(--_tooltip-transform) scale(1);
       visibility: visible;
       transition-delay: 0s;
+      animation: none;
     }
 
     /* Dismissed: a hover message has to close without the pointer moving
@@ -209,6 +240,8 @@
       transform: var(--_tooltip-transform) scale(0);
       visibility: hidden;
       transition-delay: 0s;
+      /* Under reduced motion, held at full size for the fade alone. */
+      animation-delay: var(--motion-duration-normal);
     }
   }
 

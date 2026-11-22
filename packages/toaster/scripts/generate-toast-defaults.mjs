@@ -12,7 +12,13 @@
  * inputs when it is not. Baking the raw inputs rather than the composed
  * result is what lets the same formula produce both.
  *
- * `packages/styles/src/palette.css`, styles' own generated output, is plain
+ * It reads `@codenhub/styles` as this package installs it from npm, the
+ * version its `devDependencies` names, never the styles source in this
+ * repository: the two packages are released apart, so a change to the styles
+ * source reaches these defaults only when this package moves to a release
+ * that ships it.
+ *
+ * That release's `/palette` stylesheet, `dist/palette.css`, is plain
  * text: every raw input this package needs can be read off it without
  * resolving Tailwind's own color scale, because a "solid" cell (100% fill,
  * 100% on-fill) IS the uncomposed accent and contrast color for any intent
@@ -28,6 +34,7 @@
  */
 import { spawn } from "node:child_process";
 import { readFile } from "node:fs/promises";
+import { createRequire } from "node:module";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -62,7 +69,7 @@ function splitPaletteThemes(paletteText) {
  * @returns The declaration's value.
  */
 function readPaletteValue(block, name) {
-  const match = block.match(new RegExp(`--palette-${name}:\\s*([^;]+);`));
+  const match = block.match(new RegExp(`--palette-${name}:\\s*([^;}]+)[;}]`));
   if (!match) {
     throw new Error(`palette.css has no --palette-${name} declaration -- has the palette's naming changed?`);
   }
@@ -244,9 +251,9 @@ async function formatCss(css, workspaceRoot) {
 async function main() {
   const isDryRun = process.argv.includes("--dry-run");
   const workspaceRoot = await findWorkspaceRoot(packageRoot);
-  const stylesRoot = path.join(workspaceRoot, "packages", "styles");
+  const stylesManifest = createRequire(path.join(packageRoot, "package.json")).resolve("@codenhub/styles/package.json");
 
-  const paletteText = await readFile(path.join(stylesRoot, "src", "palette.css"), "utf8");
+  const paletteText = await readFile(path.join(path.dirname(stylesManifest), "dist", "palette.css"), "utf8");
   const { dark: darkBlock, light: lightBlock } = splitPaletteThemes(paletteText);
 
   console.error("Reading raw color inputs from the real palette.css...");

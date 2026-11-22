@@ -10,10 +10,17 @@
    `/tw`, `scripts/build-tw.mjs` writes this block as `@theme static`, so a
    consumer's utilities read the tokens (`bg-primary`) and Tailwind keeps the
    unread ones too. `exports.test.ts` holds every compiled entry to the tokens
-   `docs/usage/theming.md` lists. */
+   `docs/usage/theming.md` lists.
+
+   On `:root` alone, not on `:host`: a shadow root that loads the sheet as
+   well as the page, as docs/setup.md asks, inherits the page's tokens, a
+   consumer's override on `:root` included. Declared on `:host` too, the shadow
+   root's copy redeclared every token on the host and the page's
+   `--color-primary` stopped at the boundary, while a token declared on
+   `:root` only, such as `--radius-control`, crossed it. In `/tw`, Tailwind
+   writes its theme on `:root, :host` itself; see docs/integrating/tailwind.md. */
 @layer theme {
-  :root,
-  :host {
+  :root {
     --font-default: "Segoe UI", system-ui, sans-serif;
 
     --color-primary: light-dark(var(--color-neutral-950), var(--color-neutral-50));
@@ -45,10 +52,8 @@
 
        One value rather than a `light-dark()` pair: the page is neutral-50 in
        light and neutral-950 in dark, so a tone halfway between them reads on both
-       grounds at once. A text control draws it at `--_line-rest` rather than
-       whole, which keeps the field quiet while leaving the pointer somewhere to
-       go, so the line as painted lands under the 3:1 WCAG 1.4.11 asks of a
-       control boundary. Recorded in docs/accessibility.md. */
+       grounds at once. A text control draws it whole at rest, so the line
+       clears the 3:1 WCAG 1.4.11 asks of a control boundary in both themes. */
     --color-control-border: var(--color-neutral-500);
     --color-background: light-dark(var(--color-neutral-50), var(--color-neutral-950));
     --color-foreground: light-dark(var(--color-neutral-100), var(--color-neutral-900));

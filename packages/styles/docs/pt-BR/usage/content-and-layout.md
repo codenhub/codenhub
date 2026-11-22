@@ -2,7 +2,7 @@
 title: Conteúdo e layout
 description: Consulta de todos os helpers de layout com os seus espaçamentos, a escala tipográfica com os seus tamanhos, cards e painéis com o seu padding, tabelas, citações, código e teclas.
 order: 10
-source: 90d3ac564b32aaa79ae8ddb063bc10e1aba4a19d
+source: 18df431402cededb628a4e9b814dbc9e448f5cf0
 ---
 
 # Conteúdo e layout
@@ -13,16 +13,17 @@ Esta é uma página de consulta para as classes que organizam uma página e defi
 
 O espaçamento de todo helper de layout é `--layout-gap`, `1rem` por padrão. Definir `--layout-gap` num elemento muda o espaçamento de todos os layouts dentro dele. `.tight` e `.loose` mudam só o layout em que estão; um layout aninhado dentro dele mantém o seu próprio espaçamento.
 
-| Classe             | Layout                                                                                                                                  | Espaçamento                                      |
-| ------------------ | --------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------ |
-| `.stack`           | Uma coluna vertical.                                                                                                                    | `--layout-gap`, `.tight` 0.5rem, `.loose` 1.5rem |
-| `.cluster`         | Uma linha que quebra, com os itens centralizados na vertical. `.between` espalha os itens até as duas pontas.                           | Igual                                            |
-| `.view`            | Um contêiner flex. `.vertical` o transforma numa coluna; `.horizontal`, numa linha que quebra, com itens centralizados.                 | Igual                                            |
-| `.auto-grid`       | Um grid de colunas iguais, cada uma com pelo menos `--layout-grid-min` (16rem) de largura, quantas couberem.                            | Igual                                            |
-| `.section`         | Padding em volta de uma seção da página: `--layout-gutter` nas laterais, `--layout-section-block` em cima e embaixo.                    | Nenhum                                           |
-| `.section-content` | Centraliza o seu conteúdo numa largura de `--container-max` (80rem). `.narrow` usa 48rem, `.wide` 90rem.                                | Nenhum                                           |
-| `.divider`         | Uma linha horizontal, tão larga quanto o seu contêiner. `.vertical` a transforma numa linha vertical tão alta quanto a linha do layout. | Nenhum                                           |
-| `.visually-hidden` | Esconde o conteúdo na tela e o mantém para leitores de tela.                                                                            | Nenhum                                           |
+| Classe                       | Layout                                                                                                                                                | Espaçamento                                      |
+| ---------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------ |
+| `.stack`                     | Uma coluna vertical.                                                                                                                                  | `--layout-gap`, `.tight` 0.5rem, `.loose` 1.5rem |
+| `.cluster`                   | Uma linha que quebra, com os itens centralizados na vertical. `.between` espalha os itens até as duas pontas.                                         | Igual                                            |
+| `.view`                      | Um contêiner flex. `.vertical` o transforma numa coluna; `.horizontal`, numa linha que quebra, com itens centralizados.                               | Igual                                            |
+| `.auto-grid`                 | Um grid de colunas iguais, cada uma com pelo menos `--layout-grid-min` (16rem) de largura, quantas couberem.                                          | Igual                                            |
+| `.section`                   | Padding em volta de uma seção da página: `--layout-gutter` nas laterais, `--layout-section-block` em cima e embaixo.                                  | Nenhum                                           |
+| `.section-content`           | Centraliza o seu conteúdo numa largura de `--container-max` (80rem). `.narrow` usa 48rem, `.wide` 90rem.                                              | Nenhum                                           |
+| `.divider`                   | Uma linha horizontal, tão larga quanto o seu contêiner. `.vertical` a transforma numa linha vertical tão alta quanto a linha do layout.               | Nenhum                                           |
+| `.visually-hidden`           | Esconde o conteúdo na tela e o mantém para leitores de tela.                                                                                          | Nenhum                                           |
+| `.visually-hidden-focusable` | Esconde o conteúdo do mesmo jeito até que ele ou um elemento dentro dele tenha o foco, e então o mostra, como faz um link para pular para o conteúdo. | Nenhum                                           |
 
 `.auto-grid` acomoda duas colunas de 16rem quando o seu contêiner tem 32rem mais o espaçamento de largura, três com 48rem mais dois espaçamentos, e assim por diante. Abaixo da largura de uma coluna, a coluna encolhe para caber. Defina `--layout-grid-min` no grid para mudar a largura das colunas.
 
@@ -48,9 +49,9 @@ Os dois maiores tamanhos crescem no breakpoint `md` do Tailwind, 48rem por padr�
 
 `.text-body` tem 0.875rem, menor que o texto de 1rem da página; use-o para texto secundário ou denso, não para o texto principal da página. O `/native` é a exceção: ele aplica `.text-body` ao `body`, então lá ele é o texto da página, e parágrafos e itens de lista o herdam do elemento em que estiverem. Veja [HTML sem classes](../setup.md#html-sem-classes).
 
-O espaçamento da tabela é `normal` num idioma cuja escrita une as letras: árabe, persa, urdu, pashto, sindi, uigur, curdo sorani, caxemira, siríaco, n'ko, mongol na sua própria escrita (`mn-Mong`), adlam (`ff-Adlm`) e idiomas regionais em escrita árabe: árabe egípcio e marroquino (`arz`, `ary`), panjabi ocidental (`pnb`), dari (`prs`) e azeri do sul (`azb`). Afastar as letras quebra as ligações entre elas e uma ligadura como "الله". Também é `normal` num idioma escrito numa escrita que pendura as letras numa linha superior, devanágari, bengali ou gurmukhi: hindi, marati, nepali, sânscrito, maithili, bhojpuri, concani, dogri, bodo, newari, bengali, assamês e panjabi. Ali o espaçamento corta em pedaços a linha que corre no alto de uma palavra, e pode separar um sinal de vogal da sua letra. O mesmo vale para o espaçamento de `.label` e `.hint` num campo, e para o espaçamento de rótulos que uma estética dá a botões e badges, incluindo a classe solo do chunky tile. O idioma vem de `lang`, no elemento ou num que o contenha, então defina-o: no `<html>` para uma página nesse idioma, e num trecho nesse idioma dentro de uma página em outro. Um idioma escrito numa dessas escritas só às vezes precisa da subtag de escrita, e o pacote nomeia as comuns: `ku-Arab`, `ms-Arab`, `kk-Arab`, `az-Arab`, `uz-Arab`, `tg-Arab`, `sat-Deva` e `mni-Beng`. Um idioma ou uma subtag que ele não nomeia, como `ha-Arab`, mantém o espaçamento; dê `tracking-normal` a esse texto. Com `/native`, esse trecho também não recebe o espaçamento da página ao redor. A sua própria utility `tracking-*` continua valendo.
+O espaçamento da tabela é `normal` num idioma cuja escrita une as letras: árabe, persa, urdu, pashto, sindi, uigur, curdo sorani, caxemira, siríaco, n'ko, mongol na sua própria escrita (`mn-Mong`), adlam (`ff-Adlm`) e idiomas regionais em escrita árabe: árabe egípcio e marroquino (`arz`, `ary`), panjabi ocidental (`pnb`), dari (`prs`), azeri do sul (`azb`), saraiki (`skr`), balúchi (`bal`, `bcc`, `bgn`), mazandarani (`mzn`), gilaki (`glk`), luri (`lrc`, `luz`), curdo do sul (`sdh`), bakhtiari (`bqi`), hindko (`hno`), khowar (`khw`) e brahui (`brh`), e rohingya (`rhg`), em hanifi rohingya. Afastar as letras quebra as ligações entre elas e uma ligadura como "الله". Também é `normal` num idioma escrito numa escrita que pendura as letras numa linha superior, devanágari, bengali ou gurmukhi: hindi, marati, nepali, sânscrito, maithili, bhojpuri, concani, dogri, bodo, newari, bengali, assamês e panjabi. Ali o espaçamento corta em pedaços a linha que corre no alto de uma palavra, e pode separar um sinal de vogal da sua letra. O mesmo vale para o espaçamento de `.label` e `.hint` num campo, e para o espaçamento de rótulos que uma estética dá a botões e badges, incluindo a classe solo do chunky tile. O idioma vem de `lang`, no elemento ou num que o contenha, então defina-o: no `<html>` para uma página nesse idioma, e num trecho nesse idioma dentro de uma página em outro. Um idioma escrito numa dessas escritas só às vezes precisa da subtag de escrita, e o pacote nomeia as comuns: `ku-Arab`, `ms-Arab`, `kk-Arab`, `az-Arab`, `uz-Arab`, `tg-Arab`, `sat-Deva` e `mni-Beng`. Um idioma ou uma subtag que ele não nomeia, como `ha-Arab`, mantém o espaçamento; dê `tracking-normal` a esse texto. Com `/native`, esse trecho também não recebe o espaçamento da página ao redor. A sua própria utility `tracking-*` continua valendo.
 
-`.selection-contrast` num elemento troca as cores do texto selecionado dentro dele para `--color-primary` sobre `--color-primary-contrast`. Use-o numa área `.solid.primary`, onde a cor de seleção padrão seria igual ao fundo.
+O texto selecionado é `--color-primary-contrast` sobre `--color-primary`. Sobre uma placa sólida, como um botão `.solid.primary` ou um card `.solid` e o texto dentro dele, a seleção inverte a placa: a cor do texto da placa como destaque e a cor da placa como texto, então ela se destaca em todas as intenções.
 
 ## Superfícies
 
@@ -113,7 +114,7 @@ Um card `.interactive` ou `.pressable` desabilitado mostra o cursor de não perm
 A tela de configurações lista as chaves de API numa tabela:
 
 ```html
-<div class="table-wrap">
+<div class="table-wrap" tabindex="0" role="region" aria-label="API keys">
   <table class="data-table">
     <caption class="visually-hidden">
       API keys
@@ -198,6 +199,8 @@ Uma tabela recebe o canto de superfície, como um card ao lado dela. As células
 - Sombras, como a de uma tabela `.raised`, não ganham espaço e são cortadas.
 
 Mantenha o wrapper em qualquer tabela que possa ficar mais larga que o seu contêiner; sem ele, uma tabela larga alarga a página inteira.
+
+Deixe o wrapper focável com `tabindex="0"` e nomeie-o como uma região com `role="region"` e um `aria-label`, como faz o exemplo. Quem usa o teclado rola uma tabela larga dando foco ao wrapper e usando as setas; o Firefox, e o Chrome a partir da versão 130, deixam a pessoa dar foco a um elemento com rolagem por conta própria, mas o Safari e versões mais antigas do Chrome não, então, sem `tabindex`, quem usa o teclado nesses navegadores não consegue chegar às colunas cortadas. O nome diz a quem usa leitor de tela o que a região focada contém. Um wrapper focado desenha o anel de foco que todo elemento desenha.
 
 ## Citações, código e teclas
 

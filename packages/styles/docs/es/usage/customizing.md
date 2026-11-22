@@ -2,7 +2,7 @@
 title: Personalización
 description: Consulta de los tokens de presentación y de material, los controles de las estéticas, las variables públicas de componente, la paleta generada y los helpers para construir tus propios componentes.
 order: 9
-source: f8c58af7fe7ec75b78adc3934d9f794e4f96c8ea
+source: 2d12af657dedaf597c47d7c0fbe8f77bee13a6d3
 ---
 
 # Personalización
@@ -235,9 +235,7 @@ Nombres: `--palette-<intent>-<presentation>-<slot>`, donde `<intent>` es una de 
 
 - Un sufijo `-hover`, solo en `bg` y `edge`, porque el color del texto no cambia con hover: `--palette-success-soft-page-bg-hover`. `.alert`, `.kbd`, `.code` y `.pre` no tienen hover propio, así que sus valores de hover son lo que dibuja el componente cuando le añades `box-hover`.
 
-Los valores claros se definen en `:root`. Los oscuros se aplican bajo `.dark`, `.theme-dark` o `[data-theme="dark"]` en el elemento o en uno por encima, los mismos selectores que usa el tema del paquete. Los valores claros también se aplican bajo `.light`, `.theme-light` y `[data-theme="light"]`, así que gana el tema explícito más cercano: una zona clara dentro de una oscura lee los valores claros.
-
-El archivo no sigue `prefers-color-scheme`. El código que usa la paleta por sí sola ya cambia de tema por su cuenta, así que define una de esas clases o atributos.
+Cada valor es un par `light-dark()`, definido en `:root`, así que sigue el `color-scheme` del lugar donde se usa, como los tokens de color del propio paquete: el ajuste del sistema cuando nada elige un tema, y si no el selector de tema más cercano, así que una zona clara dentro de una oscura lee los valores claros. El código que usa la paleta sin el paquete cambia de tema definiendo `color-scheme`, por ejemplo `color-scheme: dark` en la raíz o en una zona.
 
 Tampoco sigue `prefers-contrast: more` ni `data-contrast="more"`. Con esa preferencia, el paquete dibuja el borde de cada intención en su tono fuerte, así que un valor `-edge` es más tenue que el borde que dibuja el componente. El código que tiene que respetar la preferencia elige un color más fuerte por su cuenta.
 

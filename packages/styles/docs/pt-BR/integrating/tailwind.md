@@ -2,7 +2,7 @@
 title: Tailwind CSS v4
 description: Como usar os entrypoints de código-fonte /tw num projeto com Tailwind CSS v4.
 order: 1
-source: 0158d4f1e67501dfd55ac903750bc3674650d412
+source: 52bb84688d6c4ed474920042e278f5532a1c97da
 ---
 
 # Tailwind CSS v4
@@ -46,6 +46,8 @@ Diferente do `/tw`, os entrypoints específicos e o `/native/tw` não importam o
 @import "tailwindcss";
 @import "@codenhub/styles/button/tw";
 ```
+
+Um entrypoint específico é para uma família só. Cada um traz o tema e as regras compartilhadas em que as classes dele se apoiam, então dois deles trazem isso duas vezes, e o Tailwind mantém as duas cópias. Com o Tailwind 4.3.2, `/button/tw`, `/form/tw`, `/surface/tw` e `/feedback/tw` juntos compilaram uma página pequena para 85.192 bytes minificados, enquanto o `/components/tw`, que traz os quatro e ainda os tooltips, compilou a mesma página para 82.915. Para duas famílias ou mais, importe o `/components/tw`, ou o `/tw`.
 
 ## Construa seus próprios componentes com `@apply`
 
@@ -132,6 +134,12 @@ O bloco deixa de fora `neutral`, `emerald`, `amber`, `rose`, `indigo` e `white` 
 - **Por quê:** a variante do pacote vem depois de uma variante de pseudoelemento, e o Tailwind então escreve a condição dela onde os navegadores a rejeitam.
 - **Como resolver:** escreva a variante do pacote primeiro: `motion-reduce:before:hidden`, `dark:placeholder:text-white`. [Variantes de contraste e movimento](#variantes-de-contraste-e-movimento) tem os detalhes.
 
+**Uma sobrescrita de token para num shadow root**
+
+- **O que aconteceu:** `--color-primary` definido em `:root` na sua folha de estilos colore os botões da página, mas um botão dentro de um shadow root que carrega a mesma folha mantém a cor do pacote.
+- **Por quê:** o Tailwind escreve o tema em `:root, :host`, então a cópia da folha no shadow root declara cada token de novo no host, e o valor da página não é herdado além dele. Os entrypoints compilados declaram os tokens só em `:root`, então ali o valor da página atravessa.
+- **Como resolver:** defina a sobrescrita em `@theme`, como `@theme { --color-primary: oklch(49% 0.24 293); }`, que o Tailwind também escreve em `:root, :host`, ou escreva sua própria regra em `:root, :host`.
+
 **Uma classe montada em tempo de execução fica sem estilo**
 
 - **O que aconteceu:** `<button class="btn primary">` é estilizado, mas um botão cuja classe vem de uma variável, como `"btn " + variant`, ou de conteúdo de um CMS, não é.
@@ -144,7 +152,7 @@ O bloco deixa de fora `neutral`, `emerald`, `amber`, `rose`, `indigo` e `white` 
 @source inline("btn alert badge primary destructive soft");
 ```
 
-Todo entrypoint `/tw` exige Tailwind CSS 4.3.2 ou mais recente, abaixo da 5 (`>=4.3.2 <5`).
+Todo entrypoint `/tw` exige Tailwind CSS 4.3.2 ou mais recente, abaixo da 5 (`>=4.3.2 <5`), a faixa com que o CI os compila. O pacote não declara o Tailwind como peer dependency, então o seu gerenciador de pacotes não confere a versão por você; `npm ls tailwindcss` mostra a sua. Uma peer opcional conferiria, mas aí o npm se recusava a instalar o pacote em qualquer projeto com um Tailwind mais antigo, mesmo num que só referencia o CSS compilado.
 
 ## A variante `dark:`
 

@@ -13,7 +13,9 @@ export interface ScanOptions {
   failOnUnmatched?: boolean;
   /**
    * Throw on a file that cannot be read, instead of skipping it: Node.js's own error when it names
-   * the file, or one naming the file with Node.js's error as its `cause` when it does not.
+   * the file, or one naming the file with Node.js's error as its `cause` when it does not. A folder
+   * a glob has to list and cannot, for want of permission, fails the same way, with Node.js's
+   * error naming the folder.
    */
   failOnUnreadable?: boolean;
   /**
@@ -98,7 +100,11 @@ export function findFiles(entries: Iterable<string>, options: ScanOptions = {}):
 
   for (const entry of entries) {
     const skipNodeModules = options.skipNodeModules === true && !NODE_MODULES_SEGMENT.test(entry);
-    const named = resolveEntry(entry, cwd, { isStrict: options.failOnUnmatched === true, skipNodeModules });
+    const named = resolveEntry(entry, cwd, {
+      isStrict: options.failOnUnmatched === true,
+      skipNodeModules,
+      failOnUnlisted: options.failOnUnreadable === true,
+    });
 
     if (named.length === 0 && options.failOnUnmatched) {
       throw new UnmatchedEntryError(entry, cwd, reasonUnmatched(entry, cwd, skipNodeModules));
@@ -194,8 +200,14 @@ export function* splitWords(text: string, wordCharacters: string): Generator<str
 function resolveEntry(
   entry: string,
   cwd: string,
-  { isStrict, skipNodeModules }: { isStrict: boolean; skipNodeModules: boolean },
+  {
+    isStrict,
+    skipNodeModules,
+    failOnUnlisted = false,
+  }: { isStrict: boolean; skipNodeModules: boolean; failOnUnlisted?: boolean },
 ): string[] {
+  let matches: string[];
+
   try {
     const literal = path.resolve(cwd, entry);
 
@@ -206,7 +218,7 @@ function resolveEntry(
       return [];
     }
 
-    return fs
+    matches = fs
       .globSync(entry, { cwd, exclude: skipNodeModules ? isNodeModules : undefined })
       .map((match) => path.resolve(cwd, match))
       .filter(isFileOrUnknown);
@@ -217,6 +229,78 @@ function resolveEntry(
     }
     return [];
   }
+
+  if (failOnUnlisted) {
+    assertListable(entry, cwd, matches, skipNodeModules);
+  }
+
+  return matches;
+}
+
+/* `fs.globSync` skips a folder it cannot list without a word, so a build lost
+   the classes of every file in it and succeeded, or was told that a right path
+   matches nothing. The walk does not say which folders it listed, so the
+   folders it would list are found again: those matching the entry up to a
+   segment that has more after it, or up to a `**`, which lists every folder
+   below, starting from the folder its leading literal segments name.
+   `views/*.html` never lists a `views/locked`, and failing on it would fail a
+   build that needs nothing from it. A folder a match lies in was listed, so
+   only the others are opened. This costs a second walk, so it is done only when
+   asked for. */
+function assertListable(entry: string, cwd: string, matches: readonly string[], skipNodeModules: boolean): void {
+  const segments = splitSegments(process.platform === "win32" ? entry.replaceAll("\\", "/") : entry);
+  const first = segments.findIndex((segment) => GLOB_CHARACTERS.test(segment));
+  const folders = new Set([path.resolve(cwd, segments.slice(0, first).join("/") || ".")]);
+  const listed = new Set(matches.map((match) => path.dirname(match)));
+
+  for (let index = first; index < segments.length - 1 || segments[index] === "**"; index += 1) {
+    const prefix = segments.slice(0, index + 1).join("/");
+
+    for (const match of fs.globSync(prefix, { cwd, exclude: skipNodeModules ? isNodeModules : undefined })) {
+      folders.add(path.resolve(cwd, match));
+    }
+  }
+
+  for (const folder of folders) {
+    if (listed.has(folder)) {
+      continue;
+    }
+    try {
+      fs.opendirSync(folder).closeSync();
+    } catch (error) {
+      const { code } = error as { code?: string };
+
+      if (code === "EACCES" || code === "EPERM") {
+        // `opendir`'s error leaves the path out, and `readdir`'s, for the same refusal, names it.
+        fs.readdirSync(folder);
+        throw error;
+      }
+    }
+  }
+}
+
+/* Splits at each `/` outside a set, a brace, or an extglob, so
+   `{a,b/c}/**` is two segments, not three. */
+function splitSegments(pattern: string): string[] {
+  const segments: string[] = [];
+  let depth = 0;
+  let start = 0;
+
+  for (let index = 0; index < pattern.length; index += 1) {
+    const character = pattern[index];
+
+    if (character === "[" || character === "{" || character === "(") {
+      depth += 1;
+    } else if ((character === "]" || character === "}" || character === ")") && depth > 0) {
+      depth -= 1;
+    } else if (character === "/" && depth === 0) {
+      segments.push(pattern.slice(start, index));
+      start = index + 1;
+    }
+  }
+  segments.push(pattern.slice(start));
+
+  return segments;
 }
 
 /* Run only once an entry has failed, so the second walk a wildcard takes to

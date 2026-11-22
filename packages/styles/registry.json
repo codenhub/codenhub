@@ -155,7 +155,19 @@
         "elevation": 0
       },
       "native": [
-        "input:not([type=\"checkbox\"], [type=\"radio\"], [type=\"submit\"], [type=\"reset\"], [type=\"button\"])"
+        "input:not([type])",
+        "input[type=\"text\"]",
+        "input[type=\"number\"]",
+        "input[type=\"email\"]",
+        "input[type=\"password\"]",
+        "input[type=\"url\"]",
+        "input[type=\"tel\"]",
+        "input[type=\"search\"]",
+        "input[type=\"month\"]",
+        "input[type=\"week\"]",
+        "input[type=\"time\"]",
+        "input[type=\"date\"]",
+        "input[type=\"datetime-local\"]"
       ],
       "axes": ["fill", "edge"],
       "modifiers": [
@@ -737,6 +749,7 @@
     "field",
     "label",
     "hint",
+    "choice",
     "unadorned",
     "table-wrap",
     "quote-inline",
@@ -755,8 +768,8 @@
     "text-label-lg",
     "text-label",
     "text-body",
-    "selection-contrast",
-    "visually-hidden"
+    "visually-hidden",
+    "visually-hidden-focusable"
   ],
   "aesthetics": [
     {
