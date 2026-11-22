@@ -2,7 +2,7 @@
 title: Escribe tus traducciones
 description: Diccionarios, archivos JSON, placeholders, mensajes ICU, enlaces y negritas, plurales, formateadores, claves y valores tipados, cómo detectar claves sin traducir y límites de tamaño.
 order: 1
-source: 39f0fb571e8d70c2a721f079a53cf1bda981fc9d
+source: ca0eb0ec045a8496d4093ca8e0d62be3e848435b
 ---
 
 # Escribe tus traducciones
@@ -109,7 +109,7 @@ t("home.title"); // "Bem-vindo", de pt
 Una clave se busca en este orden:
 
 1. El locale activo.
-2. Cada locale configurado que resulta de quitarle sus últimos subtags, como `zh-Hant` para `zh-Hant-TW`. Un padre escrito en otro script se omite: `zh` es chino simplificado, así que una página `zh-Hant` recurre al locale por defecto en lugar de mezclar escrituras.
+2. Cada locale configurado que resulta de quitarle sus últimos subtags, como `zh-Hant` para `zh-Hant-TW`. Un padre escrito en otro script se omite: `zh` es chino simplificado, así que una página `zh-Hant` recurre al locale por defecto en lugar de mezclar escrituras. Un código de idioma obsoleto cuenta como el que lo reemplazó, como lo lee `Intl`, así que `he-IL` recurre a un `iw` configurado, e `iw-IL` a `he`. `no` y `nb` cuentan como un solo idioma, como en la [coincidencia](index.md#convierte-entradas-externas-en-un-locale).
 3. El locale configurado que nombran su idioma y su script, como `zh-Hant` para `zh-HK`, que se escribe en chino tradicional, o `sr-Latn` para `sr-ME`. Así que un diccionario `zh-HK` puede contener solo lo que Hong Kong dice distinto.
 4. El locale por defecto.
 

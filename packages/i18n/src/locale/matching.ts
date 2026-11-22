@@ -20,6 +20,23 @@ const aliasLanguage = (tag: string): string => {
 };
 
 /**
+ * A tag as two locales are compared for one language: canonicalized as `Intl` does, so a deprecated code such as `iw`
+ * reads as its replacement, `he`, then lowercased with its language as `compareLanguage` gives it, so `iw-IL` is
+ * `he-il` and `no-NO` is `nb-no`. A tag `Intl` rejects, such as private-use `x-test`, is only lowercased and aliased.
+ *
+ * @internal
+ */
+export const comparableTag = (tag: string): string => {
+  let canonical = tag;
+  try {
+    canonical = Intl.getCanonicalLocales(tag)[0] ?? tag;
+  } catch {
+    // Not a tag `Intl` reads, so there is no canonical form to compare.
+  }
+  return aliasLanguage(canonical);
+};
+
+/**
  * Adds likely subtags, such as `zh-TW` to `zh-Hant-TW`, with the language compared as `compareLanguage` gives it, or
  * returns undefined for a tag `Intl.Locale` rejects.
  */
