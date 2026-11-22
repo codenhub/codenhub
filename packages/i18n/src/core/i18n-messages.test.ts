@@ -746,8 +746,15 @@ describe("parseCachedMessage", () => {
     expect(parseCachedMessage("Hello {name")).toBe("Expected , at character 12");
   });
 
-  it("should parse quoted text with doubled apostrophes into the same text", () => {
-    expect(parseMessage("a '{b ''c'' d}' e")).toEqual([{ kind: "text", text: "a {b 'c' d} e" }]);
-    expect(parseMessage("it''s '{open")).toEqual([{ kind: "text", text: "it's {open" }]);
+  it("should parse quoted text with doubled apostrophes into a quoted node of its own", () => {
+    expect(parseMessage("a '{b ''c'' d}' e")).toEqual([
+      { kind: "text", text: "a " },
+      { kind: "text", text: "{b 'c' d}", isQuoted: true },
+      { kind: "text", text: " e" },
+    ]);
+    expect(parseMessage("it''s '{open")).toEqual([
+      { kind: "text", text: "it's " },
+      { kind: "text", text: "{open", isQuoted: true },
+    ]);
   });
 });

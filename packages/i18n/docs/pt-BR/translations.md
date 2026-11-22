@@ -2,7 +2,7 @@
 title: Escreva as suas traduções
 description: Dicionários, arquivos JSON, placeholders, mensagens ICU, links e negrito, plurais, formatadores, chaves e valores tipados, verificação de chaves não traduzidas e limites de tamanho.
 order: 1
-source: d047636c1747a1d5bc5c61d2bc69f3b65defdb1d
+source: 9d4ac76a5c73ad02f582acf7866ade61671e4b71
 ---
 
 # Escreva as suas traduções
@@ -215,17 +215,18 @@ Ele vale para `{d, date}`, `{d, time}` e uma data em `{d}`, e é o padrão de `f
 
 ### Chaves literais e apóstrofos
 
-Um apóstrofo antes de `{` ou `}` põe entre aspas o texto até o próximo apóstrofo, e dois apóstrofos viram um. Um apóstrofo em qualquer outro lugar é um apóstrofo comum, então "Don't" não precisa de nada:
+Um apóstrofo antes de `{`, `}` ou `<` põe entre aspas o texto até o próximo apóstrofo, e dois apóstrofos viram um. Um apóstrofo em qualquer outro lugar é um apóstrofo comum, então "Don't" não precisa de nada:
 
-| Escrito no dicionário     | Mostrado                |
-| ------------------------- | ----------------------- |
-| `Don't forget {name}`     | `Don't forget Ana`      |
-| `Type '{name}' to insert` | `Type {name} to insert` |
-| `It''s '{'here'}'`        | `It's {here}`           |
-| `Ouvrir l''{app}`         | `Ouvrir l'éditeur`      |
-| `Ouvrir l’{app}`          | `Ouvrir l’éditeur`      |
+| Escrito no dicionário      | Mostrado                 |
+| -------------------------- | ------------------------ |
+| `Don't forget {name}`      | `Don't forget Ana`       |
+| `Type '{name}' to insert`  | `Type {name} to insert`  |
+| `It''s '{'here'}'`         | `It's {here}`            |
+| `Write '<b>' to bold text` | `Write <b> to bold text` |
+| `Ouvrir l''{app}`          | `Ouvrir l'éditeur`       |
+| `Ouvrir l’{app}`           | `Ouvrir l’éditeur`       |
 
-Cuidado com um apóstrofo logo antes de um placeholder, como a elisão do francês, do italiano e do catalão coloca. `Ouvrir l'{app}` põe `{app}` entre aspas, então mostra `Ouvrir l{app}`, e nada avisa, porque o texto é válido. Escreva dois apóstrofos, `l''{app}`, ou o apóstrofo tipográfico `’`, que a tipografia francesa prefere de qualquer jeito e que nunca é sintaxe.
+Cuidado com um apóstrofo logo antes de um placeholder ou de uma tag, como a elisão do francês, do italiano e do catalão coloca. `Ouvrir l'{app}` põe `{app}` entre aspas, então mostra `Ouvrir l{app}`, e `l'<b>été</b>` põe a tag entre aspas, então `rich()` mostra `l<b>été</b>` como texto. Nada avisa, porque o texto é válido. Escreva dois apóstrofos, `l''{app}` e `l''<b>été</b>`, ou o apóstrofo tipográfico `’`, que a tipografia francesa prefere de qualquer jeito e que nunca é sintaxe.
 
 Dentro das formas de um plural, `#` representa o número; escreva `'#'` para um `#` literal. Um `select` aninhado numa forma não é o próprio plural, então um `#` ali aparece como foi escrito, como no ICU; use `{count}` ali.
 
@@ -272,8 +273,8 @@ Alguns detalhes:
 
 - `rich()` aceita as mesmas chaves e valores que `t()`, conferidos do mesmo jeito. Um valor é sempre texto: um `<b>` no nome de um visitante aparece como foi escrito e nunca é lido como tag.
 - Uma tag pode envolver placeholders, um plural ou um select, e pode ficar dentro de uma forma de um plural ou select, mas uma tag aberta numa forma precisa fechar nessa forma.
-- Um `<` que não forma uma tag, como em `1 < 2`, é texto.
-- Uma mensagem cujas tags não fecham, como `<b>negrito` sem `</b>`, ou se aninham mais de 10 níveis, registra um aviso uma vez para cada texto em cada locale, a menos que o gerenciador seja silencioso, e volta como uma parte só: o texto como `t()` mostra, com as tags. Uma chave que falta e a sintaxe inválida também voltam como a única parte que `t()` devolveria.
+- Um `<` que não forma uma tag, como em `1 < 2`, é texto, e o texto entre aspas também: `'<b>'` mostra `<b>`, nunca uma tag, como em [Chaves literais e apóstrofos](#chaves-literais-e-apóstrofos).
+- Uma mensagem cujas tags não fecham, como `<b>negrito` sem `</b>`, ou se aninham mais de 10 níveis, registra um aviso uma vez para cada chave, texto e locale, a menos que o gerenciador seja silencioso, e volta como uma parte só: o texto como `t()` mostra, com as tags. Uma chave que falta e a sintaxe inválida também voltam como a única parte que `t()` devolveria.
 - As tags não são conferidas nos tipos, já que uma tradução pode usar tags que o texto padrão não tem. Renderize todas as tags que as suas mensagens usam e tenha uma alternativa para o resto, como acima.
 - `t()` e o binding de `data-i18n` mostram as tags como foram escritas. Renderize pelo seu código uma mensagem com tags usando `rich()`.
 

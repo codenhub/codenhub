@@ -33,7 +33,8 @@ const OPTIONS_COST = 128;
 const OPTION_COST = 64;
 
 type MessageNode =
-  | { readonly kind: "text"; readonly text: string }
+  // Quoted text is a node of its own, so `rich()` never reads a tag from it.
+  | { readonly kind: "text"; readonly text: string; readonly isQuoted?: true }
   | { readonly kind: "pound" }
   | { readonly kind: "argument"; readonly name: string; readonly source: string }
   | {
@@ -146,7 +147,14 @@ class Parser {
 
       if (character === "'") {
         endRun();
-        parts.push(this.readApostrophe(isInPlural));
+        if (this.startsQuote(isInPlural)) {
+          flush();
+          nodes.push({ kind: "text", text: this.readQuoted(), isQuoted: true });
+        } else {
+          // `''`, or a lone `'` before any other character, is one apostrophe.
+          parts.push("'");
+          this.index += this.peek(1) === "'" ? 2 : 1;
+        }
       } else if (character === "{") {
         endRun();
         flush();
@@ -171,19 +179,17 @@ class Parser {
     return nodes;
   }
 
-  /** ICU quoting: `''` is one apostrophe, and `'` before a special character quotes until the next lone `'`. */
-  private readApostrophe(isInPlural: boolean): string {
+  /**
+   * ICU quoting: `'` before `{`, `}`, or, in a plural, `#` quotes until the next lone `'`, and so does `'` before `<`,
+   * as FormatJS reads it, so a tag can be written as text.
+   */
+  private startsQuote(isInPlural: boolean): boolean {
     const next = this.peek(1);
+    return next === "{" || next === "}" || next === "<" || (next === "#" && isInPlural);
+  }
 
-    if (next === "'") {
-      this.index += 2;
-      return "'";
-    }
-    if (next !== "{" && next !== "}" && !(next === "#" && isInPlural)) {
-      this.index += 1;
-      return "'";
-    }
-
+  /** Reads quoted text from its opening `'` to the next lone `'`, where `''` is one apostrophe. */
+  private readQuoted(): string {
     this.index += 1;
     const parts: string[] = [];
     let runStart = this.index;
@@ -719,7 +725,11 @@ const formatNodes = (nodes: Message, state: FormatState, pound: number | bigint 
 
   for (const node of nodes) {
     if (node.kind === "text") {
-      output.text(node.text);
+      if (node.isQuoted === true) {
+        output.fill(node.text);
+      } else {
+        output.text(node.text);
+      }
       continue;
     }
     if (node.kind === "pound") {

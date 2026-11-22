@@ -262,7 +262,7 @@ export interface I18n<TLocale extends string = string, TKey extends string = str
    * `{d, time}` with an optional `short`, `medium` (the default), `long`, or `full` style, `{n, plural, …}` and
    * `{n, selectordinal, …}` with `=N` and CLDR category options, an optional `offset:N`, and `#` for the number in the
    * plural's own forms, and `{v, select, …}`. Plural categories and every format use the locale of the dictionary that has the text. An
-   * apostrophe before `{`, `}`, or, in a plural, `#` quotes them, and `''` is one apostrophe. A message that is not
+   * apostrophe before `{`, `}`, `<`, or, in a plural, `#` quotes them, and `''` is one apostrophe. A message that is not
    * valid syntax warns once per process for its locale, key, and text, unless silent, and only its `{name}`
    * placeholders are filled.
    *
@@ -329,8 +329,8 @@ export interface I18n<TLocale extends string = string, TKey extends string = str
    * Translates a key as {@link I18n.translate} does, and returns its text and tags as parts for a framework to render,
    * so a translation can mark a link or bold text inside a sentence without HTML. Tags are `<name>…</name>` and
    * `<name/>`, with a name of ASCII letters, digits, and `_`, written anywhere in the message's text, including inside a
-   * plural or select form. Values are text: a tag inside a value is never read. A `<` that doesn't form a tag, as in
-   * `a < b`, is text.
+   * plural or select form. Values are text: a tag inside a value is never read, nor is one in quoted text, such as
+   * `'<b>'`. A `<` that doesn't form a tag, as in `a < b`, is text.
    *
    * A message whose tags don't balance, nest past 10 levels, or cross the edge of a plural or select form warns once per
    * process for its locale, key, and text, unless silent, and returns the text as `t()` shows it, tags included, as one part.
