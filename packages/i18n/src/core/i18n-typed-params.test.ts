@@ -173,10 +173,87 @@ describe("typed placeholder values", () => {
     expect(typed.t("greeting", user)).toBe("Hello, Ana!");
     expect(typed.t("plain", user)).toBe("Hi");
     expect(untyped.t("greeting", user)).toBe("Hello, Ana!");
-    // @ts-expect-error -- a boolean is no message value.
-    untyped.t("greeting", { name: true });
     // @ts-expect-error -- `name` is required.
     typed.t("greeting", { id: 7 });
+  });
+
+  it("should check only the values a message uses, and take any other value", async () => {
+    interface User {
+      name: string;
+      isAdmin: boolean;
+      lastSeen: Date | undefined;
+      roles: readonly string[];
+    }
+    const user: User = { name: "Ana", isAdmin: true, lastSeen: undefined, roles: ["editor"] };
+    const typed = createI18n({
+      locales: ["en"] as const,
+      defaultLocale: "en",
+      loadLocale: () =>
+        ({
+          greeting: "Hello, {name}!",
+          total: "Total: {amount, number}",
+          plain: "Hi",
+          items: { one: "One item", other: "{count} items" },
+        }) as const,
+      isSilent: true,
+    });
+    const untyped = createI18n({
+      locales: ["en"] as const,
+      defaultLocale: "en",
+      loadLocale: (): Record<string, unknown> => ({ greeting: "Hello, {name}!" }),
+      isSilent: true,
+    });
+    const json = createI18n({
+      locales: ["en"] as const,
+      defaultLocale: "en",
+      loadLocale: () =>
+        ({ items: { one: "One item", other: "{count} items" } }) as { items: { one: string; other: string } },
+      isSilent: true,
+    });
+    await Promise.all([typed.init(), untyped.init(), json.init()]);
+
+    // An interface with fields the message doesn't use, on every kind of message.
+    expect(typed.t("greeting", user)).toBe("Hello, Ana!");
+    expect(typed.rich("greeting", user)).toEqual(["Hello, Ana!"]);
+    expect(typed.t("plain", user)).toBe("Hi");
+    expect(typed.t<"greeting">("greeting", user)).toBe("Hello, Ana!");
+    expect(untyped.t("greeting", user)).toBe("Hello, Ana!");
+    expect(json.t("items", { ...user, count: 2 })).toBe("2 items");
+    // A literal with extra fields of any type.
+    expect(typed.t("greeting", { name: "Ana", isAdmin: true, onClick: () => undefined, extra: null })).toBe(
+      "Hello, Ana!",
+    );
+    expect(typed.t("items", { count: 1, isAdmin: false })).toBe("One item");
+    expect(typed.t("total", { amount: 3, isAdmin: true })).toBe("Total: 3");
+    expect(typed.t("plain", { isAdmin: true })).toBe("Hi");
+    // A message the types can't read uses no value they know of, so none is checked; the runtime leaves `{name}`.
+    expect(untyped.t("greeting", { name: true })).toBe("Hello, {name}!");
+
+    // A missing used value is still an error.
+    // @ts-expect-error -- `name` is required.
+    typed.t("greeting", { isAdmin: true });
+    // @ts-expect-error -- `amount` is required.
+    typed.t("total", { name: "Ana", isAdmin: true });
+    // @ts-expect-error -- `count` is required.
+    typed.t("items", { isAdmin: true });
+    // @ts-expect-error -- `count` is required.
+    json.t("items", user);
+    // A wrongly typed used value is still an error.
+    // @ts-expect-error -- a boolean is no message value.
+    typed.t("greeting", { name: true, isAdmin: true });
+    // @ts-expect-error -- {amount, number} needs a number.
+    typed.t("total", { amount: "3", isAdmin: true });
+    // @ts-expect-error -- `count` must be a number.
+    typed.t("items", { count: "1", isAdmin: true });
+    interface Account {
+      name: boolean;
+    }
+    const account: Account = { name: true };
+    // @ts-expect-error -- an interface's used field is checked too.
+    typed.t("greeting", account);
+    // Values are still an object.
+    // @ts-expect-error -- a string is no values object.
+    expect(() => untyped.t("greeting", "Ana")).toThrow(TypeError);
   });
 
   it("should not require an argument the runtime prints as quoted text", () => {

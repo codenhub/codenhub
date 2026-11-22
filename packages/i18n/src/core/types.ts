@@ -1,6 +1,10 @@
 import type { RichText } from "./message-format";
 import type { TranslateParams } from "./message-params";
 
+// The values a call passes when its key's type is given, as in `t<"greeting">(…)`: an interface's, which has no index
+// signature, or an object literal's, whose extra values the index signature keeps from being excess properties.
+type DefaultValues = object | Readonly<Record<string, unknown>>;
+
 /** Text direction used when rendering a locale. */
 export type LocaleDirection = "ltr" | "rtl";
 
@@ -275,7 +279,8 @@ export interface I18n<TLocale extends string = string, TKey extends string = str
    * @param params - Argument values, read from own properties. An argument without a usable value, such as a string
    * for `{n, number}`, is left as written. A string in `{name}` is inserted as written, a number as `{name, number}`
    * would format it, and a date as `{name, date}` would. A bigint is taken wherever a number is. A numeric `count`
-   * also selects a plural form.
+   * also selects a plural form. Where the dictionary type has the message as a literal, the values it uses are
+   * type-checked, and any other value may have any type, such as the `isAdmin` of a `User` passed whole.
    * @returns The translated text, or the trimmed key when no dictionary has it. A miss calls `onMissingKey`, or
    * warns once per recent locale/key pair in the process unless silent.
    * @throws {Error} When called before successful initialization.
@@ -284,7 +289,7 @@ export interface I18n<TLocale extends string = string, TKey extends string = str
    * @throws {TypeError} When `params` is neither `undefined` nor an object, such as `null` passed from plain
    * JavaScript.
    */
-  translate<K extends TKey, TValues extends object = Readonly<Record<string, string | number | bigint | Date>>>(
+  translate<K extends TKey, TValues extends object = DefaultValues>(
     key: K,
     ...params: TranslateParams<TMessages, K, TValues>
   ): string;
@@ -314,7 +319,7 @@ export interface I18n<TLocale extends string = string, TKey extends string = str
   has(key: string): key is TKey;
 
   /** Short alias of {@link I18n.translate}, the same bound function. */
-  t<K extends TKey, TValues extends object = Readonly<Record<string, string | number | bigint | Date>>>(
+  t<K extends TKey, TValues extends object = DefaultValues>(
     key: K,
     ...params: TranslateParams<TMessages, K, TValues>
   ): string;
@@ -342,7 +347,7 @@ export interface I18n<TLocale extends string = string, TKey extends string = str
    * @throws {Error} When called before successful initialization.
    * @throws {TypeError} When the key or `params` is rejected, as {@link I18n.translate} rejects them.
    */
-  rich<K extends TKey, TValues extends object = Readonly<Record<string, string | number | bigint | Date>>>(
+  rich<K extends TKey, TValues extends object = DefaultValues>(
     key: K,
     ...params: TranslateParams<TMessages, K, TValues>
   ): RichText;

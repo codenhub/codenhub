@@ -2,7 +2,7 @@
 title: Escreva as suas traduções
 description: Dicionários, arquivos JSON, placeholders, mensagens ICU, links e negrito, plurais, formatadores, chaves e valores tipados, verificação de chaves não traduzidas e limites de tamanho.
 order: 1
-source: 39f0fb571e8d70c2a721f079a53cf1bda981fc9d
+source: 1795208e6dc63f9d03d0e2a69e019303615d1d5b
 ---
 
 # Escreva as suas traduções
@@ -421,7 +421,7 @@ Quais valores cada argumento aceita:
 - `select` aceita uma string, um número ou um bigint.
 - Um `{name}` simples aceita qualquer um desses.
 
-Valores a mais são permitidos. Quando vários dicionários são tipados, uma chave precisa dos valores de todos os que a têm.
+Só os valores que a mensagem usa são conferidos. Qualquer outro valor pode ter qualquer tipo, então `t("home.greeting", user)` aceita um `User` inteiro com um `isAdmin: boolean`, e um objeto literal também pode levar valores a mais. Quando vários dicionários são tipados, uma chave precisa dos valores de todos os que a têm.
 
 Um import de JSON tipa todo texto como `string`, já que o TypeScript não guarda os valores das strings de um JSON, então um dicionário JSON confere as chaves mas aceita quaisquer valores, exceto que um grupo de plural ainda pede um `count` numérico. Para conferir os valores, escreva o idioma padrão em TypeScript com `as const` e mantenha os outros idiomas em JSON, tipados como o padrão:
 

@@ -5,11 +5,12 @@
  * @internal
  */
 
-/** A value a message argument accepts. @internal */
-export type MessageValue = string | number | bigint | Date;
+/** Values for a message's arguments, read from own properties; a value of another type is left as written. @internal */
+export type MessageValues = object;
 
-/** Values for a message's arguments, read from own properties. @internal */
-export type MessageValues = Readonly<Record<string, MessageValue>>;
+/** The value of an argument, read from an own property only, so `toString` or a prototype's field is never one. @internal */
+export const readValue = (values: MessageValues, name: string): unknown =>
+  Object.hasOwn(values, name) ? Reflect.get(values, name) : undefined;
 
 const NUMBER_STYLES = ["integer", "percent"] as const;
 const DATE_STYLES = ["short", "medium", "long", "full"] as const;
@@ -727,7 +728,7 @@ const formatNodes = (nodes: Message, state: FormatState, pound: number | bigint 
       continue;
     }
     state.filledArguments += 1;
-    const value: unknown = Object.hasOwn(values, node.name) ? values[node.name] : undefined;
+    const value = readValue(values, node.name);
 
     switch (node.kind) {
       case "argument":

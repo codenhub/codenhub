@@ -420,7 +420,7 @@ Which values each argument takes:
 - `select` takes a string, number, or bigint.
 - A plain `{name}` takes any of these.
 
-Extra values are allowed. When several dictionaries are typed, a key needs the values of every one that has it.
+Only the values the message uses are checked. Any other value may have any type, so `t("home.greeting", user)` takes a whole `User` with an `isAdmin: boolean`, and an object literal may carry extra values too. When several dictionaries are typed, a key needs the values of every one that has it.
 
 A JSON import types every text as `string`, since TypeScript doesn't keep JSON string values, so a JSON dictionary checks keys but accepts any values, except that a plural group still needs a number `count`. To check values, write the default language as `as const` TypeScript and keep the other languages in JSON, typed as the default:
 

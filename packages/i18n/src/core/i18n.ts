@@ -17,6 +17,7 @@ import {
   MAX_FILLED_ARGUMENTS,
   type MessageValues,
   parseCachedMessage,
+  readValue,
   type RichText,
   textMessage,
   toPluralOperand,
@@ -86,8 +87,7 @@ const interpolate = ({ text, params, locale, timeZone }: InterpolateOptions): st
       return placeholder;
     }
     filledArguments += 1;
-    const value: unknown = Object.hasOwn(params, name) ? params[name] : undefined;
-    return formatPlainValue(value, locale, timeZone) ?? placeholder;
+    return formatPlainValue(readValue(params, name), locale, timeZone) ?? placeholder;
   });
 };
 
@@ -296,7 +296,7 @@ class I18nInstance<TLocale extends string, TKey extends string = string>
     if (params !== undefined && (typeof params !== "object" || params === null)) {
       throw new TypeError("[I18n] Translation values must be an object or undefined.");
     }
-    const count = params !== undefined && Object.hasOwn(params, "count") ? params["count"] : undefined;
+    const count = params === undefined ? undefined : readValue(params, "count");
     return this.lookup(
       caller,
       key,
