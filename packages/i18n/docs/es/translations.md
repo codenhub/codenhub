@@ -1,8 +1,8 @@
 ---
 title: Escribe tus traducciones
-description: Diccionarios, archivos JSON, placeholders, mensajes ICU, plurales, formateadores, claves y valores tipados, cómo detectar claves sin traducir y límites de tamaño.
+description: Diccionarios, archivos JSON, placeholders, mensajes ICU, enlaces y negritas, plurales, formateadores, claves y valores tipados, cómo detectar claves sin traducir y límites de tamaño.
 order: 1
-source: c7f13bdaf19725a0e60bfcc193823ab5bb951c03
+source: 39f0fb571e8d70c2a721f079a53cf1bda981fc9d
 ---
 
 # Escribe tus traducciones
@@ -132,9 +132,9 @@ t("order.confirmed", { name: "Ana", orderId: "1042" });
 // "Thanks, Ana. Order 1042 ships tomorrow."
 ```
 
-Los valores pueden ser strings, números o fechas. Los nombres de los placeholders usan letras ASCII, dígitos y `_`, como `{firstName}` o `{first_name}`. Un nombre con cualquier otra cosa, como `{first-name}` o `{nome_ç}`, no es un placeholder: el mensaje tiene sintaxis inválida, registra una advertencia y muestra `{first-name}` tal como está escrito.
+Los valores pueden ser strings, números, bigints o fechas. Un bigint va donde va un número, y se formatea sin perder dígitos. Los nombres de los placeholders usan letras ASCII, dígitos y `_`, como `{firstName}` o `{first_name}`. Un nombre con cualquier otra cosa, como `{first-name}` o `{nome_ç}`, no es un placeholder: el mensaje tiene sintaxis inválida, registra una advertencia y muestra `{first-name}` tal como está escrito.
 
-Usa placeholders en lugar de juntar fragmentos. `t("before") + name + t("after")` obliga a todos los idiomas a seguir el orden de palabras del inglés, mientras que una oración entera con un placeholder deja que cada traducción ponga el valor donde corresponde. El orden de las palabras es lo primero que todo traductor quiere cambiar, y casi siempre tiene razón.
+Usa placeholders en lugar de juntar fragmentos. `t("before") + name + t("after")` obliga a todos los idiomas a seguir el orden de palabras del inglés, mientras que una oración entera con un placeholder deja que cada traducción ponga el valor donde corresponde. El orden de las palabras es lo primero que todo traductor quiere cambiar, y casi siempre tiene razón. Para un enlace o una negrita dentro de la oración, consulta [Enlaces y negritas dentro de una oración](#enlaces-y-negritas-dentro-de-una-oración).
 
 Algunos detalles:
 
@@ -165,14 +165,14 @@ t("cart.discount", { rate: 0.15 }); // "15% off"
 t("order.shipped", { date: new Date() });
 ```
 
-| Argumento               | Estilos                                                            | Valor                 |
-| ----------------------- | ------------------------------------------------------------------ | --------------------- |
-| `{n, number}`           | ninguno, `integer`, `percent`                                      | número                |
-| `{d, date}`             | `short`, `medium` (el valor por defecto), `long`, `full`           | `Date` o un timestamp |
-| `{d, time}`             | `short`, `medium` (el valor por defecto), `long`, `full`           | `Date` o un timestamp |
-| `{n, plural, …}`        | consulta [Plurales](#plurales)                                     | número                |
-| `{n, selectordinal, …}` | formas ordinales, como `one {#st} two {#nd} few {#rd} other {#th}` | número                |
-| `{v, select, …}`        | cualquier palabra, más `other`                                     | string o número       |
+| Argumento               | Estilos                                                            | Valor                   |
+| ----------------------- | ------------------------------------------------------------------ | ----------------------- |
+| `{n, number}`           | ninguno, `integer`, `percent`                                      | número o bigint         |
+| `{d, date}`             | `short`, `medium` (el valor por defecto), `long`, `full`           | `Date` o un timestamp   |
+| `{d, time}`             | `short`, `medium` (el valor por defecto), `long`, `full`           | `Date` o un timestamp   |
+| `{n, plural, …}`        | consulta [Plurales](#plurales)                                     | número o bigint         |
+| `{n, selectordinal, …}` | formas ordinales, como `one {#st} two {#nd} few {#rd} other {#th}` | número o bigint         |
+| `{v, select, …}`        | cualquier palabra, más `other`                                     | string, número o bigint |
 
 El formato usa el idioma del diccionario del que vino el texto, así que un texto en inglés que cubre una clave que falta en portugués se escribe a la manera del inglés. Un argumento cuyo valor tiene el tipo equivocado, como un string para `{n, number}`, se queda tal como está escrito.
 
@@ -233,6 +233,50 @@ El texto entre comillas también es texto para los tipos: en `'{it''s {x}'`, que
 
 Un texto que no es sintaxis válida, como una `{` sin cerrar o una `}` suelta, registra una advertencia, salvo que el gestor esté en silencio, y se muestra con solo sus placeholders `{name}` completados. La advertencia nombra la clave y el locale, y aparece una vez por cada texto en cada locale, entre los 1000 más recientes. [Encuentra claves sin traducir](#encuentra-claves-sin-traducir) muestra un test que comprueba cada mensaje.
 
+### Enlaces y negritas dentro de una oración
+
+Una oración con un enlace en el medio sigue siendo una sola oración. Partirla en `t("before")`, un enlace y `t("after")` fija el orden de las palabras, igual que juntar fragmentos. Marca la parte con una etiqueta y llama a `rich()`, que devuelve el texto y sus etiquetas como datos para que tu framework los renderice:
+
+```json
+{ "signup": { "terms": "Al registrarte aceptas los <terms>términos de uso</terms>." } }
+```
+
+```ts
+i18n.rich("signup.terms");
+// ["Al registrarte aceptas los ", { tag: "terms", children: ["términos de uso"] }, "."]
+```
+
+Una etiqueta es `<nombre>…</nombre>`, o `<nombre/>` para una sin contenido, como un salto de línea. Los nombres usan letras ASCII, dígitos y `_`. Una etiqueta dice qué es la parte, y tu código decide cómo se renderiza, así que una traducción no puede añadir un enlace, un script ni marcado que tu código no renderice. En React, por ejemplo:
+
+```tsx
+import { Fragment, type ReactNode } from "react";
+import type { RichText } from "@codenhub/i18n";
+
+type Tags = Readonly<Record<string, (children: ReactNode) => ReactNode>>;
+
+// Una etiqueta que tu código no renderiza muestra su contenido sin ella.
+const render = (parts: RichText, tags: Tags): ReactNode[] =>
+  parts.map((part, index) => {
+    if (typeof part === "string") {
+      return part;
+    }
+    // Solo una propiedad propia, para que una etiqueta como `<constructor>` nunca llegue a una función heredada.
+    const tag = Object.hasOwn(tags, part.tag) ? tags[part.tag]! : (children: ReactNode) => children;
+    return <Fragment key={index}>{tag(render(part.children, tags))}</Fragment>;
+  });
+
+<p>{render(i18n.rich("signup.terms"), { terms: (children) => <a href="/terms">{children}</a> })}</p>;
+```
+
+Algunos detalles:
+
+- `rich()` acepta las mismas claves y valores que `t()`, comprobados de la misma forma. Un valor siempre es texto: un `<b>` en el nombre de un visitante se muestra tal como está escrito y nunca se lee como etiqueta.
+- Una etiqueta puede envolver placeholders, un plural o un select, y puede ir dentro de una forma de un plural o un select, pero una etiqueta abierta en una forma tiene que cerrarse en esa forma.
+- Un `<` que no forma una etiqueta, como en `1 < 2`, es texto.
+- Un mensaje cuyas etiquetas no cuadran, como `<b>negrita` sin `</b>`, o se anidan más de 10 niveles, registra una advertencia una vez por cada texto en cada locale, salvo que el gestor sea silencioso, y vuelve como una sola parte: el texto tal como lo muestra `t()`, con las etiquetas. Una clave que falta y la sintaxis inválida también vuelven como la única parte que devolvería `t()`.
+- Las etiquetas no se comprueban en los tipos, porque una traducción puede usar etiquetas que el texto por defecto no tiene. Renderiza todas las etiquetas que usan tus mensajes y ten un respaldo para las demás, como arriba.
+- `t()` y el binding de `data-i18n` muestran las etiquetas tal como están escritas. Renderiza desde tu código un mensaje con etiquetas usando `rich()`.
+
 ## Plurales
 
 "1 items" está mal en inglés, y otros idiomas tienen más formas que el inglés. El árabe tiene seis. Para que cada idioma elija, escribe la clave como un grupo de formas en lugar de un solo string. El carrito de la tienda ya lo hace:
@@ -272,7 +316,7 @@ Cuando a un locale le falta un grupo de plurales, se usa el grupo del locale por
 
 Tres cosas a tener en cuenta:
 
-- **`count` tiene que ser un número.** Un string como `"5"` no elige ninguna forma; el grupo se trata entonces como una clave que falta. Conviértelo donde entra, como con `Number(params.get("count"))`. El gestor no adivina, porque `"1,5"` es uno y medio en portugués y para JavaScript ni siquiera es un número.
+- **`count` tiene que ser un número o un bigint.** Un string como `"5"` no elige ninguna forma; el grupo se trata entonces como una clave que falta. Conviértelo donde entra, como con `Number(params.get("count"))`. El gestor no adivina, porque `"1,5"` es uno y medio en portugués y para JavaScript ni siquiera es un número.
 - **Un string simple bajo la misma clave gana sobre las formas.** Si `cart.items` es un string, `count` solo completa `{count}`.
 - **Sin `other`, no es un grupo de plurales.** `{ "one": "…", "two": "…" }` funciona solo para las cantidades cuya forma justo está ahí; cualquier otra cantidad muestra la clave. `has()` dice que ese grupo no es una clave, y las claves tipadas no lo ofrecen. Agrega `other`.
 
@@ -372,14 +416,14 @@ t("cart.items", { count: 2 }); // ok: un grupo de plurales requiere un count num
 
 Qué valores acepta cada argumento:
 
-- Los argumentos `number`, `plural` y `selectordinal` aceptan un número.
+- Los argumentos `number`, `plural` y `selectordinal` aceptan un número o un bigint.
 - `date` y `time` aceptan un `Date` o un timestamp.
-- `select` acepta un string o un número.
+- `select` acepta un string, un número o un bigint.
 - Un `{name}` simple acepta cualquiera de estos.
 
 Se permiten valores de más. Cuando hay varios diccionarios tipados, una clave necesita los valores de cada uno que la tenga.
 
-Un import de JSON tipa todo el texto como `string`, porque TypeScript no conserva los valores de los strings JSON, así que un diccionario JSON comprueba las claves pero acepta cualquier valor. Para comprobar los valores, escribe el idioma por defecto como TypeScript `as const` y deja los demás idiomas en JSON, tipados como el por defecto:
+Un import de JSON tipa todo el texto como `string`, porque TypeScript no conserva los valores de los strings JSON, así que un diccionario JSON comprueba las claves pero acepta cualquier valor, salvo que un grupo de plurales sigue pidiendo un `count` numérico. Para comprobar los valores, escribe el idioma por defecto como TypeScript `as const` y deja los demás idiomas en JSON, tipados como el por defecto:
 
 ```ts
 import en from "./locales/en";
@@ -394,7 +438,7 @@ El tipo de retorno del loader es lo que tipa `t()`, así que una traducción tie
 Leer los argumentos de un mensaje ocurre por completo en el sistema de tipos, lo cual es muy ingenioso justo hasta que deja de ver el mensaje. En estos casos `t()` acepta cualquier valor, o ninguno, para esa clave. Nada deja de compilar; simplemente la comprobación queda apagada:
 
 - **La clave es una de varias.** En `t(hasFailed ? "checkout.failed" : "checkout.done")`, TypeScript ve una unión de dos claves y no puede saber los valores de qué mensaje aplican. Llama a `t()` con cada clave en su propia rama, `hasFailed ? t("checkout.failed", { orderId }) : t("checkout.done")`, y cada llamada se comprueba.
-- **El mensaje es un `string` simple**, como lo es todo texto en un diccionario JSON. Escribe el idioma por defecto como TypeScript `as const`, como arriba.
+- **El mensaje es un `string` simple**, como lo es todo texto en un diccionario JSON. Un grupo de plurales sigue pidiendo un `count` numérico, porque su forma lo dice. Escribe el idioma por defecto como TypeScript `as const`, como arriba.
 - **El mensaje tiene sintaxis inválida**, como una `{` sin cerrar, un nombre de placeholder que no está hecho de letras ASCII, dígitos y `_` (`{first-name}`), `{n, number, currency}`, o un `select` o `plural` sin `other`. Alguna sintaxis inválida, como una opción escrita dos veces, una forma plural desconocida o un anidamiento de más de 10 niveles, puede igual pedir valores. En cualquier caso, el runtime tampoco puede leerlo: registra una advertencia y muestra el texto con solo los placeholders `{name}` válidos completados. Corrige el mensaje; la [comprobación de mensajes](#encuentra-claves-sin-traducir) los encuentra.
 - **El mensaje es demasiado largo para que los tipos lo lean**: unos 900 apóstrofos, 450 argumentos o 900 espacios dentro de las llaves de un argumento, en un mismo texto. TypeScript tiene un límite de cuán profundo puede llegar un tipo, y la lectura se detiene antes de alcanzarlo en lugar de hacer fallar tu build. En tiempo de ejecución el mensaje funciona con normalidad. Si tienes uno de estos, probablemente sean tres mensajes disfrazados de uno; dividirlo devuelve las comprobaciones.
 - **El tipo del gestor está escrito a mano sin el diccionario.** `I18n<"en" | "pt", Key>` comprueba las claves pero no los valores. Pasa el tipo del diccionario como tercer argumento de tipo, `I18n<"en" | "pt", Key, typeof en>`, para que sigan comprobándose.

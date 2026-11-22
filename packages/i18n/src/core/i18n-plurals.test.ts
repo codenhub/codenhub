@@ -50,6 +50,15 @@ describe("plural selection", () => {
     expect(i18n.t("cart.items", { count: 1, n: format.format(1) })).toBe("1 item");
   });
 
+  it("should select a plural group's form by a bigint count", async () => {
+    const i18n = createPluralI18n();
+    await i18n.init();
+
+    expect(i18n.t("cart.items", { count: 1n })).toBe("1 item");
+    expect(i18n.t("cart.items", { count: 12_345_678_901_234_567_890n })).toBe("12,345,678,901,234,567,890 items");
+    expect(i18n.has("cart.items")).toBe(true);
+  });
+
   it("should pick the plural form for `count` with the active locale's rules", async () => {
     const i18n = createPluralI18n();
     await i18n.init();

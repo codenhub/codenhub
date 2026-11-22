@@ -23,6 +23,17 @@ const hasTranslationKey = (element: Element): boolean =>
  */
 const isForeignChange = (mutation: MutationRecord): boolean =>
   mutation.type === "attributes" || Array.from(mutation.addedNodes).some(isElement);
+/**
+ * The keyed element whose content other code replaced while it showed a translation, such as by setting
+ * `textContent`. The pass writes the translation back over that text, so it is not the element's fallback.
+ */
+const getReplacedText = (mutation: MutationRecord): Element | undefined =>
+  mutation.type === "childList" &&
+  isElement(mutation.target) &&
+  mutation.target.hasAttribute("data-i18n") &&
+  !showsTranslatedText(mutation.target)
+    ? mutation.target
+    : undefined;
 
 /**
  * Optional browser integrations applied around a consumer-owned i18n manager.
@@ -241,9 +252,14 @@ export async function initializeBrowserI18n<TLocale extends string>(
     // The full pass covers pending additions and key changes but does not find an element whose last key was removed,
     // so only those are handled first; the pass covers the other pending records.
     const keyRemovedElements = new Set<Element>();
+    const replacedTexts = new Set<Element>();
     for (const mutation of observer?.takeRecords() ?? []) {
       if (mutation.type === "attributes" && !hasTranslationKey(mutation.target as Element)) {
         keyRemovedElements.add(mutation.target as Element);
+      }
+      const replaced = getReplacedText(mutation);
+      if (replaced !== undefined) {
+        replacedTexts.add(replaced);
       }
     }
     // Each step runs even when an earlier one throws, as from `onMissingKey`, and the first error is thrown last.
@@ -265,6 +281,7 @@ export async function initializeBrowserI18n<TLocale extends string>(
             root: observedRoot,
             locale: i18n.locale,
             translate: (key) => internals.lookup(key),
+            replacedTexts,
           }),
         handleChangesDuringPass,
       ],
@@ -298,6 +315,7 @@ export async function initializeBrowserI18n<TLocale extends string>(
     const changedRoots = new Set<Element>();
     // An element whose last key was removed is not found by an ancestor's scan, so it is translated directly.
     const keyRemovedElements = new Set<Element>();
+    const replacedTexts = new Set<Element>();
 
     for (const mutation of mutations) {
       if (mutation.type === "attributes") {
@@ -309,12 +327,10 @@ export async function initializeBrowserI18n<TLocale extends string>(
         continue;
       }
 
-      if (
-        isElement(mutation.target) &&
-        mutation.target.hasAttribute("data-i18n") &&
-        !showsTranslatedText(mutation.target)
-      ) {
-        changedRoots.add(mutation.target);
+      const replaced = getReplacedText(mutation);
+      if (replaced !== undefined) {
+        changedRoots.add(replaced);
+        replacedTexts.add(replaced);
       }
 
       for (const addedNode of mutation.addedNodes) {
@@ -351,6 +367,7 @@ export async function initializeBrowserI18n<TLocale extends string>(
         boundary: observedRoot,
         locale: i18n.locale,
         translate: (key) => internals.lookup(key),
+        replacedTexts,
       });
     });
   };

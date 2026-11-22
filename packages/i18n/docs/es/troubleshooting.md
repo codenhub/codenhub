@@ -2,7 +2,7 @@
 title: Solución de problemas
 description: Qué significa cada error y cada advertencia, y cómo solucionarlo.
 order: 5
-source: f3a1e38b48aa9722f1d98a83ca2ced23b1d574bc
+source: 1bc41e2fb9ef984fd04b9dcbd5a70900efd818fe
 ---
 
 # Solución de problemas
@@ -137,7 +137,7 @@ Causas comunes:
 
 Si viene de `parse()`, el valor no es el pathname de una URL: no empieza con `/`, o contiene `?` o `#`. Pasa `url.pathname` en lugar de la URL completa o de una ruta con su query string, como el `request.url` de Node. Una ruta que sí es un pathname pero contiene algo que el routing rechaza, como `//` o un segmento de punto, hace en cambio que `parse()` devuelva `undefined`, así que la URL rara de un visitante se convierte en un 404 y no en un fallo de la app.
 
-Si viene de `localize()` o de `localizeAll()`, la ruta es una de esas, o contiene algo que el routing rechaza. [Rutas que acepta](localized-urls.md#rutas-que-acepta) tiene la lista completa, con la solución para cada caso.
+Si viene de `localize()` o de `localizeAll()`, la ruta es una de esas, o contiene algo que el routing rechaza. El mensaje cita la ruta y nombra la regla que incumple, como `[I18n] pathname "/help/../admin" must not contain a dot segment, . or ..`. [Rutas que acepta](localized-urls.md#rutas-que-acepta) tiene la lista completa, con la solución para cada caso.
 
 ## `localize()` lanza `RangeError`: "would be read as"
 
@@ -148,7 +148,7 @@ La ruta que construiría `localize()` abre otra página, o la misma página en o
 
 ## `localize()` lanza `RangeError`: "would be longer than 8,192 characters or 100 segments"
 
-La ruta que pasaste es válida, pero el prefijo del locale o las palabras traducidas hacen que el resultado sea más largo de lo que acepta `parse()`. Acorta la ruta; un enlace tan largo probablemente también lo corten los servidores y los proxies mucho antes de que alguien lo lea.
+La ruta que pasaste es válida, pero el prefijo del locale o las palabras traducidas hacen que el resultado sea más largo de lo que acepta `parse()`. El mensaje termina con la longitud que tendría la URL, como `its URL there would have 8,198 characters in 2 segments`. Acorta la ruta; un enlace tan largo probablemente también lo corten los servidores y los proxies mucho antes de que alguien lo lea.
 
 ## Un placeholder se muestra tal cual y nada advierte
 
@@ -168,6 +168,7 @@ Ves `Ouvrir l{app}` donde esperabas `Ouvrir l'éditeur`, y la consola está en s
 - **`Could not load locale "pt"; using "es".`** o **`Could not load locale "pt"; using the default locale.`**: el loader falló con un locale guardado o detectado distinto del por defecto, así que el visitante recibió el siguiente: el locale detectado a partir del navegador después de uno guardado, y después el por defecto. Corrige el loader; la elección guardada se conserva para la próxima vez. Si el propio locale por defecto no carga, no queda nada a lo que recurrir, y la inicialización se rechaza con `Failed to load translations for locale "en".`
 - **"Skipping translation on <p> because translated elements must be leaves"**: el elemento con `data-i18n` tiene elementos hijos. Pon la clave en un elemento que contenga solo texto, o tradúcelo con `t()`.
 - **"Skipping translation on <style> because the element can run, hide, or reparse its text as HTML"**: hay una clave `data-i18n` en un elemento `<script>`, `<style>`, `<noscript>`, `<template>`, `<iframe>`, `<noembed>`, `<noframes>`, `<xmp>` o `<plaintext>`, cuyo texto se ejecuta como código, decide qué se muestra o se escribe sin escapar cuando la página se guarda como HTML. La advertencia nombra la clave y pasa el elemento, así que la consola apunta a él. Mueve la clave a un elemento normal. Sus claves `data-i18n-<atributo>`, como el `data-i18n-title` de un `<iframe>`, se siguen traduciendo.
+- **"Skipping translation on <p> because it is inside <xmp>, which can run, hide, or reparse its content as HTML"**: un elemento con una clave está dentro de uno de los elementos que nombra la entrada anterior, algo que solo el código puede hacer, por ejemplo al agregarlo a un `<xmp>` o a un `<template>` en lugar de a su `content`. No se traducen ni su texto ni sus atributos, ya que la página escribiría ambos sin escapar, o no los escribiría. Saca el elemento de ahí.
 - **"Skipping translation because data-i18n contains an invalid key"**, o lo mismo para un `data-i18n-<attribute>`: la clave está vacía, tiene más de 1000 caracteres o contiene un carácter de control ASCII, así que ningún diccionario puede contenerla. El elemento conserva su texto actual. Corrige la clave en el HTML.
 - **"Skipping translation because data-i18n names a message that needs values"**: el mensaje tiene un placeholder, un plural o un select, y la traducción de HTML no tiene valores para completarlos. El elemento conserva su texto del HTML, y la advertencia aparece una vez por clave. Renderiza ese texto con `t()` y pasa los valores.
 - **"Skipping translation of the title of <style> because it names a style sheet set"**: hay una clave `data-i18n-title` en un elemento `<style>` o `<link rel="stylesheet">`, cuyo `title` agrupa hojas de estilo entre las que el navegador alterna, así que traducirlo cambiaría cuáles se aplican. El elemento conserva su `title`. Quita la clave.
