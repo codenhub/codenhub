@@ -32,12 +32,12 @@
         "createI18n": {
           "files": {
             "dist/index.js": {
-              "bytes": 22652,
+              "bytes": 22753,
               "declarations": {
                 "I18nInstance": 7874,
-                "Parser": 3645,
-                "formatNodes": 1245,
-                "RichOutput": 1157,
+                "Parser": 3625,
+                "formatNodes": 1287,
+                "RichOutput": 1201,
                 "createFallbackChains": 525,
                 "matchConfiguredLocale": 474,
                 "validateI18nConfig": 464,
@@ -46,7 +46,7 @@
                 "NUMBER_FORMAT_OPTIONS": 369,
                 "hashText": 367,
                 "prepareLocales": 297,
-                "RTL_SCRIPTS": 242,
+                "RTL_SCRIPTS": 267,
                 "DATE_TIME_FORMAT_OPTIONS": 235,
                 "parseCachedMessage": 211,
                 "formatPlainValue": 210,
@@ -79,12 +79,12 @@
                 "intlLocale": 75,
                 "PLURAL_KEYWORDS": 70,
                 "isNewInvalidMessage": 65,
+                "TAG_PATTERN": 60,
                 "isPlainMessage": 58,
                 "RELATIVE_TIME_FORMAT_OPTIONS": 57,
                 "SELECT_KEY_PATTERN": 52,
                 "readValue": 52,
                 "isOptionsObject": 51,
-                "TAG_PATTERN": 50,
                 "maximizeLocale": 48,
                 "PLACEHOLDER_PATTERN": 44,
                 "LANGUAGE_ALIASES": 42,
@@ -184,8 +184,8 @@
               "bytes": 25
             }
           },
-          "gzip": 10081,
-          "minified": 30059
+          "gzip": 10136,
+          "minified": 30160
         },
         "i18nErrors": {
           "files": {
@@ -206,12 +206,12 @@
       },
       "files": {
         "dist/index.js": {
-          "bytes": 22656,
+          "bytes": 22757,
           "declarations": {
             "I18nInstance": 7876,
-            "Parser": 3645,
-            "formatNodes": 1245,
-            "RichOutput": 1157,
+            "Parser": 3625,
+            "formatNodes": 1287,
+            "RichOutput": 1201,
             "createFallbackChains": 525,
             "matchConfiguredLocale": 474,
             "validateI18nConfig": 465,
@@ -220,7 +220,7 @@
             "NUMBER_FORMAT_OPTIONS": 369,
             "hashText": 367,
             "prepareLocales": 297,
-            "RTL_SCRIPTS": 242,
+            "RTL_SCRIPTS": 267,
             "DATE_TIME_FORMAT_OPTIONS": 235,
             "parseCachedMessage": 211,
             "formatPlainValue": 210,
@@ -253,12 +253,12 @@
             "intlLocale": 75,
             "PLURAL_KEYWORDS": 70,
             "isNewInvalidMessage": 65,
+            "TAG_PATTERN": 60,
             "isPlainMessage": 58,
             "RELATIVE_TIME_FORMAT_OPTIONS": 57,
             "SELECT_KEY_PATTERN": 52,
             "readValue": 52,
             "isOptionsObject": 51,
-            "TAG_PATTERN": 50,
             "maximizeLocale": 48,
             "PLACEHOLDER_PATTERN": 43,
             "LANGUAGE_ALIASES": 42,
@@ -359,40 +359,41 @@
           "bytes": 56
         }
       },
-      "gzip": 10173,
-      "minified": 30259,
-      "sha256": "ba5491667ed182ec8d50e827f6d3f9aa50840b443378cd40693e9e74b86b4248"
+      "gzip": 10231,
+      "minified": 30360,
+      "sha256": "73f256e732f178bf64e7b6a622df2c621d5e98dfe839ebb228ef0cf31049eafe"
     },
     "./browser": {
       "exports": {
         "initializeBrowserI18n": {
           "files": {
             "dist/browser.js": {
-              "bytes": 10111,
+              "bytes": 10814,
               "declarations": {
-                "initializeBrowserI18n": 4100,
-                "createDomTranslator": 3373,
-                "readPersistedLocale": 244,
+                "initializeBrowserI18n": 4538,
+                "createDomTranslator": 3513,
+                "createLocalStorage": 232,
                 "readInheritedLang": 191,
+                "readPersistedLocale": 167,
                 "namesStyleSheetSet": 138,
                 "isInsideCustomElement": 133,
                 "TRANSLATED_ATTRIBUTES": 131,
                 "isDefinedCustomElement": 127,
-                "persistLocale": 125,
                 "BLOCKED_ELEMENT_NAMES": 116,
                 "getReplacedText": 105,
-                "forgetPersistedLocale": 104,
                 "getNavigatorPreferences": 98,
                 "collectElements": 96,
                 "runEach": 92,
                 "findBlockedAncestor": 91,
                 "getMutationObserver": 90,
+                "forgetPersistedLocale": 88,
                 "syncDocumentLocale": 88,
-                "isForeignChange": 61,
+                "persistLocale": 83,
+                "isForeignChange": 62,
                 "BLOCKED_ANCESTOR_NAMES": 53,
                 "isSameLanguage": 43,
                 "warn": 43,
-                "PARENT_NODE_TYPES": 36,
+                "PARENT_NODE_TYPES": 37,
                 "hasTranslationKey": 34,
                 "TRANSLATION_KEY_ATTRIBUTES": 31,
                 "TRANSLATION_KEY_SELECTOR": 31,
@@ -403,6 +404,7 @@
                 "langStates": 30,
                 "showsTranslatedText": 30,
                 "translatedTexts": 30,
+                "STORAGE_METHODS": 26,
                 "isElement": 20,
                 "isElementNode": 20,
                 "LANGUAGE_CHANGE_EVENT": 19,
@@ -439,37 +441,38 @@
               "bytes": 35
             }
           },
-          "gzip": 4357,
-          "minified": 11054
+          "gzip": 4594,
+          "minified": 11757
         }
       },
       "files": {
         "dist/browser.js": {
-          "bytes": 10111,
+          "bytes": 10814,
           "declarations": {
-            "initializeBrowserI18n": 4100,
-            "createDomTranslator": 3373,
-            "readPersistedLocale": 244,
+            "initializeBrowserI18n": 4538,
+            "createDomTranslator": 3513,
+            "createLocalStorage": 232,
             "readInheritedLang": 191,
+            "readPersistedLocale": 167,
             "namesStyleSheetSet": 138,
             "isInsideCustomElement": 133,
             "TRANSLATED_ATTRIBUTES": 131,
             "isDefinedCustomElement": 127,
-            "persistLocale": 125,
             "BLOCKED_ELEMENT_NAMES": 116,
             "getReplacedText": 105,
-            "forgetPersistedLocale": 104,
             "getNavigatorPreferences": 98,
             "collectElements": 96,
             "runEach": 92,
             "findBlockedAncestor": 91,
             "getMutationObserver": 90,
+            "forgetPersistedLocale": 88,
             "syncDocumentLocale": 88,
-            "isForeignChange": 61,
+            "persistLocale": 83,
+            "isForeignChange": 62,
             "BLOCKED_ANCESTOR_NAMES": 53,
             "isSameLanguage": 43,
             "warn": 43,
-            "PARENT_NODE_TYPES": 36,
+            "PARENT_NODE_TYPES": 37,
             "hasTranslationKey": 34,
             "TRANSLATION_KEY_ATTRIBUTES": 31,
             "TRANSLATION_KEY_SELECTOR": 31,
@@ -480,6 +483,7 @@
             "langStates": 30,
             "showsTranslatedText": 30,
             "translatedTexts": 30,
+            "STORAGE_METHODS": 26,
             "isElement": 20,
             "isElementNode": 20,
             "LANGUAGE_CHANGE_EVENT": 19,
@@ -516,9 +520,9 @@
           "bytes": 35
         }
       },
-      "gzip": 4357,
-      "minified": 11054,
-      "sha256": "c76a580c5b4c7e469d497ee13ceded2bb965e4e5a6ee37e5f19ca665d1c717d2"
+      "gzip": 4594,
+      "minified": 11757,
+      "sha256": "b4f07e4aa596f30513d25906a1d237e0550c9a00ca3a18d7e81d3da37e1a85c4"
     },
     "./routing": {
       "exports": {

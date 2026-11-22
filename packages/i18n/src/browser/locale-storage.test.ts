@@ -1,8 +1,15 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { initializeBrowserI18n } from "../browser";
+import { type BrowserLocaleStorage, initializeBrowserI18n } from "../browser";
 import { createI18n, I18nError } from "../index";
-import { createManager, dictionaries, type Locale, setNavigatorLocales, setupBrowserTestHooks } from "./test-helpers";
+import {
+  createDeferred,
+  createManager,
+  dictionaries,
+  type Locale,
+  setNavigatorLocales,
+  setupBrowserTestHooks,
+} from "./test-helpers";
 
 setupBrowserTestHooks();
 
@@ -155,6 +162,17 @@ describe("initializeBrowserI18n locale resolution", () => {
       Object.defineProperty(globalThis, "document", descriptor);
     }
     expect(i18n.isReady).toBe(false);
+  });
+
+  it("rejects a second start for the same manager with a TypeError", async () => {
+    const i18n = createManager();
+    const binding = await initializeBrowserI18n({ i18n, persistLocale: false });
+
+    const second = initializeBrowserI18n({ i18n, persistLocale: false });
+
+    expect(second).toBeInstanceOf(Promise);
+    await expect(second).rejects.toThrow(new TypeError("[I18n] The manager already has a browser binding."));
+    binding.disconnect();
   });
 
   it("rejects without a global event target before initializing core", async () => {
@@ -501,30 +519,295 @@ describe("initializeBrowserI18n storage integration", () => {
   });
 });
 
-describe("the language picker in the browser guide", () => {
-  const createPicker = (): HTMLSelectElement => {
-    document.body.innerHTML = '<select id="language"><option>en</option><option>fr</option></select>';
-    return document.querySelector<HTMLSelectElement>("#language")!;
+describe("initializeBrowserI18n storage option", () => {
+  // A store holding one plain locale string, as a cookie does, recording each call.
+  const createStore = (initial?: unknown) => {
+    let value = initial;
+    const calls: string[] = [];
+    const storage = {
+      get: vi.fn(() => {
+        calls.push("get");
+        return value as string | undefined;
+      }),
+      set: vi.fn((locale: string) => {
+        calls.push(`set ${locale}`);
+        value = locale;
+      }),
+      remove: vi.fn(() => {
+        calls.push("remove");
+        value = undefined;
+      }),
+    };
+    return { storage, calls, read: () => value };
   };
 
-  // The guide's change listener, as `docs/browser.md` writes it under "Let visitors switch languages".
-  const listenForChoice = (picker: HTMLSelectElement, i18n: ReturnType<typeof createManager>) => async () => {
-    try {
-      await i18n.setLocale(picker.value as Locale);
-    } finally {
-      picker.value = i18n.locale;
+  it("starts in the stored locale before navigator preferences, without writing it back", async () => {
+    const { storage, calls } = createStore("fr");
+    setNavigatorLocales(["pt-BR"]);
+    const i18n = createManager();
+
+    const binding = await initializeBrowserI18n({ i18n, storage });
+
+    expect(i18n.locale).toBe("fr");
+    expect(binding.isUsingSystemLocale).toBe(false);
+    expect(calls).toEqual(["get"]);
+    binding.disconnect();
+  });
+
+  it("matches a stored locale the application no longer lists exactly, keeping the stored value", async () => {
+    const { storage, read } = createStore("pt-PT");
+    setNavigatorLocales(["en-US"]);
+    const i18n = createManager();
+
+    const binding = await initializeBrowserI18n({ i18n, storage });
+
+    expect(i18n.locale).toBe("pt-BR");
+    expect(read()).toBe("pt-PT");
+    binding.disconnect();
+  });
+
+  it.each([
+    ["undefined", undefined],
+    ["null", null],
+    ["a number", 42],
+    ["an object", { locale: "fr" }],
+    ["a promise", Promise.resolve("fr")],
+    ["an empty string", ""],
+    ["a value that is not a language tag", "fr;"],
+    ["a locale that matches nothing configured", "de"],
+  ])("treats a get() that returns %s as nothing stored", async (_description, stored) => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const { storage } = createStore(stored);
+    setNavigatorLocales(["pt-BR"]);
+    const i18n = createManager();
+
+    const binding = await initializeBrowserI18n({ i18n, storage });
+
+    expect(i18n.locale).toBe("pt-BR");
+    expect(binding.isUsingSystemLocale).toBe(true);
+    expect(warn).not.toHaveBeenCalled();
+    binding.disconnect();
+  });
+
+  it("writes an explicit locale and each applied choice as plain locale strings, but not a detected one", async () => {
+    const { storage, calls } = createStore();
+    setNavigatorLocales(["fr"]);
+    const detected = createManager();
+    const detectedBinding = await initializeBrowserI18n({ i18n: detected, storage });
+    detectedBinding.disconnect();
+    const i18n = createManager();
+
+    const binding = await initializeBrowserI18n({ i18n, storage, locale: "ar" });
+    await i18n.setLocale("pt-BR");
+    await i18n.setLocale("pt-BR");
+    await i18n.init({ locale: "en" });
+
+    expect(calls).toEqual(["get", "set ar", "set pt-BR", "set pt-BR", "set en"]);
+    binding.disconnect();
+  });
+
+  it("forgets the stored locale through remove() when switching to the system locale", async () => {
+    const { storage, calls, read } = createStore("ar");
+    setNavigatorLocales(["fr"]);
+    const i18n = createManager();
+    const binding = await initializeBrowserI18n({ i18n, storage });
+
+    await binding.switchToSystemLocale();
+
+    expect(i18n.locale).toBe("fr");
+    expect(binding.isUsingSystemLocale).toBe(true);
+    expect(read()).toBeUndefined();
+    expect(calls).toEqual(["get", "remove"]);
+    binding.disconnect();
+  });
+
+  it("falls back to the detected locale when the stored locale fails to load, keeping the stored choice", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const { storage, calls } = createStore("ar");
+    setNavigatorLocales(["fr"]);
+    const i18n = createManager({
+      loadLocale: (locale) => (locale === "ar" ? Promise.reject(new Error("offline")) : dictionaries[locale]),
+    });
+
+    const binding = await initializeBrowserI18n({ i18n, storage });
+
+    expect(i18n.locale).toBe("fr");
+    expect(binding.isUsingSystemLocale).toBe(false);
+    expect(calls).toEqual(["get"]);
+    binding.disconnect();
+  });
+
+  it("warns and carries on when each method throws", async () => {
+    const failure = new Error("cookies blocked");
+    const fail = () => {
+      throw failure;
+    };
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    setNavigatorLocales(["fr"]);
+    const i18n = createManager();
+
+    const binding = await initializeBrowserI18n({ i18n, storage: { get: fail, set: fail, remove: fail } });
+    await i18n.setLocale("ar");
+    await binding.switchToSystemLocale();
+
+    expect(i18n.locale).toBe("fr");
+    expect(warn.mock.calls).toEqual([
+      ["[I18n] Could not read persisted locale.", failure],
+      ["[I18n] Could not persist locale.", failure],
+      ["[I18n] Could not forget persisted locale.", failure],
+    ]);
+    binding.disconnect();
+  });
+
+  it("does not warn about a throwing method when the manager is silent", async () => {
+    const fail = () => {
+      throw new Error("cookies blocked");
+    };
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const i18n = createManager({ isSilent: true });
+
+    const binding = await initializeBrowserI18n({
+      i18n,
+      locale: "fr",
+      storage: { get: fail, set: fail, remove: fail },
+    });
+
+    expect(warn).not.toHaveBeenCalled();
+    binding.disconnect();
+  });
+
+  it("calls each method on the store, so a class instance works", async () => {
+    class CookieStore {
+      #value: string | undefined = "fr";
+      get() {
+        return this.#value;
+      }
+      set(locale: string) {
+        this.#value = locale;
+      }
+      remove() {
+        this.#value = undefined;
+      }
     }
+    const storage = new CookieStore();
+    const i18n = createManager();
+
+    const binding = await initializeBrowserI18n({ i18n, storage });
+    await i18n.setLocale("ar");
+
+    expect(storage.get()).toBe("ar");
+    binding.disconnect();
+  });
+
+  it("leaves localStorage alone", async () => {
+    const getItem = vi.spyOn(Storage.prototype, "getItem");
+    const setItem = vi.spyOn(Storage.prototype, "setItem");
+    const removeItem = vi.spyOn(Storage.prototype, "removeItem");
+    const { storage } = createStore();
+    const i18n = createManager();
+
+    const binding = await initializeBrowserI18n({ i18n, locale: "fr", storage });
+    await binding.switchToSystemLocale();
+
+    expect([getItem, setItem, removeItem].map((spy) => spy.mock.calls.length)).toEqual([0, 0, 0]);
+    binding.disconnect();
+  });
+
+  it("accepts storageKey and persistLocale left undefined beside it", async () => {
+    const { storage, calls } = createStore();
+    const i18n = createManager();
+
+    const binding = await initializeBrowserI18n({
+      i18n,
+      locale: "fr",
+      storage,
+      storageKey: undefined,
+      persistLocale: undefined,
+    });
+
+    expect(calls).toEqual(["set fr"]);
+    binding.disconnect();
+  });
+
+  it.each([
+    ["storageKey", { storageKey: "locale" }, "[I18n] storage replaces storageKey; pass only one of them."],
+    [
+      "persistLocale: false",
+      { persistLocale: false },
+      "[I18n] storage requires persistLocale; drop storage or persistLocale: false.",
+    ],
+    ["persistLocale: true", { persistLocale: true }, undefined],
+  ])("rejects storage beside %s before initializing the manager", async (_description, extra, message) => {
+    const { storage } = createStore();
+    const i18n = createManager();
+
+    const start = initializeBrowserI18n({ i18n, locale: "fr", storage, ...extra });
+
+    if (message === undefined) {
+      (await start).disconnect();
+      return;
+    }
+    await expect(start).rejects.toThrow(new TypeError(message));
+    expect(i18n.isReady).toBe(false);
+    expect(storage.get).not.toHaveBeenCalled();
+    (await initializeBrowserI18n({ i18n, locale: "fr", storage })).disconnect();
+  });
+
+  it.each([
+    ["null", null],
+    ["a string", "cookie"],
+    ["an object without get()", { set() {}, remove() {} }],
+    ["an object without set()", { get: (): undefined => undefined, remove() {} }],
+    ["an object without remove()", { get: (): undefined => undefined, set() {} }],
+    ["an object whose get is not a function", { get: "fr", set() {}, remove() {} }],
+  ])("rejects a storage that is %s before initializing the manager", async (_description, storage) => {
+    const i18n = createManager();
+
+    await expect(initializeBrowserI18n({ i18n, storage: storage as unknown as BrowserLocaleStorage })).rejects.toThrow(
+      new TypeError("[I18n] storage must be an object with get(), set(), and remove() methods."),
+    );
+    expect(i18n.isReady).toBe(false);
+  });
+});
+
+describe("the language picker in the browser guide", () => {
+  // The guide's picker, as `docs/browser.md` writes it under "Let visitors switch languages".
+  const startPicker = async (i18n: ReturnType<typeof createManager>) => {
+    document.body.innerHTML =
+      '<select id="language"><option>en</option><option>fr</option><option>ar</option></select>';
+    const binding = await initializeBrowserI18n({ i18n, persistLocale: false });
+    const picker = document.querySelector<HTMLSelectElement>("#language")!;
+    const showLanguage = () => {
+      picker.value = i18n.locale;
+    };
+    let latestPick = 0;
+
+    showLanguage();
+    binding.subscribe(showLanguage);
+    const onChange = async () => {
+      const pick = ++latestPick;
+      try {
+        await i18n.setLocale(picker.value as (typeof i18n.locales)[number]);
+      } finally {
+        if (pick === latestPick) {
+          showLanguage();
+        }
+      }
+    };
+    const choose = (value: string) => {
+      picker.value = value;
+      return onChange();
+    };
+    return { binding, picker, choose };
   };
 
   it("shows the language in use when the chosen one fails to load", async () => {
     const i18n = createManager({
       loadLocale: (locale) => (locale === "fr" ? Promise.reject(new Error("offline")) : dictionaries[locale]),
     });
-    const binding = await initializeBrowserI18n({ i18n, locale: "en", persistLocale: false });
-    const picker = createPicker();
+    const { binding, picker, choose } = await startPicker(i18n);
 
-    picker.value = "fr";
-    await expect(listenForChoice(picker, i18n)()).rejects.toThrow(I18nError);
+    await expect(choose("fr")).rejects.toThrow(I18nError);
 
     expect(i18n.locale).toBe("en");
     expect(picker.value).toBe("en");
@@ -532,14 +815,40 @@ describe("the language picker in the browser guide", () => {
   });
 
   it("shows the chosen language once it loads", async () => {
-    const i18n = createManager();
-    const binding = await initializeBrowserI18n({ i18n, locale: "en", persistLocale: false });
-    const picker = createPicker();
+    const { binding, picker, choose } = await startPicker(createManager());
 
-    picker.value = "fr";
-    await listenForChoice(picker, i18n)();
+    await choose("fr");
 
-    expect(i18n.locale).toBe("fr");
+    expect(picker.value).toBe("fr");
+    binding.disconnect();
+  });
+
+  it("keeps the latest pick while it loads after an earlier one settles", async () => {
+    const loads = { fr: createDeferred<unknown>(), ar: createDeferred<unknown>() };
+    const i18n = createManager({
+      loadLocale: (locale) => (locale === "fr" || locale === "ar" ? loads[locale].promise : dictionaries[locale]),
+    });
+    const { binding, picker, choose } = await startPicker(i18n);
+
+    const french = choose("fr");
+    const arabic = choose("ar");
+    loads.fr.resolve(dictionaries.fr);
+    await french;
+
+    expect(picker.value).toBe("ar");
+    loads.ar.resolve(dictionaries.ar);
+    await arabic;
+    expect(picker.value).toBe("ar");
+    binding.disconnect();
+  });
+
+  it("shows a language the binding switches to after the browser's language changes", async () => {
+    const { binding, picker } = await startPicker(createManager());
+
+    setNavigatorLocales(["fr"]);
+    window.dispatchEvent(new Event("languagechange"));
+    await new Promise<void>((resolve) => setTimeout(resolve, 0));
+
     expect(picker.value).toBe("fr");
     binding.disconnect();
   });

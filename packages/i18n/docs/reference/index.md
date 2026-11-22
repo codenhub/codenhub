@@ -116,7 +116,7 @@ export interface I18n<TLocale extends string = string, TKey extends string = str
     formatDate(value: Date | number, options?: Intl.DateTimeFormatOptions): string;
     formatRelativeTime(value: number, unit: Intl.RelativeTimeFormatUnit, options?: Intl.RelativeTimeFormatOptions): string;
     formatList(values: Iterable<string>, options?: Intl.ListFormatOptions): string;
-    subscribe(listener: () => void): () => void;
+    subscribe: (listener: () => void) => () => void;
     addEventListener<K extends keyof I18nEventMap<TLocale>>(type: K, callback: (this: I18n<TLocale, TKey>, event: I18nEventMap<TLocale>[K]) => void, options?: AddEventListenerOptions | boolean): void;
     addEventListener(type: string, callback: EventListener | EventListenerObject | null, options?: AddEventListenerOptions | boolean): void;
     removeEventListener<K extends keyof I18nEventMap<TLocale>>(type: K, callback: (this: I18n<TLocale, TKey>, event: I18nEventMap<TLocale>[K]) => void, options?: EventListenerOptions | boolean): void;
@@ -181,6 +181,14 @@ readonly locales: readonly TLocale[];
 ```
 
 Frozen copy of supported canonical locales.
+
+#### I18n › subscribe
+
+```ts
+subscribe: (listener: () => void) => () => void;
+```
+
+Calls a listener after every applied `init()` and every applied locale change, such as to re-render a framework, once per call, so an `init()` that changes the locale calls it once. A stale or same-locale request, which changes nothing, does not call it.
 
 #### I18n › addEventListener
 
@@ -399,7 +407,7 @@ Canonicalizes an exact configured locale match, ignoring letter case and surroun
 rich<K extends TKey, TValues extends object = DefaultValues>(key: K, ...params: TranslateParams<TMessages, K, TValues>): RichText;
 ```
 
-Translates a key as `I18n.translate` does, and returns its text and tags as parts for a framework to render, so a translation can mark a link or bold text inside a sentence without HTML. Tags are `<name>…</name>` and `<name/>`, with a name of letters and digits in any script, and `_`, written anywhere in the message's text, including inside a plural or select form. Values are text: a tag inside a value is never read, nor is one in quoted text, such as `'{<b>}'`. A `<` that doesn't form a tag, as in `a < b`, is text.
+Translates a key as `I18n.translate` does, and returns its text and tags as parts for a framework to render, so a translation can mark a link or bold text inside a sentence without HTML. Tags are `<name>…</name>` and `<name/>`, with a name of letters and digits in any script, `_`, and `-` after the first character, such as `<help-link>`, written anywhere in the message's text, including inside a plural or select form. Values are text: a tag inside a value is never read, nor is one in quoted text, such as `'{<b>}'`. A `<` that doesn't form a tag, as in `a < b`, is text.
 
 A message whose tags don't balance, nest past 10 levels, or cross the edge of a plural or select form warns once per process for its locale, key, and text, unless silent, and returns the text as `t()` shows it, tags included, as one part. A message with invalid syntax and a missing key return what `t()` returns, as one part.
 
@@ -444,20 +452,6 @@ Atomically changes the active locale after all required loads succeed.
 - `TypeError` — When direction resolution returns a value other than `ltr` or `rtl`.
 - `I18nError` — When an injected locale loader rejects. Exceptions from the direction callback propagate unchanged.
 
-#### I18n › subscribe
-
-```ts
-subscribe(listener: () => void): () => void;
-```
-
-Calls a listener after every applied `init()` and every applied locale change, such as to re-render a framework, once per call, so an `init()` that changes the locale calls it once. A stale or same-locale request, which changes nothing, does not call it.
-
-**Parameters**
-
-- `listener` — Called without arguments. An exception is reported as for any `EventTarget` listener: in a browser, as an uncaught error that neither stops other listeners nor rejects the change; in Node.js, it crashes the process.
-
-**Returns** — A function that removes the listener; calling it again does nothing.
-
 #### I18n › t
 
 ```ts
@@ -483,7 +477,7 @@ When `params.count` is a number or bigint and the key is a group of plural forms
 **Parameters**
 
 - `key` — Translation key, or the key of a plural group when `params.count` is a number or bigint.
-- `params` — Argument values, read from own properties. An argument without a usable value, such as a string for `{n, number}`, is left as written. A string in `{name}` is inserted as written, a number as `{name, number}` would format it, and a date as `{name, date}` would. A bigint is taken wherever a number is. A numeric `count` also selects a plural form. Where the dictionary type has the message as a literal, the values it uses are type-checked, and any other value may have any type, such as the `isAdmin` of a `User` passed whole.
+- `params` — Argument values, read from own properties. An argument without a usable value, such as a string for `{n, number}`, is left as written. A string in `{name}` is inserted as written, a number as `{name, number}` would format it, and a date as `{name, date}` would. A bigint is taken wherever a number is. A boolean is taken by `{v, select, …}` only, which picks the option named `true` or `false`, or `other`. A numeric `count` also selects a plural form. Where the dictionary type has the message as a literal, the values it uses are type-checked, and any other value may have any type, such as the `isAdmin` of a `User` passed whole.
 
 **Returns** — The translated text, or the trimmed key when no dictionary has it. A miss calls `onMissingKey`, or warns once per recent locale/key pair in the process unless silent.
 
@@ -803,7 +797,7 @@ The text and tags it encloses, empty for `<name/>`.
 readonly tag: string;
 ```
 
-The tag's name, as written: letters, combining marks, and decimal digits in any script, and `_`.
+The tag's name, as written: letters, combining marks, and decimal digits in any script, `_`, and `-` after the first character.
 
 ## Type aliases
 
@@ -1009,7 +1003,7 @@ Not exported; declared in `src/core/message-params.ts`.
 ### Narrow
 
 ```ts
-type Narrow<T> = [T] extends [number] ? number : [T] extends [number | bigint] ? number | bigint : [T] extends [Date | number] ? Date | number : [T] extends [string | number | bigint] ? string | number | bigint : T;
+type Narrow<T> = Extract<ValueKind, T>;
 ```
 
 Not exported; declared in `src/core/message-params.ts`.
@@ -1236,10 +1230,19 @@ type ValueAt<T, K extends string> = T extends object ? K extends keyof T ? T[K] 
 
 Not exported; declared in `src/core/message-params.ts`.
 
+### ValueKind
+
+```ts
+type ValueKind = string | number | bigint | boolean | Date;
+```
+
+Not exported; declared in `src/core/message-params.ts`.
+
 ### ValueOfType
 
 ```ts
-type ValueOfType<T> = T extends "number" | "plural" | "selectordinal" ? number | bigint : T extends "date" | "time" ? Date | number : T extends "select" ? string | number | bigint : Unreadable;
+type ValueOfType<T> = T extends "number" | "plural" | "selectordinal" ? number | bigint : T extends "date" | "time" ? Date | number : T extends "select" ? // A boolean picks the option named `true` or `false`; no other format reads one.
+string | number | bigint | boolean : Unreadable;
 ```
 
 Not exported; declared in `src/core/message-params.ts`.

@@ -116,7 +116,8 @@ type ValueOfType<T> = T extends "number" | "plural" | "selectordinal"
   : T extends "date" | "time"
     ? Date | number
     : T extends "select"
-      ? string | number | bigint
+      ? // A boolean picks the option named `true` or `false`; no other format reads one.
+        string | number | bigint | boolean
       : Unreadable;
 
 // The styles the runtime reads; another, such as `{n, number, currency}`, is invalid syntax.
@@ -293,16 +294,11 @@ type ValueAt<T, K extends string> = T extends object
 
 type IsUnion<T, U = T> = T extends unknown ? ([U] extends [T] ? false : true) : never;
 
-// An argument used twice, such as `{count}` and `{count, plural, …}`, takes the narrower type.
-type Narrow<T> = [T] extends [number]
-  ? number
-  : [T] extends [number | bigint]
-    ? number | bigint
-    : [T] extends [Date | number]
-      ? Date | number
-      : [T] extends [string | number | bigint]
-        ? string | number | bigint
-        : T;
+// An argument used twice, such as `{count}` and `{count, plural, …}`, takes the kinds of value both read. Each kind is
+// tested on its own, since an intersection such as `(string | boolean) & (string | Date)` keeps `true & Date`, which
+// no value is.
+type ValueKind = string | number | bigint | boolean | Date;
+type Narrow<T> = Extract<ValueKind, T>;
 type Simplify<T> = { readonly [K in keyof T]: Narrow<T[K]> } & {};
 
 // Whether any member is the marker. `Unreadable extends U` is not that test: a message without arguments reads as `{}`,

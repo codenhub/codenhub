@@ -168,7 +168,7 @@ A key that only your default language has does not fail the build; it renders in
 
 When the browser takes over a server-rendered page, it must start in the language the server used, or the text changes as the page loads. On a localized site, the URL says which: read it with `routing.parse()`, as [Localized URLs](localized-urls.md#read-the-locale-on-the-client) shows.
 
-Without a locale in the URL, the server's `Accept-Language` match is a guess, not a choice. Don't pass it to the binding as `locale`: the binding saves an explicit locale as the visitor's choice, as [How the locale is chosen](browser.md#how-the-locale-is-chosen) explains, so a visitor who picked Portuguese would have English saved over it on every page load. Keep the visitor's choice in a cookie instead, which the server can read too:
+Without a locale in the URL, the server's `Accept-Language` match is a guess, not a choice. Don't pass it to the binding as `locale`: the binding saves an explicit locale as the visitor's choice, as [How the locale is chosen](browser.md#how-the-locale-is-chosen) explains, so a visitor who picked Portuguese would have English saved over it on every page load. Keep the visitor's choice in a cookie instead, which the server can read too, and give the binding that cookie as its `storage`:
 
 ```ts
 // src/render.ts
@@ -183,21 +183,24 @@ export async function renderPage(request: Request) {
 
 ```ts
 // In the browser
-const chosen = /(?:^|;\s*)locale=([^;]*)/.exec(document.cookie)?.[1] ?? "";
 const binding = await initializeBrowserI18n({
   i18n,
-  // The cookie holds the choice, so the binding neither saves nor reads its own.
-  persistLocale: false,
-  locale: i18n.resolveLocale(chosen) ?? i18n.matchLocale([chosen]),
-});
-binding.subscribe(() => {
-  document.cookie = binding.isUsingSystemLocale ? "locale=; path=/; max-age=0" : `locale=${i18n.locale}; path=/; max-age=31536000; samesite=lax`;
+  // The binding reads, saves, and forgets the visitor's choice in the cookie instead of localStorage.
+  storage: {
+    get: () => /(?:^|;\s*)locale=([^;]*)/.exec(document.cookie)?.[1],
+    set: (locale) => {
+      document.cookie = `locale=${locale}; path=/; max-age=31536000; samesite=lax`;
+    },
+    remove: () => {
+      document.cookie = "locale=; path=/; max-age=0";
+    },
+  },
 });
 ```
 
-- **A visitor who picked a language** gets it from the server, and the browser starts in it.
+- **A visitor who picked a language** gets it from the server, and the browser starts in it. The binding matches the cookie as the server does, so a choice you no longer list exactly is matched on both sides. If the browser can't load that language, the binding warns and falls back to the detected language, then the default, as [When a loader fails during start](browser.md#when-a-loader-fails-during-start) describes, and the cookie keeps the choice for next time.
 - **A visitor who never picked one, or picked "System"**, has no cookie. The server matches `Accept-Language`, and the binding detects from `navigator.languages` with the same rules, saving nothing, so `isUsingSystemLocale` stays `true` and the page follows the browser's language. Browsers build both lists from the same settings. One that sends fewer languages in the header than `navigator.languages` lists can disagree when the visitor's first language is one you don't support, and the text then changes as the page loads.
-- **A picker** calls `i18n.setLocale()` or `binding.switchToSystemLocale()`, as in [Offer a "System" choice](browser.md#offer-a-system-choice), and `subscribe()` writes or deletes the cookie.
+- **A picker** calls `i18n.setLocale()` or `binding.switchToSystemLocale()`, as in [Offer a "System" choice](browser.md#offer-a-system-choice), and the binding writes or deletes the cookie through `storage`. A language the binding detects is never written, so the cookie only ever holds a choice.
 
 ## Next
 

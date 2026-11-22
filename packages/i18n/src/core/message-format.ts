@@ -5,6 +5,8 @@
  * @internal
  */
 
+import { formatReportedKey } from "../locale/dictionary";
+
 /** Values for a message's arguments, read from own properties; a value of another type is left as written. @internal */
 export type MessageValues = object;
 
@@ -17,7 +19,8 @@ const DATE_STYLES = ["short", "medium", "long", "full"] as const;
 const PLURAL_KEYWORDS = new Set(["zero", "one", "two", "few", "many", "other"]);
 /**
  * A character of a name, an argument's, a select key's, or a tag's: a letter, a combining mark, a decimal digit, in any
- * script, or `_`. Marks are included since a Devanagari or Thai word writes its vowels with them.
+ * script, or `_`. Marks are included since a Devanagari or Thai word writes its vowels with them. A select key and a
+ * tag's name also take `-`.
  *
  * @internal
  */
@@ -270,7 +273,7 @@ class Parser {
         }
         const options = this.parseOptions(depth, true, (key) => {
           if (key.startsWith("=") ? !EXACT_VALUE_PATTERN.test(key) : !PLURAL_KEYWORDS.has(key)) {
-            this.fail(`Unknown plural form ${key}`);
+            this.fail(`Unknown plural form ${formatReportedKey(key)}`);
           }
           // ICU compares exact values as numbers, so `=1.0` and `=01` select 1, as the value's own spelling does. An
           // integer is kept exact, so `=9007199254740993` selects that bigint rather than its rounded neighbor.
@@ -292,7 +295,7 @@ class Parser {
         return { kind: "select", name, options, source: this.message.slice(start, this.index) };
       }
       default:
-        return this.fail(`Unknown argument type ${JSON.stringify(type)}`);
+        return this.fail(`Unknown argument type ${formatReportedKey(type)}`);
     }
   }
 
@@ -306,7 +309,7 @@ class Parser {
     this.skipSpace();
     const style = this.readWhile(/[a-z]/);
     if (!(styles as readonly string[]).includes(style)) {
-      this.fail(`Unknown style ${JSON.stringify(style)}`);
+      this.fail(`Unknown style ${formatReportedKey(style)}`);
     }
     this.expect("}");
     return style as TStyle;
@@ -340,7 +343,7 @@ class Parser {
       }
       const key = readKey(written);
       if (options.has(key)) {
-        this.fail(`Repeated option ${written}`);
+        this.fail(`Repeated option ${formatReportedKey(written)}`);
       }
       this.expect("{");
       options.set(key, this.parseNodes(depth + 1, isInPlural));
@@ -704,8 +707,8 @@ export const formatPlainValue = (value: unknown, locale: string, timeZone: strin
 };
 
 /**
- * How many arguments one call fills. Past it, an argument stays as written, so a message that repeats `{a}` can't turn
- * one value into hundreds of megabytes.
+ * How many arguments one call fills, each `#` counted as one. Past it, an argument stays as written, and `#` as `#`, so a
+ * message that repeats `{a}` or `#` can't turn one value into hundreds of megabytes.
  *
  * @internal
  */
@@ -732,7 +735,7 @@ interface FormatState {
 
 const formatNodes = (nodes: Message, state: FormatState, pound: number | bigint | undefined): void => {
   const { values, locale, timeZone, output } = state;
-  // Formatted once, so a form that repeats `#` costs no formatting step per `#`, which the argument limit doesn't count.
+  // Formatted once, so a form that repeats `#` costs one formatting step, however many `#` the limit lets it fill.
   let poundText: string | undefined;
 
   for (const node of nodes) {
@@ -744,17 +747,16 @@ const formatNodes = (nodes: Message, state: FormatState, pound: number | bigint 
       }
       continue;
     }
+    if (state.filledArguments >= MAX_FILLED_ARGUMENTS) {
+      output.fill(node.kind === "pound" ? "#" : node.source);
+      continue;
+    }
+    state.filledArguments += 1;
     if (node.kind === "pound") {
       poundText ??= pound === undefined ? "#" : getNumberFormat(locale).format(pound);
       output.fill(poundText);
       continue;
     }
-
-    if (state.filledArguments >= MAX_FILLED_ARGUMENTS) {
-      output.fill(node.source);
-      continue;
-    }
-    state.filledArguments += 1;
     const value = readValue(values, node.name);
 
     switch (node.kind) {
@@ -808,7 +810,13 @@ const formatNodes = (nodes: Message, state: FormatState, pound: number | bigint 
         break;
       }
       case "select": {
-        if (typeof value !== "string" && typeof value !== "number" && typeof value !== "bigint") {
+        // A boolean picks the option named `true` or `false`, as `String(value)` spells it.
+        if (
+          typeof value !== "string" &&
+          typeof value !== "number" &&
+          typeof value !== "bigint" &&
+          typeof value !== "boolean"
+        ) {
           output.fill(node.source);
           break;
         }
@@ -856,7 +864,10 @@ export const formatMessage = (
 
 /** A tag in a rich message, `<name>…</name>` or `<name/>`, with what it encloses. */
 export interface RichElement {
-  /** The tag's name, as written: letters, combining marks, and decimal digits in any script, and `_`. */
+  /**
+   * The tag's name, as written: letters, combining marks, and decimal digits in any script, `_`, and `-` after the
+   * first character.
+   */
   readonly tag: string;
   /** The text and tags it encloses, empty for `<name/>`. */
   readonly children: RichText;
@@ -868,8 +879,9 @@ export type RichText = readonly (string | RichElement)[];
 /** How deep tags nest in one message. Past it, the message's tags are invalid. @internal */
 export const MAX_TAG_NESTING = 10;
 
-// `<b>`, `</b>`, or `<b/>`. Anything else that starts with `<`, such as `a < b` or `</b/>`, is text.
-const TAG_PATTERN = new RegExp(String.raw`<(/?)(${NAME_CHARACTER}+)(/?)>`, "gu");
+// `<b>`, `</b>`, or `<b/>`, whose name also takes `-` after its first character, as in `<help-link>`, the way custom
+// elements are named. Anything else that starts with `<`, such as `a < b`, `<->`, or `</b/>`, is text.
+const TAG_PATTERN = new RegExp(String.raw`<(/?)(${NAME_CHARACTER}(?:${NAME_CHARACTER}|-)*)(/?)>`, "gu");
 
 interface Frame {
   readonly tag: string;
@@ -925,13 +937,13 @@ class RichOutput implements Output {
   leave(): void {
     const start = this.forms.pop()!;
     if (this.reason === undefined && this.frames.length !== start) {
-      this.reason = `<${this.frames.at(-1)!.tag}> is not closed inside its plural or select form`;
+      this.reason = `The tag ${formatReportedKey(this.frames.at(-1)!.tag)} is not closed inside its plural or select form`;
     }
   }
 
   finish(): void {
     if (this.reason === undefined && this.frames.length > 1) {
-      this.reason = `<${this.frames.at(-1)!.tag}> is not closed`;
+      this.reason = `The tag ${formatReportedKey(this.frames.at(-1)!.tag)} is not closed`;
     }
   }
 
@@ -963,7 +975,7 @@ class RichOutput implements Output {
   private close(tag: string): void {
     const top = this.frames.at(-1)!;
     if (this.frames.length <= (this.forms.at(-1) ?? 1) || top.tag !== tag) {
-      this.reason = `</${tag}> closes no open <${tag}>`;
+      this.reason = `The closing tag ${formatReportedKey(tag)} closes no open tag of that name`;
       return;
     }
     this.frames.pop();

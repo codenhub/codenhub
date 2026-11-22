@@ -4,11 +4,13 @@ import type { LocaleDirection } from "../core/types";
  * Fixed lists rather than `Intl.Locale.prototype.getTextInfo()`, which not every supported engine provides, so the
  * default direction does not depend on that method. The likely script comes from `Intl.Locale.prototype.maximize()`,
  * which every supported engine has, though its likely-subtag data can differ between engine versions for rare tags.
- * Historic scripts, such as `phnx` (Phoenician), are listed too, since they cost nothing to check.
+ * Historic scripts, such as `phnx` (Phoenician), are listed too, since they cost nothing to check, and so are variants of a
+ * right-to-left script, such as `aran` (Arabic Nastaliq) and `syre` (Estrangelo Syriac), which ICU reads as left to right.
  */
 const RTL_SCRIPTS = new Set([
   "adlm",
   "arab",
+  "aran",
   "armi",
   "avst",
   "chrs",
@@ -33,6 +35,7 @@ const RTL_SCRIPTS = new Set([
   "palm",
   "phli",
   "phlp",
+  "phlv",
   "phnx",
   "prti",
   "rohg",
@@ -42,6 +45,9 @@ const RTL_SCRIPTS = new Set([
   "sogd",
   "sogo",
   "syrc",
+  "syre",
+  "syrj",
+  "syrn",
   "thaa",
   "yezi",
 ]);

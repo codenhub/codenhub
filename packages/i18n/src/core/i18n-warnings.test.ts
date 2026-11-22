@@ -75,6 +75,40 @@ describe("process-wide warning records", () => {
     expect(warnedMessages.cost - before).toBeLessThan(200);
   });
 
+  const long = "x".repeat(50_000);
+  it.each([
+    { reason: "Unknown argument type", text: `{a, ${long}}`, show: "t" },
+    { reason: "Unknown style", text: `{a, number, ${long}}`, show: "t" },
+    { reason: "Unknown plural form", text: `{n, plural, ${long} {a} other {b}}`, show: "t" },
+    // Two names of 50,000 would pass the 100,000-character limit on a translation.
+    {
+      reason: "Repeated option",
+      text: `{v, select, ${long.slice(1_000)} {a} ${long.slice(1_000)} {b} other {c}}`,
+      show: "t",
+    },
+    { reason: "an unclosed tag", text: `<${long}>`, show: "rich" },
+    { reason: "an unclosed tag in a form", text: `{n, plural, other {<${long}>}}`, show: "rich" },
+    { reason: "a stray closing tag", text: `</${long}>`, show: "rich" },
+  ] as const)("quotes and cuts the input a warning for $reason names", async ({ reason, text, show }) => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const key = `long-name ${reason}`;
+    const i18n = createManager({ en: { [key]: text }, pt: {} });
+    await i18n.init();
+
+    if (show === "t") {
+      i18n.t(key, { n: 1, v: "x" });
+    } else {
+      i18n.rich(key, { n: 1 });
+    }
+
+    expect(warn).toHaveBeenCalledTimes(1);
+    const warning = String(warn.mock.calls[0]?.[0]);
+    // The reason names the input once, cut after 100 characters; the warning then quotes the text's first 200.
+    const reasonText = warning.slice(0, warning.indexOf(";"));
+    expect(reasonText).toContain(`"${"x".repeat(100)}"...`);
+    expect(reasonText.length).toBeLessThan(250);
+  });
+
   it.each([
     { record: "invalid messages", warnings: warnedMessages, keyLength: 1_000 },
     { record: "missing keys", warnings: warnedMissingKeys, keyLength: 1_000 },
@@ -108,5 +142,59 @@ describe("process-wide warning records", () => {
     expect(warn).toHaveBeenCalledTimes(warned);
     i18n.t("missing-first");
     expect(warn).toHaveBeenCalledTimes(warned + 1);
+  });
+});
+
+describe("the message check in the translations guide", () => {
+  const createChecked = (pt: Readonly<Record<string, string>>) =>
+    createI18n({
+      defaultLocale: "en",
+      locales: ["en", "pt"] as const,
+      loadLocale: (locale) =>
+        locale === "en"
+          ? ({
+              greeting: "Hello, {name}!",
+              terms: "Read the <link>terms</link>.",
+              items: "{count, plural, one {<b>#</b> item} other {<b>#</b> items}}",
+            } as const)
+          : pt,
+    });
+
+  // The guide's test body, as `docs/translations.md` writes it under "Find untranslated keys".
+  const checkEveryMessage = async (i18n: ReturnType<typeof createChecked>) => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    await i18n.init();
+
+    for (const locale of i18n.locales) {
+      // oxlint-disable-next-line no-await-in-loop -- each locale's keys are looked up while it is active.
+      await i18n.setLocale(locale);
+      // oxlint-disable-next-line no-await-in-loop -- as above.
+      for (const key of Object.keys(await i18n.loadLocale(locale))) {
+        i18n.t(key as Parameters<typeof i18n.t>[0]);
+        i18n.rich(key as Parameters<typeof i18n.rich>[0]);
+      }
+    }
+
+    const invalid = warn.mock.calls.filter(([text]) => /^\[I18n\] Invalid (message|tags)/.test(String(text)));
+    warn.mockRestore();
+    return invalid;
+  };
+
+  it("passes for valid messages and tags", async () => {
+    const pt = { greeting: "Olá, {name}!", terms: "Leia os <link>termos</link>." };
+
+    expect(await checkEveryMessage(createChecked(pt))).toEqual([]);
+  });
+
+  it.each([
+    { problem: "broken syntax", text: "Olá, {name", warning: "[I18n] Invalid message" },
+    { problem: "an unclosed tag", text: "Leia os <link>termos.", warning: "[I18n] Invalid tags" },
+    { problem: "a stray closing tag", text: "Leia os termos</link>.", warning: "[I18n] Invalid tags" },
+  ])("fails on $problem", async ({ problem, text, warning }) => {
+    // A key of its own, since the warning records outlive each row.
+    const invalid = await checkEveryMessage(createChecked({ [`guide ${problem}`]: text }));
+
+    expect(invalid).toHaveLength(1);
+    expect(String(invalid[0]?.[0]).startsWith(warning)).toBe(true);
   });
 });

@@ -2,7 +2,7 @@
 title: URLs localizadas
 description: Pon el locale en la ruta, traduce la propia ruta, lee ambas de vuelta, enlaza a otros idiomas, genera cada página localizada y lleva a cada visitante a su propio idioma en un sitio estático.
 order: 4
-source: 43b4863aec8eb9059c48dc3a348166a28a704bcf
+source: ad1604729ae57a82be2c504473c22b1663b73e75
 ---
 
 # URLs localizadas
@@ -86,7 +86,7 @@ Con `localePrefix: "always"`, una ruta sin locale también devuelve `undefined`,
 
 ```ts
 // Un archivo, como `/favicon.ico`, no es una página; consulta Redirige a la URL canónica más abajo.
-const isFile = /\.[a-z0-9]+$/i.test(url.pathname);
+const isFile = staticFiles.has(url.pathname);
 const route = isFile ? undefined : routing.parse(url.pathname);
 if (route === undefined && !isFile) {
   const locale = pickLocale(i18n, request);
@@ -124,10 +124,10 @@ Ejecuta esta redirección, y la de un prefijo que falta de más arriba, solo par
 - Con `trailingSlash: "always"`, esta redirección manda `/favicon.ico` a `/favicon.ico/`.
 - Con `localePrefix: "always"`, la de más arriba lo manda a `/en/favicon.ico`.
 
-Ninguna de las dos tiene un archivo. Si las redirecciones tienen que ejecutarse primero, omite las rutas que terminan en una extensión de archivo, como hacen los dos ejemplos:
+Ninguna de las dos tiene un archivo. Si las redirecciones tienen que ejecutarse primero, omite las rutas que sirves como archivos, como hacen los dos ejemplos. `staticFiles` es un `Set` con ellas, por ejemplo cada archivo del directorio de salida de tu build, escrito como un pathname del tipo `/favicon.ico`. Si en cambio buscas una extensión de archivo, una página como `/blog/node.js` o `/users/john.doe` pasa por archivo: se salta las dos redirecciones y queda sin enrutar:
 
 ```ts
-const isFile = /\.[a-z0-9]+$/i.test(url.pathname);
+const isFile = staticFiles.has(url.pathname);
 const route = isFile ? undefined : routing.parse(url.pathname);
 if (route !== undefined) {
   const canonical = routing.localize(route.pathname, route.locale);
@@ -352,9 +352,14 @@ const config = {
   locales,
   // `zh-TW` es `zh-Hant`: un idioma y su script probable, como los compara `matchLocale()`, con el noruego `no` como `nb`.
   languages: Object.fromEntries(
-    locales.map((locale) => {
-      const { language, script } = new Intl.Locale(locale).maximize();
-      return [`${language === "no" ? "nb" : language}-${script}`, locale];
+    locales.flatMap((locale) => {
+      let likely;
+      try {
+        likely = new Intl.Locale(locale).maximize();
+      } catch {
+        return []; // Un locale de uso privado, como `x-pirate`, no tiene un idioma que comparar; solo lo elige una elección guardada.
+      }
+      return [[`${likely.language === "no" ? "nb" : likely.language}-${likely.script}`, locale]];
     }),
   ),
   targets: Object.fromEntries(locales.filter((locale) => locale !== defaultLocale).map((locale) => [locale, routing.localize(pathname, locale)])),

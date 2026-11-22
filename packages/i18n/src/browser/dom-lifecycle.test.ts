@@ -282,6 +282,146 @@ describe("initializeBrowserI18n document integration", () => {
     },
   );
 
+  // A translated element the DOM later moves inside one of them must not keep a translation the parser would let out,
+  // whether the element moves itself or within a subtree, and whether the observer or a later full pass finds it.
+  describe.each([
+    { pass: "the observer", observe: true },
+    { pass: "a locale change's full pass", observe: false },
+  ])("when $pass finds a translated element moved into a blocked ancestor", ({ observe }) => {
+    it.each(
+      BLOCKED_ANCESTOR_NAMES.flatMap((containerName) => [
+        { containerName, moved: "the element" },
+        { containerName, moved: "a subtree holding it" },
+      ]),
+    )("restores its HTML state when $moved moves inside <$containerName>", async ({ containerName, moved }) => {
+      document.body.innerHTML =
+        '<div id="outer"><span id="moved" data-i18n="tip" data-i18n-title="tip" title="t">Own</span></div>';
+      const container = document.createElement(containerName);
+      const page = document.createElement("div");
+      page.append(container);
+      document.body.append(page);
+      const span = document.getElementById("moved")!;
+      vi.spyOn(console, "warn").mockImplementation(() => undefined);
+      // Only the default locale has the key, so the French page marks the span with `lang="en"`.
+      const i18n = createManager({
+        loadLocale: (locale) => (locale === "en" ? { tip: breakOutOf(containerName) } : {}),
+      });
+      const binding = await initializeBrowserI18n({ i18n, locale: "fr", root: document.body, observe });
+      try {
+        expect(span.getAttribute("title")).toBe(breakOutOf(containerName));
+        expect(span.getAttribute("lang")).toBe("en");
+
+        container.append(moved === "the element" ? span : document.getElementById("outer")!);
+        if (observe) {
+          await flushMutations();
+        } else {
+          await i18n.setLocale("pt-BR");
+        }
+
+        expect(span.getAttribute("title")).toBe("t");
+        expect(span.textContent).toBe("Own");
+        expect(span.hasAttribute("lang")).toBe(false);
+        expect(reparse(page.innerHTML).map((parsed) => parsed.querySelectorAll("#escaped").length)).toEqual([0, 0]);
+      } finally {
+        binding.disconnect();
+      }
+    });
+
+    it.each([
+      { owner: "an autonomous custom element", html: "<x-card></x-card>" },
+      { owner: "a customized built-in element", html: '<button is="x-button"></button>' },
+    ])("restores its HTML state when it moves inside $owner", async ({ html }) => {
+      document.body.innerHTML = `<span id="moved" data-i18n="tip" data-i18n-title="tip" title="t">Own</span>${html}`;
+      const span = document.getElementById("moved")!;
+      const owner = document.body.lastElementChild!;
+      const i18n = createManager({ loadLocale: (locale) => (locale === "en" ? { tip: "Tip" } : {}) });
+      const binding = await initializeBrowserI18n({ i18n, locale: "fr", root: document.body, observe });
+      try {
+        expect([span.textContent, span.getAttribute("title"), span.getAttribute("lang")]).toEqual(["Tip", "Tip", "en"]);
+
+        owner.append(span);
+        if (observe) {
+          await flushMutations();
+        } else {
+          await i18n.setLocale("pt-BR");
+        }
+
+        expect([span.textContent, span.getAttribute("title"), span.getAttribute("lang")]).toEqual(["Own", "t", null]);
+      } finally {
+        binding.disconnect();
+      }
+    });
+  });
+
+  it("translates a restored element again once it moves out of a blocked ancestor", async () => {
+    document.body.innerHTML = '<span id="moved" data-i18n-title="tip" title="t"></span><textarea></textarea>';
+    const span = document.getElementById("moved")!;
+    const textarea = document.querySelector("textarea")!;
+    vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const i18n = createManager({ loadLocale: (locale) => (locale === "fr" ? { tip: "Astuce" } : {}) });
+    const binding = await initializeBrowserI18n({ i18n, locale: "fr", root: document.body, observe: true });
+    try {
+      textarea.append(span);
+      await flushMutations();
+      expect(span.getAttribute("title")).toBe("t");
+
+      document.body.append(span);
+      await flushMutations();
+      expect(span.getAttribute("title")).toBe("Astuce");
+
+      await i18n.setLocale("en");
+      expect(span.getAttribute("title")).toBe("t");
+    } finally {
+      binding.disconnect();
+    }
+  });
+
+  it.each([false, true])(
+    "keeps every element's content from becoming markup once translated elements move into it (observe: %s)",
+    async (observe) => {
+      // Each element name gets a span translated outside it, then moved inside, whose translation would close that
+      // element and start an <img>.
+      const staging = document.createElement("div");
+      const page = document.createElement("div");
+      const spans = HTML_ELEMENT_NAMES.map((name) => {
+        const span = document.createElement("span");
+        span.setAttribute("data-i18n-title", name);
+        staging.append(span);
+        page.append(document.createElement(name));
+        return span;
+      });
+      document.body.append(staging, page);
+      vi.spyOn(console, "warn").mockImplementation(() => undefined);
+      const dictionary = Object.fromEntries(HTML_ELEMENT_NAMES.map((name) => [name, breakOutOf(name)]));
+      const i18n = createManager({ loadLocale: (locale) => (locale === "fr" || locale === "pt-BR" ? dictionary : {}) });
+
+      const binding = await initializeBrowserI18n({ i18n, locale: "fr", root: document.body, observe });
+      try {
+        expect(spans.every((span) => span.hasAttribute("title"))).toBe(true);
+        const containers = Array.from(page.children);
+        containers.forEach((container, index) => container.append(spans[index]!));
+        if (observe) {
+          await flushMutations();
+        } else {
+          await i18n.setLocale("pt-BR");
+        }
+
+        const escaping = containers
+          .filter((container) =>
+            reparse(container.outerHTML).some((parsed) => parsed.querySelector("#escaped") !== null),
+          )
+          .map((container) => container.localName);
+        expect(escaping).toEqual([]);
+        const translatedIn = containers
+          .filter((container) => container.querySelector("span")?.hasAttribute("title") === true)
+          .map((container) => container.localName);
+        expect(translatedIn).toEqual(HTML_ELEMENT_NAMES.filter((name) => !BLOCKED_ANCESTOR_NAMES.includes(name)));
+      } finally {
+        binding.disconnect();
+      }
+    },
+  );
+
   it("keeps every element's content from becoming markup when the page is serialized", async () => {
     // Each element name gets a nested element whose translation would close that element and start an <img>.
     const page = document.createElement("div");
@@ -870,6 +1010,63 @@ describe("initializeBrowserI18n document integration", () => {
     expect(reported).toEqual([failure, failure]);
   });
 
+  // A throwing handler is a miss, so the element shows its HTML value rather than the earlier key's or locale's text.
+  it.each([
+    { change: "its key changes to a missing one", target: "text", observe: true },
+    { change: "its key changes to a missing one", target: "text", observe: false },
+    { change: "its key changes to a missing one", target: "attribute", observe: true },
+    { change: "its key changes to a missing one", target: "attribute", observe: false },
+    { change: "the new locale lacks its key", target: "text", observe: false },
+    { change: "the new locale lacks its key", target: "attribute", observe: false },
+  ])(
+    "shows the HTML $target and reports the error when $change and onMissingKey throws (observe: $observe)",
+    async ({ change, target, observe }) => {
+      const keyAttribute = target === "text" ? "data-i18n" : "data-i18n-title";
+      document.body.innerHTML =
+        target === "text" ? '<p data-i18n="frOnly">Own</p>' : '<p data-i18n-title="frOnly" title="Own"></p>';
+      const paragraph = document.querySelector("p")!;
+      const read = () => (target === "text" ? paragraph.textContent : paragraph.getAttribute("title"));
+      const failure = new Error("missing key");
+      let shouldThrow = false;
+      const i18n = createManager({
+        onMissingKey: () => {
+          if (shouldThrow) {
+            throw failure;
+          }
+        },
+      });
+      const binding = await initializeBrowserI18n({ i18n, locale: "fr", root: document.body, observe });
+      expect(read()).toBe("Francais seulement");
+      const reported: unknown[] = [];
+      const onError = (event: ErrorEvent) => {
+        reported.push(event.error);
+        event.preventDefault();
+      };
+      window.addEventListener("error", onError);
+      shouldThrow = true;
+
+      try {
+        if (change === "the new locale lacks its key") {
+          await i18n.setLocale("en");
+        } else {
+          paragraph.setAttribute(keyAttribute, "missing");
+          if (observe) {
+            await flushMutations();
+          } else {
+            await i18n.setLocale("pt-BR");
+          }
+        }
+      } finally {
+        window.removeEventListener("error", onError);
+        binding.disconnect();
+      }
+
+      expect(read()).toBe("Own");
+      expect(paragraph.hasAttribute("lang")).toBe(false);
+      expect(reported).toEqual([failure]);
+    },
+  );
+
   it("does not translate an element added to the root and moved outside it before observation runs", async () => {
     document.body.innerHTML = '<div id="root"></div><div id="outside"></div>';
     const root = document.querySelector("#root")!;
@@ -1095,6 +1292,30 @@ describe("initializeBrowserI18n binding lifecycle", () => {
     expect(document.documentElement.dir).toBe("rtl");
     expect(document.querySelector("p")?.textContent).toBe("Marhaba");
     binding.disconnect();
+  });
+
+  // A re-init that switches the language dispatches `ready` and `locale-change`, which is still one change to the page.
+  type Manager = ReturnType<typeof createManager>;
+  it.each([
+    { step: "the first init", run: undefined },
+    { step: "setLocale()", run: (i18n: Manager) => i18n.setLocale("fr") },
+    { step: "a re-init that switches locale", run: (i18n: Manager) => i18n.init({ locale: "fr" }) },
+    { step: "a re-init of the same locale", run: (i18n: Manager) => i18n.init({ locale: "en" }) },
+  ])("translates the page once and reports each missing key once after $step", async ({ run }) => {
+    document.body.innerHTML = '<p data-i18n="missing">Fallback</p><p data-i18n-title="gone">Other</p>';
+    const missed: string[] = [];
+    const i18n = createManager({ onMissingKey: (key) => missed.push(key) });
+    const binding = await initializeBrowserI18n({ i18n, locale: "en", root: document.body });
+    try {
+      if (run !== undefined) {
+        missed.length = 0;
+        await run(i18n);
+      }
+
+      expect(missed.sort()).toEqual(["gone", "missing"]);
+    } finally {
+      binding.disconnect();
+    }
   });
 
   it("releases ownership and browser hooks when observer setup fails", async () => {

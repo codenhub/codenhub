@@ -1,4 +1,4 @@
-<!-- source: 21a72bc2e3c7a4b3cecc1a9d026be4de6a85ecce -->
+<!-- source: d99f35eef967c67056dd721a8b1746f98f10fb63 -->
 
 # @codenhub/i18n
 
@@ -67,7 +67,7 @@ Dos puntos de entrada opcionales cubren lo que cambia según el entorno:
 - Node.js 26 o posterior, o un navegador Chromium, Firefox o WebKit actual, o un Web Worker.
 - Ninguna dependencia de runtime.
 
-En un Web Worker, el punto de entrada raíz y `@codenhub/i18n/routing` funcionan igual que en cualquier otro lugar. `@codenhub/i18n/browser` solo funciona con `syncDocument: false` y sin `root`, porque un worker no tiene página; con los valores por defecto lanza un `TypeError` antes de arrancar el gestor. Consulta [En un Web Worker](docs/es/browser.md#en-un-web-worker).
+En un Web Worker, el punto de entrada raíz y `@codenhub/i18n/routing` funcionan igual que en cualquier otro lugar. `@codenhub/i18n/browser` solo funciona con `syncDocument: false` y sin `root`, porque un worker no tiene página; con los valores por defecto rechaza con un `TypeError` antes de arrancar el gestor. Consulta [En un Web Worker](docs/es/browser.md#en-un-web-worker).
 
 ## Notas
 

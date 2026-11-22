@@ -65,7 +65,7 @@ Two optional entry points cover what differs by environment:
 - Node.js 26 or newer, or a current Chromium, Firefox, or WebKit browser or Web Worker.
 - No runtime dependencies.
 
-In a Web Worker, the root entry point and `@codenhub/i18n/routing` work as anywhere else. `@codenhub/i18n/browser` works only with `syncDocument: false` and no `root`, since a worker has no page; with the defaults it throws a `TypeError` before starting the manager. See [In a Web Worker](docs/browser.md#in-a-web-worker).
+In a Web Worker, the root entry point and `@codenhub/i18n/routing` work as anywhere else. `@codenhub/i18n/browser` works only with `syncDocument: false` and no `root`, since a worker has no page; with the defaults it rejects with a `TypeError` before starting the manager. See [In a Web Worker](docs/browser.md#in-a-web-worker).
 
 ## Notes
 

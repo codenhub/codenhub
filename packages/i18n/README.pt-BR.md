@@ -1,4 +1,4 @@
-<!-- source: 21a72bc2e3c7a4b3cecc1a9d026be4de6a85ecce -->
+<!-- source: d99f35eef967c67056dd721a8b1746f98f10fb63 -->
 
 # @codenhub/i18n
 
@@ -67,7 +67,7 @@ Dois entry points opcionais cobrem o que muda de um ambiente para outro:
 - Node.js 26 ou mais recente, ou um navegador Chromium, Firefox ou WebKit atual, ou um Web Worker.
 - Nenhuma dependência de runtime.
 
-Em um Web Worker, o entry point raiz e `@codenhub/i18n/routing` funcionam como em qualquer outro lugar. `@codenhub/i18n/browser` só funciona com `syncDocument: false` e sem `root`, já que um worker não tem página; com os padrões, ele lança um `TypeError` antes de iniciar o gerenciador. Veja [Em um Web Worker](docs/pt-BR/browser.md#em-um-web-worker).
+Em um Web Worker, o entry point raiz e `@codenhub/i18n/routing` funcionam como em qualquer outro lugar. `@codenhub/i18n/browser` só funciona com `syncDocument: false` e sem `root`, já que um worker não tem página; com os padrões, ele rejeita com um `TypeError` antes de iniciar o gerenciador. Veja [Em um Web Worker](docs/pt-BR/browser.md#em-um-web-worker).
 
 ## Observações
 
