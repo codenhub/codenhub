@@ -70,7 +70,7 @@ export interface ParsedLocalePath<TLocale extends string> {
   /**
    * The canonical application pathname: the locale prefix removed and translated segments read back, with every
    * segment normalized as RFC 3986 says, so `/pt/%61/caf%c3%a9` reads as `/a/caf%C3%A9`, the same spelling `localize`
-   * builds. It also encodes `|`, `[`, and `]`, which a URL's pathname leaves raw.
+   * builds. It also encodes `[`, `]`, `|`, and `^`, which a URL's pathname can leave raw, depending on the runtime.
    */
   pathname: string;
   /**

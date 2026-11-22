@@ -98,6 +98,23 @@ describe("translated pathnames", () => {
       expect(routing.localize(path, "en")).toBe(pathname);
     });
 
+    it("should encode the printable ASCII a URL encodes, and [, ], |, and ^, which a URL's pathname can leave raw", () => {
+      const routing = create();
+      // `encodeURI` encodes these; a URL's pathname encodes the first seven, and `^` too in recent runtimes.
+      const encoded = new Map([...' "<>`{}[]|^'].map((character) => [character, encodeURI(character)]));
+      // Every other printable ASCII character but `/`, `\`, `%`, `?`, and `#`, which a segment can't hold raw.
+      const printable = Array.from({ length: 0x7f - 0x20 }, (_, index) => String.fromCharCode(0x20 + index));
+
+      for (const character of printable.filter((character) => !"/\\%?#".includes(character))) {
+        const spelling = `/products/a${encoded.get(character) ?? character}a`;
+
+        expect(routing.parse(`/products/a${character}a`)?.pathname).toBe(spelling);
+        expect(routing.parse(new URL(`/products/a${character}a`, "https://example.com").pathname)?.pathname).toBe(
+          spelling,
+        );
+      }
+    });
+
     it("should not read an escaped reserved character as the character, so c%2B%2B and c++ are two pages", () => {
       const routing = create();
 
