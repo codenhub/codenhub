@@ -4,6 +4,14 @@ import { fileURLToPath } from "node:url";
 
 import { expect, test } from "vitest";
 
+// The generator's module, untyped JavaScript.
+const languagesSpecifier = "../../scripts/lib/script-languages.mjs";
+const { CARRIED_LANGUAGES, cldrLanguages, untrackedLanguages } = (await import(languagesSpecifier)) as {
+  CARRIED_LANGUAGES: string[];
+  cldrLanguages(): string[];
+  untrackedLanguages(): string[];
+};
+
 const packageRoot = fileURLToPath(new URL("../..", import.meta.url));
 
 /* The languages a `:where()` list names, in order, from the rule that sets
@@ -30,6 +38,49 @@ test("the type scale, /native and .chunky-tile-solo name the same untracked lang
   expect(native).toEqual(scale);
   expect(await languagesBefore("src/aesthetics/chunky-tile.css", "letter-spacing: normal")).toEqual(scale);
   expect(new Set(scale).size, "no tag twice").toBe(scale.length);
+});
+
+/* The list was written by hand and grown by example, and an audit still found
+   languages missing from it. It is generated now, from the CLDR the
+   running Node.js carries; the list records the CLDR it was generated from,
+   and a Node.js with another one, such as the floor's, skips the comparison
+   rather than reporting the difference between two CLDR releases as drift. */
+test("the untracked languages are every tag CLDR's likely subtags put in those scripts", async (context) => {
+  const source = await readFile(path.join(packageRoot, "src/typography.rules.css"), "utf8");
+  const recorded = /CLDR (\S+?),/.exec(source)?.[1];
+
+  expect(recorded, "the list names its CLDR").toBeDefined();
+  context.skip(recorded !== process.versions.cldr, `generated from CLDR ${recorded}, running ${process.versions.cldr}`);
+
+  const scale = await languagesBefore("src/typography.rules.css", "--_script-tracking: normal");
+
+  expect(scale).toEqual(untrackedLanguages());
+  for (const tag of [
+    "mni",
+    "gom",
+    "awa",
+    "mag",
+    "hne",
+    "raj",
+    "mwr",
+    "bgc",
+    "ota",
+    "ha-Arab",
+    "ky-Arab",
+    "aii",
+    "mnc",
+  ]) {
+    expect(scale).toContain(tag);
+  }
+});
+
+/* A tag carried over from the hand-written list is one CLDR's likely subtags
+   cannot show, since it resolves to the region its language does. Once they
+   do, it is CLDR's, and the carried copy goes. */
+test("a carried language is one CLDR's likely subtags do not name", () => {
+  const cldr = new Set(cldrLanguages());
+
+  expect(CARRIED_LANGUAGES.filter((tag) => cldr.has(tag))).toEqual([]);
 });
 
 /* Vite's `build.license` collects each package's `LICENSE` and never reads
