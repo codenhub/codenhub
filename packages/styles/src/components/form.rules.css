@@ -751,7 +751,7 @@
        the floor. */
     &:is([multiple], [size]:not([size="1"])) {
       height: auto;
-      padding-inline: 0.75rem;
+      padding-inline: var(--_sm-px, var(--_lg-px, 0.75rem));
       background-image: none;
     }
 
