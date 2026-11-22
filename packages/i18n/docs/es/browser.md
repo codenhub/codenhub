@@ -2,7 +2,7 @@
 title: Traduce una app de navegador
 description: Detecta y recuerda el idioma del visitante, mantén sincronizados lang y dir, vuelve a renderizar un framework, traduce HTML y ejecuta en un Web Worker.
 order: 2
-source: 3ee1ae11d7fbb040b9d9c0967c9360f74ddb7385
+source: a90f4989909e44817e6494313805fe15477ffb13
 ---
 
 # Traduce una app de navegador
@@ -66,11 +66,16 @@ const picker = document.querySelector<HTMLSelectElement>("#language")!;
 
 picker.value = i18n.locale;
 picker.addEventListener("change", async () => {
-  await i18n.setLocale(picker.value as (typeof i18n.locales)[number]);
+  try {
+    await i18n.setLocale(picker.value as (typeof i18n.locales)[number]);
+  } finally {
+    // Muestra el idioma en uso, aunque su diccionario no cargara o un cambio posterior adelantara a este.
+    picker.value = i18n.locale;
+  }
 });
 ```
 
-Del visitante que cambia de opinión rápido ya se encarga el paquete. Cuando dos cambios se superponen, gana el posterior, y el anterior se resuelve sin cambiar nada, como explica [Gana la última llamada](index.md#gana-la-última-llamada). Así que lee `i18n.locale` después del `await` en lugar de dar por hecho el valor del selector.
+Del visitante que cambia de opinión rápido ya se encarga el paquete. Cuando dos cambios se superponen, gana el posterior, y el anterior se resuelve sin cambiar nada, como explica [Gana la última llamada](index.md#gana-la-última-llamada). Así que lee `i18n.locale` después del `await` en lugar de dar por hecho el valor del selector. Cuando un diccionario no carga, `setLocale()` rechaza y la página conserva su idioma, así que el `finally` vuelve a poner el selector en él en lugar de dejar seleccionado el idioma que falló.
 
 Solo se guardan las elecciones que hace tu app: la opción `locale` y cada `setLocale()` o `init()` aplicado después de que el binding arrancó. Estas no se guardan:
 

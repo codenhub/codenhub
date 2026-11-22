@@ -65,11 +65,16 @@ const picker = document.querySelector<HTMLSelectElement>("#language")!;
 
 picker.value = i18n.locale;
 picker.addEventListener("change", async () => {
-  await i18n.setLocale(picker.value as (typeof i18n.locales)[number]);
+  try {
+    await i18n.setLocale(picker.value as (typeof i18n.locales)[number]);
+  } finally {
+    // Show the language in use, even when its dictionary failed to load or a later switch overtook this one.
+    picker.value = i18n.locale;
+  }
 });
 ```
 
-A visitor who changes their mind quickly is handled for you. When two switches overlap, the later one wins, and the earlier one resolves without changing anything, as [The latest call wins](index.md#the-latest-call-wins) explains. So read `i18n.locale` after the `await` rather than assuming the picker's value.
+A visitor who changes their mind quickly is handled for you. When two switches overlap, the later one wins, and the earlier one resolves without changing anything, as [The latest call wins](index.md#the-latest-call-wins) explains. So read `i18n.locale` after the `await` rather than assuming the picker's value. When a dictionary fails to load, `setLocale()` rejects and the page keeps its language, so the `finally` puts the picker back on it rather than leaving the language that failed selected.
 
 Only choices your app makes are saved: the `locale` option, and every applied `setLocale()` or `init()` after the binding has started. These are not saved:
 
