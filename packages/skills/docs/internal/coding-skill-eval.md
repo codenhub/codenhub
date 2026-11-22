@@ -1,6 +1,6 @@
 ---
 status: DRAFT
-last_updated: 2026-11-16
+last_updated: 2026-11-21
 scope: Evaluation scenarios and rubric for the coding skill.
 ---
 
@@ -161,6 +161,26 @@ Added with the rules on what to decide and what to ask. N1 is the fallback for a
 - N2.5 Tests cover `add` and `edit`, formatting variants, and empty phones, and would fail on broken code; they write only to temporary directories.
 - N2.6 Runs the tests and reports truthfully.
 - OverN2 No new dependency, such as a phone-number library, unless the report explains why.
+
+## Fix-class scenarios
+
+Each scenario replays a real task from this repository's history at the commit before its fix, in a worktree of the repository itself, so the baseline is the fix that was merged. The agent reads `skills/coding/SKILL.md`, and the gate is `pnpm verify --changed --skip=test:browser`. A1 tests `skills/audit/SKILL.md` the same way.
+
+### Prompts
+
+- **C1 routing leak** (base `6cf6168c`, merged fix `7039b27d`): "Routing errors in @codenhub/i18n (packages/i18n/src/routing) quote the whole pathname they reject. When a server passes a full request URL where a pathname belongs, such as `routing.parse("/reset?token=abc")` or `routing.localize("https://user:pass@host/", "en")`, the TypeError message includes the token or the credential, and servers log it. Fix it so a routing error message never carries a URL's query, fragment, or user info, and add tests."
+- **C2 raw-text attributes** (base `5485217f`, merged fix `699b866b`): "In @codenhub/i18n's browser binding (packages/i18n/src/browser), an element that script put inside an `<xmp>`, or inside a `<noscript>` when scripting is off, still gets its `data-i18n-title` and other `data-i18n-<attribute>` keys translated. Serializing the page writes the content of those elements unescaped, so a translation such as `"><img src=x onerror=alert(1)>` can become markup in server-rendered or prerendered HTML. Fix it and add tests."
+- **C3 warn once per process** (base `c3c7e229`, merged fix `5aef73d2`): "@codenhub/i18n (packages/i18n) warns about an invalid message, one with bad ICU syntax, once per manager. A server that creates a manager per request logs the same warning for every visitor. Make it warn once per process, as the missing-key warning already does (packages/i18n/src/core/i18n.ts). Add tests."
+- **C4 interface values** (base `b4917a4b`, merged fix `09194d86`): the task behind that commit, accepting a values object typed by an interface in `t()`.
+- **A1 re-audit** (at `d4361e38`): a release-readiness audit of `packages/i18n/src/routing` after the C1 fix and its follow-up `73074dab`.
+
+### Rubric
+
+- **C1:** no error message quotes user info for `//`, `/\`, or `/` plus one or more tabs, CRs, or LFs in any mix plus `/` before the host, nor anything after the first `?` or `#`. The tests cover each spelling, including a run of several. Fails if any spelling leaks.
+- **C2:** descendants of `textarea` and `title` are blocked along with the elements the serializer writes raw, and a test serializes and parses again. Fails if either is missing.
+- **C3:** the process-wide record stores a hash of the message text, not the full text or a prefix, and caps its total size, so a stream of distinct messages cannot grow it without limit. Fails on a key that holds the full text or a prefix, or on a record with no cap.
+- **C4:** the docs and changelog claim only what the tests show: a test passes an interface with a field the message does not use, or the claim is narrowed.
+- **A1:** the audit checks the fixes merged since the earlier audit first, gives each finding a class, and reports the `/\` spelling as a finding `from 73074dab`. Fails if it rules out `/\` or says ready.
 
 ## Rubric: every scenario
 
