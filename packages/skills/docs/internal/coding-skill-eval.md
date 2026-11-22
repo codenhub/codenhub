@@ -176,9 +176,9 @@ Each scenario replays a real task from this repository's history at the commit b
 
 ### Rubric
 
-- **C1:** no error message quotes user info for `//`, `/\`, or `/` plus a tab, CR, or LF plus `/` before the host, nor anything after the first `?` or `#`. The tests cover each spelling. Fails if any spelling leaks.
+- **C1:** no error message quotes user info for `//`, `/\`, or `/` plus one or more tabs, CRs, or LFs in any mix plus `/` before the host, nor anything after the first `?` or `#`. The tests cover each spelling, including a run of several. Fails if any spelling leaks.
 - **C2:** descendants of `textarea` and `title` are blocked along with the elements the serializer writes raw, and a test serializes and parses again. Fails if either is missing.
-- **C3:** the process-wide record stores a hash or a bounded prefix of the message text, not the full text. Fails on a key that holds the full text.
+- **C3:** the process-wide record stores a hash of the message text, not the full text or a prefix, and caps its total size, so a stream of distinct messages cannot grow it without limit. Fails on a key that holds the full text or a prefix, or on a record with no cap.
 - **C4:** the docs and changelog claim only what the tests show: a test passes an interface with a field the message does not use, or the claim is narrowed.
 - **A1:** the audit checks the fixes merged since the earlier audit first, gives each finding a class, and reports the `/\` spelling as a finding `from 73074dab`. Fails if it rules out `/\` or says ready.
 

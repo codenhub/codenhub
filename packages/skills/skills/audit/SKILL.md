@@ -49,7 +49,7 @@ Every finding states a case:
 - **Input or calling code:** concrete and minimal.
 - **Result:** what happens, and what should happen.
 - **Reach:** who hits it (see the severity table).
-- **Class:** every input, call site, and code location that shares the case's cause, so the fix removes the cause rather than the example. Find it from the rule of the code that reads the value, not from the example's spelling: a URL parser reads `//`, `/\`, and `/` plus a tab plus `/` alike as the start of a host; a serializer re-reads the content of raw-text elements and of `textarea` and `title` alike. Search the codebase for the same pattern, such as another process-wide record keyed by unbounded text, and list each place. Run each member you can.
+- **Class:** every input, call site, and code location that shares the case's cause, so the fix removes the cause rather than the example. Find it from the rule of the code that reads the value, not from the example's spelling: a URL parser reads `//`, `/\`, and `/` plus any run of tabs plus `/` alike as the start of a host; a serializer re-reads the content of raw-text elements and of `textarea` and `title` alike. Search the codebase for the same pattern, such as another process-wide record keyed by unbounded text, and list each place. Run each member you can.
 
 Run the case when you can; a failing test or a script settles what reasoning cannot. Mark a finding `verified` only when you executed its case in this session and saw the result, and `traced` otherwise; without a way to run code, every finding is `traced`. A `traced` finding stands when the code you read and the language or a documented API contract settle its result, such as a call to a function that does not exist. A concern you cannot turn into a case is a question, and so is a `traced` case whose result rests on tool behavior you assumed rather than read or ran, such as whether a compiler reports an error or how a third-party library handles an input.
 
@@ -164,11 +164,13 @@ Open with the verdict and the counts, then the scope. When the target was audite
 
 When asked for comments to post on a pull request, write one line per finding, ready to paste:
 
-`<file>:L<line>: <severity> <kind>: <problem>. <fix>.`
+`<file>:L<line>: <severity> <kind>: <problem>. <fix>. Class: <class>.`
+
+Append `From <commit>.` when an earlier fix introduced the finding or left it incomplete.
 
 ```text
-csv.ts:L120: major defect: a trailing empty field is dropped. Keep it as an empty string.
-retry.ts:L57: minor defect: the delay ignores a Retry-After header. Use it when present.
+csv.ts:L120: major defect: a trailing empty field is dropped. Keep it as an empty string. Class: only this case.
+retry.ts:L57: minor defect: the delay ignores a Retry-After header. Use it when present. Class: the delay in poll.ts:L30 too.
 ```
 
 Write `vulnerability` and `decision` findings as a short paragraph instead, since their reasoning is the point.
@@ -176,7 +178,7 @@ Write `vulnerability` and `decision` findings as a short paragraph instead, sinc
 ## After the Report
 
 - Fix only the findings the user approves.
-- Fix the finding's cause for its whole class, not the case that illustrated it. Test every member of the class, as a table where they share one assertion, and search again for the pattern before calling the fix complete.
+- Fix the finding's cause for its whole class, not the case that illustrated it. Test every member of the class, as a table where they share one assertion; where the class has no end, test each distinct form and its boundaries, and name the members left out. Search again for the pattern before calling the fix complete.
 - Give each fix that changes behavior a test that fails before it and passes after. When no test can be written, ask the user before shipping the fix without one, and say so in the report.
 - When a fix turns out to need new public surface, stop and bring it back as a decision.
 - Record each decision the user takes where the project records decisions, with its reason and the alternatives rejected.
