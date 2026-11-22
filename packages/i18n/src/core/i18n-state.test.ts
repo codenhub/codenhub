@@ -290,6 +290,38 @@ describe("I18n state", () => {
     expect(warn).toHaveBeenCalledTimes(1);
   });
 
+  // What the 0.5.0 changelog says is trimmed: spaces, Unicode ones included. A tab or a line break is an ASCII control,
+  // refused wherever it is.
+  it.each([
+    { around: "spaces", padding: "  " },
+    { around: "a no-break space", padding: " " },
+    { around: "an ideographic space", padding: "　" },
+    { around: "a byte order mark", padding: "﻿" },
+    { around: "a line separator", padding: " " },
+  ])("trims $around around a key", async ({ padding }) => {
+    const i18n = createI18n(createConfig());
+    await i18n.init();
+    const key = `${padding}common.greeting${padding}`;
+
+    expect(i18n.translate(key)).toBe("Hello");
+    expect(i18n.has(key)).toBe(true);
+  });
+
+  it.each([
+    { around: "a tab", padding: "\t" },
+    { around: "a line feed", padding: "\n" },
+    { around: "a carriage return", padding: "\r" },
+    { around: "a vertical tab", padding: "\v" },
+    { around: "a form feed", padding: "\f" },
+  ])("refuses a key with $around around it", async ({ padding }) => {
+    const i18n = createI18n(createConfig());
+    await i18n.init();
+    const key = `${padding}common.greeting${padding}`;
+
+    expect(() => i18n.translate(key)).toThrow(TypeError);
+    expect(i18n.has(key)).toBe(false);
+  });
+
   it("rejects an empty translation key with native TypeError", async () => {
     const i18n = createI18n(createConfig());
     await i18n.init();
