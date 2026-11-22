@@ -85,7 +85,7 @@ Then link it from the layout, by its path below that folder:
 
 Point the path at `node_modules/@codenhub` rather than at `dist/` itself. Propshaft serves files by their path below each asset folder, so adding `dist/` directly would publish a bare `index.css` that collides with any `index.css` of your own.
 
-The files you link are in `dist/`, which holds finished CSS with no `@import` to resolve, plus an empty `index.d.ts` for TypeScript and the `chs build` command with the files it reads. The Tailwind source lives in `tw/`, outside `dist/`, so a static pipeline that serves or fingerprints `dist/` meets no `@import` it cannot resolve.
+The files you link are in `dist/`, which holds finished CSS with no `@import` to resolve, plus an empty `index.d.cts` for TypeScript and the `chs build` command with the files it reads. The Tailwind source lives in `tw/`, outside `dist/`, so a static pipeline that serves or fingerprints `dist/` meets no `@import` it cannot resolve.
 
 ### Django
 
@@ -103,7 +103,7 @@ STATICFILES_DIRS = [
 <link rel="stylesheet" href="{% static 'codenhub-styles/index.css' %}" />
 ```
 
-Point the prefix at `dist`, not at the package folder. `dist/` holds finished CSS with no `@import` to resolve, plus an empty `index.d.ts` for TypeScript and the `chs build` command with the files it reads, which the storage copies as they are, so `collectstatic` also works with `ManifestStaticFilesStorage`, which fingerprints each file and rewrites the references inside it. The package folder also holds the Tailwind source in `tw/`, whose `@import "tailwindcss/..."` lines that storage cannot resolve.
+Point the prefix at `dist`, not at the package folder. `dist/` holds finished CSS with no `@import` to resolve, plus an empty `index.d.cts` for TypeScript and the `chs build` command with the files it reads, which the storage copies as they are, so `collectstatic` also works with `ManifestStaticFilesStorage`, which fingerprints each file and rewrites the references inside it. The package folder also holds the Tailwind source in `tw/`, whose `@import "tailwindcss/..."` lines that storage cannot resolve.
 
 ### Laravel
 
