@@ -19,44 +19,44 @@
      inherits -- same contract as `@codenhub/styles`' own `theme.css`. */
   color-scheme: light dark;
 
-  --toast-default-color-success: light-dark(oklab(0.508 -0.114299 0.0293215), oklab(0.508 -0.114299 0.0293215));
-  --toast-default-color-success-contrast: light-dark(oklab(0.985 0 0), oklab(0.985 0 0));
-  --toast-default-color-success-strong: light-dark(oklab(0.432 -0.0925326 0.0215109), oklab(0.845 -0.138113 0.0370641));
-  --toast-default-color-destructive: light-dark(oklab(0.514 0.212373 0.0646656), oklab(0.514 0.212373 0.0646656));
-  --toast-default-color-destructive-contrast: light-dark(oklab(0.985 0 0), oklab(0.985 0 0));
-  --toast-default-color-destructive-strong: light-dark(oklab(0.455 0.182654 0.044516), oklab(0.81 0.114595 0.0236021));
-  --toast-default-color-warning: light-dark(oklab(0.666 0.0940116 0.152325), oklab(0.666 0.0940116 0.152325));
-  --toast-default-color-warning-contrast: light-dark(oklab(0.145 0 0), oklab(0.145 0 0));
-  --toast-default-color-warning-strong: light-dark(oklab(0.473 0.0948219 0.0988828), oklab(0.879 -0.00473352 0.168934));
-  --toast-default-color-info: light-dark(oklab(0.511 0.0317755 -0.260066), oklab(0.511 0.0317755 -0.260066));
-  --toast-default-color-info-contrast: light-dark(oklab(0.985 0 0), oklab(0.985 0 0));
-  --toast-default-color-info-strong: light-dark(oklab(0.398 0.0250004 -0.193391), oklab(0.785 0.00944898 -0.114611));
-  --toast-default-color-neutral: light-dark(oklch(0.145 0 none), oklch(0.985 0 none));
-  --toast-default-color-neutral-contrast: light-dark(oklab(0.205 0 0), oklab(0.97 0 0));
-  --toast-default-color-neutral-strong: light-dark(oklab(0.205 0 0), oklab(0.97 0 0));
-  --toast-default-color-neutral-border: light-dark(oklch(0.708 0 none), oklch(0.371 0 none));
-  --toast-default-color-btn-primary: light-dark(oklab(0.145 0 0), oklab(0.985 0 0));
-  --toast-default-color-btn-primary-contrast: light-dark(oklab(0.985 0 0), oklab(0.145 0 0));
-  --toast-default-color-btn-primary-hover: light-dark(oklab(0.371 0 0), oklab(0.922 0 0));
-  --toast-default-color-btn-secondary: light-dark(oklab(0.439 0 0), oklab(0.708 0 0));
-  --toast-default-color-btn-secondary-contrast: light-dark(oklab(0.985 0 0), oklab(0.145 0 0));
-  --toast-default-color-btn-secondary-hover: light-dark(oklab(0.371 0 0), oklab(0.87 0 0));
-  --toast-default-color-btn-success: light-dark(oklab(0.508 -0.114299 0.0293215), oklab(0.508 -0.114299 0.0293215));
-  --toast-default-color-btn-success-contrast: light-dark(oklab(0.985 0 0), oklab(0.985 0 0));
+  --toast-default-color-success: light-dark(oklab(50.8% -0.114299 0.0293215), oklab(50.8% -0.114299 0.0293215));
+  --toast-default-color-success-contrast: light-dark(oklab(98.5% 0 0), oklab(98.5% 0 0));
+  --toast-default-color-success-strong: light-dark(oklab(43.2% -0.0925326 0.0215109), oklab(84.5% -0.138113 0.0370641));
+  --toast-default-color-destructive: light-dark(oklab(51.4% 0.212373 0.0646656), oklab(51.4% 0.212373 0.0646656));
+  --toast-default-color-destructive-contrast: light-dark(oklab(98.5% 0 0), oklab(98.5% 0 0));
+  --toast-default-color-destructive-strong: light-dark(oklab(45.5% 0.182654 0.044516), oklab(81% 0.114595 0.0236021));
+  --toast-default-color-warning: light-dark(oklab(66.6% 0.0940116 0.152325), oklab(66.6% 0.0940116 0.152325));
+  --toast-default-color-warning-contrast: light-dark(oklab(14.5% 0 0), oklab(14.5% 0 0));
+  --toast-default-color-warning-strong: light-dark(oklab(47.3% 0.0948219 0.0988828), oklab(87.9% -0.00473352 0.168934));
+  --toast-default-color-info: light-dark(oklab(51.1% 0.0317755 -0.260066), oklab(51.1% 0.0317755 -0.260066));
+  --toast-default-color-info-contrast: light-dark(oklab(98.5% 0 0), oklab(98.5% 0 0));
+  --toast-default-color-info-strong: light-dark(oklab(39.8% 0.0250004 -0.193391), oklab(78.5% 0.00944898 -0.114611));
+  --toast-default-color-neutral: light-dark(oklch(14.5% 0 0), oklch(98.5% 0 0));
+  --toast-default-color-neutral-contrast: light-dark(oklab(20.5% 0 0), oklab(97% 0 0));
+  --toast-default-color-neutral-strong: light-dark(oklab(20.5% 0 0), oklab(97% 0 0));
+  --toast-default-color-neutral-border: light-dark(oklch(70.8% 0 0), oklch(37.1% 0 0));
+  --toast-default-color-btn-primary: light-dark(oklab(14.5% 0 0), oklab(98.5% 0 0));
+  --toast-default-color-btn-primary-contrast: light-dark(oklab(98.5% 0 0), oklab(14.5% 0 0));
+  --toast-default-color-btn-primary-hover: light-dark(oklab(37.1% 0 0), oklab(92.2% 0 0));
+  --toast-default-color-btn-secondary: light-dark(oklab(43.9% 0 0), oklab(70.8% 0 0));
+  --toast-default-color-btn-secondary-contrast: light-dark(oklab(98.5% 0 0), oklab(14.5% 0 0));
+  --toast-default-color-btn-secondary-hover: light-dark(oklab(37.1% 0 0), oklab(87% 0 0));
+  --toast-default-color-btn-success: light-dark(oklab(50.8% -0.114299 0.0293215), oklab(50.8% -0.114299 0.0293215));
+  --toast-default-color-btn-success-contrast: light-dark(oklab(98.5% 0 0), oklab(98.5% 0 0));
   --toast-default-color-btn-success-hover: light-dark(
-    oklab(0.497872 -0.101989 0.029308),
-    oklab(0.446158 -0.0899286 0.022681)
+    oklab(49.7872% -0.101989 0.029308),
+    oklab(57.2945% -0.116429 0.0314383)
   );
-  --toast-default-color-btn-destructive: light-dark(oklab(0.514 0.212373 0.0646656), oklab(0.514 0.212373 0.0646656));
-  --toast-default-color-btn-destructive-contrast: light-dark(oklab(0.985 0 0), oklab(0.985 0 0));
+  --toast-default-color-btn-destructive: light-dark(oklab(51.4% 0.212373 0.0646656), oklab(51.4% 0.212373 0.0646656));
+  --toast-default-color-btn-destructive-contrast: light-dark(oklab(98.5% 0 0), oklab(98.5% 0 0));
   --toast-default-color-btn-destructive-hover: light-dark(
-    oklab(0.51189 0.194868 0.0640785),
-    oklab(0.549356 0.21195 0.0500346)
+    oklab(51.189% 0.194868 0.0640785),
+    oklab(54.9356% 0.21195 0.0500346)
   );
-  --toast-default-color-surface: light-dark(oklch(0.922 0 none), oklch(0.269 0 none));
-  --toast-default-color-text: light-dark(oklch(0.145 0 none), oklch(0.985 0 none));
-  --toast-default-color-border: light-dark(oklch(0.708 0 none), oklch(0.371 0 none));
-  --toast-default-color-background: light-dark(oklch(0.985 0 none), oklch(0.145 0 none));
+  --toast-default-color-surface: light-dark(oklch(92.2% 0 0), oklch(26.9% 0 0));
+  --toast-default-color-text: light-dark(oklch(14.5% 0 0), oklch(98.5% 0 0));
+  --toast-default-color-border: light-dark(oklch(70.8% 0 0), oklch(37.1% 0 0));
+  --toast-default-color-background: light-dark(oklch(98.5% 0 0), oklch(14.5% 0 0));
 }
 
 .light,
