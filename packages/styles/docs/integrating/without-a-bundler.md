@@ -264,6 +264,7 @@ Every failure prints one line starting with `chs:` to standard error and exits w
 - **`unknown aesthetic "<name>"; choose from ...`.** Pick one of the names listed. They are lowercase and hyphenated, as in `chunky-tile`.
 - **`missing command` or `unknown command "<name>"`.** The first word after `chs` has to be `build`, or `help` for the usage.
 - **`this command needs Node.js 24 or newer`.** Update Node.js on the machine that builds the CSS.
+- **`ExperimentalWarning: globSync is an experimental feature`.** Node.js 24.0.0 prints it, and 24.1.0 and newer do not. The build is still written; update Node.js to drop the line.
 - **`cannot write --output <file>: <reason> (<code>); <what to do>`.** `<reason>` and `<code>` are Node.js's own. `EACCES` or `EPERM` means you cannot write there, and on Windows also that the file is read-only; `ENOSPC` means the disk is full.
 - **`--output <file> is a folder, not a file`**, or a device, a pipe, or a socket, or **`--output <file> ends with a folder separator`**, or **`ends with a . or .. segment`**. Name a stylesheet file, such as one inside the folder.
 - **`--output <file> names "<name>", which Windows keeps for a device`**, **`which ends with a dot or a space that Windows drops`**, or **`holds "<character>", which Windows does not allow in a name`**. On Windows only. A file or folder with such a name, such as `NUL`, `com1.css`, or `app.css.`, is one `del` cannot remove. Rename the part the line names.

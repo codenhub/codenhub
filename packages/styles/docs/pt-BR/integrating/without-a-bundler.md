@@ -2,7 +2,7 @@
 title: Sem bundler
 description: Como referenciar as folhas de estilos compiladas a partir de HTML puro, Rails, Laravel, Django ou qualquer aplicação renderizada no servidor, e o build por linha de comando.
 order: 6
-source: a78ea106637488608ee267f351e4d670916b703d
+source: 91244699bcc736c6f7bb2e3ec709e7e98bd80792
 ---
 
 # Sem bundler
@@ -265,6 +265,7 @@ Toda falha imprime uma linha começando com `chs:` na saída de erro padrão e t
 - **`unknown aesthetic "<name>"; choose from ...`.** Escolha um dos nomes listados. Eles são em minúsculas e com hífen, como `chunky-tile`.
 - **`missing command` ou `unknown command "<name>"`.** A primeira palavra depois de `chs` precisa ser `build`, ou `help` para o uso.
 - **`this command needs Node.js 24 or newer`.** Atualize o Node.js na máquina que gera o CSS.
+- **`ExperimentalWarning: globSync is an experimental feature`.** O Node.js 24.0.0 a imprime, e o 24.1.0 ou mais recente não. A folha de estilos é gravada mesmo assim; atualize o Node.js para tirar a linha.
 - **`cannot write --output <file>: <reason> (<code>); <what to do>`.** `<reason>` e `<code>` são os do Node.js. `EACCES` ou `EPERM` quer dizer que você não pode escrever ali, e no Windows também que o arquivo é somente leitura; `ENOSPC` quer dizer que o disco está cheio.
 - **`--output <file> is a folder, not a file`**, ou um dispositivo, um pipe ou um socket, ou **`--output <file> ends with a folder separator`**, ou **`ends with a . or .. segment`**. Nomeie um arquivo de folha de estilos, como um dentro da pasta.
 - **`--output <file> names "<name>", which Windows keeps for a device`**, **`which ends with a dot or a space that Windows drops`**, ou **`holds "<character>", which Windows does not allow in a name`**. Só no Windows. Um arquivo ou uma pasta com um nome assim, como `NUL`, `com1.css` ou `app.css.`, é um que o `del` não consegue apagar. Renomeie a parte que a linha indica.
