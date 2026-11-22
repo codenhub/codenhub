@@ -175,7 +175,11 @@ The 1,000-character key limit applies to the trimmed key, which lookup uses, in 
 
 ### Missing-key warnings are remembered per process (0.5.0)
 
-The default warning's record of the 1,000 most recent locale/key pairs is shared by every manager in the process, as the parse cache is. So is the record of the 1,000 most recent invalid messages, which warn once per locale and text. A server creates a manager per request, so a record per manager warned once per request, and one missing word on a home page logged a line for every visitor. Rejected: a record per manager, which 0.4.0 kept; a test that wants each manager to warn passes `onMissingKey`, which runs on every miss.
+The default warning's record of the most recent locale/key pairs is shared by every manager in the process, as the parse cache is. So is the record of the most recent invalid messages, which warn once per locale, key, and text. A server creates a manager per request, so a record per manager warned once per request, and one missing word on a home page logged a line for every visitor. Rejected: a record per manager, which 0.4.0 kept; a test that wants each manager to warn passes `onMissingKey`, which runs on every miss.
+
+Each record is bounded by what it keeps, 100,000 characters, as the parse cache is bounded by its cost, not by a count: about 1,000 typical keys, or 94 of the longest. An invalid message is remembered by its locale, its trimmed key, and a 53-bit hash of its text, so the record never holds the text and an edited text warns again. Rejected: a count of 1,000 entries keyed by the text itself, which held up to 100 million characters of dictionary text for the life of a server, and warned once for a text shared by two keys; and the key without the text, which stays quiet after a translator fixes one error and makes another. A hash collision silences one warning, which costs less than the text it replaces.
+
+The process-wide formatter cache is bounded the same way: it holds 500 formatters and skips a key over 1,000 characters. `Intl` reads a number option or `hour12` from a string of any length, so `{ minimumFractionDigits: " ".repeat(1e6) + "2" }` is valid and would otherwise be kept 500 times. Every number option set at once keys 687 characters. The likely-subtags cache already takes tags of at most 64 characters, the parse cache counts each message's cost, and every other record is a `WeakMap` or `WeakSet` that goes with its manager or element.
 
 ### `resolveLocale` reads `_` as `-` (0.5.0)
 

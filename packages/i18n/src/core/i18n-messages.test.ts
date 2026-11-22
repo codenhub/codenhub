@@ -5,7 +5,14 @@ import { describe, expect, it, vi } from "vitest";
 
 import { createI18n } from "../index";
 import { getI18nInternals } from "./internals";
-import { MessageSyntaxError, parseCachedMessage, parseMessage, parseMessageWithCost } from "./message-format";
+import {
+  getDateTimeFormat,
+  getNumberFormat,
+  MessageSyntaxError,
+  parseCachedMessage,
+  parseMessage,
+  parseMessageWithCost,
+} from "./message-format";
 
 const messages = {
   hello: "Hello, {name}!",
@@ -618,6 +625,26 @@ describe("formatters", () => {
 
     expect(i18n.formatDate(0, forged)).toBe(new Intl.DateTimeFormat("en", forged).format(0));
     expect(i18n.formatDate(0, full)).toBe(new Intl.DateTimeFormat("en", full).format(0));
+  });
+
+  // `Intl` reads a number option as a number and `hour12` as a boolean, so a long string is valid for each.
+  it.each([
+    {
+      formatter: "number",
+      get: (options: object) => getNumberFormat("en", options),
+      long: { minimumFractionDigits: `${" ".repeat(10_000)}2` },
+      short: { minimumFractionDigits: 2 },
+    },
+    {
+      formatter: "date",
+      get: (options: object) => getDateTimeFormat("en", options),
+      long: { hour12: "x".repeat(10_000) },
+      short: { hour12: true },
+    },
+  ])("should not cache a $formatter formatter whose options would make a long key", ({ get, long, short }) => {
+    expect(get(short)).toBe(get(short));
+    expect(get(long)).not.toBe(get(long));
+    expect(get(long).resolvedOptions()).toEqual(get(short).resolvedOptions());
   });
 
   it("should read inherited number options without changing later calls", async () => {

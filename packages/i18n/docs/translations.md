@@ -230,7 +230,7 @@ Inside a plural's forms, `#` stands for the number; write `'#'` for a literal `#
 
 Quoted text is text to the types too: in `'{it''s {x}'`, which shows `{it's {x}`, `x` is not a value `t()` asks for.
 
-Text that is not valid syntax, such as an unclosed `{` or a stray `}`, logs a warning, unless the manager is silent, and is shown with only its `{name}` placeholders filled. The warning names the key and the locale, and comes once for each text in each locale, among the 1,000 most recent. [Find untranslated keys](#find-untranslated-keys) shows a test that checks every message.
+Text that is not valid syntax, such as an unclosed `{` or a stray `}`, logs a warning, unless the manager is silent, and is shown with only its `{name}` placeholders filled. The warning names the key and the locale, and comes once for each key, text, and locale among the roughly 1,000 most recent, so an edited text warns again. [Find untranslated keys](#find-untranslated-keys) shows a test that checks every message.
 
 ### Links and bold text inside a sentence
 

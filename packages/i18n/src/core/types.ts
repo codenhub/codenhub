@@ -103,8 +103,8 @@ export interface I18nConfig<TLocale extends string = string, TMessages = unknown
    * warning.
    * Exceptions propagate from the lookup, so a test can throw here to fail on a missing key.
    *
-   * @defaultValue A `console.warn` once for each of the 1,000 most recent locale/key pairs, shared by every manager in
-   * the process, unless `isSilent`.
+   * @defaultValue A `console.warn` once for each of the roughly 1,000 most recent locale/key pairs, fewer for
+   * long keys, shared by every manager in the process, unless `isSilent`.
    */
   onMissingKey?: ((key: string, locale: NoInfer<TLocale>) => void) | undefined;
   /** Suppresses optional diagnostics, including the default missing-key warning, without suppressing failures. Defaults to `false`. */
@@ -263,8 +263,8 @@ export interface I18n<TLocale extends string = string, TKey extends string = str
    * `{n, selectordinal, …}` with `=N` and CLDR category options, an optional `offset:N`, and `#` for the number in the
    * plural's own forms, and `{v, select, …}`. Plural categories and every format use the locale of the dictionary that has the text. An
    * apostrophe before `{`, `}`, or, in a plural, `#` quotes them, and `''` is one apostrophe. A message that is not
-   * valid syntax warns once per process for its locale and text, unless silent, and only its `{name}` placeholders are
-   * filled.
+   * valid syntax warns once per process for its locale, key, and text, unless silent, and only its `{name}`
+   * placeholders are filled.
    *
    * When `params.count` is a number or bigint and the key is a group of plural forms rather than a text, such as
    * `{ one: "{count} item", other: "{count} items" }`, the form is chosen with `Intl.PluralRules` for the locale of the
@@ -333,7 +333,7 @@ export interface I18n<TLocale extends string = string, TKey extends string = str
    * `a < b`, is text.
    *
    * A message whose tags don't balance, nest past 10 levels, or cross the edge of a plural or select form warns once per
-   * process for its locale and text, unless silent, and returns the text as `t()` shows it, tags included, as one part.
+   * process for its locale, key, and text, unless silent, and returns the text as `t()` shows it, tags included, as one part.
    * A message with invalid syntax and a missing key return what `t()` returns, as one part.
    *
    * @example

@@ -34,6 +34,7 @@ import type {
   LocaleDirection,
   TranslationKey,
 } from "./types";
+import { hashText, warnedMessages, warnedMissingKeys } from "./warning-record";
 
 /** A dictionary in the fallback chain, with the locale whose plural rules it uses. */
 interface ChainDictionary<TLocale extends string> {
@@ -41,27 +42,9 @@ interface ChainDictionary<TLocale extends string> {
   readonly dictionary: LocaleDictionary;
 }
 
-const MAX_MISSING_KEY_DIAGNOSTICS = 1_000;
-const MAX_MESSAGE_DIAGNOSTICS = 1_000;
-// Shared by every manager, since a server creates one per request and would otherwise log a warning once per visitor.
-const warnedMissingKeys = new Map<string, undefined>();
-const warnedMessages = new Map<string, undefined>();
-
-/**
- * Records a warning among the most recent `limit`, returning whether it is new. A repeat moves to the newest end, so the
- * record drops the warning least recently seen.
- */
-const rememberWarning = (record: Map<string, undefined>, warningKey: string, limit: number): boolean => {
-  if (record.delete(warningKey)) {
-    record.set(warningKey, undefined);
-    return false;
-  }
-  record.set(warningKey, undefined);
-  if (record.size > limit) {
-    record.delete(record.keys().next().value!);
-  }
-  return true;
-};
+/** Whether an invalid message is new to the process-wide record, by locale, trimmed key, and a hash of its text. */
+const isNewInvalidMessage = (key: string, found: FoundTranslation<string>): boolean =>
+  warnedMessages.remember(`${found.locale}\0${key.trim()}\0${hashText(found.text)}`);
 const PLACEHOLDER_PATTERN = /{([A-Za-z0-9_]+)}/g;
 // The form every plural group has, used when the count's category has none.
 const PLURAL_FALLBACK_FORM = "other";
@@ -277,7 +260,7 @@ class I18nInstance<TLocale extends string, TKey extends string = string>
     if (reason === undefined) {
       return parts;
     }
-    if (!this.isSilent && rememberWarning(warnedMessages, `${found.locale}\0${found.text}`, MAX_MESSAGE_DIAGNOSTICS)) {
+    if (!this.isSilent && isNewInvalidMessage(key, found)) {
       console.warn(
         `[I18n] Invalid tags for ${quoteKey(key.trim())} in locale "${found.locale}": ${reason}; the text is shown with ` +
           "its tags as written. " +
@@ -373,7 +356,7 @@ class I18nInstance<TLocale extends string, TKey extends string = string>
   }
 
   private reportInvalidMessage(key: string, found: FoundTranslation<TLocale>, reason: string): void {
-    if (this.isSilent || !rememberWarning(warnedMessages, `${found.locale}\0${found.text}`, MAX_MESSAGE_DIAGNOSTICS)) {
+    if (this.isSilent || !isNewInvalidMessage(key, found)) {
       return;
     }
     console.warn(
@@ -574,10 +557,7 @@ class I18nInstance<TLocale extends string, TKey extends string = string>
       return;
     }
 
-    if (
-      !this.isSilent &&
-      rememberWarning(warnedMissingKeys, `${this.currentLocale}\0${key}`, MAX_MISSING_KEY_DIAGNOSTICS)
-    ) {
+    if (!this.isSilent && warnedMissingKeys.remember(`${this.currentLocale}\0${key}`)) {
       console.warn(`[I18n] Missing key ${quoteKey(key)} in locale "${this.currentLocale}".`);
     }
   }

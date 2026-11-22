@@ -1,7 +1,7 @@
 ---
 title: Visión general
 description: Qué hace @codenhub/i18n, las cuatro ideas en las que se basa, un recorrido de cinco minutos, los idiomas de derecha a izquierda y cómo se comporta el gestor cuando las llamadas se superponen.
-source: 38b9262954499fa3f796ad718ada86f093242a02
+source: 1a13a90d87946c842fc56686bca1d708aa96417b
 ---
 
 # Traduce tu app
@@ -137,7 +137,7 @@ Las traducciones rara vez se quedan completas. La tienda de té agrega envoltura
 En el segundo caso, el gestor también registra una advertencia, como `[I18n] Missing key "home.subtitle" in locale "pt".`. Con qué frecuencia, y adónde va:
 
 - Advierte una vez por cada par de locale y clave, entre todos los gestores del proceso, así una clave usada en cada render, o por un gestor por solicitud, no inunda la consola.
-- Recuerda los 1000 pares más recientes, así que un par que sale de esa lista puede volver a advertir.
+- Recuerda los pares más recientes, unos 1000 y menos con claves largas, así que un par que sale de esa lista puede volver a advertir.
 - Un gestor creado con `isSilent: true` nunca la registra.
 - Para mandar las claves faltantes a tu propio logger, pasa `onMissingKey(key, locale)`. Reemplaza la advertencia y se ejecuta en cada clave faltante, no una vez por par. Si lanza un error, `t()` lanza el mismo error, así que una prueba puede fallar en la primera clave faltante; el binding del navegador traduce el resto de la página y luego rechaza con ese error.
 

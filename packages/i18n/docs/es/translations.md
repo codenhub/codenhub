@@ -2,7 +2,7 @@
 title: Escribe tus traducciones
 description: Diccionarios, archivos JSON, placeholders, mensajes ICU, enlaces y negritas, plurales, formateadores, claves y valores tipados, cómo detectar claves sin traducir y límites de tamaño.
 order: 1
-source: 1795208e6dc63f9d03d0e2a69e019303615d1d5b
+source: d047636c1747a1d5bc5c61d2bc69f3b65defdb1d
 ---
 
 # Escribe tus traducciones
@@ -231,7 +231,7 @@ Dentro de las formas de un plural, `#` representa el número; escribe `'#'` para
 
 El texto entre comillas también es texto para los tipos: en `'{it''s {x}'`, que muestra `{it's {x}`, `x` no es un valor que `t()` pida.
 
-Un texto que no es sintaxis válida, como una `{` sin cerrar o una `}` suelta, registra una advertencia, salvo que el gestor esté en silencio, y se muestra con solo sus placeholders `{name}` completados. La advertencia nombra la clave y el locale, y aparece una vez por cada texto en cada locale, entre los 1000 más recientes. [Encuentra claves sin traducir](#encuentra-claves-sin-traducir) muestra un test que comprueba cada mensaje.
+Un texto que no es sintaxis válida, como una `{` sin cerrar o una `}` suelta, registra una advertencia, salvo que el gestor esté en silencio, y se muestra con solo sus placeholders `{name}` completados. La advertencia nombra la clave y el locale, y aparece una vez por cada clave, texto y locale, entre los aproximadamente 1000 más recientes, así que un texto editado vuelve a advertir. [Encuentra claves sin traducir](#encuentra-claves-sin-traducir) muestra un test que comprueba cada mensaje.
 
 ### Enlaces y negritas dentro de una oración
 

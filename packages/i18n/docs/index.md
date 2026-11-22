@@ -136,7 +136,7 @@ Translations rarely stay complete. The tea shop adds gift wrapping, the English 
 In the second case, the manager also logs a warning, such as `[I18n] Missing key "home.subtitle" in locale "pt".`. How often, and where it goes:
 
 - It warns once for each locale and key pair, across every manager in the process, so a key used on every render, or by a manager per request, doesn't flood the console.
-- It remembers the 1,000 most recent pairs, so a pair that drops off that list can warn again.
+- It remembers the most recent pairs, about 1,000 of them and fewer for long keys, so a pair that drops off that list can warn again.
 - A manager created with `isSilent: true` never logs it.
 - To send misses to your own logger instead, pass `onMissingKey(key, locale)`. It replaces the warning and runs on every miss, not once per pair. If it throws, `t()` throws the same error, so a test can fail on the first missing key; a browser binding translates the rest of the page, then rejects with that error.
 

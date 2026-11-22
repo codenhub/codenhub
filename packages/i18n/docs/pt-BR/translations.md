@@ -2,7 +2,7 @@
 title: Escreva as suas traduções
 description: Dicionários, arquivos JSON, placeholders, mensagens ICU, links e negrito, plurais, formatadores, chaves e valores tipados, verificação de chaves não traduzidas e limites de tamanho.
 order: 1
-source: 1795208e6dc63f9d03d0e2a69e019303615d1d5b
+source: d047636c1747a1d5bc5c61d2bc69f3b65defdb1d
 ---
 
 # Escreva as suas traduções
@@ -231,7 +231,7 @@ Dentro das formas de um plural, `#` representa o número; escreva `'#'` para um 
 
 Texto entre aspas também é texto para os tipos: em `'{it''s {x}'`, que mostra `{it's {x}`, `x` não é um valor que `t()` pede.
 
-Um texto que não é sintaxe válida, como uma `{` sem fechamento ou uma `}` perdida, registra um aviso, a menos que o gerenciador esteja em silêncio, e aparece com apenas os placeholders `{name}` preenchidos. O aviso diz a chave e o locale, e vem uma vez para cada texto em cada locale, entre os 1.000 mais recentes. [Encontre chaves não traduzidas](#encontre-chaves-não-traduzidas) mostra um teste que confere todas as mensagens.
+Um texto que não é sintaxe válida, como uma `{` sem fechamento ou uma `}` perdida, registra um aviso, a menos que o gerenciador esteja em silêncio, e aparece com apenas os placeholders `{name}` preenchidos. O aviso diz a chave e o locale, e vem uma vez para cada chave, texto e locale, entre os aproximadamente 1.000 mais recentes, então um texto editado avisa de novo. [Encontre chaves não traduzidas](#encontre-chaves-não-traduzidas) mostra um teste que confere todas as mensagens.
 
 ### Links e negrito dentro de uma frase
 

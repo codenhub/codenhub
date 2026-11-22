@@ -427,6 +427,11 @@ export const isPlainMessage = (message: string): boolean =>
   !message.includes("{") && !message.includes("}") && !message.includes("'");
 
 const MAX_CACHED_FORMATTERS = 500;
+// Keys longer than this are not cached, so the cache holds at most 500 keys of this length. Every number option set at
+// once, with long values, keys 687 characters and every date option 505, while `Intl` reads a number option or
+// `hour12` from a string of any length, such as `{ minimumFractionDigits: " ".repeat(1e6) + "2" }`, which a cache bound
+// by count alone kept 500 of.
+const MAX_FORMATTER_KEY_LENGTH = 1_000;
 type CachedFormatter =
   | Intl.NumberFormat
   | Intl.DateTimeFormat
@@ -526,7 +531,7 @@ export const copyDateTimeFormatOptions = (options: Intl.DateTimeFormatOptions = 
   copyOptions(options, DATE_TIME_FORMAT_OPTIONS);
 
 const cachedFormatter = <T extends CachedFormatter>(key: string | undefined, create: () => T): T => {
-  if (key === undefined) {
+  if (key === undefined || key.length > MAX_FORMATTER_KEY_LENGTH) {
     return create();
   }
   let formatter = formatters.get(key) as T | undefined;
