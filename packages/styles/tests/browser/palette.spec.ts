@@ -2,6 +2,8 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
+import type { Page } from "@playwright/test";
+
 import { expect, test } from "./fixtures";
 import { getColorDistance, ORIGIN } from "./test-utils";
 
@@ -306,5 +308,174 @@ test.describe("generated palette", () => {
       getColorDistance(values.live, values.generated),
       `live ${values.live} vs generated ${values.generated}`,
     ).toBeLessThanOrEqual(2);
+  });
+});
+
+/* The theme selectors the package's own stylesheet sets one `color-scheme`
+   on, read off its CSSOM rather than retyped: every style rule outside a
+   media query whose `color-scheme` is a single keyword. `/palette` alone has
+   to answer the same selectors, or a page that loads only the palette, as a
+   library that lists the package as an optional peer does, kept the light
+   values under `data-theme="dark"` (0.10.0 had a dark block; 0.11.0 dropped
+   it). */
+const themeSelectors = async (page: Page) => {
+  const css = await readFile(path.join(packageRoot, "dist", "index.css"), "utf8");
+
+  await page.setContent("<!doctype html><html><head></head><body></body></html>");
+  await page.addStyleTag({ content: css });
+
+  return page.evaluate(() => {
+    const found: { scheme: string; selector: string }[] = [];
+    const walk = (rules: CSSRuleList) => {
+      for (const rule of rules) {
+        if (rule instanceof CSSMediaRule || rule instanceof CSSSupportsRule) {
+          continue;
+        }
+        if (rule instanceof CSSStyleRule) {
+          const scheme = rule.style.getPropertyValue("color-scheme").trim();
+
+          if (scheme === "light" || scheme === "dark") {
+            for (const selector of rule.selectorText.split(",")) {
+              found.push({ scheme, selector: selector.trim() });
+            }
+          }
+        }
+        if ("cssRules" in rule) {
+          walk((rule as CSSGroupingRule).cssRules);
+        }
+      }
+    };
+
+    for (const sheet of document.styleSheets) {
+      walk(sheet.cssRules);
+    }
+
+    return found;
+  });
+};
+
+test.describe("/palette alone", () => {
+  test("follows every theme selector the package sets, both themes", async ({ page }) => {
+    const selectors = await themeSelectors(page);
+
+    expect(new Set(selectors.map(({ scheme }) => scheme)), "a selector for each theme").toEqual(
+      new Set(["dark", "light"]),
+    );
+
+    const paletteCss = await readFile(path.join(packageRoot, "dist", "palette.css"), "utf8");
+    const results: string[] = [];
+
+    for (const { scheme, selector } of selectors) {
+      await page.setContent("<!doctype html><html><head></head><body></body></html>");
+      await page.addStyleTag({ content: paletteCss });
+
+      // oxlint-disable-next-line no-await-in-loop -- one fresh page per selector.
+      const read = await page.evaluate(
+        ({ scheme, selector }) => {
+          const onRoot = selector.startsWith(":root");
+          const compound = onRoot ? selector.slice(":root".length) : selector;
+          /* A light selector sits under an inline dark scheme, so following it
+             is visible; a dark one sits on the light default. */
+          const wrapper = document.createElement("div");
+
+          wrapper.style.colorScheme = scheme === "light" ? "dark" : "light";
+          document.body.append(wrapper);
+          const target = onRoot ? document.documentElement : wrapper.appendChild(document.createElement("div"));
+
+          for (const [, name] of compound.matchAll(/\.([\w-]+)/g)) {
+            target.classList.add(name!);
+          }
+          for (const [, name, value] of compound.matchAll(/\[([\w-]+)="([^"]*)"\]/g)) {
+            target.setAttribute(name!, value!);
+          }
+          if (!target.matches(selector)) {
+            throw new Error(`could not build an element for ${selector}`);
+          }
+
+          const probe = (parent: Element, colorScheme?: string) => {
+            const span = document.createElement("span");
+
+            if (colorScheme) {
+              span.style.colorScheme = colorScheme;
+            }
+            span.style.color = "var(--palette-text)";
+            parent.append(span);
+            return getComputedStyle(span).color;
+          };
+
+          return {
+            actual: probe(onRoot ? document.body : target),
+            expected: probe(document.body, scheme),
+            other: probe(document.body, scheme === "light" ? "dark" : "light"),
+          };
+        },
+        { scheme, selector },
+      );
+
+      expect(read.expected, "the two themes differ").not.toBe(read.other);
+      if (read.actual !== read.expected) {
+        results.push(`${selector}: ${read.actual}, wanted the ${scheme} ${read.expected}`);
+      }
+    }
+
+    expect(results).toEqual([]);
+  });
+
+  /* Paper is the light ground for a palette-only page too, however the root
+     asks for dark: `@codenhub/theme` writes `color-scheme` inline. */
+  test("prints the light values", async ({ page }) => {
+    const paletteCss = await readFile(path.join(packageRoot, "dist", "palette.css"), "utf8");
+
+    await page.emulateMedia({ media: "print" });
+    await page.setContent(
+      '<!doctype html><html data-theme="dark" style="color-scheme: dark"><head></head><body>' +
+        '<span id="root" style="color: var(--palette-text)">.</span>' +
+        '<section class="theme-dark"><span id="region" style="color: var(--palette-text)">.</span></section>' +
+        '<div style="color-scheme: light"><span id="light" style="color: var(--palette-text)">.</span></div>' +
+        "</body></html>",
+    );
+    await page.addStyleTag({ content: paletteCss });
+
+    const read = await page.evaluate(() =>
+      Object.fromEntries(
+        ["root", "region", "light"].map((id) => [id, getComputedStyle(document.getElementById(id)!).color]),
+      ),
+    );
+
+    expect(read.root).toBe(read.light);
+    expect(read.region).toBe(read.light);
+  });
+
+  /* Only the theme selectors: on a bare `:root` it would decide for a page
+     that loads the palette beside its own scheme. Following the system takes
+     `color-scheme: light dark` on the root, which the page sets. */
+  test("leaves the root's color-scheme to the page", async ({ page }) => {
+    const paletteCss = await readFile(path.join(packageRoot, "dist", "palette.css"), "utf8");
+
+    await page.emulateMedia({ colorScheme: "dark" });
+    await page.setContent("<!doctype html><html><head></head><body></body></html>");
+    await page.addStyleTag({ content: paletteCss });
+
+    const read = await page.evaluate(() => {
+      const probe = (colorScheme: string) => {
+        const span = document.createElement("span");
+
+        span.style.colorScheme = colorScheme;
+        span.style.color = "var(--palette-text)";
+        document.body.append(span);
+        return getComputedStyle(span).color;
+      };
+      const scheme = getComputedStyle(document.documentElement).colorScheme;
+      const light = probe("light");
+      const dark = probe("dark");
+
+      document.documentElement.style.colorScheme = "light dark";
+      const followed = probe("");
+
+      return { dark, followed, light, scheme };
+    });
+
+    expect(read.scheme).toBe("normal");
+    expect(read.followed, "light dark on the root follows the system").toBe(read.dark);
   });
 });

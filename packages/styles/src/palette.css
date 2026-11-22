@@ -6,8 +6,11 @@
    order -- see `src/theme.css` and docs/internal/model.md#cascade-layers.
 
    Each value is a `light-dark()` pair, resolved where it is used against
-   that element's `color-scheme`, so it follows the system and every theme
-   selector the way the package's own tokens do. */
+   that element's `color-scheme`. The theme selectors the package's own
+   stylesheet answers set it here too, so a page that loads only the palette
+   follows `data-theme`, `.theme-light`, `.theme-dark`, and `.dark` on
+   the root, and prints light. A bare `:root` is left to the page:
+   following the system takes `color-scheme: light dark` on it. */
 @layer theme, base, components, utilities;
 
 @layer theme {
@@ -397,5 +400,27 @@
     --palette-border: light-dark(oklch(0.708 0 none), oklch(0.371 0 none));
     --palette-surface: light-dark(oklch(0.922 0 none), oklch(0.269 0 none));
     --palette-text: light-dark(oklch(0.145 0 none), oklch(0.985 0 none));
+  }
+
+  .theme-light,
+  [data-theme="light"] {
+    color-scheme: light;
+  }
+
+  :root.dark,
+  .theme-dark,
+  [data-theme="dark"] {
+    color-scheme: dark;
+  }
+
+  @media print {
+    :root {
+      color-scheme: light !important;
+    }
+
+    .theme-dark,
+    [data-theme="dark"] {
+      color-scheme: light;
+    }
   }
 }
