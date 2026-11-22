@@ -20,15 +20,16 @@ Keep tests package-local and focused on the contract each consumer path publishe
 The [Predictable](./model.md#principles) principle promises the same rendering in every context below, so every audit covers each of them and extends the list when it finds one missing. A context that found a defect gets a standing test, named here, so the next audit builds on the last one instead of sampling again.
 
 - Each component inside `.stack`, `.field`, `.cluster`, and a grid cell. Held by `layout.spec.ts` for the tooltip.
-- Each component on the page, on `.card`, on `.card.solid` in neutral and in each intent, and directly in each aesthetic region over a dark and a light backdrop. Held by `contrast.spec.ts` and `forms.spec.ts` for intent toggle focus on solid plates, controls directly in `.glass` and `.glass-liquid`, and intent soft and ghost text on a neutral solid card.
-- Inside a shadow root. Held by `environment.spec.ts` for the brand font.
-- Print. Held by `theme.spec.ts` for a dark theme set through `color-scheme`.
+- Each component on the page, on `.card`, on `.card.solid` in neutral and in each intent, and directly in each aesthetic region over a dark and a light backdrop. Held by `accessibility.spec.ts` for every control's focus on a solid plate; by `contrast.spec.ts` for intent text on a neutral solid surface, at rest and on hover, and for controls directly in a glass region, in every transparency and contrast setting; and by `forms.spec.ts` for an `.input-group`'s disabled spellings.
+- Nested aesthetic regions, up to four deep. Held by `aesthetics.spec.ts` for `.glass-liquid` and by `contrast.spec.ts` for a control's glass ground.
+- Inside a shadow root. Held by `theme.spec.ts` for the type Preflight sets at the host, on the page and in a region.
+- Print. Held by `theme.spec.ts` for every way the root asks for dark, on every entrypoint, and by `palette.spec.ts` for `/palette`.
 - Forced colors.
 - Right-to-left text.
 - Light and dark themes, set through a class, `data-theme`, and an inline `color-scheme` as `@codenhub/theme` writes it.
 - The `/tw` path through a consumer's own Tailwind. Held by `tw-consumer.spec.ts`.
-- `/palette` alone. Held by `palette.spec.ts` for the theme selectors.
-- TypeScript under `bundler`, `node16` ESM, and `node16` CommonJS. Held by `exports.test.ts`.
+- `/palette` alone. Held by `palette.spec.ts` for every theme selector, in both themes.
+- TypeScript under `bundler`, and ESM and CommonJS under `node16`, `node18`, `node20`, and `nodenext`. Held by `exports.test.ts`.
 
 ## Structure
 
