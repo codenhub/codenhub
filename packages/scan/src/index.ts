@@ -8,7 +8,8 @@ import path from "node:path";
 /**
  * The most patterns an entry's braces may expand to. `fs.globSync` walks once per pattern, and its
  * time grows faster than their number: in an empty folder on Node.js 26.13, 1,024 took 0.06 to
- * 0.2 seconds, 4,096 took 0.3, 16,384 took 2.7 to 8.7, and 32,768 took 41.
+ * 0.2 seconds, 4,096 took 0.3, 16,384 took 2.7 to 8.7, and 32,768 took 41. Filed upstream as
+ * nodejs/node#67711; once a release fixes it, revisit the limit.
  */
 export const MAX_BRACE_EXPANSIONS = 1024;
 
