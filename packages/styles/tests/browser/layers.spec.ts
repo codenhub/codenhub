@@ -191,3 +191,26 @@ for (const [scenario, files] of Object.entries(SCENARIOS)) {
     });
   });
 }
+
+/* `docs/setup.md#cascade-layers`: a layer the consumer names before the
+   package's first `@layer` statement is created first, so it ranks below all
+   four; naming the package's layers ahead of it puts it on top. */
+test.describe("a consumer's own layer", () => {
+  const ownLayer = (order: string) => `${order}\n@layer app { .app-fill { --ui-fill: 30%; } }`;
+
+  for (const [name, order, expected] of [
+    ["declared before the package, ranks below it", "@layer app;", "100%"],
+    ["declared after the package's layers, ranks above them", "@layer theme, base, components, utilities, app;", "30%"],
+  ] as const) {
+    test(name, async ({ page }) => {
+      await page.setContent(
+        `<!doctype html><html><body><button data-testid="own-layer" class="btn solid app-fill">b</button></body></html>`,
+      );
+      await page.addStyleTag({ content: ownLayer(order) });
+      await page.addStyleTag({ content: await built("index.css") });
+      await settleAnimations(page);
+
+      expect(await read(page, "own-layer", "--ui-fill")).toBe(expected);
+    });
+  }
+});

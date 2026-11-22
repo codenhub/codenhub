@@ -184,6 +184,7 @@ O que isso significa quando você escreve o seu próprio CSS:
 - **O seu utilitário vence os padrões internos de um componente.** `p-0 text-center` numa célula de tabela, `text-sm` numa `.label` ou `px-8` num `.btn.sm` se aplicam, porque o componente escreve esses padrões de modo que uma classe no elemento vença.
 - **O estado vence a sua intenção.** Um campo com `aria-invalid="true"` continua destrutivo mesmo com um utilitário de intenção aplicado.
 - **As classes `-solo` ficam fora das camadas de propósito**, para vencer os estilos em camadas ou de especificidade zero de um componente de terceiros. Uma regra sem camada mais específica, ou uma igualmente específica que carrega depois, ainda vence essas classes; veja [Classes solo](./usage/solo.md).
+- **Uma camada sua que você nomeia primeiro fica abaixo de todas as camadas do pacote.** O navegador ordena as camadas pela primeira vez que vê cada nome, então `@layer app;` escrito antes do import, ou numa folha de estilos que carrega antes dele, cria `app` à frente de `theme`, e toda regra que o pacote traz vence toda regra dessa camada. Nomeie as camadas do pacote antes da sua, como em `@layer theme, base, components, utilities, app;`, e `app` vence todas elas. Uma camada nomeada pela primeira vez depois do import já fica acima delas, e o CSS sem camada vence todas as camadas de qualquer forma.
 
 ## A seguir
 
