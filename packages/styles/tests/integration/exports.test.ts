@@ -10,6 +10,7 @@ import ts from "typescript";
 import { expect, test } from "vitest";
 
 interface PackageManifest {
+  types?: string;
   exports: Record<string, string | Record<string, string>>;
   bin?: Record<string, string>;
   peerDependencies?: Record<string, string>;
@@ -407,7 +408,7 @@ test("tw/ holds stylesheets and their declaration file, nothing else", async () 
       entry,
       relative: path.relative(path.resolve(packageRoot, "tw"), path.join(entry.parentPath, entry.name)),
     }))
-    .filter(({ entry, relative }) => entry.isFile() && !entry.name.endsWith(".css") && relative !== "index.d.ts")
+    .filter(({ entry, relative }) => entry.isFile() && !entry.name.endsWith(".css") && relative !== "index.d.cts")
     .map(({ relative }) => relative);
 
   expect(strays).toEqual([]);
@@ -417,67 +418,93 @@ test("tw/ holds stylesheets and their declaration file, nothing else", async () 
    (`noUncheckedSideEffectImports`), and `declare module "*.css"` cannot match
    `@codenhub/styles` or `/aesthetics/glass`, which have no extension. Without
    a `types` condition, `import "@codenhub/styles";` was TS2882 under
-   `moduleResolution: bundler`. This compiles such imports with the workspace
-   TypeScript. The consumer is an in-memory file inside the package, so each
-   specifier resolves by package self-reference, through `exports` exactly as
-   it would from `node_modules`. */
-test("side-effect imports typecheck with noUncheckedSideEffectImports", () => {
-  const specifiers = [
-    "@codenhub/styles",
-    "@codenhub/styles/theme",
-    "@codenhub/styles/components",
-    "@codenhub/styles/aesthetics/glass",
-    "@codenhub/styles/native",
-    "@codenhub/styles/tw",
-    "@codenhub/styles/button/tw",
-    "@codenhub/styles/aesthetics/glass/tw",
-  ];
+   `moduleResolution: bundler`. Under the `node16` to `nodenext` modes a
+   CommonJS file importing it was TS1479 too, while the declaration was an
+   `index.d.ts`, which this package's `"type": "module"` makes ES; a `.d.cts`
+   is CommonJS, which either format may import. This compiles such imports
+   with the workspace TypeScript, under every module mode a consumer can pick
+   that resolves `exports`, from each file format the mode tells apart. The
+   consumer is an in-memory file inside the package, so each specifier
+   resolves by package self-reference, through `exports` exactly as it would
+   from `node_modules`. */
+const NODE_MODES = [ts.ModuleKind.Node16, ts.ModuleKind.Node18, ts.ModuleKind.Node20, ts.ModuleKind.NodeNext];
 
-  const options: ts.CompilerOptions = {
-    module: ts.ModuleKind.Preserve,
-    moduleResolution: ts.ModuleResolutionKind.Bundler,
-    noEmit: true,
-    noUncheckedSideEffectImports: true,
-    strict: true,
-    target: ts.ScriptTarget.ESNext,
-    types: [],
-  };
-  const entry = path.join(packageRoot, "side-effect-imports.ts").replaceAll("\\", "/");
-  const source = specifiers.map((specifier) => `import "${specifier}";\n`).join("");
-  const host = ts.createCompilerHost(options);
-  const { fileExists, getSourceFile, readFile: readHostFile } = host;
-  const isEntry = (fileName: string) => fileName.replaceAll("\\", "/") === entry;
+test.each(
+  [
+    { module: ts.ModuleKind.Preserve, moduleResolution: ts.ModuleResolutionKind.Bundler, extension: ".ts" },
+    { module: ts.ModuleKind.ESNext, moduleResolution: ts.ModuleResolutionKind.Bundler, extension: ".ts" },
+    ...NODE_MODES.flatMap((module) =>
+      [".mts", ".cts"].map((extension) => ({
+        module,
+        moduleResolution:
+          module === ts.ModuleKind.NodeNext ? ts.ModuleResolutionKind.NodeNext : ts.ModuleResolutionKind.Node16,
+        extension,
+      })),
+    ),
+  ].map((mode) => ({ ...mode, name: ts.ModuleKind[mode.module] })),
+)(
+  "side-effect imports typecheck with noUncheckedSideEffectImports, under module $name from a $extension file",
+  ({ module, moduleResolution, extension }) => {
+    const specifiers = [
+      "@codenhub/styles",
+      "@codenhub/styles/theme",
+      "@codenhub/styles/components",
+      "@codenhub/styles/aesthetics/glass",
+      "@codenhub/styles/native",
+      "@codenhub/styles/tw",
+      "@codenhub/styles/button/tw",
+      "@codenhub/styles/aesthetics/glass/tw",
+    ];
 
-  host.fileExists = (fileName) => isEntry(fileName) || fileExists.call(host, fileName);
-  host.readFile = (fileName) => (isEntry(fileName) ? source : readHostFile.call(host, fileName));
-  host.getSourceFile = (fileName, languageVersion, ...rest) =>
-    isEntry(fileName)
-      ? ts.createSourceFile(fileName, source, languageVersion)
-      : getSourceFile.call(host, fileName, languageVersion, ...rest);
+    const options: ts.CompilerOptions = {
+      module,
+      moduleResolution,
+      noEmit: true,
+      noUncheckedSideEffectImports: true,
+      strict: true,
+      target: ts.ScriptTarget.ESNext,
+      types: [],
+    };
+    const entry = path.join(packageRoot, `side-effect-imports${extension}`).replaceAll("\\", "/");
+    const source = specifiers.map((specifier) => `import "${specifier}";\n`).join("");
+    const host = ts.createCompilerHost(options);
+    const { fileExists, getSourceFile, readFile: readHostFile } = host;
+    const isEntry = (fileName: string) => fileName.replaceAll("\\", "/") === entry;
 
-  const program = ts.createProgram([entry], options, host);
-  const diagnostics = ts
-    .getPreEmitDiagnostics(program)
-    .map((diagnostic) => `TS${diagnostic.code}: ${ts.flattenDiagnosticMessageText(diagnostic.messageText, "\n")}`);
+    host.fileExists = (fileName) => isEntry(fileName) || fileExists.call(host, fileName);
+    host.readFile = (fileName) => (isEntry(fileName) ? source : readHostFile.call(host, fileName));
+    host.getSourceFile = (fileName, languageVersion, ...rest) =>
+      isEntry(fileName)
+        ? ts.createSourceFile(fileName, source, languageVersion)
+        : getSourceFile.call(host, fileName, languageVersion, ...rest);
 
-  expect(program.getRootFileNames()).toEqual([entry]);
-  expect(diagnostics).toEqual([]);
-});
+    const program = ts.createProgram([entry], options, host);
+    const diagnostics = ts
+      .getPreEmitDiagnostics(program)
+      .map((diagnostic) => `TS${diagnostic.code}: ${ts.flattenDiagnosticMessageText(diagnostic.messageText, "\n")}`);
+
+    expect(program.getRootFileNames()).toEqual([entry]);
+    expect(diagnostics).toEqual([]);
+  },
+);
 
 /* The test above samples entrypoints; this holds every one. TypeScript takes
    the first condition it recognises, so `types` has to lead, and it has to
-   name a declaration rather than the stylesheet. */
-test("every stylesheet export leads with a types condition naming a declaration", () => {
+   name a CommonJS declaration rather than the stylesheet, which a file of
+   either format may import, as the test above says. */
+test("every stylesheet export leads with a types condition naming a CommonJS declaration", () => {
   const missing = Object.entries(manifest.exports)
     .filter(([exportName]) => exportName !== "./package.json")
     .filter(([, target]) => {
       const [first, ...rest] = typeof target === "string" ? [] : Object.entries(target);
 
-      return !first || first[0] !== "types" || !first[1].endsWith(".d.ts") || rest.length === 0;
+      return !first || first[0] !== "types" || !first[1].endsWith(".d.cts") || rest.length === 0;
     })
     .map(([exportName]) => exportName);
 
   expect(missing).toEqual([]);
+  // The top-level field, which TypeScript reads where it does not read `exports`.
+  expect(manifest.types).toMatch(/\.d\.cts$/);
 });
 
 /* `dist/` holds finished CSS only, so a server that serves or fingerprints it

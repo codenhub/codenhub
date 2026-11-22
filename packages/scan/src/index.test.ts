@@ -5,7 +5,7 @@ import path from "node:path";
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { findFiles, readFiles, splitWords, UnmatchedEntryError } from "./index.ts";
+import { findFiles, MAX_BRACE_EXPANSIONS, readFiles, splitWords, UnmatchedEntryError } from "./index.ts";
 
 let root: string;
 
@@ -97,6 +97,22 @@ describe("findFiles", () => {
         );
       },
     );
+
+    // The listing check walks the entry again, and has to leave node_modules out as the first walk does.
+    it("keeps the listing check out of node_modules too, with failOnUnreadable", () => {
+      const opened = vi.spyOn(fs, "opendirSync");
+
+      try {
+        expect(
+          relative(findFiles(["**/*.html"], { cwd: root, skipNodeModules: true, failOnUnreadable: true })),
+        ).toEqual(["app/views/a.html", "app/views/nested/b.html"]);
+        expect(
+          opened.mock.calls.map(([folder]) => String(folder)).filter((folder) => folder.includes("node_modules")),
+        ).toEqual([]);
+      } finally {
+        opened.mockRestore();
+      }
+    });
 
     it("reads node_modules without it", () => {
       expect(relative(findFiles(["**/*.html"], { cwd: root }))).toContain("node_modules/dep/demo.html");
@@ -218,6 +234,45 @@ describe("findFiles", () => {
         );
       },
     );
+  });
+
+  /* `fs.globSync` walks once per pattern a brace expands to, and its time
+     grows faster than their number: 18 groups of two took more than a
+     minute. Every brace form multiplies them: a list, a list inside a list,
+     and a numeric or letter range, stepped or not. */
+  describe("brace expansions", () => {
+    const limit = MAX_BRACE_EXPANSIONS;
+
+    it.each([
+      ["a list per group", "{a,b}".repeat(Math.log2(limit)), "{a,b}".repeat(Math.log2(limit) + 1), limit * 2],
+      ["a numeric range", `{1..${limit}}`, `{1..${limit + 1}}`, limit + 1],
+      ["a stepped range", `{1..${limit * 2 - 1}..2}`, `{1..${limit * 2 + 1}..2}`, limit + 1],
+      ["a descending range", `{${limit}..1}`, `{${limit + 1}..1}`, limit + 1],
+      ["a letter range", `{a..d}{1..${limit / 4}}`, `{a..d}{1..${limit / 4 + 1}}`, limit + 4],
+      ["a list in a list", `{a,{b,c,d}}{1..${limit / 4}}`, `{a,{b,c,d}}{1..${limit / 4 + 1}}`, limit + 4],
+      ["a range in a list", `{a,{1..3}}{1..${limit / 4}}`, `{a,{1..3}}{1..${limit / 4 + 1}}`, limit + 4],
+    ])("expands %s up to the limit and refuses one past it", (_form, atLimit, pastLimit, count) => {
+      expect(findFiles([`app/${atLimit}.html`], { cwd: root })).toEqual([]);
+      expect(() => findFiles([`app/${pastLimit}.html`], { cwd: root })).toThrow(
+        `"app/${pastLimit}.html" expands to ${count} patterns through its braces, more than the ${limit} a glob may; use fewer alternatives, or a * in place of a list.`,
+      );
+    });
+
+    it.each(["{a}", "{a,b", "a,b}", "{}"])("counts %s, which no brace expands, as one pattern", (literal) => {
+      expect(() => findFiles([`app/${literal}{1..${limit}}.html`], { cwd: root })).not.toThrow();
+    });
+
+    it("refuses before any walk, even without failOnUnmatched", () => {
+      // A real walk of these would take hours.
+      const walked = vi.spyOn(fs, "globSync").mockReturnValue([]);
+
+      try {
+        expect(() => findFiles(["{a,b}".repeat(30)], { cwd: root })).toThrow(/expands to 1073741824 patterns/);
+        expect(walked).not.toHaveBeenCalled();
+      } finally {
+        walked.mockRestore();
+      }
+    });
   });
 });
 
@@ -343,6 +398,28 @@ describe("readFiles", () => {
       ]);
     });
   });
+
+  /* The listing check opens each folder the entry would list. A `**` matches
+     files as well, and opening each of them too made the check about three
+     times slower on a tree of many assets. */
+  it.each(["app/**", "app/**/*.html", "**/*", "app/*/*.html"])(
+    "opens only folders to check that %s can list them, with failOnUnreadable",
+    (entry) => {
+      const opened = vi.spyOn(fs, "opendirSync");
+
+      try {
+        findFiles([entry], { cwd: root, failOnUnreadable: true });
+
+        const notFolders = opened.mock.calls
+          .map(([folder]) => String(folder))
+          .filter((folder) => !fs.statSync(folder).isDirectory());
+
+        expect(notFolders).toEqual([]);
+      } finally {
+        opened.mockRestore();
+      }
+    },
+  );
 
   it("fails before reading on an entry that names no file, with failOnUnmatched", () => {
     expect(() => readFiles(["app/views/a.html", "missing.html"], { cwd: root, failOnUnmatched: true })).toThrow(

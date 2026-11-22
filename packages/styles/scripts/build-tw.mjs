@@ -117,9 +117,9 @@ for (const entry of readdirSync(source, { recursive: true })) {
 
 write("tokens.css", themeStatic(path.join(source, "tokens.css")));
 
-/* The `/tw` exports' `types` condition, for the same reason as `dist/index.d.ts`
+/* The `/tw` exports' `types` condition, for the same reason as `dist/index.d.cts`
    in `build-styles.mjs`. */
-writeFileSync(path.join(target, "index.d.ts"), "export {};\n");
+writeFileSync(path.join(target, "index.d.cts"), "export {};\n");
 
 /* A focused export composes utilities it does not import: `/button/tw` copies
    `box` into `.btn` but brings no `box.css`. It references the files that

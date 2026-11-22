@@ -30,8 +30,11 @@ mkdirSync(path.join(packageRoot, "dist", "aesthetics"), { recursive: true });
    side-effect imports (`noUncheckedSideEffectImports`), and a specifier such
    as `@codenhub/styles` has no `.css` extension for a `declare module "*.css"`
    to match, so without a declaration it fails with TS2882. An empty module
-   declares nothing: the import is for its side effect alone. */
-writeFileSync(path.join(packageRoot, "dist", "index.d.ts"), "export {};\n");
+   declares nothing: the import is for its side effect alone. It is a `.d.cts`
+   because a `.d.ts` in this `"type": "module"` package is an ES module, which
+   a CommonJS file under `module: node16` or `node18` cannot import (TS1479);
+   a CommonJS declaration is one an ES file may import too. */
+writeFileSync(path.join(packageRoot, "dist", "index.d.cts"), "export {};\n");
 
 const compiler = createCompiler(path.join(packageRoot, "src"));
 
