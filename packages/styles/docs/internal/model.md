@@ -10,6 +10,19 @@ What decides how an element looks.
 
 This document is the source of truth for the token contracts; public documents under `docs/` describe the same model for consumers. It states the rules and the reason for each, because the reason is what settles the next question. Superseded designs are not kept here; git history holds them.
 
+## Principles
+
+What the package is for, and the test every addition and every fix is held to. The rest of this document applies them; when a rule here and a principle disagree, the rule is the defect.
+
+- **Who it is for.** The maintainer's own apps and packages come first. The package builds a complete interface from class names on plain HTML, with no JavaScript.
+- **Predictable.** The same markup renders the same on every path: the compiled `dist/`, `/tw`, `/native`, and `chs build`. It renders the same in every context too: inside a layout helper, on any surface, in a shadow root, in print, and under forced colors.
+- **Composable.** Any combination of the axes and modifiers, intent, presentation, size, elevation, and corner, works on any component without a special case. An aesthetic composes these parts; it never adds an exception to them.
+- **Accessible by default.** Every documented combination meets the contrast policy in [Accessibility](../accessibility.md) and keeps a visible focus in every supported context, with no work from the consumer.
+- **Says only what is true.** A sentence in the documentation is a promise. Either a test holds it, or the sentence states its limit.
+- **Small surface.** A new class, token, or entrypoint has to serve a principle above and fit the existing axes, not sit beside them.
+
+A change that adds or changes surface names the principle it serves, and is checked against the surface that already exists. A proposal that serves none of them is a question, not a change. [Tests](./tests.md#consumer-contexts) lists the consumer contexts these principles are checked in.
+
 ## The axes
 
 Three questions, asked in plain language before any CSS is involved:
