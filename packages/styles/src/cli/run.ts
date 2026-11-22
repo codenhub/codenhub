@@ -31,12 +31,21 @@ const HEAD_BYTES = 1024;
 /* What every stylesheet this command has written starts with: the package's
    notice, after Tailwind's banner. The compiled stylesheets carry it too. */
 const WRITTEN_HEAD = /^\s*(?:\/\*! tailwindcss [^*]*\*\/\s*)?\/\*! @codenhub\/styles\b/;
-/* The names Windows reserves for a device in every folder, with any extension
-   and in any case: `-o NUL` or `-o public/com1.css` wrote a file that `del`
-   cannot remove. */
+/* Windows' rules for a name in a path, from "Naming Files, Paths, and
+   Namespaces": the names it reserves for a device in every folder, with any
+   extension and in any case; the characters it allows in no name, the control
+   characters among them; and a name that ends with a dot or a space, which it
+   drops. Written past them, `-o NUL`, `-o public/com1.css`, and `-o app.css.`
+   left a file `del` cannot remove, and `-o fresh.css:s` an empty `fresh.css`
+   beside its error. */
 const WINDOWS_DEVICE = /^(?:con|prn|aux|nul|conin\$|conout\$|com[0-9¹²³]|lpt[0-9¹²³])\s*(?:\..*)?$/i;
+// oxlint-disable-next-line no-control-regex -- the control characters are what it finds
+const WINDOWS_RESERVED_CHARACTER = /[<>:"|?*\u0000-\u001f]/u;
+// A drive, as in `C:` or `C:\`, the one place a colon may stand.
+const WINDOWS_DRIVE = /^[a-z]:/i;
 
 const USAGE = `Usage: ${BIN} build --content <glob> [--content <glob> ...] --output <file> [options]
+       ${BIN} help
 
 Builds a StyleKit stylesheet holding only the classes your templates use.
 
@@ -87,20 +96,21 @@ export async function run(argv: readonly string[], io: CliIo): Promise<number> {
 function parseCommandLine(argv: readonly string[]): BuildOptions | "help" | "version" {
   const { values, positionals, tokens } = parseFlags(argv);
 
-  if (values.help) {
+  const [command, ...extra] = positionals;
+
+  // `help` is `--help` as a command, so it ignores the rest as `--help` does.
+  if (values.help || command === "help") {
     return "help";
   }
   if (values.version) {
     return "version";
   }
 
-  const [command, ...extra] = positionals;
-
   if (command === undefined) {
     throw new Error(`missing command; run "${BIN} build --content <glob> --output <file>".`);
   }
   if (command !== "build") {
-    throw new Error(`unknown command "${command}"; the only command is "build".`);
+    throw new Error(`unknown command "${command}"; the commands are "build" and "help".`);
   }
   if (extra.length > 0) {
     throw new Error(
@@ -142,9 +152,8 @@ function parseCommandLine(argv: readonly string[]): BuildOptions | "help" | "ver
     );
   }
 
-  // A rename onto such a name writes a real file there, past the `stat` that finds a device elsewhere.
-  if (process.platform === "win32" && WINDOWS_DEVICE.test(path.win32.basename(output))) {
-    throw new Error(`--output ${output} is a device, not a file; name a stylesheet to write.`);
+  if (process.platform === "win32") {
+    assertWindowsName(output);
   }
 
   return {
@@ -153,6 +162,33 @@ function parseCommandLine(argv: readonly string[]): BuildOptions | "help" | "ver
     aesthetics: [...new Set(values.aesthetic ?? [])],
     shouldMinify: !values["no-minify"],
   };
+}
+
+/* Checked before anything is created, and for every segment, since the
+   folders above the output are created first: a rename onto a device's name
+   writes a real file there, past the `stat` that finds a device elsewhere. */
+function assertWindowsName(output: string): void {
+  const drive = WINDOWS_DRIVE.exec(output)?.[0] ?? "";
+  const reserved = WINDOWS_RESERVED_CHARACTER.exec(output.slice(drive.length))?.[0];
+
+  if (reserved !== undefined) {
+    throw new Error(
+      `--output ${output} holds ${JSON.stringify(reserved)}, which Windows does not allow in a name; name a stylesheet to write.`,
+    );
+  }
+
+  for (const segment of output.slice(drive.length).split(/[\\/]/)) {
+    if (segment !== "." && segment !== ".." && /[. ]$/.test(segment)) {
+      throw new Error(
+        `--output ${output} names "${segment}", which ends with a dot or a space that Windows drops; name a stylesheet to write.`,
+      );
+    }
+    if (WINDOWS_DEVICE.test(segment)) {
+      throw new Error(
+        `--output ${output} names "${segment}", which Windows keeps for a device; name a stylesheet to write.`,
+      );
+    }
+  }
 }
 
 const OPTIONS = {
@@ -164,13 +200,13 @@ const OPTIONS = {
   version: { type: "boolean" },
 } as const;
 
-/* One of this command's own options, as `-o`, `--output`, or `--output=a.css`:
-   after an option that takes a value, it is a value left out, not one that
-   starts with a dash. */
+/* One of this command's own options, as `-o`, `-oout.css`, `--output`, or
+   `--output=a.css`: after an option that takes a value, it is a value left
+   out, not one that starts with a dash. */
 function isOwnOption(arg: string): boolean {
   return Object.entries(OPTIONS).some(
     ([name, option]) =>
-      arg === `--${name}` || arg.startsWith(`--${name}=`) || ("short" in option && arg === `-${option.short}`),
+      arg === `--${name}` || arg.startsWith(`--${name}=`) || ("short" in option && arg.startsWith(`-${option.short}`)),
   );
 }
 
@@ -682,7 +718,10 @@ function readContent(entries: readonly string[], cwd: string, output: string, gi
     try {
       matched = findFiles([entry], { cwd, failOnUnmatched: true, failOnUnreadable: true, skipNodeModules: true });
     } catch (error) {
-      throw error instanceof UnmatchedEntryError ? new Error(`--content ${error.message}`) : error;
+      // A `RangeError` is the scanner's limit on brace expansions, which names the entry as an unmatched one does.
+      throw error instanceof UnmatchedEntryError || error instanceof RangeError
+        ? new Error(`--content ${error.message}`)
+        : error;
     }
 
     const content = matched.filter((file) => !isOutputOrTemporary(realPathSyncOf(file), output));

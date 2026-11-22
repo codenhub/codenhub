@@ -531,16 +531,96 @@ describe("failures", () => {
     );
   });
 
-  // `-o NUL` wrote a file named NUL, which `del` cannot remove.
-  it.skipIf(process.platform !== "win32").each(["NUL", "nul.css", "public/Com1.txt", "LPT9", "CON .css", "conout$"])(
-    "refuses an --output that names a Windows device, as %s",
-    async (output) => {
+  /* Windows' rules for a name in a path ("Naming Files, Paths, and
+     Namespaces"): no reserved character, no control character, no name of a
+     device, with or without an extension, and no name that ends with a dot or
+     a space. Written past them, `-o NUL` and `-o "app.css."` left files `del`
+     cannot remove, and `-o fresh.css:s` wrote an empty `fresh.css` before it
+     failed. The rule holds for every segment, since the folders are created
+     first. */
+  const WINDOWS_DEVICES = [
+    "CON",
+    "PRN",
+    "AUX",
+    "NUL",
+    "CONIN$",
+    "CONOUT$",
+    ...["COM", "LPT"].flatMap((port) => [..."0123456789¹²³"].map((digit) => `${port}${digit}`)),
+  ];
+
+  it.skipIf(process.platform !== "win32").each(
+    WINDOWS_DEVICES.flatMap((device) => [
+      [device, device],
+      [device.toLowerCase(), device.toLowerCase()],
+      [`${device}.css`, `${device}.css`],
+      [`${device} .css`, `${device} .css`],
+      [`${device}.tar.css`, `${device}.tar.css`],
+      [`public/${device}/app.css`, device],
+    ]),
+  )("refuses an --output that names a Windows device, as %s", async (output, segment) => {
+    expect(await failureOf("build", "-c", "app/views/**/*.erb", "-o", output)).toBe(
+      `chs: --output ${output} names "${segment}", which Windows keeps for a device; name a stylesheet to write.`,
+    );
+    expect(await readdir(project)).toEqual(["app"]);
+  });
+
+  it.skipIf(process.platform !== "win32").each([
+    ["app.css.", "app.css."],
+    ["dir/app.css ./x.css", "app.css ."],
+    ["dir/...", "..."],
+    ["dir/. .", ". ."],
+    ["nd6 .", "nd6 ."],
+    ["pub./a.css", "pub."],
+    ["pub /a.css", "pub "],
+    ["pub.\\a.css", "pub."],
+    ["NUL.", "NUL."],
+  ])("refuses an --output with a name that ends with a dot or a space, as %j", async (output, segment) => {
+    expect(await failureOf("build", "-c", "app/views/**/*.erb", "-o", output)).toBe(
+      `chs: --output ${output} names "${segment}", which ends with a dot or a space that Windows drops; name a stylesheet to write.`,
+    );
+    expect(await readdir(project)).toEqual(["app"]);
+  });
+
+  it
+    .skipIf(process.platform !== "win32")
+    .each([
+      ...[...'<>:"|?*'].map((character) => [`dir/a${character}b.css`, character]),
+      ...Array.from({ length: 31 }, (_, code) => [
+        `dir/a${String.fromCodePoint(code + 1)}b.css`,
+        String.fromCodePoint(code + 1),
+      ]),
+      ["fresh.css:s", ":"],
+      ["NUL::$DATA", ":"],
+      ["dir/C:app.css", ":"],
+      ["C:/dir:/app.css", ":"],
+    ])(
+    "refuses an --output that holds a character Windows does not allow in a name, as %j",
+    async (output, character) => {
       expect(await failureOf("build", "-c", "app/views/**/*.erb", "-o", output)).toBe(
-        `chs: --output ${output} is a device, not a file; name a stylesheet to write.`,
+        `chs: --output ${output} holds ${JSON.stringify(character)}, which Windows does not allow in a name; name a stylesheet to write.`,
       );
       expect(await readdir(project)).toEqual(["app"]);
     },
   );
+
+  // The rule leaves alone what Windows allows: a drive, `.` and `..` folders, and dots and spaces inside a name.
+  it
+    .skipIf(process.platform !== "win32")
+    .each(["out/../a .b.css", "./con-tents.css", "nul_.css", "COM10.css", "x/.y/app.css"])(
+    "writes an --output Windows allows, as %j",
+    async (output) => {
+      expect(await build("build", "-c", "app/views/**/*.erb", "-o", output)).toBe(0);
+      expect(stderr).toEqual([]);
+    },
+  );
+
+  it.skipIf(process.platform !== "win32")("writes an --output with a drive", async () => {
+    const output = path.join(project, "public", "app.css");
+
+    expect(/^[A-Za-z]:\\/.test(output)).toBe(true);
+    expect(await build("build", "-c", "app/views/**/*.erb", "-o", output)).toBe(0);
+    expect(await readFile(output, "utf8")).toMatch(ruleFor("btn"));
+  });
 
   // A quoted variable left empty by a script; written as given, it names a file of spaces.
   it("takes an --output of only spaces as missing", async () => {
@@ -645,10 +725,23 @@ describe("failures", () => {
     [["--content", "--output=out.css"], "--content"],
     [["-c", "a.html", "--output", "--aesthetic", "glass"], "--output"],
     [["-c", "a.html", "-o", "--help"], "--output"],
+    // A short option with its value attached, for each short option there is.
+    [["-c", "-oout.css"], "--content"],
+    [["-c", "a.html", "-o", "-capp/views/a.html"], "--output"],
   ])("says only that a value is missing when %j gives the next option instead", async (args, name) => {
     expect(await failureOf("build", ...args)).toBe(
       `chs: option "${name}" is missing its value; run "chs --help" for the options.`,
     );
+  });
+
+  // 18 groups of two took Node.js's glob more than a minute; the limit itself is `@codenhub/scan`'s, tested there.
+  it("refuses a --content glob whose braces expand past the limit, naming it", async () => {
+    const entry = `app/views/${"{a,b}".repeat(11)}.erb`;
+
+    expect(await failureOf("build", "-c", entry, "-o", "app.css")).toBe(
+      `chs: --content "${entry}" expands to 2048 patterns through its braces, more than the 1024 a glob may; use fewer alternatives, or a * in place of a list.`,
+    );
+    expect(await readdir(project)).toEqual(["app"]);
   });
 
   it("says a --content folder is a folder and shows a glob for its files", async () => {
@@ -667,8 +760,10 @@ describe("failures", () => {
     expect(await failureOf("-c", "app/views/**/*.erb", "-o", "app.css")).toMatch(/build/);
   });
 
-  it("rejects an unknown command", async () => {
-    expect(await failureOf("watch", "-c", "app/views/**/*.erb", "-o", "app.css")).toMatch(/"watch"/);
+  it("rejects an unknown command, naming the commands there are", async () => {
+    expect(await failureOf("watch", "-c", "app/views/**/*.erb", "-o", "app.css")).toBe(
+      'chs: unknown command "watch"; the commands are "build" and "help".',
+    );
   });
 
   it("rejects a Node.js older than the engines floor, naming both versions", async () => {
@@ -873,6 +968,17 @@ describe("help and version", () => {
     expect(await build("--help")).toBe(0);
     expect(stdout.join("\n")).toMatch(/chs build --content <glob>/);
     expect(stdout.join("\n")).toMatch(/--aesthetic <name> .*chunky-tile, cyber, glass, neobrutalism, pixel, sketch/);
+    expect(stderr).toEqual([]);
+  });
+
+  it.each([[["help"]], [["help", "build"]]])("prints the same usage with %j and exits 0", async (argv) => {
+    expect(await build("--help")).toBe(0);
+    const usage = stdout;
+
+    stdout = [];
+    expect(await build(...argv)).toBe(0);
+    expect(stdout).toEqual(usage);
+    expect(stdout.join("\n")).toMatch(/^ {7}chs help$/m);
     expect(stderr).toEqual([]);
   });
 
