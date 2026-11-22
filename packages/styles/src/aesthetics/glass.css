@@ -97,6 +97,19 @@
        two extremes bound every backdrop of one colour; a busy one blurs to
        something between them. */
     --ui-surface-ground: color-mix(in srgb, var(--color-background) 59%, transparent);
+    /* A pane's ground under a control placed straight in the region, with
+       no pane around it: a ghost button rested on the page itself, and over
+       a black backdrop a light page's label printed at 1.17:1. Unblurred,
+       for the reason controls stay solid above. Thicker than a pane's, since
+       a control tints it: on 59% a default badge printed at 3.99:1 and a
+       `.solid` field at 3.48:1 in dark over white, an unchecked `.solid`
+       checkbox's edge at 2.71:1. 69% is the thinnest ground that holds every
+       presentation's text at 4.5:1 and a toggle's edge at 3:1 over a black
+       or a white backdrop; 68% left that field at 4.48:1. The same under
+       liquid: a control is not a pane, and liquid's clearer ground is a
+       pane's trade-off. `box` lays it under the outermost box only, and
+       `contrast.spec.ts` measures it. */
+    --_region-ground: color-mix(in srgb, var(--color-background) 69%, transparent);
 
     /* Two layers pulling in with negative spread, so the shadow tucks under the
        surface instead of haloing onto the backdrop. It is the one shipped aesthetic
@@ -147,9 +160,11 @@
     font-family: var(--font-default, ui-sans-serif, system-ui, sans-serif);
   }
 
-  /* A region of another aesthetic nested in glass draws its own line. */
+  /* A region of another aesthetic nested in glass draws its own line, and
+     rests its controls on nothing: its panes are opaque. */
   :is(.neobrutalism, .pixel, .chunky-tile, .cyber, .sketch) {
     --_unfilled-ink: initial;
+    --_region-ground: initial;
   }
 
   /* Transparency is the whole aesthetic, so the honest degradation is an opaque
@@ -163,6 +178,7 @@
     .glass {
       --ui-backdrop: none;
       --ui-surface-ground: var(--color-background);
+      --_region-ground: var(--color-background);
     }
   }
 
@@ -170,12 +186,14 @@
     .glass:not(:where(:root[data-contrast="standard"], :root[data-contrast="standard"] *)) {
       --ui-backdrop: none;
       --ui-surface-ground: var(--color-background);
+      --_region-ground: var(--color-background);
     }
   }
 
   .glass:where(:root[data-contrast="more"], :root[data-contrast="more"] *) {
     --ui-backdrop: none;
     --ui-surface-ground: var(--color-background);
+    --_region-ground: var(--color-background);
   }
 
   /* More contrast also takes the ground whole, above, and then the white
@@ -222,8 +240,9 @@
     --ui-corner-shape: squircle;
   }
 
-  /* The layers' values, on a solo element too: it draws the same two. */
-  .glass-liquid {
+  /* The layers' values, on a solo element too: it draws the same two. On a
+     glass region too, which publishes the blur as liquid's backdrop below. */
+  :is(.glass, .glass-liquid) {
     --_glass-liquid-blur: blur(2px) saturate(1.8);
 
     /* The lens is its own layer rather than a second function in the blur's
@@ -263,37 +282,52 @@
 
   /* The glass material the modifier changes, where glass is in scope: on the
      same element, or on a surface whose nearest aesthetic region is glass.
-     The second selector of each pair takes back a glass region re-entered
-     inside another aesthetic nested in glass; a region nested deeper than
-     that is not told apart. Matched on `.glass *` alone, a liquid card in a
-     pixel region nested in glass took liquid's ground and rim.
+     The nearest region decides at any depth, so each region publishes the
+     material a liquid element inside it takes, and inheritance hands the
+     element the nearest one's: glass the clearer pane below, every other
+     aesthetic its own values, which leave the element as it would be without
+     the modifier. Matched on selectors instead, a liquid card in a pixel
+     region nested in glass took liquid's ground and rim, and a region nested
+     two levels deeper -- glass, pixel, glass, pixel -- could not be told
+     apart. Predictable: the class means the same thing however deep it sits.
+     The list names the other aesthetics, and `registry.test.ts` fails when one
+     is missing.
 
      The backdrop is liquid's lighter blur, for whatever frosts under glass and
      takes no layers below: a bare `<table>` under `/native`. With the backdrop
      cleared here it kept the clearer ground with nothing blurred behind it. A
      host of the layers clears its own. */
-  .glass.glass-liquid:not(.glass-solo),
-  .glass .glass-liquid:not(.glass-solo):not(:where(.glass :is(.neobrutalism, .pixel, .chunky-tile, .cyber, .sketch) *)),
-  .glass :where(:is(.neobrutalism, .pixel, .chunky-tile, .cyber, .sketch) .glass) .glass-liquid:not(.glass-solo) {
-    --ui-ink: light-dark(rgb(255 255 255 / 0.45), rgb(255 255 255 / 0.16));
+  .glass {
+    --_liquid-ink: light-dark(rgb(255 255 255 / 0.45), rgb(255 255 255 / 0.16));
     /* Clearer than glass's, and below the text rule by design: body text fell
        to 1.86:1 over a white backdrop in dark and 2.06:1 over black in light.
        `contrast.spec.ts` holds it at that floor and docs/usage/aesthetics.md
        says where it is safe. */
-    --ui-surface-ground: color-mix(in srgb, var(--color-background) 30%, transparent);
-    --ui-surface-image: initial;
-    --ui-backdrop: var(--_glass-liquid-blur);
+    --_liquid-surface-ground: color-mix(in srgb, var(--color-background) 30%, transparent);
+    --_liquid-surface-image: initial;
+    --_liquid-backdrop: var(--_glass-liquid-blur);
+  }
+
+  :is(.neobrutalism, .pixel, .chunky-tile, .cyber, .sketch) {
+    --_liquid-ink: var(--ui-ink);
+    --_liquid-surface-ground: var(--ui-surface-ground);
+    --_liquid-surface-image: var(--ui-surface-image);
+    --_liquid-backdrop: var(--ui-backdrop);
+  }
+
+  .glass-liquid:not(.glass-solo):is(.glass, .glass *) {
+    --ui-ink: var(--_liquid-ink);
+    --ui-surface-ground: var(--_liquid-surface-ground);
+    --ui-surface-image: var(--_liquid-surface-image);
+    --ui-backdrop: var(--_liquid-backdrop);
   }
 
   @media (prefers-reduced-transparency: reduce), (forced-colors: active) {
-    .glass.glass-liquid:not(.glass-solo),
-    .glass
-      .glass-liquid:not(.glass-solo):not(:where(.glass :is(.neobrutalism, .pixel, .chunky-tile, .cyber, .sketch) *)),
-    .glass :where(:is(.neobrutalism, .pixel, .chunky-tile, .cyber, .sketch) .glass) .glass-liquid:not(.glass-solo) {
-      --ui-surface-ground: var(--color-background);
+    .glass {
+      --_liquid-surface-ground: var(--color-background);
     }
 
-    .glass-liquid {
+    :is(.glass, .glass-liquid) {
       --_glass-liquid-blur: none;
       --_glass-liquid-lens: none;
       --_glass-liquid-lens-control: none;
@@ -301,67 +335,27 @@
   }
 
   @media (prefers-contrast: more) {
-    .glass.glass-liquid:not(.glass-solo):not(
-        :where(:root[data-contrast="standard"], :root[data-contrast="standard"] *)
-      ),
-    .glass
-      .glass-liquid:not(.glass-solo):not(
-        :where(.glass :is(.neobrutalism, .pixel, .chunky-tile, .cyber, .sketch) *)
-      ):not(:where(:root[data-contrast="standard"], :root[data-contrast="standard"] *)),
-    .glass
-      :where(:is(.neobrutalism, .pixel, .chunky-tile, .cyber, .sketch) .glass)
-      .glass-liquid:not(.glass-solo):not(:where(:root[data-contrast="standard"], :root[data-contrast="standard"] *)) {
-      --ui-surface-ground: var(--color-background);
+    .glass:not(:where(:root[data-contrast="standard"], :root[data-contrast="standard"] *)) {
+      --_liquid-ink: var(--color-control-border);
+      --_liquid-surface-ground: var(--color-background);
     }
 
-    .glass-liquid:not(:where(:root[data-contrast="standard"], :root[data-contrast="standard"] *)) {
+    :is(.glass, .glass-liquid):not(:where(:root[data-contrast="standard"], :root[data-contrast="standard"] *)) {
       --_glass-liquid-blur: none;
       --_glass-liquid-lens: none;
       --_glass-liquid-lens-control: none;
     }
   }
 
-  .glass.glass-liquid:not(.glass-solo):where(:root[data-contrast="more"], :root[data-contrast="more"] *),
-  .glass
-    .glass-liquid:not(.glass-solo):not(
-      :where(.glass :is(.neobrutalism, .pixel, .chunky-tile, .cyber, .sketch) *)
-    ):where(:root[data-contrast="more"], :root[data-contrast="more"] *),
-  .glass
-    :where(:is(.neobrutalism, .pixel, .chunky-tile, .cyber, .sketch) .glass)
-    .glass-liquid:not(.glass-solo):where(:root[data-contrast="more"], :root[data-contrast="more"] *) {
-    --ui-surface-ground: var(--color-background);
+  .glass:where(:root[data-contrast="more"], :root[data-contrast="more"] *) {
+    --_liquid-ink: var(--color-control-border);
+    --_liquid-surface-ground: var(--color-background);
   }
 
-  .glass-liquid:where(:root[data-contrast="more"], :root[data-contrast="more"] *) {
+  :is(.glass, .glass-liquid):where(:root[data-contrast="more"], :root[data-contrast="more"] *) {
     --_glass-liquid-blur: none;
     --_glass-liquid-lens: none;
     --_glass-liquid-lens-control: none;
-  }
-
-  @media (prefers-contrast: more) {
-    .glass.glass-liquid:not(.glass-solo):not(
-        :where(:root[data-contrast="standard"], :root[data-contrast="standard"] *)
-      ),
-    .glass
-      .glass-liquid:not(.glass-solo):not(
-        :where(.glass :is(.neobrutalism, .pixel, .chunky-tile, .cyber, .sketch) *)
-      ):not(:where(:root[data-contrast="standard"], :root[data-contrast="standard"] *)),
-    .glass
-      :where(:is(.neobrutalism, .pixel, .chunky-tile, .cyber, .sketch) .glass)
-      .glass-liquid:not(.glass-solo):not(:where(:root[data-contrast="standard"], :root[data-contrast="standard"] *)) {
-      --ui-ink: var(--color-control-border);
-    }
-  }
-
-  .glass.glass-liquid:not(.glass-solo):where(:root[data-contrast="more"], :root[data-contrast="more"] *),
-  .glass
-    .glass-liquid:not(.glass-solo):not(
-      :where(.glass :is(.neobrutalism, .pixel, .chunky-tile, .cyber, .sketch) *)
-    ):where(:root[data-contrast="more"], :root[data-contrast="more"] *),
-  .glass
-    :where(:is(.neobrutalism, .pixel, .chunky-tile, .cyber, .sketch) .glass)
-    .glass-liquid:not(.glass-solo):where(:root[data-contrast="more"], :root[data-contrast="more"] *) {
-    --ui-ink: var(--color-control-border);
   }
 
   /* The layers: a treatment no token reaches. Two pseudo-elements behind the
@@ -458,16 +452,18 @@
       pointer-events: none;
     }
 
-    /* Prefixed first, for the reason `surface` gives. */
+    /* Prefixed first, for the reason `surface` gives. Gated on the flag as
+       `surface` gates them: ungated, a liquid button in a pixel region nested
+       in glass drew no layer but still computed the blur and the lens on both. */
     &::before {
-      -webkit-backdrop-filter: var(--_glass-liquid-blur);
-      backdrop-filter: var(--_glass-liquid-blur);
+      -webkit-backdrop-filter: var(--_glass-liquid-on) var(--_glass-liquid-blur);
+      backdrop-filter: var(--_glass-liquid-on) var(--_glass-liquid-blur);
     }
 
     &::after {
-      backdrop-filter: var(--_glass-liquid-lens);
-      background-image: var(--_glass-liquid-sheen);
-      box-shadow: var(--_glass-liquid-rim);
+      backdrop-filter: var(--_glass-liquid-on) var(--_glass-liquid-lens);
+      background-image: var(--_glass-liquid-on) var(--_glass-liquid-sheen);
+      box-shadow: var(--_glass-liquid-on) var(--_glass-liquid-rim);
     }
   }
 

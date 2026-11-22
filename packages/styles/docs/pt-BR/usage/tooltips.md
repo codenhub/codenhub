@@ -2,7 +2,7 @@
 title: Tooltips
 description: Ajuda de campo que abre no hover e no foco, como ligá-la a leitores de tela e à tecla Escape, e onde um tooltip é cortado.
 order: 4
-source: 55ba06d87dce33f24cc6dc8bf87b68e0a5d14521
+source: c1100c3ce7f2d933f88758766ccdb219541af5f2
 ---
 
 # Tooltips
@@ -26,7 +26,7 @@ O switch "Public profile" da tela de configurações merece uma explicação cur
 
 As três partes:
 
-- `.tooltip` envolve o gatilho e a mensagem. Ele posiciona a mensagem e não pinta nada.
+- `.tooltip` envolve o gatilho e a mensagem. Ele posiciona a mensagem e não pinta nada. Ele assume o tamanho do gatilho em qualquer layout, então um `.stack`, um `.field` ou um grid não o esticam nem afastam a mensagem do gatilho. Um gatilho dimensionado em porcentagem, como um `.ipt` de largura total, assume ali o próprio tamanho; dê ao `.tooltip` a largura que você quer para o gatilho.
 - `.tooltip-bubble` é a mensagem. É um elemento de verdade, então pode ter um `id` para o qual o gatilho aponta.
 - `.tooltip-icon` é um gatilho pequeno e redondo, para uma mensagem sem mais nada a que se prender. Qualquer elemento focável pode ser o gatilho no lugar dele: envolva um `.btn` existente em `.tooltip` e ele mantém o próprio visual.
 

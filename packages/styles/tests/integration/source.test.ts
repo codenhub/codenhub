@@ -93,3 +93,36 @@ test("LICENSE ends with NOTICE", async () => {
 
   expect(license.endsWith(notice)).toBe(true);
 });
+
+/* A control is disabled four ways, and `box` dims every one: `:disabled`,
+   `.disabled`, `aria-disabled="true"`, and `data-disabled`. A selector that
+   named `:disabled` alone answered one of them, so a field disabled by
+   `aria-disabled` inside an `.input-group` dimmed only itself and the group
+   kept its hover. Every selector naming `:disabled` names the other three
+   with it, in the comma list `:disabled` sits in. */
+test("every selector that names :disabled names every disabled spelling", async () => {
+  const { readdir } = await import("node:fs/promises");
+  const files = (await readdir(path.join(packageRoot, "src"), { recursive: true })).filter((file) =>
+    file.endsWith(".css"),
+  );
+  const spellings = [".disabled", '[aria-disabled="true"]', "[data-disabled]"];
+  const lonely: string[] = [];
+
+  for (const file of files) {
+    // oxlint-disable-next-line no-await-in-loop -- a few dozen small files, read in turn.
+    const source = (await readFile(path.join(packageRoot, "src", file), "utf8")).replaceAll(/\/\*[\s\S]*?\*\//g, "");
+
+    for (const { index } of source.matchAll(/:disabled\b/g)) {
+      /* The selector the match sits in: from the end of the previous rule or
+         declaration to the brace that opens its block. */
+      const start = Math.max(...["{", "}", ";"].map((mark) => source.lastIndexOf(mark, index))) + 1;
+      const selector = source.slice(start, source.indexOf("{", index));
+
+      if (!spellings.every((spelling) => selector.includes(spelling))) {
+        lonely.push(`${file}: ${selector.replaceAll(/\s+/g, " ").trim()}`);
+      }
+    }
+  }
+
+  expect(lonely).toEqual([]);
+});

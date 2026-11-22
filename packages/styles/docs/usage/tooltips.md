@@ -25,7 +25,7 @@ The "Public profile" switch on the settings screen deserves a short explanation:
 
 The three parts:
 
-- `.tooltip` wraps the trigger and the message. It positions the message and paints nothing itself.
+- `.tooltip` wraps the trigger and the message. It positions the message and paints nothing itself. It takes its trigger's size in any layout, so a `.stack`, a `.field`, or a grid does not stretch it and move the message off the trigger. A trigger sized by a percentage, such as a full-width `.ipt`, takes its own size inside it instead; give the `.tooltip` the width you want the trigger to have.
 - `.tooltip-bubble` is the message. It is a real element, so it can have an `id` that the trigger points to.
 - `.tooltip-icon` is a small round trigger, for a message with nothing else to attach to. Any focusable element can be the trigger instead: wrap an existing `.btn` in `.tooltip` and it keeps its own look.
 
