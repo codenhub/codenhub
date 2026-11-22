@@ -16,11 +16,10 @@ The examples continue the tea shop's `en` and `pt` app from the earlier pages. S
 // src/routing.ts
 import { createLocaleRouting } from "@codenhub/i18n/routing";
 
-export const routing = createLocaleRouting({
-  locales: ["en", "pt"] as const,
-  defaultLocale: "en",
-  localePrefix: "except-default",
-});
+export const locales = ["en", "pt"] as const;
+export const defaultLocale = "en";
+
+export const routing = createLocaleRouting({ locales, defaultLocale, localePrefix: "except-default" });
 ```
 
 `localePrefix` decides which paths start with their locale. It is required and has no default, because each choice gives your site different URLs, and URLs are hard to change once people have bookmarked them. Leaving it out throws `TypeError: [I18n] Invalid locale routing configuration: localePrefix: Expected "always", "except-default", or "when-ambiguous", received undefined`.
@@ -37,7 +36,7 @@ How to choose:
 - `"always"` makes every URL name its language, so `/about` is not a page, which suits a site that redirects `/` to the visitor's language.
 - `"when-ambiguous"` drops the prefix from translated paths that can only belong to one language, and is worth reading about before you pick it.
 
-Use the same `locales` and `defaultLocale` as your manager. Routing is separate from the manager, so it also works where no translation happens, such as in a server's redirect logic.
+Use the same `locales` and `defaultLocale` as your manager, by importing these constants where you create it. Routing is separate from the manager, so it also works where no translation happens, such as in a server's redirect logic.
 
 If you keep the configuration in a variable before passing it in, put `as const` after the whole object: `const config = { … } as const`. Without it, TypeScript widens `localePrefix` to `string`, and `createLocaleRouting` rejects it at compile time. `as const` on `localePrefix` alone compiles, but types every locale as `string`, so `localize("/about", "fr")` compiles too.
 
@@ -167,13 +166,25 @@ Going through `parse()` matters once paths are translated: `/sobre` is a Portugu
 Use the same list for the `<link rel="alternate" hreflang>` tags that tell search engines about each language. Add an `x-default` tag for readers whose language you don't offer, pointing at the default locale's page, when it has one:
 
 ```ts
-const defaultLocale = "en"; // the defaultLocale you configured
+import { defaultLocale, routing } from "./routing";
+
+// Your framework's own escaping does the same.
+const escapeHtml = (text: string) => text.replaceAll("&", "&amp;").replaceAll('"', "&quot;").replaceAll("'", "&#39;").replaceAll("<", "&lt;").replaceAll(">", "&gt;");
+
 const link = (hreflang: string, pathname: string) => `<link rel="alternate" hreflang="${escapeHtml(hreflang)}" href="${escapeHtml(new URL(pathname, "https://example.com").href)}">`;
 
-const tags = route.alternates.map((page) => link(page.locale, page.pathname));
-const fallback = route.alternates.find((page) => page.locale === defaultLocale);
-if (fallback !== undefined) {
-  tags.push(link("x-default", fallback.pathname));
+// The tags for a request's `url.pathname`, or none for a path that is no page.
+export function alternateLinks(pathname: string): string[] {
+  const route = routing.parse(pathname);
+  if (route === undefined) {
+    return [];
+  }
+  const tags = route.alternates.map((page) => link(page.locale, page.pathname));
+  const fallback = route.alternates.find((page) => page.locale === defaultLocale);
+  if (fallback !== undefined) {
+    tags.push(link("x-default", fallback.pathname));
+  }
+  return tags;
 }
 ```
 
@@ -213,7 +224,7 @@ How the table reads:
 - **Anything the table doesn't list keeps its words.** `/blog` is `/pt/blog`, and `/products/42` in Spanish is `/es/products/42`, since only Portuguese translates it.
 - **Fixed segments match case-sensitively**, as URLs do, so `/pt/Sobre` is not the about page. Only the locale prefix ignores case.
 - **Prefer plain letters in paths.** Routing doesn't change your words, so `/servicos` is what you get only if you write `/servicos`. Most sites drop accents from URLs, because an accented path is shown percent-encoded wherever it gets copied as text, such as `/servi%C3%A7os`. Accents work too: `"/serviços"` matches the `/servi%C3%A7os` that browsers send, and `localize()` returns the encoded form, as it does for every segment, such as a product slug, and as `parse()` returns its `pathname`. So a static build that writes a folder for that path has to decode it first, as in [Build a static site](server-rendering.md#build-a-static-site).
-- **A page comes back in one spelling.** `parse()` writes every segment, listed or not, as RFC 3986 normalizes a URL: an escaped letter, digit, or `-._~` is decoded, every other escape is written in upper case, and a character a URL encodes, such as `é`, is encoded. So `/%61bout` and `/pt/%73obre`, odd spellings of `/about` and `/pt/sobre`, both give `pathname: "/about"`, and `/products/caf%c3%a9` gives `/products/caf%C3%A9`. An escaped reserved character stays escaped, so `/products/c%2B%2B` and `/products/c++` are two pages, since a server may read `%2B` differently from `+`. So pass the pathname as the URL writes it, such as `new URL(request.url).pathname`, not one your framework decoded: decoded, `/100%25` becomes `/100%`, which `parse()` refuses.
+- **A page comes back in one spelling.** `parse()` writes every segment, listed or not, as RFC 3986 normalizes a URL: an escaped letter, digit, or `-._~` is decoded, every other escape is written in upper case, and a character a URL encodes, such as `é`, is encoded. So `/%61bout` and `/pt/%73obre`, odd spellings of `/about` and `/pt/sobre`, both give `pathname: "/about"`, and `/products/caf%c3%a9` gives `/products/caf%C3%A9`. An escaped reserved character stays escaped, so `/products/c%2B%2B` and `/products/c++` are two pages, since a server may read `%2B` differently from `+`. So pass the pathname as the URL writes it, such as `new URL(request.url).pathname`, not one your framework decoded: decoded, `/products/c%2B%2B` becomes `/products/c++`, another page.
 - **A fixed segment beats a parameter, and a parameter beats a catch-all.** With both `/products/new` and `/products/:id` listed, `/products/new` is the new-product page, whichever order the table lists them in. With `/help/contact` and `/help/:path*`, `/help/contact` is the contact page and every other `/help/…` path goes to the catch-all.
 - **The default locale can be translated too.** A Portuguese-first site with English code can use `defaultLocale: "pt"` and `{ "/about": { pt: "/sobre" } }`, so `/sobre` is the Portuguese page and `/en/about` the English one.
 
@@ -427,15 +438,17 @@ This is the boring part of the page. It is also the part that decides whether a 
 - **A malformed escape**, a `%` not followed by two hex digits, as in `/50%off`. Write `%25` for a literal `%`… which is also refused, per the previous rule, so take the `%` out of the path.
 - **More than 8,192 characters or 100 segments**, or a path whose canonical path would be longer than that, as a short translated path can be when its table entry is long. Servers and proxies cut off URLs around this length anyway, and no page is 100 folders deep; a request of thousands of one-letter segments would otherwise cost work in every locale.
 
-A request can carry any of these, such as a scanner asking for `//wp-login.php`, so `parse()` returns `undefined` for them, and the same 404 answers them as any other path that is no page. `localize()` and `localizeAll()` build links from your own paths rather than read requests, so for the same paths they throw a `TypeError` that quotes the path and names the rule, such as `TypeError: [I18n] pathname "/help/../admin" must not contain a dot segment, . or ..`, and you fix the path in your code.
+A request can carry any of these, such as a scanner asking for `//wp-login.php`, so `parse()` returns `undefined` for them, and the same 404 answers them as any other path that is no page. `localize()` and `localizeAll()` build links from your own paths rather than read requests, so for the same paths they throw a `TypeError` that quotes the path and names the rule, such as `TypeError: [I18n] pathname "/help/../admin" must not contain a dot segment, . or ..`, and you fix the path in your code. A path that a URL reads as starting another host isn't quoted, as below.
 
 Every method, `parse()` included, throws a `TypeError` for a value that is not a URL's pathname at all:
 
 - One that does not start with `/`, such as a full URL: `TypeError: [I18n] pathname must start with /; pass url.pathname`.
-- One that contains `?` or `#`, such as Node's `request.url` with its query string: `TypeError: [I18n] pathname "/search?…" must not contain ?, which starts a query; pass url.pathname`. Neither error quotes the URL's user info, query, or fragment, which can hold a credential, and a path that starts with `//`, as a protocol-relative URL does, is not quoted at all: `TypeError: [I18n] pathname must not start with //, which starts a URL's host; pass url.pathname`.
+- One that contains `?` or `#`, such as Node's `request.url` with its query string: `TypeError: [I18n] pathname "/search?…" must not contain ?, which starts a query; pass url.pathname`. The error names whichever of the two comes first.
 - One that is not a string: `TypeError: [I18n] pathname must be a string, received undefined`.
 
 That is a mistake in the calling code, not a request to answer, so it fails loudly instead of answering 404 to every URL with a query.
+
+No routing error quotes what a URL reads as user info, a query, or a fragment, which can hold a credential. A path with `?` or `#` is quoted only up to it, and one that a URL reads as starting another host isn't quoted at all: one that starts with `//` or `/\`, as a protocol-relative URL does, even with a tab or line break between the two, since a URL reads `\` as `/` and skips tabs and line breaks. Its error reads `TypeError: [I18n] pathname must not start with // or /\, which a URL reads as the start of its host, even with a tab or line break between; pass url.pathname`.
 
 Ordinary escapes, such as `%20` and `%C3%A7`, are fine, and a trailing slash is kept: `/pt/sobre/` parses to `/about/`.
 

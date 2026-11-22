@@ -5,7 +5,14 @@ import { describe, expect, it, vi } from "vitest";
 
 import { createI18n } from "../index";
 import { getI18nInternals } from "./internals";
-import { MessageSyntaxError, parseCachedMessage, parseMessage, parseMessageWithCost } from "./message-format";
+import {
+  getDateTimeFormat,
+  getNumberFormat,
+  MessageSyntaxError,
+  parseCachedMessage,
+  parseMessage,
+  parseMessageWithCost,
+} from "./message-format";
 
 const messages = {
   hello: "Hello, {name}!",
@@ -451,6 +458,71 @@ describe("ICU messages", () => {
   });
 });
 
+// Every identifier the message grammar reads: an argument's name in each form, a select key, a tag's name, and a
+// placeholder of invalid syntax.
+describe("names in a message", () => {
+  const read = async (name: string) => {
+    const dictionary = {
+      plain: `{${name}}`,
+      number: `{${name}, number}`,
+      plural: `{${name}, plural, one {# one} other {# more}}`,
+      select: `{g, select, ${name} {chosen} other {other}}`,
+      tag: `<${name}>bold</${name}>`,
+      invalid: `{${name}} {`,
+    };
+    const i18n = createI18n({ defaultLocale: "en", locales: ["en"], loadLocale: () => dictionary, isSilent: true });
+    await i18n.init();
+    return {
+      plain: i18n.t("plain", { [name]: "x" }),
+      number: i18n.t("number", { [name]: 1234 }),
+      plural: i18n.t("plural", { [name]: 1 }),
+      select: i18n.t("select", { g: name }),
+      tag: i18n.rich("tag"),
+      invalid: i18n.t("invalid", { [name]: "x" }),
+    };
+  };
+
+  it.each([
+    { script: "ASCII", name: "user_1" },
+    { script: "Latin with a diacritic", name: "año" },
+    { script: "Cyrillic", name: "имя" },
+    { script: "Han", name: "名前" },
+    { script: "Devanagari, with combining marks", name: "नाम" },
+    { script: "Arabic, with Arabic-Indic digits", name: "اسم١" },
+    { script: "a letter outside the BMP", name: "𠮷野" },
+  ])("should read a name in $script", async ({ name }) => {
+    expect(await read(name)).toEqual({
+      plain: "x",
+      number: "1,234",
+      plural: "1 one",
+      select: "chosen",
+      tag: [{ tag: name, children: ["bold"] }],
+      invalid: "x {",
+    });
+  });
+
+  it.each([
+    { kind: "a symbol", name: "a€" },
+    { kind: "a space inside", name: "a b" },
+    { kind: "punctuation", name: "a.b" },
+    { kind: "an emoji", name: "a😀" },
+  ])("should not read a name with $kind", async ({ name }) => {
+    const result = await read(name);
+
+    expect(result.plain).toBe(`{${name}}`);
+    expect(result.select).toBe(`{g, select, ${name} {chosen} other {other}}`);
+    expect(result.tag).toEqual([`<${name}>bold</${name}>`]);
+    expect(result.invalid).toBe(`{${name}} {`);
+  });
+
+  it("should take a hyphen in a select key, and not in an argument's name", async () => {
+    const result = await read("año-nuevo");
+
+    expect(result.select).toBe("chosen");
+    expect(result.plain).toBe("{año-nuevo}");
+  });
+});
+
 describe("parseMessage", () => {
   it.each([
     ["{", "an unclosed argument"],
@@ -620,6 +692,26 @@ describe("formatters", () => {
     expect(i18n.formatDate(0, full)).toBe(new Intl.DateTimeFormat("en", full).format(0));
   });
 
+  // `Intl` reads a number option as a number and `hour12` as a boolean, so a long string is valid for each.
+  it.each([
+    {
+      formatter: "number",
+      get: (options: object) => getNumberFormat("en", options),
+      long: { minimumFractionDigits: `${" ".repeat(10_000)}2` },
+      short: { minimumFractionDigits: 2 },
+    },
+    {
+      formatter: "date",
+      get: (options: object) => getDateTimeFormat("en", options),
+      long: { hour12: "x".repeat(10_000) },
+      short: { hour12: true },
+    },
+  ])("should not cache a $formatter formatter whose options would make a long key", ({ get, long, short }) => {
+    expect(get(short)).toBe(get(short));
+    expect(get(long)).not.toBe(get(long));
+    expect(get(long).resolvedOptions()).toEqual(get(short).resolvedOptions());
+  });
+
   it("should read inherited number options without changing later calls", async () => {
     const i18n = create();
     const other = create();
@@ -719,8 +811,15 @@ describe("parseCachedMessage", () => {
     expect(parseCachedMessage("Hello {name")).toBe("Expected , at character 12");
   });
 
-  it("should parse quoted text with doubled apostrophes into the same text", () => {
-    expect(parseMessage("a '{b ''c'' d}' e")).toEqual([{ kind: "text", text: "a {b 'c' d} e" }]);
-    expect(parseMessage("it''s '{open")).toEqual([{ kind: "text", text: "it's {open" }]);
+  it("should parse quoted text with doubled apostrophes into a quoted node of its own", () => {
+    expect(parseMessage("a '{b ''c'' d}' e")).toEqual([
+      { kind: "text", text: "a " },
+      { kind: "text", text: "{b 'c' d}", isQuoted: true },
+      { kind: "text", text: " e" },
+    ]);
+    expect(parseMessage("it''s '{open")).toEqual([
+      { kind: "text", text: "it's " },
+      { kind: "text", text: "{open", isQuoted: true },
+    ]);
   });
 });

@@ -1,6 +1,10 @@
 import type { RichText } from "./message-format";
 import type { TranslateParams } from "./message-params";
 
+// The values a call passes when its key's type is given, as in `t<"greeting">(…)`: an interface's, which has no index
+// signature, or an object literal's, whose extra values the index signature keeps from being excess properties.
+type DefaultValues = object | Readonly<Record<string, unknown>>;
+
 /** Text direction used when rendering a locale. */
 export type LocaleDirection = "ltr" | "rtl";
 
@@ -76,7 +80,10 @@ export interface I18nConfig<TLocale extends string = string, TMessages = unknown
    * accept any string as a locale.
    */
   defaultLocale: NoInfer<TLocale>;
-  /** Non-empty, case-insensitively unique ASCII locale identifiers composed of alphanumeric hyphen-separated subtags. */
+  /**
+   * Non-empty, case-insensitively unique language tags that `Intl` accepts, such as `pt-BR`, or private-use tags, such
+   * as `x-pirate`.
+   */
   locales: readonly TLocale[];
   /**
    * Loads a flat or nested dictionary through a consumer-selected transport; callback failures become `I18nError`.
@@ -99,8 +106,8 @@ export interface I18nConfig<TLocale extends string = string, TMessages = unknown
    * warning.
    * Exceptions propagate from the lookup, so a test can throw here to fail on a missing key.
    *
-   * @defaultValue A `console.warn` once for each of the 1,000 most recent locale/key pairs, shared by every manager in
-   * the process, unless `isSilent`.
+   * @defaultValue A `console.warn` once for each of the roughly 1,000 most recent locale/key pairs, fewer for
+   * long keys, shared by every manager in the process, unless `isSilent`.
    */
   onMissingKey?: ((key: string, locale: NoInfer<TLocale>) => void) | undefined;
   /** Suppresses optional diagnostics, including the default missing-key warning, without suppressing failures. Defaults to `false`. */
@@ -141,7 +148,7 @@ export interface I18nLocaleChangeEventDetail<TLocale extends string = string> {
 export interface I18nEventMap<TLocale extends string = string> {
   /** Successful initialization event. */
   ready: CustomEvent<I18nReadyEventDetail<TLocale>>;
-  /** Successful active locale change event. */
+  /** Successful active locale change event, from `setLocale()` or an `init()` that switches a ready manager. */
   "locale-change": CustomEvent<I18nLocaleChangeEventDetail<TLocale>>;
 }
 
@@ -175,7 +182,8 @@ export interface I18n<TLocale extends string = string, TKey extends string = str
    * Atomically loads and activates an explicit locale or the default locale.
    *
    * @param options - Optional explicit locale selection.
-   * @returns A promise that resolves after loading completes. Applied initialization emits `ready`; a stale request,
+   * @returns A promise that resolves after loading completes. Applied initialization emits `ready`, and then, when it
+   * switches a manager that was already ready to another locale, `locale-change`; a stale request,
    * superseded by a later `init()` or `setLocale()`, resolves without changing state or emitting an event, even when its
    * loading fails, since the later call decides the locale. Failure leaves active state unchanged.
    * @throws {RangeError} When the locale is unsupported.
@@ -231,10 +239,10 @@ export interface I18n<TLocale extends string = string, TKey extends string = str
    * as whole subtags and with the same likely script, such as `pt` for `pt-BR`, then likely subtags, such as `zh-Hant`
    * for `zh-TW`, then the same language in the same likely script. `no` and `nb` count as one language, Norwegian
    * Bokmål, so either serves the other; Nynorsk, `nn`, stays apart. A locale in another script never matches, so with
-   * `zh`, which is Simplified, `zh-TW` tries the next preference. A configured locale `Intl.Locale` rejects has no likely
-   * script, so it matches by language, and by the script it names when it names one. When several configured locales share a preference's
-   * language and script and none matches it exactly or by likely region, the first in `locales` wins: list `es-419`
-   * before `es-ES` to serve `es-MX` from `es-419`. `es-ES`, and `es`, whose likely region is Spain, still match `es-ES`.
+   * `zh`, which is Simplified, `zh-TW` tries the next preference. A private-use locale, such as `x-pirate`, has no likely
+   * subtags, so it matches only exactly. When several configured locales share a preference's language and script and
+   * none matches it exactly or by likely region, the first in `locales` wins: list `es-419` before `es-ES` to serve `es-MX`
+   * from `es-419`. `es-ES`, and `es`, whose likely region is Spain, still match `es-ES`.
    *
    * @param preferences - Untrusted locale tags, most preferred first; blank, malformed, and non-string entries are
    * skipped, as are entries longer than 255 characters, and so is `und`, which names no language, unless a configured
@@ -258,8 +266,8 @@ export interface I18n<TLocale extends string = string, TKey extends string = str
    * `{n, selectordinal, …}` with `=N` and CLDR category options, an optional `offset:N`, and `#` for the number in the
    * plural's own forms, and `{v, select, …}`. Plural categories and every format use the locale of the dictionary that has the text. An
    * apostrophe before `{`, `}`, or, in a plural, `#` quotes them, and `''` is one apostrophe. A message that is not
-   * valid syntax warns once per process for its locale and text, unless silent, and only its `{name}` placeholders are
-   * filled.
+   * valid syntax warns once per process for its locale, key, and text, unless silent, and only its `{name}`
+   * placeholders are filled.
    *
    * When `params.count` is a number or bigint and the key is a group of plural forms rather than a text, such as
    * `{ one: "{count} item", other: "{count} items" }`, the form is chosen with `Intl.PluralRules` for the locale of the
@@ -275,7 +283,8 @@ export interface I18n<TLocale extends string = string, TKey extends string = str
    * @param params - Argument values, read from own properties. An argument without a usable value, such as a string
    * for `{n, number}`, is left as written. A string in `{name}` is inserted as written, a number as `{name, number}`
    * would format it, and a date as `{name, date}` would. A bigint is taken wherever a number is. A numeric `count`
-   * also selects a plural form.
+   * also selects a plural form. Where the dictionary type has the message as a literal, the values it uses are
+   * type-checked, and any other value may have any type, such as the `isAdmin` of a `User` passed whole.
    * @returns The translated text, or the trimmed key when no dictionary has it. A miss calls `onMissingKey`, or
    * warns once per recent locale/key pair in the process unless silent.
    * @throws {Error} When called before successful initialization.
@@ -284,7 +293,7 @@ export interface I18n<TLocale extends string = string, TKey extends string = str
    * @throws {TypeError} When `params` is neither `undefined` nor an object, such as `null` passed from plain
    * JavaScript.
    */
-  translate<K extends TKey, TValues extends object = Readonly<Record<string, string | number | bigint | Date>>>(
+  translate<K extends TKey, TValues extends object = DefaultValues>(
     key: K,
     ...params: TranslateParams<TMessages, K, TValues>
   ): string;
@@ -314,7 +323,7 @@ export interface I18n<TLocale extends string = string, TKey extends string = str
   has(key: string): key is TKey;
 
   /** Short alias of {@link I18n.translate}, the same bound function. */
-  t<K extends TKey, TValues extends object = Readonly<Record<string, string | number | bigint | Date>>>(
+  t<K extends TKey, TValues extends object = DefaultValues>(
     key: K,
     ...params: TranslateParams<TMessages, K, TValues>
   ): string;
@@ -322,12 +331,12 @@ export interface I18n<TLocale extends string = string, TKey extends string = str
   /**
    * Translates a key as {@link I18n.translate} does, and returns its text and tags as parts for a framework to render,
    * so a translation can mark a link or bold text inside a sentence without HTML. Tags are `<name>…</name>` and
-   * `<name/>`, with a name of ASCII letters, digits, and `_`, written anywhere in the message's text, including inside a
-   * plural or select form. Values are text: a tag inside a value is never read. A `<` that doesn't form a tag, as in
-   * `a < b`, is text.
+   * `<name/>`, with a name of letters and digits in any script, and `_`, written anywhere in the message's text,
+   * including inside a plural or select form. Values are text: a tag inside a value is never read, nor is one in
+   * quoted text, such as `'{<b>}'`. A `<` that doesn't form a tag, as in `a < b`, is text.
    *
    * A message whose tags don't balance, nest past 10 levels, or cross the edge of a plural or select form warns once per
-   * process for its locale and text, unless silent, and returns the text as `t()` shows it, tags included, as one part.
+   * process for its locale, key, and text, unless silent, and returns the text as `t()` shows it, tags included, as one part.
    * A message with invalid syntax and a missing key return what `t()` returns, as one part.
    *
    * @example
@@ -342,7 +351,7 @@ export interface I18n<TLocale extends string = string, TKey extends string = str
    * @throws {Error} When called before successful initialization.
    * @throws {TypeError} When the key or `params` is rejected, as {@link I18n.translate} rejects them.
    */
-  rich<K extends TKey, TValues extends object = Readonly<Record<string, string | number | bigint | Date>>>(
+  rich<K extends TKey, TValues extends object = DefaultValues>(
     key: K,
     ...params: TranslateParams<TMessages, K, TValues>
   ): RichText;
@@ -406,8 +415,9 @@ export interface I18n<TLocale extends string = string, TKey extends string = str
   formatList(values: Iterable<string>, options?: Intl.ListFormatOptions): string;
 
   /**
-   * Calls a listener after every applied `init()` and every applied locale change, such as to re-render a framework.
-   * A stale or same-locale request, which changes nothing, does not call it.
+   * Calls a listener after every applied `init()` and every applied locale change, such as to re-render a framework,
+   * once per call, so an `init()` that changes the locale calls it once. A stale or same-locale request, which changes
+   * nothing, does not call it.
    *
    * @param listener - Called without arguments. An exception is reported as for any `EventTarget` listener: in a
    * browser, as an uncaught error that neither stops other listeners nor rejects the change; in Node.js, it crashes the
@@ -419,7 +429,8 @@ export interface I18n<TLocale extends string = string, TKey extends string = str
   /**
    * Adds a typed lifecycle event listener.
    *
-   * @param type - `ready`, dispatched after every applied `init()`, or `locale-change`, after every applied locale change.
+   * @param type - `ready`, dispatched after every applied `init()`, or `locale-change`, after every applied locale change,
+   * by `setLocale()` or by an `init()` that switches a ready manager, after its `ready`.
    * @param callback - Receives the event, whose `detail` holds the locale. An exception is reported as by
    * {@link I18n.subscribe}.
    * @param options - Standard `EventTarget` listener options, such as `{ once: true }`.

@@ -2,7 +2,7 @@
 title: Traduce una app de navegador
 description: Detecta y recuerda el idioma del visitante, mantén sincronizados lang y dir, vuelve a renderizar un framework, traduce HTML y ejecuta en un Web Worker.
 order: 2
-source: 3f61176770f045618c178c16faabb283c0548b56
+source: a90f4989909e44817e6494313805fe15477ffb13
 ---
 
 # Traduce una app de navegador
@@ -66,11 +66,16 @@ const picker = document.querySelector<HTMLSelectElement>("#language")!;
 
 picker.value = i18n.locale;
 picker.addEventListener("change", async () => {
-  await i18n.setLocale(picker.value as (typeof i18n.locales)[number]);
+  try {
+    await i18n.setLocale(picker.value as (typeof i18n.locales)[number]);
+  } finally {
+    // Muestra el idioma en uso, aunque su diccionario no cargara o un cambio posterior adelantara a este.
+    picker.value = i18n.locale;
+  }
 });
 ```
 
-Del visitante que cambia de opinión rápido ya se encarga el paquete. Cuando dos cambios se superponen, gana el posterior, y el anterior se resuelve sin cambiar nada, como explica [Gana la última llamada](index.md#gana-la-última-llamada). Así que lee `i18n.locale` después del `await` en lugar de dar por hecho el valor del selector.
+Del visitante que cambia de opinión rápido ya se encarga el paquete. Cuando dos cambios se superponen, gana el posterior, y el anterior se resuelve sin cambiar nada, como explica [Gana la última llamada](index.md#gana-la-última-llamada). Así que lee `i18n.locale` después del `await` en lugar de dar por hecho el valor del selector. Cuando un diccionario no carga, `setLocale()` rechaza y la página conserva su idioma, así que el `finally` vuelve a poner el selector en él en lugar de dejar seleccionado el idioma que falló.
 
 Solo se guardan las elecciones que hace tu app: la opción `locale` y cada `setLocale()` o `init()` aplicado después de que el binding arrancó. Estas no se guardan:
 
@@ -190,7 +195,7 @@ Cómo se comporta cada parte:
 - **Los comentarios también se reemplazan.** No son elementos, así que no cuentan como hijos. No pongas `data-i18n` en un elemento que un framework renderiza o hidrata, porque los frameworks guardan marcadores en comentarios ahí; traduce ese texto con `t()`.
 - **`data-i18n-<atributo>` traduce un atributo.** Solo se permiten los atributos que contienen texto para personas o lectores de pantalla: `alt`, `title`, `placeholder`, `label`, `aria-label`, `aria-description`, `aria-placeholder`, `aria-roledescription` y `aria-valuetext`. Los demás, como `data-i18n-href` o `data-i18n-onclick`, se ignoran, así que una traducción nunca puede cambiar un enlace, un estilo ni un manejador de eventos. El `title` de un `<style>`, o de un `<link rel="stylesheet">`, se omite con una advertencia, porque ahí nombra un conjunto de hojas de estilo, y cambiarle el nombre podría desactivar los estilos de la página.
 - **El texto que ya está en el HTML es el último respaldo.** Una clave que le falta a un idioma muestra el texto del siguiente locale de su cadena de respaldo, igual que `t()`: un padre configurado, como `pt` para `pt-BR`, y después el locale por defecto. El texto original vuelve solo cuando ningún diccionario de la cadena tiene la clave. Un elemento que muestra texto en un idioma distinto del que ya tiene, por su propio `lang` o, si no, por el de su ancestro más cercano, recibe el `lang` de ese locale, como `<p lang="en">` en una página en portugués, para que un lector de pantalla lo pronuncie en el idioma correcto. Con `syncDocument: false`, ese es el idioma que declara tu página y no el locale activo, y el locale activo solo cuando no hay ningún `lang`. El binding restaura el `lang` propio del elemento cuando el texto vuelve a estar en ese idioma, y una vez que tu código cambia ese `lang`, el binding se lo deja a tu código. Un elemento con contenido propio, como texto o hijos, se marca solo por su texto de `data-i18n`, ya que `lang` cubriría también ese contenido, y un elemento cuyas claves muestran texto de locales distintos, o el propio texto del HTML tras una clave que falta, no se marca.
-- **El texto se asigna como texto plano, nunca como HTML.** El texto de `<script>`, `<style>`, `<noscript>`, `<template>`, `<iframe>`, `<noembed>`, `<noframes>`, `<xmp>` y `<plaintext>` nunca se toca, ya que se ejecuta como código, decide qué se muestra o se escribe sin escapar cuando la página se guarda como HTML. Sus atributos se traducen como los de cualquier otro, así que `<iframe data-i18n-title="video.title">` recibe un nombre accesible traducido. Un elemento dentro de uno de ellos, que solo tu código puede poner ahí, se omite entero, texto y atributos, con una advertencia, ya que la página también escribiría sus atributos sin escapar.
+- **El texto se asigna como texto plano, nunca como HTML.** El texto de `<script>`, `<style>`, `<noscript>`, `<template>`, `<iframe>`, `<noembed>`, `<noframes>`, `<xmp>` y `<plaintext>` nunca se toca, ya que se ejecuta como código, decide qué se muestra o se escribe sin escapar cuando la página se guarda como HTML. Sus atributos se traducen como los de cualquier otro, así que `<iframe data-i18n-title="video.title">` recibe un nombre accesible traducido. Un elemento dentro de uno de ellos, o dentro de un `<textarea>` o un `<title>`, que solo tu código puede poner ahí, se omite entero, texto y atributos, con una advertencia: cuando la página se guarda como HTML y se vuelve a leer, un atributo traducido podría cerrar el elemento que lo rodea y convertirse en marcado. El texto y los atributos del propio `<textarea>` o `<title>` sí se traducen.
 - **Un mensaje que necesita valores conserva el texto del HTML**, con una advertencia una vez por clave, porque en el HTML no hay de dónde pasar un valor. Eso abarca `{name}` y cualquier otro argumento, como un plural entero, que si no mostraría su sintaxis ICU a los visitantes. Renderiza el texto con valores desde tu código con `t()`.
 - **La página muestra el texto de su HTML hasta que el diccionario del visitante carga**, y después cambia en el lugar, algo que en una conexión lenta se nota. Hay dos formas de evitarlo:
   - Renderiza de antemano una página por idioma, como en [Genera un sitio estático](server-rendering.md#genera-un-sitio-estático), y pasa su `locale`.

@@ -500,3 +500,47 @@ describe("initializeBrowserI18n storage integration", () => {
     expect(setItem).not.toHaveBeenCalled();
   });
 });
+
+describe("the language picker in the browser guide", () => {
+  const createPicker = (): HTMLSelectElement => {
+    document.body.innerHTML = '<select id="language"><option>en</option><option>fr</option></select>';
+    return document.querySelector<HTMLSelectElement>("#language")!;
+  };
+
+  // The guide's change listener, as `docs/browser.md` writes it under "Let visitors switch languages".
+  const listenForChoice = (picker: HTMLSelectElement, i18n: ReturnType<typeof createManager>) => async () => {
+    try {
+      await i18n.setLocale(picker.value as Locale);
+    } finally {
+      picker.value = i18n.locale;
+    }
+  };
+
+  it("shows the language in use when the chosen one fails to load", async () => {
+    const i18n = createManager({
+      loadLocale: (locale) => (locale === "fr" ? Promise.reject(new Error("offline")) : dictionaries[locale]),
+    });
+    const binding = await initializeBrowserI18n({ i18n, locale: "en", persistLocale: false });
+    const picker = createPicker();
+
+    picker.value = "fr";
+    await expect(listenForChoice(picker, i18n)()).rejects.toThrow(I18nError);
+
+    expect(i18n.locale).toBe("en");
+    expect(picker.value).toBe("en");
+    binding.disconnect();
+  });
+
+  it("shows the chosen language once it loads", async () => {
+    const i18n = createManager();
+    const binding = await initializeBrowserI18n({ i18n, locale: "en", persistLocale: false });
+    const picker = createPicker();
+
+    picker.value = "fr";
+    await listenForChoice(picker, i18n)();
+
+    expect(i18n.locale).toBe("fr");
+    expect(picker.value).toBe("fr");
+    binding.disconnect();
+  });
+});

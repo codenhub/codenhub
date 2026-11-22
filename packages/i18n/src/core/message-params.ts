@@ -9,12 +9,9 @@
  */
 
 type MessageValue = string | number | bigint | Date;
-/**
- * The values passed, `TValues`, with each one checked as a message value. Read from the argument rather than written as
- * an index signature, which an `interface` or a class instance lacks, so `t("greeting", user)` takes a `User`.
- */
-type Values<TValues> = TValues & { readonly [K in keyof TValues]: MessageValue };
-type AnyValues<TValues> = [params?: Values<TValues>];
+// The values passed, read from the argument rather than written as an index signature, which an `interface` or a class
+// instance lacks. Only the values a message uses are checked, so a `User` with an `isAdmin: boolean` is still taken.
+type AnyValues<TValues> = [params?: TValues];
 
 /** Marks a message these types can't read. */
 declare const unreadable: unique symbol;
@@ -159,7 +156,9 @@ type Letter =
   | "z";
 type NameCharacter = Digit | Letter | Uppercase<Letter> | "_";
 
-// The runtime reads only ASCII letters, digits, and `_` as a name, so a message with `{first-name}` is invalid syntax.
+// The runtime reads letters, marks, and digits in any script, and `_`, as a name, so `{first-name}` is invalid syntax.
+// These types read only ASCII ones: they can't tell a letter outside ASCII from a symbol such as `€`, which makes the
+// message invalid, so a message with `{año}` is left unread and accepts any values rather than requiring a wrong one.
 type IsName<N, TSteps extends Steps = []> = TSteps["length"] extends MaxSteps
   ? false
   : N extends `${infer C}${infer R}`
@@ -320,12 +319,10 @@ type HasGroup<V> = true extends (V extends string ? false : V extends { readonly
 type ParamsFor<U, TValues, TIsGroup> =
   IsUnreadable<U> extends true
     ? TIsGroup extends true
-      ? [params: { readonly count: number | bigint } & Values<TValues>]
+      ? [params: { readonly count: number | bigint } & TValues]
       : AnyValues<TValues>
     : ParamsOf<UnionToIntersection<U>, TValues>;
-type ParamsOf<A, TValues> = keyof A extends never
-  ? AnyValues<TValues>
-  : [params: Readonly<Simplify<A>> & Values<TValues>];
+type ParamsOf<A, TValues> = keyof A extends never ? AnyValues<TValues> : [params: Readonly<Simplify<A>> & TValues];
 
 /**
  * The parameters `t(key, …)` takes: required values when every dictionary type's message at `key` is a literal with

@@ -94,7 +94,7 @@ An empty dictionary is accepted.
 
 The configuration is invalid. Most messages have the form `[I18n] Invalid configuration: <option>: <problem>`, so the option to fix is the first thing after the colon. Check that:
 
-- `locales` is a non-empty list with no duplicates, ignoring case, and each locale is ASCII letters and digits separated by hyphens, such as `pt-BR`.
+- `locales` is a non-empty list with no duplicates, ignoring case, and each locale is a language tag `Intl` accepts, such as `pt-BR`, or a private-use tag, such as `x-pirate`. A typo such as `en-US-US` fails with `Must be a language tag Intl accepts`.
 - `defaultLocale` is one of `locales`.
 - `loadLocale` is a function.
 - `timeZone`, when set, is one `Intl` knows. A typo gives `timeZone: Must be a time zone Intl supports, such as "America/Sao_Paulo" or "UTC"`.
@@ -126,7 +126,7 @@ You see `{count, plural, one {# item} other {# items}` or `{first-name}` on scre
 Common causes:
 
 - **A brace is missing or extra.** Count them; every `{` needs its `}`.
-- **A placeholder name has other characters.** Names are ASCII letters, digits, and underscores, so `{first-name}` and `{nome_ç}` are shown as written. Use `{firstName}` or `{nome}`.
+- **A placeholder name has other characters.** Names are letters, digits, and underscores, in any script, so `{first-name}` and `{price€}` are shown as written. Use `{firstName}` or `{price}`.
 - **A format this package doesn't support**, such as `{n, number, currency}` or a `::` skeleton. Format the value with `formatNumber()` and pass the result as a plain placeholder.
 - **Nesting deeper than 10 levels**, or the same `=1` option twice. Simplify the message.
 
@@ -136,7 +136,7 @@ Common causes:
 
 From `parse()`, the value is not a URL's pathname: it doesn't start with `/`, or it contains `?` or `#`. Pass `url.pathname` rather than the full URL or a path with its query string, such as Node's `request.url`. A path that is a pathname but contains something routing refuses, such as `//` or a dot segment, makes `parse()` return `undefined` instead, so a visitor's odd URL becomes a 404 rather than a crash.
 
-From `localize()` or `localizeAll()`, the path is one of those, or contains something routing refuses. The message quotes the path and names the rule it breaks, such as `[I18n] pathname "/help/../admin" must not contain a dot segment, . or ..`. [Paths it accepts](localized-urls.md#paths-it-accepts) has the full list, with the fix for each.
+From `localize()` or `localizeAll()`, the path is one of those, or contains something routing refuses. The message names the rule the path breaks and quotes the path, such as `[I18n] pathname "/help/../admin" must not contain a dot segment, . or ..`, except what a URL reads as user info, a query, or a fragment, which can hold a credential: a path with `?` or `#` is quoted only up to it, and one a URL reads as starting another host, such as `//example.com` or `/\example.com`, isn't quoted at all. [Paths it accepts](localized-urls.md#paths-it-accepts) has the full list, with the fix for each.
 
 ## `localize()` throws `RangeError`: "would be read as"
 
@@ -167,8 +167,8 @@ You see `Ouvrir l{app}` where you expected `Ouvrir l'éditeur`, and the console 
 - **`Could not load locale "pt"; using "es".`** or **`Could not load locale "pt"; using the default locale.`**: the loader failed for a saved or detected locale other than the default, so the visitor got the next one instead: the locale detected from the browser after a saved one, then the default. Fix the loader; the saved choice is kept for next time. If the default locale itself fails to load, there is nothing left to fall back to, and initialization rejects with `Failed to load translations for locale "en".`
 - **"Skipping translation on <p> because translated elements must be leaves"**: the element with `data-i18n` has child elements. Put the key on an element that contains only text, or translate it with `t()`.
 - **"Skipping translation on <style> because the element can run, hide, or reparse its text as HTML"**: a `data-i18n` key is on a `<script>`, `<style>`, `<noscript>`, `<template>`, `<iframe>`, `<noembed>`, `<noframes>`, `<xmp>`, or `<plaintext>` element, whose text runs as code, decides what shows, or is written back unescaped when the page is saved as HTML. The warning names the key and passes the element, so the console points to it. Move the key to an ordinary element. Its `data-i18n-<attribute>` keys, such as an `<iframe>`'s `data-i18n-title`, are still translated.
-- **"Skipping translation on <p> because it is inside <xmp>, which can run, hide, or reparse its content as HTML"**: an element with a key is inside one of the elements the previous entry lists, which only code can do, such as by appending to an `<xmp>` or a `<template>` rather than to its `content`. Neither its text nor its attributes are translated, since the page would write both back unescaped, or not at all. Move the element out.
-- **"Skipping translation because data-i18n contains an invalid key"**, or the same for a `data-i18n-<attribute>`: the key is blank, longer than 1,000 characters, or contains an ASCII control character, so no dictionary can hold it. The element keeps its current text. Fix the key in the HTML.
+- **"Skipping translation on <p> because it is inside <xmp>, which can run, hide, or reparse its content as HTML"**: an element with a key is inside one of the elements the previous entry lists, or inside a `<textarea>` or `<title>`, which only code can do, such as by appending to an `<xmp>` or a `<template>` rather than to its `content`. Neither its text nor its attributes are translated, since a translation could close the element around it and become markup once the page is saved as HTML, or would never be shown. Move the element out.
+- **"Skipping translation because data-i18n contains an invalid key"**, or the same for a `data-i18n-<attribute>`: the key is blank, longer than 1,000 characters, or contains an ASCII control character, so no dictionary can hold it. The element shows its HTML text, as for a key no dictionary has, including after a key it showed a translation for changes to an invalid one. Fix the key in the HTML.
 - **"Skipping translation because data-i18n names a message that needs values"**: the message has a placeholder, a plural, or a select, and HTML translation has no values to fill them. The element keeps its HTML text, and the warning appears once per key. Render that text with `t()` and pass the values.
 - **"Skipping translation of the title of <style> because it names a style sheet set"**: a `data-i18n-title` key is on a `<style>` or `<link rel="stylesheet">` element, whose `title` groups style sheets that the browser switches between, so translating it would change which ones apply. The element keeps its `title`. Remove the key.
 - **A `data-i18n-href` attribute does nothing**: only text attributes can be translated. See [Translate HTML without a framework](browser.md#translate-html-without-a-framework).

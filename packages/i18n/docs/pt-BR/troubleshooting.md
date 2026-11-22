@@ -2,7 +2,7 @@
 title: Solução de problemas
 description: O que cada erro e aviso quer dizer, e como resolver.
 order: 5
-source: 1bc41e2fb9ef984fd04b9dcbd5a70900efd818fe
+source: 19dea594e98153429cb214a715a356bc3ffe6c61
 ---
 
 # Solução de problemas
@@ -95,7 +95,7 @@ Um dicionário vazio é aceito.
 
 A configuração é inválida. A maioria das mensagens tem o formato `[I18n] Invalid configuration: <option>: <problem>`, então a opção a corrigir é a primeira coisa depois dos dois-pontos. Confira se:
 
-- `locales` é uma lista não vazia, sem duplicatas (ignorando maiúsculas e minúsculas), e cada locale é feito de letras e dígitos ASCII separados por hífens, como `pt-BR`.
+- `locales` é uma lista não vazia, sem duplicatas (ignorando maiúsculas e minúsculas), e cada locale é uma tag de idioma que o `Intl` aceita, como `pt-BR`, ou uma tag de uso privado, como `x-pirate`. Um erro de digitação como `en-US-US` falha com `Must be a language tag Intl accepts`.
 - `defaultLocale` é um dos `locales`.
 - `loadLocale` é uma função.
 - `timeZone`, quando definido, é um que o `Intl` conhece. Um erro de digitação dá `timeZone: Must be a time zone Intl supports, such as "America/Sao_Paulo" or "UTC"`.
@@ -127,7 +127,7 @@ Você vê `{count, plural, one {# item} other {# items}` ou `{first-name}` na te
 Causas comuns:
 
 - **Falta uma chave, ou sobra uma.** Conte; toda `{` precisa da sua `}`.
-- **Um nome de placeholder tem outros caracteres.** Os nomes são letras ASCII, dígitos e sublinhados, então `{first-name}` e `{nome_ç}` aparecem como foram escritos. Use `{firstName}` ou `{nome}`.
+- **Um nome de placeholder tem outros caracteres.** Os nomes são letras, dígitos e sublinhados, de qualquer escrita, então `{first-name}` e `{price€}` aparecem como foram escritos. Use `{firstName}` ou `{price}`.
 - **Um formato que este pacote não suporta**, como `{n, number, currency}` ou um skeleton `::`. Formate o valor com `formatNumber()` e passe o resultado como um placeholder simples.
 - **Aninhamento com mais de 10 níveis**, ou a mesma opção `=1` duas vezes. Simplifique a mensagem.
 
@@ -137,7 +137,7 @@ Causas comuns:
 
 Vindo de `parse()`, o valor não é o pathname de uma URL: ele não começa com `/`, ou contém `?` ou `#`. Passe `url.pathname` em vez da URL inteira ou de um caminho com a query string, como o `request.url` do Node. Um caminho que é um pathname mas contém algo que o roteamento recusa, como `//` ou um segmento de ponto, faz `parse()` devolver `undefined`, então a URL estranha de um visitante vira um 404 em vez de um crash.
 
-Vindo de `localize()` ou `localizeAll()`, o caminho é um desses, ou contém algo que o roteamento recusa. A mensagem cita o caminho e diz qual regra ele quebra, como `[I18n] pathname "/help/../admin" must not contain a dot segment, . or ..`. [Caminhos que ele aceita](localized-urls.md#caminhos-que-ele-aceita) tem a lista completa, com o conserto de cada um.
+Vindo de `localize()` ou `localizeAll()`, o caminho é um desses, ou contém algo que o roteamento recusa. A mensagem diz qual regra o caminho quebra e cita o caminho, como `[I18n] pathname "/help/../admin" must not contain a dot segment, . or ..`, exceto o que uma URL lê como informações de usuário, query ou fragmento, que podem conter uma credencial: um caminho com `?` ou `#` é citado só até esse caractere, e um que uma URL lê como o início de outro host, como `//example.com` ou `/\example.com`, não é citado. [Caminhos que ele aceita](localized-urls.md#caminhos-que-ele-aceita) tem a lista completa, com o conserto de cada um.
 
 ## `localize()` lança `RangeError`: "would be read as"
 
@@ -168,8 +168,8 @@ Você vê `Ouvrir l{app}` onde esperava `Ouvrir l'éditeur`, e o console está q
 - **`Could not load locale "pt"; using "es".`** ou **`Could not load locale "pt"; using the default locale.`**: o loader falhou para um locale salvo ou detectado que não é o padrão, então o visitante recebeu o seguinte: o locale detectado pelo navegador depois de um salvo, e depois o padrão. Corrija o loader; a escolha salva é mantida para a próxima vez. Se o próprio locale padrão falhar ao carregar, não sobra nada para onde cair, e a inicialização é rejeitada com `Failed to load translations for locale "en".`
 - **"Skipping translation on <p> because translated elements must be leaves"**: o elemento com `data-i18n` tem elementos filhos. Coloque a chave num elemento que contenha só texto, ou traduza com `t()`.
 - **"Skipping translation on <style> because the element can run, hide, or reparse its text as HTML"**: uma chave `data-i18n` está num elemento `<script>`, `<style>`, `<noscript>`, `<template>`, `<iframe>`, `<noembed>`, `<noframes>`, `<xmp>` ou `<plaintext>`, cujo texto roda como código, decide o que aparece ou é escrito sem escape quando a página é salva como HTML. O aviso nomeia a chave e passa o elemento, então o console aponta para ele. Mude a chave para um elemento comum. As chaves `data-i18n-<attribute>` dele, como o `data-i18n-title` de um `<iframe>`, continuam sendo traduzidas.
-- **"Skipping translation on <p> because it is inside <xmp>, which can run, hide, or reparse its content as HTML"**: um elemento com chave está dentro de um dos elementos que a entrada anterior lista, o que só código consegue fazer, por exemplo ao acrescentá-lo a um `<xmp>` ou a um `<template>` em vez de ao `content` dele. Nem o texto nem os atributos dele são traduzidos, já que a página escreveria os dois sem escape, ou nem os escreveria. Tire o elemento de lá.
-- **"Skipping translation because data-i18n contains an invalid key"**, ou o mesmo para um `data-i18n-<attribute>`: a chave está em branco, tem mais de 1.000 caracteres ou contém um caractere de controle ASCII, então nenhum dicionário consegue guardá-la. O elemento fica com o texto atual. Corrija a chave no HTML.
+- **"Skipping translation on <p> because it is inside <xmp>, which can run, hide, or reparse its content as HTML"**: um elemento com chave está dentro de um dos elementos que a entrada anterior lista, ou dentro de um `<textarea>` ou de um `<title>`, o que só código consegue fazer, por exemplo ao acrescentá-lo a um `<xmp>` ou a um `<template>` em vez de ao `content` dele. Nem o texto nem os atributos dele são traduzidos, já que uma tradução poderia fechar o elemento em volta dele e virar marcação quando a página é salva como HTML, ou nunca apareceria. Tire o elemento de lá.
+- **"Skipping translation because data-i18n contains an invalid key"**, ou o mesmo para um `data-i18n-<attribute>`: a chave está em branco, tem mais de 1.000 caracteres ou contém um caractere de controle ASCII, então nenhum dicionário consegue guardá-la. O elemento mostra o texto do HTML, como com uma chave que nenhum dicionário tem, inclusive quando uma chave cuja tradução ele mostrava muda para uma inválida. Corrija a chave no HTML.
 - **"Skipping translation because data-i18n names a message that needs values"**: a mensagem tem um placeholder, um plural ou um select, e a tradução de HTML não tem valores para preenchê-los. O elemento mantém o texto do HTML, e o aviso aparece uma vez por chave. Renderize esse texto com `t()` e passe os valores.
 - **"Skipping translation of the title of <style> because it names a style sheet set"**: uma chave `data-i18n-title` está num elemento `<style>` ou `<link rel="stylesheet">`, cujo `title` agrupa folhas de estilo entre as quais o navegador alterna, então traduzi-lo mudaria quais se aplicam. O elemento mantém o `title`. Remova a chave.
 - **Um atributo `data-i18n-href` não faz nada**: só atributos de texto podem ser traduzidos. Veja [Traduza HTML sem framework](browser.md#traduza-html-sem-framework).

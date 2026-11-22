@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
 
-import { matchConfiguredLocale } from "./matching";
+import { matchConfiguredLocale, prepareLocales } from "./matching";
 
 describe("matchConfiguredLocale", () => {
   it.each([
@@ -28,10 +28,12 @@ describe("matchConfiguredLocale", () => {
   });
 
   it.each([
-    [["zh-Hant-x-abcdefghijk"], ["zh-TW"], "zh-Hant-x-abcdefghijk"],
-    [["zh-Hant-x-abcdefghijk"], ["zh-Hans-CN"], undefined],
-    [["en-x-abcdefghijk"], ["en-GB"], "en-x-abcdefghijk"],
-  ] as const)("matches %j, which Intl.Locale rejects, to %j by its named script", (locales, preferences, expected) => {
+    [["en", "x-pirate"], ["X-Pirate"], "x-pirate"],
+    [["en", "x-pirate"], ["x-pirate-ship"], undefined],
+    [["en", "x-pirate"], ["x"], undefined],
+    [["en", "x-pirate"], ["en-GB"], "en"],
+    [["en-x-foo"], ["en-GB"], "en-x-foo"],
+  ] as const)("matches a private-use locale in %j only exactly, for %j", (locales, preferences, expected) => {
     expect(matchConfiguredLocale(locales, preferences)).toBe(expected);
   });
 
@@ -40,7 +42,7 @@ describe("matchConfiguredLocale", () => {
     [["en", "no"], ["nb-NO"], "no"],
     [["en", "nb"], ["no"], "nb"],
     [["en", "nb-NO"], ["no-NO"], "nb-NO"],
-    [["en", "no-x-abcdefghijk"], ["nb"], "no-x-abcdefghijk"],
+    [["en", "no-x-foo"], ["nb"], "no-x-foo"],
     [["en", "nb", "no"], ["no"], "no"],
     [["en", "nn"], ["no"], undefined],
     [["en", "no"], ["nn"], undefined],
@@ -99,5 +101,15 @@ describe("matchConfiguredLocale", () => {
 
     expect(matchConfiguredLocale(["en", "fr"], [tagOfLength(256), "fr"])).toBe("fr");
     expect(matchConfiguredLocale(["en", "fr"], [tagOfLength(255), "fr"])).toBe("en");
+  });
+
+  it("computes each locale's forms once per list, as a manager keeps it", () => {
+    const locales = Object.freeze(["en", "iw-IL", "no"]);
+    const prepared = prepareLocales(locales);
+
+    expect(matchConfiguredLocale(locales, ["he"])).toBe("iw-IL");
+    expect(prepareLocales(locales)).toBe(prepared);
+    expect(prepareLocales([...locales])).not.toBe(prepared);
+    expect(prepared.entries.map(({ comparable }) => comparable)).toEqual(["en", "he-il", "nb"]);
   });
 });

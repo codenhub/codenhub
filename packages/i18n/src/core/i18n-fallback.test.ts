@@ -74,6 +74,54 @@ describe("regional fallback", () => {
     expect(i18n.t("bye")).toBe("script");
   });
 
+  // A deprecated language code and its replacement, as `Intl` canonicalizes it, and `no` and `nb`, which matching
+  // compares as one language.
+  it.each([
+    ["iw", "he"],
+    ["tl", "fil"],
+    ["in", "id"],
+    ["mo", "ro"],
+    ["ji", "yi"],
+    ["jw", "jv"],
+  ])("should know %s as %s, as Intl canonicalizes it", (alias, language) => {
+    expect(Intl.getCanonicalLocales(alias)).toEqual([language]);
+  });
+
+  it.each([
+    ["iw", "he-IL"],
+    ["he", "iw-IL"],
+    ["tl", "fil-PH"],
+    ["fil", "tl-PH"],
+    ["in", "id-ID"],
+    ["id", "in-ID"],
+    ["mo", "ro-MD"],
+    ["ro", "mo-MD"],
+    ["ji", "yi-US"],
+    ["yi", "ji-US"],
+    ["jw", "jv-ID"],
+    ["jv", "jw-ID"],
+    ["no", "nb-NO"],
+    ["nb", "no-NO"],
+  ])("should fall back to %s from %s, the same language under another code", async (parent, locale) => {
+    const loadLocale = (requested: string): unknown =>
+      requested === locale ? { hello: "regional" } : requested === parent ? { bye: "parent" } : { bye: "other" };
+    const i18n = create(["en", parent, locale], loadLocale);
+    await i18n.init({ locale });
+
+    expect(i18n.t("hello")).toBe("regional");
+    expect(i18n.t("bye")).toBe("parent");
+  });
+
+  it("should not fall back from a Latin locale to a Cyrillic parent reached through an alias", async () => {
+    // `sh` is `sr-Latn`, whose parent `sr` is written in Cyrillic.
+    const i18n = create(["en", "sr", "sh-RS"], (requested) =>
+      requested === "sh-RS" ? {} : requested === "sr" ? { bye: "Ћао" } : { bye: "Bye" },
+    );
+    await i18n.init({ locale: "sh-RS" });
+
+    expect(i18n.t("bye")).toBe("Bye");
+  });
+
   it("should fall back to a parent in a language with no likely script", async () => {
     const i18n = create(["en", "nah", "nah-MX"], (locale) =>
       locale === "nah" ? { hello: "Niltze" } : locale === "nah-MX" ? {} : dictionaries[locale],

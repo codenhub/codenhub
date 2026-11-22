@@ -2,7 +2,7 @@
 title: Escreva as suas traduções
 description: Dicionários, arquivos JSON, placeholders, mensagens ICU, links e negrito, plurais, formatadores, chaves e valores tipados, verificação de chaves não traduzidas e limites de tamanho.
 order: 1
-source: 39f0fb571e8d70c2a721f079a53cf1bda981fc9d
+source: a02c923015b8a627d01aa402900f357009939366
 ---
 
 # Escreva as suas traduções
@@ -109,7 +109,7 @@ t("home.title"); // "Bem-vindo", vindo de pt
 Uma chave é procurada nesta ordem:
 
 1. O locale ativo.
-2. Cada locale configurado que se obtém tirando as últimas subtags, como `zh-Hant` para `zh-Hant-TW`. Um pai escrito em outra escrita é pulado: `zh` é chinês simplificado, então uma página `zh-Hant` faz fallback para o padrão em vez de misturar escritas.
+2. Cada locale configurado que se obtém tirando as últimas subtags, como `zh-Hant` para `zh-Hant-TW`. Um pai escrito em outra escrita é pulado: `zh` é chinês simplificado, então uma página `zh-Hant` faz fallback para o padrão em vez de misturar escritas. Um código de idioma obsoleto conta como o que o substituiu, como o `Intl` o lê, então `he-IL` faz fallback para um `iw` configurado, e `iw-IL` para `he`. `no` e `nb` contam como um idioma só, como na [correspondência](index.md#transforme-entrada-externa-em-um-locale).
 3. O locale configurado nomeado pelo seu idioma e escrita, como `zh-Hant` para `zh-HK`, que é escrito em chinês tradicional, ou `sr-Latn` para `sr-ME`. Assim um dicionário `zh-HK` pode conter só o que Hong Kong diz de outro jeito.
 4. O locale padrão.
 
@@ -132,7 +132,7 @@ t("order.confirmed", { name: "Ana", orderId: "1042" });
 // "Thanks, Ana. Order 1042 ships tomorrow."
 ```
 
-Os valores podem ser strings, números, bigints ou datas. Um bigint vai onde vai um número, e é formatado sem perder dígitos. Os nomes de placeholder usam letras ASCII, dígitos e `_`, como `{firstName}` ou `{first_name}`. Um nome com qualquer outra coisa, como `{first-name}` ou `{nome_ç}`, não é placeholder: a mensagem tem sintaxe inválida, registra um aviso e mostra `{first-name}` como foi escrito.
+Os valores podem ser strings, números, bigints ou datas. Um bigint vai onde vai um número, e é formatado sem perder dígitos. Os nomes de placeholder usam letras e dígitos de qualquer escrita, e `_`, como `{firstName}`, `{first_name}` ou `{año}`. Um nome com qualquer outra coisa, como `{first-name}` ou `{price€}`, não é placeholder: a mensagem tem sintaxe inválida, registra um aviso e mostra `{first-name}` como foi escrito.
 
 Use placeholders em vez de juntar pedaços. `t("before") + name + t("after")` prende todos os idiomas à ordem das palavras do inglês, enquanto uma frase inteira com um placeholder deixa cada tradução pôr o valor onde ele cabe. A ordem das palavras é a primeira coisa que todo tradutor quer mudar, e quase sempre ele tem razão. Para um link ou negrito dentro da frase, veja [Links e negrito dentro de uma frase](#links-e-negrito-dentro-de-uma-frase).
 
@@ -231,7 +231,7 @@ Dentro das formas de um plural, `#` representa o número; escreva `'#'` para um 
 
 Texto entre aspas também é texto para os tipos: em `'{it''s {x}'`, que mostra `{it's {x}`, `x` não é um valor que `t()` pede.
 
-Um texto que não é sintaxe válida, como uma `{` sem fechamento ou uma `}` perdida, registra um aviso, a menos que o gerenciador esteja em silêncio, e aparece com apenas os placeholders `{name}` preenchidos. O aviso diz a chave e o locale, e vem uma vez para cada texto em cada locale, entre os 1.000 mais recentes. [Encontre chaves não traduzidas](#encontre-chaves-não-traduzidas) mostra um teste que confere todas as mensagens.
+Um texto que não é sintaxe válida, como uma `{` sem fechamento ou uma `}` perdida, registra um aviso, a menos que o gerenciador esteja em silêncio, e aparece com apenas os placeholders `{name}` preenchidos. O aviso diz a chave e o locale, e vem uma vez para cada chave, texto e locale, entre os aproximadamente 1.000 mais recentes, então um texto editado avisa de novo. [Encontre chaves não traduzidas](#encontre-chaves-não-traduzidas) mostra um teste que confere todas as mensagens.
 
 ### Links e negrito dentro de uma frase
 
@@ -246,7 +246,7 @@ i18n.rich("signup.terms");
 // ["Ao se cadastrar você aceita os ", { tag: "terms", children: ["termos de uso"] }, "."]
 ```
 
-Uma tag é `<nome>…</nome>`, ou `<nome/>` para uma sem conteúdo, como uma quebra de linha. Os nomes usam letras ASCII, dígitos e `_`. Uma tag diz o que a parte é, e o seu código decide como ela é renderizada, então uma tradução não consegue adicionar um link, um script nem marcação que o seu código não renderize. No React, por exemplo:
+Uma tag é `<nome>…</nome>`, ou `<nome/>` para uma sem conteúdo, como uma quebra de linha. Os nomes usam letras e dígitos de qualquer escrita, e `_`. Uma tag diz o que a parte é, e o seu código decide como ela é renderizada, então uma tradução não consegue adicionar um link, um script nem marcação que o seu código não renderize. No React, por exemplo:
 
 ```tsx
 import { Fragment, type ReactNode } from "react";
@@ -272,8 +272,8 @@ Alguns detalhes:
 
 - `rich()` aceita as mesmas chaves e valores que `t()`, conferidos do mesmo jeito. Um valor é sempre texto: um `<b>` no nome de um visitante aparece como foi escrito e nunca é lido como tag.
 - Uma tag pode envolver placeholders, um plural ou um select, e pode ficar dentro de uma forma de um plural ou select, mas uma tag aberta numa forma precisa fechar nessa forma.
-- Um `<` que não forma uma tag, como em `1 < 2`, é texto.
-- Uma mensagem cujas tags não fecham, como `<b>negrito` sem `</b>`, ou se aninham mais de 10 níveis, registra um aviso uma vez para cada texto em cada locale, a menos que o gerenciador seja silencioso, e volta como uma parte só: o texto como `t()` mostra, com as tags. Uma chave que falta e a sintaxe inválida também voltam como a única parte que `t()` devolveria.
+- Um `<` que não forma uma tag, como em `1 < 2`, é texto, e uma tag em texto entre aspas também: `'{<b>}'` mostra `{<b>}`, nunca uma tag, como em [Chaves literais e apóstrofos](#chaves-literais-e-apóstrofos). Um apóstrofo antes de `<` é um apóstrofo comum, então `l'<b>été</b>` mantém a elisão e a tag.
+- Uma mensagem cujas tags não fecham, como `<b>negrito` sem `</b>`, ou se aninham mais de 10 níveis, registra um aviso uma vez para cada chave, texto e locale, a menos que o gerenciador seja silencioso, e volta como uma parte só: o texto como `t()` mostra, com as tags. Uma chave que falta e a sintaxe inválida também voltam como a única parte que `t()` devolveria.
 - As tags não são conferidas nos tipos, já que uma tradução pode usar tags que o texto padrão não tem. Renderize todas as tags que as suas mensagens usam e tenha uma alternativa para o resto, como acima.
 - `t()` e o binding de `data-i18n` mostram as tags como foram escritas. Renderize pelo seu código uma mensagem com tags usando `rich()`.
 
@@ -421,7 +421,7 @@ Quais valores cada argumento aceita:
 - `select` aceita uma string, um número ou um bigint.
 - Um `{name}` simples aceita qualquer um desses.
 
-Valores a mais são permitidos. Quando vários dicionários são tipados, uma chave precisa dos valores de todos os que a têm.
+Só os valores que a mensagem usa são conferidos. Qualquer outro valor pode ter qualquer tipo, então `t("home.greeting", user)` aceita um `User` inteiro com um `isAdmin: boolean`, e um objeto literal também pode levar valores a mais. Quando vários dicionários são tipados, uma chave precisa dos valores de todos os que a têm.
 
 Um import de JSON tipa todo texto como `string`, já que o TypeScript não guarda os valores das strings de um JSON, então um dicionário JSON confere as chaves mas aceita quaisquer valores, exceto que um grupo de plural ainda pede um `count` numérico. Para conferir os valores, escreva o idioma padrão em TypeScript com `as const` e mantenha os outros idiomas em JSON, tipados como o padrão:
 
@@ -439,7 +439,8 @@ Ler os argumentos de uma mensagem acontece inteiramente no sistema de tipos, o q
 
 - **A chave é uma entre várias.** Em `t(hasFailed ? "checkout.failed" : "checkout.done")`, o TypeScript vê uma união de duas chaves e não tem como saber de qual mensagem vêm os valores. Chame `t()` com cada chave no seu próprio ramo, `hasFailed ? t("checkout.failed", { orderId }) : t("checkout.done")`, e cada chamada é conferida.
 - **A mensagem é uma `string` simples**, como todo texto de um dicionário JSON. Um grupo de plural ainda pede um `count` numérico, já que o formato dele diz isso. Escreva o idioma padrão em TypeScript com `as const`, como acima.
-- **A mensagem tem sintaxe inválida**, como uma `{` sem fechamento, um nome de placeholder que não é feito de letras ASCII, dígitos e `_` (`{first-name}`), `{n, number, currency}`, ou um `select` ou `plural` sem `other`. Algumas sintaxes inválidas, como uma opção escrita duas vezes, uma forma de plural desconhecida ou aninhamento além de 10 níveis, ainda podem pedir valores. De um jeito ou de outro, o runtime também não consegue lê-la: ele registra um aviso e mostra o texto com apenas os placeholders `{name}` válidos preenchidos. Conserte a mensagem; a [verificação de mensagens](#encontre-chaves-não-traduzidas) encontra esses casos.
+- **A mensagem tem sintaxe inválida**, como uma `{` sem fechamento, um nome de placeholder com um caractere que não é letra, dígito nem `_` (`{first-name}`), `{n, number, currency}`, ou um `select` ou `plural` sem `other`. Algumas sintaxes inválidas, como uma opção escrita duas vezes, uma forma de plural desconhecida ou aninhamento além de 10 níveis, ainda podem pedir valores. De um jeito ou de outro, o runtime também não consegue lê-la: ele registra um aviso e mostra o texto com apenas os placeholders `{name}` válidos preenchidos. Conserte a mensagem; a [verificação de mensagens](#encontre-chaves-não-traduzidas) encontra esses casos.
+- **Um nome de placeholder tem uma letra fora do ASCII**, como `{año}`. O runtime lê, mas fora do ASCII os tipos não distinguem uma letra de um símbolo como `€`, que torna a mensagem inválida, então deixam a mensagem sem ler em vez de pedir um valor que o runtime nunca lê. Use um nome ASCII onde quiser a verificação.
 - **A mensagem é longa demais para os tipos lerem**: uns 900 apóstrofos, 450 argumentos ou 900 espaços dentro das chaves de um argumento, num só texto. O TypeScript tem um limite de profundidade para os tipos, e a leitura para antes de chegar nele em vez de quebrar o seu build. Em tempo de execução, a mensagem funciona normalmente. Se você tem uma dessas, ela provavelmente são três mensagens disfarçadas de uma; dividi-la traz as verificações de volta.
 - **O tipo do gerenciador foi escrito à mão, sem o dicionário.** `I18n<"en" | "pt", Key>` confere as chaves, mas não os valores. Passe o tipo do dicionário como terceiro argumento de tipo, `I18n<"en" | "pt", Key, typeof en>`, para mantê-los conferidos.
 

@@ -30,6 +30,8 @@
       const binding = await initializeBrowserI18n({ i18n, root: document.body, observe: true });
 
       window.i18nTest = {
+        createI18n,
+        initializeBrowserI18n,
         disconnect: () => binding.disconnect(),
         setLocale: (locale) => i18n.setLocale(locale),
       };

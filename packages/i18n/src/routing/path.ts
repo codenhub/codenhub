@@ -121,11 +121,10 @@ export const findPathnameProblem = (pathname: unknown): PathnameProblem | undefi
   if (!pathname.startsWith("/")) {
     return "not-absolute";
   }
-  if (pathname.includes("?")) {
-    return "query";
-  }
-  if (pathname.includes("#")) {
-    return "fragment";
+  // A URL reads the first of them as the end of its path.
+  const delimiter = /[?#]/.exec(pathname)?.[0];
+  if (delimiter !== undefined) {
+    return delimiter === "?" ? "query" : "fragment";
   }
   if (pathname.length > MAX_PATHNAME_LENGTH) {
     return "too-long";
