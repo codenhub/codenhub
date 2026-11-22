@@ -192,12 +192,12 @@ class Parser {
   }
 
   /**
-   * ICU quoting: `'` before `{`, `}`, or, in a plural, `#` quotes until the next lone `'`, and so does `'` before `<`,
-   * as FormatJS reads it, so a tag can be written as text.
+   * ICU quoting: `'` before `{`, `}`, or, in a plural, `#` quotes until the next lone `'`. Before `<` it is an
+   * apostrophe, as in ICU, so French `l'<b>été</b>` keeps its elision.
    */
   private startsQuote(isInPlural: boolean): boolean {
     const next = this.peek(1);
-    return next === "{" || next === "}" || next === "<" || (next === "#" && isInPlural);
+    return next === "{" || next === "}" || (next === "#" && isInPlural);
   }
 
   /** Reads quoted text from its opening `'` to the next lone `'`, where `''` is one apostrophe. */

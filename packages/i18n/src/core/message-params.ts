@@ -62,8 +62,7 @@ type TrimEnd<S extends string, TSteps extends Steps = []> = TSteps["length"] ext
 // Each side has its own budget, since neither recursion continues the other's.
 type Trim<S extends string> = TrimStart<S> extends infer T extends string ? TrimEnd<T> : Unreadable;
 
-// An apostrophe before a brace or `<` quotes text up to the next lone apostrophe; `''` is one apostrophe, in quoted text
-// too.
+// An apostrophe before a brace quotes text up to the next lone apostrophe; `''` is one apostrophe, in quoted text too.
 type StripQuotes<
   S extends string,
   Out extends string = "",
@@ -73,7 +72,7 @@ type StripQuotes<
   : S extends `${infer A}'${infer B}`
     ? B extends `'${infer C}`
       ? StripQuotes<C, `${Out}${A}`, Next<TSteps>>
-      : B extends `{${string}` | `}${string}` | `<${string}`
+      : B extends `{${string}` | `}${string}`
         ? SkipQuoted<B, `${Out}${A}`, Next<TSteps>>
         : B extends `#${string}`
           ? QuotesBrace<B> extends true

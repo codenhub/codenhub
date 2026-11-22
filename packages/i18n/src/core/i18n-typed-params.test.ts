@@ -273,12 +273,14 @@ describe("typed placeholder values", () => {
     expectTypeOf<{}>().not.toExtend<Select>();
   });
 
-  it("should not require an argument the runtime prints as text quoted by an apostrophe before <", () => {
-    expectTypeOf<TranslateParams<{ readonly m: "'<b>{name}</b>'" }, "m">>().toEqualTypeOf<Loose>();
-    expectTypeOf<{ x: 1 }>().toExtend<NonNullable<TranslateParams<{ readonly m: "'<b>{name}</b>' {x}" }, "m">[0]>>();
-    expectTypeOf<{}>().not.toExtend<NonNullable<TranslateParams<{ readonly m: "'<b>{name}</b>' {x}" }, "m">[0]>>();
-    // An apostrophe before a letter is text, so the argument after it is read.
-    expectTypeOf<{}>().not.toExtend<NonNullable<TranslateParams<{ readonly m: "Don't <b>{name}</b>" }, "m">[0]>>();
+  it("should require an argument after an apostrophe before <, which quotes nothing", () => {
+    type ParamsOf<M extends string> = NonNullable<TranslateParams<{ readonly m: M }, "m">[0]>;
+    expectTypeOf<{ name: "Ana" }>().toExtend<ParamsOf<"l'<b>{name}</b>">>();
+    expectTypeOf<{}>().not.toExtend<ParamsOf<"l'<b>{name}</b>">>();
+    expectTypeOf<{}>().not.toExtend<ParamsOf<"'<b>{name}</b>'">>();
+    // A tag in a run quoted by `'{` is text, and so is an argument there.
+    expectTypeOf<{ x: 1 }>().toExtend<ParamsOf<"'{<b>{name}</b>}' {x}">>();
+    expectTypeOf<{}>().not.toExtend<ParamsOf<"'{<b>{name}</b>}' {x}">>();
   });
 
   it("should not require an argument the runtime prints as text quoted by an apostrophe before #", () => {

@@ -214,18 +214,17 @@ It applies to `{d, date}`, `{d, time}`, and a date in `{d}`, and is `formatDate`
 
 ### Literal braces and apostrophes
 
-An apostrophe before `{`, `}`, or `<` quotes text up to the next apostrophe, and two apostrophes make one. An apostrophe anywhere else is an ordinary apostrophe, so "Don't" needs nothing:
+An apostrophe before `{` or `}` quotes text up to the next apostrophe, and two apostrophes make one. An apostrophe anywhere else is an ordinary apostrophe, so "Don't" needs nothing:
 
-| Written in the dictionary  | Shown                    |
-| -------------------------- | ------------------------ |
-| `Don't forget {name}`      | `Don't forget Ana`       |
-| `Type '{name}' to insert`  | `Type {name} to insert`  |
-| `It''s '{'here'}'`         | `It's {here}`            |
-| `Write '<b>' to bold text` | `Write <b> to bold text` |
-| `Ouvrir l''{app}`          | `Ouvrir l'éditeur`       |
-| `Ouvrir l’{app}`           | `Ouvrir l’éditeur`       |
+| Written in the dictionary | Shown                   |
+| ------------------------- | ----------------------- |
+| `Don't forget {name}`     | `Don't forget Ana`      |
+| `Type '{name}' to insert` | `Type {name} to insert` |
+| `It''s '{'here'}'`        | `It's {here}`           |
+| `Ouvrir l''{app}`         | `Ouvrir l'éditeur`      |
+| `Ouvrir l’{app}`          | `Ouvrir l’éditeur`      |
 
-Watch for an apostrophe right before a placeholder or a tag, as French, Italian, and Catalan elision puts one. `Ouvrir l'{app}` quotes `{app}`, so it shows `Ouvrir l{app}`, and `l'<b>été</b>` quotes the tag, so `rich()` shows `l<b>été</b>` as text. Nothing warns, because the text is valid. Write two apostrophes, `l''{app}` and `l''<b>été</b>`, or the typographic apostrophe `’`, which French typography prefers anyway and which is never syntax.
+Watch for an apostrophe right before a placeholder, as French, Italian, and Catalan elision puts one. `Ouvrir l'{app}` quotes `{app}`, so it shows `Ouvrir l{app}`, and nothing warns, because the text is valid. Write two apostrophes, `l''{app}`, or the typographic apostrophe `’`, which French typography prefers anyway and which is never syntax.
 
 Inside a plural's forms, `#` stands for the number; write `'#'` for a literal `#`. A `select` nested in a form is not the plural itself, so a `#` there is shown as written, as in ICU; put `{count}` there instead.
 
@@ -272,7 +271,7 @@ A few details:
 
 - `rich()` takes the same keys and values as `t()`, checked the same way. A value is always text: a `<b>` in a visitor's name is shown as written, never read as a tag.
 - A tag can wrap placeholders, a plural, or a select, and can sit inside a plural or select form, but a tag opened in a form must close in that form.
-- A `<` that doesn't form a tag, as in `1 < 2`, is text, and so is quoted text: `'<b>'` shows `<b>`, never a tag, as in [Literal braces and apostrophes](#literal-braces-and-apostrophes).
+- A `<` that doesn't form a tag, as in `1 < 2`, is text, and so is a tag in quoted text: `'{<b>}'` shows `{<b>}`, never a tag, as in [Literal braces and apostrophes](#literal-braces-and-apostrophes). An apostrophe before `<` is an ordinary apostrophe, so `l'<b>été</b>` keeps its elision and its tag.
 - A message whose tags don't balance, such as `<b>bold` without `</b>`, or nest more than 10 levels deep, logs a warning once for each key, text, and locale, unless the manager is silent, and comes back as one part: the text as `t()` shows it, tags included. A missing key and invalid syntax also come back as the one part `t()` would return.
 - Tags aren't type-checked, since a translation can use tags the default text doesn't. Render every tag your messages use, and keep a fallback for the rest, as above.
 - `t()` and the `data-i18n` binding show tags as written. Render a message with tags from your code with `rich()`.

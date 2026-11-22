@@ -2,7 +2,7 @@
 title: Escribe tus traducciones
 description: Diccionarios, archivos JSON, placeholders, mensajes ICU, enlaces y negritas, plurales, formateadores, claves y valores tipados, cómo detectar claves sin traducir y límites de tamaño.
 order: 1
-source: 4223b6ff8ce5b2f0699b97a720caf2f4ae7f2ba6
+source: 7c7e558119ce147aa0f8c5abb2518e6dd345de47
 ---
 
 # Escribe tus traducciones
@@ -215,18 +215,17 @@ Se aplica a `{d, date}`, a `{d, time}` y a una fecha en `{d}`, y es el valor por
 
 ### Llaves y apóstrofos literales
 
-Un apóstrofo antes de `{`, `}` o `<` pone entre comillas el texto hasta el siguiente apóstrofo, y dos apóstrofos forman uno. Un apóstrofo en cualquier otra parte es un apóstrofo normal, así que "Don't" no necesita nada:
+Un apóstrofo antes de `{` o `}` pone entre comillas el texto hasta el siguiente apóstrofo, y dos apóstrofos forman uno. Un apóstrofo en cualquier otra parte es un apóstrofo normal, así que "Don't" no necesita nada:
 
-| Escrito en el diccionario  | Se muestra               |
-| -------------------------- | ------------------------ |
-| `Don't forget {name}`      | `Don't forget Ana`       |
-| `Type '{name}' to insert`  | `Type {name} to insert`  |
-| `It''s '{'here'}'`         | `It's {here}`            |
-| `Write '<b>' to bold text` | `Write <b> to bold text` |
-| `Ouvrir l''{app}`          | `Ouvrir l'éditeur`       |
-| `Ouvrir l’{app}`           | `Ouvrir l’éditeur`       |
+| Escrito en el diccionario | Se muestra              |
+| ------------------------- | ----------------------- |
+| `Don't forget {name}`     | `Don't forget Ana`      |
+| `Type '{name}' to insert` | `Type {name} to insert` |
+| `It''s '{'here'}'`        | `It's {here}`           |
+| `Ouvrir l''{app}`         | `Ouvrir l'éditeur`      |
+| `Ouvrir l’{app}`          | `Ouvrir l’éditeur`      |
 
-Cuidado con un apóstrofo justo antes de un placeholder o una etiqueta, como el que pone la elisión en francés, italiano y catalán. `Ouvrir l'{app}` pone `{app}` entre comillas, así que muestra `Ouvrir l{app}`, y `l'<b>été</b>` pone la etiqueta entre comillas, así que `rich()` muestra `l<b>été</b>` como texto. Nada avisa, porque el texto es válido. Escribe dos apóstrofos, `l''{app}` y `l''<b>été</b>`, o el apóstrofo tipográfico `’`, que la tipografía francesa prefiere de todos modos y que nunca es sintaxis.
+Cuidado con un apóstrofo justo antes de un placeholder, como el que pone la elisión en francés, italiano y catalán. `Ouvrir l'{app}` pone `{app}` entre comillas, así que muestra `Ouvrir l{app}`, y nada avisa, porque el texto es válido. Escribe dos apóstrofos, `l''{app}`, o el apóstrofo tipográfico `’`, que la tipografía francesa prefiere de todos modos y que nunca es sintaxis.
 
 Dentro de las formas de un plural, `#` representa el número; escribe `'#'` para un `#` literal. Un `select` anidado en una forma no es el plural en sí, así que un `#` ahí se muestra tal como está escrito, igual que en ICU; pon `{count}` en su lugar.
 
@@ -273,7 +272,7 @@ Algunos detalles:
 
 - `rich()` acepta las mismas claves y valores que `t()`, comprobados de la misma forma. Un valor siempre es texto: un `<b>` en el nombre de un visitante se muestra tal como está escrito y nunca se lee como etiqueta.
 - Una etiqueta puede envolver placeholders, un plural o un select, y puede ir dentro de una forma de un plural o un select, pero una etiqueta abierta en una forma tiene que cerrarse en esa forma.
-- Un `<` que no forma una etiqueta, como en `1 < 2`, es texto, y también lo es el texto entre comillas: `'<b>'` muestra `<b>`, nunca una etiqueta, como en [Llaves y apóstrofos literales](#llaves-y-apóstrofos-literales).
+- Un `<` que no forma una etiqueta, como en `1 < 2`, es texto, y también lo es una etiqueta en texto entre comillas: `'{<b>}'` muestra `{<b>}`, nunca una etiqueta, como en [Llaves y apóstrofos literales](#llaves-y-apóstrofos-literales). Un apóstrofo antes de `<` es un apóstrofo normal, así que `l'<b>été</b>` conserva su elisión y su etiqueta.
 - Un mensaje cuyas etiquetas no cuadran, como `<b>negrita` sin `</b>`, o se anidan más de 10 niveles, registra una advertencia una vez por cada clave, texto y locale, salvo que el gestor sea silencioso, y vuelve como una sola parte: el texto tal como lo muestra `t()`, con las etiquetas. Una clave que falta y la sintaxis inválida también vuelven como la única parte que devolvería `t()`.
 - Las etiquetas no se comprueban en los tipos, porque una traducción puede usar etiquetas que el texto por defecto no tiene. Renderiza todas las etiquetas que usan tus mensajes y ten un respaldo para las demás, como arriba.
 - `t()` y el binding de `data-i18n` muestran las etiquetas tal como están escritas. Renderiza desde tu código un mensaje con etiquetas usando `rich()`.
