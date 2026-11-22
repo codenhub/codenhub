@@ -133,7 +133,7 @@ Which paths start with their locale: `"always"` every path; `"except-default"` e
 locales: readonly TLocale[];
 ```
 
-ASCII locale identifiers with alphanumeric hyphen-separated subtags, preserved in `localizeAll` order.
+Language tags that `Intl` accepts, or private-use tags such as `x-pirate`, preserved in `localizeAll` order.
 
 #### LocaleRoutingConfig › pathnames
 
@@ -212,4 +212,4 @@ The trimmed canonical configured locale identified by the pathname.
 pathname: string;
 ```
 
-The canonical application pathname: the locale prefix removed and translated segments read back, with every segment normalized as RFC 3986 says, so `/pt/%61/caf%c3%a9` reads as `/a/caf%C3%A9`, the same spelling `localize` builds. It also encodes `|`, `[`, and `]`, which a URL's pathname leaves raw.
+The canonical application pathname: the locale prefix removed and translated segments read back, with every segment normalized as RFC 3986 says, so `/pt/%61/caf%c3%a9` reads as `/a/caf%C3%A9`, the same spelling `localize` builds. It also encodes `[`, `]`, `|`, and `^`, which a URL's pathname can leave raw, depending on the runtime.
