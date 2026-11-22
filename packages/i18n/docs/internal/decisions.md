@@ -162,7 +162,9 @@ The 1,000-character key limit applies to the trimmed key, which lookup uses, in 
 
 ### Likely subtags are cached per process (0.5.0)
 
-`Intl.Locale.prototype.maximize()` results are cached by tag and shared by fallback chains, matching, and every manager, so creating a manager and matching a request no longer maximize every configured locale. With 50 locales that cost 0.4 ms per request, against the docs' "creating a manager is cheap". The cache holds 1,000 tags of up to 64 characters, least recently used first, because `matchLocale` receives tags from `Accept-Language`. Rejected: caching per configured list only, which leaves the request's tags uncached.
+`Intl.Locale.prototype.maximize()` results are cached by tag and shared by fallback chains, matching, and every manager, so creating a manager and matching a request no longer maximize every configured locale. With 50 locales that cost 0.4 ms per request, against the docs' "creating a manager is cheap". The cache holds 1,000 tags of up to 64 characters, least recently used first, because `matchLocale` receives tags from `Accept-Language`. Rejected: caching per configured list only, which leaves the request's tags uncached. `Intl.getCanonicalLocales` results, which fallback chains compare since 0.5.0, are cached the same way.
+
+**Each locale's forms are computed once per manager** (0.5.0): its lowercased and aliased prefixes, likely subtags, likely script, and canonical form, kept with the manager's frozen `locales` in a `WeakMap`, shared by its fallback chains and every `matchLocale()` call. The per-process cache alone left each call rebuilding those forms for every configured locale: about 30 µs a call with 20 locales and 115 µs with 100 on Node.js 26.13, against about 2 µs now, and 0.4.0's 160 µs and 770 µs. Creating a manager takes about 55 µs with 20 locales and 240 µs with 100, about a third of 0.4.0's. Rejected: computing the forms on the first `matchLocale()` only, which saves nothing for the fallback chains every manager builds.
 
 ### Missing-key warnings are remembered per process (0.5.0)
 

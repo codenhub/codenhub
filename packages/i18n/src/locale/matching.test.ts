@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
 
-import { matchConfiguredLocale } from "./matching";
+import { matchConfiguredLocale, prepareLocales } from "./matching";
 
 describe("matchConfiguredLocale", () => {
   it.each([
@@ -99,5 +99,15 @@ describe("matchConfiguredLocale", () => {
 
     expect(matchConfiguredLocale(["en", "fr"], [tagOfLength(256), "fr"])).toBe("fr");
     expect(matchConfiguredLocale(["en", "fr"], [tagOfLength(255), "fr"])).toBe("en");
+  });
+
+  it("computes each locale's forms once per list, as a manager keeps it", () => {
+    const locales = Object.freeze(["en", "iw-IL", "no"]);
+    const prepared = prepareLocales(locales);
+
+    expect(matchConfiguredLocale(locales, ["he"])).toBe("iw-IL");
+    expect(prepareLocales(locales)).toBe(prepared);
+    expect(prepareLocales([...locales])).not.toBe(prepared);
+    expect(prepared.entries.map(({ comparable }) => comparable)).toEqual(["en", "he-il", "nb"]);
   });
 });
