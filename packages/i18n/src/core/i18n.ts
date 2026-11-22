@@ -152,6 +152,7 @@ class I18nInstance<TLocale extends string, TKey extends string = string>
   private loadingRequest: Promise<unknown> | undefined;
   private applyListener: ((requestId: number) => void) | undefined;
   private readonly pluralRules = new Map<TLocale, Intl.PluralRules | undefined>();
+  private readonly initLocaleChanges = new WeakSet<Event>();
   private readonly localeLookup: ReadonlyMap<string, TLocale>;
   private readonly config: ValidatedI18nConfig<TLocale>;
   private readonly loader: LocaleLoader<TLocale>;
@@ -384,16 +385,22 @@ class I18nInstance<TLocale extends string, TKey extends string = string>
 
   subscribe(listener: () => void): () => void {
     const notify = (): void => listener();
+    // A re-init's `locale-change` follows its `ready`, which already called the listener for that change.
+    const notifyChange = (event: Event): void => {
+      if (!this.initLocaleChanges.has(event)) {
+        listener();
+      }
+    };
     let isSubscribed = true;
 
     this.addEventListener("ready", notify);
-    this.addEventListener("locale-change", notify);
+    this.addEventListener("locale-change", notifyChange);
 
     return () => {
       if (isSubscribed) {
         isSubscribed = false;
         this.removeEventListener("ready", notify);
-        this.removeEventListener("locale-change", notify);
+        this.removeEventListener("locale-change", notifyChange);
       }
     };
   }
@@ -424,12 +431,20 @@ class I18nInstance<TLocale extends string, TKey extends string = string>
       return false;
     }
 
+    const previousLocale = this.isReadyState ? this.currentLocale : undefined;
     this.currentLocale = locale;
     this.currentDirection = direction;
     this.dictionaries = dictionaries;
     this.isReadyState = true;
     this.applyListener?.(requestId);
     this.dispatchEvent(createCustomEvent<I18nReadyEventDetail<TLocale>>("ready", { locale }));
+    // A re-init that switches the language is a locale change too, so a `locale-change` listener sees every switch. The
+    // first init has no locale it changes from: `ready` reports it.
+    if (previousLocale !== undefined && previousLocale !== locale) {
+      const event = this.createLocaleChangeEvent(locale, previousLocale);
+      this.initLocaleChanges.add(event);
+      this.dispatchEvent(event);
+    }
     return true;
   }
 
@@ -470,12 +485,11 @@ class I18nInstance<TLocale extends string, TKey extends string = string>
     this.currentDirection = direction;
     this.dictionaries = dictionaries;
     this.applyListener?.(requestId);
-    this.dispatchEvent(
-      createCustomEvent<I18nLocaleChangeEventDetail<TLocale>>("locale-change", {
-        locale: nextLocale,
-        previousLocale,
-      }),
-    );
+    this.dispatchEvent(this.createLocaleChangeEvent(nextLocale, previousLocale));
+  }
+
+  private createLocaleChangeEvent(locale: TLocale, previousLocale: TLocale): CustomEvent {
+    return createCustomEvent<I18nLocaleChangeEventDetail<TLocale>>("locale-change", { locale, previousLocale });
   }
 
   /**

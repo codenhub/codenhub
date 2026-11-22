@@ -66,6 +66,12 @@ Without interpolation, a sentence with a value has to be concatenated from fragm
 
 Framework stores, such as React's `useSyncExternalStore`, need a subscribe function that returns an unsubscribe function. The typed `ready` and `locale-change` events remain for code that needs the event detail.
 
+### A re-`init()` that changes the locale fires `locale-change` (0.5.0)
+
+Every path that switches the active locale dispatches `locale-change` once, with `previousLocale`: `setLocale()`, and an `init()` on a manager that is already ready, which includes the browser binding's start and its re-initialization. The re-init dispatches `ready` first, as every applied `init()` does, then `locale-change`. `subscribe()` listens to both but is called once per applied call, so a re-init that switches the language does not render twice. The first `init()` dispatches only `ready`: before it the manager has no active language, only the default that `locale` reports, so there is nothing to change from. A call that keeps the locale, or that a later call overtook, dispatches no `locale-change`.
+
+Rejected: dispatching only `ready` from `init()`, as until 0.5.0. A listener that follows the language, such as one that logs a switch, updates a `lang` attribute outside the binding, or refetches localized data, had to listen to both events and compare locales itself, and one written for `locale-change`, as the docs show, missed a re-init's switch. Also rejected: `locale-change` from the first `init()`, whose `previousLocale` would name a locale that was never active.
+
 ### `defaultLocale` does not drive locale inference (0.2.0)
 
 `defaultLocale` is typed `NoInfer<TLocale>` in `I18nConfig` and `LocaleRoutingConfig`, as is the locale parameter of `loadLocale`, `getLocaleDirection`, and `onMissingKey`, so a callback annotated `(locale: string)` cannot widen it either. Otherwise a configuration in a separate variable without `as const` would infer `TLocale` as `string` from `defaultLocale`, so `setLocale("fr")` would compile for an app that supports only `en` and `pt`, and fail at runtime. That configuration is a compile error at `createI18n(config)`, fixed with `as const`. Inline configurations are unaffected, since `defaultLocale` is checked against the literal union inferred from `locales`.

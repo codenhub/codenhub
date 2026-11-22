@@ -145,7 +145,7 @@ export interface I18nLocaleChangeEventDetail<TLocale extends string = string> {
 export interface I18nEventMap<TLocale extends string = string> {
   /** Successful initialization event. */
   ready: CustomEvent<I18nReadyEventDetail<TLocale>>;
-  /** Successful active locale change event. */
+  /** Successful active locale change event, from `setLocale()` or an `init()` that switches a ready manager. */
   "locale-change": CustomEvent<I18nLocaleChangeEventDetail<TLocale>>;
 }
 
@@ -179,7 +179,8 @@ export interface I18n<TLocale extends string = string, TKey extends string = str
    * Atomically loads and activates an explicit locale or the default locale.
    *
    * @param options - Optional explicit locale selection.
-   * @returns A promise that resolves after loading completes. Applied initialization emits `ready`; a stale request,
+   * @returns A promise that resolves after loading completes. Applied initialization emits `ready`, and then, when it
+   * switches a manager that was already ready to another locale, `locale-change`; a stale request,
    * superseded by a later `init()` or `setLocale()`, resolves without changing state or emitting an event, even when its
    * loading fails, since the later call decides the locale. Failure leaves active state unchanged.
    * @throws {RangeError} When the locale is unsupported.
@@ -411,8 +412,9 @@ export interface I18n<TLocale extends string = string, TKey extends string = str
   formatList(values: Iterable<string>, options?: Intl.ListFormatOptions): string;
 
   /**
-   * Calls a listener after every applied `init()` and every applied locale change, such as to re-render a framework.
-   * A stale or same-locale request, which changes nothing, does not call it.
+   * Calls a listener after every applied `init()` and every applied locale change, such as to re-render a framework,
+   * once per call, so an `init()` that changes the locale calls it once. A stale or same-locale request, which changes
+   * nothing, does not call it.
    *
    * @param listener - Called without arguments. An exception is reported as for any `EventTarget` listener: in a
    * browser, as an uncaught error that neither stops other listeners nor rejects the change; in Node.js, it crashes the
@@ -424,7 +426,8 @@ export interface I18n<TLocale extends string = string, TKey extends string = str
   /**
    * Adds a typed lifecycle event listener.
    *
-   * @param type - `ready`, dispatched after every applied `init()`, or `locale-change`, after every applied locale change.
+   * @param type - `ready`, dispatched after every applied `init()`, or `locale-change`, after every applied locale change,
+   * by `setLocale()` or by an `init()` that switches a ready manager, after its `ready`.
    * @param callback - Receives the event, whose `detail` holds the locale. An exception is reported as by
    * {@link I18n.subscribe}.
    * @param options - Standard `EventTarget` listener options, such as `{ once: true }`.

@@ -210,11 +210,12 @@ The manager has a few properties you can read at any time:
 - A `setLocale()` to the locale already active changes nothing, so it doesn't call the listener.
 - A call that a later one overtook (next section) changes nothing either, so it doesn't call the listener.
 - Calling `init()` again with the same locale does apply, and does call it.
+- Calling `init()` again with another locale calls it once, not once per event.
 
 For code that needs to know what changed, the manager is also an `EventTarget` with two events:
 
 - `ready`, after every applied `init()`. `event.detail.locale` is the locale it started with.
-- `locale-change`, after every applied locale change. `event.detail.locale` is the new locale and `event.detail.previousLocale` the one before it.
+- `locale-change`, after every applied locale change. `event.detail.locale` is the new locale and `event.detail.previousLocale` the one before it. That includes an `init()` that switches a manager that was already ready to another locale, which dispatches `ready` and then `locale-change`. The first `init()` dispatches only `ready`, whatever locale it starts with.
 
 ```ts
 i18n.addEventListener("locale-change", (event) => {

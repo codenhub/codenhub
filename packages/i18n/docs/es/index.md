@@ -1,7 +1,7 @@
 ---
 title: Visión general
 description: Qué hace @codenhub/i18n, las cuatro ideas en las que se basa, un recorrido de cinco minutos, los idiomas de derecha a izquierda y cómo se comporta el gestor cuando las llamadas se superponen.
-source: 1e936e9462e1f95bef5dcd7db88d7f526dbad33a
+source: 38b9262954499fa3f796ad718ada86f093242a02
 ---
 
 # Traduce tu app
@@ -211,11 +211,12 @@ En esa oración, "aplicado" hace mucho trabajo:
 - Un `setLocale()` al locale que ya está activo no cambia nada, así que no llama al listener.
 - Una llamada a la que se adelantó otra posterior (siguiente sección) tampoco cambia nada, así que no llama al listener.
 - Llamar a `init()` otra vez con el mismo locale sí se aplica, y sí lo llama.
+- Llamar a `init()` otra vez con otro locale lo llama una vez, no una por evento.
 
 Para el código que necesita saber qué cambió, el gestor también es un `EventTarget` con dos eventos:
 
 - `ready`, después de cada `init()` aplicado. `event.detail.locale` es el locale con el que arrancó.
-- `locale-change`, después de cada cambio de locale aplicado. `event.detail.locale` es el nuevo locale y `event.detail.previousLocale`, el anterior.
+- `locale-change`, después de cada cambio de locale aplicado. `event.detail.locale` es el nuevo locale y `event.detail.previousLocale`, el anterior. Eso incluye un `init()` que cambia a otro locale un gestor que ya estaba listo, que emite `ready` y después `locale-change`. El primer `init()` solo emite `ready`, sea cual sea el locale con el que arranca.
 
 ```ts
 i18n.addEventListener("locale-change", (event) => {
