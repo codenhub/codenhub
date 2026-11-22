@@ -2,7 +2,7 @@
 title: Sin bundler
 description: Enlazar las hojas de estilos compiladas desde HTML simple, Rails, Laravel, Django o cualquier aplicación renderizada en el servidor, y el build por línea de comandos.
 order: 6
-source: 21bdefae1882dda22d050a63c3cb0785ef22beed
+source: dc92f1c454079a0452418338d714861a92633e0c
 ---
 
 # Sin bundler
@@ -116,7 +116,7 @@ El paquete trae un comando, `chs`, que lee tus plantillas en busca de nombres de
 
 El comando también sirve con un bundler. Un proyecto cuyo bundler no ejecuta Tailwind, como un build simple con Vite o webpack, puede escribir la hoja de estilos entre sus fuentes, `--output src/stylekit.css`, e importar ese archivo donde importaría `@codenhub/styles`. Un proyecto que usa Tailwind CSS v4 obtiene la misma reducción con el [punto de entrada de código fuente](./tailwind.md) y no necesita el comando.
 
-Necesita Node.js 26 o posterior en la máquina que genera el CSS, sea tu portátil, un job de CI o un paso del despliegue, y nada más: el paquete es toda la instalación, sin Tailwind y sin configuración. Instálalo como dependencia de desarrollo desde la raíz de tu proyecto; npm crea un `package.json` si no tienes uno:
+Necesita Node.js 24 o posterior en la máquina que genera el CSS, sea tu portátil, un job de CI o un paso del despliegue, y nada más: el paquete es toda la instalación, sin Tailwind y sin configuración. Instálalo como dependencia de desarrollo desde la raíz de tu proyecto; npm crea un `package.json` si no tienes uno:
 
 ```sh
 npm install --save-dev @codenhub/styles
@@ -244,7 +244,7 @@ Cada prefijo es una copia fija de esas clases, incluida en el paquete, así que 
 
 ### En un despliegue
 
-Genera la hoja de estilos antes del paso que recoge o añade huella a tus assets, como `rails assets:precompile`, `php artisan optimize` o `python manage.py collectstatic`. Puedes hacer commit de la salida, de modo que los servidores no necesitan Node.js en absoluto, a cambio de un archivo generado que alguien tiene que acordarse de regenerar; o generarla en el despliegue, de modo que la máquina de build necesita Node.js 26 o posterior.
+Genera la hoja de estilos antes del paso que recoge o añade huella a tus assets, como `rails assets:precompile`, `php artisan optimize` o `python manage.py collectstatic`. Puedes hacer commit de la salida, de modo que los servidores no necesitan Node.js en absoluto, a cambio de un archivo generado que alguien tiene que acordarse de regenerar; o generarla en el despliegue, de modo que la máquina de build necesita Node.js 24 o posterior.
 
 Fija la versión. Por debajo de 1.0 una versión menor puede renombrar o eliminar una clase, así que el mismo comando puede escribir otra hoja de estilos con una versión más nueva. La salida no depende de nada más que de la versión del paquete y de tus plantillas, así que haz commit de `package.json` y del lockfile que escribe npm, e instala con `npm ci` en la máquina de build, para que cada build use la versión que probaste.
 
@@ -263,7 +263,7 @@ Cada fallo imprime una línea que empieza por `chs:` en la salida de error está
 - **`--output is given more than once`.** Cada build escribe una sola hoja de estilos. Deja un solo `--output`, y vuelve a ejecutar el comando para otro archivo.
 - **`unknown aesthetic "<name>"; choose from ...`.** Elige uno de los nombres de la lista. Van en minúsculas y con guion, como `chunky-tile`.
 - **`missing command` o `unknown command "<name>"`.** La primera palabra después de `chs` tiene que ser `build`.
-- **`this command needs Node.js 26 or newer`.** Actualiza Node.js en la máquina que genera el CSS.
+- **`this command needs Node.js 24 or newer`.** Actualiza Node.js en la máquina que genera el CSS.
 - **`cannot write --output <file>: <reason> (<code>); <what to do>`.** `<reason>` y `<code>` son los de Node.js. `EACCES` o `EPERM` significa que no puedes escribir ahí, y en Windows también que el archivo es de solo lectura; `ENOSPC` significa que el disco está lleno.
 - **`--output <file> is a folder, not a file`**, o un dispositivo, incluido en Windows un nombre como `NUL` o `com1.css` que Windows reserva para uno, una tubería o un socket, o **`--output <file> ends with a folder separator`**, o **`ends with a . or .. segment`**. Nombra un archivo de hoja de estilos, como uno dentro de la carpeta.
 - **`--output <file> holds something this command did not write`.** El archivo no es una hoja de estilos que escribió este comando, como una escrita a mano o la de un proveedor, así que reemplazarlo lo perdería. Nombra otro archivo o aparta este. Una copia de `@codenhub/styles`, `/components` o `/native` del paquete empieza con el mismo aviso, así que se reemplaza como una que escribió el comando; una copia de otro punto de entrada, como `/theme` o una estética, no, y se rechaza.

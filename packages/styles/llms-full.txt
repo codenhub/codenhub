@@ -45,13 +45,13 @@ The docs build one account settings screen from start to finish, in this order:
 
 ## Requirements
 
-| Requirement   | Details                                                                                                                                                                                                              |
-| ------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| CSS imports   | Consumer tooling must resolve package CSS imports.                                                                                                                                                                   |
-| Browsers      | Chrome 123, Safari 17.5, or Firefox 128 and newer (`light-dark()` theming; `:has()` for `.input-group` state; `@property` for non-inheriting elevation).                                                             |
-| Tailwind CSS  | 4.3.2 or newer, below 5, only for the `/tw` source entrypoints. Install it yourself; the package does not.                                                                                                           |
-| Node.js       | 26 or newer on the machine that runs the `chs build` command. The stylesheets need none, but the package declares it as its engine, so Yarn 1, and npm with `engine-strict`, refuse the install on an older Node.js. |
-| Accessibility | Consumers provide semantic HTML, ARIA, keyboard behavior, and focus management.                                                                                                                                      |
+| Requirement   | Details                                                                                                                                                                                                                      |
+| ------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| CSS imports   | Consumer tooling must resolve package CSS imports.                                                                                                                                                                           |
+| Browsers      | Chrome 123, Safari 17.5, or Firefox 128 and newer (`light-dark()` theming; `:has()` for `.input-group` state; `@property` for non-inheriting elevation).                                                                     |
+| Tailwind CSS  | 4.3.2 or newer, below 5, only for the `/tw` source entrypoints. Install it yourself; the package does not.                                                                                                                   |
+| Node.js       | 24 or newer on the machine that runs the `chs build` command. The stylesheets need none, but the package declares it as its engine, so Yarn 1, and npm or pnpm with `engine-strict`, refuse the install on an older Node.js. |
+| Accessibility | Consumers provide semantic HTML, ARIA, keyboard behavior, and focus management.                                                                                                                                              |
 
 ## Notes
 
@@ -59,7 +59,7 @@ This package has no JavaScript behavior. It ships no compatibility aliases: a re
 
 ## License
 
-This project is licensed under the [Apache-2.0](LICENSE) license. Tailwind's theme values, Preflight, and property registrations, carried in the compiled stylesheets in `dist/`, and the property registrations in `tw/theme.css` come from [Tailwind CSS](https://tailwindcss.com) (MIT). The embedded checkbox marks are derived from the [Lucide](https://lucide.dev) `check` and `minus` icons (ISC), which Lucide derives from [Feather](https://github.com/feathericons/feather) (MIT). See [NOTICE](NOTICE) for the required notices. Every stylesheet in `dist/` and `tw/` that holds the marks carries them in a `/*!` comment, but a `/tw` build's minifier may drop a comment that is not at the top of its output, as Tailwind's own `--minify` does, so a build that ships the checkbox should keep the notices some other way.
+This project is licensed under the [Apache-2.0](LICENSE) license. Tailwind's theme values, Preflight, and property registrations, carried in the compiled stylesheets in `dist/`, and the property registrations in `tw/theme.css` come from [Tailwind CSS](https://tailwindcss.com) (MIT). The embedded checkbox marks are derived from the [Lucide](https://lucide.dev) `check` and `minus` icons (ISC), which Lucide derives from [Feather](https://github.com/feathericons/feather) (MIT). See [NOTICE](NOTICE) for the required notices. Every stylesheet in `dist/` and `tw/` that holds the marks carries them in a `/*!` comment, but most bundlers drop that comment once the package's CSS is not the first thing in the output, for the compiled entrypoints as much as for `/tw`: Vite 8 does when another stylesheet is imported before the package's, the Tailwind CLI's `--minify` does after `@import "tailwindcss"`, and Next.js 16 with Turbopack does from its chunk. So a build that ships the checkbox should keep the notices another way. The simplest is to serve `NOTICE` with your app, for example by copying `node_modules/@codenhub/styles/NOTICE` into your public folder, or to add its text to your app's licences page. Vite's `build.license` lists the package's `LICENSE`, not `NOTICE`, so it does not carry them. In Vite, `build.cssMinify: false` keeps the comment where it is, at the cost of leaving your own CSS unminified; the package's is minified already.
 
 <!-- Source: docs/index.md -->
 
@@ -204,7 +204,7 @@ The complete stylesheet includes the reset, the tokens, the layout and type help
 
 Pick one:
 
-- **Compiled CSS** (`@codenhub/styles`, shown above). Use it unless you have a reason not to. Any bundler that resolves CSS imports from packages works, such as Vite, webpack, or the Tailwind CLI. It ships every class, whether your pages use it or not.
+- **Compiled CSS** (`@codenhub/styles`, shown above). Use it unless you have a reason not to. Any bundler that resolves CSS imports from packages works, such as Vite, webpack, or the Tailwind CLI. It ships every class, whether your pages use it or not. Through the Tailwind CLI it grows by about a fifth: the CLI writes each `color-mix()` twice, a fallback and the original inside `@supports (color: color-mix(in lab, red, red))`, and every browser the package supports takes the original. With Tailwind 4.3.2, the complete stylesheet and one aesthetic came out at 282,209 bytes from 238,722. In a project that runs Tailwind, use the source below instead, or import the compiled file outside Tailwind's pipeline, such as from your app's JavaScript entry.
 - **Tailwind CSS v4 source** (`@codenhub/styles/tw`). Use it when your project already runs Tailwind v4. Your build compiles the package with your own utilities, so you get one stylesheet and Tailwind's `dark:` variant matches the package's theme. It needs Tailwind 4.3.2 or newer, below 5.
 - **No bundler.** Link the compiled file from `node_modules` or a CDN with a `<link>` tag; see [Without a bundler](docs/integrating/without-a-bundler.md).
 
@@ -234,8 +234,8 @@ The order of the two imports does not matter, because every entrypoint declares 
 
 - **Browsers:** Chrome 123, Safari 17.5, or Firefox 128 and newer. Colors use `light-dark()` and `color-scheme` (Firefox 120). `.input-group` reads a nested control's invalid and disabled state with `:has()` (Firefox 121). The elevation classes register a non-inheriting property with `@property` (Firefox 128); without it, an elevation class would also reach the unclassed elements inside it.
 - **Tooling:** an `@import` of a package name needs a tool that resolves CSS imports from packages through their `exports` map. Without one, link the compiled file by its path or from a CDN; see [Without a bundler](docs/integrating/without-a-bundler.md). Two common tools need a nudge, described in [Integrating → Bundlers that need a nudge](docs/integrating/index.md#bundlers-that-need-a-nudge): Parcel, and PostCSS with `postcss-import`.
-- **Tailwind:** 4.3.2 or newer, below 5, only for the `/tw` source entrypoints. It is an optional peer dependency, so the compiled entrypoints and the `chs build` command do not install it.
-- **Node.js:** 26 or newer on the machine that runs the `chs build` command. The stylesheets need none, but the package declares it as its engine, so Yarn 1, and npm with `engine-strict`, refuse the install on an older Node.js.
+- **Tailwind:** 4.3.2 or newer, below 5, only for the `/tw` source entrypoints. The package does not depend on it, so the compiled entrypoints and the `chs build` command work in a project on any Tailwind or none, and nothing checks the version for you.
+- **Node.js:** 24 or newer on the machine that runs the `chs build` command. The stylesheets need none, but the package declares it as its engine, so Yarn 1, and npm or pnpm with `engine-strict`, refuse the install on an older Node.js.
 - **Your application:** the package has no JavaScript. Semantic HTML, ARIA, keyboard behavior, focus management, validation, and announcements are yours; see [Accessibility](docs/accessibility.md).
 
 ## When nothing is styled
@@ -255,7 +255,7 @@ That does not apply to the `/tw` files. They are Tailwind source, not finished C
 
 ## All entrypoints
 
-Compiled entrypoints are finished CSS. `/tw` entrypoints publish the uncompiled source from `tw/`, beside `dist/`, which a Tailwind v4 build must process. Each one is a compiled path with `/tw` added, as `@codenhub/styles/native/tw` is the source of `@codenhub/styles/native`; the focused ones, such as `/button/tw`, exist only as source, and `/palette` only compiled. A focused `/tw` component entrypoint includes the theme tokens, so its classes need nothing else from the package, but it needs `@import "tailwindcss";` before it; see [Tailwind CSS v4 → Using a focused entrypoint](docs/integrating/tailwind.md#using-a-focused-entrypoint).
+Compiled entrypoints are finished CSS. `/tw` entrypoints publish the uncompiled source from `tw/`, beside `dist/`, which a Tailwind v4 build must process. Each one is a compiled path with `/tw` added, as `@codenhub/styles/native/tw` is the source of `@codenhub/styles/native`; the focused ones, such as `/button/tw`, exist only as source, and `/palette` only compiled. A focused `/tw` component entrypoint includes the theme tokens, so its classes need nothing else from the package, but it needs `@import "tailwindcss";` before it; see [Tailwind CSS v4 → Using a focused entrypoint](docs/integrating/tailwind.md#using-a-focused-entrypoint). A focused entrypoint is for one family: two or more of them each bring the theme and the shared rules again, so for two families or more import `/components/tw`, or `/tw`.
 
 Each import path resolves the same file under the `style`, `import`, and `default` export conditions. A `types` condition comes first and names an empty declaration, so TypeScript accepts a side-effect import such as `import "@codenhub/styles";` with `noUncheckedSideEffectImports`, which TypeScript 6 turns on by default. A CSS import is a side effect, so make sure your bundler does not drop it as unused.
 
@@ -405,6 +405,25 @@ Then import the package with Parcel's `npm:` prefix, which tells it the name is 
 
 The other compiled entrypoints work the same way, such as `@codenhub/styles/dist/aesthetics/neobrutalism.css`.
 
+### Test runners
+
+A component test that imports a file which imports `@codenhub/styles` loads the stylesheet too. Vitest needs nothing: it resolves the package's `exports` map to the `.css` file and, by default, processes no CSS in tests. Jest does not process CSS at all, and the usual `moduleNameMapper` line for `.css` files misses this import, since `@codenhub/styles` and `@codenhub/styles/aesthetics/pixel` have no extension; Jest then reads the stylesheet as JavaScript and fails with `SyntaxError: Invalid or unexpected token`. Map the package's specifiers to the same empty module:
+
+```js
+// jest.config.js
+module.exports = {
+  moduleNameMapper: {
+    "^@codenhub/styles(/.*)?$": "<rootDir>/styleMock.js",
+    "\\.css$": "<rootDir>/styleMock.js",
+  },
+};
+```
+
+```js
+// styleMock.js
+module.exports = {};
+```
+
 ## Verifying it worked
 
 After the import, render one styled element and confirm it picked up the package's tokens rather than the browser default:
@@ -462,6 +481,8 @@ Unlike `/tw`, the focused entrypoints and `/native/tw` do not import Tailwind, s
 @import "tailwindcss";
 @import "@codenhub/styles/button/tw";
 ```
+
+A focused entrypoint is for one family. Each one brings the theme and the shared rules its classes are built on, so two of them bring those twice, and Tailwind keeps both copies. With Tailwind 4.3.2, `/button/tw`, `/form/tw`, `/surface/tw`, and `/feedback/tw` together compiled a small page to 85,192 bytes minified, where `/components/tw`, which holds all four and the tooltips too, compiled it to 82,915. For two families or more, import `/components/tw`, or `/tw`.
 
 ## Build your own components with `@apply`
 
@@ -560,7 +581,7 @@ The block leaves out `neutral`, `emerald`, `amber`, `rose`, `indigo`, and `white
 @source inline("btn alert badge primary destructive soft");
 ```
 
-Every `/tw` entrypoint requires Tailwind CSS 4.3.2 or newer, below 5 (`>=4.3.2 <5`).
+Every `/tw` entrypoint requires Tailwind CSS 4.3.2 or newer, below 5 (`>=4.3.2 <5`), the range CI compiles it with. The package does not declare Tailwind as a peer dependency, so your package manager does not check the version for you; `npm ls tailwindcss` shows yours. An optional peer would have checked it, but npm then refused to install the package in any project on an older Tailwind, even one that only links the compiled CSS.
 
 ## The `dark:` variant
 
@@ -879,7 +900,7 @@ The package carries a command, `chs`, that reads your templates for class names 
 
 The command works with a bundler too. A project whose bundler does not run Tailwind, such as a plain Vite or webpack build, can write the stylesheet into its sources, `--output src/stylekit.css`, and import that file where it would import `@codenhub/styles`. A project that runs Tailwind CSS v4 gets the same trimming from the [source entrypoint](docs/integrating/tailwind.md) and does not need the command.
 
-It needs Node.js 26 or newer on the machine that builds the CSS, whether that is your laptop, a CI job, or a deploy step, and nothing else: the package is the whole install, with no Tailwind and no configuration. Install it as a development dependency from your project root; npm creates a `package.json` if you have none:
+It needs Node.js 24 or newer on the machine that builds the CSS, whether that is your laptop, a CI job, or a deploy step, and nothing else: the package is the whole install, with no Tailwind and no configuration. Install it as a development dependency from your project root; npm creates a `package.json` if you have none:
 
 ```sh
 npm install --save-dev @codenhub/styles
@@ -1007,7 +1028,7 @@ Each prefix is a fixed copy of those classes, built into the package, so the lis
 
 ### In a deploy
 
-Build the stylesheet before whatever step collects or fingerprints your assets, such as `rails assets:precompile`, `php artisan optimize`, or `python manage.py collectstatic`. Either commit the output, so the servers need no Node.js at all at the cost of a generated file someone has to remember to rebuild, or build it on deploy, so the build machine needs Node.js 26 or newer.
+Build the stylesheet before whatever step collects or fingerprints your assets, such as `rails assets:precompile`, `php artisan optimize`, or `python manage.py collectstatic`. Either commit the output, so the servers need no Node.js at all at the cost of a generated file someone has to remember to rebuild, or build it on deploy, so the build machine needs Node.js 24 or newer.
 
 Pin the version. Below 1.0 a minor release may rename or remove a class, so the same command can write a different stylesheet with a newer version. The output depends on nothing but the package's version and your templates, so commit `package.json` and the lockfile npm writes, and install with `npm ci` on the build machine, so every build uses the version you tested.
 
@@ -1026,7 +1047,7 @@ Every failure prints one line starting with `chs:` to standard error and exits w
 - **`--output is given more than once`.** Only one stylesheet is written per build. Keep one `--output`, and run the command again for another file.
 - **`unknown aesthetic "<name>"; choose from ...`.** Pick one of the names listed. They are lowercase and hyphenated, as in `chunky-tile`.
 - **`missing command` or `unknown command "<name>"`.** The first word after `chs` has to be `build`.
-- **`this command needs Node.js 26 or newer`.** Update Node.js on the machine that builds the CSS.
+- **`this command needs Node.js 24 or newer`.** Update Node.js on the machine that builds the CSS.
 - **`cannot write --output <file>: <reason> (<code>); <what to do>`.** `<reason>` and `<code>` are Node.js's own. `EACCES` or `EPERM` means you cannot write there, and on Windows also that the file is read-only; `ENOSPC` means the disk is full.
 - **`--output <file> is a folder, not a file`**, or a device, including on Windows a name such as `NUL` or `com1.css` that Windows keeps for one, a pipe, or a socket, or **`--output <file> ends with a folder separator`**, or **`ends with a . or .. segment`**. Name a stylesheet file, such as one inside the folder.
 - **`--output <file> holds something this command did not write`.** The file is not a stylesheet this command wrote, such as one you wrote by hand or a vendor's, so replacing it would lose it. Name another file, or move this one away. A copy of `@codenhub/styles`, `/components`, or `/native` from the package starts with the same notice, so it is replaced as one the command wrote; a copy of another entrypoint, such as `/theme` or an aesthetic, does not, and is refused.
@@ -3695,366 +3716,3 @@ An app with its own contrast and motion settings can now pass them to the packag
 - **Under `.glass`, a pane inside a filled surface stays legible.** A ghost or soft card, a panel, or an alert inside a `.card.solid.primary` showed the fill through its translucent pane and printed its text at 3.0 to 3.99:1. On a filled surface the pane is now opaque. A ground you set yourself with `--ui-surface-ground` is replaced by the page's color there too, even an opaque one.
 - **`.btn.lg` stands as tall as `.ipt.lg` under a 2px border.** Under `.neobrutalism`, `.chunky-tile`, or a `--border-width: 2px` preset, it measured 49.5px beside the field's 48px.
 - **The Tailwind guide names the order the package's variants need.** Written after a pseudo-element variant, as in `before:motion-reduce:hidden` or `placeholder:dark:text-white`, `dark:`, `contrast-more:`, `contrast-less:`, `motion-safe:`, and `motion-reduce:` compile to a selector browsers drop, so the utility ignores the app's settings. Write them first, as in `motion-reduce:before:hidden`. See [Tailwind](docs/integrating/tailwind.md).
-
-<!-- Source: docs/changelog/0.10.0.md -->
-
-# 0.10.0
-
-Every Tailwind source path now ends in `/tw`, so the source of a compiled entrypoint is its path with `/tw` added; `/palette`, compiled only, has none. Node.js 26 is the floor. The compiled stylesheets are built by the package's own build instead of Tailwind, and ship the same CSS as before.
-
-## Changed
-
-- **Breaking: the focused Tailwind source paths end in `/tw`.** `@codenhub/styles/tw/<name>` is now `@codenhub/styles/<name>/tw`, such as `@codenhub/styles/button/tw` and `@codenhub/styles/native/tw`, and `@codenhub/styles/tw/aesthetics/<name>` is now `@codenhub/styles/aesthetics/<name>/tw`. The old paths are gone, with no alias. Move `/tw` to the end of each import. `@codenhub/styles/tw` is unchanged. See [Tailwind CSS v4 → Using a focused entrypoint](docs/integrating/tailwind.md#using-a-focused-entrypoint).
-- **Breaking: Node.js 26 or newer.** `engines.node` is `>=26`, so Yarn 1, and npm with `engine-strict`, refuse the install on Node.js 24, and `chs build` exits with an error there. Update Node.js where the package is installed or the CSS is built; the stylesheets themselves need nothing. See [Setup → Requirements](docs/setup.md#requirements). ([#553](https://github.com/codenhub/codenhub/issues/553))
-- **The compiled stylesheets are built without Tailwind.** The package compiles them with its own build, and they carry the same rules as in 0.9.0. Through `/tw`, your Tailwind compiles the same classes as before. The only difference is the nine `--tw-*` property registrations the package's classes use, which every `/tw` entry that carries the theme now emits on every page, about 0.7 KB. `NOTICE` now carries Tailwind's MIT licence, for the parts of Tailwind's theme, Preflight, and registrations the package ships.
-
-## Fixed
-
-- **`chs build` reads a `--content` path whose name holds a bracket.** A path that names an existing file, such as Next.js's `app/[id]/page.tsx`, is now read as that file; before, it was read as a glob, in which `[id]` matches one letter, so the build failed with "matches no file". A path that names no file is still read as a glob. A glob that matches a link to a file now reads the file it links to, where it used to skip it. See [Without a bundler → Build only the classes you use](docs/integrating/without-a-bundler.md#build-only-the-classes-you-use).
-- **`chs build` no longer reads its own output.** A `--content` glob that matched the `--output` file, such as `-c "src/**/*" -o src/stylekit.css`, read the previous build back in, so the stylesheet kept every class it had ever held and grew with each build. The output is now left out of the content.
-- **`chs build` reads content one file at a time.** It held the text of every file a glob matched at once, so a broad glob over a large folder, such as `node_modules`, could take gigabytes of memory; it now holds one file and the classes found so far. A file that cannot be read because it is too large is now named in the error.
-
-<!-- Source: docs/changelog/0.9.0.md -->
-
-# 0.9.0
-
-The build command is renamed `chs` and no longer runs Tailwind: it trims a stylesheet the package ships, so the package is the whole install. Twelve component variables, such as `--field-gap` and `--table-cell-padding`, are public and take effect when set on any ancestor. The release also fixes printing, bare native controls, disabled solo actions, forced colors, and sketch knobs, and adds the licence notice of the checkbox marks to every compiled file that carries them.
-
-## Added
-
-- **Twelve component variables.** `--tooltip-gap`, `--field-gap`, `--input-group-padding`, `--switch-height`, `--switch-width`, `--divider-color`, `--divider-width`, `--skeleton-base`, `--skeleton-sheen`, `--quote-width`, `--table-cell-padding`, and `--table-hover` join `--input-group-gap` and `--tooltip-linger` as public variables. Each one works on the component or on any element around it, so `.settings { --field-gap: 0.5rem; }` spaces every field in the region. `--table-hover` also works on a `tbody` or a row, for that part of the table only. See [Customizing → Component variables](docs/usage/customizing.md#component-variables).
-
-## Changed
-
-- **Breaking: the build command is `chs`.** `codenhub-styles build` is gone, with no alias; run `chs build` from a `package.json` script, or `npx @codenhub/styles build` from a shell. Do not type `npx chs`: an unrelated package on npm has that name, and npx would download and run it. See [Without a bundler → Build only the classes you use](docs/integrating/without-a-bundler.md#build-only-the-classes-you-use).
-- **Breaking: the command builds without Tailwind.** It reads the classes your files name and keeps their rules from a complete stylesheet the package ships in `dist/purge/`, so it needs Node.js 24 or newer and nothing else installed, and its output no longer changes with your Tailwind version. Three things it did through Tailwind are gone. It emits no Tailwind utilities, so `flex` or `mt-4` in your templates adds nothing. Variants are a fixed set of ten: `sm:`, `md:`, `lg:`, `xl:`, `2xl:`, `hover:`, `focus:`, `focus-visible:`, `active:`, and `dark:`. Variants do not stack, so `md:hover:primary` is not found. A project that needs any of those runs Tailwind and imports `/tw`, which still gives all three. See [Without a bundler → What it does not do](docs/integrating/without-a-bundler.md#what-it-does-not-do).
-- **Breaking: `@codenhub/styles` no longer has a peer dependency on `@tailwindcss/cli`.** Only the command used it. Remove it from your dependencies if nothing else uses it. `tailwindcss` stays an optional peer for `/tw`.
-- **`--input-group-gap` and `--tooltip-linger` work from a parent.** They took effect only when set on the `.input-group` or the `.tooltip` itself. A value set on an ancestor now reaches them.
-- **Sketch knobs reach every position.** `--sketch-radius`, `--sketch-radius-rounded`, `--sketch-radius-surface`, and `--sketch-radius-surface-rounded` set on a `.sketch` region, or on any element inside it, now shape every control and surface that rotates through the four outlines, such as `.btn`, `.ipt`, and `.card`. They skipped one element in four. A component that does not rotate, such as `.skeleton` or a bare control under `/native`, still takes only a knob set on the region. See [Aesthetics → Sketch](docs/usage/aesthetics.md#sketch).
-- **Small buttons and fields read the theme's line height.** `.btn.sm` and the small text fields took their leading from a variable private to Tailwind, which can change between Tailwind releases. They now read `--text-sm--line-height`. A `leading-*` utility on them still wins.
-- **Internal variables renamed.** The custom properties that switches, tooltips, quotes, tables, and elevation derive internally now start with `--_`, as the other internal ones do, such as `--_tooltip-top` and `--_table-rule`. They were documented as internal. CSS that set one of the old names, such as `--table-rule`, no longer does anything. Use a public variable or a utility instead.
-- **The homepage is the package's page on codenhub.dev.**
-
-## Fixed
-
-- **A tap leaves no hover tint.** On a touch screen a tapped button, interactive card, table row, checkbox, switch, select, or input group kept its hover color until something else was tapped. Hover now applies only where the pointer can hover, as Tailwind's `hover:` variant does.
-- **A bare `<progress>` takes the color it sits in.** Under `/native`, in a filled container, it drew the page's ink over the container's color.
-- **A bare quiet checkbox or radio keeps its checked plate.** Under `/native`, a checked `.ghost` or `.soft` checkbox or radio showed its resting plate, and a mixed one also kept the neutral 20% cap.
-- **A filled quotation prints with its plate.** A `.quote.solid` printed white text on white paper.
-- **A solid solo element prints with its plate.** The `-solo` classes left their fill off paper, as the quotation did.
-- **A solo action disabled by class or data attribute does not press.** The neobrutalism, chunky tile, and cyber solos guarded their press with `:disabled` and `aria-disabled` only. A link or `role="button"` marked `.disabled` or `data-disabled` still sank when clicked.
-- **`@apply progress` and `@apply select` keep their forced colors.** The applied bar's value was repainted as Canvas, and the applied drop-down drew no arrow.
-- **Compiled CSS carries the licence of the checkbox marks.** The marks come from Lucide (ISC, itself from Feather, MIT). Each compiled file that inlines them now carries their copyright and permission notices in a `/*!` comment after Tailwind's banner, and `chs build` keeps it in its output.
-
-## Documentation
-
-- [Customizing → Generated palette](docs/usage/customizing.md#generated-palette) says the palette's `-edge` values do not follow `prefers-contrast: more`.
-- [Tailwind CSS v4](docs/integrating/tailwind.md) warns against clearing the `--text-*`, `--font-*`, and `--spacing` themes, which the package reads.
-
-<!-- Source: docs/changelog/0.8.0.md -->
-
-# 0.8.0
-
-On `/tw` every intent, presentation, elevation, corner, size, and modifier class is a Tailwind utility, so `@apply btn primary soft sm` and `md:lg` work, and a `/tw` build emits only the classes your pages use. A `codenhub-styles build` command writes that trimmed stylesheet for a project that does not run Tailwind, with a bundler or without one. Text fields take `.sm` and `.lg`. The compiled stylesheets are about half their size before compression. The release also fixes a round of bugs in applied helpers, input groups, focus rings, nested aesthetics, and forced colors.
-
-## Added
-
-- **Every class is a utility on `/tw`.** The intents, the presentation (`solid`, `soft`, `ghost`, `edged`, `edgeless`), the elevation (`flat`, `raised`, `floating`), the corner patterns, and the sizes (`sm`, `lg`) are Tailwind utilities, so one class of yours can carry a whole recipe, `@utility btn-save { @apply btn primary soft sm; }`, and variants such as `hover:primary`, `md:lg`, and `dark:solid` apply a class under a condition. Before, they were plain classes: `@apply` could not name them and those variants compiled to nothing. See [Tailwind CSS v4 → Build your own components with `@apply`](docs/integrating/tailwind.md#build-your-own-components-with-apply).
-- **Component modifiers are utilities too.** `tight`, `loose`, `vertical`, `horizontal`, `between`, `narrow`, `wide`, `p-xs`, `p-sm`, `p-lg`, `flush`, `icon`, `pill`, `active`, `indeterminate`, `ruled`, `ruleless`, `interactive`, `hoverable`, and `pressable` work in `@apply` and with variants: `@apply stack tight`, `@apply btn icon pill`, and `md:tight`. A modifier still changes only the components that read it; `.wide` or `.active` on an element of your own sets nothing visible. The disabled state is not a utility: it stays the `disabled`, `aria-disabled`, or `data-disabled` attribute, or the `.disabled` class in markup.
-- **A build command for projects without a bundler.** `npx codenhub-styles build --content "app/views/**/*.erb" --output public/stylekit.css` reads your templates and writes one minified stylesheet with only the classes they use, for plain HTML, Rails, Laravel, Django, any server-rendered app, or a bundler build without Tailwind. It needs Node.js 24 or newer and `@tailwindcss/cli` and `tailwindcss` 4.3.2 or newer, below 5, installed, and stops with a one-line message naming whatever is missing. `@tailwindcss/cli` joins `tailwindcss` as an optional peer dependency, so a project that does not run the command installs nothing new. See [Without a bundler → Build only the classes you use](docs/integrating/without-a-bundler.md#build-only-the-classes-you-use).
-- **Sizes for text fields.** `.ipt`, `.select`, `.textarea`, and `.input-group` take `.sm` and `.lg` with the button's heights, text sizes, and corner step, so a small field and a small button line up in a row. See [Forms → Sizes](docs/usage/forms.md#sizes).
-- **`<dialog>` and `<progress>` under `/native`.** A plain `<dialog>` is a `.card.floating`, hidden until opened and centered, and a plain `<progress>` is a `.progress` filled to its `value`, or the indeterminate sweep with no `value`. See [Setup → Classless HTML](docs/setup.md#classless-html).
-- **Pages print in the light theme.** Under `@media print` every theme resolves to its light values, a forced-dark region's included, and filled components print their background (`print-color-adjust: exact`), so a solid button's white label no longer prints on blank paper. A `dark:` utility still applies in print. See [Theming → Printing](docs/usage/theming.md#printing).
-- **Presets.** A new guide, [Presets](docs/usage/presets.md), compares the three ways to set a look once: axis classes on a container, theme and material tokens, and your own component classes built with `@apply`.
-- **Dropping Tailwind's palette.** [Tailwind CSS v4 → Drop Tailwind's palette](docs/integrating/tailwind.md#drop-tailwinds-palette) has the `@theme` block that clears the hues your design does not use, and names the six ramps the theme needs.
-- **Parcel and `postcss-import`.** [Integrating → Bundlers that need a nudge](docs/integrating/index.md#bundlers-that-need-a-nudge) shows the one change each needs to find the stylesheet.
-
-## Changed
-
-- **Breaking: the `/tw` source moved from `dist/tw/` to `tw/`.** Imports through the package's exports, such as `@import "@codenhub/styles/tw"`, are unchanged. A path that reaches into `node_modules/@codenhub/styles/dist/tw/` breaks; point it at `tw/`. `dist/` now holds only finished CSS, plus an empty `index.d.ts` for TypeScript, so Django's `ManifestStaticFilesStorage` no longer fails `collectstatic` on it.
-- **Breaking: a `/tw` build emits only the classes your files name.** The `/tw` copy no longer lists every package class for Tailwind to generate, so a page using one button compiles to about 28 KB minified where it compiled to the whole 416 KB stylesheet. The intent, presentation, elevation, corner, and size classes, and the modifiers, are now generated only when they are found too, where the intent, presentation, and elevation classes used to be emitted always. A class name built at runtime, such as `` `btn ${tone}` ``, or one that comes from a CMS, has no styling until you write it out where Tailwind scans or list it with `@source inline("btn primary destructive soft")`. See [Tailwind CSS v4 → Troubleshooting](docs/integrating/tailwind.md#troubleshooting). The aesthetic classes are still always emitted.
-- **Breaking: the class families moved to a sublayer of `utilities`.** The intent, presentation, edge, elevation, corner, and size classes sat in the `components` layer; they now sit in `utilities.families`, which loses to every other rule in `utilities`. Your utilities and unlayered CSS still beat them. A rule of yours in the `components` layer, or in a layer of your own declared before `utilities`, no longer does: `@layer components { .my-card { --ui-fill: 50%; } }` now loses to `.solid` on the same element. Move such a rule into a utility, into unlayered CSS, or into a layer declared after `utilities`. See [Setup → Cascade layers](docs/setup.md#cascade-layers).
-- **Your utility beats a modifier and a component's inner defaults.** A modifier or size used to be a 0-2-0 rule nested in its component, so it beat a utility on the same element. Now a modifier only raises a flag its component reads at the weight of its default, so `gap-2` on a `.stack.tight`, `px-8` on a `.btn.sm`, `text-sm` on a `.label`, and `p-0 text-center` on a `.data-table` cell all apply. If you wrote such a utility and relied on the modifier winning, remove the utility.
-- **`.interactive`, `.hoverable`, and `.pressable` work on any element `box` paints, not only `.card`.** A `.badge`, a `.panel`, or your own `@apply box` element takes the hover and the press, and `.interactive` and `.pressable` set the pointer cursor on any element that carries them. If your own markup already uses one of these class names for something else, the element now takes the pointer cursor and the press; rename your class. A disabled `.interactive` or `.pressable` card shows the not-allowed cursor now, where it kept the pointer.
-- **`.ruled` and `.ruleless` on a container reach every table inside it.** They reached only the `.data-table` carrying them; a `.ruleless` wrapper now drops the body rules of every table it holds.
-- **The compiled stylesheets are about half their size before compression.** Each composed rule repeated its declarations once for every file that referenced it; they are stated once now. The compiled files also drop the fallbacks Tailwind writes for browsers without `color-mix()` or `@property`, which no supported browser needs. Minified, the complete stylesheet is about 198 KB, down from 416 KB, `/native` about 295 KB from 582 KB, and `/components` about 159 KB from 324 KB. With gzip they are about 17 KB, down from 20 KB, 22 KB from 26 KB, and 13 KB from 15 KB.
-- **Under `.pixel`, cards, panels, and alerts take no cut.** A surface keeps the inset ring and square corners but no longer clips, because the clip cut everything inside it: a tooltip in a card was never painted, and a child's shadow and focus outline were trimmed. Buttons, fields, and code blocks keep their stepped corners. See [Aesthetics → Pixel](docs/usage/aesthetics.md#pixel).
-- **A neutral component on a filled parent prints in the parent's text color.** A neutral badge in a `.btn.primary` read at 1.11:1, and a `.ghost` Cancel button in a `.card.solid.primary` printed the page's text on the card's fill. A neutral component that is not `.solid`, a text field included, now takes its label and its line from the filled component around it. A component with an intent keeps its own color. See [Buttons → Choose a fill and an edge](docs/usage/buttons.md#choose-a-fill-and-an-edge).
-- **A filled component's focus ring carries a line of the page color inside it.** On a component filled past half, such as `.solid.primary`, the outline sat over a fill of its own color and part of it vanished. A 2px line of `--color-background` now runs inside the ring, as it already did under `.pixel`; a focused `.input-group` takes the same line.
-- **A container's tracking no longer reaches its buttons and badges.** `.btn` and `.badge` fall back to `normal` letter spacing, and text fields set `normal`, so body copy's tracking under `/native` no longer widens every control. To track a region's buttons, set `--ui-label-tracking` on the container.
-- **`/native` sets body text on `body`, not on `p` and `li`.** Paragraphs and list items inherit their type from what they sit in, so a container that sets its own size, weight, or tracking applies it to the Markdown inside it; a paragraph in a bold 20px container is no longer 14px regular.
-- **Every press happens under reduced motion.** The default look, glass, cyber, sketch, and `.cyber-solo` dropped their press under `prefers-reduced-motion: reduce`, so a click gave no feedback. The press now lands at once, as the slab presses of neobrutalism and chunky tile already did.
-- **Glass and neobrutalism regions set the theme's font.** They set `font-family` from `--font-default` on the region, so a glass or neobrutalist region nested in pixel, cyber, sketch, or chunky tile no longer takes that aesthetic's face. A font set only with `font-family` on `body` or a container stops at these regions; set `--font-default` too, as [Theming → Fonts](docs/usage/theming.md#fonts) describes.
-- **`--focus-ring` is no longer declared at `:root`.** It resolved `--color-primary` there and inherited, so a region with its own `--color-primary` ringed its buttons in the page's color. Each focused element now falls back to its own primary at 64%, and a `--focus-ring` you set on an ancestor still inherits. `var(--focus-ring)` in your own CSS with nothing set now resolves to nothing; write the fallback, `var(--focus-ring, color-mix(in srgb, var(--color-primary) 64%, transparent))`.
-- **Eight neutral palette values changed.** `/palette`'s neutral soft `page` and `subtle` cells are now read from the components that draw them, `.alert` and `.kbd`, so they match what those components render; `--palette-neutral-soft-page-bg` is lighter in the light theme and darker in the dark one. Every other palette value is unchanged.
-- **The package declares its types.** Every stylesheet export leads with a `types` condition naming an empty declaration, and the top-level `types` field names `dist/index.d.ts`, so `import "@codenhub/styles";` typechecks under TypeScript 6's `noUncheckedSideEffectImports`, where it failed with TS2882. `tw/` holds its own `index.d.ts`.
-- **`prefers-contrast: more` is honored.** Nothing read it before. With it, text fields rest at their full border, neutral borders take a heavier gray, an intent's border takes its strong tone, a progress track is outlined, and glass turns opaque with a gray border, so each of those lines measures at least 3:1 in both themes. Readers who have not asked for more contrast see no change. [Accessibility → Increased contrast](docs/accessibility.md#increased-contrast) lists each one.
-
-## Removed
-
-- **`--surface-padding`.** The variable `.card` and `.panel` read their padding from, and that `.p-xs`, `.p-sm`, `.p-lg`, and `.flush` wrote, is gone; the padding modifiers now set the padding through their own flags. It was documented as internal wiring, but CSS that set `--surface-padding` on a card to change its padding no longer does anything; use a padding modifier, or set `padding` in your own unlayered CSS.
-
-## Fixed
-
-- **`@apply text-control` and `@apply surface` behave like the classes.** An applied field missed the rules that named `.text-control` from outside it: it drew the faint surface line instead of the 3:1 control line, took the intent of any container around it, ignored the `.soft`, `.solid`, and `.edgeless` limits and `aria-invalid`, and kept the plain focus ring in forced colors. An applied surface missed the neutral reset, so inside a `.card.success` it drew the card's green line, and a `<dialog>` with your own `@apply surface` class rendered while closed and pinned to the top-left once open. All of that now travels with the utility. See [Customizing → Composition helpers](docs/usage/customizing.md#composition-helpers).
-- **`@apply progress` draws its border.** An applied progress bar read an undefined border color and drew no track edge.
-- **Liquid glass layers reach your own surfaces.** A `@apply surface` element in a `.glass-liquid` region took the backdrop but no lens or rim.
-- **A neutral edged ghost button or badge under glass shows its edge.** Glass's white hairline needs a plate to be seen on, and on a light page it measured 1.01:1; an unfilled neutral button or badge draws glass's control line instead.
-- **An input group is the height of the controls beside it.** The control inside kept its own height within the group's border, so a group was 42px beside 40px fields and buttons.
-- **An input group draws one focus ring.** A focused field drew its own Highlight ring inside the group's in forced colors, and a focused button drew its ring inside the group's; the button keeps its ring and the group drops its own.
-- **A disabled control in an input group dims once.** The group and the control both dimmed, so the value showed at about a third of its opacity.
-- **A `.success` or invalid input group prints its typed text in that intent.** The control inside reset to neutral text while the group drew its line in the intent.
-- **An invalid checkbox is drawn as a destructive one.** A checked invalid checkbox in the dark theme drew the neutral near-black mark on red, at 3.28:1.
-- **Every intent hint is readable.** `.hint.destructive` printed a fill color at 3.28:1 on the dark page, and the other intents were not wired; each built-in intent now prints its strong tone, 4.5:1 or better in both themes.
-- **A themed region re-resolves its text color.** `<aside class="dark">` on a light page kept the near-black text it inherited and printed it on its dark ground; the theme selectors now set `color` too.
-- **A progress bar shows its value in forced colors.** The value was repainted as Canvas on a Canvas track, so a half-full bar read as empty.
-- **Glass is opaque in forced colors.** `.glass`, `.glass-liquid`, and `.glass-solo` stayed translucent and showed the page through the pane; they now take the opaque ground of the reduced-transparency fallback.
-- **A container's fill reaches a card, panel, or alert.** A `.card` inside a `.soft` container drew the grey slab of a `.card.soft`, and a container's `.ghost` or `.solid` landed a panel or alert on its quiet plate; they now draw the fill they resolve.
-- **A box with no intent draws in the aesthetic's ink.** A bare `box` under `.neobrutalism` drew the theme's grey line and slab beside a `.neutral` sibling's black ink.
-- **A `.raised` button keeps its shadow while pressed.** With no aesthetic it dropped from `0 1px 3px` to `0 0 3px` while held down.
-- **Code in a native `pre` draws no chip.** `pre code` cleared only the chip's fill and padding, so `.cyber` drew a glowing box inside the block, neobrutalism's border indented the first line, and `.pixel` drew an inset ring.
-- **A solo element keeps its own transition and transform.** A solo class replaced an element's `transition` list, so a toast stopped animating its fade and height; only actions take the press's transition now, and the press moves through `translate` or `scale`, leaving `transform` alone.
-- **Nested aesthetics take the nearest region's look.** A liquid region inside another aesthetic nested in a liquid one lost its layers, and a sketch region in the same position lost its rotation and dashed accents.
-- **`.alert.neobrutalism` sits on the slab.** An alert carrying the class itself rested flat, unlike one inside a `.neobrutalism` region and unlike `.card.neobrutalism`.
-- **Native elements under `.sketch` take the dashed accents.** Under `/native`, a plain `<hr>`, `<table>`, and checkbox draw the dashes `.divider`, `.data-table`, and `.checkbox` do.
-
-<!-- Source: docs/changelog/0.7.0.md -->
-
-# 0.7.0
-
-A button can be a liquid glass pane, the solo classes compose with presentation, intent, and elevation the way components do, the loaders are gone in favor of a spinner from an icon set, and a round of fixes to nested layout gaps, dialog placement, table rows, right-to-left switches, field groups, and forced colors.
-
-## Added
-
-- **Liquid glass buttons.** A `.btn` carrying `.glass-liquid` itself, in a glass scope, takes the blur, lens, and rim of a liquid pane, with a lens sized for a control. The fill is still the presentation's: `.solid` is an opaque plate under the rim, `.ghost` and `.soft` are clear panes. A liquid region alone still leaves its controls solid. See [Aesthetics → Liquid buttons](docs/usage/aesthetics.md#liquid-buttons).
-- **Solo classes compose with presentation, intent, and elevation.** Fill and edge come from the element or a container, intent and elevation from the element's own class, so `.pixel-solo.edgeless` drops its ring, `.glass-solo.solid.success` is an opaque green pane, and `.neobrutalism-solo.flat` has no slab. With none of those classes a solo element paints what it did. See [Aesthetics → Solo classes](docs/usage/aesthetics.md#solo-classes).
-- **`--font-mono` is a documented token.** It sets the font of the `kbd`, `code`, and `pre` helpers and of `<kbd>`, `<code>`, and `<pre>` under `/native`, and joins the other font tokens in [Theming → Fonts](docs/usage/theming.md#fonts), which also shows how to load a web font.
-- **Linking without a bundler.** [Integrating → Without a bundler](docs/integrating/without-a-bundler.md) covers plain HTML, Rails, Django, and a CDN `<link>`, which load the compiled files by path rather than by package name.
-- **A stated versioning policy.** Below 1.0 a minor release may break and a patch release never does; see [Versioning](docs/index.md#versioning).
-
-## Changed
-
-- **A solo element inside a `.solid`, `.soft`, or `.ghost` container takes that fill and the theme's text color**, since presentation cascades to it now as it does to components. A solo element whose own background does not follow the theme -- a dark toast on a light page -- inside such a container prints the theme's text; keep it out of the container, or give it `.solid` with an intent.
-- **`.tight` and `.loose` stay on their own element.** They wrote `--layout-gap`, which inherits, so a plain `.stack`, `.view`, `.cluster`, or `.auto-grid` nested inside one took its gap. A nested layout keeps the default gap now; set `--layout-gap` on a container to change the gap of every layout inside it.
-- **Your margin places a component dialog.** The centring of an open `<dialog class="card">` (or `.panel`, `.surface`) overruled your margin utilities and unlayered CSS; it now sits in `utilities` at zero specificity, so `mt-8` or your own rule wins, and it still beats a `base` reset such as Preflight's. A margin reset in a cascade layer of your own, declared after the package's, now wins over the centring too, as it already does over every component property.
-- **`.cyber` glows from the outline.** Its glow is the intent color at 60% with a 1px spread, up from 40% with none, so the brightest point sits on the element's outline. An edgeless button, badge, or panel read as backlit -- a shadow on a dark page -- because the glow just outside it was brighter than its own fill. `.cyber-solo` takes the same glow. In the light theme the near-black glow of a neutral component is heavier too; a hued `--cyber-ink` is still the way to make it read as light there.
-- **The neutral palette values carry no hue.** `--palette-border`, `--palette-surface`, and `--palette-text` are `oklch(… 0 none)` in both themes, where they were `oklch(… 0 0)`. The colors themselves are unchanged, but a missing hue takes its partner's in polar interpolation: `color-mix(in oklch, var(--palette-text), oklch(60% 0.2 240))` now lands on hue 240, a blue, where it travelled from hue 0 and landed on a purple. To keep the old result, give the neutral its old hue: `color-mix(in oklch, oklch(from var(--palette-text) l c 0), oklch(60% 0.2 240))`. Mixing in `oklab` does not, since a hueless neutral adds no hue there and the mix stays blue.
-
-## Removed
-
-- **The loaders.** `.loader`, its `.sm` and `.lg` sizes, the nine variants (`.dots-wave`, `.dots-fade`, `.dots-queue`, `.dots-rotate`, `.dots-grow`, `.dots-grow-alternate`, `.dot-bounce`, `.bars-wave`, `.pulse-ring`), `.loader-mask`, and the `@codenhub/styles/tw/loader` entrypoint are gone. Importing `/tw/loader` now fails to resolve, and `<span class="loader dots-wave">` in the complete CSS renders nothing. `.sm` and `.lg` on other components are unchanged. Use a spinner from an icon set instead, such as `@codenhub/icons`, which this package does not import: a glyph with `ic-anim-spin` (`ic-lucide-loader-circle ic-anim-spin`) or the animated `svg-spinners` family, both in `currentColor`. Under `prefers-reduced-motion: reduce` every loader showed a still ring; a glyph with `ic-anim-spin` stops there too, but `svg-spinners` artwork keeps moving, so choose the glyph where that matters. See [Feedback](docs/usage/feedback.md) for loading the icons.
-
-## Fixed
-
-- **A focused `.solid.primary` control under `.pixel` shows its focus.** The inset focus ring is the primary color, so it vanished into the fill; a line of the page color now sits inside it. `.pixel-solo` takes the same line.
-- **Controls and surfaces under `.pixel` keep an edge in forced colors.** Pixel draws its edge as an inset shadow, which forced colors remove, so buttons, fields, and cards had no boundary; forced colors now draw a solid border and drop the clip. `.pixel-solo` draws an inward outline there.
-- **A `.disabled` text field holds still under the pointer.** The class spelling of disabled still darkened an `.ipt`'s line on hover, unlike `disabled`, `aria-disabled`, and `data-disabled`.
-- **`.sketch-rounded` beside `.sketch-solo` stays on the solo element.** Its radius tokens inherited into the element's contents, so a `.btn` inside a rounded sketch toast drew a sketch outline on a page with no sketch in scope.
-- **A checked native radio looks like a checked `.radio` in forced colors.** Under `/native` it drew a Highlight ring and dot on Canvas, where `.radio` draws a Highlight disc with a HighlightText dot, so `<input type="radio" class="radio">` changed look with the entrypoint. Both draw the disc now.
-- **`/theme` declares every documented color and foundation token**, except `--focus-ring-offset`, which is computed on the focused element, and the `/tw`-only `--breakpoint-xs`. The compiled entry left out `--color-background`, `--color-foreground`, `--color-text-secondary`, and `--font-default`, because nothing in it read them, so `var(--color-background)` in your own CSS over `/theme` alone resolved to nothing.
-- **A liquid region blurs what takes no liquid layers.** A bare `<table>` under `/native` or your own `@apply surface` inside a `.glass-liquid` region took its clearer ground with nothing blurred behind it; it takes liquid's lighter blur now.
-- **Liquid's corners stay off a solo element's contents.** `.glass-solo.glass-liquid` no longer hands liquid's corner tokens to what it holds, so a `.btn` inside a liquid solo toast keeps the page's corners.
-- **A checked `.switch` stays in its track right to left.** Under `dir="rtl"` the checked knob moved the left-to-right way, out past the track's right edge; it sits at the inline end, the left, now.
-- **A table row shows its own intent.** A `<tr class="destructive">` in a `.data-table.success` kept the table's green text, rule, and hover, because the table resolved them before the row's intent applied. A row with an intent draws them in its own now; on a `.solid` table its text keeps the table's ink -- the contrast ink on a hued table, the table's own text color on a neutral one -- which that plate needs. Other rows keep the table's.
-- **A button in an `.input-group` keeps its own edge.** The field's line reached every component inside the group, so a `.ghost` or `.edgeless` clear button drew a border the field's color. It rests as it does outside the group now, and the group keeps its line.
-- **An `.alert` in another aesthetic nested under `.neobrutalism` casts no slab.** Neobrutalism raised the elevation of every alert below it, so one inside a `.chunky-tile`, `.glass`, `.pixel`, `.cyber`, or `.sketch` region took neobrutalism's shadow, unlike a card there. It takes the nested aesthetic's look now, and a `.neobrutalism` region nested inside that one still rests its alerts on the slab.
-- **A select keeps its drop-down arrow in forced colors.** The chevron is drawn with gradients, which forced colors remove, so in Chromium and Firefox a `.select` or a native `<select>` under `/native` read as a text field. A single-row select shows the platform's arrow there now.
-- **An `.input-group` holding a disabled control holds still under the pointer.** The group dimmed and showed the not-allowed cursor, but its line still darkened on hover; it no longer does.
-- **A padding modifier pads only its own card or panel.** `.p-xs`, `.p-sm`, `.p-lg`, and `.flush` on a `.card` or `.panel` reached every card and panel nested inside it, so a card in a `.card.p-xs` sat at 8px instead of its 20px, and one in a `.flush` card had none. A nested surface keeps its own padding now; give it a modifier of its own to change it.
-- **A long select label in an `.input-group` stops short of the chevron.** The group took the select's inline padding, so a label too long for the field ran under the drop-down arrow, at the right or, right to left, at the left. A single-row select keeps room for its chevron at the inline end now.
-- **Typed text in a hued or invalid field reads at 4.5:1.** The text in `.ipt`, `.textarea`, and `.select` was the intent's base color, which fell as low as 2.5:1 against the field: a `.warning` field in the light theme, and `.success`, `.destructive`, `.info`, and `aria-invalid="true"` fields in the dark one, worst on `.soft` and `.solid`. It is the intent's strong tone now, darker in light and lighter in dark, at 4.5:1 or better for every intent and presentation in both themes. The field's line, focus ring, and fill are unchanged. Native fields under `/native` take the same text. A field with no intent class takes the neutral strong tone too, so its text is a shade different from 0.6.
-- **The package's NOTICE covers the checkbox marks' Feather origin.** The checkbox check and indeterminate minus come from Lucide icons derived from Feather, and NOTICE now carries Feather's MIT notice beside Lucide's ISC one.
-
-<!-- Source: docs/changelog/0.6.0.md -->
-
-# 0.6.0
-
-A liquid-glass modifier, glass that keeps every presentation's fill whole, hoverable tooltips, native field decorations with an `.unadorned` opt-out, indeterminate checkboxes and list-box selects, and a round of fixes to tables, controls, the focus ring, right-to-left layout, and reduced motion on every entrypoint.
-
-## Added
-
-- **`.glass-liquid`**, a modifier of `.glass`: continuous corners, a bright rim, a lighter blur, a clearer ground, and a lens that bends what is behind a surface at its edges (Chromium today; Firefox and Safari keep the rim, blur, and ground). Put it beside `.glass` on the region, or on one surface inside a glass region; `.glass-solo.glass-liquid` paints the same pane on an element the package does not style. Without `.glass` in scope it changes the corners and nothing else. See [Aesthetics → Liquid glass](docs/usage/aesthetics.md#liquid-glass).
-- **`.unadorned`** removes the browser's own field decorations -- the date picker button, number spin buttons, and search clear button and magnifier -- on a control or on its `.input-group`, for a field whose adornments you draw yourself. See [Forms → Browser decorations](docs/usage/forms.md#browser-decorations).
-- **`[data-state="closed"]` on `.tooltip`** hides the bubble while it is hovered or focused, for an Escape handler, and **`--tooltip-linger`** (300ms) sets how long a bubble stays after the pointer leaves its trigger. See [Tooltips](docs/usage/tooltips.md).
-- **An indeterminate `.checkbox`** (and a native one under `/native`) draws the checked plate with a dash for its mark, and a Highlight plate in forced colors. See [Forms → Toggles](docs/usage/forms.md#toggles).
-- **A multi-row `.select`** -- `multiple`, or a `size` above 1 -- draws as a list box: no chevron, as tall as its rows, with the chevron's room given back. It used to keep the chevron and a one-row height.
-- **`--ui-rule-ink`**, the neutral line color of a table's frame and rules, read ahead of `--ui-ink`. Glass sets it so a table's lines read on its plate; every other aesthetic clears it.
-
-## Changed
-
-- **Glass no longer thins fills.** It stopped setting `--ui-bg-alpha: 0.8`, so a `.solid` button, a checked toggle, and a `.solid` card are opaque under glass like everywhere else. Translucency comes from the surface ground alone. Glass buttons also take the base `scale(0.97)` press (it was `none`).
-- **A neutral `.solid` rests on the page background.** Its capped 20% fill was painted over nothing and showed whatever was behind it; it is now an opaque grey. The generated `--palette-neutral-solid-bg` and `-bg-hover` values changed to match, in both themes.
-- **Tables frost under glass and keep their lines.** A default or `.soft` `.data-table` blurs like a surface, its frame and rules read `--ui-rule-ink`, and a bare `<table>` under `/native` reads it too.
-- **A table takes the surface corner and is never clipped.** The four corner cells round instead of an `overflow` clip, so a `<caption>` is untouched in every engine; a cell spanning rows into a bottom corner leaves that corner square. `.table-wrap` makes room for an aesthetic's halo (cyber's glow) inside its scroll box, so put the aesthetic class on the wrapper or an ancestor.
-- **Table rules draw at the aesthetic's line width**, uncapped, so `.chunky-tile`'s 2px frame no longer sits over a 1px row rule and `.pixel` draws them at all.
-- **The focus ring is pulled in by the focused element's line width.** `--focus-ring-offset` is no longer declared at `:root`; its default is computed on the element, so it lands on the edge under every aesthetic. Setting `--focus-ring-offset` yourself still wins, but reading `var(--focus-ring-offset)` in your own CSS now needs a fallback.
-- **Ink aesthetics draw controls in the control border.** Under `.neobrutalism`, `.pixel`, `.cyber`, and `.sketch`, a resting neutral field or toggle uses `--color-control-border` instead of the near-primary ink. A bare native checkbox or radio under `/native` takes the control ink too, and a `.neutral` field under glass takes it like an unclassed one.
-- **Text controls keep the browser's own decorations.** The date picker button, number spin buttons, and search clear button were hidden on every text control, which also removed what they do. They are back by default; add `.unadorned` to remove them.
-- **Buttons and fields take the surrounding font on every entrypoint.** `<button>` under `/native`, and every `.btn` and text control under `/components`, used the user agent's smaller control font (13.33px), so the same label printed at three sizes across elements and entrypoints. They inherit the page's font now, as they already did on `.`.
-- **A default `.btn` is `--control-height` tall**, 40px, the same as `.ipt` beside it; it was 42px, and 44px under a 2px aesthetic line. Its vertical padding gives back the line width.
-- **`/tw` keeps Tailwind's `2xl` breakpoint.** It redefined `--breakpoint-2xl` as 90rem, which moved every `2xl:` utility in a consumer's own Tailwind build from 96rem. `--breakpoint-xs` (30rem) is still added. Nothing in the package used the override, so the compiled entrypoints are unchanged.
-- **Components honour reduced motion and fix `<dialog>` on every entrypoint.** `/components` and the focused `/tw/*` entries carry no reset, so the skeleton and progress shimmer, the indeterminate sweep, and the tooltip, toggle, and press transitions kept moving under `prefers-reduced-motion: reduce`, and a `<dialog class="card">` rendered open on load. Each component now stops its own motion, and the `<dialog>` fix ships beside `.card`. The fix now reaches only a dialog carrying `.card`, `.panel`, or `.surface`, so a dialog the package does not style keeps its own margin.
-- **A tooltip bubble is hoverable.** It lingers for `--tooltip-linger` after the pointer leaves the trigger and stays open while the pointer is over it, as WCAG 1.4.13 asks; it used to vanish on the way. A closed bubble is `visibility: hidden` rather than only transparent, so a bubble no `aria-describedby` points at is no longer read in place while closed.
-- **`.alert-icon` sizes without `!important`.** It set its 1.25rem size `!important`, which no consumer rule could override. It sets `--ic-size` for `@codenhub/icons` glyphs and a plain size for any other icon now, so your own rule resizes it. An icon set that sizes itself in an unlayered rule under another knob keeps its own size.
-- **The Tailwind CSS peer range is `>=4.3.2 <5`.** It claimed `>=4.0.0`, but the `/tw` source needs `@source not` and `@source inline()` (Tailwind 4.1) and is tested against 4.3.2. The peer is still optional, and only `/tw` needs it.
-- **Browser floor is Firefox 128.** Non-inheriting elevation relies on `@property`; the documented floor was Firefox 121.
-
-## Fixed
-
-- **A switch's knob sits inside `.pixel`'s inset ring** instead of covering it, so an unchecked and a checked switch no longer read as two halves.
-- **The sketch solo shadow is cast in the depth colour** rather than full ink.
-- **No stray `.contents` rule.** The compiled `.`, `/native`, and `/components` stylesheets shipped Tailwind's `.contents{display:contents}`, picked up from the license text; the build no longer scans the package's root files.
-- **Links under `/native` keep the size of their text.** `a` was mapped to body copy, so a link inside a heading printed at 14px and regular weight.
-- **The Tailwind guide no longer imports Tailwind twice.** `/tw` imports Tailwind itself, so it replaces your own `@import "tailwindcss"`; with both, an unminified build carried two copies of Preflight. The focused `/tw/*` entrypoints and `/tw/native` still expect your import first.
-- **`.tooltip-icon` keeps its size on a `<button>`.** The docs now use a real `<button type="button">` as the trigger, since `aria-label` on a role-less `<span>` is not reliably announced; the chip resets the padding and minimum size a button brings under `/native` and `/components`. The docs also no longer call it circular under every aesthetic: it is square under `.neobrutalism` and `.pixel`.
-- **A wrapped `.hint` has room between its lines.** Its line height equalled its 14px size, so wrapped lines touched; it takes `text-sm`'s 20px leading now.
-- **`/palette` follows a light subtree nested in a dark one.** Its light values sat on `:root` alone, so a `.light` region inside `.dark` kept the dark values. They answer the explicit light selectors too now.
-- **An unchecked switch's knob is `CanvasText` in forced colors.** The switch opts out of forced colors to keep its states apart, and its unchecked knob kept the package grey on the system `Canvas`.
-- **A select's chevron mirrors under `dir="rtl"`.** It and the padding kept for it stayed on the right, so a right-to-left value started beside the chevron.
-- **`.btn.icon` follows the size step.** `.sm` left an icon button at the default 40px, and under WebKit a `.lg` one was 40px wide and 48px tall. They are square at 32px and 48px now.
-- **Tables align to the inline start.** `.data-table` cells and its caption used `text-left`, so a right-to-left table stayed left-aligned.
-- **A region of one aesthetic nested inside another keeps its own material.** Every aesthetic now restates the depth colour and clears the focus inset, hover transform, and shadow tokens it does not use, so glass inside `.chunky-tile` no longer casts a black slab under every card, glass inside `.cyber` casts its shadow again, and a region inside `.pixel` no longer inherits pixel's inset focus layer.
-
-<!-- Source: docs/changelog/0.5.0.md -->
-
-# 0.5.0
-
-A foundation update with an opt-in sketch aesthetic and rounded sketch variant. Everything under [Changed](#changed) and [Removed](#removed) breaks against `0.4.0`.
-
-## Changed
-
-- **The package sits in named cascade layers.** Every entrypoint declares Tailwind's layer order first and places everything in it: foundation tokens and the palette in `theme`, resets in `base`, the intent, presentation, elevation, and aesthetic classes in `components`, and every component in `utilities` -- including on `/components` and `/native`, which emitted them unlayered. Your own utility or unlayered CSS now beats all four class families on the same element, and an aesthetic on `<html>` keeps its tokens over the theme's in any load order. CSS that relied on a package class beating it now loses to it, and a rule of yours in `@layer components` contests the class families by specificity instead of losing outright. See [Setup](docs/setup.md).
-- **Aesthetics set `--ui-corner`, not `--ui-radius`.** The corner is now a length at the default size that scales with the element (below); `--ui-radius` and `--ui-radius-surface` take a complete radius used as written, and every shipped aesthetic sets `--ui-corner` and `--ui-corner-surface` instead. If you set `--ui-radius` yourself, nothing changes for you. An aesthetic of your own moves to `--ui-corner` to get the scale and the corner pattern. `--ui-radius-pill` and `--ui-radius-tight` fall back through `--ui-radius`, then `--ui-corner`.
-- **`--ui-button-weight` and `--ui-button-tracking` are `--ui-label-weight` and `--ui-label-tracking`**, read by `.badge` as well as `.btn`. The old names are removed without an alias. Under `.chunky-tile`, badges now take the heavier label too.
-- **Explicit chip radii are no longer capped.** Checkbox, `.kbd`, and `.code` keep a small default radius when `--ui-radius-tight` is unset, but a supplied value now applies as a complete `border-radius`, including elliptical shapes. A consumer setting a large value now gets the large corner it asked for instead of the previous `--radius-small` ceiling.
-- **`.cyber` glows everything, flat or not.** Its glow moved from depth onto the new halo, so fields, chips, badges, and alerts glow too, `.flat` no longer puts the glow out, and `.raised` and `.floating` add no shadow under it.
-
-## Removed
-
-- **Alias classes removed**, each a second name for a class that already had one: `.dense`, `.compact`, and `.spacious` (use `.p-xs`, `.p-sm`, and `.p-lg`); `.danger` and `.error` (use `.destructive`, and `.hint.destructive` for `.hint.error`); and `.elevation-none`, `.elevation-sm`, and `.elevation-md` (use `.flat`, `.raised`, and `.floating`). `.theme-light` and `.theme-dark` stay.
-
-## Added
-
-- **`.sketch`, `.sketch-rounded`, and `.sketch-solo`**: a hand-drawn treatment with uneven elliptical corners, a solid ink line (dashed checkboxes and rules under `.sketch`), a small offset shadow, and an optional consumer-supplied handwriting font. Sibling components rotate between four stable outlines; pill buttons take organic hand-drawn rounded pill contours without oval distortion; switch tracks, knobs, and chips take compact irregular box outlines, and radios stay subtly circular. The opt-in `.sketch-rounded` modifier class provides subtle, organic hand-drawn rounded contours across controls, surfaces, chips, and solo elements with 4-step sibling rotation and no egg-shaped distortion on wide elements. The solo class paints an unstyled element directly; the cascading class restyles package components. Both ship in the aesthetic aggregate and dedicated compiled and Tailwind CSS entrypoints. See [Aesthetics](docs/usage/aesthetics.md#sketch).
-- **Corner scale.** `.p-xs` sets a size step of `0.5`, `.sm` and `.p-sm` `0.75`, and `.lg` and `.p-lg` `1.25`, and the corner is multiplied by it; when a size and a padding class sit on one element, the smaller step wins. A bevel stays a true 45 degrees, so `.cyber`'s 25% cap is gone. Depth follows the step down, never up: a `.p-xs` button sits on half its aesthetic's shadow, which also retires chunky tile's one selector list. `--ui-scale` overrides the step. A press that travels into the depth -- `--ui-active-translate-x` and `-y`, which chunky tile and neobrutalism now set instead of a translating `--ui-active-transform` -- scales the same way, elevation included, so it always lands flat on the slab, and a `.flat` button under either no longer drops. See [Customizing → Corner size and pattern](docs/usage/customizing.md#corner-size-and-pattern).
-- **Corner pattern.** `.cut-diagonal` keeps the top-left and bottom-right corners and squares the other two, `.cut-diagonal-reverse` the opposite pair, wherever the corner is computed -- on a control under `.cyber`, but not a surface, which keeps its own shape. Both set `--ui-corner-tl`, `-tr`, `-br`, and `-bl`, which you can set yourself.
-- **`--ui-line-style`**: `solid`, `dashed`, `dotted`, or `double` for every line a component draws -- the box's edge, the progress track, and dividers and table rules. `--ui-rule-style` overrides only dividers and table rules.
-- **A halo**, `--ui-halo-blur`, `--ui-halo-spread`, and `--ui-halo-ink`: light in the element's own intent colour, which elevation does not scale and `.flat` does not remove.
-- **`--ui-surface-image`**, a painted layer over a surface's plate -- cards, panels, alerts, and tooltips, not controls. Your own `background-image` on a surface still wins.
-- **`--ui-label-case` and `--ui-label-shadow`**, beside the weight and tracking: the label's `text-transform`, and a `text-shadow` written without a colour so it takes the label's own.
-- **`--ui-control-ink`**, a neutral line for controls read ahead of `--ui-ink`. Glass and chunky tile set it, so an unchecked checkbox under glass (1.33:1 before) and a field under chunky tile (1.65:1 before) draw a boundary that reads.
-
-Under forced colours, each new part draws its plain version: a solid line, no halo, no painted layer, and no label shadow.
-
-## Fixed
-
-- **A stylesheet survives being inlined.** The loader art's SVG data URIs carried a literal `</style>`, so a stylesheet pasted into an HTML `<style>` element ended at the first loader and silently dropped every rule after it. It is now percent-encoded.
-- **Every entry ships the theme it promises.** `/components`, `/tw/components`, `/tw/feedback`, and `/tw/tooltip` shipped no colour token at all, and every other focused `/tw` component entry lost the palette ramp the tokens are built from. Each entry now declares every colour it reads, and `/components` works alone.
-- **A line fades into a translucent plate instead of ringing it.** A neutral `.solid.edged`, and any plate `--ui-bg-alpha` thins, drew a ring 1.54:1 against its own fill; the line now fades toward transparent as the fill fills in. The generated palette's edge tokens follow.
-- **A select's options read in the dark theme.** The open list is painted over the select's own background, and a ghost `.select` has none, so Chromium drew its default white popup under options that inherited the near-white text. Options and option groups now take the page's ground and text colour.
-- **A region nested inside glass keeps its own surfaces.** Neobrutalism, pixel, chunky tile, and cyber left glass's translucent ground, fill alpha, and two-layer surface shadow in place, so their cards inside a glass region came out as half glass. Every aesthetic now clears them.
-- **Surfaces under glass stay glass.** A neutral `.card.soft`, `.panel`, and `.alert` sat opaque inside a glass region, and `.card.soft.glass` did on the same element; their quiet ground is now a private default beneath `--ui-surface-ground`.
-
-<!-- Source: docs/changelog/0.4.0.md -->
-
-# 0.4.0
-
-## Added
-
-- **`.cyber`**, a fifth aesthetic from `@codenhub/styles/aesthetics/cyber` (and `/tw/aesthetics/cyber`, and both aggregates): bevelled corners, a 1px edge, and a glow in each component's own colour. Controls cut top-left and bottom-right, surfaces top-right and bottom-left; what is fully round (a radio, a switch, a pill, a badge) cuts to diamonds and pointed hexagons, and chips square. Knobs: `--cyber-cut`, `--cyber-shape`, `--cyber-shape-surface`, `--cyber-glow`, `--cyber-ink`, and the consumer-supplied `--font-cyber`. The bevel is drawn with `corner-shape`, which only Chromium supports today; Firefox and Safari get square cut corners and round round ones. See [Aesthetics → Cyber](docs/usage/aesthetics.md#cyber).
-- **A solo class for every aesthetic**: `.glass-solo`, `.neobrutalism-solo`, `.pixel-solo`, `.chunky-tile-solo`, and `.cyber-solo` paint the aesthetic's look onto the one element carrying the class, for an element this package does not style -- a toast from another library, or a `<div>` on a page without the base stylesheet. Each ships in its aesthetic's existing entrypoint and needs nothing else loaded. See [Aesthetics → Solo classes](docs/usage/aesthetics.md#solo-classes).
-- **Three material tokens**: `--ui-corner-shape` (what a corner draws: `round`, or a `bevel` cut), `--ui-radius-pill` (the corner of what is fully round by default), and `--ui-radius-tight` (the corner of chips, before their `--radius-small` cap). All three default to today's look, so nothing changes unless an aesthetic or your own CSS sets them. See [Customizing → Material tokens](docs/usage/customizing.md#material-tokens).
-
-<!-- Source: docs/changelog/0.3.0.md -->
-
-# 0.3.0
-
-## Added
-
-- **`@codenhub/styles/palette`**, a generated, self-contained stylesheet of every `intent x presentation` cell's composed colors -- `--palette-<intent>-<presentation>[-<ground>]-<slot>[-hover]` custom properties, already-composited light and dark values, for a consumer that cannot take this package as a build-time dependency (an optional peer, for example) but wants to look consistent with it. Not a replacement for the components themselves when Tailwind is available. Also includes `--palette-border`/`--palette-surface`/`--palette-text`, flat values for the three neutral surface tokens that sit outside the intent x presentation cross. See [Customizing → Generated palette](docs/usage/customizing.md#generated-palette).
-
-## Changed
-
-- **`.progress`'s track reads presentation.** It used to be intent-only, like `.loader`, `.skeleton`, and `.divider`; now it composes a fill and an edge like `.quote` does, while the moving value fill stays `--intent-color` at full strength, unaffected by presentation. The registered default is `.soft.edgeless`, chosen to stay closest to the previous fixed-neutral look, but it renders differently than before: it now tints by intent instead of a fixed grey, and every existing `.progress` gets that new look with no markup change. `.solid` is unsupported on the track (a fully-filled track and the value fill it carries would become the same color); `.ghost.edgeless` renders but is discouraged, since it leaves the track with neither fill nor line.
-- **Known issue: the new `.progress.soft.edgeless` default does not meet WCAG 1.4.11's 3:1 non-text contrast floor.** Measured at roughly 1.1-1.3:1 against the page, in both themes and across intents -- down from the ~3.6-4.3:1 the prior fixed-neutral track cleared. An `.edged` presentation restores a boundary through the line for most intents, but not all of them clear 3:1 there either (`warning.soft.edged` measured ~2.7:1). A consumer whose track must meet 1.4.11 should choose an `.edged` presentation and verify the intents they use. See [Accessibility](docs/accessibility.md#control-boundaries).
-
-<!-- Source: docs/changelog/0.2.0.md -->
-
-# 0.2.0
-
-Fixes from a stress-test pass composing real screens (`app-shell`, `form`, `settings`) against the published `0.1.x` model. Several change default token values rather than adding new surface, so this lands as one minor rather than a run of patches -- see [Changed](#changed) for what an upgrader needs to check.
-
-## Added
-
-- `.visually-hidden`, a utility that hides content from sighted users while keeping it in the accessibility tree. Ships wherever the layout utilities do (`.`, `/native`, `/tw`, `/tw/native`, `/tw/utilities`), including the vanilla entries that have no Tailwind utility layer of their own; not part of `/components` or the narrower `/tw/*` component slices.
-- `.tooltip-bubble`, a real element for a tooltip's message that can carry its own `id` and be referenced by `aria-describedby`.
-- `.alert-icon`, sizing and alignment for a consumer-supplied icon element dropped into `.alert` -- any inline SVG, `<img>`, or icon-set class works, not just a built-in glyph.
-- `dialog:not([open])`/`dialog[open]` restated in author origin, so `.card` composed onto a `<dialog>` hides until opened and centers when shown, without a dialog primitive of its own.
-- `.icon` added to `registry.json` under `modifiers.shape`. The button shape modifier was already shipped and documented; it was missing only from the machine-readable contract, which is kept in the repository and is not part of the npm package.
-- `.switch.ghost.edgeless` now renders a track instead of disappearing.
-
-## Changed
-
-- **Tooltips are composition, not a single class.** `.tooltip` now wraps a trigger and a `.tooltip-bubble`, one more DOM node than before. Intent, presentation, aesthetic, and elevation classes move to `.tooltip-bubble`, the element that actually paints.
-- **`.checkbox`, `.radio`, and `.switch` default to `.soft` instead of `.solid`, and their checked state now composes one plate regardless of presentation.** Unchecked, `.ghost` (0% fill), `.soft` (12%), and `.solid` now read as three distinct plates instead of three shades of one wash; `.ghost` is a supported look on every toggle for the first time.
-- **A neutral (no named intent) `.card.soft`, `data-table`, `.panel`, or `.alert` rests untinted instead of mixing a 12% ink wash.** A named intent (`.card.soft.destructive`, `.alert.success`, and so on) is unaffected and keeps its ordinary tint; `.badge` is unaffected either way, since it has no border to fall back on if untinted.
-- **Elevation no longer cascades onto descendants.** `--ui-elevation`, `--elevation-y`, and `--elevation-blur` are registered non-inheriting, so an elevation class lifts only the element it is written on. A container that used to lift a whole unclassed subtree in one class now needs an elevation class on each element that wants depth.
-- `--input-group-gap` replaces a hardcoded gap in `.input-group`; unchanged by default for icon compositions, and settable to `0` on a text affix for a flush look.
-- `.loader`'s sizes step down from 24/32/40px to 20/28/36px for `.sm`/default/`.lg`.
-- A `/tw` consumer's own `dark:` utilities now also fire under `prefers-color-scheme: dark` when no explicit theme selector is present, matching how the token palette already follows the OS default.
-
-## Removed
-
-- **`.btn.loading`.** A loading button is now a disabled `.btn` composed with a real `.loader` child instead of a hardcoded `::after` spinner -- any loader variant works, not just one circular spinner.
-- **`.alert.icon`'s hardcoded per-intent SVG mask.** Replaced by `.alert-icon` (above), sized for a consumer-supplied icon element.
-
-## Fixed
-
-- `.icon` buttons kept the wrong `min-width` floor under `.compact`/`.spacious`; all three padding tiers now size `.icon` to its own padding.
-- `.chunky-tile`'s offset shadow read as a solid fill behind a small `.icon.ghost` button; halved for that combination.
-- Table row and boundary rules stayed a 1px hairline under `.chunky-tile`'s 2px frame; both now track the same width token the frame uses.
-- `.progress`'s track failed WCAG 1.4.11 in both themes; `--progress-surface` now mixes enough ink to clear 3:1.
-- `.card.soft.edged`'s border was nearly invisible against its own fill in light theme; `--color-border`'s light value moved one step darker.
-- A badge nested inside an untinted `data-table` lost its own fill; box now restates its fill cap on every element that uses it, so a nested badge, button, or chip no longer inherits its container's cap.
-
-<!-- Source: docs/changelog/0.1.1.md -->
-
-# 0.1.1
-
-## Fixed
-
-- `.p-xs` and its alias `.dense` now clear a button's `--control-height` minimum, so a chip-sized button fits inside a table cell or a dense toolbar. Before this, every button kept the full control-height floor even at the tightest padding, so a button that small could not be built. Every other size and padding class still keeps the floor, so a plain button is unchanged. An icon-only `.p-xs`/`.dense` button also gives up its `min-width`; size the glyph yourself, as the package sizes no icons.
-
-<!-- Source: docs/changelog/0.1.0.md -->
-
-# 0.1.0
-
-`0.1.0` replaces the model published in `0.0.4` wholesale. The old model had three orthogonal axes with per-component clamps and no chosen default: a plain element got whatever `var()` fallback each component happened to declare. This release makes each decision explicitly and is the baseline the `0.x` line builds on. Nearly everything below is breaking against `0.0.4`; there are no compatibility aliases.
-
-## Changed
-
-- **Every element now composes from three named axes.** _Intent_ (`.primary`, `.success`, `.destructive`, …) sets hue only. _Presentation_ sets how much of that hue fills the element and whether it draws an edge. _Aesthetic_ sets the material — radius, edge width, shadow, silhouette, type. Intent is redeclared per component; presentation and aesthetic cascade, so a container can set the look of a subtree while any element opts out. [Concepts](docs/concepts.md) and [Composing](docs/usage/composing.md) describe the full model.
-- **Presentation is two independent questions.** Fill is `.solid` / `.soft` / `.ghost`; edge is `.edged` / `.edgeless`. Exactly one of each applies, and they never decide each other. The common web button — a subtle fill with a border — is `.soft.edged`, which had no spelling before.
-- **`.bare` is renamed `.ghost`.** `.bare` and `.edgeless` both read as "less of something", so the name is now a fill and only a fill: no fill at rest, a tint on hover.
-- **Hover is derived, not declared.** A hovered element takes its resting fill plus one published step and its `--intent-hover` colour. There are no hover tokens to set. An outline button therefore tints on hover rather than filling completely.
-- **A sunk text field is `.soft.edgeless`.** Two classes saying two things, where `.soft` alone used to silently suppress the field's border.
-- **Table row rules are opt-in via `.ruled`.** Rules no longer arrive by implication from a component's edge default. The head and foot separators stay at every presentation.
-- **Depth is a modifier, not part of a component.** `surface` no longer carries a structural shadow, so cards, buttons, and chips on a plain page rest flat. Use `.raised` / `.floating` (or `.elevation-sm` / `.elevation-md`) to add depth, and `.flat` to remove an aesthetic's.
-- **The Tailwind v4 entrypoint moved from `/overrides` to `/native`.**
-
-## Added
-
-- **Opt-in aesthetics.** `.neobrutalism`, `.glass`, `.pixel`, and `.chunky-tile`, each shipped as its own entrypoint (`@codenhub/styles/aesthetics/pixel`, …) and as an aggregate (`@codenhub/styles/aesthetics`). An aesthetic sets material tokens only; it never repaints hue. See [Aesthetics](docs/usage/aesthetics.md).
-- **An elevation modifier.** `.flat` / `.raised` / `.floating` (and the `.elevation-none` / `-sm` / `-md` names) multiply an aesthetic's shadow geometry. Unitless, so a container can flatten a whole toolbar and any element can opt back in.
-- **Granular Tailwind v4 source entrypoints.** `@codenhub/styles/tw` and per-family subpaths (`/tw/button`, `/tw/form`, `/tw/feedback`, `/tw/tooltip`, `/tw/utilities`, `/tw/aesthetics/*`, …) for consumers compiling their own build. `package.json` is also exported.
-- **`.input-group`.** A wrapper that draws one box and lets the control inside give up its own paint, so an icon can sit alongside a field. The package ships no icons — any element works in the slot.
-- **`registry.json`.** A machine-readable record of every supported class, each component's default fill/edge/elevation, the axes it reads, and every bound and exception with its reason. It is kept in the repository, beside the source, and is not part of the npm package.
-- **`--intent-strong`**, the intent tone chosen to be read on a page, used wherever a fill is partial.
-
-## Removed
-
-- **`.out` and `.fill`.** Outline is now `.ghost.edged`; there is no class that makes an outline button fill completely on hover.
-- **`--ui-border-scale` / `.out`'s doubled border.** The edge width comes from the aesthetic and nothing else, which removed the per-component border ceilings small components needed.
-- **`--color-text-subtle`**, which nothing read.
-- **`--layout-stack-gap` and `--layout-cluster-gap`**, replaced by a single `--layout-gap`.
-- **The bundled input-field icons.** Icons were a `background-image` data URI with a light and a dark copy per glyph; they are gone, and `.input-group` carries a consumer-supplied icon instead.

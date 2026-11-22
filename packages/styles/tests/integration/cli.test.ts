@@ -671,11 +671,13 @@ describe("failures", () => {
     expect(await failureOf("watch", "-c", "app/views/**/*.erb", "-o", "app.css")).toMatch(/"watch"/);
   });
 
-  it("rejects a Node.js older than it supports, naming both versions", async () => {
-    nodeVersion = "24.22.1";
+  it("rejects a Node.js older than the engines floor, naming both versions", async () => {
+    const manifest = JSON.parse(await readFile(new URL("../../package.json", import.meta.url), "utf8"));
+    const floor = Number(/^>=(\d+)$/.exec(manifest.engines.node)?.[1]);
+    nodeVersion = `${floor - 1}.12.0`;
 
     expect(await failureOf("build", "-c", "app/views/**/*.erb", "-o", "app.css")).toBe(
-      "chs: this command needs Node.js 26 or newer; this is Node.js 24.22.1.",
+      `chs: this command needs Node.js ${floor} or newer; this is Node.js ${floor - 1}.12.0.`,
     );
   });
 

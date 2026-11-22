@@ -1,10 +1,10 @@
 name: Tailwind
 
 # `@codenhub/styles/tw` is compiled by the consumer's Tailwind, anywhere in the
-# peer range, while the workspace builds and tests with the one version its
-# catalog pins. This workflow runs the package's integration suite, which
-# compiles `/tw` as a consumer does, against the floor of that range and the
-# newest 4.x.
+# range its Tailwind guide documents, while the workspace builds and tests with
+# the one version its catalog pins. This workflow runs the package's integration
+# suite, which compiles `/tw` as a consumer does, against the floor of that range
+# and the newest 4.x.
 #
 # It is a workflow of its own for its `paths` filter: a pull request that leaves
 # the package and CI alone starts no job here, where a job of `ci.yml` would
@@ -44,12 +44,19 @@ jobs:
       - name: Set up the workspace
         uses: ./.github/actions/setup
 
-      # The floor is read from the peer range, so raising it moves this job too.
+      # The floor is read from the range the Tailwind guide documents, so
+      # raising it there moves this job too. The package declares no peer: an
+      # optional one still made `npm install` fail for a project on an older
+      # Tailwind that only links the compiled CSS.
       - name: Install the consumer's Tailwind
         working-directory: packages/styles
         run: |
           if [ "${{ matrix.tailwind }}" = floor ]; then
-            version="$(node -p "require('./package.json').peerDependencies.tailwindcss.match(/>=\s*([\d.]+)/)[1]")"
+            version="$(grep -oE -m1 '\(`>=[0-9]+\.[0-9]+\.[0-9]+ <5`\)' docs/integrating/tailwind.md | grep -oE '[0-9]+\.[0-9]+\.[0-9]+')"
+            if [ -z "$version" ]; then
+              echo "::error::docs/integrating/tailwind.md no longer states the range as (\`>=x.y.z <5\`)"
+              exit 1
+            fi
           else
             version=4
           fi

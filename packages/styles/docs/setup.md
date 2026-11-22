@@ -43,7 +43,7 @@ The complete stylesheet includes the reset, the tokens, the layout and type help
 
 Pick one:
 
-- **Compiled CSS** (`@codenhub/styles`, shown above). Use it unless you have a reason not to. Any bundler that resolves CSS imports from packages works, such as Vite, webpack, or the Tailwind CLI. It ships every class, whether your pages use it or not.
+- **Compiled CSS** (`@codenhub/styles`, shown above). Use it unless you have a reason not to. Any bundler that resolves CSS imports from packages works, such as Vite, webpack, or the Tailwind CLI. It ships every class, whether your pages use it or not. Through the Tailwind CLI it grows by about a fifth: the CLI writes each `color-mix()` twice, a fallback and the original inside `@supports (color: color-mix(in lab, red, red))`, and every browser the package supports takes the original. With Tailwind 4.3.2, the complete stylesheet and one aesthetic came out at 282,209 bytes from 238,722. In a project that runs Tailwind, use the source below instead, or import the compiled file outside Tailwind's pipeline, such as from your app's JavaScript entry.
 - **Tailwind CSS v4 source** (`@codenhub/styles/tw`). Use it when your project already runs Tailwind v4. Your build compiles the package with your own utilities, so you get one stylesheet and Tailwind's `dark:` variant matches the package's theme. It needs Tailwind 4.3.2 or newer, below 5.
 - **No bundler.** Link the compiled file from `node_modules` or a CDN with a `<link>` tag; see [Without a bundler](./integrating/without-a-bundler.md).
 
@@ -73,8 +73,8 @@ The order of the two imports does not matter, because every entrypoint declares 
 
 - **Browsers:** Chrome 123, Safari 17.5, or Firefox 128 and newer. Colors use `light-dark()` and `color-scheme` (Firefox 120). `.input-group` reads a nested control's invalid and disabled state with `:has()` (Firefox 121). The elevation classes register a non-inheriting property with `@property` (Firefox 128); without it, an elevation class would also reach the unclassed elements inside it.
 - **Tooling:** an `@import` of a package name needs a tool that resolves CSS imports from packages through their `exports` map. Without one, link the compiled file by its path or from a CDN; see [Without a bundler](./integrating/without-a-bundler.md). Two common tools need a nudge, described in [Integrating → Bundlers that need a nudge](./integrating/index.md#bundlers-that-need-a-nudge): Parcel, and PostCSS with `postcss-import`.
-- **Tailwind:** 4.3.2 or newer, below 5, only for the `/tw` source entrypoints. It is an optional peer dependency, so the compiled entrypoints and the `chs build` command do not install it.
-- **Node.js:** 26 or newer on the machine that runs the `chs build` command. The stylesheets need none, but the package declares it as its engine, so Yarn 1, and npm with `engine-strict`, refuse the install on an older Node.js.
+- **Tailwind:** 4.3.2 or newer, below 5, only for the `/tw` source entrypoints. The package does not depend on it, so the compiled entrypoints and the `chs build` command work in a project on any Tailwind or none, and nothing checks the version for you.
+- **Node.js:** 24 or newer on the machine that runs the `chs build` command. The stylesheets need none, but the package declares it as its engine, so Yarn 1, and npm or pnpm with `engine-strict`, refuse the install on an older Node.js.
 - **Your application:** the package has no JavaScript. Semantic HTML, ARIA, keyboard behavior, focus management, validation, and announcements are yours; see [Accessibility](./accessibility.md).
 
 ## When nothing is styled
@@ -94,7 +94,7 @@ That does not apply to the `/tw` files. They are Tailwind source, not finished C
 
 ## All entrypoints
 
-Compiled entrypoints are finished CSS. `/tw` entrypoints publish the uncompiled source from `tw/`, beside `dist/`, which a Tailwind v4 build must process. Each one is a compiled path with `/tw` added, as `@codenhub/styles/native/tw` is the source of `@codenhub/styles/native`; the focused ones, such as `/button/tw`, exist only as source, and `/palette` only compiled. A focused `/tw` component entrypoint includes the theme tokens, so its classes need nothing else from the package, but it needs `@import "tailwindcss";` before it; see [Tailwind CSS v4 → Using a focused entrypoint](./integrating/tailwind.md#using-a-focused-entrypoint).
+Compiled entrypoints are finished CSS. `/tw` entrypoints publish the uncompiled source from `tw/`, beside `dist/`, which a Tailwind v4 build must process. Each one is a compiled path with `/tw` added, as `@codenhub/styles/native/tw` is the source of `@codenhub/styles/native`; the focused ones, such as `/button/tw`, exist only as source, and `/palette` only compiled. A focused `/tw` component entrypoint includes the theme tokens, so its classes need nothing else from the package, but it needs `@import "tailwindcss";` before it; see [Tailwind CSS v4 → Using a focused entrypoint](./integrating/tailwind.md#using-a-focused-entrypoint). A focused entrypoint is for one family: two or more of them each bring the theme and the shared rules again, so for two families or more import `/components/tw`, or `/tw`.
 
 Each import path resolves the same file under the `style`, `import`, and `default` export conditions. A `types` condition comes first and names an empty declaration, so TypeScript accepts a side-effect import such as `import "@codenhub/styles";` with `noUncheckedSideEffectImports`, which TypeScript 6 turns on by default. A CSS import is a side effect, so make sure your bundler does not drop it as unused.
 

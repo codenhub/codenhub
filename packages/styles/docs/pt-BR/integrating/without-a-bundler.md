@@ -2,7 +2,7 @@
 title: Sem bundler
 description: Como referenciar as folhas de estilos compiladas a partir de HTML puro, Rails, Laravel, Django ou qualquer aplicação renderizada no servidor, e o build por linha de comando.
 order: 6
-source: 21bdefae1882dda22d050a63c3cb0785ef22beed
+source: dc92f1c454079a0452418338d714861a92633e0c
 ---
 
 # Sem bundler
@@ -116,7 +116,7 @@ O pacote traz um comando, `chs`, que lê os seus templates atrás de nomes de cl
 
 O comando também serve com um bundler. Um projeto cujo bundler não roda o Tailwind, como um build simples com Vite ou webpack, pode escrever a folha de estilos entre os seus fontes, `--output src/stylekit.css`, e importar esse arquivo onde importaria `@codenhub/styles`. Um projeto que usa o Tailwind CSS v4 tem a mesma redução pelo [entrypoint de código-fonte](./tailwind.md) e não precisa do comando.
 
-Ele precisa do Node.js 26 ou mais recente na máquina que gera o CSS, seja o seu notebook, um job de CI ou uma etapa do deploy, e de nada mais: o pacote é toda a instalação, sem Tailwind e sem configuração. Instale-o como dependência de desenvolvimento a partir da raiz do projeto; o npm cria um `package.json` se você não tiver um:
+Ele precisa do Node.js 24 ou mais recente na máquina que gera o CSS, seja o seu notebook, um job de CI ou uma etapa do deploy, e de nada mais: o pacote é toda a instalação, sem Tailwind e sem configuração. Instale-o como dependência de desenvolvimento a partir da raiz do projeto; o npm cria um `package.json` se você não tiver um:
 
 ```sh
 npm install --save-dev @codenhub/styles
@@ -244,7 +244,7 @@ Cada prefixo é uma cópia fixa dessas classes, embutida no pacote, então a lis
 
 ### Num deploy
 
-Gere a folha de estilos antes da etapa que recolhe ou aplica fingerprint aos seus assets, como `rails assets:precompile`, `php artisan optimize` ou `python manage.py collectstatic`. Você pode fazer commit da saída, e aí os servidores não precisam de Node.js nenhum, ao custo de um arquivo gerado que alguém precisa lembrar de regenerar; ou gerá-la no deploy, e aí a máquina de build precisa do Node.js 26 ou mais recente.
+Gere a folha de estilos antes da etapa que recolhe ou aplica fingerprint aos seus assets, como `rails assets:precompile`, `php artisan optimize` ou `python manage.py collectstatic`. Você pode fazer commit da saída, e aí os servidores não precisam de Node.js nenhum, ao custo de um arquivo gerado que alguém precisa lembrar de regenerar; ou gerá-la no deploy, e aí a máquina de build precisa do Node.js 24 ou mais recente.
 
 Fixe a versão. Abaixo da 1.0 uma versão minor pode renomear ou remover uma classe, então o mesmo comando pode escrever outra folha de estilos com uma versão mais nova. A saída não depende de nada além da versão do pacote e dos seus templates, então faça commit do `package.json` e do lockfile que o npm escreve, e instale com `npm ci` na máquina de build, para que cada build use a versão que você testou.
 
@@ -263,7 +263,7 @@ Toda falha imprime uma linha começando com `chs:` na saída de erro padrão e t
 - **`--output is given more than once`.** Cada build escreve uma única folha de estilos. Deixe um só `--output`, e rode o comando de novo para outro arquivo.
 - **`unknown aesthetic "<name>"; choose from ...`.** Escolha um dos nomes listados. Eles são em minúsculas e com hífen, como `chunky-tile`.
 - **`missing command` ou `unknown command "<name>"`.** A primeira palavra depois de `chs` precisa ser `build`.
-- **`this command needs Node.js 26 or newer`.** Atualize o Node.js na máquina que gera o CSS.
+- **`this command needs Node.js 24 or newer`.** Atualize o Node.js na máquina que gera o CSS.
 - **`cannot write --output <file>: <reason> (<code>); <what to do>`.** `<reason>` e `<code>` são os do Node.js. `EACCES` ou `EPERM` quer dizer que você não pode escrever ali, e no Windows também que o arquivo é somente leitura; `ENOSPC` quer dizer que o disco está cheio.
 - **`--output <file> is a folder, not a file`**, ou um dispositivo, inclusive no Windows um nome como `NUL` ou `com1.css` que o Windows reserva para um, um pipe ou um socket, ou **`--output <file> ends with a folder separator`**, ou **`ends with a . or .. segment`**. Nomeie um arquivo de folha de estilos, como um dentro da pasta.
 - **`--output <file> holds something this command did not write`.** O arquivo não é uma folha de estilos que este comando escreveu, como uma escrita à mão ou a de um fornecedor, então substituí-lo o perderia. Nomeie outro arquivo ou tire este do caminho. Uma cópia de `@codenhub/styles`, `/components` ou `/native` do pacote começa com o mesmo aviso, então é substituída como uma que o comando escreveu; uma cópia de outro entrypoint, como `/theme` ou uma estética, não, e é recusada.
