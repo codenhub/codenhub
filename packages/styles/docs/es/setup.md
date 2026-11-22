@@ -2,7 +2,7 @@
 title: Configuración inicial
 description: Instala el paquete, elige entre CSS compilado o código fuente de Tailwind y renderiza la estructura base de la página de ajustes.
 order: 1
-source: 4225043fb42dcf38a424348f0845139166e16ea6
+source: 22c98bb0d3018bf3cee2e04b8e8c5301796015f8
 ---
 
 # Configuración inicial
@@ -85,7 +85,7 @@ El orden de los dos imports no importa, porque cada punto de entrada declara las
 - **Se carga una ruta `/tw` sin Tailwind.** Los archivos `/tw` son código fuente de Tailwind: contienen `@theme`, `@utility` y `@apply`, que los navegadores no entienden. Tu build de Tailwind tiene que compilarlos; consulta [Tailwind CSS v4](./integrating/tailwind.md).
 - **Un punto de entrada `/tw` específico se importa sin Tailwind antes.** `@codenhub/styles/button/tw` y los demás archivos de un solo componente no importan Tailwind. Importados solos, compilan sin error pero no producen ninguna regla de componente. Pon `@import "tailwindcss";` antes; consulta [Tailwind CSS v4 → Usar un punto de entrada específico](./integrating/tailwind.md#usar-un-punto-de-entrada-específico).
 - **Falta una clase construida en tiempo de ejecución (solo con código fuente de Tailwind).** Tailwind genera una clase de utilidad, también los componentes del paquete como `.btn`, solo cuando encuentra su nombre en tus archivos fuente. Un nombre armado a partir de strings, como `` `btn ${tone}` ``, es invisible para ese escaneo. Escribe los nombres de clase completos, o enuméralos como se describe en [Tailwind CSS v4](./integrating/tailwind.md).
-- **Un shadow root tiene la hoja de estilos y la página no.** Dentro de un shadow root, las tarjetas pierden su línea y otras partes quedan a medio estilizar: el navegador ignora `@property` en un shadow root, y el paquete registra propiedades de las que depende. Carga la hoja de estilos también en la página, y luego en cada shadow root que use las clases, por ejemplo adoptando la misma `CSSStyleSheet` en ambos. Los tokens se declaran en el `:root` de la página y el shadow root los hereda, así que un cambio como `--color-primary` definido en el `:root` de la página también le llega.
+- **Un shadow root tiene la hoja de estilos y la página no.** Dentro de un shadow root, las tarjetas pierden su línea y otras partes quedan a medio estilizar: el navegador ignora `@property` en un shadow root, y el paquete registra propiedades de las que depende. Carga la hoja de estilos también en la página, y luego en cada shadow root que use las clases, por ejemplo adoptando la misma `CSSStyleSheet` en ambos. Los tokens se declaran en el `:root` de la página y el shadow root los hereda, así que un cambio como `--color-primary` definido en el `:root` de la página también le llega. Su texto toma la tipografía que tendría en el lugar del host en la página, con la fuente, el interlineado, el tamaño de tabulación y los ajustes de fuente, así que un shadow root dentro de una región con fuente propia coincide con el texto de al lado.
 
 ### CSS crítico en línea
 
