@@ -15,7 +15,7 @@
   }
 
   .inspector-th {
-    @apply border-border bg-background-subtle text-text-secondary w-48 border-r p-3 font-semibold;
+    @apply border-border bg-foreground text-text-secondary w-48 border-r p-3 font-semibold;
   }
 
   .inspector-td {
@@ -23,11 +23,11 @@
   }
 
   .inspector-code {
-    @apply bg-background-subtle border-border text-text-strong rounded border px-1.5 py-0.5 font-mono text-xs;
+    @apply bg-foreground border-border text-text-strong rounded border px-1.5 py-0.5 font-mono text-xs;
   }
 
   .inspector-pre {
-    @apply border-border bg-background-subtle text-text overflow-x-auto rounded border p-2 font-mono text-xs;
+    @apply border-border bg-foreground text-text overflow-x-auto rounded border p-2 font-mono text-xs;
   }
 }
 
