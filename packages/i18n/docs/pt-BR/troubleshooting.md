@@ -2,7 +2,7 @@
 title: Solução de problemas
 description: O que cada erro e aviso quer dizer, e como resolver.
 order: 5
-source: 1bc41e2fb9ef984fd04b9dcbd5a70900efd818fe
+source: 2fd96b60219e8a8770c0a185cdce09e665e80bb6
 ---
 
 # Solução de problemas
@@ -137,7 +137,7 @@ Causas comuns:
 
 Vindo de `parse()`, o valor não é o pathname de uma URL: ele não começa com `/`, ou contém `?` ou `#`. Passe `url.pathname` em vez da URL inteira ou de um caminho com a query string, como o `request.url` do Node. Um caminho que é um pathname mas contém algo que o roteamento recusa, como `//` ou um segmento de ponto, faz `parse()` devolver `undefined`, então a URL estranha de um visitante vira um 404 em vez de um crash.
 
-Vindo de `localize()` ou `localizeAll()`, o caminho é um desses, ou contém algo que o roteamento recusa. A mensagem cita o caminho e diz qual regra ele quebra, como `[I18n] pathname "/help/../admin" must not contain a dot segment, . or ..`. [Caminhos que ele aceita](localized-urls.md#caminhos-que-ele-aceita) tem a lista completa, com o conserto de cada um.
+Vindo de `localize()` ou `localizeAll()`, o caminho é um desses, ou contém algo que o roteamento recusa. A mensagem diz qual regra o caminho quebra e cita o caminho, como `[I18n] pathname "/help/../admin" must not contain a dot segment, . or ..`, exceto o que uma URL lê como informações de usuário, query ou fragmento, que podem conter uma credencial: um caminho com `?` ou `#` é citado só até esse caractere, e um que uma URL lê como o início de outro host, como `//example.com` ou `/\example.com`, não é citado. [Caminhos que ele aceita](localized-urls.md#caminhos-que-ele-aceita) tem a lista completa, com o conserto de cada um.
 
 ## `localize()` lança `RangeError`: "would be read as"
 

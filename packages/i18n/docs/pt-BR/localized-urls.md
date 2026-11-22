@@ -2,7 +2,7 @@
 title: URLs localizadas
 description: Coloque o locale no caminho, traduza o próprio caminho, leia os dois de volta, crie links para outros idiomas, gere todas as páginas localizadas e mande os visitantes para o idioma deles num site estático.
 order: 4
-source: 9631ff21a73a680787941415c4160732b2d7873e
+source: 28f049f16715dae8ac4b869e8a74206580d254c2
 ---
 
 # URLs localizadas
@@ -428,15 +428,17 @@ Esta é a parte chata da página. Também é a parte que decide se uma URL forja
 - **Um escape malformado**, um `%` que não é seguido por dois dígitos hexadecimais, como em `/50%off`. Escreva `%25` para um `%` literal… que também é recusado, pela regra anterior, então tire o `%` do caminho.
 - **Mais de 8.192 caracteres ou 100 segmentos**, ou um caminho cujo caminho canônico teria mais do que isso, como pode acontecer com um caminho traduzido curto quando a entrada dele na tabela é longa. Servidores e proxies cortam as URLs por volta desse tamanho de qualquer jeito, e nenhuma página fica 100 pastas abaixo; um pedido com milhares de segmentos de uma letra custaria trabalho em cada locale.
 
-Uma requisição pode trazer qualquer um desses, como um scanner pedindo `//wp-login.php`, então `parse()` devolve `undefined` para eles, e o mesmo 404 os responde como a qualquer outro caminho que não é página. `localize()` e `localizeAll()` montam links a partir dos seus próprios caminhos, em vez de ler requisições, então, para os mesmos caminhos, eles lançam um `TypeError` que cita o caminho e diz a regra, como `TypeError: [I18n] pathname "/help/../admin" must not contain a dot segment, . or ..`, e você corrige o caminho no seu código.
+Uma requisição pode trazer qualquer um desses, como um scanner pedindo `//wp-login.php`, então `parse()` devolve `undefined` para eles, e o mesmo 404 os responde como a qualquer outro caminho que não é página. `localize()` e `localizeAll()` montam links a partir dos seus próprios caminhos, em vez de ler requisições, então, para os mesmos caminhos, eles lançam um `TypeError` que cita o caminho e diz a regra, como `TypeError: [I18n] pathname "/help/../admin" must not contain a dot segment, . or ..`, e você corrige o caminho no seu código. Um caminho que uma URL lê como o início de outro host não é citado, como explicado abaixo.
 
 Todo método, `parse()` incluído, lança um `TypeError` para um valor que nem é o pathname de uma URL:
 
 - Um que não começa com `/`, como uma URL inteira: `TypeError: [I18n] pathname must start with /; pass url.pathname`.
-- Um que contém `?` ou `#`, como o `request.url` do Node com a query string: `TypeError: [I18n] pathname "/search?…" must not contain ?, which starts a query; pass url.pathname`. Nenhum dos dois erros cita as informações de usuário, a query ou o fragmento da URL, que podem conter uma credencial, e um caminho que começa com `//`, como uma URL relativa ao protocolo, não é citado: `TypeError: [I18n] pathname must not start with //, which starts a URL's host; pass url.pathname`.
+- Um que contém `?` ou `#`, como o `request.url` do Node com a query string: `TypeError: [I18n] pathname "/search?…" must not contain ?, which starts a query; pass url.pathname`. O erro diz o que aparece primeiro.
 - Um que não é string: `TypeError: [I18n] pathname must be a string, received undefined`.
 
 Isso é um erro no código que chama, e não uma requisição a responder, então ele falha alto em vez de responder 404 a toda URL com query.
+
+Nenhum erro de roteamento cita o que uma URL lê como informações de usuário, query ou fragmento, que podem conter uma credencial. Um caminho com `?` ou `#` é citado só até esse caractere, e um que uma URL lê como o início de outro host não é citado: um que começa com `//` ou `/\`, como uma URL relativa ao protocolo, mesmo com um tab ou uma quebra de linha entre os dois, já que uma URL lê `\` como `/` e ignora tabs e quebras de linha. O erro dele diz `TypeError: [I18n] pathname must not start with // or /\, which a URL reads as the start of its host, even with a tab or line break between; pass url.pathname`.
 
 Escapes comuns, como `%20` e `%C3%A7`, não têm problema, e uma barra final é mantida: `/pt/sobre/` vira `/about/` no parse.
 

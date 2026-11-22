@@ -1,7 +1,8 @@
-import { formatReportedKey, quoteKey } from "../locale/dictionary";
+import { quoteKey } from "../locale/dictionary";
 import { createFallbackChains } from "../locale/fallback";
 import { createLocaleLoader, type LocaleLoader } from "../locale/loader";
 import { matchConfiguredLocale } from "../locale/matching";
+import { describeUnsupportedLocale } from "../locale/reported-input";
 import { validateI18nConfig, type ValidatedI18nConfig } from "../locale/resolution";
 import { registerI18nInternals } from "./internals";
 import {
@@ -608,10 +609,7 @@ class I18nInstance<TLocale extends string, TKey extends string = string>
     const locale = this.resolveLocale(value);
 
     if (locale === undefined) {
-      // The value is calling code's, often from a URL or a header, so it is quoted and truncated, as rejected keys are.
-      throw new RangeError(
-        `[I18n] Unsupported locale ${typeof value === "string" ? formatReportedKey(value) : `of type ${typeof value}`}.`,
-      );
+      throw new RangeError(describeUnsupportedLocale(value));
     }
 
     return locale;

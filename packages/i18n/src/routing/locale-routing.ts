@@ -1,5 +1,6 @@
 import { assertConfig, localeRoutingConfig } from "../locale/config-validators";
 import { formatReportedKey } from "../locale/dictionary";
+import { describeUnsupportedLocale, formatReportedInput } from "../locale/reported-input";
 import {
   areSegmentsTooLong,
   describePathnameRule,
@@ -218,19 +219,19 @@ export const createLocaleRouting = <TLocale extends string>(
       // Often a full URL, whose user info can hold a credential, so the value is not quoted.
       throw new TypeError(`[I18n] pathname must ${describePathnameRule(problem)}; pass url.pathname`);
     }
-    if (pathname.startsWith("//")) {
-      // A protocol-relative URL, whose user info can hold a credential, so the value is not quoted.
-      throw new TypeError("[I18n] pathname must not start with //, which starts a URL's host; pass url.pathname");
-    }
-    if (problem === "query" || problem === "fragment") {
-      // A URL passed where its pathname belongs. Its query or fragment can hold a token, so only the path is quoted.
-      const path = `${pathname.slice(0, pathname.search(/[?#]/))}${problem === "query" ? "?" : "#"}…`;
+    // A URL passed where its pathname belongs: its user info, query, or fragment can hold a credential, so none is quoted.
+    const quoted = formatReportedInput(pathname);
+    if (quoted === undefined) {
       throw new TypeError(
-        `[I18n] pathname ${formatReportedKey(path)} must ${describePathnameRule(problem)}; pass url.pathname`,
+        "[I18n] pathname must not start with // or /\\, which a URL reads as the start of its host, even with a tab or " +
+          "line break between; pass url.pathname",
       );
     }
+    if (problem === "query" || problem === "fragment") {
+      throw new TypeError(`[I18n] pathname ${quoted} must ${describePathnameRule(problem)}; pass url.pathname`);
+    }
     if (problem !== undefined) {
-      throw new TypeError(`[I18n] pathname ${formatReportedKey(pathname)} must ${describePathnameRule(problem)}`);
+      throw new TypeError(`[I18n] pathname ${quoted} must ${describePathnameRule(problem)}`);
     }
   };
 
@@ -419,10 +420,7 @@ export const createLocaleRouting = <TLocale extends string>(
     const canonicalLocale = typeof locale === "string" ? findLocale(locale, true) : undefined;
 
     if (canonicalLocale === undefined) {
-      // The value is calling code's, often from a URL or a header, so it is quoted and truncated, as the manager does.
-      throw new RangeError(
-        `[I18n] Unsupported locale ${typeof locale === "string" ? formatReportedKey(locale) : `of type ${typeof locale}`}.`,
-      );
+      throw new RangeError(describeUnsupportedLocale(locale));
     }
 
     // Every path is canonical. One that starts with a locale, such as an English `/my/orders` when Burmese, `my`, is
