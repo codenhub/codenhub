@@ -38,7 +38,7 @@ mount(App, { target: document.getElementById("app")! });
 
 ## Forzar un tema
 
-Aplica `.dark` o `.light` en `<html>` (edita `src/app.html` en SvelteKit) para forzar un tema en lugar de seguir la preferencia del sistema; consulta [Temas → Claro y oscuro](../usage/theming.md#claro-y-oscuro).
+Aplica `.theme-dark` o `.theme-light` (o `data-theme="dark"` o `"light"`) en `<html>` (edita `src/app.html` en SvelteKit) para forzar un tema en lugar de seguir la preferencia del sistema; consulta [Temas → Claro y oscuro](../usage/theming.md#claro-y-oscuro).
 
 ## Siguiente paso
 

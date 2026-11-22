@@ -38,7 +38,7 @@ See [Tailwind CSS v4](./tailwind.md), including when an explicit `@source` is ac
 
 ## Force a theme
 
-Apply `.dark` or `.light` on `<html>` to force a theme instead of following the system preference; see [Theming → Light and dark](../usage/theming.md#light-and-dark).
+Apply `.theme-dark` or `.theme-light` (or `data-theme="dark"` or `"light"`) on `<html>` to force a theme instead of following the system preference; see [Theming → Light and dark](../usage/theming.md#light-and-dark).
 
 ## Next
 

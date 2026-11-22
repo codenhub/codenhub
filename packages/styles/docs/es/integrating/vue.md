@@ -24,7 +24,7 @@ createApp(App).mount("#app");
 
 ## Forzar un tema
 
-Aplica `.dark` o `.light` en `<html>`, en `index.html`, para forzar un tema en lugar de seguir la preferencia del sistema; consulta [Temas → Claro y oscuro](../usage/theming.md#claro-y-oscuro).
+Aplica `.theme-dark` o `.theme-light` (o `data-theme="dark"` o `"light"`) en `<html>`, en `index.html`, para forzar un tema en lugar de seguir la preferencia del sistema; consulta [Temas → Claro y oscuro](../usage/theming.md#claro-y-oscuro).
 
 ## Siguiente paso
 

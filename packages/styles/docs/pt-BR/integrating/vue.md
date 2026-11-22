@@ -24,7 +24,7 @@ Usa Tailwind CSS v4? Importe `@codenhub/styles/tw` a partir de um arquivo CSS de
 
 ## Force um tema
 
-Aplique `.dark` ou `.light` no `<html>` do `index.html` para forçar um tema em vez de seguir a preferência do sistema; veja [Temas → Claro e escuro](../usage/theming.md#claro-e-escuro).
+Aplique `.theme-dark` ou `.theme-light` (ou `data-theme="dark"` ou `"light"`) no `<html>` do `index.html` para forçar um tema em vez de seguir a preferência do sistema; veja [Temas → Claro e escuro](../usage/theming.md#claro-e-escuro).
 
 ## A seguir
 

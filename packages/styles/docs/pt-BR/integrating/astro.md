@@ -39,7 +39,7 @@ Veja [Tailwind CSS v4](./tailwind.md), incluindo quando um `@source` explícito 
 
 ## Force um tema
 
-Aplique `.dark` ou `.light` no `<html>` para forçar um tema em vez de seguir a preferência do sistema; veja [Temas → Claro e escuro](../usage/theming.md#claro-e-escuro).
+Aplique `.theme-dark` ou `.theme-light` (ou `data-theme="dark"` ou `"light"`) no `<html>` para forçar um tema em vez de seguir a preferência do sistema; veja [Temas → Claro e escuro](../usage/theming.md#claro-e-escuro).
 
 ## A seguir
 
