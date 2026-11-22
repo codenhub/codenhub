@@ -2,7 +2,7 @@
 title: Temas
 description: Modo claro e escuro, como trocar a paleta pelas cores da marca, como definir uma intenção própria, e cada token de cor, de intenção, fundamental e de fonte com o seu padrão.
 order: 5
-source: b0e0304fea0db65e54c1174efb54aabf6e35fac0
+source: d86793254ca2f68d9123cf8738319c15401e973b
 ---
 
 # Temas
@@ -198,22 +198,22 @@ Cada linha é um ponto de sobrescrita: defina-a no `:root` para mudar o tema da 
 | `--color-success-contrast`     | `neutral-50`                 | Texto sobre um preenchimento de sucesso total: 5.14:1.                                                              |
 | `--color-success-hover`        | `#007552`, `#006448`         | Preenchimento de sucesso sob o ponteiro.                                                                            |
 | `--color-success-subtle`       | `emerald-100`, `emerald-900` | Tom de sucesso por trás dos componentes soft.                                                                       |
-| `--color-success-strong`       | `emerald-800`, `emerald-300` | Texto, ícones e bordas de sucesso onde o preenchimento não é total.                                                 |
+| `--color-success-strong`       | `emerald-950`, `emerald-300` | Texto, ícones e bordas de sucesso onde o preenchimento não é total.                                                 |
 | `--color-warning`              | `amber-600`                  | Preenchimento de `.warning`.                                                                                        |
 | `--color-warning-contrast`     | `neutral-950`                | Texto sobre um preenchimento de aviso total: quase preto, não a cor da página. 6.19:1.                              |
 | `--color-warning-hover`        | `#d46700`, `#e78300`         | Preenchimento de aviso sob o ponteiro.                                                                              |
 | `--color-warning-subtle`       | `amber-100`, `amber-900`     | Tom de aviso por trás dos componentes soft.                                                                         |
-| `--color-warning-strong`       | `amber-800`, `amber-300`     | Texto, ícones e bordas de aviso onde o preenchimento não é total.                                                   |
+| `--color-warning-strong`       | `amber-950`, `amber-300`     | Texto, ícones e bordas de aviso onde o preenchimento não é total.                                                   |
 | `--color-destructive`          | `rose-700`                   | Preenchimento de `.destructive`.                                                                                    |
 | `--color-destructive-contrast` | `neutral-50`                 | Texto sobre um preenchimento destrutivo total: 5.78:1.                                                              |
 | `--color-destructive-hover`    | `#c00036`, `#d1054b`         | Preenchimento destrutivo sob o ponteiro.                                                                            |
 | `--color-destructive-subtle`   | `rose-100`, `rose-900`       | Tom destrutivo por trás dos componentes soft.                                                                       |
-| `--color-destructive-strong`   | `rose-800`, `rose-300`       | Texto, ícones e bordas destrutivos onde o preenchimento não é total.                                                |
+| `--color-destructive-strong`   | `rose-950`, `rose-300`       | Texto, ícones e bordas destrutivos onde o preenchimento não é total.                                                |
 | `--color-info`                 | `indigo-600`                 | Preenchimento de `.info`.                                                                                           |
 | `--color-info-contrast`        | `neutral-50`                 | Texto sobre um preenchimento informativo total: 6.19:1.                                                             |
 | `--color-info-hover`           | `#4b36e9`, `#5e4ff9`         | Preenchimento informativo sob o ponteiro.                                                                           |
 | `--color-info-subtle`          | `indigo-100`, `indigo-900`   | Tom informativo por trás dos componentes soft.                                                                      |
-| `--color-info-strong`          | `indigo-800`, `indigo-300`   | Texto, ícones e bordas informativos onde o preenchimento não é total.                                               |
+| `--color-info-strong`          | `indigo-950`, `indigo-300`   | Texto, ícones e bordas informativos onde o preenchimento não é total.                                               |
 
 Mudanças de tema pertencem a esses valores, não a regras de componente que verificam o tema.
 
@@ -231,7 +231,7 @@ Uma classe de intenção define estes sete slots, e os componentes os leem. Como
 | `--intent-border`   | Cor das linhas. Sem intenção, é o `--ui-ink` da estética e, depois, `--color-border`; controles de texto e toggles leem `--ui-control-ink`, depois `--ui-ink` e depois `--color-control-border`, e as tabelas leem `--ui-rule-ink` primeiro. |
 | `--intent-fill-max` | Até onde um preenchimento dessa intenção pode ir. `100%` para toda intenção, exceto a neutra.                                                                                                                                                |
 
-`--intent-color` e `--intent-strong` não são intercambiáveis. A cor base é escolhida para preencher; o tom forte é escolhido para ser lido sobre a página. Um componente soft ou ghost imprime o tom forte, e é por isso que um aviso soft aparece em amber-800 enquanto um sólido é preenchido com amber-600.
+`--intent-color` e `--intent-strong` não são intercambiáveis. A cor base é escolhida para preencher; o tom forte é escolhido para ser lido sobre a página, e sobre uma superfície `.solid` neutra, onde um componente com intenção mantém a sua própria cor de texto. Um componente soft ou ghost imprime o tom forte, e é por isso que um aviso soft aparece em amber-950 enquanto um sólido é preenchido com amber-600.
 
 O tom forte também precisa continuar reconhecível como o seu próprio matiz. Numa página escura, a tonalidade `-100` de cada família é um tom pálido quase sem cor em tamanhos pequenos: um badge de sucesso soft e um destrutivo soft pareceriam ambos brancos. Por isso, os tons fortes do escuro são `-300`, e os tons por baixo deles são `-900`, que medem 5.0:1 ou mais onde quer que um preenchimento parcial tenha texto, e mais de 9:1 sobre a página.
 
