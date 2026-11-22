@@ -42,31 +42,46 @@ const NAMED_SEVERITIES = ["success", "destructive", "warning", "info"];
 const BUTTON_ROLES = ["primary", "secondary", "success", "destructive"];
 
 /**
- * Splits `palette.css` into its light (`:root`) and dark
- * (`.dark, .theme-dark, [data-theme="dark"]`) declaration blocks.
- * @param paletteText Contents of `packages/styles/src/palette.css`.
- * @returns The two blocks' raw text, each still holding its declarations.
+ * Splits one `light-dark(light, dark)` value into its two arguments, at the
+ * comma that sits outside every nested parenthesis. A value that is not a
+ * `light-dark()` pair is the same in both themes.
+ * @param value A `--palette-*` declaration's value.
+ * @returns The light and dark values.
  */
-function splitPaletteThemes(paletteText) {
-  const darkStart = paletteText.indexOf(".dark,");
-  if (darkStart === -1) {
-    throw new Error("palette.css has no `.dark,` block -- has its dark-mode selector changed?");
+function splitLightDark(value) {
+  const match = value.match(/^light-dark\(([\s\S]*)\)$/);
+  if (!match) {
+    return { dark: value, light: value };
   }
-  return { dark: paletteText.slice(darkStart), light: paletteText.slice(0, darkStart) };
+  const inner = match[1];
+  let depth = 0;
+  for (let index = 0; index < inner.length; index += 1) {
+    const char = inner[index];
+    if (char === "(") {
+      depth += 1;
+    } else if (char === ")") {
+      depth -= 1;
+    } else if (char === "," && depth === 0) {
+      return { dark: inner.slice(index + 1).trim(), light: inner.slice(0, index).trim() };
+    }
+  }
+  throw new Error(`palette.css has a light-dark() value with one argument: ${value}`);
 }
 
 /**
- * Reads one `--palette-*` declaration's value out of a block of CSS text.
- * @param block Light or dark declaration block from {@link splitPaletteThemes}.
+ * Reads one `--palette-*` declaration's value for one theme. Each value in
+ * `palette.css` is a `light-dark()` pair, or a single value both themes share.
+ * @param paletteText Contents of `packages/styles/src/palette.css`.
  * @param name Declaration name without its `--palette-` prefix.
- * @returns The declaration's value.
+ * @param theme `"light"` or `"dark"`.
+ * @returns The declaration's value in that theme.
  */
-function readPaletteValue(block, name) {
-  const match = block.match(new RegExp(`--palette-${name}:\\s*([^;]+);`));
+function readPaletteValue(paletteText, name, theme) {
+  const match = paletteText.match(new RegExp(`--palette-${name}:\\s*([^;]+);`));
   if (!match) {
     throw new Error(`palette.css has no --palette-${name} declaration -- has the palette's naming changed?`);
   }
-  return match[1].trim();
+  return splitLightDark(match[1].replace(/\s+/g, " ").trim())[theme];
 }
 
 /**
@@ -74,35 +89,37 @@ function readPaletteValue(block, name) {
  * strong tone per named severity; the flat neutral tokens a "default"
  * severity and dialog surface/text/border read; and an accent/contrast/hover
  * per button role.
- * @param block Light or dark declaration block from {@link splitPaletteThemes}.
+ * @param paletteText Contents of `packages/styles/src/palette.css`.
+ * @param theme `"light"` or `"dark"`.
  * @returns Flat `{ name: value }` map, keyed the same way {@link buildTheme} expects.
  */
-function readRawValues(block) {
+function readRawValues(paletteText, theme) {
+  const block = paletteText;
   const raw = {};
   for (const severity of NAMED_SEVERITIES) {
     // Uncapped intent (fill-max 100%): the "solid" cell IS the accent and
     // contrast color, with no fill or ground mixed in to recover from.
-    raw[`${severity}-color`] = readPaletteValue(block, `${severity}-solid-bg`);
-    raw[`${severity}-contrast`] = readPaletteValue(block, `${severity}-solid-fg`);
+    raw[`${severity}-color`] = readPaletteValue(block, `${severity}-solid-bg`, theme);
+    raw[`${severity}-contrast`] = readPaletteValue(block, `${severity}-solid-fg`, theme);
     // The "soft" cell's foreground is the strong tone at any fill at or
     // under 50%, styles.css `box`'s own on-fill formula.
-    raw[`${severity}-strong`] = readPaletteValue(block, `${severity}-soft-fg`);
+    raw[`${severity}-strong`] = readPaletteValue(block, `${severity}-soft-fg`, theme);
   }
   // Neutral maps its color to the flat text token and its border to the flat
   // border token -- the two differ, unlike a named severity's own intent
   // mapping its border to its color.
-  raw["neutral-color"] = readPaletteValue(block, "text");
-  raw["neutral-border"] = readPaletteValue(block, "border");
-  raw["neutral-strong"] = readPaletteValue(block, "neutral-soft-fg");
-  raw["neutral-contrast"] = readPaletteValue(block, "neutral-solid-fg");
+  raw["neutral-color"] = readPaletteValue(block, "text", theme);
+  raw["neutral-border"] = readPaletteValue(block, "border", theme);
+  raw["neutral-strong"] = readPaletteValue(block, "neutral-soft-fg", theme);
+  raw["neutral-contrast"] = readPaletteValue(block, "neutral-solid-fg", theme);
   for (const role of BUTTON_ROLES) {
-    raw[`btn-${role}-color`] = readPaletteValue(block, `${role}-solid-bg`);
-    raw[`btn-${role}-contrast`] = readPaletteValue(block, `${role}-solid-fg`);
-    raw[`btn-${role}-hover`] = readPaletteValue(block, `${role}-solid-bg-hover`);
+    raw[`btn-${role}-color`] = readPaletteValue(block, `${role}-solid-bg`, theme);
+    raw[`btn-${role}-contrast`] = readPaletteValue(block, `${role}-solid-fg`, theme);
+    raw[`btn-${role}-hover`] = readPaletteValue(block, `${role}-solid-bg-hover`, theme);
   }
-  raw.surface = readPaletteValue(block, "surface");
-  raw.text = readPaletteValue(block, "text");
-  raw.border = readPaletteValue(block, "border");
+  raw.surface = readPaletteValue(block, "surface", theme);
+  raw.text = readPaletteValue(block, "text", theme);
+  raw.border = readPaletteValue(block, "border", theme);
   return raw;
 }
 
@@ -247,11 +264,10 @@ async function main() {
   const stylesRoot = path.join(workspaceRoot, "packages", "styles");
 
   const paletteText = await readFile(path.join(stylesRoot, "src", "palette.css"), "utf8");
-  const { dark: darkBlock, light: lightBlock } = splitPaletteThemes(paletteText);
 
   console.error("Reading raw color inputs from the real palette.css...");
-  const lightRaw = readRawValues(lightBlock);
-  const darkRaw = readRawValues(darkBlock);
+  const lightRaw = readRawValues(paletteText, "light");
+  const darkRaw = readRawValues(paletteText, "dark");
   const light = buildTheme(lightRaw, darkRaw.text);
   const dark = buildTheme(darkRaw, lightRaw.text);
 
