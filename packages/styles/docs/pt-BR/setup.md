@@ -2,7 +2,7 @@
 title: Configuração
 description: Instale o pacote, escolha entre CSS compilado ou código-fonte do Tailwind e renderize a estrutura da página de configurações.
 order: 1
-source: 0698f24ec8f6da13b5e44f0c4d42ac64400d5ee6
+source: 4225043fb42dcf38a424348f0845139166e16ea6
 ---
 
 # Configuração
@@ -72,7 +72,7 @@ A ordem dos dois imports não importa, porque todo entrypoint declara as [camada
 
 ## Requisitos
 
-- **Navegadores:** Chrome 123, Safari 17.5 ou Firefox 128 e mais recentes. As cores usam `light-dark()` e `color-scheme` (Firefox 120). O `.input-group` lê o estado inválido e desabilitado de um controle aninhado com `:has()` (Firefox 121). As classes de elevação registram uma propriedade sem herança com `@property` (Firefox 128); sem isso, uma classe de elevação também atingiria os elementos sem classe dentro dela.
+- **Navegadores:** Chrome 123, Safari 17.5 ou Firefox 128 e mais recentes. As cores usam `light-dark()` e `color-scheme` (Firefox 120). O `.input-group` lê o estado inválido e desabilitado de um controle aninhado com `:has()` (Firefox 121). As classes de elevação registram uma propriedade sem herança com `@property` (Firefox 128); sem isso, uma classe de elevação também atingiria os elementos sem classe dentro dela. Alguns recursos mais recentes são usados onde o navegador os tem e ignorados onde não tem, sem quebrar nada no mínimo: `corner-shape`, sem o qual os cantos chanfrados de `.cyber` ficam retos, `scrollbar-color` e `scrollbar-width`, sem os quais o Safari 17.5 desenha a própria barra de rolagem, e as partes que a configuração de movimento reduzido interrompe, como uma animação guiada pela rolagem, que um navegador sem elas nunca anima.
 - **Ferramental:** um `@import` com nome de pacote precisa de uma ferramenta que resolva imports de CSS de pacotes pelo mapa `exports` deles. Sem ela, referencie o arquivo compilado pelo caminho ou a partir de uma CDN; veja [Sem bundler](./integrating/without-a-bundler.md). Duas ferramentas comuns precisam de um ajuste, descrito em [Integração → Bundlers que precisam de um empurrão](./integrating/index.md#bundlers-que-precisam-de-um-empurrão): o Parcel e o PostCSS com `postcss-import`.
 - **Tailwind:** 4.3.2 ou mais recente, abaixo da 5, só para os entrypoints de código-fonte `/tw`. O pacote não depende dele, então os entrypoints compilados e o comando `chs build` funcionam num projeto com qualquer Tailwind ou sem nenhum, e nada confere a versão por você.
 - **Node.js:** 24 ou mais recente na máquina que roda o comando `chs build`. As folhas de estilos não precisam dele, mas o pacote o declara como sua engine, então o Yarn 1, e o npm ou o pnpm com `engine-strict`, recusam a instalação num Node.js mais antigo.
@@ -85,7 +85,7 @@ A ordem dos dois imports não importa, porque todo entrypoint declara as [camada
 - **Um caminho `/tw` é carregado sem Tailwind.** Os arquivos `/tw` são código-fonte do Tailwind: eles contêm `@theme`, `@utility` e `@apply`, que os navegadores não entendem. O seu build do Tailwind precisa compilá-los; veja [Tailwind CSS v4](./integrating/tailwind.md).
 - **Um entrypoint `/tw` específico é importado sem o Tailwind antes.** `@codenhub/styles/button/tw` e os outros arquivos de um componente específico não importam o Tailwind. Importados sozinhos, eles compilam sem erro, mas não produzem nenhuma regra de componente. Coloque `@import "tailwindcss";` antes; veja [Tailwind CSS v4 → Usando um entrypoint específico](./integrating/tailwind.md#usando-um-entrypoint-específico).
 - **Falta uma classe montada em tempo de execução (só com código-fonte do Tailwind).** O Tailwind só gera uma classe utilitária, incluindo os componentes do pacote como `.btn`, quando encontra o nome nos seus arquivos de código. Um nome montado a partir de strings, como `` `btn ${tone}` ``, é invisível para essa varredura. Escreva os nomes de classe completos, ou liste-os como descrito em [Tailwind CSS v4](./integrating/tailwind.md).
-- **Um shadow root tem a folha de estilos e a página não.** Dentro de um shadow root, os cards perdem a linha e outras partes ficam meio estilizadas: o navegador ignora `@property` num shadow root, e o pacote registra propriedades das quais depende. Carregue a folha de estilos também na página, e depois em cada shadow root que usa as classes, por exemplo adotando a mesma `CSSStyleSheet` nos dois.
+- **Um shadow root tem a folha de estilos e a página não.** Dentro de um shadow root, os cards perdem a linha e outras partes ficam meio estilizadas: o navegador ignora `@property` num shadow root, e o pacote registra propriedades das quais depende. Carregue a folha de estilos também na página, e depois em cada shadow root que usa as classes, por exemplo adotando a mesma `CSSStyleSheet` nos dois. Os tokens são declarados no `:root` da página e o shadow root os herda, então uma sobrescrita como `--color-primary` definida no `:root` da página chega a ele também.
 
 ### CSS crítico inline
 

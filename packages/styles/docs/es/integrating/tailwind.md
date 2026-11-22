@@ -2,7 +2,7 @@
 title: Tailwind CSS v4
 description: Usar los puntos de entrada de código fuente /tw en un proyecto con Tailwind CSS v4.
 order: 1
-source: bcb7ef9efbaa5e492c44ea8b5a721d6b1a0afe5c
+source: 52bb84688d6c4ed474920042e278f5532a1c97da
 ---
 
 # Tailwind CSS v4
@@ -133,6 +133,12 @@ El bloque deja fuera `neutral`, `emerald`, `amber`, `rose`, `indigo` y `white` a
 - **Qué ha pasado:** `before:motion-reduce:hidden` o `placeholder:dark:text-white` no sigue `data-motion` ni `data-theme` en `<html>`, o no se aplica nunca, mientras que `motion-reduce:hidden` en el propio elemento funciona.
 - **Por qué:** la variante del paquete va detrás de una variante de pseudoelemento, y Tailwind escribe entonces su condición donde los navegadores la rechazan.
 - **Solución:** escribe primero la variante del paquete: `motion-reduce:before:hidden`, `dark:placeholder:text-white`. [Variantes de contraste y movimiento](#variantes-de-contraste-y-movimiento) tiene los detalles.
+
+**Un cambio de token se detiene en un shadow root**
+
+- **Qué ha pasado:** `--color-primary` definido en `:root` en tu hoja de estilos colorea los botones de la página, pero un botón dentro de un shadow root que carga la misma hoja conserva el color del paquete.
+- **Por qué:** Tailwind escribe el tema en `:root, :host`, así que la copia de la hoja en el shadow root vuelve a declarar cada token en su host, y el valor de la página no se hereda más allá. Los puntos de entrada compilados declaran los tokens solo en `:root`, así que ahí el valor de la página sí cruza.
+- **Solución:** define el cambio en `@theme`, como `@theme { --color-primary: oklch(49% 0.24 293); }`, que Tailwind también escribe en `:root, :host`, o escribe tu propia regla en `:root, :host`.
 
 **Una clase construida en tiempo de ejecución no tiene estilo**
 

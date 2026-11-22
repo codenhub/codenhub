@@ -1,6 +1,6 @@
 ---
 status: IMPLEMENTED
-last_updated: 2026-11-18
+last_updated: 2026-11-21
 scope: `@codenhub/styles` styling model, token contracts, and composition rules.
 ---
 
@@ -130,7 +130,7 @@ A box that rests on a ground of its own blocks the ink: `surface`, `.kbd`, `.cod
 
 `.data-table` blocks it for its sections alone: it passes the pair from above through itself, restates it on each child but the `<caption>`, and sets its own hold to 100% so its own text stays off it. Chromium and WebKit lay the caption out beside the plate, on the ground the table stands on, so the caption takes that ground's ink.
 
-Text that is not a box reads the pair as well, wherever the page's grey or the primary ring would land on a plate: a placeholder, a `.hint` with no intent, an `.input-group`'s adornments, a table caption, and `.quote-inline` mix `--_held-ink` into `--color-text-secondary` by `--_held-on`, and the reset's default focus ring mixes it in by `min(--_held-on, 100% - --_own-hold)`, so a box that holds the ink itself keeps the primary ring. On a solid intent surface the grey read at 1.0 to 3.24:1 and the ring at 1.0 to 2.9:1. A consumer's `--focus-ring` is not mixed. An invalid control sets `--intent-fill-max: 100%` with its destructive slots, so it is no longer neutral and keeps its red on a plate; the field inside an `.input-group` restates the neutral 20% on its own `[aria-invalid]` at 0-3-0, since Tailwind emits the control's state after the group's child rule, and prints the plate's ink as an `.input-group.destructive` field does.
+Text that is not a box reads the pair as well, wherever the page's grey or the primary ring would land on a plate: a placeholder, a `.hint` with no intent, an `.input-group`'s adornments, a table caption, and `.quote-inline` mix `--_held-ink` into `--color-text-secondary` by `--_held-on`, and the reset's default focus ring mixes it in by `min(--_held-on, 100% - --_own-hold)`, so a box that holds the ink itself keeps the primary ring. On a solid intent surface the grey read at 1.0 to 3.24:1 and the ring at 1.0 to 2.9:1. A consumer's `--focus-ring` is not mixed. The reset's `::selection` inverts the plate by `--_held-on`: `--_held-ink` as the highlight and `--_held-plate`, a fourth registered property `box` writes beside the ink, as the selected text. `--_held-plate` is the capped intent over `--color-background`, opaque, rather than `--_bg`, which an aesthetic's alpha thins; under such an aesthetic the selected text is the colour the plate would have on an opaque page. The brand-coloured highlight painted a `.solid.primary` button at 1:1. This replaces `.selection-contrast`, a class a consumer put on a solid primary area to swap the brand pair, removed on 2026-11-21 before 0.11.0: it fixed one intent and only where someone remembered it, while the plate already knows its own ink and colour. An invalid control sets `--intent-fill-max: 100%` with its destructive slots, so it is no longer neutral and keeps its red on a plate; the field inside an `.input-group` restates the neutral 20% on its own `[aria-invalid]` at 0-3-0, since Tailwind emits the control's state after the group's child rule, and prints the plate's ink as an `.input-group.destructive` field does.
 
 The limits, recorded rather than worked around:
 
@@ -1106,4 +1106,5 @@ This does not apply to a class or attribute that is itself a direction choice an
 - [Roadmap](./roadmap.md)
 - [Tests](./tests.md)
 - [Generated palette](./generated-palette.md)
+- [Browser support](./browser-support.md)
 - [Accessibility](../accessibility.md)

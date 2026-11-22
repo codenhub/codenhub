@@ -121,7 +121,6 @@ describe("the stylesheets the command reads", () => {
     expect([...inSource].filter((name) => !droppable.has(name)).sort()).toEqual([
       "dark",
       "disabled",
-      "light",
       "theme-dark",
       "theme-light",
     ]);

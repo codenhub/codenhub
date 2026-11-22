@@ -1058,3 +1058,37 @@ test("tracks no joining or headstroke script named by a script subtag or a regio
 
   expect(spacing).toEqual(Object.fromEntries(Object.keys(spacing).map((id) => [id, "normal"])));
 });
+
+/* Fourteen more languages written in a joining script by default kept the
+   tracking: regional languages of Pakistan and Iran in Arabic script, and
+   Rohingya, in Hanifi Rohingya. Chunky tile's solo class repeats the list in
+   `src/aesthetics/chunky-tile.css`, which is read apart from this one. */
+test("tracks no regional Arabic-script language or Rohingya", async ({ page }) => {
+  const { readFile } = await import("node:fs/promises");
+  const [index, native] = await Promise.all(
+    ["index.css", "native.css"].map((file) => readFile(new URL(`../../dist/${file}`, import.meta.url), "utf8")),
+  );
+  const languages = ["skr", "bal", "bcc", "bgn", "mzn", "glk", "lrc", "luz", "sdh", "bqi", "hno", "khw", "brh", "rhg"];
+
+  await page.setContent(
+    `<!doctype html><html><body>${languages
+      .map(
+        (lang) =>
+          `<div lang="${lang}"><p data-testid="${lang}-body">الله</p><span data-testid="${lang}-text" class="text-label">الله</span><label data-testid="${lang}-label" class="label">الله</label></div>`,
+      )
+      .join("")}</body></html>`,
+  );
+  await page.addStyleTag({ content: native });
+  await page.addStyleTag({ content: index });
+
+  const spacing = await page.evaluate(() =>
+    Object.fromEntries(
+      [...document.querySelectorAll("[data-testid]")].map((element) => [
+        element.getAttribute("data-testid"),
+        getComputedStyle(element).letterSpacing,
+      ]),
+    ),
+  );
+
+  expect(spacing).toEqual(Object.fromEntries(Object.keys(spacing).map((id) => [id, "normal"])));
+});

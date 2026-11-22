@@ -4,9 +4,9 @@
    its output reads, as Tailwind keeps a theme value only where something uses
    it; the `/tw` copy imports `tailwindcss/theme.css` in its place, so a
    consumer's Tailwind supplies its own. `--theme(--x, initial)` is written
-   `var(--x)`, which is what Tailwind compiles it to. */
-:root,
-:host {
+   `var(--x)`, which is what Tailwind compiles it to. On `:root` alone, so a
+   shadow root inherits the page's values, as `tokens.css` says. */
+:root {
   --font-sans:
     -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", "Noto Sans", Arial, sans-serif,
     "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";

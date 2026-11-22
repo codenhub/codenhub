@@ -2,7 +2,7 @@
 title: Temas
 description: Modo claro y oscuro, reemplazar la paleta con los colores de marca, definir una intención propia, y cada token de color, intención, base y fuente con su valor por defecto.
 order: 5
-source: d071d7088a90d81286d17d3af6aec720cbd1e5f7
+source: 059c7efb0eda78e0564d17ec30ccb0a225d7aad8
 ---
 
 # Temas
@@ -21,10 +21,12 @@ Para que el usuario elija, pon un selector de tema en el elemento raíz:
 </html>
 ```
 
-| Tema   | Selectores equivalentes                          |
-| ------ | ------------------------------------------------ |
-| Claro  | `.light`, `.theme-light`, `[data-theme="light"]` |
-| Oscuro | `.dark`, `.theme-dark`, `[data-theme="dark"]`    |
+| Tema   | Selectores equivalentes                                    |
+| ------ | ---------------------------------------------------------- |
+| Claro  | `.theme-light`, `[data-theme="light"]`                     |
+| Oscuro | `.theme-dark`, `[data-theme="dark"]` y `.dark` en `<html>` |
+
+`.dark` solo aplica el tema en el elemento raíz, donde lo pone la convención de Tailwind, y no existe `.light`. Las dos son palabras que un nombre de clase suele llevar por otros motivos: un `<span class="light">` para un peso más ligero pasaría su texto al casi negro del tema claro en una página oscura. Para aplicar un tema a una zona, usa `.theme-*` o `data-theme`.
 
 Una pantalla de ajustes con la opción "Sistema / Claro / Oscuro" quita el atributo para Sistema y lo pone para las otras dos.
 
@@ -33,9 +35,9 @@ Los ajustes de contraste y movimiento funcionan igual, con `data-contrast` y `da
 Cómo se resuelve:
 
 - Un selector de tema define la propiedad CSS `color-scheme`, y el color del texto del elemento en `--color-text`. Cada token de color contiene a la vez su valor claro y su valor oscuro, mediante `light-dark()`, y el `color-scheme` del elemento elige uno.
-- `color-scheme` se hereda, así que un selector aplica el tema a todo lo que contiene. Un selector en cualquier elemento aplica el tema a esa parte de la página: una barra lateral oscura en una página clara es `<aside class="dark">`, y el texto que contiene toma el color de texto del tema oscuro.
+- `color-scheme` se hereda, así que un selector aplica el tema a todo lo que contiene. Un selector en cualquier elemento aplica el tema a esa parte de la página: una barra lateral oscura en una página clara es `<aside class="theme-dark">`, y el texto que contiene toma el color de texto del tema oscuro.
 - Un selector no define ningún fondo. Dale tú el fondo a la zona, por ejemplo con `background: var(--color-background)`. Cualquier utilidad o clase de componente en el mismo elemento sobrescribe el color de texto del selector.
-- Gana el selector más cercano, a cualquier profundidad. Una tarjeta `.light` dentro de una página `.dark` es clara.
+- Gana el selector más cercano, a cualquier profundidad. Una tarjeta `.theme-light` dentro de una página oscura es clara.
 - Sin selector, la raíz tiene `color-scheme: light dark`, que sigue al sistema.
 - Pon un solo tema en cada elemento. Si un elemento lleva a la vez un selector claro y uno oscuro, gana el oscuro, pero no confíes en ello.
 - Definir tú mismo `color-scheme` en un elemento aplica el tema a los tokens de la misma forma, porque es lo único que lee la paleta. También aplica el tema a partes nativas como las barras de desplazamiento y el interior de los controles de formulario. El texto simple de dentro conserva el color que heredó hasta que también defines `color: var(--color-text)`.
@@ -60,14 +62,14 @@ Con los puntos de entrada de código fuente de Tailwind (`/tw`), el paquete reem
 <html>
   <body>
     <p class="dark:text-white">Follows the system preference</p>
-    <div class="light">
+    <div class="theme-light">
       <p class="dark:text-white">Stays light: this part of the page chose a theme</p>
     </div>
   </body>
 </html>
 ```
 
-Se diferencia de los tokens en un caso: un tema explícito anidado dentro del opuesto. Un elemento `.light` dentro de uno `.dark` tiene tokens claros, porque gana el `color-scheme` más cercano. Pero `dark:` coincide por selector, y `.dark *` coincide con cada elemento dentro de `.dark`, así que una utilidad `dark:` dentro de ese elemento `.light` se sigue aplicando. Si una página usa a la vez tokens y utilidades `dark:`, no anides temas opuestos.
+Se diferencia de los tokens en un caso: un tema explícito anidado dentro del opuesto. Un elemento `.theme-light` dentro de uno `.theme-dark` tiene tokens claros, porque gana el `color-scheme` más cercano. Pero `dark:` coincide por selector, y `.theme-dark *` coincide con cada elemento dentro de `.theme-dark`, así que una utilidad `dark:` dentro de ese elemento `.theme-light` se sigue aplicando. Si una página usa a la vez tokens y utilidades `dark:`, no anides temas opuestos.
 
 Los puntos de entrada compilados no definen una variante `dark:`; no tienen un build de Tailwind en el que definirla. El [comando `chs build`](../integrating/without-a-bundler.md#variantes) sí ofrece `dark:`, con los mismos selectores, solo en las clases de intención, presentación y modificador.
 

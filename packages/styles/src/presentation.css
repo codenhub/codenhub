@@ -43,6 +43,14 @@
   initial-value: transparent;
 }
 
+/* The colour of that plate, opaque, so selected text on it can take the
+   plate's colour while the highlight takes its ink. See `reset.rules.css`. */
+@property --_held-plate {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: transparent;
+}
+
 @property --_held-on {
   syntax: "<percentage>";
   inherits: true;
