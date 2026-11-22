@@ -198,22 +198,22 @@ Each row is an override point: set it on `:root` to retheme the page, or on any 
 | `--color-success-contrast`     | `neutral-50`                 | Text on a full success fill: 5.14:1.                                                           |
 | `--color-success-hover`        | `#007552`, `#006448`         | Success fill under the pointer.                                                                |
 | `--color-success-subtle`       | `emerald-100`, `emerald-900` | Success tint behind soft components.                                                           |
-| `--color-success-strong`       | `emerald-800`, `emerald-300` | Success text, icons, and borders where the fill is not full.                                   |
+| `--color-success-strong`       | `emerald-950`, `emerald-300` | Success text, icons, and borders where the fill is not full.                                   |
 | `--color-warning`              | `amber-600`                  | Fill of `.warning`.                                                                            |
 | `--color-warning-contrast`     | `neutral-950`                | Text on a full warning fill: near-black, not the page color. 6.19:1.                           |
 | `--color-warning-hover`        | `#d46700`, `#e78300`         | Warning fill under the pointer.                                                                |
 | `--color-warning-subtle`       | `amber-100`, `amber-900`     | Warning tint behind soft components.                                                           |
-| `--color-warning-strong`       | `amber-800`, `amber-300`     | Warning text, icons, and borders where the fill is not full.                                   |
+| `--color-warning-strong`       | `amber-950`, `amber-300`     | Warning text, icons, and borders where the fill is not full.                                   |
 | `--color-destructive`          | `rose-700`                   | Fill of `.destructive`.                                                                        |
 | `--color-destructive-contrast` | `neutral-50`                 | Text on a full destructive fill: 5.78:1.                                                       |
 | `--color-destructive-hover`    | `#c00036`, `#d1054b`         | Destructive fill under the pointer.                                                            |
 | `--color-destructive-subtle`   | `rose-100`, `rose-900`       | Destructive tint behind soft components.                                                       |
-| `--color-destructive-strong`   | `rose-800`, `rose-300`       | Destructive text, icons, and borders where the fill is not full.                               |
+| `--color-destructive-strong`   | `rose-950`, `rose-300`       | Destructive text, icons, and borders where the fill is not full.                               |
 | `--color-info`                 | `indigo-600`                 | Fill of `.info`.                                                                               |
 | `--color-info-contrast`        | `neutral-50`                 | Text on a full info fill: 6.19:1.                                                              |
 | `--color-info-hover`           | `#4b36e9`, `#5e4ff9`         | Info fill under the pointer.                                                                   |
 | `--color-info-subtle`          | `indigo-100`, `indigo-900`   | Info tint behind soft components.                                                              |
-| `--color-info-strong`          | `indigo-800`, `indigo-300`   | Info text, icons, and borders where the fill is not full.                                      |
+| `--color-info-strong`          | `indigo-950`, `indigo-300`   | Info text, icons, and borders where the fill is not full.                                      |
 
 Theme changes belong in these values, not in component rules that check the theme.
 
@@ -231,7 +231,7 @@ An intent class sets these seven slots, and components read them. Because every 
 | `--intent-border`   | Line color. With no intent it is the aesthetic's `--ui-ink`, then `--color-border`; text controls and toggles read `--ui-control-ink`, then `--ui-ink`, then `--color-control-border`, and tables read `--ui-rule-ink` first. |
 | `--intent-fill-max` | How far a fill of this intent may go. `100%` for every intent except neutral.                                                                                                                                                 |
 
-`--intent-color` and `--intent-strong` are not interchangeable. The base color is chosen to be filled with; the strong tone is chosen to be read against the page. A soft or ghost component prints the strong tone, which is why a soft warning reads in amber-800 while a solid one is filled with amber-600.
+`--intent-color` and `--intent-strong` are not interchangeable. The base color is chosen to be filled with; the strong tone is chosen to be read against the page, and against a neutral `.solid` surface, where a component with an intent keeps its own text color. A soft or ghost component prints the strong tone, which is why a soft warning reads in amber-950 while a solid one is filled with amber-600.
 
 The strong tone also has to stay recognizably its own hue. On a dark page, the `-100` shade of every family is a pale tint with almost no color at small sizes: a soft success badge and a soft destructive one would both read as white. The dark strong tones are `-300` for that reason, and the tints under them are `-900`, which measures 5.0:1 or better wherever a partial fill holds text, and over 9:1 on the page.
 

@@ -2,7 +2,7 @@
 title: Temas
 description: Modo claro y oscuro, reemplazar la paleta con los colores de marca, definir una intención propia, y cada token de color, intención, base y fuente con su valor por defecto.
 order: 5
-source: e5b82874c6aa7a8be9f4edea7d3bc53b4224159b
+source: 11818fb6c0d117f7c999fe2fa7cac9f211d86c1a
 ---
 
 # Temas
@@ -199,22 +199,22 @@ Cada fila es un punto de sobrescritura: defínelo en `:root` para cambiar el tem
 | `--color-success-contrast`     | `neutral-50`                 | Texto sobre un relleno success completo: 5.14:1.                                                                 |
 | `--color-success-hover`        | `#007552`, `#006448`         | Relleno success bajo el puntero.                                                                                 |
 | `--color-success-subtle`       | `emerald-100`, `emerald-900` | Tinte success detrás de los componentes soft.                                                                    |
-| `--color-success-strong`       | `emerald-800`, `emerald-300` | Texto, iconos y bordes success donde el relleno no es completo.                                                  |
+| `--color-success-strong`       | `emerald-950`, `emerald-300` | Texto, iconos y bordes success donde el relleno no es completo.                                                  |
 | `--color-warning`              | `amber-600`                  | Relleno de `.warning`.                                                                                           |
 | `--color-warning-contrast`     | `neutral-950`                | Texto sobre un relleno warning completo: casi negro, no el color de la página. 6.19:1.                           |
 | `--color-warning-hover`        | `#d46700`, `#e78300`         | Relleno warning bajo el puntero.                                                                                 |
 | `--color-warning-subtle`       | `amber-100`, `amber-900`     | Tinte warning detrás de los componentes soft.                                                                    |
-| `--color-warning-strong`       | `amber-800`, `amber-300`     | Texto, iconos y bordes warning donde el relleno no es completo.                                                  |
+| `--color-warning-strong`       | `amber-950`, `amber-300`     | Texto, iconos y bordes warning donde el relleno no es completo.                                                  |
 | `--color-destructive`          | `rose-700`                   | Relleno de `.destructive`.                                                                                       |
 | `--color-destructive-contrast` | `neutral-50`                 | Texto sobre un relleno destructive completo: 5.78:1.                                                             |
 | `--color-destructive-hover`    | `#c00036`, `#d1054b`         | Relleno destructive bajo el puntero.                                                                             |
 | `--color-destructive-subtle`   | `rose-100`, `rose-900`       | Tinte destructive detrás de los componentes soft.                                                                |
-| `--color-destructive-strong`   | `rose-800`, `rose-300`       | Texto, iconos y bordes destructive donde el relleno no es completo.                                              |
+| `--color-destructive-strong`   | `rose-950`, `rose-300`       | Texto, iconos y bordes destructive donde el relleno no es completo.                                              |
 | `--color-info`                 | `indigo-600`                 | Relleno de `.info`.                                                                                              |
 | `--color-info-contrast`        | `neutral-50`                 | Texto sobre un relleno info completo: 6.19:1.                                                                    |
 | `--color-info-hover`           | `#4b36e9`, `#5e4ff9`         | Relleno info bajo el puntero.                                                                                    |
 | `--color-info-subtle`          | `indigo-100`, `indigo-900`   | Tinte info detrás de los componentes soft.                                                                       |
-| `--color-info-strong`          | `indigo-800`, `indigo-300`   | Texto, iconos y bordes info donde el relleno no es completo.                                                     |
+| `--color-info-strong`          | `indigo-950`, `indigo-300`   | Texto, iconos y bordes info donde el relleno no es completo.                                                     |
 
 Los cambios de tema van en estos valores, no en reglas de componente que comprueban el tema.
 
@@ -232,7 +232,7 @@ Una clase de intención define estos siete huecos, y los componentes los leen. C
 | `--intent-border`   | Color de línea. Sin intención es el `--ui-ink` de la estética y, si no, `--color-border`; los controles de texto y los toggles leen `--ui-control-ink`, después `--ui-ink` y después `--color-control-border`, y las tablas leen primero `--ui-rule-ink`. |
 | `--intent-fill-max` | Hasta dónde puede llegar un relleno de esta intención. `100%` para todas las intenciones excepto la neutra.                                                                                                                                               |
 
-`--intent-color` e `--intent-strong` no son intercambiables. El color base se elige para rellenar con él; el tono strong se elige para leerse sobre la página. Un componente soft o ghost imprime el tono strong, y por eso un warning soft se lee en amber-800 mientras que uno sólido se rellena con amber-600.
+`--intent-color` e `--intent-strong` no son intercambiables. El color base se elige para rellenar con él; el tono strong se elige para leerse sobre la página, y sobre una superficie `.solid` neutra, donde un componente con intención conserva su propio color de texto. Un componente soft o ghost imprime el tono strong, y por eso un warning soft se lee en amber-950 mientras que uno sólido se rellena con amber-600.
 
 El tono strong también tiene que seguir siendo reconociblemente de su propio matiz. En una página oscura, el tono `-100` de cada familia es un tinte pálido casi sin color en tamaños pequeños: un badge success soft y uno destructive soft se leerían los dos como blancos. Por eso los tonos strong oscuros son `-300`, y los tintes bajo ellos son `-900`, que mide 5.0:1 o más dondequiera que un relleno parcial contenga texto, y más de 9:1 sobre la página.
 

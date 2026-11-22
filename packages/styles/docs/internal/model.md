@@ -1,6 +1,6 @@
 ---
 status: IMPLEMENTED
-last_updated: 2026-11-21
+last_updated: 2026-11-22
 scope: `@codenhub/styles` styling model, token contracts, and composition rules.
 ---
 
@@ -147,7 +147,7 @@ Text that is not a box reads the pair as well, wherever the page's grey or the p
 
 The limits, recorded rather than worked around:
 
-- Only a neutral box takes the ink. An intent keeps its own ink, as it keeps its own colour.
+- Only a neutral box takes the ink. An intent keeps its own ink, as it keeps its own colour, so its light `-strong` tone is chosen against the one plate every intent lands on, a neutral `.solid` surface at 20% of the page's ink, as well as against the page. At `-800` a soft destructive button there read 3.72:1 at rest and 2.93:1 on hover; at `-950`, decided on 2026-11-22, every intent's soft, ghost, and hint text holds 4.5:1 there at rest and on hover. Stepping the intent's ink toward the plate's instead would have recoloured an intent on a neutral surface, and the same tone on the page and on the plate is the predictable one.
 - A `.ghost` table blocks like every table, so on a filled parent it prints the page's ink on that fill: the block is unconditional because a toggle cannot be stepped from the fill.
 - A `.hint` with an intent keeps its `--intent-strong`, chosen against the page, so on a solid surface of another intent it can fall to 1.0:1. A placeholder keeps the plate's ink whole rather than a step toward the fill: typed text on a held field reaches only 4.59:1 on a dark `.card.solid.success`, so no step that reads as distinct keeps 4.5:1 on every intent.
 - A fill set straight through `--ui-fill`, rather than by a fill class, does not flip the toggle, so it hands nothing down.

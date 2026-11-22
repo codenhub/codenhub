@@ -520,6 +520,77 @@ for (const theme of THEMES) {
   }
 }
 
+/* An intent keeps its own ink on a filled parent (docs/internal/model.md, "The
+   ink of the plate beneath"), so the tone it prints on the page has to hold on
+   the one plate every intent lands on: a neutral `.solid` surface, 20% of the
+   page's ink. A destructive soft button in a `.card.solid` read 3.72:1 there,
+   2.93:1 on hover, and a success hint 4.32:1. Every text component, a hint
+   with each intent, and every neutral solid surface are read at rest, in
+   every aesthetic. Hover is read in a test of its own, on the card alone and
+   with only what hovers: the three surfaces fill the same plate, and hovering
+   on the full page ran past the test timeout under liquid glass. */
+const NEUTRAL_PLATES = ["card solid", "panel solid", "alert solid"] as const;
+const PLATE_TEXT = [
+  ...TEXT_COMPONENTS,
+  ["hint", (classes: string) => `<span class="hint ${classes}">Hint</span>`, false],
+] as const;
+
+const onPlates = (
+  region: string,
+  plates: readonly string[],
+  components: readonly (readonly [string, (classes: string) => string, boolean])[],
+  presentations: readonly string[],
+) =>
+  `<div class="${region}" style="padding: 1rem">${plates
+    .map(
+      (plate, index) =>
+        `<div class="${plate}">${INTENTS.flatMap((intent) =>
+          presentations.flatMap((presentation) =>
+            components.map(([component, markup]) =>
+              markup(`${presentation} ${intent}`).replace(
+                /^<(\w+)/,
+                `<$1 data-testid="${caseId(`plate${index}`, component, intent, presentation)}"`,
+              ),
+            ),
+          ),
+        ).join("")}</div>`,
+    )
+    .join("")}</div>`;
+
+for (const theme of THEMES) {
+  for (const [name, region] of SOLID_REGIONS) {
+    test(`prints every intent's text at 4.5:1 on a neutral solid surface, ${name}, ${theme}`, async ({ page }) => {
+      await loadIn(page, theme, "standard", onPlates(region, NEUTRAL_PLATES, PLATE_TEXT, PRESENTATIONS));
+
+      for (const [testId, painted] of Object.entries(await paint(page))) {
+        expect.soft(textRatio(painted), `${testId} at rest`).toBeGreaterThanOrEqual(4.5);
+      }
+    });
+
+    test(`prints every intent's text at 4.5:1 on hover on a neutral solid surface, ${name}, ${theme}`, async ({
+      page,
+    }) => {
+      const hovering = PLATE_TEXT.filter(([, , hovers]) => hovers);
+      const presentations = PRESENTATIONS.filter((presentation) => presentation !== "solid");
+      await loadIn(page, theme, "standard", onPlates(region, NEUTRAL_PLATES.slice(0, 1), hovering, presentations));
+
+      for (const intent of INTENTS) {
+        for (const presentation of presentations) {
+          for (const [component] of hovering) {
+            const testId = caseId("plate0", component, intent, presentation);
+            // oxlint-disable-next-line no-await-in-loop -- one pointer, moved in turn.
+            await page.getByTestId(testId).hover();
+            // oxlint-disable-next-line no-await-in-loop -- one pointer, moved in turn.
+            const { [testId]: painted } = await paint(page, [testId]);
+
+            expect.soft(textRatio(painted!), `${testId} on hover`).toBeGreaterThanOrEqual(4.5);
+          }
+        }
+      }
+    });
+  }
+}
+
 /* An unchecked toggle's border is the only thing that shows it, so it is the
    one resting edge the policy holds at 3:1 without the preference. */
 const TOGGLES = [
