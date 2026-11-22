@@ -5,17 +5,25 @@
  * @internal
  */
 
-/** A value a message argument accepts. @internal */
-export type MessageValue = string | number | bigint | Date;
+/** Values for a message's arguments, read from own properties; a value of another type is left as written. @internal */
+export type MessageValues = object;
 
-/** Values for a message's arguments, read from own properties. @internal */
-export type MessageValues = Readonly<Record<string, MessageValue>>;
+/** The value of an argument, read from an own property only, so `toString` or a prototype's field is never one. @internal */
+export const readValue = (values: MessageValues, name: string): unknown =>
+  Object.hasOwn(values, name) ? Reflect.get(values, name) : undefined;
 
 const NUMBER_STYLES = ["integer", "percent"] as const;
 const DATE_STYLES = ["short", "medium", "long", "full"] as const;
 const PLURAL_KEYWORDS = new Set(["zero", "one", "two", "few", "many", "other"]);
-const NAME_PATTERN = /[A-Za-z0-9_]/;
-const SELECT_KEY_PATTERN = /[A-Za-z0-9_-]/;
+/**
+ * A character of a name, an argument's, a select key's, or a tag's: a letter, a combining mark, a decimal digit, in any
+ * script, or `_`. Marks are included since a Devanagari or Thai word writes its vowels with them.
+ *
+ * @internal
+ */
+export const NAME_CHARACTER = String.raw`[\p{L}\p{M}\p{Nd}_]`;
+const NAME_PATTERN = new RegExp(NAME_CHARACTER, "u");
+const SELECT_KEY_PATTERN = new RegExp(String.raw`[\p{L}\p{M}\p{Nd}_-]`, "u");
 const EXACT_VALUE_PATTERN = /^=-?[0-9]+(\.[0-9]+)?$/;
 
 /** An exact plural key's value, as the plural's lookup spells it: an integer in full, any other number as a number. */
@@ -32,7 +40,8 @@ const OPTIONS_COST = 128;
 const OPTION_COST = 64;
 
 type MessageNode =
-  | { readonly kind: "text"; readonly text: string }
+  // Quoted text is a node of its own, so `rich()` never reads a tag from it.
+  | { readonly kind: "text"; readonly text: string; readonly isQuoted?: true }
   | { readonly kind: "pound" }
   | { readonly kind: "argument"; readonly name: string; readonly source: string }
   | {
@@ -109,10 +118,15 @@ class Parser {
     this.index += 1;
   }
 
+  /** Reads code points while they match, so a letter outside the BMP, a surrogate pair, is one character. */
   private readWhile(pattern: RegExp): string {
     const start = this.index;
-    while (pattern.test(this.peek() ?? "")) {
-      this.index += 1;
+    while (this.index < this.message.length) {
+      const character = String.fromCodePoint(this.message.codePointAt(this.index)!);
+      if (!pattern.test(character)) {
+        break;
+      }
+      this.index += character.length;
     }
     return this.message.slice(start, this.index);
   }
@@ -145,7 +159,14 @@ class Parser {
 
       if (character === "'") {
         endRun();
-        parts.push(this.readApostrophe(isInPlural));
+        if (this.startsQuote(isInPlural)) {
+          flush();
+          nodes.push({ kind: "text", text: this.readQuoted(), isQuoted: true });
+        } else {
+          // `''`, or a lone `'` before any other character, is one apostrophe.
+          parts.push("'");
+          this.index += this.peek(1) === "'" ? 2 : 1;
+        }
       } else if (character === "{") {
         endRun();
         flush();
@@ -170,19 +191,17 @@ class Parser {
     return nodes;
   }
 
-  /** ICU quoting: `''` is one apostrophe, and `'` before a special character quotes until the next lone `'`. */
-  private readApostrophe(isInPlural: boolean): string {
+  /**
+   * ICU quoting: `'` before `{`, `}`, or, in a plural, `#` quotes until the next lone `'`, and so does `'` before `<`,
+   * as FormatJS reads it, so a tag can be written as text.
+   */
+  private startsQuote(isInPlural: boolean): boolean {
     const next = this.peek(1);
+    return next === "{" || next === "}" || next === "<" || (next === "#" && isInPlural);
+  }
 
-    if (next === "'") {
-      this.index += 2;
-      return "'";
-    }
-    if (next !== "{" && next !== "}" && !(next === "#" && isInPlural)) {
-      this.index += 1;
-      return "'";
-    }
-
+  /** Reads quoted text from its opening `'` to the next lone `'`, where `''` is one apostrophe. */
+  private readQuoted(): string {
     this.index += 1;
     const parts: string[] = [];
     let runStart = this.index;
@@ -426,6 +445,11 @@ export const isPlainMessage = (message: string): boolean =>
   !message.includes("{") && !message.includes("}") && !message.includes("'");
 
 const MAX_CACHED_FORMATTERS = 500;
+// Keys longer than this are not cached, so the cache holds at most 500 keys of this length. Every number option set at
+// once, with long values, keys 687 characters and every date option 505, while `Intl` reads a number option or
+// `hour12` from a string of any length, such as `{ minimumFractionDigits: " ".repeat(1e6) + "2" }`, which a cache bound
+// by count alone kept 500 of.
+const MAX_FORMATTER_KEY_LENGTH = 1_000;
 type CachedFormatter =
   | Intl.NumberFormat
   | Intl.DateTimeFormat
@@ -525,7 +549,7 @@ export const copyDateTimeFormatOptions = (options: Intl.DateTimeFormatOptions = 
   copyOptions(options, DATE_TIME_FORMAT_OPTIONS);
 
 const cachedFormatter = <T extends CachedFormatter>(key: string | undefined, create: () => T): T => {
-  if (key === undefined) {
+  if (key === undefined || key.length > MAX_FORMATTER_KEY_LENGTH) {
     return create();
   }
   let formatter = formatters.get(key) as T | undefined;
@@ -713,7 +737,11 @@ const formatNodes = (nodes: Message, state: FormatState, pound: number | bigint 
 
   for (const node of nodes) {
     if (node.kind === "text") {
-      output.text(node.text);
+      if (node.isQuoted === true) {
+        output.fill(node.text);
+      } else {
+        output.text(node.text);
+      }
       continue;
     }
     if (node.kind === "pound") {
@@ -727,7 +755,7 @@ const formatNodes = (nodes: Message, state: FormatState, pound: number | bigint 
       continue;
     }
     state.filledArguments += 1;
-    const value: unknown = Object.hasOwn(values, node.name) ? values[node.name] : undefined;
+    const value = readValue(values, node.name);
 
     switch (node.kind) {
       case "argument":
@@ -828,7 +856,7 @@ export const formatMessage = (
 
 /** A tag in a rich message, `<name>…</name>` or `<name/>`, with what it encloses. */
 export interface RichElement {
-  /** The tag's name, as written: ASCII letters, digits, and `_`. */
+  /** The tag's name, as written: letters, combining marks, and decimal digits in any script, and `_`. */
   readonly tag: string;
   /** The text and tags it encloses, empty for `<name/>`. */
   readonly children: RichText;
@@ -841,7 +869,7 @@ export type RichText = readonly (string | RichElement)[];
 export const MAX_TAG_NESTING = 10;
 
 // `<b>`, `</b>`, or `<b/>`. Anything else that starts with `<`, such as `a < b` or `</b/>`, is text.
-const TAG_PATTERN = /<(\/?)([A-Za-z0-9_]+)(\/?)>/g;
+const TAG_PATTERN = new RegExp(String.raw`<(/?)(${NAME_CHARACTER}+)(/?)>`, "gu");
 
 interface Frame {
   readonly tag: string;

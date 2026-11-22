@@ -136,7 +136,7 @@ Translations rarely stay complete. The tea shop adds gift wrapping, the English 
 In the second case, the manager also logs a warning, such as `[I18n] Missing key "home.subtitle" in locale "pt".`. How often, and where it goes:
 
 - It warns once for each locale and key pair, across every manager in the process, so a key used on every render, or by a manager per request, doesn't flood the console.
-- It remembers the 1,000 most recent pairs, so a pair that drops off that list can warn again.
+- It remembers the most recent pairs, about 1,000 of them and fewer for long keys, so a pair that drops off that list can warn again.
 - A manager created with `isSilent: true` never logs it.
 - To send misses to your own logger instead, pass `onMissingKey(key, locale)`. It replaces the warning and runs on every miss, not once per pair. If it throws, `t()` throws the same error, so a test can fail on the first missing key; a browser binding translates the rest of the page, then rejects with that error.
 
@@ -210,11 +210,12 @@ The manager has a few properties you can read at any time:
 - A `setLocale()` to the locale already active changes nothing, so it doesn't call the listener.
 - A call that a later one overtook (next section) changes nothing either, so it doesn't call the listener.
 - Calling `init()` again with the same locale does apply, and does call it.
+- Calling `init()` again with another locale calls it once, not once per event.
 
 For code that needs to know what changed, the manager is also an `EventTarget` with two events:
 
 - `ready`, after every applied `init()`. `event.detail.locale` is the locale it started with.
-- `locale-change`, after every applied locale change. `event.detail.locale` is the new locale and `event.detail.previousLocale` the one before it.
+- `locale-change`, after every applied locale change. `event.detail.locale` is the new locale and `event.detail.previousLocale` the one before it. That includes an `init()` that switches a manager that was already ready to another locale, which dispatches `ready` and then `locale-change`. The first `init()` dispatches only `ready`, whatever locale it starts with.
 
 ```ts
 i18n.addEventListener("locale-change", (event) => {

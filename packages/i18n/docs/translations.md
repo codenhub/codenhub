@@ -131,7 +131,7 @@ t("order.confirmed", { name: "Ana", orderId: "1042" });
 // "Thanks, Ana. Order 1042 ships tomorrow."
 ```
 
-Values can be strings, numbers, bigints, or dates. A bigint goes wherever a number does, and is formatted without losing digits. Placeholder names use ASCII letters, digits, and `_`, such as `{firstName}` or `{first_name}`. A name with anything else, such as `{first-name}` or `{nome_ç}`, is not a placeholder: the message is invalid syntax, logs a warning, and shows `{first-name}` as written.
+Values can be strings, numbers, bigints, or dates. A bigint goes wherever a number does, and is formatted without losing digits. Placeholder names use letters and digits in any script, and `_`, such as `{firstName}`, `{first_name}`, or `{año}`. A name with anything else, such as `{first-name}` or `{price€}`, is not a placeholder: the message is invalid syntax, logs a warning, and shows `{first-name}` as written.
 
 Use placeholders instead of joining fragments. `t("before") + name + t("after")` locks every language into English word order, while a whole sentence with a placeholder lets each translation put the value where it belongs. Word order is the first thing every translator wants to change, and they are usually right. For a link or bold text inside the sentence, see [Links and bold text inside a sentence](#links-and-bold-text-inside-a-sentence).
 
@@ -214,23 +214,24 @@ It applies to `{d, date}`, `{d, time}`, and a date in `{d}`, and is `formatDate`
 
 ### Literal braces and apostrophes
 
-An apostrophe before `{` or `}` quotes text up to the next apostrophe, and two apostrophes make one. An apostrophe anywhere else is an ordinary apostrophe, so "Don't" needs nothing:
+An apostrophe before `{`, `}`, or `<` quotes text up to the next apostrophe, and two apostrophes make one. An apostrophe anywhere else is an ordinary apostrophe, so "Don't" needs nothing:
 
-| Written in the dictionary | Shown                   |
-| ------------------------- | ----------------------- |
-| `Don't forget {name}`     | `Don't forget Ana`      |
-| `Type '{name}' to insert` | `Type {name} to insert` |
-| `It''s '{'here'}'`        | `It's {here}`           |
-| `Ouvrir l''{app}`         | `Ouvrir l'éditeur`      |
-| `Ouvrir l’{app}`          | `Ouvrir l’éditeur`      |
+| Written in the dictionary  | Shown                    |
+| -------------------------- | ------------------------ |
+| `Don't forget {name}`      | `Don't forget Ana`       |
+| `Type '{name}' to insert`  | `Type {name} to insert`  |
+| `It''s '{'here'}'`         | `It's {here}`            |
+| `Write '<b>' to bold text` | `Write <b> to bold text` |
+| `Ouvrir l''{app}`          | `Ouvrir l'éditeur`       |
+| `Ouvrir l’{app}`           | `Ouvrir l’éditeur`       |
 
-Watch for an apostrophe right before a placeholder, as French, Italian, and Catalan elision puts one. `Ouvrir l'{app}` quotes `{app}`, so it shows `Ouvrir l{app}`, and nothing warns, because the text is valid. Write two apostrophes, `l''{app}`, or the typographic apostrophe `’`, which French typography prefers anyway and which is never syntax.
+Watch for an apostrophe right before a placeholder or a tag, as French, Italian, and Catalan elision puts one. `Ouvrir l'{app}` quotes `{app}`, so it shows `Ouvrir l{app}`, and `l'<b>été</b>` quotes the tag, so `rich()` shows `l<b>été</b>` as text. Nothing warns, because the text is valid. Write two apostrophes, `l''{app}` and `l''<b>été</b>`, or the typographic apostrophe `’`, which French typography prefers anyway and which is never syntax.
 
 Inside a plural's forms, `#` stands for the number; write `'#'` for a literal `#`. A `select` nested in a form is not the plural itself, so a `#` there is shown as written, as in ICU; put `{count}` there instead.
 
 Quoted text is text to the types too: in `'{it''s {x}'`, which shows `{it's {x}`, `x` is not a value `t()` asks for.
 
-Text that is not valid syntax, such as an unclosed `{` or a stray `}`, logs a warning, unless the manager is silent, and is shown with only its `{name}` placeholders filled. The warning names the key and the locale, and comes once for each text in each locale, among the 1,000 most recent. [Find untranslated keys](#find-untranslated-keys) shows a test that checks every message.
+Text that is not valid syntax, such as an unclosed `{` or a stray `}`, logs a warning, unless the manager is silent, and is shown with only its `{name}` placeholders filled. The warning names the key and the locale, and comes once for each key, text, and locale among the roughly 1,000 most recent, so an edited text warns again. [Find untranslated keys](#find-untranslated-keys) shows a test that checks every message.
 
 ### Links and bold text inside a sentence
 
@@ -245,7 +246,7 @@ i18n.rich("signup.terms");
 // ["By signing up you accept the ", { tag: "terms", children: ["terms of use"] }, "."]
 ```
 
-A tag is `<name>…</name>`, or `<name/>` for one with no content, such as a line break. Names use ASCII letters, digits, and `_`. A tag names what the part is, and your code decides how it renders, so a translation can't add a link, a script, or markup your code doesn't render. In React, for example:
+A tag is `<name>…</name>`, or `<name/>` for one with no content, such as a line break. Names use letters and digits in any script, and `_`. A tag names what the part is, and your code decides how it renders, so a translation can't add a link, a script, or markup your code doesn't render. In React, for example:
 
 ```tsx
 import { Fragment, type ReactNode } from "react";
@@ -271,8 +272,8 @@ A few details:
 
 - `rich()` takes the same keys and values as `t()`, checked the same way. A value is always text: a `<b>` in a visitor's name is shown as written, never read as a tag.
 - A tag can wrap placeholders, a plural, or a select, and can sit inside a plural or select form, but a tag opened in a form must close in that form.
-- A `<` that doesn't form a tag, as in `1 < 2`, is text.
-- A message whose tags don't balance, such as `<b>bold` without `</b>`, or nest more than 10 levels deep, logs a warning once for each text in each locale, unless the manager is silent, and comes back as one part: the text as `t()` shows it, tags included. A missing key and invalid syntax also come back as the one part `t()` would return.
+- A `<` that doesn't form a tag, as in `1 < 2`, is text, and so is quoted text: `'<b>'` shows `<b>`, never a tag, as in [Literal braces and apostrophes](#literal-braces-and-apostrophes).
+- A message whose tags don't balance, such as `<b>bold` without `</b>`, or nest more than 10 levels deep, logs a warning once for each key, text, and locale, unless the manager is silent, and comes back as one part: the text as `t()` shows it, tags included. A missing key and invalid syntax also come back as the one part `t()` would return.
 - Tags aren't type-checked, since a translation can use tags the default text doesn't. Render every tag your messages use, and keep a fallback for the rest, as above.
 - `t()` and the `data-i18n` binding show tags as written. Render a message with tags from your code with `rich()`.
 
@@ -420,7 +421,7 @@ Which values each argument takes:
 - `select` takes a string, number, or bigint.
 - A plain `{name}` takes any of these.
 
-Extra values are allowed. When several dictionaries are typed, a key needs the values of every one that has it.
+Only the values the message uses are checked. Any other value may have any type, so `t("home.greeting", user)` takes a whole `User` with an `isAdmin: boolean`, and an object literal may carry extra values too. When several dictionaries are typed, a key needs the values of every one that has it.
 
 A JSON import types every text as `string`, since TypeScript doesn't keep JSON string values, so a JSON dictionary checks keys but accepts any values, except that a plural group still needs a number `count`. To check values, write the default language as `as const` TypeScript and keep the other languages in JSON, typed as the default:
 
@@ -438,7 +439,8 @@ Reading a message's arguments happens entirely in the type system, which is clev
 
 - **The key is one of several.** In `t(hasFailed ? "checkout.failed" : "checkout.done")`, TypeScript sees a union of two keys and can't know which message's values apply. Call `t()` with each key in its own branch, `hasFailed ? t("checkout.failed", { orderId }) : t("checkout.done")`, and each call is checked.
 - **The message is a plain `string`**, as every text in a JSON dictionary is. A plural group still needs a number `count`, since its shape says so. Write the default language as `as const` TypeScript, as above.
-- **The message has invalid syntax**, such as an unclosed `{`, a placeholder name that isn't ASCII letters, digits, and `_` (`{first-name}`), `{n, number, currency}`, or a `select` or `plural` without `other`. Some invalid syntax, such as an option written twice, an unknown plural form, or nesting past 10 levels, may still ask for values. Either way, the runtime can't read it either: it logs a warning and shows the text with only valid `{name}` placeholders filled. Fix the message; the [message check](#find-untranslated-keys) finds these.
+- **The message has invalid syntax**, such as an unclosed `{`, a placeholder name with a character other than a letter, a digit, or `_` (`{first-name}`), `{n, number, currency}`, or a `select` or `plural` without `other`. Some invalid syntax, such as an option written twice, an unknown plural form, or nesting past 10 levels, may still ask for values. Either way, the runtime can't read it either: it logs a warning and shows the text with only valid `{name}` placeholders filled. Fix the message; the [message check](#find-untranslated-keys) finds these.
+- **A placeholder name has a letter outside ASCII**, such as `{año}`. The runtime reads it, but outside ASCII the types can't tell a letter from a symbol such as `€`, which makes the message invalid, so they leave the message unread rather than ask for a value the runtime never reads. Use an ASCII name where you want the check.
 - **The message is too long for the types to read**: about 900 apostrophes, 450 arguments, or 900 spaces inside one argument's braces, in one text. TypeScript has a limit on how deep a type can go, and the reading stops short of it instead of failing your build. At runtime the message works normally. If you have one of these, it is probably three messages in a trench coat; splitting it brings the checks back.
 - **The manager's type is written by hand without the dictionary.** `I18n<"en" | "pt", Key>` checks keys but not values. Pass the dictionary type as a third type argument, `I18n<"en" | "pt", Key, typeof en>`, to keep them checked.
 

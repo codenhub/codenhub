@@ -16,7 +16,9 @@ import {
   isPlainMessage,
   MAX_FILLED_ARGUMENTS,
   type MessageValues,
+  NAME_CHARACTER,
   parseCachedMessage,
+  readValue,
   type RichText,
   textMessage,
   toPluralOperand,
@@ -33,6 +35,7 @@ import type {
   LocaleDirection,
   TranslationKey,
 } from "./types";
+import { hashText, warnedMessages, warnedMissingKeys } from "./warning-record";
 
 /** A dictionary in the fallback chain, with the locale whose plural rules it uses. */
 interface ChainDictionary<TLocale extends string> {
@@ -40,28 +43,11 @@ interface ChainDictionary<TLocale extends string> {
   readonly dictionary: LocaleDictionary;
 }
 
-const MAX_MISSING_KEY_DIAGNOSTICS = 1_000;
-const MAX_MESSAGE_DIAGNOSTICS = 1_000;
-// Shared by every manager, since a server creates one per request and would otherwise log a warning once per visitor.
-const warnedMissingKeys = new Map<string, undefined>();
-const warnedMessages = new Map<string, undefined>();
-
-/**
- * Records a warning among the most recent `limit`, returning whether it is new. A repeat moves to the newest end, so the
- * record drops the warning least recently seen.
- */
-const rememberWarning = (record: Map<string, undefined>, warningKey: string, limit: number): boolean => {
-  if (record.delete(warningKey)) {
-    record.set(warningKey, undefined);
-    return false;
-  }
-  record.set(warningKey, undefined);
-  if (record.size > limit) {
-    record.delete(record.keys().next().value!);
-  }
-  return true;
-};
-const PLACEHOLDER_PATTERN = /{([A-Za-z0-9_]+)}/g;
+/** Whether an invalid message is new to the process-wide record, by locale, trimmed key, and a hash of its text. */
+const isNewInvalidMessage = (key: string, found: FoundTranslation<string>): boolean =>
+  warnedMessages.remember(`${found.locale}\0${key.trim()}\0${hashText(found.text)}`);
+// A `{name}` with a name the parser reads, so invalid syntax fills the names valid syntax would.
+const PLACEHOLDER_PATTERN = new RegExp(String.raw`\{(${NAME_CHARACTER}+)\}`, "gu");
 // The form every plural group has, used when the count's category has none.
 const PLURAL_FALLBACK_FORM = "other";
 
@@ -86,8 +72,7 @@ const interpolate = ({ text, params, locale, timeZone }: InterpolateOptions): st
       return placeholder;
     }
     filledArguments += 1;
-    const value: unknown = Object.hasOwn(params, name) ? params[name] : undefined;
-    return formatPlainValue(value, locale, timeZone) ?? placeholder;
+    return formatPlainValue(readValue(params, name), locale, timeZone) ?? placeholder;
   });
 };
 
@@ -101,7 +86,7 @@ const needsValues = (text: string): boolean => {
   }
   const message = parseCachedMessage(text);
   return typeof message === "string"
-    ? new RegExp(PLACEHOLDER_PATTERN.source).test(text)
+    ? new RegExp(PLACEHOLDER_PATTERN.source, "u").test(text)
     : message.some((node) => node.kind !== "text");
 };
 
@@ -152,6 +137,7 @@ class I18nInstance<TLocale extends string, TKey extends string = string>
   private loadingRequest: Promise<unknown> | undefined;
   private applyListener: ((requestId: number) => void) | undefined;
   private readonly pluralRules = new Map<TLocale, Intl.PluralRules | undefined>();
+  private readonly initLocaleChanges = new WeakSet<Event>();
   private readonly localeLookup: ReadonlyMap<string, TLocale>;
   private readonly config: ValidatedI18nConfig<TLocale>;
   private readonly loader: LocaleLoader<TLocale>;
@@ -276,7 +262,7 @@ class I18nInstance<TLocale extends string, TKey extends string = string>
     if (reason === undefined) {
       return parts;
     }
-    if (!this.isSilent && rememberWarning(warnedMessages, `${found.locale}\0${found.text}`, MAX_MESSAGE_DIAGNOSTICS)) {
+    if (!this.isSilent && isNewInvalidMessage(key, found)) {
       console.warn(
         `[I18n] Invalid tags for ${quoteKey(key.trim())} in locale "${found.locale}": ${reason}; the text is shown with ` +
           "its tags as written. " +
@@ -296,7 +282,7 @@ class I18nInstance<TLocale extends string, TKey extends string = string>
     if (params !== undefined && (typeof params !== "object" || params === null)) {
       throw new TypeError("[I18n] Translation values must be an object or undefined.");
     }
-    const count = params !== undefined && Object.hasOwn(params, "count") ? params["count"] : undefined;
+    const count = params === undefined ? undefined : readValue(params, "count");
     return this.lookup(
       caller,
       key,
@@ -372,7 +358,7 @@ class I18nInstance<TLocale extends string, TKey extends string = string>
   }
 
   private reportInvalidMessage(key: string, found: FoundTranslation<TLocale>, reason: string): void {
-    if (this.isSilent || !rememberWarning(warnedMessages, `${found.locale}\0${found.text}`, MAX_MESSAGE_DIAGNOSTICS)) {
+    if (this.isSilent || !isNewInvalidMessage(key, found)) {
       return;
     }
     console.warn(
@@ -384,16 +370,22 @@ class I18nInstance<TLocale extends string, TKey extends string = string>
 
   subscribe(listener: () => void): () => void {
     const notify = (): void => listener();
+    // A re-init's `locale-change` follows its `ready`, which already called the listener for that change.
+    const notifyChange = (event: Event): void => {
+      if (!this.initLocaleChanges.has(event)) {
+        listener();
+      }
+    };
     let isSubscribed = true;
 
     this.addEventListener("ready", notify);
-    this.addEventListener("locale-change", notify);
+    this.addEventListener("locale-change", notifyChange);
 
     return () => {
       if (isSubscribed) {
         isSubscribed = false;
         this.removeEventListener("ready", notify);
-        this.removeEventListener("locale-change", notify);
+        this.removeEventListener("locale-change", notifyChange);
       }
     };
   }
@@ -424,12 +416,20 @@ class I18nInstance<TLocale extends string, TKey extends string = string>
       return false;
     }
 
+    const previousLocale = this.isReadyState ? this.currentLocale : undefined;
     this.currentLocale = locale;
     this.currentDirection = direction;
     this.dictionaries = dictionaries;
     this.isReadyState = true;
     this.applyListener?.(requestId);
     this.dispatchEvent(createCustomEvent<I18nReadyEventDetail<TLocale>>("ready", { locale }));
+    // A re-init that switches the language is a locale change too, so a `locale-change` listener sees every switch. The
+    // first init has no locale it changes from: `ready` reports it.
+    if (previousLocale !== undefined && previousLocale !== locale) {
+      const event = this.createLocaleChangeEvent(locale, previousLocale);
+      this.initLocaleChanges.add(event);
+      this.dispatchEvent(event);
+    }
     return true;
   }
 
@@ -470,12 +470,11 @@ class I18nInstance<TLocale extends string, TKey extends string = string>
     this.currentDirection = direction;
     this.dictionaries = dictionaries;
     this.applyListener?.(requestId);
-    this.dispatchEvent(
-      createCustomEvent<I18nLocaleChangeEventDetail<TLocale>>("locale-change", {
-        locale: nextLocale,
-        previousLocale,
-      }),
-    );
+    this.dispatchEvent(this.createLocaleChangeEvent(nextLocale, previousLocale));
+  }
+
+  private createLocaleChangeEvent(locale: TLocale, previousLocale: TLocale): CustomEvent {
+    return createCustomEvent<I18nLocaleChangeEventDetail<TLocale>>("locale-change", { locale, previousLocale });
   }
 
   /**
@@ -560,10 +559,7 @@ class I18nInstance<TLocale extends string, TKey extends string = string>
       return;
     }
 
-    if (
-      !this.isSilent &&
-      rememberWarning(warnedMissingKeys, `${this.currentLocale}\0${key}`, MAX_MISSING_KEY_DIAGNOSTICS)
-    ) {
+    if (!this.isSilent && warnedMissingKeys.remember(`${this.currentLocale}\0${key}`)) {
       console.warn(`[I18n] Missing key ${quoteKey(key)} in locale "${this.currentLocale}".`);
     }
   }

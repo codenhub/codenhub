@@ -79,6 +79,66 @@ describe("rich()", () => {
     expect(i18n.rich("quoted")).toEqual(["{", { tag: "b", children: ["}"] }]);
   });
 
+  // Every quoting form the parser reads, each with a tag in it or beside it: quoted text is never read as a tag, and
+  // t() shows the same text rich() does.
+  it.each([
+    { form: "an apostrophe before {", message: "'{<br/>}'", text: "{<br/>}", parts: ["{<br/>}"] },
+    { form: "an apostrophe before }", message: "'}<br/>'", text: "}<br/>", parts: ["}<br/>"] },
+    { form: "an apostrophe before <", message: "'<b>'bold'</b>'", text: "<b>bold</b>", parts: ["<b>bold</b>"] },
+    {
+      form: "a quoted element",
+      message: "'<b>bold</b>' plain",
+      text: "<b>bold</b> plain",
+      parts: ["<b>bold</b> plain"],
+    },
+    { form: "'' inside quoted text", message: "'<b>it''s</b>'", text: "<b>it's</b>", parts: ["<b>it's</b>"] },
+    {
+      form: "a quote left open to the end",
+      message: "'<br/> to the end",
+      text: "<br/> to the end",
+      parts: ["<br/> to the end"],
+    },
+    {
+      form: "an apostrophe before # in a plural",
+      message: "{n, plural, other {'#<br/>'}}",
+      text: "#<br/>",
+      parts: ["#<br/>"],
+    },
+    {
+      form: "quoted text in a select option",
+      message: "{v, select, other {'<br/>'}}",
+      text: "<br/>",
+      parts: ["<br/>"],
+    },
+    {
+      form: "quoted text inside a tag",
+      message: "<b>'<i>'x'</i>'</b>",
+      text: "<b><i>x</i></b>",
+      parts: [{ tag: "b", children: ["<i>x</i>"] }],
+    },
+    { form: "quoted text that splits a tag", message: "<b'{'/>", text: "<b{/>", parts: ["<b{/>"] },
+    {
+      form: "'' before a tag, which is one apostrophe",
+      message: "l''<b>été</b>",
+      text: "l'<b>été</b>",
+      parts: ["l'", { tag: "b", children: ["été"] }],
+    },
+    {
+      form: "a lone apostrophe before a letter, which is text",
+      message: "Don't <b>stop</b>",
+      text: "Don't <b>stop</b>",
+      parts: ["Don't ", { tag: "b", children: ["stop"] }],
+    },
+  ])("should keep $form as text, never a tag", async ({ message, text, parts }) => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const i18n = createI18n({ defaultLocale: "en", locales: ["en"], loadLocale: () => ({ m: message }) });
+    await i18n.init();
+
+    expect(i18n.t("m", { n: 1, v: "x" })).toBe(text);
+    expect(i18n.rich("m", { n: 1, v: "x" })).toEqual(parts);
+    expect(warn).not.toHaveBeenCalled();
+  });
+
   it("should allow 10 levels of tags", async () => {
     const i18n = create();
     await i18n.init();

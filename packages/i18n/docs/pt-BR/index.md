@@ -1,7 +1,7 @@
 ---
 title: Visão geral
 description: O que o @codenhub/i18n faz, as quatro ideias por trás dele, um passo a passo de cinco minutos, idiomas da direita para a esquerda e como o gerenciador se comporta quando as chamadas se sobrepõem.
-source: 1e936e9462e1f95bef5dcd7db88d7f526dbad33a
+source: 1a13a90d87946c842fc56686bca1d708aa96417b
 ---
 
 # Traduza o seu app
@@ -137,7 +137,7 @@ Traduções raramente ficam completas. A loja de chá passa a oferecer embrulho 
 No segundo caso, o gerenciador também registra um aviso, como `[I18n] Missing key "home.subtitle" in locale "pt".`. Com que frequência, e para onde ele vai:
 
 - Ele avisa uma vez para cada par de locale e chave, entre todos os gerenciadores do processo, então uma chave usada em toda renderização, ou por um gerenciador por requisição, não inunda o console.
-- Ele lembra os 1.000 pares mais recentes, então um par que sai dessa lista pode avisar de novo.
+- Ele lembra os pares mais recentes, cerca de 1.000 e menos com chaves longas, então um par que sai dessa lista pode avisar de novo.
 - Um gerenciador criado com `isSilent: true` nunca registra esse aviso.
 - Para mandar as faltas para o seu próprio logger, passe `onMissingKey(key, locale)`. Ele substitui o aviso e roda em toda falta, e não uma vez por par. Se ele lançar um erro, `t()` lança o mesmo erro, então um teste pode falhar na primeira chave que falta; o binding do navegador traduz o resto da página e depois rejeita com esse erro.
 
@@ -211,11 +211,12 @@ O gerenciador tem algumas propriedades que você pode ler a qualquer momento:
 - Um `setLocale()` para o locale que já está ativo não muda nada, então não chama o listener.
 - Uma chamada que foi ultrapassada por uma posterior (próxima seção) também não muda nada, então não chama o listener.
 - Chamar `init()` de novo com o mesmo locale é aplicado, sim, e chama o listener.
+- Chamar `init()` de novo com outro locale chama o listener uma vez, não uma por evento.
 
 Para o código que precisa saber o que mudou, o gerenciador também é um `EventTarget` com dois eventos:
 
 - `ready`, depois de cada `init()` aplicado. `event.detail.locale` é o locale com que ele começou.
-- `locale-change`, depois de cada troca de locale aplicada. `event.detail.locale` é o novo locale e `event.detail.previousLocale`, o anterior.
+- `locale-change`, depois de cada troca de locale aplicada. `event.detail.locale` é o novo locale e `event.detail.previousLocale`, o anterior. Isso inclui um `init()` que troca para outro locale um gerenciador que já estava pronto, que emite `ready` e depois `locale-change`. O primeiro `init()` emite só `ready`, seja qual for o locale com que começa.
 
 ```ts
 i18n.addEventListener("locale-change", (event) => {

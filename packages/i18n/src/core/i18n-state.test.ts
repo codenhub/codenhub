@@ -2,6 +2,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { createI18n, I18nError, type I18n, type I18nConfig } from "../index";
+import { getI18nInternals } from "./internals";
 
 const LOCALES = ["en", "pt", "ar"] as const;
 type Locale = (typeof LOCALES)[number];
@@ -124,6 +125,78 @@ describe("I18n state", () => {
     expect(listener.mock.calls[0]?.[0].detail).toEqual({ locale: "ar", previousLocale: "en" });
   });
 
+  // Every path that applies a locale: `init()`, the browser binding's start, which initializes through the internals,
+  // and `setLocale()`.
+  const localeChanges = [
+    { path: "init()", change: (i18n: I18n<Locale>, locale: Locale) => i18n.init({ locale }) },
+    {
+      path: "the browser binding's init",
+      change: async (i18n: I18n<Locale>, locale: Locale) => {
+        await getI18nInternals(i18n).init({ locale });
+      },
+    },
+    { path: "setLocale()", change: (i18n: I18n<Locale>, locale: Locale) => i18n.setLocale(locale) },
+  ];
+
+  it.each(localeChanges)("emits locale-change once when $path changes the locale", async ({ change }) => {
+    const i18n = createI18n(createConfig());
+    await i18n.init();
+    const events: string[] = [];
+    const seen: unknown[] = [];
+    const onLocaleChange = vi.fn((event: CustomEvent) => {
+      seen.push({ ...event.detail, active: i18n.locale, direction: i18n.direction });
+      events.push(event.type);
+    });
+    i18n.addEventListener("ready", (event) => events.push(event.type));
+    i18n.addEventListener("locale-change", onLocaleChange);
+    const onChange = vi.fn();
+    i18n.subscribe(onChange);
+
+    await change(i18n, "ar");
+
+    expect(onLocaleChange).toHaveBeenCalledTimes(1);
+    expect(seen).toEqual([{ locale: "ar", previousLocale: "en", active: "ar", direction: "rtl" }]);
+    expect(events.at(-1)).toBe("locale-change");
+    expect(onChange).toHaveBeenCalledTimes(1);
+  });
+
+  it.each(localeChanges)("emits no locale-change when $path keeps the locale", async ({ change }) => {
+    const i18n = createI18n(createConfig());
+    await i18n.init({ locale: "pt" });
+    const { onLocaleChange } = listenForLifecycleEvents(i18n);
+
+    await change(i18n, "pt");
+
+    expect(i18n.locale).toBe("pt");
+    expect(onLocaleChange).not.toHaveBeenCalled();
+  });
+
+  it("emits only ready when the first init() starts in a locale other than the default", async () => {
+    const i18n = createI18n(createConfig());
+    const { onReady, onLocaleChange } = listenForLifecycleEvents(i18n);
+
+    await i18n.init({ locale: "pt" });
+
+    expect(onReady).toHaveBeenCalledTimes(1);
+    expect(onLocaleChange).not.toHaveBeenCalled();
+  });
+
+  it("emits no locale-change for a re-init() that a later call overtook", async () => {
+    const ptLoad = createDeferred<unknown>();
+    const loadLocale = vi.fn((locale: Locale) => (locale === "pt" ? ptLoad.promise : dictionaries[locale]));
+    const i18n = createI18n(createConfig({ loadLocale }));
+    await i18n.init();
+    const { onLocaleChange } = listenForLifecycleEvents(i18n);
+
+    const staleInit = i18n.init({ locale: "pt" });
+    await i18n.init({ locale: "en" });
+    ptLoad.resolve(dictionaries.pt);
+    await staleInit;
+
+    expect(i18n.locale).toBe("en");
+    expect(onLocaleChange).not.toHaveBeenCalled();
+  });
+
   it("does not emit when setting the already active loaded locale", async () => {
     const loadLocale = vi.fn((locale: Locale) => dictionaries[locale]);
     const i18n = createI18n(createConfig({ loadLocale }));
@@ -217,17 +290,36 @@ describe("I18n state", () => {
     expect(warn).toHaveBeenCalledTimes(1);
   });
 
-  it("retains only the 1,000 most recent missing-key diagnostics", async () => {
-    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+  // What the 0.5.0 changelog says is trimmed: spaces, Unicode ones included. A tab or a line break is an ASCII control,
+  // refused wherever it is.
+  it.each([
+    { around: "spaces", padding: "  " },
+    { around: "a no-break space", padding: " " },
+    { around: "an ideographic space", padding: "　" },
+    { around: "a byte order mark", padding: "﻿" },
+    { around: "a line separator", padding: " " },
+  ])("trims $around around a key", async ({ padding }) => {
     const i18n = createI18n(createConfig());
     await i18n.init();
+    const key = `${padding}common.greeting${padding}`;
 
-    for (let index = 0; index <= 1_000; index += 1) {
-      i18n.translate(`missing-${index}`);
-    }
-    i18n.translate("missing-0");
+    expect(i18n.translate(key)).toBe("Hello");
+    expect(i18n.has(key)).toBe(true);
+  });
 
-    expect(warn).toHaveBeenCalledTimes(1_002);
+  it.each([
+    { around: "a tab", padding: "\t" },
+    { around: "a line feed", padding: "\n" },
+    { around: "a carriage return", padding: "\r" },
+    { around: "a vertical tab", padding: "\v" },
+    { around: "a form feed", padding: "\f" },
+  ])("refuses a key with $around around it", async ({ padding }) => {
+    const i18n = createI18n(createConfig());
+    await i18n.init();
+    const key = `${padding}common.greeting${padding}`;
+
+    expect(() => i18n.translate(key)).toThrow(TypeError);
+    expect(i18n.has(key)).toBe(false);
   });
 
   it("rejects an empty translation key with native TypeError", async () => {
