@@ -1077,12 +1077,15 @@ test("draws a skeleton's outline in forced colours", async ({ page }) => {
 /* The system draws a disabled control in GrayText, at full strength: a
    disabled checked toggle once kept its Highlight plate and dimmed it to 0.58,
    which read as a faint enabled one. Checked or not, the line and the mark
-   are GrayText on Canvas. The classes only: the bare `/native` elements take
-   their forced colours from `native.css`'s own unlayered block. */
+   are GrayText on Canvas, on the classes and on the bare `/native` elements,
+   which take theirs from `native.css`'s own unlayered block. */
 test("draws a disabled toggle in GrayText, undimmed, in forced colours", async ({ page }) => {
   await page.emulateMedia({ forcedColors: "active" });
 
-  for (const [stylesUrl, classed] of [[COMPONENT_STYLES_URL, true]] as const) {
+  for (const [stylesUrl, classed] of [
+    [COMPONENT_STYLES_URL, true],
+    [NATIVE_STYLES_URL, false],
+  ] as const) {
     /* oxlint-disable no-await-in-loop -- one entrypoint at a time keeps the failure naming it. */
     await page.setContent("<!doctype html><html><body></body></html>");
     test.skip(
@@ -1107,10 +1110,12 @@ test("draws a disabled toggle in GrayText, undimmed, in forced colours", async (
         ["radio", "radio", isClassed ? "radio" : ""],
         ["switch", "checkbox", "switch"],
       ] as const;
+      /* `/native` has no switch: a bare checkbox is only ever a checkbox. */
+      const drawnToggles = isClassed ? toggles : toggles.filter(([name]) => name !== "switch");
 
       return {
         colors,
-        rows: toggles.flatMap(([name, type, className]) =>
+        rows: drawnToggles.flatMap(([name, type, className]) =>
           [true, false].map((checked) => {
             const input = document.createElement("input");
             input.type = type;

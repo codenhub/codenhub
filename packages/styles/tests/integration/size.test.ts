@@ -43,20 +43,26 @@ const COMPILED_CEILINGS: Record<string, number> = {
      after 0.11.0's reduced-motion reset reached scroll-driven animations and
      three more pseudo-elements, and a plate began handing its colour down
      beside its ink for the selection, one declaration in every component
-     that composes `box`: 238,000, 191,400, 355,400, and 13,200 until then. */
-  "dist/index.css": 247_100,
-  "dist/components.css": 195_900,
-  "dist/native.css": 367_000,
+     that composes `box`: 238,000, 191,400, 355,400, and 13,200 until then.
+     The first three set again once the release's branches met: 247,100,
+     195,900, and 367,000 until the field line rested whole, `:user-invalid`
+     painted as `aria-invalid`, `.choice` and the read-only rest arrived, and
+     glass lifted a surface holding focus or an open popover. */
+  "dist/index.css": 252_700,
+  "dist/components.css": 201_400,
+  "dist/native.css": 375_500,
   "dist/theme.css": 13_650,
   /* 26,800 until 0.11.0 wrote each value once, as a `light-dark()` pair,
      where a light and a dark block each wrote all of them. */
   "dist/palette.css": 19_650,
-  "dist/aesthetics/index.css": 50_450,
+  // 50,450 until glass's lift and pixel's notch grew, as their own files did.
+  "dist/aesthetics/index.css": 51_500,
   /* 5,600 until 0.11.0 kept the solo class's tracking off scripts that join
      their letters or hang them from a headstroke: it ships without the
      components, so it carries the language list itself, regional languages
-     and script subtags included. */
-  "dist/aesthetics/chunky-tile.css": 6_200,
+     and script subtags included; 6,200 until fourteen Arabic-script
+     languages and Rohingya joined the list. */
+  "dist/aesthetics/chunky-tile.css": 6_350,
   "dist/aesthetics/cyber.css": 4_900,
   "dist/aesthetics/glass.css": 14_700,
   "dist/aesthetics/neobrutalism.css": 4_750,
@@ -70,8 +76,9 @@ const COMPILED_CEILINGS: Record<string, number> = {
      raised a glass surface holding a tooltip, scoped the bubble to it, gave
      a glass pane an opaque ground on a plate, and let a button label wrap;
      327,000 until the reset and the selection grew as the complete file's
-     did. */
-  "dist/purge/index.css": 339_200,
+     did; 339,200 until the release's branches met, as the complete
+     file's did. */
+  "dist/purge/index.css": 344_800,
   "dist/purge/classes.json": 7_100,
 };
 
@@ -148,8 +155,10 @@ describe("a /tw consumer build", { timeout: 60_000 }, () => {
          learned to wrap its label and a pane its ground on a plate, and the
          view transition reset and the no-tracking language list grew;
          31,400 until the reset reached scroll-driven animations and three
-         more pseudo-elements and the selection read the plate. */
-      ceiling: 35_700,
+         more pseudo-elements and the selection read the plate;
+         35,700 until the release's branches met, as the complete file's
+         ceiling was set again. */
+      ceiling: 36_400,
     },
   ];
 

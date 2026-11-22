@@ -17,15 +17,17 @@ const languagesBefore = async (file: string, declaration: string) => {
 };
 
 /* The languages whose script joins its letters or hangs them from a
-   headstroke are listed twice, once for the type scale and once for
-   `/native`'s bare passages, since a nested rule in every step cost 2 KB (see
-   `typography.rules.css`). A tag added to one and not the other kept the
+   headstroke are listed three times. The type scale and `/native`'s bare
+   passages each carry one, since a nested rule in every step cost 2 KB (see
+   `typography.rules.css`), and `.chunky-tile-solo` carries one because it
+   ships without the type scale. A tag added to one and not the other kept the
    tracking in the place it was left out of. */
-test("the type scale and /native name the same untracked languages", async () => {
+test("the type scale, /native and .chunky-tile-solo name the same untracked languages", async () => {
   const scale = await languagesBefore("src/typography.rules.css", "--_script-tracking: normal");
   const native = await languagesBefore("src/native.css", "letter-spacing: normal");
 
   expect(scale.length).toBeGreaterThan(0);
   expect(native).toEqual(scale);
+  expect(await languagesBefore("src/aesthetics/chunky-tile.css", "letter-spacing: normal")).toEqual(scale);
   expect(new Set(scale).size, "no tag twice").toBe(scale.length);
 });

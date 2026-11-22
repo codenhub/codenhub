@@ -198,9 +198,7 @@
      It is not named `.sr-only`: on a `/tw` entry the consumer's own Tailwind
      build supplies that utility, and two same-named utilities in one cascade
      collide silently -- the collision `registry.test.ts` polices (see
-     `data-table`'s `renamedFrom` in `registry.json`). `@source
-     inline("visually-hidden")` in `utilities/index.css` force-emits it on the
-     entries with no scannable markup of their own. */
+     `data-table`'s `renamedFrom` in `registry.json`). */
   .visually-hidden {
     position: absolute;
     width: 1px;

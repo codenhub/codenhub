@@ -173,7 +173,7 @@ In forced colors, `.text-control`, `.ipt`, `.textarea`, `.select`, the toggles, 
 
 Checkboxes, radios, and switches use the system colors `Canvas`, `CanvasText`, `Highlight`, and `HighlightText`, so checked and unchecked stay distinct: a checked toggle is filled with `Highlight` and its mark is `HighlightText`, on the classes and in the native entrypoint alike. Shape, size, and spacing do not change.
 
-A disabled `.checkbox`, `.radio`, or `.switch` draws its border and mark in `GrayText` on `Canvas`, at full opacity, checked or not, as the system draws its own disabled controls: dimmed instead, a checked one read as a faint enabled toggle. The native entrypoint's unclassed checkboxes and radios do not do this yet; a disabled checked one keeps its `Highlight` fill, dimmed.
+A disabled `.checkbox`, `.radio`, or `.switch` draws its border and mark in `GrayText` on `Canvas`, at full opacity, checked or not, as the system draws its own disabled controls: dimmed instead, a checked one read as a faint enabled toggle. The native entrypoint's unclassed checkboxes and radios do the same.
 
 A `.progress` bar does the same: its filled part is `CanvasText` on a `Canvas` track with a `CanvasText` outline, whatever its intent or presentation, so a half-full bar does not read as an empty one. The `.active` shimmer is not drawn.
 

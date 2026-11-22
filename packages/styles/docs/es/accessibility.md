@@ -2,7 +2,7 @@
 title: Accesibilidad
 description: Lo que hace el CSS con el foco, los estados, el movimiento, el contraste, los colores forzados y el texto de derecha a izquierda, y lo que tu aplicación todavía les debe a sus usuarios.
 order: 5
-source: 779b7ab61a0afbbd6b6a1001ede7fbcb8fd91b6b
+source: 71f2622e8cb9ccf8049788b85f207a5ff391ae3e
 ---
 
 # Accesibilidad
@@ -174,7 +174,7 @@ Con colores forzados, `.text-control`, `.ipt`, `.textarea`, `.select`, los toggl
 
 Los checkboxes, radios y switches usan los colores del sistema `Canvas`, `CanvasText`, `Highlight` y `HighlightText`, así que activado y desactivado siguen siendo distinguibles: un toggle activado se rellena con `Highlight` y su marca es `HighlightText`, tanto en las clases como en el punto de entrada native. La forma, el tamaño y el espaciado no cambian.
 
-Un `.checkbox`, `.radio` o `.switch` deshabilitado dibuja su borde y su marca en `GrayText` sobre `Canvas`, con opacidad completa, esté marcado o no, como el sistema dibuja sus propios controles deshabilitados: si se atenuara, uno marcado se leería como un toggle habilitado tenue. Los checkboxes y radios sin clase del punto de entrada native todavía no lo hacen; uno deshabilitado y marcado conserva su relleno `Highlight`, atenuado.
+Un `.checkbox`, `.radio` o `.switch` deshabilitado dibuja su borde y su marca en `GrayText` sobre `Canvas`, con opacidad completa, esté marcado o no, como el sistema dibuja sus propios controles deshabilitados: si se atenuara, uno marcado se leería como un toggle habilitado tenue. Los checkboxes y radios sin clase del punto de entrada native hacen lo mismo.
 
 Una barra `.progress` hace lo mismo: su parte rellena es `CanvasText` sobre un carril `Canvas` con un contorno `CanvasText`, sea cual sea su intención o su presentación, así que una barra a medio llenar no se confunde con una vacía. El brillo de `.active` no se dibuja.
 
