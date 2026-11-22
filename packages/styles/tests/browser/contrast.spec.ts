@@ -224,11 +224,33 @@ for (const theme of THEMES) {
   });
 }
 
-test("leaves a text control's resting line quiet without the preference", async ({ page }) => {
-  await load(page, "light", `<input data-testid="ipt" class="ipt" />`);
+/* WCAG 1.4.11 holds for a field at rest without asking for more contrast. A
+   field once rested at 60% of its line, so hover had a step to take: 2.2:1 for
+   a neutral field in both themes, and under 3:1 for most intents. Every text
+   control and every intent, against the page and the field's own fill. */
+for (const theme of THEMES) {
+  test(`rests every text control's line at 3:1 without the preference, ${theme}`, async ({ page }) => {
+    await load(
+      page,
+      theme,
+      INTENTS.map(
+        (intent) =>
+          `<input data-testid="ipt-${intent}" class="ipt ${intent}" />
+           <textarea data-testid="textarea-${intent}" class="textarea ${intent}"></textarea>
+           <select data-testid="select-${intent}" class="select ${intent}"><option>a</option></select>
+           <div data-testid="group-${intent}" class="input-group ${intent}"><input class="ipt" /></div>`,
+      ).join(""),
+    );
 
-  expect(await lineContrast(page, "ipt")).toBeLessThan(MINIMUM);
-});
+    for (const intent of INTENTS) {
+      for (const control of ["ipt", "textarea", "select", "group"]) {
+        // oxlint-disable-next-line no-await-in-loop -- one page, read in turn.
+        const ratio = await lineContrast(page, `${control}-${intent}`);
+        expect.soft(ratio, `${control} ${intent}`).toBeGreaterThanOrEqual(MINIMUM);
+      }
+    }
+  });
+}
 
 /* docs/accessibility.md promises every intent's `.solid` label 4.5:1 in both
    themes. Hover swaps the plate for `--intent-hover`, a tone baked per theme,
@@ -541,16 +563,33 @@ for (const theme of THEMES) {
   }
 }
 
-/* A ring is an outline or, on the toggles, a box shadow of one or more
-   layers. One layer at 3:1 against the ground outside the control is enough:
-   a ring may lay a gap in the page's colour under its colour. */
+/* A ring is an outline or, on the toggles and under pixel, a box shadow of
+   one or more layers. One layer at 3:1 against the ground outside the control
+   is enough: a ring may lay a gap in the page's colour under its colour.
+
+   Only the layers focus adds are the ring. Pixel draws its resting edge as an
+   inset layer in its ink, near-black on a light page, and read with the rest
+   that edge passed every pixel control whatever colour its focus layer was.
+   `resting` is the shadow the control has without focus, and each of its
+   layers is taken out of the focused shadow once. */
 const COLOR_PATTERN = /(?:rgba?|oklch|oklab|color)\([^)]*\)/g;
-const ringRatio = (painted: Painted) => {
+const focusLayers = (shadow: string, resting: string) => {
+  const layers: string[] = [...(shadow.match(COLOR_PATTERN) ?? [])];
+  for (const color of resting.match(COLOR_PATTERN) ?? []) {
+    const index = layers.indexOf(color);
+    if (index !== -1) {
+      layers.splice(index, 1);
+    }
+  }
+
+  return layers;
+};
+const ringRatio = (painted: Painted, resting: string) => {
   const { under } = groundsOf(painted);
   const colors =
     painted.outlineStyle !== "none" && painted.outlineWidth > 0
       ? [painted.outlineColor]
-      : (painted.shadow.match(COLOR_PATTERN) ?? []);
+      : focusLayers(painted.shadow, resting);
 
   return Math.max(0, ...colors.map((color) => getContrastRatio(flattenColor(color, under), under)));
 };
@@ -614,13 +653,83 @@ for (const theme of THEMES) {
       );
 
       await page.getByTestId("before").focus();
-      await page.keyboard.press("Tab");
       const grounds = await paint(page);
+      await page.keyboard.press("Tab");
       const focused = await paintFocused(page);
 
       for (const [testId, ring] of Object.entries(focused)) {
+        const resting = grounds[testId]!;
         expect.soft(ring.focused, `${testId} has focus`).toBe(true);
-        expect.soft(ringRatio({ ...grounds[testId]!, ...ring }), `${testId} ring`).toBeGreaterThanOrEqual(MINIMUM);
+        expect
+          .soft(ringRatio({ ...resting, ...ring }, resting.shadow), `${testId} ring`)
+          .toBeGreaterThanOrEqual(MINIMUM);
+      }
+    });
+  }
+}
+
+/* Glass shows what is behind it, and the page chooses that. Read over the
+   page background alone, a pane passed; over the two ends a backdrop can
+   reach, pure black and pure white, its 45% ground left body text at 3.67:1
+   on a light card over black and 2.89:1 on a dark card over white, and a
+   ghost or soft button's ring at 2.13 to 2.94:1 against the pane. The pane is
+   read over a region painted the backdrop's colour: a blur and a saturation of
+   one flat colour are that colour. Liquid glass's clearer ground is the
+   recorded trade-off, held to the floor its documentation states. */
+/* Body text only: the guarantee is the neutral pane's. An intent pane's ink is
+   drawn for the theme's own background, and over the opposite backdrop it fell
+   to 1.6:1 even at a 60% ground -- docs/usage/aesthetics.md, "Glass". */
+const BACKDROPS = ["#000000", "#ffffff"] as const;
+const BACKDROP_PANES = [...PANES, "glass-solo"] as const;
+/* Liquid's clearer ground is a documented trade-off, not a pass: measured at
+   1.86:1 (dark over white, WebKit) and 2.06:1 (light over black). This floor
+   holds it from falling further; docs/usage/aesthetics.md, "Liquid glass". */
+const LIQUID_TEXT_FLOOR = 1.8;
+
+for (const theme of THEMES) {
+  for (const backdrop of BACKDROPS) {
+    for (const [name, region, floor] of [
+      ["glass", "glass", 4.5],
+      ["glass-liquid", "glass glass-liquid", LIQUID_TEXT_FLOOR],
+    ] as const) {
+      test(`prints a ${name} pane's text at ${floor}:1 over a ${backdrop} backdrop, ${theme}`, async ({ page }) => {
+        await loadIn(
+          page,
+          theme,
+          "standard",
+          `<div class="${region}" style="background: ${backdrop}; padding: 1rem">${BACKDROP_PANES.map(
+            (pane) => `<div data-testid="${pane}" class="${pane}">Text</div>`,
+          ).join("")}</div>`,
+        );
+
+        for (const [testId, painted] of Object.entries(await paint(page))) {
+          expect.soft(textRatio(painted), testId).toBeGreaterThanOrEqual(floor);
+        }
+      });
+    }
+
+    test(`draws a focus ring at 3:1 against a glass pane over a ${backdrop} backdrop, ${theme}`, async ({ page }) => {
+      await loadIn(
+        page,
+        theme,
+        "standard",
+        `<button data-testid="before">.</button><div class="glass" style="background: ${backdrop}; padding: 1rem"><div class="card">${INTENTS.flatMap(
+          (intent) =>
+            FOCUSABLE.map(([control, open, close]) => `${open} ${intent}" data-testid="${control}-${intent}${close}`),
+        ).join("")}</div></div>`,
+      );
+
+      await page.getByTestId("before").focus();
+      const grounds = await paint(page);
+      await page.keyboard.press("Tab");
+      const focused = await paintFocused(page);
+
+      for (const [testId, ring] of Object.entries(focused)) {
+        const resting = grounds[testId]!;
+        expect.soft(ring.focused, `${testId} has focus`).toBe(true);
+        expect
+          .soft(ringRatio({ ...resting, ...ring }, resting.shadow), `${testId} ring`)
+          .toBeGreaterThanOrEqual(MINIMUM);
       }
     });
   }

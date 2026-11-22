@@ -1,6 +1,6 @@
 ---
 status: IMPLEMENTED
-last_updated: 2026-11-18
+last_updated: 2026-11-21
 scope: Approved exceptions for workspace packages.
 ---
 
@@ -19,6 +19,15 @@ An exception to a rule that `hub check` enforces MUST also declare a `Checks byp
 - **Where it applies:** `packages/styles/`.
 - **Why acceptable:** The package ships stylesheets and one build command, `chs`, declared as its `bin`; it exposes no JavaScript API to import, so `main` and `module` would point at no usable runtime entrypoint. It does declare `types`: an empty `dist/index.d.ts`, the file the `dist/` exports' `types` conditions name (the `/tw` exports name the same empty `tw/index.d.ts`), so a TypeScript project that checks side-effect imports resolves them; `tests/integration/exports.test.ts` compiles such imports.
 - **Temporary or permanent:** Permanent while the package exposes no library API.
+
+## `@codenhub/styles`: Tailwind is not a peer
+
+- **Rules bypassed:** `docs/specs/packages-lifecycle.md`, "Choosing the field" (published code imports only `dependencies` and `peerDependencies`, and a host integration the consumer supplies is a `peerDependency`), and `docs/guidelines/code.md`, "A tool consumers may already run is an adapter, never a requirement" (the adapter declares the tool as an optional peer).
+- **Checks bypassed:** `dependencies/runtime-declaration`.
+- **Where it applies:** `packages/styles/tw/`, which the `/tw` exports name and which imports `tailwindcss`; nothing in `dist/` or the `chs` command imports it.
+- **Why acceptable:** The `/tw` files are source the consumer's own Tailwind compiles, so the consumer supplies Tailwind by running it, and the package never resolves it. Declared as an optional peer until 0.11.0, it still took part in npm's resolution: a project on Tailwind 3, or on 4.x below the floor, failed `npm install` with `ERESOLVE`, even one that only linked the compiled CSS, which needs no Tailwind. The supported range is stated in `packages/styles/docs/integrating/tailwind.md` instead, where `.github/workflows/tailwind.yml` reads the floor it tests, and `packages/styles/docs/internal/model.md`, "No Tailwind peer", records the decision. The cost is that no package manager checks a `/tw` consumer's Tailwind version.
+- **Temporary or permanent:** Permanent while npm fails an install on an out-of-range optional peer.
+- **Reevaluate when:** npm treats an optional peer's range as a warning, as pnpm does; or `/tw` moves to a package of its own, whose every consumer runs Tailwind and could take a required peer.
 
 ## `@codenhub/styles`: no visual regression baselines
 

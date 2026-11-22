@@ -138,6 +138,11 @@
        A component that rests on a ground of its own restates all three after
        `@apply box`. See docs/internal/model.md#the-ink-of-the-plate-beneath. */
     --_held-ink: var(--_holds-ink, var(--_d-holds-ink)) var(--_fg-own);
+    /* The plate, as the page would show it: the capped fill over the page
+       ground. Opaque, so the selected text it colours reads on the ink, where
+       `--_bg` thinned by an aesthetic's alpha would not. */
+    --_held-plate: var(--_holds-ink, var(--_d-holds-ink))
+      color-mix(in oklab, var(--intent-color) var(--_capped), var(--color-background));
     --_held-on: var(--_holds-ink, var(--_d-holds-ink)) 100%;
     --_own-hold: var(--_holds-ink, var(--_d-holds-ink)) 100%;
     --_on-plate: var(--_holds-ink, var(--_d-holds-ink)) 100%;
@@ -329,7 +334,8 @@
        1, which is how `.cut-diagonal` and a bevelling aesthetic's diagonal draw
        two corners and leave two square. An explicit `--ui-radius` still wins,
        taken as written. */
-    --_corner: calc(var(--ui-corner, var(--radius-control)) * var(--_scale));
+    /* Pixel's notch, where it is drawn, replaces the length: see `pixel.css`. */
+    --_corner: var(--_notch, calc(var(--ui-corner, var(--radius-control)) * var(--_scale)));
     border-radius: var(
       --ui-radius,
       calc(var(--_corner) * var(--ui-corner-tl, 1)) calc(var(--_corner) * var(--ui-corner-tr, 1))
@@ -341,7 +347,7 @@
        `corner-shape` drops the line at parse time. A component that overrides the
        radius after `@apply box` keeps this, so it bevels by the same amount it
        rounds. See model.md#material-tokens. */
-    corner-shape: var(--ui-corner-shape, round);
+    corner-shape: var(--_notch-shape, var(--ui-corner-shape, round));
     box-shadow: var(--_shadow);
     clip-path: var(--ui-clip, none);
     /* The press travel `box-active` writes; `none` at rest, because any other

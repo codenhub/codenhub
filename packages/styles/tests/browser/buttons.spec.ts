@@ -1,3 +1,5 @@
+import { readFile } from "node:fs/promises";
+
 import { expect, test } from "./fixtures";
 import {
   BUTTON_INTENT_TOKENS,
@@ -774,3 +776,30 @@ test("shrinks a full-width button to fit its row beside an icon button", async (
     expect.soft(row.icon[0], `${row.padding} icon button stays square`).toBeCloseTo(row.icon[1]!, 0);
   }
 });
+
+/* docs/usage/buttons.md and docs/accessibility.md show a disabled link
+   button. Written as `<a aria-disabled="true">` with no `href`, it was neither
+   focusable nor a link, and `aria-disabled` is not allowed on a generic
+   element, so nothing announced it as disabled. Each documented example has to
+   be a link that is reached from the keyboard, announced as disabled, and drawn
+   as a disabled button. */
+for (const [doc, name] of [
+  ["docs/usage/buttons.md", "Download invoice"],
+  ["docs/accessibility.md", "Export data"],
+] as const) {
+  test(`makes the disabled link example in ${doc} a focusable, disabled link`, async ({ page }) => {
+    const source = await readFile(new URL(`../../${doc}`, import.meta.url), "utf8");
+    const example = source.split("\n").find((line) => line.includes("<a ") && line.includes(name))!;
+
+    await page.setContent(`<!doctype html><html><body><button>before</button>${example}</body></html>`);
+    await page.addStyleTag({ url: `${ORIGIN}/shared/entry-vanilla.css` });
+    await page.getByRole("button", { name: "before" }).focus();
+    await page.keyboard.press("Tab");
+
+    const link = page.getByRole("link", { name, disabled: true });
+
+    await expect(link).toBeFocused();
+    await expect(link).toHaveCSS("opacity", "0.58");
+    await expect(link).toHaveCSS("cursor", "not-allowed");
+  });
+}

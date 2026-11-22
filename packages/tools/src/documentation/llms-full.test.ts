@@ -49,6 +49,38 @@ describe("buildLlmsFull frontmatter errors", () => {
   });
 });
 
+describe("buildLlmsFull changelog", () => {
+  async function changelogPackage(version?: string): Promise<string> {
+    const rootPath = await mkdtemp(path.join(tmpdir(), "codenhub-llms-full-"));
+    await mkdir(path.join(rootPath, "docs", "changelog"), { recursive: true });
+    if (version !== undefined) {
+      await writeFile(path.join(rootPath, "package.json"), JSON.stringify({ name: "@codenhub/example", version }));
+    }
+    await writeFile(
+      path.join(rootPath, "docs", "changelog", "index.md"),
+      "---\ntitle: Changelog\ncurated: true\n---\n\n# Changelog\n\n- [1.1.0](1.1.0.md)\n- [1.0.0](1.0.0.md)\n",
+    );
+    await writeFile(path.join(rootPath, "docs", "changelog", "1.1.0.md"), "# 1.1.0\n\nNewest.\n");
+    await writeFile(path.join(rootPath, "docs", "changelog", "1.0.0.md"), "# 1.0.0\n\nOldest.\n");
+    return rootPath;
+  }
+  const sources = ["docs/changelog/index.md", "docs/changelog/1.0.0.md", "docs/changelog/1.1.0.md"];
+
+  it("keeps only the changelog page of the version the manifest names", async () => {
+    const compiled = await buildLlmsFull(await changelogPackage("1.0.0"), sources);
+
+    expect(compiled).toContain("<!-- Source: docs/changelog/1.0.0.md -->");
+    expect(compiled).not.toContain("docs/changelog/1.1.0.md");
+    expect(compiled).not.toContain("Newest.");
+  });
+
+  it("keeps no changelog page when the package has no manifest version", async () => {
+    const compiled = await buildLlmsFull(await changelogPackage(), sources);
+
+    expect(compiled).not.toContain("<!-- Source: docs/changelog/");
+  });
+});
+
 describe("orderLlmsFullSources", () => {
   it("shouldPlaceTheReadmeFirstAndTheDocumentationIndexBeforeOtherPages", () => {
     expect(

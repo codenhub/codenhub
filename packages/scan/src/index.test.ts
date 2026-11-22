@@ -1,3 +1,4 @@
+import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -290,6 +291,57 @@ describe("readFiles", () => {
     } finally {
       read.mockRestore();
     }
+  });
+
+  /* A glob skips a folder it cannot list without a word, so a build lost the
+     classes of every file in it and succeeded, or was told a right path
+     matches nothing. Windows denies listing through an ACL, POSIX through the
+     mode, which root ignores. */
+  describe.skipIf(process.platform !== "win32" && process.getuid?.() === 0)("a folder it cannot list", () => {
+    const locked = () => path.join(root, "app", "views", "locked");
+
+    beforeEach(() => {
+      fs.mkdirSync(locked());
+      fs.writeFileSync(path.join(locked(), "c.html"), "c");
+      if (process.platform === "win32") {
+        execFileSync("icacls", [locked(), "/deny", `${os.userInfo().username}:(RD)`], { stdio: "ignore" });
+      } else {
+        fs.chmodSync(locked(), 0o000);
+      }
+    });
+
+    afterEach(() => {
+      if (process.platform === "win32") {
+        execFileSync("icacls", [locked(), "/remove:d", os.userInfo().username], { stdio: "ignore" });
+      } else {
+        fs.chmodSync(locked(), 0o755);
+      }
+    });
+
+    it.each(["app/views/**/*.html", "app/views/locked/*.html", "app/*/locked/*.html"])(
+      "fails naming the folder %s has to list, with failOnUnreadable",
+      (entry) => {
+        expect(() => findFiles([entry], { cwd: root, failOnUnreadable: true })).toThrow(
+          expect.objectContaining({
+            code: expect.stringMatching(/^(EACCES|EPERM)$/),
+            message: expect.stringContaining(locked()),
+          }),
+        );
+      },
+    );
+
+    it("does not fail on a folder the glob never enters, with failOnUnreadable", () => {
+      expect(relative(findFiles(["app/views/*.html"], { cwd: root, failOnUnreadable: true }))).toEqual([
+        "app/views/a.html",
+      ]);
+    });
+
+    it("skips the folder without failOnUnreadable", () => {
+      expect(relative(findFiles(["app/views/**/*.html"], { cwd: root }))).toEqual([
+        "app/views/a.html",
+        "app/views/nested/b.html",
+      ]);
+    });
   });
 
   it("fails before reading on an entry that names no file, with failOnUnmatched", () => {

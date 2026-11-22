@@ -7,6 +7,7 @@ import {
   isTransparent,
   ORIGIN,
   readSrgb,
+  settleAnimations,
 } from "./test-utils";
 
 const FEEDBACK_URL = `${ORIGIN}/feedback/?env=vanilla`;
@@ -35,9 +36,8 @@ test.describe("feedback", () => {
     expect(badgeStyles.borderRadius).not.toBe("0px");
   });
 
-  /* The package no longer paints an icon: `.alert`'s own `gap-3` spaces a real
-     `.alert-icon` child from the message with nothing to trigger, the same way
-     `.input-group`'s gap spaces an icon from a control. */
+  /* The package no longer paints an icon: `.alert-icon`'s own end margin
+     spaces a real icon child from the message with nothing to trigger. */
   test("spaces an alert's icon from its message and keeps a readable border", async ({ page }) => {
     await page.goto(FEEDBACK_URL);
 
@@ -50,7 +50,7 @@ test.describe("feedback", () => {
       if (!icon) {
         throw new Error("Expected the icon-state alert fixture to contain a .alert-icon child.");
       }
-      return { gap: getComputedStyle(element).columnGap, iconWidth: icon.getBoundingClientRect().width };
+      return { gap: getComputedStyle(icon).marginInlineEnd, iconWidth: icon.getBoundingClientRect().width };
     });
 
     expect(alertStyles.borderWidth).not.toBe("0px");
@@ -767,3 +767,97 @@ test.describe("feedback", () => {
     expect(sizes).toEqual([20, 20, 32]);
   });
 });
+
+const FULL_STYLES_URL = `${ORIGIN}/shared/entry-vanilla.css`;
+const MESSAGE = 'Your card <a href="#">expires next month</a>. <strong>Update it</strong> to keep your plan.';
+
+/* An alert's message is one paragraph whatever inline markup it holds. As a
+   flex row, each text run and each link or `<strong>` was an item of its own,
+   and at 320px the message read as five narrow columns. So the bare message
+   has to lay out exactly as the same message wrapped in one block, with an
+   icon before it or without one. */
+test("flows an alert's inline markup as one message, wrapped or not, with or without an icon", async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 640 });
+  await page.setContent(
+    `<!doctype html><html><body style="margin: 0; padding: 16px">
+       <div class="alert warning" data-testid="bare">${MESSAGE}</div>
+       <div class="alert warning" data-testid="wrapped"><p style="margin: 0">${MESSAGE}</p></div>
+       <div class="alert warning" data-testid="icon-bare"><i class="alert-icon" aria-hidden="true"></i>${MESSAGE}</div>
+       <div class="alert warning" data-testid="icon-wrapped"><i class="alert-icon" aria-hidden="true"></i><p style="margin: 0">${MESSAGE}</p></div>
+     </body></html>`,
+  );
+  await page.addStyleTag({ url: FULL_STYLES_URL });
+
+  const read = (testId: string) =>
+    page.getByTestId(testId).evaluate((alert) => {
+      const box = alert.getBoundingClientRect();
+      const styles = getComputedStyle(alert);
+      const link = alert.querySelector("a")!.getBoundingClientRect();
+      const strong = alert.querySelector("strong")!.getBoundingClientRect();
+      const icon = alert.querySelector(".alert-icon")?.getBoundingClientRect();
+      const contentTop = box.top + Number.parseFloat(styles.borderTopWidth) + Number.parseFloat(styles.paddingTop);
+      const contentLeft = box.left + Number.parseFloat(styles.borderLeftWidth) + Number.parseFloat(styles.paddingLeft);
+
+      return {
+        height: box.height,
+        link: [Math.round(link.left - box.left), Math.round(link.top - box.top)],
+        strong: [Math.round(strong.left - box.left), Math.round(strong.top - box.top)],
+        icon: icon && { left: icon.left - contentLeft, top: icon.top - contentTop, width: icon.width },
+      };
+    });
+
+  const bare = await read("bare");
+  const wrapped = await read("wrapped");
+  const iconBare = await read("icon-bare");
+  const iconWrapped = await read("icon-wrapped");
+
+  /* Three lines at 20px leading, inside 16px of padding and the border. */
+  expect(bare.height, "the bare message wraps as a paragraph").toBeLessThan(110);
+  expect(bare).toEqual(wrapped);
+  expect(iconBare).toEqual(iconWrapped);
+  expect(iconBare.icon, "the icon sits at the start of the first line").toEqual({ left: 0, top: 0, width: 20 });
+  expect(iconBare.link[0], "the message starts after the icon and its gap").toBeGreaterThanOrEqual(20 + 12);
+});
+
+/* Under reduced motion the bubble stops growing, so it once rested at full
+   size, hidden only by its fade: a hidden box still counts toward scrollable
+   overflow, and the docs' help tooltip at the end of a row made a 320px page
+   scroll sideways, 438px wide. */
+for (const motion of [
+  { label: "with no preference", reducedMotion: "no-preference", attribute: null },
+  { label: "under reduced motion", reducedMotion: "reduce", attribute: null },
+  { label: 'under data-motion="reduce"', reducedMotion: "no-preference", attribute: "reduce" },
+  { label: 'under data-motion="none"', reducedMotion: "no-preference", attribute: "none" },
+] as const) {
+  test(`keeps a closed tooltip from widening the page ${motion.label}`, async ({ page }) => {
+    await page.setViewportSize({ width: 320, height: 640 });
+    await page.emulateMedia({ reducedMotion: motion.reducedMotion });
+    await page.setContent(
+      `<!doctype html><html${motion.attribute ? ` data-motion="${motion.attribute}"` : ""}><body style="margin: 0; padding: 16px">
+         <div class="cluster between">
+           <label class="choice"><input class="switch primary" type="checkbox" role="switch" /> Public profile</label>
+           <span class="tooltip">
+             <button class="tooltip-icon" type="button" aria-label="About public profiles" aria-describedby="help">?</button>
+             <span class="tooltip-bubble" role="tooltip" id="help">Anyone with the link can see your name, photo, and public projects.</span>
+           </span>
+         </div>
+         <button data-testid="away">away</button>
+       </body></html>`,
+    );
+    await page.addStyleTag({ url: FULL_STYLES_URL });
+    await settleAnimations(page);
+
+    const overflow = () =>
+      page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+
+    expect(await overflow(), "at rest").toBe(0);
+
+    /* Opened, then closed: once its linger and fade are over it is gone again. */
+    await page.locator(".tooltip").evaluate((element) => element.style.setProperty("--tooltip-linger", "0s"));
+    await page.locator(".tooltip-icon").hover();
+    await expect(page.locator(".tooltip-bubble")).toHaveCSS("opacity", "1");
+    await page.getByTestId("away").hover();
+    await expect(page.locator(".tooltip-bubble")).toHaveCSS("visibility", "hidden");
+    await expect.poll(overflow, { message: "after closing" }).toBe(0);
+  });
+}

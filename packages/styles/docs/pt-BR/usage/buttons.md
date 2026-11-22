@@ -2,7 +2,7 @@
 title: Botões
 description: Ações destrutivas e secundárias, botões de ícone, tamanhos, links com cara de botão, estados desabilitados e como carregar ícones.
 order: 1
-source: 6cde544bb49cfd22089ca1973a87cd9b2aaeb123
+source: c4127c479567dd763b978f6e2b78f486206ad700
 ---
 
 # Botões
@@ -123,10 +123,10 @@ Qualquer um destes deixa um botão com aparência de desabilitado: o atributo `d
 ```html
 <button class="btn primary" type="submit" disabled>Save changes</button>
 
-<a class="btn ghost" aria-disabled="true">Download invoice</a>
+<a class="btn ghost" role="link" aria-disabled="true" tabindex="0">Download invoice</a>
 ```
 
-Só o atributo `disabled` impede o botão de funcionar. `.disabled`, `aria-disabled` e `data-disabled` mudam apenas a aparência: um clique ou a tecla Enter ainda o acionam, então o seu código precisa ignorá-lo. `aria-disabled` é a escolha certa quando o botão deve continuar focável, por exemplo para que um tooltip explique por que ele está desabilitado. Um link não tem atributo `disabled`, então remova também o `href` dele quando ele não deve navegar.
+Só o atributo `disabled` impede o botão de funcionar. `.disabled`, `aria-disabled` e `data-disabled` mudam apenas a aparência: um clique ou a tecla Enter ainda o acionam, então o seu código precisa ignorá-lo. `aria-disabled` é a escolha certa quando o botão deve continuar focável, por exemplo para que um tooltip explique por que ele está desabilitado. Um link não tem atributo `disabled`, então remova o `href` dele quando ele não deve navegar. Sem um `href`, um `<a>` deixa de ser um link: ele perde a role de link e sai da ordem de tabulação, então quem usa leitor de tela nunca ouve que ele está desabilitado. Devolva `role="link"` e `tabindex="0"` a ele, como no exemplo, para que continue sendo anunciado como um link desabilitado e continue alcançável.
 
 ## Estado de carregamento
 

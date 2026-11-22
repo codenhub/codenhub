@@ -27,7 +27,7 @@
  * as Django's `ManifestStaticFilesStorage`, never meets a bare
  * `@import "tailwindcss/..."` it cannot resolve.
  */
-import { mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -53,9 +53,21 @@ const TAILWIND_IMPORTS = {
   "base/utilities.css": "tailwindcss/utilities.css",
 };
 
+const manifest = JSON.parse(readFileSync(path.join(packageRoot, "package.json"), "utf8"));
+const repositoryRoot = path.resolve(packageRoot, manifest.repository.directory.replaceAll(/[^/]+/g, ".."));
+
+/* The release's tree in the repository, where a path a comment names can be
+   read when the tarball does not carry it. The tag is the one `hub publish`
+   pushes, so the link reads the sources this `tw/` was built from. */
+const RELEASE_TREE = `${manifest.repository.url.replace(/^git\+/, "").replace(/\.git$/, "")}/blob/${manifest.name}@${manifest.version}`;
+
+/* A path a comment names: `docs/internal/model.md#cascade-layers`,
+   `tests/integration/registry.test.ts`, `src/`. */
+const PATH_REFERENCE = /(?<![\w./-])(?:docs|tests|scripts|src)\/(?:[\w.-]+\/)*(?:[\w.-]*[\w-])?/g;
+
 /* The `src/` files the `/tw` exports name, relative to it. */
 const EXPORTS = new Set(
-  Object.values(JSON.parse(readFileSync(path.join(packageRoot, "package.json"), "utf8")).exports)
+  Object.values(manifest.exports)
     .map((conditions) => conditions.style)
     .filter((style) => style?.startsWith("./tw/"))
     .map((style) => style.slice("./tw/".length)),
@@ -281,7 +293,7 @@ function themeStatic(file) {
   const header = root.nodes.filter((node) => node.type === "comment");
   let tokens;
 
-  root.walkRules(/^:root,\s*:host$/, (rule) => {
+  root.walkRules(/^:root$/, (rule) => {
     tokens = rule;
   });
 
@@ -298,5 +310,44 @@ function write(relative, css) {
   mkdirSync(path.dirname(file), { recursive: true });
   /* A `/tw` source that carries the checkbox marks is a copy of them too, and
      a consumer's Tailwind keeps its `/*!` comment in the stylesheet it builds. */
-  writeFileSync(file, withNotice(css));
+  writeFileSync(file, withNotice(linkUnshipped(css, relative)));
+}
+
+/* The comments are `src/`'s, written for maintainers, so they name
+   `docs/internal/`, the tests, and the build scripts, none of which ship. A
+   consumer reading `tw/` gets each such path as a link to the release's tree
+   instead; one that names nothing in the repository fails the build, since
+   the comment it sits in has gone stale. */
+function linkUnshipped(css, relative) {
+  const root = postcss.parse(css);
+
+  root.walkComments((comment) => {
+    comment.text = comment.text.replaceAll(PATH_REFERENCE, (reference) => {
+      if (ships(reference)) {
+        return reference;
+      }
+
+      if (existsSync(path.join(packageRoot, reference))) {
+        return `${RELEASE_TREE}/${manifest.repository.directory}/${reference}`;
+      }
+
+      if (existsSync(path.join(repositoryRoot, reference))) {
+        return `${RELEASE_TREE}/${reference}`;
+      }
+
+      throw new Error(`tw/${relative}: a comment names ${reference}, which is not in the repository`);
+    });
+  });
+
+  return root.toString();
+}
+
+/* What `files` and `docs/.npmignore` publish of the paths a comment can name. */
+function ships(reference) {
+  return (
+    existsSync(path.join(packageRoot, reference)) &&
+    reference.startsWith("docs/") &&
+    !reference.startsWith("docs/internal/") &&
+    !reference.startsWith("docs/plans/")
+  );
 }

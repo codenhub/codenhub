@@ -6,12 +6,14 @@
    unbroken line to two gaps in Chromium and WebKit, and WebKit set the
    i-matra of "हिन्दी" apart from its consonant. So each step below reads
    `--_script-tracking` before its own tracking, and an element in such a
-   language -- Arabic script, Syriac, N'Ko, Mongolian, Adlam, Devanagari,
-   Bengali, Gurmukhi -- sets it to `normal`. A consumer's `tracking-*` sets
+   language -- Arabic script, Syriac, N'Ko, Mongolian, Adlam, Hanifi
+   Rohingya, Devanagari, Bengali, Gurmukhi -- sets it to `normal`. A consumer's `tracking-*` sets
    `letter-spacing` itself and still wins wherever it beats the class.
    Kurdish is written in Arabic script only sometimes, so it needs the
    `-Arab` subtag, as do the other languages named with a subtag; Punjabi is
-   in either Gurmukhi or Arabic script, so it is matched whole.
+   in either Gurmukhi or Arabic script, so it is matched whole, and so is
+   Rohingya, in Hanifi Rohingya by default and in Latin too: a Latin passage
+   matched loses only its tracking.
 
    Each subtag is named rather than matched by a wildcard such as
    `:lang("*-Arab")`: Chromium matched none (measured on 2026-11-21 against
@@ -24,7 +26,8 @@
    rule, with fourteen languages, added 2 KB to `dist/purge/index.css`.
    It does not inherit, so a Latin passage (`lang="en"`) inside an Arabic page
    keeps its tracking. The list is repeated in `native.css` and in chunky
-   tile's solo class. */
+   tile's solo class; `tests/integration/source.test.ts` holds the first two
+   to each other. */
 @property --_script-tracking {
   syntax: "*";
   inherits: false;
@@ -60,6 +63,20 @@
     :lang(pnb),
     :lang(prs),
     :lang(azb),
+    :lang(skr),
+    :lang(bal),
+    :lang(bcc),
+    :lang(bgn),
+    :lang(mzn),
+    :lang(glk),
+    :lang(lrc),
+    :lang(luz),
+    :lang(sdh),
+    :lang(bqi),
+    :lang(hno),
+    :lang(khw),
+    :lang(brh),
+    :lang(rhg),
     :lang(doi),
     :lang(brx),
     :lang(new),

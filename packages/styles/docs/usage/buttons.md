@@ -122,10 +122,10 @@ Any of these makes a button look disabled: the `disabled` attribute, `.disabled`
 ```html
 <button class="btn primary" type="submit" disabled>Save changes</button>
 
-<a class="btn ghost" aria-disabled="true">Download invoice</a>
+<a class="btn ghost" role="link" aria-disabled="true" tabindex="0">Download invoice</a>
 ```
 
-Only the `disabled` attribute stops the button from working. `.disabled`, `aria-disabled`, and `data-disabled` change the look only: a click or the Enter key still activates it, so your code has to ignore it. `aria-disabled` is the right choice when the button should stay focusable, for example so a tooltip can explain why it is disabled. A link has no `disabled` attribute, so remove its `href` as well when it should not navigate.
+Only the `disabled` attribute stops the button from working. `.disabled`, `aria-disabled`, and `data-disabled` change the look only: a click or the Enter key still activates it, so your code has to ignore it. `aria-disabled` is the right choice when the button should stay focusable, for example so a tooltip can explain why it is disabled. A link has no `disabled` attribute, so remove its `href` when it should not navigate. Without an `href` an `<a>` is no longer a link: it loses the link role and drops out of the tab order, so screen reader users never hear that it is disabled. Give it `role="link"` and `tabindex="0"` back, as in the example, so it is still announced as a disabled link and can still be reached.
 
 ## Loading state
 

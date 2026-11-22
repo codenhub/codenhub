@@ -3,7 +3,14 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { expect, test, type Page } from "./fixtures";
-import { drawsCornerShape, expectSameColor, readSrgb, settleAnimations, stopTransitions } from "./test-utils";
+import {
+  drawsCornerShape,
+  expectSameColor,
+  pixelStep,
+  readSrgb,
+  settleAnimations,
+  stopTransitions,
+} from "./test-utils";
 
 /* A solo class exists for an element this package does not style, on a page
    that may never have loaded the base stylesheet. So unlike the aesthetic
@@ -489,8 +496,22 @@ test.describe("solo utilities", () => {
     expect(pane["clip-path"], "a container takes no clip").toBe("none");
     expect(pane["border-top-width"], "and the ring for its edge").toBe("0px");
     expect(pane["box-shadow"]).toMatch(/inset/);
-    expect((await read(page, "#action", ["clip-path"]))["clip-path"], "a button").toMatch(/^polygon/);
-    expect((await read(page, "#link", ["clip-path"]))["clip-path"], "a link").toMatch(/^polygon/);
+    for (const [selector, label] of [
+      ["#action", "a button"],
+      ["#link", "a link"],
+    ]) {
+      // oxlint-disable-next-line no-await-in-loop -- one page, read in turn.
+      const styles = await read(page, selector!, ["clip-path", "border-top-left-radius", "corner-shape"]);
+
+      expect(
+        pixelStep({
+          clipPath: styles["clip-path"]!,
+          borderTopLeftRadius: styles["border-top-left-radius"]!,
+          cornerShape: styles["corner-shape"]!,
+        }),
+        label,
+      ).toBe("4px");
+    }
 
     /* The pinned corner past the edge paints: the topmost element there is it. */
     const hit = await page.evaluate(() => {
@@ -500,6 +521,27 @@ test.describe("solo utilities", () => {
     });
 
     expect(hit).toBe("pinned");
+  });
+
+  /* Where the engine draws `corner-shape: notch`, an action's step is its
+     shape and clips nothing, so a badge pinned past its corner paints. */
+  test("paint a badge pinned past a pixel action's corner where the notch is drawn", async ({ page }) => {
+    await load(
+      page,
+      ["aesthetics/pixel.css"],
+      `<button id="action" class="pixel-solo" style="position: relative; margin: 2rem">Go
+         <span id="badge" style="position: absolute; top: -8px; right: -10px; width: 16px; height: 16px; background: red"></span>
+       </button>`,
+    );
+    test.skip(!(await page.evaluate(() => CSS.supports("corner-shape", "notch"))), "no corner-shape: notch");
+
+    const hit = await page.evaluate(() => {
+      const box = document.querySelector("#action")!.getBoundingClientRect();
+
+      return document.elementFromPoint(box.right + 4, box.top - 4)?.id;
+    });
+
+    expect(hit).toBe("badge");
   });
 
   /* The clip takes the focus outline with it, so a focused pixel element draws

@@ -234,9 +234,7 @@ Naming: `--palette-<intent>-<presentation>-<slot>`, where `<intent>` is one of t
 
 - A `-hover` suffix, on `bg` and `edge` only, because the text color does not change on hover: `--palette-success-soft-page-bg-hover`. `.alert`, `.kbd`, `.code`, and `.pre` have no hover of their own, so their hover values are what the component draws when you add `box-hover` to it.
 
-Light values are set on `:root`. Dark values apply under `.dark`, `.theme-dark`, or `[data-theme="dark"]` on the element or an element above it, the same selectors the package's theme uses. The light values also apply under `.light`, `.theme-light`, and `[data-theme="light"]`, so the nearest explicit theme wins: a light area inside a dark one reads the light values.
-
-The file does not follow `prefers-color-scheme`. Code that uses the palette on its own already switches themes itself, so it sets one of those classes or attributes.
+Each value is a `light-dark()` pair, set on `:root`, so it follows `color-scheme` where it is used, as the package's own color tokens do: the system's setting when nothing chooses a theme, and the nearest theme selector otherwise, so a light area inside a dark one reads the light values. Code that uses the palette without the package switches themes by setting `color-scheme`, such as `color-scheme: dark` on the root or on a region.
 
 Nor does it follow `prefers-contrast: more` or `data-contrast="more"`. Under that setting the package draws each intent's border in its strong tone, so a `-edge` value is fainter than the border the component draws. Code that has to honor the setting picks a stronger color itself.
 

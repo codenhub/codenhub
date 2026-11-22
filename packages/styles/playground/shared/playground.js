@@ -9,7 +9,7 @@ const nextEnvironment = environment === "build" ? "vanilla" : "build";
 
 const setTheme = (isDark) => {
   documentRoot.classList.toggle("dark", isDark);
-  documentRoot.classList.toggle("light", !isDark);
+  documentRoot.classList.toggle("theme-light", !isDark);
 };
 
 const storedTheme = localStorage.getItem("theme");
