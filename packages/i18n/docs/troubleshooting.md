@@ -94,7 +94,7 @@ An empty dictionary is accepted.
 
 The configuration is invalid. Most messages have the form `[I18n] Invalid configuration: <option>: <problem>`, so the option to fix is the first thing after the colon. Check that:
 
-- `locales` is a non-empty list with no duplicates, ignoring case, and each locale is ASCII letters and digits separated by hyphens, such as `pt-BR`.
+- `locales` is a non-empty list with no duplicates, ignoring case, and each locale is a language tag `Intl` accepts, such as `pt-BR`, or a private-use tag, such as `x-pirate`. A typo such as `en-US-US` fails with `Must be a language tag Intl accepts`.
 - `defaultLocale` is one of `locales`.
 - `loadLocale` is a function.
 - `timeZone`, when set, is one `Intl` knows. A typo gives `timeZone: Must be a time zone Intl supports, such as "America/Sao_Paulo" or "UTC"`.

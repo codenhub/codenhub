@@ -2,7 +2,7 @@
 title: Solución de problemas
 description: Qué significa cada error y cada advertencia, y cómo solucionarlo.
 order: 5
-source: 2fd96b60219e8a8770c0a185cdce09e665e80bb6
+source: 74adb8aab2e8ea985d7f602854cca406acb8c43b
 ---
 
 # Solución de problemas
@@ -95,7 +95,7 @@ Un diccionario vacío se acepta.
 
 La configuración no es válida. La mayoría de los mensajes tienen la forma `[I18n] Invalid configuration: <option>: <problem>`, así que la opción que hay que corregir es lo primero que aparece después de los dos puntos. Comprueba que:
 
-- `locales` sea una lista no vacía sin duplicados, ignorando mayúsculas y minúsculas, y que cada locale esté formado por letras y dígitos ASCII separados por guiones, como `pt-BR`.
+- `locales` sea una lista no vacía sin duplicados, ignorando mayúsculas y minúsculas, y que cada locale sea una etiqueta de idioma que `Intl` acepte, como `pt-BR`, o una etiqueta de uso privado, como `x-pirate`. Un error de tipeo como `en-US-US` falla con `Must be a language tag Intl accepts`.
 - `defaultLocale` sea uno de los `locales`.
 - `loadLocale` sea una función.
 - `timeZone`, cuando está definido, sea uno que `Intl` conoce. Una errata da `timeZone: Must be a time zone Intl supports, such as "America/Sao_Paulo" or "UTC"`.

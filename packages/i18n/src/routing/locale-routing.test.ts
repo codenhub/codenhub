@@ -96,6 +96,8 @@ describe("createLocaleRouting", () => {
     );
     expect(create({ locales: ["en", "EN"] })).toThrow("locales[1]: Must be unique, ignoring letter case");
     expect(create({ locales: ["en", "../admin"] })).toThrow("locales[1]: Must be an ASCII locale identifier");
+    expect(create({ locales: ["en", "en-US-US"] })).toThrow("locales[1]: Must be a language tag Intl accepts");
+    expect(create({ locales: ["en", "x-pirate"], defaultLocale: "x-pirate" })).not.toThrow();
     expect(create({ defaultLocale: "fr" })).toThrow("defaultLocale: Must match a configured locale");
     expect(create({ localePrefix: "yes" })).toThrow(
       'localePrefix: Expected "always", "except-default", or "when-ambiguous", received "yes"',
@@ -212,7 +214,7 @@ describe("createLocaleRouting", () => {
   it("should refuse a path of thousands of segments quickly", () => {
     const routing = createLocaleRouting({
       defaultLocale: "en-US",
-      locales: Array.from({ length: 20 }, (_, index) => (index === 0 ? "en-US" : `x${index}`)),
+      locales: Array.from({ length: 20 }, (_, index) => (index === 0 ? "en-US" : `x-${index}`)),
       localePrefix: "except-default",
     });
     const pathname = `/docs/${"a/".repeat(4_090)}a`;

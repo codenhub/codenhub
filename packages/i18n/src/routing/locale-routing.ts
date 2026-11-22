@@ -34,7 +34,7 @@ const memoizeNormalize = (): Normalize => {
 export interface LocaleRoutingConfig<TLocale extends string> {
   /** The trimmed, case-insensitively matched locale used for unprefixed paths; its type is inferred from `locales` only. */
   defaultLocale: NoInfer<TLocale>;
-  /** ASCII locale identifiers with alphanumeric hyphen-separated subtags, preserved in `localizeAll` order. */
+  /** Language tags that `Intl` accepts, or private-use tags such as `x-pirate`, preserved in `localizeAll` order. */
   locales: readonly TLocale[];
   /**
    * Which paths start with their locale: `"always"` every path; `"except-default"` every path but the default

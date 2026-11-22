@@ -28,10 +28,12 @@ describe("matchConfiguredLocale", () => {
   });
 
   it.each([
-    [["zh-Hant-x-abcdefghijk"], ["zh-TW"], "zh-Hant-x-abcdefghijk"],
-    [["zh-Hant-x-abcdefghijk"], ["zh-Hans-CN"], undefined],
-    [["en-x-abcdefghijk"], ["en-GB"], "en-x-abcdefghijk"],
-  ] as const)("matches %j, which Intl.Locale rejects, to %j by its named script", (locales, preferences, expected) => {
+    [["en", "x-pirate"], ["X-Pirate"], "x-pirate"],
+    [["en", "x-pirate"], ["x-pirate-ship"], undefined],
+    [["en", "x-pirate"], ["x"], undefined],
+    [["en", "x-pirate"], ["en-GB"], "en"],
+    [["en-x-foo"], ["en-GB"], "en-x-foo"],
+  ] as const)("matches a private-use locale in %j only exactly, for %j", (locales, preferences, expected) => {
     expect(matchConfiguredLocale(locales, preferences)).toBe(expected);
   });
 
@@ -40,7 +42,7 @@ describe("matchConfiguredLocale", () => {
     [["en", "no"], ["nb-NO"], "no"],
     [["en", "nb"], ["no"], "nb"],
     [["en", "nb-NO"], ["no-NO"], "nb-NO"],
-    [["en", "no-x-abcdefghijk"], ["nb"], "no-x-abcdefghijk"],
+    [["en", "no-x-foo"], ["nb"], "no-x-foo"],
     [["en", "nb", "no"], ["no"], "no"],
     [["en", "nn"], ["no"], undefined],
     [["en", "no"], ["nn"], undefined],

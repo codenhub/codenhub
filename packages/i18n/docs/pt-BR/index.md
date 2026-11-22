@@ -1,7 +1,7 @@
 ---
 title: Visão geral
 description: O que o @codenhub/i18n faz, as quatro ideias por trás dele, um passo a passo de cinco minutos, idiomas da direita para a esquerda e como o gerenciador se comporta quando as chamadas se sobrepõem.
-source: 1e936e9462e1f95bef5dcd7db88d7f526dbad33a
+source: 8e81c5c65c9c1fd69f2b2baff20554be06b5bf54
 ---
 
 # Traduza o seu app
@@ -274,7 +274,7 @@ O norueguês tem dois códigos para o bokmål, `no` e `nb`, e os navegadores man
 
 Um locale em outra escrita nunca corresponde, porque uma página numa escrita que o visitante não lê o atende pior do que o próximo idioma dele. Com `zh`, que é chinês simplificado, um visitante `zh-TW` que também lista inglês recebe inglês, e um que não lista mais nada recebe `undefined`.
 
-Um locale configurado que o `Intl.Locale` rejeita, como um com uma subtag de uso privado de mais de oito caracteres, não tem escrita provável. Ele corresponde pelo idioma, e pela escrita que ele nomeia, quando nomeia uma.
+Um locale configurado de uso privado, como `x-pirate`, não tem subtags prováveis, já que o `Intl.Locale` o rejeita, então ele só corresponde a uma preferência que o nomeie exatamente.
 
 O resto do comportamento é curto:
 

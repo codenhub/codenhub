@@ -10,11 +10,7 @@ const LANGUAGE_ALIASES: ReadonlyMap<string, string> = new Map([["no", "nb"]]);
  */
 const MAX_PREFERENCE_LENGTH = 255;
 
-const SCRIPT_PATTERN = /^[a-z]{4}$/;
-
-const compareLanguage = (language: string): string => LANGUAGE_ALIASES.get(language) ?? language;
-
-// A lowercased tag with its language as `compareLanguage` gives it, such as `nb-no` for `no-NO`.
+// A lowercased tag with its language as `LANGUAGE_ALIASES` gives it, such as `nb-no` for `no-NO`.
 const aliasLanguage = (tag: string): string => {
   const lowercased = tag.toLowerCase();
   const end = lowercased.indexOf("-");
@@ -24,12 +20,12 @@ const aliasLanguage = (tag: string): string => {
 };
 
 // A tag as two locales are compared for one language: canonicalized as `Intl` does, so a deprecated code such as `iw`
-// reads as its replacement, `he`, then lowercased with its language as `compareLanguage` gives it, so `iw-IL` is
+// reads as its replacement, `he`, then lowercased with its language as `aliasLanguage` gives it, so `iw-IL` is
 // `he-il` and `no-NO` is `nb-no`. A tag `Intl` rejects, such as private-use `x-test`, is only lowercased and aliased.
 const comparableTag = (tag: string): string => aliasLanguage(canonicalizeTag(tag) ?? tag);
 
 /**
- * Adds likely subtags, such as `zh-TW` to `zh-Hant-TW`, with the language compared as `compareLanguage` gives it, or
+ * Adds likely subtags, such as `zh-TW` to `zh-Hant-TW`, with the language compared as `aliasLanguage` gives it, or
  * returns undefined for a tag `Intl.Locale` rejects.
  */
 const maximizeLocale = (value: string): string | undefined => {
@@ -48,9 +44,6 @@ export interface PreparedLocale<TLocale extends string> {
   /** With likely subtags, as `maximizeLocale` gives it, and its language and script; undefined when `Intl` rejects it. */
   readonly maximized: string | undefined;
   readonly likely: string | undefined;
-  /** For a locale `Intl.Locale` rejects: its language as compared, and the script it names, if any. */
-  readonly language: string;
-  readonly script: string | undefined;
 }
 
 /** @internal */
@@ -81,7 +74,6 @@ export const prepareLocales = <TLocale extends string>(locales: readonly TLocale
       exact.set(lowercased, locale);
     }
     const maximized = maximizeLocale(locale);
-    const [language = "", second] = lowercased.split("-");
     return {
       locale,
       comparable: comparableTag(locale),
@@ -89,8 +81,6 @@ export const prepareLocales = <TLocale extends string>(locales: readonly TLocale
       aliasedPrefix: `${aliasLanguage(locale)}-`,
       maximized,
       likely: maximized === undefined ? undefined : languageAndScript(maximized),
-      language: compareLanguage(language),
-      script: second !== undefined && SCRIPT_PATTERN.test(second) ? second : undefined,
     };
   });
   const prepared: PreparedLocales<TLocale> = { exact, entries };
@@ -122,8 +112,8 @@ const findPrefixLocale = <TLocale extends string>(
  * Matches ordered locale preferences, such as `navigator.languages` or a parsed `Accept-Language`, to a configured
  * locale: exact, then the longest whole-subtag prefix with the same likely script, then likely subtags, then the same
  * language and likely script. A locale whose likely script differs never matches, so `zh-TW` tries the next preference
- * rather than Simplified `zh`. A locale `Intl.Locale` rejects matches by language subtag, and by the script it names
- * when it names one. `no` and `nb` are compared as one language, Norwegian Bokmål. A preference whose language is `und`
+ * rather than Simplified `zh`. A private-use locale, such as `x-pirate`, the only kind `Intl.Locale` rejects that
+ * a configuration accepts, has no likely subtags and matches only exactly. `no` and `nb` are compared as one language, Norwegian Bokmål. A preference whose language is `und`
  * names no language and is skipped unless a configured locale is that exact tag. An underscore reads as a hyphen, so
  * `pt_BR`, as iOS, Android, and POSIX write it, is `pt-BR`. A preference longer than 255 characters is skipped unread.
  * Among configured locales of the same language and script, the first in `locales` wins when none matches exactly or by
@@ -148,8 +138,6 @@ export function matchConfiguredLocale<TLocale extends string>(
 
     const normalizedPreference = preference.replaceAll("_", "-").trim().toLowerCase();
 
-    // `und` names no language, yet likely subtags turn it into `en-Latn-US`, so it is no preference at all, unless a
-    // configured locale is that exact tag.
     if (normalizedPreference.length === 0) {
       continue;
     }
@@ -160,6 +148,7 @@ export function matchConfiguredLocale<TLocale extends string>(
       return exactLocale;
     }
 
+    // `und` names no language, yet likely subtags turn it into `en-Latn-US`, so it is no preference at all.
     if (normalizedPreference.split("-")[0] === "und") {
       continue;
     }
@@ -192,18 +181,6 @@ export function matchConfiguredLocale<TLocale extends string>(
     }
 
     // The same language in another likely script, such as `zh-Hant` for `zh`, reads worse than the next preference.
-    // A locale `Intl.Locale` rejects has no likely script, so only the script it names, if any, is compared.
-    const [language, script] = likelyPreference.split("-");
-    const subtagLocale = entries.find(
-      (entry) =>
-        entry.maximized === undefined &&
-        entry.language === language &&
-        (entry.script === undefined || entry.script === script),
-    )?.locale;
-
-    if (subtagLocale !== undefined) {
-      return subtagLocale;
-    }
   }
 
   return undefined;

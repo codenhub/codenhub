@@ -273,7 +273,7 @@ Norwegian has two codes for Bokmål, `no` and `nb`, and browsers send either, so
 
 A locale in another script never matches, because a page in a script the visitor doesn't read serves them worse than their next language. With `zh`, which is Simplified Chinese, a `zh-TW` visitor who also lists English gets English, and one who lists nothing else gets `undefined`.
 
-A configured locale that `Intl.Locale` rejects, such as one with a private-use subtag over eight characters, has no likely script. It matches by language, and by the script it names when it names one.
+A configured private-use locale, such as `x-pirate`, has no likely subtags, since `Intl.Locale` rejects it, so it matches only a preference that names it exactly.
 
 The rest of its behavior is short:
 
