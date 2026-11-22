@@ -2,7 +2,7 @@
 title: Sin bundler
 description: Enlazar las hojas de estilos compiladas desde HTML simple, Rails, Laravel, Django o cualquier aplicación renderizada en el servidor, y el build por línea de comandos.
 order: 6
-source: cd41cef0848efcdef21e9d17f62f9113f049c243
+source: 21bdefae1882dda22d050a63c3cb0785ef22beed
 ---
 
 # Sin bundler
@@ -112,7 +112,7 @@ Una aplicación Laravel usa Vite por defecto, así que tiene un bundler: importa
 
 ## Generar solo las clases que usas
 
-El paquete trae un comando, `chs`, que lee tus plantillas en busca de nombres de clase y escribe una sola hoja de estilos minificada con solo las clases de StyleKit que usan. Una página que usa un botón recibe alrededor de una octava parte de la hoja de estilos completa; el tamaño exacto depende de las clases que uses, porque cada componente trae las reglas compartidas de las que depende.
+El paquete trae un comando, `chs`, que lee tus plantillas en busca de nombres de clase y escribe una sola hoja de estilos minificada con solo las clases de StyleKit que usan. Una página que usa un botón recibe alrededor de una séptima parte de la hoja de estilos completa; el tamaño exacto depende de las clases que uses, porque cada componente trae las reglas compartidas de las que depende.
 
 El comando también sirve con un bundler. Un proyecto cuyo bundler no ejecuta Tailwind, como un build simple con Vite o webpack, puede escribir la hoja de estilos entre sus fuentes, `--output src/stylekit.css`, e importar ese archivo donde importaría `@codenhub/styles`. Un proyecto que usa Tailwind CSS v4 obtiene la misma reducción con el [punto de entrada de código fuente](./tailwind.md) y no necesita el comando.
 
@@ -152,12 +152,14 @@ Si todo va bien, el comando imprime una línea: la ruta absoluta que escribió y
 /home/you/shop/public/stylekit.css 24497 bytes
 ```
 
-Enlaza ese archivo desde tu layout como cualquier hoja de estilos estática.
+Enlaza ese archivo desde tu layout como cualquier hoja de estilos estática. Un build también puede imprimir en la salida de error líneas que empiezan por `chs: warning:`, como describe [Cómo se encuentran las clases](#cómo-se-encuentran-las-clases); no cambian su estado de salida.
+
+Cada ejemplo de abajo lee también los scripts que añaden clases en el navegador, como `.active` o `.indeterminate` en una [barra de progreso](../usage/feedback.md#mostrar-el-progreso), porque una clase que no nombra ningún archivo que lee el build se queda fuera. Quita ese `--content` si tus scripts no añaden ninguna, porque un glob que no coincide con nada hace fallar el build.
 
 ### Vistas de Rails
 
 ```json
-"build:css": "chs build --content \"app/views/**/*.erb\" --content \"app/helpers/**/*.rb\" --output public/stylekit.css"
+"build:css": "chs build --content \"app/views/**/*.erb\" --content \"app/helpers/**/*.rb\" --content \"app/javascript/**/*.js\" --output public/stylekit.css"
 ```
 
 ```erb
@@ -168,7 +170,7 @@ Enlaza ese archivo desde tu layout como cualquier hoja de estilos estática.
 ### Vistas Blade de Laravel
 
 ```json
-"build:css": "chs build --content \"resources/views/**/*.blade.php\" --output public/css/stylekit.css"
+"build:css": "chs build --content \"resources/views/**/*.blade.php\" --content \"resources/js/**/*.js\" --output public/css/stylekit.css"
 ```
 
 ```blade
@@ -181,7 +183,7 @@ Enlaza ese archivo desde tu layout como cualquier hoja de estilos estática.
 Un proyecto Django guarda las plantillas en una carpeta `templates/` del proyecto, en la carpeta `templates/` de cada app, o en ambas. Pasa un `--content` por cada lugar donde estén las tuyas, y deja fuera los que no uses, porque un glob que no coincide con nada hace fallar el build:
 
 ```json
-"build:css": "chs build --content \"templates/**/*.html\" --content \"shop/templates/**/*.html\" --output static/stylekit.css"
+"build:css": "chs build --content \"templates/**/*.html\" --content \"shop/templates/**/*.html\" --content \"static/js/**/*.js\" --output static/stylekit.css"
 ```
 
 ```django
@@ -195,16 +197,18 @@ Escribe la salida en una carpeta incluida en `STATICFILES_DIRS`, aquí `static/`
 
 - `--content <glob>`, o `-c <glob>`, indica los archivos en los que buscar nombres de clase. Es obligatorio y se puede repetir: pásalo una vez por glob, y el build lee todos los archivos que coincidan con alguno. Un glob relativo se resuelve respecto a la carpeta desde la que ejecutas el comando, así que ejecútalo desde la raíz de tu proyecto; un glob absoluto se usa tal cual. Una ruta que nombra un archivo existente se lee como ese archivo, aunque su nombre lleve un corchete, como el `app/[id]/page.tsx` de Next.js; solo una ruta que no nombra ningún archivo se lee como glob. En un glob, un `[` abre un conjunto de caracteres, así que `app/[locale]/**/*.tsx` coincide con una carpeta cuyo nombre es una de las letras `l`, `o`, `c`, `a` o `e`, no con `[locale]`: escribe el corchete como `[[]`, como en `app/[[]locale]/**/*.tsx`, que funciona en cualquier sistema, mientras que `\[` no funciona en Windows. Una carpeta no es un glob de los archivos que contiene: escribe `app/views/**/*`, no `app/views`. `**` coincide con cualquier número de carpetas, y `{rb,erb}` con cualquiera de las dos extensiones. Sirve cualquier archivo de texto, tenga la extensión que tenga, en UTF-8 o en UTF-16 con marca de orden de bytes, como lo escribe el `>` de Windows PowerShell 5.1. Cada glob tiene que coincidir con al menos un archivo, o el build falla y lo nombra, así que una errata no puede publicar una hoja de estilos vacía. Los archivos que excluye tu `.gitignore` se leen igualmente cuando un glob coincide con ellos, y no se lee nada fuera de tus globs. Un `*` o un `**` tampoco entra en una carpeta `node_modules`, así que las páginas de demostración de una dependencia nunca añaden clases: nómbrala para leer una, como en `node_modules/some-ui/**/*.html`. Un `*` o un `**` no coincide con un nombre que empieza por punto, así que `**/*.html` omite tanto `.hidden/page.html` como `.page.html`; escribe el punto para llegar a ellos, como en `.hidden/**/*.html`. El archivo de `--output` nunca se lee en busca de clases, aunque un glob coincida con él o con un enlace a él, y tampoco un archivo temporal con su nombre, `<output>.<random>.tmp`, que un build detenido antes de terminar puede dejar a su lado; un glob que no coincide con nada más falla.
 - Pon cada glob entre comillas, con `\"` dentro de un script de `package.json`. Sin comillas, tu shell puede expandir el glob a una lista de archivos antes de que el comando lo vea, y solo el primer archivo cuenta como valor de `--content`. Cuando eso deja nombres de archivo sobrantes, el build los rechaza en lugar de leer en silencio menos de lo que querías; cuando el glob coincidió con un solo archivo, el build lee solo ese archivo y nada de lo que tus plantillas añadan más adelante.
-- `--output <file>`, o `-o <file>`, es la hoja de estilos que se escribe. Es obligatorio, y se da una sola vez. Una ruta relativa se resuelve respecto a la carpeta desde la que ejecutas el comando, las carpetas padre que falten se crean, y una hoja de estilos que el comando escribió antes se reemplaza. Para que no pierdas un archivo por error, lee los primeros bytes de un archivo existente y rechaza el que no empiece con el aviso `/*! @codenhub/styles` del paquete, con el que empieza todo lo que escribe, tras el banner de Tailwind. Un archivo vacío o con solo espacios en blanco se reemplaza, y se rechazan un archivo que no puede leer, uno que nombre una entrada de `--content` y `-`, igual que una carpeta, una ruta que termina en un separador de carpetas o en un segmento `.` o `..`, como `public/` o `public/.`, un dispositivo como `/dev/null`, una tubería o un socket. Cuando `--output` es un enlace, se escribe el archivo al que lleva y el enlace se queda. En Linux y macOS, la hoja de estilos que reemplaza conserva sus permisos, su dueño y su grupo; solo root puede mantener a otro usuario como dueño, así que para cualquier otro el archivo pasa a ser suyo, conserva su grupo si pertenece a él, y el comando imprime en la salida de error una línea que empieza por `chs: warning:`, y aun así termina con estado 0. Un archivo tuyo de un grupo al que no perteneces sigue siendo tuyo y toma tu grupo, y el aviso nombra solo el grupo. Cuando cambia el dueño y los permisos no dejan leer el archivo a nadie más que a su dueño, como `0600`, el aviso dice además que el dueño anterior, como el usuario de tu servidor web, puede que ya no consiga leerlo; y cuando cambia el grupo y los permisos solo dejan leerlo al dueño y al grupo, como `0640`, dice lo mismo de los miembros del grupo anterior, como tu servidor web. Devuélveles el permiso de lectura, o ejecuta el build como el dueño del archivo, en su grupo.
-- `--aesthetic <name>` añade una de las [estéticas](../usage/aesthetics.md): `neobrutalism`, `glass`, `pixel`, `chunky-tile`, `cyber` o `sketch`. Repítelo para más de una; nombrar una dos veces la incluye una sola vez. Las estéticas se piden explícitamente porque el build no puede saber por tus plantillas cuál quieres: cada una se añade cuando la pides, sin sus reglas para las clases que tus plantillas no usan, y no se incluye ninguna cuando no lo haces.
+- `--output <file>`, o `-o <file>`, es la hoja de estilos que se escribe. Es obligatorio, y se da una sola vez. Una ruta relativa se resuelve respecto a la carpeta desde la que ejecutas el comando, las carpetas padre que falten se crean, y una hoja de estilos que el comando escribió antes se reemplaza. Para que no pierdas un archivo por error, lee los primeros bytes de un archivo existente y rechaza el que no empiece con el aviso `/*! @codenhub/styles` del paquete, con el que empieza todo lo que escribe, tras el banner de Tailwind. Un archivo vacío o con solo espacios en blanco se reemplaza, y se rechazan un archivo que no puede leer, uno que nombre una entrada de `--content` y `-`, igual que una carpeta, una ruta que termina en un separador de carpetas o en un segmento `.` o `..`, como `public/` o `public/.`, un dispositivo como `/dev/null`, o en Windows un nombre que Windows reserva para uno en cada carpeta, como `NUL`, `CON`, `COM1` o `LPT1`, con o sin extensión, una tubería o un socket. Cuando `--output` es un enlace, se escribe el archivo al que lleva y el enlace se queda. En Linux y macOS, la hoja de estilos que reemplaza conserva sus permisos, su dueño y su grupo; solo root puede mantener a otro usuario como dueño, así que para cualquier otro el archivo pasa a ser suyo, conserva su grupo si pertenece a él, y el comando imprime en la salida de error una línea que empieza por `chs: warning:`, y aun así termina con estado 0. Un archivo tuyo de un grupo al que no perteneces sigue siendo tuyo y toma tu grupo, y el aviso nombra solo el grupo. Cuando cambia el dueño y los permisos no dejan leer el archivo a nadie más que a su dueño, como `0600`, el aviso dice además que el dueño anterior, como el usuario de tu servidor web, puede que ya no consiga leerlo; y cuando cambia el grupo y los permisos solo dejan leerlo al dueño y al grupo, como `0640`, dice lo mismo de los miembros del grupo anterior, como tu servidor web. Devuélveles el permiso de lectura, o ejecuta el build como el dueño del archivo, en su grupo.
+- `--aesthetic <name>` añade una de las [estéticas](../usage/aesthetics.md): `neobrutalism`, `glass`, `pixel`, `chunky-tile`, `cyber` o `sketch`. Repítelo para más de una; nombrar una dos veces la incluye una sola vez. Las estéticas se piden explícitamente porque el build no puede saber por tus plantillas cuál quieres: cada una se añade cuando la pides, sin sus reglas para las clases que tus plantillas no usan, y no se incluye ninguna cuando no lo haces. Cuando un archivo que lee el build nombra una clase de una estética, como `glass` o `glass-liquid`, y no pediste esa estética, el build escribe igualmente la hoja de estilos, sin ella, e imprime una línea `chs: warning:` que nombra la clase y el `--aesthetic` que añadir. También cuenta una palabra en un texto, así que una página que dice "pixel" o "sketch" puede imprimirla sin motivo.
 - `--no-minify` escribe en su lugar CSS legible e indentado. Sirve para leer lo que generó el build; en producción sirve el archivo minificado.
 - `--help` imprime el uso, con las estéticas que trae esta versión. `--version` imprime la versión del paquete. Ninguno de los dos genera nada, y ambos terminan con estado 0.
 
-La salida siempre contiene el tema, sus design tokens como propiedades personalizadas de CSS, el reset, las reglas base de las que dependen todos los componentes y las clases que una página recibe en tiempo de ejecución en lugar de desde una plantilla, como `.theme-dark`. Encima va cada clase de StyleKit que usan tus plantillas. La salida se construye a partir de la hoja de estilos completa, no de `/native`, así que no incluye los mapeos sin clases. Un build cuyas plantillas nombran todas las clases escribe la hoja de estilos completa, byte a byte.
+La salida siempre contiene el tema, sus design tokens como propiedades personalizadas de CSS, el reset, las reglas base de las que dependen todos los componentes y cuatro clases, las nombre o no un archivo: `.dark`, `.theme-dark` y `.theme-light`, que cambian el tema, y `.disabled`. Encima va cada clase de StyleKit que usan los archivos que lee el build. Cualquier otra clase que un script añade en el navegador, como `.active` o `.indeterminate` en una barra de progreso, se conserva solo cuando la nombra un archivo que lee el build, así que pasa también tus scripts con un `--content`. La salida se construye a partir de la hoja de estilos completa, no de `/native`, así que no incluye los mapeos sin clases. Un build cuyas plantillas nombran todas las clases escribe la hoja de estilos completa, byte a byte.
 
 ### Cómo se encuentran las clases
 
 El build no ejecuta tus plantillas. Lee como texto simple cada archivo que coincide con tus globs de `--content`, recoge cada palabra que podría ser un nombre de clase y escribe las reglas de las palabras que son clases de StyleKit. Tailwind CSS también lee el contenido así.
+
+Solo se leen los archivos con los que coinciden tus globs, así que una clase que solo añade un script, como en `bar.classList.add("indeterminate")`, se encuentra solo cuando el script es uno de ellos. Nombra tus scripts con su propio `--content`, como `app/javascript/**/*.js`.
 
 Una clase tiene que aparecer en un archivo como una palabra completa. `class="btn primary"`, `class: "btn primary"` y `classes = ["btn", "primary"]` funcionan, y también una clase escrita antes o después de dos puntos, como en `class:primary={isPrimary}` de Svelte o en `btn: true` de un hash de Ruby. Una palabra que solo parece una clase también cuenta: un comentario que dice "card" añade todas las reglas de la tarjeta a la hoja de estilos, lo que agranda el archivo y no cambia nada en la página.
 
@@ -212,6 +216,12 @@ Un nombre de clase que tu código arma al renderizar nunca aparece completo en n
 
 - **Escribe los nombres de clase completos.** Asigna cada valor a un nombre de clase completo en un archivo que el build lea, como `{ "urgent" => "destructive", "normal" => "neutral" }.fetch(@order.priority)` en un helper.
 - **Enuméralos en un archivo de safelist.** Un archivo de texto simple con un nombre de clase por línea, añadido con su propio `--content`, como `--content config/stylekit-classes.txt`. Guárdalo junto al código que arma los nombres de clase, para que quien cambie uno vea el otro.
+
+Algunos archivos con los que coincide un glob no se leen en busca de clases, porque cada uno nombra todas las clases del paquete y conservaría la hoja de estilos entera: un archivo que empieza con el aviso `/*! @codenhub/styles` del paquete, con el que empieza toda hoja de estilos que escribe el comando, así que dos builds sobre una misma carpeta nunca se leen entre sí; una lista de nombres de clase copiada de `dist/purge/classes.json` del paquete; y un archivo idéntico, byte a byte, a uno que la versión instalada trae en `dist/`, como las copias que hacen `collectstatic` o Propshaft. Una copia de otra versión del paquete que no empieza con el aviso, como una estética o `theme.css` que un despliegue anterior dejó en `STATIC_ROOT`, sí se lee, así que limita tus globs a tus plantillas y scripts en lugar de la carpeta donde se recogen tus archivos estáticos.
+
+Una carpeta en la que un glob tiene que buscar y que no tienes permiso para listar hace fallar el build, que la nombra, en lugar de dejar fuera sus archivos.
+
+Cuando los archivos no nombran ninguna clase de StyleKit, el build escribe igualmente el tema y el reset, y termina con estado 0, pero imprime una línea `chs: warning:` que nombra los globs, porque un glob que nombra los archivos equivocados dejaría el sitio sin estilos sin decir nada.
 
 ### Variantes
 
@@ -242,7 +252,8 @@ Fija la versión. Por debajo de 1.0 una versión menor puede renombrar o elimina
 
 Cada fallo imprime una línea que empieza por `chs:` en la salida de error estándar y termina con estado 1, sin escribir el archivo de salida, así que un script de despliegue se detiene en lugar de publicar una hoja de estilos desactualizada o vacía. La línea dice qué salió mal y qué hacer:
 
-- **`missing --content` o `missing --output`.** Añade la que nombra. Un `--output` vacío o con solo espacios cuenta como ausente.
+- **`missing --content` o `missing --output`.** Añade la que nombra. Un `--content` o un `--output` vacío o con solo espacios cuenta como ausente, como el que da una variable sin definir en `--content "$TEMPLATES"`.
+- **`EACCES` o `EPERM`, nombrando una carpeta.** Un glob tiene que buscar en esa carpeta y no tienes permiso para listarla. Corrige sus permisos, o escribe el glob de modo que no entre en ella.
 - **`--content "<glob>" matches no file in <folder>`.** Suele ser una errata en la ruta, un comando ejecutado desde una carpeta distinta de la raíz de tu proyecto, o un glob de un lugar que tu proyecto no usa. Generar a partir de nada escribiría una hoja de estilos sin clases de componente, y el sitio perdería sus estilos sin avisar. Cuando se conoce una causa más probable, la línea la nombra en lugar de la ruta: un `*` o un `**` que solo coincidió con archivos dentro de `node_modules`, donde no entra, o un `[` leído como el inicio de un conjunto de caracteres, cuando escribirlo como `[[]`, que lee un corchete, coincidiría con un archivo.
 - **`--content "<path>" is a folder in <folder>, not a file`.** Nombra los archivos que contiene, como en `app/views/**/*`.
 - **`--content "<glob>" matches only --output <file>`.** El glob no coincidió con nada más que la hoja de estilos que escribe el build, que nunca se lee en busca de clases, como pasa con `public/*.css` una vez que el build escribió `public/stylekit.css`. Nombra las plantillas en su lugar.
@@ -254,7 +265,7 @@ Cada fallo imprime una línea que empieza por `chs:` en la salida de error está
 - **`missing command` o `unknown command "<name>"`.** La primera palabra después de `chs` tiene que ser `build`.
 - **`this command needs Node.js 26 or newer`.** Actualiza Node.js en la máquina que genera el CSS.
 - **`cannot write --output <file>: <reason> (<code>); <what to do>`.** `<reason>` y `<code>` son los de Node.js. `EACCES` o `EPERM` significa que no puedes escribir ahí, y en Windows también que el archivo es de solo lectura; `ENOSPC` significa que el disco está lleno.
-- **`--output <file> is a folder, not a file`**, o un dispositivo, una tubería o un socket, o **`--output <file> ends with a folder separator`**, o **`ends with a . or .. segment`**. Nombra un archivo de hoja de estilos, como uno dentro de la carpeta.
+- **`--output <file> is a folder, not a file`**, o un dispositivo, incluido en Windows un nombre como `NUL` o `com1.css` que Windows reserva para uno, una tubería o un socket, o **`--output <file> ends with a folder separator`**, o **`ends with a . or .. segment`**. Nombra un archivo de hoja de estilos, como uno dentro de la carpeta.
 - **`--output <file> holds something this command did not write`.** El archivo no es una hoja de estilos que escribió este comando, como una escrita a mano o la de un proveedor, así que reemplazarlo lo perdería. Nombra otro archivo o aparta este. Una copia de `@codenhub/styles`, `/components` o `/native` del paquete empieza con el mismo aviso, así que se reemplaza como una que escribió el comando; una copia de otro punto de entrada, como `/theme` o una estética, no, y se rechaza.
 - **`--output <file> is also a --content file`.** La salida nombra una plantilla, como en `--content index.html --output index.html`. Nombra una hoja de estilos para escribir.
 - **`cannot read --output <file> to check it is a stylesheet this command wrote`.** El archivo existe pero no puedes leerlo, así que el comando no puede saber si reemplazarlo perdería algo. Arregla sus permisos o nombra otro archivo.

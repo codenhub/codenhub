@@ -111,7 +111,7 @@ A Laravel app runs Vite by default, so it has a bundler: import the package from
 
 ## Build only the classes you use
 
-The package carries a command, `chs`, that reads your templates for class names and writes one minified stylesheet with only the StyleKit classes they use. A page that uses one button gets about an eighth of the full stylesheet; the exact size depends on which classes you use, since each component brings the shared rules it relies on.
+The package carries a command, `chs`, that reads your templates for class names and writes one minified stylesheet with only the StyleKit classes they use. A page that uses one button gets about a seventh of the full stylesheet; the exact size depends on which classes you use, since each component brings the shared rules it relies on.
 
 The command works with a bundler too. A project whose bundler does not run Tailwind, such as a plain Vite or webpack build, can write the stylesheet into its sources, `--output src/stylekit.css`, and import that file where it would import `@codenhub/styles`. A project that runs Tailwind CSS v4 gets the same trimming from the [source entrypoint](./tailwind.md) and does not need the command.
 
@@ -151,12 +151,14 @@ On success the command prints one line, the absolute path it wrote and the file'
 /home/you/shop/public/stylekit.css 24497 bytes
 ```
 
-Link that file from your layout like any static stylesheet.
+Link that file from your layout like any static stylesheet. A build can also print lines starting with `chs: warning:` to standard error, as [How classes are found](#how-classes-are-found) describes; they do not change its exit status.
+
+Each example below reads the scripts that add classes in the browser too, such as `.active` or `.indeterminate` on a [progress bar](../usage/feedback.md#show-progress), since a class no file the build reads names is left out. Leave that `--content` out if your scripts add none, since a glob that matches nothing fails the build.
 
 ### Rails views
 
 ```json
-"build:css": "chs build --content \"app/views/**/*.erb\" --content \"app/helpers/**/*.rb\" --output public/stylekit.css"
+"build:css": "chs build --content \"app/views/**/*.erb\" --content \"app/helpers/**/*.rb\" --content \"app/javascript/**/*.js\" --output public/stylekit.css"
 ```
 
 ```erb
@@ -167,7 +169,7 @@ Link that file from your layout like any static stylesheet.
 ### Laravel Blade views
 
 ```json
-"build:css": "chs build --content \"resources/views/**/*.blade.php\" --output public/css/stylekit.css"
+"build:css": "chs build --content \"resources/views/**/*.blade.php\" --content \"resources/js/**/*.js\" --output public/css/stylekit.css"
 ```
 
 ```blade
@@ -180,7 +182,7 @@ Link that file from your layout like any static stylesheet.
 A Django project keeps templates in a project-level `templates/` folder, in each app's own `templates/` folder, or both. Give one `--content` for each place yours live, and leave out any place you do not use, since a glob that matches nothing fails the build:
 
 ```json
-"build:css": "chs build --content \"templates/**/*.html\" --content \"shop/templates/**/*.html\" --output static/stylekit.css"
+"build:css": "chs build --content \"templates/**/*.html\" --content \"shop/templates/**/*.html\" --content \"static/js/**/*.js\" --output static/stylekit.css"
 ```
 
 ```django
@@ -194,16 +196,18 @@ Write the output into a folder listed in `STATICFILES_DIRS`, here `static/`, so 
 
 - `--content <glob>`, or `-c <glob>`, names the files to read for class names. It is required and repeatable: pass it once per glob, and the build reads every file any of them matches. A relative glob is resolved against the folder you run the command in, so run it from your project root; an absolute glob is used as given. A path that names an existing file is read as that file, even when its name holds a bracket, such as Next.js's `app/[id]/page.tsx`; only a path that names no file is read as a glob. In a glob, a `[` starts a set of characters, so `app/[locale]/**/*.tsx` matches a folder named with one of the letters `l`, `o`, `c`, `a`, or `e`, not `[locale]`: write the bracket as `[[]`, as in `app/[[]locale]/**/*.tsx`, which works on every system, where `\[` does not work on Windows. A folder is not a glob for the files in it: write `app/views/**/*`, not `app/views`. `**` matches any number of folders, and `{rb,erb}` either extension. Any text file works, whatever its extension, in UTF-8 or in UTF-16 with a byte order mark, as Windows PowerShell 5.1's `>` writes. Each glob has to match at least one file, or the build fails and names it, so a typo cannot ship an empty stylesheet. Files your `.gitignore` excludes are still read when a glob matches them, and nothing outside your globs is read. A `*` or `**` does not enter a `node_modules` folder either, so a dependency's demo pages never add classes: name it to read one, as in `node_modules/some-ui/**/*.html`. A `*` or `**` does not match a name that starts with a dot, so `**/*.html` skips both `.hidden/page.html` and `.page.html`; write the dot to reach them, as in `.hidden/**/*.html`. The `--output` file is never read for classes, even when a glob matches it, or a link to it does, and neither is a temporary file named after it, `<output>.<random>.tmp`, which a build stopped before it finished can leave beside it; a glob that matches nothing else fails.
 - Quote every glob, with `\"` inside a `package.json` script. Without quotes, your shell may expand the glob into a list of files before the command sees it, and only the first file counts as the `--content` value. When that leaves extra file names behind, the build rejects them rather than silently reading less than you meant; when the glob matched a single file, the build reads just that file and nothing your templates add later.
-- `--output <file>`, or `-o <file>`, is the stylesheet to write. It is required, and given once. A relative path is resolved against the folder you run the command in, missing parent folders are created, and a stylesheet the command wrote before is replaced. To keep you from losing a file by mistake, it reads the first bytes of an existing file and refuses one that does not start with the package's `/*! @codenhub/styles` notice, which everything it writes starts with, after Tailwind's banner. A file that is empty or holds only whitespace is replaced, and a file it cannot read, one a `--content` entry names, and `-` are refused, as is a folder, a path that ends with a folder separator or with a `.` or `..` segment, such as `public/` or `public/.`, a device such as `/dev/null`, a pipe, or a socket. When `--output` is a link, the file it leads to is written and the link stays. On Linux and macOS, the stylesheet it replaces keeps its permissions, owner, and group; only root can keep another user as the owner, so for anyone else the file becomes theirs, keeps its group when they are in it, and the command prints a line starting with `chs: warning:` to standard error, and still exits with status 0. A file you own of a group you are not in stays yours and takes your group, and the warning names the group alone. When the owner changes and the permissions let no one but the owner read the file, as `0600` does, the warning also says the previous owner, such as your web server's user, may no longer be able to read it; and when the group changes and the permissions let only the owner and the group read it, as `0640` does, it says the same of the previous group's members, such as your web server. Give them read access again, or build as the file's owner, in its group.
-- `--aesthetic <name>` adds one of the [aesthetics](../usage/aesthetics.md): `neobrutalism`, `glass`, `pixel`, `chunky-tile`, `cyber`, or `sketch`. Repeat it for more than one; naming one twice includes it once. Aesthetics are opt-in because the build cannot tell from your templates which one you want: each is added when you ask for it, less its rules for classes your templates do not use, and none is included when you do not.
+- `--output <file>`, or `-o <file>`, is the stylesheet to write. It is required, and given once. A relative path is resolved against the folder you run the command in, missing parent folders are created, and a stylesheet the command wrote before is replaced. To keep you from losing a file by mistake, it reads the first bytes of an existing file and refuses one that does not start with the package's `/*! @codenhub/styles` notice, which everything it writes starts with, after Tailwind's banner. A file that is empty or holds only whitespace is replaced, and a file it cannot read, one a `--content` entry names, and `-` are refused, as is a folder, a path that ends with a folder separator or with a `.` or `..` segment, such as `public/` or `public/.`, a device such as `/dev/null`, or on Windows a name Windows keeps for one in every folder, such as `NUL`, `CON`, `COM1`, or `LPT1`, with or without an extension, a pipe, or a socket. When `--output` is a link, the file it leads to is written and the link stays. On Linux and macOS, the stylesheet it replaces keeps its permissions, owner, and group; only root can keep another user as the owner, so for anyone else the file becomes theirs, keeps its group when they are in it, and the command prints a line starting with `chs: warning:` to standard error, and still exits with status 0. A file you own of a group you are not in stays yours and takes your group, and the warning names the group alone. When the owner changes and the permissions let no one but the owner read the file, as `0600` does, the warning also says the previous owner, such as your web server's user, may no longer be able to read it; and when the group changes and the permissions let only the owner and the group read it, as `0640` does, it says the same of the previous group's members, such as your web server. Give them read access again, or build as the file's owner, in its group.
+- `--aesthetic <name>` adds one of the [aesthetics](../usage/aesthetics.md): `neobrutalism`, `glass`, `pixel`, `chunky-tile`, `cyber`, or `sketch`. Repeat it for more than one; naming one twice includes it once. Aesthetics are opt-in because the build cannot tell from your templates which one you want: each is added when you ask for it, less its rules for classes your templates do not use, and none is included when you do not. When a file the build reads names an aesthetic's class, such as `glass` or `glass-liquid`, and you did not ask for that aesthetic, the build still writes the stylesheet, without it, and prints a `chs: warning:` line naming the class and the `--aesthetic` to add. A word in prose counts too, so a page that says "pixel" or "sketch" can print it for nothing.
 - `--no-minify` writes readable, indented CSS instead. Useful for reading what the build produced; serve the minified file.
 - `--help` prints the usage, with the aesthetics this version ships. `--version` prints the package version. Both build nothing and exit with status 0.
 
-The output always holds the theme, its design tokens as CSS custom properties, the reset, the base rules every component relies on, and the classes a page gets at run time rather than from a template, such as `.theme-dark`. On top of that comes each StyleKit class your templates use. The output is built from the complete stylesheet, not from `/native`, so it has no classless mappings. A build whose templates name every class writes the complete stylesheet, byte for byte.
+The output always holds the theme, its design tokens as CSS custom properties, the reset, the base rules every component relies on, and four classes whether or not a file names them: `.dark`, `.theme-dark`, and `.theme-light`, which switch the theme, and `.disabled`. On top of that comes each StyleKit class the files the build reads use. Any other class a script adds in the browser, such as `.active` or `.indeterminate` on a progress bar, is kept only when a file the build reads names it, so give your scripts a `--content` too. The output is built from the complete stylesheet, not from `/native`, so it has no classless mappings. A build whose templates name every class writes the complete stylesheet, byte for byte.
 
 ### How classes are found
 
 The build does not run your templates. It reads each file your `--content` globs match as plain text, collects every word that could be a class name, and writes the rules for the words that are StyleKit classes. This is how Tailwind CSS reads content too.
+
+Only the files your globs match are read, so a class that only a script adds, as in `bar.classList.add("indeterminate")`, is found only when the script is one of them. Name your scripts with their own `--content`, such as `app/javascript/**/*.js`.
 
 A class has to appear in a file as one whole word. `class="btn primary"`, `class: "btn primary"`, and `classes = ["btn", "primary"]` all work, and so does a class written before a colon or after one, as in Svelte's `class:primary={isPrimary}` or a Ruby hash's `btn: true`. A word that only looks like a class also counts: a comment that says "card" adds the card's full rules to the stylesheet, which makes the file larger and changes nothing on the page.
 
@@ -211,6 +215,12 @@ A class name your code assembles while rendering never appears whole in any file
 
 - **Write class names whole.** Map each value to a complete class name in a file the build reads, such as `{ "urgent" => "destructive", "normal" => "neutral" }.fetch(@order.priority)` in a helper.
 - **List them in a safelist file.** A plain text file with one class name per line, added with its own `--content`, such as `--content config/stylekit-classes.txt`. Keep it next to the code that builds the class names, so whoever changes one sees the other.
+
+Some files a glob matches are not read for classes, because each names every class the package has and would keep the whole stylesheet: a file that starts with the package's `/*! @codenhub/styles` notice, which every stylesheet the command writes does, so two builds over one folder never read each other; a list of class names copied from the package's `dist/purge/classes.json`; and a file that is the same, byte for byte, as one the installed version ships in `dist/`, such as the copies `collectstatic` or Propshaft makes of it. A copy from another version of the package that does not start with the notice, such as an aesthetic or `theme.css` left in `STATIC_ROOT` by an earlier deploy, is still read, so keep your globs to your templates and scripts rather than the folder your static files are collected into.
+
+A folder a glob has to look in and that you are not allowed to list fails the build, naming the folder, rather than leaving its files out.
+
+When the files name no StyleKit class at all, the build still writes the theme and the reset, and exits with status 0, but prints a `chs: warning:` line naming the globs, since a glob that names the wrong files would otherwise leave the site unstyled without a word.
 
 ### Variants
 
@@ -241,7 +251,8 @@ Pin the version. Below 1.0 a minor release may rename or remove a class, so the 
 
 Every failure prints one line starting with `chs:` to standard error and exits with status 1, without writing the output file, so a deploy script stops instead of shipping a stale or empty stylesheet. The line says what went wrong and what to do:
 
-- **`missing --content` or `missing --output`.** Add the one it names. An `--output` that is empty or only spaces counts as missing.
+- **`missing --content` or `missing --output`.** Add the one it names. A `--content` or `--output` that is empty or only spaces counts as missing, as an unset variable gives in `--content "$TEMPLATES"`.
+- **`EACCES` or `EPERM`, naming a folder.** A glob has to look in that folder and you are not allowed to list it. Fix its permissions, or write the glob so it does not enter the folder.
 - **`--content "<glob>" matches no file in <folder>`.** Usually a typo in the path, a command run from another folder than your project root, or a glob for a place your project does not use. Building from nothing would write a stylesheet with no component classes, and the site would quietly lose its styling. When a likelier cause is known, the line names it instead of the path: a `*` or `**` that matched files only inside `node_modules`, which it does not enter, or a `[` read as the start of a set of characters, when writing it as `[[]`, which matches a bracket, would match a file.
 - **`--content "<path>" is a folder in <folder>, not a file`.** Name the files in it, as in `app/views/**/*`.
 - **`--content "<glob>" matches only --output <file>`.** The glob matched nothing but the stylesheet the build writes, which is never read for classes, as `public/*.css` does once the build has written `public/stylekit.css`. Name the templates instead.
@@ -253,7 +264,7 @@ Every failure prints one line starting with `chs:` to standard error and exits w
 - **`missing command` or `unknown command "<name>"`.** The first word after `chs` has to be `build`.
 - **`this command needs Node.js 26 or newer`.** Update Node.js on the machine that builds the CSS.
 - **`cannot write --output <file>: <reason> (<code>); <what to do>`.** `<reason>` and `<code>` are Node.js's own. `EACCES` or `EPERM` means you cannot write there, and on Windows also that the file is read-only; `ENOSPC` means the disk is full.
-- **`--output <file> is a folder, not a file`**, or a device, a pipe, or a socket, or **`--output <file> ends with a folder separator`**, or **`ends with a . or .. segment`**. Name a stylesheet file, such as one inside the folder.
+- **`--output <file> is a folder, not a file`**, or a device, including on Windows a name such as `NUL` or `com1.css` that Windows keeps for one, a pipe, or a socket, or **`--output <file> ends with a folder separator`**, or **`ends with a . or .. segment`**. Name a stylesheet file, such as one inside the folder.
 - **`--output <file> holds something this command did not write`.** The file is not a stylesheet this command wrote, such as one you wrote by hand or a vendor's, so replacing it would lose it. Name another file, or move this one away. A copy of `@codenhub/styles`, `/components`, or `/native` from the package starts with the same notice, so it is replaced as one the command wrote; a copy of another entrypoint, such as `/theme` or an aesthetic, does not, and is refused.
 - **`--output <file> is also a --content file`.** The output named a template, as in `--content index.html --output index.html`. Name a stylesheet to write.
 - **`cannot read --output <file> to check it is a stylesheet this command wrote`.** The file exists but you cannot read it, so the command cannot tell whether replacing it would lose something. Fix its permissions or name another file.

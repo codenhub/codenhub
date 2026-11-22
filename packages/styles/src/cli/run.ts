@@ -7,7 +7,7 @@ import { parseArgs } from "node:util";
 
 import { findFiles, readFiles, splitWords, UnmatchedEntryError } from "@codenhub/scan";
 
-import { format, parse, purge, serialize } from "./purge";
+import { classesOf, format, parse, purge, serialize } from "./purge";
 
 export interface CliIo {
   cwd: string;
@@ -31,6 +31,10 @@ const HEAD_BYTES = 1024;
 /* What every stylesheet this command has written starts with: the package's
    notice, after Tailwind's banner. The compiled stylesheets carry it too. */
 const WRITTEN_HEAD = /^\s*(?:\/\*! tailwindcss [^*]*\*\/\s*)?\/\*! @codenhub\/styles\b/;
+/* The names Windows reserves for a device in every folder, with any extension
+   and in any case: `-o NUL` or `-o public/com1.css` wrote a file that `del`
+   cannot remove. */
+const WINDOWS_DEVICE = /^(?:con|prn|aux|nul|conin\$|conout\$|com[0-9¹²³]|lpt[0-9¹²³])\s*(?:\..*)?$/i;
 
 const USAGE = `Usage: ${BIN} build --content <glob> [--content <glob> ...] --output <file> [options]
 
@@ -103,7 +107,8 @@ function parseCommandLine(argv: readonly string[]): BuildOptions | "help" | "ver
       `unexpected argument "${extra[0]}"; quote each --content glob so the shell does not expand it, as in --content "app/views/**/*.erb".`,
     );
   }
-  if (!values.content?.length) {
+  // A quoted variable left empty, as in `-c "$TEMPLATES"`, named the working directory, and the advice for a folder named the root of the disk.
+  if (!values.content?.length || values.content.some((entry) => entry.trim() === "")) {
     throw new Error(`missing --content; name the templates to scan, as in --content "app/views/**/*.erb".`);
   }
 
@@ -135,6 +140,11 @@ function parseCommandLine(argv: readonly string[]): BuildOptions | "help" | "ver
     throw new Error(
       `--output ${output} ends with a . or .. segment, so it names a folder, not a file; name a stylesheet to write, as in --output ${output}${lastSegment[1] || "/"}app.css.`,
     );
+  }
+
+  // A rename onto such a name writes a real file there, past the `stat` that finds a device elsewhere.
+  if (process.platform === "win32" && WINDOWS_DEVICE.test(path.win32.basename(output))) {
+    throw new Error(`--output ${output} is a device, not a file; name a stylesheet to write.`);
   }
 
   return {
@@ -225,22 +235,30 @@ async function build(options: BuildOptions, io: CliIo): Promise<string> {
   const contents = readContent(options.contentGlobs, io.cwd, target, options.output);
 
   const droppable = new Set(JSON.parse(await readPackageFile(PURGE_CLASSES)) as string[]);
+  const source = parse(await readPackageFile(PURGE_SOURCE));
+  const aesthetics = await readAesthetics(validAesthetics, classesOf(source));
+  const known = { has: (name: string) => droppable.has(name) || aesthetics.owners.has(name) };
+  const shipped = await readShippedSizes();
   const found = new Set<string>();
 
   // One file at a time, so a broad glob holds only the file being read and the classes found so far.
   for (const content of contents) {
-    for (const name of findClasses(content, droppable)) {
+    // oxlint-disable-next-line no-await-in-loop -- one file at a time, as the loop reads them
+    if (await isPackageCopy(content, droppable, shipped)) {
+      continue;
+    }
+    for (const name of findClasses(content, known)) {
       found.add(name);
     }
   }
   // A class this command may not drop is one no template has to name, such as `.theme-dark`, so it always counts as used.
   const used = { has: (name: string) => found.has(name) || !droppable.has(name) };
 
-  const stylesheets = await Promise.all(
-    [PURGE_SOURCE, ...options.aesthetics.map((name) => resolveExport(`./aesthetics/${name}`))].map(readPackageFile),
-  );
   const write = options.shouldMinify ? serialize : format;
-  const css = stylesheets.map((stylesheet) => write(purge(parse(stylesheet), used))).join("");
+  const css = [source, ...options.aesthetics.map((name) => aesthetics.trees.get(name) ?? [])]
+    .map((tree) => write(purge(tree, used)))
+    .join("");
+  const warnings = warningsFor(options, found, droppable, aesthetics.owners);
 
   /* Written beside the output and renamed over it, so a write that fails
      partway, on a full disk say, leaves the previous stylesheet whole rather
@@ -270,11 +288,149 @@ async function build(options: BuildOptions, io: CliIo): Promise<string> {
   }
 
   // After the rename, so a build that fails prints its one line and no warning.
-  if (warning !== undefined) {
-    io.stderr(warning);
+  for (const line of warning === undefined ? warnings : [...warnings, warning]) {
+    io.stderr(line);
   }
 
   return output;
+}
+
+type Tree = ReturnType<typeof parse>;
+
+/* Each aesthetic's stylesheet, parsed, and the classes only it styles, by the
+   aesthetic they belong to: those its file names that the stylesheet does not,
+   under the aesthetic's name or a name that starts with it, such as
+   `glass-liquid` and `glass-solo`. An aesthetic's file names the others'
+   classes too, to leave them alone, so being named in it does not make a class
+   its own. Read from the build, so a new aesthetic or class needs no change
+   here. */
+async function readAesthetics(
+  names: readonly string[],
+  stylesheetClasses: ReadonlySet<string>,
+): Promise<{ trees: Map<string, Tree>; owners: Map<string, string> }> {
+  const trees = new Map<string, Tree>();
+  const owners = new Map<string, string>();
+  const files = await Promise.all(names.map((name) => readPackageFile(resolveExport(`./aesthetics/${name}`))));
+
+  for (const [index, name] of names.entries()) {
+    const tree = parse(files[index] ?? "");
+
+    trees.set(name, tree);
+    for (const className of classesOf(tree)) {
+      if (!stylesheetClasses.has(className) && (className === name || className.startsWith(`${name}-`))) {
+        owners.set(className, name);
+      }
+    }
+  }
+
+  return { trees, owners };
+}
+
+/* A build that finds no class still writes the theme and the reset, and exits
+   0, since a page may use the tokens and the reset alone; but a site whose
+   globs name the wrong files loses its styling that way, so it is said. An
+   aesthetic's class is styled only under its `--aesthetic`, which a template
+   cannot ask for, so a class named without it is said too, rather than taken
+   as the request. */
+function warningsFor(
+  options: BuildOptions,
+  found: ReadonlySet<string>,
+  droppable: ReadonlySet<string>,
+  owners: ReadonlyMap<string, string>,
+): string[] {
+  const warnings: string[] = [];
+
+  if (![...found].some((name) => droppable.has(name))) {
+    const entries = options.contentGlobs.map((entry) => `"${entry}"`).join(", ");
+
+    warnings.push(
+      `${BIN}: warning: --content ${entries} names no StyleKit class, so the stylesheet holds only the theme and the reset; check that the globs name your templates.`,
+    );
+  }
+
+  const unrequested = new Map<string, string[]>();
+
+  for (const name of [...found].sort()) {
+    const owner = owners.get(name);
+
+    if (owner !== undefined && !options.aesthetics.includes(owner)) {
+      unrequested.set(owner, [...(unrequested.get(owner) ?? []), name]);
+    }
+  }
+  for (const [aesthetic, names] of unrequested) {
+    const quoted = names.map((name) => `"${name}"`);
+    const listed = quoted.length === 1 ? quoted[0] : `${quoted.slice(0, -1).join(", ")} and ${quoted.at(-1)}`;
+
+    warnings.push(
+      `${BIN}: warning: --content names ${listed}, which only --aesthetic ${aesthetic} styles; add --aesthetic ${aesthetic}, or leave the class out.`,
+    );
+  }
+
+  return warnings;
+}
+
+/* The files this package ships under `dist/`, by size, so a content file is
+   compared with one only when the sizes agree. */
+async function readShippedSizes(): Promise<Map<number, string[]>> {
+  const dist = path.join(packageRoot, "dist");
+  const sizes = new Map<number, string[]>();
+  const entries = await fs.readdir(dist, { recursive: true, withFileTypes: true });
+
+  for (const entry of entries.filter((dirent) => dirent.isFile())) {
+    const file = path.join(entry.parentPath, entry.name);
+    // oxlint-disable-next-line no-await-in-loop -- a few dozen files at most
+    const { size } = await fs.stat(file);
+
+    sizes.set(size, [...(sizes.get(size) ?? []), file]);
+  }
+
+  return sizes;
+}
+
+/* A copy of what this package ships, or of what this command wrote, names
+   every class it holds, so read as content it kept them all: Django's
+   `collectstatic` copies the package's `dist/` into `staticfiles/`, and two
+   builds over one folder read each other. A file that starts with the
+   package's notice is one of them; so is a JSON list of class names holding at
+   least half of this version's, as a copy of `purge/classes.json` from this or
+   a nearby version does and a safelist does not; and so is a file the same as
+   one this version ships, such as an aesthetic, which carries no notice. */
+async function isPackageCopy(
+  content: string,
+  droppable: ReadonlySet<string>,
+  shipped: ReadonlyMap<number, readonly string[]>,
+): Promise<boolean> {
+  if (WRITTEN_HEAD.test(content.slice(0, HEAD_BYTES))) {
+    return true;
+  }
+  if (/^\s*\[/.test(content) && isClassList(content, droppable)) {
+    return true;
+  }
+
+  for (const file of shipped.get(Buffer.byteLength(content)) ?? []) {
+    // oxlint-disable-next-line no-await-in-loop -- rarely more than one file of a size
+    if ((await fs.readFile(file, "utf8")) === content) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+function isClassList(content: string, droppable: ReadonlySet<string>): boolean {
+  let list: unknown;
+
+  try {
+    list = JSON.parse(content);
+  } catch {
+    return false;
+  }
+
+  return (
+    Array.isArray(list) &&
+    list.every((item) => typeof item === "string") &&
+    list.filter((item: string) => droppable.has(item)).length >= droppable.size / 2
+  );
 }
 
 /* A name anyone could guess, such as one from the process ID, let whoever can
@@ -524,7 +680,7 @@ function readContent(entries: readonly string[], cwd: string, output: string, gi
     let matched: string[];
 
     try {
-      matched = findFiles([entry], { cwd, failOnUnmatched: true, skipNodeModules: true });
+      matched = findFiles([entry], { cwd, failOnUnmatched: true, failOnUnreadable: true, skipNodeModules: true });
     } catch (error) {
       throw error instanceof UnmatchedEntryError ? new Error(`--content ${error.message}`) : error;
     }
