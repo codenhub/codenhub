@@ -118,6 +118,10 @@
       calc(var(--_corner-surface) * var(--ui-corner-tl, 1)) calc(var(--_corner-surface) * var(--ui-corner-tr, 1))
         calc(var(--_corner-surface) * var(--ui-corner-br, 1)) calc(var(--_corner-surface) * var(--ui-corner-bl, 1))
     );
+    /* The aesthetic's shape without pixel's notch, which `box` reads with the
+       notch's own length: the surface replaces that length above, and a surface
+       is square under `.pixel`. */
+    corner-shape: var(--ui-corner-shape, round);
     /* No silhouette clip, whatever the aesthetic's `--ui-clip`: a clip cuts
        everything inside the element, and a surface is the box that holds other
        things. Under `.pixel` a tooltip in a card computed visible and was never
@@ -159,13 +163,24 @@
        declarations compute to `unset`, which is what an undeclared one is. Both
        slots are spent where the flag is on, so a host there carries no
        `::before` or `::after` of its own. See
-       docs/internal/model.md#glass-liquid. */
+       docs/internal/model.md#glass-liquid.
+
+       Not a `<dialog>` or a popover. The user agent places those in the top
+       layer with `position: fixed`, or a non-modal dialog with `absolute`, at
+       user-agent origin, which any author rule beats: anchored, a
+       `<dialog class="card">` opened 1683px above the window on a page
+       scrolled 2000px in WebKit, and a toast popover pinned to the window's
+       corner scrolled with the page. Either is already positioned, so the
+       layers still have their anchor. */
     :where(&) {
       --_layers-anchor: var(--_surface-stacks) relative;
       --_layers-isolation: var(--_glass-liquid-on) isolate;
 
-      position: var(--_layers-anchor, revert-layer);
       isolation: var(--_layers-isolation, revert-layer);
+    }
+
+    :where(&:not(dialog, [popover])) {
+      position: var(--_layers-anchor, revert-layer);
     }
 
     /* A surface holding an open tooltip steps above the next one, where
@@ -179,6 +194,14 @@
        is, so the pointer crossing the gap onto a bubble that overhangs the next
        surface lands on the bubble.
 
+       Not a tooltip only. Anything else that overhangs a surface was trapped
+       the same way: a menu absolutely placed under a button in one card, at
+       `z-index: 50`, was painted under the next card in every engine. So a
+       surface also steps up while it holds focus, the way a menu opened from
+       the keyboard or by a click is held, or holds something open: a popover,
+       a `[data-state="open"]` widget, or an `[open]` element. Hover alone
+       lifts only a surface holding a tooltip, which opens on hover.
+
        One step, not the popover layer: a sibling surface rests at `auto`, and
        a sticky header or an open menu at `z-index: 10` stays above a card
        whose field has focus. Elsewhere a surface is no stacking context, the
@@ -189,7 +212,7 @@
        `var(--_surface-stacks) 1` turned `auto` there, and dropped a sticky
        header's `z-index: 10` set in `@layer components` while it held focus.
        See docs/usage/tooltips.md. */
-    :where(&:has(.tooltip):is(:hover, :focus-within), &:has(.tooltip[data-state="open"])) {
+    :where(&:has(.tooltip):hover, &:focus-within, &:has(:popover-open, [data-state="open"], [open])) {
       --_surface-raise: var(--_surface-stacks) 1;
 
       z-index: var(--_surface-raise, revert-layer);

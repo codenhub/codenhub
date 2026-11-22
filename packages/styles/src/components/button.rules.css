@@ -218,5 +218,9 @@
           calc(var(--_corner) * var(--ui-corner-br, 1)) calc(var(--_corner) * var(--ui-corner-bl, 1))
       )
     );
+    /* A pill keeps the aesthetic's own corner shape rather than pixel's notch,
+       which on a fully round corner draws a cross; see `pixel.css`. */
+    --_pill-shape: var(--_m-pill) var(--ui-corner-shape, round);
+    corner-shape: var(--_pill-shape, var(--_notch-shape, var(--ui-corner-shape, round)));
   }
 }

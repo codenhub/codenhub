@@ -126,6 +126,9 @@
       calc(var(--_corner) * var(--ui-corner-tl, 1)) calc(var(--_corner) * var(--ui-corner-tr, 1))
         calc(var(--_corner) * var(--ui-corner-br, 1)) calc(var(--_corner) * var(--ui-corner-bl, 1))
     );
+    /* And the shape `box` gives that corner, pixel's notch included, which
+       `surface` leaves off. */
+    corner-shape: var(--_notch-shape, var(--ui-corner-shape, round));
 
     /* Inside `.tooltip`, at the class's own specificity: placed beside the
        trigger, hidden at rest, and grown in. `:where()` keeps the host out of

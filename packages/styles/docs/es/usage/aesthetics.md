@@ -2,7 +2,7 @@
 title: Estéticas
 description: Los seis aspectos opcionales, lo que cada uno cambia en un componente, sus controles y sus límites.
 order: 6
-source: 22bdaf42bfaf87e96f07b1c1c950b1cee169fa58
+source: f152706f9c55c0f5a6a2f967f21e4a4862537d64
 ---
 
 # Estéticas
@@ -92,9 +92,14 @@ La sombra se proyecta en la propia intención del componente, así que un botón
 
 - Toda superficie en una región glass es de vidrio, incluidas una `.card.soft`, un `.panel` y una `.alert` neutros.
 - El vidrio es el fondo, no el relleno. Una presentación conserva todo su relleno, así que un botón `.solid`, un toggle marcado y una tarjeta o tabla `.solid` son opacos; los cristales esmerilados son los de por defecto, `.soft` y `.ghost`.
+- El fondo de un cristal esmerilado es el 59% del color de la página: el mínimo que mantiene el texto del cuerpo a 4.5:1 sobre un fondo negro o blanco, en los dos temas. El texto de una intención sobre un cristal tintado, como una `.card.soft.info`, está pensado para el fondo propio de la página y no se garantiza sobre el opuesto: sobre negro en el tema claro, o blanco en el oscuro, se midió hasta 1.6:1. Pon los cristales con intención sobre un fondo cercano al color de la página, o hazlos `.solid`.
 - Un cristal dentro de una tarjeta, panel o alerta `.solid` es opaco: a través de un cristal translúcido se ve la superficie rellena que hay detrás, y el texto del cristal bajaba de 4.5:1. Descansa sobre el fondo de la página, así que su texto conserva el contraste que tiene sobre la página.
 - El desenfoque solo se aplica a `.card`, `.panel`, `.alert`, la burbuja del tooltip y una `.data-table` por defecto o `.soft`. Los controles se quedan sólidos y se apoyan sobre el vidrio: un desenfoque bajo cada control de un grupo denso cuesta una capa compuesta por cada uno y se percibe como ruido. Los controles siguen tomando el radio, el borde y la sombra de la estética.
 - Con `prefers-reduced-transparency: reduce`, y con colores forzados, las superficies de vidrio pierden el desenfoque y se vuelven opacas. Los colores forzados reemplazan los colores pero conservan su transparencia, así que sin esto un panel dejaría ver la página a través del fondo del sistema.
+- Cada superficie de vidrio es su propia capa, y el desenfoque la convierte en el bloque contenedor de todo lo que tenga dentro con `position: fixed`: un toast o un menú fijo dentro de una tarjeta se ubica respecto de la tarjeta, y se desplaza con ella, en lugar de respecto de la ventana. Pon un elemento fijo fuera de la superficie, o ábrelo como `popover` o `<dialog>`, que la capa superior del navegador ubica respecto de la ventana esté donde esté en la página.
+- Las superficies tienen `position: relative` en reposo, así que un hijo con posición absoluta se ubica respecto de su superficie. Un `<dialog>` o `[popover]` que lleva una clase de superficie conserva la ubicación que le da el navegador.
+- Una superficie sube una capa, `z-index: 1`, mientras contiene el foco, un popover abierto o un elemento con `[open]` o `data-state="open"`, y mientras el puntero está sobre una que contiene un tooltip, así que un menú o una burbuja que sobresale sobre la tarjeta siguiente se pinta por encima de ella. Un paso queda por debajo de tus propias capas, como un encabezado sticky. Una superficie a la que diste tu propio `z-index` lo conserva.
+- Cada superficie esmerilada visible cuesta tiempo en cada fotograma que pinta la página. Medido en Chromium con GPU y 300 tarjetas en pantalla, un fotograma tardó una mediana de 8.3ms sin estética, 16.4ms con `.glass` (21.9ms en el percentil 90) y 31.7ms con `.glass-liquid` (51.6ms en el percentil 90, 393ms en el peor caso). Reserva el vidrio para los cristales que lo necesitan en lugar de cada fila de una lista larga, y no uses `.glass-liquid` en filas repetidas.
 - Los botones y una `.card` que lo active se pulsan con el `scale(0.97)` simple; con movimiento reducido la pulsación sigue ocurriendo, al instante.
 - No tiene fuente propia y define en la región la del tema, `--font-default`, como hace neobrutalism.
 - Los controles de texto y los toggles dibujan su línea con la tinta de la página al 55% en lugar del fino borde blanco, que borraría un checkbox sin marcar en una página clara. Es `--ui-control-ink`; defínelo en la región para elegir otro.
@@ -122,7 +127,7 @@ La lente la dibuja un filtro SVG en `backdrop-filter`, que Chromium renderiza y 
 - Decide la región más cercana. Una región de otra estética anidada dentro de una región liquid, o de `.glass` simple, conserva su propio material y no toma capas, y una región liquid anidada a su vez dentro de esa vuelve a tomarlas.
 - Sin `.glass` en el ámbito, solo cambia las esquinas.
 - Con `prefers-reduced-transparency: reduce`, y con colores forzados, desaparecen el desenfoque y la lente y la superficie es opaca, como con glass.
-- El texto queda sobre un cristal más claro que con glass. Sobre contenido recargado, comprueba que tu texto se sigue leyendo: el fondo es el 30% del color de la página, frente al 45% de glass.
+- El texto queda sobre un cristal más claro que con glass, y por debajo de la regla de 4.5:1 para texto: el fondo es el 30% del color de la página, frente al 59% de glass. El texto del cuerpo se midió a 2.06:1 sobre un fondo negro en el tema claro, y a 1.86:1 sobre uno blanco en el tema oscuro. Usa liquid sobre un fondo cercano al color de la página, como un degradado suave o una foto atenuada, y pon el texto que tiene que leerse en una superficie `.solid` o bajo `.glass` simple.
 
 #### Botones liquid
 
@@ -159,6 +164,7 @@ Un botón es un cristal liquid cuando él mismo lleva `.glass-liquid`, dentro de
 - Las superficies también son cuadradas: una `.card`, un `.panel` o una `.alert` conserva el anillo interior, pero no recibe recorte ni recorta nada. Un recorte cortaría todo lo que contiene, así que un tooltip dentro de una tarjeta, una sombra o un anillo de foco quedarían recortados.
 - Las tablas, las barras de progreso y los skeletons también son cuadrados. Una tabla no recibe recorte porque en Chromium y WebKit su caja incluye el caption, y el recorte caería en el caption en lugar de en las filas. Las barras de progreso y los skeletons solo toman la esquina cuadrada.
 - Un bloque de código `.pre` es escalonado como un botón. No tiene borde por defecto, así que el recorte se ve sin contorno alrededor.
+- Donde el navegador dibuja `corner-shape`, como hace Chromium, el escalón es una esquina con muesca en lugar de un recorte, y no se recorta nada: una insignia fijada más allá de la esquina de un botón, un menú que se abre desde él y su anillo de foco se ven enteros. Un navegador que no lo dibuja, como Firefox, recorta la esquina con `clip-path`, que corta todo lo que sobresale del borde del elemento; ahí, mantén la insignia dentro del botón. Un botón `.pill` es una píldora simple donde se dibuja la muesca, porque una muesca en un extremo redondo sería un mordisco.
 - El contorno es un anillo interior, porque un recorte elimina un borde real; por el mismo motivo, el anillo de foco es una segunda capa interior en lugar de un outline. Los dos son el propio borde del elemento y no una sombra, así que el borde responde a `.edged` y `.edgeless` como lo hace un borde: un badge `.edgeless` y un botón `.solid` no dibujan ninguno, una tarjeta `.edged` dibuja uno, y un campo conserva el suyo pida lo que pida un contenedor.
 - El anillo de foco interior es más fino en una caja más pequeña, `.sm`, `.p-sm` o `.p-xs`, para que un botón de icono pequeño no pierda de vista su icono. Lleva dentro una línea de 2px del color de la página. El anillo es del color principal, así que en un botón `.solid.primary` se dibujaría sobre su propio color; la línea es lo que se ve ahí.
 - Con colores forzados desaparecen tanto el anillo como el recorte, porque el sistema elimina todas las sombras de caja: los componentes dibujan un borde real de 2px y esquinas rectas, y `.pixel-solo` un outline hacia dentro.

@@ -60,7 +60,9 @@ const COMPILED_CEILINGS: Record<string, number> = {
   "dist/aesthetics/cyber.css": 4_900,
   "dist/aesthetics/glass.css": 14_700,
   "dist/aesthetics/neobrutalism.css": 4_750,
-  "dist/aesthetics/pixel.css": 5_100,
+  /* 5,100 until 0.11.0 drew the step as a `corner-shape: notch` where an
+     engine draws one, beside the polygon, on components and solo actions. */
+  "dist/aesthetics/pixel.css": 5_620,
   "dist/aesthetics/sketch.css": 15_350,
   /* Read by `chs build`, never served, but every consumer installs it. */
   /* 314,500 until 0.11.0 kept tracking off scripts that join their letters,
