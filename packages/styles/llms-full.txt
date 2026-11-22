@@ -877,7 +877,7 @@ Then link it from the layout, by its path below that folder:
 
 Point the path at `node_modules/@codenhub` rather than at `dist/` itself. Propshaft serves files by their path below each asset folder, so adding `dist/` directly would publish a bare `index.css` that collides with any `index.css` of your own.
 
-The files you link are in `dist/`, which holds finished CSS with no `@import` to resolve, plus an empty `index.d.ts` for TypeScript and the `chs build` command with the files it reads. The Tailwind source lives in `tw/`, outside `dist/`, so a static pipeline that serves or fingerprints `dist/` meets no `@import` it cannot resolve.
+The files you link are in `dist/`, which holds finished CSS with no `@import` to resolve, plus an empty `index.d.cts` for TypeScript and the `chs build` command with the files it reads. The Tailwind source lives in `tw/`, outside `dist/`, so a static pipeline that serves or fingerprints `dist/` meets no `@import` it cannot resolve.
 
 ### Django
 
@@ -895,7 +895,7 @@ STATICFILES_DIRS = [
 <link rel="stylesheet" href="{% static 'codenhub-styles/index.css' %}" />
 ```
 
-Point the prefix at `dist`, not at the package folder. `dist/` holds finished CSS with no `@import` to resolve, plus an empty `index.d.ts` for TypeScript and the `chs build` command with the files it reads, which the storage copies as they are, so `collectstatic` also works with `ManifestStaticFilesStorage`, which fingerprints each file and rewrites the references inside it. The package folder also holds the Tailwind source in `tw/`, whose `@import "tailwindcss/..."` lines that storage cannot resolve.
+Point the prefix at `dist`, not at the package folder. `dist/` holds finished CSS with no `@import` to resolve, plus an empty `index.d.cts` for TypeScript and the `chs build` command with the files it reads, which the storage copies as they are, so `collectstatic` also works with `ManifestStaticFilesStorage`, which fingerprints each file and rewrites the references inside it. The package folder also holds the Tailwind source in `tw/`, whose `@import "tailwindcss/..."` lines that storage cannot resolve.
 
 ### Laravel
 
@@ -3689,7 +3689,7 @@ That completes the reading path. The [Introduction](docs/index.md) links every p
 
 # 0.11.0
 
-Most pages see a change after upgrading, even with no classes beyond the defaults. The bare `.light` and `.dark` classes no longer theme a region: use `.theme-light`, `.theme-dark`, or `data-theme`, though `.dark` on `<html>` still works. Under the system's reduced-motion setting, what moves still stops at once, but color and opacity now fade. Glass panes are less see-through, pixel's stepped corner is a notch where the browser draws one, and a long button label wraps. The package no longer declares `tailwindcss` as a peer. The breaking entries come first under each heading below.
+Most pages see a change after upgrading, even with no classes beyond the defaults. The bare `.light` and `.dark` classes no longer theme a region: use `.theme-light`, `.theme-dark`, or `data-theme`, though `.dark` on `<html>` still works. Under the system's reduced-motion setting, what moves still stops at once, but color and opacity now fade. Glass panes are less see-through, pixel's stepped corner is a notch where the browser draws one, and a long button label wraps. The package no longer declares `tailwindcss` as a peer, and the empty type declaration is `index.d.cts`. The breaking entries come first under each heading below.
 
 An app with its own contrast and motion settings can now pass them to the package with `data-contrast` and `data-motion` on `<html>`. Node.js 24 is the floor again, down from 26.
 
@@ -3712,6 +3712,7 @@ An app with its own contrast and motion settings can now pass them to the packag
 - **Breaking: a `chs build` wildcard stays out of `node_modules`.** Run from a project's root, `--content "**/*.html"` read every dependency's demo pages, and `**/*` read the package's own list of every class, so the whole stylesheet shipped. A `*` or `**` no longer enters a `node_modules` folder, and a glob that matched only files there now fails, naming it. To read a dependency's templates, name the folder, as in `--content "node_modules/some-ui/**/*.html"`. See [Without a bundler](docs/integrating/without-a-bundler.md).
 - **Breaking: a long `.btn` label wraps.** A button kept its label on one line whatever its container, so on a 320px screen a long label scrolled the page sideways. A label stays on one line while it fits, then wraps, balanced, when its container is narrower. A button in a flex row still shrinks when the row runs out of room, so its label may wrap onto two lines instead of pushing its neighbors out; an icon button keeps its square. Add `white-space: nowrap` to keep a label on one line. A label wraps between words only, so a single word wider than its container still overflows. See [Buttons](docs/usage/buttons.md).
 - **Breaking: `.tooltip-bubble` hides and positions itself only inside `.tooltip`.** On its own, the class is now only the look, so a bubble that a positioning library or a `popover` opens shows when it is open. A bubble outside `.tooltip` that relied on the class to stay hidden needs hiding of its own. See [Tooltips](docs/usage/tooltips.md).
+- **Breaking: the empty TypeScript declaration is `index.d.cts`.** Every export's `types` condition, and the top-level `types` field, now name `dist/index.d.cts` or `tw/index.d.cts` in place of `index.d.ts`, so `import "@codenhub/styles";` typechecks in a CommonJS file under `module: node16` or `node18`, where it failed with TS1479. Code that names `@codenhub/styles/dist/index.d.ts` by path has to name the new file.
 - **The package supports Node.js 24 or newer, down from 26.** `engines.node` is `>=24`, and `chs build` runs there. See [Setup → Requirements](docs/setup.md#requirements).
 - **A read-only field rests on the quiet field color and does not react to the pointer.** An `.ipt` or `.textarea` with `readonly`, and an `.input-group` holding one, now rests on `--color-foreground` and keeps that color under the pointer, with its text at full strength and its focus ring, so it reads as a value to read rather than a place to type. See [Forms → Read-only fields](docs/usage/forms.md#read-only-fields).
 - **An `.alert`'s message flows around its icon.** It used to sit in a column beside the icon; it now runs as one paragraph, with the lines after the first continuing under the icon.

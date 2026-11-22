@@ -2,7 +2,7 @@
 title: Sin bundler
 description: Enlazar las hojas de estilos compiladas desde HTML simple, Rails, Laravel, Django o cualquier aplicación renderizada en el servidor, y el build por línea de comandos.
 order: 6
-source: 5f87ea84cfdc6e00a85e4dbd04a4737bcc4207af
+source: 09e05a6f0f8b4204ccfa92492a00aa965a6700b1
 ---
 
 # Sin bundler
@@ -86,7 +86,7 @@ Después enlázala desde el layout, por su ruta dentro de esa carpeta:
 
 Apunta la ruta a `node_modules/@codenhub` y no directamente a `dist/`. Propshaft sirve los archivos por su ruta dentro de cada carpeta de assets, así que añadir `dist/` directamente publicaría un `index.css` suelto que choca con cualquier `index.css` tuyo.
 
-Los archivos que enlazas están en `dist/`, que contiene CSS terminado sin `@import` que resolver, más un `index.d.ts` vacío para TypeScript y el comando `chs build` con los archivos que lee. El código fuente de Tailwind vive en `tw/`, fuera de `dist/`, así que un pipeline estático que sirve `dist/` o le añade huellas no encuentra ningún `@import` que no pueda resolver.
+Los archivos que enlazas están en `dist/`, que contiene CSS terminado sin `@import` que resolver, más un `index.d.cts` vacío para TypeScript y el comando `chs build` con los archivos que lee. El código fuente de Tailwind vive en `tw/`, fuera de `dist/`, así que un pipeline estático que sirve `dist/` o le añade huellas no encuentra ningún `@import` que no pueda resolver.
 
 ### Django
 
@@ -104,7 +104,7 @@ STATICFILES_DIRS = [
 <link rel="stylesheet" href="{% static 'codenhub-styles/index.css' %}" />
 ```
 
-Apunta el prefijo a `dist`, no a la carpeta del paquete. `dist/` contiene CSS terminado sin `@import` que resolver, más un `index.d.ts` vacío para TypeScript y el comando `chs build` con los archivos que lee, que el almacenamiento copia tal cual, así que `collectstatic` también funciona con `ManifestStaticFilesStorage`, que añade una huella a cada archivo y reescribe las referencias que contiene. La carpeta del paquete también contiene el código fuente de Tailwind en `tw/`, cuyas líneas `@import "tailwindcss/..."` ese almacenamiento no puede resolver.
+Apunta el prefijo a `dist`, no a la carpeta del paquete. `dist/` contiene CSS terminado sin `@import` que resolver, más un `index.d.cts` vacío para TypeScript y el comando `chs build` con los archivos que lee, que el almacenamiento copia tal cual, así que `collectstatic` también funciona con `ManifestStaticFilesStorage`, que añade una huella a cada archivo y reescribe las referencias que contiene. La carpeta del paquete también contiene el código fuente de Tailwind en `tw/`, cuyas líneas `@import "tailwindcss/..."` ese almacenamiento no puede resolver.
 
 ### Laravel
 
