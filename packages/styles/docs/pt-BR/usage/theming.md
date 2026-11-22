@@ -2,7 +2,7 @@
 title: Temas
 description: Modo claro e escuro, como trocar a paleta pelas cores da marca, como definir uma intenção própria, e cada token de cor, de intenção, fundamental e de fonte com o seu padrão.
 order: 5
-source: 7d28b927ede7667cfa4dc32c836dc3482d198200
+source: e5b82874c6aa7a8be9f4edea7d3bc53b4224159b
 ---
 
 # Temas
@@ -72,6 +72,8 @@ Com os entrypoints de código-fonte do Tailwind (`/tw`), o pacote substitui a va
 ```
 
 Ela difere dos tokens em um caso: um tema explícito aninhado dentro do tema oposto. Um elemento `.theme-light` dentro de um `.theme-dark` tem tokens claros, porque o `color-scheme` mais próximo vence. Mas `dark:` casa por seletor, e `.theme-dark *` casa com todo elemento dentro de `.theme-dark`, então um utilitário `dark:` dentro daquele elemento `.theme-light` ainda se aplica. Se uma página usa tanto tokens quanto utilitários `dark:`, não aninhe temas opostos.
+
+`dark:` lê só os seletores de tema, nunca `color-scheme`, então um tema com nome seu também precisa ter um deles. Com o `@codenhub/theme` e temas com nomes diferentes de `light` e `dark`, como um `paper` claro e um `ink` escuro, a raiz recebe `data-theme="paper"`, a classe `theme-paper` e um `color-scheme: light` inline, e o `dark:` não lê nenhum deles: com a preferência escura do sistema, todo utilitário `dark:` vale na página `paper` mesmo com os tokens claros. Dê também à raiz `.theme-light` ou `.theme-dark`, conforme o esquema do tema. O `@codenhub/theme` aplica uma classe por tema, então defina a opção `className` dele como `` ({ colorScheme }) => `theme-${colorScheme}` `` e selecione um tema específico pelo atributo, como `[data-theme="paper"]`, que ele continua escrevendo. A opção `darkClass` dele adiciona `.dark` a um tema escuro, o que cobre `ink` com o sistema claro, mas não `paper` com o sistema escuro.
 
 Os entrypoints compilados não definem uma variante `dark:`; eles não têm um build do Tailwind em que defini-la. O [comando `chs build`](../integrating/without-a-bundler.md#variantes) oferece `dark:`, sim, com os mesmos seletores, só nas classes de intenção, apresentação e modificador.
 

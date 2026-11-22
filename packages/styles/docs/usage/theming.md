@@ -72,6 +72,8 @@ With the Tailwind source entrypoints (`/tw`), the package replaces Tailwind's `d
 
 It differs from the tokens in one case: an explicit theme nested inside the opposite one. A `.theme-light` element inside a `.theme-dark` one has light tokens, because the nearest `color-scheme` wins. But `dark:` matches by selector, and `.theme-dark *` matches every element inside `.theme-dark`, so a `dark:` utility inside that `.theme-light` element still applies. If a page uses both tokens and `dark:` utilities, do not nest opposite themes.
 
+`dark:` reads only the theme selectors, never `color-scheme`, so a theme you name yourself has to carry one of them too. With `@codenhub/theme` and themes named other than `light` and `dark`, such as a light `paper` and a dark `ink`, the root gets `data-theme="paper"`, the class `theme-paper`, and an inline `color-scheme: light`, and `dark:` reads none of them: under a dark system preference, every `dark:` utility applies on the `paper` page although its tokens are light. Give the root `.theme-light` or `.theme-dark` as well, matching the theme's scheme. `@codenhub/theme` applies one class per theme, so set its `className` option to `` ({ colorScheme }) => `theme-${colorScheme}` ``, and select a single theme by its attribute, such as `[data-theme="paper"]`, which it still writes. Its `darkClass` option adds `.dark` to a dark theme, which covers `ink` on a light system but not `paper` on a dark one.
+
 The compiled entrypoints do not define a `dark:` variant; they have no Tailwind build to define it in. The [`chs build` command](../integrating/without-a-bundler.md#variants) does offer `dark:`, with the same selectors, on the intent, presentation, and modifier classes only.
 
 ## Change the brand color

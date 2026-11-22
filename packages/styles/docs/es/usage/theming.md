@@ -2,7 +2,7 @@
 title: Temas
 description: Modo claro y oscuro, reemplazar la paleta con los colores de marca, definir una intención propia, y cada token de color, intención, base y fuente con su valor por defecto.
 order: 5
-source: 7d28b927ede7667cfa4dc32c836dc3482d198200
+source: e5b82874c6aa7a8be9f4edea7d3bc53b4224159b
 ---
 
 # Temas
@@ -72,6 +72,8 @@ Con los puntos de entrada de código fuente de Tailwind (`/tw`), el paquete reem
 ```
 
 Se diferencia de los tokens en un caso: un tema explícito anidado dentro del opuesto. Un elemento `.theme-light` dentro de uno `.theme-dark` tiene tokens claros, porque gana el `color-scheme` más cercano. Pero `dark:` coincide por selector, y `.theme-dark *` coincide con cada elemento dentro de `.theme-dark`, así que una utilidad `dark:` dentro de ese elemento `.theme-light` se sigue aplicando. Si una página usa a la vez tokens y utilidades `dark:`, no anides temas opuestos.
+
+`dark:` lee solo los selectores de tema, nunca `color-scheme`, así que un tema al que le das tu propio nombre también tiene que llevar uno de ellos. Con `@codenhub/theme` y temas con nombres distintos de `light` y `dark`, como un `paper` claro y un `ink` oscuro, la raíz recibe `data-theme="paper"`, la clase `theme-paper` y un `color-scheme: light` en línea, y `dark:` no lee ninguno de ellos: con una preferencia oscura del sistema, cada utilidad `dark:` se aplica en la página `paper` aunque sus tokens sean claros. Da también a la raíz `.theme-light` o `.theme-dark`, según el esquema del tema. `@codenhub/theme` aplica una clase por tema, así que define su opción `className` como `` ({ colorScheme }) => `theme-${colorScheme}` `` y selecciona un tema concreto por su atributo, como `[data-theme="paper"]`, que sigue escribiendo. Su opción `darkClass` añade `.dark` a un tema oscuro, lo que cubre `ink` con el sistema claro, pero no `paper` con el sistema oscuro.
 
 Los puntos de entrada compilados no definen una variante `dark:`; no tienen un build de Tailwind en el que definirla. El [comando `chs build`](../integrating/without-a-bundler.md#variantes) sí ofrece `dark:`, con los mismos selectores, solo en las clases de intención, presentación y modificador.
 
