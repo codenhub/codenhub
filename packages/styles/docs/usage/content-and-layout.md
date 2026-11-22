@@ -113,7 +113,7 @@ A disabled `.interactive` or `.pressable` card shows the not-allowed cursor inst
 The settings screen lists API keys in a table:
 
 ```html
-<div class="table-wrap">
+<div class="table-wrap" tabindex="0" role="region" aria-label="API keys">
   <table class="data-table">
     <caption class="visually-hidden">
       API keys
@@ -198,6 +198,8 @@ A table takes the surface corner, like a card beside it. The corner cells carry 
 - Shadows, such as a `.raised` table's, get no room and are cut off.
 
 Keep the wrapper on any table that could be wider than its container; without it, a wide table widens the whole page.
+
+Make the wrapper focusable with `tabindex="0"`, and name it as a region with `role="region"` and an `aria-label`, as the example does. Someone using a keyboard scrolls a wide table by focusing the wrapper and using the arrow keys; Firefox, and Chrome from version 130, let them focus a scrolling element on their own, but Safari and older Chrome do not, so without `tabindex` a keyboard user there cannot reach the columns that are cut off. The name tells a screen reader user what the focused region holds. A focused wrapper draws the focus ring every element does.
 
 ## Quotes, code, and keys
 

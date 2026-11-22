@@ -41,10 +41,12 @@ The corners scale with the size, as a button's do. A `.textarea` keeps its 7rem 
 
 ```html
 <div class="cluster tight">
-  <input class="ipt sm" aria-label="Coupon code" />
+  <input class="ipt sm" aria-label="Coupon code" style="flex: 1 1 0" />
   <button class="btn sm" type="button">Apply</button>
 </div>
 ```
+
+A text control takes the full width of its container, so in a row it would push the button onto the next line. `flex: 1 1 0` lets it share the row instead, taking what the button leaves.
 
 ## Show a validation error
 
@@ -59,6 +61,8 @@ Mark the control invalid with `aria-invalid="true"` and give the error message `
 ```
 
 An invalid control draws its border and typed text in the destructive color, whatever intent class it has and whatever surface it sits on, so on a `.card.solid` it is drawn as its `.destructive` version. A field inside an invalid `.input-group` prints in the surface's text color there, as in an `.input-group.destructive`. Its focus ring is the one a valid control draws, set by [`--focus-ring`](./theming.md#foundation-tokens). The text uses the readable tone of that color, `--intent-strong`, so it stays legible on the page. The package only paints the state: deciding that the value is invalid, setting and clearing `aria-invalid`, and writing the message are your code. Remove `aria-invalid` once the value is valid again; leaving it set keeps the field red. On a checkbox, radio, or switch, `aria-invalid="true"` draws the toggle exactly as `.destructive` does, checked mark included.
+
+The browser's own validation is painted the same way. A control that fails a constraint you set in HTML, such as `required`, `type="email"`, or `pattern`, matches `:user-invalid` once the person has changed it and left it, or has tried to submit the form, and it then draws as `aria-invalid="true"` does, its `.input-group` included. Before that it stays neutral, so an empty required field is not red when the page loads. The browser does not write the message for you to style; keep showing your own `.hint.destructive`. If your code decides validity itself, set `aria-invalid="false"` on the control to keep the browser's verdict from painting it.
 
 A hint takes any of the six built-in intents, not only `.destructive`: `.hint.success` confirms a value was accepted, and `.hint.warning` flags one that is allowed but unusual. Each prints in its intent's readable tone, `--intent-strong`, which holds 4.5:1 against the page in both themes. A hint with no intent, with `.neutral`, or with an [intent you defined yourself](./theming.md#your-own-intent), stays secondary-colored, and on a solid surface takes the surface's text color, as a group's prefix, a table caption, and `.quote-inline` do. Only a class on the hint itself colors it; an intent on the field or a container around it does not.
 
@@ -170,7 +174,7 @@ The settings screen has three kinds of toggle: a checkbox to opt into invoice em
 ```html
 <fieldset class="stack tight">
   <legend class="label">Notifications</legend>
-  <label class="cluster tight">
+  <label class="choice">
     <input class="checkbox" type="checkbox" name="invoice-email" checked />
     Email me when an invoice is ready
   </label>
@@ -178,24 +182,25 @@ The settings screen has three kinds of toggle: a checkbox to opt into invoice em
 
 <fieldset class="stack tight">
   <legend class="label">Billing period</legend>
-  <label class="cluster tight">
+  <label class="choice">
     <input class="radio" type="radio" name="period" value="monthly" />
     Monthly
   </label>
-  <label class="cluster tight">
+  <label class="choice">
     <input class="radio" type="radio" name="period" value="yearly" checked />
     Yearly, two months free
   </label>
 </fieldset>
 
-<label class="cluster tight">
+<label class="choice">
   <input class="switch primary" type="checkbox" role="switch" name="public-profile" />
   Public profile
 </label>
 ```
 
 - `.checkbox` goes on `type="checkbox"`, `.radio` on `type="radio"`, and `.switch` on `type="checkbox"`. Give a switch `role="switch"` yourself, so it is announced as on or off rather than checked.
-- `.cluster.tight` on the `<label>` lines the control up with its text and leaves a 0.5rem gap.
+- `.choice` on the `<label>` puts the control beside its text with a 0.5rem gap. Text too long for one line wraps beside the control, not under it, and the control stays centered on the first line. The text is one piece of the layout, so put rich text, such as a link or `<strong>`, inside a single `<span>`; each element left loose becomes a column of its own.
+- A `<legend>` in a `.stack` fieldset is spaced from the first option by the stack's gap, as the options are from each other. A browser draws a legend outside its fieldset's layout, so the gap alone never reached it.
 - A checkbox whose `indeterminate` property is set, for a group where only some items are checked, shows a dash, and keeps the dash while also `checked`, as the browser's own checkbox does. Set it from script (`input.indeterminate = true`); there is no attribute for it.
 
 ### Checked and unchecked colors
@@ -240,11 +245,22 @@ The border works the same way. An `.edgeless` inherited from a container is igno
 </div>
 ```
 
-At rest, a field's border is deliberately lighter than 3:1 against the page, so hover and focus have a visible change to make. [Accessibility → Control boundaries](../accessibility.md#control-boundaries) explains the trade-off and how to get a stronger border.
+At rest, a field's border is its intent's full border color, at least 3:1 against the page in both themes, so the field's edge meets WCAG 1.4.11 without a preference. Hover moves it to the intent's hover color and focus to the intent color, alongside the focus ring. [Accessibility → Control boundaries](../accessibility.md#control-boundaries) lists the measurements.
 
 ## Disabled controls
 
 `disabled`, `aria-disabled="true"`, `data-disabled`, or `.disabled` on a control draws it at reduced opacity with a not-allowed cursor. As with buttons, only the `disabled` attribute stops input; the others change the look only.
+
+## Read-only fields
+
+`readonly` on an `.ipt` or a `.textarea` keeps its value from being edited but leaves it focusable, selectable, and submitted with the form. The field rests on the quiet field color, `--color-foreground`, does not change under the pointer, and keeps its full-strength text and its focus ring, so it reads as a value to read rather than a place to type. It is not dimmed: dimming says a control is unavailable, and a read-only value is still there to read and copy. An `.input-group` whose field is read-only rests the same way.
+
+```html
+<div class="field">
+  <label class="label" for="account-id">Account ID</label>
+  <input class="ipt" id="account-id" name="account-id" value="acct_4821" readonly />
+</div>
+```
 
 ## Building your own control
 

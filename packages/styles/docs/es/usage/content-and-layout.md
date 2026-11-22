@@ -2,7 +2,7 @@
 title: Contenido y layout
 description: Consulta de cada helper de layout con su espaciado, la escala tipográfica con sus tamaños, las tarjetas y los paneles con su relleno interior, las tablas, las citas, el código y las teclas.
 order: 10
-source: a929c85000a850ab8b93af8c3da6bd3241468ba2
+source: 18df431402cededb628a4e9b814dbc9e448f5cf0
 ---
 
 # Contenido y layout
@@ -114,7 +114,7 @@ Una tarjeta `.interactive` o `.pressable` deshabilitada muestra el cursor de no 
 La pantalla de ajustes enumera las claves de API en una tabla:
 
 ```html
-<div class="table-wrap">
+<div class="table-wrap" tabindex="0" role="region" aria-label="API keys">
   <table class="data-table">
     <caption class="visually-hidden">
       API keys
@@ -199,6 +199,8 @@ Una tabla toma la esquina de superficie, como una tarjeta a su lado. Las celdas 
 - Las sombras, como la de una tabla `.raised`, no reciben espacio y quedan recortadas.
 
 Mantén el contenedor en cualquier tabla que pueda ser más ancha que su contenedor; sin él, una tabla ancha ensancha toda la página.
+
+Haz que el contenedor pueda recibir el foco con `tabindex="0"`, y nómbralo como región con `role="region"` y un `aria-label`, como hace el ejemplo. Quien usa el teclado desplaza una tabla ancha poniendo el foco en el contenedor y usando las flechas; Firefox, y Chrome desde la versión 130, permiten enfocar por sí solos un elemento con scroll, pero Safari y las versiones anteriores de Chrome no, así que sin `tabindex` un usuario de teclado en ellos no puede llegar a las columnas que quedan cortadas. El nombre le dice a quien usa lector de pantalla qué contiene la región enfocada. Un contenedor con foco dibuja el anillo de foco que dibuja cualquier elemento.
 
 ## Citas, código y teclas
 
