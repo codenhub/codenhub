@@ -2,7 +2,7 @@
 title: Estéticas
 description: Os seis visuais opcionais, o que cada um muda num componente, os seus ajustes e os seus limites.
 order: 6
-source: 503dfd424b0f0ce86bc1bb7948dec82d3557284f
+source: f152706f9c55c0f5a6a2f967f21e4a4862537d64
 ---
 
 # Estéticas
@@ -164,7 +164,7 @@ Um botão é uma placa liquid quando ele mesmo tem `.glass-liquid`, dentro de um
 - As superfícies também são quadradas: um `.card`, `.panel` ou `.alert` mantém o anel interno, mas não recebe corte nem recorta nada. Um recorte cortaria tudo dentro dele, então um tooltip num card, uma sombra ou um anel de foco ali seriam aparados.
 - Tabelas, barras de progresso e skeletons também são quadrados. Uma tabela não recebe corte porque, no Chromium e no WebKit, a caixa dela inclui a legenda, e o corte cairia na legenda em vez de nas linhas. Barras de progresso e skeletons recebem só o canto quadrado.
 - Um bloco de código `.pre` é escalonado como um botão. Ele não tem borda por padrão, então o corte aparece sem contorno em volta.
-- Onde o navegador desenha `corner-shape`, como o Chromium faz, o degrau é um canto com entalhe em vez de um recorte, e nada é recortado: um badge preso além do canto de um botão, um menu que abre a partir dele e o anel de foco aparecem inteiros. Firefox e Safari ainda não o desenham, e recortam o canto com `clip-path`, que corta tudo o que passa da borda do elemento; ali, mantenha o badge dentro do botão. Um botão `.pill` é uma pílula simples onde o entalhe é desenhado, porque um entalhe numa ponta redonda seria uma mordida.
+- Onde o navegador desenha `corner-shape`, como o Chromium faz, o degrau é um canto com entalhe em vez de um recorte, e nada é recortado: um badge preso além do canto de um botão, um menu que abre a partir dele e o anel de foco aparecem inteiros. Um navegador que não o desenha, como o Firefox, recorta o canto com `clip-path`, que corta tudo o que passa da borda do elemento; ali, mantenha o badge dentro do botão. Um botão `.pill` é uma pílula simples onde o entalhe é desenhado, porque um entalhe numa ponta redonda seria uma mordida.
 - O contorno é um anel interno, porque um recorte remove uma borda de verdade — e o anel de foco, pelo mesmo motivo, é uma segunda camada interna, e não um outline. Os dois são a própria borda do elemento, e não uma sombra, então a borda responde a `.edged` e `.edgeless` como uma borda responde: um badge `.edgeless` e um botão `.solid` não desenham nenhuma, um card `.edged` desenha uma, e um campo mantém a sua, peça o contêiner o que pedir.
 - O anel de foco interno é mais fino numa caixa menor, `.sm`, `.p-sm` ou `.p-xs`, para que um botão de ícone pequeno continue mostrando o ícone. Ele carrega uma linha de 2px na cor da página por dentro. O anel é da cor primária, então num botão `.solid.primary` ele seria desenhado sobre a sua própria cor; é a linha que aparece ali.
 - Em cores forçadas, o anel e o corte somem, porque o sistema remove todas as box shadows: os componentes desenham uma borda real de 2px e cantos quadrados, e o `.pixel-solo` um outline para dentro.

@@ -2,7 +2,7 @@
 title: Estéticas
 description: Los seis aspectos opcionales, lo que cada uno cambia en un componente, sus controles y sus límites.
 order: 6
-source: 503dfd424b0f0ce86bc1bb7948dec82d3557284f
+source: f152706f9c55c0f5a6a2f967f21e4a4862537d64
 ---
 
 # Estéticas
@@ -164,7 +164,7 @@ Un botón es un cristal liquid cuando él mismo lleva `.glass-liquid`, dentro de
 - Las superficies también son cuadradas: una `.card`, un `.panel` o una `.alert` conserva el anillo interior, pero no recibe recorte ni recorta nada. Un recorte cortaría todo lo que contiene, así que un tooltip dentro de una tarjeta, una sombra o un anillo de foco quedarían recortados.
 - Las tablas, las barras de progreso y los skeletons también son cuadrados. Una tabla no recibe recorte porque en Chromium y WebKit su caja incluye el caption, y el recorte caería en el caption en lugar de en las filas. Las barras de progreso y los skeletons solo toman la esquina cuadrada.
 - Un bloque de código `.pre` es escalonado como un botón. No tiene borde por defecto, así que el recorte se ve sin contorno alrededor.
-- Donde el navegador dibuja `corner-shape`, como hace Chromium, el escalón es una esquina con muesca en lugar de un recorte, y no se recorta nada: una insignia fijada más allá de la esquina de un botón, un menú que se abre desde él y su anillo de foco se ven enteros. Firefox y Safari todavía no lo dibujan, y recortan la esquina con `clip-path`, que corta todo lo que sobresale del borde del elemento; ahí, mantén la insignia dentro del botón. Un botón `.pill` es una píldora simple donde se dibuja la muesca, porque una muesca en un extremo redondo sería un mordisco.
+- Donde el navegador dibuja `corner-shape`, como hace Chromium, el escalón es una esquina con muesca en lugar de un recorte, y no se recorta nada: una insignia fijada más allá de la esquina de un botón, un menú que se abre desde él y su anillo de foco se ven enteros. Un navegador que no lo dibuja, como Firefox, recorta la esquina con `clip-path`, que corta todo lo que sobresale del borde del elemento; ahí, mantén la insignia dentro del botón. Un botón `.pill` es una píldora simple donde se dibuja la muesca, porque una muesca en un extremo redondo sería un mordisco.
 - El contorno es un anillo interior, porque un recorte elimina un borde real; por el mismo motivo, el anillo de foco es una segunda capa interior en lugar de un outline. Los dos son el propio borde del elemento y no una sombra, así que el borde responde a `.edged` y `.edgeless` como lo hace un borde: un badge `.edgeless` y un botón `.solid` no dibujan ninguno, una tarjeta `.edged` dibuja uno, y un campo conserva el suyo pida lo que pida un contenedor.
 - El anillo de foco interior es más fino en una caja más pequeña, `.sm`, `.p-sm` o `.p-xs`, para que un botón de icono pequeño no pierda de vista su icono. Lleva dentro una línea de 2px del color de la página. El anillo es del color principal, así que en un botón `.solid.primary` se dibujaría sobre su propio color; la línea es lo que se ve ahí.
 - Con colores forzados desaparecen tanto el anillo como el recorte, porque el sistema elimina todas las sombras de caja: los componentes dibujan un borde real de 2px y esquinas rectas, y `.pixel-solo` un outline hacia dentro.
