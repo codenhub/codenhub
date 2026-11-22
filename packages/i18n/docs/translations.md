@@ -108,7 +108,7 @@ t("home.title"); // "Bem-vindo", from pt
 A key is looked up in this order:
 
 1. The active locale.
-2. Each configured locale made by dropping its last subtags, such as `zh-Hant` for `zh-Hant-TW`. A parent written in another script is skipped: `zh` is Simplified Chinese, so a `zh-Hant` page falls back to the default rather than mixing scripts.
+2. Each configured locale made by dropping its last subtags, such as `zh-Hant` for `zh-Hant-TW`. A parent written in another script is skipped: `zh` is Simplified Chinese, so a `zh-Hant` page falls back to the default rather than mixing scripts. A deprecated language code counts as the one that replaced it, as `Intl` reads it, so `he-IL` falls back to a configured `iw`, and `iw-IL` to `he`. `no` and `nb` count as one language, as they do in [matching](index.md#turn-outside-input-into-a-locale).
 3. The configured locale named by its language and script, such as `zh-Hant` for `zh-HK`, which is written in Traditional Chinese, or `sr-Latn` for `sr-ME`. So a `zh-HK` dictionary can hold only what Hong Kong says differently.
 4. The default locale.
 

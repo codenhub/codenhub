@@ -94,7 +94,7 @@ An empty dictionary is accepted.
 
 The configuration is invalid. Most messages have the form `[I18n] Invalid configuration: <option>: <problem>`, so the option to fix is the first thing after the colon. Check that:
 
-- `locales` is a non-empty list with no duplicates, ignoring case, and each locale is ASCII letters and digits separated by hyphens, such as `pt-BR`.
+- `locales` is a non-empty list with no duplicates, ignoring case, and each locale is a language tag `Intl` accepts, such as `pt-BR`, or a private-use tag, such as `x-pirate`. A typo such as `en-US-US` fails with `Must be a language tag Intl accepts`.
 - `defaultLocale` is one of `locales`.
 - `loadLocale` is a function.
 - `timeZone`, when set, is one `Intl` knows. A typo gives `timeZone: Must be a time zone Intl supports, such as "America/Sao_Paulo" or "UTC"`.
@@ -136,7 +136,7 @@ Common causes:
 
 From `parse()`, the value is not a URL's pathname: it doesn't start with `/`, or it contains `?` or `#`. Pass `url.pathname` rather than the full URL or a path with its query string, such as Node's `request.url`. A path that is a pathname but contains something routing refuses, such as `//` or a dot segment, makes `parse()` return `undefined` instead, so a visitor's odd URL becomes a 404 rather than a crash.
 
-From `localize()` or `localizeAll()`, the path is one of those, or contains something routing refuses. The message quotes the path and names the rule it breaks, such as `[I18n] pathname "/help/../admin" must not contain a dot segment, . or ..`. [Paths it accepts](localized-urls.md#paths-it-accepts) has the full list, with the fix for each.
+From `localize()` or `localizeAll()`, the path is one of those, or contains something routing refuses. The message names the rule the path breaks and quotes the path, such as `[I18n] pathname "/help/../admin" must not contain a dot segment, . or ..`, except what a URL reads as user info, a query, or a fragment, which can hold a credential: a path with `?` or `#` is quoted only up to it, and one a URL reads as starting another host, such as `//example.com` or `/\example.com`, isn't quoted at all. [Paths it accepts](localized-urls.md#paths-it-accepts) has the full list, with the fix for each.
 
 ## `localize()` throws `RangeError`: "would be read as"
 

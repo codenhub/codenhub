@@ -2,7 +2,7 @@
 title: Solução de problemas
 description: O que cada erro e aviso quer dizer, e como resolver.
 order: 5
-source: 663dcefbeca29e2dc1e87c9222075b8dcc3a8e6c
+source: 0fcc7c701377e3490bfc2495311dd4cabf720a9e
 ---
 
 # Solução de problemas
@@ -95,7 +95,7 @@ Um dicionário vazio é aceito.
 
 A configuração é inválida. A maioria das mensagens tem o formato `[I18n] Invalid configuration: <option>: <problem>`, então a opção a corrigir é a primeira coisa depois dos dois-pontos. Confira se:
 
-- `locales` é uma lista não vazia, sem duplicatas (ignorando maiúsculas e minúsculas), e cada locale é feito de letras e dígitos ASCII separados por hífens, como `pt-BR`.
+- `locales` é uma lista não vazia, sem duplicatas (ignorando maiúsculas e minúsculas), e cada locale é uma tag de idioma que o `Intl` aceita, como `pt-BR`, ou uma tag de uso privado, como `x-pirate`. Um erro de digitação como `en-US-US` falha com `Must be a language tag Intl accepts`.
 - `defaultLocale` é um dos `locales`.
 - `loadLocale` é uma função.
 - `timeZone`, quando definido, é um que o `Intl` conhece. Um erro de digitação dá `timeZone: Must be a time zone Intl supports, such as "America/Sao_Paulo" or "UTC"`.
@@ -137,7 +137,7 @@ Causas comuns:
 
 Vindo de `parse()`, o valor não é o pathname de uma URL: ele não começa com `/`, ou contém `?` ou `#`. Passe `url.pathname` em vez da URL inteira ou de um caminho com a query string, como o `request.url` do Node. Um caminho que é um pathname mas contém algo que o roteamento recusa, como `//` ou um segmento de ponto, faz `parse()` devolver `undefined`, então a URL estranha de um visitante vira um 404 em vez de um crash.
 
-Vindo de `localize()` ou `localizeAll()`, o caminho é um desses, ou contém algo que o roteamento recusa. A mensagem cita o caminho e diz qual regra ele quebra, como `[I18n] pathname "/help/../admin" must not contain a dot segment, . or ..`. [Caminhos que ele aceita](localized-urls.md#caminhos-que-ele-aceita) tem a lista completa, com o conserto de cada um.
+Vindo de `localize()` ou `localizeAll()`, o caminho é um desses, ou contém algo que o roteamento recusa. A mensagem diz qual regra o caminho quebra e cita o caminho, como `[I18n] pathname "/help/../admin" must not contain a dot segment, . or ..`, exceto o que uma URL lê como informações de usuário, query ou fragmento, que podem conter uma credencial: um caminho com `?` ou `#` é citado só até esse caractere, e um que uma URL lê como o início de outro host, como `//example.com` ou `/\example.com`, não é citado. [Caminhos que ele aceita](localized-urls.md#caminhos-que-ele-aceita) tem a lista completa, com o conserto de cada um.
 
 ## `localize()` lança `RangeError`: "would be read as"
 

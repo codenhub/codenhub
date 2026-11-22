@@ -1,7 +1,7 @@
 ---
 title: Visión general
 description: Qué hace @codenhub/i18n, las cuatro ideas en las que se basa, un recorrido de cinco minutos, los idiomas de derecha a izquierda y cómo se comporta el gestor cuando las llamadas se superponen.
-source: 1a13a90d87946c842fc56686bca1d708aa96417b
+source: 9688cd5e72d7f9b4516d076de3bd61453e572a7b
 ---
 
 # Traduce tu app
@@ -275,7 +275,7 @@ El noruego tiene dos códigos para el bokmål, `no` y `nb`, y los navegadores en
 
 Un locale en otro script nunca coincide, porque una página en un script que el visitante no lee le sirve peor que su siguiente idioma. Con `zh`, que es chino simplificado, un visitante `zh-TW` que también incluye inglés recibe inglés, y uno que no incluye nada más recibe `undefined`.
 
-Un locale configurado que `Intl.Locale` rechaza, como uno con un subtag de uso privado de más de ocho caracteres, no tiene script probable. Coincide por idioma, y por el script que nombra cuando nombra uno.
+Un locale configurado de uso privado, como `x-pirate`, no tiene subtags probables, ya que `Intl.Locale` lo rechaza, así que solo coincide con una preferencia que lo nombre exactamente.
 
 El resto de su comportamiento es breve:
 

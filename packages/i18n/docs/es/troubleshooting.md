@@ -2,7 +2,7 @@
 title: Solución de problemas
 description: Qué significa cada error y cada advertencia, y cómo solucionarlo.
 order: 5
-source: 663dcefbeca29e2dc1e87c9222075b8dcc3a8e6c
+source: 0fcc7c701377e3490bfc2495311dd4cabf720a9e
 ---
 
 # Solución de problemas
@@ -95,7 +95,7 @@ Un diccionario vacío se acepta.
 
 La configuración no es válida. La mayoría de los mensajes tienen la forma `[I18n] Invalid configuration: <option>: <problem>`, así que la opción que hay que corregir es lo primero que aparece después de los dos puntos. Comprueba que:
 
-- `locales` sea una lista no vacía sin duplicados, ignorando mayúsculas y minúsculas, y que cada locale esté formado por letras y dígitos ASCII separados por guiones, como `pt-BR`.
+- `locales` sea una lista no vacía sin duplicados, ignorando mayúsculas y minúsculas, y que cada locale sea una etiqueta de idioma que `Intl` acepte, como `pt-BR`, o una etiqueta de uso privado, como `x-pirate`. Un error de tipeo como `en-US-US` falla con `Must be a language tag Intl accepts`.
 - `defaultLocale` sea uno de los `locales`.
 - `loadLocale` sea una función.
 - `timeZone`, cuando está definido, sea uno que `Intl` conoce. Una errata da `timeZone: Must be a time zone Intl supports, such as "America/Sao_Paulo" or "UTC"`.
@@ -137,7 +137,7 @@ Causas comunes:
 
 Si viene de `parse()`, el valor no es el pathname de una URL: no empieza con `/`, o contiene `?` o `#`. Pasa `url.pathname` en lugar de la URL completa o de una ruta con su query string, como el `request.url` de Node. Una ruta que sí es un pathname pero contiene algo que el routing rechaza, como `//` o un segmento de punto, hace en cambio que `parse()` devuelva `undefined`, así que la URL rara de un visitante se convierte en un 404 y no en un fallo de la app.
 
-Si viene de `localize()` o de `localizeAll()`, la ruta es una de esas, o contiene algo que el routing rechaza. El mensaje cita la ruta y nombra la regla que incumple, como `[I18n] pathname "/help/../admin" must not contain a dot segment, . or ..`. [Rutas que acepta](localized-urls.md#rutas-que-acepta) tiene la lista completa, con la solución para cada caso.
+Si viene de `localize()` o de `localizeAll()`, la ruta es una de esas, o contiene algo que el routing rechaza. El mensaje nombra la regla que la ruta incumple y cita la ruta, como `[I18n] pathname "/help/../admin" must not contain a dot segment, . or ..`, salvo lo que una URL lee como información de usuario, query o fragmento, que pueden contener una credencial: una ruta con `?` o `#` se cita solo hasta ese carácter, y una que una URL lee como el inicio de otro host, como `//example.com` o `/\example.com`, no se cita en absoluto. [Rutas que acepta](localized-urls.md#rutas-que-acepta) tiene la lista completa, con la solución para cada caso.
 
 ## `localize()` lanza `RangeError`: "would be read as"
 

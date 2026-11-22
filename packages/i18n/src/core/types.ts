@@ -80,7 +80,10 @@ export interface I18nConfig<TLocale extends string = string, TMessages = unknown
    * accept any string as a locale.
    */
   defaultLocale: NoInfer<TLocale>;
-  /** Non-empty, case-insensitively unique ASCII locale identifiers composed of alphanumeric hyphen-separated subtags. */
+  /**
+   * Non-empty, case-insensitively unique language tags that `Intl` accepts, such as `pt-BR`, or private-use tags, such
+   * as `x-pirate`.
+   */
   locales: readonly TLocale[];
   /**
    * Loads a flat or nested dictionary through a consumer-selected transport; callback failures become `I18nError`.
@@ -236,10 +239,10 @@ export interface I18n<TLocale extends string = string, TKey extends string = str
    * as whole subtags and with the same likely script, such as `pt` for `pt-BR`, then likely subtags, such as `zh-Hant`
    * for `zh-TW`, then the same language in the same likely script. `no` and `nb` count as one language, Norwegian
    * Bokmål, so either serves the other; Nynorsk, `nn`, stays apart. A locale in another script never matches, so with
-   * `zh`, which is Simplified, `zh-TW` tries the next preference. A configured locale `Intl.Locale` rejects has no likely
-   * script, so it matches by language, and by the script it names when it names one. When several configured locales share a preference's
-   * language and script and none matches it exactly or by likely region, the first in `locales` wins: list `es-419`
-   * before `es-ES` to serve `es-MX` from `es-419`. `es-ES`, and `es`, whose likely region is Spain, still match `es-ES`.
+   * `zh`, which is Simplified, `zh-TW` tries the next preference. A private-use locale, such as `x-pirate`, has no likely
+   * subtags, so it matches only exactly. When several configured locales share a preference's language and script and
+   * none matches it exactly or by likely region, the first in `locales` wins: list `es-419` before `es-ES` to serve `es-MX`
+   * from `es-419`. `es-ES`, and `es`, whose likely region is Spain, still match `es-ES`.
    *
    * @param preferences - Untrusted locale tags, most preferred first; blank, malformed, and non-string entries are
    * skipped, as are entries longer than 255 characters, and so is `und`, which names no language, unless a configured
