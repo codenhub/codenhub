@@ -79,64 +79,90 @@ describe("rich()", () => {
     expect(i18n.rich("quoted")).toEqual(["{", { tag: "b", children: ["}"] }]);
   });
 
-  // Every quoting form the parser reads, each with a tag in it or beside it: quoted text is never read as a tag, and
-  // t() shows the same text rich() does.
+  const show = async (message: string) => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const i18n = createI18n({ defaultLocale: "en", locales: ["en"], loadLocale: () => ({ m: message }) });
+    await i18n.init();
+    const shown = { text: i18n.t("m", { n: 1, v: "x" }), parts: i18n.rich("m", { n: 1, v: "x" }) };
+    expect(warn).not.toHaveBeenCalled();
+    return shown;
+  };
+
+  // Every quoting form the parser reads, each with a tag in its quoted run or beside it: quoted text is never read as a
+  // tag, and t() shows the same text rich() does.
   it.each([
-    { form: "an apostrophe before {", message: "'{<br/>}'", text: "{<br/>}", parts: ["{<br/>}"] },
-    { form: "an apostrophe before }", message: "'}<br/>'", text: "}<br/>", parts: ["}<br/>"] },
-    { form: "an apostrophe before <", message: "'<b>'bold'</b>'", text: "<b>bold</b>", parts: ["<b>bold</b>"] },
+    { form: "a run quoted by '{", message: "'{<br/>}'", text: "{<br/>}", parts: ["{<br/>}"] },
+    { form: "a run quoted by '}", message: "'}<br/>'", text: "}<br/>", parts: ["}<br/>"] },
     {
-      form: "a quoted element",
-      message: "'<b>bold</b>' plain",
-      text: "<b>bold</b> plain",
-      parts: ["<b>bold</b> plain"],
+      form: "a whole element in a quoted run",
+      message: "'{<b>bold</b>}' plain",
+      text: "{<b>bold</b>} plain",
+      parts: ["{<b>bold</b>} plain"],
     },
-    { form: "'' inside quoted text", message: "'<b>it''s</b>'", text: "<b>it's</b>", parts: ["<b>it's</b>"] },
+    { form: "'' inside a quoted run", message: "'{<b>it''s</b>}'", text: "{<b>it's</b>}", parts: ["{<b>it's</b>}"] },
     {
-      form: "a quote left open to the end",
-      message: "'<br/> to the end",
-      text: "<br/> to the end",
-      parts: ["<br/> to the end"],
+      form: "a quoted run left open to the end",
+      message: "'{<br/> to the end",
+      text: "{<br/> to the end",
+      parts: ["{<br/> to the end"],
     },
     {
-      form: "an apostrophe before # in a plural",
+      form: "a run quoted by '# in a plural",
       message: "{n, plural, other {'#<br/>'}}",
       text: "#<br/>",
       parts: ["#<br/>"],
     },
     {
-      form: "quoted text in a select option",
-      message: "{v, select, other {'<br/>'}}",
-      text: "<br/>",
-      parts: ["<br/>"],
+      form: "a quoted run in a select option",
+      message: "{v, select, other {'{<br/>}'}}",
+      text: "{<br/>}",
+      parts: ["{<br/>}"],
     },
     {
-      form: "quoted text inside a tag",
-      message: "<b>'<i>'x'</i>'</b>",
-      text: "<b><i>x</i></b>",
-      parts: [{ tag: "b", children: ["<i>x</i>"] }],
+      form: "a quoted run inside a tag",
+      message: "<b>'{<i>}'x</b>",
+      text: "<b>{<i>}x</b>",
+      parts: [{ tag: "b", children: ["{<i>}x"] }],
     },
-    { form: "quoted text that splits a tag", message: "<b'{'/>", text: "<b{/>", parts: ["<b{/>"] },
+    { form: "a quoted run that splits a tag", message: "<b'{'/>", text: "<b{/>", parts: ["<b{/>"] },
     {
       form: "'' before a tag, which is one apostrophe",
       message: "l''<b>été</b>",
       text: "l'<b>été</b>",
       parts: ["l'", { tag: "b", children: ["été"] }],
     },
+  ])("should keep $form as text, never a tag", async ({ message, text, parts }) => {
+    expect(await show(message)).toEqual({ text, parts });
+  });
+
+  // An apostrophe before `<` is an apostrophe, as in ICU, so an elision before a tag keeps it.
+  it.each([
     {
-      form: "a lone apostrophe before a letter, which is text",
+      form: "an elision before a tag",
+      message: "l'<b>été</b>",
+      text: "l'<b>été</b>",
+      parts: ["l'", { tag: "b", children: ["été"] }],
+    },
+    {
+      form: "an apostrophe before a lone <",
+      message: "Type '<' here",
+      text: "Type '<' here",
+      parts: ["Type '<' here"],
+    },
+    {
+      form: "apostrophes around an element",
+      message: "'<b>bold</b>'",
+      text: "'<b>bold</b>'",
+      parts: ["'", { tag: "b", children: ["bold"] }, "'"],
+    },
+    {
+      form: "an apostrophe before a letter",
       message: "Don't <b>stop</b>",
       text: "Don't <b>stop</b>",
       parts: ["Don't ", { tag: "b", children: ["stop"] }],
     },
-  ])("should keep $form as text, never a tag", async ({ message, text, parts }) => {
-    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
-    const i18n = createI18n({ defaultLocale: "en", locales: ["en"], loadLocale: () => ({ m: message }) });
-    await i18n.init();
-
-    expect(i18n.t("m", { n: 1, v: "x" })).toBe(text);
-    expect(i18n.rich("m", { n: 1, v: "x" })).toEqual(parts);
-    expect(warn).not.toHaveBeenCalled();
+  ])("should read $form as an apostrophe that quotes nothing", async ({ message, text, parts }) => {
+    expect(await show(message)).toEqual({ text, parts });
   });
 
   it("should allow 10 levels of tags", async () => {
