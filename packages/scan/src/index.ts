@@ -6,10 +6,13 @@ import fs from "node:fs";
 import path from "node:path";
 
 /**
- * The most patterns an entry's braces may expand to. `fs.globSync` walks once per pattern, and its
- * time grows faster than their number: in an empty folder on Node.js 26.13, 1,024 took 0.06 to
- * 0.2 seconds, 4,096 took 0.3, 16,384 took 2.7 to 8.7, and 32,768 took 41. Filed upstream as
- * nodejs/node#67711; once a release fixes it, revisit the limit.
+ * The most patterns an entry's braces may expand to. `fs.globSync` on Node.js 24 and 26 builds its
+ * matcher with minimatch 10.2.6, which compares every expanded pattern with every other to drop
+ * duplicates, so its time grows with the square of their number: in an empty folder on Node.js
+ * 26.13, 1,024 took 0.06 to 0.2 seconds, 4,096 took 0.3, 16,384 took 2.7 to 8.7, and 32,768
+ * took 41. minimatch 11.0.5 drops them without the pairwise compare, and Node.js `main` no longer
+ * uses minimatch; filed upstream as nodejs/node#67711. Revisit the limit once every supported
+ * Node.js release has either.
  */
 export const MAX_BRACE_EXPANSIONS = 1024;
 

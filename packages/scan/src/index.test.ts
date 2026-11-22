@@ -236,9 +236,9 @@ describe("findFiles", () => {
     );
   });
 
-  /* `fs.globSync` walks once per pattern a brace expands to, and its time
-     grows faster than their number: 18 groups of two took more than a
-     minute. Every brace form multiplies them: a list, a list inside a list,
+  /* `fs.globSync` compares every pattern a brace expands to with every other
+     (see `MAX_BRACE_EXPANSIONS`), so its time grows with the square of their
+     number: 18 groups of two took more than a minute. Every brace form multiplies them: a list, a list inside a list,
      and a numeric or letter range, stepped or not. */
   describe("brace expansions", () => {
     const limit = MAX_BRACE_EXPANSIONS;
