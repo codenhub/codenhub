@@ -24,9 +24,10 @@ Before judging anything, establish:
 
 - **Purpose and users.** Who calls this, how, and what they expect. For a library, write the calling code a consumer would write for the common case and for the hardest case.
 - **Stage.** Unreleased, experimental, or stable. The stage decides what a breaking change costs and which surface is about to freeze; it never turns a defect into a non-defect.
-- **Recorded decisions** in the area, with their reasons and the alternatives they rejected.
+- **Recorded decisions** in the area, with their reasons and the alternatives they rejected, and the project's recorded principles, the north star every decision serves.
+- **Recorded coverage.** The contexts and cases the last audit covered and ruled out, where the project keeps them. Start from that list and extend it, rather than sampling again.
 - **Recent history.** Commits, pull requests, and earlier audit results that touched the area, and why. An audit that undoes last week's fix, or reopens a decision on arguments already heard, is the failure this skill exists to prevent.
-- **Earlier fixes, first.** When the target was audited before, check each fix merged since then before auditing the rest: whether it covers every member of its finding's class (see "Evidence"), whether the same pattern survives elsewhere, and whether each claim its docs and changelog added holds beyond the case its test used. A fix covers the example it was given far more often than the class, so this is where a re-audit finds the most.
+- **Earlier fixes, first.** When the target was audited before, check each fix merged since then before auditing the rest: whether it covers every member of its finding's class (see "Evidence"), whether the same pattern survives elsewhere, and whether each claim its docs and changelog added holds beyond the case its test used. Check each fix for two things in particular. Class coverage: a hand-written list grown by the reported examples, nesting fixed one level deeper, or a treatment given to some members of a mechanism and not the rest. The docs sweep: when the fix removed or renamed behavior, search for the old spelling in every doc, translation, and generated file. A fix covers the example it was given far more often than the class, so this is where a re-audit finds the most.
 
 ## Questions
 
@@ -113,6 +114,7 @@ Then apply, in order:
 
 - Report a recorded decision as a `decision` finding only when you can name what it did not weigh: a case it gets wrong, a measurement, or a constraint that has changed. Without that, the decision stands; do not list it. When the alternative you prefer was already rejected, your evidence must answer the reason it was rejected.
 - Before reporting, check each finding against the recent history of its area. When a finding would undo a recent fix or reverse a recent decision, name that change and say why it was wrong.
+- Before proposing new surface, name the project's recorded principle it serves and check it is consistent with the surface that already exists, such as the axes or naming a new class has to fit. A proposal that fits no recorded principle is a question.
 - A fix that adds or changes public surface (an export, an option, a default, a limit, an error shape) is a decision, not a fix. Present it in the decision format below, include "change nothing" when it is viable, and prefer a fix that removes the problem without new surface.
 
 ## Several Auditors
@@ -182,3 +184,4 @@ Write `vulnerability` and `decision` findings as a short paragraph instead, sinc
 - Give each fix that changes behavior a test that fails before it and passes after. When no test can be written, ask the user before shipping the fix without one, and say so in the report.
 - When a fix turns out to need new public surface, stop and bring it back as a decision.
 - Record each decision the user takes where the project records decisions, with its reason and the alternatives rejected.
+- Keep coverage in the repository. Record the contexts the audit covered and its ruled-out list where the project keeps them, such as its test strategy, and turn each context that found a defect into a standing test, so the next audit builds on this one.
