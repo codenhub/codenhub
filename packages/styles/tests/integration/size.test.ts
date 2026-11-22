@@ -55,8 +55,9 @@ const COMPILED_CEILINGS: Record<string, number> = {
   /* 26,800 until 0.11.0 wrote each value once, as a `light-dark()` pair,
      where a light and a dark block each wrote all of them. */
   "dist/palette.css": 19_650,
-  // 50,450 until glass's lift and pixel's notch grew, as their own files did.
-  "dist/aesthetics/index.css": 51_500,
+  /* 50,450 until glass's lift and pixel's notch grew, as their own files did;
+     51,500 until liquid's tokens followed the nearest region. */
+  "dist/aesthetics/index.css": 52_900,
   /* 5,600 until 0.11.0 kept the solo class's tracking off scripts that join
      their letters or hang them from a headstroke: it ships without the
      components, so it carries the language list itself, regional languages
@@ -64,7 +65,9 @@ const COMPILED_CEILINGS: Record<string, number> = {
      languages and Rohingya joined the list. */
   "dist/aesthetics/chunky-tile.css": 6_350,
   "dist/aesthetics/cyber.css": 4_900,
-  "dist/aesthetics/glass.css": 14_700,
+  /* 14,700 until 0.11.0 gave liquid's tokens only where glass is the
+     nearest region, a second selector for each of six rules. */
+  "dist/aesthetics/glass.css": 16_200,
   "dist/aesthetics/neobrutalism.css": 4_750,
   /* 5,100 until 0.11.0 drew the step as a `corner-shape: notch` where an
      engine draws one, beside the polygon, on components and solo actions. */

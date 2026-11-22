@@ -31,3 +31,14 @@ test("the type scale, /native and .chunky-tile-solo name the same untracked lang
   expect(await languagesBefore("src/aesthetics/chunky-tile.css", "letter-spacing: normal")).toEqual(scale);
   expect(new Set(scale).size, "no tag twice").toBe(scale.length);
 });
+
+/* Vite's `build.license` collects each package's `LICENSE` and never reads
+   `NOTICE`, so `LICENSE` ends with a copy of it. An edit to one and not the
+   other left a Vite build carrying the old third-party notices. */
+test("LICENSE ends with NOTICE", async () => {
+  const [license, notice] = await Promise.all(
+    ["LICENSE", "NOTICE"].map((file) => readFile(path.join(packageRoot, file), "utf8")),
+  );
+
+  expect(license.endsWith(notice)).toBe(true);
+});

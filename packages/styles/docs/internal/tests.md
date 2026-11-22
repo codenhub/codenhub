@@ -146,10 +146,10 @@ Node-based Vitest checks validate every published target. Every compiled export 
 | `dist/native.css`                          | 364,491  | 27,357 | 375,500 |
 | `dist/theme.css`                           | 13,232   | 2,626  | 13,650  |
 | `dist/palette.css`                         | 19,038   | 2,510  | 19,650  |
-| `dist/aesthetics/index.css`                | 49,924   | 5,444  | 51,500  |
+| `dist/aesthetics/index.css`                | 51,294   | 5,506  | 52,900  |
 | `dist/aesthetics/chunky-tile.css`          | 6,161    | 1,526  | 6,350   |
 | `dist/aesthetics/cyber.css`                | 4,734    | 1,307  | 4,900   |
-| `dist/aesthetics/glass.css`                | 14,351   | 2,367  | 14,700  |
+| `dist/aesthetics/glass.css`                | 15,721   | 2,414  | 16,200  |
 | `dist/aesthetics/neobrutalism.css`         | 4,586    | 1,263  | 4,750   |
 | `dist/aesthetics/pixel.css`                | 5,458    | 1,316  | 5,620   |
 | `dist/aesthetics/sketch.css`               | 14,905   | 2,081  | 15,350  |

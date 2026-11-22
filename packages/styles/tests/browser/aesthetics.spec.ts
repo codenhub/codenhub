@@ -1360,6 +1360,46 @@ test.describe("aesthetics", () => {
         }
       });
 
+      /* Liquid's ink and ground, too: inside a pixel region nested in glass,
+         a `.card.glass-liquid` matched `.glass .glass-liquid` and took liquid's
+         clear ground and white rim in place of the region's own. */
+      test("gives a liquid element liquid's tokens by the nearest region", async ({ page, browserName }) => {
+        await allowTransparency(page, browserName);
+        await page.goto(SURFACES_URL);
+
+        const read = await page.getByTestId("preview-root").evaluate((root) => {
+          const others = ["neobrutalism", "pixel", "chunky-tile", "cyber", "sketch"];
+          const paint = (regions: string[]) => {
+            const wrapper = document.createElement("div");
+
+            wrapper.innerHTML = `${regions.map((region) => `<div class="${region}">`).join("")}<div class="card glass-liquid">x</div>${"</div>".repeat(regions.length)}`;
+            root.append(wrapper);
+
+            const styles = getComputedStyle(wrapper.querySelector(".card")!);
+            const result = {
+              ink: styles.getPropertyValue("--ui-ink"),
+              ground: styles.getPropertyValue("--ui-surface-ground"),
+            };
+
+            wrapper.remove();
+
+            return result;
+          };
+
+          return {
+            alone: paint(["glass"]),
+            nested: Object.fromEntries(others.map((other) => [other, paint(["glass", other])])),
+            reference: Object.fromEntries(others.map((other) => [other, paint([other])])),
+            reentered: Object.fromEntries(others.map((other) => [other, paint(["glass", other, "glass"])])),
+          };
+        });
+
+        for (const other of Object.keys(read.nested)) {
+          expect.soft(read.nested[other], `a liquid card in ${other} inside glass`).toEqual(read.reference[other]);
+          expect.soft(read.reentered[other], `a liquid card in glass inside ${other} inside glass`).toEqual(read.alone);
+        }
+      });
+
       test("changes only the corners where glass is not in scope", async ({ page }) => {
         await page.goto(SURFACES_URL);
 
