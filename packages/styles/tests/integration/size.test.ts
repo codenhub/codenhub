@@ -46,10 +46,12 @@ const COMPILED_CEILINGS: Record<string, number> = {
      that composes `box`: 238,000, 191,400, 355,400, and 13,200 until then.
      The first three set again once the release's branches met: 247,100,
      195,900, and 367,000 until the read-only rest arrived and glass lifted
-     a surface holding focus or an open popover. */
+     a surface holding focus or an open popover. `/native` set again from
+     375,500 when glass began grounding a control placed straight in its
+     region, at 375,517. */
   "dist/index.css": 252_700,
   "dist/components.css": 201_400,
-  "dist/native.css": 375_500,
+  "dist/native.css": 386_800,
   "dist/theme.css": 13_650,
   /* 26,800 until 0.11.0 wrote the dark values a second time, for the
      system's dark setting with no theme selector; 40,100 until it wrote the
