@@ -370,6 +370,10 @@ Rejected:
 
 **The clash error names the URL and the page it opens.** `localize`'s `RangeError` said "pass a canonical path, such as parse().pathname" even when that is what the caller passed. It names the URL it would build and the page that URL opens, gives advice for both causes, a URL passed as a canonical path and a canonical path whose URL belongs to another page, and points request-time links to `alternates`. It keeps its `… would be read as "X" in "Y"; …` start.
 
+### `hreflang` tags are built from the app's own constants (0.5.0)
+
+The `x-default` tag needs the default locale, which a `LocaleRouting` does not expose. The guide's `hreflang` example redeclared it as `const defaultLocale = "en"`, a second copy that drifts from the configuration when the default changes. Routing exposes nothing new for it: the guide's routing module exports the `locales` and `defaultLocale` it passes in, and the manager and the `hreflang` tags import those. An app always has the values, since it wrote the configuration. Rejected: exposing `locales` and `defaultLocale` on `LocaleRouting`, or a helper that builds the tags, because each adds a published contract, kept for every later version, for values the caller already holds, and a tag helper would also choose the markup, the origin, and the escaping that belong to the app's framework.
+
 ### `parse` builds every locale's URL from one lookup (0.5.0)
 
 `parse` splits and normalizes the path once and finds its table route once; each locale's URL is built from that and read back on its segments. Those segments are already normalized, which normalizing leaves unchanged, and already valid except for length, so the read-back only checks length. On a 2,000-route table plus a catch-all, with inputs near the limits, about 8,000 characters in 99 segments or one long segment, a `parse` took 2.1–5.5 ms with 20 locales and 5.2–27.2 ms with 100, and takes 0.34–0.50 ms and 0.56–1.61 ms. Only `localize`'s clash message runs the full read-back. Rejected: caching by input, which an attacker controls.

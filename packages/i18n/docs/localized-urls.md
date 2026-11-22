@@ -16,11 +16,10 @@ The examples continue the tea shop's `en` and `pt` app from the earlier pages. S
 // src/routing.ts
 import { createLocaleRouting } from "@codenhub/i18n/routing";
 
-export const routing = createLocaleRouting({
-  locales: ["en", "pt"] as const,
-  defaultLocale: "en",
-  localePrefix: "except-default",
-});
+export const locales = ["en", "pt"] as const;
+export const defaultLocale = "en";
+
+export const routing = createLocaleRouting({ locales, defaultLocale, localePrefix: "except-default" });
 ```
 
 `localePrefix` decides which paths start with their locale. It is required and has no default, because each choice gives your site different URLs, and URLs are hard to change once people have bookmarked them. Leaving it out throws `TypeError: [I18n] Invalid locale routing configuration: localePrefix: Expected "always", "except-default", or "when-ambiguous", received undefined`.
@@ -37,7 +36,7 @@ How to choose:
 - `"always"` makes every URL name its language, so `/about` is not a page, which suits a site that redirects `/` to the visitor's language.
 - `"when-ambiguous"` drops the prefix from translated paths that can only belong to one language, and is worth reading about before you pick it.
 
-Use the same `locales` and `defaultLocale` as your manager. Routing is separate from the manager, so it also works where no translation happens, such as in a server's redirect logic.
+Use the same `locales` and `defaultLocale` as your manager, by importing these constants where you create it. Routing is separate from the manager, so it also works where no translation happens, such as in a server's redirect logic.
 
 If you keep the configuration in a variable before passing it in, put `as const` after the whole object: `const config = { … } as const`. Without it, TypeScript widens `localePrefix` to `string`, and `createLocaleRouting` rejects it at compile time. `as const` on `localePrefix` alone compiles, but types every locale as `string`, so `localize("/about", "fr")` compiles too.
 
@@ -167,13 +166,25 @@ Going through `parse()` matters once paths are translated: `/sobre` is a Portugu
 Use the same list for the `<link rel="alternate" hreflang>` tags that tell search engines about each language. Add an `x-default` tag for readers whose language you don't offer, pointing at the default locale's page, when it has one:
 
 ```ts
-const defaultLocale = "en"; // the defaultLocale you configured
+import { defaultLocale, routing } from "./routing";
+
+// Your framework's own escaping does the same.
+const escapeHtml = (text: string) => text.replaceAll("&", "&amp;").replaceAll('"', "&quot;").replaceAll("'", "&#39;").replaceAll("<", "&lt;").replaceAll(">", "&gt;");
+
 const link = (hreflang: string, pathname: string) => `<link rel="alternate" hreflang="${escapeHtml(hreflang)}" href="${escapeHtml(new URL(pathname, "https://example.com").href)}">`;
 
-const tags = route.alternates.map((page) => link(page.locale, page.pathname));
-const fallback = route.alternates.find((page) => page.locale === defaultLocale);
-if (fallback !== undefined) {
-  tags.push(link("x-default", fallback.pathname));
+// The tags for a request's `url.pathname`, or none for a path that is no page.
+export function alternateLinks(pathname: string): string[] {
+  const route = routing.parse(pathname);
+  if (route === undefined) {
+    return [];
+  }
+  const tags = route.alternates.map((page) => link(page.locale, page.pathname));
+  const fallback = route.alternates.find((page) => page.locale === defaultLocale);
+  if (fallback !== undefined) {
+    tags.push(link("x-default", fallback.pathname));
+  }
+  return tags;
 }
 ```
 

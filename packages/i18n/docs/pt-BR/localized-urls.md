@@ -2,7 +2,7 @@
 title: URLs localizadas
 description: Coloque o locale no caminho, traduza o próprio caminho, leia os dois de volta, crie links para outros idiomas, gere todas as páginas localizadas e mande os visitantes para o idioma deles num site estático.
 order: 4
-source: 5206ec4d51a8996884e8ef91bf29899d93891fa1
+source: 43b4863aec8eb9059c48dc3a348166a28a704bcf
 ---
 
 # URLs localizadas
@@ -17,11 +17,10 @@ Os exemplos continuam o app `en` e `pt` da loja de chá das páginas anteriores.
 // src/routing.ts
 import { createLocaleRouting } from "@codenhub/i18n/routing";
 
-export const routing = createLocaleRouting({
-  locales: ["en", "pt"] as const,
-  defaultLocale: "en",
-  localePrefix: "except-default",
-});
+export const locales = ["en", "pt"] as const;
+export const defaultLocale = "en";
+
+export const routing = createLocaleRouting({ locales, defaultLocale, localePrefix: "except-default" });
 ```
 
 `localePrefix` decide quais caminhos começam com o locale. Ele é obrigatório e não tem padrão, porque cada escolha dá ao seu site URLs diferentes, e URLs são difíceis de mudar depois que as pessoas as salvaram nos favoritos. Deixá-lo de fora lança `TypeError: [I18n] Invalid locale routing configuration: localePrefix: Expected "always", "except-default", or "when-ambiguous", received undefined`.
@@ -38,7 +37,7 @@ Como escolher:
 - `"always"` faz toda URL dizer o idioma dela, então `/about` não é uma página, o que combina com um site que redireciona `/` para o idioma do visitante.
 - `"when-ambiguous"` tira o prefixo dos caminhos traduzidos que só podem pertencer a um idioma, e vale a leitura antes de você escolhê-lo.
 
-Use os mesmos `locales` e `defaultLocale` do seu gerenciador. O roteamento é separado do gerenciador, então funciona também onde não há tradução nenhuma, como na lógica de redirecionamento de um servidor.
+Use os mesmos `locales` e `defaultLocale` do seu gerenciador, importando estas constantes onde você o cria. O roteamento é separado do gerenciador, então funciona também onde não há tradução nenhuma, como na lógica de redirecionamento de um servidor.
 
 Se você guardar a configuração numa variável antes de passá-la, ponha `as const` depois do objeto inteiro: `const config = { … } as const`. Sem isso, o TypeScript alarga `localePrefix` para `string`, e `createLocaleRouting` o rejeita em tempo de compilação. `as const` só em `localePrefix` compila, mas tipa todo locale como `string`, então `localize("/about", "fr")` também compila.
 
@@ -168,13 +167,25 @@ Passar pelo `parse()` importa quando os caminhos ganham tradução: `/sobre` é 
 Use a mesma lista para as tags `<link rel="alternate" hreflang>` que contam aos buscadores sobre cada idioma. Acrescente uma tag `x-default` para os leitores cujo idioma você não oferece, apontando para a página do locale padrão, quando ela existir:
 
 ```ts
-const defaultLocale = "en"; // o defaultLocale que você configurou
+import { defaultLocale, routing } from "./routing";
+
+// O escape do seu framework faz o mesmo.
+const escapeHtml = (text: string) => text.replaceAll("&", "&amp;").replaceAll('"', "&quot;").replaceAll("'", "&#39;").replaceAll("<", "&lt;").replaceAll(">", "&gt;");
+
 const link = (hreflang: string, pathname: string) => `<link rel="alternate" hreflang="${escapeHtml(hreflang)}" href="${escapeHtml(new URL(pathname, "https://example.com").href)}">`;
 
-const tags = route.alternates.map((page) => link(page.locale, page.pathname));
-const fallback = route.alternates.find((page) => page.locale === defaultLocale);
-if (fallback !== undefined) {
-  tags.push(link("x-default", fallback.pathname));
+// As tags para o `url.pathname` de uma requisição, ou nenhuma para um caminho que não é uma página.
+export function alternateLinks(pathname: string): string[] {
+  const route = routing.parse(pathname);
+  if (route === undefined) {
+    return [];
+  }
+  const tags = route.alternates.map((page) => link(page.locale, page.pathname));
+  const fallback = route.alternates.find((page) => page.locale === defaultLocale);
+  if (fallback !== undefined) {
+    tags.push(link("x-default", fallback.pathname));
+  }
+  return tags;
 }
 ```
 
