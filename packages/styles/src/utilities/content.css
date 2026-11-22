@@ -102,12 +102,12 @@
        `--intent-subtle` still reads as `.solid` on neutral, since neutral's ink
        and ground are both on the same greyscale axis. A head has no hover or
        interaction state to reveal a tint into the way a card does, so `.soft` is
-       `--color-foreground`, flat, always, for every intent. That mutes a coloured
+       `--color-background-subtle`, flat, always, for every intent. That mutes a coloured
        `.success`/`.destructive` head at rest the way it mutes a non-interactive
        `.card.soft`; accepted for the same reason.
 
        The table's own base plate rests the same way: a `.soft` head at
-       `--color-foreground` (five units off the page) above a body carrying the
+       `--color-background-subtle` (five units off the page) above a body carrying the
        ordinary 12% tint (twenty-four units past the head) reads backwards, as
        though the head belonged to the page and the body were the odd one out.
        `--_fill-cap` is `box.css`'s override slot (the one `.card.soft` uses) and
@@ -130,7 +130,7 @@
        one is named. Head and body share the plate, as they do on the page. Only
        the quiet rest reads it: a `.solid` table is opaque, like every `.solid`,
        and a `.ghost` one is boundaries and type. */
-    --_table-ground-plate: var(--ui-surface-ground, var(--color-foreground));
+    --_table-ground-plate: var(--ui-surface-ground, var(--color-background-subtle));
     --_table-fill: min(
       calc(min(var(--ui-fill, var(--_d-fill)), var(--intent-fill-max, 100%)) * var(--ui-bg-alpha, 1)),
       calc(100% - var(--_table-quiet))
@@ -238,7 +238,7 @@
        `box-hover` is: the row composites onto whatever plate the table drew, so a
        filled table shifts within its own colour, a soft one deepens its tint, and
        a ghost one picks up a faint wash of the page. (Mixed into
-       `--color-foreground`, a solid primary table in dark theme would hover to
+       `--color-background-subtle`, a solid primary table in dark theme would hover to
        near-black, a dark band across a light table.)
 
        Which tone it steps toward moves with the fill. On a bare or tinted plate

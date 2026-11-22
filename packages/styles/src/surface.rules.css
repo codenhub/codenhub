@@ -92,7 +92,7 @@
        nothing and below that cap -- `.soft`, a panel's or an alert's default.
        12% of the page's near-black ink reads as a grey slab rather than a step,
        so `.card`, `.panel`, and `.alert` read this to rest such a fill on the
-       quiet foreground instead. Stepped from the resolved fill rather than
+       quiet background tone instead. Stepped from the resolved fill rather than
        keyed on a class on the element, because presentation cascades: a
        container's `.soft` and the surface's own are one request and have to
        render one plate. Stepped rather than divided, as `box`'s `--_plate` is,

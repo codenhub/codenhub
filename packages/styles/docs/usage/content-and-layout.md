@@ -183,7 +183,7 @@ A table reads [presentation](./composing.md#presentation) on its header, its lin
 </table>
 ```
 
-- `.soft`, the default, gives the header the quiet background tone, `--color-foreground`, for every intent. A table has no hover state for a tint, so a `.data-table.success.soft` does not turn green; its lines and border do.
+- `.soft`, the default, gives the header the quiet background tone, `--color-background-subtle`, for every intent. A table has no hover state for a tint, so a `.data-table.success.soft` does not turn green; its lines and border do.
 - `.ghost` removes the header background, leaving lines and text.
 - `.solid` fills the header with the intent color.
 

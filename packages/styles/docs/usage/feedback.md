@@ -67,7 +67,7 @@ Any icon element works: a class from an icon set, an inline `<svg>`, or an `<img
 
 With no presentation class, an alert is soft and edged: a light tint of its intent, intent-colored text, and a border. Presentation classes change that like on any component, such as `.alert.primary.solid` for a filled banner.
 
-An alert with no intent is an exception. It has no tint at rest; it uses `--color-foreground`, the quiet background tone one step off the page, the same as a neutral `.card.soft` or `.panel`. An alert with `.primary`, `.secondary`, `.success`, `.warning`, `.destructive`, or `.info` keeps its tint. Only those six classes count here: an alert with an intent class you defined yourself is treated as having no intent; see [Theming → Your own intent](./theming.md#your-own-intent).
+An alert with no intent is an exception. It has no tint at rest; it uses `--color-background-subtle`, the quiet background tone one step off the page, the same as a neutral `.card.soft` or `.panel`. An alert with `.primary`, `.secondary`, `.success`, `.warning`, `.destructive`, or `.info` keeps its tint. Only those six classes count here: an alert with an intent class you defined yourself is treated as having no intent; see [Theming → Your own intent](./theming.md#your-own-intent).
 
 ## Label the plan with a badge
 

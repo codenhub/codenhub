@@ -50,14 +50,14 @@
        alert's own `.ghost` or `.solid` would. A named intent keeps its ordinary wash, because untinting
        `.alert.soft.destructive` would silence the status it exists to carry.
 
-       Grounds on `--color-foreground` through `--_d-surface-ground`, exactly like
+       Grounds on `--color-background-subtle` through `--_d-surface-ground`, exactly like
        `.panel` and a resting `.card.soft`, so glass's ground and a consumer's
        `--ui-surface-ground` still win over it. An alert has no hover state to
        reveal a tint into either, so this is permanent. A neutral alert keeps its
        identity: `--_d-border: 100%` above holds regardless of fill, so it still
        reads as a framed box, just a quiet one instead of a grey slab. */
     --_fill-cap: calc(100% - var(--_quiet));
-    --_d-surface-ground: color-mix(in oklab, var(--color-foreground) var(--_quiet), var(--color-background));
+    --_d-surface-ground: color-mix(in oklab, var(--color-background-subtle) var(--_quiet), var(--color-background));
   }
 
   /* No icon is shipped. An icon dropped in as a real child floats at the start
@@ -169,7 +169,10 @@
     /* Public, read with their defaults, so a value set on any ancestor reaches
        the placeholder. */
     --_skeleton-base: var(--skeleton-base, color-mix(in oklab, var(--intent-color) 6%, var(--intent-subtle)));
-    --_skeleton-sheen: var(--skeleton-sheen, color-mix(in oklab, var(--intent-color) 10%, var(--color-foreground)));
+    --_skeleton-sheen: var(
+      --skeleton-sheen,
+      color-mix(in oklab, var(--intent-color) 10%, var(--color-background-subtle))
+    );
 
     min-height: calc(var(--spacing) * 4);
     width: 100%;

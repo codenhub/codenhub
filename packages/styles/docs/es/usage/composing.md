@@ -2,7 +2,7 @@
 title: Composición
 description: Consulta de cómo se combinan la intención, la presentación, la estética y la elevación, el aspecto por defecto de cada componente y qué clases lee cada uno.
 order: 8
-source: 2493c7c14124565b565b1226e99d4b3de3b087b2
+source: 4b39b54fc10896007bbe68ed0c51cff0695a345d
 ---
 
 # Composición
@@ -77,7 +77,7 @@ El borde es el contorno del componente y nada más. Las líneas dentro de un com
 
 ### Las superficies neutras reposan sin tinte
 
-Una `.card.soft`, un `.panel` y una `.alert` neutros no muestran tinte en reposo. Usan en su lugar el tono de fondo discreto un paso por encima de la página (`--color-foreground`), porque un tinte gris en cada caja neutra se ve sucio en lugar de discreto.
+Una `.card.soft`, un `.panel` y una `.alert` neutros no muestran tinte en reposo. Usan en su lugar el tono de fondo discreto un paso por encima de la página (`--color-background-subtle`), porque un tinte gris en cada caja neutra se ve sucio en lugar de discreto.
 
 - Una `.card.soft` con `.interactive` o `.hoverable` muestra el tinte con hover. Una `.card.soft` simple y un `.panel` no tienen estado de hover.
 - Con una de las seis intenciones incluidas, los tres conservan el tinte normal del 12%, y una tarjeta lo intensifica con hover. Una intención que hayas definido tú se trata aquí como neutra; consulta [Temas → Tu propia intención](./theming.md#tu-propia-intención).

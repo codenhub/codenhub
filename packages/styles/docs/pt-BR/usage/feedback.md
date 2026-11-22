@@ -2,7 +2,7 @@
 title: Feedback
 description: Um botão de salvando, alertas, badges, placeholders de carregamento e barras de progresso, e o que o seu código precisa manter em sincronia com eles.
 order: 3
-source: b9e6381383bd60c3305a4d3df95041b68ed6c645
+source: bb8f90f02a76bac54e0ace005591b797d45753d6
 ---
 
 # Feedback
@@ -68,7 +68,7 @@ Qualquer elemento de ícone funciona: uma classe de um conjunto de ícones, um `
 
 Sem classe de apresentação, um alerta é soft e com borda: um tom claro da sua intenção, texto na cor da intenção e uma borda. As classes de apresentação mudam isso como em qualquer componente, como `.alert.primary.solid` para um banner preenchido.
 
-Um alerta sem intenção é uma exceção. Ele não tem tom em repouso; usa `--color-foreground`, o tom de fundo discreto um passo distante da página, o mesmo de um `.card.soft` ou `.panel` neutro. Um alerta com `.primary`, `.secondary`, `.success`, `.warning`, `.destructive` ou `.info` mantém o tom. Só essas seis classes contam aqui: um alerta com uma classe de intenção que você mesmo definiu é tratado como sem intenção; veja [Temas → Sua própria intenção](./theming.md#sua-própria-intenção).
+Um alerta sem intenção é uma exceção. Ele não tem tom em repouso; usa `--color-background-subtle`, o tom de fundo discreto um passo distante da página, o mesmo de um `.card.soft` ou `.panel` neutro. Um alerta com `.primary`, `.secondary`, `.success`, `.warning`, `.destructive` ou `.info` mantém o tom. Só essas seis classes contam aqui: um alerta com uma classe de intenção que você mesmo definiu é tratado como sem intenção; veja [Temas → Sua própria intenção](./theming.md#sua-própria-intenção).
 
 ## Identifique o plano com um badge
 

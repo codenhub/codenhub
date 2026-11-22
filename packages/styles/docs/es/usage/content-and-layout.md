@@ -2,7 +2,7 @@
 title: Contenido y layout
 description: Consulta de cada helper de layout con su espaciado, la escala tipográfica con sus tamaños, las tarjetas y los paneles con su relleno interior, las tablas, las citas, el código y las teclas.
 order: 10
-source: 18df431402cededb628a4e9b814dbc9e448f5cf0
+source: f1584d2942bf08e8d74f5008f684c169a8b81cef
 ---
 
 # Contenido y layout
@@ -184,7 +184,7 @@ Una tabla lee la [presentación](./composing.md#presentación) en su encabezado,
 </table>
 ```
 
-- `.soft`, el valor por defecto, da al encabezado el tono de fondo discreto, `--color-foreground`, con cualquier intención. Una tabla no tiene estado de hover para un tinte, así que una `.data-table.success.soft` no se vuelve verde; sus líneas y su borde sí.
+- `.soft`, el valor por defecto, da al encabezado el tono de fondo discreto, `--color-background-subtle`, con cualquier intención. Una tabla no tiene estado de hover para un tinte, así que una `.data-table.success.soft` no se vuelve verde; sus líneas y su borde sí.
 - `.ghost` quita el fondo del encabezado y deja las líneas y el texto.
 - `.solid` rellena el encabezado con el color de la intención.
 

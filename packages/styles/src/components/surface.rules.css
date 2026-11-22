@@ -53,10 +53,10 @@
 
     /* A quiet neutral tint -- `.soft`, on the card or on a container -- rests
        untinted instead of mixing its 12%: 12% of `--color-text` onto any of
-       `--color-background`, `--color-foreground`, or `--color-surface` lands
+       `--color-background`, `--color-background-subtle`, or `--color-surface` lands
        within a few units of the others (a near-black ink dominates the result),
        so swapping the ground token alone does not read as quieter. A resting
-       neutral `.card.soft` is `--color-foreground` with no ink mixed in -- a
+       neutral `.card.soft` is `--color-background-subtle` with no ink mixed in -- a
        plain step up from the page that marks a different container without
        drawing attention to it.
 
@@ -70,8 +70,8 @@
        container's `.soft` renders the plate the card's own `.soft` does. Keyed
        on the card's classes, `.soft > .card` drew the grey slab. `--_fill-cap`
        (box.css's override slot, not `--ui-fill` directly -- see the comment
-       there) drops to 0% only when quiet, and the ground steps to the
-       foreground only then, through `--_d-surface-ground`, the default
+       there) drops to 0% only when quiet, and the ground steps to the quiet
+       background tone only then, through `--_d-surface-ground`, the default
        `surface` reads beneath the public `--ui-surface-ground`, so a consumer's
        override, or glass's ground, wins.
 
@@ -83,7 +83,7 @@
        opt a card into `box-hover`. A named intent rests tinted, so the generic
        formula deepens it on hover (12% to 26%). */
     --_fill-cap: calc(100% - var(--_quiet));
-    --_d-surface-ground: color-mix(in oklab, var(--color-foreground) var(--_quiet), var(--color-background));
+    --_d-surface-ground: color-mix(in oklab, var(--color-background-subtle) var(--_quiet), var(--color-background));
 
     --_hover-ground: var(--_m-hover) color-mix(in oklab, var(--color-surface) var(--_quiet), var(--color-background));
 
@@ -92,7 +92,7 @@
       &:hover {
         --_d-surface-ground: var(
           --_hover-ground,
-          color-mix(in oklab, var(--color-foreground) var(--_quiet), var(--color-background))
+          color-mix(in oklab, var(--color-background-subtle) var(--_quiet), var(--color-background))
         );
       }
     }
@@ -188,7 +188,7 @@
        `250, 250, 250` page): the same "neutral ink reads louder" effect
        `.card.soft` answers, and the reason `--intent-fill-max` stops neutral's
        fill short everywhere else. So a quiet neutral tint rests untinted on
-       `--color-foreground`, through `--_d-surface-ground`, the default
+       `--color-background-subtle`, through `--_d-surface-ground`, the default
        `.card.soft` rests on, so a bare `.panel` rests at exactly the plate a
        `.card.soft` does, and a consumer's `--ui-surface-ground` or glass's
        translucent ground wins over it: a neutral panel under `.glass` is glass.
@@ -203,7 +203,7 @@
        Permanent rather than hover-revealed: a panel has no interaction state to
        reveal a tint into. */
     --_fill-cap: calc(100% - var(--_quiet));
-    --_d-surface-ground: color-mix(in oklab, var(--color-foreground) var(--_quiet), var(--color-background));
+    --_d-surface-ground: color-mix(in oklab, var(--color-background-subtle) var(--_quiet), var(--color-background));
   }
 }
 

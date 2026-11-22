@@ -2,7 +2,7 @@
 title: Formulários
 description: Campos com rótulo, dicas e erros, ícones e prefixos fixos, selects e toggles de checkbox, radio e switch.
 order: 2
-source: a2d604165d6c2eb3ab1a03c095d5b975b4db15ce
+source: 77e9ad4ba0006a646f844aa9cca208d3ce67689c
 ---
 
 # Formulários
@@ -254,7 +254,7 @@ Em repouso, a borda de um campo é a cor de borda cheia da sua intenção, com p
 
 ## Campos somente leitura
 
-`readonly` num `.ipt` ou num `.textarea` impede que o valor seja editado, mas o deixa focável, selecionável e enviado com o formulário. O campo fica em repouso na cor discreta de campo, `--color-foreground`, não muda sob o ponteiro e mantém o texto em intensidade total e o seu anel de foco, para ser lido como um valor a ler, e não como um lugar para digitar. Ele não fica esmaecido: esmaecer diz que um controle está indisponível, e um valor somente leitura continua ali para ser lido e copiado. Um `.input-group` cujo campo é somente leitura fica em repouso do mesmo jeito.
+`readonly` num `.ipt` ou num `.textarea` impede que o valor seja editado, mas o deixa focável, selecionável e enviado com o formulário. O campo fica em repouso na cor discreta de campo, `--color-background-subtle`, não muda sob o ponteiro e mantém o texto em intensidade total e o seu anel de foco, para ser lido como um valor a ler, e não como um lugar para digitar. Ele não fica esmaecido: esmaecer diz que um controle está indisponível, e um valor somente leitura continua ali para ser lido e copiado. Um `.input-group` cujo campo é somente leitura fica em repouso do mesmo jeito.
 
 ```html
 <div class="field">

@@ -42,9 +42,6 @@
        Read here rather than restating the token there, so a consumer who sets
        `--color-border` replaces both and keeps their colour. */
     --color-border: var(--_contrast-border, light-dark(var(--color-neutral-400), var(--color-neutral-700)));
-    /* Nothing in the package draws a border that darkens on hover; it is a
-       public override point for a consumer's own. */
-    --color-border-hover: light-dark(var(--color-neutral-600), var(--color-neutral-500));
 
     /* A text control's line is the only thing identifying it: the box is
        transparent at rest, so nothing else marks where typing goes.
@@ -56,7 +53,7 @@
        clears the 3:1 WCAG 1.4.11 asks of a control boundary in both themes. */
     --color-control-border: var(--color-neutral-500);
     --color-background: light-dark(var(--color-neutral-50), var(--color-neutral-950));
-    --color-foreground: light-dark(var(--color-neutral-100), var(--color-neutral-900));
+    --color-background-subtle: light-dark(var(--color-neutral-100), var(--color-neutral-900));
     --color-surface: light-dark(var(--color-neutral-200), var(--color-neutral-800));
     --color-text: light-dark(var(--color-neutral-950), var(--color-neutral-50));
     --color-text-secondary: light-dark(var(--color-neutral-700), var(--color-neutral-400));

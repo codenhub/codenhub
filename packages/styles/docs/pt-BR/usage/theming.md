@@ -2,7 +2,7 @@
 title: Temas
 description: Modo claro e escuro, como trocar a paleta pelas cores da marca, como definir uma intenção própria, e cada token de cor, de intenção, fundamental e de fonte com o seu padrão.
 order: 5
-source: 059c7efb0eda78e0564d17ec30ccb0a225d7aad8
+source: 0d84f323e3479882e4369ce308f41bbdc497d83f
 ---
 
 # Temas
@@ -180,10 +180,9 @@ Cada linha é um ponto de sobrescrita: defina-a no `:root` para mudar o tema da 
 | `--color-accent-subtle`        | `neutral-100`, `neutral-800` | Tom secundário por trás dos componentes soft.                                                                       |
 | `--color-accent-strong`        | `neutral-800`, `neutral-200` | Texto, ícones e bordas secundários onde o preenchimento não é total.                                                |
 | `--color-border`               | `neutral-400`, `neutral-700` | Borda de superfícies neutras, tabelas, divisores e teclas.                                                          |
-| `--color-border-hover`         | `neutral-600`, `neutral-500` | Borda sob o ponteiro.                                                                                               |
 | `--color-control-border`       | `neutral-500`                | Borda em repouso de controles de texto e toggles neutros, desenhada com uma fração da força nos controles de texto. |
 | `--color-background`           | `neutral-50`, `neutral-950`  | A página.                                                                                                           |
-| `--color-foreground`           | `neutral-100`, `neutral-900` | O tom de fundo discreto um passo distante da página: cards soft, painéis e alertas neutros.                         |
+| `--color-background-subtle`    | `neutral-100`, `neutral-900` | O tom de fundo discreto um passo distante da página: cards soft, painéis e alertas neutros.                         |
 | `--color-surface`              | `neutral-200`, `neutral-800` | Mais um passo: superfícies aninhadas e esmaecidas, e o tom da intenção neutra.                                      |
 | `--color-text`                 | `neutral-950`, `neutral-50`  | Texto do corpo, e a cor da intenção neutra.                                                                         |
 | `--color-text-secondary`       | `neutral-700`, `neutral-400` | Texto secundário, como o `.hint`.                                                                                   |

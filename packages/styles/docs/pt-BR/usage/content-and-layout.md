@@ -2,7 +2,7 @@
 title: Conteúdo e layout
 description: Consulta de todos os helpers de layout com os seus espaçamentos, a escala tipográfica com os seus tamanhos, cards e painéis com o seu padding, tabelas, citações, código e teclas.
 order: 10
-source: 18df431402cededb628a4e9b814dbc9e448f5cf0
+source: f1584d2942bf08e8d74f5008f684c169a8b81cef
 ---
 
 # Conteúdo e layout
@@ -184,7 +184,7 @@ Uma tabela lê a [apresentação](./composing.md#apresentação) no seu cabeçal
 </table>
 ```
 
-- `.soft`, o padrão, dá ao cabeçalho o tom de fundo discreto, `--color-foreground`, em todas as intenções. Uma tabela não tem estado de hover para um tom, então um `.data-table.success.soft` não fica verde; as linhas divisórias e a borda dele ficam.
+- `.soft`, o padrão, dá ao cabeçalho o tom de fundo discreto, `--color-background-subtle`, em todas as intenções. Uma tabela não tem estado de hover para um tom, então um `.data-table.success.soft` não fica verde; as linhas divisórias e a borda dele ficam.
 - `.ghost` remove o fundo do cabeçalho, deixando as linhas divisórias e o texto.
 - `.solid` preenche o cabeçalho com a cor da intenção.
 

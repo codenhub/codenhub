@@ -2546,7 +2546,7 @@ test("paints a typed, rejected email and its group as invalid once focus leaves"
 
 /* A read-only field can be focused and its value selected, so it keeps its
    ring, but nothing about it answers the pointer: it rests on the quiet field
-   tone, `--color-foreground`, and its text stays at full strength. */
+   tone, `--color-background-subtle`, and its text stays at full strength. */
 for (const [entry, url, classed] of [
   ["the classes", FULL_STYLES_URL, true],
   ["/native", NATIVE_STYLES_URL, false],
@@ -2563,7 +2563,7 @@ for (const [entry, url, classed] of [
          <button data-testid="between">.</button>
          <textarea ${cls("textarea")} readonly data-testid="textarea">ada</textarea>
          <input ${cls("ipt")} value="ada" data-testid="ipt-editable" />
-         <span data-testid="quiet" style="background: color-mix(in oklab, var(--color-foreground) 100%, transparent)">.</span>`,
+         <span data-testid="quiet" style="background: color-mix(in oklab, var(--color-background-subtle) 100%, transparent)">.</span>`,
       );
     }, classed);
 
@@ -2619,7 +2619,7 @@ test("rests an input group on the quiet tone when its field is read-only", async
   await page.setContent(
     `<!doctype html><html><body>
        <div class="input-group" data-testid="group"><input class="ipt" readonly value="ada" /></div>
-       <span data-testid="quiet" style="background: color-mix(in oklab, var(--color-foreground) 100%, transparent)">.</span>
+       <span data-testid="quiet" style="background: color-mix(in oklab, var(--color-background-subtle) 100%, transparent)">.</span>
      </body></html>`,
   );
   await page.addStyleTag({ url: FULL_STYLES_URL });

@@ -179,10 +179,9 @@ Each row is an override point: set it on `:root` to retheme the page, or on any 
 | `--color-accent-subtle`        | `neutral-100`, `neutral-800` | Secondary tint behind soft components.                                                         |
 | `--color-accent-strong`        | `neutral-800`, `neutral-200` | Secondary text, icons, and borders where the fill is not full.                                 |
 | `--color-border`               | `neutral-400`, `neutral-700` | Border of neutral surfaces, tables, dividers, and key caps.                                    |
-| `--color-border-hover`         | `neutral-600`, `neutral-500` | Border under the pointer.                                                                      |
 | `--color-control-border`       | `neutral-500`                | Resting border of neutral text controls and toggles, drawn at a fraction on text controls.     |
 | `--color-background`           | `neutral-50`, `neutral-950`  | The page.                                                                                      |
-| `--color-foreground`           | `neutral-100`, `neutral-900` | The quiet background tone one step off the page: neutral soft cards, panels, and alerts.       |
+| `--color-background-subtle`    | `neutral-100`, `neutral-900` | The quiet background tone one step off the page: neutral soft cards, panels, and alerts.       |
 | `--color-surface`              | `neutral-200`, `neutral-800` | A further step: nested and muted surfaces, and the neutral intent's tint.                      |
 | `--color-text`                 | `neutral-950`, `neutral-50`  | Body text, and the neutral intent's color.                                                     |
 | `--color-text-secondary`       | `neutral-700`, `neutral-400` | Secondary text, such as `.hint`.                                                               |

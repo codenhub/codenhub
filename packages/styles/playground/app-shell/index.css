@@ -39,7 +39,7 @@
 }
 
 .app-nav-link.active {
-  background: var(--color-foreground);
+  background: var(--color-background-subtle);
   color: var(--color-text);
   font-weight: 600;
 }

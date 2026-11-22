@@ -2,7 +2,7 @@
 title: Feedback
 description: Un botón que indica que está guardando, alertas, badges, placeholders de carga y barras de progreso, y lo que tu código debe mantener sincronizado con ellos.
 order: 3
-source: b9e6381383bd60c3305a4d3df95041b68ed6c645
+source: bb8f90f02a76bac54e0ace005591b797d45753d6
 ---
 
 # Feedback
@@ -68,7 +68,7 @@ Funciona cualquier elemento de icono: una clase de un conjunto de iconos, un `<s
 
 Sin clase de presentación, una alerta es soft y con borde: un tinte claro de su intención, texto del color de la intención y un borde. Las clases de presentación lo cambian como en cualquier componente, por ejemplo `.alert.primary.solid` para un banner relleno.
 
-Una alerta sin intención es una excepción. No tiene tinte en reposo; usa `--color-foreground`, el tono de fondo discreto un paso por encima de la página, igual que una `.card.soft` o un `.panel` neutros. Una alerta con `.primary`, `.secondary`, `.success`, `.warning`, `.destructive` o `.info` conserva su tinte. Aquí solo cuentan esas seis clases: una alerta con una clase de intención que hayas definido tú se trata como si no tuviera intención; consulta [Temas → Tu propia intención](./theming.md#tu-propia-intención).
+Una alerta sin intención es una excepción. No tiene tinte en reposo; usa `--color-background-subtle`, el tono de fondo discreto un paso por encima de la página, igual que una `.card.soft` o un `.panel` neutros. Una alerta con `.primary`, `.secondary`, `.success`, `.warning`, `.destructive` o `.info` conserva su tinte. Aquí solo cuentan esas seis clases: una alerta con una clase de intención que hayas definido tú se trata como si no tuviera intención; consulta [Temas → Tu propia intención](./theming.md#tu-propia-intención).
 
 ## Etiquetar el plan con un badge
 
