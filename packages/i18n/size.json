@@ -32,10 +32,10 @@
         "createI18n": {
           "files": {
             "dist/index.js": {
-              "bytes": 22661,
+              "bytes": 22652,
               "declarations": {
                 "I18nInstance": 7874,
-                "Parser": 3654,
+                "Parser": 3645,
                 "formatNodes": 1245,
                 "RichOutput": 1157,
                 "createFallbackChains": 525,
@@ -184,8 +184,8 @@
               "bytes": 25
             }
           },
-          "gzip": 10084,
-          "minified": 30068
+          "gzip": 10081,
+          "minified": 30059
         },
         "i18nErrors": {
           "files": {
@@ -206,10 +206,10 @@
       },
       "files": {
         "dist/index.js": {
-          "bytes": 22665,
+          "bytes": 22656,
           "declarations": {
             "I18nInstance": 7876,
-            "Parser": 3654,
+            "Parser": 3645,
             "formatNodes": 1245,
             "RichOutput": 1157,
             "createFallbackChains": 525,
@@ -359,9 +359,9 @@
           "bytes": 56
         }
       },
-      "gzip": 10176,
-      "minified": 30268,
-      "sha256": "1305a503eb3b437b6f89a80adaa1ef8a65096b6417c02365666b831ac142815a"
+      "gzip": 10173,
+      "minified": 30259,
+      "sha256": "ba5491667ed182ec8d50e827f6d3f9aa50840b443378cd40693e9e74b86b4248"
     },
     "./browser": {
       "exports": {

@@ -609,18 +609,17 @@ It applies to `{d, date}`, `{d, time}`, and a date in `{d}`, and is `formatDate`
 
 ### Literal braces and apostrophes
 
-An apostrophe before `{`, `}`, or `<` quotes text up to the next apostrophe, and two apostrophes make one. An apostrophe anywhere else is an ordinary apostrophe, so "Don't" needs nothing:
+An apostrophe before `{` or `}` quotes text up to the next apostrophe, and two apostrophes make one. An apostrophe anywhere else is an ordinary apostrophe, so "Don't" needs nothing:
 
-| Written in the dictionary  | Shown                    |
-| -------------------------- | ------------------------ |
-| `Don't forget {name}`      | `Don't forget Ana`       |
-| `Type '{name}' to insert`  | `Type {name} to insert`  |
-| `It''s '{'here'}'`         | `It's {here}`            |
-| `Write '<b>' to bold text` | `Write <b> to bold text` |
-| `Ouvrir l''{app}`          | `Ouvrir l'éditeur`       |
-| `Ouvrir l’{app}`           | `Ouvrir l’éditeur`       |
+| Written in the dictionary | Shown                   |
+| ------------------------- | ----------------------- |
+| `Don't forget {name}`     | `Don't forget Ana`      |
+| `Type '{name}' to insert` | `Type {name} to insert` |
+| `It''s '{'here'}'`        | `It's {here}`           |
+| `Ouvrir l''{app}`         | `Ouvrir l'éditeur`      |
+| `Ouvrir l’{app}`          | `Ouvrir l’éditeur`      |
 
-Watch for an apostrophe right before a placeholder or a tag, as French, Italian, and Catalan elision puts one. `Ouvrir l'{app}` quotes `{app}`, so it shows `Ouvrir l{app}`, and `l'<b>été</b>` quotes the tag, so `rich()` shows `l<b>été</b>` as text. Nothing warns, because the text is valid. Write two apostrophes, `l''{app}` and `l''<b>été</b>`, or the typographic apostrophe `’`, which French typography prefers anyway and which is never syntax.
+Watch for an apostrophe right before a placeholder, as French, Italian, and Catalan elision puts one. `Ouvrir l'{app}` quotes `{app}`, so it shows `Ouvrir l{app}`, and nothing warns, because the text is valid. Write two apostrophes, `l''{app}`, or the typographic apostrophe `’`, which French typography prefers anyway and which is never syntax.
 
 Inside a plural's forms, `#` stands for the number; write `'#'` for a literal `#`. A `select` nested in a form is not the plural itself, so a `#` there is shown as written, as in ICU; put `{count}` there instead.
 
@@ -667,7 +666,7 @@ A few details:
 
 - `rich()` takes the same keys and values as `t()`, checked the same way. A value is always text: a `<b>` in a visitor's name is shown as written, never read as a tag.
 - A tag can wrap placeholders, a plural, or a select, and can sit inside a plural or select form, but a tag opened in a form must close in that form.
-- A `<` that doesn't form a tag, as in `1 < 2`, is text, and so is quoted text: `'<b>'` shows `<b>`, never a tag, as in [Literal braces and apostrophes](#literal-braces-and-apostrophes).
+- A `<` that doesn't form a tag, as in `1 < 2`, is text, and so is a tag in quoted text: `'{<b>}'` shows `{<b>}`, never a tag, as in [Literal braces and apostrophes](#literal-braces-and-apostrophes). An apostrophe before `<` is an ordinary apostrophe, so `l'<b>été</b>` keeps its elision and its tag.
 - A message whose tags don't balance, such as `<b>bold` without `</b>`, or nest more than 10 levels deep, logs a warning once for each key, text, and locale, unless the manager is silent, and comes back as one part: the text as `t()` shows it, tags included. A missing key and invalid syntax also come back as the one part `t()` would return.
 - Tags aren't type-checked, since a translation can use tags the default text doesn't. Render every tag your messages use, and keep a fallback for the rest, as above.
 - `t()` and the `data-i18n` binding show tags as written. Render a message with tags from your code with `rich()`.
@@ -2100,7 +2099,7 @@ The [reference](docs/reference/index.md) documents every export, option, and the
 - **`binding.isUsingSystemLocale`** says whether to show "System" selected: `true` after a start with nothing chosen and after `switchToSystemLocale()`, `false` once your app applies a locale with `setLocale()` or `init()`.
 - **`binding.subscribe()`** calls your function once after each change to what a picker shows, the language or `isUsingSystemLocale`, including a pick of the language already showing, which `i18n.subscribe()` doesn't report. Render a framework picker from it, as the [React example](docs/browser.md#offer-a-system-choice) does.
 - **`parse()` returns `alternates`**, the page's URL in every language that has one, for language switchers and `hreflang` tags. A language whose URL would open another page is left out, where `localize()` throws, so an English product `/products/novo` next to a translated `/products/new` no longer makes the guide's switcher answer 500. See [Link to another language](docs/localized-urls.md#link-to-another-language).
-- **`rich(key, values)`** returns a message as text and `{ tag, children }` parts, so a link or bold text inside a sentence stays one message a translator can reorder: `"Read the <link>terms</link>"` gives `["Read the ", { tag: "link", children: ["terms"] }]`. Map the parts to your framework's elements. Tags come only from the message, never from a value or quoted text, and unbalanced tags warn once and return the text as `t()` shows it. See [Links and bold text inside a sentence](docs/translations.md#links-and-bold-text-inside-a-sentence).
+- **`rich(key, values)`** returns a message as text and `{ tag, children }` parts, so a link or bold text inside a sentence stays one message a translator can reorder: `"Read the <link>terms</link>"` gives `["Read the ", { tag: "link", children: ["terms"] }]`. Map the parts to your framework's elements. Tags come only from the message, never from a value or from quoted text such as `'{<b>}'`, and unbalanced tags warn once and return the text as `t()` shows it. See [Links and bold text inside a sentence](docs/translations.md#links-and-bold-text-inside-a-sentence).
 - **A bigint is taken wherever a number is**, in `{n}`, `{n, number}`, `plural`, `selectordinal`, `select`, and a plural group's `count`. It is formatted without losing digits and selects its plural form exactly, so `10n ** 20n + 22n` in an English ordinal reads "…22nd".
 - If your code implements `I18n`, `BrowserI18nBinding`, or `LocaleRouting`, or builds `parse()` results, as a test double might, add the new members, or build the double from the real thing. A test that compares a `parse()` result with `toEqual({ locale, pathname })` now needs `alternates` too, or `toMatchObject`.
 
@@ -2113,7 +2112,6 @@ The [reference](docs/reference/index.md) documents every export, option, and the
 - **`resolveLocale()` reads `_` as `-`** too, so `pt_BR` from a cookie or a back end resolves to `pt-BR`, where it returned `undefined`.
 - **The default missing-key warning is logged once per process for each locale and key**, shared by every manager, where each manager kept its own record. A server with a manager per request logged one missing word once for every visitor. A test that expects each new manager to warn again passes `onMissingKey` instead.
 - **An invalid message warns once per process for each locale, key, and text**, shared by every manager, as a missing key does, so an edited text warns again. Both records keep a bounded amount of memory, about 1,000 typical keys, and remember a message by a hash of its text, not the text itself.
-- **An apostrophe before `<` quotes text**, as before `{` or `}`, so `'<b>'` shows `<b>` in `t()` and is never a tag in `rich()`, as FormatJS reads it. It showed `'<b>'`, apostrophes included. An apostrophe right before a tag, as in French `l'<b>`, now needs doubling, `l''<b>`, or the typographic `’`.
 - **Names in a message take letters and digits in any script**: an argument such as `{año}`, a select option such as `niño {…}`, and a tag such as `<énfasis>`, where only ASCII letters, digits, and `_` were read: such a message was invalid syntax, or its tag was text. The types check values only for ASCII names; a message with another name accepts any values.
 - **`data-i18n` and `data-i18n-<attribute>` keep the HTML's value for a message that needs values**, one with a placeholder, a plural, or a select, and warns once per key, where it wrote the message as written, such as `Hello {name}`, without a warning. Render that text with `t()`.
 - **`data-i18n` and `data-i18n-<attribute>` set `lang` on text from a fallback locale's dictionary**, so a screen reader reads an English fallback on a French page in English. The locale is compared with the language the element has without the mark, its own `lang` or its nearest ancestor's, so a French text in a widget under `<html lang="en">` is marked `fr` with `syncDocument: false` too. An element is marked only when every key it shows comes from that one locale, so a button with French text and an English `title` isn't. The binding restores the element's own `lang` when the text is translated again, unless your code has changed that `lang`, which then stays yours to update.

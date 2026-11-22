@@ -399,7 +399,7 @@ Canonicalizes an exact configured locale match, ignoring letter case and surroun
 rich<K extends TKey, TValues extends object = DefaultValues>(key: K, ...params: TranslateParams<TMessages, K, TValues>): RichText;
 ```
 
-Translates a key as `I18n.translate` does, and returns its text and tags as parts for a framework to render, so a translation can mark a link or bold text inside a sentence without HTML. Tags are `<name>…</name>` and `<name/>`, with a name of letters and digits in any script, and `_`, written anywhere in the message's text, including inside a plural or select form. Values are text: a tag inside a value is never read, nor is one in quoted text, such as `'<b>'`. A `<` that doesn't form a tag, as in `a < b`, is text.
+Translates a key as `I18n.translate` does, and returns its text and tags as parts for a framework to render, so a translation can mark a link or bold text inside a sentence without HTML. Tags are `<name>…</name>` and `<name/>`, with a name of letters and digits in any script, and `_`, written anywhere in the message's text, including inside a plural or select form. Values are text: a tag inside a value is never read, nor is one in quoted text, such as `'{<b>}'`. A `<` that doesn't form a tag, as in `a < b`, is text.
 
 A message whose tags don't balance, nest past 10 levels, or cross the edge of a plural or select form warns once per process for its locale, key, and text, unless silent, and returns the text as `t()` shows it, tags included, as one part. A message with invalid syntax and a missing key return what `t()` returns, as one part.
 
@@ -476,7 +476,7 @@ Resolves a trimmed key against the active locale's dictionary, then each configu
 
 A parent is made by dropping subtags and is skipped when its likely script differs, so `zh-Hant` never falls back to `zh`, which is Simplified Chinese. The configured locale named by the active locale's likely language and script is a parent too, after those, so `zh-HK` falls back to `zh-Hant` and `sr-ME` to `sr-Latn`.
 
-Messages use ICU syntax: `{name}`, `{n, number}` with an optional `integer` or `percent` style, `{d, date}` and `{d, time}` with an optional `short`, `medium` (the default), `long`, or `full` style, `{n, plural, …}` and `{n, selectordinal, …}` with `=N` and CLDR category options, an optional `offset:N`, and `#` for the number in the plural's own forms, and `{v, select, …}`. Plural categories and every format use the locale of the dictionary that has the text. An apostrophe before `{`, `}`, `<`, or, in a plural, `#` quotes them, and `''` is one apostrophe. A message that is not valid syntax warns once per process for its locale, key, and text, unless silent, and only its `{name}` placeholders are filled.
+Messages use ICU syntax: `{name}`, `{n, number}` with an optional `integer` or `percent` style, `{d, date}` and `{d, time}` with an optional `short`, `medium` (the default), `long`, or `full` style, `{n, plural, …}` and `{n, selectordinal, …}` with `=N` and CLDR category options, an optional `offset:N`, and `#` for the number in the plural's own forms, and `{v, select, …}`. Plural categories and every format use the locale of the dictionary that has the text. An apostrophe before `{`, `}`, or, in a plural, `#` quotes them, and `''` is one apostrophe. A message that is not valid syntax warns once per process for its locale, key, and text, unless silent, and only its `{name}` placeholders are filled.
 
 When `params.count` is a number or bigint and the key is a group of plural forms rather than a text, such as `{ one: "{count} item", other: "{count} items" }`, the form is chosen with `Intl.PluralRules` for the locale of the dictionary that has the group, falling back to its `other` form. Forms are named by CLDR plural category: `zero`, `one`, `two`, `few`, `many`, and `other`.
 
@@ -1143,7 +1143,7 @@ Not exported; declared in `src/core/message-params.ts`.
 ### StripQuotes
 
 ```ts
-type StripQuotes<S extends string, Out extends string = "", TSteps extends Steps = []> = TSteps["length"] extends MaxSteps ? Unreadable : S extends `${infer A}'${infer B}` ? B extends `'${infer C}` ? StripQuotes<C, `${Out}${A}`, Next<TSteps>> : B extends `{${string}` | `}${string}` | `<${string}` ? SkipQuoted<B, `${Out}${A}`, Next<TSteps>> : B extends `#${string}` ? QuotesBrace<B> extends true ? Unreadable : StripQuotes<B, `${Out}${A}`, Next<TSteps>> : StripQuotes<B, `${Out}${A}`, Next<TSteps>> : `${Out}${S}`;
+type StripQuotes<S extends string, Out extends string = "", TSteps extends Steps = []> = TSteps["length"] extends MaxSteps ? Unreadable : S extends `${infer A}'${infer B}` ? B extends `'${infer C}` ? StripQuotes<C, `${Out}${A}`, Next<TSteps>> : B extends `{${string}` | `}${string}` ? SkipQuoted<B, `${Out}${A}`, Next<TSteps>> : B extends `#${string}` ? QuotesBrace<B> extends true ? Unreadable : StripQuotes<B, `${Out}${A}`, Next<TSteps>> : StripQuotes<B, `${Out}${A}`, Next<TSteps>> : `${Out}${S}`;
 ```
 
 Not exported; declared in `src/core/message-params.ts`.
