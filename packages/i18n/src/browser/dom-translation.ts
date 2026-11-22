@@ -106,9 +106,10 @@ export interface DomTranslator {
    * Translates safe leaves and attributes at and below the root, restoring the fallback where a key was removed, and
    * marks an element whose translations come from a locale other than the language it has without the mark, its own
    * `lang` or the nearest ancestor's, with that locale's `lang`. An element inside one whose content is blocked, such as
-   * `<xmp>` or `<textarea>`, is skipped with a warning. A message that needs values or an invalid key shows the
+   * `<xmp>` or `<textarea>`, is skipped with a warning, and one inside a custom element is skipped silently; either gets
+   * back the text, attributes, and `lang` it had before a pass translated it. A message that needs values or an invalid key shows the
    * fallback, with a warning. A text or attribute whose translation throws, such as from a throwing `onMissingKey`,
-   * keeps its value; every other key is still translated, and the first error is thrown after the pass.
+   * shows the fallback too; every other key is still translated, and the first error is thrown after the pass.
    */
   translateRoot(options: TranslateRootOptions): void;
 }
@@ -319,15 +320,23 @@ export function createDomTranslator(options: DomTranslatorOptions): DomTranslato
       states.set(attribute, state);
     }
 
-    const found = readTranslation(element, keyAttribute, rawKey, translate);
-    const nextValue = found?.text ?? state.fallback;
-
-    if (nextValue === null) {
-      element.removeAttribute(attribute);
-    } else if (currentValue !== nextValue) {
-      element.setAttribute(attribute, nextValue);
+    const show = (nextValue: string | null): void => {
+      if (nextValue === null) {
+        element.removeAttribute(attribute);
+      } else if (currentValue !== nextValue) {
+        element.setAttribute(attribute, nextValue);
+      }
+      state.translated = nextValue;
+    };
+    let found: FoundText | undefined;
+    try {
+      found = readTranslation(element, keyAttribute, rawKey, translate);
+    } catch (error) {
+      // A throwing missing-key handler is still a miss, so the value shown for an earlier key or locale goes too.
+      show(state.fallback);
+      throw error;
     }
-    state.translated = nextValue;
+    show(found?.text ?? state.fallback);
     return found?.locale;
   };
 
@@ -436,13 +445,21 @@ export function createDomTranslator(options: DomTranslatorOptions): DomTranslato
     }
 
     const fallbackText = getFallbackText(element, isReplaced);
-    const found = readTranslation(element, TRANSLATION_ATTRIBUTE, rawKey, translate);
-    const nextText = found?.text ?? fallbackText;
-
-    if (element.textContent !== nextText) {
-      element.textContent = nextText;
+    const show = (nextText: string): void => {
+      if (element.textContent !== nextText) {
+        element.textContent = nextText;
+      }
+      translatedTexts.set(element, nextText);
+    };
+    let found: FoundText | undefined;
+    try {
+      found = readTranslation(element, TRANSLATION_ATTRIBUTE, rawKey, translate);
+    } catch (error) {
+      // A throwing missing-key handler is still a miss, so the text shown for an earlier key or locale goes too.
+      show(fallbackText);
+      throw error;
     }
-    translatedTexts.set(element, nextText);
+    show(found?.text ?? fallbackText);
     return found?.locale;
   };
 
@@ -550,16 +567,33 @@ export function createDomTranslator(options: DomTranslatorOptions): DomTranslato
     );
   };
 
+  /**
+   * Puts back the text, attributes, and `lang` the element had before the binding translated it, for an element the DOM
+   * moved where the binding no longer translates, so a translation never outlives the binding's reason to show it.
+   */
+  const restoreElement = (element: Element): void => {
+    restoreText(element);
+    for (const attribute of TRANSLATED_ATTRIBUTES) {
+      restoreAttribute(element, attribute);
+    }
+    applyLang(element, undefined);
+  };
+
   return {
     translateRoot({ root, boundary = root, ...pass }) {
       runEach(collectElements(root, isTracked), (element) => {
+        // An element moved inside a component, or inside an element whose content the parser can read as markup,
+        // after a pass translated it would otherwise keep that translation, such as a `title` that closes a
+        // `<textarea>`.
         if (isInsideCustomElement(element, boundary)) {
+          restoreElement(element);
           return;
         }
         const blockedAncestor = findBlockedAncestor(element);
         if (blockedAncestor === undefined) {
           translateElement(element, pass);
         } else {
+          restoreElement(element);
           warnBlockedAncestor(element, blockedAncestor);
         }
       });

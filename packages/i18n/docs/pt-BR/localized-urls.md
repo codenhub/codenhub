@@ -2,7 +2,7 @@
 title: URLs localizadas
 description: Coloque o locale no caminho, traduza o próprio caminho, leia os dois de volta, crie links para outros idiomas, gere todas as páginas localizadas e mande os visitantes para o idioma deles num site estático.
 order: 4
-source: 43b4863aec8eb9059c48dc3a348166a28a704bcf
+source: ad1604729ae57a82be2c504473c22b1663b73e75
 ---
 
 # URLs localizadas
@@ -86,7 +86,7 @@ Com `localePrefix: "always"`, um caminho sem locale também devolve `undefined`,
 
 ```ts
 // Um arquivo, como `/favicon.ico`, não é uma página; veja Redirecione para a URL canônica abaixo.
-const isFile = /\.[a-z0-9]+$/i.test(url.pathname);
+const isFile = staticFiles.has(url.pathname);
 const route = isFile ? undefined : routing.parse(url.pathname);
 if (route === undefined && !isFile) {
   const locale = pickLocale(i18n, request);
@@ -124,10 +124,10 @@ Rode este redirecionamento, e o do prefixo que falta acima, só para rotas de p�
 - Com `trailingSlash: "always"`, este redirecionamento manda `/favicon.ico` para `/favicon.ico/`.
 - Com `localePrefix: "always"`, o de cima o manda para `/en/favicon.ico`.
 
-Nenhum dos dois tem arquivo. Se os redirecionamentos precisarem rodar antes, pule os caminhos que terminam numa extensão de arquivo, como os dois exemplos fazem:
+Nenhum dos dois tem arquivo. Se os redirecionamentos precisarem rodar antes, pule os caminhos que você serve como arquivos, como os dois exemplos fazem. `staticFiles` é um `Set` com eles, como cada arquivo do diretório de saída do seu build, escrito como um pathname do tipo `/favicon.ico`. Testar uma extensão de arquivo no lugar disso faz uma página como `/blog/node.js` ou `/users/john.doe` passar por arquivo: ela pula os dois redirecionamentos e fica sem rota:
 
 ```ts
-const isFile = /\.[a-z0-9]+$/i.test(url.pathname);
+const isFile = staticFiles.has(url.pathname);
 const route = isFile ? undefined : routing.parse(url.pathname);
 if (route !== undefined) {
   const canonical = routing.localize(route.pathname, route.locale);
@@ -352,9 +352,14 @@ const config = {
   locales,
   // `zh-TW` é `zh-Hant`: um idioma e a sua escrita provável, como `matchLocale()` os compara, com o norueguês `no` como `nb`.
   languages: Object.fromEntries(
-    locales.map((locale) => {
-      const { language, script } = new Intl.Locale(locale).maximize();
-      return [`${language === "no" ? "nb" : language}-${script}`, locale];
+    locales.flatMap((locale) => {
+      let likely;
+      try {
+        likely = new Intl.Locale(locale).maximize();
+      } catch {
+        return []; // Um locale de uso privado, como `x-pirate`, não tem idioma para comparar; só uma escolha salva o seleciona.
+      }
+      return [[`${likely.language === "no" ? "nb" : likely.language}-${likely.script}`, locale]];
     }),
   ),
   targets: Object.fromEntries(locales.filter((locale) => locale !== defaultLocale).map((locale) => [locale, routing.localize(pathname, locale)])),

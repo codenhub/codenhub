@@ -282,9 +282,10 @@ export interface I18n<TLocale extends string = string, TKey extends string = str
    * @param key - Translation key, or the key of a plural group when `params.count` is a number or bigint.
    * @param params - Argument values, read from own properties. An argument without a usable value, such as a string
    * for `{n, number}`, is left as written. A string in `{name}` is inserted as written, a number as `{name, number}`
-   * would format it, and a date as `{name, date}` would. A bigint is taken wherever a number is. A numeric `count`
-   * also selects a plural form. Where the dictionary type has the message as a literal, the values it uses are
-   * type-checked, and any other value may have any type, such as the `isAdmin` of a `User` passed whole.
+   * would format it, and a date as `{name, date}` would. A bigint is taken wherever a number is. A boolean is taken by
+   * `{v, select, …}` only, which picks the option named `true` or `false`, or `other`. A numeric `count` also selects a
+   * plural form. Where the dictionary type has the message as a literal, the values it uses are type-checked, and any
+   * other value may have any type, such as the `isAdmin` of a `User` passed whole.
    * @returns The translated text, or the trimmed key when no dictionary has it. A miss calls `onMissingKey`, or
    * warns once per recent locale/key pair in the process unless silent.
    * @throws {Error} When called before successful initialization.
@@ -331,9 +332,10 @@ export interface I18n<TLocale extends string = string, TKey extends string = str
   /**
    * Translates a key as {@link I18n.translate} does, and returns its text and tags as parts for a framework to render,
    * so a translation can mark a link or bold text inside a sentence without HTML. Tags are `<name>…</name>` and
-   * `<name/>`, with a name of letters and digits in any script, and `_`, written anywhere in the message's text,
-   * including inside a plural or select form. Values are text: a tag inside a value is never read, nor is one in
-   * quoted text, such as `'{<b>}'`. A `<` that doesn't form a tag, as in `a < b`, is text.
+   * `<name/>`, with a name of letters and digits in any script, `_`, and `-` after the first character, such as
+   * `<help-link>`, written anywhere in the message's text, including inside a plural or select form. Values are text: a
+   * tag inside a value is never read, nor is one in quoted text, such as `'{<b>}'`. A `<` that doesn't form a tag, as
+   * in `a < b`, is text.
    *
    * A message whose tags don't balance, nest past 10 levels, or cross the edge of a plural or select form warns once per
    * process for its locale, key, and text, unless silent, and returns the text as `t()` shows it, tags included, as one part.
@@ -424,7 +426,7 @@ export interface I18n<TLocale extends string = string, TKey extends string = str
    * process.
    * @returns A function that removes the listener; calling it again does nothing.
    */
-  subscribe(listener: () => void): () => void;
+  subscribe: (listener: () => void) => () => void;
 
   /**
    * Adds a typed lifecycle event listener.

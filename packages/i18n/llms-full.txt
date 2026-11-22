@@ -67,7 +67,7 @@ Two optional entry points cover what differs by environment:
 - Node.js 26 or newer, or a current Chromium, Firefox, or WebKit browser or Web Worker.
 - No runtime dependencies.
 
-In a Web Worker, the root entry point and `@codenhub/i18n/routing` work as anywhere else. `@codenhub/i18n/browser` works only with `syncDocument: false` and no `root`, since a worker has no page; with the defaults it throws a `TypeError` before starting the manager. See [In a Web Worker](docs/browser.md#in-a-web-worker).
+In a Web Worker, the root entry point and `@codenhub/i18n/routing` work as anywhere else. `@codenhub/i18n/browser` works only with `syncDocument: false` and no `root`, since a worker has no page; with the defaults it rejects with a `TypeError` before starting the manager. See [In a Web Worker](docs/browser.md#in-a-web-worker).
 
 ## Notes
 
@@ -526,14 +526,14 @@ t("order.confirmed", { name: "Ana", orderId: "1042" });
 // "Thanks, Ana. Order 1042 ships tomorrow."
 ```
 
-Values can be strings, numbers, bigints, or dates. A bigint goes wherever a number does, and is formatted without losing digits. Placeholder names use letters and digits in any script, and `_`, such as `{firstName}`, `{first_name}`, or `{año}`. A name with anything else, such as `{first-name}` or `{price€}`, is not a placeholder: the message is invalid syntax, logs a warning, and shows `{first-name}` as written.
+Values can be strings, numbers, bigints, or dates, and a `select` also takes a boolean. A bigint goes wherever a number does, and is formatted without losing digits. Placeholder names use letters and digits in any script, and `_`, such as `{firstName}`, `{first_name}`, or `{año}`. A name with anything else, such as `{first-name}` or `{price€}`, is not a placeholder: the message is invalid syntax, logs a warning, and shows `{first-name}` as written.
 
 Use placeholders instead of joining fragments. `t("before") + name + t("after")` locks every language into English word order, while a whole sentence with a placeholder lets each translation put the value where it belongs. Word order is the first thing every translator wants to change, and they are usually right. For a link or bold text inside the sentence, see [Links and bold text inside a sentence](#links-and-bold-text-inside-a-sentence).
 
 A few details:
 
 - A placeholder with no matching value stays as written, so a missing value shows up as `{name}` on screen rather than disappearing.
-- One `t()` call fills at most 100 arguments, counting those inside plural and select forms, and leaves the rest as written. A UI sentence never gets close; the limit keeps a huge fetched message from costing one formatting step per placeholder.
+- One `t()` call fills at most 100 arguments, counting those inside plural and select forms and each `#`, and leaves the rest as written, a `#` as `#`. A UI sentence never gets close; the limit keeps a huge fetched message from costing one formatting step per placeholder, or from repeating a long number thousands of times.
 - A number in a plain `{name}` is formatted for the reader, as `{name, number}` does: `1234.5` reads "1,234.5" in English and "1.234,5" in Portuguese. Write `{name, number, integer}` or another style, as the next section shows, to format it differently.
 - Braces and apostrophes are message syntax, so text that shows them literally needs quoting; see [Literal braces and apostrophes](#literal-braces-and-apostrophes).
 
@@ -559,14 +559,14 @@ t("cart.discount", { rate: 0.15 }); // "15% off"
 t("order.shipped", { date: new Date() });
 ```
 
-| Argument                | Styles                                                             | Value                     |
-| ----------------------- | ------------------------------------------------------------------ | ------------------------- |
-| `{n, number}`           | none, `integer`, `percent`                                         | number or bigint          |
-| `{d, date}`             | `short`, `medium` (the default), `long`, `full`                    | `Date` or a timestamp     |
-| `{d, time}`             | `short`, `medium` (the default), `long`, `full`                    | `Date` or a timestamp     |
-| `{n, plural, …}`        | see [Plurals](#plurals)                                            | number or bigint          |
-| `{n, selectordinal, …}` | ordinal forms, such as `one {#st} two {#nd} few {#rd} other {#th}` | number or bigint          |
-| `{v, select, …}`        | any words, plus `other`                                            | string, number, or bigint |
+| Argument                | Styles                                                             | Value                              |
+| ----------------------- | ------------------------------------------------------------------ | ---------------------------------- |
+| `{n, number}`           | none, `integer`, `percent`                                         | number or bigint                   |
+| `{d, date}`             | `short`, `medium` (the default), `long`, `full`                    | `Date` or a timestamp              |
+| `{d, time}`             | `short`, `medium` (the default), `long`, `full`                    | `Date` or a timestamp              |
+| `{n, plural, …}`        | see [Plurals](#plurals)                                            | number or bigint                   |
+| `{n, selectordinal, …}` | ordinal forms, such as `one {#st} two {#nd} few {#rd} other {#th}` | number or bigint                   |
+| `{v, select, …}`        | any words, plus `other`                                            | string, number, bigint, or boolean |
 
 Formatting uses the language of the dictionary the text came from, so English text that fills in for a missing Portuguese key is written the English way. An argument whose value has the wrong type, such as a string for `{n, number}`, stays as written.
 
@@ -580,6 +580,8 @@ A `select` picks text by a value, such as a pronoun, and needs an `other` option
 ```json
 { "review": { "replied": "{gender, select, female {She} male {He} other {They}} replied to your review" } }
 ```
+
+A boolean picks the option named `true` or `false`, so `{isAdmin, select, true {Admin} other {Member}}` shows "Admin" for `{ isAdmin: true }`. Only `select` reads a boolean; in a plain `{isAdmin}` it stays as written.
 
 To format a value in code, use the manager's formatters. They follow the active locale:
 
@@ -625,7 +627,7 @@ Inside a plural's forms, `#` stands for the number; write `'#'` for a literal `#
 
 Quoted text is text to the types too: in `'{it''s {x}'`, which shows `{it's {x}`, `x` is not a value `t()` asks for.
 
-Text that is not valid syntax, such as an unclosed `{` or a stray `}`, logs a warning, unless the manager is silent, and is shown with only its `{name}` placeholders filled. The warning names the key and the locale, and comes once for each key, text, and locale among the roughly 1,000 most recent, so an edited text warns again. [Find untranslated keys](#find-untranslated-keys) shows a test that checks every message.
+Text that is not valid syntax, such as an unclosed `{` or a stray `}`, logs a warning, unless the manager is silent, and is shown with only its `{name}` placeholders filled. The warning names the key and the locale, and comes once for each key, text, and locale among the roughly 1,000 most recent, so an edited text warns again. [Find untranslated keys](#find-untranslated-keys) shows a test that checks every message's syntax.
 
 ### Links and bold text inside a sentence
 
@@ -640,7 +642,7 @@ i18n.rich("signup.terms");
 // ["By signing up you accept the ", { tag: "terms", children: ["terms of use"] }, "."]
 ```
 
-A tag is `<name>…</name>`, or `<name/>` for one with no content, such as a line break. Names use letters and digits in any script, and `_`. A tag names what the part is, and your code decides how it renders, so a translation can't add a link, a script, or markup your code doesn't render. In React, for example:
+A tag is `<name>…</name>`, or `<name/>` for one with no content, such as a line break. Names use letters and digits in any script, `_`, and `-` after the first character, such as `<help-link>`. A tag names what the part is, and your code decides how it renders, so a translation can't add a link, a script, or markup your code doesn't render. In React, for example:
 
 ```tsx
 import { Fragment, type ReactNode } from "react";
@@ -812,8 +814,8 @@ Which values each argument takes:
 
 - `number`, `plural`, and `selectordinal` arguments take a number or bigint.
 - `date` and `time` take a `Date` or a timestamp.
-- `select` takes a string, number, or bigint.
-- A plain `{name}` takes any of these.
+- `select` takes a string, number, bigint, or boolean.
+- A plain `{name}` takes a string, number, bigint, or `Date`.
 
 Only the values the message uses are checked. Any other value may have any type, so `t("home.greeting", user)` takes a whole `User` with an `isAdmin: boolean`, and an object literal may carry extra values too. When several dictionaries are typed, a key needs the values of every one that has it.
 
@@ -883,7 +885,7 @@ test("every locale has every key", async () => {
 });
 ```
 
-To catch a message with broken syntax, such as an unclosed `{` a translator left, look up every key in every locale and fail on the warning. The manager must not be silent for this:
+To catch a message with broken syntax, such as an unclosed `{` a translator left, or tags that don't balance, look up every key in every locale and fail on the warning. The manager must not be silent for this:
 
 ```ts
 import { expect, test, vi } from "vitest";
@@ -897,13 +899,17 @@ test("every message is valid", async () => {
     await i18n.setLocale(locale);
     for (const key of Object.keys(await i18n.loadLocale(locale))) {
       i18n.t(key as Parameters<typeof i18n.t>[0]);
+      i18n.rich(key as Parameters<typeof i18n.rich>[0]);
     }
   }
 
-  expect(warn.mock.calls.filter(([text]) => String(text).startsWith("[I18n] Invalid message"))).toEqual([]);
+  const invalid = warn.mock.calls.filter(([text]) => /^\[I18n\] Invalid (message|tags)/.test(String(text)));
   warn.mockRestore();
+  expect(invalid).toEqual([]);
 });
 ```
+
+`rich()` checks the tags in the text each call shows. Without values, a plural or select is shown as written, so the tags inside its forms are not checked; pass values that pick a form to check its tags too.
 
 To fail a test on keys missing from every dictionary, such as a typo in a key you built at runtime, throw from `onMissingKey`:
 
@@ -974,7 +980,7 @@ With no other options, this:
 2. Sets `<html lang="pt" dir="ltr">` to match, so screen readers pronounce text correctly and [right-to-left languages](docs/index.md#right-to-left-languages) lay out correctly.
 3. Saves the language your app chooses, and reads it back on the visitor's next visit.
 
-It returns a binding. Keep it if your language picker has a "System" entry, as [Offer a "System" choice](#offer-a-system-choice) shows. Its `disconnect()` method is only needed when you tear the app down, as in tests or micro-frontends.
+It returns a binding. Keep it for your language picker, which renders from its `subscribe()`, as [Let visitors switch languages](#let-visitors-switch-languages) shows. Its `disconnect()` method is only needed when you tear the app down, as in tests or micro-frontends.
 
 ### How the locale is chosen
 
@@ -991,36 +997,49 @@ On a localized site, that means every page view saves the language in its URL. U
 
 It also means a visitor who follows one shared Portuguese link to a tea has Portuguese saved from then on, until they read a page in another language, even if their browser asks for English. One link from a Brazilian friend, and the shop speaks Portuguese to them.
 
-If you would rather save only what the visitor picks in your language picker, turn saving off with `persistLocale: false` and store the picker's choice yourself. That option also stops the binding from reading the saved choice, so read your own back and pass it as `locale`. If your picker also has [a "System" entry](#offer-a-system-choice), delete your stored choice when the visitor picks it, and start without `locale` while nothing is stored, so the binding detects again.
+If you would rather save only what the visitor picks in your language picker, turn saving off with `persistLocale: false`, and have the picker save its choice where your redirect reads it, deleting it when the visitor picks [a "System" entry](#offer-a-system-choice). Don't read that choice back and pass it as `locale`: the URL decides the page's language.
+
+To keep the choice somewhere other than `localStorage`, such as a cookie your server reads too, pass `storage` rather than reading the choice yourself and passing it as `locale`. The binding then reads, saves, and forgets the choice through it just as it does in `localStorage`: a saved choice whose dictionary fails to load falls back as the next section describes, where an explicit `locale` would reject, and a "System" entry works unchanged. [Hand the locale to the browser](docs/server-rendering.md#hand-the-locale-to-the-browser) keeps it in a cookie.
 
 #### When a loader fails during start
 
-If your loader fails for a saved locale, the binding warns and tries the locale it detects from the browser, then the default locale, so the visitor still gets a language they read instead of a broken app. A detected locale that fails falls back to the default the same way. The saved choice is kept for next time.
+If your loader fails for a saved locale, whether saved in `localStorage` or in your `storage`, the binding warns and tries the locale it detects from the browser, then the default locale, so the visitor still gets a language they read instead of a broken app. A detected locale that fails falls back to the default the same way. The saved choice is kept for next time.
 
 Two failures still reject:
 
-- A loader failure for a locale you passed explicitly, or for the default locale, since there is nothing sensible to fall back to.
+- A loader failure for a locale you passed explicitly, or for the default locale, since there is nothing sensible to fall back to. A choice you keep yourself, such as in a cookie, falls back like a saved one when you hand it over as `storage`, and rejects when you pass it as `locale`.
 - A dictionary that loads but [breaks the rules](docs/troubleshooting.md#a-dictionary-is-rejected), whatever the locale. That is a bug to fix, not a network hiccup to ride out.
 
 ## Let visitors switch languages
 
-Call `setLocale()` from your language picker. The binding reacts to every change that is applied: it saves the choice and updates `lang` and `dir`.
+Call `setLocale()` from your language picker, and show the language the binding reports. The binding reacts to every change that is applied: it saves the choice and updates `lang` and `dir`.
 
 ```ts
+const binding = await initializeBrowserI18n({ i18n });
 const picker = document.querySelector<HTMLSelectElement>("#language")!;
+const showLanguage = () => {
+  picker.value = i18n.locale;
+};
+let latestPick = 0;
 
-picker.value = i18n.locale;
+showLanguage();
+binding.subscribe(showLanguage);
 picker.addEventListener("change", async () => {
+  const pick = ++latestPick;
   try {
     await i18n.setLocale(picker.value as (typeof i18n.locales)[number]);
   } finally {
-    // Show the language in use, even when its dictionary failed to load or a later switch overtook this one.
-    picker.value = i18n.locale;
+    // A failed pick changes nothing, so show the language in use again, unless a later pick is still loading.
+    if (pick === latestPick) {
+      showLanguage();
+    }
   }
 });
 ```
 
-A visitor who changes their mind quickly is handled for you. When two switches overlap, the later one wins, and the earlier one resolves without changing anything, as [The latest call wins](docs/index.md#the-latest-call-wins) explains. So read `i18n.locale` after the `await` rather than assuming the picker's value. When a dictionary fails to load, `setLocale()` rejects and the page keeps its language, so the `finally` puts the picker back on it rather than leaving the language that failed selected.
+The language can change without the picker: a visitor who never picked one follows their browser's language mid-visit, as [Offer a "System" choice](#offer-a-system-choice) describes. `binding.subscribe()` calls `showLanguage` after every change, so the picker never shows a language the page left.
+
+A visitor who changes their mind quickly is handled for you. When two switches overlap, the later one wins, and the earlier one resolves without changing anything, as [The latest call wins](docs/index.md#the-latest-call-wins) explains. `latestPick` keeps that earlier one from putting the old language back on the picker while the later one is still loading. When a dictionary fails to load, `setLocale()` rejects and the page keeps its language, so the `finally` puts the picker back on it rather than leaving the language that failed selected.
 
 Only choices your app makes are saved: the `locale` option, and every applied `setLocale()` or `init()` after the binding has started. These are not saved:
 
@@ -1029,18 +1048,24 @@ Only choices your app makes are saved: the `locale` option, and every applied `s
 
 A visitor who never picked one keeps following their browser settings, including when you add their language later.
 
-The choice is stored in `localStorage` as `{"locale":"pt"}` under the key `"i18n"`. Change the key with `storageKey`, or turn saving off with `persistLocale: false`. If storage is unavailable, as in some private browsing modes, the binding warns and carries on without it.
+The choice is stored in `localStorage` as `{"locale":"pt"}` under the key `"i18n"`. Change the key with `storageKey`, keep the choice elsewhere with `storage`, or turn saving off with `persistLocale: false`. If storage is unavailable, as in some private browsing modes, or your `storage` throws, the binding warns and carries on without it.
 
 ### Offer a "System" choice
 
-Once a visitor picks a language, it sticks, which is the point. A "System" entry in the picker lets them undo that and go back to following their browser. Keep the binding that `initializeBrowserI18n()` returns; this replaces the start and the picker above:
+Once a visitor picks a language, it sticks, which is the point. A "System" entry in the picker lets them undo that and go back to following their browser. This replaces the picker above:
 
 ```ts
 const binding = await initializeBrowserI18n({ i18n });
 const picker = document.querySelector<HTMLSelectElement>("#language")!;
+const showChoice = () => {
+  picker.value = binding.isUsingSystemLocale ? "system" : i18n.locale;
+};
+let latestPick = 0;
 
-picker.value = binding.isUsingSystemLocale ? "system" : i18n.locale;
+showChoice();
+binding.subscribe(showChoice);
 picker.addEventListener("change", async () => {
+  const pick = ++latestPick;
   try {
     if (picker.value === "system") {
       await binding.switchToSystemLocale();
@@ -1048,8 +1073,10 @@ picker.addEventListener("change", async () => {
       await i18n.setLocale(picker.value as (typeof i18n.locales)[number]);
     }
   } finally {
-    // Show the visitor's choice, even when the switch failed or a later one overtook it.
-    picker.value = binding.isUsingSystemLocale ? "system" : i18n.locale;
+    // Show the visitor's choice again after a failed switch, unless a later pick is still loading.
+    if (pick === latestPick) {
+      showChoice();
+    }
   }
 });
 ```
@@ -1060,7 +1087,7 @@ picker.addEventListener("change", async () => {
 
 While `isUsingSystemLocale` is `true`, the binding also listens for the browser's `languagechange` event, so a visitor who changes their browser's language mid-visit gets the new one without a reload. A language the visitor just picked and that is still loading is kept, not overtaken.
 
-In a framework, render the picker from `binding.subscribe()` rather than `i18n.subscribe()`. Picking the language already showing, or "System" while the detected language is the one showing, changes the selection without changing the language, so the manager has nothing to report. The binding reports both, and every language change. In React:
+Render the picker from `binding.subscribe()` rather than `i18n.subscribe()`, in a framework too. Picking the language already showing, or "System" while the detected language is the one showing, changes the selection without changing the language, so the manager has nothing to report. The binding reports both, and every language change. `binding.subscribe` works detached from the binding, so it can be passed on as it is. In React:
 
 ```tsx
 import { useState, useSyncExternalStore } from "react";
@@ -1140,7 +1167,7 @@ How each part behaves:
 - **Comments are replaced too.** They are not elements, so they don't count as children. Don't put `data-i18n` on an element a framework renders or hydrates, since frameworks keep comment markers there; translate that text with `t()` instead.
 - **`data-i18n-<attribute>` translates one attribute.** Only attributes that hold text for people or screen readers are allowed: `alt`, `title`, `placeholder`, `label`, `aria-label`, `aria-description`, `aria-placeholder`, `aria-roledescription`, and `aria-valuetext`. Others, such as `data-i18n-href` or `data-i18n-onclick`, are ignored, so a translation can never change a link, a style, or an event handler. The `title` of a `<style>`, or of a `<link rel="stylesheet">`, is skipped with a warning, since there it names a set of style sheets, and renaming it could switch the page's styles off.
 - **The text already in the HTML is the last fallback.** A key a language lacks shows the text of the next locale in its fallback chain, as `t()` does: a configured parent such as `pt` for `pt-BR`, then the default locale. The original text comes back only when no dictionary in the chain has the key. An element showing text in another language than the one it already has, from its own `lang` or else its nearest ancestor's, gets that locale's `lang`, such as `<p lang="en">` on a Portuguese page, so a screen reader pronounces it in the right language. With `syncDocument: false`, that is the language your page declares rather than the active locale, and the active locale only where no `lang` is set. The binding restores the element's own `lang` once the text is in that language again, and once your code changes that `lang`, the binding leaves it to your code. An element with content of its own, such as text or children, is marked only by its `data-i18n` text, since `lang` would cover that content too, and an element whose keys show text from different locales, or the HTML's own text after a miss, is not marked.
-- **Text is set as plain text, never as HTML.** The text of `<script>`, `<style>`, `<noscript>`, `<template>`, `<iframe>`, `<noembed>`, `<noframes>`, `<xmp>`, and `<plaintext>` is never touched, since it runs as code, decides what shows, or is written back unescaped when the page is saved as HTML. Their attributes are translated like any other, so `<iframe data-i18n-title="video.title">` gets a translated accessible name. An element inside one of them, or inside a `<textarea>` or `<title>`, which only your code can put there, is skipped whole, text and attributes, with a warning: when the page is saved as HTML and read again, a translated attribute could close the element around it and become markup. The text and attributes of a `<textarea>` or `<title>` itself are translated.
+- **Text is set as plain text, never as HTML.** The text of `<script>`, `<style>`, `<noscript>`, `<template>`, `<iframe>`, `<noembed>`, `<noframes>`, `<xmp>`, and `<plaintext>` is never touched, since it runs as code, decides what shows, or is written back unescaped when the page is saved as HTML. Their attributes are translated like any other, so `<iframe data-i18n-title="video.title">` gets a translated accessible name. An element inside one of them, or inside a `<textarea>` or `<title>`, which only your code can put there, is skipped whole, text and attributes, with a warning: when the page is saved as HTML and read again, a translated attribute could close the element around it and become markup. An element your code moves into one of them after the binding translated it gets back the text, attributes, and `lang` it had in the HTML at the next language change, or at once with `observe`. The text and attributes of a `<textarea>` or `<title>` itself are translated.
 - **A message that needs values keeps the HTML text**, with a warning once per key, because there is nowhere in the HTML to pass a value from. That covers `{name}` and any other argument, such as a whole plural, which would otherwise show its ICU syntax to visitors. Render text with values from your code with `t()`.
 - **The page shows its HTML text until the visitor's dictionary has loaded**, then switches in place, which on a slow connection is visible. There are two ways to avoid that:
   - Render a page per language ahead of time, as in [Build a static site](docs/server-rendering.md#build-a-static-site), and pass its `locale`.
@@ -1173,7 +1200,7 @@ Leave `observe` off when a framework renders the page: the framework already cal
 
 ### Custom elements
 
-The binding does not look inside custom elements and doesn't warn when it skips one. That covers tags with a dash, such as `<my-widget>`, and customized built-in elements, whether the HTML marks one with `is`, as in `<button is="my-button">`, or your code creates one with `document.createElement("button", { is: "my-button" })`, which sets no `is` attribute. In a browser without `customElements.getName()`, one your code creates is translated like a plain element.
+The binding does not look inside custom elements and doesn't warn when it skips one. An element your code moves into one after the binding translated it gets back the text, attributes, and `lang` it had in the HTML, at the next language change, or at once with `observe`, since the component owns it now. That covers tags with a dash, such as `<my-widget>`, and customized built-in elements, whether the HTML marks one with `is`, as in `<button is="my-button">`, or your code creates one with `document.createElement("button", { is: "my-button" })`, which sets no `is` attribute. In a browser without `customElements.getName()`, one your code creates is translated like a plain element.
 
 The binding never crosses into a shadow root either, a custom element's or any other's. A shadow root can itself be the `root` you pass, when that is the part of the page the binding translates.
 
@@ -1214,7 +1241,7 @@ A Web Worker has no page, so there is no `<html>` to set `lang` on and nothing t
 await initializeBrowserI18n({ i18n, syncDocument: false });
 ```
 
-Pass `syncDocument: false` and no `root`. With the default `syncDocument: true` and no `document`, `initializeBrowserI18n()` throws `TypeError: [I18n] Document synchronization requires a page document; pass syncDocument: false without one.` before it starts the manager, so the manager is left not started rather than half bound.
+Pass `syncDocument: false` and no `root`. With the default `syncDocument: true` and no `document`, `initializeBrowserI18n()` rejects with `TypeError: [I18n] Document synchronization requires a page document; pass syncDocument: false without one.` before it starts the manager, so the manager is left not started rather than half bound.
 
 A worker has no `localStorage` either, so saving warns and is skipped. Add `persistLocale: false` to start quietly.
 
@@ -1226,6 +1253,7 @@ A worker has no `localStorage` either, so saving warns and is skipped. Add `pers
 | `locale`        | none       | A locale that overrides saved and detected ones. It is saved too while `persistLocale` is on.                |
 | `persistLocale` | `true`     | Read the saved choice, and save the `locale` option and every language change your app makes after start.    |
 | `storageKey`    | `"i18n"`   | The `localStorage` key for the saved choice.                                                                 |
+| `storage`       | none       | Where to keep the saved choice instead of `localStorage`, as `get()`, `set(locale)`, and `remove()`.         |
 | `syncDocument`  | `true`     | Keep `<html lang>` and `dir` in step with the locale. Needs a page `document`; pass `false` in a Web Worker. |
 | `root`          | none       | The part of the page to translate with `data-i18n` attributes.                                               |
 | `observe`       | `false`    | Also translate changes below `root` as they happen. Needs `root`.                                            |
@@ -1233,8 +1261,9 @@ A worker has no `localStorage` either, so saving warns and is skipped. Add `pers
 ## Rules to know
 
 - **One binding per manager.** A second `initializeBrowserI18n()` call for the same manager rejects until the first is disconnected.
-- **Start the binding once, when the app starts**, as a module's top-level `await` or before mounting the app, not in a component's effect. A start still loading can't be cancelled, so a second start, as React's StrictMode makes by running an effect twice, rejects with `Error: [I18n] The manager already has a browser binding.`, with no binding yet to `disconnect()`.
-- **Give each binding its own part of the page.** Two bindings, as in micro-frontends, each with its own manager, need `root`s that don't contain each other. Where they overlap, each translates the shared elements in its own language, and whichever runs last wins. They also share the saved choice and `<html lang>` unless told otherwise: give each extra binding its own `storageKey`, so one binding's saved pick doesn't overwrite another's, and `syncDocument: false` to all but the one binding that owns the page.
+- **Start the binding once, when the app starts**, as a module's top-level `await` or before mounting the app, not in a component's effect. A start still loading can't be cancelled, so a second start, as React's StrictMode makes by running an effect twice, rejects with `TypeError: [I18n] The manager already has a browser binding.`, with no binding yet to `disconnect()`.
+- **`storage` replaces `storageKey` and needs saving on.** Passing it with `storageKey`, or with `persistLocale: false`, rejects with a `TypeError` before the manager starts, since both say where the choice lives or that it doesn't. Each method runs synchronously: the binding doesn't wait for a promise one returns.
+- **Give each binding its own part of the page.** Two bindings, as in micro-frontends, each with its own manager, need `root`s that don't contain each other. Where they overlap, each translates the shared elements in its own language, and whichever runs last wins. They also share the saved choice and `<html lang>` unless told otherwise: give each extra binding its own `storageKey` or `storage`, so one binding's saved pick doesn't overwrite another's, and `syncDocument: false` to all but the one binding that owns the page.
 - **Let the binding start the manager.** The binding's promise rejects with `Error: [I18n] Browser initialization was superseded before its locale became active.` when, before the binding's locale is active, your code either:
   - calls `i18n.init()`, or
   - calls `i18n.setLocale()` on a manager that was already initialized, even to the locale already showing.
@@ -1415,7 +1444,7 @@ A key that only your default language has does not fail the build; it renders in
 
 When the browser takes over a server-rendered page, it must start in the language the server used, or the text changes as the page loads. On a localized site, the URL says which: read it with `routing.parse()`, as [Localized URLs](docs/localized-urls.md#read-the-locale-on-the-client) shows.
 
-Without a locale in the URL, the server's `Accept-Language` match is a guess, not a choice. Don't pass it to the binding as `locale`: the binding saves an explicit locale as the visitor's choice, as [How the locale is chosen](docs/browser.md#how-the-locale-is-chosen) explains, so a visitor who picked Portuguese would have English saved over it on every page load. Keep the visitor's choice in a cookie instead, which the server can read too:
+Without a locale in the URL, the server's `Accept-Language` match is a guess, not a choice. Don't pass it to the binding as `locale`: the binding saves an explicit locale as the visitor's choice, as [How the locale is chosen](docs/browser.md#how-the-locale-is-chosen) explains, so a visitor who picked Portuguese would have English saved over it on every page load. Keep the visitor's choice in a cookie instead, which the server can read too, and give the binding that cookie as its `storage`:
 
 ```ts
 // src/render.ts
@@ -1430,21 +1459,24 @@ export async function renderPage(request: Request) {
 
 ```ts
 // In the browser
-const chosen = /(?:^|;\s*)locale=([^;]*)/.exec(document.cookie)?.[1] ?? "";
 const binding = await initializeBrowserI18n({
   i18n,
-  // The cookie holds the choice, so the binding neither saves nor reads its own.
-  persistLocale: false,
-  locale: i18n.resolveLocale(chosen) ?? i18n.matchLocale([chosen]),
-});
-binding.subscribe(() => {
-  document.cookie = binding.isUsingSystemLocale ? "locale=; path=/; max-age=0" : `locale=${i18n.locale}; path=/; max-age=31536000; samesite=lax`;
+  // The binding reads, saves, and forgets the visitor's choice in the cookie instead of localStorage.
+  storage: {
+    get: () => /(?:^|;\s*)locale=([^;]*)/.exec(document.cookie)?.[1],
+    set: (locale) => {
+      document.cookie = `locale=${locale}; path=/; max-age=31536000; samesite=lax`;
+    },
+    remove: () => {
+      document.cookie = "locale=; path=/; max-age=0";
+    },
+  },
 });
 ```
 
-- **A visitor who picked a language** gets it from the server, and the browser starts in it.
+- **A visitor who picked a language** gets it from the server, and the browser starts in it. The binding matches the cookie as the server does, so a choice you no longer list exactly is matched on both sides. If the browser can't load that language, the binding warns and falls back to the detected language, then the default, as [When a loader fails during start](docs/browser.md#when-a-loader-fails-during-start) describes, and the cookie keeps the choice for next time.
 - **A visitor who never picked one, or picked "System"**, has no cookie. The server matches `Accept-Language`, and the binding detects from `navigator.languages` with the same rules, saving nothing, so `isUsingSystemLocale` stays `true` and the page follows the browser's language. Browsers build both lists from the same settings. One that sends fewer languages in the header than `navigator.languages` lists can disagree when the visitor's first language is one you don't support, and the text then changes as the page loads.
-- **A picker** calls `i18n.setLocale()` or `binding.switchToSystemLocale()`, as in [Offer a "System" choice](docs/browser.md#offer-a-system-choice), and `subscribe()` writes or deletes the cookie.
+- **A picker** calls `i18n.setLocale()` or `binding.switchToSystemLocale()`, as in [Offer a "System" choice](docs/browser.md#offer-a-system-choice), and the binding writes or deletes the cookie through `storage`. A language the binding detects is never written, so the cookie only ever holds a choice.
 
 ## Next
 
@@ -1533,7 +1565,7 @@ With `localePrefix: "always"`, a path without a locale returns `undefined` too, 
 
 ```ts
 // A file, such as `/favicon.ico`, is not a page; see Redirect to the canonical URL below.
-const isFile = /\.[a-z0-9]+$/i.test(url.pathname);
+const isFile = staticFiles.has(url.pathname);
 const route = isFile ? undefined : routing.parse(url.pathname);
 if (route === undefined && !isFile) {
   const locale = pickLocale(i18n, request);
@@ -1571,10 +1603,10 @@ Run this redirect, and the one for a missing prefix above, only for page routes,
 - With `trailingSlash: "always"`, this redirect sends `/favicon.ico` to `/favicon.ico/`.
 - With `localePrefix: "always"`, the one above sends it to `/en/favicon.ico`.
 
-Neither has a file. If the redirects have to run first, skip paths that end in a file extension, as both examples do:
+Neither has a file. If the redirects have to run first, skip the paths you serve as files, as both examples do. `staticFiles` is a `Set` of them, such as every file in your build's output directory, each written as a pathname like `/favicon.ico`. Testing for a file extension instead turns a page such as `/blog/node.js` or `/users/john.doe` into a file, which skips both redirects and leaves the page unrouted:
 
 ```ts
-const isFile = /\.[a-z0-9]+$/i.test(url.pathname);
+const isFile = staticFiles.has(url.pathname);
 const route = isFile ? undefined : routing.parse(url.pathname);
 if (route !== undefined) {
   const canonical = routing.localize(route.pathname, route.locale);
@@ -1799,9 +1831,14 @@ const config = {
   locales,
   // `zh-TW` is `zh-Hant`: a language and its likely script, as `matchLocale()` compares them, with Norwegian `no` as `nb`.
   languages: Object.fromEntries(
-    locales.map((locale) => {
-      const { language, script } = new Intl.Locale(locale).maximize();
-      return [`${language === "no" ? "nb" : language}-${script}`, locale];
+    locales.flatMap((locale) => {
+      let likely;
+      try {
+        likely = new Intl.Locale(locale).maximize();
+      } catch {
+        return []; // A private-use locale, such as `x-pirate`, has no language to match; only a saved choice selects it.
+      }
+      return [[`${likely.language === "no" ? "nb" : likely.language}-${likely.script}`, locale]];
     }),
   ),
   targets: Object.fromEntries(locales.filter((locale) => locale !== defaultLocale).map((locale) => [locale, routing.localize(pathname, locale)])),
@@ -2065,19 +2102,20 @@ You see `Ouvrir l{app}` where you expected `Ouvrir l'éditeur`, and the console 
 
 ## The browser binding warns or rejects
 
-- **"Document synchronization requires a page document"**: `initializeBrowserI18n()` ran without a `document`, as in a Web Worker, and threw `TypeError: [I18n] Document synchronization requires a page document; pass syncDocument: false without one.` before starting the manager. Pass `syncDocument: false` and no `root`; see [In a Web Worker](docs/browser.md#in-a-web-worker).
+- **"Document synchronization requires a page document"**: `initializeBrowserI18n()` ran without a `document`, as in a Web Worker, and rejected with `TypeError: [I18n] Document synchronization requires a page document; pass syncDocument: false without one.` before starting the manager. Pass `syncDocument: false` and no `root`; see [In a Web Worker](docs/browser.md#in-a-web-worker).
 - **"The manager already has a browser binding"**: you called `initializeBrowserI18n()` twice for the same manager. Call `disconnect()` on the first binding, or keep one.
 - **"Browser initialization was superseded before its locale became active"**: your code called `i18n.init()` while the binding was starting the manager, or `i18n.setLocale()` on a manager that was already initialized, even to the locale already showing. The manager keeps your call's result and the binding is not connected. Let the binding start the manager, and switch languages after its promise resolves.
 - **"Browser observation requires a root"**: `observe: true` needs a `root` to watch.
-- **"root must be an element, a document, or a shadow root, such as document.body."**: `root` was something else, usually the `null` that `document.querySelector("#app")` returns on a page without `#app`. The binding throws before starting the manager. Check that the element exists on every page that runs the script, or pass `document`.
-- **`onMissingKey` threw**: the binding still translates every other element, then rejects with the first error on the first initialization, or reports it as an uncaught error after a later language switch. Only the text or attribute whose key was missing keeps its value. A first initialization that rejects this way leaves the manager started but the binding disconnected, so later language switches don't translate the page; fix the callback and call `initializeBrowserI18n()` again.
-- **"Could not read persisted locale", "Could not persist locale", or "Could not forget persisted locale"**: `localStorage` is unavailable, as in some private browsing modes or a Web Worker. The visitor's choice is not saved, or after `switchToSystemLocale()`, not forgotten; everything else works. Pass `persistLocale: false` where there is no storage to start quietly.
+- **"root must be an element, a document, or a shadow root, such as document.body."**: `root` was something else, usually the `null` that `document.querySelector("#app")` returns on a page without `#app`. The binding rejects before starting the manager. Check that the element exists on every page that runs the script, or pass `document`.
+- **`onMissingKey` threw**: the binding still translates every other element, then rejects with the first error on the first initialization, or reports it as an uncaught error after a later language switch. The text or attribute whose key was missing shows the HTML's value, as a missing key does. A first initialization that rejects this way leaves the manager started but the binding disconnected, so later language switches don't translate the page; fix the callback and call `initializeBrowserI18n()` again.
+- **"Could not read persisted locale", "Could not persist locale", or "Could not forget persisted locale"**: `localStorage` is unavailable, as in some private browsing modes or a Web Worker, or a method of your [`storage`](docs/server-rendering.md#hand-the-locale-to-the-browser) threw. The visitor's choice is not saved, or after `switchToSystemLocale()`, not forgotten; everything else works. Pass `persistLocale: false` where there is no storage to start quietly, or fix the `storage` method that threw.
+- **"storage replaces storageKey", "storage requires persistLocale", or "storage must be an object with get(), set(), and remove() methods"**: `initializeBrowserI18n()` rejected with a `TypeError` before starting the manager. Pass `storage` alone, with saving left on, and give it all three methods.
 - **"Could not switch to the detected locale"**: the browser's language changed while the binding [followed the system](docs/browser.md#offer-a-system-choice), and the loader failed for the newly detected locale. The page keeps its current language. Fix the loader.
 - **"switchToSystemLocale() requires a connected browser binding"**: you called `switchToSystemLocale()` after `disconnect()`. Call it on the binding that is connected.
 - **`Could not load locale "pt"; using "es".`** or **`Could not load locale "pt"; using the default locale.`**: the loader failed for a saved or detected locale other than the default, so the visitor got the next one instead: the locale detected from the browser after a saved one, then the default. Fix the loader; the saved choice is kept for next time. If the default locale itself fails to load, there is nothing left to fall back to, and initialization rejects with `Failed to load translations for locale "en".`
 - **"Skipping translation on <p> because translated elements must be leaves"**: the element with `data-i18n` has child elements. Put the key on an element that contains only text, or translate it with `t()`.
 - **"Skipping translation on <style> because the element can run, hide, or reparse its text as HTML"**: a `data-i18n` key is on a `<script>`, `<style>`, `<noscript>`, `<template>`, `<iframe>`, `<noembed>`, `<noframes>`, `<xmp>`, or `<plaintext>` element, whose text runs as code, decides what shows, or is written back unescaped when the page is saved as HTML. The warning names the key and passes the element, so the console points to it. Move the key to an ordinary element. Its `data-i18n-<attribute>` keys, such as an `<iframe>`'s `data-i18n-title`, are still translated.
-- **"Skipping translation on <p> because it is inside <xmp>, which can run, hide, or reparse its content as HTML"**: an element with a key is inside one of the elements the previous entry lists, or inside a `<textarea>` or `<title>`, which only code can do, such as by appending to an `<xmp>` or a `<template>` rather than to its `content`. Neither its text nor its attributes are translated, since a translation could close the element around it and become markup once the page is saved as HTML, or would never be shown. Move the element out.
+- **"Skipping translation on <p> because it is inside <xmp>, which can run, hide, or reparse its content as HTML"**: an element with a key is inside one of the elements the previous entry lists, or inside a `<textarea>` or `<title>`, which only code can do, such as by appending to an `<xmp>` or a `<template>` rather than to its `content`. Neither its text nor its attributes are translated, since a translation could close the element around it and become markup once the page is saved as HTML, or would never be shown. An element translated before it was moved there gets its HTML text and attributes back. Move the element out.
 - **"Skipping translation because data-i18n contains an invalid key"**, or the same for a `data-i18n-<attribute>`: the key is blank, longer than 1,000 characters, or contains an ASCII control character, so no dictionary can hold it. The element shows its HTML text, as for a key no dictionary has, including after a key it showed a translation for changes to an invalid one. Fix the key in the HTML.
 - **"Skipping translation because data-i18n names a message that needs values"**: the message has a placeholder, a plural, or a select, and HTML translation has no values to fill them. The element keeps its HTML text, and the warning appears once per key. Render that text with `t()` and pass the values.
 - **"Skipping translation of the title of <style> because it names a style sheet set"**: a `data-i18n-title` key is on a `<style>` or `<link rel="stylesheet">` element, whose `title` groups style sheets that the browser switches between, so translating it would change which ones apply. The element keeps its `title`. Remove the key.
@@ -2099,8 +2137,10 @@ The [reference](docs/reference/index.md) documents every export, option, and the
 - **`binding.isUsingSystemLocale`** says whether to show "System" selected: `true` after a start with nothing chosen and after `switchToSystemLocale()`, `false` once your app applies a locale with `setLocale()` or `init()`.
 - **`binding.subscribe()`** calls your function once after each change to what a picker shows, the language or `isUsingSystemLocale`, including a pick of the language already showing, which `i18n.subscribe()` doesn't report. Render a framework picker from it, as the [React example](docs/browser.md#offer-a-system-choice) does.
 - **`parse()` returns `alternates`**, the page's URL in every language that has one, for language switchers and `hreflang` tags. A language whose URL would open another page is left out, where `localize()` throws, so an English product `/products/novo` next to a translated `/products/new` no longer makes the guide's switcher answer 500. See [Link to another language](docs/localized-urls.md#link-to-another-language).
-- **`rich(key, values)`** returns a message as text and `{ tag, children }` parts, so a link or bold text inside a sentence stays one message a translator can reorder: `"Read the <link>terms</link>"` gives `["Read the ", { tag: "link", children: ["terms"] }]`. Map the parts to your framework's elements. Tags come only from the message, never from a value or from quoted text such as `'{<b>}'`, and unbalanced tags warn once and return the text as `t()` shows it. See [Links and bold text inside a sentence](docs/translations.md#links-and-bold-text-inside-a-sentence).
+- **`rich(key, values)`** returns a message as text and `{ tag, children }` parts, so a link or bold text inside a sentence stays one message a translator can reorder: `"Read the <link>terms</link>"` gives `["Read the ", { tag: "link", children: ["terms"] }]`. Map the parts to your framework's elements. A tag's name takes `-` after its first character, as in `<help-link>`. Tags come only from the message, never from a value or from quoted text such as `'{<b>}'`, and unbalanced tags warn once and return the text as `t()` shows it. See [Links and bold text inside a sentence](docs/translations.md#links-and-bold-text-inside-a-sentence).
 - **A bigint is taken wherever a number is**, in `{n}`, `{n, number}`, `plural`, `selectordinal`, `select`, and a plural group's `count`. It is formatted without losing digits and selects its plural form exactly, so `10n ** 20n + 22n` in an English ordinal reads "…22nd".
+- **`select` takes a boolean**, picking the option named `true` or `false`, or `other`: `{isAdmin, select, true {Admin} other {Member}}` shows "Admin" for `{ isAdmin: true }`, where it showed the message's source. The types accept a boolean for `select` only; in a plain `{isAdmin}` it stays as written.
+- **`initializeBrowserI18n`'s `storage` option** saves the visitor's choice somewhere other than `localStorage`, such as a cookie your server reads, through `get()`, `set(locale)`, and `remove()`. A choice read from it is matched and falls back when its dictionary fails to load, as a saved one does, which a choice passed as `locale` can't. A value that isn't a configured locale counts as nothing saved, and a method that throws warns. Passing it with `storageKey` or `persistLocale: false` rejects with a `TypeError`. See [Hand the locale to the browser](docs/server-rendering.md#hand-the-locale-to-the-browser).
 - If your code implements `I18n`, `BrowserI18nBinding`, or `LocaleRouting`, or builds `parse()` results, as a test double might, add the new members, or build the double from the real thing. A test that compares a `parse()` result with `toEqual({ locale, pathname })` now needs `alternates` too, or `toMatchObject`.
 
 ## Changed
@@ -2112,7 +2152,7 @@ The [reference](docs/reference/index.md) documents every export, option, and the
 - **`resolveLocale()` reads `_` as `-`** too, so `pt_BR` from a cookie or a back end resolves to `pt-BR`, where it returned `undefined`.
 - **The default missing-key warning is logged once per process for each locale and key**, shared by every manager, where each manager kept its own record. A server with a manager per request logged one missing word once for every visitor. A test that expects each new manager to warn again passes `onMissingKey` instead.
 - **An invalid message warns once per process for each locale, key, and text**, shared by every manager, as a missing key does, so an edited text warns again. Both records keep a bounded amount of memory, about 1,000 typical keys, and remember a message by a hash of its text, not the text itself.
-- **Names in a message take letters and digits in any script**: an argument such as `{año}`, a select option such as `niño {…}`, and a tag such as `<énfasis>`, where only ASCII letters, digits, and `_` were read: such a message was invalid syntax, or its tag was text. The types check values only for ASCII names; a message with another name accepts any values.
+- **Names in a message take letters and digits in any script**: an argument such as `{año}`, a select option such as `niño {…}`, and a tag such as `<énfasis>` or `<help-link>`, where only ASCII letters, digits, and `_` were read: such a message was invalid syntax, or its tag was text. A tag also takes `-` after its first character, as a select key takes it anywhere. The types check values only for ASCII names; a message with another name accepts any values.
 - **`data-i18n` and `data-i18n-<attribute>` keep the HTML's value for a message that needs values**, one with a placeholder, a plural, or a select, and warns once per key, where it wrote the message as written, such as `Hello {name}`, without a warning. Render that text with `t()`.
 - **`data-i18n` and `data-i18n-<attribute>` set `lang` on text from a fallback locale's dictionary**, so a screen reader reads an English fallback on a French page in English. The locale is compared with the language the element has without the mark, its own `lang` or its nearest ancestor's, so a French text in a widget under `<html lang="en">` is marked `fr` with `syncDocument: false` too. An element is marked only when every key it shows comes from that one locale, so a button with French text and an English `title` isn't. The binding restores the element's own `lang` when the text is translated again, unless your code has changed that `lang`, which then stays yours to update.
 - **`data-i18n-title` on a `<style>` or a `<link rel="stylesheet">` is skipped with a warning**, since their `title` names a style sheet set and translating it would change which styles apply.
@@ -2121,9 +2161,9 @@ The [reference](docs/reference/index.md) documents every export, option, and the
 - **`matchLocale()` skips a preference longer than 255 characters**, as it skips one that isn't a string. A 16 KB `Accept-Language` entry cost about 25 ms a match.
 - **`data-i18n` skips `iframe`, `noembed`, `noframes`, `plaintext`, and `xmp`**, as it skips `script` and `style`, with a warning. Serializing the page writes their text without escaping, so a translation in one of them could become markup in server-rendered or prerendered HTML.
 - **Only the content of those elements is skipped.** An element inside one of them, which only script can put there, is skipped whole, with a warning, and so is one inside a `<template>` or a `<noscript>`. Their own `data-i18n-<attribute>` keys are translated, so an `<iframe>`'s `data-i18n-title`, the name a screen reader gives an embedded video or map, follows the language. That includes `<template>` and `<noscript>`, whose attributes 0.4.0 left untranslated.
-- **`initializeBrowserI18n()` throws a `TypeError` when there is no global event target**, before touching the manager, where it initialized the manager and then rejected.
+- **`initializeBrowserI18n()` rejects with a `TypeError` when there is no global event target**, before touching the manager, where it initialized the manager and then rejected.
 - **`t()` takes values typed by an interface or a class**, such as a `User`, where only object literals and index-signature types compiled, and checks only the values the message uses. Any other value may have any type, in an interface or an object literal, so a `User` with an `isAdmin: boolean` is taken whole; a missing or wrongly typed value the message uses still fails to compile. `t()` has a second type parameter for the values; a call that passes the key's type argument, `t<"cart.title">(…)`, is unaffected.
-- **A visitor who never chose a language follows the browser mid-visit.** While `isUsingSystemLocale` is `true`, a `languagechange` event switches to the newly detected locale without saving it, where the page kept its language until a reload. A visitor's pick still loading when the event arrives is kept. A load that fails warns, "Could not switch to the detected locale", and keeps the current language. You need do nothing; a visitor who chose a language, or a start with an explicit `locale`, is not affected.
+- **A visitor who never chose a language follows the browser mid-visit.** While `isUsingSystemLocale` is `true`, a `languagechange` event switches to the newly detected locale without saving it, where the page kept its language until a reload. A visitor's pick still loading when the event arrives is kept. A load that fails warns, "Could not switch to the detected locale", and keeps the current language. A picker that sets its value only after its own switches keeps showing the old language; render it from `binding.subscribe()`, as [Let visitors switch languages](docs/browser.md#let-visitors-switch-languages) does. A visitor who chose a language, or a start with an explicit `locale`, is not affected.
 - **A `setLocale()` to the language already showing is saved**, like any other choice, where nothing was saved. A visitor who picks English while English was detected has chosen it, and keeps it after changing their browser's language.
 - `disconnect()` also stops following the browser's language and calling `binding.subscribe()` listeners, and drops a switch to a detected locale still loading. A `setLocale()` still loading still applies.
 - **The guide's language switcher and `hreflang` tags read `route.alternates`** instead of calling `localize()` on a path from the request. Do the same in yours. The `x-default` tag is left out when the default locale has no URL for the page, and its default locale comes from the constants the guide's routing module exports, not a second copy that drifts when the default changes. A static build still uses `localizeAll()`, which throws on a clash, so the build finds it.
@@ -2139,15 +2179,21 @@ The [reference](docs/reference/index.md) documents every export, option, and the
 - **`t()` takes any key when the loader returns `Record<string, unknown>`**, where no key compiled.
 - **An `init()` that switches a ready manager to another locale also dispatches `locale-change`**, after `ready`, with `previousLocale`, where it dispatched only `ready`, so a `locale-change` listener missed the switch. `subscribe()` listeners are still called once for it. The first `init()` dispatches only `ready`, and an `init()` with the locale already active dispatches no `locale-change`.
 - **`t(key, values)` throws a `TypeError` when `values` is `null` or a primitive.** `null` failed with a native error from inside the package, and a string was ignored.
-- **Errors that name a dictionary key, a locale, a path, or a configuration property quote it**, with line breaks escaped, and cut it after 100 characters. A test that matches such a message for an unusual key or locale may need updating; ordinary ones read the same. Routing errors do the same for a pathname.
+- **Errors that name a dictionary key, a locale, a path, or a configuration property quote it**, with line breaks escaped, and cut it after 100 characters. A test that matches such a message for an unusual key or locale may need updating; ordinary ones read the same. Routing errors do the same for a pathname, and so do the warnings for invalid syntax and unbalanced tags, which name an unknown type, style, plural form, repeated option, or tag.
 - **The `data-i18n` warnings name the key and the element.** "Skipping translation because data-i18n contains an invalid key", "translated elements must be leaves", and "the element can run, hide, or reparse its text as HTML" now quote the key, and pass the element after the message, so the browser console points to it. The message is the second argument, after a `"%s"` format, so a key such as `%o` is shown as written. A test that expects the exact message, or one argument, needs updating.
+- **`i18n.subscribe` and `binding.subscribe` are typed as function properties**, not methods, so a lint rule against unbound methods, such as `@typescript-eslint/unbound-method`, accepts `useSyncExternalStore(binding.subscribe, …)`. Both were already bound at runtime. A test double that implements one as a method with a narrower listener type no longer compiles.
+- **A `data-i18n` or `data-i18n-<attribute>` whose `onMissingKey` throws shows the HTML's value**, where it kept the translation of the earlier key or locale. The error is still reported.
 - **`formatRelativeTime()` and `formatList()` reuse their `Intl` formatters**, several times faster in a list of "3 days ago" labels.
 - **`matchLocale()` takes a few microseconds whatever the number of locales**, where it took about 160 µs a call with 20 locales and 770 µs with 100, since each locale's forms are computed once per manager, and likely subtags and canonical tags once per process. **Creating a manager is about 3 times faster** with 20 to 100 locales: about 55 µs with 20 and 240 µs with 100, where it took 160 µs and 780 µs. Measured on Node.js 26.13 with three preferences that match by likely subtags.
 - **`parse()` stops at the first route that matches**, where it tried every route of the path's shape: a table of 2,000 deep routes reads a path in about half the time.
 
 ## Fixed
 
-- **The server-rendering guide no longer overwrites a visitor's choice.** It passed the server's `Accept-Language` match to the binding as `locale`, which the binding saves, so on a site without a locale in the URL a visitor who picked Portuguese got English saved over it on every page load. The guide now keeps the choice in a cookie that the server reads and `binding.subscribe()` writes, and starts the binding without `locale` when there is none. A choice you no longer list exactly, such as `pt-BR` once you list only `pt`, is read with `matchLocale()` after `resolveLocale()`, so it isn't lost to the `Accept-Language` guess. If you followed it, see [Hand the locale to the browser](docs/server-rendering.md#hand-the-locale-to-the-browser).
+- **The server-rendering guide no longer overwrites a visitor's choice.** It passed the server's `Accept-Language` match to the binding as `locale`, which the binding saves, so on a site without a locale in the URL a visitor who picked Portuguese got English saved over it on every page load. The guide now keeps the choice in a cookie that the server reads and the binding reads, writes, and deletes through its new `storage` option, so a cookie choice that fails to load falls back as a saved one does, and a language the binding detects is never written. The server reads a choice you no longer list exactly, such as `pt-BR` once you list only `pt`, with `matchLocale()` after `resolveLocale()`, and the binding matches it the same way, so it isn't lost to the `Accept-Language` guess. If you followed it, see [Hand the locale to the browser](docs/server-rendering.md#hand-the-locale-to-the-browser).
+- **Each `#` counts toward the 100 arguments one call fills**, and past them a `#` is written as `#`. A plural form of 99,970 `#` with `1e308` made one `t()` return 41 million characters, since only arguments were counted, so a fetched message could make a server allocate tens of megabytes per request.
+- **An element moved inside a blocked element or a custom element after it was translated gets back its HTML text, attributes, and `lang`**, at the next language change, or at once with `observe`. Its translated `title` could otherwise become markup when the page was serialized and parsed again.
+- **An `init()` that switches the locale on a bound manager translates the page once**, so `onMissingKey` is called once per missing key, where it ran twice.
+- **The default direction is `rtl` for variants of a right-to-left script**: `Aran` (Arabic Nastaliq), `Syre`, `Syrj`, and `Syrn` (Syriac), and `Phlv` (Book Pahlavi), so `ur-Aran` is `rtl`, where it was `ltr`.
 - **Two bindings whose roots overlap no longer hang the page.** Each rewrote the other's text, forever. A binding now skips text it wrote itself; the guide says to keep roots apart.
 - **A loader type made of `Partial<typeof en>` checks values again**, where it accepted any values for every key.
 - **A visitor following the system follows a `languagechange` that arrived while their own pick was loading**, once that pick fails, where the page kept the old language until the next event.
@@ -2169,4 +2215,7 @@ The [reference](docs/reference/index.md) documents every export, option, and the
 - **With `observe`, text other code writes over a keyed element no longer becomes its fallback.** The binding writes the translation back, and the HTML's text stays the one shown for a language without the key.
 - The docs say that a plural group `has()` finds needs `count` in `t()`.
 - The docs say that the binding never enters a shadow root, a custom element's or a plain element's.
-- The browser guide's language picker shows the language in use after a switch fails, where it kept the language that failed to load selected.
+- The browser guide's language picker shows the language in use after a switch fails, where it kept the language that failed to load selected. It also renders from `binding.subscribe()`, so it follows a language the binding switches to, and keeps the latest of several quick picks selected while it loads.
+- The docs say that the second `initializeBrowserI18n()` rejects with a `TypeError`, and that a start in a Web Worker without `syncDocument: false` rejects rather than throws.
+- The translations guide's test checks the tags `rich()` reads as well as the syntax, and no longer says it checks every message.
+- The localized-URL guide skips the paths you serve as files, where it skipped every path ending in an extension, such as the page `/blog/node.js`, and its static-site redirect builder skips a private-use locale, such as `x-pirate`, where it threw.

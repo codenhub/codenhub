@@ -2,7 +2,7 @@
 title: Renderize no servidor ou no build
 description: Um gerenciador por requisição, escolha de locale a partir do Accept-Language, builds de sites estáticos e logs de produção sob controle.
 order: 3
-source: 0e3720f5937d9379c7af6a6abd5191de4715e938
+source: 8d289c83a3401a4f5424475aa62fb5fc2751a9e3
 ---
 
 # Renderize no servidor ou no build
@@ -169,7 +169,7 @@ Uma chave que só o seu idioma padrão tem não faz o build falhar; ela é rende
 
 Quando o navegador assume uma página renderizada no servidor, ele precisa começar no idioma que o servidor usou, ou o texto muda enquanto a página carrega. Num site localizado, a URL diz qual: leia-o com `routing.parse()`, como mostra [URLs localizadas](localized-urls.md#leia-o-locale-no-cliente).
 
-Sem um locale na URL, a correspondência do servidor com `Accept-Language` é um palpite, não uma escolha. Não a passe para o binding como `locale`: o binding salva um locale explícito como escolha do visitante, como explica [Como o locale é escolhido](browser.md#como-o-locale-é-escolhido), então um visitante que escolheu português teria inglês salvo por cima a cada carregamento de página. Guarde a escolha do visitante num cookie, que o servidor também consegue ler:
+Sem um locale na URL, a correspondência do servidor com `Accept-Language` é um palpite, não uma escolha. Não a passe para o binding como `locale`: o binding salva um locale explícito como escolha do visitante, como explica [Como o locale é escolhido](browser.md#como-o-locale-é-escolhido), então um visitante que escolheu português teria inglês salvo por cima a cada carregamento de página. Guarde a escolha do visitante num cookie, que o servidor também consegue ler, e dê esse cookie ao binding como o `storage` dele:
 
 ```ts
 // src/render.ts
@@ -184,21 +184,24 @@ export async function renderPage(request: Request) {
 
 ```ts
 // No navegador
-const chosen = /(?:^|;\s*)locale=([^;]*)/.exec(document.cookie)?.[1] ?? "";
 const binding = await initializeBrowserI18n({
   i18n,
-  // O cookie guarda a escolha, então o binding não salva nem lê a sua.
-  persistLocale: false,
-  locale: i18n.resolveLocale(chosen) ?? i18n.matchLocale([chosen]),
-});
-binding.subscribe(() => {
-  document.cookie = binding.isUsingSystemLocale ? "locale=; path=/; max-age=0" : `locale=${i18n.locale}; path=/; max-age=31536000; samesite=lax`;
+  // O binding lê, salva e esquece a escolha do visitante no cookie em vez do localStorage.
+  storage: {
+    get: () => /(?:^|;\s*)locale=([^;]*)/.exec(document.cookie)?.[1],
+    set: (locale) => {
+      document.cookie = `locale=${locale}; path=/; max-age=31536000; samesite=lax`;
+    },
+    remove: () => {
+      document.cookie = "locale=; path=/; max-age=0";
+    },
+  },
 });
 ```
 
-- **Um visitante que escolheu um idioma** o recebe do servidor, e o navegador começa nele.
+- **Um visitante que escolheu um idioma** o recebe do servidor, e o navegador começa nele. O binding faz a correspondência do cookie como o servidor faz, então uma escolha que você não lista mais exatamente corresponde dos dois lados. Se o navegador não conseguir carregar esse idioma, o binding avisa e cai para o idioma detectado e depois para o locale padrão, como descreve [Quando um loader falha na inicialização](browser.md#quando-um-loader-falha-na-inicialização), e o cookie mantém a escolha para a próxima vez.
 - **Um visitante que nunca escolheu um, ou que escolheu "Sistema"**, não tem cookie. O servidor faz a correspondência com `Accept-Language`, e o binding detecta a partir de `navigator.languages` com as mesmas regras, sem salvar nada, então `isUsingSystemLocale` continua `true` e a página segue o idioma do navegador. Os navegadores montam as duas listas a partir das mesmas configurações. Um que manda no cabeçalho menos idiomas do que `navigator.languages` lista pode discordar quando o primeiro idioma do visitante é um que você não suporta, e aí o texto muda enquanto a página carrega.
-- **Um seletor** chama `i18n.setLocale()` ou `binding.switchToSystemLocale()`, como em [Ofereça uma opção "Sistema"](browser.md#ofereça-uma-opção-sistema), e `subscribe()` grava ou apaga o cookie.
+- **Um seletor** chama `i18n.setLocale()` ou `binding.switchToSystemLocale()`, como em [Ofereça uma opção "Sistema"](browser.md#ofereça-uma-opção-sistema), e o binding grava ou apaga o cookie por meio de `storage`. Um idioma que o binding detecta nunca é gravado, então o cookie só guarda uma escolha.
 
 ## Próximos passos
 

@@ -32,7 +32,7 @@ Locale selection uses explicit input, valid persisted state, navigator preferenc
 
 **Throws**
 
-- `TypeError` — When observation lacks a root, when `root` is not an element, a document, or a shadow root, such as the `null` of a `querySelector()` that found nothing, when `syncDocument` is on without a global `document`, such as in a Web Worker, when there is no global event target, such as on a server, when the manager was not created by `createI18n()`, or when it already has a browser binding. These are thrown before the manager is initialized.
+- `TypeError` — When observation lacks a root, when `root` is not an element, a document, or a shadow root, such as the `null` of a `querySelector()` that found nothing, when `syncDocument` is on without a global `document`, such as in a Web Worker, when there is no global event target, such as on a server, when `storage` lacks a `get()`, `set()`, or `remove()` method or is passed with `storageKey` or `persistLocale: false`, when the manager was not created by `createI18n()`, or when it already has a browser binding. These are thrown before the manager is initialized.
 - `RangeError` — When an explicit locale is unsupported or is not a string at runtime.
 - `Error` — With the message "[I18n] Browser initialization was superseded before its locale became active." when a later `init()` call starts before this call's locale becomes active, or a later `setLocale()` call does on a manager that was already initialized, even to the locale already active. The manager keeps the later call's result. On a manager that was not yet initialized, `setLocale()` throws its own error instead and supersedes nothing.
 - `TypeError` — When a required dictionary is invalid.
@@ -48,7 +48,7 @@ Locale selection uses explicit input, valid persisted state, navigator preferenc
 export interface BrowserI18nBinding {
     readonly isUsingSystemLocale: boolean;
     switchToSystemLocale(): Promise<void>;
-    subscribe(listener: () => void): () => void;
+    readonly subscribe: (listener: () => void) => () => void;
     disconnect(): void;
 }
 ```
@@ -63,6 +63,16 @@ readonly isUsingSystemLocale: boolean;
 
 Whether the locale follows the browser's languages rather than a choice: `true` after a start with no explicit locale and no saved locale that matches a configured one, and after `switchToSystemLocale()`, and `false` once the application applies a locale through `setLocale()` or `init()`. While it is `true`, a `languagechange` event switches to the newly detected locale, unless an application request is still loading.
 
+#### BrowserI18nBinding › subscribe
+
+```ts
+readonly subscribe: (listener: () => void) => () => void;
+```
+
+Calls `listener` after each change to what a language picker shows: the active locale or `isUsingSystemLocale`. That includes a `setLocale()` to the locale already showing, which ends following the system without an `i18n.subscribe()` call, and a `switchToSystemLocale()` that keeps the locale. Changes made together are reported once, after the current task's synchronous work. A listener that throws is reported like an event listener's error, and the others still run.
+
+It is a function property rather than a method, so it can be passed detached, as to React's `useSyncExternalStore(binding.subscribe, …)`.
+
 #### BrowserI18nBinding › disconnect
 
 ```ts
@@ -72,16 +82,6 @@ disconnect(): void;
 Stops locale-change handling, mutation observation, and `subscribe()` calls.
 
 Existing DOM text, document attributes, persisted state, and core i18n state are unchanged. A switch to a detected locale still loading is dropped; a `setLocale()` call still loading is not. Manager ownership is released, so a new browser binding may then be initialized.
-
-#### BrowserI18nBinding › subscribe
-
-```ts
-subscribe(listener: () => void): () => void;
-```
-
-Calls `listener` after each change to what a language picker shows: the active locale or `isUsingSystemLocale`. That includes a `setLocale()` to the locale already showing, which ends following the system without an `i18n.subscribe()` call, and a `switchToSystemLocale()` that keeps the locale. Changes made together are reported once, after the current task's synchronous work. A listener that throws is reported like an event listener's error, and the others still run.
-
-**Returns** — A function that stops the calls; calling it again does nothing. `disconnect()` stops every listener.
 
 #### BrowserI18nBinding › switchToSystemLocale
 
@@ -105,6 +105,7 @@ export interface BrowserI18nOptions<TLocale extends string> {
     i18n: I18n<TLocale>;
     locale?: NoInfer<TLocale> | undefined;
     storageKey?: string | undefined;
+    storage?: BrowserLocaleStorage | undefined;
     persistLocale?: boolean | undefined;
     syncDocument?: boolean | undefined;
     root?: ParentNode | undefined;
@@ -158,6 +159,14 @@ root?: ParentNode | undefined;
 
 Optional DOM boundary whose safe `data-i18n` leaves and allowlisted `data-i18n-<attribute>` attributes are translated.
 
+#### BrowserI18nOptions › storage
+
+```ts
+storage?: BrowserLocaleStorage | undefined;
+```
+
+Where the visitor's choice is kept instead of `localStorage`, such as a cookie a server also reads. The binding reads, writes, and forgets the locale through it exactly where it would use `localStorage`. It can't be combined with `storageKey` or `persistLocale: false`, which contradict it.
+
 #### BrowserI18nOptions › storageKey
 
 ```ts
@@ -173,3 +182,41 @@ syncDocument?: boolean | undefined;
 ```
 
 Whether the global document element's `lang` and `dir` stay synchronized. Defaults to `true`.
+
+### BrowserLocaleStorage
+
+```ts
+export interface BrowserLocaleStorage {
+    get(): string | null | undefined;
+    set(locale: string): void;
+    remove(): void;
+}
+```
+
+A synchronous store for the visitor's chosen locale, used by `initializeBrowserI18n()` in place of `localStorage`.
+
+Each method is called on the store, so a class instance works, and its result is used at once: a returned promise is not awaited. An exception from any method warns, unless the manager is silent, and the binding carries on as though nothing were stored, or as though the write had not happened.
+
+#### BrowserLocaleStorage › get
+
+```ts
+get(): string | null | undefined;
+```
+
+Returns the stored locale, or `undefined` or `null` when there is none. A value that is not a string, or a string that names no configured locale, even after matching as a browser preference is, counts as nothing stored, without a warning. A stored locale the application no longer lists exactly, such as `pt-PT` once only `pt-BR` is configured, is matched and left as it is.
+
+#### BrowserLocaleStorage › remove
+
+```ts
+remove(): void;
+```
+
+Forgets the stored locale, as `switchToSystemLocale()` does.
+
+#### BrowserLocaleStorage › set
+
+```ts
+set(locale: string): void;
+```
+
+Stores `locale`, a configured locale, after the application applies it; never a locale the binding detected.

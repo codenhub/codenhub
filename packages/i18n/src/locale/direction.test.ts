@@ -38,6 +38,13 @@ describe("getDefaultLocaleDirection", () => {
     expect(getDefaultLocaleDirection(locale)).toBe("rtl");
   });
 
+  it.each(["ur-Aran", "syr-Syre", "syr-Syrj", "syr-Syrn", "pal-Phlv"])(
+    "resolves rtl for %s, written in a variant of a right-to-left script",
+    (locale) => {
+      expect(getDefaultLocaleDirection(locale)).toBe("rtl");
+    },
+  );
+
   it.each([
     ["en-u-nu-arab", "ltr"],
     ["uz-x-arab", "ltr"],

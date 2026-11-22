@@ -175,8 +175,9 @@ export interface LocaleRouting<TLocale extends string> {
  *
  * @param config - Supported locales, default locale, locale-prefix policy, and optional translated paths.
  * @returns Pure parsing and generation operations bound to an immutable configuration snapshot.
- * @throws {TypeError} When `config` is not a plain object, locales are empty, invalid conservative ASCII identifiers, or
- * duplicated case-insensitively after trimming, the trimmed default locale is unsupported, `localePrefix` is not a
+ * @throws {TypeError} When `config` is not a plain object, locales are empty, invalid conservative ASCII identifiers,
+ * language tags `Intl` rejects other than a private-use tag such as `x-pirate`, or duplicated case-insensitively after
+ * trimming, the trimmed default locale is unsupported, `localePrefix` is not a
  * supported policy, or `pathnames` is not an object of objects of strings or has an invalid path, an unsupported locale
  * or one listed twice ignoring case, a path that starts with a locale, a catch-all that is not last, a parameter whose
  * name has characters other than ASCII letters, digits, and `_` or is `__proto__`, `constructor`, or `prototype`, a

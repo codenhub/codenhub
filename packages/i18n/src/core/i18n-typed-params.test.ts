@@ -48,7 +48,7 @@ describe("typed placeholder values", () => {
     expectTypeOf<Value<"inbox", "count">>().toEqualTypeOf<number | bigint>();
     expectTypeOf<Value<"inbox", "sender">>().toEqualTypeOf<string | number | bigint | Date>();
     expectTypeOf<Value<"place", "n">>().toEqualTypeOf<number | bigint>();
-    expectTypeOf<Value<"replied", "gender">>().toEqualTypeOf<string | number | bigint>();
+    expectTypeOf<Value<"replied", "gender">>().toEqualTypeOf<string | number | bigint | boolean>();
     expectTypeOf<Value<"apostrophe", "name">>().toEqualTypeOf<string | number | bigint | Date>();
     expectTypeOf<{ count: 1; sender: "Ana" }>().toExtend<Values<"inbox">>();
     expectTypeOf<{ count: 1 }>().not.toExtend<Values<"inbox">>();
@@ -261,6 +261,26 @@ describe("typed placeholder values", () => {
     expectTypeOf<TranslateParams<{ readonly m: "'{it''s {x}'" }, "m">>().toEqualTypeOf<Loose>();
     expectTypeOf<{ x: 1 }>().toExtend<NonNullable<TranslateParams<{ readonly m: "'{it''s}' {x}" }, "m">[0]>>();
     expectTypeOf<{}>().not.toExtend<NonNullable<TranslateParams<{ readonly m: "'{it''s}' {x}" }, "m">[0]>>();
+  });
+
+  it("should take a boolean for a select only", () => {
+    type ParamsOf<M extends string> = NonNullable<TranslateParams<{ readonly m: M }, "m">[0]>;
+    type Select = ParamsOf<"{isAdmin, select, true {Admin} other {Member}}">;
+    expectTypeOf<Select["isAdmin"]>().toEqualTypeOf<string | number | bigint | boolean>();
+    expectTypeOf<{ isAdmin: true }>().toExtend<Select>();
+    expectTypeOf<{ isAdmin: boolean }>().toExtend<Select>();
+    expectTypeOf<{ isAdmin: true }>().not.toExtend<ParamsOf<"Admin: {isAdmin}">>();
+    expectTypeOf<{ isAdmin: true }>().not.toExtend<ParamsOf<"{isAdmin, number}">>();
+    expectTypeOf<{ isAdmin: true }>().not.toExtend<ParamsOf<"{isAdmin, plural, other {#}}">>();
+    expectTypeOf<{ isAdmin: true }>().not.toExtend<ParamsOf<"{isAdmin, date}">>();
+    // Used in a select and as a plain argument too, it takes what both read.
+    type Both = ParamsOf<"{isAdmin, select, true {Admin} other {Member}} {isAdmin}">;
+    expectTypeOf<Both["isAdmin"]>().toEqualTypeOf<string | number | bigint>();
+    type WithPlural = ParamsOf<"{n, select, true {x} other {y}} {n, plural, other {#}}">;
+    expectTypeOf<WithPlural["n"]>().toEqualTypeOf<number | bigint>();
+    // A select reads no `Date`, so with a date argument only a timestamp is read by both.
+    type WithDate = ParamsOf<"{d, select, other {x}} {d, date}">;
+    expectTypeOf<WithDate["d"]>().toEqualTypeOf<number>();
   });
 
   it("should accept any values for a name outside ASCII, and read a select key outside ASCII", () => {

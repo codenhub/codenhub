@@ -85,7 +85,7 @@ With `localePrefix: "always"`, a path without a locale returns `undefined` too, 
 
 ```ts
 // A file, such as `/favicon.ico`, is not a page; see Redirect to the canonical URL below.
-const isFile = /\.[a-z0-9]+$/i.test(url.pathname);
+const isFile = staticFiles.has(url.pathname);
 const route = isFile ? undefined : routing.parse(url.pathname);
 if (route === undefined && !isFile) {
   const locale = pickLocale(i18n, request);
@@ -123,10 +123,10 @@ Run this redirect, and the one for a missing prefix above, only for page routes,
 - With `trailingSlash: "always"`, this redirect sends `/favicon.ico` to `/favicon.ico/`.
 - With `localePrefix: "always"`, the one above sends it to `/en/favicon.ico`.
 
-Neither has a file. If the redirects have to run first, skip paths that end in a file extension, as both examples do:
+Neither has a file. If the redirects have to run first, skip the paths you serve as files, as both examples do. `staticFiles` is a `Set` of them, such as every file in your build's output directory, each written as a pathname like `/favicon.ico`. Testing for a file extension instead turns a page such as `/blog/node.js` or `/users/john.doe` into a file, which skips both redirects and leaves the page unrouted:
 
 ```ts
-const isFile = /\.[a-z0-9]+$/i.test(url.pathname);
+const isFile = staticFiles.has(url.pathname);
 const route = isFile ? undefined : routing.parse(url.pathname);
 if (route !== undefined) {
   const canonical = routing.localize(route.pathname, route.locale);
@@ -351,9 +351,14 @@ const config = {
   locales,
   // `zh-TW` is `zh-Hant`: a language and its likely script, as `matchLocale()` compares them, with Norwegian `no` as `nb`.
   languages: Object.fromEntries(
-    locales.map((locale) => {
-      const { language, script } = new Intl.Locale(locale).maximize();
-      return [`${language === "no" ? "nb" : language}-${script}`, locale];
+    locales.flatMap((locale) => {
+      let likely;
+      try {
+        likely = new Intl.Locale(locale).maximize();
+      } catch {
+        return []; // A private-use locale, such as `x-pirate`, has no language to match; only a saved choice selects it.
+      }
+      return [[`${likely.language === "no" ? "nb" : likely.language}-${likely.script}`, locale]];
     }),
   ),
   targets: Object.fromEntries(locales.filter((locale) => locale !== defaultLocale).map((locale) => [locale, routing.localize(pathname, locale)])),

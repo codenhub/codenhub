@@ -2,7 +2,7 @@
 title: Escreva as suas traduções
 description: Dicionários, arquivos JSON, placeholders, mensagens ICU, links e negrito, plurais, formatadores, chaves e valores tipados, verificação de chaves não traduzidas e limites de tamanho.
 order: 1
-source: a02c923015b8a627d01aa402900f357009939366
+source: c1c8b51ebbd116dcd002f363e4b394ef41451ab4
 ---
 
 # Escreva as suas traduções
@@ -132,14 +132,14 @@ t("order.confirmed", { name: "Ana", orderId: "1042" });
 // "Thanks, Ana. Order 1042 ships tomorrow."
 ```
 
-Os valores podem ser strings, números, bigints ou datas. Um bigint vai onde vai um número, e é formatado sem perder dígitos. Os nomes de placeholder usam letras e dígitos de qualquer escrita, e `_`, como `{firstName}`, `{first_name}` ou `{año}`. Um nome com qualquer outra coisa, como `{first-name}` ou `{price€}`, não é placeholder: a mensagem tem sintaxe inválida, registra um aviso e mostra `{first-name}` como foi escrito.
+Os valores podem ser strings, números, bigints ou datas, e um `select` também aceita um booleano. Um bigint vai onde vai um número, e é formatado sem perder dígitos. Os nomes de placeholder usam letras e dígitos de qualquer escrita, e `_`, como `{firstName}`, `{first_name}` ou `{año}`. Um nome com qualquer outra coisa, como `{first-name}` ou `{price€}`, não é placeholder: a mensagem tem sintaxe inválida, registra um aviso e mostra `{first-name}` como foi escrito.
 
 Use placeholders em vez de juntar pedaços. `t("before") + name + t("after")` prende todos os idiomas à ordem das palavras do inglês, enquanto uma frase inteira com um placeholder deixa cada tradução pôr o valor onde ele cabe. A ordem das palavras é a primeira coisa que todo tradutor quer mudar, e quase sempre ele tem razão. Para um link ou negrito dentro da frase, veja [Links e negrito dentro de uma frase](#links-e-negrito-dentro-de-uma-frase).
 
 Alguns detalhes:
 
 - Um placeholder sem valor correspondente fica como foi escrito, então um valor que falta aparece como `{name}` na tela em vez de sumir.
-- Uma chamada de `t()` preenche no máximo 100 argumentos, contando os que ficam dentro de formas de plural e de select, e deixa o resto como foi escrito. Uma frase de interface nunca chega nem perto; o limite impede que uma mensagem enorme vinda da rede custe um passo de formatação por placeholder.
+- Uma chamada de `t()` preenche no máximo 100 argumentos, contando os que ficam dentro de formas de plural e de select e cada `#`, e deixa o resto como foi escrito, um `#` como `#`. Uma frase de interface nunca chega nem perto; o limite impede que uma mensagem enorme vinda da rede custe um passo de formatação por placeholder, ou repita um número longo milhares de vezes.
 - Um número num `{name}` simples é formatado para o leitor, como `{name, number}` faz: `1234.5` aparece como "1,234.5" em inglês e "1.234,5" em português. Escreva `{name, number, integer}` ou outro estilo, como mostra a próxima seção, para formatá-lo de outro jeito.
 - Chaves (`{` e `}`) e apóstrofos são sintaxe de mensagem, então um texto que os mostra literalmente precisa de aspas; veja [Chaves literais e apóstrofos](#chaves-literais-e-apóstrofos).
 
@@ -165,14 +165,14 @@ t("cart.discount", { rate: 0.15 }); // "15% off"
 t("order.shipped", { date: new Date() });
 ```
 
-| Argumento               | Estilos                                                           | Valor                    |
-| ----------------------- | ----------------------------------------------------------------- | ------------------------ |
-| `{n, number}`           | nenhum, `integer`, `percent`                                      | número ou bigint         |
-| `{d, date}`             | `short`, `medium` (o padrão), `long`, `full`                      | `Date` ou um timestamp   |
-| `{d, time}`             | `short`, `medium` (o padrão), `long`, `full`                      | `Date` ou um timestamp   |
-| `{n, plural, …}`        | veja [Plurais](#plurais)                                          | número ou bigint         |
-| `{n, selectordinal, …}` | formas ordinais, como `one {#st} two {#nd} few {#rd} other {#th}` | número ou bigint         |
-| `{v, select, …}`        | quaisquer palavras, mais `other`                                  | string, número ou bigint |
+| Argumento               | Estilos                                                           | Valor                              |
+| ----------------------- | ----------------------------------------------------------------- | ---------------------------------- |
+| `{n, number}`           | nenhum, `integer`, `percent`                                      | número ou bigint                   |
+| `{d, date}`             | `short`, `medium` (o padrão), `long`, `full`                      | `Date` ou um timestamp             |
+| `{d, time}`             | `short`, `medium` (o padrão), `long`, `full`                      | `Date` ou um timestamp             |
+| `{n, plural, …}`        | veja [Plurais](#plurais)                                          | número ou bigint                   |
+| `{n, selectordinal, …}` | formas ordinais, como `one {#st} two {#nd} few {#rd} other {#th}` | número ou bigint                   |
+| `{v, select, …}`        | quaisquer palavras, mais `other`                                  | string, número, bigint ou booleano |
 
 A formatação usa o idioma do dicionário de onde o texto veio, então um texto em inglês que cobre uma chave que falta em português é escrito do jeito inglês. Um argumento cujo valor tem o tipo errado, como uma string para `{n, number}`, fica como foi escrito.
 
@@ -186,6 +186,8 @@ Um `select` escolhe o texto por um valor, como um pronome, e precisa de uma opç
 ```json
 { "review": { "replied": "{gender, select, female {She} male {He} other {They}} replied to your review" } }
 ```
+
+Um booleano escolhe a opção chamada `true` ou `false`, então `{isAdmin, select, true {Admin} other {Member}}` mostra "Admin" com `{ isAdmin: true }`. Só `select` lê um booleano; num `{isAdmin}` simples ele fica como foi escrito.
 
 Para formatar um valor no código, use os formatadores do gerenciador. Eles seguem o locale ativo:
 
@@ -231,7 +233,7 @@ Dentro das formas de um plural, `#` representa o número; escreva `'#'` para um 
 
 Texto entre aspas também é texto para os tipos: em `'{it''s {x}'`, que mostra `{it's {x}`, `x` não é um valor que `t()` pede.
 
-Um texto que não é sintaxe válida, como uma `{` sem fechamento ou uma `}` perdida, registra um aviso, a menos que o gerenciador esteja em silêncio, e aparece com apenas os placeholders `{name}` preenchidos. O aviso diz a chave e o locale, e vem uma vez para cada chave, texto e locale, entre os aproximadamente 1.000 mais recentes, então um texto editado avisa de novo. [Encontre chaves não traduzidas](#encontre-chaves-não-traduzidas) mostra um teste que confere todas as mensagens.
+Um texto que não é sintaxe válida, como uma `{` sem fechamento ou uma `}` perdida, registra um aviso, a menos que o gerenciador esteja em silêncio, e aparece com apenas os placeholders `{name}` preenchidos. O aviso diz a chave e o locale, e vem uma vez para cada chave, texto e locale, entre os aproximadamente 1.000 mais recentes, então um texto editado avisa de novo. [Encontre chaves não traduzidas](#encontre-chaves-não-traduzidas) mostra um teste que confere a sintaxe de todas as mensagens.
 
 ### Links e negrito dentro de uma frase
 
@@ -246,7 +248,7 @@ i18n.rich("signup.terms");
 // ["Ao se cadastrar você aceita os ", { tag: "terms", children: ["termos de uso"] }, "."]
 ```
 
-Uma tag é `<nome>…</nome>`, ou `<nome/>` para uma sem conteúdo, como uma quebra de linha. Os nomes usam letras e dígitos de qualquer escrita, e `_`. Uma tag diz o que a parte é, e o seu código decide como ela é renderizada, então uma tradução não consegue adicionar um link, um script nem marcação que o seu código não renderize. No React, por exemplo:
+Uma tag é `<nome>…</nome>`, ou `<nome/>` para uma sem conteúdo, como uma quebra de linha. Os nomes usam letras e dígitos de qualquer escrita, `_`, e `-` depois do primeiro caractere, como `<help-link>`. Uma tag diz o que a parte é, e o seu código decide como ela é renderizada, então uma tradução não consegue adicionar um link, um script nem marcação que o seu código não renderize. No React, por exemplo:
 
 ```tsx
 import { Fragment, type ReactNode } from "react";
@@ -418,8 +420,8 @@ Quais valores cada argumento aceita:
 
 - Argumentos `number`, `plural` e `selectordinal` aceitam um número ou um bigint.
 - `date` e `time` aceitam um `Date` ou um timestamp.
-- `select` aceita uma string, um número ou um bigint.
-- Um `{name}` simples aceita qualquer um desses.
+- `select` aceita uma string, um número, um bigint ou um booleano.
+- Um `{name}` simples aceita uma string, um número, um bigint ou um `Date`.
 
 Só os valores que a mensagem usa são conferidos. Qualquer outro valor pode ter qualquer tipo, então `t("home.greeting", user)` aceita um `User` inteiro com um `isAdmin: boolean`, e um objeto literal também pode levar valores a mais. Quando vários dicionários são tipados, uma chave precisa dos valores de todos os que a têm.
 
@@ -489,7 +491,7 @@ test("every locale has every key", async () => {
 });
 ```
 
-Para pegar uma mensagem com sintaxe quebrada, como uma `{` sem fechamento que um tradutor deixou, consulte todas as chaves em todos os locales e falhe ao ver o aviso. O gerenciador não pode estar em silêncio para isso:
+Para pegar uma mensagem com sintaxe quebrada, como uma `{` sem fechamento que um tradutor deixou, ou com tags que não fecham, consulte todas as chaves em todos os locales e falhe ao ver o aviso. O gerenciador não pode estar em silêncio para isso:
 
 ```ts
 import { expect, test, vi } from "vitest";
@@ -503,13 +505,17 @@ test("every message is valid", async () => {
     await i18n.setLocale(locale);
     for (const key of Object.keys(await i18n.loadLocale(locale))) {
       i18n.t(key as Parameters<typeof i18n.t>[0]);
+      i18n.rich(key as Parameters<typeof i18n.rich>[0]);
     }
   }
 
-  expect(warn.mock.calls.filter(([text]) => String(text).startsWith("[I18n] Invalid message"))).toEqual([]);
+  const invalid = warn.mock.calls.filter(([text]) => /^\[I18n\] Invalid (message|tags)/.test(String(text)));
   warn.mockRestore();
+  expect(invalid).toEqual([]);
 });
 ```
+
+`rich()` confere as tags do texto que cada chamada mostra. Sem valores, um plural ou um select aparece como foi escrito, então as tags dentro das suas formas não são conferidas; passe valores que escolham uma forma para conferir as tags dela também.
 
 Para fazer um teste falhar com chaves que faltam em todos os dicionários, como um erro de digitação numa chave montada em tempo de execução, lance um erro a partir de `onMissingKey`:
 

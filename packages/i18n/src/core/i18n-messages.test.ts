@@ -238,6 +238,42 @@ describe("ICU messages", () => {
     expect(i18n.t("nested", { count: 2, gender: "female" })).toBe("2 items");
   });
 
+  describe("a boolean in a select", () => {
+    const create = () =>
+      createI18n({
+        defaultLocale: "en",
+        locales: ["en"],
+        loadLocale: () => ({
+          role: "{isAdmin, select, true {Admin} false {Member} other {Guest}}",
+          onlyTrue: "{isAdmin, select, true {Admin} other {Member}}",
+          plain: "Admin: {isAdmin}",
+          number: "{isAdmin, number}",
+          plural: "{isAdmin, plural, other {#}}",
+        }),
+        isSilent: true,
+      });
+
+    it.each([
+      { key: "role", isAdmin: true, text: "Admin" },
+      { key: "role", isAdmin: false, text: "Member" },
+      { key: "onlyTrue", isAdmin: true, text: "Admin" },
+      { key: "onlyTrue", isAdmin: false, text: "Member" },
+    ] as const)("should pick the option named $isAdmin in $key, or other", async ({ key, isAdmin, text }) => {
+      const i18n = create();
+      await i18n.init();
+
+      expect(i18n.t(key, { isAdmin })).toBe(text);
+      expect(i18n.rich(key, { isAdmin })).toEqual([text]);
+    });
+
+    it.each(["plain", "number", "plural"] as const)("should leave a boolean in %s as written", async (key) => {
+      const i18n = create();
+      await i18n.init();
+
+      expect(i18n.t(key, { isAdmin: true })).toBe(i18n.t(key));
+    });
+  });
+
   it("should treat apostrophes as ICU does", async () => {
     const i18n = create();
     await i18n.init();
@@ -368,6 +404,46 @@ describe("ICU messages", () => {
     // The plural is the 100th argument, so it picks its form, and the two inside it stay as written.
     expect(i18n.t("nested", { a: "v", n: 1 })).toBe(`${"v".repeat(99)}{a}{a}`);
     expect(i18n.t("malformed", { a: "v" })).toBe(`${"v".repeat(100)}{a} }`);
+  });
+
+  describe("# toward the 100-argument limit", () => {
+    const create = () =>
+      createI18n({
+        defaultLocale: "en",
+        locales: ["en"],
+        loadLocale: () => ({
+          pounds: `{n, plural, other {${"#".repeat(101)}}}`,
+          poundsThenArgument: `{n, plural, other {${"#".repeat(99)}{a}}}`,
+          argumentsThenPounds: `${"{a}".repeat(98)}{n, plural, other {##}}`,
+          nested: `{n, plural, other {${"#".repeat(50)}{m, plural, other {${"#".repeat(50)}}}}}`,
+          huge: `{n, plural, other {${"#".repeat(99_970)}}}`,
+        }),
+        isSilent: true,
+      });
+
+    // The plural is the first argument, so 99 `#` are left before the limit.
+    it.each([
+      { key: "pounds", values: { n: 5 }, text: `${"5".repeat(99)}##` },
+      { key: "poundsThenArgument", values: { n: 5, a: "v" }, text: `${"5".repeat(99)}{a}` },
+      { key: "argumentsThenPounds", values: { n: 5, a: "v" }, text: `${"v".repeat(98)}5#` },
+      { key: "nested", values: { n: 1, m: 2 }, text: `${"1".repeat(50)}${"2".repeat(48)}##` },
+    ] as const)("should count each # in $key and write the rest as #", async ({ key, values, text }) => {
+      const i18n = create();
+      await i18n.init();
+
+      expect(i18n.t(key, values)).toBe(text);
+      expect(i18n.rich(key, values)).toEqual([text]);
+    });
+
+    it("should keep a long number repeated by # within 100 copies", async () => {
+      const i18n = create();
+      await i18n.init();
+      const number = i18n.formatNumber(1e308);
+
+      const text = i18n.t("huge", { n: 1e308 });
+      expect(text).toBe(`${number.repeat(99)}${"#".repeat(99_970 - 99)}`);
+      expect(i18n.rich("huge", { n: 1e308 })).toEqual([text]);
+    });
   });
 
   it("should format a plural's number once however many # its form repeats", async () => {
@@ -515,11 +591,39 @@ describe("names in a message", () => {
     expect(result.invalid).toBe(`{${name}} {`);
   });
 
-  it("should take a hyphen in a select key, and not in an argument's name", async () => {
-    const result = await read("año-nuevo");
+  it.each(["año-nuevo", "help-link", "a-", "a--b"])(
+    "should take a hyphen after the first character in a select key and a tag, as in %s, and not in an argument's name",
+    async (name) => {
+      const result = await read(name);
 
-    expect(result.select).toBe("chosen");
-    expect(result.plain).toBe("{año-nuevo}");
+      expect(result.select).toBe("chosen");
+      expect(result.tag).toEqual([{ tag: name, children: ["bold"] }]);
+      expect(result.plain).toBe(`{${name}}`);
+      expect(result.number).toBe(`{${name}, number}`);
+      expect(result.invalid).toBe(`{${name}} {`);
+    },
+  );
+
+  it("should read a hyphenated tag in each of its forms", async () => {
+    const i18n = createI18n({
+      defaultLocale: "en",
+      locales: ["en"],
+      loadLocale: () => ({ m: "Read the <help-link>terms</help-link>.<line-break/>" }),
+    });
+    await i18n.init();
+
+    expect(i18n.rich("m")).toEqual([
+      "Read the ",
+      { tag: "help-link", children: ["terms"] },
+      ".",
+      { tag: "line-break", children: [] },
+    ]);
+  });
+
+  it("should not read a tag whose name starts with a hyphen", async () => {
+    const result = await read("-a");
+
+    expect(result.tag).toEqual(["<-a>bold</-a>"]);
   });
 });
 
