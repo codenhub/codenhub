@@ -41,6 +41,13 @@
 
     position: relative;
     display: inline-block;
+    /* The bubble is placed against this box, so the box is the trigger's
+       size in any layout: a column (`.stack`, `.field`), a grid, or a row
+       stretched by a taller sibling stretched it, and the bubble centred on
+       the stretched box, off its trigger. Not stretched, it sits at the start
+       of the line it was stretched across, as a lone button there does. */
+    width: fit-content;
+    height: fit-content;
 
     &[data-tooltip-position="bottom"] {
       --_tooltip-top: auto;
