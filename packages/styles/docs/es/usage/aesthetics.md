@@ -2,7 +2,7 @@
 title: Estéticas
 description: Los seis aspectos opcionales, lo que cada uno cambia en un componente, sus controles y sus límites.
 order: 6
-source: 46597474670860ede317be3820c70230cb430b8d
+source: c4830e14419df8685dc763f157aa9f3142631e1d
 ---
 
 # Estéticas
@@ -126,7 +126,7 @@ La lente la dibuja un filtro SVG en `backdrop-filter`, que Chromium renderiza y 
 - Dibuja su desenfoque y su lente en el `::before` y el `::after` de cada superficie, así que una superficie dentro de una región liquid no puede llevar un `::before` o `::after` propio. Cada superficie se convierte también en un contexto de apilamiento posicionado; una superficie que posiciones tú conserva tu colocación.
 - Todo lo demás que se esmerila con glass conserva el desenfoque ligero y el fondo más claro de liquid, sin la lente ni el borde brillante: una `<table>` sin clase con `/native`.
 - La lente es una erosión de 8px desenfocada sobre 10px en cada superficie, y de 3px desenfocada sobre 3.5px en un botón; su intensidad es fija. Un filtro no puede leer una custom property, así que ninguno de los dos es un control. Las esquinas sí lo son, mediante `--glass-radius` y `--glass-radius-surface`, con valores por defecto mayores: una esquina continua parece más pequeña que una redondeada del mismo radio.
-- Decide la región más cercana. Una región de otra estética anidada dentro de una región liquid, o de `.glass` simple, conserva su propio material y no toma capas, y una región liquid anidada a su vez dentro de esa vuelve a tomarlas.
+- Decide la región más cercana. Una región de otra estética anidada dentro de una región liquid, o de `.glass` simple, conserva su propio material y no toma capas, y una región liquid anidada a su vez dentro de esa vuelve a tomarlas. Lo mismo vale para una superficie o un botón que lleva `.glass-liquid`, a cualquier profundidad: la región más cercana le da la tinta, el fondo, el desenfoque y las capas, así que en una región `.pixel` anidada dentro de glass se ve como se vería sin el modificador, y en una región glass anidada a su vez dentro de esa es liquid.
 - Sin `.glass` en el ámbito, solo cambia las esquinas.
 - Con `prefers-reduced-transparency: reduce`, y con colores forzados, desaparecen el desenfoque y la lente y la superficie es opaca, como con glass.
 - El texto queda sobre un cristal más claro que con glass, y por debajo de la regla de 4.5:1 para texto: el fondo es el 30% del color de la página, frente al 59% de glass. Un control colocado directamente en la región conserva el fondo propio de glass para los controles, y con él la regla de 4.5:1 para texto; un botón liquid se apoya sobre el más claro. El texto del cuerpo se midió a 2.06:1 sobre un fondo negro en el tema claro, y a 1.86:1 sobre uno blanco en el tema oscuro. Usa liquid sobre un fondo cercano al color de la página, como un degradado suave o una foto atenuada, y pon el texto que tiene que leerse en una superficie `.solid` o bajo `.glass` simple.

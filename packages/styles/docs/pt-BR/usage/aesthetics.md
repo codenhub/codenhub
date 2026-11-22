@@ -2,7 +2,7 @@
 title: Estéticas
 description: Os seis visuais opcionais, o que cada um muda num componente, os seus ajustes e os seus limites.
 order: 6
-source: 46597474670860ede317be3820c70230cb430b8d
+source: c4830e14419df8685dc763f157aa9f3142631e1d
 ---
 
 # Estéticas
@@ -126,7 +126,7 @@ A lente é desenhada por um filtro SVG em `backdrop-filter`, que o Chromium rend
 - Ele desenha o desfoque e a lente no `::before` e no `::after` de cada superfície, então uma superfície dentro de uma região liquid não pode ter um `::before` ou `::after` seu. Cada superfície também vira um contexto de empilhamento posicionado; uma superfície que você mesmo posiciona mantém o seu posicionamento.
 - Todo o resto que fica fosco no glass mantém o desfoque leve e o chão mais transparente do liquid, sem a lente nem a borda de luz: uma `<table>` sem classe com `/native`.
 - A lente é uma erosão de 8px desfocada em 10px em toda superfície, e de 3px desfocada em 3.5px num botão; a intensidade dela é fixa. Um filtro não consegue ler uma custom property, então nenhum desses valores é um ajuste. Os cantos são, por meio de `--glass-radius` e `--glass-radius-surface`, com padrões maiores: um canto contínuo parece menor que um arredondado com o mesmo raio.
-- A região mais próxima decide. Uma região de outra estética aninhada dentro de uma região liquid, ou de `.glass` simples, mantém o seu próprio material e não recebe camadas, e uma região liquid aninhada de novo dentro dela volta a recebê-las.
+- A região mais próxima decide. Uma região de outra estética aninhada dentro de uma região liquid, ou de `.glass` simples, mantém o seu próprio material e não recebe camadas, e uma região liquid aninhada de novo dentro dela volta a recebê-las. O mesmo vale para uma superfície ou um botão que tem `.glass-liquid`, em qualquer profundidade: a região mais próxima dá a ele a tinta, o chão, o desfoque e as camadas, então numa região `.pixel` aninhada dentro do glass ele fica como ficaria sem o modificador, e numa região glass aninhada de novo dentro dela ele é liquid.
 - Sem `.glass` em vigor, ele muda os cantos e mais nada.
 - Com `prefers-reduced-transparency: reduce`, e em cores forçadas, o desfoque e a lente somem e a superfície fica opaca, como no glass.
 - O texto fica sobre uma placa mais transparente que no glass, e abaixo da regra de 4.5:1 para texto: o chão é 30% da cor da página, contra 59% no glass. Um controle colocado direto na região mantém o chão próprio do glass para controles, e com ele a regra de 4.5:1 para texto; um botão líquido fica sobre o mais transparente. O texto do corpo mediu 2.06:1 sobre um fundo preto no tema claro, e 1.86:1 sobre um branco no tema escuro. Use liquid sobre um fundo próximo da cor da página, como um degradê suave ou uma foto escurecida, e coloque o texto que precisa ser lido numa superfície `.solid` ou sob o `.glass` simples.

@@ -1405,6 +1405,144 @@ test.describe("aesthetics", () => {
         }
       });
 
+      /* At any depth, and in every arm. The selectors that gave liquid its
+         ink, ground, and backdrop told a region apart one level deep: in
+         glass, a pixel region, glass again, and pixel again, a liquid card
+         matched the re-entry selector and took liquid's clear ground in the
+         innermost pixel region. Every chain is read against the one its
+         nearest region makes alone: a lone liquid card in glass, a card in a
+         liquid region, a liquid button in glass, or the other aesthetic. */
+      const NEAREST_ARMS = [
+        "standard",
+        "reduced transparency",
+        "forced colors",
+        "more contrast",
+        'data-contrast="more"',
+      ] as const;
+      const SUBJECTS = [
+        ["a liquid card", "glass", '<div class="card glass-liquid">x</div>'],
+        ["a card in a liquid region", "glass glass-liquid", '<div class="card">x</div>'],
+        ["a liquid button", "glass", '<button class="btn ghost glass-liquid">x</button>'],
+      ] as const;
+
+      for (const arm of NEAREST_ARMS) {
+        test(`gives liquid its material by the nearest region at any depth, ${arm}`, async ({
+          page: ownPage,
+          browserName,
+          playwright,
+        }) => {
+          test.skip(
+            arm === "reduced transparency" && browserName === "webkit",
+            "WebKit cannot be asked for reduced transparency",
+          );
+          const browser =
+            arm === "reduced transparency" && browserName === "firefox"
+              ? await playwright.firefox.launch({
+                  firefoxUserPrefs: {
+                    "layout.css.prefers-reduced-transparency.enabled": true,
+                    "ui.prefersReducedTransparency": 1,
+                  },
+                })
+              : undefined;
+
+          try {
+            const page = browser ? await browser.newPage() : ownPage;
+
+            if (browserName === "chromium") {
+              const session = await page.context().newCDPSession(page);
+              await session.send("Emulation.setEmulatedMedia", {
+                features: [
+                  {
+                    name: "prefers-reduced-transparency",
+                    value: arm === "reduced transparency" ? "reduce" : "no-preference",
+                  },
+                  { name: "forced-colors", value: arm === "forced colors" ? "active" : "none" },
+                  { name: "prefers-contrast", value: arm === "more contrast" ? "more" : "no-preference" },
+                ],
+              });
+            } else {
+              await page.emulateMedia({
+                forcedColors: arm === "forced colors" ? "active" : "none",
+                contrast: arm === "more contrast" ? "more" : "no-preference",
+              });
+            }
+            await page.goto(SURFACES_URL);
+            await page.waitForSelector('[data-testid="preview-root"]');
+            await settleAnimations(page);
+
+            const read = await page.evaluate(
+              ({ subjects, others, contrast }) => {
+                if (contrast) {
+                  document.documentElement.dataset.contrast = "more";
+                }
+                const root = document.querySelector('[data-testid="preview-root"]')!;
+                const paint = (regions: readonly string[], markup: string) => {
+                  const wrapper = document.createElement("div");
+
+                  wrapper.innerHTML = `${regions.map((region) => `<div class="${region}">`).join("")}${markup}${"</div>".repeat(regions.length)}`;
+                  root.append(wrapper);
+
+                  const element = wrapper.querySelector(".card, .btn")!;
+                  const styles = getComputedStyle(element);
+                  const before = getComputedStyle(element, "::before");
+                  const after = getComputedStyle(element, "::after");
+                  const result = {
+                    ink: styles.getPropertyValue("--ui-ink"),
+                    ground: styles.getPropertyValue("--ui-surface-ground"),
+                    backdrop: styles.getPropertyValue("--ui-backdrop"),
+                    background: styles.backgroundColor,
+                    line: styles.borderTopColor,
+                    before: before.content,
+                    beforeBackdrop: before.backdropFilter,
+                    after: after.content,
+                    afterBackdrop: after.backdropFilter,
+                  };
+
+                  wrapper.remove();
+
+                  return result;
+                };
+
+                return subjects.map(([name, region, markup]) => ({
+                  name,
+                  alone: paint([region], markup),
+                  chains: others.flatMap((other) => {
+                    const second = others.find((next) => next !== other)!;
+
+                    return [
+                      [[other, region], "alone"],
+                      [[region, other], other],
+                      [[region, other, region, other], other],
+                      [[other, region, other, region], "alone"],
+                      [[region, other, second, region], "alone"],
+                      [[region, other, region, second], second],
+                    ].map(([regions, nearest]) => ({
+                      regions: regions as string[],
+                      nearest: nearest as string,
+                      painted: paint(regions as string[], markup),
+                      expected: nearest === "alone" ? undefined : paint([nearest as string], markup),
+                    }));
+                  }),
+                }));
+              },
+              {
+                subjects: SUBJECTS,
+                others: ["neobrutalism", "pixel", "chunky-tile", "cyber", "sketch"],
+                contrast: arm === 'data-contrast="more"',
+              },
+            );
+
+            for (const { name, alone, chains } of read) {
+              for (const { regions, painted, expected } of chains) {
+                expect.soft(painted, `${name} in ${regions.join(" > ")}`).toEqual(expected ?? alone);
+              }
+            }
+          } finally {
+            await browser?.close();
+          }
+        });
+      }
+
       test("changes only the corners where glass is not in scope", async ({ page }) => {
         await page.goto(SURFACES_URL);
 
