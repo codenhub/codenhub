@@ -2,7 +2,7 @@
 title: Vue
 description: Como carregar a folha de estilos numa aplicação Vue / Vite.
 order: 3
-source: f41a743332c1bd5a0133f67ba22875f1b3f0f829
+source: 80238df7f86f51d63715250f473e6ffbf8d19edf
 ---
 
 # Vue

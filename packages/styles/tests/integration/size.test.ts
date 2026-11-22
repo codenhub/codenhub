@@ -47,23 +47,31 @@ const COMPILED_CEILINGS: Record<string, number> = {
      The first three set again once the release's branches met: 247,100,
      195,900, and 367,000 until the field line rested whole, `:user-invalid`
      painted as `aria-invalid`, `.choice` and the read-only rest arrived, and
-     glass lifted a surface holding focus or an open popover. */
-  "dist/index.css": 252_700,
-  "dist/components.css": 201_400,
-  "dist/native.css": 375_500,
+     glass lifted a surface holding focus or an open popover; 252,700,
+     201,400, and 375,500 until the convergence fixes generated the
+     no-tracking language list from CLDR, 515 tags where 52 were written by
+     hand (about 5.2 KB in each copy, two of them in `/native`), gave a control
+     straight in glass its ground, and switched every control's focus line on
+     a plate. */
+  "dist/index.css": 264_100,
+  "dist/components.css": 211_400,
+  "dist/native.css": 395_700,
   "dist/theme.css": 13_650,
   /* 26,800 until 0.11.0 wrote each value once, as a `light-dark()` pair,
-     where a light and a dark block each wrote all of them. */
-  "dist/palette.css": 19_650,
+     where a light and a dark block each wrote all of them; 19,650 until it
+     followed the theme selectors and printed light. */
+  "dist/palette.css": 19_900,
   /* 50,450 until glass's lift and pixel's notch grew, as their own files did;
-     51,500 until liquid's tokens followed the nearest region. */
-  "dist/aesthetics/index.css": 52_900,
+     51,500 until liquid's tokens followed the nearest region; 52,900 until
+     chunky tile's solo class carried the CLDR language list. */
+  "dist/aesthetics/index.css": 56_900,
   /* 5,600 until 0.11.0 kept the solo class's tracking off scripts that join
      their letters or hang them from a headstroke: it ships without the
      components, so it carries the language list itself, regional languages
      and script subtags included; 6,200 until fourteen Arabic-script
-     languages and Rohingya joined the list. */
-  "dist/aesthetics/chunky-tile.css": 6_350,
+     languages and Rohingya joined the list; 6,350 until the list was
+     generated from CLDR, 515 tags. */
+  "dist/aesthetics/chunky-tile.css": 11_750,
   "dist/aesthetics/cyber.css": 4_900,
   /* 14,700 until 0.11.0 gave liquid's tokens only where glass is the
      nearest region, a second selector for each of six rules. */
@@ -80,8 +88,9 @@ const COMPILED_CEILINGS: Record<string, number> = {
      a glass pane an opaque ground on a plate, and let a button label wrap;
      327,000 until the reset and the selection grew as the complete file's
      did; 339,200 until the release's branches met, as the complete
-     file's did. */
-  "dist/purge/index.css": 344_800,
+     file's did; 344,800 until the CLDR language list and the convergence
+     fixes, as the complete file's did. */
+  "dist/purge/index.css": 356_200,
   "dist/purge/classes.json": 7_100,
 };
 
@@ -139,8 +148,10 @@ describe("a /tw consumer build", { timeout: 60_000 }, () => {
       candidates: ["btn", "primary"],
       /* 21,800 until 0.11.0 capped a held neutral box's fill, 18 bytes more;
          22,600 since its held boxes and toggles drew a surface's ink;
-         22,950 until the reduced-motion reset and the selection grew. */
-      ceiling: 23_500,
+         22,950 until the reduced-motion reset and the selection grew;
+         23,500 until every control's focus line on a plate switched to its
+         own ink. */
+      ceiling: 23_950,
     },
     {
       name: "a page that names no package class, through /button/tw",
@@ -160,8 +171,9 @@ describe("a /tw consumer build", { timeout: 60_000 }, () => {
          31,400 until the reset reached scroll-driven animations and three
          more pseudo-elements and the selection read the plate;
          35,700 until the release's branches met, as the complete file's
-         ceiling was set again. */
-      ceiling: 36_400,
+         ceiling was set again; 36,400 until the reset's language list was
+         generated from CLDR, 515 tags. */
+      ceiling: 42_300,
     },
   ];
 

@@ -2,7 +2,7 @@
 title: Configuração
 description: Instale o pacote, escolha entre CSS compilado ou código-fonte do Tailwind e renderize a estrutura da página de configurações.
 order: 1
-source: 22c98bb0d3018bf3cee2e04b8e8c5301796015f8
+source: 7ae500b120dd1e23351cc62f8dce77e1560b6714
 ---
 
 # Configuração
@@ -44,7 +44,7 @@ A folha de estilos completa inclui o reset, os tokens, os utilitários de layout
 
 Escolha um:
 
-- **CSS compilado** (`@codenhub/styles`, mostrado acima). Use este, a menos que tenha um motivo para não usar. Qualquer bundler que resolva imports de CSS de pacotes funciona, como Vite, webpack ou a CLI do Tailwind. Ele traz todas as classes, sejam usadas pelas suas páginas ou não. Pela CLI do Tailwind ele cresce cerca de um quinto: a CLI escreve cada `color-mix()` duas vezes, uma alternativa e o original dentro de `@supports (color: color-mix(in lab, red, red))`, e todo navegador que o pacote suporta usa o original. Com o Tailwind 4.3.2, a folha de estilos completa e uma estética saíram com 282.209 bytes, de 238.722. Num projeto que já roda Tailwind, use o código-fonte abaixo, ou importe o arquivo compilado fora do pipeline do Tailwind, por exemplo a partir da entrada JavaScript do app.
+- **CSS compilado** (`@codenhub/styles`, mostrado acima). Use este, a menos que tenha um motivo para não usar. Qualquer bundler que resolva imports de CSS de pacotes funciona, como Vite, webpack ou a CLI do Tailwind. Ele traz todas as classes, sejam usadas pelas suas páginas ou não. Pela CLI do Tailwind ele cresce cerca de um quinto: a CLI escreve cada `color-mix()` duas vezes, uma alternativa e o original dentro de `@supports (color: color-mix(in lab, red, red))`, e todo navegador que o pacote suporta usa o original. Com o Tailwind 4.3.4, a folha de estilos completa e a neobrutalism saíram com 308.466 bytes, de 260.955. Num projeto que já roda Tailwind, use o código-fonte abaixo, ou importe o arquivo compilado fora do pipeline do Tailwind, por exemplo a partir da entrada JavaScript do app.
 - **Código-fonte do Tailwind CSS v4** (`@codenhub/styles/tw`). Use quando o seu projeto já roda Tailwind v4. O seu build compila o pacote junto com os seus próprios utilitários, então você fica com uma única folha de estilos e a variante `dark:` do Tailwind acompanha o tema do pacote. Exige Tailwind 4.3.2 ou mais recente, abaixo da 5.
 - **Sem bundler.** Referencie o arquivo compilado a partir do `node_modules` ou de uma CDN com uma tag `<link>`; veja [Sem bundler](./integrating/without-a-bundler.md).
 

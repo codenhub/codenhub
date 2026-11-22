@@ -2,7 +2,7 @@
 title: Svelte
 description: Como carregar a folha de estilos numa aplicação Svelte / SvelteKit.
 order: 4
-source: 9c8bc0fee69e4b2bf1edd85c784b7df8ff1e883d
+source: 442997d6f6210c9a860bdea4c6ccdb6be003524e
 ---
 
 # Svelte

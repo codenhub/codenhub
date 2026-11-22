@@ -156,23 +156,23 @@ Node-based Vitest checks validate every published target. Every compiled export 
 
 | Measured                                   | Minified | Gzip   | Ceiling |
 | ------------------------------------------ | -------- | ------ | ------- |
-| `dist/index.css`                           | 245,297  | 20,693 | 252,700 |
-| `dist/components.css`                      | 195,444  | 15,686 | 201,400 |
-| `dist/native.css`                          | 364,491  | 27,357 | 375,500 |
-| `dist/theme.css`                           | 13,232   | 2,626  | 13,650  |
-| `dist/palette.css`                         | 19,038   | 2,510  | 19,650  |
-| `dist/aesthetics/index.css`                | 51,294   | 5,506  | 52,900  |
-| `dist/aesthetics/chunky-tile.css`          | 6,161    | 1,526  | 6,350   |
+| `dist/index.css`                           | 256,369  | 22,323 | 264,100 |
+| `dist/components.css`                      | 205,252  | 17,231 | 211,400 |
+| `dist/native.css`                          | 384,122  | 29,193 | 395,700 |
+| `dist/theme.css`                           | 13,173   | 2,620  | 13,650  |
+| `dist/palette.css`                         | 19,277   | 2,605  | 19,900  |
+| `dist/aesthetics/index.css`                | 55,232   | 6,897  | 56,900  |
+| `dist/aesthetics/chunky-tile.css`          | 11,394   | 2,736  | 11,750  |
 | `dist/aesthetics/cyber.css`                | 4,734    | 1,307  | 4,900   |
-| `dist/aesthetics/glass.css`                | 15,721   | 2,414  | 16,200  |
+| `dist/aesthetics/glass.css`                | 14,426   | 2,446  | 16,200  |
 | `dist/aesthetics/neobrutalism.css`         | 4,586    | 1,263  | 4,750   |
 | `dist/aesthetics/pixel.css`                | 5,458    | 1,316  | 5,620   |
 | `dist/aesthetics/sketch.css`               | 14,905   | 2,081  | 15,350  |
-| `dist/purge/index.css`                     | 334,724  | 27,162 | 344,800 |
+| `dist/purge/index.css`                     | 345,796  | 28,830 | 356,200 |
 | `dist/purge/classes.json`                  | 6,871    | 1,630  | 7,100   |
-| `/button/tw`, a page with `btn primary`    | 22,947   |        | 23,500  |
-| `/button/tw`, a page with no package class | 10,025   |        | 10,350  |
-| `/tw`, a page with `btn primary`           | 35,298   |        | 36,400  |
+| `/button/tw`, a page with `btn primary`    | 23,244   |        | 23,950  |
+| `/button/tw`, a page with no package class | 9,966    |        | 10,350  |
+| `/tw`, a page with `btn primary`           | 41,047   |        | 42,300  |
 
 About 694 bytes of each of the three `/tw` rows are the nine `--tw-*` registrations `/tw` ships itself, with the fallbacks Tailwind's polyfills write for them, because Tailwind registers each only on a page that uses a utility setting it, and registers nothing a utility body sets by hand. `dist/aesthetics/index.css` carries no Tailwind banner, as it carries none of Tailwind's CSS.
 

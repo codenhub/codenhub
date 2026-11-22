@@ -2,7 +2,7 @@
 title: Accesibilidad
 description: Lo que hace el CSS con el foco, los estados, el movimiento, el contraste, los colores forzados y el texto de derecha a izquierda, y lo que tu aplicación todavía les debe a sus usuarios.
 order: 5
-source: 156495ffeb9abb047680b23a381496271a6de08e
+source: 3de386f598d3218dcd5ca8788d16672fd110d1b0
 ---
 
 # Accesibilidad

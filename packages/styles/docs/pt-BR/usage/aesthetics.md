@@ -2,7 +2,7 @@
 title: Estéticas
 description: Os seis visuais opcionais, o que cada um muda num componente, os seus ajustes e os seus limites.
 order: 6
-source: c4830e14419df8685dc763f157aa9f3142631e1d
+source: b8a3676210b5757ff3035067c998a4cfb42712b4
 ---
 
 # Estéticas

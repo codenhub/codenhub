@@ -2,7 +2,7 @@
 title: Formulários
 description: Campos com rótulo, dicas e erros, ícones e prefixos fixos, selects e toggles de checkbox, radio e switch.
 order: 2
-source: 1496679be928fb9a2d2e78b72d01144de16d27b9
+source: 6ad5aac1b3b34233067a88cba377ced511c4d479
 ---
 
 # Formulários

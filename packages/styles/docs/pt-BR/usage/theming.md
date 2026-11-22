@@ -2,7 +2,7 @@
 title: Temas
 description: Modo claro e escuro, como trocar a paleta pelas cores da marca, como definir uma intenção própria, e cada token de cor, de intenção, fundamental e de fonte com o seu padrão.
 order: 5
-source: 11818fb6c0d117f7c999fe2fa7cac9f211d86c1a
+source: 30b79f4843f5388bdfec341211f199f0a596cfb6
 ---
 
 # Temas

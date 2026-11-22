@@ -2,7 +2,7 @@
 title: Next.js
 description: Como carregar a folha de estilos numa aplicação Next.js / React.
 order: 2
-source: b229c0204095ccf30396f20e8b7f8033f7004285
+source: 4936b6621b4763b60f2eda24049a477a7fa764e6
 ---
 
 # Next.js

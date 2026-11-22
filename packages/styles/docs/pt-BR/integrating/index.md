@@ -3,7 +3,7 @@ title: Visão geral
 description: Como a folha de estilos é carregada no build de um framework e qual guia seguir.
 group: Integração
 order: 2
-source: 5af237896ccc0da753e402313a176df02820a62c
+source: 52e0563bc739ebe40d0bbc3957ccaa946633ff7e
 ---
 
 # Integração

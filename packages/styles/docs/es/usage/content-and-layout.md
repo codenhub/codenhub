@@ -2,7 +2,7 @@
 title: Contenido y layout
 description: Consulta de cada helper de layout con su espaciado, la escala tipográfica con sus tamaños, las tarjetas y los paneles con su relleno interior, las tablas, las citas, el código y las teclas.
 order: 10
-source: 658091f4effdbf6842df999372d1a4f54f41a8c4
+source: dfa5f0f6b322f475585cc2784a3a7cfa4c64ef4b
 ---
 
 # Contenido y layout

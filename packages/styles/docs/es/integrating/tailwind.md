@@ -2,7 +2,7 @@
 title: Tailwind CSS v4
 description: Usar los puntos de entrada de código fuente /tw en un proyecto con Tailwind CSS v4.
 order: 1
-source: 52bb84688d6c4ed474920042e278f5532a1c97da
+source: 751c07d0ead1796ffb06aa5b463f6da775741485
 ---
 
 # Tailwind CSS v4

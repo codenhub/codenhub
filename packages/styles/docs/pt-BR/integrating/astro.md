@@ -2,7 +2,7 @@
 title: Astro
 description: Como carregar a folha de estilos numa aplicação Astro.
 order: 5
-source: 12336fe1b350a8cb49d62acf9c121afb1fed933d
+source: 5282320f5f302eb16a0171b8dc5e078a6ea0f310
 ---
 
 # Astro
