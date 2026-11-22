@@ -174,20 +174,21 @@ Without a locale in the URL, the server's `Accept-Language` match is a guess, no
 // src/render.ts
 export async function renderPage(request: Request) {
   const i18n = createAppI18n();
-  const chosen = /(?:^|;\s*)locale=([^;]*)/.exec(request.headers.get("cookie") ?? "")?.[1];
-  await i18n.init({ locale: i18n.resolveLocale(chosen ?? "") ?? pickLocale(i18n, request) });
+  const chosen = /(?:^|;\s*)locale=([^;]*)/.exec(request.headers.get("cookie") ?? "")?.[1] ?? "";
+  // `matchLocale()` reads a choice you no longer list exactly, such as `pt-BR` once you list only `pt`.
+  await i18n.init({ locale: i18n.resolveLocale(chosen) ?? i18n.matchLocale([chosen]) ?? pickLocale(i18n, request) });
   // ...
 }
 ```
 
 ```ts
 // In the browser
-const chosen = /(?:^|;\s*)locale=([^;]*)/.exec(document.cookie)?.[1];
+const chosen = /(?:^|;\s*)locale=([^;]*)/.exec(document.cookie)?.[1] ?? "";
 const binding = await initializeBrowserI18n({
   i18n,
   // The cookie holds the choice, so the binding neither saves nor reads its own.
   persistLocale: false,
-  locale: i18n.resolveLocale(chosen ?? ""),
+  locale: i18n.resolveLocale(chosen) ?? i18n.matchLocale([chosen]),
 });
 binding.subscribe(() => {
   document.cookie = binding.isUsingSystemLocale ? "locale=; path=/; max-age=0" : `locale=${i18n.locale}; path=/; max-age=31536000; samesite=lax`;

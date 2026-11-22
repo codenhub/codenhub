@@ -2,7 +2,7 @@
 title: Renderiza en un servidor o en tiempo de build
 description: Un gestor por solicitud, cómo elegir un locale a partir de Accept-Language, builds de sitios estáticos y logs de producción silenciosos.
 order: 3
-source: 05b5ef19c9d00d610cfbacb2332204b69fac1647
+source: 0e3720f5937d9379c7af6a6abd5191de4715e938
 ---
 
 # Renderiza en un servidor o en tiempo de build
@@ -175,20 +175,21 @@ Sin un locale en la URL, la coincidencia del servidor con `Accept-Language` es u
 // src/render.ts
 export async function renderPage(request: Request) {
   const i18n = createAppI18n();
-  const chosen = /(?:^|;\s*)locale=([^;]*)/.exec(request.headers.get("cookie") ?? "")?.[1];
-  await i18n.init({ locale: i18n.resolveLocale(chosen ?? "") ?? pickLocale(i18n, request) });
+  const chosen = /(?:^|;\s*)locale=([^;]*)/.exec(request.headers.get("cookie") ?? "")?.[1] ?? "";
+  // `matchLocale()` lee una elección que ya no listas tal cual, como `pt-BR` cuando solo listas `pt`.
+  await i18n.init({ locale: i18n.resolveLocale(chosen) ?? i18n.matchLocale([chosen]) ?? pickLocale(i18n, request) });
   // ...
 }
 ```
 
 ```ts
 // En el navegador
-const chosen = /(?:^|;\s*)locale=([^;]*)/.exec(document.cookie)?.[1];
+const chosen = /(?:^|;\s*)locale=([^;]*)/.exec(document.cookie)?.[1] ?? "";
 const binding = await initializeBrowserI18n({
   i18n,
   // La cookie guarda la elección, así que el binding no guarda ni lee la suya.
   persistLocale: false,
-  locale: i18n.resolveLocale(chosen ?? ""),
+  locale: i18n.resolveLocale(chosen) ?? i18n.matchLocale([chosen]),
 });
 binding.subscribe(() => {
   document.cookie = binding.isUsingSystemLocale ? "locale=; path=/; max-age=0" : `locale=${i18n.locale}; path=/; max-age=31536000; samesite=lax`;
