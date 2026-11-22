@@ -777,7 +777,12 @@ test.describe("aesthetics", () => {
 
       const [[, soft]] = await read(BUTTONS_URL, ["btn-soft-edged-primary"]);
 
-      expect(readSrgb(soft!["background-color"]!).alpha, "soft button keeps its whole tint").toBeCloseTo(0.12, 2);
+      /* The playground places the button straight in the region, so its whole
+         0.12 tint rests on glass's 69% control ground: 1 - 0.88 * 0.31. */
+      expect(readSrgb(soft!["background-color"]!).alpha, "soft button keeps its whole tint").toBeCloseTo(
+        1 - (1 - 0.12) * (1 - 0.69),
+        2,
+      );
     });
 
     /* A table is a pane of content, and next to frosted cards an opaque one read
