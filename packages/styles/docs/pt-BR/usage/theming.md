@@ -165,53 +165,53 @@ Para mais contraste, o segundo caminho são duas regras: uma para a configuraç�
 
 Cada token de cor guarda um valor claro e um escuro por meio de `light-dark()`; um único valor significa que os dois temas o usam. Nomes de paleta como `neutral-950` são da paleta padrão do Tailwind, que o CSS compilado do pacote declara para as cores que usa.
 
-Cada linha é um ponto de sobrescrita: defina-a no `:root` para mudar o tema da página, ou em qualquer elemento para mudar o tema do que está dentro dele. As linhas `-hover`, `-subtle`, `-strong` e `-contrast` são companheiras da cor base da sua família e não a acompanham, então mude o tema da família inteira. A família `text` não tem linha `-subtle`: a intenção neutra pega o seu tom suave de `--color-surface`.
+Cada linha é um ponto de sobrescrita: defina-a no `:root` para mudar o tema da página, ou em qualquer elemento para mudar o tema dos componentes dentro dele. O texto e o fundo do próprio elemento são a exceção: o reset lê `--color-text` e `--color-background` só em `html` e `body`, então um valor definido numa `<section>` muda a cor dos componentes dentro dela, mas não a do próprio texto nem o fundo. Defina também `color: var(--color-text)` e `background-color: var(--color-background)` no mesmo elemento. Um [seletor de tema](#claro-e-escuro) já define o `color` dele. As linhas `-hover`, `-subtle`, `-strong` e `-contrast` são companheiras da cor base da sua família e não a acompanham, então mude o tema da família inteira. A família `text` não tem linha `-subtle`: a intenção neutra pega o seu tom suave de `--color-surface`.
 
-| Token                          | Claro, escuro                | Finalidade                                                                                                          |
-| ------------------------------ | ---------------------------- | ------------------------------------------------------------------------------------------------------------------- |
-| `--color-primary`              | `neutral-950`, `neutral-50`  | Preenchimento de `.primary`.                                                                                        |
-| `--color-primary-contrast`     | `neutral-50`, `neutral-950`  | Texto e ícones sobre um preenchimento primário total.                                                               |
-| `--color-primary-hover`        | `neutral-700`, `neutral-200` | Preenchimento primário sob o ponteiro.                                                                              |
-| `--color-primary-subtle`       | `neutral-200`, `neutral-900` | Tom primário por trás dos componentes soft.                                                                         |
-| `--color-primary-strong`       | `neutral-900`, `neutral-100` | Texto, ícones e bordas primários onde o preenchimento não é total.                                                  |
-| `--color-accent`               | `neutral-600`, `neutral-400` | Preenchimento de `.secondary`.                                                                                      |
-| `--color-accent-contrast`      | `neutral-50`, `neutral-950`  | Texto e ícones sobre um preenchimento secundário total.                                                             |
-| `--color-accent-hover`         | `neutral-700`, `neutral-300` | Preenchimento secundário sob o ponteiro.                                                                            |
-| `--color-accent-subtle`        | `neutral-100`, `neutral-800` | Tom secundário por trás dos componentes soft.                                                                       |
-| `--color-accent-strong`        | `neutral-800`, `neutral-200` | Texto, ícones e bordas secundários onde o preenchimento não é total.                                                |
-| `--color-border`               | `neutral-400`, `neutral-700` | Borda de superfícies neutras, tabelas, divisores e teclas.                                                          |
-| `--color-border-hover`         | `neutral-600`, `neutral-500` | Borda sob o ponteiro.                                                                                               |
-| `--color-control-border`       | `neutral-500`                | Borda em repouso de controles de texto e toggles neutros, desenhada com uma fração da força nos controles de texto. |
-| `--color-background`           | `neutral-50`, `neutral-950`  | A página.                                                                                                           |
-| `--color-foreground`           | `neutral-100`, `neutral-900` | O tom de fundo discreto um passo distante da página: cards soft, painéis e alertas neutros.                         |
-| `--color-surface`              | `neutral-200`, `neutral-800` | Mais um passo: superfícies aninhadas e esmaecidas, e o tom da intenção neutra.                                      |
-| `--color-text`                 | `neutral-950`, `neutral-50`  | Texto do corpo, e a cor da intenção neutra.                                                                         |
-| `--color-text-secondary`       | `neutral-700`, `neutral-400` | Texto secundário, como o `.hint`.                                                                                   |
-| `--color-text-contrast`        | `neutral-50`, `neutral-950`  | Texto sobre um preenchimento total de `--color-text`, como a marca de um toggle neutro marcado.                     |
-| `--color-text-hover`           | `neutral-700`, `neutral-200` | Cor neutra sob o ponteiro.                                                                                          |
-| `--color-text-strong`          | `neutral-900`, `neutral-100` | Texto, ícones e bordas neutros onde o preenchimento não é total.                                                    |
-| `--color-tooltip`              | `white`, `neutral-700`       | Fundo de um balão de tooltip sem intenção. Escolhido por tema para parecer elevado nos dois.                        |
-| `--color-tooltip-contrast`     | `neutral-900`, `neutral-100` | Texto sobre `--color-tooltip`.                                                                                      |
-| `--color-success`              | `emerald-700`                | Preenchimento de `.success`.                                                                                        |
-| `--color-success-contrast`     | `neutral-50`                 | Texto sobre um preenchimento de sucesso total: 5.14:1.                                                              |
-| `--color-success-hover`        | `#007552`, `#006448`         | Preenchimento de sucesso sob o ponteiro.                                                                            |
-| `--color-success-subtle`       | `emerald-100`, `emerald-900` | Tom de sucesso por trás dos componentes soft.                                                                       |
-| `--color-success-strong`       | `emerald-800`, `emerald-300` | Texto, ícones e bordas de sucesso onde o preenchimento não é total.                                                 |
-| `--color-warning`              | `amber-600`                  | Preenchimento de `.warning`.                                                                                        |
-| `--color-warning-contrast`     | `neutral-950`                | Texto sobre um preenchimento de aviso total: quase preto, não a cor da página. 6.19:1.                              |
-| `--color-warning-hover`        | `#d46700`, `#e78300`         | Preenchimento de aviso sob o ponteiro.                                                                              |
-| `--color-warning-subtle`       | `amber-100`, `amber-900`     | Tom de aviso por trás dos componentes soft.                                                                         |
-| `--color-warning-strong`       | `amber-800`, `amber-300`     | Texto, ícones e bordas de aviso onde o preenchimento não é total.                                                   |
-| `--color-destructive`          | `rose-700`                   | Preenchimento de `.destructive`.                                                                                    |
-| `--color-destructive-contrast` | `neutral-50`                 | Texto sobre um preenchimento destrutivo total: 5.78:1.                                                              |
-| `--color-destructive-hover`    | `#c00036`, `#d1054b`         | Preenchimento destrutivo sob o ponteiro.                                                                            |
-| `--color-destructive-subtle`   | `rose-100`, `rose-900`       | Tom destrutivo por trás dos componentes soft.                                                                       |
-| `--color-destructive-strong`   | `rose-800`, `rose-300`       | Texto, ícones e bordas destrutivos onde o preenchimento não é total.                                                |
-| `--color-info`                 | `indigo-600`                 | Preenchimento de `.info`.                                                                                           |
-| `--color-info-contrast`        | `neutral-50`                 | Texto sobre um preenchimento informativo total: 6.19:1.                                                             |
-| `--color-info-hover`           | `#4b36e9`, `#5e4ff9`         | Preenchimento informativo sob o ponteiro.                                                                           |
-| `--color-info-subtle`          | `indigo-100`, `indigo-900`   | Tom informativo por trás dos componentes soft.                                                                      |
-| `--color-info-strong`          | `indigo-800`, `indigo-300`   | Texto, ícones e bordas informativos onde o preenchimento não é total.                                               |
+| Token                          | Claro, escuro                | Finalidade                                                                                      |
+| ------------------------------ | ---------------------------- | ----------------------------------------------------------------------------------------------- |
+| `--color-primary`              | `neutral-950`, `neutral-50`  | Preenchimento de `.primary`.                                                                    |
+| `--color-primary-contrast`     | `neutral-50`, `neutral-950`  | Texto e ícones sobre um preenchimento primário total.                                           |
+| `--color-primary-hover`        | `neutral-700`, `neutral-200` | Preenchimento primário sob o ponteiro.                                                          |
+| `--color-primary-subtle`       | `neutral-200`, `neutral-900` | Tom primário por trás dos componentes soft.                                                     |
+| `--color-primary-strong`       | `neutral-900`, `neutral-100` | Texto, ícones e bordas primários onde o preenchimento não é total.                              |
+| `--color-accent`               | `neutral-600`, `neutral-400` | Preenchimento de `.secondary`.                                                                  |
+| `--color-accent-contrast`      | `neutral-50`, `neutral-950`  | Texto e ícones sobre um preenchimento secundário total.                                         |
+| `--color-accent-hover`         | `neutral-700`, `neutral-300` | Preenchimento secundário sob o ponteiro.                                                        |
+| `--color-accent-subtle`        | `neutral-100`, `neutral-800` | Tom secundário por trás dos componentes soft.                                                   |
+| `--color-accent-strong`        | `neutral-800`, `neutral-200` | Texto, ícones e bordas secundários onde o preenchimento não é total.                            |
+| `--color-border`               | `neutral-400`, `neutral-700` | Borda de superfícies neutras, tabelas, divisores e teclas.                                      |
+| `--color-border-hover`         | `neutral-600`, `neutral-500` | Borda sob o ponteiro.                                                                           |
+| `--color-control-border`       | `neutral-500`                | Borda em repouso de controles de texto e toggles neutros.                                       |
+| `--color-background`           | `neutral-50`, `neutral-950`  | A página.                                                                                       |
+| `--color-foreground`           | `neutral-100`, `neutral-900` | O tom de fundo discreto um passo distante da página: cards soft, painéis e alertas neutros.     |
+| `--color-surface`              | `neutral-200`, `neutral-800` | Mais um passo: superfícies aninhadas e esmaecidas, e o tom da intenção neutra.                  |
+| `--color-text`                 | `neutral-950`, `neutral-50`  | Texto do corpo, e a cor da intenção neutra.                                                     |
+| `--color-text-secondary`       | `neutral-700`, `neutral-400` | Texto secundário, como o `.hint`.                                                               |
+| `--color-text-contrast`        | `neutral-50`, `neutral-950`  | Texto sobre um preenchimento total de `--color-text`, como a marca de um toggle neutro marcado. |
+| `--color-text-hover`           | `neutral-700`, `neutral-200` | Cor neutra sob o ponteiro.                                                                      |
+| `--color-text-strong`          | `neutral-900`, `neutral-100` | Texto, ícones e bordas neutros onde o preenchimento não é total.                                |
+| `--color-tooltip`              | `white`, `neutral-700`       | Fundo de um balão de tooltip sem intenção. Escolhido por tema para parecer elevado nos dois.    |
+| `--color-tooltip-contrast`     | `neutral-900`, `neutral-100` | Texto sobre `--color-tooltip`.                                                                  |
+| `--color-success`              | `emerald-700`                | Preenchimento de `.success`.                                                                    |
+| `--color-success-contrast`     | `neutral-50`                 | Texto sobre um preenchimento de sucesso total: 5.14:1.                                          |
+| `--color-success-hover`        | `#007552`, `#006448`         | Preenchimento de sucesso sob o ponteiro.                                                        |
+| `--color-success-subtle`       | `emerald-100`, `emerald-900` | Tom de sucesso por trás dos componentes soft.                                                   |
+| `--color-success-strong`       | `emerald-800`, `emerald-300` | Texto, ícones e bordas de sucesso onde o preenchimento não é total.                             |
+| `--color-warning`              | `amber-600`                  | Preenchimento de `.warning`.                                                                    |
+| `--color-warning-contrast`     | `neutral-950`                | Texto sobre um preenchimento de aviso total: quase preto, não a cor da página. 6.19:1.          |
+| `--color-warning-hover`        | `#d46700`, `#e78300`         | Preenchimento de aviso sob o ponteiro.                                                          |
+| `--color-warning-subtle`       | `amber-100`, `amber-900`     | Tom de aviso por trás dos componentes soft.                                                     |
+| `--color-warning-strong`       | `amber-800`, `amber-300`     | Texto, ícones e bordas de aviso onde o preenchimento não é total.                               |
+| `--color-destructive`          | `rose-700`                   | Preenchimento de `.destructive`.                                                                |
+| `--color-destructive-contrast` | `neutral-50`                 | Texto sobre um preenchimento destrutivo total: 5.78:1.                                          |
+| `--color-destructive-hover`    | `#c00036`, `#d1054b`         | Preenchimento destrutivo sob o ponteiro.                                                        |
+| `--color-destructive-subtle`   | `rose-100`, `rose-900`       | Tom destrutivo por trás dos componentes soft.                                                   |
+| `--color-destructive-strong`   | `rose-800`, `rose-300`       | Texto, ícones e bordas destrutivos onde o preenchimento não é total.                            |
+| `--color-info`                 | `indigo-600`                 | Preenchimento de `.info`.                                                                       |
+| `--color-info-contrast`        | `neutral-50`                 | Texto sobre um preenchimento informativo total: 6.19:1.                                         |
+| `--color-info-hover`           | `#4b36e9`, `#5e4ff9`         | Preenchimento informativo sob o ponteiro.                                                       |
+| `--color-info-subtle`          | `indigo-100`, `indigo-900`   | Tom informativo por trás dos componentes soft.                                                  |
+| `--color-info-strong`          | `indigo-800`, `indigo-300`   | Texto, ícones e bordas informativos onde o preenchimento não é total.                           |
 
 Mudanças de tema pertencem a esses valores, não a regras de componente que verificam o tema.
 
@@ -241,7 +241,7 @@ A cor do texto acompanha o preenchimento. `--intent-contrast` é a cor do texto 
 
 ## Tokens fundamentais
 
-Os tokens fundamentais definem layout, formato, movimento, foco, profundidade e empilhamento. Sobrescreva-os no `:root`, ou num elemento para o que está dentro dele.
+Os tokens fundamentais definem layout, formato, movimento, foco, profundidade e empilhamento. Sobrescreva-os no `:root`, ou num elemento para o que está dentro dele. `--font-default` é a exceção: a fonte de um elemento só o acompanha quando o elemento define `font-family` a partir dele, como mostra [Fontes](#fontes).
 
 As quatro sombras `--elevation-*` são para elementos que você mesmo estiliza. Elas são separadas das classes `.flat`, `.raised` e `.floating`, que escalam a sombra do próprio componente e não desenham nada até que uma estética ou uma dessas classes peça profundidade; veja [Composição → Elevação](./composing.md#elevação). Ambas usam os pesos nenhum, pequeno, médio e grande, mas uma é um valor fixo e a outra escala partes da sombra, então elas nem sempre têm a mesma aparência.
 
@@ -292,7 +292,7 @@ O pacote não entrega arquivos de fonte e não faz requisições de rede. Cada t
 
 `--font-default` só chega à página pelo reset, que `@codenhub/styles`, `/native`, `/tw`, `/native/tw` e `/reset/tw` incluem. Usando só `/theme` ou `/components`, defina você mesmo o `font-family` no `body` e defina `--font-default` com a mesma fonte: as regiões `.glass` e `.neobrutalism` definem o próprio `font-family` a partir do token, então uma fonte definida só no `body` não chega dentro delas. Ou defina só o token e escreva `font-family: var(--font-default)` no `body`. Os tokens das estéticas são lidos pela classe da própria estética, então funcionam com qualquer entrypoint.
 
-Para usar uma web font, carregue-a como você carrega qualquer fonte e depois nomeie-a no token. Defina o token no `:root` para a página inteira, ou em qualquer elemento para aquela parte dela:
+Para usar uma web font, carregue-a como você carrega qualquer fonte e depois nomeie-a no token. Defina o token no `:root` para a página inteira. Para uma parte só, defina o token nesse elemento e, junto, `font-family: var(--font-default)`, porque o reset lê o token só em `html` e `body`, e o texto dentro herda a fonte que o elemento resolve:
 
 ```html
 <link rel="preconnect" href="https://fonts.googleapis.com" />

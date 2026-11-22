@@ -165,7 +165,7 @@ Para más contraste, el segundo camino son dos reglas: una para el ajuste del si
 
 Cada token de color contiene un valor claro y uno oscuro mediante `light-dark()`; un solo valor significa que los dos temas lo usan. Los nombres de paleta como `neutral-950` son la paleta por defecto de Tailwind, que el CSS compilado del paquete declara para los colores que usa.
 
-Cada fila es un punto de sobrescritura: defínelo en `:root` para cambiar el tema de la página, o en cualquier elemento para cambiar el de lo que contiene. Las filas `-hover`, `-subtle`, `-strong` y `-contrast` son acompañantes del color base de su familia y no lo siguen, así que cambia la familia completa. La familia `text` no tiene fila `-subtle`: la intención neutra toma su tono subtle de `--color-surface`.
+Cada fila es un punto de sobrescritura: defínelo en `:root` para cambiar el tema de la página, o en cualquier elemento para cambiar el de los componentes que contiene. El texto y el fondo del propio elemento son la excepción: el reset lee `--color-text` y `--color-background` solo en `html` y `body`, así que un valor definido en una `<section>` cambia el color de los componentes que hay dentro, pero no el de su propio texto ni su fondo. Define también `color: var(--color-text)` y `background-color: var(--color-background)` en el mismo elemento. Un [selector de tema](#claro-y-oscuro) ya define su `color`. Las filas `-hover`, `-subtle`, `-strong` y `-contrast` son acompañantes del color base de su familia y no lo siguen, así que cambia la familia completa. La familia `text` no tiene fila `-subtle`: la intención neutra toma su tono subtle de `--color-surface`.
 
 | Token                          | Claro, oscuro                | Propósito                                                                                                        |
 | ------------------------------ | ---------------------------- | ---------------------------------------------------------------------------------------------------------------- |
@@ -181,7 +181,7 @@ Cada fila es un punto de sobrescritura: defínelo en `:root` para cambiar el tem
 | `--color-accent-strong`        | `neutral-800`, `neutral-200` | Texto, iconos y bordes secundarios donde el relleno no es completo.                                              |
 | `--color-border`               | `neutral-400`, `neutral-700` | Borde de las superficies neutras, tablas, divisores y teclas.                                                    |
 | `--color-border-hover`         | `neutral-600`, `neutral-500` | Borde bajo el puntero.                                                                                           |
-| `--color-control-border`       | `neutral-500`                | Borde en reposo de los controles de texto y toggles neutros, dibujado a una fracción en los controles de texto.  |
+| `--color-control-border`       | `neutral-500`                | Borde en reposo de los controles de texto y toggles neutros.                                                     |
 | `--color-background`           | `neutral-50`, `neutral-950`  | La página.                                                                                                       |
 | `--color-foreground`           | `neutral-100`, `neutral-900` | El tono de fondo discreto un paso por encima de la página: tarjetas soft, paneles y alertas neutros.             |
 | `--color-surface`              | `neutral-200`, `neutral-800` | Un paso más: superficies anidadas y atenuadas, y el tinte de la intención neutra.                                |
@@ -241,7 +241,7 @@ El color del texto sigue al relleno. `--intent-contrast` es el color de texto pa
 
 ## Tokens base
 
-Los tokens base definen el layout, la forma, el movimiento, el foco, la profundidad y el apilamiento. Sobrescríbelos en `:root`, o en un elemento para lo que contiene.
+Los tokens base definen el layout, la forma, el movimiento, el foco, la profundidad y el apilamiento. Sobrescríbelos en `:root`, o en un elemento para lo que contiene. `--font-default` es la excepción: la fuente de un elemento solo lo sigue cuando el elemento define `font-family` a partir de él, como muestra [Fuentes](#fuentes).
 
 Las cuatro sombras `--elevation-*` son para elementos a los que das estilo tú. Son independientes de las clases `.flat`, `.raised` y `.floating`, que escalan la sombra propia de un componente y no dibujan nada hasta que una estética o una de esas clases pide profundidad; consulta [Composición → Elevación](./composing.md#elevación). Las dos usan los pesos ninguno, pequeño, mediano y grande, pero una es un valor fijo y la otra escala partes de la sombra, así que no siempre se ven igual.
 
@@ -292,7 +292,7 @@ El paquete no incluye archivos de fuente ni hace peticiones de red. Cada token d
 
 `--font-default` solo llega a la página a través del reset, que incluyen `@codenhub/styles`, `/native`, `/tw`, `/native/tw` y `/reset/tw`. Con `/theme` o `/components` solos, define tú mismo `font-family` en `body` y define `--font-default` con la misma fuente: las regiones `.glass` y `.neobrutalism` definen su propio `font-family` a partir del token, así que una fuente definida solo en `body` no llega dentro de ellas. O define solo el token y escribe `font-family: var(--font-default)` en `body`. Los tokens de las estéticas los lee la propia clase de la estética, así que funcionan con cualquier punto de entrada.
 
-Para usar una fuente web, cárgala como cargas cualquier fuente y después nómbrala en el token. Define el token en `:root` para toda la página, o en cualquier elemento para esa parte:
+Para usar una fuente web, cárgala como cargas cualquier fuente y después nómbrala en el token. Define el token en `:root` para toda la página. Para una sola parte, define el token en ese elemento y, con él, `font-family: var(--font-default)`, porque el reset lee el token solo en `html` y `body`, y el texto de dentro hereda la fuente que resuelve el elemento:
 
 ```html
 <link rel="preconnect" href="https://fonts.googleapis.com" />
