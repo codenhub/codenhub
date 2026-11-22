@@ -109,9 +109,9 @@ The package's own colors do not change, and you can still add colors of your own
 
 The block leaves out `neutral`, `emerald`, `amber`, `rose`, `indigo`, and `white` on purpose: the theme builds its colors from them.
 
-- **Do not clear the whole namespace.** `--color-*: initial` also removes the package's semantic colors, and the build stops with an error such as `Cannot apply unknown utility class`.
+- **Do not clear the whole namespace.** `--color-*: initial` also removes the package's semantic colors, such as `--color-primary`, because they are theme variables too. The build still succeeds, with no warning, and every component that reads them draws with no color.
 - **Do not clear a ramp the theme reads.** Clearing `--color-emerald-*` builds without an error, but the success colors made from it are lost.
-- **Do not clear the type, font, or spacing namespaces.** The components apply Tailwind's `text-*` and `font-*` utilities and its `--spacing()` function, so `--text-*: initial`, `--font-*: initial`, `--spacing: initial`, or `--*: initial` stops the build with `Cannot apply unknown utility class` or `The --spacing(…) function requires that the --spacing theme variable exists`. Override single values instead, such as `--text-sm`. Clearing `--radius-*` is safe.
+- **Do not clear the type, font, or spacing namespaces.** The components apply Tailwind's `text-*` and `font-*` utilities and its `--spacing()` function, so `--text-*: initial`, `--font-*: initial`, `--spacing: initial`, or `--*: initial` removes the values they read. The build still succeeds, with no warning: the components keep their references to `--text-sm`, `--font-default`, or `--spacing`, which now name nothing, so their text takes the inherited size and font and their padding and gaps collapse to zero. Override single values instead, such as `--text-sm`. Clearing `--radius-*` is safe: the components' corners come from the package's own `--radius-control`, `--radius-small`, and `--radius-surface`.
 
 ## Troubleshooting
 

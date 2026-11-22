@@ -110,9 +110,9 @@ Los colores propios del paquete no cambian, y puedes seguir añadiendo colores t
 
 El bloque deja fuera `neutral`, `emerald`, `amber`, `rose`, `indigo` y `white` a propósito: el tema construye sus colores a partir de ellos.
 
-- **No borres todo el espacio de nombres.** `--color-*: initial` quita también los colores semánticos del paquete, y el build se detiene con un error como `Cannot apply unknown utility class`.
+- **No borres todo el espacio de nombres.** `--color-*: initial` quita también los colores semánticos del paquete, como `--color-primary`, porque también son variables del tema. El build termina igual, sin ningún aviso, y todo componente que los lee se dibuja sin color.
 - **No borres una escala que lee el tema.** Borrar `--color-emerald-*` compila sin error, pero los colores de éxito construidos con ella se pierden.
-- **No borres los espacios de nombres de tipo, fuente o espaciado.** Los componentes aplican las utilidades `text-*` y `font-*` de Tailwind y su función `--spacing()`, así que `--text-*: initial`, `--font-*: initial`, `--spacing: initial` o `--*: initial` detiene la compilación con `Cannot apply unknown utility class` o `The --spacing(…) function requires that the --spacing theme variable exists`. Sobrescribe valores sueltos, como `--text-sm`. Borrar `--radius-*` es seguro.
+- **No borres los espacios de nombres de tipo, fuente o espaciado.** Los componentes aplican las utilidades `text-*` y `font-*` de Tailwind y su función `--spacing()`, así que `--text-*: initial`, `--font-*: initial`, `--spacing: initial` o `--*: initial` quita los valores que leen. El build termina igual, sin ningún aviso: los componentes conservan sus referencias a `--text-sm`, `--font-default` o `--spacing`, que ya no nombran nada, así que su texto toma el tamaño y la fuente heredados, y su relleno y sus espacios quedan en cero. Sobrescribe valores sueltos, como `--text-sm`. Borrar `--radius-*` es seguro: las esquinas de los componentes salen de `--radius-control`, `--radius-small` y `--radius-surface`, que son del paquete.
 
 ## Solución de problemas
 
