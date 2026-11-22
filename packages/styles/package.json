@@ -237,7 +237,7 @@
     "dev": "pnpm --filter=@codenhub/styles-dev dev",
     "debug": "pnpm build && pnpm --filter=@codenhub/styles-debug dev",
     "demo": "pnpm build && pnpm --filter=@codenhub/styles-demo dev",
-    "generate": "node scripts/generate-palette.mjs",
+    "generate": "node scripts/generate.mjs",
     "build": "pnpm clean && node scripts/build-styles.mjs && pnpm build:tw && pnpm build:purge && pnpm build:cli",
     "build:styles": "node scripts/build-styles.mjs --styles",
     "build:aesthetics": "node scripts/build-styles.mjs --aesthetics",

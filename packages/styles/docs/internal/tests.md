@@ -150,7 +150,7 @@ Node-based Vitest checks validate every published target. Every compiled export 
 
 `purge.test.ts` covers the tree-shaking `chs build` runs, apart from the command: which selectors a set of used classes can match, which rules and selectors a purge drops, that the compiled stylesheets the command reads parse and write back unchanged, that purging the source to every class of the complete stylesheet gives that stylesheet, and the readable output `--no-minify` writes.
 
-`source.test.ts` holds lists that `src/` repeats on purpose to each other: the languages the type scale and `/native` leave untracked.
+`source.test.ts` holds lists that `src/` repeats on purpose to each other: the languages the type scale, `/native`, and chunky tile's solo class leave untracked. It also holds that list to the CLDR the running Node.js carries, and skips that comparison on a Node.js whose CLDR is not the one the list records, such as the floor's.
 
 `size.test.ts` holds what a consumer downloads under ceilings, in minified bytes, each about 3% above the measurement it was set from. Gzipped lengths are recorded here but never compared, because zlib output can differ between machines. A change that grows past a ceiling raises it in the same change and says why. Measured with Tailwind 4.3.4:
 

@@ -1012,8 +1012,7 @@ test("tracks no headstroke script", async ({ page }) => {
 
 /* Egyptian and Moroccan Arabic, Shahmukhi Punjabi, Dari, South Azerbaijani,
    Jawi Malay, Dogri, Bodo, Newari, and Meitei in Bengali script were still
-   tracked: the list named their scripts' larger languages only. A script
-   subtag now reaches any language written in one of these scripts. */
+   tracked: the list named their scripts' larger languages only. */
 test("tracks no joining or headstroke script named by a script subtag or a regional language", async ({ page }) => {
   const { readFile } = await import("node:fs/promises");
   const [index, native, chunky] = await Promise.all(
@@ -1091,4 +1090,51 @@ test("tracks no regional Arabic-script language or Rohingya", async ({ page }) =
   );
 
   expect(spacing).toEqual(Object.fromEntries(Object.keys(spacing).map((id) => [id, "normal"])));
+});
+
+/* The list was written by hand and missed languages written in these scripts
+   by default (Meitei, Goan Konkani, Awadhi, Magahi, Chhattisgarhi, Rajasthani,
+   Marwari, Haryanvi, Ottoman Turkish, Assyrian Neo-Aramaic, Manchu) and
+   others written in one with a script subtag (Hausa, Kyrgyz). It is now
+   every tag CLDR's likely subtags resolve to one of the scripts, generated
+   into the three copies by `scripts/generate-script-languages.mjs`; each is
+   checked here, in each copy. */
+test("tracks no language CLDR writes in a joining or headstroke script", async ({ page }) => {
+  const { readFile } = await import("node:fs/promises");
+  // The generator's module, untyped JavaScript.
+  const languagesSpecifier = "../../scripts/lib/script-languages.mjs";
+  const { untrackedLanguages } = (await import(languagesSpecifier)) as {
+    untrackedLanguages(): string[];
+  };
+  const [index, native, chunky] = await Promise.all(
+    ["index.css", "native.css", "aesthetics/chunky-tile.css"].map((file) =>
+      readFile(new URL(`../../dist/${file}`, import.meta.url), "utf8"),
+    ),
+  );
+  const missed = ["mni", "gom", "awa", "mag", "hne", "raj", "mwr", "bgc", "ota", "ha-Arab", "ky-Arab", "aii", "mnc"];
+  const languages = [...new Set([...missed, ...untrackedLanguages()])];
+
+  await page.setContent(
+    `<!doctype html><html lang="en"><body>${languages
+      .map(
+        (lang) =>
+          `<div lang="${lang}"><p data-lang="${lang}" data-part="body">x</p><span data-lang="${lang}" data-part="text" class="text-label">x</span><label data-lang="${lang}" data-part="label" class="label">x</label><button data-lang="${lang}" data-part="solo" class="chunky-tile-solo">x</button></div>`,
+      )
+      .join("")}<p data-testid="latin" class="text-label">x</p></body></html>`,
+  );
+  await page.addStyleTag({ content: native });
+  await page.addStyleTag({ content: index });
+  await page.addStyleTag({ content: chunky });
+
+  const tracked = await page.evaluate(() =>
+    [...document.querySelectorAll("[data-lang]")]
+      .filter((element) => getComputedStyle(element).letterSpacing !== "normal")
+      .map((element) => `${element.getAttribute("data-lang")} ${element.getAttribute("data-part")}`),
+  );
+
+  expect(tracked).toEqual([]);
+  expect(
+    await page.getByTestId("latin").evaluate((element) => getComputedStyle(element).letterSpacing),
+    "a Latin page keeps its tracking",
+  ).not.toBe("normal");
 });
