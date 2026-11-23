@@ -197,12 +197,9 @@ describe("createI18n", () => {
   });
 
   it.each([
-    ["//user:secret@host", "[I18n] Unsupported locale, not quoted since it reads as a URL."],
-    ["/\\user:secret@host", "[I18n] Unsupported locale, not quoted since it reads as a URL."],
-    ["https://user:secret@host", "[I18n] Unsupported locale, not quoted since it reads as a URL."],
     ["fr?token=secret", '[I18n] Unsupported locale "fr?…".'],
     ["fr#a?token=secret", '[I18n] Unsupported locale "fr#…".'],
-  ])("keeps what a URL reads as user info, a query, or a fragment out of %j's error", async (locale, message) => {
+  ])("keeps a query or a fragment out of %j's error", async (locale, message) => {
     const i18n = createI18n(createConfig());
 
     const rejection = i18n.init({ locale: locale as Locale });

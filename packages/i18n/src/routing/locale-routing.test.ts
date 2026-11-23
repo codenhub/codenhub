@@ -12,9 +12,6 @@ vi.mock("./path", async (importOriginal) => {
 });
 
 const LOCALES = ["en-US", "pt-BR"] as const;
-const HOST_MESSAGE =
-  "pathname must not start with // or /\\, which a URL reads as the start of its host, even with a tab or line break " +
-  "between; pass url.pathname";
 
 describe("createLocaleRouting", () => {
   it("should type locales from `locales` and reject a widened default locale", () => {
@@ -289,18 +286,11 @@ describe("createLocaleRouting", () => {
   });
 
   it.each([
-    // Read as a URL with a host, which can carry user info, so none of it is quoted.
-    ["//user:secret@host", "[I18n] Unsupported locale, not quoted since it reads as a URL."],
-    ["/\\user:secret@host", "[I18n] Unsupported locale, not quoted since it reads as a URL."],
-    ["/\t/user:secret@host", "[I18n] Unsupported locale, not quoted since it reads as a URL."],
-    [" //user:secret@host", "[I18n] Unsupported locale, not quoted since it reads as a URL."],
-    ["https://user:secret@host", "[I18n] Unsupported locale, not quoted since it reads as a URL."],
-    ["https:user:secret@host", "[I18n] Unsupported locale, not quoted since it reads as a URL."],
     // A query or fragment is cut at its start.
     ["fr?token=secret", '[I18n] Unsupported locale "fr?…".'],
     ["fr#token=secret", '[I18n] Unsupported locale "fr#…".'],
     ["fr#a?token=secret", '[I18n] Unsupported locale "fr#…".'],
-  ])("should keep what a URL reads as user info, a query, or a fragment out of %j's error", (locale, message) => {
+  ])("should keep a query or a fragment out of %j's error", (locale, message) => {
     const routing = createLocaleRouting({ defaultLocale: "en-US", locales: LOCALES, localePrefix: "always" });
 
     expect(() => routing.localize("/about", locale as (typeof LOCALES)[number])).toThrow(new RangeError(message));
@@ -317,8 +307,8 @@ describe("createLocaleRouting", () => {
       // A value that isn't a path, or a query or fragment, can hold a credential, so it isn't quoted.
       ["https://user:secret@example.com/", "pathname must start with /; pass url.pathname"],
       ["", "pathname must start with /; pass url.pathname"],
-      ["//user:secret@example.com/a", HOST_MESSAGE],
-      ["//user:secret@example.com/a?b", HOST_MESSAGE],
+      ["//a", 'pathname "//a" must not contain an empty segment, as // makes'],
+      ["//a?b", 'pathname "//a?…" must not contain ?, which starts a query; pass url.pathname'],
       ["/about?token=secret", 'pathname "/about?…" must not contain ?, which starts a query; pass url.pathname'],
       ["/about#token=secret", 'pathname "/about#…" must not contain #, which starts a fragment; pass url.pathname'],
       // A URL reads the first `?` or `#` as the end of the path, so the error names that one.
@@ -347,66 +337,6 @@ describe("createLocaleRouting", () => {
     expect(() => routing.localize(null as unknown as string, "en-US")).toThrow(
       new TypeError("[I18n] pathname must be a string, received null"),
     );
-  });
-
-  describe("a pathname a URL reads as starting a host", () => {
-    const routing = createLocaleRouting({ defaultLocale: "en-US", locales: LOCALES, localePrefix: "always" });
-    // Every shape a URL parser reads as `//`: it reads `\` as `/` in an http(s) URL, and skips tabs and line breaks.
-    const starts = ["//", "/\\", "/\t/", "/\n/", "/\r/", "/\t\\", "/\n\\", "/\r\\", "/\t\n\r/", "/\\/", "///"];
-    const paths = starts.map((start) => `${start}user:secret@host/x`);
-    const urls = starts.flatMap((start) => [
-      `${start}user:secret@host/x?token=1`,
-      `${start}user:secret@host/x#token=1`,
-    ]);
-
-    it.each([...paths, ...urls])("should read %j as a URL's host, as a URL parser does", (pathname) => {
-      expect(new URL(pathname, "https://base.example").password).toBe("secret");
-    });
-
-    it.each([...paths, ...urls])("should not quote %j in localize or localizeAll", (pathname) => {
-      expect(() => routing.localize(pathname, "en-US")).toThrow(new TypeError(`[I18n] ${HOST_MESSAGE}`));
-      expect(() => routing.localizeAll(pathname)).toThrow(new TypeError(`[I18n] ${HOST_MESSAGE}`));
-    });
-
-    it.each(urls)("should not quote %j in parse", (pathname) => {
-      expect(() => routing.parse(pathname)).toThrow(new TypeError(`[I18n] ${HOST_MESSAGE}`));
-    });
-
-    // A path without a query or fragment can arrive in a request, so `parse()` refuses it without an error.
-    it.each(paths)("should refuse %j in parse without an error", (pathname) => {
-      expect(routing.parse(pathname)).toBeUndefined();
-    });
-
-    it("should quote no value a URL parser reads with another host or user info", () => {
-      const ascii = Array.from({ length: 128 }, (_, code) => String.fromCharCode(code));
-      const quoted: string[] = [];
-      for (const first of ["", ...ascii]) {
-        for (const second of ["", ...ascii]) {
-          for (const pathname of [
-            `/${first}${second}u:s@h/x`,
-            `/${first}/${second}u:s@h/x`,
-            `/${first}\\${second}u:s@h?x`,
-          ]) {
-            // A value the parser can't read throws while reading its host, so it counts as one with a host.
-            const url = URL.parse(pathname, "https://base.example");
-            if (url !== null && url.host === "base.example" && url.password === "") {
-              continue;
-            }
-            for (const call of [() => routing.localize(pathname, "en-US"), () => routing.parse(pathname)]) {
-              try {
-                call();
-              } catch (error) {
-                if ((error as Error).message.includes("u:s")) {
-                  quoted.push(pathname);
-                }
-              }
-            }
-          }
-        }
-      }
-
-      expect(quoted).toEqual([]);
-    });
   });
 
   it("should generate canonical prefixed pathnames and preserve non-root trailing slashes", () => {

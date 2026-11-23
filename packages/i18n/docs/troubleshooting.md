@@ -136,7 +136,7 @@ Common causes:
 
 From `parse()`, the value is not a URL's pathname: it doesn't start with `/`, or it contains `?` or `#`. Pass `url.pathname` rather than the full URL or a path with its query string, such as Node's `request.url`. A path that is a pathname but contains something routing refuses, such as `//` or a dot segment, makes `parse()` return `undefined` instead, so a visitor's odd URL becomes a 404 rather than a crash.
 
-From `localize()` or `localizeAll()`, the path is one of those, or contains something routing refuses. The message names the rule the path breaks and quotes the path, such as `[I18n] pathname "/help/../admin" must not contain a dot segment, . or ..`, except what a URL reads as user info, a query, or a fragment, which can hold a credential: a path with `?` or `#` is quoted only up to it, and one a URL reads as starting another host, such as `//example.com` or `/\example.com`, isn't quoted at all. [Paths it accepts](localized-urls.md#paths-it-accepts) has the full list, with the fix for each.
+From `localize()` or `localizeAll()`, the path is one of those, or contains something routing refuses. The message names the rule the path breaks and quotes the path, such as `[I18n] pathname "/help/../admin" must not contain a dot segment, . or ..`, except a query or a fragment, which can hold a token: a path with `?` or `#` is quoted only up to it. [Paths it accepts](localized-urls.md#paths-it-accepts) has the full list, with the fix for each.
 
 ## `localize()` throws `RangeError`: "would be read as"
 

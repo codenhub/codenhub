@@ -2,7 +2,7 @@
 title: Solução de problemas
 description: O que cada erro e aviso quer dizer, e como resolver.
 order: 5
-source: bc548b19b2bee40de1afe60200b69f500d1c0559
+source: 0a0e9f2e2a10aab83a42708af4f535b5e9f1b543
 ---
 
 # Solução de problemas
@@ -137,7 +137,7 @@ Causas comuns:
 
 Vindo de `parse()`, o valor não é o pathname de uma URL: ele não começa com `/`, ou contém `?` ou `#`. Passe `url.pathname` em vez da URL inteira ou de um caminho com a query string, como o `request.url` do Node. Um caminho que é um pathname mas contém algo que o roteamento recusa, como `//` ou um segmento de ponto, faz `parse()` devolver `undefined`, então a URL estranha de um visitante vira um 404 em vez de um crash.
 
-Vindo de `localize()` ou `localizeAll()`, o caminho é um desses, ou contém algo que o roteamento recusa. A mensagem diz qual regra o caminho quebra e cita o caminho, como `[I18n] pathname "/help/../admin" must not contain a dot segment, . or ..`, exceto o que uma URL lê como informações de usuário, query ou fragmento, que podem conter uma credencial: um caminho com `?` ou `#` é citado só até esse caractere, e um que uma URL lê como o início de outro host, como `//example.com` ou `/\example.com`, não é citado. [Caminhos que ele aceita](localized-urls.md#caminhos-que-ele-aceita) tem a lista completa, com o conserto de cada um.
+Vindo de `localize()` ou `localizeAll()`, o caminho é um desses, ou contém algo que o roteamento recusa. A mensagem diz qual regra o caminho quebra e cita o caminho, como `[I18n] pathname "/help/../admin" must not contain a dot segment, . or ..`, exceto uma query ou um fragmento, que podem conter um token: um caminho com `?` ou `#` é citado só até esse caractere. [Caminhos que ele aceita](localized-urls.md#caminhos-que-ele-aceita) tem a lista completa, com o conserto de cada um.
 
 ## `localize()` lança `RangeError`: "would be read as"
 
