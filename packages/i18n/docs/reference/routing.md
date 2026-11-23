@@ -52,7 +52,7 @@ Generates the canonical URL pathname of a page for one supported locale.
 
 **Parameters**
 
-- `pathname` — A canonical application pathname of at most 8,192 characters and 100 segments, without a URL, query, or fragment, such as `parse(url).pathname`. It is never read as a URL, so `/pt/about` is not Portuguese.
+- `pathname` — A canonical application pathname of at most 8,192 characters and 100 segments, without a URL, query, or fragment. A path that starts with a locale is read as that locale's URL, as `parse` reads it, so `localize("/pt/about", "en")` is `/about`.
 - `locale` — A supported locale, trimmed and matched case-insensitively.
 
 **Returns** — The pathname in the locale's words, with the configured locale-prefix and trailing-slash policies applied.
@@ -60,7 +60,7 @@ Generates the canonical URL pathname of a page for one supported locale.
 **Throws**
 
 - `TypeError` — When `pathname` is not a valid application pathname.
-- `RangeError` — When `locale` is unsupported or is not a string at runtime, when `pathname` starts with a configured locale, such as `/my/orders` with Burmese, `my`, configured, since every URL of it would be that locale's `/orders`, when the result would be longer than 8,192 characters or 100 segments, or when the result would be parsed as another page or locale, such as a page the table doesn't list whose path is another locale's translated path. A static build that localizes its page list finds those clashes at build time; links built for a request can use `parse(url.pathname).alternates`, which leaves out the locales where `localize` throws.
+- `RangeError` — When `locale` is unsupported or is not a string at runtime, when the result would be longer than 8,192 characters or 100 segments, or when the result would be parsed as another page or locale, such as a page the table doesn't list whose path is another locale's translated path. A static build that localizes its page list finds those clashes at build time; links built for a request can use `parse(url.pathname).alternates`, which leaves out the locales where `localize` throws.
 
 #### LocaleRouting › localizeAll
 
@@ -125,7 +125,7 @@ The trimmed, case-insensitively matched locale used for unprefixed paths; its ty
 localePrefix: "always" | "except-default" | "when-ambiguous";
 ```
 
-Which paths start with their locale: `"always"` every path; `"except-default"` every path but the default locale's; `"when-ambiguous"` like `"except-default"`, except that a translated path with a fixed segment drops the prefix, such as `/sobre`, when no other path read without a prefix could match it: no default-locale path, and no other locale's path that drops its prefix. A path the table doesn't list is read as the default locale's, so with `"when-ambiguous"`, `localize` throws when such a path would be read as another page.
+Which paths start with their locale: `"always"` every path; `"except-default"` every path but the default locale's; `"when-ambiguous"` like `"except-default"`, except that a translated path with a fixed segment that no other locale's path could match drops the prefix, such as `/sobre`. A path the table doesn't list is read as the default locale's, so with `"when-ambiguous"`, `localize` throws when such a path would be read as another page.
 
 #### LocaleRoutingConfig › locales
 

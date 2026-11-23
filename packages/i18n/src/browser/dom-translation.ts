@@ -25,28 +25,6 @@ const BLOCKED_ELEMENT_NAMES = new Set([
   "xmp",
 ]);
 /**
- * Elements whose descendants, which only the DOM can put there, are skipped whole. The parser reads the content of most
- * of them as text up to their end tag, so an attribute value inside one that holds `</textarea>` ends it, and what
- * follows becomes markup, wherever a serializer leaves `<` raw in attribute values: jsdom's does, and browsers did
- * before the 2025 HTML change. A `template` never serializes such an element, and `plaintext` reads it all as text.
- * The serializer escapes the own text of `textarea` and `title`, so only their content is blocked.
- */
-const BLOCKED_ANCESTOR_NAMES = new Set([...BLOCKED_ELEMENT_NAMES, "textarea", "title"]);
-
-/**
- * Whether the element's `title` names the style sheet set it belongs to rather than text people read, so translating
- * it could switch the preferred style sheet off. A `<link>` that is not a style sheet, such as a feed, has a readable
- * title.
- */
-const namesStyleSheetSet = (element: Element): boolean =>
-  element.localName === "style" ||
-  (element.localName === "link" &&
-    (element.getAttribute("rel") ?? "")
-      .toLowerCase()
-      .split(/[\t\n\f\r ]+/u)
-      .includes("stylesheet"));
-
-/**
  * Attributes that `data-i18n-<attribute>` may translate: text shown to people or assistive technology. URLs, styles,
  * and event handlers stay out, so a translation can never set them.
  */
@@ -105,10 +83,8 @@ export interface DomTranslator {
   /**
    * Translates safe leaves and attributes at and below the root, restoring the fallback where a key was removed, and
    * marks an element whose translations come from a locale other than the language it has without the mark, its own
-   * `lang` or the nearest ancestor's, with that locale's `lang`. An element inside one whose content is blocked, such as
-   * `<xmp>` or `<textarea>`, is skipped with a warning, and one inside a custom element is skipped silently; either gets
-   * back the text, attributes, and `lang` it had before a pass translated it. A message that needs values or an invalid key shows the
-   * fallback, with a warning. A text or attribute whose translation throws, such as from a throwing `onMissingKey`,
+   * `lang` or the nearest ancestor's, with that locale's `lang`. An element inside a custom element is skipped silently.
+   * A message that needs values or an invalid key shows the fallback, with a warning. A text or attribute whose translation throws, such as from a throwing `onMissingKey`,
    * shows the fallback too; every other key is still translated, and the first error is thrown after the pass.
    */
   translateRoot(options: TranslateRootOptions): void;
@@ -136,29 +112,12 @@ export const runEach = <T>(items: Iterable<T>, run: (item: T) => void): void => 
 
 const isElementNode = (node: ParentNode): node is Element => node.nodeType === ELEMENT_NODE;
 
-/**
- * Whether the element was defined as a custom element, which also finds a customized built-in created from script,
- * such as `document.createElement("button", { is: "x-button" })`, since that sets no `is` attribute.
- */
-const isDefinedCustomElement = (element: Element): boolean => {
-  const registry = element.ownerDocument.defaultView?.customElements;
-  // `getName()` is missing from browsers before 2024, where only the tag and the `is` attribute tell.
-  return (
-    typeof registry?.getName === "function" &&
-    registry.getName(element.constructor as CustomElementConstructor) !== null
-  );
-};
-
 const isInsideCustomElement = (element: Element, root: ParentNode): boolean => {
   let currentElement: Element | null = element;
 
   while (currentElement !== null && currentElement !== root) {
     // A customized built-in element, such as `<button is="x-button">`, is a component too.
-    if (
-      currentElement.tagName.includes("-") ||
-      currentElement.hasAttribute("is") ||
-      isDefinedCustomElement(currentElement)
-    ) {
+    if (currentElement.tagName.includes("-") || currentElement.hasAttribute("is")) {
       return true;
     }
 
@@ -166,16 +125,6 @@ const isInsideCustomElement = (element: Element, root: ParentNode): boolean => {
   }
 
   return false;
-};
-
-/** The nearest ancestor whose content the parser reads as text, or that the page never shows. */
-const findBlockedAncestor = (element: Element): Element | undefined => {
-  for (let ancestor = element.parentElement; ancestor !== null; ancestor = ancestor.parentElement) {
-    if (BLOCKED_ANCESTOR_NAMES.has(ancestor.localName)) {
-      return ancestor;
-    }
-  }
-  return undefined;
 };
 
 /**
@@ -473,7 +422,9 @@ export function createDomTranslator(options: DomTranslatorOptions): DomTranslato
     const translateOwnText = (): void => {
       const rawKey = element.getAttribute(TRANSLATION_ATTRIBUTE);
 
-      // Only the text is blocked: the serializer escapes every attribute, so an `<iframe>`'s `title` is translated.
+      // Only the text is blocked, so an `<iframe>`'s `title` is translated: a browser escapes `<` in an attribute when it
+      // serializes the page. A serializer that leaves it raw, such as jsdom's, can make a translated attribute inside a
+      // raw-text element read as markup; translations are the app's own text.
       if (rawKey !== null && BLOCKED_ELEMENT_NAMES.has(element.localName)) {
         if (!options.isSilent) {
           console.warn(
@@ -495,16 +446,7 @@ export function createDomTranslator(options: DomTranslatorOptions): DomTranslato
     const translateOwnAttribute = (attribute: string): void => {
       const rawAttributeKey = element.getAttribute(`${TRANSLATION_ATTRIBUTE}-${attribute}`);
 
-      if (rawAttributeKey !== null && attribute === "title" && namesStyleSheetSet(element)) {
-        if (!options.isSilent) {
-          console.warn(
-            "%s",
-            `[I18n] Skipping translation of the title of <${element.localName}> because it names a style sheet set; ` +
-              `its ${TRANSLATION_ATTRIBUTE}-title is ${formatReportedKey(rawAttributeKey)}.`,
-            element,
-          );
-        }
-      } else if (rawAttributeKey !== null) {
+      if (rawAttributeKey !== null) {
         const index = shownLocales.push(null) - 1;
         const shown = translateAttribute(element, attribute, rawAttributeKey, translate);
         // An attribute neither translated nor in the HTML shows no text, so it says nothing about the language.
@@ -553,48 +495,11 @@ export function createDomTranslator(options: DomTranslatorOptions): DomTranslato
     );
   };
 
-  const warnBlockedAncestor = (element: Element, ancestor: Element): void => {
-    const keyAttribute = TRANSLATION_KEY_ATTRIBUTES.find((attribute) => element.hasAttribute(attribute));
-    if (options.isSilent || keyAttribute === undefined) {
-      return;
-    }
-    console.warn(
-      "%s",
-      `[I18n] Skipping translation on <${element.localName}> because it is inside <${ancestor.localName}>, which can ` +
-        `run, hide, or reparse its content as HTML; its ${keyAttribute} is ` +
-        `${formatReportedKey(element.getAttribute(keyAttribute) ?? "")}.`,
-      element,
-    );
-  };
-
-  /**
-   * Puts back the text, attributes, and `lang` the element had before the binding translated it, for an element the DOM
-   * moved where the binding no longer translates, so a translation never outlives the binding's reason to show it.
-   */
-  const restoreElement = (element: Element): void => {
-    restoreText(element);
-    for (const attribute of TRANSLATED_ATTRIBUTES) {
-      restoreAttribute(element, attribute);
-    }
-    applyLang(element, undefined);
-  };
-
   return {
     translateRoot({ root, boundary = root, ...pass }) {
       runEach(collectElements(root, isTracked), (element) => {
-        // An element moved inside a component, or inside an element whose content the parser can read as markup,
-        // after a pass translated it would otherwise keep that translation, such as a `title` that closes a
-        // `<textarea>`.
-        if (isInsideCustomElement(element, boundary)) {
-          restoreElement(element);
-          return;
-        }
-        const blockedAncestor = findBlockedAncestor(element);
-        if (blockedAncestor === undefined) {
+        if (!isInsideCustomElement(element, boundary)) {
           translateElement(element, pass);
-        } else {
-          restoreElement(element);
-          warnBlockedAncestor(element, blockedAncestor);
         }
       });
     },

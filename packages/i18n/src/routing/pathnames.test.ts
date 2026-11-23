@@ -75,7 +75,7 @@ const randomTable = (next: () => number, size: number): CheckedPathnameEntry[] =
 
 describe("compilePathnames", () => {
   describe("with `when-ambiguous`", () => {
-    it("should drop the prefix from exactly the translated forms no other form read without a prefix overlaps", () => {
+    it("should drop the prefix from exactly the translated forms no other locale's form overlaps", () => {
       let checkedTables = 0;
       for (let seed = 1; checkedTables < 400; seed += 1) {
         const next = random(seed);
@@ -97,34 +97,20 @@ describe("compilePathnames", () => {
 
         const formOf = (entry: CheckedPathnameEntry, locale: Locale) =>
           entry.forms.find((form) => form.locale === locale)?.pathname ?? entry.pathname;
-        // A path without a prefix is read as an unprefixed form, else as the default locale's. A translated form with a
-        // fixed segment may drop its prefix when no default-locale form overlaps it; it does, unless it also overlaps
-        // another locale's form that may.
-        const candidates = entries.flatMap((entry) =>
+        const expected = entries.map((entry) =>
           entry.forms
             .map((form) => form.locale as Locale)
             .filter(
               (locale) =>
                 locale !== defaultLocale &&
                 segmentsOf(formOf(entry, locale)).some((segment) => !segment.startsWith(":")) &&
-                !entries.some((other) => overlaps(formOf(entry, locale), formOf(other, defaultLocale))),
-            )
-            .map((locale) => ({
-              entry,
-              locale,
-              pathname: formOf(entry, locale),
-            })),
-        );
-        const expected = entries.map((entry) =>
-          candidates
-            .filter(
-              (candidate) =>
-                candidate.entry === entry &&
-                !candidates.some(
-                  (other) => other.locale !== candidate.locale && overlaps(candidate.pathname, other.pathname),
+                !entries.some((other) =>
+                  LOCALES.some(
+                    (otherLocale) =>
+                      otherLocale !== locale && overlaps(formOf(entry, locale), formOf(other, otherLocale)),
+                  ),
                 ),
             )
-            .map((candidate) => candidate.locale)
             .sort(),
         );
         const actual = compiled.routes.map((route) => [...route.unprefixed].sort());

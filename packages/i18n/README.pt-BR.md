@@ -1,4 +1,4 @@
-<!-- source: d99f35eef967c67056dd721a8b1746f98f10fb63 -->
+<!-- source: ea7ff0aee43744868631acc059c3f98eaeba1ff0 -->
 
 # @codenhub/i18n
 
@@ -19,8 +19,8 @@ pnpm add @codenhub/i18n
 import { createI18n } from "@codenhub/i18n";
 
 const dictionaries = {
-  en: { home: { title: "Welcome", greeting: "Hello, {name}!" }, cart: { items: { one: "{count} item", other: "{count} items" } } },
-  pt: { home: { title: "Bem-vindo", greeting: "Olá, {name}!" }, cart: { items: { one: "{count} item", other: "{count} itens" } } },
+  en: { home: { title: "Welcome", greeting: "Hello, {name}!" }, cart: { items: { one: "{count, number} item", other: "{count, number} items" } } },
+  pt: { home: { title: "Bem-vindo", greeting: "Olá, {name}!" }, cart: { items: { one: "{count, number} item", other: "{count, number} itens" } } },
 } as const;
 
 export const i18n = createI18n({
@@ -72,7 +72,7 @@ Em um Web Worker, o entry point raiz e `@codenhub/i18n/routing` funcionam como e
 ## Observações
 
 - No servidor ou num build estático, crie um gerenciador por requisição ou por página, e não um compartilhado. Um gerenciador compartilhado é o caminho para um visitante acabar lendo no idioma de outro.
-- O pacote não renderiza HTML vindo das traduções: o texto sempre volta como texto. Para um link ou negrito dentro de uma frase, `rich()` devolve o texto e as tags dele como dados para o seu código renderizar; veja [Links e negrito dentro de uma frase](docs/pt-BR/translations.md#links-e-negrito-dentro-de-uma-frase).
+- O pacote não renderiza HTML vindo das traduções: o texto sempre volta como texto.
 - As mensagens ICU cobrem `number`, `date`, `time`, `plural`, `selectordinal` e `select`, sem skeletons de número nem estilos como `{n, number, currency}`, que aparecem como foram escritos, com um aviso. Formate um valor desses com `formatNumber()` e passe o resultado.
 
 ## Licença

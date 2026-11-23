@@ -98,6 +98,22 @@ describe("findFiles", () => {
       },
     );
 
+    // The listing check walks the entry again, and has to leave node_modules out as the first walk does.
+    it("keeps the listing check out of node_modules too, with failOnUnreadable", () => {
+      const opened = vi.spyOn(fs, "opendirSync");
+
+      try {
+        expect(
+          relative(findFiles(["**/*.html"], { cwd: root, skipNodeModules: true, failOnUnreadable: true })),
+        ).toEqual(["app/views/a.html", "app/views/nested/b.html"]);
+        expect(
+          opened.mock.calls.map(([folder]) => String(folder)).filter((folder) => folder.includes("node_modules")),
+        ).toEqual([]);
+      } finally {
+        opened.mockRestore();
+      }
+    });
+
     it("reads node_modules without it", () => {
       expect(relative(findFiles(["**/*.html"], { cwd: root }))).toContain("node_modules/dep/demo.html");
     });
@@ -343,6 +359,28 @@ describe("readFiles", () => {
       ]);
     });
   });
+
+  /* The listing check opens each folder the entry would list. A `**` matches
+     files as well, and opening each of them too made the check about three
+     times slower on a tree of many assets. */
+  it.each(["app/**", "app/**/*.html", "**/*", "app/*/*.html"])(
+    "opens only folders to check that %s can list them, with failOnUnreadable",
+    (entry) => {
+      const opened = vi.spyOn(fs, "opendirSync");
+
+      try {
+        findFiles([entry], { cwd: root, failOnUnreadable: true });
+
+        const notFolders = opened.mock.calls
+          .map(([folder]) => String(folder))
+          .filter((folder) => !fs.statSync(folder).isDirectory());
+
+        expect(notFolders).toEqual([]);
+      } finally {
+        opened.mockRestore();
+      }
+    },
+  );
 
   it("fails before reading on an entry that names no file, with failOnUnmatched", () => {
     expect(() => readFiles(["app/views/a.html", "missing.html"], { cwd: root, failOnUnmatched: true })).toThrow(

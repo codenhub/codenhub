@@ -7,7 +7,7 @@ import { parseArgs } from "node:util";
 
 import { findFiles, readFiles, splitWords, UnmatchedEntryError } from "@codenhub/scan";
 
-import { classesOf, format, parse, purge, serialize } from "./purge";
+import { format, parse, purge, serialize } from "./purge";
 
 export interface CliIo {
   cwd: string;
@@ -31,10 +31,6 @@ const HEAD_BYTES = 1024;
 /* What every stylesheet this command has written starts with: the package's
    notice, after Tailwind's banner. The compiled stylesheets carry it too. */
 const WRITTEN_HEAD = /^\s*(?:\/\*! tailwindcss [^*]*\*\/\s*)?\/\*! @codenhub\/styles\b/;
-/* The names Windows reserves for a device in every folder, with any extension
-   and in any case: `-o NUL` or `-o public/com1.css` wrote a file that `del`
-   cannot remove. */
-const WINDOWS_DEVICE = /^(?:con|prn|aux|nul|conin\$|conout\$|com[0-9¹²³]|lpt[0-9¹²³])\s*(?:\..*)?$/i;
 
 const USAGE = `Usage: ${BIN} build --content <glob> [--content <glob> ...] --output <file> [options]
 
@@ -127,25 +123,6 @@ function parseCommandLine(argv: readonly string[]): BuildOptions | "help" | "ver
       "--output - would write a file named -; this command writes no standard output, so name a stylesheet, as in --output public/app.css.",
     );
   }
-  // `path.resolve` drops a trailing separator, so `newdir/` wrote a file named `newdir` where none existed.
-  if ((process.platform === "win32" ? /[\\/]$/ : /\/$/).test(output)) {
-    throw new Error(
-      `--output ${output} ends with a folder separator, so it names a folder, not a file; name a stylesheet to write, as in --output ${output}app.css.`,
-    );
-  }
-  // It resolves `newdir/.` and `newdir/sub/..` to `newdir` as well.
-  const lastSegment = (process.platform === "win32" ? /(^|[\\/])(\.\.?)$/ : /(^|\/)(\.\.?)$/).exec(output);
-
-  if (lastSegment !== null) {
-    throw new Error(
-      `--output ${output} ends with a . or .. segment, so it names a folder, not a file; name a stylesheet to write, as in --output ${output}${lastSegment[1] || "/"}app.css.`,
-    );
-  }
-
-  // A rename onto such a name writes a real file there, past the `stat` that finds a device elsewhere.
-  if (process.platform === "win32" && WINDOWS_DEVICE.test(path.win32.basename(output))) {
-    throw new Error(`--output ${output} is a device, not a file; name a stylesheet to write.`);
-  }
 
   return {
     contentGlobs: values.content,
@@ -230,14 +207,14 @@ async function build(options: BuildOptions, io: CliIo): Promise<string> {
 
   await assertReplaceable(options, io.cwd, output);
 
-  // Through a link, the file it leads to is the one written, and the one no glob may read.
-  const target = await realPathOf(output);
-  const contents = readContent(options.contentGlobs, io.cwd, target, options.output);
+  /* The output's folder as the system resolves it, as each content file is, so
+     a glob that reaches the output by another spelling, such as a Windows 8.3
+     short name, still leaves it out. The output itself is not followed: a link
+     there is replaced, as other build tools replace one. */
+  const resolved = path.join(await realPathOf(path.dirname(output)), path.basename(output));
+  const contents = readContent(options.contentGlobs, io.cwd, resolved, options.output);
 
   const droppable = new Set(JSON.parse(await readPackageFile(PURGE_CLASSES)) as string[]);
-  const source = parse(await readPackageFile(PURGE_SOURCE));
-  const aesthetics = await readAesthetics(validAesthetics, classesOf(source));
-  const known = { has: (name: string) => droppable.has(name) || aesthetics.owners.has(name) };
   const shipped = await readShippedSizes();
   const found = new Set<string>();
 
@@ -247,7 +224,7 @@ async function build(options: BuildOptions, io: CliIo): Promise<string> {
     if (await isPackageCopy(content, droppable, shipped)) {
       continue;
     }
-    for (const name of findClasses(content, known)) {
+    for (const name of findClasses(content, droppable)) {
       found.add(name);
     }
   }
@@ -255,30 +232,29 @@ async function build(options: BuildOptions, io: CliIo): Promise<string> {
   const used = { has: (name: string) => found.has(name) || !droppable.has(name) };
 
   const write = options.shouldMinify ? serialize : format;
-  const css = [source, ...options.aesthetics.map((name) => aesthetics.trees.get(name) ?? [])]
-    .map((tree) => write(purge(tree, used)))
-    .join("");
-  const warnings = warningsFor(options, found, droppable, aesthetics.owners);
+  const stylesheets = await Promise.all(
+    [PURGE_SOURCE, ...options.aesthetics.map((name) => resolveExport(`./aesthetics/${name}`))].map(readPackageFile),
+  );
+  const css = stylesheets.map((stylesheet) => write(purge(parse(stylesheet), used))).join("");
 
   /* Written beside the output and renamed over it, so a write that fails
      partway, on a full disk say, leaves the previous stylesheet whole rather
      than a truncated one a deploy would ship. */
   let temporary: string | undefined;
-  let warning: string | undefined;
 
   try {
-    await fs.mkdir(path.dirname(target), { recursive: true });
+    await fs.mkdir(path.dirname(output), { recursive: true });
 
-    const created = await createTemporary(target);
+    const created = await createTemporary(output);
 
     temporary = created.path;
     try {
       await created.handle.writeFile(css);
-      warning = await keepOwnershipOf(created.handle, target, options.output);
+      await keepModeOf(created.handle, output);
     } finally {
       await created.handle.close();
     }
-    await replaceFile(temporary, target);
+    await replaceFile(temporary, output);
   } catch (error) {
     // Best effort, and only for a file this build created: the error worth reporting is the one above.
     if (temporary !== undefined) {
@@ -287,86 +263,7 @@ async function build(options: BuildOptions, io: CliIo): Promise<string> {
     throw new Error(`cannot write --output ${options.output}: ${describeWriteError(error)}`);
   }
 
-  // After the rename, so a build that fails prints its one line and no warning.
-  for (const line of warning === undefined ? warnings : [...warnings, warning]) {
-    io.stderr(line);
-  }
-
   return output;
-}
-
-type Tree = ReturnType<typeof parse>;
-
-/* Each aesthetic's stylesheet, parsed, and the classes only it styles, by the
-   aesthetic they belong to: those its file names that the stylesheet does not,
-   under the aesthetic's name or a name that starts with it, such as
-   `glass-liquid` and `glass-solo`. An aesthetic's file names the others'
-   classes too, to leave them alone, so being named in it does not make a class
-   its own. Read from the build, so a new aesthetic or class needs no change
-   here. */
-async function readAesthetics(
-  names: readonly string[],
-  stylesheetClasses: ReadonlySet<string>,
-): Promise<{ trees: Map<string, Tree>; owners: Map<string, string> }> {
-  const trees = new Map<string, Tree>();
-  const owners = new Map<string, string>();
-  const files = await Promise.all(names.map((name) => readPackageFile(resolveExport(`./aesthetics/${name}`))));
-
-  for (const [index, name] of names.entries()) {
-    const tree = parse(files[index] ?? "");
-
-    trees.set(name, tree);
-    for (const className of classesOf(tree)) {
-      if (!stylesheetClasses.has(className) && (className === name || className.startsWith(`${name}-`))) {
-        owners.set(className, name);
-      }
-    }
-  }
-
-  return { trees, owners };
-}
-
-/* A build that finds no class still writes the theme and the reset, and exits
-   0, since a page may use the tokens and the reset alone; but a site whose
-   globs name the wrong files loses its styling that way, so it is said. An
-   aesthetic's class is styled only under its `--aesthetic`, which a template
-   cannot ask for, so a class named without it is said too, rather than taken
-   as the request. */
-function warningsFor(
-  options: BuildOptions,
-  found: ReadonlySet<string>,
-  droppable: ReadonlySet<string>,
-  owners: ReadonlyMap<string, string>,
-): string[] {
-  const warnings: string[] = [];
-
-  if (![...found].some((name) => droppable.has(name))) {
-    const entries = options.contentGlobs.map((entry) => `"${entry}"`).join(", ");
-
-    warnings.push(
-      `${BIN}: warning: --content ${entries} names no StyleKit class, so the stylesheet holds only the theme and the reset; check that the globs name your templates.`,
-    );
-  }
-
-  const unrequested = new Map<string, string[]>();
-
-  for (const name of [...found].sort()) {
-    const owner = owners.get(name);
-
-    if (owner !== undefined && !options.aesthetics.includes(owner)) {
-      unrequested.set(owner, [...(unrequested.get(owner) ?? []), name]);
-    }
-  }
-  for (const [aesthetic, names] of unrequested) {
-    const quoted = names.map((name) => `"${name}"`);
-    const listed = quoted.length === 1 ? quoted[0] : `${quoted.slice(0, -1).join(", ")} and ${quoted.at(-1)}`;
-
-    warnings.push(
-      `${BIN}: warning: --content names ${listed}, which only --aesthetic ${aesthetic} styles; add --aesthetic ${aesthetic}, or leave the class out.`,
-    );
-  }
-
-  return warnings;
 }
 
 /* The files this package ships under `dist/`, by size, so a content file is
@@ -455,14 +352,13 @@ async function createTemporary(target: string): Promise<{ path: string; handle: 
 }
 
 /* The stylesheet is renamed over the output, so it would come out with the mode
-   and owner of a new file: a `0640` file of the web server's group would come
-   back `0644` and the runner's. The temporary file takes the permission bits,
-   owner, and group of the file it replaces first. Windows keeps neither: its
-   mode is only the read-only attribute, which a rename over the file refuses,
-   and a new file takes its folder's permissions. */
-async function keepOwnershipOf(handle: fs.FileHandle, target: string, output: string): Promise<string | undefined> {
+   of a new file: a `0640` file would come back `0644`, readable by everyone.
+   The temporary file takes the permission bits of the file it replaces first.
+   Windows keeps none: its mode is only the read-only attribute, which a rename
+   over the file refuses. */
+async function keepModeOf(handle: fs.FileHandle, target: string): Promise<void> {
   if (process.platform === "win32") {
-    return undefined;
+    return;
   }
 
   const previous = await fs.stat(target).catch((error: unknown) => {
@@ -472,93 +368,9 @@ async function keepOwnershipOf(handle: fs.FileHandle, target: string, output: st
     throw error;
   });
 
-  return previous === undefined ? undefined : keepOwnership(handle, previous, output);
-}
-
-/** What {@link keepOwnership} changes: the temporary file, through its handle. */
-export interface OwnedFile {
-  stat(): Promise<{ uid: number; gid: number }>;
-  chown(uid: number, gid: number): Promise<void>;
-  chmod(mode: number): Promise<void>;
-}
-
-/**
- * Gives `file` the owner, group, and permission bits of `previous`, and returns the warning to
- * print when it could not keep them all. Only root can give a file to another user, and only to a
- * group its owner is in, so a runner without that right keeps the group when it is in it, and says
- * what changed rather than fail a build that wrote the stylesheet.
- */
-export async function keepOwnership(
-  file: OwnedFile,
-  previous: { uid: number; gid: number; mode: number },
-  output: string,
-): Promise<string | undefined> {
-  const created = await file.stat();
-  let warning: string | undefined;
-
-  if (previous.uid !== created.uid || previous.gid !== created.gid) {
-    const kept = await chownAllowed(file, previous.uid, previous.gid);
-    /* The previous owner read the file by the owner's bit. Without the owner,
-       only the bits of the group, while it is kept, and of others still let
-       them, so a `0600` file of the web server's is one the server may no
-       longer read, which "its mode is kept" alone did not say. */
-    const stillRead = kept === "group" ? 0o044 : 0o004;
-    /* The same for the previous group: a `0640` file the web server reads
-       through its group is one it may no longer read once the group is gone. */
-    const lostReaders = [
-      previous.uid !== created.uid && (previous.mode & 0o400) !== 0 && (previous.mode & stillRead) === 0
-        ? `user ${previous.uid}`
-        : undefined,
-      previous.gid !== created.gid &&
-      kept === "neither" &&
-      (previous.mode & 0o040) !== 0 &&
-      (previous.mode & 0o004) === 0
-        ? `the members of group ${previous.gid}`
-        : undefined,
-    ].filter((reader) => reader !== undefined);
-    const unreadable =
-      lostReaders.length === 0 ? "" : `, so ${lostReaders.join(" and ")} may no longer be able to read it`;
-
-    if (previous.uid === created.uid) {
-      // Only the group was to change.
-      if (kept === "neither") {
-        warning = `${BIN}: warning: --output ${output} now belongs to group ${created.gid}, not ${previous.gid}, since only root can give a file to a group you are not in; its owner and mode are kept${unreadable}.`;
-      }
-    } else if (kept === "group") {
-      warning = `${BIN}: warning: --output ${output} now belongs to user ${created.uid}, not ${previous.uid}, since only root can give a file to another user; its group and mode are kept${unreadable}.`;
-    } else if (kept === "neither") {
-      warning = `${BIN}: warning: --output ${output} now belongs to user ${created.uid} and group ${created.gid}, not ${previous.uid} and ${previous.gid}, since only root can give a file to another user or to a group you are not in; its mode is kept${unreadable}.`;
-    }
+  if (previous !== undefined) {
+    await handle.chmod(previous.mode & 0o777);
   }
-  // After the owner: changing it can clear the set-user-ID and set-group-ID bits.
-  await file.chmod(previous.mode & 0o777);
-
-  return warning;
-}
-
-/* Gives the file to the user and group, or to the group alone when only root
-   could give it to the user. Any failure but that refusal is thrown. */
-async function chownAllowed(file: OwnedFile, uid: number, gid: number): Promise<"both" | "group" | "neither"> {
-  const isRefused = (error: unknown) => (error as { code?: string }).code === "EPERM";
-
-  try {
-    await file.chown(uid, gid);
-    return "both";
-  } catch (error) {
-    if (!isRefused(error)) {
-      throw error;
-    }
-  }
-  try {
-    await file.chown(-1, gid);
-    return "group";
-  } catch (error) {
-    if (!isRefused(error)) {
-      throw error;
-    }
-  }
-
-  return "neither";
 }
 
 /* Node.js names the path a system call failed on, and here that is mostly the
@@ -685,7 +497,7 @@ function readContent(entries: readonly string[], cwd: string, output: string, gi
       throw error instanceof UnmatchedEntryError ? new Error(`--content ${error.message}`) : error;
     }
 
-    const content = matched.filter((file) => !isOutputOrTemporary(realPathSyncOf(file), output));
+    const content = matched.filter((file) => path.relative(realPathSyncOf(file), output) !== "");
 
     if (content.length === 0) {
       throw new Error(
@@ -700,41 +512,17 @@ function readContent(entries: readonly string[], cwd: string, output: string, gi
   return readFiles(files, { cwd, failOnUnreadable: true });
 }
 
-/* The output, or a temporary file of `createTemporary` a build killed before
-   its rename left beside it: read as content, that held the classes of the
-   last build, which a build would then keep. `path.relative` compares the
-   output's part as the platform does, without case on Windows. */
-function isOutputOrTemporary(file: string, output: string): boolean {
-  return (
-    path.relative(file.slice(0, output.length), output) === "" &&
-    /^(?:\.[0-9a-f]{16}\.tmp)?$/.test(file.slice(output.length))
-  );
-}
-
 /* Content is read as text and never run, as Tailwind reads it: every run of
    characters a class name can hold is a word, and a word counts when it is a
    class this package defines. A word that is not one is read again by its
    parts around each colon, so Svelte's `class:primary={isPrimary}` and a Ruby
-   `btn: true` are found. The parts are taken one at a time: a word can be as
-   long as the file, and `split(":")` made an array of every part, so a 160 MB
-   file of colons aborted Node.js and a 192 MB one of `a:` took 1.6 GB. */
-export function* findClasses(
-  content: string,
-  known: Pick<ReadonlySet<string>, "has">,
-): Generator<string, void, undefined> {
+   `btn: true` are found. */
+function* findClasses(content: string, known: ReadonlySet<string>): Generator<string, void, undefined> {
   for (const word of splitWords(content, String.raw`\w:-`)) {
     if (known.has(word)) {
       yield word;
-      continue;
-    }
-    for (let from = 0, colon = word.indexOf(":"); colon !== -1; from = colon + 1) {
-      colon = word.indexOf(":", from);
-
-      const part = word.slice(from, colon === -1 ? undefined : colon);
-
-      if (part !== "" && known.has(part)) {
-        yield part;
-      }
+    } else if (word.includes(":")) {
+      yield* word.split(":").filter((part) => known.has(part));
     }
   }
 }
@@ -806,9 +594,7 @@ function assertNodeVersion(nodeVersion: string): void {
   }
 }
 
-/* The file a link leads to, or the path itself while nothing is there yet. A
-   link whose target does not exist yet still leads there: the stylesheet is
-   written where it points rather than over the link. */
+/* The path as the system resolves it, or as given while nothing is there yet. */
 async function realPathOf(file: string): Promise<string> {
   try {
     return await fs.realpath(file);
@@ -817,80 +603,8 @@ async function realPathOf(file: string): Promise<string> {
       throw error;
     }
 
-    return process.platform === "win32" ? windowsTargetOf(file) : posixTargetOf(file);
+    return file;
   }
-}
-
-/* Windows collapses a `..` before it follows any link, as `path.resolve` does. */
-async function windowsTargetOf(file: string): Promise<string> {
-  const link = await fs.readlink(file).catch(() => undefined);
-
-  return link === undefined ? file : realPathOf(path.resolve(path.dirname(file), link));
-}
-
-/* POSIX follows each name in turn, a link included, before the `..` after it,
-   so `alias/../real.css` with `alias` a link into another folder is a
-   `real.css` there. `path.resolve` collapses the `..` first and named another
-   file, which the build overwrote without checking it. The walk does what the
-   system does: a link's target replaces it, and a `..` steps out of the folder
-   reached so far. A folder that does not exist yet is created by the write, so
-   the names after it are taken as written; a `..` after one has no folder to
-   step out of, and the system refuses the path, so this does too. */
-async function posixTargetOf(file: string): Promise<string> {
-  const names = (value: string) => value.split("/").filter((name) => name !== "" && name !== ".");
-  const pending = names(file);
-  let current = "/";
-  let missing = false;
-  let links = 0;
-
-  for (let name = pending.shift(); name !== undefined; name = pending.shift()) {
-    if (name === "..") {
-      if (missing) {
-        throw new Error(`cannot follow the --output link at ${file}: it leads out of a folder that does not exist.`);
-      }
-      current = path.dirname(current);
-      continue;
-    }
-
-    const next = path.join(current, name);
-
-    if (missing) {
-      current = next;
-      continue;
-    }
-
-    let link: string | undefined;
-
-    try {
-      // oxlint-disable-next-line no-await-in-loop -- each name is read from the folder the one before it reached
-      link = await fs.readlink(next);
-    } catch (error) {
-      const { code } = error as { code?: string };
-
-      if (code === "ENOENT") {
-        missing = true;
-      } else if (code !== "EINVAL") {
-        throw error;
-      }
-    }
-
-    if (link === undefined) {
-      current = next;
-      continue;
-    }
-
-    // The system's own limit is 40 on Linux; past it, a chain of links is a loop.
-    links += 1;
-    if (links > 40) {
-      throw new Error(`cannot follow the --output link at ${file}: its links lead in a loop.`);
-    }
-    if (path.isAbsolute(link)) {
-      current = "/";
-    }
-    pending.unshift(...names(link));
-  }
-
-  return current;
 }
 
 /* The native resolver, as `fs.realpath` above uses: on Windows the JavaScript

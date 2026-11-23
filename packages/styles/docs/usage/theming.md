@@ -49,6 +49,8 @@ Every component color comes from a token or from `currentColor`, so components f
 
 A page prints in the light theme, whatever theme it shows on screen. Under `@media print`, the root and every dark selector set `color-scheme: light`, so every token resolves to its light value, a forced-dark sidebar's included. Paper is light, and dark text on it costs less ink than a printed dark page.
 
+The root's rule is `!important`, so it also wins over a `color-scheme` you set on `<html>` yourself: inline, as `@codenhub/theme` writes it, in your own unlayered CSS, or with Tailwind's `scheme-dark`. A `color-scheme` you set on an element inside the page is yours to reset for print, such as with `print:scheme-light` beside a `scheme-dark` utility. An inline `style="color-scheme: dark"` wins over that utility, so reset it with a `@media print` rule of your own that sets `color-scheme: light !important`.
+
 Filled components print their background. A browser drops backgrounds from a printed page by default, which leaves a solid button's contrast text on nothing, so every component sets `print-color-adjust: exact`. The property inherits, so the content inside a component keeps its colors too.
 
 One limit: a `dark:` utility still applies in print. It matches by selector, not by `color-scheme`, so `<html class="dark">` with `dark:bg-black` on an element prints that background black. Write a `print:` utility beside it if the printed page matters.

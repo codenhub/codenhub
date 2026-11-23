@@ -1,18 +1,5 @@
 import { execFileSync, spawnSync } from "node:child_process";
-import {
-  chmod,
-  chown,
-  cp,
-  lstat,
-  mkdir,
-  mkdtemp,
-  readdir,
-  readFile,
-  rm,
-  stat,
-  symlink,
-  writeFile,
-} from "node:fs/promises";
+import { chmod, cp, lstat, mkdir, mkdtemp, readdir, readFile, rm, stat, symlink, writeFile } from "node:fs/promises";
 import { createRequire } from "node:module";
 import { tmpdir, userInfo } from "node:os";
 import path from "node:path";
@@ -20,7 +7,7 @@ import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { classesOf, parse } from "../../src/cli/purge";
-import { findClasses, findPackageRoot, keepOwnership, run } from "../../src/cli/run";
+import { findPackageRoot, run } from "../../src/cli/run";
 
 const { version } = createRequire(import.meta.url)("../../package.json") as { version: string };
 const packageRoot = path.resolve(import.meta.dirname, "../..");
@@ -338,42 +325,6 @@ describe("build", () => {
     },
   );
 
-  // A template that names no class wrote the theme and the reset alone, and said nothing.
-  it("warns when the content names no StyleKit class, and still builds", async () => {
-    await writeFile(path.join(project, "empty.html"), '<div id="root"></div>\n');
-
-    expect(await build("build", "-c", "empty.html", "-o", "app.css")).toBe(0);
-    expect(stderr).toEqual([
-      'chs: warning: --content "empty.html" names no StyleKit class, so the stylesheet holds only the theme and the reset; check that the globs name your templates.',
-    ]);
-    expect(stdout).toHaveLength(1);
-  });
-
-  // An aesthetic is added only on request, so a template naming its class got an unstyled element.
-  it("warns of an aesthetic class the content names without its --aesthetic", async () => {
-    await writeFile(path.join(project, "app", "views", "card.html.erb"), '<div class="card glass glass-liquid">\n');
-
-    expect(await build("build", "-c", "app/views/**/*.erb", "-o", "app.css")).toBe(0);
-    expect(stderr).toEqual([
-      'chs: warning: --content names "glass" and "glass-liquid", which only --aesthetic glass styles; add --aesthetic glass, or leave the class out.',
-    ]);
-
-    stderr = [];
-    expect(await build("build", "-c", "app/views/**/*.erb", "-o", "app.css", "--aesthetic", "glass")).toBe(0);
-    expect(stderr).toEqual([]);
-  });
-
-  // A build killed before its rename leaves its temporary file, which held the last build's classes.
-  it("does not read a temporary file a killed build left beside the output", async () => {
-    await mkdir(path.join(project, "public"));
-    await writeFile(path.join(project, "public", "index.html"), '<button class="btn">Save</button>\n');
-    await writeFile(path.join(project, "public", "app.css.0123456789abcdef.tmp"), '<table class="data-table">\n');
-
-    expect(await build("build", "-c", "public/*", "-o", "public/app.css")).toBe(0);
-    expect(await readOutput("public/app.css")).toMatch(ruleFor("btn"));
-    expect(await readOutput("public/app.css")).not.toMatch(ruleFor("data-table"));
-  });
-
   it.skipIf(!canSymlink)("does not read its own output through a link a glob matches", async () => {
     const argv = ["build", "-c", "app/views/*", "-o", "app.css"];
 
@@ -385,21 +336,14 @@ describe("build", () => {
     expect(await readOutput()).toBe(first);
   });
 
-  it.skipIf(!canSymlink)("writes through an --output that is a link, and keeps the link", async () => {
+  it.skipIf(!canSymlink)("replaces an --output that is a link, and leaves the file it led to", async () => {
     await writeFile(path.join(project, "real.css"), "");
     await symlink(path.join(project, "real.css"), path.join(project, "app.css"), "file");
 
     expect(await build("build", "-c", "app/views/**/*.erb", "-o", "app.css")).toBe(0);
-    expect((await lstat(path.join(project, "app.css"))).isSymbolicLink()).toBe(true);
-    expect(await readOutput("real.css")).toMatch(ruleFor("btn"));
-  });
-
-  it.skipIf(!canSymlink)("writes where an --output link points before its target exists", async () => {
-    await symlink(path.join(project, "build", "real.css"), path.join(project, "app.css"), "file");
-
-    expect(await build("build", "-c", "app/views/**/*.erb", "-o", "app.css")).toBe(0);
-    expect((await lstat(path.join(project, "app.css"))).isSymbolicLink()).toBe(true);
-    expect(await readOutput("build/real.css")).toMatch(ruleFor("btn"));
+    expect((await lstat(path.join(project, "app.css"))).isSymbolicLink()).toBe(false);
+    expect(await readOutput()).toMatch(ruleFor("btn"));
+    expect(await readOutput("real.css")).toBe("");
   });
 
   /* The temporary file was named after the process ID, which anyone can guess,
@@ -421,9 +365,8 @@ describe("build", () => {
     expect((await readdir(project)).sort()).toEqual(["app", "app.css"]);
   });
 
-  /* The stylesheet is renamed over the output, so it used to take the mode and
-     owner a new file gets: a `0640` file of the web server's group came back
-     `0644` and the runner's, readable by everyone and maybe not by the server. */
+  /* The stylesheet is renamed over the output, so it used to take the mode a
+     new file gets: a `0640` file came back `0644`, readable by everyone. */
   it.skipIf(process.platform === "win32").each([
     ["0640", 0o640],
     ["0444", 0o444],
@@ -436,53 +379,6 @@ describe("build", () => {
     expect((await stat(file)).mode & 0o777).toBe(mode);
     expect(await readOutput()).toMatch(/\n {2}\S/);
   });
-
-  it.skipIf(process.platform === "win32" || process.getuid?.() !== 0)(
-    "keeps the owner and group of the stylesheet it replaces, as root",
-    async () => {
-      const file = path.join(project, "app.css");
-
-      expect(await build("build", "-c", "app/views/**/*.erb", "-o", "app.css")).toBe(0);
-      await chown(file, 4321, 4322);
-      expect(await build("build", "-c", "app/views/**/*.erb", "-o", "app.css")).toBe(0);
-      expect(await stat(file)).toMatchObject({ uid: 4321, gid: 4322 });
-      expect(stderr).toEqual([]);
-    },
-  );
-
-  // A user can give a file they own to any group they are in.
-  const otherGroup = process.getgroups?.().find((gid) => gid !== process.getegid?.());
-
-  it.skipIf(process.platform === "win32" || otherGroup === undefined)(
-    "keeps the group of the stylesheet it replaces",
-    async () => {
-      const file = path.join(project, "app.css");
-
-      expect(await build("build", "-c", "app/views/**/*.erb", "-o", "app.css")).toBe(0);
-      await chown(file, -1, otherGroup ?? -1);
-      expect(await build("build", "-c", "app/views/**/*.erb", "-o", "app.css")).toBe(0);
-      expect((await stat(file)).gid).toBe(otherGroup);
-      expect(stderr).toEqual([]);
-    },
-  );
-
-  /* POSIX follows `alias` before its `..`; Windows collapses the `..` first, so the case does not arise there. */
-  it.skipIf(!canSymlink || process.platform === "win32")(
-    "writes where an --output link points when its target climbs out of another link",
-    async () => {
-      const authored = "a { color: red; }";
-
-      await mkdir(path.join(project, "nested", "dir"), { recursive: true });
-      await symlink(path.join(project, "nested", "dir"), path.join(project, "alias"), "dir");
-      await writeFile(path.join(project, "real.css"), authored);
-      // Written whole: `path.join` would collapse the `..` this test is about.
-      await symlink("alias/../real.css", path.join(project, "app.css"), "file");
-
-      expect(await build("build", "-c", "app/views/**/*.erb", "-o", "app.css")).toBe(0);
-      expect(await readOutput("real.css")).toBe(authored);
-      expect(await readOutput("nested/real.css")).toMatch(ruleFor("btn"));
-    },
-  );
 });
 
 describe("failures", () => {
@@ -495,26 +391,6 @@ describe("failures", () => {
 
     return stderr[0] ?? "";
   }
-
-  // POSIX refuses a `..` out of a folder that does not exist; collapsing it instead named an authored file.
-  it.skipIf(!canSymlink || process.platform === "win32")(
-    "refuses an --output link that leads out of a missing folder",
-    async () => {
-      const authored = "a { color: red; }";
-
-      await mkdir(path.join(project, "nested", "dir"), { recursive: true });
-      await symlink(path.join(project, "nested", "dir"), path.join(project, "alias"), "dir");
-      await writeFile(path.join(project, "real.css"), authored);
-      await writeFile(path.join(project, "nested", "real.css"), authored);
-      await symlink("alias/../missing/../real.css", path.join(project, "app.css"), "file");
-
-      expect(await failureOf("build", "-c", "app/views/**/*.erb", "-o", "app.css")).toMatch(
-        /leads out of a folder that does not exist/,
-      );
-      expect(await readOutput("real.css")).toBe(authored);
-      expect(await readOutput("nested/real.css")).toBe(authored);
-    },
-  );
 
   it("rejects a build without --content", async () => {
     expect(await failureOf("build", "-o", "app.css")).toMatch(/--content/);
@@ -530,17 +406,6 @@ describe("failures", () => {
       'chs: missing --content; name the templates to scan, as in --content "app/views/**/*.erb".',
     );
   });
-
-  // `-o NUL` wrote a file named NUL, which `del` cannot remove.
-  it.skipIf(process.platform !== "win32").each(["NUL", "nul.css", "public/Com1.txt", "LPT9", "CON .css", "conout$"])(
-    "refuses an --output that names a Windows device, as %s",
-    async (output) => {
-      expect(await failureOf("build", "-c", "app/views/**/*.erb", "-o", output)).toBe(
-        `chs: --output ${output} is a device, not a file; name a stylesheet to write.`,
-      );
-      expect(await readdir(project)).toEqual(["app"]);
-    },
-  );
 
   // A quoted variable left empty by a script; written as given, it names a file of spaces.
   it("takes an --output of only spaces as missing", async () => {
@@ -584,40 +449,6 @@ describe("failures", () => {
     expect(await failureOf("build", "-c", "public/*.css", "-o", "public/s.css")).toBe(
       'chs: --content "public/*.css" matches only --output public/s.css, which is never read for classes; name the templates to scan.',
     );
-  });
-
-  it("rejects a --content glob that matches only the --output and a killed build's temporary file", async () => {
-    expect(await build("build", "-c", "app/views/**/*.erb", "-o", "public/s.css")).toBe(0);
-    await writeFile(path.join(project, "public", "s.css.0123456789abcdef.tmp"), '<table class="data-table">\n');
-    stdout = [];
-
-    expect(await failureOf("build", "-c", "public/*", "-o", "public/s.css")).toBe(
-      'chs: --content "public/*" matches only --output public/s.css, which is never read for classes; name the templates to scan.',
-    );
-  });
-
-  // `path.resolve` drops a trailing separator, so `-o newdir/` wrote a file named `newdir`.
-  it.each(["newdir/", ...(process.platform === "win32" ? ["newdir\\"] : [])])(
-    "refuses an --output that ends with a separator, as %s",
-    async (output) => {
-      expect(await failureOf("build", "-c", "app/views/**/*.erb", "-o", output)).toBe(
-        `chs: --output ${output} ends with a folder separator, so it names a folder, not a file; name a stylesheet to write, as in --output ${output}app.css.`,
-      );
-      expect(await readdir(project)).toEqual(["app"]);
-    },
-  );
-
-  // `path.resolve` takes `newdir/.` for `newdir`, so it wrote a file named `newdir` too.
-  it.each([
-    ["newdir/.", "newdir/./app.css"],
-    ["newdir/..", "newdir/../app.css"],
-    ["newdir/sub/..", "newdir/sub/../app.css"],
-    ...(process.platform === "win32" ? [["newdir\\.", "newdir\\.\\app.css"]] : []),
-  ])("refuses an --output whose last segment is . or .., as %s", async (output, example) => {
-    expect(await failureOf("build", "-c", "app/views/**/*.erb", "-o", output)).toBe(
-      `chs: --output ${output} ends with a . or .. segment, so it names a folder, not a file; name a stylesheet to write, as in --output ${example}.`,
-    );
-    expect(await readdir(project)).toEqual(["app"]);
   });
 
   // parseArgs keeps the last value, so `-o a.css -o b.css` wrote only b.css and said nothing of a.css.
@@ -879,121 +710,6 @@ describe("help and version", () => {
   it("prints the package version with --version and exits 0", async () => {
     expect(await build("--version")).toBe(0);
     expect(stdout).toEqual([version]);
-  });
-});
-
-describe("findClasses", () => {
-  it("finds the classes around each colon of a word", () => {
-    const known = new Set(["btn", "primary", "md:lg"]);
-
-    expect([...findClasses("class:primary btn: md:lg ::btn::", known)]).toEqual(["primary", "btn", "md:lg", "btn"]);
-  });
-
-  /* `split(":")` made an array of every part: a 160 MB file of colons aborted
-     Node.js with no `chs:` line, and a 192 MB one of `a:` took 1.6 GB. */
-  it("reads the parts of a word one at a time", () => {
-    let lookups = 0;
-    const known = {
-      has(name: string) {
-        lookups += 1;
-        return name === "btn";
-      },
-    };
-    const classes = findClasses(`btn${":".repeat(100_000)}`, known);
-
-    expect(classes.next()).toEqual({ done: false, value: "btn" });
-    expect(lookups).toBeLessThan(10);
-  });
-});
-
-/* A test cannot make a file of another user without root, so the ownership
-   rules run on a file whose calls are recorded and refused as a user's are. */
-describe("keepOwnership", () => {
-  const runner = { uid: 1000, gid: 1000 };
-
-  function fileOf({ refuseOwner, refuseGroup }: { refuseOwner: boolean; refuseGroup: boolean }) {
-    const calls: string[] = [];
-    const refusal = () => Object.assign(new Error("EPERM: operation not permitted"), { code: "EPERM" });
-
-    return {
-      calls,
-      stat: () => Promise.resolve(runner),
-      chown(uid: number, gid: number) {
-        calls.push(`chown ${uid} ${gid}`);
-        return (uid === -1 ? refuseGroup : refuseOwner) ? Promise.reject(refusal()) : Promise.resolve();
-      },
-      chmod(mode: number) {
-        calls.push(`chmod ${mode.toString(8)}`);
-        return Promise.resolve();
-      },
-    };
-  }
-
-  it("gives the file the previous owner, group, and mode", async () => {
-    const file = fileOf({ refuseOwner: false, refuseGroup: false });
-
-    expect(await keepOwnership(file, { uid: 33, gid: 33, mode: 0o100640 }, "app.css")).toBeUndefined();
-    expect(file.calls).toEqual(["chown 33 33", "chmod 640"]);
-  });
-
-  it("warns that the owner changed and the group and mode are kept", async () => {
-    const file = fileOf({ refuseOwner: true, refuseGroup: false });
-
-    expect(await keepOwnership(file, { uid: 33, gid: 33, mode: 0o100640 }, "app.css")).toBe(
-      "chs: warning: --output app.css now belongs to user 1000, not 33, since only root can give a file to another user; its group and mode are kept.",
-    );
-    expect(file.calls).toEqual(["chown 33 33", "chown -1 33", "chmod 640"]);
-  });
-
-  it("warns that the owner and group changed and the mode is kept", async () => {
-    const file = fileOf({ refuseOwner: true, refuseGroup: true });
-
-    expect(await keepOwnership(file, { uid: 33, gid: 33, mode: 0o100644 }, "app.css")).toBe(
-      "chs: warning: --output app.css now belongs to user 1000 and group 1000, not 33 and 33, since only root can give a file to another user or to a group you are not in; its mode is kept.",
-    );
-  });
-
-  /* A `0600` file of the web server's came back the deploy user's, which the
-     server could no longer read, under a warning that said the mode was kept.
-     With the group gone too, a group read bit no longer reaches it either. */
-  it.each([
-    ["0600 with the group kept", false, 0o600, "its group and mode are kept, so user 33"],
-    ["0640 with the group changed", true, 0o640, "its mode is kept, so user 33 and the members of group 33"],
-  ])("warns that the previous readers may no longer read a file of mode %s", async (_, refuseGroup, mode, kept) => {
-    const file = fileOf({ refuseOwner: true, refuseGroup });
-
-    expect(await keepOwnership(file, { uid: 33, gid: 33, mode: 0o100000 | mode }, "app.css")).toMatch(
-      new RegExp(`; ${kept} may no longer be able to read it\\.$`),
-    );
-  });
-
-  /* The runner owns a `0640` file of a group it is not in, such as the web
-     server's, which read it through the group bit and no longer can. */
-  it("warns of the group alone, and of its members' read, when only the group could not be kept", async () => {
-    const file = fileOf({ refuseOwner: true, refuseGroup: true });
-
-    expect(await keepOwnership(file, { uid: 1000, gid: 33, mode: 0o100640 }, "app.css")).toBe(
-      "chs: warning: --output app.css now belongs to group 1000, not 33, since only root can give a file to a group you are not in; its owner and mode are kept, so the members of group 33 may no longer be able to read it.",
-    );
-    expect(file.calls).toEqual(["chown 1000 33", "chown -1 33", "chmod 640"]);
-  });
-
-  // Anyone may read a `0644` file, so a group lost takes no reader with it.
-  it("warns of the group alone with no lost reader when others may read the file", async () => {
-    const file = fileOf({ refuseOwner: true, refuseGroup: true });
-
-    expect(await keepOwnership(file, { uid: 1000, gid: 33, mode: 0o100644 }, "app.css")).toMatch(
-      /; its owner and mode are kept\.$/,
-    );
-  });
-
-  it("throws a failure other than a refusal", async () => {
-    const file = {
-      ...fileOf({ refuseOwner: false, refuseGroup: false }),
-      chown: () => Promise.reject(Object.assign(new Error("EIO: i/o error"), { code: "EIO" })),
-    };
-
-    await expect(keepOwnership(file, { uid: 33, gid: 33, mode: 0o100644 }, "app.css")).rejects.toThrow(/EIO/);
   });
 });
 

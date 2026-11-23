@@ -145,7 +145,7 @@ Node-based Vitest checks validate every published target. Every compiled export 
 | `dist/components.css`                      | 195,444  | 15,686 | 201,400 |
 | `dist/native.css`                          | 364,491  | 27,357 | 375,500 |
 | `dist/theme.css`                           | 13,232   | 2,626  | 13,650  |
-| `dist/palette.css`                         | 19,038   | 2,510  | 19,650  |
+| `dist/palette.css`                         | 38,940   | 3,316  | 40,100  |
 | `dist/aesthetics/index.css`                | 51,294   | 5,506  | 52,900  |
 | `dist/aesthetics/chunky-tile.css`          | 6,161    | 1,526  | 6,350   |
 | `dist/aesthetics/cyber.css`                | 4,734    | 1,307  | 4,900   |

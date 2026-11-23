@@ -2,7 +2,7 @@
 title: Solución de problemas
 description: Qué significa cada error y cada advertencia, y cómo solucionarlo.
 order: 5
-source: 99dcdf590f17b221278454a70baf7c1111196592
+source: 0a0e9f2e2a10aab83a42708af4f535b5e9f1b543
 ---
 
 # Solución de problemas
@@ -137,7 +137,7 @@ Causas comunes:
 
 Si viene de `parse()`, el valor no es el pathname de una URL: no empieza con `/`, o contiene `?` o `#`. Pasa `url.pathname` en lugar de la URL completa o de una ruta con su query string, como el `request.url` de Node. Una ruta que sí es un pathname pero contiene algo que el routing rechaza, como `//` o un segmento de punto, hace en cambio que `parse()` devuelva `undefined`, así que la URL rara de un visitante se convierte en un 404 y no en un fallo de la app.
 
-Si viene de `localize()` o de `localizeAll()`, la ruta es una de esas, o contiene algo que el routing rechaza. El mensaje nombra la regla que la ruta incumple y cita la ruta, como `[I18n] pathname "/help/../admin" must not contain a dot segment, . or ..`, salvo lo que una URL lee como información de usuario, query o fragmento, que pueden contener una credencial: una ruta con `?` o `#` se cita solo hasta ese carácter, y una que una URL lee como el inicio de otro host, como `//example.com` o `/\example.com`, no se cita en absoluto. [Rutas que acepta](localized-urls.md#rutas-que-acepta) tiene la lista completa, con la solución para cada caso.
+Si viene de `localize()` o de `localizeAll()`, la ruta es una de esas, o contiene algo que el routing rechaza. El mensaje nombra la regla que la ruta incumple y cita la ruta, como `[I18n] pathname "/help/../admin" must not contain a dot segment, . or ..`, salvo una query o un fragmento, que pueden contener un token: una ruta con `?` o `#` se cita solo hasta ese carácter. [Rutas que acepta](localized-urls.md#rutas-que-acepta) tiene la lista completa, con la solución para cada caso.
 
 ## `localize()` lanza `RangeError`: "would be read as"
 
@@ -169,10 +169,8 @@ Ves `Ouvrir l{app}` donde esperabas `Ouvrir l'éditeur`, y la consola está en s
 - **`Could not load locale "pt"; using "es".`** o **`Could not load locale "pt"; using the default locale.`**: el loader falló con un locale guardado o detectado distinto del por defecto, así que el visitante recibió el siguiente: el locale detectado a partir del navegador después de uno guardado, y después el por defecto. Corrige el loader; la elección guardada se conserva para la próxima vez. Si el propio locale por defecto no carga, no queda nada a lo que recurrir, y la inicialización se rechaza con `Failed to load translations for locale "en".`
 - **"Skipping translation on <p> because translated elements must be leaves"**: el elemento con `data-i18n` tiene elementos hijos. Pon la clave en un elemento que contenga solo texto, o tradúcelo con `t()`.
 - **"Skipping translation on <style> because the element can run, hide, or reparse its text as HTML"**: hay una clave `data-i18n` en un elemento `<script>`, `<style>`, `<noscript>`, `<template>`, `<iframe>`, `<noembed>`, `<noframes>`, `<xmp>` o `<plaintext>`, cuyo texto se ejecuta como código, decide qué se muestra o se escribe sin escapar cuando la página se guarda como HTML. La advertencia nombra la clave y pasa el elemento, así que la consola apunta a él. Mueve la clave a un elemento normal. Sus claves `data-i18n-<atributo>`, como el `data-i18n-title` de un `<iframe>`, se siguen traduciendo.
-- **"Skipping translation on <p> because it is inside <xmp>, which can run, hide, or reparse its content as HTML"**: un elemento con una clave está dentro de uno de los elementos que nombra la entrada anterior, o dentro de un `<textarea>` o un `<title>`, algo que solo el código puede hacer, por ejemplo al agregarlo a un `<xmp>` o a un `<template>` en lugar de a su `content`. No se traducen ni su texto ni sus atributos, ya que una traducción podría cerrar el elemento que lo rodea y convertirse en marcado cuando la página se guarda como HTML, o nunca se mostraría. Un elemento traducido antes de que lo movieran ahí recupera su texto y sus atributos del HTML. Saca el elemento de ahí.
 - **"Skipping translation because data-i18n contains an invalid key"**, o lo mismo para un `data-i18n-<attribute>`: la clave está vacía, tiene más de 1000 caracteres o contiene un carácter de control ASCII, así que ningún diccionario puede contenerla. El elemento muestra su texto del HTML, como con una clave que ningún diccionario tiene, también cuando una clave cuya traducción mostraba cambia a una no válida. Corrige la clave en el HTML.
 - **"Skipping translation because data-i18n names a message that needs values"**: el mensaje tiene un placeholder, un plural o un select, y la traducción de HTML no tiene valores para completarlos. El elemento conserva su texto del HTML, y la advertencia aparece una vez por clave. Renderiza ese texto con `t()` y pasa los valores.
-- **"Skipping translation of the title of <style> because it names a style sheet set"**: hay una clave `data-i18n-title` en un elemento `<style>` o `<link rel="stylesheet">`, cuyo `title` agrupa hojas de estilo entre las que el navegador alterna, así que traducirlo cambiaría cuáles se aplican. El elemento conserva su `title`. Quita la clave.
 - **Un atributo `data-i18n-href` no hace nada**: solo se pueden traducir los atributos de texto. Consulta [Traduce HTML sin un framework](browser.md#traduce-html-sin-un-framework).
 
 Las advertencias del navegador se silencian junto con todas las demás cuando el gestor tiene `isSilent: true`.

@@ -2,7 +2,7 @@
 title: Contenido y layout
 description: Consulta de cada helper de layout con su espaciado, la escala tipográfica con sus tamaños, las tarjetas y los paneles con su relleno interior, las tablas, las citas, el código y las teclas.
 order: 10
-source: 18df431402cededb628a4e9b814dbc9e448f5cf0
+source: 7029232dde1180e32de10f9abc61339f4a0ebe98
 ---
 
 # Contenido y layout
@@ -13,17 +13,16 @@ Esta es una página de consulta de las clases que organizan una página y dan fo
 
 La separación de todos los helpers de layout es `--layout-gap`, `1rem` por defecto. Definir `--layout-gap` en un elemento cambia la separación de todos los layouts que contiene. `.tight` y `.loose` cambian solo el layout en el que están; un layout anidado dentro conserva su propia separación.
 
-| Clase                        | Layout                                                                                                                                                      | Separación                                       |
-| ---------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------ |
-| `.stack`                     | Una columna vertical.                                                                                                                                       | `--layout-gap`, `.tight` 0.5rem, `.loose` 1.5rem |
-| `.cluster`                   | Una fila que salta de línea, con los elementos centrados en vertical. `.between` reparte los elementos hacia los dos extremos.                              | Igual                                            |
-| `.view`                      | Un contenedor flex. `.vertical` lo convierte en una columna; `.horizontal` en una fila que salta de línea con los elementos centrados.                      | Igual                                            |
-| `.auto-grid`                 | Una cuadrícula de columnas iguales, cada una de al menos `--layout-grid-min` (16rem) de ancho, tantas como quepan.                                          | Igual                                            |
-| `.section`                   | Relleno interior alrededor de una sección de la página: `--layout-gutter` a los lados, `--layout-section-block` arriba y abajo.                             | Ninguna                                          |
-| `.section-content`           | Centra su contenido con un ancho de `--container-max` (80rem). `.narrow` usa 48rem, `.wide` 90rem.                                                          | Ninguna                                          |
-| `.divider`                   | Una línea horizontal, tan ancha como su contenedor. `.vertical` la convierte en una línea vertical tan alta como la fila.                                   | Ninguna                                          |
-| `.visually-hidden`           | Oculta contenido en pantalla y lo mantiene para los lectores de pantalla.                                                                                   | Ninguna                                          |
-| `.visually-hidden-focusable` | Oculta contenido del mismo modo hasta que él o un elemento dentro de él tiene el foco, y entonces lo muestra, como hace un enlace para saltar al contenido. | Ninguna                                          |
+| Clase              | Layout                                                                                                                                 | Separación                                       |
+| ------------------ | -------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------ |
+| `.stack`           | Una columna vertical.                                                                                                                  | `--layout-gap`, `.tight` 0.5rem, `.loose` 1.5rem |
+| `.cluster`         | Una fila que salta de línea, con los elementos centrados en vertical. `.between` reparte los elementos hacia los dos extremos.         | Igual                                            |
+| `.view`            | Un contenedor flex. `.vertical` lo convierte en una columna; `.horizontal` en una fila que salta de línea con los elementos centrados. | Igual                                            |
+| `.auto-grid`       | Una cuadrícula de columnas iguales, cada una de al menos `--layout-grid-min` (16rem) de ancho, tantas como quepan.                     | Igual                                            |
+| `.section`         | Relleno interior alrededor de una sección de la página: `--layout-gutter` a los lados, `--layout-section-block` arriba y abajo.        | Ninguna                                          |
+| `.section-content` | Centra su contenido con un ancho de `--container-max` (80rem). `.narrow` usa 48rem, `.wide` 90rem.                                     | Ninguna                                          |
+| `.divider`         | Una línea horizontal, tan ancha como su contenedor. `.vertical` la convierte en una línea vertical tan alta como la fila.              | Ninguna                                          |
+| `.visually-hidden` | Oculta contenido en pantalla y lo mantiene para los lectores de pantalla.                                                              | Ninguna                                          |
 
 `.auto-grid` coloca dos columnas de 16rem cuando su contenedor mide 32rem más la separación, tres a partir de 48rem más dos separaciones, y así sucesivamente. Por debajo del ancho de una columna, la columna se encoge para caber. Define `--layout-grid-min` en la cuadrícula para cambiar el ancho de columna.
 

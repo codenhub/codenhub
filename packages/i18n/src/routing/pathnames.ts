@@ -430,26 +430,20 @@ export const compilePathnames = <TLocale extends string>({
     );
   }
 
-  // Under `when-ambiguous`, a path without a prefix is read as a form that dropped its prefix, else as the default
-  // locale's, so a translated form with a fixed segment drops its prefix only when no form read that way could match
-  // it too. Comparing it with a form that keeps its prefix would only take the prefix from paths that need none.
-  // Which forms drop it depends on which others do, so it is settled in two steps that no table order changes: a form
-  // a default-locale form overlaps keeps its prefix, and of the rest, a form that overlaps another locale's keeps it
-  // too, even where that other one keeps it as well. No other policy reads the decision, so it is not made.
+  // Under `when-ambiguous`, a translated form drops the prefix only when it has a fixed segment and no other locale's
+  // path could match it. No other policy reads the decision, so it is not made.
   if (localePrefix === "when-ambiguous") {
-    const formsIn = (locale: TLocale) => routes.map((route) => ({ route, locale, pattern: route.forms.get(locale)! }));
-    const candidates = locales.flatMap((locale) =>
-      locale === defaultLocale
-        ? []
-        : formsIn(locale).filter(
-            ({ route, pattern }) =>
-              translated.get(route)!.includes(locale) && pattern.segments.some((segment) => segment.kind === "static"),
-          ),
+    const allForms = routes.flatMap((route) =>
+      locales.map((locale) => ({ route, locale, pattern: route.forms.get(locale)! })),
     );
-    const overlappedByDefault = findOverlapped(formsIn(defaultLocale), candidates);
-    const eligible = candidates.filter((candidate) => !overlappedByDefault.has(candidate));
-    const overlapped = findOverlapped(eligible, eligible);
-    for (const candidate of eligible) {
+    const candidates = allForms.filter(
+      ({ route, locale, pattern }) =>
+        locale !== defaultLocale &&
+        translated.get(route)!.includes(locale) &&
+        pattern.segments.some((segment) => segment.kind === "static"),
+    );
+    const overlapped = findOverlapped(allForms, candidates);
+    for (const candidate of candidates) {
       if (!overlapped.has(candidate)) {
         (candidate.route.unprefixed as Set<TLocale>).add(candidate.locale);
       }

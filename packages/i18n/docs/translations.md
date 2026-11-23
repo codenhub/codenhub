@@ -127,19 +127,19 @@ Write `{name}` where a value goes, and pass the value to `t()`:
 ```
 
 ```ts
-t("order.confirmed", { name: "Ana", orderId: "1042" });
+t("order.confirmed", { name: "Ana", orderId: 1042 });
 // "Thanks, Ana. Order 1042 ships tomorrow."
 ```
 
-Values can be strings, numbers, bigints, or dates, and a `select` also takes a boolean. A bigint goes wherever a number does, and is formatted without losing digits. Placeholder names use letters and digits in any script, and `_`, such as `{firstName}`, `{first_name}`, or `{año}`. A name with anything else, such as `{first-name}` or `{price€}`, is not a placeholder: the message is invalid syntax, logs a warning, and shows `{first-name}` as written.
+Values can be strings, numbers, or dates, and a `select` also takes a boolean. Placeholder names use letters and digits in any script, and `_`, such as `{firstName}`, `{first_name}`, or `{año}`. A name with anything else, such as `{first-name}` or `{price€}`, is not a placeholder: the message is invalid syntax, logs a warning, and shows `{first-name}` as written.
 
-Use placeholders instead of joining fragments. `t("before") + name + t("after")` locks every language into English word order, while a whole sentence with a placeholder lets each translation put the value where it belongs. Word order is the first thing every translator wants to change, and they are usually right. For a link or bold text inside the sentence, see [Links and bold text inside a sentence](#links-and-bold-text-inside-a-sentence).
+Use placeholders instead of joining fragments. `t("before") + name + t("after")` locks every language into English word order, while a whole sentence with a placeholder lets each translation put the value where it belongs. Word order is the first thing every translator wants to change, and they are usually right.
 
 A few details:
 
 - A placeholder with no matching value stays as written, so a missing value shows up as `{name}` on screen rather than disappearing.
 - One `t()` call fills at most 100 arguments, counting those inside plural and select forms and each `#`, and leaves the rest as written, a `#` as `#`. A UI sentence never gets close; the limit keeps a huge fetched message from costing one formatting step per placeholder, or from repeating a long number thousands of times.
-- A number in a plain `{name}` is formatted for the reader, as `{name, number}` does: `1234.5` reads "1,234.5" in English and "1.234,5" in Portuguese. Write `{name, number, integer}` or another style, as the next section shows, to format it differently.
+- Numbers in a plain `{name}` are inserted as JavaScript writes them: `1234.5`. Write `{name, number}` to format them for the reader, as the next section shows.
 - Braces and apostrophes are message syntax, so text that shows them literally needs quoting; see [Literal braces and apostrophes](#literal-braces-and-apostrophes).
 
 ### Format numbers and dates in the text
@@ -164,14 +164,14 @@ t("cart.discount", { rate: 0.15 }); // "15% off"
 t("order.shipped", { date: new Date() });
 ```
 
-| Argument                | Styles                                                             | Value                              |
-| ----------------------- | ------------------------------------------------------------------ | ---------------------------------- |
-| `{n, number}`           | none, `integer`, `percent`                                         | number or bigint                   |
-| `{d, date}`             | `short`, `medium` (the default), `long`, `full`                    | `Date` or a timestamp              |
-| `{d, time}`             | `short`, `medium` (the default), `long`, `full`                    | `Date` or a timestamp              |
-| `{n, plural, …}`        | see [Plurals](#plurals)                                            | number or bigint                   |
-| `{n, selectordinal, …}` | ordinal forms, such as `one {#st} two {#nd} few {#rd} other {#th}` | number or bigint                   |
-| `{v, select, …}`        | any words, plus `other`                                            | string, number, bigint, or boolean |
+| Argument                | Styles                                                             | Value                      |
+| ----------------------- | ------------------------------------------------------------------ | -------------------------- |
+| `{n, number}`           | none, `integer`, `percent`                                         | number                     |
+| `{d, date}`             | `short`, `medium` (the default), `long`, `full`                    | `Date` or a timestamp      |
+| `{d, time}`             | `short`, `medium` (the default), `long`, `full`                    | `Date` or a timestamp      |
+| `{n, plural, …}`        | see [Plurals](#plurals)                                            | number                     |
+| `{n, selectordinal, …}` | ordinal forms, such as `one {#st} two {#nd} few {#rd} other {#th}` | number                     |
+| `{v, select, …}`        | any words, plus `other`                                            | string, number, or boolean |
 
 Formatting uses the language of the dictionary the text came from, so English text that fills in for a missing Portuguese key is written the English way. An argument whose value has the wrong type, such as a string for `{n, number}`, stays as written.
 
@@ -234,50 +234,6 @@ Quoted text is text to the types too: in `'{it''s {x}'`, which shows `{it's {x}`
 
 Text that is not valid syntax, such as an unclosed `{` or a stray `}`, logs a warning, unless the manager is silent, and is shown with only its `{name}` placeholders filled. The warning names the key and the locale, and comes once for each key, text, and locale among the roughly 1,000 most recent, so an edited text warns again. [Find untranslated keys](#find-untranslated-keys) shows a test that checks every message's syntax.
 
-### Links and bold text inside a sentence
-
-A sentence with a link in the middle is still one sentence. Splitting it into `t("before")`, a link, and `t("after")` locks the word order, as joining fragments does. Mark the part with a tag and call `rich()`, which returns the text and its tags as data for your framework to render:
-
-```json
-{ "signup": { "terms": "By signing up you accept the <terms>terms of use</terms>." } }
-```
-
-```ts
-i18n.rich("signup.terms");
-// ["By signing up you accept the ", { tag: "terms", children: ["terms of use"] }, "."]
-```
-
-A tag is `<name>…</name>`, or `<name/>` for one with no content, such as a line break. Names use letters and digits in any script, `_`, and `-` after the first character, such as `<help-link>`. A tag names what the part is, and your code decides how it renders, so a translation can't add a link, a script, or markup your code doesn't render. In React, for example:
-
-```tsx
-import { Fragment, type ReactNode } from "react";
-import type { RichText } from "@codenhub/i18n";
-
-type Tags = Readonly<Record<string, (children: ReactNode) => ReactNode>>;
-
-// A tag your code doesn't render shows its content without it.
-const render = (parts: RichText, tags: Tags): ReactNode[] =>
-  parts.map((part, index) => {
-    if (typeof part === "string") {
-      return part;
-    }
-    // An own property only, so a tag such as `<constructor>` never reaches an inherited function.
-    const tag = Object.hasOwn(tags, part.tag) ? tags[part.tag]! : (children: ReactNode) => children;
-    return <Fragment key={index}>{tag(render(part.children, tags))}</Fragment>;
-  });
-
-<p>{render(i18n.rich("signup.terms"), { terms: (children) => <a href="/terms">{children}</a> })}</p>;
-```
-
-A few details:
-
-- `rich()` takes the same keys and values as `t()`, checked the same way. A value is always text: a `<b>` in a visitor's name is shown as written, never read as a tag.
-- A tag can wrap placeholders, a plural, or a select, and can sit inside a plural or select form, but a tag opened in a form must close in that form.
-- A `<` that doesn't form a tag, as in `1 < 2`, is text, and so is a tag in quoted text: `'{<b>}'` shows `{<b>}`, never a tag, as in [Literal braces and apostrophes](#literal-braces-and-apostrophes). An apostrophe before `<` is an ordinary apostrophe, so `l'<b>été</b>` keeps its elision and its tag.
-- A message whose tags don't balance, such as `<b>bold` without `</b>`, or nest more than 10 levels deep, logs a warning once for each key, text, and locale, unless the manager is silent, and comes back as one part: the text as `t()` shows it, tags included. A missing key and invalid syntax also come back as the one part `t()` would return.
-- Tags aren't type-checked, since a translation can use tags the default text doesn't. Render every tag your messages use, and keep a fallback for the rest, as above.
-- `t()` and the `data-i18n` binding show tags as written. Render a message with tags from your code with `rich()`.
-
 ## Plurals
 
 "1 items" is wrong in English, and other languages have more forms than English does. Arabic has six. To let each language choose, write the key as a group of forms instead of a single string. The shop's cart already does:
@@ -317,9 +273,30 @@ When a plural group is missing from the current locale, the default locale's gro
 
 Three things to watch for:
 
-- **`count` must be a number or bigint.** A string such as `"5"` does not select a form; the group is then treated as a missing key. Convert it where it comes in, such as `Number(params.get("count"))`. The manager doesn't guess, since `"1,5"` is one and a half in Portuguese and not a number at all to JavaScript.
+- **`count` must be a number.** A string such as `"5"` does not select a form; the group is then treated as a missing key. Convert it where it comes in, such as `Number(params.get("count"))`. The manager doesn't guess, since `"1,5"` is one and a half in Portuguese and not a number at all to JavaScript.
 - **A plain string under the same key wins over forms.** If `cart.items` is a string, `count` only fills `{count}`.
 - **Without `other`, it is not a plural group.** `{ "one": "…", "two": "…" }` works only for counts whose form happens to be there; any other count shows the key. `has()` says such a group is not a key, and typed keys don't offer it. Add `other`.
+
+### Show a formatted count
+
+A plain `{count}` writes the number as JavaScript does, so 1234 items reads "1234 items" rather than "1,234 items", or "1.234 itens" in Portuguese. Write `{count, number}` in the forms instead:
+
+```json
+{
+  "cart": {
+    "items": {
+      "one": "{count, number} item",
+      "other": "{count, number} items"
+    }
+  }
+}
+```
+
+```ts
+t("cart.items", { count: 1234 }); // "1,234 items"
+```
+
+That is a lot of tea, but the comma is right.
 
 ### Plurals inside a sentence
 
@@ -417,10 +394,10 @@ t("cart.items", { count: 2 }); // ok: a plural group requires a numeric count
 
 Which values each argument takes:
 
-- `number`, `plural`, and `selectordinal` arguments take a number or bigint.
+- `number`, `plural`, and `selectordinal` arguments take a number.
 - `date` and `time` take a `Date` or a timestamp.
-- `select` takes a string, number, bigint, or boolean.
-- A plain `{name}` takes a string, number, bigint, or `Date`.
+- `select` takes a string, number, or boolean.
+- A plain `{name}` takes a string, number, or `Date`.
 
 Only the values the message uses are checked. Any other value may have any type, so `t("home.greeting", user)` takes a whole `User` with an `isAdmin: boolean`, and an object literal may carry extra values too. When several dictionaries are typed, a key needs the values of every one that has it.
 
@@ -490,7 +467,7 @@ test("every locale has every key", async () => {
 });
 ```
 
-To catch a message with broken syntax, such as an unclosed `{` a translator left, or tags that don't balance, look up every key in every locale and fail on the warning. The manager must not be silent for this:
+To catch a message with broken syntax, such as an unclosed `{` a translator left, look up every key in every locale and fail on the warning. The manager must not be silent for this:
 
 ```ts
 import { expect, test, vi } from "vitest";
@@ -504,17 +481,14 @@ test("every message is valid", async () => {
     await i18n.setLocale(locale);
     for (const key of Object.keys(await i18n.loadLocale(locale))) {
       i18n.t(key as Parameters<typeof i18n.t>[0]);
-      i18n.rich(key as Parameters<typeof i18n.rich>[0]);
     }
   }
 
-  const invalid = warn.mock.calls.filter(([text]) => /^\[I18n\] Invalid (message|tags)/.test(String(text)));
+  const invalid = warn.mock.calls.filter(([text]) => String(text).startsWith("[I18n] Invalid message"));
   warn.mockRestore();
   expect(invalid).toEqual([]);
 });
 ```
-
-`rich()` checks the tags in the text each call shows. Without values, a plural or select is shown as written, so the tags inside its forms are not checked; pass values that pick a form to check its tags too.
 
 To fail a test on keys missing from every dictionary, such as a typo in a key you built at runtime, throw from `onMissingKey`:
 
