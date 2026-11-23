@@ -147,7 +147,11 @@ routing.localize("/about", "pt"); // "/pt/about"
 routing.localize("/about", "en"); // "/about"
 ```
 
-A canonical path never starts with a locale, so `localize()` throws a `RangeError` for one, such as `/pt/about`. That is a URL; pass `parse("/pt/about").pathname` instead. It throws for a page of your own whose path starts with a locale code, too: with Burmese, `my`, configured, an English page at `/my/orders` has no URL, since `/my/orders` is the Burmese `/orders`. Give such a page another path.
+A path that already starts with a locale is read as that locale's URL, so the prefix is replaced:
+
+```ts
+routing.localize("/pt/about", "en"); // "/about"
+```
 
 On a localized site, switching language is a navigation, not just `setLocale()`: `setLocale()` changes the text but never the URL. So the shop's language picker reads the current page with `parse()`, takes its path in the new language from `alternates`, keeps the query string and fragment, and lets your router go there:
 
@@ -293,10 +297,8 @@ routing.localize("/blog", "pt"); // "/pt/blog"
 The prefix stays wherever the path alone can't say which language it is in:
 
 - **Paths with the same words in two languages.** `/` and `/blog` exist in English too, so Portuguese keeps `/pt` and `/pt/blog`. Two languages translating to the same words, such as `/contato` in both Portuguese and Spanish, keep the prefix as well.
-- **Paths a default-language parameter could match.** If English lists `/:slug`, every one-segment path could be an English page, so `/sobre` keeps its prefix.
+- **Paths another language's parameter could match.** If Spanish lists `/:tag`, every one-segment path could be a Spanish tag, so `/sobre` keeps its prefix.
 - **Paths made only of parameters**, such as `/:tag`, which could be anything.
-
-Only paths read without a prefix count. A Spanish `/:tag` keeps its prefix, so it only matches paths that start with `/es`, and the Portuguese `/sobre` still drops its own.
 
 The default locale never has a prefix in this mode. `parse()` still accepts `/pt/sobre`, so redirect it as in [Redirect to the canonical URL](#redirect-to-the-canonical-url).
 
@@ -443,7 +445,7 @@ This is the boring part of the page. It is also the part that decides whether a 
 - **A malformed escape**, a `%` not followed by two hex digits, as in `/50%off`. Write `%25` for a literal `%`… which is also refused, per the previous rule, so take the `%` out of the path.
 - **More than 8,192 characters or 100 segments**, or a path whose canonical path would be longer than that, as a short translated path can be when its table entry is long. Servers and proxies cut off URLs around this length anyway, and no page is 100 folders deep; a request of thousands of one-letter segments would otherwise cost work in every locale.
 
-A request can carry any of these, such as a scanner asking for `//wp-login.php`, so `parse()` returns `undefined` for them, and the same 404 answers them as any other path that is no page. `localize()` and `localizeAll()` build links from your own paths rather than read requests, so for the same paths they throw a `TypeError` that quotes the path and names the rule, such as `TypeError: [I18n] pathname "/help/../admin" must not contain a dot segment, . or ..`, and you fix the path in your code. A path that a URL reads as starting another host isn't quoted, as below.
+A request can carry any of these, such as a scanner asking for `//wp-login.php`, so `parse()` returns `undefined` for them, and the same 404 answers them as any other path that is no page. `localize()` and `localizeAll()` build links from your own paths rather than read requests, so for the same paths they throw a `TypeError` that quotes the path and names the rule, such as `TypeError: [I18n] pathname "/help/../admin" must not contain a dot segment, . or ..`, and you fix the path in your code.
 
 Every method, `parse()` included, throws a `TypeError` for a value that is not a URL's pathname at all:
 
@@ -453,7 +455,7 @@ Every method, `parse()` included, throws a `TypeError` for a value that is not a
 
 That is a mistake in the calling code, not a request to answer, so it fails loudly instead of answering 404 to every URL with a query.
 
-No routing error quotes what a URL reads as user info, a query, or a fragment, which can hold a credential. A path with `?` or `#` is quoted only up to it, and one that a URL reads as starting another host isn't quoted at all: one that starts with `//` or `/\`, as a protocol-relative URL does, even with a tab or line break between the two, since a URL reads `\` as `/` and skips tabs and line breaks. Its error reads `TypeError: [I18n] pathname must not start with // or /\, which a URL reads as the start of its host, even with a tab or line break between; pass url.pathname`.
+No routing error quotes a query or a fragment, which can hold a token: a path with `?` or `#` is quoted only up to it. A value that doesn't start with `/`, such as a full URL, whose user info can hold a credential, isn't quoted at all.
 
 Ordinary escapes, such as `%20` and `%C3%A7`, are fine, and a trailing slash is kept: `/pt/sobre/` parses to `/about/`.
 

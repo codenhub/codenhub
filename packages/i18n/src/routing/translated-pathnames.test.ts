@@ -142,27 +142,16 @@ describe("translated pathnames", () => {
       });
     });
 
-    it("should refuse a URL where a canonical path belongs, and switch language through parse()", () => {
+    it("should read a prefixed path as that locale's URL, so it can switch language", () => {
       const routing = create();
 
-      expect(() => routing.localize("/pt/sobre", "es")).toThrow(RangeError);
-      expect(() => routing.localizeAll("/pt/sobre")).toThrow(RangeError);
-      expect(routing.localize(routing.parse("/pt/sobre")!.pathname, "es")).toBe("/es/acerca");
-    });
-
-    // Burmese is `my`, and `/my/orders` is an English page no URL leads to: `/my/orders` is the Burmese `/orders`.
-    it("should refuse a page whose path starts with a locale code rather than build another page's links", () => {
-      const routing = createLocaleRouting({
-        locales: ["en", "pt", "my"],
-        defaultLocale: "en",
-        localePrefix: "except-default",
-      });
-
-      expect(() => routing.localizeAll("/my/orders")).toThrow(RangeError);
-      expect(routing.localizeAll("/orders").map(({ pathname }) => pathname)).toEqual([
-        "/orders",
-        "/pt/orders",
-        "/my/orders",
+      expect(routing.localize("/pt/about", "en")).toBe("/about");
+      expect(routing.localize("/pt/sobre", "es")).toBe("/es/acerca");
+      expect(routing.localize("/pt/about", "pt")).toBe("/pt/sobre");
+      expect(routing.localizeAll("/pt/sobre")).toEqual([
+        { locale: "en", pathname: "/about" },
+        { locale: "pt", pathname: "/pt/sobre" },
+        { locale: "es", pathname: "/es/acerca" },
       ]);
     });
 
@@ -191,10 +180,12 @@ describe("translated pathnames", () => {
         const routing = create({ localePrefix });
 
         expect(routing.parse("/%70t/sobre")).toMatchObject({ locale: "pt", pathname: "/about" });
-        expect(() => routing.localize("/%70t/sobre", "es")).toThrow(RangeError);
+        expect(routing.localize("/%70t/sobre", "es")).toBe(routing.localize("/about", "es"));
         // A leading locale after the prefix is refused, written plainly or percent-encoded.
         expect(routing.parse("/pt/en/about")).toBeUndefined();
         expect(routing.parse("/pt/%65n/about")).toBeUndefined();
+        expect(() => routing.localize("/pt/en/about", "es")).toThrow(RangeError);
+        expect(() => routing.localize("/pt/%65n/about", "es")).toThrow(RangeError);
       },
     );
 
@@ -312,14 +303,10 @@ describe("translated pathnames", () => {
 
     it("should redirect a path without a prefix by reading it in the chosen locale", () => {
       const routing = create({ localePrefix: "always" });
-      const redirect = (pathname: string, locale: string) => {
-        const guess = routing.parse(`/${locale}${pathname}`)!;
-        return routing.localize(guess.pathname, guess.locale);
-      };
 
-      expect(redirect("/sobre", "pt")).toBe("/pt/sobre");
-      expect(redirect("/about", "pt")).toBe("/pt/sobre");
-      expect(redirect("/about", "en")).toBe("/en/about");
+      expect(routing.localize("/pt/sobre", "pt")).toBe("/pt/sobre");
+      expect(routing.localize("/pt/about", "pt")).toBe("/pt/sobre");
+      expect(routing.localize("/en/about", "en")).toBe("/en/about");
     });
 
     it("should match a translated segment that mixes Unicode with an escape that isn't UTF-8", () => {
@@ -399,8 +386,7 @@ describe("translated pathnames", () => {
       });
     });
 
-    it("should not compare a path with another locale's path that always keeps its prefix", () => {
-      // Every Spanish tag URL is `/es/…`, and a path without a prefix is never read as Spanish, so `/sobre` is free.
+    it("should keep the prefix when another locale's parameter could match the path", () => {
       const routing = create({
         localePrefix: "when-ambiguous",
         pathnames: {
@@ -409,38 +395,10 @@ describe("translated pathnames", () => {
         },
       });
 
-      expect(routing.localize("/about", "pt")).toBe("/sobre");
-      expect(routing.localize("/tags/sobre", "es")).toBe("/es/sobre");
+      expect(routing.localize("/about", "pt")).toBe("/pt/sobre");
       expect(routing.parse("/sobre")).toMatchObject({
-        locale: "pt",
-        pathname: "/about",
-      });
-      expect(routing.parse("/es/sobre")).toMatchObject({
-        locale: "es",
-        pathname: "/tags/sobre",
-      });
-    });
-
-    it("should not compare a path with another locale's path that the default locale's paths keep prefixed", () => {
-      // The Spanish `/c/:x` overlaps the English `/c/d`, so it keeps `/es`, and no longer stands in the way of `/:y/e`.
-      const routing = create({
-        localePrefix: "when-ambiguous",
-        pathnames: {
-          "/c/d": {},
-          "/a/b/:x": { es: "/c/:x" },
-          "/b/z/:y": { pt: "/:y/e" },
-        },
-      });
-
-      expect(routing.localize("/a/b/1", "es")).toBe("/es/c/1");
-      expect(routing.localize("/b/z/c", "pt")).toBe("/c/e");
-      expect(routing.parse("/c/e")).toMatchObject({
-        locale: "pt",
-        pathname: "/b/z/c",
-      });
-      expect(routing.parse("/c/d")).toMatchObject({
         locale: "en",
-        pathname: "/c/d",
+        pathname: "/sobre",
       });
     });
 
@@ -491,7 +449,7 @@ describe("translated pathnames", () => {
         locale: "pt",
         pathname: "/about",
       });
-      expect(routing.localize(routing.parse("/pt/sobre")!.pathname, "pt")).toBe("/sobre");
+      expect(routing.localize("/pt/sobre", "pt")).toBe("/sobre");
     });
 
     it("should behave like `except-default` without a table", () => {

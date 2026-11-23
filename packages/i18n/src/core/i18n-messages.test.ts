@@ -71,64 +71,29 @@ describe("ICU messages", () => {
     expect(i18n.t("whole", { amount: 1234 })).toBe("1,234 units");
   });
 
-  it("should format a number in a plain argument as {name, number} does", async () => {
+  it("should insert a number in a plain argument as JavaScript writes it, as 0.4.0 does", async () => {
     const i18n = create({ pt: { hello: "Olá, {name}!", broken: "Olá {name} }" } });
     await i18n.init();
 
-    expect(i18n.t("hello", { name: 1234.5 })).toBe("Hello, 1,234.5!");
-    expect(i18n.t("hello", { name: "1234.5" })).toBe("Hello, 1234.5!");
+    expect(i18n.t("hello", { name: 12_345.5 })).toBe("Hello, 12345.5!");
 
     await i18n.setLocale("pt");
-    expect(i18n.t("hello", { name: 1234.5 })).toBe("Olá, 1.234,5!");
+    expect(i18n.t("hello", { name: 12_345.5 })).toBe("Olá, 12345.5!");
     // A message that is not valid ICU syntax fills its arguments the same way.
-    expect(i18n.t("broken", { name: 1234.5 })).toBe("Olá 1.234,5 }");
+    expect(i18n.t("broken", { name: 12_345.5 })).toBe("Olá 12345.5 }");
   });
 
-  it("should take a bigint wherever it takes a number", async () => {
-    const i18n = create({ pt: { price: "Custa {amount, number}" } });
+  it("should leave an argument as written for a bigint, as 0.4.0 does", async () => {
+    const i18n = create();
     await i18n.init();
-    const big = 12_345_678_901_234_567_890n;
+    // Plain JavaScript can pass one; the types take only a number.
+    const values = { name: 3n, amount: 3n, count: 3n, n: 3n, gender: 3n } as unknown as Record<string, number>;
 
-    expect(i18n.t("hello", { name: big })).toBe("Hello, 12,345,678,901,234,567,890!");
-    expect(i18n.t("price", { amount: big })).toBe("Costs 12,345,678,901,234,567,890");
-    expect(i18n.t("whole", { amount: 3n })).toBe("3 units");
-    expect(i18n.t("share", { ratio: 1n })).toBe("100% done");
-    expect(i18n.t("items", { count: 0n })).toBe("No items");
-    expect(i18n.t("items", { count: 1n })).toBe("1 item");
-    expect(i18n.t("items", { count: big })).toBe("12,345,678,901,234,567,890 items");
-    expect(i18n.t("others", { count: 3n, name: "Ana" })).toBe("Ana and 2 others");
-    expect(i18n.t("place", { n: 22n })).toBe("22nd");
-    // As a number, 10^20 + 22 rounds to 10^20 and would select "th".
-    expect(i18n.t("place", { n: 10n ** 20n + 22n })).toBe("100,000,000,000,000,000,022nd");
-    expect(i18n.t("greet", { gender: 1n })).toBe("They replied");
-    expect(i18n.t("broken", { name: 5n })).toBe("Hello {name");
-
-    await i18n.setLocale("pt");
-    expect(i18n.t("price", { amount: big })).toBe("Custa 12.345.678.901.234.567.890");
-  });
-
-  it("should match a bigint's exact form and offset without rounding them to a number", async () => {
-    const i18n = createI18n({
-      defaultLocale: "en",
-      locales: ["en"],
-      loadLocale: () => ({
-        exact: "{n, plural, =9007199254740993 {exact} other {other}}",
-        offset: "{n, plural, offset:9007199254740993 other {#}}",
-        huge: `{n, plural, offset:${"9".repeat(400)} other {#}}`,
-        padded: "{n, plural, =01 {one} =2.0 {two} other {other}}",
-      }),
-      isSilent: true,
-    });
-    await i18n.init();
-
-    expect(i18n.t("exact", { n: 9_007_199_254_740_993n })).toBe("exact");
-    expect(i18n.t("exact", { n: 9_007_199_254_740_992n })).toBe("other");
-    expect(i18n.t("offset", { n: 9_007_199_254_740_993n })).toBe("0");
-    // 1 - (10^400 - 1), formatted in full.
-    expect(i18n.t("huge", { n: 1n })).toMatch(/^-9(,999){132},998$/);
-    expect(i18n.t("padded", { n: 1n })).toBe("one");
-    expect(i18n.t("padded", { n: 2 })).toBe("two");
-    expect(i18n.t("padded", { n: 2n })).toBe("two");
+    expect(i18n.t("hello", values)).toBe("Hello, {name}!");
+    expect(i18n.t("price", values)).toBe("Costs {amount, number}");
+    expect(i18n.t("items", values)).toBe("{count, plural, =0 {No items} one {# item} other {# items}}");
+    expect(i18n.t("place", values)).toBe("{n, selectordinal, one {#st} two {#nd} few {#rd} other {#th}}");
+    expect(i18n.t("greet", values)).toBe("{gender, select, female {She} male {He} other {They}} replied");
   });
 
   it("should format dates and times as Intl does", async () => {
@@ -263,7 +228,6 @@ describe("ICU messages", () => {
       await i18n.init();
 
       expect(i18n.t(key, { isAdmin })).toBe(text);
-      expect(i18n.rich(key, { isAdmin })).toEqual([text]);
     });
 
     it.each(["plain", "number", "plural"] as const)("should leave a boolean in %s as written", async (key) => {
@@ -432,7 +396,6 @@ describe("ICU messages", () => {
       await i18n.init();
 
       expect(i18n.t(key, values)).toBe(text);
-      expect(i18n.rich(key, values)).toEqual([text]);
     });
 
     it("should keep a long number repeated by # within 100 copies", async () => {
@@ -440,9 +403,7 @@ describe("ICU messages", () => {
       await i18n.init();
       const number = i18n.formatNumber(1e308);
 
-      const text = i18n.t("huge", { n: 1e308 });
-      expect(text).toBe(`${number.repeat(99)}${"#".repeat(99_970 - 99)}`);
-      expect(i18n.rich("huge", { n: 1e308 })).toEqual([text]);
+      expect(i18n.t("huge", { n: 1e308 })).toBe(`${number.repeat(99)}${"#".repeat(99_970 - 99)}`);
     });
   });
 
@@ -534,8 +495,8 @@ describe("ICU messages", () => {
   });
 });
 
-// Every identifier the message grammar reads: an argument's name in each form, a select key, a tag's name, and a
-// placeholder of invalid syntax.
+// Every identifier the message grammar reads: an argument's name in each form, a select key, and a placeholder of
+// invalid syntax.
 describe("names in a message", () => {
   const read = async (name: string) => {
     const dictionary = {
@@ -543,7 +504,6 @@ describe("names in a message", () => {
       number: `{${name}, number}`,
       plural: `{${name}, plural, one {# one} other {# more}}`,
       select: `{g, select, ${name} {chosen} other {other}}`,
-      tag: `<${name}>bold</${name}>`,
       invalid: `{${name}} {`,
     };
     const i18n = createI18n({ defaultLocale: "en", locales: ["en"], loadLocale: () => dictionary, isSilent: true });
@@ -553,7 +513,6 @@ describe("names in a message", () => {
       number: i18n.t("number", { [name]: 1234 }),
       plural: i18n.t("plural", { [name]: 1 }),
       select: i18n.t("select", { g: name }),
-      tag: i18n.rich("tag"),
       invalid: i18n.t("invalid", { [name]: "x" }),
     };
   };
@@ -572,7 +531,6 @@ describe("names in a message", () => {
       number: "1,234",
       plural: "1 one",
       select: "chosen",
-      tag: [{ tag: name, children: ["bold"] }],
       invalid: "x {",
     });
   });
@@ -587,44 +545,20 @@ describe("names in a message", () => {
 
     expect(result.plain).toBe(`{${name}}`);
     expect(result.select).toBe(`{g, select, ${name} {chosen} other {other}}`);
-    expect(result.tag).toEqual([`<${name}>bold</${name}>`]);
     expect(result.invalid).toBe(`{${name}} {`);
   });
 
   it.each(["año-nuevo", "help-link", "a-", "a--b"])(
-    "should take a hyphen after the first character in a select key and a tag, as in %s, and not in an argument's name",
+    "should take a hyphen after the first character in a select key, as in %s, and not in an argument's name",
     async (name) => {
       const result = await read(name);
 
       expect(result.select).toBe("chosen");
-      expect(result.tag).toEqual([{ tag: name, children: ["bold"] }]);
       expect(result.plain).toBe(`{${name}}`);
       expect(result.number).toBe(`{${name}, number}`);
       expect(result.invalid).toBe(`{${name}} {`);
     },
   );
-
-  it("should read a hyphenated tag in each of its forms", async () => {
-    const i18n = createI18n({
-      defaultLocale: "en",
-      locales: ["en"],
-      loadLocale: () => ({ m: "Read the <help-link>terms</help-link>.<line-break/>" }),
-    });
-    await i18n.init();
-
-    expect(i18n.rich("m")).toEqual([
-      "Read the ",
-      { tag: "help-link", children: ["terms"] },
-      ".",
-      { tag: "line-break", children: [] },
-    ]);
-  });
-
-  it("should not read a tag whose name starts with a hyphen", async () => {
-    const result = await read("-a");
-
-    expect(result.tag).toEqual(["<-a>bold</-a>"]);
-  });
 });
 
 describe("parseMessage", () => {
@@ -915,15 +849,8 @@ describe("parseCachedMessage", () => {
     expect(parseCachedMessage("Hello {name")).toBe("Expected , at character 12");
   });
 
-  it("should parse quoted text with doubled apostrophes into a quoted node of its own", () => {
-    expect(parseMessage("a '{b ''c'' d}' e")).toEqual([
-      { kind: "text", text: "a " },
-      { kind: "text", text: "{b 'c' d}", isQuoted: true },
-      { kind: "text", text: " e" },
-    ]);
-    expect(parseMessage("it''s '{open")).toEqual([
-      { kind: "text", text: "it's " },
-      { kind: "text", text: "{open", isQuoted: true },
-    ]);
+  it("should parse quoted text with doubled apostrophes as text", () => {
+    expect(parseMessage("a '{b ''c'' d}' e")).toEqual([{ kind: "text", text: "a {b 'c' d} e" }]);
+    expect(parseMessage("it''s '{open")).toEqual([{ kind: "text", text: "it's {open" }]);
   });
 });

@@ -14,24 +14,13 @@ const createManager = (dictionaries: Readonly<Record<"en" | "pt", Dictionary>>) 
     loadLocale: (locale) => dictionaries[locale],
   });
 
-// Each way a message is reported: invalid syntax through `t()`, `rich()`, and the browser binding's lookup, and tags
-// that don't balance through `rich()`.
+// Each way a message is reported: invalid syntax through `t()` and the browser binding's lookup.
 const reports = [
   { caller: "t()", text: "Hello {name", show: (i18n: ReturnType<typeof createManager>, key: string) => i18n.t(key) },
-  {
-    caller: "rich()",
-    text: "Hello {name",
-    show: (i18n: ReturnType<typeof createManager>, key: string) => i18n.rich(key),
-  },
   {
     caller: "the binding's lookup",
     text: "Hello {name",
     show: (i18n: ReturnType<typeof createManager>, key: string) => getI18nInternals(i18n).lookup(key),
-  },
-  {
-    caller: "rich() with unbalanced tags",
-    text: "Hello <b>{name}",
-    show: (i18n: ReturnType<typeof createManager>, key: string) => i18n.rich(key),
   },
 ];
 
@@ -77,29 +66,21 @@ describe("process-wide warning records", () => {
 
   const long = "x".repeat(50_000);
   it.each([
-    { reason: "Unknown argument type", text: `{a, ${long}}`, show: "t" },
-    { reason: "Unknown style", text: `{a, number, ${long}}`, show: "t" },
-    { reason: "Unknown plural form", text: `{n, plural, ${long} {a} other {b}}`, show: "t" },
+    { reason: "Unknown argument type", text: `{a, ${long}}` },
+    { reason: "Unknown style", text: `{a, number, ${long}}` },
+    { reason: "Unknown plural form", text: `{n, plural, ${long} {a} other {b}}` },
     // Two names of 50,000 would pass the 100,000-character limit on a translation.
     {
       reason: "Repeated option",
       text: `{v, select, ${long.slice(1_000)} {a} ${long.slice(1_000)} {b} other {c}}`,
-      show: "t",
     },
-    { reason: "an unclosed tag", text: `<${long}>`, show: "rich" },
-    { reason: "an unclosed tag in a form", text: `{n, plural, other {<${long}>}}`, show: "rich" },
-    { reason: "a stray closing tag", text: `</${long}>`, show: "rich" },
-  ] as const)("quotes and cuts the input a warning for $reason names", async ({ reason, text, show }) => {
+  ] as const)("quotes and cuts the input a warning for $reason names", async ({ reason, text }) => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
     const key = `long-name ${reason}`;
     const i18n = createManager({ en: { [key]: text }, pt: {} });
     await i18n.init();
 
-    if (show === "t") {
-      i18n.t(key, { n: 1, v: "x" });
-    } else {
-      i18n.rich(key, { n: 1 });
-    }
+    i18n.t(key, { n: 1, v: "x" });
 
     expect(warn).toHaveBeenCalledTimes(1);
     const warning = String(warn.mock.calls[0]?.[0]);
@@ -154,8 +135,7 @@ describe("the message check in the translations guide", () => {
         locale === "en"
           ? ({
               greeting: "Hello, {name}!",
-              terms: "Read the <link>terms</link>.",
-              items: "{count, plural, one {<b>#</b> item} other {<b>#</b> items}}",
+              items: "{count, plural, one {# item} other {# items}}",
             } as const)
           : pt,
     });
@@ -171,25 +151,23 @@ describe("the message check in the translations guide", () => {
       // oxlint-disable-next-line no-await-in-loop -- as above.
       for (const key of Object.keys(await i18n.loadLocale(locale))) {
         i18n.t(key as Parameters<typeof i18n.t>[0]);
-        i18n.rich(key as Parameters<typeof i18n.rich>[0]);
       }
     }
 
-    const invalid = warn.mock.calls.filter(([text]) => /^\[I18n\] Invalid (message|tags)/.test(String(text)));
+    const invalid = warn.mock.calls.filter(([text]) => String(text).startsWith("[I18n] Invalid message"));
     warn.mockRestore();
     return invalid;
   };
 
-  it("passes for valid messages and tags", async () => {
-    const pt = { greeting: "Olá, {name}!", terms: "Leia os <link>termos</link>." };
+  it("passes for valid messages", async () => {
+    const pt = { greeting: "Olá, {name}!" };
 
     expect(await checkEveryMessage(createChecked(pt))).toEqual([]);
   });
 
   it.each([
     { problem: "broken syntax", text: "Olá, {name", warning: "[I18n] Invalid message" },
-    { problem: "an unclosed tag", text: "Leia os <link>termos.", warning: "[I18n] Invalid tags" },
-    { problem: "a stray closing tag", text: "Leia os termos</link>.", warning: "[I18n] Invalid tags" },
+    { problem: "a stray closing brace", text: "Olá, name}", warning: "[I18n] Invalid message" },
   ])("fails on $problem", async ({ problem, text, warning }) => {
     // A key of its own, since the warning records outlive each row.
     const invalid = await checkEveryMessage(createChecked({ [`guide ${problem}`]: text }));
