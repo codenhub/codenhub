@@ -3,6 +3,9 @@ import { execute } from "../process/execute.ts";
 import type { WorkspacePackage } from "../workspace/discover.ts";
 import { SIZE_FILE } from "./size-report.ts";
 
+/** How many uncommitted paths the `worktree` block names before it only counts the rest. */
+const MAX_LISTED_CHANGES = 5;
+
 /** Whether one publish precondition is met. */
 export type ReadinessStatus = "ready" | "blocked" | "unknown";
 
@@ -159,13 +162,19 @@ async function checkWorkingTree(workspacePackage: WorkspacePackage, run: Release
     return { detail: "git could not report the working tree", name: "worktree", status: "unknown" };
   }
   const changed = result.stdout.split(/\r?\n/).filter((line) => line.trim() !== "");
-  return changed.length === 0
-    ? { detail: "no uncommitted changes", name: "worktree", status: "ready" }
-    : {
-        detail: `${changed.length} uncommitted change(s); the tarball would not match any commit`,
-        name: "worktree",
-        status: "blocked",
-      };
+  if (changed.length === 0) {
+    return { detail: "no uncommitted changes", name: "worktree", status: "ready" };
+  }
+  // Naming the paths lets a reader find a change that is gone by the time they
+  // look, such as a file another process wrote and then removed. A porcelain
+  // line is two status letters and a space before the repository-relative path.
+  const shown = changed.slice(0, MAX_LISTED_CHANGES).map((line) => line.slice(3));
+  const more = changed.length > shown.length ? `, and ${changed.length - shown.length} more` : "";
+  return {
+    detail: `${changed.length} uncommitted change(s) (${shown.join(", ")}${more}); the tarball would not match any commit`,
+    name: "worktree",
+    status: "blocked",
+  };
 }
 
 /** Lists the files npm would publish for a package. Injected by tests. */

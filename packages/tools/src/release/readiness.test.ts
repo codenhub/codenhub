@@ -160,7 +160,18 @@ describe("readPackageReadiness", () => {
     const check = await checkFor(createPackage(), { readPack: packed, run: runner }, "worktree");
 
     expect(check.status).toBe("blocked");
-    expect(check.detail).toContain("1 uncommitted change(s)");
+    expect(check.detail).toContain("1 uncommitted change(s) (packages/example/src/index.ts)");
+  });
+
+  it("names the first five uncommitted paths and counts the rest", async () => {
+    const lines = Array.from({ length: 7 }, (_, index) => `?? packages/example/new-${index}.ts`);
+    const runner = createRunner("1.1.0", lines.join("\n"));
+
+    const check = await checkFor(createPackage(), { readPack: packed, run: runner }, "worktree");
+
+    expect(check.detail).toContain("7 uncommitted change(s) (packages/example/new-0.ts,");
+    expect(check.detail).toContain("packages/example/new-4.ts, and 2 more)");
+    expect(check.detail).not.toContain("new-5.ts");
   });
 
   it("scopes the working-tree check to the package directory", async () => {
