@@ -338,31 +338,6 @@ describe("build", () => {
     },
   );
 
-  // A template that names no class wrote the theme and the reset alone, and said nothing.
-  it("warns when the content names no StyleKit class, and still builds", async () => {
-    await writeFile(path.join(project, "empty.html"), '<div id="root"></div>\n');
-
-    expect(await build("build", "-c", "empty.html", "-o", "app.css")).toBe(0);
-    expect(stderr).toEqual([
-      'chs: warning: --content "empty.html" names no StyleKit class, so the stylesheet holds only the theme and the reset; check that the globs name your templates.',
-    ]);
-    expect(stdout).toHaveLength(1);
-  });
-
-  // An aesthetic is added only on request, so a template naming its class got an unstyled element.
-  it("warns of an aesthetic class the content names without its --aesthetic", async () => {
-    await writeFile(path.join(project, "app", "views", "card.html.erb"), '<div class="card glass glass-liquid">\n');
-
-    expect(await build("build", "-c", "app/views/**/*.erb", "-o", "app.css")).toBe(0);
-    expect(stderr).toEqual([
-      'chs: warning: --content names "glass" and "glass-liquid", which only --aesthetic glass styles; add --aesthetic glass, or leave the class out.',
-    ]);
-
-    stderr = [];
-    expect(await build("build", "-c", "app/views/**/*.erb", "-o", "app.css", "--aesthetic", "glass")).toBe(0);
-    expect(stderr).toEqual([]);
-  });
-
   // A build killed before its rename leaves its temporary file, which held the last build's classes.
   it("does not read a temporary file a killed build left beside the output", async () => {
     await mkdir(path.join(project, "public"));

@@ -7,7 +7,7 @@ import { parseArgs } from "node:util";
 
 import { findFiles, readFiles, splitWords, UnmatchedEntryError } from "@codenhub/scan";
 
-import { classesOf, format, parse, purge, serialize } from "./purge";
+import { format, parse, purge, serialize } from "./purge";
 
 export interface CliIo {
   cwd: string;
@@ -235,9 +235,6 @@ async function build(options: BuildOptions, io: CliIo): Promise<string> {
   const contents = readContent(options.contentGlobs, io.cwd, target, options.output);
 
   const droppable = new Set(JSON.parse(await readPackageFile(PURGE_CLASSES)) as string[]);
-  const source = parse(await readPackageFile(PURGE_SOURCE));
-  const aesthetics = await readAesthetics(validAesthetics, classesOf(source));
-  const known = { has: (name: string) => droppable.has(name) || aesthetics.owners.has(name) };
   const shipped = await readShippedSizes();
   const found = new Set<string>();
 
@@ -247,7 +244,7 @@ async function build(options: BuildOptions, io: CliIo): Promise<string> {
     if (await isPackageCopy(content, droppable, shipped)) {
       continue;
     }
-    for (const name of findClasses(content, known)) {
+    for (const name of findClasses(content, droppable)) {
       found.add(name);
     }
   }
@@ -255,10 +252,10 @@ async function build(options: BuildOptions, io: CliIo): Promise<string> {
   const used = { has: (name: string) => found.has(name) || !droppable.has(name) };
 
   const write = options.shouldMinify ? serialize : format;
-  const css = [source, ...options.aesthetics.map((name) => aesthetics.trees.get(name) ?? [])]
-    .map((tree) => write(purge(tree, used)))
-    .join("");
-  const warnings = warningsFor(options, found, droppable, aesthetics.owners);
+  const stylesheets = await Promise.all(
+    [PURGE_SOURCE, ...options.aesthetics.map((name) => resolveExport(`./aesthetics/${name}`))].map(readPackageFile),
+  );
+  const css = stylesheets.map((stylesheet) => write(purge(parse(stylesheet), used))).join("");
 
   /* Written beside the output and renamed over it, so a write that fails
      partway, on a full disk say, leaves the previous stylesheet whole rather
@@ -288,85 +285,11 @@ async function build(options: BuildOptions, io: CliIo): Promise<string> {
   }
 
   // After the rename, so a build that fails prints its one line and no warning.
-  for (const line of warning === undefined ? warnings : [...warnings, warning]) {
-    io.stderr(line);
+  if (warning !== undefined) {
+    io.stderr(warning);
   }
 
   return output;
-}
-
-type Tree = ReturnType<typeof parse>;
-
-/* Each aesthetic's stylesheet, parsed, and the classes only it styles, by the
-   aesthetic they belong to: those its file names that the stylesheet does not,
-   under the aesthetic's name or a name that starts with it, such as
-   `glass-liquid` and `glass-solo`. An aesthetic's file names the others'
-   classes too, to leave them alone, so being named in it does not make a class
-   its own. Read from the build, so a new aesthetic or class needs no change
-   here. */
-async function readAesthetics(
-  names: readonly string[],
-  stylesheetClasses: ReadonlySet<string>,
-): Promise<{ trees: Map<string, Tree>; owners: Map<string, string> }> {
-  const trees = new Map<string, Tree>();
-  const owners = new Map<string, string>();
-  const files = await Promise.all(names.map((name) => readPackageFile(resolveExport(`./aesthetics/${name}`))));
-
-  for (const [index, name] of names.entries()) {
-    const tree = parse(files[index] ?? "");
-
-    trees.set(name, tree);
-    for (const className of classesOf(tree)) {
-      if (!stylesheetClasses.has(className) && (className === name || className.startsWith(`${name}-`))) {
-        owners.set(className, name);
-      }
-    }
-  }
-
-  return { trees, owners };
-}
-
-/* A build that finds no class still writes the theme and the reset, and exits
-   0, since a page may use the tokens and the reset alone; but a site whose
-   globs name the wrong files loses its styling that way, so it is said. An
-   aesthetic's class is styled only under its `--aesthetic`, which a template
-   cannot ask for, so a class named without it is said too, rather than taken
-   as the request. */
-function warningsFor(
-  options: BuildOptions,
-  found: ReadonlySet<string>,
-  droppable: ReadonlySet<string>,
-  owners: ReadonlyMap<string, string>,
-): string[] {
-  const warnings: string[] = [];
-
-  if (![...found].some((name) => droppable.has(name))) {
-    const entries = options.contentGlobs.map((entry) => `"${entry}"`).join(", ");
-
-    warnings.push(
-      `${BIN}: warning: --content ${entries} names no StyleKit class, so the stylesheet holds only the theme and the reset; check that the globs name your templates.`,
-    );
-  }
-
-  const unrequested = new Map<string, string[]>();
-
-  for (const name of [...found].sort()) {
-    const owner = owners.get(name);
-
-    if (owner !== undefined && !options.aesthetics.includes(owner)) {
-      unrequested.set(owner, [...(unrequested.get(owner) ?? []), name]);
-    }
-  }
-  for (const [aesthetic, names] of unrequested) {
-    const quoted = names.map((name) => `"${name}"`);
-    const listed = quoted.length === 1 ? quoted[0] : `${quoted.slice(0, -1).join(", ")} and ${quoted.at(-1)}`;
-
-    warnings.push(
-      `${BIN}: warning: --content names ${listed}, which only --aesthetic ${aesthetic} styles; add --aesthetic ${aesthetic}, or leave the class out.`,
-    );
-  }
-
-  return warnings;
 }
 
 /* The files this package ships under `dist/`, by size, so a content file is
