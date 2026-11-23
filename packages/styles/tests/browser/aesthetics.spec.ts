@@ -1190,6 +1190,120 @@ test.describe("aesthetics", () => {
         expect(readSrgb(read.ghost.ground).alpha, "a ghost button rests on liquid's ground").toBeCloseTo(0.3, 2);
       });
 
+      /* An alert is a line or two tall, and the pane's lens band is 8px of
+         erosion under a 10px blur from each edge: on a one-line alert the two
+         sides' ramps met in the middle and bent the backdrop behind the text.
+         It takes the control's lens, in a liquid region, as a liquid surface,
+         and as a solo pane, and a card keeps the pane's. */
+      test("gives an alert the control's lens", async ({ page, browserName }) => {
+        await allowTransparency(page, browserName);
+        await page.goto(withAesthetic(SURFACES_URL, "glass"));
+
+        const read = await page.getByTestId("preview-root").evaluate((root) => {
+          const region = document.createElement("div");
+
+          region.innerHTML =
+            '<div class="glass-liquid"><div class="alert" data-probe="region">Region</div>' +
+            '<div class="card" data-probe="card">Card</div>' +
+            '<button class="btn ghost glass-liquid" data-probe="button">Button</button></div>' +
+            '<div class="alert glass-liquid" data-probe="one">One</div>' +
+            '<div class="alert glass-solo glass-liquid" data-probe="solo">Solo</div>';
+          root.append(region);
+
+          const lens = (probe: string) =>
+            getComputedStyle(region.querySelector(`[data-probe="${probe}"]`)!, "::after").backdropFilter;
+          const result = Object.fromEntries(
+            ["region", "card", "button", "one", "solo"].map((probe) => [probe, lens(probe)]),
+          );
+
+          region.remove();
+
+          return result;
+        });
+
+        expect(read.button, "the control's lens").toContain("#lens");
+        expect(read.card, "a card keeps the pane's lens").not.toBe(read.button);
+        for (const probe of ["region", "one", "solo"] as const) {
+          expect(read[probe], `${probe} alert`).toBe(read.button);
+        }
+      });
+
+      /* The pixels behind a one-line alert's text, with the lens and without.
+         Chromium is the engine that draws the lens; the pane's lens moved 55% of
+         them on a 40px box, the control's none. */
+      test("keeps the backdrop straight behind a one-line alert's text", async ({ page, browserName }) => {
+        test.skip(browserName !== "chromium", "only Chromium draws an SVG filter in backdrop-filter");
+        await allowTransparency(page, browserName);
+        await page.goto(SURFACES_URL);
+
+        await page.waitForSelector('[data-testid="preview-root"]');
+        /* On the body, alone: the playground's own boxes would be the backdrop. */
+        const box = await page.evaluate(() => {
+          const stage = document.createElement("div");
+
+          document.body.replaceChildren(stage);
+          stage.id = "lens-stage";
+          stage.className = "glass glass-liquid";
+          stage.style.cssText =
+            "position:fixed;inset:0;z-index:9;padding:16px;background:repeating-conic-gradient(#000 0 25%,#fff 0 50%) 0 0/20px 20px";
+          stage.innerHTML = '<div class="alert" style="width:240px;color:transparent">One line</div>';
+
+          return stage.firstElementChild!.getBoundingClientRect().toJSON() as DOMRect;
+        });
+        const clip = { x: box.x, y: box.y, width: box.width, height: box.height };
+
+        await settleAnimations(page);
+        const bent = await page.screenshot({ clip, scale: "css" });
+
+        await page.locator("#lens-stage > .alert").evaluate((alert: HTMLElement) => {
+          alert.style.setProperty("--_glass-liquid-lens", "none");
+          alert.style.setProperty("--_glass-liquid-lens-control", "none");
+        });
+        await settleAnimations(page);
+        const straight = await page.screenshot({ clip, scale: "css" });
+
+        const moved = await page.evaluate(
+          async ([a, b]) => {
+            const decode = async (source: string) => {
+              const image = new Image();
+
+              image.src = `data:image/png;base64,${source}`;
+              await image.decode();
+              const canvas = document.createElement("canvas");
+
+              canvas.width = image.width;
+              canvas.height = image.height;
+              const context = canvas.getContext("2d")!;
+
+              context.drawImage(image, 0, 0);
+
+              return context.getImageData(0, 0, image.width, image.height);
+            };
+            const [x, y] = [await decode(a), await decode(b)];
+            const middle = Math.floor(x.height / 2);
+            let changed = 0;
+            let total = 0;
+
+            for (let row = middle - 4; row < middle + 4; row += 1) {
+              for (let column = Math.floor(x.width / 4); column < Math.floor((3 * x.width) / 4); column += 1) {
+                const i = (row * x.width + column) * 4;
+
+                total += 1;
+                if (Math.max(...[0, 1, 2].map((c) => Math.abs(x.data[i + c]! - y.data[i + c]!))) > 24) {
+                  changed += 1;
+                }
+              }
+            }
+
+            return changed / total;
+          },
+          [bent.toString("base64"), straight.toString("base64")] as const,
+        );
+
+        expect(box.height, "a one-line alert").toBeLessThan(70);
+        expect(moved, "share of the backdrop the lens moves behind the text").toBeLessThan(0.05);
+      });
+
       /* Surfaces and the listed hosts take the layers, so anything else that
          frosts under glass -- a bare `<table>` under `/native` -- takes none.
          It keeps a blur of its own instead: with the backdrop cleared on the

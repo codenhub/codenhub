@@ -2,7 +2,7 @@
 title: URLs localizadas
 description: Coloque o locale no caminho, traduza o próprio caminho, leia os dois de volta, crie links para outros idiomas, gere todas as páginas localizadas e mande os visitantes para o idioma deles num site estático.
 order: 4
-source: ad1604729ae57a82be2c504473c22b1663b73e75
+source: 5f0e503e14d61f5148c6bba2a83d6e3e1126ff28
 ---
 
 # URLs localizadas
@@ -148,7 +148,11 @@ routing.localize("/about", "pt"); // "/pt/about"
 routing.localize("/about", "en"); // "/about"
 ```
 
-Um caminho canônico nunca começa com um locale, então `localize()` lança um `RangeError` para um que comece, como `/pt/about`. Isso é uma URL; passe `parse("/pt/about").pathname` em vez dele. Ele também lança para uma página sua cujo caminho começa com o código de um locale: com birmanês, `my`, configurado, uma página em inglês em `/my/orders` não tem URL, já que `/my/orders` é o `/orders` em birmanês. Dê outro caminho a essa página.
+Um caminho que já começa com um locale é lido como a URL desse locale, então o prefixo é substituído:
+
+```ts
+routing.localize("/pt/about", "en"); // "/about"
+```
 
 Num site localizado, trocar de idioma é uma navegação, e não só um `setLocale()`: `setLocale()` muda o texto, mas nunca a URL. Então o seletor de idioma da loja lê a página atual com `parse()`, pega o caminho dela no novo idioma em `alternates`, mantém a query string e o fragmento e deixa o seu router ir até lá:
 
@@ -294,10 +298,8 @@ routing.localize("/blog", "pt"); // "/pt/blog"
 O prefixo fica onde o caminho sozinho não consegue dizer em que idioma está:
 
 - **Caminhos com as mesmas palavras em dois idiomas.** `/` e `/blog` também existem em inglês, então o português mantém `/pt` e `/pt/blog`. Dois idiomas que traduzem para as mesmas palavras, como `/contato` em português e em espanhol, também mantêm o prefixo.
-- **Caminhos que um parâmetro do idioma padrão poderia pegar.** Se o inglês lista `/:slug`, todo caminho de um segmento poderia ser uma página em inglês, então `/sobre` mantém o prefixo.
+- **Caminhos que o parâmetro de outro idioma poderia pegar.** Se o espanhol lista `/:tag`, todo caminho de um segmento poderia ser uma tag em espanhol, então `/sobre` mantém o prefixo.
 - **Caminhos feitos só de parâmetros**, como `/:tag`, que poderiam ser qualquer coisa.
-
-Só contam os caminhos lidos sem prefixo. Um `/:tag` em espanhol mantém o prefixo, então só pega caminhos que começam com `/es`, e o `/sobre` em português continua sem o seu.
 
 Nesse modo, o locale padrão nunca tem prefixo. `parse()` continua aceitando `/pt/sobre`, então redirecione-o como em [Redirecione para a URL canônica](#redirecione-para-a-url-canônica).
 
@@ -444,7 +446,7 @@ Esta é a parte chata da página. Também é a parte que decide se uma URL forja
 - **Um escape malformado**, um `%` que não é seguido por dois dígitos hexadecimais, como em `/50%off`. Escreva `%25` para um `%` literal… que também é recusado, pela regra anterior, então tire o `%` do caminho.
 - **Mais de 8.192 caracteres ou 100 segmentos**, ou um caminho cujo caminho canônico teria mais do que isso, como pode acontecer com um caminho traduzido curto quando a entrada dele na tabela é longa. Servidores e proxies cortam as URLs por volta desse tamanho de qualquer jeito, e nenhuma página fica 100 pastas abaixo; um pedido com milhares de segmentos de uma letra custaria trabalho em cada locale.
 
-Uma requisição pode trazer qualquer um desses, como um scanner pedindo `//wp-login.php`, então `parse()` devolve `undefined` para eles, e o mesmo 404 os responde como a qualquer outro caminho que não é página. `localize()` e `localizeAll()` montam links a partir dos seus próprios caminhos, em vez de ler requisições, então, para os mesmos caminhos, eles lançam um `TypeError` que cita o caminho e diz a regra, como `TypeError: [I18n] pathname "/help/../admin" must not contain a dot segment, . or ..`, e você corrige o caminho no seu código. Um caminho que uma URL lê como o início de outro host não é citado, como explicado abaixo.
+Uma requisição pode trazer qualquer um desses, como um scanner pedindo `//wp-login.php`, então `parse()` devolve `undefined` para eles, e o mesmo 404 os responde como a qualquer outro caminho que não é página. `localize()` e `localizeAll()` montam links a partir dos seus próprios caminhos, em vez de ler requisições, então, para os mesmos caminhos, eles lançam um `TypeError` que cita o caminho e diz a regra, como `TypeError: [I18n] pathname "/help/../admin" must not contain a dot segment, . or ..`, e você corrige o caminho no seu código.
 
 Todo método, `parse()` incluído, lança um `TypeError` para um valor que nem é o pathname de uma URL:
 
@@ -454,7 +456,7 @@ Todo método, `parse()` incluído, lança um `TypeError` para um valor que nem �
 
 Isso é um erro no código que chama, e não uma requisição a responder, então ele falha alto em vez de responder 404 a toda URL com query.
 
-Nenhum erro de roteamento cita o que uma URL lê como informações de usuário, query ou fragmento, que podem conter uma credencial. Um caminho com `?` ou `#` é citado só até esse caractere, e um que uma URL lê como o início de outro host não é citado: um que começa com `//` ou `/\`, como uma URL relativa ao protocolo, mesmo com um tab ou uma quebra de linha entre os dois, já que uma URL lê `\` como `/` e ignora tabs e quebras de linha. O erro dele diz `TypeError: [I18n] pathname must not start with // or /\, which a URL reads as the start of its host, even with a tab or line break between; pass url.pathname`.
+Nenhum erro de roteamento cita uma query ou um fragmento, que podem conter um token: um caminho com `?` ou `#` é citado só até esse caractere. Um valor que não começa com `/`, como uma URL completa, cujas informações de usuário podem conter uma credencial, não é citado.
 
 Escapes comuns, como `%20` e `%C3%A7`, não têm problema, e uma barra final é mantida: `/pt/sobre/` vira `/about/` no parse.
 

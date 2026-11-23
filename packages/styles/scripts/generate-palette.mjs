@@ -50,12 +50,10 @@ const GROUNDS = [
   { suffix: "subtle", component: "kbd" },
 ];
 const BASE_COMPONENT = GROUNDS[0].component;
-/* Each value is read once per scheme and written as one `light-dark()` pair,
-   so it follows `color-scheme` as the package's own tokens do -- the doc's
-   "Dark mode" section. */
+/* Each value is read once per scheme and written in a light and a dark block,
+   under the selectors `theme.css` sets `color-scheme` with -- the doc's "Dark
+   mode" section. */
 const THEMES = ["light", "dark"];
-/* The repository's `oxfmt` print width, in `.oxfmtrc.json`. */
-const PRINT_WIDTH = 120;
 /* The three flat neutral tokens (`docs/internal/generated-palette.md`, "Flat
    neutral values"): no intent, no presentation, no ground, no hover -- so each
    is one flat probe reading straight off its `theme.css` token, not a
@@ -259,39 +257,7 @@ function toDeclarations(values) {
     lines.push(`--palette-${key}: ${values[`neutral-${key}`][channel]};`);
   }
 
-  return lines;
-}
-
-/**
- * Pairs the light and dark declarations, in their shared order, into one
- * `light-dark()` value each, or the value alone where both schemes agree.
- * @param light The declarations read in the light scheme.
- * @param dark The same declarations read in the dark scheme.
- */
-function pairDeclarations(light, dark) {
-  return light
-    .map((line, index) => {
-      const [name, lightValue] = line.slice(0, -1).split(": ");
-      const [darkName, darkValue] = dark[index].slice(0, -1).split(": ");
-
-      if (darkName !== name) {
-        throw new Error(`The two schemes disagree on the declaration order: ${name} and ${darkName}.`);
-      }
-
-      if (lightValue === darkValue) {
-        return `  ${name}: ${lightValue};`;
-      }
-
-      const paired = `  ${name}: light-dark(${lightValue}, ${darkValue});`;
-
-      /* Wrapped as the formatter wraps it, so the file the drift check
-         compares is the one `oxfmt` leaves: a line past the print width,
-         once `indent()` nests it, takes one argument per line. */
-      return paired.length + 2 <= PRINT_WIDTH
-        ? paired
-        : `  ${name}: light-dark(\n    ${lightValue},\n    ${darkValue}\n  );`;
-    })
-    .join("\n");
+  return lines.map((line) => `  ${line}`).join("\n");
 }
 
 /** Indents a block one level, for declarations nested inside `@layer theme`. */
@@ -351,16 +317,46 @@ async function main() {
         "   `docs/internal/generated-palette.md` for what this is and why it exists.",
         "",
         "   Tokens, so they sit in `theme` with the rest, behind the package's layer",
-        "   order -- see `src/theme.css` and docs/internal/model.md#cascade-layers.",
-        "",
-        "   Each value is a `light-dark()` pair, resolved where it is used against",
-        "   that element's `color-scheme`, so it follows the system and every theme",
-        "   selector the way the package's own tokens do. */",
+        "   order -- see `src/theme.css` and docs/internal/model.md#cascade-layers. */",
         "@layer theme, base, components, utilities;",
         "",
         "@layer theme {",
-        "  :root {",
-        indent(pairDeclarations(toDeclarations(light), toDeclarations(dark))),
+        /* The light values answer the explicit light selectors too, so a light
+           subtree nested inside a dark one reads them, as the package's own
+           tokens do. */
+        "  :root,",
+        "  .theme-light,",
+        '  [data-theme="light"] {',
+        indent(toDeclarations(light)),
+        "  }",
+        "",
+        /* The system's dark setting, on a root no light selector forces light:
+           `theme.css`'s `color-scheme: light dark` renders the package dark
+           there, so the palette reads dark too. */
+        "  @media (prefers-color-scheme: dark) {",
+        '    :root:not(.theme-light, [data-theme="light"]) {',
+        indent(indent(toDeclarations(dark))),
+        "    }",
+        "  }",
+        "",
+        /* Last, so dark still wins on an element carrying both, as
+           `color-scheme` does in `theme.css`. */
+        "  :root.dark,",
+        "  .theme-dark,",
+        '  [data-theme="dark"] {',
+        indent(toDeclarations(dark)),
+        "  }",
+        "",
+        /* Print is light, as `theme.css`'s print rule makes the package's own
+           tokens: every selector that reads dark reads light again on paper.
+           Last, so it wins over the dark blocks at equal specificity. */
+        "  @media print {",
+        '    :root:not(.theme-light, [data-theme="light"]),',
+        "    :root.dark,",
+        "    .theme-dark,",
+        '    [data-theme="dark"] {',
+        indent(indent(toDeclarations(light))),
+        "    }",
         "  }",
         "}",
         "",

@@ -12,7 +12,7 @@ The "Public profile" switch on the settings screen deserves a short explanation:
 
 ```html
 <div class="cluster tight">
-  <label class="choice">
+  <label class="cluster tight">
     <input class="switch primary" type="checkbox" role="switch" name="public-profile" />
     Public profile
   </label>

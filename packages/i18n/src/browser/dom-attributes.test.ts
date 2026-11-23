@@ -143,23 +143,17 @@ describe("initializeBrowserI18n attribute translation", () => {
     binding.disconnect();
   });
 
-  it("skips customized built-in elements created from script, which have no is attribute", async () => {
+  it("translates a customized built-in created from script, which has no is attribute, as 0.4.0 does", async () => {
     class ScriptButton extends HTMLButtonElement {}
-    class ScriptList extends HTMLUListElement {}
     customElements.define("script-button", ScriptButton, { extends: "button" });
-    customElements.define("script-list", ScriptList, { extends: "ul" });
     const created = document.createElement("button", { is: "script-button" });
     created.setAttribute("data-i18n", "greeting");
     created.textContent = "Own";
-    const constructed = new ScriptList();
-    constructed.innerHTML = '<li data-i18n="greeting">Item</li>';
-    document.body.append(created, constructed);
-    expect(created.hasAttribute("is")).toBe(false);
+    document.body.append(created);
 
     const binding = await initializeBrowserI18n({ i18n: createManager(), locale: "fr", root: document.body });
 
-    expect(created.textContent).toBe("Own");
-    expect(constructed.querySelector("li")?.textContent).toBe("Item");
+    expect(created.textContent).toBe("Bonjour");
     binding.disconnect();
   });
 
@@ -637,33 +631,13 @@ describe("initializeBrowserI18n style sheet titles", () => {
   it.each([
     ["style", null],
     ["link", "stylesheet"],
-    ["link", "Alternate StyleSheet"],
-  ])("does not translate the title of <%s rel=%s>, which names a style sheet set", async (name, rel) => {
-    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    ["link", "alternate"],
+  ])("translates the title of <%s rel=%s>, as 0.4.0 does", async (name, rel) => {
     const element = document.createElement(name);
     if (rel !== null) {
       element.setAttribute("rel", rel);
     }
     element.setAttribute("title", "Default");
-    element.setAttribute("data-i18n-title", "greeting");
-    document.head.append(element);
-
-    const binding = await initializeBrowserI18n({
-      i18n: createManager(),
-      locale: "fr",
-      root: document.documentElement,
-    });
-
-    expect(element.getAttribute("title")).toBe("Default");
-    expect(String(warn.mock.calls[0]?.[1])).toContain("names a style sheet set");
-    binding.disconnect();
-    element.remove();
-  });
-
-  it("translates the title of a link that is not a style sheet, such as a feed", async () => {
-    const element = document.createElement("link");
-    element.setAttribute("rel", "alternate");
-    element.setAttribute("title", "Feed");
     element.setAttribute("data-i18n-title", "greeting");
     document.head.append(element);
 

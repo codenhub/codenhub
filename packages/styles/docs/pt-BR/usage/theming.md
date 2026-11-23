@@ -2,7 +2,7 @@
 title: Temas
 description: Modo claro e escuro, como trocar a paleta pelas cores da marca, como definir uma intenção própria, e cada token de cor, de intenção, fundamental e de fonte com o seu padrão.
 order: 5
-source: 059c7efb0eda78e0564d17ec30ccb0a225d7aad8
+source: cca47722960fe81a21aa51a5a76474d63232fa8d
 ---
 
 # Temas
@@ -49,6 +49,8 @@ Toda cor de componente vem de um token ou de `currentColor`, então os component
 ### Impressão
 
 Uma página é impressa no tema claro, seja qual for o tema que ela mostra na tela. Dentro de `@media print`, a raiz e todo seletor escuro definem `color-scheme: light`, então todo token é resolvido para o seu valor claro, inclusive o de uma barra lateral forçada para o escuro. O papel é claro, e texto escuro sobre ele gasta menos tinta do que uma página escura impressa.
+
+A regra da raiz é `!important`, então ela também vence um `color-scheme` que você mesmo define no `<html>`: inline, como o `@codenhub/theme` o escreve, no seu próprio CSS fora de camadas ou com o `scheme-dark` do Tailwind. Um `color-scheme` que você define num elemento dentro da página fica por sua conta redefinir para a impressão, por exemplo com `print:scheme-light` ao lado de um utilitário `scheme-dark`. Um `style="color-scheme: dark"` inline vence esse utilitário, então redefina-o com uma regra `@media print` sua que defina `color-scheme: light !important`.
 
 Componentes preenchidos imprimem o seu fundo. Por padrão, o navegador tira os fundos de uma página impressa, o que deixa o texto de contraste de um botão sólido sobre o nada, então todo componente define `print-color-adjust: exact`. A propriedade é herdada, de modo que o conteúdo de um componente também mantém as suas cores.
 

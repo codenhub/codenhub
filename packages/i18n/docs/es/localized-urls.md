@@ -2,7 +2,7 @@
 title: URLs localizadas
 description: Pon el locale en la ruta, traduce la propia ruta, lee ambas de vuelta, enlaza a otros idiomas, genera cada página localizada y lleva a cada visitante a su propio idioma en un sitio estático.
 order: 4
-source: ad1604729ae57a82be2c504473c22b1663b73e75
+source: 5f0e503e14d61f5148c6bba2a83d6e3e1126ff28
 ---
 
 # URLs localizadas
@@ -148,7 +148,11 @@ routing.localize("/about", "pt"); // "/pt/about"
 routing.localize("/about", "en"); // "/about"
 ```
 
-Una ruta canónica nunca empieza con un locale, así que `localize()` lanza un `RangeError` para una que sí, como `/pt/about`. Eso es una URL; pasa `parse("/pt/about").pathname` en su lugar. También lanza para una página tuya cuya ruta empieza con un código de locale: con el birmano, `my`, configurado, una página en inglés en `/my/orders` no tiene URL, porque `/my/orders` es el `/orders` birmano. Dale otra ruta a esa página.
+Una ruta que ya empieza con un locale se lee como la URL de ese locale, así que el prefijo se reemplaza:
+
+```ts
+routing.localize("/pt/about", "en"); // "/about"
+```
 
 En un sitio localizado, cambiar de idioma es una navegación, no solo un `setLocale()`: `setLocale()` cambia el texto, pero nunca la URL. Así que el selector de idioma de la tienda lee la página actual con `parse()`, toma su ruta en el nuevo idioma de `alternates`, conserva el query string y el fragmento, y deja que tu router vaya ahí:
 
@@ -294,10 +298,8 @@ routing.localize("/blog", "pt"); // "/pt/blog"
 El prefijo se queda dondequiera que la ruta por sí sola no puede decir en qué idioma está:
 
 - **Rutas con las mismas palabras en dos idiomas.** `/` y `/blog` también existen en inglés, así que el portugués conserva `/pt` y `/pt/blog`. Dos idiomas que traducen a las mismas palabras, como `/contato` tanto en portugués como en español, también conservan el prefijo.
-- **Rutas con las que podría coincidir un parámetro del idioma por defecto.** Si el inglés tiene `/:slug`, cualquier ruta de un segmento podría ser una página en inglés, así que `/sobre` conserva su prefijo.
+- **Rutas con las que podría coincidir un parámetro de otro idioma.** Si el español tiene `/:tag`, cualquier ruta de un segmento podría ser una etiqueta en español, así que `/sobre` conserva su prefijo.
 - **Rutas hechas solo de parámetros**, como `/:tag`, que podrían ser cualquier cosa.
-
-Solo cuentan las rutas que se leen sin prefijo. Un `/:tag` en español conserva su prefijo, así que solo coincide con rutas que empiezan con `/es`, y el `/sobre` en portugués sigue quitando el suyo.
 
 En este modo, el locale por defecto nunca tiene prefijo. `parse()` sigue aceptando `/pt/sobre`, así que redirígela como en [Redirige a la URL canónica](#redirige-a-la-url-canónica).
 
@@ -444,7 +446,7 @@ Esta es la parte aburrida de la página. También es la parte que decide si una 
 - **Un escape mal formado**, un `%` que no va seguido de dos dígitos hexadecimales, como en `/50%off`. Escribe `%25` para un `%` literal… que también se rechaza, según la regla anterior, así que saca el `%` de la ruta.
 - **Más de 8192 caracteres o 100 segmentos**, o una ruta cuya ruta canónica sería más larga que eso, como puede pasar con una ruta traducida corta cuando su entrada en la tabla es larga. De todos modos, los servidores y los proxies cortan las URLs alrededor de esa longitud, y ninguna página está 100 carpetas abajo; una petición de miles de segmentos de una letra costaría trabajo en cada locale.
 
-Una solicitud puede traer cualquiera de estas, como un escáner que pide `//wp-login.php`, así que `parse()` devuelve `undefined` para ellas, y el mismo 404 las responde como a cualquier otra ruta que no es una página. `localize()` y `localizeAll()` construyen enlaces a partir de tus propias rutas en lugar de leer solicitudes, así que con esas mismas rutas lanzan un `TypeError` que cita la ruta y nombra la regla, como `TypeError: [I18n] pathname "/help/../admin" must not contain a dot segment, . or ..`, y corriges la ruta en tu código. Una ruta que una URL lee como el inicio de otro host no se cita, como se explica más abajo.
+Una solicitud puede traer cualquiera de estas, como un escáner que pide `//wp-login.php`, así que `parse()` devuelve `undefined` para ellas, y el mismo 404 las responde como a cualquier otra ruta que no es una página. `localize()` y `localizeAll()` construyen enlaces a partir de tus propias rutas en lugar de leer solicitudes, así que con esas mismas rutas lanzan un `TypeError` que cita la ruta y nombra la regla, como `TypeError: [I18n] pathname "/help/../admin" must not contain a dot segment, . or ..`, y corriges la ruta en tu código.
 
 Todos los métodos, `parse()` incluido, lanzan un `TypeError` para un valor que ni siquiera es el pathname de una URL:
 
@@ -454,7 +456,7 @@ Todos los métodos, `parse()` incluido, lanzan un `TypeError` para un valor que 
 
 Eso es un error del código que llama, no una solicitud que haya que responder, así que falla de forma ruidosa en lugar de responder 404 a cada URL con query string.
 
-Ningún error de routing cita lo que una URL lee como información de usuario, query o fragmento, que pueden contener una credencial. Una ruta con `?` o `#` se cita solo hasta ese carácter, y una que una URL lee como el inicio de otro host no se cita en absoluto: una que empieza con `//` o `/\`, como una URL relativa al protocolo, aunque haya un tabulador o un salto de línea entre los dos, ya que una URL lee `\` como `/` y omite tabuladores y saltos de línea. Su error dice `TypeError: [I18n] pathname must not start with // or /\, which a URL reads as the start of its host, even with a tab or line break between; pass url.pathname`.
+Ningún error de routing cita una query o un fragmento, que pueden contener un token: una ruta con `?` o `#` se cita solo hasta ese carácter. Un valor que no empieza con `/`, como una URL completa, cuya información de usuario puede contener una credencial, no se cita en absoluto.
 
 Los escapes normales, como `%20` y `%C3%A7`, no son problema, y una barra final se conserva: `/pt/sobre/` se parsea como `/about/`.
 

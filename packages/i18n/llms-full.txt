@@ -19,8 +19,8 @@ pnpm add @codenhub/i18n
 import { createI18n } from "@codenhub/i18n";
 
 const dictionaries = {
-  en: { home: { title: "Welcome", greeting: "Hello, {name}!" }, cart: { items: { one: "{count} item", other: "{count} items" } } },
-  pt: { home: { title: "Bem-vindo", greeting: "Olá, {name}!" }, cart: { items: { one: "{count} item", other: "{count} itens" } } },
+  en: { home: { title: "Welcome", greeting: "Hello, {name}!" }, cart: { items: { one: "{count, number} item", other: "{count, number} items" } } },
+  pt: { home: { title: "Bem-vindo", greeting: "Olá, {name}!" }, cart: { items: { one: "{count, number} item", other: "{count, number} itens" } } },
 } as const;
 
 export const i18n = createI18n({
@@ -72,7 +72,7 @@ In a Web Worker, the root entry point and `@codenhub/i18n/routing` work as anywh
 ## Notes
 
 - On a server or in a static build, create one manager per request or page, not a shared one. A shared manager is how one visitor ends up reading another visitor's language.
-- The package does not render HTML from translations: text always comes back as text. For a link or bold text inside a sentence, `rich()` returns the text and its tags as data for your code to render; see [Links and bold text inside a sentence](docs/translations.md#links-and-bold-text-inside-a-sentence).
+- The package does not render HTML from translations: text always comes back as text.
 - ICU messages cover `number`, `date`, `time`, `plural`, `selectordinal`, and `select`, without number skeletons or styles such as `{n, number, currency}`, which are shown as written with a warning. Format such a value with `formatNumber()` and pass the result in.
 
 ## License
@@ -522,19 +522,19 @@ Write `{name}` where a value goes, and pass the value to `t()`:
 ```
 
 ```ts
-t("order.confirmed", { name: "Ana", orderId: "1042" });
+t("order.confirmed", { name: "Ana", orderId: 1042 });
 // "Thanks, Ana. Order 1042 ships tomorrow."
 ```
 
-Values can be strings, numbers, bigints, or dates, and a `select` also takes a boolean. A bigint goes wherever a number does, and is formatted without losing digits. Placeholder names use letters and digits in any script, and `_`, such as `{firstName}`, `{first_name}`, or `{año}`. A name with anything else, such as `{first-name}` or `{price€}`, is not a placeholder: the message is invalid syntax, logs a warning, and shows `{first-name}` as written.
+Values can be strings, numbers, or dates, and a `select` also takes a boolean. Placeholder names use letters and digits in any script, and `_`, such as `{firstName}`, `{first_name}`, or `{año}`. A name with anything else, such as `{first-name}` or `{price€}`, is not a placeholder: the message is invalid syntax, logs a warning, and shows `{first-name}` as written.
 
-Use placeholders instead of joining fragments. `t("before") + name + t("after")` locks every language into English word order, while a whole sentence with a placeholder lets each translation put the value where it belongs. Word order is the first thing every translator wants to change, and they are usually right. For a link or bold text inside the sentence, see [Links and bold text inside a sentence](#links-and-bold-text-inside-a-sentence).
+Use placeholders instead of joining fragments. `t("before") + name + t("after")` locks every language into English word order, while a whole sentence with a placeholder lets each translation put the value where it belongs. Word order is the first thing every translator wants to change, and they are usually right.
 
 A few details:
 
 - A placeholder with no matching value stays as written, so a missing value shows up as `{name}` on screen rather than disappearing.
 - One `t()` call fills at most 100 arguments, counting those inside plural and select forms and each `#`, and leaves the rest as written, a `#` as `#`. A UI sentence never gets close; the limit keeps a huge fetched message from costing one formatting step per placeholder, or from repeating a long number thousands of times.
-- A number in a plain `{name}` is formatted for the reader, as `{name, number}` does: `1234.5` reads "1,234.5" in English and "1.234,5" in Portuguese. Write `{name, number, integer}` or another style, as the next section shows, to format it differently.
+- Numbers in a plain `{name}` are inserted as JavaScript writes them: `1234.5`. Write `{name, number}` to format them for the reader, as the next section shows.
 - Braces and apostrophes are message syntax, so text that shows them literally needs quoting; see [Literal braces and apostrophes](#literal-braces-and-apostrophes).
 
 ### Format numbers and dates in the text
@@ -559,14 +559,14 @@ t("cart.discount", { rate: 0.15 }); // "15% off"
 t("order.shipped", { date: new Date() });
 ```
 
-| Argument                | Styles                                                             | Value                              |
-| ----------------------- | ------------------------------------------------------------------ | ---------------------------------- |
-| `{n, number}`           | none, `integer`, `percent`                                         | number or bigint                   |
-| `{d, date}`             | `short`, `medium` (the default), `long`, `full`                    | `Date` or a timestamp              |
-| `{d, time}`             | `short`, `medium` (the default), `long`, `full`                    | `Date` or a timestamp              |
-| `{n, plural, …}`        | see [Plurals](#plurals)                                            | number or bigint                   |
-| `{n, selectordinal, …}` | ordinal forms, such as `one {#st} two {#nd} few {#rd} other {#th}` | number or bigint                   |
-| `{v, select, …}`        | any words, plus `other`                                            | string, number, bigint, or boolean |
+| Argument                | Styles                                                             | Value                      |
+| ----------------------- | ------------------------------------------------------------------ | -------------------------- |
+| `{n, number}`           | none, `integer`, `percent`                                         | number                     |
+| `{d, date}`             | `short`, `medium` (the default), `long`, `full`                    | `Date` or a timestamp      |
+| `{d, time}`             | `short`, `medium` (the default), `long`, `full`                    | `Date` or a timestamp      |
+| `{n, plural, …}`        | see [Plurals](#plurals)                                            | number                     |
+| `{n, selectordinal, …}` | ordinal forms, such as `one {#st} two {#nd} few {#rd} other {#th}` | number                     |
+| `{v, select, …}`        | any words, plus `other`                                            | string, number, or boolean |
 
 Formatting uses the language of the dictionary the text came from, so English text that fills in for a missing Portuguese key is written the English way. An argument whose value has the wrong type, such as a string for `{n, number}`, stays as written.
 
@@ -629,50 +629,6 @@ Quoted text is text to the types too: in `'{it''s {x}'`, which shows `{it's {x}`
 
 Text that is not valid syntax, such as an unclosed `{` or a stray `}`, logs a warning, unless the manager is silent, and is shown with only its `{name}` placeholders filled. The warning names the key and the locale, and comes once for each key, text, and locale among the roughly 1,000 most recent, so an edited text warns again. [Find untranslated keys](#find-untranslated-keys) shows a test that checks every message's syntax.
 
-### Links and bold text inside a sentence
-
-A sentence with a link in the middle is still one sentence. Splitting it into `t("before")`, a link, and `t("after")` locks the word order, as joining fragments does. Mark the part with a tag and call `rich()`, which returns the text and its tags as data for your framework to render:
-
-```json
-{ "signup": { "terms": "By signing up you accept the <terms>terms of use</terms>." } }
-```
-
-```ts
-i18n.rich("signup.terms");
-// ["By signing up you accept the ", { tag: "terms", children: ["terms of use"] }, "."]
-```
-
-A tag is `<name>…</name>`, or `<name/>` for one with no content, such as a line break. Names use letters and digits in any script, `_`, and `-` after the first character, such as `<help-link>`. A tag names what the part is, and your code decides how it renders, so a translation can't add a link, a script, or markup your code doesn't render. In React, for example:
-
-```tsx
-import { Fragment, type ReactNode } from "react";
-import type { RichText } from "@codenhub/i18n";
-
-type Tags = Readonly<Record<string, (children: ReactNode) => ReactNode>>;
-
-// A tag your code doesn't render shows its content without it.
-const render = (parts: RichText, tags: Tags): ReactNode[] =>
-  parts.map((part, index) => {
-    if (typeof part === "string") {
-      return part;
-    }
-    // An own property only, so a tag such as `<constructor>` never reaches an inherited function.
-    const tag = Object.hasOwn(tags, part.tag) ? tags[part.tag]! : (children: ReactNode) => children;
-    return <Fragment key={index}>{tag(render(part.children, tags))}</Fragment>;
-  });
-
-<p>{render(i18n.rich("signup.terms"), { terms: (children) => <a href="/terms">{children}</a> })}</p>;
-```
-
-A few details:
-
-- `rich()` takes the same keys and values as `t()`, checked the same way. A value is always text: a `<b>` in a visitor's name is shown as written, never read as a tag.
-- A tag can wrap placeholders, a plural, or a select, and can sit inside a plural or select form, but a tag opened in a form must close in that form.
-- A `<` that doesn't form a tag, as in `1 < 2`, is text, and so is a tag in quoted text: `'{<b>}'` shows `{<b>}`, never a tag, as in [Literal braces and apostrophes](#literal-braces-and-apostrophes). An apostrophe before `<` is an ordinary apostrophe, so `l'<b>été</b>` keeps its elision and its tag.
-- A message whose tags don't balance, such as `<b>bold` without `</b>`, or nest more than 10 levels deep, logs a warning once for each key, text, and locale, unless the manager is silent, and comes back as one part: the text as `t()` shows it, tags included. A missing key and invalid syntax also come back as the one part `t()` would return.
-- Tags aren't type-checked, since a translation can use tags the default text doesn't. Render every tag your messages use, and keep a fallback for the rest, as above.
-- `t()` and the `data-i18n` binding show tags as written. Render a message with tags from your code with `rich()`.
-
 ## Plurals
 
 "1 items" is wrong in English, and other languages have more forms than English does. Arabic has six. To let each language choose, write the key as a group of forms instead of a single string. The shop's cart already does:
@@ -712,9 +668,30 @@ When a plural group is missing from the current locale, the default locale's gro
 
 Three things to watch for:
 
-- **`count` must be a number or bigint.** A string such as `"5"` does not select a form; the group is then treated as a missing key. Convert it where it comes in, such as `Number(params.get("count"))`. The manager doesn't guess, since `"1,5"` is one and a half in Portuguese and not a number at all to JavaScript.
+- **`count` must be a number.** A string such as `"5"` does not select a form; the group is then treated as a missing key. Convert it where it comes in, such as `Number(params.get("count"))`. The manager doesn't guess, since `"1,5"` is one and a half in Portuguese and not a number at all to JavaScript.
 - **A plain string under the same key wins over forms.** If `cart.items` is a string, `count` only fills `{count}`.
 - **Without `other`, it is not a plural group.** `{ "one": "…", "two": "…" }` works only for counts whose form happens to be there; any other count shows the key. `has()` says such a group is not a key, and typed keys don't offer it. Add `other`.
+
+### Show a formatted count
+
+A plain `{count}` writes the number as JavaScript does, so 1234 items reads "1234 items" rather than "1,234 items", or "1.234 itens" in Portuguese. Write `{count, number}` in the forms instead:
+
+```json
+{
+  "cart": {
+    "items": {
+      "one": "{count, number} item",
+      "other": "{count, number} items"
+    }
+  }
+}
+```
+
+```ts
+t("cart.items", { count: 1234 }); // "1,234 items"
+```
+
+That is a lot of tea, but the comma is right.
 
 ### Plurals inside a sentence
 
@@ -812,10 +789,10 @@ t("cart.items", { count: 2 }); // ok: a plural group requires a numeric count
 
 Which values each argument takes:
 
-- `number`, `plural`, and `selectordinal` arguments take a number or bigint.
+- `number`, `plural`, and `selectordinal` arguments take a number.
 - `date` and `time` take a `Date` or a timestamp.
-- `select` takes a string, number, bigint, or boolean.
-- A plain `{name}` takes a string, number, bigint, or `Date`.
+- `select` takes a string, number, or boolean.
+- A plain `{name}` takes a string, number, or `Date`.
 
 Only the values the message uses are checked. Any other value may have any type, so `t("home.greeting", user)` takes a whole `User` with an `isAdmin: boolean`, and an object literal may carry extra values too. When several dictionaries are typed, a key needs the values of every one that has it.
 
@@ -885,7 +862,7 @@ test("every locale has every key", async () => {
 });
 ```
 
-To catch a message with broken syntax, such as an unclosed `{` a translator left, or tags that don't balance, look up every key in every locale and fail on the warning. The manager must not be silent for this:
+To catch a message with broken syntax, such as an unclosed `{` a translator left, look up every key in every locale and fail on the warning. The manager must not be silent for this:
 
 ```ts
 import { expect, test, vi } from "vitest";
@@ -899,17 +876,14 @@ test("every message is valid", async () => {
     await i18n.setLocale(locale);
     for (const key of Object.keys(await i18n.loadLocale(locale))) {
       i18n.t(key as Parameters<typeof i18n.t>[0]);
-      i18n.rich(key as Parameters<typeof i18n.rich>[0]);
     }
   }
 
-  const invalid = warn.mock.calls.filter(([text]) => /^\[I18n\] Invalid (message|tags)/.test(String(text)));
+  const invalid = warn.mock.calls.filter(([text]) => String(text).startsWith("[I18n] Invalid message"));
   warn.mockRestore();
   expect(invalid).toEqual([]);
 });
 ```
-
-`rich()` checks the tags in the text each call shows. Without values, a plural or select is shown as written, so the tags inside its forms are not checked; pass values that pick a form to check its tags too.
 
 To fail a test on keys missing from every dictionary, such as a typo in a key you built at runtime, throw from `onMissingKey`:
 
@@ -1165,9 +1139,9 @@ How each part behaves:
 
 - **`data-i18n` replaces an element's whole content.** The element must contain only text, with no child elements, so a translation can never remove your markup. Elements with children are skipped with a warning.
 - **Comments are replaced too.** They are not elements, so they don't count as children. Don't put `data-i18n` on an element a framework renders or hydrates, since frameworks keep comment markers there; translate that text with `t()` instead.
-- **`data-i18n-<attribute>` translates one attribute.** Only attributes that hold text for people or screen readers are allowed: `alt`, `title`, `placeholder`, `label`, `aria-label`, `aria-description`, `aria-placeholder`, `aria-roledescription`, and `aria-valuetext`. Others, such as `data-i18n-href` or `data-i18n-onclick`, are ignored, so a translation can never change a link, a style, or an event handler. The `title` of a `<style>`, or of a `<link rel="stylesheet">`, is skipped with a warning, since there it names a set of style sheets, and renaming it could switch the page's styles off.
+- **`data-i18n-<attribute>` translates one attribute.** Only attributes that hold text for people or screen readers are allowed: `alt`, `title`, `placeholder`, `label`, `aria-label`, `aria-description`, `aria-placeholder`, `aria-roledescription`, and `aria-valuetext`. Others, such as `data-i18n-href` or `data-i18n-onclick`, are ignored, so a translation can never change a link, a style, or an event handler.
 - **The text already in the HTML is the last fallback.** A key a language lacks shows the text of the next locale in its fallback chain, as `t()` does: a configured parent such as `pt` for `pt-BR`, then the default locale. The original text comes back only when no dictionary in the chain has the key. An element showing text in another language than the one it already has, from its own `lang` or else its nearest ancestor's, gets that locale's `lang`, such as `<p lang="en">` on a Portuguese page, so a screen reader pronounces it in the right language. With `syncDocument: false`, that is the language your page declares rather than the active locale, and the active locale only where no `lang` is set. The binding restores the element's own `lang` once the text is in that language again, and once your code changes that `lang`, the binding leaves it to your code. An element with content of its own, such as text or children, is marked only by its `data-i18n` text, since `lang` would cover that content too, and an element whose keys show text from different locales, or the HTML's own text after a miss, is not marked.
-- **Text is set as plain text, never as HTML.** The text of `<script>`, `<style>`, `<noscript>`, `<template>`, `<iframe>`, `<noembed>`, `<noframes>`, `<xmp>`, and `<plaintext>` is never touched, since it runs as code, decides what shows, or is written back unescaped when the page is saved as HTML. Their attributes are translated like any other, so `<iframe data-i18n-title="video.title">` gets a translated accessible name. An element inside one of them, or inside a `<textarea>` or `<title>`, which only your code can put there, is skipped whole, text and attributes, with a warning: when the page is saved as HTML and read again, a translated attribute could close the element around it and become markup. An element your code moves into one of them after the binding translated it gets back the text, attributes, and `lang` it had in the HTML at the next language change, or at once with `observe`. The text and attributes of a `<textarea>` or `<title>` itself are translated.
+- **Text is set as plain text, never as HTML.** The text of `<script>`, `<style>`, `<noscript>`, `<template>`, `<iframe>`, `<noembed>`, `<noframes>`, `<xmp>`, and `<plaintext>` is never touched, since it runs as code, decides what shows, or is written back unescaped when the page is saved as HTML. Their attributes are translated like any other, so `<iframe data-i18n-title="video.title">` gets a translated accessible name.
 - **A message that needs values keeps the HTML text**, with a warning once per key, because there is nowhere in the HTML to pass a value from. That covers `{name}` and any other argument, such as a whole plural, which would otherwise show its ICU syntax to visitors. Render text with values from your code with `t()`.
 - **The page shows its HTML text until the visitor's dictionary has loaded**, then switches in place, which on a slow connection is visible. There are two ways to avoid that:
   - Render a page per language ahead of time, as in [Build a static site](docs/server-rendering.md#build-a-static-site), and pass its `locale`.
@@ -1200,7 +1174,7 @@ Leave `observe` off when a framework renders the page: the framework already cal
 
 ### Custom elements
 
-The binding does not look inside custom elements and doesn't warn when it skips one. An element your code moves into one after the binding translated it gets back the text, attributes, and `lang` it had in the HTML, at the next language change, or at once with `observe`, since the component owns it now. That covers tags with a dash, such as `<my-widget>`, and customized built-in elements, whether the HTML marks one with `is`, as in `<button is="my-button">`, or your code creates one with `document.createElement("button", { is: "my-button" })`, which sets no `is` attribute. In a browser without `customElements.getName()`, one your code creates is translated like a plain element.
+The binding does not look inside custom elements and doesn't warn when it skips one. That covers tags with a dash, such as `<my-widget>`, and built-in elements customized with `is`, such as `<button is="my-button">`.
 
 The binding never crosses into a shadow root either, a custom element's or any other's. A shadow root can itself be the `root` you pass, when that is the part of the page the binding translates.
 
@@ -1627,7 +1601,11 @@ routing.localize("/about", "pt"); // "/pt/about"
 routing.localize("/about", "en"); // "/about"
 ```
 
-A canonical path never starts with a locale, so `localize()` throws a `RangeError` for one, such as `/pt/about`. That is a URL; pass `parse("/pt/about").pathname` instead. It throws for a page of your own whose path starts with a locale code, too: with Burmese, `my`, configured, an English page at `/my/orders` has no URL, since `/my/orders` is the Burmese `/orders`. Give such a page another path.
+A path that already starts with a locale is read as that locale's URL, so the prefix is replaced:
+
+```ts
+routing.localize("/pt/about", "en"); // "/about"
+```
 
 On a localized site, switching language is a navigation, not just `setLocale()`: `setLocale()` changes the text but never the URL. So the shop's language picker reads the current page with `parse()`, takes its path in the new language from `alternates`, keeps the query string and fragment, and lets your router go there:
 
@@ -1773,10 +1751,8 @@ routing.localize("/blog", "pt"); // "/pt/blog"
 The prefix stays wherever the path alone can't say which language it is in:
 
 - **Paths with the same words in two languages.** `/` and `/blog` exist in English too, so Portuguese keeps `/pt` and `/pt/blog`. Two languages translating to the same words, such as `/contato` in both Portuguese and Spanish, keep the prefix as well.
-- **Paths a default-language parameter could match.** If English lists `/:slug`, every one-segment path could be an English page, so `/sobre` keeps its prefix.
+- **Paths another language's parameter could match.** If Spanish lists `/:tag`, every one-segment path could be a Spanish tag, so `/sobre` keeps its prefix.
 - **Paths made only of parameters**, such as `/:tag`, which could be anything.
-
-Only paths read without a prefix count. A Spanish `/:tag` keeps its prefix, so it only matches paths that start with `/es`, and the Portuguese `/sobre` still drops its own.
 
 The default locale never has a prefix in this mode. `parse()` still accepts `/pt/sobre`, so redirect it as in [Redirect to the canonical URL](#redirect-to-the-canonical-url).
 
@@ -1923,7 +1899,7 @@ This is the boring part of the page. It is also the part that decides whether a 
 - **A malformed escape**, a `%` not followed by two hex digits, as in `/50%off`. Write `%25` for a literal `%`… which is also refused, per the previous rule, so take the `%` out of the path.
 - **More than 8,192 characters or 100 segments**, or a path whose canonical path would be longer than that, as a short translated path can be when its table entry is long. Servers and proxies cut off URLs around this length anyway, and no page is 100 folders deep; a request of thousands of one-letter segments would otherwise cost work in every locale.
 
-A request can carry any of these, such as a scanner asking for `//wp-login.php`, so `parse()` returns `undefined` for them, and the same 404 answers them as any other path that is no page. `localize()` and `localizeAll()` build links from your own paths rather than read requests, so for the same paths they throw a `TypeError` that quotes the path and names the rule, such as `TypeError: [I18n] pathname "/help/../admin" must not contain a dot segment, . or ..`, and you fix the path in your code. A path that a URL reads as starting another host isn't quoted, as below.
+A request can carry any of these, such as a scanner asking for `//wp-login.php`, so `parse()` returns `undefined` for them, and the same 404 answers them as any other path that is no page. `localize()` and `localizeAll()` build links from your own paths rather than read requests, so for the same paths they throw a `TypeError` that quotes the path and names the rule, such as `TypeError: [I18n] pathname "/help/../admin" must not contain a dot segment, . or ..`, and you fix the path in your code.
 
 Every method, `parse()` included, throws a `TypeError` for a value that is not a URL's pathname at all:
 
@@ -1933,7 +1909,7 @@ Every method, `parse()` included, throws a `TypeError` for a value that is not a
 
 That is a mistake in the calling code, not a request to answer, so it fails loudly instead of answering 404 to every URL with a query.
 
-No routing error quotes what a URL reads as user info, a query, or a fragment, which can hold a credential. A path with `?` or `#` is quoted only up to it, and one that a URL reads as starting another host isn't quoted at all: one that starts with `//` or `/\`, as a protocol-relative URL does, even with a tab or line break between the two, since a URL reads `\` as `/` and skips tabs and line breaks. Its error reads `TypeError: [I18n] pathname must not start with // or /\, which a URL reads as the start of its host, even with a tab or line break between; pass url.pathname`.
+No routing error quotes a query or a fragment, which can hold a token: a path with `?` or `#` is quoted only up to it. A value that doesn't start with `/`, such as a full URL, whose user info can hold a credential, isn't quoted at all.
 
 Ordinary escapes, such as `%20` and `%C3%A7`, are fine, and a trailing slash is kept: `/pt/sobre/` parses to `/about/`.
 
@@ -2083,7 +2059,7 @@ Common causes:
 
 From `parse()`, the value is not a URL's pathname: it doesn't start with `/`, or it contains `?` or `#`. Pass `url.pathname` rather than the full URL or a path with its query string, such as Node's `request.url`. A path that is a pathname but contains something routing refuses, such as `//` or a dot segment, makes `parse()` return `undefined` instead, so a visitor's odd URL becomes a 404 rather than a crash.
 
-From `localize()` or `localizeAll()`, the path is one of those, or contains something routing refuses. The message names the rule the path breaks and quotes the path, such as `[I18n] pathname "/help/../admin" must not contain a dot segment, . or ..`, except what a URL reads as user info, a query, or a fragment, which can hold a credential: a path with `?` or `#` is quoted only up to it, and one a URL reads as starting another host, such as `//example.com` or `/\example.com`, isn't quoted at all. [Paths it accepts](docs/localized-urls.md#paths-it-accepts) has the full list, with the fix for each.
+From `localize()` or `localizeAll()`, the path is one of those, or contains something routing refuses. The message names the rule the path breaks and quotes the path, such as `[I18n] pathname "/help/../admin" must not contain a dot segment, . or ..`, except a query or a fragment, which can hold a token: a path with `?` or `#` is quoted only up to it. [Paths it accepts](docs/localized-urls.md#paths-it-accepts) has the full list, with the fix for each.
 
 ## `localize()` throws `RangeError`: "would be read as"
 
@@ -2115,10 +2091,8 @@ You see `Ouvrir l{app}` where you expected `Ouvrir l'éditeur`, and the console 
 - **`Could not load locale "pt"; using "es".`** or **`Could not load locale "pt"; using the default locale.`**: the loader failed for a saved or detected locale other than the default, so the visitor got the next one instead: the locale detected from the browser after a saved one, then the default. Fix the loader; the saved choice is kept for next time. If the default locale itself fails to load, there is nothing left to fall back to, and initialization rejects with `Failed to load translations for locale "en".`
 - **"Skipping translation on <p> because translated elements must be leaves"**: the element with `data-i18n` has child elements. Put the key on an element that contains only text, or translate it with `t()`.
 - **"Skipping translation on <style> because the element can run, hide, or reparse its text as HTML"**: a `data-i18n` key is on a `<script>`, `<style>`, `<noscript>`, `<template>`, `<iframe>`, `<noembed>`, `<noframes>`, `<xmp>`, or `<plaintext>` element, whose text runs as code, decides what shows, or is written back unescaped when the page is saved as HTML. The warning names the key and passes the element, so the console points to it. Move the key to an ordinary element. Its `data-i18n-<attribute>` keys, such as an `<iframe>`'s `data-i18n-title`, are still translated.
-- **"Skipping translation on <p> because it is inside <xmp>, which can run, hide, or reparse its content as HTML"**: an element with a key is inside one of the elements the previous entry lists, or inside a `<textarea>` or `<title>`, which only code can do, such as by appending to an `<xmp>` or a `<template>` rather than to its `content`. Neither its text nor its attributes are translated, since a translation could close the element around it and become markup once the page is saved as HTML, or would never be shown. An element translated before it was moved there gets its HTML text and attributes back. Move the element out.
 - **"Skipping translation because data-i18n contains an invalid key"**, or the same for a `data-i18n-<attribute>`: the key is blank, longer than 1,000 characters, or contains an ASCII control character, so no dictionary can hold it. The element shows its HTML text, as for a key no dictionary has, including after a key it showed a translation for changes to an invalid one. Fix the key in the HTML.
 - **"Skipping translation because data-i18n names a message that needs values"**: the message has a placeholder, a plural, or a select, and HTML translation has no values to fill them. The element keeps its HTML text, and the warning appears once per key. Render that text with `t()` and pass the values.
-- **"Skipping translation of the title of <style> because it names a style sheet set"**: a `data-i18n-title` key is on a `<style>` or `<link rel="stylesheet">` element, whose `title` groups style sheets that the browser switches between, so translating it would change which ones apply. The element keeps its `title`. Remove the key.
 - **A `data-i18n-href` attribute does nothing**: only text attributes can be translated. See [Translate HTML without a framework](docs/browser.md#translate-html-without-a-framework).
 
 The browser warnings are silenced along with the rest when the manager has `isSilent: true`.
@@ -2137,49 +2111,43 @@ The [reference](docs/reference/index.md) documents every export, option, and the
 - **`binding.isUsingSystemLocale`** says whether to show "System" selected: `true` after a start with nothing chosen and after `switchToSystemLocale()`, `false` once your app applies a locale with `setLocale()` or `init()`.
 - **`binding.subscribe()`** calls your function once after each change to what a picker shows, the language or `isUsingSystemLocale`, including a pick of the language already showing, which `i18n.subscribe()` doesn't report. Render a framework picker from it, as the [React example](docs/browser.md#offer-a-system-choice) does.
 - **`parse()` returns `alternates`**, the page's URL in every language that has one, for language switchers and `hreflang` tags. A language whose URL would open another page is left out, where `localize()` throws, so an English product `/products/novo` next to a translated `/products/new` no longer makes the guide's switcher answer 500. See [Link to another language](docs/localized-urls.md#link-to-another-language).
-- **`rich(key, values)`** returns a message as text and `{ tag, children }` parts, so a link or bold text inside a sentence stays one message a translator can reorder: `"Read the <link>terms</link>"` gives `["Read the ", { tag: "link", children: ["terms"] }]`. Map the parts to your framework's elements. A tag's name takes `-` after its first character, as in `<help-link>`. Tags come only from the message, never from a value or from quoted text such as `'{<b>}'`, and unbalanced tags warn once and return the text as `t()` shows it. See [Links and bold text inside a sentence](docs/translations.md#links-and-bold-text-inside-a-sentence).
-- **A bigint is taken wherever a number is**, in `{n}`, `{n, number}`, `plural`, `selectordinal`, `select`, and a plural group's `count`. It is formatted without losing digits and selects its plural form exactly, so `10n ** 20n + 22n` in an English ordinal reads "…22nd".
 - **`select` takes a boolean**, picking the option named `true` or `false`, or `other`: `{isAdmin, select, true {Admin} other {Member}}` shows "Admin" for `{ isAdmin: true }`, where it showed the message's source. The types accept a boolean for `select` only; in a plain `{isAdmin}` it stays as written.
 - **`initializeBrowserI18n`'s `storage` option** saves the visitor's choice somewhere other than `localStorage`, such as a cookie your server reads, through `get()`, `set(locale)`, and `remove()`. A choice read from it is matched and falls back when its dictionary fails to load, as a saved one does, which a choice passed as `locale` can't. A value that isn't a configured locale counts as nothing saved, and a method that throws warns. Passing it with `storageKey` or `persistLocale: false` rejects with a `TypeError`. See [Hand the locale to the browser](docs/server-rendering.md#hand-the-locale-to-the-browser).
 - If your code implements `I18n`, `BrowserI18nBinding`, or `LocaleRouting`, or builds `parse()` results, as a test double might, add the new members, or build the double from the real thing. A test that compares a `parse()` result with `toEqual({ locale, pathname })` now needs `alternates` too, or `toMatchObject`.
 
 ## Changed
 
-- **`localize()` reads every path as canonical, and throws a `RangeError` for one that starts with a locale.** A prefixed path was read as that locale's URL, so with Burmese, `my`, configured, `localize("/my/orders", "en")` linked to the Burmese `/orders`. To switch a URL's language, pass `parse(url).pathname`, as the guide does; a page whose path starts with a locale code needs another path, since no URL leads to it. See [Link to another language](docs/localized-urls.md#link-to-another-language).
 - **Every segment is normalized as RFC 3986 says**, parameters and unlisted segments included. `localize("/products/café", "en")` returns `/products/caf%C3%A9`, where it wrote a raw `é` into the link, and `parse("/pt/produtos/café").pathname` is `/products/caf%C3%A9` too, so two spellings of one page give one `pathname`. A segment is normalized as RFC 3986 says: an escaped unreserved character such as `%61` is decoded, other escapes are written in upper case, and an escaped reserved character stays escaped, so `c%2B%2B` and `c++` stay two pages. That also encodes `[`, `]`, `|`, and `^`, which a URL's pathname can leave raw, depending on the runtime. A lone surrogate, which is not text, is written as `%EF%BF%BD`, as a URL writes it. A canonical redirect that compares the request with `localize(route.pathname, …)` now redirects a hand-typed `/café` once, to the encoded form. Code that compares `parse().pathname` with a path of its own needs that path in the same encoded form, as `localize()` returns it; decoding `pathname` with `decodeURI()` instead fails for a segment such as `%3F` or `%2B`, which it leaves encoded.
 - **A regional locale falls back to the configured locale of its likely script** after its parents: `zh-HK` reads `zh-Hant`, and `sr-ME` reads `sr-Latn`, where both fell back to the default. The fallback locale loads with it.
 - **`matchLocale()` reads `_` as `-`**, so `pt_BR` and `zh_Hant_TW`, as an OS or a database writes them, match `pt-BR` and `zh-Hant-TW`, where they matched nothing.
 - **`resolveLocale()` reads `_` as `-`** too, so `pt_BR` from a cookie or a back end resolves to `pt-BR`, where it returned `undefined`.
 - **The default missing-key warning is logged once per process for each locale and key**, shared by every manager, where each manager kept its own record. A server with a manager per request logged one missing word once for every visitor. A test that expects each new manager to warn again passes `onMissingKey` instead.
 - **An invalid message warns once per process for each locale, key, and text**, shared by every manager, as a missing key does, so an edited text warns again. Both records keep a bounded amount of memory, about 1,000 typical keys, and remember a message by a hash of its text, not the text itself.
-- **Names in a message take letters and digits in any script**: an argument such as `{año}`, a select option such as `niño {…}`, and a tag such as `<énfasis>` or `<help-link>`, where only ASCII letters, digits, and `_` were read: such a message was invalid syntax, or its tag was text. A tag also takes `-` after its first character, as a select key takes it anywhere. The types check values only for ASCII names; a message with another name accepts any values.
+- **Names in a message take letters and digits in any script**: an argument such as `{año}` and a select option such as `niño {…}`, where only ASCII letters, digits, and `_` were read: such a message was invalid syntax. The types check values only for ASCII names; a message with another name accepts any values.
 - **`data-i18n` and `data-i18n-<attribute>` keep the HTML's value for a message that needs values**, one with a placeholder, a plural, or a select, and warns once per key, where it wrote the message as written, such as `Hello {name}`, without a warning. Render that text with `t()`.
 - **`data-i18n` and `data-i18n-<attribute>` set `lang` on text from a fallback locale's dictionary**, so a screen reader reads an English fallback on a French page in English. The locale is compared with the language the element has without the mark, its own `lang` or its nearest ancestor's, so a French text in a widget under `<html lang="en">` is marked `fr` with `syncDocument: false` too. An element is marked only when every key it shows comes from that one locale, so a button with French text and an English `title` isn't. The binding restores the element's own `lang` when the text is translated again, unless your code has changed that `lang`, which then stays yours to update.
-- **`data-i18n-title` on a `<style>` or a `<link rel="stylesheet">` is skipped with a warning**, since their `title` names a style sheet set and translating it would change which styles apply.
 - **A configuration error quotes a received string**, so `localePrefix: "as-needed"` reads `Expected …, received "as-needed"`, where it read `received string`.
 - **`createI18n()` and `createLocaleRouting()` reject a locale that `Intl` rejects**, such as `en-US-US` or `en-GB-oed`, with `locales[1]: Must be a language tag Intl accepts, …`, where it was accepted, and in routing became a URL prefix, so a typo served `/en-US-US/…` without an error. A private-use tag, such as `x-pirate`, is still accepted, and matches only exactly, where a locale `Intl` rejected matched by its language subtag. A configuration that throws now fixes the tag, or uses `x-` for a locale of its own.
 - **`matchLocale()` skips a preference longer than 255 characters**, as it skips one that isn't a string. A 16 KB `Accept-Language` entry cost about 25 ms a match.
 - **`data-i18n` skips `iframe`, `noembed`, `noframes`, `plaintext`, and `xmp`**, as it skips `script` and `style`, with a warning. Serializing the page writes their text without escaping, so a translation in one of them could become markup in server-rendered or prerendered HTML.
-- **Only the content of those elements is skipped.** An element inside one of them, which only script can put there, is skipped whole, with a warning, and so is one inside a `<template>` or a `<noscript>`. Their own `data-i18n-<attribute>` keys are translated, so an `<iframe>`'s `data-i18n-title`, the name a screen reader gives an embedded video or map, follows the language. That includes `<template>` and `<noscript>`, whose attributes 0.4.0 left untranslated.
+- **Only the content of those elements is skipped.** Their own `data-i18n-<attribute>` keys are translated, so an `<iframe>`'s `data-i18n-title`, the name a screen reader gives an embedded video or map, follows the language. That includes `<template>` and `<noscript>`, whose attributes 0.4.0 left untranslated.
 - **`initializeBrowserI18n()` rejects with a `TypeError` when there is no global event target**, before touching the manager, where it initialized the manager and then rejected.
 - **`t()` takes values typed by an interface or a class**, such as a `User`, where only object literals and index-signature types compiled, and checks only the values the message uses. Any other value may have any type, in an interface or an object literal, so a `User` with an `isAdmin: boolean` is taken whole; a missing or wrongly typed value the message uses still fails to compile. `t()` has a second type parameter for the values; a call that passes the key's type argument, `t<"cart.title">(…)`, is unaffected.
-- **A visitor who never chose a language follows the browser mid-visit.** While `isUsingSystemLocale` is `true`, a `languagechange` event switches to the newly detected locale without saving it, where the page kept its language until a reload. A visitor's pick still loading when the event arrives is kept. A load that fails warns, "Could not switch to the detected locale", and keeps the current language. A picker that sets its value only after its own switches keeps showing the old language; render it from `binding.subscribe()`, as [Let visitors switch languages](docs/browser.md#let-visitors-switch-languages) does. A visitor who chose a language, or a start with an explicit `locale`, is not affected.
+- **A visitor who never chose a language follows the browser mid-visit.** While `isUsingSystemLocale` is `true`, a `languagechange` event switches to the newly detected locale without saving it, where the page kept its language until a reload. A visitor's pick still loading when the event arrives is kept, and if it fails, the page follows the event. A load that fails warns, "Could not switch to the detected locale", and keeps the current language. A picker that sets its value only after its own switches keeps showing the old language; render it from `binding.subscribe()`, as [Let visitors switch languages](docs/browser.md#let-visitors-switch-languages) does. A visitor who chose a language, or a start with an explicit `locale`, is not affected.
 - **A `setLocale()` to the language already showing is saved**, like any other choice, where nothing was saved. A visitor who picks English while English was detected has chosen it, and keeps it after changing their browser's language.
 - `disconnect()` also stops following the browser's language and calling `binding.subscribe()` listeners, and drops a switch to a detected locale still loading. A `setLocale()` still loading still applies.
 - **The guide's language switcher and `hreflang` tags read `route.alternates`** instead of calling `localize()` on a path from the request. Do the same in yours. The `x-default` tag is left out when the default locale has no URL for the page, and its default locale comes from the constants the guide's routing module exports, not a second copy that drifts when the default changes. A static build still uses `localizeAll()`, which throws on a clash, so the build finds it.
 - **A JSON dictionary's plural group needs a numeric `count` in `t()`.** With forms typed `string`, as from a JSON import, `t("cart.items")` compiled and then showed `cart.items`.
-- **Under `localePrefix: "when-ambiguous"`, only paths read without a prefix keep a translated path's prefix**: the default locale's paths, and the other translated paths that drop theirs. A Spanish `/:tag`, which keeps `/es`, no longer keeps the prefix on the Portuguese `/sobre`. Some URLs lose their prefix, so redirect the old `/pt/…` form as the guide shows; `parse()` still accepts it.
-- **Routing errors quote the value and name the rule it breaks**, such as `[I18n] pathname "/help/../admin" must not contain a dot segment, . or ..` and `[I18n] Unsupported locale "fr".`, as the manager's errors do. They replace "must be a valid absolute application pathname" and "must not contain dot segments". A configuration error for a table entry reads `Must start with /` and similar. Nothing a URL reads as user info, a query, or a fragment is quoted, since a full URL can carry a credential there: a value that doesn't start with `/`, or that a URL reads as starting another host, such as `//host` or `/\host`, even with a tab or line break between the slashes, isn't quoted, and one with a query or fragment is quoted up to the first `?` or `#`, which the message names. An unsupported locale passed to `localize()` or to the manager is quoted the same way, so `https://user:secret@host` reads `[I18n] Unsupported locale, not quoted since it reads as a URL.`
+- **Routing errors quote the value and name the rule it breaks**, such as `[I18n] pathname "/help/../admin" must not contain a dot segment, . or ..` and `[I18n] Unsupported locale "fr".`, as the manager's errors do. They replace "must be a valid absolute application pathname" and "must not contain dot segments". A configuration error for a table entry reads `Must start with /` and similar. A value that doesn't start with `/`, such as a full URL, whose user info can carry a credential, isn't quoted, and one with a query or fragment, which can carry a token, is quoted up to the first `?` or `#`, which the message names. An unsupported locale passed to `localize()` or to the manager is cut at `?` or `#` the same way.
 - **`localize()`'s "would be read as" `RangeError` names the URL it would build**, such as `"/pt/produtos/novo"`, and no longer tells you to pass `parse().pathname` when that is what you passed. Code that matches the text after the `;` needs updating.
-- **Paths have at most 100 segments.** `parse()` returns `undefined` for a longer one, and `localize()` throws a `TypeError` for one, or a `RangeError` when its prefix or translated words take it past 100, as for 8,192 characters. A request made of thousands of one-letter segments, such as `/a/a/a/…`, cost about 40 ms a `parse()` with 20 locales, so anyone could keep a server busy with it. The `RangeError` reads "would be longer than 8,192 characters or 100 segments", and gives the length the URL would have.
-- **A number in a plain `{name}` is formatted for the reader**, as `{name, number}` does and as ICU MessageFormat does, so `"{count} items"` with `1234` reads "1,234 items", or "1.234 itens" in Portuguese, where it read "1234 items" in every language. A message that wants the digits as written, such as an order number, takes a string: `t("order", { id: String(id) })`. A number in a message that is not valid ICU syntax is formatted too.
+- **Paths have at most 100 segments.** `parse()` returns `undefined` for a longer one, and `localize()` throws a `TypeError` for one, or a `RangeError` when its prefix or translated words take it past 100, as for 8,192 characters. A request made of thousands of one-letter segments, such as `/a/a/a/…`, costs work for each segment in every locale, so anyone could keep a server busy with it. The `RangeError` reads "would be longer than 8,192 characters or 100 segments", and gives the length the URL would have.
 - **`loadLocale` must accept every configured locale.** A loader typed for fewer, such as `(locale: keyof typeof dictionaries)` before every dictionary exists, no longer compiles, where `init()` rejected at runtime.
 - **`initializeBrowserI18n`'s `locale` must be a configured locale.** `initializeBrowserI18n({ i18n, locale: "fr" })` on a manager without `fr` no longer compiles, where it rejected at runtime.
 - **`t()` accepts any values for a message it prints as written**: one with an unknown style, such as `{n, number, currency}`, a `plural` or `select` without `other`, or `'#` quoting a brace inside a plural. The types required values the runtime never filled in.
 - **`t()` takes any key when the loader returns `Record<string, unknown>`**, where no key compiled.
-- **An `init()` that switches a ready manager to another locale also dispatches `locale-change`**, after `ready`, with `previousLocale`, where it dispatched only `ready`, so a `locale-change` listener missed the switch. `subscribe()` listeners are still called once for it. The first `init()` dispatches only `ready`, and an `init()` with the locale already active dispatches no `locale-change`.
+- **An `init()` that switches a ready manager to another locale also dispatches `locale-change`**, after `ready`, with `previousLocale`, where it dispatched only `ready`, so a `locale-change` listener missed the switch. `subscribe()` listeners are still called once for it, and a bound page is translated once. The first `init()` dispatches only `ready`, and an `init()` with the locale already active dispatches no `locale-change`.
 - **`t(key, values)` throws a `TypeError` when `values` is `null` or a primitive.** `null` failed with a native error from inside the package, and a string was ignored.
-- **Errors that name a dictionary key, a locale, a path, or a configuration property quote it**, with line breaks escaped, and cut it after 100 characters. A test that matches such a message for an unusual key or locale may need updating; ordinary ones read the same. Routing errors do the same for a pathname, and so do the warnings for invalid syntax and unbalanced tags, which name an unknown type, style, plural form, repeated option, or tag.
+- **Errors that name a dictionary key, a locale, a path, or a configuration property quote it**, with line breaks escaped, and cut it after 100 characters. A test that matches such a message for an unusual key or locale may need updating; ordinary ones read the same. Routing errors do the same for a pathname, and so do the warnings for invalid syntax, which name an unknown type, style, plural form, or repeated option.
 - **The `data-i18n` warnings name the key and the element.** "Skipping translation because data-i18n contains an invalid key", "translated elements must be leaves", and "the element can run, hide, or reparse its text as HTML" now quote the key, and pass the element after the message, so the browser console points to it. The message is the second argument, after a `"%s"` format, so a key such as `%o` is shown as written. A test that expects the exact message, or one argument, needs updating.
 - **`i18n.subscribe` and `binding.subscribe` are typed as function properties**, not methods, so a lint rule against unbound methods, such as `@typescript-eslint/unbound-method`, accepts `useSyncExternalStore(binding.subscribe, …)`. Both were already bound at runtime. A test double that implements one as a method with a narrower listener type no longer compiles.
 - **A `data-i18n` or `data-i18n-<attribute>` whose `onMissingKey` throws shows the HTML's value**, where it kept the translation of the earlier key or locale. The error is still reported.
@@ -2191,31 +2159,24 @@ The [reference](docs/reference/index.md) documents every export, option, and the
 
 - **The server-rendering guide no longer overwrites a visitor's choice.** It passed the server's `Accept-Language` match to the binding as `locale`, which the binding saves, so on a site without a locale in the URL a visitor who picked Portuguese got English saved over it on every page load. The guide now keeps the choice in a cookie that the server reads and the binding reads, writes, and deletes through its new `storage` option, so a cookie choice that fails to load falls back as a saved one does, and a language the binding detects is never written. The server reads a choice you no longer list exactly, such as `pt-BR` once you list only `pt`, with `matchLocale()` after `resolveLocale()`, and the binding matches it the same way, so it isn't lost to the `Accept-Language` guess. If you followed it, see [Hand the locale to the browser](docs/server-rendering.md#hand-the-locale-to-the-browser).
 - **Each `#` counts toward the 100 arguments one call fills**, and past them a `#` is written as `#`. A plural form of 99,970 `#` with `1e308` made one `t()` return 41 million characters, since only arguments were counted, so a fetched message could make a server allocate tens of megabytes per request.
-- **An element moved inside a blocked element or a custom element after it was translated gets back its HTML text, attributes, and `lang`**, at the next language change, or at once with `observe`. Its translated `title` could otherwise become markup when the page was serialized and parsed again.
-- **An `init()` that switches the locale on a bound manager translates the page once**, so `onMissingKey` is called once per missing key, where it ran twice.
 - **The default direction is `rtl` for variants of a right-to-left script**: `Aran` (Arabic Nastaliq), `Syre`, `Syrj`, and `Syrn` (Syriac), and `Phlv` (Book Pahlavi), so `ur-Aran` is `rtl`, where it was `ltr`.
 - **Two bindings whose roots overlap no longer hang the page.** Each rewrote the other's text, forever. A binding now skips text it wrote itself; the guide says to keep roots apart.
-- **A loader type made of `Partial<typeof en>` checks values again**, where it accepted any values for every key.
-- **A visitor following the system follows a `languagechange` that arrived while their own pick was loading**, once that pick fails, where the page kept the old language until the next event.
+- **A loader type made of `Partial<typeof en>` checks values**, where it accepted any values for every key.
 - **The shared message cache counts what each message keeps in memory**, not only its length, so a dictionary of messages full of placeholders or `#` can no longer keep hundreds of megabytes alive on a server.
 - **`matchLocale()` ignores a preference's extensions**, so `es-u-hc-h23`, which a browser may send, matches `es-ES` as `es` does, where it matched the first Spanish locale listed, such as `es-419`.
 - **A language with no likely script matches and falls back to its parent**, so `nah-MX` matches and falls back to `nah`, where it matched nothing and fell back to the default.
 - **A locale falls back to a parent written under another code for its language**, such as a configured `iw` for `he-IL`, `he` for `iw-IL`, `in` for `id-ID`, or `no` for `nb-NO`, where it fell back to the default. Deprecated codes are read as `Intl` canonicalizes them, and `no` and `nb` count as one language, as in `matchLocale()`.
 - **`t()` leaves a date or time as written for a timestamp past what a `Date` holds**, such as `1e16`, where it threw a `RangeError`, and formats a `Date` from another realm, such as an iframe, where it left it as written.
 - **`parse()` and `localize()` read a percent-encoded locale prefix**, so `/%70t/sobre` is Portuguese, as `/pt/sobre` is, and `/pt/%65n/about` is refused, as `/pt/en/about` is.
-- **A `binding.subscribe()` listener that calls `disconnect()` stops the listeners after it**, and `disconnect()` releases every listener.
 - **A key over 10,000 characters is refused before it is trimmed**, as documented, with an error that names that limit.
 - **A key with spaces around it is no longer refused** by `t()`, `has()`, or `data-i18n` when it is within 1,000 characters once trimmed. Spaces are trimmed, Unicode ones such as the no-break space included, and so are the byte order mark and the Unicode line and paragraph separators. A tab, a line feed, a carriage return, or any other ASCII control is still refused wherever it is in the key.
 - **Creating a routing with `localePrefix: "when-ambiguous"` takes linear time** in tables whose translated paths start with a parameter: 20,000 such routes took about 17 s and take about 0.4 s. Which paths drop the prefix is unchanged.
 - **`localizeAll("/help/:path*")` translates through the table's catch-all.** With `/help/:id` also listed, it returned the parameter route's form, such as `/pt/ajuda/artigo/:path*`, and a router registered it for the wrong pages.
-- **`parse()` costs about the same per locale whatever the path**: with 100 locales, a path near the 8,192-character limit took up to 27 ms and takes under 2 ms.
-- **An element inside a `<textarea>` or a `<title>` is skipped whole**, with a warning, as one inside an `<xmp>` is. Both read their content as text up to their end tag, so a translated attribute holding `</textarea><img onerror=…>` on an element that script put inside one became markup once the page was saved as HTML by a serializer that leaves `<` in attribute values, as jsdom's does, and read again. The text and attributes of a `<textarea>` or `<title>` itself are still translated.
 - **A `data-i18n` or `data-i18n-<attribute>` key changed to an invalid one shows the HTML's value**, as a missing key does, where the element kept the translation of its earlier key. A blank key, one over the length limit, and one with an ASCII control are invalid, and the HTML's value comes back whether a later binding, an observed change, a language change, or moving the element back in reads the key.
-- **`data-i18n` skips a customized built-in created from script**, such as `document.createElement("button", { is: "x-button" })`, which has no `is` attribute, as it skips `<button is="x-button">`.
 - **With `observe`, text other code writes over a keyed element no longer becomes its fallback.** The binding writes the translation back, and the HTML's text stays the one shown for a language without the key.
 - The docs say that a plural group `has()` finds needs `count` in `t()`.
 - The docs say that the binding never enters a shadow root, a custom element's or a plain element's.
 - The browser guide's language picker shows the language in use after a switch fails, where it kept the language that failed to load selected. It also renders from `binding.subscribe()`, so it follows a language the binding switches to, and keeps the latest of several quick picks selected while it loads.
 - The docs say that the second `initializeBrowserI18n()` rejects with a `TypeError`, and that a start in a Web Worker without `syncDocument: false` rejects rather than throws.
-- The translations guide's test checks the tags `rich()` reads as well as the syntax, and no longer says it checks every message.
+- The translations guide says its test checks every message's syntax, where it said it checks every message.
 - The localized-URL guide skips the paths you serve as files, where it skipped every path ending in an extension, such as the page `/blog/node.js`, and its static-site redirect builder skips a private-use locale, such as `x-pirate`, where it threw.
