@@ -15,6 +15,12 @@ import {
 
 const FORMS_URL = `${ORIGIN}/forms/?env=vanilla`;
 
+/* Every way a control is disabled, as `box` dims it and the docs list it. */
+const DISABLED_SPELLINGS = ["disabled", ".disabled", 'aria-disabled="true"', "data-disabled"];
+/* A field disabled by one spelling, in markup a page can parse. */
+const disabledField = (spelling: string) =>
+  spelling === ".disabled" ? '<input class="ipt disabled" />' : `<input class="ipt" ${spelling} />`;
+
 /* Matrix rows name a fill and an edge, and the test id joins them with a dash the
    way `playground/shared/matrix.js` does. */
 const slug = (presentation: string) => presentation.replace(/\s+/gu, "-");
@@ -1264,41 +1270,44 @@ test.describe("forms", () => {
   test("propagates an inner control's invalid and disabled state to the group", async ({ page }) => {
     await page.goto(FORMS_URL);
 
-    const measured = await page.evaluate(() => {
-      const host = document.querySelector('[data-testid="preview-root"]') ?? document.body;
+    const measured = await page.evaluate(
+      (fields) => {
+        const host = document.querySelector('[data-testid="preview-root"]') ?? document.body;
 
-      const read = (className: string, inner: string) => {
-        const element = document.createElement("div");
+        const read = (className: string, inner: string) => {
+          const element = document.createElement("div");
 
-        element.className = className;
-        element.innerHTML = inner;
-        host.append(element);
+          element.className = className;
+          element.innerHTML = inner;
+          host.append(element);
 
-        const styles = getComputedStyle(element);
-        /* What a reader sees is the product of the group's opacity and the
+          const styles = getComputedStyle(element);
+          /* What a reader sees is the product of the group's opacity and the
            control's, so a group and a control both dimmed is dimmed twice. */
-        const control = element.firstElementChild;
-        const effectiveOpacity =
-          Number.parseFloat(styles.opacity) * (control ? Number.parseFloat(getComputedStyle(control).opacity) : 1);
-        const values = { border: styles.borderTopColor, cursor: styles.cursor, effectiveOpacity };
+          const control = element.firstElementChild;
+          const effectiveOpacity =
+            Number.parseFloat(styles.opacity) * (control ? Number.parseFloat(getComputedStyle(control).opacity) : 1);
+          const values = { border: styles.borderTopColor, cursor: styles.cursor, effectiveOpacity };
 
-        element.remove();
+          element.remove();
 
-        return values;
-      };
+          return values;
+        };
 
-      /* The group's line is `text-control`'s -- the intent drawn at
+        /* The group's line is `text-control`'s -- the intent drawn at
          `--_line-rest` -- so a lone `.ipt.destructive` is the reference for what
          a reddened line looks like, no fraction to reconstruct. */
-      return {
-        destructiveLine: read("ipt destructive", "").border,
-        neutralLine: read("ipt", "").border,
-        plain: read("input-group", `<input class="ipt" />`),
-        invalid: read("input-group", `<input class="ipt" aria-invalid="true" />`),
-        disabled: read("input-group", `<input class="ipt" disabled />`),
-        loneDisabled: read("field", `<input class="ipt" disabled />`),
-      };
-    });
+        return {
+          destructiveLine: read("ipt destructive", "").border,
+          neutralLine: read("ipt", "").border,
+          plain: read("input-group", `<input class="ipt" />`),
+          invalid: read("input-group", `<input class="ipt" aria-invalid="true" />`),
+          disabled: Object.fromEntries(fields.map(([spelling, field]) => [spelling, read("input-group", field)])),
+          loneDisabled: read("field", `<input class="ipt" disabled />`),
+        };
+      },
+      DISABLED_SPELLINGS.map((spelling) => [spelling, disabledField(spelling)] as const),
+    );
 
     expect(
       getColorDistance(measured.invalid.border, measured.destructiveLine),
@@ -1312,12 +1321,14 @@ test.describe("forms", () => {
       getColorDistance(measured.plain.border, measured.neutralLine),
       "a valid group keeps the neutral line",
     ).toBeLessThan(2);
-    expect(measured.disabled.effectiveOpacity, "an inner disabled dims the group once").toBeCloseTo(
-      measured.loneDisabled.effectiveOpacity,
-      2,
-    );
-    expect(measured.disabled.effectiveOpacity, "and does dim it").toBeLessThan(1);
-    expect(measured.disabled.cursor, "and shows the not-allowed cursor").toBe("not-allowed");
+    for (const [spelling, disabled] of Object.entries(measured.disabled)) {
+      expect(disabled.effectiveOpacity, `an inner ${spelling} dims the group once`).toBeCloseTo(
+        measured.loneDisabled.effectiveOpacity,
+        2,
+      );
+      expect(disabled.effectiveOpacity, `and ${spelling} does dim it`).toBeLessThan(1);
+      expect(disabled.cursor, `and ${spelling} shows the not-allowed cursor`).toBe("not-allowed");
+    }
 
     /* A dimmed group does not answer the pointer, as a disabled lone field
        does not: its line once darkened on hover anyway. Hovered for real and
@@ -1325,16 +1336,19 @@ test.describe("forms", () => {
        does darken, so the probe is shown to move a line that can move. A
        `<select>` with a disabled option is a control, not a group, and keeps
        its hover. */
-    await page.evaluate(() => {
-      const host = document.querySelector('[data-testid="preview-root"]') ?? document.body;
+    await page.evaluate(
+      (fields) => {
+        const host = document.querySelector('[data-testid="preview-root"]') ?? document.body;
 
-      host.insertAdjacentHTML(
-        "beforeend",
-        `<div class="input-group" data-hover-probe="enabled"><input class="ipt" /></div>
-         <div class="input-group" data-hover-probe="disabled"><input class="ipt" disabled /></div>
+        host.insertAdjacentHTML(
+          "beforeend",
+          `<div class="input-group" data-hover-probe="enabled"><input class="ipt" /></div>
+         ${fields.map(([, field], index) => `<div class="input-group" data-hover-probe="disabled-${index}">${field}</div>`).join("")}
          <select class="select" data-hover-probe="select"><option disabled>Off</option><option>On</option></select>`,
-      );
-    });
+        );
+      },
+      DISABLED_SPELLINGS.map((spelling) => [spelling, disabledField(spelling)] as const),
+    );
 
     const hoverLine = async (probe: string) => {
       const element = page.locator(`[data-hover-probe="${probe}"]`);
@@ -1353,11 +1367,18 @@ test.describe("forms", () => {
     };
 
     const enabled = await hoverLine("enabled");
-    const disabled = await hoverLine("disabled");
     const select = await hoverLine("select");
 
     expect(getColorDistance(enabled.hovered, enabled.rest), "an enabled group's line moves").toBeGreaterThan(2);
-    expect(getColorDistance(disabled.hovered, disabled.rest), "a disabled group's line holds").toBeLessThan(2);
+    for (const [index, spelling] of DISABLED_SPELLINGS.entries()) {
+      // oxlint-disable-next-line no-await-in-loop -- one pointer, hovered in turn.
+      const disabled = await hoverLine(`disabled-${index}`);
+
+      expect(
+        getColorDistance(disabled.hovered, disabled.rest),
+        `a group with an inner ${spelling} holds its line`,
+      ).toBeLessThan(2);
+    }
     expect(getColorDistance(select.hovered, select.rest), "a select with a disabled option moves").toBeGreaterThan(2);
   });
 
@@ -1552,6 +1573,43 @@ test.describe("forms", () => {
       expect(listBox.chevron).toBe(false);
       expect(listBox.symmetric).toBe(true);
       expect(listBox.height).toBeGreaterThan(40);
+    }
+  });
+
+  /* A list box's padding follows the size step, as a drop-down's start does:
+     `.select.sm[multiple]` was 0.75rem on both sides, wider than its 0.625rem
+     start. */
+  test("pads a sized list box as its size step", async ({ page }) => {
+    await page.goto(FORMS_URL);
+
+    const pads = await page.evaluate(() => {
+      const host = document.createElement("div");
+
+      host.innerHTML = ["", "sm", "lg"]
+        .flatMap((size) => [
+          `<select class="select ${size}"><option>One</option></select>`,
+          `<select class="select ${size}" multiple><option>One</option></select>`,
+          `<select class="select ${size}" size="3"><option>One</option></select>`,
+        ])
+        .join("");
+      document.body.append(host);
+      const result = [...host.querySelectorAll("select")].map((select) => {
+        const style = getComputedStyle(select);
+
+        return [style.paddingLeft, style.paddingRight];
+      });
+
+      host.remove();
+
+      return result;
+    });
+
+    for (const [index, size] of ["", "sm", "lg"].entries()) {
+      const [single, multiple, sized] = pads.slice(index * 3, index * 3 + 3);
+
+      for (const listBox of [multiple!, sized!]) {
+        expect(listBox, `.select${size ? `.${size}` : ""} list box`).toEqual([single![0], single![0]]);
+      }
     }
   });
 
