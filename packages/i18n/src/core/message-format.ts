@@ -27,12 +27,6 @@ export const NAME_CHARACTER = String.raw`[\p{L}\p{M}\p{Nd}_]`;
 const NAME_PATTERN = new RegExp(NAME_CHARACTER, "u");
 const SELECT_KEY_PATTERN = new RegExp(String.raw`[\p{L}\p{M}\p{Nd}_-]`, "u");
 const EXACT_VALUE_PATTERN = /^=-?[0-9]+(\.[0-9]+)?$/;
-
-/** An exact plural key's value, as the plural's lookup spells it: an integer in full, any other number as a number. */
-const exactKey = (value: string): string => {
-  const [whole, fraction = ""] = value.split(".");
-  return /^0*$/.test(fraction) ? `=${BigInt(whole!)}` : `=${Number(value)}`;
-};
 const MAX_NESTING = 10;
 // What a parsed message keeps, in characters of its text, which V8 keeps at about 2 bytes each. Measured on Node.js
 // 26.13: a node, such as `{a}` or `#`, keeps 47 to 140 bytes, and a plural or select keeps about 330 bytes with one
@@ -61,8 +55,7 @@ type MessageNode =
       readonly kind: "plural";
       readonly name: string;
       readonly isOrdinal: boolean;
-      /** Exact, as a bigint count needs it; a number count subtracts it as a number. */
-      readonly offset: bigint;
+      readonly offset: number;
       readonly options: ReadonlyMap<string, readonly MessageNode[]>;
       readonly source: string;
     }
@@ -255,7 +248,7 @@ class Parser {
       case "selectordinal": {
         this.expect(",");
         this.skipSpace();
-        let offset = 0n;
+        let offset = 0;
         if (this.message.startsWith("offset:", this.index)) {
           this.index += "offset:".length;
           this.skipSpace();
@@ -263,15 +256,14 @@ class Parser {
           if (digits.length === 0) {
             this.fail("Expected an offset");
           }
-          offset = BigInt(digits);
+          offset = Number(digits);
         }
         const options = this.parseOptions(depth, true, (key) => {
           if (key.startsWith("=") ? !EXACT_VALUE_PATTERN.test(key) : !PLURAL_KEYWORDS.has(key)) {
             this.fail(`Unknown plural form ${formatReportedKey(key)}`);
           }
-          // ICU compares exact values as numbers, so `=1.0` and `=01` select 1, as the value's own spelling does. An
-          // integer is kept exact, so `=9007199254740993` selects that bigint rather than its rounded neighbor.
-          return key.startsWith("=") ? exactKey(key.slice(1)) : key;
+          // ICU compares exact values as numbers, so `=1.0` and `=01` select 1, as the value's own spelling does.
+          return key.startsWith("=") ? `=${Number(key.slice(1))}` : key;
         });
         return {
           kind: "plural",
@@ -642,24 +634,6 @@ const getPluralRules = (locale: string, isOrdinal: boolean): Intl.PluralRules =>
     () => new Intl.PluralRules(intlLocale(locale), { type: isOrdinal ? "ordinal" : "cardinal" }),
   );
 
-const MILLION = 1_000_000n;
-
-/**
- * A count as the number `Intl.PluralRules` selects by. It rejects a bigint, and one past `Number.MAX_SAFE_INTEGER` loses
- * its last digits as a number, which rules such as `n % 10` and French `i % 1000000` read. CLDR rules read at most the
- * last six digits of an integer and compare the whole value only with small numbers, so a large bigint selects as the
- * number a million above its last six digits.
- *
- * @internal
- */
-export const toPluralOperand = (count: number | bigint): number => {
-  if (typeof count === "number") {
-    return count;
-  }
-  const size = count < 0n ? -count : count;
-  return Number(size <= BigInt(Number.MAX_SAFE_INTEGER) ? size : (size % MILLION) + MILLION);
-};
-
 // The largest time a `Date` holds, in milliseconds either side of the epoch. `Intl` throws past it.
 const MAX_TIME = 8_640_000_000_000_000;
 
@@ -691,7 +665,7 @@ export const formatPlainValue = (value: unknown, locale: string, timeZone: strin
   if (typeof value === "string") {
     return value;
   }
-  if (typeof value === "number" || typeof value === "bigint") {
+  if (typeof value === "number") {
     return getNumberFormat(locale).format(value);
   }
   const time = readDateTime(value);
@@ -715,7 +689,7 @@ interface FormatState {
   filledArguments: number;
 }
 
-const formatNodes = (nodes: Message, state: FormatState, pound: number | bigint | undefined): string => {
+const formatNodes = (nodes: Message, state: FormatState, pound: number | undefined): string => {
   const { values, locale, timeZone } = state;
   let result = "";
   // Formatted once, so a form that repeats `#` costs one formatting step, however many `#` the limit lets it fill.
@@ -744,7 +718,7 @@ const formatNodes = (nodes: Message, state: FormatState, pound: number | bigint 
         break;
       case "number":
         result +=
-          typeof value === "number" || typeof value === "bigint"
+          typeof value === "number"
             ? getNumberFormat(
                 locale,
                 node.style === "percent"
@@ -768,30 +742,24 @@ const formatNodes = (nodes: Message, state: FormatState, pound: number | bigint 
         break;
       }
       case "plural": {
-        if (typeof value !== "number" && typeof value !== "bigint") {
+        if (typeof value !== "number") {
           result += node.source;
           break;
         }
-        const exact = node.options.get(
-          typeof value === "bigint" || Number.isInteger(value) ? `=${BigInt(value)}` : `=${value}`,
-        );
-        const shown = typeof value === "bigint" ? value - node.offset : value - Number(node.offset);
+        const exact = node.options.get(`=${value}`);
         // A locale Intl rejects uses `other`, as plural groups do, rather than the root locale's English-like rules.
         const category =
-          intlLocale(locale) === "und"
-            ? "other"
-            : getPluralRules(locale, node.isOrdinal).select(toPluralOperand(shown));
-        result += formatNodes(exact ?? node.options.get(category) ?? node.options.get("other")!, state, shown);
+          intlLocale(locale) === "und" ? "other" : getPluralRules(locale, node.isOrdinal).select(value - node.offset);
+        result += formatNodes(
+          exact ?? node.options.get(category) ?? node.options.get("other")!,
+          state,
+          value - node.offset,
+        );
         break;
       }
       case "select": {
         // A boolean picks the option named `true` or `false`, as `String(value)` spells it.
-        if (
-          typeof value !== "string" &&
-          typeof value !== "number" &&
-          typeof value !== "bigint" &&
-          typeof value !== "boolean"
-        ) {
+        if (typeof value !== "string" && typeof value !== "number" && typeof value !== "boolean") {
           result += node.source;
           break;
         }

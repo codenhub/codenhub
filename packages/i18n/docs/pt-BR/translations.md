@@ -2,7 +2,7 @@
 title: Escreva as suas traduções
 description: Dicionários, arquivos JSON, placeholders, mensagens ICU, links e negrito, plurais, formatadores, chaves e valores tipados, verificação de chaves não traduzidas e limites de tamanho.
 order: 1
-source: d58a19891385c194ba345ff2c6f77a0c52e16753
+source: 8daa50b13bfaf4609d737cd52c61ecf2188c76fa
 ---
 
 # Escreva as suas traduções
@@ -132,7 +132,7 @@ t("order.confirmed", { name: "Ana", orderId: "1042" });
 // "Thanks, Ana. Order 1042 ships tomorrow."
 ```
 
-Os valores podem ser strings, números, bigints ou datas, e um `select` também aceita um booleano. Um bigint vai onde vai um número, e é formatado sem perder dígitos. Os nomes de placeholder usam letras e dígitos de qualquer escrita, e `_`, como `{firstName}`, `{first_name}` ou `{año}`. Um nome com qualquer outra coisa, como `{first-name}` ou `{price€}`, não é placeholder: a mensagem tem sintaxe inválida, registra um aviso e mostra `{first-name}` como foi escrito.
+Os valores podem ser strings, números ou datas, e um `select` também aceita um booleano. Os nomes de placeholder usam letras e dígitos de qualquer escrita, e `_`, como `{firstName}`, `{first_name}` ou `{año}`. Um nome com qualquer outra coisa, como `{first-name}` ou `{price€}`, não é placeholder: a mensagem tem sintaxe inválida, registra um aviso e mostra `{first-name}` como foi escrito.
 
 Use placeholders em vez de juntar pedaços. `t("before") + name + t("after")` prende todos os idiomas à ordem das palavras do inglês, enquanto uma frase inteira com um placeholder deixa cada tradução pôr o valor onde ele cabe. A ordem das palavras é a primeira coisa que todo tradutor quer mudar, e quase sempre ele tem razão.
 
@@ -165,14 +165,14 @@ t("cart.discount", { rate: 0.15 }); // "15% off"
 t("order.shipped", { date: new Date() });
 ```
 
-| Argumento               | Estilos                                                           | Valor                              |
-| ----------------------- | ----------------------------------------------------------------- | ---------------------------------- |
-| `{n, number}`           | nenhum, `integer`, `percent`                                      | número ou bigint                   |
-| `{d, date}`             | `short`, `medium` (o padrão), `long`, `full`                      | `Date` ou um timestamp             |
-| `{d, time}`             | `short`, `medium` (o padrão), `long`, `full`                      | `Date` ou um timestamp             |
-| `{n, plural, …}`        | veja [Plurais](#plurais)                                          | número ou bigint                   |
-| `{n, selectordinal, …}` | formas ordinais, como `one {#st} two {#nd} few {#rd} other {#th}` | número ou bigint                   |
-| `{v, select, …}`        | quaisquer palavras, mais `other`                                  | string, número, bigint ou booleano |
+| Argumento               | Estilos                                                           | Valor                      |
+| ----------------------- | ----------------------------------------------------------------- | -------------------------- |
+| `{n, number}`           | nenhum, `integer`, `percent`                                      | número                     |
+| `{d, date}`             | `short`, `medium` (o padrão), `long`, `full`                      | `Date` ou um timestamp     |
+| `{d, time}`             | `short`, `medium` (o padrão), `long`, `full`                      | `Date` ou um timestamp     |
+| `{n, plural, …}`        | veja [Plurais](#plurais)                                          | número                     |
+| `{n, selectordinal, …}` | formas ordinais, como `one {#st} two {#nd} few {#rd} other {#th}` | número                     |
+| `{v, select, …}`        | quaisquer palavras, mais `other`                                  | string, número ou booleano |
 
 A formatação usa o idioma do dicionário de onde o texto veio, então um texto em inglês que cobre uma chave que falta em português é escrito do jeito inglês. Um argumento cujo valor tem o tipo errado, como uma string para `{n, number}`, fica como foi escrito.
 
@@ -274,7 +274,7 @@ Quando um grupo de plural falta no locale atual, é usado o grupo do locale padr
 
 Três coisas a observar:
 
-- **`count` precisa ser um número ou um bigint.** Uma string como `"5"` não escolhe forma nenhuma; o grupo então é tratado como chave que falta. Converta o valor onde ele entra, como `Number(params.get("count"))`. O gerenciador não adivinha, já que `"1,5"` é um e meio em português e não é número nenhum para o JavaScript.
+- **`count` precisa ser um número.** Uma string como `"5"` não escolhe forma nenhuma; o grupo então é tratado como chave que falta. Converta o valor onde ele entra, como `Number(params.get("count"))`. O gerenciador não adivinha, já que `"1,5"` é um e meio em português e não é número nenhum para o JavaScript.
 - **Uma string simples na mesma chave ganha das formas.** Se `cart.items` for uma string, `count` só preenche `{count}`.
 - **Sem `other`, não é um grupo de plural.** `{ "one": "…", "two": "…" }` só funciona para as quantidades cuja forma por acaso esteja ali; qualquer outra quantidade mostra a chave. `has()` diz que um grupo assim não é uma chave, e as chaves tipadas não o oferecem. Acrescente `other`.
 
@@ -374,10 +374,10 @@ t("cart.items", { count: 2 }); // ok: um grupo de plural exige um count numéric
 
 Quais valores cada argumento aceita:
 
-- Argumentos `number`, `plural` e `selectordinal` aceitam um número ou um bigint.
+- Argumentos `number`, `plural` e `selectordinal` aceitam um número.
 - `date` e `time` aceitam um `Date` ou um timestamp.
-- `select` aceita uma string, um número, um bigint ou um booleano.
-- Um `{name}` simples aceita uma string, um número, um bigint ou um `Date`.
+- `select` aceita uma string, um número ou um booleano.
+- Um `{name}` simples aceita uma string, um número ou um `Date`.
 
 Só os valores que a mensagem usa são conferidos. Qualquer outro valor pode ter qualquer tipo, então `t("home.greeting", user)` aceita um `User` inteiro com um `isAdmin: boolean`, e um objeto literal também pode levar valores a mais. Quando vários dicionários são tipados, uma chave precisa dos valores de todos os que a têm.
 

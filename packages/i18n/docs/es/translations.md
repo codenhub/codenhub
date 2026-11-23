@@ -2,7 +2,7 @@
 title: Escribe tus traducciones
 description: Diccionarios, archivos JSON, placeholders, mensajes ICU, enlaces y negritas, plurales, formateadores, claves y valores tipados, cómo detectar claves sin traducir y límites de tamaño.
 order: 1
-source: d58a19891385c194ba345ff2c6f77a0c52e16753
+source: 8daa50b13bfaf4609d737cd52c61ecf2188c76fa
 ---
 
 # Escribe tus traducciones
@@ -132,7 +132,7 @@ t("order.confirmed", { name: "Ana", orderId: "1042" });
 // "Thanks, Ana. Order 1042 ships tomorrow."
 ```
 
-Los valores pueden ser strings, números, bigints o fechas, y un `select` también acepta un booleano. Un bigint va donde va un número, y se formatea sin perder dígitos. Los nombres de los placeholders usan letras y dígitos de cualquier escritura, y `_`, como `{firstName}`, `{first_name}` o `{año}`. Un nombre con cualquier otra cosa, como `{first-name}` o `{price€}`, no es un placeholder: el mensaje tiene sintaxis inválida, registra una advertencia y muestra `{first-name}` tal como está escrito.
+Los valores pueden ser strings, números o fechas, y un `select` también acepta un booleano. Los nombres de los placeholders usan letras y dígitos de cualquier escritura, y `_`, como `{firstName}`, `{first_name}` o `{año}`. Un nombre con cualquier otra cosa, como `{first-name}` o `{price€}`, no es un placeholder: el mensaje tiene sintaxis inválida, registra una advertencia y muestra `{first-name}` tal como está escrito.
 
 Usa placeholders en lugar de juntar fragmentos. `t("before") + name + t("after")` obliga a todos los idiomas a seguir el orden de palabras del inglés, mientras que una oración entera con un placeholder deja que cada traducción ponga el valor donde corresponde. El orden de las palabras es lo primero que todo traductor quiere cambiar, y casi siempre tiene razón.
 
@@ -165,14 +165,14 @@ t("cart.discount", { rate: 0.15 }); // "15% off"
 t("order.shipped", { date: new Date() });
 ```
 
-| Argumento               | Estilos                                                            | Valor                             |
-| ----------------------- | ------------------------------------------------------------------ | --------------------------------- |
-| `{n, number}`           | ninguno, `integer`, `percent`                                      | número o bigint                   |
-| `{d, date}`             | `short`, `medium` (el valor por defecto), `long`, `full`           | `Date` o un timestamp             |
-| `{d, time}`             | `short`, `medium` (el valor por defecto), `long`, `full`           | `Date` o un timestamp             |
-| `{n, plural, …}`        | consulta [Plurales](#plurales)                                     | número o bigint                   |
-| `{n, selectordinal, …}` | formas ordinales, como `one {#st} two {#nd} few {#rd} other {#th}` | número o bigint                   |
-| `{v, select, …}`        | cualquier palabra, más `other`                                     | string, número, bigint o booleano |
+| Argumento               | Estilos                                                            | Valor                     |
+| ----------------------- | ------------------------------------------------------------------ | ------------------------- |
+| `{n, number}`           | ninguno, `integer`, `percent`                                      | número                    |
+| `{d, date}`             | `short`, `medium` (el valor por defecto), `long`, `full`           | `Date` o un timestamp     |
+| `{d, time}`             | `short`, `medium` (el valor por defecto), `long`, `full`           | `Date` o un timestamp     |
+| `{n, plural, …}`        | consulta [Plurales](#plurales)                                     | número                    |
+| `{n, selectordinal, …}` | formas ordinales, como `one {#st} two {#nd} few {#rd} other {#th}` | número                    |
+| `{v, select, …}`        | cualquier palabra, más `other`                                     | string, número o booleano |
 
 El formato usa el idioma del diccionario del que vino el texto, así que un texto en inglés que cubre una clave que falta en portugués se escribe a la manera del inglés. Un argumento cuyo valor tiene el tipo equivocado, como un string para `{n, number}`, se queda tal como está escrito.
 
@@ -274,7 +274,7 @@ Cuando a un locale le falta un grupo de plurales, se usa el grupo del locale por
 
 Tres cosas a tener en cuenta:
 
-- **`count` tiene que ser un número o un bigint.** Un string como `"5"` no elige ninguna forma; el grupo se trata entonces como una clave que falta. Conviértelo donde entra, como con `Number(params.get("count"))`. El gestor no adivina, porque `"1,5"` es uno y medio en portugués y para JavaScript ni siquiera es un número.
+- **`count` tiene que ser un número.** Un string como `"5"` no elige ninguna forma; el grupo se trata entonces como una clave que falta. Conviértelo donde entra, como con `Number(params.get("count"))`. El gestor no adivina, porque `"1,5"` es uno y medio en portugués y para JavaScript ni siquiera es un número.
 - **Un string simple bajo la misma clave gana sobre las formas.** Si `cart.items` es un string, `count` solo completa `{count}`.
 - **Sin `other`, no es un grupo de plurales.** `{ "one": "…", "two": "…" }` funciona solo para las cantidades cuya forma justo está ahí; cualquier otra cantidad muestra la clave. `has()` dice que ese grupo no es una clave, y las claves tipadas no lo ofrecen. Agrega `other`.
 
@@ -374,10 +374,10 @@ t("cart.items", { count: 2 }); // ok: un grupo de plurales requiere un count num
 
 Qué valores acepta cada argumento:
 
-- Los argumentos `number`, `plural` y `selectordinal` aceptan un número o un bigint.
+- Los argumentos `number`, `plural` y `selectordinal` aceptan un número.
 - `date` y `time` aceptan un `Date` o un timestamp.
-- `select` acepta un string, un número, un bigint o un booleano.
-- Un `{name}` simple acepta un string, un número, un bigint o un `Date`.
+- `select` acepta un string, un número o un booleano.
+- Un `{name}` simple acepta un string, un número o un `Date`.
 
 Solo se comprueban los valores que usa el mensaje. Cualquier otro valor puede ser de cualquier tipo, así que `t("home.greeting", user)` acepta un `User` entero con un `isAdmin: boolean`, y un objeto literal también puede llevar valores de más. Cuando hay varios diccionarios tipados, una clave necesita los valores de cada uno que la tenga.
 

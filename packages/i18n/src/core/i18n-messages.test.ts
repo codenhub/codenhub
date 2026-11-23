@@ -84,51 +84,17 @@ describe("ICU messages", () => {
     expect(i18n.t("broken", { name: 1234.5 })).toBe("Olá 1.234,5 }");
   });
 
-  it("should take a bigint wherever it takes a number", async () => {
-    const i18n = create({ pt: { price: "Custa {amount, number}" } });
+  it("should leave an argument as written for a bigint, as 0.4.0 does", async () => {
+    const i18n = create();
     await i18n.init();
-    const big = 12_345_678_901_234_567_890n;
+    // Plain JavaScript can pass one; the types take only a number.
+    const values = { name: 3n, amount: 3n, count: 3n, n: 3n, gender: 3n } as unknown as Record<string, number>;
 
-    expect(i18n.t("hello", { name: big })).toBe("Hello, 12,345,678,901,234,567,890!");
-    expect(i18n.t("price", { amount: big })).toBe("Costs 12,345,678,901,234,567,890");
-    expect(i18n.t("whole", { amount: 3n })).toBe("3 units");
-    expect(i18n.t("share", { ratio: 1n })).toBe("100% done");
-    expect(i18n.t("items", { count: 0n })).toBe("No items");
-    expect(i18n.t("items", { count: 1n })).toBe("1 item");
-    expect(i18n.t("items", { count: big })).toBe("12,345,678,901,234,567,890 items");
-    expect(i18n.t("others", { count: 3n, name: "Ana" })).toBe("Ana and 2 others");
-    expect(i18n.t("place", { n: 22n })).toBe("22nd");
-    // As a number, 10^20 + 22 rounds to 10^20 and would select "th".
-    expect(i18n.t("place", { n: 10n ** 20n + 22n })).toBe("100,000,000,000,000,000,022nd");
-    expect(i18n.t("greet", { gender: 1n })).toBe("They replied");
-    expect(i18n.t("broken", { name: 5n })).toBe("Hello {name");
-
-    await i18n.setLocale("pt");
-    expect(i18n.t("price", { amount: big })).toBe("Custa 12.345.678.901.234.567.890");
-  });
-
-  it("should match a bigint's exact form and offset without rounding them to a number", async () => {
-    const i18n = createI18n({
-      defaultLocale: "en",
-      locales: ["en"],
-      loadLocale: () => ({
-        exact: "{n, plural, =9007199254740993 {exact} other {other}}",
-        offset: "{n, plural, offset:9007199254740993 other {#}}",
-        huge: `{n, plural, offset:${"9".repeat(400)} other {#}}`,
-        padded: "{n, plural, =01 {one} =2.0 {two} other {other}}",
-      }),
-      isSilent: true,
-    });
-    await i18n.init();
-
-    expect(i18n.t("exact", { n: 9_007_199_254_740_993n })).toBe("exact");
-    expect(i18n.t("exact", { n: 9_007_199_254_740_992n })).toBe("other");
-    expect(i18n.t("offset", { n: 9_007_199_254_740_993n })).toBe("0");
-    // 1 - (10^400 - 1), formatted in full.
-    expect(i18n.t("huge", { n: 1n })).toMatch(/^-9(,999){132},998$/);
-    expect(i18n.t("padded", { n: 1n })).toBe("one");
-    expect(i18n.t("padded", { n: 2 })).toBe("two");
-    expect(i18n.t("padded", { n: 2n })).toBe("two");
+    expect(i18n.t("hello", values)).toBe("Hello, {name}!");
+    expect(i18n.t("price", values)).toBe("Costs {amount, number}");
+    expect(i18n.t("items", values)).toBe("{count, plural, =0 {No items} one {# item} other {# items}}");
+    expect(i18n.t("place", values)).toBe("{n, selectordinal, one {#st} two {#nd} few {#rd} other {#th}}");
+    expect(i18n.t("greet", values)).toBe("{gender, select, female {She} male {He} other {They}} replied");
   });
 
   it("should format dates and times as Intl does", async () => {

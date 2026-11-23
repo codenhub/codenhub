@@ -19,7 +19,6 @@ import {
   NAME_CHARACTER,
   parseCachedMessage,
   readValue,
-  toPluralOperand,
 } from "./message-format";
 import { MAX_TRANSLATION_KEY_LENGTH, MAX_UNTRIMMED_KEY_LENGTH, normalizeTranslationKey } from "./string-validation";
 import type {
@@ -255,11 +254,7 @@ class I18nInstance<TLocale extends string, TKey extends string = string>
       throw new TypeError("[I18n] Translation values must be an object or undefined.");
     }
     const count = params === undefined ? undefined : readValue(params, "count");
-    return this.lookup(
-      caller,
-      key,
-      typeof count === "number" || typeof count === "bigint" ? toPluralOperand(count) : undefined,
-    );
+    return this.lookup(caller, key, typeof count === "number" ? count : undefined);
   }
 
   has(key: TKey): boolean;

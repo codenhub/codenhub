@@ -131,7 +131,7 @@ t("order.confirmed", { name: "Ana", orderId: "1042" });
 // "Thanks, Ana. Order 1042 ships tomorrow."
 ```
 
-Values can be strings, numbers, bigints, or dates, and a `select` also takes a boolean. A bigint goes wherever a number does, and is formatted without losing digits. Placeholder names use letters and digits in any script, and `_`, such as `{firstName}`, `{first_name}`, or `{año}`. A name with anything else, such as `{first-name}` or `{price€}`, is not a placeholder: the message is invalid syntax, logs a warning, and shows `{first-name}` as written.
+Values can be strings, numbers, or dates, and a `select` also takes a boolean. Placeholder names use letters and digits in any script, and `_`, such as `{firstName}`, `{first_name}`, or `{año}`. A name with anything else, such as `{first-name}` or `{price€}`, is not a placeholder: the message is invalid syntax, logs a warning, and shows `{first-name}` as written.
 
 Use placeholders instead of joining fragments. `t("before") + name + t("after")` locks every language into English word order, while a whole sentence with a placeholder lets each translation put the value where it belongs. Word order is the first thing every translator wants to change, and they are usually right.
 
@@ -164,14 +164,14 @@ t("cart.discount", { rate: 0.15 }); // "15% off"
 t("order.shipped", { date: new Date() });
 ```
 
-| Argument                | Styles                                                             | Value                              |
-| ----------------------- | ------------------------------------------------------------------ | ---------------------------------- |
-| `{n, number}`           | none, `integer`, `percent`                                         | number or bigint                   |
-| `{d, date}`             | `short`, `medium` (the default), `long`, `full`                    | `Date` or a timestamp              |
-| `{d, time}`             | `short`, `medium` (the default), `long`, `full`                    | `Date` or a timestamp              |
-| `{n, plural, …}`        | see [Plurals](#plurals)                                            | number or bigint                   |
-| `{n, selectordinal, …}` | ordinal forms, such as `one {#st} two {#nd} few {#rd} other {#th}` | number or bigint                   |
-| `{v, select, …}`        | any words, plus `other`                                            | string, number, bigint, or boolean |
+| Argument                | Styles                                                             | Value                      |
+| ----------------------- | ------------------------------------------------------------------ | -------------------------- |
+| `{n, number}`           | none, `integer`, `percent`                                         | number                     |
+| `{d, date}`             | `short`, `medium` (the default), `long`, `full`                    | `Date` or a timestamp      |
+| `{d, time}`             | `short`, `medium` (the default), `long`, `full`                    | `Date` or a timestamp      |
+| `{n, plural, …}`        | see [Plurals](#plurals)                                            | number                     |
+| `{n, selectordinal, …}` | ordinal forms, such as `one {#st} two {#nd} few {#rd} other {#th}` | number                     |
+| `{v, select, …}`        | any words, plus `other`                                            | string, number, or boolean |
 
 Formatting uses the language of the dictionary the text came from, so English text that fills in for a missing Portuguese key is written the English way. An argument whose value has the wrong type, such as a string for `{n, number}`, stays as written.
 
@@ -273,7 +273,7 @@ When a plural group is missing from the current locale, the default locale's gro
 
 Three things to watch for:
 
-- **`count` must be a number or bigint.** A string such as `"5"` does not select a form; the group is then treated as a missing key. Convert it where it comes in, such as `Number(params.get("count"))`. The manager doesn't guess, since `"1,5"` is one and a half in Portuguese and not a number at all to JavaScript.
+- **`count` must be a number.** A string such as `"5"` does not select a form; the group is then treated as a missing key. Convert it where it comes in, such as `Number(params.get("count"))`. The manager doesn't guess, since `"1,5"` is one and a half in Portuguese and not a number at all to JavaScript.
 - **A plain string under the same key wins over forms.** If `cart.items` is a string, `count` only fills `{count}`.
 - **Without `other`, it is not a plural group.** `{ "one": "…", "two": "…" }` works only for counts whose form happens to be there; any other count shows the key. `has()` says such a group is not a key, and typed keys don't offer it. Add `other`.
 
@@ -373,10 +373,10 @@ t("cart.items", { count: 2 }); // ok: a plural group requires a numeric count
 
 Which values each argument takes:
 
-- `number`, `plural`, and `selectordinal` arguments take a number or bigint.
+- `number`, `plural`, and `selectordinal` arguments take a number.
 - `date` and `time` take a `Date` or a timestamp.
-- `select` takes a string, number, bigint, or boolean.
-- A plain `{name}` takes a string, number, bigint, or `Date`.
+- `select` takes a string, number, or boolean.
+- A plain `{name}` takes a string, number, or `Date`.
 
 Only the values the message uses are checked. Any other value may have any type, so `t("home.greeting", user)` takes a whole `User` with an `isAdmin: boolean`, and an object literal may carry extra values too. When several dictionaries are typed, a key needs the values of every one that has it.
 

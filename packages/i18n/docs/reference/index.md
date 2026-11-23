@@ -442,12 +442,12 @@ A parent is made by dropping subtags and is skipped when its likely script diffe
 
 Messages use ICU syntax: `{name}`, `{n, number}` with an optional `integer` or `percent` style, `{d, date}` and `{d, time}` with an optional `short`, `medium` (the default), `long`, or `full` style, `{n, plural, …}` and `{n, selectordinal, …}` with `=N` and CLDR category options, an optional `offset:N`, and `#` for the number in the plural's own forms, and `{v, select, …}`. Plural categories and every format use the locale of the dictionary that has the text. An apostrophe before `{`, `}`, or, in a plural, `#` quotes them, and `''` is one apostrophe. A message that is not valid syntax warns once per process for its locale, key, and text, unless silent, and only its `{name}` placeholders are filled.
 
-When `params.count` is a number or bigint and the key is a group of plural forms rather than a text, such as `{ one: "{count} item", other: "{count} items" }`, the form is chosen with `Intl.PluralRules` for the locale of the dictionary that has the group, falling back to its `other` form. Forms are named by CLDR plural category: `zero`, `one`, `two`, `few`, `many`, and `other`.
+When `params.count` is a number and the key is a group of plural forms rather than a text, such as `{ one: "{count} item", other: "{count} items" }`, the form is chosen with `Intl.PluralRules` for the locale of the dictionary that has the group, falling back to its `other` form. Forms are named by CLDR plural category: `zero`, `one`, `two`, `few`, `many`, and `other`.
 
 **Parameters**
 
-- `key` — Translation key, or the key of a plural group when `params.count` is a number or bigint.
-- `params` — Argument values, read from own properties. An argument without a usable value, such as a string for `{n, number}`, is left as written. A string in `{name}` is inserted as written, a number as `{name, number}` would format it, and a date as `{name, date}` would. A bigint is taken wherever a number is. A boolean is taken by `{v, select, …}` only, which picks the option named `true` or `false`, or `other`. A numeric `count` also selects a plural form. Where the dictionary type has the message as a literal, the values it uses are type-checked, and any other value may have any type, such as the `isAdmin` of a `User` passed whole.
+- `key` — Translation key, or the key of a plural group when `params.count` is a number.
+- `params` — Argument values, read from own properties. An argument without a usable value, such as a string for `{n, number}`, is left as written. A string in `{name}` is inserted as written, a number as `{name, number}` would format it, and a date as `{name, date}` would. A boolean is taken by `{v, select, …}` only, which picks the option named `true` or `false`, or `other`. A numeric `count` also selects a plural form. Where the dictionary type has the message as a literal, the values it uses are type-checked, and any other value may have any type, such as the `isAdmin` of a `User` passed whole.
 
 **Returns** — The translated text, or the trimmed key when no dictionary has it. A miss calls `onMissingKey`, or warns once per recent locale/key pair in the process unless silent.
 
@@ -922,7 +922,7 @@ Not exported; declared in `src/core/message-params.ts`.
 ### MessageValue
 
 ```ts
-type MessageValue = string | number | bigint | Date;
+type MessageValue = string | number | Date;
 ```
 
 Not exported; declared in `src/core/message-params.ts`.
@@ -971,7 +971,7 @@ Not exported; declared in `src/core/message-params.ts`.
 
 ```ts
 type ParamsFor<U, TValues, TIsGroup> = IsUnreadable<U> extends true ? TIsGroup extends true ? [params: {
-    readonly count: number | bigint;
+    readonly count: number;
 } & TValues] : AnyValues<TValues> : ParamsOf<UnionToIntersection<U>, TValues>;
 ```
 
@@ -1151,7 +1151,7 @@ Not exported; declared in `src/core/message-params.ts`.
 type ValueArguments<V> = V extends string ? MessageArguments<V> : V extends {
     readonly other: string;
 } ? IsUnreadable<FormArguments<V>> extends true ? Unreadable : UnionToIntersection<FormArguments<V>> & {
-    readonly count: number | bigint;
+    readonly count: number;
 } : Unreadable;
 ```
 
@@ -1168,7 +1168,7 @@ Not exported; declared in `src/core/message-params.ts`.
 ### ValueKind
 
 ```ts
-type ValueKind = string | number | bigint | boolean | Date;
+type ValueKind = string | number | boolean | Date;
 ```
 
 Not exported; declared in `src/core/message-params.ts`.
@@ -1176,8 +1176,8 @@ Not exported; declared in `src/core/message-params.ts`.
 ### ValueOfType
 
 ```ts
-type ValueOfType<T> = T extends "number" | "plural" | "selectordinal" ? number | bigint : T extends "date" | "time" ? Date | number : T extends "select" ? // A boolean picks the option named `true` or `false`; no other format reads one.
-string | number | bigint | boolean : Unreadable;
+type ValueOfType<T> = T extends "number" | "plural" | "selectordinal" ? number : T extends "date" | "time" ? Date | number : T extends "select" ? // A boolean picks the option named `true` or `false`; no other format reads one.
+string | number | boolean : Unreadable;
 ```
 
 Not exported; declared in `src/core/message-params.ts`.
