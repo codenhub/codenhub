@@ -584,29 +584,6 @@
     gap: var(--field-gap, 0.35rem);
   }
 
-  /* A toggle and its label: the control beside the text, the text wrapping
-     beside it rather than under it, and the control centred on the first line
-     however many lines follow. A wrapping `.cluster` dropped long text below
-     the switch, where it read as the next control's label.
-
-     The text is the label's own anonymous flex item, so rich text -- a link,
-     a `<strong>` -- goes in one `<span>`, or each piece becomes an item of its
-     own. The offset is half the difference between a line and the control,
-     read on the control, where `1lh` is the label's leading (a toggle inherits
-     its line height) and a switch's height is its own `--_switch-height`; a
-     checkbox and a radio are 1rem. Floored at zero: a control taller than the
-     line pushes the text down instead. */
-  .choice {
-    display: flex;
-    align-items: flex-start;
-    gap: calc(var(--spacing) * 2);
-
-    & > :is(.checkbox, .radio, .switch, input[type="checkbox"], input[type="radio"]) {
-      flex: none;
-      margin-block-start: max(0px, calc((1lh - var(--_switch-height, calc(var(--spacing) * 4))) / 2));
-    }
-  }
-
   .label {
     /* In `:where()`: a label's type is a default, and Tailwind emits this rule
        after its own type utilities, so at 0-1-0 `.label.text-sm` stayed 16px.

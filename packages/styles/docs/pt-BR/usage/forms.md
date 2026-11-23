@@ -2,7 +2,7 @@
 title: Formulários
 description: Campos com rótulo, dicas e erros, ícones e prefixos fixos, selects e toggles de checkbox, radio e switch.
 order: 2
-source: 1cdef6787095e5d757576d3970723166d2232bff
+source: 0a045c27e48eb5d6e64934f84f3e1f90a403c7a8
 ---
 
 # Formulários
@@ -175,7 +175,7 @@ A tela de configurações tem três tipos de toggle: um checkbox para optar por 
 ```html
 <fieldset class="stack tight">
   <legend class="label">Notifications</legend>
-  <label class="choice">
+  <label class="cluster tight">
     <input class="checkbox" type="checkbox" name="invoice-email" checked />
     Email me when an invoice is ready
   </label>
@@ -183,24 +183,24 @@ A tela de configurações tem três tipos de toggle: um checkbox para optar por 
 
 <fieldset class="stack tight">
   <legend class="label">Billing period</legend>
-  <label class="choice">
+  <label class="cluster tight">
     <input class="radio" type="radio" name="period" value="monthly" />
     Monthly
   </label>
-  <label class="choice">
+  <label class="cluster tight">
     <input class="radio" type="radio" name="period" value="yearly" checked />
     Yearly, two months free
   </label>
 </fieldset>
 
-<label class="choice">
+<label class="cluster tight">
   <input class="switch primary" type="checkbox" role="switch" name="public-profile" />
   Public profile
 </label>
 ```
 
 - `.checkbox` vai em `type="checkbox"`, `.radio` em `type="radio"` e `.switch` em `type="checkbox"`. Dê você mesmo `role="switch"` a um switch, para que ele seja anunciado como ligado ou desligado, e não como marcado.
-- `.choice` no `<label>` coloca o controle ao lado do texto com um espaçamento de 0.5rem. Um texto longo demais para uma linha quebra ao lado do controle, não embaixo dele, e o controle fica centralizado na primeira linha. O texto é uma única peça do layout, então coloque texto rico, como um link ou um `<strong>`, dentro de um único `<span>`; cada elemento deixado solto vira uma coluna própria.
+- `.cluster.tight` no `<label>` alinha o controle com o texto e deixa um espaçamento de 0.5rem.
 - Um `<legend>` num fieldset `.stack` fica afastado da primeira opção pelo espaçamento da stack, como as opções ficam umas das outras. O navegador desenha um legend fora do layout do seu fieldset, então o espaçamento sozinho nunca chegava até ele.
 - Um checkbox com a propriedade `indeterminate` definida, para um grupo em que só alguns itens estão marcados, mostra um traço, e mantém o traço mesmo quando também está `checked`, como faz o checkbox nativo do navegador. Defina-a por script (`input.indeterminate = true`); não existe atributo para isso.
 

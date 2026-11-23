@@ -835,7 +835,7 @@ for (const motion of [
     await page.setContent(
       `<!doctype html><html${motion.attribute ? ` data-motion="${motion.attribute}"` : ""}><body style="margin: 0; padding: 16px">
          <div class="cluster between">
-           <label class="choice"><input class="switch primary" type="checkbox" role="switch" /> Public profile</label>
+           <label class="cluster tight"><input class="switch primary" type="checkbox" role="switch" /> Public profile</label>
            <span class="tooltip">
              <button class="tooltip-icon" type="button" aria-label="About public profiles" aria-describedby="help">?</button>
              <span class="tooltip-bubble" role="tooltip" id="help">Anyone with the link can see your name, photo, and public projects.</span>

@@ -2639,48 +2639,6 @@ test("rests an input group on the quiet tone when its field is read-only", async
   expect(await read()).toEqual(rest);
 });
 
-/* A toggle and its label on a narrow screen: the label's text wraps beside
-   the control, never under it, and the control sits on the first line. On a
-   wrapping `.cluster` the text dropped below the switch and read as the next
-   control's. */
-test("keeps a toggle label's wrapped text beside its control, on the first line", async ({ page }) => {
-  await page.setViewportSize({ width: 320, height: 640 });
-  await page.setContent(
-    `<!doctype html><html><body style="margin: 0; padding: 16px">
-       <label class="choice" data-testid="switch"><input class="switch primary" type="checkbox" role="switch" /> Show my profile to anyone with the link</label>
-       <label class="choice" data-testid="checkbox"><input class="checkbox" type="checkbox" /> Email me when an invoice is ready, and again a week before it is due</label>
-       <label class="choice" data-testid="radio"><input class="radio" type="radio" /> Yearly, two months free, billed once a year on the day you signed up</label>
-     </body></html>`,
-  );
-  await page.addStyleTag({ url: FULL_STYLES_URL });
-
-  for (const testId of ["switch", "checkbox", "radio"]) {
-    // oxlint-disable-next-line no-await-in-loop -- one label at a time.
-    const layout = await page.getByTestId(testId).evaluate((label) => {
-      const control = label.querySelector("input")!.getBoundingClientRect();
-      const text = [...label.childNodes].find((node) => node.nodeType === Node.TEXT_NODE && node.textContent!.trim())!;
-      const range = document.createRange();
-      range.selectNodeContents(text);
-      const lines = [...range.getClientRects()].filter((rect) => rect.width > 1);
-      const first = lines[0]!;
-
-      return {
-        lines: new Set(lines.map((rect) => Math.round(rect.top))).size,
-        textLeft: Math.min(...lines.map((rect) => rect.left)),
-        controlRight: control.right,
-        controlCentre: control.top + control.height / 2,
-        firstLineCentre: first.top + first.height / 2,
-      };
-    });
-
-    expect(layout.lines, `${testId} wraps`).toBeGreaterThan(1);
-    expect(layout.textLeft, `${testId} text stays beside the control`).toBeGreaterThan(layout.controlRight);
-    expect(Math.abs(layout.controlCentre - layout.firstLineCentre), `${testId} sits on the first line`).toBeLessThan(
-      2.5,
-    );
-  }
-});
-
 /* A rendered legend is not one of its fieldset's flex items, so a `.stack`
    gap never reached it and it sat flush against the first option. */
 test("spaces a fieldset's legend from its first option as the stack spaces the rest", async ({ page }) => {
@@ -2688,8 +2646,8 @@ test("spaces a fieldset's legend from its first option as the stack spaces the r
     `<!doctype html><html><body>
        <fieldset class="stack tight" data-testid="set">
          <legend class="label">Billing period</legend>
-         <label class="choice"><input class="radio" type="radio" name="p" /> Monthly</label>
-         <label class="choice"><input class="radio" type="radio" name="p" /> Yearly</label>
+         <label class="cluster tight"><input class="radio" type="radio" name="p" /> Monthly</label>
+         <label class="cluster tight"><input class="radio" type="radio" name="p" /> Yearly</label>
        </fieldset></body></html>`,
   );
   await page.addStyleTag({ url: FULL_STYLES_URL });

@@ -2,7 +2,7 @@
 title: Formularios
 description: Campos con etiqueta, pistas y errores, iconos y prefijos fijos, selects y toggles de checkbox, radio y switch.
 order: 2
-source: 1cdef6787095e5d757576d3970723166d2232bff
+source: 0a045c27e48eb5d6e64934f84f3e1f90a403c7a8
 ---
 
 # Formularios
@@ -175,7 +175,7 @@ La pantalla de ajustes tiene tres tipos de toggle: un checkbox para activar los 
 ```html
 <fieldset class="stack tight">
   <legend class="label">Notifications</legend>
-  <label class="choice">
+  <label class="cluster tight">
     <input class="checkbox" type="checkbox" name="invoice-email" checked />
     Email me when an invoice is ready
   </label>
@@ -183,24 +183,24 @@ La pantalla de ajustes tiene tres tipos de toggle: un checkbox para activar los 
 
 <fieldset class="stack tight">
   <legend class="label">Billing period</legend>
-  <label class="choice">
+  <label class="cluster tight">
     <input class="radio" type="radio" name="period" value="monthly" />
     Monthly
   </label>
-  <label class="choice">
+  <label class="cluster tight">
     <input class="radio" type="radio" name="period" value="yearly" checked />
     Yearly, two months free
   </label>
 </fieldset>
 
-<label class="choice">
+<label class="cluster tight">
   <input class="switch primary" type="checkbox" role="switch" name="public-profile" />
   Public profile
 </label>
 ```
 
 - `.checkbox` va en `type="checkbox"`, `.radio` en `type="radio"` y `.switch` en `type="checkbox"`. Dale tú mismo `role="switch"` a un switch, para que se anuncie como activado o desactivado en lugar de marcado.
-- `.choice` en el `<label>` pone el control junto a su texto con una separación de 0.5rem. Un texto demasiado largo para una línea se ajusta junto al control, no por debajo de él, y el control sigue centrado en la primera línea. El texto es una sola pieza del layout, así que pon el texto enriquecido, como un enlace o un `<strong>`, dentro de un único `<span>`; cada elemento que quede suelto se convierte en una columna propia.
+- `.cluster.tight` en el `<label>` alinea el control con su texto y deja una separación de 0.5rem.
 - Un `<legend>` en un fieldset `.stack` queda separado de la primera opción por la separación del stack, igual que las opciones entre sí. Un navegador dibuja una leyenda fuera del layout de su fieldset, así que la separación por sí sola nunca le llegaba.
 - Un checkbox con la propiedad `indeterminate` activada, para un grupo en el que solo algunos elementos están marcados, muestra un guion, y lo mantiene aunque también esté `checked`, como hace el checkbox propio del navegador. Actívala desde un script (`input.indeterminate = true`); no hay atributo para ello.
 

@@ -1616,7 +1616,7 @@ The settings screen has three kinds of toggle: a checkbox to opt into invoice em
 ```html
 <fieldset class="stack tight">
   <legend class="label">Notifications</legend>
-  <label class="choice">
+  <label class="cluster tight">
     <input class="checkbox" type="checkbox" name="invoice-email" checked />
     Email me when an invoice is ready
   </label>
@@ -1624,24 +1624,24 @@ The settings screen has three kinds of toggle: a checkbox to opt into invoice em
 
 <fieldset class="stack tight">
   <legend class="label">Billing period</legend>
-  <label class="choice">
+  <label class="cluster tight">
     <input class="radio" type="radio" name="period" value="monthly" />
     Monthly
   </label>
-  <label class="choice">
+  <label class="cluster tight">
     <input class="radio" type="radio" name="period" value="yearly" checked />
     Yearly, two months free
   </label>
 </fieldset>
 
-<label class="choice">
+<label class="cluster tight">
   <input class="switch primary" type="checkbox" role="switch" name="public-profile" />
   Public profile
 </label>
 ```
 
 - `.checkbox` goes on `type="checkbox"`, `.radio` on `type="radio"`, and `.switch` on `type="checkbox"`. Give a switch `role="switch"` yourself, so it is announced as on or off rather than checked.
-- `.choice` on the `<label>` puts the control beside its text with a 0.5rem gap. Text too long for one line wraps beside the control, not under it, and the control stays centered on the first line. The text is one piece of the layout, so put rich text, such as a link or `<strong>`, inside a single `<span>`; each element left loose becomes a column of its own.
+- `.cluster.tight` on the `<label>` lines the control up with its text and leaves a 0.5rem gap.
 - A `<legend>` in a `.stack` fieldset is spaced from the first option by the stack's gap, as the options are from each other. A browser draws a legend outside its fieldset's layout, so the gap alone never reached it.
 - A checkbox whose `indeterminate` property is set, for a group where only some items are checked, shows a dash, and keeps the dash while also `checked`, as the browser's own checkbox does. Set it from script (`input.indeterminate = true`); there is no attribute for it.
 
@@ -1881,7 +1881,7 @@ The "Public profile" switch on the settings screen deserves a short explanation:
 
 ```html
 <div class="cluster tight">
-  <label class="choice">
+  <label class="cluster tight">
     <input class="switch primary" type="checkbox" role="switch" name="public-profile" />
     Public profile
   </label>
