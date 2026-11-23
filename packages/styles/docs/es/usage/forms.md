@@ -2,7 +2,7 @@
 title: Formularios
 description: Campos con etiqueta, pistas y errores, iconos y prefijos fijos, selects y toggles de checkbox, radio y switch.
 order: 2
-source: 0a045c27e48eb5d6e64934f84f3e1f90a403c7a8
+source: a6def04104caa5e1883027221ca000fea44b55f4
 ---
 
 # Formularios
@@ -62,8 +62,6 @@ Marca el control como inválido con `aria-invalid="true"` y dale al mensaje de e
 ```
 
 Un control inválido dibuja su borde y el texto escrito en el color destructivo, tenga la clase de intención que tenga y esté sobre la superficie que esté, así que en una `.card.solid` se dibuja como su versión `.destructive`. Ahí, un campo dentro de un `.input-group` inválido muestra el texto en el color de texto de la superficie, como en un `.input-group.destructive`. Su anillo de foco es el mismo que dibuja un control válido, definido por [`--focus-ring`](./theming.md#tokens-base). El texto usa el tono legible de ese color, `--intent-strong`, para que siga siendo legible sobre la página. El paquete solo pinta el estado: decidir que el valor es inválido, poner y quitar `aria-invalid` y escribir el mensaje es cosa de tu código. Quita `aria-invalid` en cuanto el valor vuelva a ser válido; si lo dejas puesto, el campo sigue en rojo. En un checkbox, un radio o un switch, `aria-invalid="true"` dibuja el toggle exactamente igual que `.destructive`, marca de activado incluida.
-
-La validación propia del navegador se pinta de la misma forma. Un control que no cumple una restricción que defines en HTML, como `required`, `type="email"` o `pattern`, coincide con `:user-invalid` en cuanto la persona lo ha cambiado y ha salido de él, o ha intentado enviar el formulario, y entonces se dibuja como lo hace `aria-invalid="true"`, incluido su `.input-group`. Antes de eso sigue neutro, así que un campo obligatorio vacío no está en rojo al cargar la página. El navegador no escribe un mensaje que puedas estilizar; sigue mostrando tu propio `.hint.destructive`. Si es tu código el que decide la validez, pon `aria-invalid="false"` en el control para que el veredicto del navegador no lo pinte.
 
 Un `.hint` acepta cualquiera de las seis intenciones incorporadas, no solo `.destructive`: `.hint.success` confirma que se aceptó un valor, y `.hint.warning` señala uno que está permitido pero es inusual. Cada uno se muestra en el tono legible de su intención, `--intent-strong`, que mantiene 4.5:1 frente a la página en los dos temas. Un `.hint` sin intención, con `.neutral` o con una [intención que definiste tú](./theming.md#tu-propia-intención), se queda en el color secundario, y sobre una superficie sólida toma el color de texto de la superficie, como el prefijo de un grupo, el título de una tabla y `.quote-inline`. Solo lo colorea una clase en el propio `.hint`; una intención en el campo o en un contenedor que lo rodee no lo hace.
 

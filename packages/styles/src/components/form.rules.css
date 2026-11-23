@@ -321,15 +321,7 @@
        privates or a state's intent slots, so nothing a consumer writes competes
        with them. */
 
-    /* An invalid control is destructive whatever else it was asked to be:
-       `aria-invalid="true"`, or the browser's own `:user-invalid` -- a
-       constraint the field fails once the person has interacted with it or
-       tried to submit -- unless `aria-invalid="false"` says the page is
-       handling validity itself. Inside a forgiving `:is()`, so an engine
-       without `:user-invalid` keeps the `aria-invalid` arm, and the opt-out
-       in `:where()`, so the state stays 0-1-0 as the attribute alone was.
-       Not `:invalid`: it matches an empty required field on load, before
-       anyone has typed. In
+    /* An invalid control is destructive whatever else it was asked to be. In
        `utilities` above every intent class in `utilities.families` and both
        resets in `components`, and
        0-2-0 so it also outranks the control's own body and the reset above; a
@@ -345,7 +337,7 @@
        surface took the surface's ink as a neutral one does, and its red line
        read as the valid grey. The bare elements and the `.input-group` bridge
        are below the utility, since they name no class `@apply` could carry. */
-    &:is([aria-invalid="true"], :user-invalid:where(:not([aria-invalid="false"]))) {
+    &[aria-invalid="true"] {
       --intent-color: var(--color-destructive);
       --intent-contrast: var(--color-destructive-contrast);
       --intent-hover: var(--color-destructive-hover);
@@ -484,7 +476,7 @@
      the `.input-group` whose field is invalid -- not a toggle or a button
      beside it, which the group's text does not answer to either. The values
      are the utility's; see the state there. */
-  :is(input, textarea, select):is([aria-invalid="true"], :user-invalid:where(:not([aria-invalid="false"]))),
+  :is(input, textarea, select)[aria-invalid="true"],
   .input-group:has(
     > :is(.ipt, .textarea, .select, .text-control, input, textarea, select):where(
         :not(
@@ -503,7 +495,7 @@
           [type="file"],
           [type="hidden"]
         )
-      ):is([aria-invalid="true"], :user-invalid:where(:not([aria-invalid="false"])))
+      )[aria-invalid="true"]
   ) {
     --intent-color: var(--color-destructive);
     --intent-contrast: var(--color-destructive-contrast);
@@ -970,7 +962,7 @@
       background-color: transparent;
       box-shadow: none;
 
-      &:is([aria-invalid="true"], :user-invalid:where(:not([aria-invalid="false"]))) {
+      &[aria-invalid="true"] {
         --intent-fill-max: 20%;
       }
 
@@ -1062,7 +1054,7 @@
             [type="file"],
             [type="hidden"]
           )
-        ):is([aria-invalid="true"], :user-invalid:where(:not([aria-invalid="false"])))
+        )[aria-invalid="true"]
     ) {
       --intent-color: var(--color-destructive);
       --intent-contrast: var(--color-destructive-contrast);
