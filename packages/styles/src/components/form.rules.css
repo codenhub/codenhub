@@ -809,12 +809,12 @@
        control draws, plus `box`'s inset layer when a clipping aesthetic asks for
        one, and the focus line tone a field states for itself. The control inside
        drops its own ring below so the group shows one. The cost is that the ring
-       also shows on a mouse click, which a lone field's does not. */
+       also shows on a mouse click, which a lone field's does not. On a solid
+       surface it takes the surface's ink, for the reason given on `checkbox`. */
     &:focus-within {
       --_line-tone: color-mix(in oklab, var(--_held-ink) var(--_through), var(--intent-color));
 
-      outline: var(--focus-ring-width) solid
-        var(--focus-ring, color-mix(in srgb, var(--color-primary) 64%, transparent));
+      outline: var(--focus-ring-width) solid var(--_plate-ring);
       outline-offset: var(--focus-ring-offset, calc(-1 * var(--ui-border-width, var(--border-width))));
       box-shadow: var(--_focus-stack, var(--_shadow), inset 0 0 0 2px var(--_focus-gap));
 
@@ -1116,11 +1116,12 @@
        40px field and not on a 16px box, so a toggle draws a ring as well: as a
        shadow layer rather than as an `outline`, so a clipping aesthetic clips it
        with everything else and its own inset focus layer still paints over the
-       top. */
+       top. On a solid surface the ring takes the surface's ink, as `reset.css`'s
+       outline does: the primary colour at 64% drew over a fill of its own colour
+       or close to it, so focusing a checkbox in a `.card.solid.primary` changed
+       no pixel by more than 1.1:1. A consumer's `--focus-ring` is left as set. */
     &:focus-visible {
-      --_shadow:
-        var(--_shadow-parts) var(--_halo-layer,),
-        0 0 0 var(--focus-ring-width) var(--focus-ring, color-mix(in srgb, var(--color-primary) 64%, transparent));
+      --_shadow: var(--_shadow-parts) var(--_halo-layer,), 0 0 0 var(--focus-ring-width) var(--_plate-ring);
       /* The shadow is the ring, so the reset's outline is not drawn as well:
          the two overlapped a pixel apart at the ring's alpha and painted one
          blotched band. Forced colours keep their important outline, since
@@ -1133,8 +1134,7 @@
          over it. Undefined with no such aesthetic, as `box`'s stack is. */
       --_focus-inset: min(var(--ui-focus-inset), calc(var(--_ss) + 2px));
       --_focus-stack:
-        var(--_shadow),
-        inset 0 0 0 var(--_focus-inset) var(--focus-ring, color-mix(in srgb, var(--color-primary) 64%, transparent)),
+        var(--_shadow), inset 0 0 0 var(--_focus-inset) var(--_plate-ring),
         inset 0 0 0 calc(var(--_focus-inset) + 2px) var(--color-background);
     }
 
@@ -1272,14 +1272,11 @@
 
     /* The ring, for the reason given on `checkbox`. */
     &:focus-visible {
-      --_shadow:
-        var(--_shadow-parts) var(--_halo-layer,),
-        0 0 0 var(--focus-ring-width) var(--focus-ring, color-mix(in srgb, var(--color-primary) 64%, transparent));
+      --_shadow: var(--_shadow-parts) var(--_halo-layer,), 0 0 0 var(--focus-ring-width) var(--_plate-ring);
       outline: none;
       --_focus-inset: min(var(--ui-focus-inset), calc(var(--_ss) + 2px));
       --_focus-stack:
-        var(--_shadow),
-        inset 0 0 0 var(--_focus-inset) var(--focus-ring, color-mix(in srgb, var(--color-primary) 64%, transparent)),
+        var(--_shadow), inset 0 0 0 var(--_focus-inset) var(--_plate-ring),
         inset 0 0 0 calc(var(--_focus-inset) + 2px) var(--color-background);
     }
 
@@ -1454,14 +1451,11 @@
 
     /* The ring, for the reason given on `checkbox`. */
     &:focus-visible {
-      --_shadow:
-        var(--_shadow-parts) var(--_halo-layer,),
-        0 0 0 var(--focus-ring-width) var(--focus-ring, color-mix(in srgb, var(--color-primary) 64%, transparent));
+      --_shadow: var(--_shadow-parts) var(--_halo-layer,), 0 0 0 var(--focus-ring-width) var(--_plate-ring);
       outline: none;
       --_focus-inset: min(var(--ui-focus-inset), calc(var(--_ss) + 2px));
       --_focus-stack:
-        var(--_shadow),
-        inset 0 0 0 var(--_focus-inset) var(--focus-ring, color-mix(in srgb, var(--color-primary) 64%, transparent)),
+        var(--_shadow), inset 0 0 0 var(--_focus-inset) var(--_plate-ring),
         inset 0 0 0 calc(var(--_focus-inset) + 2px) var(--color-background);
     }
 
