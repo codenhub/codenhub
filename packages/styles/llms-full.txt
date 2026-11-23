@@ -2186,22 +2186,22 @@ Each row is an override point: set it on `:root` to retheme the page, or on any 
 | `--color-tooltip-contrast`     | `neutral-900`, `neutral-100` | Text on `--color-tooltip`.                                                                     |
 | `--color-success`              | `emerald-700`                | Fill of `.success`.                                                                            |
 | `--color-success-contrast`     | `neutral-50`                 | Text on a full success fill: 5.14:1.                                                           |
-| `--color-success-hover`        | `#007552`, `#006448`         | Success fill under the pointer.                                                                |
+| `--color-success-hover`        | `#006c4c`, `#006448`         | Success fill under the pointer.                                                                |
 | `--color-success-subtle`       | `emerald-100`, `emerald-900` | Success tint behind soft components.                                                           |
 | `--color-success-strong`       | `emerald-950`, `emerald-300` | Success text, icons, and borders where the fill is not full.                                   |
 | `--color-warning`              | `amber-600`                  | Fill of `.warning`.                                                                            |
 | `--color-warning-contrast`     | `neutral-950`                | Text on a full warning fill: near-black, not the page color. 6.19:1.                           |
-| `--color-warning-hover`        | `#d46700`, `#e78300`         | Warning fill under the pointer.                                                                |
+| `--color-warning-hover`        | `#c56100`, `#e78300`         | Warning fill under the pointer.                                                                |
 | `--color-warning-subtle`       | `amber-100`, `amber-900`     | Warning tint behind soft components.                                                           |
 | `--color-warning-strong`       | `amber-950`, `amber-300`     | Warning text, icons, and borders where the fill is not full.                                   |
 | `--color-destructive`          | `rose-700`                   | Fill of `.destructive`.                                                                        |
 | `--color-destructive-contrast` | `neutral-50`                 | Text on a full destructive fill: 5.78:1.                                                       |
-| `--color-destructive-hover`    | `#c00036`, `#d1054b`         | Destructive fill under the pointer.                                                            |
+| `--color-destructive-hover`    | `#b10030`, `#d1054b`         | Destructive fill under the pointer.                                                            |
 | `--color-destructive-subtle`   | `rose-100`, `rose-900`       | Destructive tint behind soft components.                                                       |
 | `--color-destructive-strong`   | `rose-950`, `rose-300`       | Destructive text, icons, and borders where the fill is not full.                               |
 | `--color-info`                 | `indigo-600`                 | Fill of `.info`.                                                                               |
 | `--color-info-contrast`        | `neutral-50`                 | Text on a full info fill: 6.19:1.                                                              |
-| `--color-info-hover`           | `#4b36e9`, `#5e4ff9`         | Info fill under the pointer.                                                                   |
+| `--color-info-hover`           | `#4634d8`, `#5e4ff9`         | Info fill under the pointer.                                                                   |
 | `--color-info-subtle`          | `indigo-100`, `indigo-900`   | Info tint behind soft components.                                                              |
 | `--color-info-strong`          | `indigo-950`, `indigo-300`   | Info text, icons, and borders where the fill is not full.                                      |
 

@@ -837,8 +837,9 @@ const componentMarkup = (name: string, classes: string, testId: string) => {
 /* A text field's resting line is quiet by default, the recorded exception
    in docs/accessibility.md, and reaches 3:1 only where the line is raised:
    under increased contrast the app has not overridden, and in forced colors.
-   The "more contrast" arm loads with `data-contrast="standard"`, which
-   overrides the media query, so it is not one of them. WebKit matches
+   The "more contrast, standard" arm loads with `data-contrast="standard"`,
+   which overrides the media query, so it is not one of them; "more contrast"
+   loads with no choice made, so the query holds. WebKit matches
    `forced-colors: active` when asked but paints no system colors (it has no
    `forced-color-adjust`, and Safari no forced-colors mode), so its forced
    arm draws the standard line and is not one either. */
@@ -849,7 +850,15 @@ const QUIET_TEXT_LINE = ["ipt", "textarea", "select", "input-group"];
    standard arm asks it for no preference. Firefox reads the preference only
    behind a pref, so that arm gets a Firefox of its own; WebKit cannot be
    asked. */
-const ARMS = ["standard", "reduced transparency", "forced colors", "more contrast", 'data-contrast="more"'] as const;
+const ARMS = [
+  "standard",
+  "reduced transparency",
+  "forced colors",
+  "more contrast",
+  "more contrast, standard",
+  'data-contrast="more"',
+] as const;
+const MORE_CONTRAST_MEDIA: readonly string[] = ["more contrast", "more contrast, standard"];
 const FIREFOX_REDUCED_TRANSPARENCY = {
   "layout.css.prefers-reduced-transparency.enabled": true,
   "ui.prefersReducedTransparency": 1,
@@ -884,20 +893,20 @@ for (const theme of THEMES) {
                   value: arm === "reduced transparency" ? "reduce" : "no-preference",
                 },
                 { name: "forced-colors", value: arm === "forced colors" ? "active" : "none" },
-                { name: "prefers-contrast", value: arm === "more contrast" ? "more" : "no-preference" },
+                { name: "prefers-contrast", value: MORE_CONTRAST_MEDIA.includes(arm) ? "more" : "no-preference" },
               ],
             });
           } else {
             await page.emulateMedia({
               forcedColors: arm === "forced colors" ? "active" : "none",
-              contrast: arm === "more contrast" ? "more" : "no-preference",
+              contrast: MORE_CONTRAST_MEDIA.includes(arm) ? "more" : "no-preference",
             });
           }
 
           await loadIn(
             page,
             theme,
-            arm === 'data-contrast="more"' ? "more" : "standard",
+            { 'data-contrast="more"': "more", "more contrast": "" }[arm as string] ?? "standard",
             [
               ["glass", "glass", ""],
               ["glass glass-liquid", "glass glass-liquid", ""],
@@ -925,7 +934,7 @@ for (const theme of THEMES) {
           ).toEqual({
             reduce: arm === "reduced transparency",
             forced: arm === "forced colors",
-            more: arm === "more contrast",
+            more: MORE_CONTRAST_MEDIA.includes(arm),
           });
 
           /* A pane is what rests on the surface ground, told apart by giving
@@ -933,7 +942,14 @@ for (const theme of THEMES) {
              floor its trade-off is held to above, and every control to the
              text rule. */
           const painted = await paint(page);
-          const raisedLine = arm === 'data-contrast="more"' || (arm === "forced colors" && browserName !== "webkit");
+          const raisedLine =
+            arm === 'data-contrast="more"' ||
+            arm === "more contrast" ||
+            (arm === "forced colors" && browserName !== "webkit");
+          /* Every arm that raises the line takes the ground whole, and so
+             does reduced transparency: each control then rests on an opaque
+             ground, not on whatever is behind the region. */
+          const opaque = raisedLine || arm === "reduced transparency";
           const panes = new Set(
             Object.entries(painted)
               .filter(
@@ -949,6 +965,9 @@ for (const theme of THEMES) {
 
             if (!(name in TOGGLE_TYPES)) {
               expect.soft(textRatio(read), `${testId} text`).toBeGreaterThanOrEqual(floor);
+            }
+            if (opaque) {
+              expect.soft(readSrgb(read.fill).alpha, `${testId} ground`).toBe(1);
             }
             if (CONTROL_LINE.includes(name) && (raisedLine || !QUIET_TEXT_LINE.includes(name))) {
               const { under, fill } = groundsOf(read);
@@ -968,7 +987,7 @@ for (const theme of THEMES) {
 
 /* The ground is the region's, so the nearest region decides, at any depth: a
    region of another aesthetic nested in glass gives its controls none, and a
-   glass region re-entered inside it gives it back. A box already resting on
+   glass region re-entered inside it, or inside a card, gives it back. A box already resting on
    one -- a surface, a field inside an input group, a badge inside a button --
    passes none on, so the pane is never laid twice. */
 const OTHER_AESTHETICS = registry.aesthetics.map(({ class: name }) => name).filter((name) => name !== "glass");
@@ -994,7 +1013,7 @@ for (const theme of THEMES) {
              `<div class="${name}">${ghost(name)}<div><div class="glass">${ghost(`${name}-glass`)}</div></div></div>`,
          ).join("")}
          <div><div><div>${ghost("depth-4")}</div></div></div>
-         <div class="card">${ghost("card")}</div>
+         <div class="card">${ghost("card")}<div class="glass">${ghost("card-glass")}</div></div>
          <div class="input-group"><input class="ipt" data-testid="group-field" /></div>
          <button class="btn ghost"><span class="badge ghost" data-testid="badge-in-button">B</span></button>
        </div>`,
@@ -1003,7 +1022,13 @@ for (const theme of THEMES) {
     const painted = await paint(page);
     const alpha = (testId: string) => readSrgb(painted[testId]!.fill).alpha;
 
-    for (const testId of ["glass", "liquid", "depth-4", ...OTHER_AESTHETICS.map((name) => `${name}-glass`)]) {
+    for (const testId of [
+      "glass",
+      "liquid",
+      "depth-4",
+      "card-glass",
+      ...OTHER_AESTHETICS.map((name) => `${name}-glass`),
+    ]) {
       expect.soft(alpha(testId), `${testId} rests on the pane`).toBeGreaterThan(0);
     }
     for (const testId of [...OTHER_AESTHETICS, "card", "group-field", "badge-in-button"]) {

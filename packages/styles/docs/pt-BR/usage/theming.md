@@ -2,7 +2,7 @@
 title: Temas
 description: Modo claro e escuro, como trocar a paleta pelas cores da marca, como definir uma intenção própria, e cada token de cor, de intenção, fundamental e de fonte com o seu padrão.
 order: 5
-source: d86793254ca2f68d9123cf8738319c15401e973b
+source: 09cd405afb7dbf287e210fd7fe927b46156ef339
 ---
 
 # Temas
@@ -196,22 +196,22 @@ Cada linha é um ponto de sobrescrita: defina-a no `:root` para mudar o tema da 
 | `--color-tooltip-contrast`     | `neutral-900`, `neutral-100` | Texto sobre `--color-tooltip`.                                                                                      |
 | `--color-success`              | `emerald-700`                | Preenchimento de `.success`.                                                                                        |
 | `--color-success-contrast`     | `neutral-50`                 | Texto sobre um preenchimento de sucesso total: 5.14:1.                                                              |
-| `--color-success-hover`        | `#007552`, `#006448`         | Preenchimento de sucesso sob o ponteiro.                                                                            |
+| `--color-success-hover`        | `#006c4c`, `#006448`         | Preenchimento de sucesso sob o ponteiro.                                                                            |
 | `--color-success-subtle`       | `emerald-100`, `emerald-900` | Tom de sucesso por trás dos componentes soft.                                                                       |
 | `--color-success-strong`       | `emerald-950`, `emerald-300` | Texto, ícones e bordas de sucesso onde o preenchimento não é total.                                                 |
 | `--color-warning`              | `amber-600`                  | Preenchimento de `.warning`.                                                                                        |
 | `--color-warning-contrast`     | `neutral-950`                | Texto sobre um preenchimento de aviso total: quase preto, não a cor da página. 6.19:1.                              |
-| `--color-warning-hover`        | `#d46700`, `#e78300`         | Preenchimento de aviso sob o ponteiro.                                                                              |
+| `--color-warning-hover`        | `#c56100`, `#e78300`         | Preenchimento de aviso sob o ponteiro.                                                                              |
 | `--color-warning-subtle`       | `amber-100`, `amber-900`     | Tom de aviso por trás dos componentes soft.                                                                         |
 | `--color-warning-strong`       | `amber-950`, `amber-300`     | Texto, ícones e bordas de aviso onde o preenchimento não é total.                                                   |
 | `--color-destructive`          | `rose-700`                   | Preenchimento de `.destructive`.                                                                                    |
 | `--color-destructive-contrast` | `neutral-50`                 | Texto sobre um preenchimento destrutivo total: 5.78:1.                                                              |
-| `--color-destructive-hover`    | `#c00036`, `#d1054b`         | Preenchimento destrutivo sob o ponteiro.                                                                            |
+| `--color-destructive-hover`    | `#b10030`, `#d1054b`         | Preenchimento destrutivo sob o ponteiro.                                                                            |
 | `--color-destructive-subtle`   | `rose-100`, `rose-900`       | Tom destrutivo por trás dos componentes soft.                                                                       |
 | `--color-destructive-strong`   | `rose-950`, `rose-300`       | Texto, ícones e bordas destrutivos onde o preenchimento não é total.                                                |
 | `--color-info`                 | `indigo-600`                 | Preenchimento de `.info`.                                                                                           |
 | `--color-info-contrast`        | `neutral-50`                 | Texto sobre um preenchimento informativo total: 6.19:1.                                                             |
-| `--color-info-hover`           | `#4b36e9`, `#5e4ff9`         | Preenchimento informativo sob o ponteiro.                                                                           |
+| `--color-info-hover`           | `#4634d8`, `#5e4ff9`         | Preenchimento informativo sob o ponteiro.                                                                           |
 | `--color-info-subtle`          | `indigo-100`, `indigo-900`   | Tom informativo por trás dos componentes soft.                                                                      |
 | `--color-info-strong`          | `indigo-950`, `indigo-300`   | Texto, ícones e bordas informativos onde o preenchimento não é total.                                               |
 
