@@ -241,7 +241,6 @@ async function build(options: BuildOptions, io: CliIo): Promise<string> {
      partway, on a full disk say, leaves the previous stylesheet whole rather
      than a truncated one a deploy would ship. */
   let temporary: string | undefined;
-  let warning: string | undefined;
 
   try {
     await fs.mkdir(path.dirname(output), { recursive: true });
@@ -251,7 +250,7 @@ async function build(options: BuildOptions, io: CliIo): Promise<string> {
     temporary = created.path;
     try {
       await created.handle.writeFile(css);
-      warning = await keepOwnershipOf(created.handle, output, options.output);
+      await keepModeOf(created.handle, output);
     } finally {
       await created.handle.close();
     }
@@ -262,11 +261,6 @@ async function build(options: BuildOptions, io: CliIo): Promise<string> {
       await fs.rm(temporary, { force: true }).catch(() => undefined);
     }
     throw new Error(`cannot write --output ${options.output}: ${describeWriteError(error)}`);
-  }
-
-  // After the rename, so a build that fails prints its one line and no warning.
-  if (warning !== undefined) {
-    io.stderr(warning);
   }
 
   return output;
@@ -358,14 +352,13 @@ async function createTemporary(target: string): Promise<{ path: string; handle: 
 }
 
 /* The stylesheet is renamed over the output, so it would come out with the mode
-   and owner of a new file: a `0640` file of the web server's group would come
-   back `0644` and the runner's. The temporary file takes the permission bits,
-   owner, and group of the file it replaces first. Windows keeps neither: its
-   mode is only the read-only attribute, which a rename over the file refuses,
-   and a new file takes its folder's permissions. */
-async function keepOwnershipOf(handle: fs.FileHandle, target: string, output: string): Promise<string | undefined> {
+   of a new file: a `0640` file would come back `0644`, readable by everyone.
+   The temporary file takes the permission bits of the file it replaces first.
+   Windows keeps none: its mode is only the read-only attribute, which a rename
+   over the file refuses. */
+async function keepModeOf(handle: fs.FileHandle, target: string): Promise<void> {
   if (process.platform === "win32") {
-    return undefined;
+    return;
   }
 
   const previous = await fs.stat(target).catch((error: unknown) => {
@@ -375,93 +368,9 @@ async function keepOwnershipOf(handle: fs.FileHandle, target: string, output: st
     throw error;
   });
 
-  return previous === undefined ? undefined : keepOwnership(handle, previous, output);
-}
-
-/** What {@link keepOwnership} changes: the temporary file, through its handle. */
-export interface OwnedFile {
-  stat(): Promise<{ uid: number; gid: number }>;
-  chown(uid: number, gid: number): Promise<void>;
-  chmod(mode: number): Promise<void>;
-}
-
-/**
- * Gives `file` the owner, group, and permission bits of `previous`, and returns the warning to
- * print when it could not keep them all. Only root can give a file to another user, and only to a
- * group its owner is in, so a runner without that right keeps the group when it is in it, and says
- * what changed rather than fail a build that wrote the stylesheet.
- */
-export async function keepOwnership(
-  file: OwnedFile,
-  previous: { uid: number; gid: number; mode: number },
-  output: string,
-): Promise<string | undefined> {
-  const created = await file.stat();
-  let warning: string | undefined;
-
-  if (previous.uid !== created.uid || previous.gid !== created.gid) {
-    const kept = await chownAllowed(file, previous.uid, previous.gid);
-    /* The previous owner read the file by the owner's bit. Without the owner,
-       only the bits of the group, while it is kept, and of others still let
-       them, so a `0600` file of the web server's is one the server may no
-       longer read, which "its mode is kept" alone did not say. */
-    const stillRead = kept === "group" ? 0o044 : 0o004;
-    /* The same for the previous group: a `0640` file the web server reads
-       through its group is one it may no longer read once the group is gone. */
-    const lostReaders = [
-      previous.uid !== created.uid && (previous.mode & 0o400) !== 0 && (previous.mode & stillRead) === 0
-        ? `user ${previous.uid}`
-        : undefined,
-      previous.gid !== created.gid &&
-      kept === "neither" &&
-      (previous.mode & 0o040) !== 0 &&
-      (previous.mode & 0o004) === 0
-        ? `the members of group ${previous.gid}`
-        : undefined,
-    ].filter((reader) => reader !== undefined);
-    const unreadable =
-      lostReaders.length === 0 ? "" : `, so ${lostReaders.join(" and ")} may no longer be able to read it`;
-
-    if (previous.uid === created.uid) {
-      // Only the group was to change.
-      if (kept === "neither") {
-        warning = `${BIN}: warning: --output ${output} now belongs to group ${created.gid}, not ${previous.gid}, since only root can give a file to a group you are not in; its owner and mode are kept${unreadable}.`;
-      }
-    } else if (kept === "group") {
-      warning = `${BIN}: warning: --output ${output} now belongs to user ${created.uid}, not ${previous.uid}, since only root can give a file to another user; its group and mode are kept${unreadable}.`;
-    } else if (kept === "neither") {
-      warning = `${BIN}: warning: --output ${output} now belongs to user ${created.uid} and group ${created.gid}, not ${previous.uid} and ${previous.gid}, since only root can give a file to another user or to a group you are not in; its mode is kept${unreadable}.`;
-    }
+  if (previous !== undefined) {
+    await handle.chmod(previous.mode & 0o777);
   }
-  // After the owner: changing it can clear the set-user-ID and set-group-ID bits.
-  await file.chmod(previous.mode & 0o777);
-
-  return warning;
-}
-
-/* Gives the file to the user and group, or to the group alone when only root
-   could give it to the user. Any failure but that refusal is thrown. */
-async function chownAllowed(file: OwnedFile, uid: number, gid: number): Promise<"both" | "group" | "neither"> {
-  const isRefused = (error: unknown) => (error as { code?: string }).code === "EPERM";
-
-  try {
-    await file.chown(uid, gid);
-    return "both";
-  } catch (error) {
-    if (!isRefused(error)) {
-      throw error;
-    }
-  }
-  try {
-    await file.chown(-1, gid);
-    return "group";
-  } catch (error) {
-    if (!isRefused(error)) {
-      throw error;
-    }
-  }
-
-  return "neither";
 }
 
 /* Node.js names the path a system call failed on, and here that is mostly the

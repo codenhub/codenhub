@@ -1,18 +1,5 @@
 import { execFileSync, spawnSync } from "node:child_process";
-import {
-  chmod,
-  chown,
-  cp,
-  lstat,
-  mkdir,
-  mkdtemp,
-  readdir,
-  readFile,
-  rm,
-  stat,
-  symlink,
-  writeFile,
-} from "node:fs/promises";
+import { chmod, cp, lstat, mkdir, mkdtemp, readdir, readFile, rm, stat, symlink, writeFile } from "node:fs/promises";
 import { createRequire } from "node:module";
 import { tmpdir, userInfo } from "node:os";
 import path from "node:path";
@@ -20,7 +7,7 @@ import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { classesOf, parse } from "../../src/cli/purge";
-import { findPackageRoot, keepOwnership, run } from "../../src/cli/run";
+import { findPackageRoot, run } from "../../src/cli/run";
 
 const { version } = createRequire(import.meta.url)("../../package.json") as { version: string };
 const packageRoot = path.resolve(import.meta.dirname, "../..");
@@ -378,9 +365,8 @@ describe("build", () => {
     expect((await readdir(project)).sort()).toEqual(["app", "app.css"]);
   });
 
-  /* The stylesheet is renamed over the output, so it used to take the mode and
-     owner a new file gets: a `0640` file of the web server's group came back
-     `0644` and the runner's, readable by everyone and maybe not by the server. */
+  /* The stylesheet is renamed over the output, so it used to take the mode a
+     new file gets: a `0640` file came back `0644`, readable by everyone. */
   it.skipIf(process.platform === "win32").each([
     ["0640", 0o640],
     ["0444", 0o444],
@@ -393,35 +379,6 @@ describe("build", () => {
     expect((await stat(file)).mode & 0o777).toBe(mode);
     expect(await readOutput()).toMatch(/\n {2}\S/);
   });
-
-  it.skipIf(process.platform === "win32" || process.getuid?.() !== 0)(
-    "keeps the owner and group of the stylesheet it replaces, as root",
-    async () => {
-      const file = path.join(project, "app.css");
-
-      expect(await build("build", "-c", "app/views/**/*.erb", "-o", "app.css")).toBe(0);
-      await chown(file, 4321, 4322);
-      expect(await build("build", "-c", "app/views/**/*.erb", "-o", "app.css")).toBe(0);
-      expect(await stat(file)).toMatchObject({ uid: 4321, gid: 4322 });
-      expect(stderr).toEqual([]);
-    },
-  );
-
-  // A user can give a file they own to any group they are in.
-  const otherGroup = process.getgroups?.().find((gid) => gid !== process.getegid?.());
-
-  it.skipIf(process.platform === "win32" || otherGroup === undefined)(
-    "keeps the group of the stylesheet it replaces",
-    async () => {
-      const file = path.join(project, "app.css");
-
-      expect(await build("build", "-c", "app/views/**/*.erb", "-o", "app.css")).toBe(0);
-      await chown(file, -1, otherGroup ?? -1);
-      expect(await build("build", "-c", "app/views/**/*.erb", "-o", "app.css")).toBe(0);
-      expect((await stat(file)).gid).toBe(otherGroup);
-      expect(stderr).toEqual([]);
-    },
-  );
 });
 
 describe("failures", () => {
@@ -753,97 +710,6 @@ describe("help and version", () => {
   it("prints the package version with --version and exits 0", async () => {
     expect(await build("--version")).toBe(0);
     expect(stdout).toEqual([version]);
-  });
-});
-
-/* A test cannot make a file of another user without root, so the ownership
-   rules run on a file whose calls are recorded and refused as a user's are. */
-describe("keepOwnership", () => {
-  const runner = { uid: 1000, gid: 1000 };
-
-  function fileOf({ refuseOwner, refuseGroup }: { refuseOwner: boolean; refuseGroup: boolean }) {
-    const calls: string[] = [];
-    const refusal = () => Object.assign(new Error("EPERM: operation not permitted"), { code: "EPERM" });
-
-    return {
-      calls,
-      stat: () => Promise.resolve(runner),
-      chown(uid: number, gid: number) {
-        calls.push(`chown ${uid} ${gid}`);
-        return (uid === -1 ? refuseGroup : refuseOwner) ? Promise.reject(refusal()) : Promise.resolve();
-      },
-      chmod(mode: number) {
-        calls.push(`chmod ${mode.toString(8)}`);
-        return Promise.resolve();
-      },
-    };
-  }
-
-  it("gives the file the previous owner, group, and mode", async () => {
-    const file = fileOf({ refuseOwner: false, refuseGroup: false });
-
-    expect(await keepOwnership(file, { uid: 33, gid: 33, mode: 0o100640 }, "app.css")).toBeUndefined();
-    expect(file.calls).toEqual(["chown 33 33", "chmod 640"]);
-  });
-
-  it("warns that the owner changed and the group and mode are kept", async () => {
-    const file = fileOf({ refuseOwner: true, refuseGroup: false });
-
-    expect(await keepOwnership(file, { uid: 33, gid: 33, mode: 0o100640 }, "app.css")).toBe(
-      "chs: warning: --output app.css now belongs to user 1000, not 33, since only root can give a file to another user; its group and mode are kept.",
-    );
-    expect(file.calls).toEqual(["chown 33 33", "chown -1 33", "chmod 640"]);
-  });
-
-  it("warns that the owner and group changed and the mode is kept", async () => {
-    const file = fileOf({ refuseOwner: true, refuseGroup: true });
-
-    expect(await keepOwnership(file, { uid: 33, gid: 33, mode: 0o100644 }, "app.css")).toBe(
-      "chs: warning: --output app.css now belongs to user 1000 and group 1000, not 33 and 33, since only root can give a file to another user or to a group you are not in; its mode is kept.",
-    );
-  });
-
-  /* A `0600` file of the web server's came back the deploy user's, which the
-     server could no longer read, under a warning that said the mode was kept.
-     With the group gone too, a group read bit no longer reaches it either. */
-  it.each([
-    ["0600 with the group kept", false, 0o600, "its group and mode are kept, so user 33"],
-    ["0640 with the group changed", true, 0o640, "its mode is kept, so user 33 and the members of group 33"],
-  ])("warns that the previous readers may no longer read a file of mode %s", async (_, refuseGroup, mode, kept) => {
-    const file = fileOf({ refuseOwner: true, refuseGroup });
-
-    expect(await keepOwnership(file, { uid: 33, gid: 33, mode: 0o100000 | mode }, "app.css")).toMatch(
-      new RegExp(`; ${kept} may no longer be able to read it\\.$`),
-    );
-  });
-
-  /* The runner owns a `0640` file of a group it is not in, such as the web
-     server's, which read it through the group bit and no longer can. */
-  it("warns of the group alone, and of its members' read, when only the group could not be kept", async () => {
-    const file = fileOf({ refuseOwner: true, refuseGroup: true });
-
-    expect(await keepOwnership(file, { uid: 1000, gid: 33, mode: 0o100640 }, "app.css")).toBe(
-      "chs: warning: --output app.css now belongs to group 1000, not 33, since only root can give a file to a group you are not in; its owner and mode are kept, so the members of group 33 may no longer be able to read it.",
-    );
-    expect(file.calls).toEqual(["chown 1000 33", "chown -1 33", "chmod 640"]);
-  });
-
-  // Anyone may read a `0644` file, so a group lost takes no reader with it.
-  it("warns of the group alone with no lost reader when others may read the file", async () => {
-    const file = fileOf({ refuseOwner: true, refuseGroup: true });
-
-    expect(await keepOwnership(file, { uid: 1000, gid: 33, mode: 0o100644 }, "app.css")).toMatch(
-      /; its owner and mode are kept\.$/,
-    );
-  });
-
-  it("throws a failure other than a refusal", async () => {
-    const file = {
-      ...fileOf({ refuseOwner: false, refuseGroup: false }),
-      chown: () => Promise.reject(Object.assign(new Error("EIO: i/o error"), { code: "EIO" })),
-    };
-
-    await expect(keepOwnership(file, { uid: 33, gid: 33, mode: 0o100644 }, "app.css")).rejects.toThrow(/EIO/);
   });
 });
 
