@@ -447,7 +447,7 @@ When `params.count` is a number and the key is a group of plural forms rather th
 **Parameters**
 
 - `key` — Translation key, or the key of a plural group when `params.count` is a number.
-- `params` — Argument values, read from own properties. An argument without a usable value, such as a string for `{n, number}`, is left as written. A string in `{name}` is inserted as written, a number as `{name, number}` would format it, and a date as `{name, date}` would. A boolean is taken by `{v, select, …}` only, which picks the option named `true` or `false`, or `other`. A numeric `count` also selects a plural form. Where the dictionary type has the message as a literal, the values it uses are type-checked, and any other value may have any type, such as the `isAdmin` of a `User` passed whole.
+- `params` — Argument values, read from own properties. An argument without a usable value, such as a string for `{n, number}`, is left as written. A string or number in `{name}` is inserted as JavaScript writes it, and a date as `{name, date}` would format it. A boolean is taken by `{v, select, …}` only, which picks the option named `true` or `false`, or `other`. A numeric `count` also selects a plural form. Where the dictionary type has the message as a literal, the values it uses are type-checked, and any other value may have any type, such as the `isAdmin` of a `User` passed whole.
 
 **Returns** — The translated text, or the trimmed key when no dictionary has it. A miss calls `onMissingKey`, or warns once per recent locale/key pair in the process unless silent.
 

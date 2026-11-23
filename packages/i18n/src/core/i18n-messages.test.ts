@@ -71,17 +71,16 @@ describe("ICU messages", () => {
     expect(i18n.t("whole", { amount: 1234 })).toBe("1,234 units");
   });
 
-  it("should format a number in a plain argument as {name, number} does", async () => {
+  it("should insert a number in a plain argument as JavaScript writes it, as 0.4.0 does", async () => {
     const i18n = create({ pt: { hello: "Olá, {name}!", broken: "Olá {name} }" } });
     await i18n.init();
 
-    expect(i18n.t("hello", { name: 1234.5 })).toBe("Hello, 1,234.5!");
-    expect(i18n.t("hello", { name: "1234.5" })).toBe("Hello, 1234.5!");
+    expect(i18n.t("hello", { name: 12_345.5 })).toBe("Hello, 12345.5!");
 
     await i18n.setLocale("pt");
-    expect(i18n.t("hello", { name: 1234.5 })).toBe("Olá, 1.234,5!");
+    expect(i18n.t("hello", { name: 12_345.5 })).toBe("Olá, 12345.5!");
     // A message that is not valid ICU syntax fills its arguments the same way.
-    expect(i18n.t("broken", { name: 1234.5 })).toBe("Olá 1.234,5 }");
+    expect(i18n.t("broken", { name: 12_345.5 })).toBe("Olá 12345.5 }");
   });
 
   it("should leave an argument as written for a bigint, as 0.4.0 does", async () => {

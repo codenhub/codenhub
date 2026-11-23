@@ -2,7 +2,7 @@
 title: Escribe tus traducciones
 description: Diccionarios, archivos JSON, placeholders, mensajes ICU, enlaces y negritas, plurales, formateadores, claves y valores tipados, cómo detectar claves sin traducir y límites de tamaño.
 order: 1
-source: 8daa50b13bfaf4609d737cd52c61ecf2188c76fa
+source: 7fdff4bea2e0abd927cb111859a280ad2ef0691c
 ---
 
 # Escribe tus traducciones
@@ -128,7 +128,7 @@ Escribe `{name}` donde va un valor, y pásale el valor a `t()`:
 ```
 
 ```ts
-t("order.confirmed", { name: "Ana", orderId: "1042" });
+t("order.confirmed", { name: "Ana", orderId: 1042 });
 // "Thanks, Ana. Order 1042 ships tomorrow."
 ```
 
@@ -140,7 +140,7 @@ Algunos detalles:
 
 - Un placeholder sin un valor que le corresponda se queda tal como está escrito, así que un valor que falta aparece en pantalla como `{name}` en lugar de desaparecer.
 - Una llamada a `t()` completa como máximo 100 argumentos, contando los que están dentro de las formas de plural y de select y cada `#`, y deja el resto tal como está escrito, un `#` como `#`. Una oración de interfaz no se acerca ni de lejos; el límite evita que un mensaje enorme traído de fuera cueste un paso de formateo por placeholder, o repita un número largo miles de veces.
-- Un número en un `{name}` simple se formatea para el lector, como hace `{name, number}`: `1234.5` se lee "1,234.5" en inglés y "1.234,5" en portugués. Escribe `{name, number, integer}` u otro estilo, como muestra la siguiente sección, para formatearlo de otra manera.
+- Los números en un `{name}` simple se insertan como los escribe JavaScript: `1234.5`. Escribe `{name, number}` para formatearlos para el lector, como muestra la siguiente sección.
 - Las llaves y los apóstrofos son sintaxis de los mensajes, así que el texto que los muestra literalmente necesita comillas; consulta [Llaves y apóstrofos literales](#llaves-y-apóstrofos-literales).
 
 ### Formatea números y fechas en el texto
@@ -277,6 +277,27 @@ Tres cosas a tener en cuenta:
 - **`count` tiene que ser un número.** Un string como `"5"` no elige ninguna forma; el grupo se trata entonces como una clave que falta. Conviértelo donde entra, como con `Number(params.get("count"))`. El gestor no adivina, porque `"1,5"` es uno y medio en portugués y para JavaScript ni siquiera es un número.
 - **Un string simple bajo la misma clave gana sobre las formas.** Si `cart.items` es un string, `count` solo completa `{count}`.
 - **Sin `other`, no es un grupo de plurales.** `{ "one": "…", "two": "…" }` funciona solo para las cantidades cuya forma justo está ahí; cualquier otra cantidad muestra la clave. `has()` dice que ese grupo no es una clave, y las claves tipadas no lo ofrecen. Agrega `other`.
+
+### Muestra un conteo formateado
+
+Un `{count}` simple escribe el número como lo hace JavaScript, así que 1234 artículos se leen "1234 items" en lugar de "1,234 items", o "1.234 itens" en portugués. Escribe `{count, number}` en las formas:
+
+```json
+{
+  "cart": {
+    "items": {
+      "one": "{count, number} item",
+      "other": "{count, number} items"
+    }
+  }
+}
+```
+
+```ts
+t("cart.items", { count: 1234 }); // "1,234 items"
+```
+
+Es muchísimo té, pero la coma está bien puesta.
 
 ### Plurales dentro de una oración
 
