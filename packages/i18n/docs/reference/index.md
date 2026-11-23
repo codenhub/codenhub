@@ -111,7 +111,6 @@ export interface I18n<TLocale extends string = string, TKey extends string = str
     has(key: TKey): boolean;
     has(key: string): key is TKey;
     t<K extends TKey, TValues extends object = DefaultValues>(key: K, ...params: TranslateParams<TMessages, K, TValues>): string;
-    rich<K extends TKey, TValues extends object = DefaultValues>(key: K, ...params: TranslateParams<TMessages, K, TValues>): RichText;
     formatNumber(value: number | bigint, options?: Intl.NumberFormatOptions): string;
     formatDate(value: Date | number, options?: Intl.DateTimeFormatOptions): string;
     formatRelativeTime(value: number, unit: Intl.RelativeTimeFormatUnit, options?: Intl.RelativeTimeFormatOptions): string;
@@ -400,35 +399,6 @@ Canonicalizes an exact configured locale match, ignoring letter case and surroun
 - `value` — Untrusted locale value.
 
 **Returns** — The canonical locale or undefined; language subtags are not matched, as `I18n.matchLocale` does.
-
-#### I18n › rich
-
-```ts
-rich<K extends TKey, TValues extends object = DefaultValues>(key: K, ...params: TranslateParams<TMessages, K, TValues>): RichText;
-```
-
-Translates a key as `I18n.translate` does, and returns its text and tags as parts for a framework to render, so a translation can mark a link or bold text inside a sentence without HTML. Tags are `<name>…</name>` and `<name/>`, with a name of letters and digits in any script, `_`, and `-` after the first character, such as `<help-link>`, written anywhere in the message's text, including inside a plural or select form. Values are text: a tag inside a value is never read, nor is one in quoted text, such as `'{<b>}'`. A `<` that doesn't form a tag, as in `a < b`, is text.
-
-A message whose tags don't balance, nest past 10 levels, or cross the edge of a plural or select form warns once per process for its locale, key, and text, unless silent, and returns the text as `t()` shows it, tags included, as one part. A message with invalid syntax and a missing key return what `t()` returns, as one part.
-
-**Parameters**
-
-- `key` — Translation key, or the key of a plural group when `params.count` is a number or bigint.
-- `params` — Argument values, as `I18n.translate` takes them.
-
-**Returns** — Text and tags in order, with empty text left out and adjacent text joined.
-
-**Throws**
-
-- `Error` — When called before successful initialization.
-- `TypeError` — When the key or `params` is rejected, as `I18n.translate` rejects them.
-
-**Example**
-
-```ts
-// "terms": "Read the <link>terms</link>."
-rich("terms"); // ["Read the ", { tag: "link", children: ["terms"] }, "."]
-```
 
 #### I18n › setLocale
 
@@ -772,33 +742,6 @@ maxValueLength?: number | undefined;
 
 Maximum characters in one translation value. Defaults to 100,000.
 
-### RichElement
-
-```ts
-export interface RichElement {
-    readonly tag: string;
-    readonly children: RichText;
-}
-```
-
-A tag in a rich message, `<name>…</name>` or `<name/>`, with what it encloses.
-
-#### RichElement › children
-
-```ts
-readonly children: RichText;
-```
-
-The text and tags it encloses, empty for `<name/>`.
-
-#### RichElement › tag
-
-```ts
-readonly tag: string;
-```
-
-The tag's name, as written: letters, combining marks, and decimal digits in any script, `_`, and `-` after the first character.
-
 ## Type aliases
 
 ### I18nErrorCode
@@ -816,14 +759,6 @@ export type LocaleDirection = "ltr" | "rtl";
 ```
 
 Text direction used when rendering a locale.
-
-### RichText
-
-```ts
-export type RichText = readonly (string | RichElement)[];
-```
-
-A message as text and tags, in order, for a framework to render.
 
 ### TranslationKey
 

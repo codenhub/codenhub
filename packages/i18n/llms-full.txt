@@ -72,7 +72,7 @@ In a Web Worker, the root entry point and `@codenhub/i18n/routing` work as anywh
 ## Notes
 
 - On a server or in a static build, create one manager per request or page, not a shared one. A shared manager is how one visitor ends up reading another visitor's language.
-- The package does not render HTML from translations: text always comes back as text. For a link or bold text inside a sentence, `rich()` returns the text and its tags as data for your code to render; see [Links and bold text inside a sentence](docs/translations.md#links-and-bold-text-inside-a-sentence).
+- The package does not render HTML from translations: text always comes back as text.
 - ICU messages cover `number`, `date`, `time`, `plural`, `selectordinal`, and `select`, without number skeletons or styles such as `{n, number, currency}`, which are shown as written with a warning. Format such a value with `formatNumber()` and pass the result in.
 
 ## License
@@ -528,7 +528,7 @@ t("order.confirmed", { name: "Ana", orderId: "1042" });
 
 Values can be strings, numbers, bigints, or dates, and a `select` also takes a boolean. A bigint goes wherever a number does, and is formatted without losing digits. Placeholder names use letters and digits in any script, and `_`, such as `{firstName}`, `{first_name}`, or `{año}`. A name with anything else, such as `{first-name}` or `{price€}`, is not a placeholder: the message is invalid syntax, logs a warning, and shows `{first-name}` as written.
 
-Use placeholders instead of joining fragments. `t("before") + name + t("after")` locks every language into English word order, while a whole sentence with a placeholder lets each translation put the value where it belongs. Word order is the first thing every translator wants to change, and they are usually right. For a link or bold text inside the sentence, see [Links and bold text inside a sentence](#links-and-bold-text-inside-a-sentence).
+Use placeholders instead of joining fragments. `t("before") + name + t("after")` locks every language into English word order, while a whole sentence with a placeholder lets each translation put the value where it belongs. Word order is the first thing every translator wants to change, and they are usually right.
 
 A few details:
 
@@ -628,50 +628,6 @@ Inside a plural's forms, `#` stands for the number; write `'#'` for a literal `#
 Quoted text is text to the types too: in `'{it''s {x}'`, which shows `{it's {x}`, `x` is not a value `t()` asks for.
 
 Text that is not valid syntax, such as an unclosed `{` or a stray `}`, logs a warning, unless the manager is silent, and is shown with only its `{name}` placeholders filled. The warning names the key and the locale, and comes once for each key, text, and locale among the roughly 1,000 most recent, so an edited text warns again. [Find untranslated keys](#find-untranslated-keys) shows a test that checks every message's syntax.
-
-### Links and bold text inside a sentence
-
-A sentence with a link in the middle is still one sentence. Splitting it into `t("before")`, a link, and `t("after")` locks the word order, as joining fragments does. Mark the part with a tag and call `rich()`, which returns the text and its tags as data for your framework to render:
-
-```json
-{ "signup": { "terms": "By signing up you accept the <terms>terms of use</terms>." } }
-```
-
-```ts
-i18n.rich("signup.terms");
-// ["By signing up you accept the ", { tag: "terms", children: ["terms of use"] }, "."]
-```
-
-A tag is `<name>…</name>`, or `<name/>` for one with no content, such as a line break. Names use letters and digits in any script, `_`, and `-` after the first character, such as `<help-link>`. A tag names what the part is, and your code decides how it renders, so a translation can't add a link, a script, or markup your code doesn't render. In React, for example:
-
-```tsx
-import { Fragment, type ReactNode } from "react";
-import type { RichText } from "@codenhub/i18n";
-
-type Tags = Readonly<Record<string, (children: ReactNode) => ReactNode>>;
-
-// A tag your code doesn't render shows its content without it.
-const render = (parts: RichText, tags: Tags): ReactNode[] =>
-  parts.map((part, index) => {
-    if (typeof part === "string") {
-      return part;
-    }
-    // An own property only, so a tag such as `<constructor>` never reaches an inherited function.
-    const tag = Object.hasOwn(tags, part.tag) ? tags[part.tag]! : (children: ReactNode) => children;
-    return <Fragment key={index}>{tag(render(part.children, tags))}</Fragment>;
-  });
-
-<p>{render(i18n.rich("signup.terms"), { terms: (children) => <a href="/terms">{children}</a> })}</p>;
-```
-
-A few details:
-
-- `rich()` takes the same keys and values as `t()`, checked the same way. A value is always text: a `<b>` in a visitor's name is shown as written, never read as a tag.
-- A tag can wrap placeholders, a plural, or a select, and can sit inside a plural or select form, but a tag opened in a form must close in that form.
-- A `<` that doesn't form a tag, as in `1 < 2`, is text, and so is a tag in quoted text: `'{<b>}'` shows `{<b>}`, never a tag, as in [Literal braces and apostrophes](#literal-braces-and-apostrophes). An apostrophe before `<` is an ordinary apostrophe, so `l'<b>été</b>` keeps its elision and its tag.
-- A message whose tags don't balance, such as `<b>bold` without `</b>`, or nest more than 10 levels deep, logs a warning once for each key, text, and locale, unless the manager is silent, and comes back as one part: the text as `t()` shows it, tags included. A missing key and invalid syntax also come back as the one part `t()` would return.
-- Tags aren't type-checked, since a translation can use tags the default text doesn't. Render every tag your messages use, and keep a fallback for the rest, as above.
-- `t()` and the `data-i18n` binding show tags as written. Render a message with tags from your code with `rich()`.
 
 ## Plurals
 
@@ -885,7 +841,7 @@ test("every locale has every key", async () => {
 });
 ```
 
-To catch a message with broken syntax, such as an unclosed `{` a translator left, or tags that don't balance, look up every key in every locale and fail on the warning. The manager must not be silent for this:
+To catch a message with broken syntax, such as an unclosed `{` a translator left, look up every key in every locale and fail on the warning. The manager must not be silent for this:
 
 ```ts
 import { expect, test, vi } from "vitest";
@@ -899,17 +855,14 @@ test("every message is valid", async () => {
     await i18n.setLocale(locale);
     for (const key of Object.keys(await i18n.loadLocale(locale))) {
       i18n.t(key as Parameters<typeof i18n.t>[0]);
-      i18n.rich(key as Parameters<typeof i18n.rich>[0]);
     }
   }
 
-  const invalid = warn.mock.calls.filter(([text]) => /^\[I18n\] Invalid (message|tags)/.test(String(text)));
+  const invalid = warn.mock.calls.filter(([text]) => String(text).startsWith("[I18n] Invalid message"));
   warn.mockRestore();
   expect(invalid).toEqual([]);
 });
 ```
-
-`rich()` checks the tags in the text each call shows. Without values, a plural or select is shown as written, so the tags inside its forms are not checked; pass values that pick a form to check its tags too.
 
 To fail a test on keys missing from every dictionary, such as a typo in a key you built at runtime, throw from `onMissingKey`:
 
@@ -2139,7 +2092,6 @@ The [reference](docs/reference/index.md) documents every export, option, and the
 - **`binding.isUsingSystemLocale`** says whether to show "System" selected: `true` after a start with nothing chosen and after `switchToSystemLocale()`, `false` once your app applies a locale with `setLocale()` or `init()`.
 - **`binding.subscribe()`** calls your function once after each change to what a picker shows, the language or `isUsingSystemLocale`, including a pick of the language already showing, which `i18n.subscribe()` doesn't report. Render a framework picker from it, as the [React example](docs/browser.md#offer-a-system-choice) does.
 - **`parse()` returns `alternates`**, the page's URL in every language that has one, for language switchers and `hreflang` tags. A language whose URL would open another page is left out, where `localize()` throws, so an English product `/products/novo` next to a translated `/products/new` no longer makes the guide's switcher answer 500. See [Link to another language](docs/localized-urls.md#link-to-another-language).
-- **`rich(key, values)`** returns a message as text and `{ tag, children }` parts, so a link or bold text inside a sentence stays one message a translator can reorder: `"Read the <link>terms</link>"` gives `["Read the ", { tag: "link", children: ["terms"] }]`. Map the parts to your framework's elements. A tag's name takes `-` after its first character, as in `<help-link>`. Tags come only from the message, never from a value or from quoted text such as `'{<b>}'`, and unbalanced tags warn once and return the text as `t()` shows it. See [Links and bold text inside a sentence](docs/translations.md#links-and-bold-text-inside-a-sentence).
 - **A bigint is taken wherever a number is**, in `{n}`, `{n, number}`, `plural`, `selectordinal`, `select`, and a plural group's `count`. It is formatted without losing digits and selects its plural form exactly, so `10n ** 20n + 22n` in an English ordinal reads "…22nd".
 - **`select` takes a boolean**, picking the option named `true` or `false`, or `other`: `{isAdmin, select, true {Admin} other {Member}}` shows "Admin" for `{ isAdmin: true }`, where it showed the message's source. The types accept a boolean for `select` only; in a plain `{isAdmin}` it stays as written.
 - **`initializeBrowserI18n`'s `storage` option** saves the visitor's choice somewhere other than `localStorage`, such as a cookie your server reads, through `get()`, `set(locale)`, and `remove()`. A choice read from it is matched and falls back when its dictionary fails to load, as a saved one does, which a choice passed as `locale` can't. A value that isn't a configured locale counts as nothing saved, and a method that throws warns. Passing it with `storageKey` or `persistLocale: false` rejects with a `TypeError`. See [Hand the locale to the browser](docs/server-rendering.md#hand-the-locale-to-the-browser).
@@ -2154,7 +2106,7 @@ The [reference](docs/reference/index.md) documents every export, option, and the
 - **`resolveLocale()` reads `_` as `-`** too, so `pt_BR` from a cookie or a back end resolves to `pt-BR`, where it returned `undefined`.
 - **The default missing-key warning is logged once per process for each locale and key**, shared by every manager, where each manager kept its own record. A server with a manager per request logged one missing word once for every visitor. A test that expects each new manager to warn again passes `onMissingKey` instead.
 - **An invalid message warns once per process for each locale, key, and text**, shared by every manager, as a missing key does, so an edited text warns again. Both records keep a bounded amount of memory, about 1,000 typical keys, and remember a message by a hash of its text, not the text itself.
-- **Names in a message take letters and digits in any script**: an argument such as `{año}`, a select option such as `niño {…}`, and a tag such as `<énfasis>` or `<help-link>`, where only ASCII letters, digits, and `_` were read: such a message was invalid syntax, or its tag was text. A tag also takes `-` after its first character, as a select key takes it anywhere. The types check values only for ASCII names; a message with another name accepts any values.
+- **Names in a message take letters and digits in any script**: an argument such as `{año}` and a select option such as `niño {…}`, where only ASCII letters, digits, and `_` were read: such a message was invalid syntax. The types check values only for ASCII names; a message with another name accepts any values.
 - **`data-i18n` and `data-i18n-<attribute>` keep the HTML's value for a message that needs values**, one with a placeholder, a plural, or a select, and warns once per key, where it wrote the message as written, such as `Hello {name}`, without a warning. Render that text with `t()`.
 - **`data-i18n` and `data-i18n-<attribute>` set `lang` on text from a fallback locale's dictionary**, so a screen reader reads an English fallback on a French page in English. The locale is compared with the language the element has without the mark, its own `lang` or its nearest ancestor's, so a French text in a widget under `<html lang="en">` is marked `fr` with `syncDocument: false` too. An element is marked only when every key it shows comes from that one locale, so a button with French text and an English `title` isn't. The binding restores the element's own `lang` when the text is translated again, unless your code has changed that `lang`, which then stays yours to update.
 - **`data-i18n-title` on a `<style>` or a `<link rel="stylesheet">` is skipped with a warning**, since their `title` names a style sheet set and translating it would change which styles apply.
@@ -2181,7 +2133,7 @@ The [reference](docs/reference/index.md) documents every export, option, and the
 - **`t()` takes any key when the loader returns `Record<string, unknown>`**, where no key compiled.
 - **An `init()` that switches a ready manager to another locale also dispatches `locale-change`**, after `ready`, with `previousLocale`, where it dispatched only `ready`, so a `locale-change` listener missed the switch. `subscribe()` listeners are still called once for it. The first `init()` dispatches only `ready`, and an `init()` with the locale already active dispatches no `locale-change`.
 - **`t(key, values)` throws a `TypeError` when `values` is `null` or a primitive.** `null` failed with a native error from inside the package, and a string was ignored.
-- **Errors that name a dictionary key, a locale, a path, or a configuration property quote it**, with line breaks escaped, and cut it after 100 characters. A test that matches such a message for an unusual key or locale may need updating; ordinary ones read the same. Routing errors do the same for a pathname, and so do the warnings for invalid syntax and unbalanced tags, which name an unknown type, style, plural form, repeated option, or tag.
+- **Errors that name a dictionary key, a locale, a path, or a configuration property quote it**, with line breaks escaped, and cut it after 100 characters. A test that matches such a message for an unusual key or locale may need updating; ordinary ones read the same. Routing errors do the same for a pathname, and so do the warnings for invalid syntax, which name an unknown type, style, plural form, or repeated option.
 - **The `data-i18n` warnings name the key and the element.** "Skipping translation because data-i18n contains an invalid key", "translated elements must be leaves", and "the element can run, hide, or reparse its text as HTML" now quote the key, and pass the element after the message, so the browser console points to it. The message is the second argument, after a `"%s"` format, so a key such as `%o` is shown as written. A test that expects the exact message, or one argument, needs updating.
 - **`i18n.subscribe` and `binding.subscribe` are typed as function properties**, not methods, so a lint rule against unbound methods, such as `@typescript-eslint/unbound-method`, accepts `useSyncExternalStore(binding.subscribe, …)`. Both were already bound at runtime. A test double that implements one as a method with a narrower listener type no longer compiles.
 - **A `data-i18n` or `data-i18n-<attribute>` whose `onMissingKey` throws shows the HTML's value**, where it kept the translation of the earlier key or locale. The error is still reported.
@@ -2219,5 +2171,5 @@ The [reference](docs/reference/index.md) documents every export, option, and the
 - The docs say that the binding never enters a shadow root, a custom element's or a plain element's.
 - The browser guide's language picker shows the language in use after a switch fails, where it kept the language that failed to load selected. It also renders from `binding.subscribe()`, so it follows a language the binding switches to, and keeps the latest of several quick picks selected while it loads.
 - The docs say that the second `initializeBrowserI18n()` rejects with a `TypeError`, and that a start in a Web Worker without `syncDocument: false` rejects rather than throws.
-- The translations guide's test checks the tags `rich()` reads as well as the syntax, and no longer says it checks every message.
+- The translations guide's test no longer says it checks every message.
 - The localized-URL guide skips the paths you serve as files, where it skipped every path ending in an extension, such as the page `/blog/node.js`, and its static-site redirect builder skips a private-use locale, such as `x-pirate`, where it threw.

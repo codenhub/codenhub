@@ -2,7 +2,7 @@
 title: Escreva as suas traduções
 description: Dicionários, arquivos JSON, placeholders, mensagens ICU, links e negrito, plurais, formatadores, chaves e valores tipados, verificação de chaves não traduzidas e limites de tamanho.
 order: 1
-source: c1c8b51ebbd116dcd002f363e4b394ef41451ab4
+source: d58a19891385c194ba345ff2c6f77a0c52e16753
 ---
 
 # Escreva as suas traduções
@@ -134,7 +134,7 @@ t("order.confirmed", { name: "Ana", orderId: "1042" });
 
 Os valores podem ser strings, números, bigints ou datas, e um `select` também aceita um booleano. Um bigint vai onde vai um número, e é formatado sem perder dígitos. Os nomes de placeholder usam letras e dígitos de qualquer escrita, e `_`, como `{firstName}`, `{first_name}` ou `{año}`. Um nome com qualquer outra coisa, como `{first-name}` ou `{price€}`, não é placeholder: a mensagem tem sintaxe inválida, registra um aviso e mostra `{first-name}` como foi escrito.
 
-Use placeholders em vez de juntar pedaços. `t("before") + name + t("after")` prende todos os idiomas à ordem das palavras do inglês, enquanto uma frase inteira com um placeholder deixa cada tradução pôr o valor onde ele cabe. A ordem das palavras é a primeira coisa que todo tradutor quer mudar, e quase sempre ele tem razão. Para um link ou negrito dentro da frase, veja [Links e negrito dentro de uma frase](#links-e-negrito-dentro-de-uma-frase).
+Use placeholders em vez de juntar pedaços. `t("before") + name + t("after")` prende todos os idiomas à ordem das palavras do inglês, enquanto uma frase inteira com um placeholder deixa cada tradução pôr o valor onde ele cabe. A ordem das palavras é a primeira coisa que todo tradutor quer mudar, e quase sempre ele tem razão.
 
 Alguns detalhes:
 
@@ -234,50 +234,6 @@ Dentro das formas de um plural, `#` representa o número; escreva `'#'` para um 
 Texto entre aspas também é texto para os tipos: em `'{it''s {x}'`, que mostra `{it's {x}`, `x` não é um valor que `t()` pede.
 
 Um texto que não é sintaxe válida, como uma `{` sem fechamento ou uma `}` perdida, registra um aviso, a menos que o gerenciador esteja em silêncio, e aparece com apenas os placeholders `{name}` preenchidos. O aviso diz a chave e o locale, e vem uma vez para cada chave, texto e locale, entre os aproximadamente 1.000 mais recentes, então um texto editado avisa de novo. [Encontre chaves não traduzidas](#encontre-chaves-não-traduzidas) mostra um teste que confere a sintaxe de todas as mensagens.
-
-### Links e negrito dentro de uma frase
-
-Uma frase com um link no meio continua sendo uma frase só. Quebrá-la em `t("before")`, um link e `t("after")` prende a ordem das palavras, como juntar pedaços faz. Marque a parte com uma tag e chame `rich()`, que devolve o texto e as tags dele como dados para o seu framework renderizar:
-
-```json
-{ "signup": { "terms": "Ao se cadastrar você aceita os <terms>termos de uso</terms>." } }
-```
-
-```ts
-i18n.rich("signup.terms");
-// ["Ao se cadastrar você aceita os ", { tag: "terms", children: ["termos de uso"] }, "."]
-```
-
-Uma tag é `<nome>…</nome>`, ou `<nome/>` para uma sem conteúdo, como uma quebra de linha. Os nomes usam letras e dígitos de qualquer escrita, `_`, e `-` depois do primeiro caractere, como `<help-link>`. Uma tag diz o que a parte é, e o seu código decide como ela é renderizada, então uma tradução não consegue adicionar um link, um script nem marcação que o seu código não renderize. No React, por exemplo:
-
-```tsx
-import { Fragment, type ReactNode } from "react";
-import type { RichText } from "@codenhub/i18n";
-
-type Tags = Readonly<Record<string, (children: ReactNode) => ReactNode>>;
-
-// Uma tag que o seu código não renderiza mostra o conteúdo dela sem ela.
-const render = (parts: RichText, tags: Tags): ReactNode[] =>
-  parts.map((part, index) => {
-    if (typeof part === "string") {
-      return part;
-    }
-    // Só uma propriedade própria, para que uma tag como `<constructor>` nunca chegue a uma função herdada.
-    const tag = Object.hasOwn(tags, part.tag) ? tags[part.tag]! : (children: ReactNode) => children;
-    return <Fragment key={index}>{tag(render(part.children, tags))}</Fragment>;
-  });
-
-<p>{render(i18n.rich("signup.terms"), { terms: (children) => <a href="/terms">{children}</a> })}</p>;
-```
-
-Alguns detalhes:
-
-- `rich()` aceita as mesmas chaves e valores que `t()`, conferidos do mesmo jeito. Um valor é sempre texto: um `<b>` no nome de um visitante aparece como foi escrito e nunca é lido como tag.
-- Uma tag pode envolver placeholders, um plural ou um select, e pode ficar dentro de uma forma de um plural ou select, mas uma tag aberta numa forma precisa fechar nessa forma.
-- Um `<` que não forma uma tag, como em `1 < 2`, é texto, e uma tag em texto entre aspas também: `'{<b>}'` mostra `{<b>}`, nunca uma tag, como em [Chaves literais e apóstrofos](#chaves-literais-e-apóstrofos). Um apóstrofo antes de `<` é um apóstrofo comum, então `l'<b>été</b>` mantém a elisão e a tag.
-- Uma mensagem cujas tags não fecham, como `<b>negrito` sem `</b>`, ou se aninham mais de 10 níveis, registra um aviso uma vez para cada chave, texto e locale, a menos que o gerenciador seja silencioso, e volta como uma parte só: o texto como `t()` mostra, com as tags. Uma chave que falta e a sintaxe inválida também voltam como a única parte que `t()` devolveria.
-- As tags não são conferidas nos tipos, já que uma tradução pode usar tags que o texto padrão não tem. Renderize todas as tags que as suas mensagens usam e tenha uma alternativa para o resto, como acima.
-- `t()` e o binding de `data-i18n` mostram as tags como foram escritas. Renderize pelo seu código uma mensagem com tags usando `rich()`.
 
 ## Plurais
 
@@ -491,7 +447,7 @@ test("every locale has every key", async () => {
 });
 ```
 
-Para pegar uma mensagem com sintaxe quebrada, como uma `{` sem fechamento que um tradutor deixou, ou com tags que não fecham, consulte todas as chaves em todos os locales e falhe ao ver o aviso. O gerenciador não pode estar em silêncio para isso:
+Para pegar uma mensagem com sintaxe quebrada, como uma `{` sem fechamento que um tradutor deixou, consulte todas as chaves em todos os locales e falhe ao ver o aviso. O gerenciador não pode estar em silêncio para isso:
 
 ```ts
 import { expect, test, vi } from "vitest";
@@ -505,17 +461,14 @@ test("every message is valid", async () => {
     await i18n.setLocale(locale);
     for (const key of Object.keys(await i18n.loadLocale(locale))) {
       i18n.t(key as Parameters<typeof i18n.t>[0]);
-      i18n.rich(key as Parameters<typeof i18n.rich>[0]);
     }
   }
 
-  const invalid = warn.mock.calls.filter(([text]) => /^\[I18n\] Invalid (message|tags)/.test(String(text)));
+  const invalid = warn.mock.calls.filter(([text]) => String(text).startsWith("[I18n] Invalid message"));
   warn.mockRestore();
   expect(invalid).toEqual([]);
 });
 ```
-
-`rich()` confere as tags do texto que cada chamada mostra. Sem valores, um plural ou um select aparece como foi escrito, então as tags dentro das suas formas não são conferidas; passe valores que escolham uma forma para conferir as tags dela também.
 
 Para fazer um teste falhar com chaves que faltam em todos os dicionários, como um erro de digitação numa chave montada em tempo de execução, lance um erro a partir de `onMissingKey`:
 

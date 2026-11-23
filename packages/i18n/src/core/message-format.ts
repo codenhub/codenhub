@@ -18,9 +18,8 @@ const NUMBER_STYLES = ["integer", "percent"] as const;
 const DATE_STYLES = ["short", "medium", "long", "full"] as const;
 const PLURAL_KEYWORDS = new Set(["zero", "one", "two", "few", "many", "other"]);
 /**
- * A character of a name, an argument's, a select key's, or a tag's: a letter, a combining mark, a decimal digit, in any
- * script, or `_`. Marks are included since a Devanagari or Thai word writes its vowels with them. A select key and a
- * tag's name also take `-`.
+ * A character of a name, an argument's or a select key's: a letter, a combining mark, a decimal digit, in any script, or
+ * `_`. Marks are included since a Devanagari or Thai word writes its vowels with them. A select key also takes `-`.
  *
  * @internal
  */
@@ -43,8 +42,7 @@ const OPTIONS_COST = 128;
 const OPTION_COST = 64;
 
 type MessageNode =
-  // Quoted text is a node of its own, so `rich()` never reads a tag from it.
-  | { readonly kind: "text"; readonly text: string; readonly isQuoted?: true }
+  | { readonly kind: "text"; readonly text: string }
   | { readonly kind: "pound" }
   | { readonly kind: "argument"; readonly name: string; readonly source: string }
   | {
@@ -163,8 +161,7 @@ class Parser {
       if (character === "'") {
         endRun();
         if (this.startsQuote(isInPlural)) {
-          flush();
-          nodes.push({ kind: "text", text: this.readQuoted(), isQuoted: true });
+          parts.push(this.readQuoted());
         } else {
           // `''`, or a lone `'` before any other character, is one apostrophe.
           parts.push("'");
@@ -194,10 +191,7 @@ class Parser {
     return nodes;
   }
 
-  /**
-   * ICU quoting: `'` before `{`, `}`, or, in a plural, `#` quotes until the next lone `'`. Before `<` it is an
-   * apostrophe, as in ICU, so French `l'<b>été</b>` keeps its elision.
-   */
+  /** ICU quoting: `'` before `{`, `}`, or, in a plural, `#` quotes until the next lone `'`. */
   private startsQuote(isInPlural: boolean): boolean {
     const next = this.peek(1);
     return next === "{" || next === "}" || (next === "#" && isInPlural);
@@ -714,57 +708,42 @@ export const formatPlainValue = (value: unknown, locale: string, timeZone: strin
  */
 export const MAX_FILLED_ARGUMENTS = 100;
 
-/**
- * Where a walk writes. `text` is the message's own text, where `rich()` reads tags; `fill` is everything formatted into
- * it, which is never read for tags. `enter` and `leave` bracket a plural or select form, which a tag can't cross.
- */
-interface Output {
-  text(text: string): void;
-  fill(text: string): void;
-  enter(): void;
-  leave(): void;
-}
-
 interface FormatState {
   readonly values: MessageValues;
   readonly locale: string;
   readonly timeZone: string | undefined;
-  readonly output: Output;
   filledArguments: number;
 }
 
-const formatNodes = (nodes: Message, state: FormatState, pound: number | bigint | undefined): void => {
-  const { values, locale, timeZone, output } = state;
+const formatNodes = (nodes: Message, state: FormatState, pound: number | bigint | undefined): string => {
+  const { values, locale, timeZone } = state;
+  let result = "";
   // Formatted once, so a form that repeats `#` costs one formatting step, however many `#` the limit lets it fill.
   let poundText: string | undefined;
 
   for (const node of nodes) {
     if (node.kind === "text") {
-      if (node.isQuoted === true) {
-        output.fill(node.text);
-      } else {
-        output.text(node.text);
-      }
+      result += node.text;
       continue;
     }
     if (state.filledArguments >= MAX_FILLED_ARGUMENTS) {
-      output.fill(node.kind === "pound" ? "#" : node.source);
+      result += node.kind === "pound" ? "#" : node.source;
       continue;
     }
     state.filledArguments += 1;
     if (node.kind === "pound") {
       poundText ??= pound === undefined ? "#" : getNumberFormat(locale).format(pound);
-      output.fill(poundText);
+      result += poundText;
       continue;
     }
     const value = readValue(values, node.name);
 
     switch (node.kind) {
       case "argument":
-        output.fill(formatPlainValue(value, locale, timeZone) ?? node.source);
+        result += formatPlainValue(value, locale, timeZone) ?? node.source;
         break;
       case "number":
-        output.fill(
+        result +=
           typeof value === "number" || typeof value === "bigint"
             ? getNumberFormat(
                 locale,
@@ -774,25 +753,23 @@ const formatNodes = (nodes: Message, state: FormatState, pound: number | bigint 
                     ? { maximumFractionDigits: 0 }
                     : {},
               ).format(value)
-            : node.source,
-        );
+            : node.source;
         break;
       case "date":
       case "time": {
         const time = readTime(value);
-        output.fill(
+        result +=
           time === undefined
             ? node.source
             : getDateTimeFormat(
                 locale,
                 node.kind === "date" ? { dateStyle: node.style, timeZone } : { timeStyle: node.style, timeZone },
-              ).format(time),
-        );
+              ).format(time);
         break;
       }
       case "plural": {
         if (typeof value !== "number" && typeof value !== "bigint") {
-          output.fill(node.source);
+          result += node.source;
           break;
         }
         const exact = node.options.get(
@@ -804,9 +781,7 @@ const formatNodes = (nodes: Message, state: FormatState, pound: number | bigint 
           intlLocale(locale) === "und"
             ? "other"
             : getPluralRules(locale, node.isOrdinal).select(toPluralOperand(shown));
-        output.enter();
-        formatNodes(exact ?? node.options.get(category) ?? node.options.get("other")!, state, shown);
-        output.leave();
+        result += formatNodes(exact ?? node.options.get(category) ?? node.options.get("other")!, state, shown);
         break;
       }
       case "select": {
@@ -817,33 +792,16 @@ const formatNodes = (nodes: Message, state: FormatState, pound: number | bigint 
           typeof value !== "bigint" &&
           typeof value !== "boolean"
         ) {
-          output.fill(node.source);
+          result += node.source;
           break;
         }
-        output.enter();
-        formatNodes(node.options.get(String(value)) ?? node.options.get("other")!, state, pound);
-        output.leave();
+        result += formatNodes(node.options.get(String(value)) ?? node.options.get("other")!, state, pound);
         break;
       }
     }
   }
+  return result;
 };
-
-class StringOutput implements Output {
-  result = "";
-
-  text(text: string): void {
-    this.result += text;
-  }
-
-  fill(text: string): void {
-    this.result += text;
-  }
-
-  enter(): void {}
-
-  leave(): void {}
-}
 
 /**
  * Formats a parsed message, with dates and times in `timeZone`, or the runtime's when `undefined`. An argument without
@@ -856,150 +814,4 @@ export const formatMessage = (
   values: MessageValues,
   locale: string,
   timeZone: string | undefined,
-): string => {
-  const output = new StringOutput();
-  formatNodes(message, { values, locale, timeZone, output, filledArguments: 0 }, undefined);
-  return output.result;
-};
-
-/** A tag in a rich message, `<name>…</name>` or `<name/>`, with what it encloses. */
-export interface RichElement {
-  /**
-   * The tag's name, as written: letters, combining marks, and decimal digits in any script, `_`, and `-` after the
-   * first character.
-   */
-  readonly tag: string;
-  /** The text and tags it encloses, empty for `<name/>`. */
-  readonly children: RichText;
-}
-
-/** A message as text and tags, in order, for a framework to render. */
-export type RichText = readonly (string | RichElement)[];
-
-/** How deep tags nest in one message. Past it, the message's tags are invalid. @internal */
-export const MAX_TAG_NESTING = 10;
-
-// `<b>`, `</b>`, or `<b/>`, whose name also takes `-` after its first character, as in `<help-link>`, the way custom
-// elements are named. Anything else that starts with `<`, such as `a < b`, `<->`, or `</b/>`, is text.
-const TAG_PATTERN = new RegExp(String.raw`<(/?)(${NAME_CHARACTER}(?:${NAME_CHARACTER}|-)*)(/?)>`, "gu");
-
-interface Frame {
-  readonly tag: string;
-  readonly children: (string | RichElement)[];
-}
-
-class RichOutput implements Output {
-  /** The text as `t()` shows it, returned when the tags don't balance. */
-  flat = "";
-  /** Why the tags don't balance, or `undefined` while they do. */
-  reason: string | undefined;
-  readonly root: (string | RichElement)[] = [];
-  private readonly frames: Frame[] = [{ tag: "", children: this.root }];
-  // How many frames were open when each plural or select form began; a tag in the form can't close one of them.
-  private readonly forms: number[] = [];
-
-  text(text: string): void {
-    this.flat += text;
-    if (this.reason !== undefined) {
-      return;
-    }
-    let end = 0;
-    for (const match of text.matchAll(TAG_PATTERN)) {
-      const [source, closing, tag, empty] = match as unknown as [string, string, string, string];
-      if (closing !== "" && empty !== "") {
-        continue;
-      }
-      this.add(text.slice(end, match.index));
-      end = match.index + source.length;
-      if (closing === "") {
-        this.open(tag, empty !== "");
-      } else {
-        this.close(tag);
-      }
-      if (this.reason !== undefined) {
-        return;
-      }
-    }
-    this.add(text.slice(end));
-  }
-
-  fill(text: string): void {
-    this.flat += text;
-    if (this.reason === undefined) {
-      this.add(text);
-    }
-  }
-
-  enter(): void {
-    this.forms.push(this.frames.length);
-  }
-
-  leave(): void {
-    const start = this.forms.pop()!;
-    if (this.reason === undefined && this.frames.length !== start) {
-      this.reason = `The tag ${formatReportedKey(this.frames.at(-1)!.tag)} is not closed inside its plural or select form`;
-    }
-  }
-
-  finish(): void {
-    if (this.reason === undefined && this.frames.length > 1) {
-      this.reason = `The tag ${formatReportedKey(this.frames.at(-1)!.tag)} is not closed`;
-    }
-  }
-
-  private add(text: string): void {
-    if (text === "") {
-      return;
-    }
-    const { children } = this.frames.at(-1)!;
-    const last = children.length - 1;
-    if (typeof children[last] === "string") {
-      children[last] += text;
-    } else {
-      children.push(text);
-    }
-  }
-
-  private open(tag: string, isEmpty: boolean): void {
-    if (this.frames.length > MAX_TAG_NESTING) {
-      this.reason = `Tags nest more than ${MAX_TAG_NESTING} levels`;
-      return;
-    }
-    const element: Frame = { tag, children: [] };
-    this.frames.at(-1)!.children.push(element);
-    if (!isEmpty) {
-      this.frames.push(element);
-    }
-  }
-
-  private close(tag: string): void {
-    const top = this.frames.at(-1)!;
-    if (this.frames.length <= (this.forms.at(-1) ?? 1) || top.tag !== tag) {
-      this.reason = `The closing tag ${formatReportedKey(tag)} closes no open tag of that name`;
-      return;
-    }
-    this.frames.pop();
-  }
-}
-
-/** A message with only text, for `formatRichMessage` to read tags from. @internal */
-export const textMessage = (text: string): Message => [{ kind: "text", text }];
-
-/**
- * Formats a parsed message as text and tags. Tags are read from the message's own text, never from values, and each
- * plural or select form must close the tags it opens. When they don't balance, `reason` says why and `text` is the
- * message as `formatMessage` formats it.
- *
- * @internal
- */
-export const formatRichMessage = (
-  message: Message,
-  values: MessageValues,
-  locale: string,
-  timeZone: string | undefined,
-): { readonly parts: RichText; readonly reason: string | undefined; readonly text: string } => {
-  const output = new RichOutput();
-  formatNodes(message, { values, locale, timeZone, output, filledArguments: 0 }, undefined);
-  output.finish();
-  return { parts: output.root, reason: output.reason, text: output.flat };
-};
+): string => formatNodes(message, { values, locale, timeZone, filledArguments: 0 }, undefined);

@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { describe, expect, expectTypeOf, it } from "vitest";
 
-import { createI18n, type I18n, type RichText } from "../index";
+import { createI18n, type I18n } from "../index";
 import type { TranslateParams } from "./message-params";
 
 const en = {
@@ -132,23 +132,6 @@ describe("typed placeholder values", () => {
     typed.t<"greeting">("greeting", { title: "Dr." });
   });
 
-  it("should check rich() values as t() checks them", async () => {
-    const typed = createI18n({
-      locales: ["en"] as const,
-      defaultLocale: "en",
-      loadLocale: () => ({ reply: "<b>{name}</b> replied", total: "<b>{amount, number}</b>" }) as const,
-      isSilent: true,
-    });
-    await typed.init();
-
-    expect(typed.rich("reply", { name: "Ana" })).toEqual([{ tag: "b", children: ["Ana"] }, " replied"]);
-    expectTypeOf(typed.rich("total", { amount: 3n })).toEqualTypeOf<RichText>();
-    // @ts-expect-error -- `name` is required.
-    typed.rich("reply");
-    // @ts-expect-error -- {amount, number} needs a number.
-    typed.rich("total", { amount: "3" });
-  });
-
   it("should take values typed by an interface, and still check each value", async () => {
     interface User {
       name: string;
@@ -214,7 +197,6 @@ describe("typed placeholder values", () => {
 
     // An interface with fields the message doesn't use, on every kind of message.
     expect(typed.t("greeting", user)).toBe("Hello, Ana!");
-    expect(typed.rich("greeting", user)).toEqual(["Hello, Ana!"]);
     expect(typed.t("plain", user)).toBe("Hi");
     expect(typed.t<"greeting">("greeting", user)).toBe("Hello, Ana!");
     expect(untyped.t("greeting", user)).toBe("Hello, Ana!");
@@ -298,7 +280,7 @@ describe("typed placeholder values", () => {
     expectTypeOf<{ name: "Ana" }>().toExtend<ParamsOf<"l'<b>{name}</b>">>();
     expectTypeOf<{}>().not.toExtend<ParamsOf<"l'<b>{name}</b>">>();
     expectTypeOf<{}>().not.toExtend<ParamsOf<"'<b>{name}</b>'">>();
-    // A tag in a run quoted by `'{` is text, and so is an argument there.
+    // A run quoted by `'{` is text, an argument in it included.
     expectTypeOf<{ x: 1 }>().toExtend<ParamsOf<"'{<b>{name}</b>}' {x}">>();
     expectTypeOf<{}>().not.toExtend<ParamsOf<"'{<b>{name}</b>}' {x}">>();
   });

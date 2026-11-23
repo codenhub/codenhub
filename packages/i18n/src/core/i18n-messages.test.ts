@@ -263,7 +263,6 @@ describe("ICU messages", () => {
       await i18n.init();
 
       expect(i18n.t(key, { isAdmin })).toBe(text);
-      expect(i18n.rich(key, { isAdmin })).toEqual([text]);
     });
 
     it.each(["plain", "number", "plural"] as const)("should leave a boolean in %s as written", async (key) => {
@@ -432,7 +431,6 @@ describe("ICU messages", () => {
       await i18n.init();
 
       expect(i18n.t(key, values)).toBe(text);
-      expect(i18n.rich(key, values)).toEqual([text]);
     });
 
     it("should keep a long number repeated by # within 100 copies", async () => {
@@ -440,9 +438,7 @@ describe("ICU messages", () => {
       await i18n.init();
       const number = i18n.formatNumber(1e308);
 
-      const text = i18n.t("huge", { n: 1e308 });
-      expect(text).toBe(`${number.repeat(99)}${"#".repeat(99_970 - 99)}`);
-      expect(i18n.rich("huge", { n: 1e308 })).toEqual([text]);
+      expect(i18n.t("huge", { n: 1e308 })).toBe(`${number.repeat(99)}${"#".repeat(99_970 - 99)}`);
     });
   });
 
@@ -534,8 +530,8 @@ describe("ICU messages", () => {
   });
 });
 
-// Every identifier the message grammar reads: an argument's name in each form, a select key, a tag's name, and a
-// placeholder of invalid syntax.
+// Every identifier the message grammar reads: an argument's name in each form, a select key, and a placeholder of
+// invalid syntax.
 describe("names in a message", () => {
   const read = async (name: string) => {
     const dictionary = {
@@ -543,7 +539,6 @@ describe("names in a message", () => {
       number: `{${name}, number}`,
       plural: `{${name}, plural, one {# one} other {# more}}`,
       select: `{g, select, ${name} {chosen} other {other}}`,
-      tag: `<${name}>bold</${name}>`,
       invalid: `{${name}} {`,
     };
     const i18n = createI18n({ defaultLocale: "en", locales: ["en"], loadLocale: () => dictionary, isSilent: true });
@@ -553,7 +548,6 @@ describe("names in a message", () => {
       number: i18n.t("number", { [name]: 1234 }),
       plural: i18n.t("plural", { [name]: 1 }),
       select: i18n.t("select", { g: name }),
-      tag: i18n.rich("tag"),
       invalid: i18n.t("invalid", { [name]: "x" }),
     };
   };
@@ -572,7 +566,6 @@ describe("names in a message", () => {
       number: "1,234",
       plural: "1 one",
       select: "chosen",
-      tag: [{ tag: name, children: ["bold"] }],
       invalid: "x {",
     });
   });
@@ -587,44 +580,20 @@ describe("names in a message", () => {
 
     expect(result.plain).toBe(`{${name}}`);
     expect(result.select).toBe(`{g, select, ${name} {chosen} other {other}}`);
-    expect(result.tag).toEqual([`<${name}>bold</${name}>`]);
     expect(result.invalid).toBe(`{${name}} {`);
   });
 
   it.each(["año-nuevo", "help-link", "a-", "a--b"])(
-    "should take a hyphen after the first character in a select key and a tag, as in %s, and not in an argument's name",
+    "should take a hyphen after the first character in a select key, as in %s, and not in an argument's name",
     async (name) => {
       const result = await read(name);
 
       expect(result.select).toBe("chosen");
-      expect(result.tag).toEqual([{ tag: name, children: ["bold"] }]);
       expect(result.plain).toBe(`{${name}}`);
       expect(result.number).toBe(`{${name}, number}`);
       expect(result.invalid).toBe(`{${name}} {`);
     },
   );
-
-  it("should read a hyphenated tag in each of its forms", async () => {
-    const i18n = createI18n({
-      defaultLocale: "en",
-      locales: ["en"],
-      loadLocale: () => ({ m: "Read the <help-link>terms</help-link>.<line-break/>" }),
-    });
-    await i18n.init();
-
-    expect(i18n.rich("m")).toEqual([
-      "Read the ",
-      { tag: "help-link", children: ["terms"] },
-      ".",
-      { tag: "line-break", children: [] },
-    ]);
-  });
-
-  it("should not read a tag whose name starts with a hyphen", async () => {
-    const result = await read("-a");
-
-    expect(result.tag).toEqual(["<-a>bold</-a>"]);
-  });
 });
 
 describe("parseMessage", () => {
@@ -915,15 +884,8 @@ describe("parseCachedMessage", () => {
     expect(parseCachedMessage("Hello {name")).toBe("Expected , at character 12");
   });
 
-  it("should parse quoted text with doubled apostrophes into a quoted node of its own", () => {
-    expect(parseMessage("a '{b ''c'' d}' e")).toEqual([
-      { kind: "text", text: "a " },
-      { kind: "text", text: "{b 'c' d}", isQuoted: true },
-      { kind: "text", text: " e" },
-    ]);
-    expect(parseMessage("it''s '{open")).toEqual([
-      { kind: "text", text: "it's " },
-      { kind: "text", text: "{open", isQuoted: true },
-    ]);
+  it("should parse quoted text with doubled apostrophes as text", () => {
+    expect(parseMessage("a '{b ''c'' d}' e")).toEqual([{ kind: "text", text: "a {b 'c' d} e" }]);
+    expect(parseMessage("it''s '{open")).toEqual([{ kind: "text", text: "it's {open" }]);
   });
 });

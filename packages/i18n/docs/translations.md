@@ -133,7 +133,7 @@ t("order.confirmed", { name: "Ana", orderId: "1042" });
 
 Values can be strings, numbers, bigints, or dates, and a `select` also takes a boolean. A bigint goes wherever a number does, and is formatted without losing digits. Placeholder names use letters and digits in any script, and `_`, such as `{firstName}`, `{first_name}`, or `{año}`. A name with anything else, such as `{first-name}` or `{price€}`, is not a placeholder: the message is invalid syntax, logs a warning, and shows `{first-name}` as written.
 
-Use placeholders instead of joining fragments. `t("before") + name + t("after")` locks every language into English word order, while a whole sentence with a placeholder lets each translation put the value where it belongs. Word order is the first thing every translator wants to change, and they are usually right. For a link or bold text inside the sentence, see [Links and bold text inside a sentence](#links-and-bold-text-inside-a-sentence).
+Use placeholders instead of joining fragments. `t("before") + name + t("after")` locks every language into English word order, while a whole sentence with a placeholder lets each translation put the value where it belongs. Word order is the first thing every translator wants to change, and they are usually right.
 
 A few details:
 
@@ -233,50 +233,6 @@ Inside a plural's forms, `#` stands for the number; write `'#'` for a literal `#
 Quoted text is text to the types too: in `'{it''s {x}'`, which shows `{it's {x}`, `x` is not a value `t()` asks for.
 
 Text that is not valid syntax, such as an unclosed `{` or a stray `}`, logs a warning, unless the manager is silent, and is shown with only its `{name}` placeholders filled. The warning names the key and the locale, and comes once for each key, text, and locale among the roughly 1,000 most recent, so an edited text warns again. [Find untranslated keys](#find-untranslated-keys) shows a test that checks every message's syntax.
-
-### Links and bold text inside a sentence
-
-A sentence with a link in the middle is still one sentence. Splitting it into `t("before")`, a link, and `t("after")` locks the word order, as joining fragments does. Mark the part with a tag and call `rich()`, which returns the text and its tags as data for your framework to render:
-
-```json
-{ "signup": { "terms": "By signing up you accept the <terms>terms of use</terms>." } }
-```
-
-```ts
-i18n.rich("signup.terms");
-// ["By signing up you accept the ", { tag: "terms", children: ["terms of use"] }, "."]
-```
-
-A tag is `<name>…</name>`, or `<name/>` for one with no content, such as a line break. Names use letters and digits in any script, `_`, and `-` after the first character, such as `<help-link>`. A tag names what the part is, and your code decides how it renders, so a translation can't add a link, a script, or markup your code doesn't render. In React, for example:
-
-```tsx
-import { Fragment, type ReactNode } from "react";
-import type { RichText } from "@codenhub/i18n";
-
-type Tags = Readonly<Record<string, (children: ReactNode) => ReactNode>>;
-
-// A tag your code doesn't render shows its content without it.
-const render = (parts: RichText, tags: Tags): ReactNode[] =>
-  parts.map((part, index) => {
-    if (typeof part === "string") {
-      return part;
-    }
-    // An own property only, so a tag such as `<constructor>` never reaches an inherited function.
-    const tag = Object.hasOwn(tags, part.tag) ? tags[part.tag]! : (children: ReactNode) => children;
-    return <Fragment key={index}>{tag(render(part.children, tags))}</Fragment>;
-  });
-
-<p>{render(i18n.rich("signup.terms"), { terms: (children) => <a href="/terms">{children}</a> })}</p>;
-```
-
-A few details:
-
-- `rich()` takes the same keys and values as `t()`, checked the same way. A value is always text: a `<b>` in a visitor's name is shown as written, never read as a tag.
-- A tag can wrap placeholders, a plural, or a select, and can sit inside a plural or select form, but a tag opened in a form must close in that form.
-- A `<` that doesn't form a tag, as in `1 < 2`, is text, and so is a tag in quoted text: `'{<b>}'` shows `{<b>}`, never a tag, as in [Literal braces and apostrophes](#literal-braces-and-apostrophes). An apostrophe before `<` is an ordinary apostrophe, so `l'<b>été</b>` keeps its elision and its tag.
-- A message whose tags don't balance, such as `<b>bold` without `</b>`, or nest more than 10 levels deep, logs a warning once for each key, text, and locale, unless the manager is silent, and comes back as one part: the text as `t()` shows it, tags included. A missing key and invalid syntax also come back as the one part `t()` would return.
-- Tags aren't type-checked, since a translation can use tags the default text doesn't. Render every tag your messages use, and keep a fallback for the rest, as above.
-- `t()` and the `data-i18n` binding show tags as written. Render a message with tags from your code with `rich()`.
 
 ## Plurals
 
@@ -490,7 +446,7 @@ test("every locale has every key", async () => {
 });
 ```
 
-To catch a message with broken syntax, such as an unclosed `{` a translator left, or tags that don't balance, look up every key in every locale and fail on the warning. The manager must not be silent for this:
+To catch a message with broken syntax, such as an unclosed `{` a translator left, look up every key in every locale and fail on the warning. The manager must not be silent for this:
 
 ```ts
 import { expect, test, vi } from "vitest";
@@ -504,17 +460,14 @@ test("every message is valid", async () => {
     await i18n.setLocale(locale);
     for (const key of Object.keys(await i18n.loadLocale(locale))) {
       i18n.t(key as Parameters<typeof i18n.t>[0]);
-      i18n.rich(key as Parameters<typeof i18n.rich>[0]);
     }
   }
 
-  const invalid = warn.mock.calls.filter(([text]) => /^\[I18n\] Invalid (message|tags)/.test(String(text)));
+  const invalid = warn.mock.calls.filter(([text]) => String(text).startsWith("[I18n] Invalid message"));
   warn.mockRestore();
   expect(invalid).toEqual([]);
 });
 ```
-
-`rich()` checks the tags in the text each call shows. Without values, a plural or select is shown as written, so the tags inside its forms are not checked; pass values that pick a form to check its tags too.
 
 To fail a test on keys missing from every dictionary, such as a typo in a key you built at runtime, throw from `onMissingKey`:
 

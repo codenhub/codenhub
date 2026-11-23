@@ -1,4 +1,3 @@
-import type { RichText } from "./message-format";
 import type { TranslateParams } from "./message-params";
 
 // The values a call passes when its key's type is given, as in `t<"greeting">(…)`: an interface's, which has no index
@@ -328,35 +327,6 @@ export interface I18n<TLocale extends string = string, TKey extends string = str
     key: K,
     ...params: TranslateParams<TMessages, K, TValues>
   ): string;
-
-  /**
-   * Translates a key as {@link I18n.translate} does, and returns its text and tags as parts for a framework to render,
-   * so a translation can mark a link or bold text inside a sentence without HTML. Tags are `<name>…</name>` and
-   * `<name/>`, with a name of letters and digits in any script, `_`, and `-` after the first character, such as
-   * `<help-link>`, written anywhere in the message's text, including inside a plural or select form. Values are text: a
-   * tag inside a value is never read, nor is one in quoted text, such as `'{<b>}'`. A `<` that doesn't form a tag, as
-   * in `a < b`, is text.
-   *
-   * A message whose tags don't balance, nest past 10 levels, or cross the edge of a plural or select form warns once per
-   * process for its locale, key, and text, unless silent, and returns the text as `t()` shows it, tags included, as one part.
-   * A message with invalid syntax and a missing key return what `t()` returns, as one part.
-   *
-   * @example
-   * ```ts
-   * // "terms": "Read the <link>terms</link>."
-   * rich("terms"); // ["Read the ", { tag: "link", children: ["terms"] }, "."]
-   * ```
-   *
-   * @param key - Translation key, or the key of a plural group when `params.count` is a number or bigint.
-   * @param params - Argument values, as {@link I18n.translate} takes them.
-   * @returns Text and tags in order, with empty text left out and adjacent text joined.
-   * @throws {Error} When called before successful initialization.
-   * @throws {TypeError} When the key or `params` is rejected, as {@link I18n.translate} rejects them.
-   */
-  rich<K extends TKey, TValues extends object = DefaultValues>(
-    key: K,
-    ...params: TranslateParams<TMessages, K, TValues>
-  ): RichText;
 
   /**
    * Formats a number for the active locale with `Intl.NumberFormat`.
