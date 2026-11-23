@@ -2,7 +2,7 @@
 title: Temas
 description: Modo claro e escuro, como trocar a paleta pelas cores da marca, como definir uma intenção própria, e cada token de cor, de intenção, fundamental e de fonte com o seu padrão.
 order: 5
-source: 059c7efb0eda78e0564d17ec30ccb0a225d7aad8
+source: 03f940004e76bda5b38289afd7956dc8a8914c77
 ---
 
 # Temas
@@ -165,7 +165,7 @@ Para mais contraste, o segundo caminho são duas regras: uma para a configuraç�
 
 Cada token de cor guarda um valor claro e um escuro por meio de `light-dark()`; um único valor significa que os dois temas o usam. Nomes de paleta como `neutral-950` são da paleta padrão do Tailwind, que o CSS compilado do pacote declara para as cores que usa.
 
-Cada linha é um ponto de sobrescrita: defina-a no `:root` para mudar o tema da página, ou em qualquer elemento para mudar o tema do que está dentro dele. As linhas `-hover`, `-subtle`, `-strong` e `-contrast` são companheiras da cor base da sua família e não a acompanham, então mude o tema da família inteira. A família `text` não tem linha `-subtle`: a intenção neutra pega o seu tom suave de `--color-surface`.
+Cada linha é um ponto de sobrescrita: defina-a no `:root` para mudar o tema da página, ou em qualquer elemento para mudar o tema dos componentes dentro dele. O texto e o fundo do próprio elemento são a exceção: o reset lê `--color-text` e `--color-background` só em `html` e `body`, então um valor definido numa `<section>` muda a cor dos componentes dentro dela, mas não a do próprio texto nem o fundo. Defina também `color: var(--color-text)` e `background-color: var(--color-background)` no mesmo elemento. Um [seletor de tema](#claro-e-escuro) já define o `color` dele. As linhas `-hover`, `-subtle`, `-strong` e `-contrast` são companheiras da cor base da sua família e não a acompanham, então mude o tema da família inteira. A família `text` não tem linha `-subtle`: a intenção neutra pega o seu tom suave de `--color-surface`.
 
 | Token                          | Claro, escuro                | Finalidade                                                                                                          |
 | ------------------------------ | ---------------------------- | ------------------------------------------------------------------------------------------------------------------- |
@@ -241,7 +241,7 @@ A cor do texto acompanha o preenchimento. `--intent-contrast` é a cor do texto 
 
 ## Tokens fundamentais
 
-Os tokens fundamentais definem layout, formato, movimento, foco, profundidade e empilhamento. Sobrescreva-os no `:root`, ou num elemento para o que está dentro dele.
+Os tokens fundamentais definem layout, formato, movimento, foco, profundidade e empilhamento. Sobrescreva-os no `:root`, ou num elemento para o que está dentro dele. `--font-default` é a exceção: a fonte de um elemento só o acompanha quando o elemento define `font-family` a partir dele, como mostra [Fontes](#fontes).
 
 As quatro sombras `--elevation-*` são para elementos que você mesmo estiliza. Elas são separadas das classes `.flat`, `.raised` e `.floating`, que escalam a sombra do próprio componente e não desenham nada até que uma estética ou uma dessas classes peça profundidade; veja [Composição → Elevação](./composing.md#elevação). Ambas usam os pesos nenhum, pequeno, médio e grande, mas uma é um valor fixo e a outra escala partes da sombra, então elas nem sempre têm a mesma aparência.
 
@@ -292,7 +292,7 @@ O pacote não entrega arquivos de fonte e não faz requisições de rede. Cada t
 
 `--font-default` só chega à página pelo reset, que `@codenhub/styles`, `/native`, `/tw`, `/native/tw` e `/reset/tw` incluem. Usando só `/theme` ou `/components`, defina você mesmo o `font-family` no `body` e defina `--font-default` com a mesma fonte: as regiões `.glass` e `.neobrutalism` definem o próprio `font-family` a partir do token, então uma fonte definida só no `body` não chega dentro delas. Ou defina só o token e escreva `font-family: var(--font-default)` no `body`. Os tokens das estéticas são lidos pela classe da própria estética, então funcionam com qualquer entrypoint.
 
-Para usar uma web font, carregue-a como você carrega qualquer fonte e depois nomeie-a no token. Defina o token no `:root` para a página inteira, ou em qualquer elemento para aquela parte dela:
+Para usar uma web font, carregue-a como você carrega qualquer fonte e depois nomeie-a no token. Defina o token no `:root` para a página inteira. Para uma parte só, defina o token nesse elemento e, junto, `font-family: var(--font-default)`, porque o reset lê o token só em `html` e `body`, e o texto dentro herda a fonte que o elemento resolve:
 
 ```html
 <link rel="preconnect" href="https://fonts.googleapis.com" />
