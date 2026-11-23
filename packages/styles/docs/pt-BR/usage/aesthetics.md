@@ -2,7 +2,7 @@
 title: Estéticas
 description: Os seis visuais opcionais, o que cada um muda num componente, os seus ajustes e os seus limites.
 order: 6
-source: 6c13c062cc4fa4e740e6a466a0b9c01b8bd92888
+source: a4bc695bdf76b14ae9bc10886612677f711745bb
 ---
 
 # Estéticas
@@ -236,7 +236,7 @@ Um paralelogramo inclina as laterais para dentro do conteúdo, então dê paddin
 
 **Exceções:**
 
-- Hoje o chanfro só existe no Chromium. O Firefox e o Safari ainda não desenham `corner-shape` e, neles, a estética deixa quadrados os cantos cortados em vez de arredondá-los, e o que é totalmente redondo continua redondo, então o visual degrada para quadrado, com contorno e brilho. Ele ganha o chanfro sem nenhuma mudança assim que um motor de renderização passar a suportá-lo.
+- O chanfro precisa de `corner-shape`, que o Chromium desenha, e o Safari a partir da 27.3. O Firefox, e o Safari antes da 27.3, não desenham e, neles, a estética deixa quadrados os cantos cortados em vez de arredondá-los, e o que é totalmente redondo continua redondo, então o visual degrada para quadrado, com contorno e brilho. Ele ganha o chanfro sem nenhuma mudança assim que um motor de renderização passar a suportá-lo.
 - O brilho é um halo, não profundidade, então todo componente o recebe, inclusive campos, badges e alertas, e `.flat` não o remove. `.raised` e `.floating` não acrescentam sombra nesta estética.
 - No tema claro, o brilho de um componente neutro ou `.primary` é a tinta quase preta, que parece uma sombra suave, e não luz. O visual fica mais forte numa página escura, ou com um `--cyber-ink` com matiz.
 - Um `.btn.icon` simples é um controle quadrado, então recebe a diagonal de controle; um `.btn.icon.pill` é redondo, então vira um losango.

@@ -2,7 +2,7 @@
 title: Tailwind CSS v4
 description: Como usar os entrypoints de código-fonte /tw num projeto com Tailwind CSS v4.
 order: 1
-source: 52bb84688d6c4ed474920042e278f5532a1c97da
+source: 751c07d0ead1796ffb06aa5b463f6da775741485
 ---
 
 # Tailwind CSS v4
@@ -110,9 +110,9 @@ As cores do próprio pacote não mudam, e você ainda pode acrescentar cores sua
 
 O bloco deixa de fora `neutral`, `emerald`, `amber`, `rose`, `indigo` e `white` de propósito: o tema constrói as cores dele a partir deles.
 
-- **Não limpe o namespace inteiro.** `--color-*: initial` também remove as cores semânticas do pacote, e o build para com um erro como `Cannot apply unknown utility class`.
+- **Não limpe o namespace inteiro.** `--color-*: initial` também remove as cores semânticas do pacote, como `--color-primary`, porque elas também são variáveis do tema. O build termina mesmo assim, sem nenhum aviso, e todo componente que as lê é desenhado sem cor.
 - **Não limpe uma escala que o tema lê.** Limpar `--color-emerald-*` compila sem erro, mas as cores de sucesso feitas com ela se perdem.
-- **Não limpe os namespaces de tipo, fonte ou espaçamento.** Os componentes aplicam os utilitários `text-*` e `font-*` do Tailwind e a função `--spacing()` dele, então `--text-*: initial`, `--font-*: initial`, `--spacing: initial` ou `--*: initial` interrompe a compilação com `Cannot apply unknown utility class` ou `The --spacing(…) function requires that the --spacing theme variable exists`. Sobrescreva valores isolados, como `--text-sm`. Limpar `--radius-*` é seguro.
+- **Não limpe os namespaces de tipo, fonte ou espaçamento.** Os componentes aplicam os utilitários `text-*` e `font-*` do Tailwind e a função `--spacing()` dele, então `--text-*: initial`, `--font-*: initial`, `--spacing: initial` ou `--*: initial` remove os valores que eles leem. O build termina mesmo assim, sem nenhum aviso: os componentes mantêm as referências a `--text-sm`, `--font-default` ou `--spacing`, que já não nomeiam nada, então o texto deles assume o tamanho e a fonte herdados, e o preenchimento e os espaçamentos caem para zero. Sobrescreva valores isolados, como `--text-sm`. Limpar `--radius-*` é seguro: os cantos dos componentes vêm de `--radius-control`, `--radius-small` e `--radius-surface`, que são do pacote.
 
 ## Solução de problemas
 

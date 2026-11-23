@@ -3,7 +3,7 @@ title: Visão geral
 description: Como a folha de estilos é carregada no build de um framework e qual guia seguir.
 group: Integração
 order: 2
-source: 5af237896ccc0da753e402313a176df02820a62c
+source: 52e0563bc739ebe40d0bbc3957ccaa946633ff7e
 ---
 
 # Integração
@@ -17,7 +17,7 @@ Toda stack faz os mesmos dois imports, a partir do mesmo tipo de lugar — um la
 1. Um [entrypoint](../setup.md#todos-os-entrypoints) — o `@codenhub/styles` compilado para qualquer build, ou `@codenhub/styles/tw` quando o projeto já roda Tailwind CSS v4.
 2. `@codenhub/styles/aesthetics` (ou `/aesthetics/tw`), só se o projeto usar uma [estética](../usage/aesthetics.md). Ele pode vir antes ou depois do entrypoint, porque todo entrypoint declara as [camadas de cascata](../setup.md#camadas-de-cascata) antes de usar uma.
 
-Importar de um único lugar importa por dois motivos. Alguns frameworks só _permitem_ CSS global a partir de um arquivo raiz designado e falham no build caso contrário — o Pages Router do Next.js é um deles; veja [Next.js → Solução de problemas](./nextjs.md#solução-de-problemas). Onde o framework permite de forma mais ampla, como faz o App Router do Next.js, importar a partir da raiz continua sendo a escolha recomendada para uma ordem de CSS previsível — e importar por componente carregaria as mesmas regras de reset e de tokens uma vez por componente, em vez de uma vez por aplicação.
+Importar de um único lugar importa por dois motivos. Alguns frameworks só _permitem_ os seus próprios arquivos CSS globais a partir de um arquivo raiz designado e falham no build caso contrário — o Pages Router do Next.js é um deles, e o arquivo CSS que contém o `/tw` é um dos seus; veja [Next.js → Solução de problemas](./nextjs.md#solução-de-problemas). Onde o framework permite de forma mais ampla, importar a partir da raiz continua sendo a escolha recomendada, porque assim a ordem em que as folhas de estilos carregam não depende de qual página ou componente o leitor abriu primeiro.
 
 ## Qual guia seguir
 

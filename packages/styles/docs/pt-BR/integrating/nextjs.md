@@ -2,7 +2,7 @@
 title: Next.js
 description: Como carregar a folha de estilos numa aplicação Next.js / React.
 order: 2
-source: b229c0204095ccf30396f20e8b7f8033f7004285
+source: 69f6ff482bccb50f743692edae000890b592e912
 ---
 
 # Next.js
@@ -10,7 +10,7 @@ source: b229c0204095ccf30396f20e8b7f8033f7004285
 O Next.js tem duas arquiteturas de roteamento, e elas tratam o CSS global de formas diferentes:
 
 - **App Router** (um diretório `app/`): o CSS global — incluindo a folha de estilos de um pacote externo como este — pode ser importado de qualquer layout, página ou componente dentro de `app/`. Importar a partir do layout raiz é só uma recomendação, para uma ordem de CSS previsível entre as rotas; o Next.js não impõe isso e nenhum erro acontece se você importar em outro lugar.
-- **Pages Router** (um diretório `pages/`, sem `app/`): o CSS global fica restrito a `pages/_app.tsx`. Importar de qualquer outro lugar faz o build falhar — quem impõe isso é o próprio Next.js, não este pacote; veja [Solução de problemas](#solução-de-problemas).
+- **Pages Router** (um diretório `pages/`, sem `app/`): a folha de estilos de um pacote, como esta, também pode ser importada de qualquer página ou componente. Os restritos são os seus próprios arquivos `.css` globais: eles só podem ser importados de `pages/_app.tsx`, e importar um em qualquer outro lugar faz o build falhar. Isso importa para o `/tw`, que fica num arquivo CSS seu. Quem impõe isso é o próprio Next.js, não este pacote; veja [Solução de problemas](#solução-de-problemas). Importe a folha de estilos em `pages/_app.tsx` mesmo assim, pela mesma ordem previsível.
 - **Os dois diretórios presentes** (no meio de uma migração): importe a folha de estilos nos dois arquivos raiz. Os dois roteadores servem as suas próprias rotas de forma independente, então uma rota em `pages/` nunca vê uma folha de estilos importada só em `app/layout.tsx`, e vice-versa.
 
 ## Importe a folha de estilos
@@ -64,9 +64,9 @@ No Pages Router, quem renderiza o `<html>` é o `pages/_document.tsx`, então co
 
 **O build com Pages Router falha com "Global CSS cannot be imported from files other than your Custom `<App>`"**
 
-- **O que aconteceu:** o Next.js rejeitou uma instrução `import` de CSS global fora de `pages/_app.tsx`. Essa restrição é específica do Pages Router — quem a impõe é o próprio Next.js, não este pacote, e ela vale para qualquer import de CSS global, não especificamente para o `@codenhub/styles`. Ela não vale para o App Router, em que o mesmo import funciona a partir de qualquer layout, página ou componente.
-- **Por quê:** o Pages Router não tem uma fronteira de CSS por rota como o App Router tem, então o Next.js exige um único arquivo previsível para as folhas de estilos globais, para evitar conflitos de ordem entre as páginas.
-- **Como resolver:** mova a linha `import "@codenhub/styles"` para `pages/_app.tsx` e remova-a de onde ela estiver agora.
+- **O que aconteceu:** o Next.js rejeitou um `import` de um dos seus próprios arquivos `.css` globais fora de `pages/_app.tsx`, como o arquivo que contém `@import "@codenhub/styles/tw"`. Essa restrição é específica do Pages Router, e quem a impõe é o próprio Next.js, não este pacote. Ela não cobre uma folha de estilos importada direto de um pacote, então `import "@codenhub/styles"` compila a partir de qualquer página ou componente, e ela não vale para o App Router. Verificado com o Next.js 16.4, com Turbopack e com webpack.
+- **Por quê:** o Pages Router não tem uma fronteira de CSS por rota como o App Router tem, então o Next.js exige um único arquivo previsível para as suas folhas de estilos globais, para evitar conflitos de ordem entre as páginas.
+- **Como resolver:** mova o import do seu arquivo CSS para `pages/_app.tsx` e remova-o de onde ele estiver agora.
 
 ## A seguir
 

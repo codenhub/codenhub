@@ -261,6 +261,7 @@ Every failure prints one line starting with `chs:` to standard error and exits w
 - **`unknown aesthetic "<name>"; choose from ...`.** Pick one of the names listed. They are lowercase and hyphenated, as in `chunky-tile`.
 - **`missing command` or `unknown command "<name>"`.** The first word after `chs` has to be `build`.
 - **`this command needs Node.js 24 or newer`.** Update Node.js on the machine that builds the CSS.
+- **`ExperimentalWarning: globSync is an experimental feature`.** Node.js 24.0.0 prints it, and 24.1.0 and newer do not. The build is still written; update Node.js to drop the line.
 - **`cannot write --output <file>: <reason> (<code>); <what to do>`.** `<reason>` and `<code>` are Node.js's own. `EACCES` or `EPERM` means you cannot write there, and on Windows also that the file is read-only; `ENOSPC` means the disk is full.
 - **`--output <file> is a folder, not a file`**, or a device, a pipe, or a socket. Name a stylesheet file, such as one inside the folder.
 - **`--output <file> holds something this command did not write`.** The file is not a stylesheet this command wrote, such as one you wrote by hand or a vendor's, so replacing it would lose it. Name another file, or move this one away. A copy of `@codenhub/styles`, `/components`, or `/native` from the package starts with the same notice, so it is replaced as one the command wrote; a copy of another entrypoint, such as `/theme` or an aesthetic, does not, and is refused.

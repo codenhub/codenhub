@@ -235,7 +235,7 @@ A parallelogram slants its sides into the content, so give a surface that takes 
 
 **Exceptions:**
 
-- The bevel is Chromium-only today. Firefox and Safari do not draw `corner-shape` yet, and there the aesthetic squares its cut corners instead of rounding them, and what is fully round stays round, so the look degrades to square, lined, and glowing. It picks up the bevel with no change once an engine ships it.
+- The bevel needs `corner-shape`, which Chromium draws, and Safari from 27.3. Firefox, and Safari before 27.3, do not, and there the aesthetic squares its cut corners instead of rounding them, and what is fully round stays round, so the look degrades to square, lined, and glowing. It picks up the bevel with no change once an engine ships it.
 - The glow is a halo, not depth, so every component takes it, fields, badges, and alerts included, and `.flat` does not take it off. `.raised` and `.floating` add no shadow under this aesthetic.
 - In the light theme the glow of a neutral or `.primary` component is its near-black ink, which reads as a soft shadow rather than as light. The look is at its strongest on a dark page, or with a hued `--cyber-ink`.
 - A plain `.btn.icon` is a square control, so it takes the control diagonal; a `.btn.icon.pill` is round, so it becomes a diamond.

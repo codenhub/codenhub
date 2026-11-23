@@ -166,7 +166,7 @@ For more contrast, the second way is two rules: one for the system's setting, wh
 
 Every color token holds a light and a dark value through `light-dark()`; one value means both themes use it. Palette names such as `neutral-950` are Tailwind's default palette, which the package's compiled CSS declares for the colors it uses.
 
-Each row is an override point: set it on `:root` to retheme the page, or on any element to retheme what is inside it. The `-hover`, `-subtle`, `-strong`, and `-contrast` rows are companions of their family's base color and do not follow it, so retheme the whole family. The `text` family has no `-subtle` row: the neutral intent takes its subtle tone from `--color-surface`.
+Each row is an override point: set it on `:root` to retheme the page, or on any element to retheme the components inside it. The element's own text and background are the exception: the reset reads `--color-text` and `--color-background` only on `html` and `body`, so a value set on a `<section>` recolors the components in it but not its own text or ground. Set `color: var(--color-text)` and `background-color: var(--color-background)` on the same element too. A [theme selector](#light-and-dark) already sets its `color`. The `-hover`, `-subtle`, `-strong`, and `-contrast` rows are companions of their family's base color and do not follow it, so retheme the whole family. The `text` family has no `-subtle` row: the neutral intent takes its subtle tone from `--color-surface`.
 
 | Token                          | Light, dark                  | Purpose                                                                                        |
 | ------------------------------ | ---------------------------- | ---------------------------------------------------------------------------------------------- |
@@ -242,7 +242,7 @@ The text color follows the fill. `--intent-contrast` is the text color for a ful
 
 ## Foundation tokens
 
-Foundation tokens set layout, shape, motion, focus, depth, and stacking. Override them on `:root`, or on an element for what is inside it.
+Foundation tokens set layout, shape, motion, focus, depth, and stacking. Override them on `:root`, or on an element for what is inside it. `--font-default` is the exception: an element's own font follows it only when the element sets `font-family` from it, as [Fonts](#fonts) shows.
 
 The four `--elevation-*` shadows are for elements you style yourself. They are separate from the `.flat`, `.raised`, and `.floating` classes, which scale a component's own shadow and draw nothing until an aesthetic or one of those classes asks for depth; see [Composing → Elevation](./composing.md#elevation). Both use the weights none, small, medium, and large, but one is a fixed value and the other scales shadow parts, so they do not always look the same.
 
@@ -293,7 +293,7 @@ The package ships no font files and makes no network requests. Every font token 
 
 `--font-default` reaches the page only through the reset, which `@codenhub/styles`, `/native`, `/tw`, `/native/tw`, and `/reset/tw` include. With `/theme` or `/components` alone, set `font-family` on `body` yourself, and set `--font-default` to the same font: `.glass` and `.neobrutalism` regions set their own `font-family` from the token, so a font set only on `body` does not reach inside them. Or set only the token, and write `font-family: var(--font-default)` on `body`. The aesthetic tokens are read by the aesthetic's own class, so they work with any entrypoint.
 
-To use a web font, load it the way you load any font, then name it in the token. Set the token on `:root` for the whole page, or on any element for that part of it:
+To use a web font, load it the way you load any font, then name it in the token. Set the token on `:root` for the whole page. For one part of it, set the token on that element and `font-family: var(--font-default)` with it, since the reset reads the token only on `html` and `body`, and the text inside inherits the font the element resolves:
 
 ```html
 <link rel="preconnect" href="https://fonts.googleapis.com" />

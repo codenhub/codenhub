@@ -2,7 +2,7 @@
 title: Sem bundler
 description: Como referenciar as folhas de estilos compiladas a partir de HTML puro, Rails, Laravel, Django ou qualquer aplicação renderizada no servidor, e o build por linha de comando.
 order: 6
-source: 96a264991ff72b45d7c55007afcf525add499afc
+source: 5f87ea84cfdc6e00a85e4dbd04a4737bcc4207af
 ---
 
 # Sem bundler
@@ -262,6 +262,7 @@ Toda falha imprime uma linha começando com `chs:` na saída de erro padrão e t
 - **`unknown aesthetic "<name>"; choose from ...`.** Escolha um dos nomes listados. Eles são em minúsculas e com hífen, como `chunky-tile`.
 - **`missing command` ou `unknown command "<name>"`.** A primeira palavra depois de `chs` precisa ser `build`.
 - **`this command needs Node.js 24 or newer`.** Atualize o Node.js na máquina que gera o CSS.
+- **`ExperimentalWarning: globSync is an experimental feature`.** O Node.js 24.0.0 a imprime, e o 24.1.0 ou mais recente não. A folha de estilos é gravada mesmo assim; atualize o Node.js para tirar a linha.
 - **`cannot write --output <file>: <reason> (<code>); <what to do>`.** `<reason>` e `<code>` são os do Node.js. `EACCES` ou `EPERM` quer dizer que você não pode escrever ali, e no Windows também que o arquivo é somente leitura; `ENOSPC` quer dizer que o disco está cheio.
 - **`--output <file> is a folder, not a file`**, ou um dispositivo, um pipe ou um socket. Nomeie um arquivo de folha de estilos, como um dentro da pasta.
 - **`--output <file> holds something this command did not write`.** O arquivo não é uma folha de estilos que este comando escreveu, como uma escrita à mão ou a de um fornecedor, então substituí-lo o perderia. Nomeie outro arquivo ou tire este do caminho. Uma cópia de `@codenhub/styles`, `/components` ou `/native` do pacote começa com o mesmo aviso, então é substituída como uma que o comando escreveu; uma cópia de outro entrypoint, como `/theme` ou uma estética, não, e é recusada.
