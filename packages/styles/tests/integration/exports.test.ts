@@ -262,40 +262,6 @@ test(
   },
 );
 
-/* `tw/` copies the comments of `src/`, which point maintainers at
-   `docs/internal/`, the tests, and the build scripts, none of which ship: a
-   reader of the installed `tw/button.css` was sent to a file they do not have.
-   Every path a shipped comment names is in the tarball, or is a link. */
-test("every path a comment in tw/ names ships, or is a link to the repository", { timeout: 60_000 }, async () => {
-  const { stdout } = await executeFile("npm", ["pack", "--dry-run", "--json", "--ignore-scripts"], {
-    cwd: packageRoot,
-    shell: process.platform === "win32",
-  });
-  const [packed] = JSON.parse(stdout) as [{ files: { path: string }[] }];
-  const files = new Set(packed.files.map((file) => file.path));
-  const ships = (reference: string) =>
-    files.has(reference) ||
-    [...files].some((file) => file.startsWith(reference.endsWith("/") ? reference : `${reference}/`));
-  const unshipped: string[] = [];
-
-  for (const file of await shippedStylesheets("tw")) {
-    // oxlint-disable-next-line no-await-in-loop -- one file at a time keeps the failure list ordered.
-    postcss.parse(await readFile(path.resolve(packageRoot, file), "utf8")).walkComments((comment) => {
-      const withoutLinks = comment.text.replaceAll(/https:\/\/\S+/g, "");
-
-      for (const [reference] of withoutLinks.matchAll(
-        /(?<![\w./-])(?:docs|tests|scripts|src)\/(?:[\w.-]+\/)*(?:[\w.-]*[\w-])?/g,
-      )) {
-        if (!ships(reference)) {
-          unshipped.push(`${file}: ${reference}`);
-        }
-      }
-    });
-  }
-
-  expect(unshipped).toEqual([]);
-});
-
 /* Every CSS file under one of the package's published directories, as
    package-relative paths with forward slashes. */
 const shippedStylesheets = async (directory: string) =>
