@@ -386,8 +386,7 @@ describe("translated pathnames", () => {
       });
     });
 
-    it("should not compare a path with another locale's path that always keeps its prefix", () => {
-      // Every Spanish tag URL is `/es/…`, and a path without a prefix is never read as Spanish, so `/sobre` is free.
+    it("should keep the prefix when another locale's parameter could match the path", () => {
       const routing = create({
         localePrefix: "when-ambiguous",
         pathnames: {
@@ -396,38 +395,10 @@ describe("translated pathnames", () => {
         },
       });
 
-      expect(routing.localize("/about", "pt")).toBe("/sobre");
-      expect(routing.localize("/tags/sobre", "es")).toBe("/es/sobre");
+      expect(routing.localize("/about", "pt")).toBe("/pt/sobre");
       expect(routing.parse("/sobre")).toMatchObject({
-        locale: "pt",
-        pathname: "/about",
-      });
-      expect(routing.parse("/es/sobre")).toMatchObject({
-        locale: "es",
-        pathname: "/tags/sobre",
-      });
-    });
-
-    it("should not compare a path with another locale's path that the default locale's paths keep prefixed", () => {
-      // The Spanish `/c/:x` overlaps the English `/c/d`, so it keeps `/es`, and no longer stands in the way of `/:y/e`.
-      const routing = create({
-        localePrefix: "when-ambiguous",
-        pathnames: {
-          "/c/d": {},
-          "/a/b/:x": { es: "/c/:x" },
-          "/b/z/:y": { pt: "/:y/e" },
-        },
-      });
-
-      expect(routing.localize("/a/b/1", "es")).toBe("/es/c/1");
-      expect(routing.localize("/b/z/c", "pt")).toBe("/c/e");
-      expect(routing.parse("/c/e")).toMatchObject({
-        locale: "pt",
-        pathname: "/b/z/c",
-      });
-      expect(routing.parse("/c/d")).toMatchObject({
         locale: "en",
-        pathname: "/c/d",
+        pathname: "/sobre",
       });
     });
 

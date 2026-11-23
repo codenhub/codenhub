@@ -297,10 +297,8 @@ routing.localize("/blog", "pt"); // "/pt/blog"
 The prefix stays wherever the path alone can't say which language it is in:
 
 - **Paths with the same words in two languages.** `/` and `/blog` exist in English too, so Portuguese keeps `/pt` and `/pt/blog`. Two languages translating to the same words, such as `/contato` in both Portuguese and Spanish, keep the prefix as well.
-- **Paths a default-language parameter could match.** If English lists `/:slug`, every one-segment path could be an English page, so `/sobre` keeps its prefix.
+- **Paths another language's parameter could match.** If Spanish lists `/:tag`, every one-segment path could be a Spanish tag, so `/sobre` keeps its prefix.
 - **Paths made only of parameters**, such as `/:tag`, which could be anything.
-
-Only paths read without a prefix count. A Spanish `/:tag` keeps its prefix, so it only matches paths that start with `/es`, and the Portuguese `/sobre` still drops its own.
 
 The default locale never has a prefix in this mode. `parse()` still accepts `/pt/sobre`, so redirect it as in [Redirect to the canonical URL](#redirect-to-the-canonical-url).
 

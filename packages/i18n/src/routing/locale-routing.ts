@@ -38,10 +38,9 @@ export interface LocaleRoutingConfig<TLocale extends string> {
   locales: readonly TLocale[];
   /**
    * Which paths start with their locale: `"always"` every path; `"except-default"` every path but the default
-   * locale's; `"when-ambiguous"` like `"except-default"`, except that a translated path with a fixed segment drops the
-   * prefix, such as `/sobre`, when no other path read without a prefix could match it: no default-locale path, and no
-   * other locale's path that drops its prefix. A path the table doesn't list is read as the default locale's, so with
-   * `"when-ambiguous"`, `localize` throws when such a path would be read as another page.
+   * locale's; `"when-ambiguous"` like `"except-default"`, except that a translated path with a fixed segment that no
+   * other locale's path could match drops the prefix, such as `/sobre`. A path the table doesn't list is read as the
+   * default locale's, so with `"when-ambiguous"`, `localize` throws when such a path would be read as another page.
    */
   localePrefix: "always" | "except-default" | "when-ambiguous";
   /**
