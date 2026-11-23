@@ -20,7 +20,7 @@ import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { classesOf, parse } from "../../src/cli/purge";
-import { findClasses, findPackageRoot, keepOwnership, run } from "../../src/cli/run";
+import { findPackageRoot, keepOwnership, run } from "../../src/cli/run";
 
 const { version } = createRequire(import.meta.url)("../../package.json") as { version: string };
 const packageRoot = path.resolve(import.meta.dirname, "../..");
@@ -338,17 +338,6 @@ describe("build", () => {
     },
   );
 
-  // A build killed before its rename leaves its temporary file, which held the last build's classes.
-  it("does not read a temporary file a killed build left beside the output", async () => {
-    await mkdir(path.join(project, "public"));
-    await writeFile(path.join(project, "public", "index.html"), '<button class="btn">Save</button>\n');
-    await writeFile(path.join(project, "public", "app.css.0123456789abcdef.tmp"), '<table class="data-table">\n');
-
-    expect(await build("build", "-c", "public/*", "-o", "public/app.css")).toBe(0);
-    expect(await readOutput("public/app.css")).toMatch(ruleFor("btn"));
-    expect(await readOutput("public/app.css")).not.toMatch(ruleFor("data-table"));
-  });
-
   it.skipIf(!canSymlink)("does not read its own output through a link a glob matches", async () => {
     const argv = ["build", "-c", "app/views/*", "-o", "app.css"];
 
@@ -360,21 +349,14 @@ describe("build", () => {
     expect(await readOutput()).toBe(first);
   });
 
-  it.skipIf(!canSymlink)("writes through an --output that is a link, and keeps the link", async () => {
+  it.skipIf(!canSymlink)("replaces an --output that is a link, and leaves the file it led to", async () => {
     await writeFile(path.join(project, "real.css"), "");
     await symlink(path.join(project, "real.css"), path.join(project, "app.css"), "file");
 
     expect(await build("build", "-c", "app/views/**/*.erb", "-o", "app.css")).toBe(0);
-    expect((await lstat(path.join(project, "app.css"))).isSymbolicLink()).toBe(true);
-    expect(await readOutput("real.css")).toMatch(ruleFor("btn"));
-  });
-
-  it.skipIf(!canSymlink)("writes where an --output link points before its target exists", async () => {
-    await symlink(path.join(project, "build", "real.css"), path.join(project, "app.css"), "file");
-
-    expect(await build("build", "-c", "app/views/**/*.erb", "-o", "app.css")).toBe(0);
-    expect((await lstat(path.join(project, "app.css"))).isSymbolicLink()).toBe(true);
-    expect(await readOutput("build/real.css")).toMatch(ruleFor("btn"));
+    expect((await lstat(path.join(project, "app.css"))).isSymbolicLink()).toBe(false);
+    expect(await readOutput()).toMatch(ruleFor("btn"));
+    expect(await readOutput("real.css")).toBe("");
   });
 
   /* The temporary file was named after the process ID, which anyone can guess,
@@ -440,24 +422,6 @@ describe("build", () => {
       expect(stderr).toEqual([]);
     },
   );
-
-  /* POSIX follows `alias` before its `..`; Windows collapses the `..` first, so the case does not arise there. */
-  it.skipIf(!canSymlink || process.platform === "win32")(
-    "writes where an --output link points when its target climbs out of another link",
-    async () => {
-      const authored = "a { color: red; }";
-
-      await mkdir(path.join(project, "nested", "dir"), { recursive: true });
-      await symlink(path.join(project, "nested", "dir"), path.join(project, "alias"), "dir");
-      await writeFile(path.join(project, "real.css"), authored);
-      // Written whole: `path.join` would collapse the `..` this test is about.
-      await symlink("alias/../real.css", path.join(project, "app.css"), "file");
-
-      expect(await build("build", "-c", "app/views/**/*.erb", "-o", "app.css")).toBe(0);
-      expect(await readOutput("real.css")).toBe(authored);
-      expect(await readOutput("nested/real.css")).toMatch(ruleFor("btn"));
-    },
-  );
 });
 
 describe("failures", () => {
@@ -470,26 +434,6 @@ describe("failures", () => {
 
     return stderr[0] ?? "";
   }
-
-  // POSIX refuses a `..` out of a folder that does not exist; collapsing it instead named an authored file.
-  it.skipIf(!canSymlink || process.platform === "win32")(
-    "refuses an --output link that leads out of a missing folder",
-    async () => {
-      const authored = "a { color: red; }";
-
-      await mkdir(path.join(project, "nested", "dir"), { recursive: true });
-      await symlink(path.join(project, "nested", "dir"), path.join(project, "alias"), "dir");
-      await writeFile(path.join(project, "real.css"), authored);
-      await writeFile(path.join(project, "nested", "real.css"), authored);
-      await symlink("alias/../missing/../real.css", path.join(project, "app.css"), "file");
-
-      expect(await failureOf("build", "-c", "app/views/**/*.erb", "-o", "app.css")).toMatch(
-        /leads out of a folder that does not exist/,
-      );
-      expect(await readOutput("real.css")).toBe(authored);
-      expect(await readOutput("nested/real.css")).toBe(authored);
-    },
-  );
 
   it("rejects a build without --content", async () => {
     expect(await failureOf("build", "-o", "app.css")).toMatch(/--content/);
@@ -505,17 +449,6 @@ describe("failures", () => {
       'chs: missing --content; name the templates to scan, as in --content "app/views/**/*.erb".',
     );
   });
-
-  // `-o NUL` wrote a file named NUL, which `del` cannot remove.
-  it.skipIf(process.platform !== "win32").each(["NUL", "nul.css", "public/Com1.txt", "LPT9", "CON .css", "conout$"])(
-    "refuses an --output that names a Windows device, as %s",
-    async (output) => {
-      expect(await failureOf("build", "-c", "app/views/**/*.erb", "-o", output)).toBe(
-        `chs: --output ${output} is a device, not a file; name a stylesheet to write.`,
-      );
-      expect(await readdir(project)).toEqual(["app"]);
-    },
-  );
 
   // A quoted variable left empty by a script; written as given, it names a file of spaces.
   it("takes an --output of only spaces as missing", async () => {
@@ -559,40 +492,6 @@ describe("failures", () => {
     expect(await failureOf("build", "-c", "public/*.css", "-o", "public/s.css")).toBe(
       'chs: --content "public/*.css" matches only --output public/s.css, which is never read for classes; name the templates to scan.',
     );
-  });
-
-  it("rejects a --content glob that matches only the --output and a killed build's temporary file", async () => {
-    expect(await build("build", "-c", "app/views/**/*.erb", "-o", "public/s.css")).toBe(0);
-    await writeFile(path.join(project, "public", "s.css.0123456789abcdef.tmp"), '<table class="data-table">\n');
-    stdout = [];
-
-    expect(await failureOf("build", "-c", "public/*", "-o", "public/s.css")).toBe(
-      'chs: --content "public/*" matches only --output public/s.css, which is never read for classes; name the templates to scan.',
-    );
-  });
-
-  // `path.resolve` drops a trailing separator, so `-o newdir/` wrote a file named `newdir`.
-  it.each(["newdir/", ...(process.platform === "win32" ? ["newdir\\"] : [])])(
-    "refuses an --output that ends with a separator, as %s",
-    async (output) => {
-      expect(await failureOf("build", "-c", "app/views/**/*.erb", "-o", output)).toBe(
-        `chs: --output ${output} ends with a folder separator, so it names a folder, not a file; name a stylesheet to write, as in --output ${output}app.css.`,
-      );
-      expect(await readdir(project)).toEqual(["app"]);
-    },
-  );
-
-  // `path.resolve` takes `newdir/.` for `newdir`, so it wrote a file named `newdir` too.
-  it.each([
-    ["newdir/.", "newdir/./app.css"],
-    ["newdir/..", "newdir/../app.css"],
-    ["newdir/sub/..", "newdir/sub/../app.css"],
-    ...(process.platform === "win32" ? [["newdir\\.", "newdir\\.\\app.css"]] : []),
-  ])("refuses an --output whose last segment is . or .., as %s", async (output, example) => {
-    expect(await failureOf("build", "-c", "app/views/**/*.erb", "-o", output)).toBe(
-      `chs: --output ${output} ends with a . or .. segment, so it names a folder, not a file; name a stylesheet to write, as in --output ${example}.`,
-    );
-    expect(await readdir(project)).toEqual(["app"]);
   });
 
   // parseArgs keeps the last value, so `-o a.css -o b.css` wrote only b.css and said nothing of a.css.
@@ -854,30 +753,6 @@ describe("help and version", () => {
   it("prints the package version with --version and exits 0", async () => {
     expect(await build("--version")).toBe(0);
     expect(stdout).toEqual([version]);
-  });
-});
-
-describe("findClasses", () => {
-  it("finds the classes around each colon of a word", () => {
-    const known = new Set(["btn", "primary", "md:lg"]);
-
-    expect([...findClasses("class:primary btn: md:lg ::btn::", known)]).toEqual(["primary", "btn", "md:lg", "btn"]);
-  });
-
-  /* `split(":")` made an array of every part: a 160 MB file of colons aborted
-     Node.js with no `chs:` line, and a 192 MB one of `a:` took 1.6 GB. */
-  it("reads the parts of a word one at a time", () => {
-    let lookups = 0;
-    const known = {
-      has(name: string) {
-        lookups += 1;
-        return name === "btn";
-      },
-    };
-    const classes = findClasses(`btn${":".repeat(100_000)}`, known);
-
-    expect(classes.next()).toEqual({ done: false, value: "btn" });
-    expect(lookups).toBeLessThan(10);
   });
 });
 

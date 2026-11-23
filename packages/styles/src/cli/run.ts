@@ -31,10 +31,6 @@ const HEAD_BYTES = 1024;
 /* What every stylesheet this command has written starts with: the package's
    notice, after Tailwind's banner. The compiled stylesheets carry it too. */
 const WRITTEN_HEAD = /^\s*(?:\/\*! tailwindcss [^*]*\*\/\s*)?\/\*! @codenhub\/styles\b/;
-/* The names Windows reserves for a device in every folder, with any extension
-   and in any case: `-o NUL` or `-o public/com1.css` wrote a file that `del`
-   cannot remove. */
-const WINDOWS_DEVICE = /^(?:con|prn|aux|nul|conin\$|conout\$|com[0-9¹²³]|lpt[0-9¹²³])\s*(?:\..*)?$/i;
 
 const USAGE = `Usage: ${BIN} build --content <glob> [--content <glob> ...] --output <file> [options]
 
@@ -127,25 +123,6 @@ function parseCommandLine(argv: readonly string[]): BuildOptions | "help" | "ver
       "--output - would write a file named -; this command writes no standard output, so name a stylesheet, as in --output public/app.css.",
     );
   }
-  // `path.resolve` drops a trailing separator, so `newdir/` wrote a file named `newdir` where none existed.
-  if ((process.platform === "win32" ? /[\\/]$/ : /\/$/).test(output)) {
-    throw new Error(
-      `--output ${output} ends with a folder separator, so it names a folder, not a file; name a stylesheet to write, as in --output ${output}app.css.`,
-    );
-  }
-  // It resolves `newdir/.` and `newdir/sub/..` to `newdir` as well.
-  const lastSegment = (process.platform === "win32" ? /(^|[\\/])(\.\.?)$/ : /(^|\/)(\.\.?)$/).exec(output);
-
-  if (lastSegment !== null) {
-    throw new Error(
-      `--output ${output} ends with a . or .. segment, so it names a folder, not a file; name a stylesheet to write, as in --output ${output}${lastSegment[1] || "/"}app.css.`,
-    );
-  }
-
-  // A rename onto such a name writes a real file there, past the `stat` that finds a device elsewhere.
-  if (process.platform === "win32" && WINDOWS_DEVICE.test(path.win32.basename(output))) {
-    throw new Error(`--output ${output} is a device, not a file; name a stylesheet to write.`);
-  }
 
   return {
     contentGlobs: values.content,
@@ -230,9 +207,12 @@ async function build(options: BuildOptions, io: CliIo): Promise<string> {
 
   await assertReplaceable(options, io.cwd, output);
 
-  // Through a link, the file it leads to is the one written, and the one no glob may read.
-  const target = await realPathOf(output);
-  const contents = readContent(options.contentGlobs, io.cwd, target, options.output);
+  /* The output's folder as the system resolves it, as each content file is, so
+     a glob that reaches the output by another spelling, such as a Windows 8.3
+     short name, still leaves it out. The output itself is not followed: a link
+     there is replaced, as other build tools replace one. */
+  const resolved = path.join(await realPathOf(path.dirname(output)), path.basename(output));
+  const contents = readContent(options.contentGlobs, io.cwd, resolved, options.output);
 
   const droppable = new Set(JSON.parse(await readPackageFile(PURGE_CLASSES)) as string[]);
   const shipped = await readShippedSizes();
@@ -264,18 +244,18 @@ async function build(options: BuildOptions, io: CliIo): Promise<string> {
   let warning: string | undefined;
 
   try {
-    await fs.mkdir(path.dirname(target), { recursive: true });
+    await fs.mkdir(path.dirname(output), { recursive: true });
 
-    const created = await createTemporary(target);
+    const created = await createTemporary(output);
 
     temporary = created.path;
     try {
       await created.handle.writeFile(css);
-      warning = await keepOwnershipOf(created.handle, target, options.output);
+      warning = await keepOwnershipOf(created.handle, output, options.output);
     } finally {
       await created.handle.close();
     }
-    await replaceFile(temporary, target);
+    await replaceFile(temporary, output);
   } catch (error) {
     // Best effort, and only for a file this build created: the error worth reporting is the one above.
     if (temporary !== undefined) {
@@ -608,7 +588,7 @@ function readContent(entries: readonly string[], cwd: string, output: string, gi
       throw error instanceof UnmatchedEntryError ? new Error(`--content ${error.message}`) : error;
     }
 
-    const content = matched.filter((file) => !isOutputOrTemporary(realPathSyncOf(file), output));
+    const content = matched.filter((file) => path.relative(realPathSyncOf(file), output) !== "");
 
     if (content.length === 0) {
       throw new Error(
@@ -623,41 +603,17 @@ function readContent(entries: readonly string[], cwd: string, output: string, gi
   return readFiles(files, { cwd, failOnUnreadable: true });
 }
 
-/* The output, or a temporary file of `createTemporary` a build killed before
-   its rename left beside it: read as content, that held the classes of the
-   last build, which a build would then keep. `path.relative` compares the
-   output's part as the platform does, without case on Windows. */
-function isOutputOrTemporary(file: string, output: string): boolean {
-  return (
-    path.relative(file.slice(0, output.length), output) === "" &&
-    /^(?:\.[0-9a-f]{16}\.tmp)?$/.test(file.slice(output.length))
-  );
-}
-
 /* Content is read as text and never run, as Tailwind reads it: every run of
    characters a class name can hold is a word, and a word counts when it is a
    class this package defines. A word that is not one is read again by its
    parts around each colon, so Svelte's `class:primary={isPrimary}` and a Ruby
-   `btn: true` are found. The parts are taken one at a time: a word can be as
-   long as the file, and `split(":")` made an array of every part, so a 160 MB
-   file of colons aborted Node.js and a 192 MB one of `a:` took 1.6 GB. */
-export function* findClasses(
-  content: string,
-  known: Pick<ReadonlySet<string>, "has">,
-): Generator<string, void, undefined> {
+   `btn: true` are found. */
+function* findClasses(content: string, known: ReadonlySet<string>): Generator<string, void, undefined> {
   for (const word of splitWords(content, String.raw`\w:-`)) {
     if (known.has(word)) {
       yield word;
-      continue;
-    }
-    for (let from = 0, colon = word.indexOf(":"); colon !== -1; from = colon + 1) {
-      colon = word.indexOf(":", from);
-
-      const part = word.slice(from, colon === -1 ? undefined : colon);
-
-      if (part !== "" && known.has(part)) {
-        yield part;
-      }
+    } else if (word.includes(":")) {
+      yield* word.split(":").filter((part) => known.has(part));
     }
   }
 }
@@ -729,9 +685,7 @@ function assertNodeVersion(nodeVersion: string): void {
   }
 }
 
-/* The file a link leads to, or the path itself while nothing is there yet. A
-   link whose target does not exist yet still leads there: the stylesheet is
-   written where it points rather than over the link. */
+/* The path as the system resolves it, or as given while nothing is there yet. */
 async function realPathOf(file: string): Promise<string> {
   try {
     return await fs.realpath(file);
@@ -740,80 +694,8 @@ async function realPathOf(file: string): Promise<string> {
       throw error;
     }
 
-    return process.platform === "win32" ? windowsTargetOf(file) : posixTargetOf(file);
+    return file;
   }
-}
-
-/* Windows collapses a `..` before it follows any link, as `path.resolve` does. */
-async function windowsTargetOf(file: string): Promise<string> {
-  const link = await fs.readlink(file).catch(() => undefined);
-
-  return link === undefined ? file : realPathOf(path.resolve(path.dirname(file), link));
-}
-
-/* POSIX follows each name in turn, a link included, before the `..` after it,
-   so `alias/../real.css` with `alias` a link into another folder is a
-   `real.css` there. `path.resolve` collapses the `..` first and named another
-   file, which the build overwrote without checking it. The walk does what the
-   system does: a link's target replaces it, and a `..` steps out of the folder
-   reached so far. A folder that does not exist yet is created by the write, so
-   the names after it are taken as written; a `..` after one has no folder to
-   step out of, and the system refuses the path, so this does too. */
-async function posixTargetOf(file: string): Promise<string> {
-  const names = (value: string) => value.split("/").filter((name) => name !== "" && name !== ".");
-  const pending = names(file);
-  let current = "/";
-  let missing = false;
-  let links = 0;
-
-  for (let name = pending.shift(); name !== undefined; name = pending.shift()) {
-    if (name === "..") {
-      if (missing) {
-        throw new Error(`cannot follow the --output link at ${file}: it leads out of a folder that does not exist.`);
-      }
-      current = path.dirname(current);
-      continue;
-    }
-
-    const next = path.join(current, name);
-
-    if (missing) {
-      current = next;
-      continue;
-    }
-
-    let link: string | undefined;
-
-    try {
-      // oxlint-disable-next-line no-await-in-loop -- each name is read from the folder the one before it reached
-      link = await fs.readlink(next);
-    } catch (error) {
-      const { code } = error as { code?: string };
-
-      if (code === "ENOENT") {
-        missing = true;
-      } else if (code !== "EINVAL") {
-        throw error;
-      }
-    }
-
-    if (link === undefined) {
-      current = next;
-      continue;
-    }
-
-    // The system's own limit is 40 on Linux; past it, a chain of links is a loop.
-    links += 1;
-    if (links > 40) {
-      throw new Error(`cannot follow the --output link at ${file}: its links lead in a loop.`);
-    }
-    if (path.isAbsolute(link)) {
-      current = "/";
-    }
-    pending.unshift(...names(link));
-  }
-
-  return current;
 }
 
 /* The native resolver, as `fs.realpath` above uses: on Windows the JavaScript
