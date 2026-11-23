@@ -471,10 +471,15 @@
     }
   }
 
-  /* A button's lens is the control one. Swapped as the value the layer reads
-     rather than on the layer: the list above outranks any selector that names
-     the button's `::after` alone. */
-  .btn.glass-liquid:is(.glass, .glass *) {
+  /* A button's lens is the control one, and so is an alert's. Swapped as the
+     value the layer reads rather than on the layer: the list above outranks any
+     selector that names the button's `::after` alone. An alert is a line or two
+     tall, and the pane's ramps, 18px from each edge, met in its middle and bent
+     the backdrop behind the text; `aesthetics.spec.ts` measures it. A card has
+     no height of its own to go by, and a filter cannot read the box's, so a
+     card keeps the pane's lens. On a solo pane too, which reads the same value. */
+  .btn.glass-liquid:is(.glass, .glass *),
+  .alert:is(.glass, .glass *, .glass-liquid) {
     --_glass-liquid-lens: var(--_glass-liquid-lens-control);
   }
 }
