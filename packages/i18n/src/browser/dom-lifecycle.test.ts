@@ -1,23 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
 
-import {
-  BLOCKED_ANCESTOR_NAMES,
-  breakOutOf,
-  findEscapingContainers,
-  HTML_ELEMENT_NAMES,
-} from "../../tests/html-reparsing";
 import { initializeBrowserI18n } from "../browser";
 import { getI18nInternals } from "../core/internals";
 import { createDeferred, createManager, dictionaries, flushMutations, setupBrowserTestHooks } from "./test-helpers";
 
 setupBrowserTestHooks();
-
-// The HTML parsed again as a fragment of this page, scripting on, and as a document of its own, scripting off.
-const reparse = (html: string): ParentNode[] => {
-  const fragment = document.createElement("div");
-  fragment.innerHTML = html;
-  return [fragment, new DOMParser().parseFromString(`<body>${html}`, "text/html")];
-};
 
 describe("initializeBrowserI18n document integration", () => {
   it("keeps the page's own text as the fallback for a binding started after disconnect()", async () => {
@@ -160,30 +147,7 @@ describe("initializeBrowserI18n document integration", () => {
     },
   );
 
-  it.each(["textarea", "title"])(
-    "translates the text of <%s> itself, which the serializer escapes, so the serialized page gains no markup",
-    async (tagName) => {
-      const element = document.createElement(tagName);
-      element.setAttribute("data-i18n", "tip");
-      element.textContent = "Own";
-      const page = document.createElement("div");
-      page.append(element);
-      document.body.append(page);
-      const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
-      const i18n = createManager({ loadLocale: (locale) => (locale === "fr" ? { tip: breakOutOf(tagName) } : {}) });
-
-      const binding = await initializeBrowserI18n({ i18n, locale: "fr", root: document.body });
-      try {
-        expect(element.textContent).toBe(breakOutOf(tagName));
-        expect(reparse(page.innerHTML).map((parsed) => parsed.querySelectorAll("#escaped").length)).toEqual([0, 0]);
-        expect(warn).not.toHaveBeenCalled();
-      } finally {
-        binding.disconnect();
-      }
-    },
-  );
-
-  it.each(["iframe", "noscript", "template", "textarea", "title", "xmp"])(
+  it.each(["iframe", "noscript", "template", "xmp"])(
     "translates the attributes of <%s> without a warning, since an attribute is escaped wherever the page is written",
     async (tagName) => {
       const element = document.createElement(tagName);
@@ -245,254 +209,17 @@ describe("initializeBrowserI18n document integration", () => {
     }
   });
 
-  // Only the DOM can put an element inside these. The parser reads each one's content as text up to its end tag, or
-  // never serializes it, and jsdom's serializer leaves `<` raw in an attribute value.
-  it.each(BLOCKED_ANCESTOR_NAMES)(
-    "skips an element inside <%s> whole, so the serialized page gains no markup",
-    async (containerName) => {
-      const container = document.createElement(containerName);
-      const paragraph = document.createElement("p");
-      paragraph.setAttribute("data-i18n-title", "tip");
-      const span = document.createElement("span");
-      span.setAttribute("data-i18n", "tip");
-      span.textContent = "Own";
-      container.append(paragraph, span);
-      const page = document.createElement("div");
-      page.append(container);
-      document.body.append(page);
-      const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
-      const i18n = createManager({
-        loadLocale: (locale) => (locale === "fr" ? { tip: breakOutOf(containerName) } : {}),
-      });
-
-      const binding = await initializeBrowserI18n({ i18n, locale: "fr", root: document.body });
-      try {
-        expect(paragraph.hasAttribute("title")).toBe(false);
-        expect(span.textContent).toBe("Own");
-        expect(reparse(page.innerHTML).map((parsed) => parsed.querySelectorAll("#escaped").length)).toEqual([0, 0]);
-        expect(warn).toHaveBeenCalledWith(
-          "%s",
-          `[I18n] Skipping translation on <p> because it is inside <${containerName}>, which can run, hide, or reparse ` +
-            'its content as HTML; its data-i18n-title is "tip".',
-          paragraph,
-        );
-      } finally {
-        binding.disconnect();
-      }
-    },
-  );
-
-  // A translated element the DOM later moves inside one of them must not keep a translation the parser would let out,
-  // whether the element moves itself or within a subtree, and whether the observer or a later full pass finds it.
-  describe.each([
-    { pass: "the observer", observe: true },
-    { pass: "a locale change's full pass", observe: false },
-  ])("when $pass finds a translated element moved into a blocked ancestor", ({ observe }) => {
-    it.each(
-      BLOCKED_ANCESTOR_NAMES.flatMap((containerName) => [
-        { containerName, moved: "the element" },
-        { containerName, moved: "a subtree holding it" },
-      ]),
-    )("restores its HTML state when $moved moves inside <$containerName>", async ({ containerName, moved }) => {
-      document.body.innerHTML =
-        '<div id="outer"><span id="moved" data-i18n="tip" data-i18n-title="tip" title="t">Own</span></div>';
-      const container = document.createElement(containerName);
-      const page = document.createElement("div");
-      page.append(container);
-      document.body.append(page);
-      const span = document.getElementById("moved")!;
-      vi.spyOn(console, "warn").mockImplementation(() => undefined);
-      // Only the default locale has the key, so the French page marks the span with `lang="en"`.
-      const i18n = createManager({
-        loadLocale: (locale) => (locale === "en" ? { tip: breakOutOf(containerName) } : {}),
-      });
-      const binding = await initializeBrowserI18n({ i18n, locale: "fr", root: document.body, observe });
-      try {
-        expect(span.getAttribute("title")).toBe(breakOutOf(containerName));
-        expect(span.getAttribute("lang")).toBe("en");
-
-        container.append(moved === "the element" ? span : document.getElementById("outer")!);
-        if (observe) {
-          await flushMutations();
-        } else {
-          await i18n.setLocale("pt-BR");
-        }
-
-        expect(span.getAttribute("title")).toBe("t");
-        expect(span.textContent).toBe("Own");
-        expect(span.hasAttribute("lang")).toBe(false);
-        expect(reparse(page.innerHTML).map((parsed) => parsed.querySelectorAll("#escaped").length)).toEqual([0, 0]);
-      } finally {
-        binding.disconnect();
-      }
-    });
-
-    it.each([
-      { owner: "an autonomous custom element", html: "<x-card></x-card>" },
-      { owner: "a customized built-in element", html: '<button is="x-button"></button>' },
-    ])("restores its HTML state when it moves inside $owner", async ({ html }) => {
-      document.body.innerHTML = `<span id="moved" data-i18n="tip" data-i18n-title="tip" title="t">Own</span>${html}`;
-      const span = document.getElementById("moved")!;
-      const owner = document.body.lastElementChild!;
-      const i18n = createManager({ loadLocale: (locale) => (locale === "en" ? { tip: "Tip" } : {}) });
-      const binding = await initializeBrowserI18n({ i18n, locale: "fr", root: document.body, observe });
-      try {
-        expect([span.textContent, span.getAttribute("title"), span.getAttribute("lang")]).toEqual(["Tip", "Tip", "en"]);
-
-        owner.append(span);
-        if (observe) {
-          await flushMutations();
-        } else {
-          await i18n.setLocale("pt-BR");
-        }
-
-        expect([span.textContent, span.getAttribute("title"), span.getAttribute("lang")]).toEqual(["Own", "t", null]);
-      } finally {
-        binding.disconnect();
-      }
-    });
-  });
-
-  it("translates a restored element again once it moves out of a blocked ancestor", async () => {
-    document.body.innerHTML = '<span id="moved" data-i18n-title="tip" title="t"></span><textarea></textarea>';
-    const span = document.getElementById("moved")!;
-    const textarea = document.querySelector("textarea")!;
-    vi.spyOn(console, "warn").mockImplementation(() => undefined);
-    const i18n = createManager({ loadLocale: (locale) => (locale === "fr" ? { tip: "Astuce" } : {}) });
-    const binding = await initializeBrowserI18n({ i18n, locale: "fr", root: document.body, observe: true });
-    try {
-      textarea.append(span);
-      await flushMutations();
-      expect(span.getAttribute("title")).toBe("t");
-
-      document.body.append(span);
-      await flushMutations();
-      expect(span.getAttribute("title")).toBe("Astuce");
-
-      await i18n.setLocale("en");
-      expect(span.getAttribute("title")).toBe("t");
-    } finally {
-      binding.disconnect();
-    }
-  });
-
-  it.each([false, true])(
-    "keeps every element's content from becoming markup once translated elements move into it (observe: %s)",
-    async (observe) => {
-      // Each element name gets a span translated outside it, then moved inside, whose translation would close that
-      // element and start an <img>.
-      const staging = document.createElement("div");
-      const page = document.createElement("div");
-      const spans = HTML_ELEMENT_NAMES.map((name) => {
-        const span = document.createElement("span");
-        span.setAttribute("data-i18n-title", name);
-        staging.append(span);
-        page.append(document.createElement(name));
-        return span;
-      });
-      document.body.append(staging, page);
-      vi.spyOn(console, "warn").mockImplementation(() => undefined);
-      const dictionary = Object.fromEntries(HTML_ELEMENT_NAMES.map((name) => [name, breakOutOf(name)]));
-      const i18n = createManager({ loadLocale: (locale) => (locale === "fr" || locale === "pt-BR" ? dictionary : {}) });
-
-      const binding = await initializeBrowserI18n({ i18n, locale: "fr", root: document.body, observe });
-      try {
-        expect(spans.every((span) => span.hasAttribute("title"))).toBe(true);
-        const containers = Array.from(page.children);
-        containers.forEach((container, index) => container.append(spans[index]!));
-        if (observe) {
-          await flushMutations();
-        } else {
-          await i18n.setLocale("pt-BR");
-        }
-
-        const escaping = containers
-          .filter((container) =>
-            reparse(container.outerHTML).some((parsed) => parsed.querySelector("#escaped") !== null),
-          )
-          .map((container) => container.localName);
-        expect(escaping).toEqual([]);
-        const translatedIn = containers
-          .filter((container) => container.querySelector("span")?.hasAttribute("title") === true)
-          .map((container) => container.localName);
-        expect(translatedIn).toEqual(HTML_ELEMENT_NAMES.filter((name) => !BLOCKED_ANCESTOR_NAMES.includes(name)));
-      } finally {
-        binding.disconnect();
-      }
-    },
-  );
-
-  it("keeps every element's content from becoming markup when the page is serialized", async () => {
-    // Each element name gets a nested element whose translation would close that element and start an <img>.
-    const page = document.createElement("div");
-    for (const name of HTML_ELEMENT_NAMES) {
-      const container = document.createElement(name);
-      const nested = document.createElement("span");
-      nested.setAttribute("data-i18n-title", name);
-      container.append(nested);
-      page.append(container);
-    }
-    document.body.append(page);
-    vi.spyOn(console, "warn").mockImplementation(() => undefined);
-    const i18n = createManager({
-      loadLocale: (locale) =>
-        locale === "fr" ? Object.fromEntries(HTML_ELEMENT_NAMES.map((name) => [name, breakOutOf(name)])) : {},
-    });
-
-    const binding = await initializeBrowserI18n({ i18n, locale: "fr", root: document.body });
-    try {
-      // Each one is serialized alone, since one such as <plaintext> would swallow the rest.
-      const containers = Array.from(page.children);
-      const escaping = containers
-        .filter((container) => reparse(container.outerHTML).some((parsed) => parsed.querySelector("#escaped") !== null))
-        .map((container) => container.localName);
-      expect(escaping).toEqual([]);
-      // The binding translated the nested element everywhere else, so the check above saw translations.
-      const translatedIn = containers
-        .filter((container) => container.querySelector("span")?.hasAttribute("title") === true)
-        .map((container) => container.localName);
-      expect(translatedIn).toEqual(HTML_ELEMENT_NAMES.filter((name) => !BLOCKED_ANCESTOR_NAMES.includes(name)));
-    } finally {
-      binding.disconnect();
-    }
-  });
-
-  it("blocks the content of every element whose content jsdom's parser lets an attribute break out of", () => {
-    // The decision cites this run; when jsdom changes what it serializes or parses, check the decision again.
-    expect(findEscapingContainers(HTML_ELEMENT_NAMES)).toEqual(
-      BLOCKED_ANCESTOR_NAMES.filter((name) => name !== "plaintext" && name !== "template"),
-    );
-  });
-
-  it("skips an element inside <noscript> in a document parsed without scripting", async () => {
-    const parsed = new DOMParser().parseFromString(
-      '<p data-i18n="greeting">Text</p><noscript><img data-i18n-alt="greeting" alt="Own"></noscript>',
-      "text/html",
-    );
-    vi.spyOn(console, "warn").mockImplementation(() => undefined);
-    const i18n = createManager();
-
-    const binding = await initializeBrowserI18n({ i18n, locale: "fr", root: parsed.body, syncDocument: false });
-    try {
-      expect(parsed.querySelector("noscript img")?.getAttribute("alt")).toBe("Own");
-      expect(parsed.querySelector("p")?.textContent).toBe("Bonjour");
-    } finally {
-      binding.disconnect();
-    }
-  });
-
-  it("skips an element appended to a <template> itself, which the page never serializes", async () => {
-    const template = document.createElement("template");
-    const paragraph = document.createElement("p");
-    paragraph.setAttribute("data-i18n", "greeting");
-    paragraph.textContent = "Own";
-    template.append(paragraph);
-    document.body.append(template);
-    vi.spyOn(console, "warn").mockImplementation(() => undefined);
+  it("translates an element that script puts inside a blocked element, as 0.4.0 does", async () => {
+    const container = document.createElement("xmp");
+    const span = document.createElement("span");
+    span.setAttribute("data-i18n", "greeting");
+    span.textContent = "Own";
+    container.append(span);
+    document.body.append(container);
 
     const binding = await initializeBrowserI18n({ i18n: createManager(), locale: "fr", root: document.body });
 
-    expect(paragraph.textContent).toBe("Own");
+    expect(span.textContent).toBe("Bonjour");
     binding.disconnect();
   });
 
