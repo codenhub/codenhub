@@ -1892,7 +1892,7 @@ The "Public profile" switch on the settings screen deserves a short explanation:
 
 The three parts:
 
-- `.tooltip` wraps the trigger and the message. It positions the message and paints nothing itself.
+- `.tooltip` wraps the trigger and the message. It positions the message and paints nothing itself. It takes its trigger's size in any layout, so a `.stack`, a `.field`, or a grid doesn't stretch it and push the message off the trigger. Around a text field, such as an `.ipt` or a `.select`, it keeps the width the layout gives it, so a full-width field stays full width.
 - `.tooltip-bubble` is the message. It is a real element, so it can have an `id` that the trigger points to.
 - `.tooltip-icon` is a small round trigger, for a message with nothing else to attach to. Any focusable element can be the trigger instead: wrap an existing `.btn` in `.tooltip` and it keeps its own look.
 
@@ -3791,3 +3791,4 @@ An app with its own contrast and motion settings can now pass them to the packag
 - **The Tailwind guide names the order the package's variants need.** Written after a pseudo-element variant, as in `before:motion-reduce:hidden` or `placeholder:dark:text-white`, `dark:`, `contrast-more:`, `contrast-less:`, `motion-safe:`, and `motion-reduce:` compile to a selector browsers drop, so the utility ignores the app's settings. Write them first, as in `motion-reduce:before:hidden`. See [Tailwind](docs/integrating/tailwind.md).
 - **Vite's `build.license` carries the third-party notices.** It lists each package's `LICENSE`, and the Tailwind, Lucide, and Feather notices were only in `NOTICE`, so the licence file it wrote named this package as Apache-2.0 alone. `LICENSE` now ends with a copy of `NOTICE`.
 - **A control placed straight in a `.glass` region reads over any backdrop.** With no pane around it, a ghost button's text read 1.17:1 over a black backdrop. Such a control now rests on an unblurred ground of 69% of the page color, so its text holds 4.5:1 and a toggle's edge 3:1 over black or white, and the ground turns opaque under reduced transparency, forced colors, and increased contrast. A region of another aesthetic nested in glass gives no ground, and a glass region nested inside that gives it back. See [Aesthetics → Glass](docs/usage/aesthetics.md#glass).
+- **A `.tooltip` takes its trigger's size in any layout.** In a `.stack`, a `.field`, or a grid cell it stretched to the column's width, and in a row stretched by a taller sibling to the row's height, so its bubble centered on that rather than on the trigger. It is now sized to its content. Around a text field it still takes the width its layout gives it, so a full-width `.ipt`, `.textarea`, `.select`, or `.input-group` stays full width. See [Tooltips](docs/usage/tooltips.md).
