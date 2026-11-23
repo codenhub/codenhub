@@ -68,7 +68,7 @@ Follow "Comparing a project with the template" in the README, from the project's
 
 A project that predates the template is compared the same way. The diff is large, and a file shown as removed is one the project never had: judge whether to add it. Present the result as a branch for review, never as a finished change, since it rewrites files the project has relied on. When no profile matches the project's stack, compare with the core only, and say so; when its tooling differs from its profile's at the root, adopting the profile is a restructuring decision: describe what would change and ask before starting. A project file that does the job of a template file under another name, such as a different hooks directory or lint config, is proposed for replacement, not replaced.
 
-Report per file, and per hunk where a file has more than one verdict, which side won and why. Then list what was taken, what was kept, what is suggested upstream, and the choices left for the user. Leave out the placeholder values, which are not differences to judge.
+Report per file, and per hunk where a file has more than one verdict, which side won and why, in a line each; leave out the placeholder values, which are not differences to judge. Then give one numbered list of everything that needs an answer: each choice left for the user, with what changes in the project under each option and your recommendation; each hunk taken or kept that a reader might reverse, in one line; and each upstream suggestion with its evidence. Each item carries its recommendation, so it can be answered with its number and a word. End with how to reply: "Reply 'go' to take every recommendation, or name the numbers to change." When nothing needs an answer, say so instead.
 
 ## Migrate
 

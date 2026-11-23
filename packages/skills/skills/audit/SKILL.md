@@ -142,8 +142,8 @@ Open with the verdict and the counts, then the scope. When the target was audite
 2. **Retrying every request method.** `decision` · `major` · `default` · `traced` · `src/retry.ts:41`
    - Problem: `fetchJson` retries a timed-out request whatever its method, so a `POST` that reached the server is sent twice and creates a duplicate order.
    - Not weighed: the recorded decision chose retries on by default for resilience, and considered only idempotent reads.
-   - Options: (a) retry only idempotent methods by default; (b) keep retrying all methods and document it; (c) make all retries opt-in.
-   - Recommendation: (a). Why: it removes the duplicates for the common case and needs no new option.
+   - Options: (a) retry only idempotent methods by default: a timed-out `POST` fails once instead of ordering twice, and the caller decides whether to send it again; (b) keep retrying all methods and document it: no code changes, and the duplicates stay; (c) make all retries opt-in: no duplicates by default, though a caller who opts a `POST` in can still get one, and every caller relying on retried reads must add the option.
+   - Recommendation: (a). Why: it removes the duplicates for the common case, keeps retried reads working, and needs no new option.
 
 ### Ruled out
 
@@ -151,9 +151,9 @@ Open with the verdict and the counts, then the scope. When the target was audite
 
 ### Questions
 
-3. Whether `formatMoney` should round half to even: it depends on whether consumers use it for accounting totals. Asking them would settle it.
+3. **Rounding half-cent prices.** `formatMoney(2.345)` shows `$2.35`; accounting software that rounds half to even shows `$2.34`, so a total built from our prices can be a cent off an invoice. (a) Change nothing: it matches `Intl.NumberFormat`. (b) Round half to even by default: breaking, about half of the half-cent prices change in every app, such as `$2.35` to `$2.34`. Recommendation: (a) until a consumer reports a mismatch.
 
-Reply "go" to fix 1 and 2 as recommended, or name the numbers to change.
+Reply "go" to fix 1 and 2 and keep the rounding in 3 as recommended, or name the numbers to change.
 ```
 
 - **Title:** what is wrong, in plain words.

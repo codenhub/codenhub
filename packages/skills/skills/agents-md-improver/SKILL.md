@@ -54,7 +54,7 @@ When everything holds, say so and change nothing.
 
 ## Report
 
-Report before changing anything. Number every item so the user can approve by number, show each proposed line as it will read, and end with the net change in lines. List only files with proposed changes; summarize unchanged files in one line.
+Report before changing anything. Number every item so the user can approve by number, show each proposed line as it will read, give the net change in lines, and end with how to reply: "Reply 'go' to apply every item, or name the numbers to drop." List only files with proposed changes; summarize unchanged files in one line.
 
 ```markdown
 **Files:** `AGENTS.md`, `packages/api/AGENTS.md`, `CLAUDE.md` (imports `AGENTS.md`).
@@ -74,6 +74,8 @@ Report before changing anything. Number every item so the user can approve by nu
 ### Conflicts
 
 6. `cut` `AGENTS.md` L8 allows committing typo fixes to `main`; `CONTRIBUTING.md` forbids any commit to `main`. The contributor guide owns the workflow.
+
+Reply "go" to apply every item, or name the numbers to drop.
 ```
 
 ## Apply
