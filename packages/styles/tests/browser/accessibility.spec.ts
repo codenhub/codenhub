@@ -1064,8 +1064,8 @@ const focusControls = (intent: string) => {
 };
 
 for (const scheme of ["light", "dark"] as const) {
-  for (const plate of ["", ...Object.keys(registry.intents)]) {
-    test(`shows focus on every control in a ${scheme} .card.solid${plate ? `.${plate}` : ""}`, async ({
+  for (const plate of ["card", "card solid", ...Object.keys(registry.intents).map((name) => `card solid ${name}`)]) {
+    test(`shows focus on every control in a ${scheme} .${plate.replaceAll(" ", ".")}`, async ({
       browserName,
       page,
     }) => {
@@ -1079,7 +1079,7 @@ for (const scheme of ["light", "dark"] as const) {
 
       await page.evaluate(
         ([controls, name]) => {
-          document.body.innerHTML = `<button id="before">.</button><div class="card solid ${name}" id="plate" style="display: flex; flex-wrap: wrap; gap: 16px; padding: 16px">${controls
+          document.body.innerHTML = `<button id="before">.</button><div class="${name}" id="plate" style="display: flex; flex-wrap: wrap; gap: 16px; padding: 16px">${controls
             .map(
               (control, index) =>
                 `<span data-index="${index}" style="display: inline-flex; padding: 6px">${control}</span>`,
