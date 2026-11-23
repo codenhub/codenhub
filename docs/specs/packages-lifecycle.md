@@ -1,6 +1,6 @@
 ---
 status: APPROVED
-last_updated: 2026-11-16
+last_updated: 2026-11-22
 scope: Public workspace packages.
 ---
 
@@ -263,6 +263,8 @@ Every release SHOULD aim to be the last before its next breaking change, whateve
 
 The same holds for planned features. Every release is an attempt at 1.0, so a feature on the package's roadmap ships in the release being prepared rather than in a later one. Deferring it is the exception, for when shipping it now is not a plausible option, such as a feature that waits on a runtime, a dependency, or a decision outside the package. The package's roadmap then says what it waits on, so the deferral can be judged and lifted when that changes. Rejected: deferring a feature because it is additive or needs its own design, which is true of most features and would leave a 1.0 short of what its consumers were promised.
 
+Reaching 1.0 is a promotion, not a plan. No release is prepared as the 1.0, and no roadmap schedules it: each release is prepared as an attempt at it, and 1.0 is declared afterwards, about a release already in use, once what its consumers did with it shows its surface holds. The evidence is observed behavior: real consumers built on that release, used it long enough to find where it was wrong, and nothing they found needed a breaking change. A reading of the code, however thorough, is not that evidence; it shows that the package looks finished, not that the people using it found it so. The 1.0.0 release therefore publishes the surface that was proven, with no change to behavior or public API from the release it promotes. A change that cannot wait is released first and proven like any other. Rejected: preparing the next release as the 1.0 because the code looks finished, which promises a stable surface no consumer has tested. Rejected: a fixed waiting period, which measures time rather than use.
+
 Packages are also encouraged to track release history following `docs/specs/packages-changelog.md`, which requires a changelog once the documentation site keeps an earlier release of the package; it does not replace the README and `docs/` updates required above. A package that has one MUST keep it in step with its version, which `hub check` enforces.
 
 `hub release --cut=<version|major|minor|patch>` raises the version and scaffolds that entry in one step, and prints the sequence that follows. It writes only; committing and tagging stay with a person, for the reason "Who publishes" gives above.
@@ -301,6 +303,13 @@ That release meets the bar above, and also:
 - **Notice removed.** The README's experimental notice is removed in the same change as the status, which the `readme` rule enforces.
 - **Translated.** The README and every public document are translated into every supported locale, which the `translation` rule enforces once the status is `active`. Whether people use a package is a judgment; this is the point where the translation requirement is checked for certain, not the point where it starts.
 - **Roadmap settled.** No roadmap item is still deferred for a reason that no longer holds. A consumer adopting 1.0 should get what the roadmap promised them, or know what it waits on.
+
+### Promoting to 1.0
+
+The 1.0.0 release meets the bars above, and also, as "Versioning" requires:
+
+- **Promotes a release in use.** The pull request names the release it promotes, the consumers that use it, and what their use found.
+- **Unchanged surface.** Its diff from that release changes no behavior and no public API, only the version, the status, the release record the cut writes, and the documentation the bars above ask for.
 
 Rejected: a list that restates each rule in short. It would be easier to read, but it would drift from the specs it summarizes, and a short version of a rule is not the rule: "set `engines.node`" would lead a browser-only package to declare a floor that "Node.js support" forbids. Rejected: a bar for 1.0 alone. It would let a 0.x release skip the bar, which is the deferral "Versioning" rejects.
 
