@@ -2,7 +2,7 @@
 title: Formulários
 description: Campos com rótulo, dicas e erros, ícones e prefixos fixos, selects e toggles de checkbox, radio e switch.
 order: 2
-source: a2d604165d6c2eb3ab1a03c095d5b975b4db15ce
+source: 1cdef6787095e5d757576d3970723166d2232bff
 ---
 
 # Formulários
@@ -246,7 +246,7 @@ A borda funciona do mesmo jeito. Um `.edgeless` herdado de um contêiner é igno
 </div>
 ```
 
-Em repouso, a borda de um campo é a cor de borda cheia da sua intenção, com pelo menos 3:1 em relação à página nos dois temas, então a borda do campo atende ao WCAG 1.4.11 sem depender de uma preferência. O hover a muda para a cor de hover da intenção, e o foco para a cor da intenção, junto com o anel de foco. [Acessibilidade → Limites dos controles](../accessibility.md#limites-dos-controles) lista as medições.
+Em repouso, a borda de um campo é propositalmente mais clara que 3:1 em relação à página, para que o hover e o foco tenham uma mudança visível a fazer. [Acessibilidade → Limites dos controles](../accessibility.md#limites-dos-controles) explica esse trade-off e como conseguir uma borda mais forte.
 
 ## Controles desabilitados
 

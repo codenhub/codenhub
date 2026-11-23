@@ -245,7 +245,7 @@ The border works the same way. An `.edgeless` inherited from a container is igno
 </div>
 ```
 
-At rest, a field's border is its intent's full border color, at least 3:1 against the page in both themes, so the field's edge meets WCAG 1.4.11 without a preference. Hover moves it to the intent's hover color and focus to the intent color, alongside the focus ring. [Accessibility → Control boundaries](../accessibility.md#control-boundaries) lists the measurements.
+At rest, a field's border is deliberately lighter than 3:1 against the page, so hover and focus have a visible change to make. [Accessibility → Control boundaries](../accessibility.md#control-boundaries) explains the trade-off and how to get a stronger border.
 
 ## Disabled controls
 

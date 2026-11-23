@@ -45,9 +45,9 @@ const COMPILED_CEILINGS: Record<string, number> = {
      beside its ink for the selection, one declaration in every component
      that composes `box`: 238,000, 191,400, 355,400, and 13,200 until then.
      The first three set again once the release's branches met: 247,100,
-     195,900, and 367,000 until the field line rested whole, `:user-invalid`
-     painted as `aria-invalid`, `.choice` and the read-only rest arrived, and
-     glass lifted a surface holding focus or an open popover. */
+     195,900, and 367,000 until `:user-invalid` painted as `aria-invalid`,
+     `.choice` and the read-only rest arrived, and glass lifted a surface
+     holding focus or an open popover. */
   "dist/index.css": 252_700,
   "dist/components.css": 201_400,
   "dist/native.css": 375_500,

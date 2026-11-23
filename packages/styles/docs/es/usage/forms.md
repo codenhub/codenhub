@@ -2,7 +2,7 @@
 title: Formularios
 description: Campos con etiqueta, pistas y errores, iconos y prefijos fijos, selects y toggles de checkbox, radio y switch.
 order: 2
-source: a2d604165d6c2eb3ab1a03c095d5b975b4db15ce
+source: 1cdef6787095e5d757576d3970723166d2232bff
 ---
 
 # Formularios
@@ -246,7 +246,7 @@ El borde funciona igual. Un `.edgeless` heredado de un contenedor se ignora, par
 </div>
 ```
 
-En reposo, el borde de un campo es el color de borde completo de su intención, al menos 3:1 frente a la página en ambos temas, así que el borde del campo cumple WCAG 1.4.11 sin ninguna preferencia. El hover lo lleva al color de hover de la intención y el foco al color de la intención, junto con el anillo de foco. [Accesibilidad → Límites de los controles](../accessibility.md#límites-de-los-controles) recoge las mediciones.
+En reposo, el borde de un campo es deliberadamente más claro que 3:1 frente a la página, para que el hover y el foco tengan un cambio visible que hacer. [Accesibilidad → Límites de los controles](../accessibility.md#límites-de-los-controles) explica esta contrapartida y cómo conseguir un borde más intenso.
 
 ## Controles deshabilitados
 
