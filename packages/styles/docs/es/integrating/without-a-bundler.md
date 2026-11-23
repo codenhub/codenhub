@@ -2,7 +2,7 @@
 title: Sin bundler
 description: Enlazar las hojas de estilos compiladas desde HTML simple, Rails, Laravel, Django o cualquier aplicación renderizada en el servidor, y el build por línea de comandos.
 order: 6
-source: dc92f1c454079a0452418338d714861a92633e0c
+source: a81f9436c745620557b46e1f2f1a9ad324f27228
 ---
 
 # Sin bundler
@@ -264,6 +264,7 @@ Cada fallo imprime una línea que empieza por `chs:` en la salida de error está
 - **`unknown aesthetic "<name>"; choose from ...`.** Elige uno de los nombres de la lista. Van en minúsculas y con guion, como `chunky-tile`.
 - **`missing command` o `unknown command "<name>"`.** La primera palabra después de `chs` tiene que ser `build`.
 - **`this command needs Node.js 24 or newer`.** Actualiza Node.js en la máquina que genera el CSS.
+- **`ExperimentalWarning: globSync is an experimental feature`.** Node.js 24.0.0 la imprime, y 24.1.0 o posterior no. La hoja de estilos se escribe igual; actualiza Node.js para quitar la línea.
 - **`cannot write --output <file>: <reason> (<code>); <what to do>`.** `<reason>` y `<code>` son los de Node.js. `EACCES` o `EPERM` significa que no puedes escribir ahí, y en Windows también que el archivo es de solo lectura; `ENOSPC` significa que el disco está lleno.
 - **`--output <file> is a folder, not a file`**, o un dispositivo, incluido en Windows un nombre como `NUL` o `com1.css` que Windows reserva para uno, una tubería o un socket, o **`--output <file> ends with a folder separator`**, o **`ends with a . or .. segment`**. Nombra un archivo de hoja de estilos, como uno dentro de la carpeta.
 - **`--output <file> holds something this command did not write`.** El archivo no es una hoja de estilos que escribió este comando, como una escrita a mano o la de un proveedor, así que reemplazarlo lo perdería. Nombra otro archivo o aparta este. Una copia de `@codenhub/styles`, `/components` o `/native` del paquete empieza con el mismo aviso, así que se reemplaza como una que escribió el comando; una copia de otro punto de entrada, como `/theme` o una estética, no, y se rechaza.
