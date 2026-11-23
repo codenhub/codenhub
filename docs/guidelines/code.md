@@ -1,6 +1,6 @@
 ---
 status: IMPLEMENTED
-last_updated: 2026-11-16
+last_updated: 2026-11-22
 scope: Coding conventions for every package and app in the workspace.
 ---
 
@@ -35,13 +35,13 @@ The project keeps what its packages depend on as close to zero as it can, and pr
 
 The principle is about what reaches a package's consumers: its `dependencies`, any peer it requires, and any third-party tool that decides what the package ships, such as the compiler its stylesheets are built with. Tools that check or package the code without shaping what a consumer receives, such as TypeScript, the test runner, the bundler, and the formatter, are held only to the sentence above.
 
-- **A tool consumers may already run is an adapter, never a requirement.** A package supports Tailwind CSS, Vite, PostCSS, or a framework through an entry point of its own that declares the tool as an optional peer, and every package works without it. Tailwind CSS is in this repository for compatibility with the projects that run it, not as a source of utilities.
+- **A tool consumers may already run is an adapter, never a requirement.** A package supports Tailwind CSS, Vite, PostCSS, or a framework through an entry point of its own, optional and never required, and every package works without it. Tailwind CSS is in this repository for compatibility with the projects that run it, not as a source of utilities.
 - **A tool used to start faster is a step.** A dependency taken because it was quicker to build on stays until the package owns the part it covers, and the package's roadmap records that plan, as [the build styles owns](../../packages/styles/docs/internal/roadmap.md#a-build-the-package-owns-with-tailwind-as-an-adapter) does.
-- **Code two packages share starts private.** It is a private workspace package inlined into each package that uses it, as [Inlined dependencies](../specs/packages-lifecycle.md#inlined-dependencies) describes, and becomes a public package only when a need names why.
+- **Code two packages share starts private,** as [A private workspace package](../specs/packages-lifecycle.md#a-private-workspace-package) describes.
 
 Each dependency costs a consumer in three ways, as the `@codenhub/styles` [build command](../../packages/styles/docs/internal/cli.md#the-command-tree-shakes-it-does-not-compile) shows: an install they would not otherwise make, an output that varies with a version this repository can neither test nor pin, and behavior the package has to work around rather than decide. The cost accepted in exchange is code the project writes and maintains itself.
 
-The principle does not remove a dependency by itself. An existing one stays until a change weighs it and finds owning the part worth that code. A decision that keeps a package's scope narrow, such as the `@codenhub/styles` rejection of a command that writes Tailwind-style utilities, may be reopened under this principle; the reopening names what the package would then own.
+The principle does not remove a dependency by itself. An existing one stays until a change weighs it and finds owning the part worth that code.
 
 Rejected: a third-party tool as the foundation a package is built on. It is the fastest start, and it makes every later feature a design around another project's compiler, and every major release of that project a port of the package.
 
