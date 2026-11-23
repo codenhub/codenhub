@@ -498,6 +498,77 @@ for (const theme of THEMES) {
   }
 }
 
+/* An intent keeps its own ink on a filled parent (docs/internal/model.md, "The
+   ink of the plate beneath"), so the tone it prints on the page has to hold on
+   the one plate every intent lands on: a neutral `.solid` surface, 20% of the
+   page's ink. A destructive soft button in a `.card.solid` read 3.72:1 there,
+   2.93:1 on hover, and a success hint 4.32:1. Every text component, a hint
+   with each intent, and every neutral solid surface are read at rest, in
+   every aesthetic. Hover is read in a test of its own, on the card alone and
+   with only what hovers: the three surfaces fill the same plate, and hovering
+   on the full page ran past the test timeout under liquid glass. */
+const NEUTRAL_PLATES = ["card solid", "panel solid", "alert solid"] as const;
+const PLATE_TEXT = [
+  ...TEXT_COMPONENTS,
+  ["hint", (classes: string) => `<span class="hint ${classes}">Hint</span>`, false],
+] as const;
+
+const onPlates = (
+  region: string,
+  plates: readonly string[],
+  components: readonly (readonly [string, (classes: string) => string, boolean])[],
+  presentations: readonly string[],
+) =>
+  `<div class="${region}" style="padding: 1rem">${plates
+    .map(
+      (plate, index) =>
+        `<div class="${plate}">${INTENTS.flatMap((intent) =>
+          presentations.flatMap((presentation) =>
+            components.map(([component, markup]) =>
+              markup(`${presentation} ${intent}`).replace(
+                /^<(\w+)/,
+                `<$1 data-testid="${caseId(`plate${index}`, component, intent, presentation)}"`,
+              ),
+            ),
+          ),
+        ).join("")}</div>`,
+    )
+    .join("")}</div>`;
+
+for (const theme of THEMES) {
+  for (const [name, region] of SOLID_REGIONS) {
+    test(`prints every intent's text at 4.5:1 on a neutral solid surface, ${name}, ${theme}`, async ({ page }) => {
+      await loadIn(page, theme, "standard", onPlates(region, NEUTRAL_PLATES, PLATE_TEXT, PRESENTATIONS));
+
+      for (const [testId, painted] of Object.entries(await paint(page))) {
+        expect.soft(textRatio(painted), `${testId} at rest`).toBeGreaterThanOrEqual(4.5);
+      }
+    });
+
+    test(`prints every intent's text at 4.5:1 on hover on a neutral solid surface, ${name}, ${theme}`, async ({
+      page,
+    }) => {
+      const hovering = PLATE_TEXT.filter(([, , hovers]) => hovers);
+      const presentations = PRESENTATIONS.filter((presentation) => presentation !== "solid");
+      await loadIn(page, theme, "standard", onPlates(region, NEUTRAL_PLATES.slice(0, 1), hovering, presentations));
+
+      for (const intent of INTENTS) {
+        for (const presentation of presentations) {
+          for (const [component] of hovering) {
+            const testId = caseId("plate0", component, intent, presentation);
+            // oxlint-disable-next-line no-await-in-loop -- one pointer, moved in turn.
+            await page.getByTestId(testId).hover();
+            // oxlint-disable-next-line no-await-in-loop -- one pointer, moved in turn.
+            const { [testId]: painted } = await paint(page, [testId]);
+
+            expect.soft(textRatio(painted!), `${testId} on hover`).toBeGreaterThanOrEqual(4.5);
+          }
+        }
+      }
+    });
+  }
+}
+
 /* An unchecked toggle's border is the only thing that shows it, so it is the
    one resting edge the policy holds at 3:1 without the preference. */
 const TOGGLES = [
@@ -711,6 +782,259 @@ for (const theme of THEMES) {
       }
     });
   }
+}
+
+/* A control directly in a glass region rested on nothing: glass grounded its
+   panes alone, so over a black backdrop a light page's ghost button printed
+   near-black on black and an unchecked checkbox's line vanished into it. A
+   control in a glass region rests on the pane's ground, unblurred, wherever
+   no box beneath it already does; every arm that makes a pane opaque makes
+   this ground opaque too. Every painted component in the registry is read,
+   in every presentation, with no intent: as for a pane, an intent's ink is
+   drawn for the theme's own background. Text holds 4.5:1 on what it sits on;
+   a control whose line is its boundary -- the list that draws the control
+   line, `src/intent.css` -- is marked at 3:1 against what is around it, by
+   its line or by its ground. */
+const registry = JSON.parse(await readFile(path.join(packageRoot, "registry.json"), "utf8")) as {
+  components: { class: string; composition?: string }[];
+  aesthetics: { class: string }[];
+};
+const PAINTED = registry.components
+  .filter((component) => component.composition !== "none")
+  .map(({ class: name }) => name);
+const CONTROL_LINE = (await readFile(path.join(packageRoot, "src/intent.css"), "utf8"))
+  .match(/:where\(([^()]*)\)\s*\{\s*--intent-border: var\(--ui-control-ink/)![1]!
+  .split(",")
+  .map((selector) => selector.trim().replace(/^\./, ""))
+  .filter((name) => name !== "text-control");
+const TOGGLE_TYPES: Record<string, string> = { checkbox: "checkbox", radio: "radio", switch: "checkbox" };
+
+/* The markup each component paints with. Anything not named is a `<div>`. */
+const componentMarkup = (name: string, classes: string, testId: string) => {
+  const attributes = `class="${name} ${classes}" data-testid="${testId}"`;
+
+  if (name in TOGGLE_TYPES) {
+    return `<input type="${TOGGLE_TYPES[name]}" ${attributes} />`;
+  }
+
+  return (
+    {
+      btn: `<button ${attributes}>Label</button>`,
+      ipt: `<input ${attributes} value="Text" />`,
+      textarea: `<textarea ${attributes}>Text</textarea>`,
+      select: `<select ${attributes}><option>Text</option></select>`,
+      "input-group": `<div ${attributes}><input class="ipt" value="Text" /></div>`,
+      "data-table": `<table ${attributes}><tbody><tr><td>Text</td></tr></tbody></table>`,
+      pre: `<pre ${attributes}>Text</pre>`,
+      code: `<code ${attributes}>Text</code>`,
+      kbd: `<kbd ${attributes}>K</kbd>`,
+      badge: `<span ${attributes}>Badge</span>`,
+      "tooltip-icon": `<button type="button" ${attributes}>?</button>`,
+    }[name] ?? `<div ${attributes}>Text</div>`
+  );
+};
+
+/* A text field's resting line is quiet by default, the recorded exception
+   in docs/accessibility.md, and reaches 3:1 only where the line is raised:
+   under increased contrast the app has not overridden, and in forced colors.
+   The "more contrast, standard" arm loads with `data-contrast="standard"`,
+   which overrides the media query, so it is not one of them; "more contrast"
+   loads with no choice made, so the query holds. WebKit matches
+   `forced-colors: active` when asked but paints no system colors (it has no
+   `forced-color-adjust`, and Safari no forced-colors mode), so its forced
+   arm draws the standard line and is not one either. */
+const QUIET_TEXT_LINE = ["ipt", "textarea", "select", "input-group"];
+
+/* The preferences that make a pane opaque, and how each is asked for.
+   Chromium reports reduced transparency in this environment, so even the
+   standard arm asks it for no preference. Firefox reads the preference only
+   behind a pref, so that arm gets a Firefox of its own; WebKit cannot be
+   asked. */
+const ARMS = [
+  "standard",
+  "reduced transparency",
+  "forced colors",
+  "more contrast",
+  "more contrast, standard",
+  'data-contrast="more"',
+] as const;
+const MORE_CONTRAST_MEDIA: readonly string[] = ["more contrast", "more contrast, standard"];
+const FIREFOX_REDUCED_TRANSPARENCY = {
+  "layout.css.prefers-reduced-transparency.enabled": true,
+  "ui.prefersReducedTransparency": 1,
+};
+
+for (const theme of THEMES) {
+  for (const backdrop of BACKDROPS) {
+    for (const arm of ARMS) {
+      test(`grounds every control directly in a glass region over a ${backdrop} backdrop, ${theme}, ${arm}`, async ({
+        page: ownPage,
+        browserName,
+        playwright,
+      }) => {
+        test.skip(
+          arm === "reduced transparency" && browserName === "webkit",
+          "WebKit cannot be asked for reduced transparency",
+        );
+        const browser =
+          arm === "reduced transparency" && browserName === "firefox"
+            ? await playwright.firefox.launch({ firefoxUserPrefs: FIREFOX_REDUCED_TRANSPARENCY })
+            : undefined;
+
+        try {
+          const page = browser ? await browser.newPage() : ownPage;
+
+          if (browserName === "chromium") {
+            const session = await page.context().newCDPSession(page);
+            await session.send("Emulation.setEmulatedMedia", {
+              features: [
+                {
+                  name: "prefers-reduced-transparency",
+                  value: arm === "reduced transparency" ? "reduce" : "no-preference",
+                },
+                { name: "forced-colors", value: arm === "forced colors" ? "active" : "none" },
+                { name: "prefers-contrast", value: MORE_CONTRAST_MEDIA.includes(arm) ? "more" : "no-preference" },
+              ],
+            });
+          } else {
+            await page.emulateMedia({
+              forcedColors: arm === "forced colors" ? "active" : "none",
+              contrast: MORE_CONTRAST_MEDIA.includes(arm) ? "more" : "no-preference",
+            });
+          }
+
+          await loadIn(
+            page,
+            theme,
+            { 'data-contrast="more"': "more", "more contrast": "" }[arm as string] ?? "standard",
+            [
+              ["glass", "glass", ""],
+              ["glass glass-liquid", "glass glass-liquid", ""],
+              ["pane", "glass", "--ui-surface-ground: rgb(255 0 0)"],
+            ]
+              .map(
+                ([region, classes, ground]) =>
+                  `<div class="${classes}" style="background: ${backdrop}; padding: 1rem; ${ground}">${PRESENTATIONS.flatMap(
+                    (presentation) =>
+                      PAINTED.map((name) =>
+                        componentMarkup(name, presentation, `${region}:${name}:${presentation || "default"}`),
+                      ),
+                  ).join("")}</div>`,
+              )
+              .join(""),
+          );
+
+          expect(
+            await page.evaluate(() => ({
+              reduce: matchMedia("(prefers-reduced-transparency: reduce)").matches,
+              forced: matchMedia("(forced-colors: active)").matches,
+              more: matchMedia("(prefers-contrast: more)").matches,
+            })),
+            "the preferences the arm asks for",
+          ).toEqual({
+            reduce: arm === "reduced transparency",
+            forced: arm === "forced colors",
+            more: MORE_CONTRAST_MEDIA.includes(arm),
+          });
+
+          /* A pane is what rests on the surface ground, told apart by giving
+             one region a ground of its own: under liquid it is held to the
+             floor its trade-off is held to above, and every control to the
+             text rule. */
+          const painted = await paint(page);
+          const raisedLine =
+            arm === 'data-contrast="more"' ||
+            arm === "more contrast" ||
+            (arm === "forced colors" && browserName !== "webkit");
+          /* Every arm that raises the line takes the ground whole, and so
+             does reduced transparency: each control then rests on an opaque
+             ground, not on whatever is behind the region. */
+          const opaque = raisedLine || arm === "reduced transparency";
+          const panes = new Set(
+            Object.entries(painted)
+              .filter(
+                ([testId, { fill }]) =>
+                  testId.startsWith("pane:") && fill !== painted[testId.replace(/^pane/, "glass")]!.fill,
+              )
+              .map(([testId]) => testId.split(":")[1]!),
+          );
+
+          for (const [testId, read] of Object.entries(painted).filter(([testId]) => !testId.startsWith("pane:"))) {
+            const [region, name = ""] = testId.split(":");
+            const floor = region === "glass glass-liquid" && panes.has(name) ? LIQUID_TEXT_FLOOR : 4.5;
+
+            if (!(name in TOGGLE_TYPES)) {
+              expect.soft(textRatio(read), `${testId} text`).toBeGreaterThanOrEqual(floor);
+            }
+            if (opaque) {
+              expect.soft(readSrgb(read.fill).alpha, `${testId} ground`).toBe(1);
+            }
+            if (CONTROL_LINE.includes(name) && (raisedLine || !QUIET_TEXT_LINE.includes(name))) {
+              const { under, fill } = groundsOf(read);
+              const line = flattenColor(read.borderColor, fill);
+              expect
+                .soft(Math.max(getContrastRatio(line, under), getContrastRatio(fill, under)), `${testId} boundary`)
+                .toBeGreaterThanOrEqual(MINIMUM);
+            }
+          }
+        } finally {
+          await browser?.close();
+        }
+      });
+    }
+  }
+}
+
+/* The ground is the region's, so the nearest region decides, at any depth: a
+   region of another aesthetic nested in glass gives its controls none, and a
+   glass region re-entered inside it, or inside a card, gives it back. A box already resting on
+   one -- a surface, a field inside an input group, a badge inside a button --
+   passes none on, so the pane is never laid twice. */
+const OTHER_AESTHETICS = registry.aesthetics.map(({ class: name }) => name).filter((name) => name !== "glass");
+
+for (const theme of THEMES) {
+  test(`lets the nearest region decide a control's glass ground, ${theme}`, async ({ page, browserName }) => {
+    if (browserName === "chromium") {
+      const session = await page.context().newCDPSession(page);
+      await session.send("Emulation.setEmulatedMedia", {
+        features: [{ name: "prefers-reduced-transparency", value: "no-preference" }],
+      });
+    }
+
+    const ghost = (testId: string) => `<button class="btn ghost" data-testid="${testId}">Label</button>`;
+    await loadIn(
+      page,
+      theme,
+      "standard",
+      `<div class="glass">${ghost("glass")}
+         <div class="glass glass-liquid">${ghost("liquid")}</div>
+         ${OTHER_AESTHETICS.map(
+           (name) =>
+             `<div class="${name}">${ghost(name)}<div><div class="glass">${ghost(`${name}-glass`)}</div></div></div>`,
+         ).join("")}
+         <div><div><div>${ghost("depth-4")}</div></div></div>
+         <div class="card">${ghost("card")}<div class="glass">${ghost("card-glass")}</div></div>
+         <div class="input-group"><input class="ipt" data-testid="group-field" /></div>
+         <button class="btn ghost"><span class="badge ghost" data-testid="badge-in-button">B</span></button>
+       </div>`,
+    );
+
+    const painted = await paint(page);
+    const alpha = (testId: string) => readSrgb(painted[testId]!.fill).alpha;
+
+    for (const testId of [
+      "glass",
+      "liquid",
+      "depth-4",
+      "card-glass",
+      ...OTHER_AESTHETICS.map((name) => `${name}-glass`),
+    ]) {
+      expect.soft(alpha(testId), `${testId} rests on the pane`).toBeGreaterThan(0);
+    }
+    for (const testId of [...OTHER_AESTHETICS, "card", "group-field", "badge-in-button"]) {
+      expect.soft(alpha(testId), `${testId} lays no pane`).toBe(0);
+    }
+  });
 }
 
 /* Pressed is the third state the text rule holds in. Read with the standard

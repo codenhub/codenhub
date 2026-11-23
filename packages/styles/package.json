@@ -39,190 +39,190 @@
   "sideEffects": [
     "**/*.css"
   ],
-  "types": "./dist/index.d.ts",
+  "types": "./dist/index.d.cts",
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
+      "types": "./dist/index.d.cts",
       "style": "./dist/index.css",
       "import": "./dist/index.css",
       "default": "./dist/index.css"
     },
     "./theme": {
-      "types": "./dist/index.d.ts",
+      "types": "./dist/index.d.cts",
       "style": "./dist/theme.css",
       "import": "./dist/theme.css",
       "default": "./dist/theme.css"
     },
     "./palette": {
-      "types": "./dist/index.d.ts",
+      "types": "./dist/index.d.cts",
       "style": "./dist/palette.css",
       "import": "./dist/palette.css",
       "default": "./dist/palette.css"
     },
     "./components": {
-      "types": "./dist/index.d.ts",
+      "types": "./dist/index.d.cts",
       "style": "./dist/components.css",
       "import": "./dist/components.css",
       "default": "./dist/components.css"
     },
     "./aesthetics": {
-      "types": "./dist/index.d.ts",
+      "types": "./dist/index.d.cts",
       "style": "./dist/aesthetics/index.css",
       "import": "./dist/aesthetics/index.css",
       "default": "./dist/aesthetics/index.css"
     },
     "./aesthetics/neobrutalism": {
-      "types": "./dist/index.d.ts",
+      "types": "./dist/index.d.cts",
       "style": "./dist/aesthetics/neobrutalism.css",
       "import": "./dist/aesthetics/neobrutalism.css",
       "default": "./dist/aesthetics/neobrutalism.css"
     },
     "./aesthetics/glass": {
-      "types": "./dist/index.d.ts",
+      "types": "./dist/index.d.cts",
       "style": "./dist/aesthetics/glass.css",
       "import": "./dist/aesthetics/glass.css",
       "default": "./dist/aesthetics/glass.css"
     },
     "./aesthetics/pixel": {
-      "types": "./dist/index.d.ts",
+      "types": "./dist/index.d.cts",
       "style": "./dist/aesthetics/pixel.css",
       "import": "./dist/aesthetics/pixel.css",
       "default": "./dist/aesthetics/pixel.css"
     },
     "./aesthetics/chunky-tile": {
-      "types": "./dist/index.d.ts",
+      "types": "./dist/index.d.cts",
       "style": "./dist/aesthetics/chunky-tile.css",
       "import": "./dist/aesthetics/chunky-tile.css",
       "default": "./dist/aesthetics/chunky-tile.css"
     },
     "./aesthetics/cyber": {
-      "types": "./dist/index.d.ts",
+      "types": "./dist/index.d.cts",
       "style": "./dist/aesthetics/cyber.css",
       "import": "./dist/aesthetics/cyber.css",
       "default": "./dist/aesthetics/cyber.css"
     },
     "./aesthetics/sketch": {
-      "types": "./dist/index.d.ts",
+      "types": "./dist/index.d.cts",
       "style": "./dist/aesthetics/sketch.css",
       "import": "./dist/aesthetics/sketch.css",
       "default": "./dist/aesthetics/sketch.css"
     },
     "./tw": {
-      "types": "./tw/index.d.ts",
+      "types": "./tw/index.d.cts",
       "style": "./tw/index.css",
       "import": "./tw/index.css",
       "default": "./tw/index.css"
     },
     "./theme/tw": {
-      "types": "./tw/index.d.ts",
+      "types": "./tw/index.d.cts",
       "style": "./tw/theme.css",
       "import": "./tw/theme.css",
       "default": "./tw/theme.css"
     },
     "./components/tw": {
-      "types": "./tw/index.d.ts",
+      "types": "./tw/index.d.cts",
       "style": "./tw/components/index.css",
       "import": "./tw/components/index.css",
       "default": "./tw/components/index.css"
     },
     "./surface/tw": {
-      "types": "./tw/index.d.ts",
+      "types": "./tw/index.d.cts",
       "style": "./tw/components/surface.css",
       "import": "./tw/components/surface.css",
       "default": "./tw/components/surface.css"
     },
     "./button/tw": {
-      "types": "./tw/index.d.ts",
+      "types": "./tw/index.d.cts",
       "style": "./tw/components/button.css",
       "import": "./tw/components/button.css",
       "default": "./tw/components/button.css"
     },
     "./form/tw": {
-      "types": "./tw/index.d.ts",
+      "types": "./tw/index.d.cts",
       "style": "./tw/components/form.css",
       "import": "./tw/components/form.css",
       "default": "./tw/components/form.css"
     },
     "./feedback/tw": {
-      "types": "./tw/index.d.ts",
+      "types": "./tw/index.d.cts",
       "style": "./tw/components/feedback.css",
       "import": "./tw/components/feedback.css",
       "default": "./tw/components/feedback.css"
     },
     "./tooltip/tw": {
-      "types": "./tw/index.d.ts",
+      "types": "./tw/index.d.cts",
       "style": "./tw/components/tooltip.css",
       "import": "./tw/components/tooltip.css",
       "default": "./tw/components/tooltip.css"
     },
     "./reset/tw": {
-      "types": "./tw/index.d.ts",
+      "types": "./tw/index.d.cts",
       "style": "./tw/reset.css",
       "import": "./tw/reset.css",
       "default": "./tw/reset.css"
     },
     "./native/tw": {
-      "types": "./tw/index.d.ts",
+      "types": "./tw/index.d.cts",
       "style": "./tw/native.css",
       "import": "./tw/native.css",
       "default": "./tw/native.css"
     },
     "./typography/tw": {
-      "types": "./tw/index.d.ts",
+      "types": "./tw/index.d.cts",
       "style": "./tw/typography.css",
       "import": "./tw/typography.css",
       "default": "./tw/typography.css"
     },
     "./utilities/tw": {
-      "types": "./tw/index.d.ts",
+      "types": "./tw/index.d.cts",
       "style": "./tw/utilities/index.css",
       "import": "./tw/utilities/index.css",
       "default": "./tw/utilities/index.css"
     },
     "./aesthetics/tw": {
-      "types": "./tw/index.d.ts",
+      "types": "./tw/index.d.cts",
       "style": "./tw/aesthetics/index.css",
       "import": "./tw/aesthetics/index.css",
       "default": "./tw/aesthetics/index.css"
     },
     "./aesthetics/neobrutalism/tw": {
-      "types": "./tw/index.d.ts",
+      "types": "./tw/index.d.cts",
       "style": "./tw/aesthetics/neobrutalism.css",
       "import": "./tw/aesthetics/neobrutalism.css",
       "default": "./tw/aesthetics/neobrutalism.css"
     },
     "./aesthetics/glass/tw": {
-      "types": "./tw/index.d.ts",
+      "types": "./tw/index.d.cts",
       "style": "./tw/aesthetics/glass.css",
       "import": "./tw/aesthetics/glass.css",
       "default": "./tw/aesthetics/glass.css"
     },
     "./aesthetics/pixel/tw": {
-      "types": "./tw/index.d.ts",
+      "types": "./tw/index.d.cts",
       "style": "./tw/aesthetics/pixel.css",
       "import": "./tw/aesthetics/pixel.css",
       "default": "./tw/aesthetics/pixel.css"
     },
     "./aesthetics/chunky-tile/tw": {
-      "types": "./tw/index.d.ts",
+      "types": "./tw/index.d.cts",
       "style": "./tw/aesthetics/chunky-tile.css",
       "import": "./tw/aesthetics/chunky-tile.css",
       "default": "./tw/aesthetics/chunky-tile.css"
     },
     "./aesthetics/cyber/tw": {
-      "types": "./tw/index.d.ts",
+      "types": "./tw/index.d.cts",
       "style": "./tw/aesthetics/cyber.css",
       "import": "./tw/aesthetics/cyber.css",
       "default": "./tw/aesthetics/cyber.css"
     },
     "./aesthetics/sketch/tw": {
-      "types": "./tw/index.d.ts",
+      "types": "./tw/index.d.cts",
       "style": "./tw/aesthetics/sketch.css",
       "import": "./tw/aesthetics/sketch.css",
       "default": "./tw/aesthetics/sketch.css"
     },
     "./native": {
-      "types": "./dist/index.d.ts",
+      "types": "./dist/index.d.cts",
       "style": "./dist/native.css",
       "import": "./dist/native.css",
       "default": "./dist/native.css"

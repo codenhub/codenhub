@@ -250,7 +250,7 @@ test.describe("buttons", () => {
              is 0%, so `box` mixes the contrast tone in at zero strength and lands
              on `--intent-strong`. The base tone is a ground, picked to be filled
              with; the strong tone is the one picked to be read on a page, which
-             is why amber-800 rather than amber-600 prints here. */
+             is why amber-950 rather than amber-600 prints here. */
           expectedPresentationText: resolveTokenColor({
             host,
             tokenName: `${intent.tokenName}-strong`,

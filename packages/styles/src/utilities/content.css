@@ -112,8 +112,8 @@
        though the head belonged to the page and the body were the odd one out.
        `--_fill-cap` is `box.css`'s override slot (the one `.card.soft` uses) and
        `--_d-ground` is box's private ground slot; both land on the table's own
-       element, so nothing here fights `.soft` for `--ui-fill`. `.ghost` is left
-       at box's default (`--_d-ground: transparent`), so it stays the fully bare
+       element, so nothing here fights `.soft` for `--ui-fill`. `.ghost` rests on
+       nothing, as box's default does, so it stays the fully bare
        boundaries-only table; `.soft` differs from it by keeping an opaque,
        untinted plate and a head label strip. */
     /* Whether the table rests on the quiet plate, as 0% or 100%: a resolved
@@ -141,7 +141,14 @@
       color-mix(in oklab, var(--intent-subtle) var(--_table-ground), transparent)
     );
     --_fill-cap: calc(100% - var(--_table-quiet));
-    --_d-ground: color-mix(in oklab, var(--_table-ground-plate) var(--_table-quiet), transparent);
+    /* A `.ghost` table placed straight in a region that grounds its
+       controls rests on that ground, as a ghost button does there; see
+       `--_d-ground` in `box.css`. */
+    --_d-ground: color-mix(
+      in oklab,
+      var(--_table-ground-plate) var(--_table-quiet),
+      var(--_region-ground, transparent)
+    );
 
     /* A table rests on a plate of its own at every fill but `.ghost`, so no
        ink from above passes through it, as on `surface`. A ghost table on a

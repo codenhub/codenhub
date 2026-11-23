@@ -1,6 +1,6 @@
 ---
 status: IMPLEMENTED
-last_updated: 2026-11-21
+last_updated: 2026-11-22
 scope: `@codenhub/styles` styling model, token contracts, and composition rules.
 ---
 
@@ -134,7 +134,7 @@ Text that is not a box reads the pair as well, wherever the page's grey or the p
 
 The limits, recorded rather than worked around:
 
-- Only a neutral box takes the ink. An intent keeps its own ink, as it keeps its own colour.
+- Only a neutral box takes the ink. An intent keeps its own ink, as it keeps its own colour, so its light `-strong` tone is chosen against the one plate every intent lands on, a neutral `.solid` surface at 20% of the page's ink, as well as against the page. At `-800` a soft destructive button there read 3.72:1 at rest and 2.93:1 on hover; at `-950`, decided on 2026-11-22, every intent's soft, ghost, and hint text holds 4.5:1 there at rest and on hover. Stepping the intent's ink toward the plate's instead would have recoloured an intent on a neutral surface, and the same tone on the page and on the plate is the predictable one.
 - A `.ghost` table blocks like every table, so on a filled parent it prints the page's ink on that fill: the block is unconditional because a toggle cannot be stepped from the fill.
 - A `.hint` with an intent keeps its `--intent-strong`, chosen against the page, so on a solid surface of another intent it can fall to 1.0:1. A placeholder keeps the plate's ink whole rather than a step toward the fill: typed text on a held field reaches only 4.59:1 on a dark `.card.solid.success`, so no step that reads as distinct keeps 4.5:1 on every intent.
 - A fill set straight through `--ui-fill`, rather than by a fill class, does not flip the toggle, so it hands nothing down.
@@ -596,6 +596,8 @@ The numbering is stable; R4 and R5 are not used.
 - **R8.** An aesthetic declares only what it owns the namespace of: `--ui-*`, its own `--_*` privates, and `--elevation-color`. A knob it publishes to consumers is _read_ with its default as the `var()` fallback, never declared. A declaration beats an inherited value whatever the specificity, so a knob declared on the aesthetic's own class outranks every ancestor including `:root` -- which is where an application themes something, and so is the only place the knob was ever going to be set from.
 
 Where an aesthetic must reach one kind of component and not another, the way to say so is a token only that kind resolves. A surface resolves `--ui-backdrop` and `--ui-surface-shadow`, and a data table resolves the backdrop and the surface ground, because it is a pane of content; nothing else does. That is why glass blurs cards, panels, and tables while controls stay solid, and why its two-layer drop shadow does not land under every button on the page. Adding such a slot costs one line in the components that accept it, and it is visible in those components rather than inferred from a table somewhere else.
+
+A region whose panes show the page behind them grounds a control placed straight in it, too, through a private `--_region-ground` that `box` reads as its default ground. Without it a ghost button in a `.glass` region rested on the page itself, and over a black backdrop a light page's label printed at 1.17:1. Only the outermost box takes it: `box` clears it for everything it holds, so a field in an `.input-group`, a badge in a button, or a control in a card does not lay the pane twice, and glass clears it on every other aesthetic's region, which `registry.test.ts` holds to the registry's list, so the nearest region decides at any depth. Glass's is 69% of the page colour, thicker than a pane's 59%, because a control tints its ground: on 59% a default badge printed at 3.99:1 and a `.solid` field at 3.48:1 in dark over white. It is unblurred, for the layer cost above, and opaque in every arm that makes a pane opaque. `contrast.spec.ts` reads every painted component in the registry over a black and a white backdrop in each arm.
 
 ### The cost of a no-op
 

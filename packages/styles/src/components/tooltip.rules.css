@@ -41,6 +41,36 @@
 
     position: relative;
     display: inline-block;
+    /* The bubble is placed against this box, so the box is the trigger's
+       size in any layout: a column (`.stack`, `.field`), a grid, or a row
+       stretched by a taller sibling stretched it, and the bubble centred on
+       the stretched box, off its trigger. Not stretched, it sits at the start
+       of the line it was stretched across, as a lone button there does. */
+    width: fit-content;
+    height: fit-content;
+
+    /* Except around a text field, which fills its line: sized to its
+       content, the box left a `width: 100%` field nothing wider to fill, and
+       a full-width `.ipt` in a 480px `.field` drew 215px wide. Stretched, the
+       box is the field's width, so the bubble still centres on it. The list
+       is the one the form rules use for a field, bare elements included for
+       `/native`. */
+    &:has(
+      > :is(.ipt, .textarea, .select, .text-control, .input-group, textarea, select),
+      > input:not(
+        [type="checkbox"],
+        [type="radio"],
+        [type="range"],
+        [type="color"],
+        [type="file"],
+        [type="button"],
+        [type="submit"],
+        [type="reset"],
+        [type="image"]
+      )
+    ) {
+      width: auto;
+    }
 
     &[data-tooltip-position="bottom"] {
       --_tooltip-top: auto;

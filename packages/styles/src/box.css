@@ -109,8 +109,17 @@
        zero fill over the page colour and paint an opaque slab where it asked for
        no fill, and the slab would stay while the card tints on hover. An own
        declaration beats the inherited one at any specificity; `surface`, `kbd`,
-       `code`, `pre` and the tooltip each restate theirs after `@apply box`. */
-    --_d-ground: transparent;
+       `code`, `pre` and the tooltip each restate theirs after `@apply box`.
+
+       The one ground a box takes unasked is its region's: an aesthetic whose
+       panes show the page behind them names one in `--_region-ground`, so a
+       control placed straight in the region rests on a pane rather than on
+       whatever the page put there -- glass's, without the blur, so its text
+       is legible over any backdrop (accessible by default). Only the
+       outermost box takes it. Every box clears it for what it holds, below:
+       what it holds already rests on a ground, and a field in an input group
+       or a badge in a button would lay the pane twice. */
+    --_d-ground: var(--_region-ground, transparent);
     /* The ground, made the page background wherever `--_plate` says the cap
        stopped the fill -- over a component's own ground too, so a capped
        `.solid` surface under glass is opaque like every other `.solid`. */
@@ -417,6 +426,13 @@
        lose its shadow rather than keep it. */
     &:focus-visible {
       box-shadow: var(--_focus-stack, var(--_shadow), inset 0 0 0 2px var(--_focus-gap));
+    }
+
+    /* The region's ground stops at the first box; see `--_d-ground`. Cleared
+       on the children, so it reaches the rest by inheritance, and a region
+       nested deeper, which states its own, takes the ground back. */
+    & > * {
+      --_region-ground: initial;
     }
 
     &:disabled,

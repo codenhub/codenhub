@@ -97,6 +97,22 @@
        two extremes bound every backdrop of one colour; a busy one blurs to
        something between them. */
     --ui-surface-ground: color-mix(in srgb, var(--color-background) 59%, transparent);
+    /* A pane's ground under a control placed straight in the region, with
+       no pane around it: a ghost button rested on the page itself, and over
+       a black backdrop a light page's label printed at 1.17:1. Unblurred,
+       for the reason controls stay solid above. Thicker than a pane's, since
+       a control tints it: on 59% a default badge printed at 3.99:1 and a
+       `.solid` field at 3.48:1 in dark over white, an unchecked `.solid`
+       checkbox's edge at 2.71:1. 69% is the thinnest ground that holds every
+       presentation's text at 4.5:1 and a toggle's edge at 3:1 over a black
+       or a white backdrop; 68% left that field at 4.48:1. The same under
+       liquid: a control is not a pane, and liquid's clearer ground is a
+       pane's trade-off. `box` lays it under the outermost box only, and
+       `contrast.spec.ts` measures it. */
+    --_glass-ground: color-mix(in srgb, var(--color-background) 69%, transparent);
+    /* Named apart from the region's, so a glass region nested inside a box
+       can take it back after the box clears what it holds; see below. */
+    --_region-ground: var(--_glass-ground);
 
     /* Two layers pulling in with negative spread, so the shadow tucks under the
        surface instead of haloing onto the backdrop. It is the one shipped aesthetic
@@ -147,9 +163,11 @@
     font-family: var(--font-default, ui-sans-serif, system-ui, sans-serif);
   }
 
-  /* A region of another aesthetic nested in glass draws its own line. */
+  /* A region of another aesthetic nested in glass draws its own line, and
+     rests its controls on nothing: its panes are opaque. */
   :is(.neobrutalism, .pixel, .chunky-tile, .cyber, .sketch) {
     --_unfilled-ink: initial;
+    --_region-ground: initial;
   }
 
   /* Transparency is the whole aesthetic, so the honest degradation is an opaque
@@ -163,6 +181,7 @@
     .glass {
       --ui-backdrop: none;
       --ui-surface-ground: var(--color-background);
+      --_glass-ground: var(--color-background);
     }
   }
 
@@ -170,12 +189,14 @@
     .glass:not(:where(:root[data-contrast="standard"], :root[data-contrast="standard"] *)) {
       --ui-backdrop: none;
       --ui-surface-ground: var(--color-background);
+      --_glass-ground: var(--color-background);
     }
   }
 
   .glass:where(:root[data-contrast="more"], :root[data-contrast="more"] *) {
     --ui-backdrop: none;
     --ui-surface-ground: var(--color-background);
+    --_glass-ground: var(--color-background);
   }
 
   /* More contrast also takes the ground whole, above, and then the white
@@ -494,6 +515,17 @@
    writes only a private nothing a consumer sets. See
    docs/internal/model.md#cascade-layers. */
 @layer utilities {
+  /* Every box clears the region's ground on its children, from `utilities`
+     (`.card > *`, `.btn > *`, one rule per component), so the ground stops at
+     the first box. A glass region that is one of those children is a region
+     again, and states its ground back here: a control in a glass region
+     inside a card rests on the pane like one placed straight in the page's.
+     The class is doubled to outrank those resets on specificity rather than
+     on which stylesheet loads last. */
+  .glass.glass {
+    --_region-ground: var(--_glass-ground);
+  }
+
   .btn.glass-liquid:is(.glass, .glass *) {
     /* Only where the layers are on, so the nearest region decides here too. */
     --_glass-liquid-ground: var(--_glass-liquid-on) var(--ui-surface-ground, transparent);
