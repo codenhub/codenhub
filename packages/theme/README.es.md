@@ -1,4 +1,4 @@
-<!-- source: 0f9e1f73bd89fb68ad8c92108dab49c6b4ce001f -->
+<!-- source: 3f439937d94cf3b1a87c92def2d67b793c85076c -->
 
 # @codenhub/theme
 
@@ -61,7 +61,7 @@ Como este script se ejecuta después de que el navegador pinta por primera vez, 
 ## Requisitos
 
 - Un navegador para aplicar el tema: Chrome 93, Firefox 92, Safari 15.4 o posterior, porque el paquete llama a `Object.hasOwn`. Para navegadores más antiguos, transpila las dependencias y agrega polyfills en tu build. En un servidor, el gestor omite sin errores todo lo que necesita un navegador e informa el tema por defecto.
-- Tu propio CSS para cada tema. El paquete escribe en `<html>` el nombre del tema, una clase opcional, `color-scheme` y propiedades personalizadas de CSS opcionales; no incluye estilos.
+- Tu propio CSS para cada tema. El paquete escribe en `<html>` el nombre del tema, una clase `theme-light` o `theme-dark` para su esquema de color, una clase opcional para el propio tema, `color-scheme` y propiedades personalizadas de CSS opcionales; no incluye estilos.
 - TypeScript 5.4 o posterior, si usas TypeScript, por el `NoInfer` del que dependen los tipos.
 
 ## Notas

@@ -2,7 +2,7 @@
 title: Definir temas
 description: Agrega tus propios temas, elige qué temas usan la configuración del sistema y el toggle, lee el estado actual y conoce cada opción con su valor por defecto.
 order: 2
-source: a1e19884b57c904f7e3f6b86300e1849e1765b66
+source: 6d7b1264bdc3a212421a468d818b0ab6cdcf26ff
 ---
 
 # Definir temas
@@ -166,7 +166,7 @@ Algunas merecen un comentario:
 
 - **`storageKey`**: Todas las apps del mismo dominio comparten un solo `localStorage`. Si dos apps de un mismo dominio usan este paquete, dale a cada una su propia clave, como `"my-app-theme"`, o se turnarán para pisarse la elección.
 - **`attribute`**: Sirve cualquier nombre de atributo HTML válido, uno sin espacios, comillas, `/`, `>` ni `=`, excepto `class` y `style`, porque escribir ahí el nombre del tema borraría las clases y los estilos inline que tu página puso en `<html>`. Usa `className` para obtener una clase.
-- **`className`**: Una función, con tipo `ThemeClassResolver`, recibe el tema, incluidos sus tokens estáticos, y devuelve un nombre de clase sin espacios. `className: (theme) => theme.name` da clases como `dark` y `dim` en lugar de `theme-dark`. El paquete le pide a la función la clase de todos los temas a la vez, la primera vez que necesita una, normalmente en `init()` o `getPrePaintScript()`. Una función que devuelve un nombre vacío o con espacios para cualquier tema hace que esa llamada lance una excepción, aunque el tema rechazado no sea el que se está aplicando.
+- **`className`**: Una función, con tipo `ThemeClassResolver`, recibe el tema, incluidos sus tokens estáticos, y devuelve un nombre de clase sin espacios. `className: (theme) => theme.name` da clases como `dark` y `dim` en lugar de `theme-dark`. El paquete le pide a la función la clase de todos los temas a la vez, la primera vez que necesita una, normalmente en `init()` o `getPrePaintScript()`. Una función que devuelve un nombre vacío o con espacios para cualquier tema hace que esa llamada lance una excepción, aunque el tema rechazado no sea el que se está aplicando. Sea cual sea `className`, incluido `false`, también se agrega la clase `theme-light` o `theme-dark` que sigue el `colorScheme` del tema, como describe la [visión general](index.md#qué-hace-y-qué-te-deja-a-ti).
 
 ## Cuando la configuración está mal
 

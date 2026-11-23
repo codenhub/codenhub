@@ -1,4 +1,4 @@
-import { DARK_CLASS, THEME_CHANGE_EVENT } from "./constants";
+import { DARK_CLASS, SCHEME_CLASSES, THEME_CHANGE_EVENT } from "./constants";
 import type { ResolvedThemeOptions } from "./options";
 import type { ActiveTheme, ThemeChangeDetail } from "./types";
 
@@ -34,6 +34,13 @@ export const applyTheme = <TName extends string, TSchema extends Record<string, 
   if (nextClass !== null) {
     root.classList.add(nextClass);
   }
+
+  // The active theme's own class stays, even when it names the opposite scheme.
+  const oppositeClass = SCHEME_CLASSES[theme.colorScheme === "dark" ? "light" : "dark"];
+  if (oppositeClass !== nextClass) {
+    root.classList.remove(oppositeClass);
+  }
+  root.classList.add(SCHEME_CLASSES[theme.colorScheme]);
 
   if (options.darkClass) {
     root.classList.toggle(DARK_CLASS, theme.colorScheme === "dark");
@@ -141,6 +148,8 @@ export const removeAppliedTheme = <TName extends string, TSchema extends Record<
   for (const configuredClass of classes) {
     root.classList.remove(configuredClass);
   }
+
+  root.classList.remove(SCHEME_CLASSES.light, SCHEME_CLASSES.dark);
 
   if (options.darkClass) {
     root.classList.remove(DARK_CLASS);

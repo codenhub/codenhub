@@ -1,7 +1,7 @@
 ---
 title: Visión general
 description: Para qué sirve el paquete, cómo elige un tema y en qué orden leer sus páginas.
-source: 05f3b784bd7ac9ef656c70f8de0859aa17ccb13b
+source: c0d2db9109f69eee01a3c6c84197ee41ec955290
 ---
 
 # Gestiona los temas del navegador
@@ -22,6 +22,7 @@ En cada cambio, escribe el tema activo en el elemento `<html>` (`document.docume
 
 - `data-theme="dark"`: el nombre del tema, para selectores de CSS como `[data-theme="dark"]`.
 - `class="theme-dark"`: el mismo nombre como clase `theme-<name>`, que se agrega por defecto para el código que prefiere clases (la opción `className` la cambia o la quita). Con `darkClass: true` también se agrega una clase `dark` para Tailwind CSS.
+- `theme-light` o `theme-dark`: el `colorScheme` del tema como clase, que se agrega sea cual sea el nombre del tema y diga lo que diga `className`. Un tema claro llamado `paper` da `class="theme-paper theme-light"`, así que el CSS que se basa en esas dos clases, como las hojas de estilo de `@codenhub/styles`, lo trata como claro.
 - `color-scheme: dark`: le indica al navegador que dibuje sus propios controles, como las barras de desplazamiento y los campos de formulario, en colores oscuros.
 - Propiedades personalizadas de CSS, como `--color-primary`, para los tokens que enumeras en `tokenSchema` y a los que das valores en JavaScript.
 
