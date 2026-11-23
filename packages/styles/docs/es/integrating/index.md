@@ -3,7 +3,7 @@ title: Visión general
 description: Cómo se carga la hoja de estilos en el build de un framework, y qué guía seguir.
 group: Integración
 order: 2
-source: 5af237896ccc0da753e402313a176df02820a62c
+source: 52e0563bc739ebe40d0bbc3957ccaa946633ff7e
 ---
 
 # Integración
@@ -17,7 +17,7 @@ Todos los stacks hacen los mismos dos imports, desde el mismo tipo de lugar: un 
 1. Un [punto de entrada](../setup.md#todos-los-puntos-de-entrada): el compilado `@codenhub/styles` para cualquier build, o `@codenhub/styles/tw` cuando el proyecto ya usa Tailwind CSS v4.
 2. `@codenhub/styles/aesthetics` (o `/aesthetics/tw`), solo si el proyecto usa una [estética](../usage/aesthetics.md). Puede ir antes o después del punto de entrada, porque cada punto de entrada declara las [capas de cascada](../setup.md#capas-de-cascada) antes de usar una.
 
-Importar desde un solo lugar importa por dos motivos. Algunos frameworks solo _permiten_ CSS global desde un archivo raíz designado y, si no, el build falla; el Pages Router de Next.js es uno de ellos, consulta [Next.js → Solución de problemas](./nextjs.md#solución-de-problemas). Donde un framework lo permite de forma más amplia, como hace el App Router de Next.js, importar desde la raíz sigue siendo la opción recomendada para que el orden del CSS sea predecible; además, importar en cada componente cargaría las mismas reglas de reset y de tokens una vez por componente en lugar de una vez por aplicación.
+Importar desde un solo lugar importa por dos motivos. Algunos frameworks solo _permiten_ tus propios archivos CSS globales desde un archivo raíz designado y, si no, el build falla; el Pages Router de Next.js es uno de ellos, y el archivo CSS que contiene `/tw` es uno de los tuyos; consulta [Next.js → Solución de problemas](./nextjs.md#solución-de-problemas). Donde un framework lo permite de forma más amplia, importar desde la raíz sigue siendo la opción recomendada, porque así el orden en que se cargan las hojas de estilos no depende de qué página o componente abrió primero el lector.
 
 ## Qué guía seguir
 

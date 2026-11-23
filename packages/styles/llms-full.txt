@@ -362,7 +362,7 @@ Every stack does the same two imports, from the same kind of place — a root la
 1. One [entrypoint](docs/setup.md#all-entrypoints) — the compiled `@codenhub/styles` for any build, or `@codenhub/styles/tw` when the project already runs Tailwind CSS v4.
 2. `@codenhub/styles/aesthetics` (or `/aesthetics/tw`), only if the project uses an [aesthetic](docs/usage/aesthetics.md). It can come before or after the entrypoint, because every entrypoint declares the [cascade layers](docs/setup.md#cascade-layers) before using one.
 
-Importing from one place matters for two reasons. Some frameworks only _allow_ global CSS from a designated root file and fail the build otherwise — Next.js's Pages Router is one, see [Next.js → Troubleshooting](docs/integrating/nextjs.md#troubleshooting). Where a framework allows it more broadly, as Next.js's App Router does, importing from the root remains the recommended choice for predictable CSS ordering — and importing per-component instead would load the same reset and token rules once per component rather than once per app.
+Importing from one place matters for two reasons. Some frameworks only _allow_ your own global CSS files from a designated root file and fail the build otherwise — Next.js's Pages Router is one, and the CSS file that holds `/tw` is one of yours; see [Next.js → Troubleshooting](docs/integrating/nextjs.md#troubleshooting). Where a framework allows it more broadly, importing from the root remains the recommended choice, because the order the stylesheets load in then does not depend on which page or component the reader opened first.
 
 ## Which guide to follow
 
@@ -621,7 +621,7 @@ Return to the main path: [Building a screen](docs/concepts.md) adds the first ca
 Next.js has two router architectures, and they treat global CSS differently:
 
 - **App Router** (an `app/` directory): global CSS — including an external package's stylesheet like this one — can be imported from any layout, page, or component under `app/`. Importing it from the root layout is only a recommendation, for predictable CSS ordering across routes; Next.js does not enforce it and no error occurs if you import it elsewhere.
-- **Pages Router** (a `pages/` directory, no `app/`): global CSS is restricted to `pages/_app.tsx`. Importing it from anywhere else fails the build — Next.js enforces this itself, not this package; see [Troubleshooting](#troubleshooting).
+- **Pages Router** (a `pages/` directory, no `app/`): a stylesheet from a package, like this one, can be imported from any page or component too. Your own global `.css` files are the restricted ones: they can be imported only from `pages/_app.tsx`, and importing one anywhere else fails the build. That matters for `/tw`, which lives in a CSS file of yours. Next.js enforces this itself, not this package; see [Troubleshooting](#troubleshooting). Import the stylesheet from `pages/_app.tsx` anyway, for the same predictable order.
 - **Both directories present** (mid-migration): import the stylesheet in both root files. The two routers serve their own routes independently, so a route under `pages/` never sees a stylesheet imported only in `app/layout.tsx`, and vice versa.
 
 ## Import the stylesheet
@@ -675,9 +675,9 @@ In the Pages Router, `pages/_document.tsx` renders `<html>`, so put the class on
 
 **Pages Router build fails with "Global CSS cannot be imported from files other than your Custom `<App>`"**
 
-- **What happened:** Next.js rejected a global CSS `import` statement outside `pages/_app.tsx`. This restriction is specific to the Pages Router — Next.js enforces it itself, not this package, and it applies to any global CSS import, not specifically to `@codenhub/styles`. It does not apply to the App Router, where the same import works from any layout, page, or component.
-- **Why:** the Pages Router has no per-route CSS boundary the way the App Router does, so Next.js requires one predictable file for global stylesheets to avoid ordering conflicts between pages.
-- **Fix:** move the `import "@codenhub/styles"` line to `pages/_app.tsx`, and remove it from wherever it currently is.
+- **What happened:** Next.js rejected an `import` of one of your own global `.css` files outside `pages/_app.tsx`, such as the file that holds `@import "@codenhub/styles/tw"`. This restriction is specific to the Pages Router, and Next.js enforces it itself, not this package. It does not cover a stylesheet imported straight from a package, so `import "@codenhub/styles"` builds from any page or component, and it does not apply to the App Router at all. Checked with Next.js 16.4, with Turbopack and with webpack.
+- **Why:** the Pages Router has no per-route CSS boundary the way the App Router does, so Next.js requires one predictable file for your global stylesheets to avoid ordering conflicts between pages.
+- **Fix:** move the import of your CSS file to `pages/_app.tsx`, and remove it from wherever it currently is.
 
 ## Next
 
@@ -3795,5 +3795,6 @@ An app with its own contrast and motion settings can now pass them to the packag
 - **On Windows, `chs build` refuses `--output NUL` and the other device names.** `NUL`, `CON`, `PRN`, `AUX`, `COM1`, and `LPT1`, with or without an extension, wrote a file that `del` cannot remove.
 - **The `/tw` sources link to the files they name.** Their comments named paths the package does not ship, so a reader in `node_modules` found nothing there; they now link to the file in the repository.
 - **The guides fill gaps.** [Without a bundler](docs/integrating/without-a-bundler.md) names the classes every build keeps (`.dark`, `.theme-dark`, `.theme-light`, and `.disabled`) and passes the scripts that add a class, such as `.active`, as `--content` in its Rails, Laravel, and Django examples. The README says how to keep the licence notice when your build drops it. [Integrating](docs/integrating/index.md) covers Jest, and [Tailwind](docs/integrating/tailwind.md) says when to prefer `/components/tw` over several focused entrypoints. [Aesthetics](docs/usage/aesthetics.md) gives glass's frame cost and liquid's text contrast, about 1.9 to 2:1 over a black or white backdrop, so keep liquid off repeated rows and put text that must read on `.solid` or under plain `.glass`. [Accessibility](docs/accessibility.md) and the examples keep a disabled link's `role="link"` and tab stop, wrap a live `.alert` in a bare `role="status"` or `role="alert"` element, and make a scrolling `.table-wrap` focusable and named.
+- **The guides correct claims they got wrong.** [Next.js](docs/integrating/nextjs.md) said the Pages Router accepts global CSS only from `pages/_app.tsx`; that holds for your own `.css` files, such as the one holding `/tw`, while `import "@codenhub/styles"` builds from any page or component.
 - **The Tailwind guide names the order the package's variants need.** Written after a pseudo-element variant, as in `before:motion-reduce:hidden` or `placeholder:dark:text-white`, `dark:`, `contrast-more:`, `contrast-less:`, `motion-safe:`, and `motion-reduce:` compile to a selector browsers drop, so the utility ignores the app's settings. Write them first, as in `motion-reduce:before:hidden`. See [Tailwind](docs/integrating/tailwind.md).
 - **Vite's `build.license` carries the third-party notices.** It lists each package's `LICENSE`, and the Tailwind, Lucide, and Feather notices were only in `NOTICE`, so the licence file it wrote named this package as Apache-2.0 alone. `LICENSE` now ends with a copy of `NOTICE`.
