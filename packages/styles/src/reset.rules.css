@@ -33,6 +33,27 @@
     color: var(--color-text);
   }
 
+  /* A shadow root types its text as the page does at the host. Tailwind's
+     Preflight, on the entries that carry it, sets its own sans stack, leading,
+     tab size, and font settings on `html, :host`; the rule above puts the
+     brand font back on `html` alone, so a shadow root printed Tailwind's
+     font beside the page's, and inside a region with a font or a leading of
+     its own, such as an aesthetic's, every one of these stopped at the host.
+     Each is an inherited property, so `inherit` is what the host would take
+     with no Preflight. No background and no colour: the host sits on whatever
+     the page draws, and inherits the page's text colour, a plate's ink
+     included, which `var(--color-text)` here would replace. */
+  :host {
+    -webkit-tap-highlight-color: inherit;
+    -webkit-text-size-adjust: inherit;
+    text-size-adjust: inherit;
+    font-family: inherit;
+    font-feature-settings: inherit;
+    font-variation-settings: inherit;
+    line-height: inherit;
+    tab-size: inherit;
+  }
+
   h1,
   h2,
   h3,

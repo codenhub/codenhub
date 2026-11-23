@@ -1,6 +1,6 @@
 ---
 status: IMPLEMENTED
-last_updated: 2026-11-16
+last_updated: 2026-11-22
 scope: Durable repository-level documentation under root `docs/`.
 ---
 
@@ -70,13 +70,15 @@ When APPROVED or IMPLEMENTED documents conflict with each other, the conflict MU
 
 Each rule has one owning document; others link to it rather than repeat it. A rule stated twice drifts into two rules. Prefer updating an existing document to creating an overlapping one, and prefer updating documentation before changing code, so the intended direction is clear before the implementation follows.
 
-Delete a document once it no longer describes current or intended direction, in the same change that makes it stale. Git keeps its history; an outdated document kept in the tree only competes with the current one in search and review.
+Delete a document once it no longer describes current or intended direction, in the same change that makes it stale. The same holds for a section or a sentence: the plan for a version once it ships, a design note for one version, a roadmap item once it is built, and a statement about behavior the code no longer has. A release is the change that makes most of these stale, so the release removes them. Git keeps their history; outdated text kept in the tree only competes with the current one in search and review.
 
 ## Recording decisions
 
 A document that settles a choice MUST say why. Where real alternatives existed, it SHOULD name the ones it rejected and, briefly, why each lost. A decision recorded without its reason can only be obeyed or overruled, not judged, and the next reader reopens it.
 
 Record the reason, not the history behind it. A document states what is true now: "Do X", "Don't do Y", "Do X when Y", and the reason X is right. It does not tell how the decision came about, what was measured on which date, how many packages did something when the rule was written, or what an earlier version of the document said. That evidence belongs in the commit and the pull request that make the change, where Git keeps it with the date it held. A count goes stale the day after it is written, and a story of how a rule arose makes the reader dig the rule out of it.
+
+A decision MAY link the issue, pull request, or commit that holds its evidence, as in "Decided in #203". A link points to the history without retelling it, so someone judging the decision can find what it weighed. One link per decision, next to its reason; a list of everything tried, measured, and dropped stays in Git. Rejected: no links at all, which leaves a reader no way to check a decision before reopening it. Rejected: the evidence written into the document, which turns internal docs into a record of what happened, long and describing behavior the code no longer has.
 
 A change that reverses a recorded decision MUST name what the decision did not weigh: a concrete case it gets wrong, a measurement, or a constraint that has changed since. Preferring another option is not enough; without new evidence, the recorded decision stands. The evidence goes in the reversing change's pull request. The document records the old choice among the rejected alternatives, with the reason it lost, so the decision is not reopened on arguments already heard.
 
