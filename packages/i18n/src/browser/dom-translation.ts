@@ -422,7 +422,9 @@ export function createDomTranslator(options: DomTranslatorOptions): DomTranslato
     const translateOwnText = (): void => {
       const rawKey = element.getAttribute(TRANSLATION_ATTRIBUTE);
 
-      // Only the text is blocked: the serializer escapes every attribute, so an `<iframe>`'s `title` is translated.
+      // Only the text is blocked, so an `<iframe>`'s `title` is translated: a browser escapes `<` in an attribute when it
+      // serializes the page. A serializer that leaves it raw, such as jsdom's, can make a translated attribute inside a
+      // raw-text element read as markup; translations are the app's own text.
       if (rawKey !== null && BLOCKED_ELEMENT_NAMES.has(element.localName)) {
         if (!options.isSilent) {
           console.warn(
