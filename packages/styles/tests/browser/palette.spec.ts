@@ -238,54 +238,52 @@ test.describe("generated palette", () => {
     });
   }
 
-  /* Each value is a `light-dark()` pair, so it follows `color-scheme` as the
-     package's own tokens do: the nearest explicit theme wins at any depth, and
-     with no theme selector the system's setting decides. Read through a
-     colour, since the custom property itself holds the unresolved pair. */
+  /* The nearest explicit theme wins, as it does for the package's own tokens:
+     a light subtree inside a dark one reads the light values, a dark one
+     inside it the dark values again, and dark wins on an element carrying
+     both, as `color-scheme` does. A bare `.dark` themes only the root, as in
+     `theme.css`. */
   test("follows the nearest explicit theme, nested either way", async ({ page }) => {
     const values = await page.evaluate(() => {
-      const read = (element: Element) => {
-        const probe = document.createElement("span");
-
-        probe.style.color = "var(--palette-text)";
-        element.append(probe);
-        const value = getComputedStyle(probe).color;
-
-        probe.remove();
-
-        return value;
-      };
+      const read = (element: Element) => getComputedStyle(element).getPropertyValue("--palette-text").trim();
       document.body.insertAdjacentHTML(
         "beforeend",
-        '<div data-theme="dark" id="outer"><div class="theme-light" id="light"><div class="theme-dark" id="dark"></div></div></div><div class="theme-light theme-dark" id="both"></div><div data-theme="light" id="plain"></div>',
+        '<div data-theme="dark" id="outer"><div class="theme-light" id="light"><div class="theme-dark" id="dark"></div></div></div><div class="theme-light theme-dark" id="both"></div><div class="dark" id="bare"></div>',
       );
 
       return {
+        bare: read(document.getElementById("bare")!),
         both: read(document.getElementById("both")!),
         dark: read(document.getElementById("dark")!),
         light: read(document.getElementById("light")!),
         outer: read(document.getElementById("outer")!),
-        plain: read(document.getElementById("plain")!),
+        root: read(document.documentElement),
       };
     });
 
-    expect(values.outer).not.toBe(values.plain);
-    expect(values.light, "light inside dark").toBe(values.plain);
+    expect(values.outer).not.toBe(values.root);
+    expect(values.light, "light inside dark").toBe(values.root);
     expect(values.dark, "dark inside light inside dark").toBe(values.outer);
     expect(values.both, "both classes on one element").toBe(values.outer);
+    expect(values.bare, "a bare .dark off the root").toBe(values.root);
   });
 
-  /* The palette was light unless a theme selector said dark, so under a dark
-     system setting a consumer's toast took the light `neutral-solid-bg` while
-     the page's `.badge.solid` rendered dark. */
+  /* With no theme selector the package follows the system, so under a dark
+     system setting the palette reads dark too: a consumer's chip took the
+     light `neutral-solid-bg` beside the page's dark `.badge.solid`. A root
+     forced light keeps the light values. Read with `getPropertyValue`, which
+     returns the colour itself, as a script reading the palette expects. */
   test("follows the system's dark setting with no theme selector", async ({ page }) => {
+    const root = () => getComputedStyle(document.documentElement).getPropertyValue("--palette-neutral-solid-bg").trim();
+    const light = await page.evaluate(root);
+
     await page.emulateMedia({ colorScheme: "dark" });
 
     const values = await page.evaluate(() => {
-      const root = document.documentElement;
+      const element = document.documentElement;
 
-      root.classList.remove("dark", "theme-dark", "theme-light");
-      root.removeAttribute("data-theme");
+      element.classList.remove("dark", "theme-dark", "theme-light");
+      element.removeAttribute("data-theme");
       const badge = document.createElement("span");
       const probe = document.createElement("span");
 
@@ -293,18 +291,28 @@ test.describe("generated palette", () => {
       badge.textContent = "Badge";
       probe.style.color = "var(--palette-neutral-solid-bg)";
       document.body.append(badge, probe);
+      const raw = getComputedStyle(element).getPropertyValue("--palette-neutral-solid-bg").trim();
+
+      element.setAttribute("data-theme", "light");
+      const forced = getComputedStyle(element).getPropertyValue("--palette-neutral-solid-bg").trim();
+
+      element.removeAttribute("data-theme");
 
       return {
-        scheme: getComputedStyle(root).colorScheme,
+        scheme: getComputedStyle(element).colorScheme,
         live: getComputedStyle(badge).backgroundColor,
         generated: getComputedStyle(probe).color,
+        raw,
+        forced,
       };
     });
 
     expect(values.scheme, "the page follows the system").toBe("light dark");
+    expect(values.raw, "a plain colour").not.toContain("light-dark");
     expect(
       getColorDistance(values.live, values.generated),
       `live ${values.live} vs generated ${values.generated}`,
     ).toBeLessThanOrEqual(2);
+    expect(values.forced, 'data-theme="light" under a dark system').toBe(light);
   });
 });

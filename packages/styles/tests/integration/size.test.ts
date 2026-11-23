@@ -51,9 +51,9 @@ const COMPILED_CEILINGS: Record<string, number> = {
   "dist/components.css": 201_400,
   "dist/native.css": 375_500,
   "dist/theme.css": 13_650,
-  /* 26,800 until 0.11.0 wrote each value once, as a `light-dark()` pair,
-     where a light and a dark block each wrote all of them. */
-  "dist/palette.css": 19_650,
+  /* 26,800 until 0.11.0 wrote the dark values a second time, for the
+     system's dark setting with no theme selector. */
+  "dist/palette.css": 40_100,
   /* 50,450 until glass's lift and pixel's notch grew, as their own files did;
      51,500 until liquid's tokens followed the nearest region. */
   "dist/aesthetics/index.css": 52_900,
