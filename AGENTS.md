@@ -40,7 +40,7 @@ After:
 > `formatPrice(2.345)` shows `$2.35` today. Some accounting software shows `$2.34` for the same value, because it rounds a half to the even digit, so a total built from our prices can be a cent off from an invoice.
 >
 > - (a) Change nothing. It matches what browsers do with `Intl.NumberFormat`. No new code.
-> - (b) Round halves to even by default. Breaking: every displayed price that ends in a half cent changes, in every app.
+> - (b) Round halves to even by default. Breaking: about half the displayed prices that end in a half cent change, such as `$2.35` to `$2.34`, in every app.
 > - (c) Add a `rounding` option. Nothing breaks, but it is one more option to document, test, and keep.
 >
 > Recommendation: (a) until someone reports a mismatch. (b) breaks every app for a case nobody has hit, and (c) adds surface nobody has asked for.

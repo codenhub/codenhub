@@ -309,7 +309,7 @@ That release meets the bar above, and also:
 The 1.0.0 release meets the bars above, and also, as "Versioning" requires:
 
 - **Promotes a release in use.** The pull request names the release it promotes, the consumers that use it, and what their use found.
-- **Unchanged surface.** Its diff from that release changes no behavior and no public API, only the version, the status, and the documentation the bars above ask for.
+- **Unchanged surface.** Its diff from that release changes no behavior and no public API, only the version, the status, the release record the cut writes, and the documentation the bars above ask for.
 
 Rejected: a list that restates each rule in short. It would be easier to read, but it would drift from the specs it summarizes, and a short version of a rule is not the rule: "set `engines.node`" would lead a browser-only package to declare a floor that "Node.js support" forbids. Rejected: a bar for 1.0 alone. It would let a 0.x release skip the bar, which is the deferral "Versioning" rejects.
 
