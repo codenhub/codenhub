@@ -2,7 +2,7 @@
 title: Formularios
 description: Campos con etiqueta, pistas y errores, iconos y prefijos fijos, selects y toggles de checkbox, radio y switch.
 order: 2
-source: a2d604165d6c2eb3ab1a03c095d5b975b4db15ce
+source: 1496679be928fb9a2d2e78b72d01144de16d27b9
 ---
 
 # Formularios
@@ -145,7 +145,7 @@ Un `.select` también funciona en un grupo. El grupo quita el relleno lateral de
 
 Cualquier elemento sirve como adorno: una clase de icono, un `<svg>` en línea, un `<img>` o texto. El paquete no incluye iconos para los campos, porque una imagen incorporada no podría seguir tu color de texto, tu tema ni tu estética.
 
-El grupo lee la intención y la presentación igual que un `.ipt` solo: `.input-group.primary` colorea el borde y el texto escrito, y `.input-group.soft.edgeless` es un campo hundido en la página. Pon la intención en el grupo, no en el control de dentro: el grupo dibuja el campo, así que el texto del control toma la intención del grupo y una clase de intención en el control no tiene efecto. `aria-invalid="true"` o `disabled` en el control de dentro se aplica a todo el grupo, y lo mismo si cualquiera de los dos está en el propio grupo. El anillo de foco del grupo aparece cuando su campo tiene el foco, así que, a diferencia de un campo solo, también se muestra después de un clic con el ratón. Un botón dentro del grupo, como un botón para borrar, dibuja su propio anillo cuando tiene el foco, y el grupo no dibuja ninguno: un solo anillo marca siempre el único control que tiene el foco.
+El grupo lee la intención y la presentación igual que un `.ipt` solo: `.input-group.primary` colorea el borde y el texto escrito, y `.input-group.soft.edgeless` es un campo hundido en la página. Pon la intención en el grupo, no en el control de dentro: el grupo dibuja el campo, así que el texto del control toma la intención del grupo y una clase de intención en el control no tiene efecto. `aria-invalid="true"` en el control de dentro se aplica a todo el grupo, y lo mismo pasa al deshabilitarlo con cualquiera de `disabled`, `aria-disabled="true"`, `data-disabled` o `.disabled`: el grupo se atenúa y deja de reaccionar al hover. Cualquiera de los dos estados en el propio grupo hace lo mismo. El anillo de foco del grupo aparece cuando su campo tiene el foco, así que, a diferencia de un campo solo, también se muestra después de un clic con el ratón. Un botón dentro del grupo, como un botón para borrar, dibuja su propio anillo cuando tiene el foco, y el grupo no dibuja ninguno: un solo anillo marca siempre el único control que tiene el foco.
 
 ## Decoraciones del navegador
 

@@ -1078,7 +1078,9 @@ test("draws a skeleton's outline in forced colours", async ({ page }) => {
    disabled checked toggle once kept its Highlight plate and dimmed it to 0.58,
    which read as a faint enabled one. Checked or not, the line and the mark
    are GrayText on Canvas, on the classes and on the bare `/native` elements,
-   which take theirs from `native.css`'s own unlayered block. */
+   which take theirs from `native.css`'s own unlayered block, in every
+   spelling of disabled: `/native` read `:disabled` alone, so a bare checkbox
+   with `aria-disabled="true"` dimmed its Highlight plate. */
 test("draws a disabled toggle in GrayText, undimmed, in forced colours", async ({ page }) => {
   await page.emulateMedia({ forcedColors: "active" });
 
@@ -1116,25 +1118,33 @@ test("draws a disabled toggle in GrayText, undimmed, in forced colours", async (
       return {
         colors,
         rows: drawnToggles.flatMap(([name, type, className]) =>
-          [true, false].map((checked) => {
-            const input = document.createElement("input");
-            input.type = type;
-            input.className = className;
-            input.checked = checked;
-            input.disabled = true;
-            document.body.append(input);
-            const styles = getComputedStyle(input);
-            const mark = getComputedStyle(input, "::after");
-            /* The checkbox draws its mark through a mask on `::after`, the
+          ["disabled", "class", "aria-disabled", "data-disabled"].flatMap((spelling) =>
+            [true, false].map((checked) => {
+              const input = document.createElement("input");
+              input.type = type;
+              input.className = className;
+              input.checked = checked;
+              if (spelling === "disabled") {
+                input.disabled = true;
+              } else if (spelling === "class") {
+                input.classList.add("disabled");
+              } else {
+                input.setAttribute(spelling, "true");
+              }
+              document.body.append(input);
+              const styles = getComputedStyle(input);
+              const mark = getComputedStyle(input, "::after");
+              /* The checkbox draws its mark through a mask on `::after`, the
                radio its dot, the switch its knob. Unchecked, only the knob shows. */
-            return {
-              label: `${name} ${checked ? "checked" : "unchecked"}`,
-              opacity: styles.opacity,
-              border: styles.borderTopColor,
-              fill: styles.backgroundColor,
-              mark: name === "switch" || checked ? mark.backgroundColor : null,
-            };
-          }),
+              return {
+                label: `${name} ${checked ? "checked" : "unchecked"} by ${spelling}`,
+                opacity: styles.opacity,
+                border: styles.borderTopColor,
+                fill: styles.backgroundColor,
+                mark: name === "switch" || checked ? mark.backgroundColor : null,
+              };
+            }),
+          ),
         ),
       };
     }, classed);
