@@ -97,8 +97,8 @@ mutation($id: ID!) { resolveReviewThread(input: { threadId: $id }) { thread { is
 
 Write it for someone who saw none of the rounds and wants to answer in a few words.
 
-1. **State:** the pull request, with its link, whether it is ready to merge, and if not, what blocks it. Then what the rounds changed for someone using the code, in a few plain lines; the commits carry the rest.
-2. **Checks:** only those that failed, were rerun, or could not be fixed, with their final states, then "all other checks passed" in one line. Name any AI reviewer you stopped waiting for.
+1. **State:** the pull request, with its link, whether it is ready to merge, and if not, what blocks it. Then what the pull request changes for someone using the code, and what the rounds added to it, in a few plain lines; the commits carry the rest.
+2. **Checks:** only those that failed, were rerun, could not be fixed, were skipped, or are still pending, with their final states, then "all other checks passed" in one line when that is true. Name any AI reviewer you stopped waiting for.
 3. **One numbered list of everything that needs an answer**, never split into sections that overlap or repeat each other:
    - each decision question collected in step 4. Give the situation in a sentence or two; a concrete example, such as the code someone writes or the input they give, and what happens today; the options, each with what it does to that example and what it costs, with "change nothing" among them when it is viable; and what you recommend and why. A specification, a framework's behavior, or a file path is evidence after the example, never in place of it;
    - each thread left open, with its link and what it needs from the user;
