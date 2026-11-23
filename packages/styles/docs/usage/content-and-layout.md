@@ -12,17 +12,16 @@ This is a lookup page for the classes that arrange a page and set its content: l
 
 Every layout helper's gap is `--layout-gap`, `1rem` by default. Setting `--layout-gap` on an element changes the gap of every layout inside it. `.tight` and `.loose` change only the layout they are on; a layout nested inside keeps its own gap.
 
-| Class                        | Layout                                                                                                         | Gap                                              |
-| ---------------------------- | -------------------------------------------------------------------------------------------------------------- | ------------------------------------------------ |
-| `.stack`                     | A vertical column.                                                                                             | `--layout-gap`, `.tight` 0.5rem, `.loose` 1.5rem |
-| `.cluster`                   | A row that wraps, with items centered vertically. `.between` spreads the items to both ends.                   | Same                                             |
-| `.view`                      | A flex container. `.vertical` makes it a column; `.horizontal` a wrapping row with items centered.             | Same                                             |
-| `.auto-grid`                 | A grid of equal columns, each at least `--layout-grid-min` (16rem) wide, as many as fit.                       | Same                                             |
-| `.section`                   | Padding around a page section: `--layout-gutter` at the sides, `--layout-section-block` at the top and bottom. | None                                             |
-| `.section-content`           | Centers its content at a width of `--container-max` (80rem). `.narrow` uses 48rem, `.wide` 90rem.              | None                                             |
-| `.divider`                   | A horizontal line, as wide as its container. `.vertical` makes it a vertical line as tall as the row.          | None                                             |
-| `.visually-hidden`           | Hides content on screen and keeps it for screen readers.                                                       | None                                             |
-| `.visually-hidden-focusable` | Hides content the same way until it or an element inside it has focus, then shows it, as a skip link does.     | None                                             |
+| Class              | Layout                                                                                                         | Gap                                              |
+| ------------------ | -------------------------------------------------------------------------------------------------------------- | ------------------------------------------------ |
+| `.stack`           | A vertical column.                                                                                             | `--layout-gap`, `.tight` 0.5rem, `.loose` 1.5rem |
+| `.cluster`         | A row that wraps, with items centered vertically. `.between` spreads the items to both ends.                   | Same                                             |
+| `.view`            | A flex container. `.vertical` makes it a column; `.horizontal` a wrapping row with items centered.             | Same                                             |
+| `.auto-grid`       | A grid of equal columns, each at least `--layout-grid-min` (16rem) wide, as many as fit.                       | Same                                             |
+| `.section`         | Padding around a page section: `--layout-gutter` at the sides, `--layout-section-block` at the top and bottom. | None                                             |
+| `.section-content` | Centers its content at a width of `--container-max` (80rem). `.narrow` uses 48rem, `.wide` 90rem.              | None                                             |
+| `.divider`         | A horizontal line, as wide as its container. `.vertical` makes it a vertical line as tall as the row.          | None                                             |
+| `.visually-hidden` | Hides content on screen and keeps it for screen readers.                                                       | None                                             |
 
 `.auto-grid` fits two 16rem columns once its container is 32rem plus the gap wide, three at 48rem plus two gaps, and so on. Below one column's width, the column shrinks to fit. Set `--layout-grid-min` on the grid to change the column width.
 

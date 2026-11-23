@@ -749,7 +749,6 @@
     "field",
     "label",
     "hint",
-    "choice",
     "unadorned",
     "table-wrap",
     "quote-inline",
@@ -768,8 +767,7 @@
     "text-label-lg",
     "text-label",
     "text-body",
-    "visually-hidden",
-    "visually-hidden-focusable"
+    "visually-hidden"
   ],
   "aesthetics": [
     {

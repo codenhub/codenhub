@@ -2,7 +2,7 @@
 title: Personalização
 description: Consulta sobre tokens de apresentação e de material, ajustes das estéticas, as variáveis públicas de componente, a paleta gerada e os helpers para criar os seus próprios componentes.
 order: 9
-source: 2d12af657dedaf597c47d7c0fbe8f77bee13a6d3
+source: ddccb743a90fae4c5caafd7e8fb4501c366dc957
 ---
 
 # Personalização
@@ -235,7 +235,9 @@ Nomenclatura: `--palette-<intent>-<presentation>-<slot>`, em que `<intent>` é u
 
 - Um sufixo `-hover`, só em `bg` e `edge`, porque a cor do texto não muda no hover: `--palette-success-soft-page-bg-hover`. `.alert`, `.kbd`, `.code` e `.pre` não têm hover próprio, então os seus valores de hover são o que o componente desenha quando você adiciona `box-hover` a ele.
 
-Cada valor é um par `light-dark()`, definido em `:root`, então segue o `color-scheme` de onde é usado, como os tokens de cor do próprio pacote: a configuração do sistema quando nada escolhe um tema, e senão o seletor de tema mais próximo, então uma área clara dentro de uma escura lê os valores claros. Código que usa a paleta sem o pacote troca de tema definindo `color-scheme`, por exemplo `color-scheme: dark` na raiz ou numa área.
+Os valores claros são definidos em `:root`. Os valores escuros se aplicam sob `.theme-dark` ou `[data-theme="dark"]` no elemento ou num elemento acima dele, e sob `.dark` no `<html>`, os mesmos seletores que o tema do pacote usa. Os valores claros também se aplicam sob `.theme-light` e `[data-theme="light"]`, então o tema explícito mais próximo vence: uma área clara dentro de uma escura lê os valores claros.
+
+Sem nenhum seletor de tema, o arquivo segue a configuração do sistema, como o pacote: com um `prefers-color-scheme` escuro, `:root` recebe os valores escuros, a menos que tenha `.theme-light` ou `[data-theme="light"]`. Cada valor é uma cor simples, então `getComputedStyle(element).getPropertyValue("--palette-text")` retorna a cor que esse elemento usa.
 
 Ele também não segue `prefers-contrast: more` nem `data-contrast="more"`. Com essa preferência, o pacote desenha a borda de cada intenção no seu tom forte, então um valor `-edge` fica mais fraco que a borda que o componente desenha. Código que precisa respeitar a preferência escolhe uma cor mais forte por conta própria.
 
