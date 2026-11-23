@@ -1576,6 +1576,43 @@ test.describe("forms", () => {
     }
   });
 
+  /* A list box's padding follows the size step, as a drop-down's start does:
+     `.select.sm[multiple]` was 0.75rem on both sides, wider than its 0.625rem
+     start. */
+  test("pads a sized list box as its size step", async ({ page }) => {
+    await page.goto(FORMS_URL);
+
+    const pads = await page.evaluate(() => {
+      const host = document.createElement("div");
+
+      host.innerHTML = ["", "sm", "lg"]
+        .flatMap((size) => [
+          `<select class="select ${size}"><option>One</option></select>`,
+          `<select class="select ${size}" multiple><option>One</option></select>`,
+          `<select class="select ${size}" size="3"><option>One</option></select>`,
+        ])
+        .join("");
+      document.body.append(host);
+      const result = [...host.querySelectorAll("select")].map((select) => {
+        const style = getComputedStyle(select);
+
+        return [style.paddingLeft, style.paddingRight];
+      });
+
+      host.remove();
+
+      return result;
+    });
+
+    for (const [index, size] of ["", "sm", "lg"].entries()) {
+      const [single, multiple, sized] = pads.slice(index * 3, index * 3 + 3);
+
+      for (const listBox of [multiple!, sized!]) {
+        expect(listBox, `.select${size ? `.${size}` : ""} list box`).toEqual([single![0], single![0]]);
+      }
+    }
+  });
+
   /* The chevron sits at the inline end, with the room kept for it, so under
      `dir="rtl"` both move to the left and the value starts at the right. */
   test("mirrors a select's chevron and its room under right-to-left", async ({ page }) => {
