@@ -2,7 +2,7 @@
 title: URLs localizadas
 description: Pon el locale en la ruta, traduce la propia ruta, lee ambas de vuelta, enlaza a otros idiomas, genera cada página localizada y lleva a cada visitante a su propio idioma en un sitio estático.
 order: 4
-source: ad1604729ae57a82be2c504473c22b1663b73e75
+source: 385318bb8802c4bd62795ca83fb54b787545be12
 ---
 
 # URLs localizadas
@@ -148,7 +148,11 @@ routing.localize("/about", "pt"); // "/pt/about"
 routing.localize("/about", "en"); // "/about"
 ```
 
-Una ruta canónica nunca empieza con un locale, así que `localize()` lanza un `RangeError` para una que sí, como `/pt/about`. Eso es una URL; pasa `parse("/pt/about").pathname` en su lugar. También lanza para una página tuya cuya ruta empieza con un código de locale: con el birmano, `my`, configurado, una página en inglés en `/my/orders` no tiene URL, porque `/my/orders` es el `/orders` birmano. Dale otra ruta a esa página.
+Una ruta que ya empieza con un locale se lee como la URL de ese locale, así que el prefijo se reemplaza:
+
+```ts
+routing.localize("/pt/about", "en"); // "/about"
+```
 
 En un sitio localizado, cambiar de idioma es una navegación, no solo un `setLocale()`: `setLocale()` cambia el texto, pero nunca la URL. Así que el selector de idioma de la tienda lee la página actual con `parse()`, toma su ruta en el nuevo idioma de `alternates`, conserva el query string y el fragmento, y deja que tu router vaya ahí:
 

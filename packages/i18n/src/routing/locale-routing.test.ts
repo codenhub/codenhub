@@ -444,21 +444,16 @@ describe("createLocaleRouting", () => {
     expect(routing.localize("/about", "pt-BR")).toBe("/pt-BR/about");
   });
 
-  it("should refuse a canonical path that starts with a locale, and keep other leading segments", () => {
+  it("should replace recognized prefixes while preserving unsupported leading segments", () => {
     const routing = createLocaleRouting({
       defaultLocale: "en-US",
       locales: LOCALES,
       localePrefix: "except-default",
     });
 
-    expect(() => routing.localize("/PT-br/about/", "pt-BR")).toThrow(
-      new RangeError(
-        '[I18n] "/PT-br/about/" starts with the locale "pt-BR", so no URL leads to it. If it is a URL, pass ' +
-          "parse(url).pathname instead; if it is a page, give it a path that doesn't start with a locale",
-      ),
-    );
-    expect(() => routing.localize("/pt-BR/about", "en-US")).toThrow(RangeError);
-    expect(() => routing.localizeAll("/en-US/about/")).toThrow(RangeError);
+    expect(routing.localize("/PT-br/about/", "pt-BR")).toBe("/pt-BR/about/");
+    expect(routing.localize("/pt-BR/about", "en-US")).toBe("/about");
+    expect(routing.localizeAll("/en-US/about/")).toEqual(routing.localizeAll("/about/"));
     expect(routing.localize("/fr/about", "pt-BR")).toBe("/pt-BR/fr/about");
     expect(routing.localize("/pt-BR-other/about", "pt-BR")).toBe("/pt-BR/pt-BR-other/about");
   });

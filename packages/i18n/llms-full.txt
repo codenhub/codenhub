@@ -1627,7 +1627,11 @@ routing.localize("/about", "pt"); // "/pt/about"
 routing.localize("/about", "en"); // "/about"
 ```
 
-A canonical path never starts with a locale, so `localize()` throws a `RangeError` for one, such as `/pt/about`. That is a URL; pass `parse("/pt/about").pathname` instead. It throws for a page of your own whose path starts with a locale code, too: with Burmese, `my`, configured, an English page at `/my/orders` has no URL, since `/my/orders` is the Burmese `/orders`. Give such a page another path.
+A path that already starts with a locale is read as that locale's URL, so the prefix is replaced:
+
+```ts
+routing.localize("/pt/about", "en"); // "/about"
+```
 
 On a localized site, switching language is a navigation, not just `setLocale()`: `setLocale()` changes the text but never the URL. So the shop's language picker reads the current page with `parse()`, takes its path in the new language from `alternates`, keeps the query string and fragment, and lets your router go there:
 
