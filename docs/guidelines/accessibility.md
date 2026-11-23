@@ -1,6 +1,6 @@
 ---
 status: APPROVED
-last_updated: 2026-11-21
+last_updated: 2026-11-22
 scope: Which contrast pairs a package must meet, which it is free to choose, and what an accessibility finding has to show, for anyone writing, reviewing, or auditing a change that draws color.
 ---
 
@@ -26,14 +26,7 @@ Each pair is measured on the colors as painted: a translucent color is laid over
 
 ## Recorded exceptions
 
-A package MAY draw a boundary below 3:1 by choice when its documentation records the case, the reason, and how a reader who needs more gets it. Each exception is a decision, recorded and reversed the way [Documentation](documentation.md) says decisions are. The ones that stand:
-
-| Package            | Exception                                                                                                                              | Reason                                                                                                                                               | For a reader who needs more                                      |
-| ------------------ | -------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------- |
-| `@codenhub/styles` | A resting text control's border, lighter than its intent's full border.                                                                | Hover and focus need a stronger tone to change to. A field also shows itself by its label and its placement.                                         | Increased contrast draws it at 3:1.                              |
-| `@codenhub/styles` | A progress bar's default track, a quiet background at about 1.1 to 1.3:1.                                                              | The filled part carries the value; the track is not a control.                                                                                       | Increased contrast outlines it at 3:1, as does `.ghost.edged`.   |
-| `@codenhub/styles` | A progress bar's filled part, in its intent's own tone: about 2.7:1 against the track for warning in light and 2.9:1 for info in dark. | The value is drawn in the color the intent has everywhere else. Its strong tone by default was rejected: it would darken every warning and info bar. | Increased contrast draws it in the intent's strong tone, at 3:1. |
-| `@codenhub/styles` | A control a consumer gives `.edgeless`.                                                                                                | The consumer asked for no border.                                                                                                                    | None; the consumer owns the result.                              |
+A package MAY draw a boundary below 3:1 by choice when its documentation records the case, the reason, and how a reader who needs more gets it. Each exception is a decision, recorded and reversed the way [Documentation](documentation.md) says decisions are, in the package that makes it; this guideline does not copy the list. `@codenhub/styles` records its exceptions in [Control boundaries](../../packages/styles/docs/accessibility.md#control-boundaries) and [Progress outlines](../../packages/styles/docs/accessibility.md#progress-outlines).
 
 ## Increased contrast
 
