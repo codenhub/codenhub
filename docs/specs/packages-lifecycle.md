@@ -283,6 +283,7 @@ Checked by tools:
 - No `hub check` warning remains that this release could fix. A warning that has to stay is waived in `docs/specs/packages-exceptions.md`, with its reason. The warnings include a missing `description`, `license`, `repository`, `homepage`, or `keywords`, a `homepage` other than the one "Package metadata" names, and a README `License` section that does not link the package's `LICENSE` file.
 
 - **Record.** The version was cut with `hub release --cut`, so the changelog entry, when the package keeps a changelog, and `size.json` describe this release.
+- **Nothing stale.** The package's internal docs and roadmap no longer describe this release as upcoming, nor behavior the package no longer has, as "Source of truth" in `docs/guidelines/documentation.md` requires.
 
 That is the whole bar for a patch release, which "Versioning" lets ship a fix without waiting for anything else.
 
