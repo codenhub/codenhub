@@ -346,6 +346,18 @@ async function main() {
         '  [data-theme="dark"] {',
         indent(toDeclarations(dark)),
         "  }",
+        "",
+        /* Print is light, as `theme.css`'s print rule makes the package's own
+           tokens: every selector that reads dark reads light again on paper.
+           Last, so it wins over the dark blocks at equal specificity. */
+        "  @media print {",
+        '    :root:not(.theme-light, [data-theme="light"]),',
+        "    :root.dark,",
+        "    .theme-dark,",
+        '    [data-theme="dark"] {',
+        indent(indent(toDeclarations(light))),
+        "    }",
+        "  }",
         "}",
         "",
       ].join("\n");

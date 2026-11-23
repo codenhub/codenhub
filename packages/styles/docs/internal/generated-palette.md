@@ -53,6 +53,8 @@ Light values are the unscoped default, declared on `:root` and on the explicit l
 
 Between them, the dark values are declared a second time under `@media (prefers-color-scheme: dark)` on `:root:not(.theme-light, [data-theme="light"])`. With no theme selector, `theme.css`'s `color-scheme: light dark` renders the package dark under a dark system setting, so a palette that stayed light there put a consumer's light `--palette-neutral-solid-bg` chip beside a dark `.badge.solid`. A root the page forces light keeps the light values.
 
+Last, under `@media print`, every selector that reads dark reads the light values again, the system setting's included. `theme.css`'s print rule makes the package's own tokens light on paper, so a palette that stayed dark there printed near-white `--palette-text` on a light page.
+
 Rejected, on 2026-11-22 before 0.11.0 shipped: each value as one `light-dark(light, dark)` pair on `:root`. It fixed the same case, but changed the file's format for every reader: `getPropertyValue` returned the unresolved pair rather than a color, which broke a script that reads the values, and a page that loads only `/palette` and sets `data-theme="dark"` resolved light, since nothing there sets `color-scheme`. The blocks keep the 0.10.0 format and fix the default-setup case with one more block.
 
 ## Verifying the output

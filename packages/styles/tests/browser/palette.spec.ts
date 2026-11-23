@@ -315,4 +315,45 @@ test.describe("generated palette", () => {
     ).toBeLessThanOrEqual(2);
     expect(values.forced, 'data-theme="light" under a dark system').toBe(light);
   });
+
+  /* Print is light, as `theme.css`'s print rule makes the package's own
+     tokens, so a printed dark region does not put near-white palette text on
+     paper. Every selector that reads dark on screen, the system setting's
+     included, reads the light values again. */
+  test("prints the light values under every dark selector", async ({ page }) => {
+    const root = () => getComputedStyle(document.documentElement).getPropertyValue("--palette-text").trim();
+    const light = await page.evaluate(root);
+
+    await page.emulateMedia({ colorScheme: "dark", media: "print" });
+
+    const values = await page.evaluate(() => {
+      const element = document.documentElement;
+      const read = (target: Element) => getComputedStyle(target).getPropertyValue("--palette-text").trim();
+
+      element.classList.remove("dark", "theme-dark", "theme-light");
+      element.removeAttribute("data-theme");
+      document.body.insertAdjacentHTML(
+        "beforeend",
+        '<div class="theme-dark" id="class"></div><div data-theme="dark" id="attribute"></div>',
+      );
+      const system = read(element);
+
+      element.classList.add("dark");
+      const rootDark = read(element);
+
+      element.classList.remove("dark");
+
+      return {
+        attribute: read(document.getElementById("attribute")!),
+        class: read(document.getElementById("class")!),
+        rootDark,
+        system,
+      };
+    });
+
+    expect(values.system, "a dark system setting").toBe(light);
+    expect(values.rootDark, ":root.dark").toBe(light);
+    expect(values.class, ".theme-dark").toBe(light);
+    expect(values.attribute, '[data-theme="dark"]').toBe(light);
+  });
 });
