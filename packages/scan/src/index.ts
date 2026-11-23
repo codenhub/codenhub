@@ -255,9 +255,17 @@ function assertListable(entry: string, cwd: string, matches: readonly string[], 
 
   for (let index = first; index < segments.length - 1 || segments[index] === "**"; index += 1) {
     const prefix = segments.slice(0, index + 1).join("/");
+    // Folders only: a `**` matches every file below it too, and opening each of them made the check about three times slower.
+    const matched = fs.globSync(prefix, {
+      cwd,
+      withFileTypes: true,
+      exclude: skipNodeModules ? isNodeModules : undefined,
+    });
 
-    for (const match of fs.globSync(prefix, { cwd, exclude: skipNodeModules ? isNodeModules : undefined })) {
-      folders.add(path.resolve(cwd, match));
+    for (const match of matched) {
+      if (match.isDirectory()) {
+        folders.add(path.resolve(cwd, match.parentPath, match.name));
+      }
     }
   }
 
@@ -329,9 +337,9 @@ function reasonUnmatched(entry: string, cwd: string, skipNodeModules: boolean): 
     : undefined;
 }
 
-// Called for each folder the walk would enter too, so it never descends into one.
-function isNodeModules(match: string): boolean {
-  return path.basename(match) === "node_modules";
+// Called for each folder the walk would enter too, so it never descends into one. With `withFileTypes`, it is given a `Dirent`.
+function isNodeModules(match: string | fs.Dirent): boolean {
+  return (typeof match === "string" ? path.basename(match) : match.name) === "node_modules";
 }
 
 /* A link is followed, so a linked file is read and a linked folder is not, and
