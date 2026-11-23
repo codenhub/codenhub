@@ -35,7 +35,11 @@ export const applyTheme = <TName extends string, TSchema extends Record<string, 
     root.classList.add(nextClass);
   }
 
-  root.classList.remove(SCHEME_CLASSES[theme.colorScheme === "dark" ? "light" : "dark"]);
+  // The active theme's own class stays, even when it names the opposite scheme.
+  const oppositeClass = SCHEME_CLASSES[theme.colorScheme === "dark" ? "light" : "dark"];
+  if (oppositeClass !== nextClass) {
+    root.classList.remove(oppositeClass);
+  }
   root.classList.add(SCHEME_CLASSES[theme.colorScheme]);
 
   if (options.darkClass) {

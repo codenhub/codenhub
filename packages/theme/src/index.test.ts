@@ -488,6 +488,22 @@ describe("Theme behavior", () => {
     expect(root.className).toBe("app-shell theme-light");
   });
 
+  it("should keep the active theme's class when it names the opposite scheme", () => {
+    const themes = { light: { colorScheme: "dark" }, dark: { colorScheme: "light" } } as const;
+
+    createTheme({ themes, systemTheme: { light: "dark", dark: "light" } })
+      .init()
+      .set("light");
+
+    expect(root.className).toBe("theme-light theme-dark");
+
+    root.className = "";
+    window.localStorage.setItem("app-theme-preference", "light");
+    new Function(createTheme({ themes, systemTheme: { light: "dark", dark: "light" } }).getPrePaintScript())();
+
+    expect(root.className).toBe("theme-light theme-dark");
+  });
+
   it("should keep the scheme class when a configured theme class shares its name", () => {
     const theme = createTheme({
       themes: { light: { colorScheme: "light" }, dark: { colorScheme: "dark" }, paper: { colorScheme: "light" } },
