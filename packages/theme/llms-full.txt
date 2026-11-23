@@ -898,15 +898,11 @@ React found the `data-theme`, class, or `style` the pre-paint script added. That
 
 Still stuck? The [API reference](docs/reference/index.md) lists every rule each method enforces, and every error it throws.
 
-<!-- Source: docs/changelog/0.3.0.md -->
+<!-- Source: docs/changelog/0.4.0.md -->
 
-# 0.3.0
-
-## Added
-
-- `set(name, { followSystem: true })` saves a choice that applies `name` or its `pairedTheme`, whichever has the operating system's color scheme, and switches between them when the operating system does. Apps with theme families no longer need a second store and a rebuilt manager to follow the system. The pre-paint script and other tabs apply the same variant. ([#583](https://github.com/codenhub/codenhub/issues/583))
-- `theme.followsSystem` reports whether the saved choice follows the system, and `ThemeSetOptions` types the new `set()` options.
+# 0.4.0
 
 ## Changed
 
-- A choice that follows the system is saved in `localStorage` as `{"name":"…","followSystem":true}` instead of a bare theme name. Fixed choices are still saved as bare names. A version before 0.3.0 ignores the new form and falls back to the system theme, so rolling an app back after users chose a following theme loses those users' choice.
+- `document.documentElement` now always carries `theme-light` or `theme-dark`, following the active theme's `colorScheme`, whatever the theme is named and whatever `className` is set to. A light theme named `paper` gets `theme-paper theme-light`, so stylesheets keyed on `.theme-light` and `.theme-dark`, such as the `dark:` variant of `@codenhub/styles`, match it without a workaround. The pre-paint script applies the same class. ([#627](https://github.com/codenhub/codenhub/issues/627))
+- The manager now owns `theme-light` and `theme-dark` on the root element: it adds and removes them on every change, and `destroy({ revertDom: true })` removes them even if the page added them itself. A page that sets either class by hand, or a stylesheet that expects only the theme's own class to be present, should drop that code when upgrading.
