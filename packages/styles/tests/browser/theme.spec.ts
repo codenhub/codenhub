@@ -534,6 +534,118 @@ test("a page's token override reaches a shadow root that loads the sheet", async
   expect(read.inside.radius, "the radius crosses too").toBe(read.outside.radius);
 });
 
+/* Tailwind's Preflight sets its own type on `html, :host`, and the reset puts
+   the brand font back on `html` alone, so a shadow root took Tailwind's sans
+   stack while the page beside it took `--font-default`. Inside a region that
+   sets its own type, an aesthetic's font or a utility's leading, every other
+   property of that rule stopped at the host too. Each one is read off the
+   rule itself, so a property Preflight adds is checked without a list here
+   growing. A value for each, distinct from Preflight's, is what the region
+   sets; one without a value fails rather than going unchecked. */
+const PREFLIGHT_HOST_VALUES: Record<string, string> = {
+  "-webkit-tap-highlight-color": "rgb(255, 0, 0)",
+  "-webkit-text-size-adjust": "50%",
+  "text-size-adjust": "50%",
+  "font-family": "monospace",
+  "font-feature-settings": '"smcp"',
+  "font-variation-settings": '"wght" 500',
+  "line-height": "37px",
+  "tab-size": "7",
+};
+
+const SHADOW_PATHS = THEME_PATHS.filter(({ name }) =>
+  ["dist/index.css", "dist/purge/index.css", "/tw", "chs build"].includes(name),
+);
+
+test("Preflight's html, :host rule sets only properties this suite gives a value", async ({ page }) => {
+  await page.setContent("<!doctype html><html><head></head><body></body></html>");
+  await page.addStyleTag({ content: readFileSync(path.join(packageRoot, "dist", "index.css"), "utf8") });
+
+  const properties = await page.evaluate(() => {
+    const found: string[] = [];
+    const walk = (rules: CSSRuleList) => {
+      for (const rule of rules) {
+        if (rule instanceof CSSStyleRule && rule.selectorText.replaceAll(" ", "") === "html,:host") {
+          found.push(...Array.from(rule.style));
+        }
+        if ("cssRules" in rule && !(rule instanceof CSSStyleRule)) {
+          walk((rule as CSSGroupingRule).cssRules);
+        }
+      }
+    };
+
+    for (const sheet of document.styleSheets) {
+      walk(sheet.cssRules);
+    }
+
+    return found;
+  });
+
+  expect(properties.length, "the rule is found").toBeGreaterThan(0);
+  expect(properties.filter((name) => !(name in PREFLIGHT_HOST_VALUES))).toEqual([]);
+});
+
+for (const themePath of SHADOW_PATHS) {
+  test(`a shadow root takes the page's type, on the page and in a region, ${themePath.name}`, async ({ page }) => {
+    const style = themePath.style();
+    const region = Object.entries(PREFLIGHT_HOST_VALUES)
+      .map(([name, value]) => `${name}: ${value}`)
+      .join("; ");
+
+    await page.setContent(
+      `<!doctype html><html><head></head><body>` +
+        '<span id="page-light">Text</span><div id="page-host"></div>' +
+        `<div style='${region}'><span id="region-light">Text</span><div id="region-host"></div></div>` +
+        "</body></html>",
+    );
+    await page.addStyleTag(style);
+
+    const read = await page.evaluate(
+      async ({ properties, style }) => {
+        const results: Record<string, { light: string; shadow: string }> = {};
+
+        for (const where of ["page", "region"]) {
+          const root = document.getElementById(`${where}-host`)!.attachShadow({ mode: "open" });
+          const sheet = document.createElement(style.url ? "link" : "style");
+
+          if (style.url) {
+            Object.assign(sheet, { href: style.url, rel: "stylesheet" });
+          } else {
+            sheet.textContent = style.content!;
+          }
+          const loaded = style.url ? new Promise((resolve) => sheet.addEventListener("load", resolve)) : null;
+
+          root.append(sheet);
+          // oxlint-disable-next-line no-await-in-loop -- each shadow root is read once its sheet applies.
+          await loaded;
+          const span = document.createElement("span");
+
+          span.textContent = "Text";
+          root.append(span);
+          const light = getComputedStyle(document.getElementById(`${where}-light`)!);
+          const shadow = getComputedStyle(span);
+
+          for (const name of properties) {
+            results[`${where} ${name}`] = {
+              light: light.getPropertyValue(name),
+              shadow: shadow.getPropertyValue(name),
+            };
+          }
+        }
+
+        return results;
+      },
+      { properties: Object.keys(PREFLIGHT_HOST_VALUES), style: style as { content?: string; url?: string } },
+    );
+
+    const differ = Object.entries(read)
+      .filter(([, { light, shadow }]) => light !== shadow)
+      .map(([name, { light, shadow }]) => `${name}: page ${light}, shadow ${shadow}`);
+
+    expect(differ).toEqual([]);
+  });
+}
+
 /* Inside a shadow root, the sheet's `:root` matches nothing, so the tokens
    reach it by inheritance from the page, which loads the sheet too, as
    docs/setup.md asks: a browser ignores `@property` in a shadow root, and
