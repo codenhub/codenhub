@@ -2,7 +2,7 @@
 title: Configuración inicial
 description: Instala el paquete, elige entre CSS compilado o código fuente de Tailwind y renderiza la estructura base de la página de ajustes.
 order: 1
-source: 4225043fb42dcf38a424348f0845139166e16ea6
+source: 59a0ab286cd1aa9b8e86686249e87a0a7a04cd9f
 ---
 
 # Configuración inicial
@@ -184,6 +184,7 @@ Lo que eso significa cuando escribes tu propio CSS:
 - **Tu utilidad supera los valores por defecto internos de un componente.** `p-0 text-center` en una celda de tabla, `text-sm` en una `.label` o `px-8` en un `.btn.sm` se aplican, porque el componente escribe esos valores por defecto de modo que gane una clase en el elemento.
 - **El estado supera a tu intención.** Un campo con `aria-invalid="true"` sigue siendo destructivo aunque lleve una utilidad de intención.
 - **Las clases `-solo` no tienen capa a propósito**, para que superen los estilos con capa o de especificidad cero de un componente de terceros. Una regla sin capa más específica, o una igual de específica que se cargue después, sigue superándolas; consulta [Clases solo](./usage/solo.md).
+- **Una capa propia que nombras primero queda por debajo de todas las capas del paquete.** El navegador ordena las capas por la primera vez que ve cada nombre, así que `@layer app;` escrito antes del import, o en una hoja de estilos que carga antes que él, crea `app` por delante de `theme`, y toda regla que trae el paquete supera a toda regla de esa capa. Nombra primero las capas del paquete, como en `@layer theme, base, components, utilities, app;`, y `app` las supera a todas. Una capa nombrada por primera vez después del import ya queda por encima de ellas, y el CSS sin capa supera a todas las capas en cualquier caso.
 
 ## Siguiente paso
 

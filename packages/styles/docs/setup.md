@@ -183,6 +183,7 @@ What that means when you write your own CSS:
 - **Your utility beats a component's inner defaults.** `p-0 text-center` on a table cell, `text-sm` on a `.label`, or `px-8` on a `.btn.sm` applies, because the component writes those defaults so that a class on the element wins.
 - **State beats your intent.** A field with `aria-invalid="true"` stays destructive even with an intent utility on it.
 - **The `-solo` classes are unlayered on purpose**, so they beat a third-party component's layered or zero-specificity styles. A more specific unlayered rule, or an equally specific one that loads later, still beats them; see [Solo classes](./usage/solo.md).
+- **A layer of your own that you name first ranks below every package layer.** The browser orders layers by the first time it sees each name, so `@layer app;` written before the import, or in a stylesheet that loads before it, creates `app` ahead of `theme`, and every rule the package ships beats every rule in it. Name the package's layers ahead of yours instead, as in `@layer theme, base, components, utilities, app;`, and `app` beats them all. A layer first named after the import already ranks above them, and unlayered CSS beats every layer either way.
 
 ## Next
 
