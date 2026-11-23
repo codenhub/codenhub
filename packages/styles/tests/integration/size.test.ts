@@ -45,16 +45,16 @@ const COMPILED_CEILINGS: Record<string, number> = {
      beside its ink for the selection, one declaration in every component
      that composes `box`: 238,000, 191,400, 355,400, and 13,200 until then.
      The first three set again once the release's branches met: 247,100,
-     195,900, and 367,000 until the field line rested whole, `:user-invalid`
-     painted as `aria-invalid`, `.choice` and the read-only rest arrived, and
-     glass lifted a surface holding focus or an open popover. */
+     195,900, and 367,000 until the read-only rest arrived and glass lifted
+     a surface holding focus or an open popover. */
   "dist/index.css": 252_700,
   "dist/components.css": 201_400,
   "dist/native.css": 375_500,
   "dist/theme.css": 13_650,
-  /* 26,800 until 0.11.0 wrote each value once, as a `light-dark()` pair,
-     where a light and a dark block each wrote all of them. */
-  "dist/palette.css": 19_650,
+  /* 26,800 until 0.11.0 wrote the dark values a second time, for the
+     system's dark setting with no theme selector; 40,100 until it wrote the
+     light values a second time, for print. */
+  "dist/palette.css": 52_500,
   /* 50,450 until glass's lift and pixel's notch grew, as their own files did;
      51,500 until liquid's tokens followed the nearest region. */
   "dist/aesthetics/index.css": 52_900,

@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { describe, expect, expectTypeOf, it } from "vitest";
 
-import { createI18n, type I18n, type RichText } from "../index";
+import { createI18n, type I18n } from "../index";
 import type { TranslateParams } from "./message-params";
 
 const en = {
@@ -40,16 +40,16 @@ describe("typed placeholder values", () => {
 
   it("should require each argument with the type its format needs", () => {
     expectTypeOf<Params<"total">["length"]>().toEqualTypeOf<1>();
-    expectTypeOf<Value<"spaced", "name">>().toEqualTypeOf<string | number | bigint | Date>();
+    expectTypeOf<Value<"spaced", "name">>().toEqualTypeOf<string | number | Date>();
     expectTypeOf<Params<"unicodeSpaced">["length"]>().toEqualTypeOf<1>();
-    expectTypeOf<Value<"unicodeSpaced", "name">>().toEqualTypeOf<string | number | bigint | Date>();
-    expectTypeOf<Value<"total", "amount">>().toEqualTypeOf<number | bigint>();
+    expectTypeOf<Value<"unicodeSpaced", "name">>().toEqualTypeOf<string | number | Date>();
+    expectTypeOf<Value<"total", "amount">>().toEqualTypeOf<number>();
     expectTypeOf<Value<"shipped", "when">>().toEqualTypeOf<Date | number>();
-    expectTypeOf<Value<"inbox", "count">>().toEqualTypeOf<number | bigint>();
-    expectTypeOf<Value<"inbox", "sender">>().toEqualTypeOf<string | number | bigint | Date>();
-    expectTypeOf<Value<"place", "n">>().toEqualTypeOf<number | bigint>();
-    expectTypeOf<Value<"replied", "gender">>().toEqualTypeOf<string | number | bigint | boolean>();
-    expectTypeOf<Value<"apostrophe", "name">>().toEqualTypeOf<string | number | bigint | Date>();
+    expectTypeOf<Value<"inbox", "count">>().toEqualTypeOf<number>();
+    expectTypeOf<Value<"inbox", "sender">>().toEqualTypeOf<string | number | Date>();
+    expectTypeOf<Value<"place", "n">>().toEqualTypeOf<number>();
+    expectTypeOf<Value<"replied", "gender">>().toEqualTypeOf<string | number | boolean>();
+    expectTypeOf<Value<"apostrophe", "name">>().toEqualTypeOf<string | number | Date>();
     expectTypeOf<{ count: 1; sender: "Ana" }>().toExtend<Values<"inbox">>();
     expectTypeOf<{ count: 1 }>().not.toExtend<Values<"inbox">>();
   });
@@ -63,7 +63,7 @@ describe("typed placeholder values", () => {
     expectTypeOf<{ count: 1; place: "cart" }>().toExtend<Values<"cart.items">>();
     expectTypeOf<{ place: "cart" }>().not.toExtend<Values<"cart.items">>();
     expectTypeOf<{ count: 1 }>().not.toExtend<Values<"cart.items">>();
-    expectTypeOf<Value<"cart.items", "count">>().toEqualTypeOf<number | bigint>();
+    expectTypeOf<Value<"cart.items", "count">>().toEqualTypeOf<number>();
   });
 
   it("should still check a key when one of its forms or dictionaries has no arguments", () => {
@@ -84,7 +84,6 @@ describe("typed placeholder values", () => {
     type JsonValues = NonNullable<TranslateParams<Json, "cart.items">[0]>;
     expectTypeOf<TranslateParams<Json, "cart.items">["length"]>().toEqualTypeOf<1>();
     expectTypeOf<{ count: 3 }>().toExtend<JsonValues>();
-    expectTypeOf<{ count: 3n }>().toExtend<JsonValues>();
     expectTypeOf<{ count: 3; anything: "else" }>().toExtend<JsonValues>();
     expectTypeOf<{}>().not.toExtend<JsonValues>();
     expectTypeOf<{ count: "3" }>().not.toExtend<JsonValues>();
@@ -130,23 +129,6 @@ describe("typed placeholder values", () => {
     expect(typed.translate<"greeting">("greeting", { name: "Ana", title: "Dr." })).toBe("Hello, Ana!");
     // @ts-expect-error -- `name` is required.
     typed.t<"greeting">("greeting", { title: "Dr." });
-  });
-
-  it("should check rich() values as t() checks them", async () => {
-    const typed = createI18n({
-      locales: ["en"] as const,
-      defaultLocale: "en",
-      loadLocale: () => ({ reply: "<b>{name}</b> replied", total: "<b>{amount, number}</b>" }) as const,
-      isSilent: true,
-    });
-    await typed.init();
-
-    expect(typed.rich("reply", { name: "Ana" })).toEqual([{ tag: "b", children: ["Ana"] }, " replied"]);
-    expectTypeOf(typed.rich("total", { amount: 3n })).toEqualTypeOf<RichText>();
-    // @ts-expect-error -- `name` is required.
-    typed.rich("reply");
-    // @ts-expect-error -- {amount, number} needs a number.
-    typed.rich("total", { amount: "3" });
   });
 
   it("should take values typed by an interface, and still check each value", async () => {
@@ -214,7 +196,6 @@ describe("typed placeholder values", () => {
 
     // An interface with fields the message doesn't use, on every kind of message.
     expect(typed.t("greeting", user)).toBe("Hello, Ana!");
-    expect(typed.rich("greeting", user)).toEqual(["Hello, Ana!"]);
     expect(typed.t("plain", user)).toBe("Hi");
     expect(typed.t<"greeting">("greeting", user)).toBe("Hello, Ana!");
     expect(untyped.t("greeting", user)).toBe("Hello, Ana!");
@@ -266,7 +247,7 @@ describe("typed placeholder values", () => {
   it("should take a boolean for a select only", () => {
     type ParamsOf<M extends string> = NonNullable<TranslateParams<{ readonly m: M }, "m">[0]>;
     type Select = ParamsOf<"{isAdmin, select, true {Admin} other {Member}}">;
-    expectTypeOf<Select["isAdmin"]>().toEqualTypeOf<string | number | bigint | boolean>();
+    expectTypeOf<Select["isAdmin"]>().toEqualTypeOf<string | number | boolean>();
     expectTypeOf<{ isAdmin: true }>().toExtend<Select>();
     expectTypeOf<{ isAdmin: boolean }>().toExtend<Select>();
     expectTypeOf<{ isAdmin: true }>().not.toExtend<ParamsOf<"Admin: {isAdmin}">>();
@@ -275,9 +256,9 @@ describe("typed placeholder values", () => {
     expectTypeOf<{ isAdmin: true }>().not.toExtend<ParamsOf<"{isAdmin, date}">>();
     // Used in a select and as a plain argument too, it takes what both read.
     type Both = ParamsOf<"{isAdmin, select, true {Admin} other {Member}} {isAdmin}">;
-    expectTypeOf<Both["isAdmin"]>().toEqualTypeOf<string | number | bigint>();
+    expectTypeOf<Both["isAdmin"]>().toEqualTypeOf<string | number>();
     type WithPlural = ParamsOf<"{n, select, true {x} other {y}} {n, plural, other {#}}">;
-    expectTypeOf<WithPlural["n"]>().toEqualTypeOf<number | bigint>();
+    expectTypeOf<WithPlural["n"]>().toEqualTypeOf<number>();
     // A select reads no `Date`, so with a date argument only a timestamp is read by both.
     type WithDate = ParamsOf<"{d, select, other {x}} {d, date}">;
     expectTypeOf<WithDate["d"]>().toEqualTypeOf<number>();
@@ -298,7 +279,7 @@ describe("typed placeholder values", () => {
     expectTypeOf<{ name: "Ana" }>().toExtend<ParamsOf<"l'<b>{name}</b>">>();
     expectTypeOf<{}>().not.toExtend<ParamsOf<"l'<b>{name}</b>">>();
     expectTypeOf<{}>().not.toExtend<ParamsOf<"'<b>{name}</b>'">>();
-    // A tag in a run quoted by `'{` is text, and so is an argument there.
+    // A run quoted by `'{` is text, an argument in it included.
     expectTypeOf<{ x: 1 }>().toExtend<ParamsOf<"'{<b>{name}</b>}' {x}">>();
     expectTypeOf<{}>().not.toExtend<ParamsOf<"'{<b>{name}</b>}' {x}">>();
   });
@@ -339,7 +320,7 @@ describe("typed placeholder values", () => {
   it("should accept any values for an argument name the runtime can't read", () => {
     expectTypeOf<TranslateParams<{ readonly m: "{first-name}" }, "m">>().toEqualTypeOf<Loose>();
     expectTypeOf<TranslateParams<{ readonly m: "{nome_ç}" }, "m">>().toEqualTypeOf<Loose>();
-    expectTypeOf<Value<"spaced", "name">>().toEqualTypeOf<string | number | bigint | Date>();
+    expectTypeOf<Value<"spaced", "name">>().toEqualTypeOf<string | number | Date>();
     expectTypeOf<TranslateParams<{ readonly m: "{Name_2}" }, "m">["length"]>().toEqualTypeOf<1>();
   });
 

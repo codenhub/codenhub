@@ -148,38 +148,3 @@ test("aligns a table's cells and caption to the inline start in either direction
     }
   }
 });
-
-/* A skip link is hidden until a keyboard reaches it, then shown where it
-   stands; a group is shown while focus is anywhere inside it. */
-test("shows a visually hidden focusable element while it or its content has focus", async ({ page }) => {
-  await page.setContent(
-    `<!doctype html><html><head><link rel="stylesheet" href="${ORIGIN}/shared/entry-vanilla.css" /></head><body><a class="visually-hidden-focusable" href="#main" data-testid="skip">Skip to content</a><div class="visually-hidden-focusable" data-testid="group"><a href="#a">First</a> <a href="#b">Second</a></div><main id="main">Main</main></body></html>`,
-  );
-  await page.waitForLoadState("load");
-
-  const read = (id: string) =>
-    page.getByTestId(id).evaluate((element) => {
-      const computed = getComputedStyle(element);
-
-      return { position: computed.position, width: element.getBoundingClientRect().width, overflow: computed.overflow };
-    });
-
-  const resting = { position: "absolute", width: 1, overflow: "hidden" };
-
-  expect(await read("skip"), "the skip link at rest").toEqual(resting);
-  expect(await read("group"), "the group at rest").toEqual(resting);
-
-  // `focus()` rather than Tab: WebKit leaves links out of the tab order by default.
-  await page.getByTestId("skip").focus();
-  const skip = await read("skip");
-
-  expect(skip.position, "the focused skip link").toBe("static");
-  expect(skip.width, "the focused skip link").toBeGreaterThan(1);
-
-  await page.getByTestId("group").getByRole("link", { name: "First" }).focus();
-  expect((await read("skip")).width, "the skip link once focus leaves").toBe(1);
-  const group = await read("group");
-
-  expect(group.position, "the group while a link inside it has focus").toBe("static");
-  expect(group.width, "the group while a link inside it has focus").toBeGreaterThan(1);
-});

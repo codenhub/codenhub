@@ -38,10 +38,9 @@ export interface LocaleRoutingConfig<TLocale extends string> {
   locales: readonly TLocale[];
   /**
    * Which paths start with their locale: `"always"` every path; `"except-default"` every path but the default
-   * locale's; `"when-ambiguous"` like `"except-default"`, except that a translated path with a fixed segment drops the
-   * prefix, such as `/sobre`, when no other path read without a prefix could match it: no default-locale path, and no
-   * other locale's path that drops its prefix. A path the table doesn't list is read as the default locale's, so with
-   * `"when-ambiguous"`, `localize` throws when such a path would be read as another page.
+   * locale's; `"when-ambiguous"` like `"except-default"`, except that a translated path with a fixed segment that no
+   * other locale's path could match drops the prefix, such as `/sobre`. A path the table doesn't list is read as the
+   * default locale's, so with `"when-ambiguous"`, `localize` throws when such a path would be read as another page.
    */
   localePrefix: "always" | "except-default" | "when-ambiguous";
   /**
@@ -141,13 +140,12 @@ export interface LocaleRouting<TLocale extends string> {
    * Generates the canonical URL pathname of a page for one supported locale.
    *
    * @param pathname - A canonical application pathname of at most 8,192 characters and 100 segments, without a URL,
-   * query, or fragment, such as `parse(url).pathname`. It is never read as a URL, so `/pt/about` is not Portuguese.
+   * query, or fragment. A path that starts with a locale is read as that locale's URL, as `parse` reads it, so
+   * `localize("/pt/about", "en")` is `/about`.
    * @param locale - A supported locale, trimmed and matched case-insensitively.
    * @returns The pathname in the locale's words, with the configured locale-prefix and trailing-slash policies applied.
    * @throws {TypeError} When `pathname` is not a valid application pathname.
-   * @throws {RangeError} When `locale` is unsupported or is not a string at runtime, when `pathname` starts with a
-   * configured locale, such as `/my/orders` with Burmese, `my`, configured, since every URL of it would be that locale's
-   * `/orders`, when the result would be longer
+   * @throws {RangeError} When `locale` is unsupported or is not a string at runtime, when the result would be longer
    * than 8,192 characters or 100 segments, or when the result would be parsed as another page or locale, such as a page the table
    * doesn't list whose path is another locale's translated path. A static build that localizes its page list finds
    * those clashes at build time; links built for a request can use `parse(url.pathname).alternates`, which leaves out
@@ -220,14 +218,8 @@ export const createLocaleRouting = <TLocale extends string>(
       // Often a full URL, whose user info can hold a credential, so the value is not quoted.
       throw new TypeError(`[I18n] pathname must ${describePathnameRule(problem)}; pass url.pathname`);
     }
-    // A URL passed where its pathname belongs: its user info, query, or fragment can hold a credential, so none is quoted.
+    // A URL passed where its pathname belongs: its query or fragment can hold a token, so only the path is quoted.
     const quoted = formatReportedInput(pathname);
-    if (quoted === undefined) {
-      throw new TypeError(
-        "[I18n] pathname must not start with // or /\\, which a URL reads as the start of its host, even with a tab or " +
-          "line break between; pass url.pathname",
-      );
-    }
     if (problem === "query" || problem === "fragment") {
       throw new TypeError(`[I18n] pathname ${quoted} must ${describePathnameRule(problem)}; pass url.pathname`);
     }
@@ -424,18 +416,14 @@ export const createLocaleRouting = <TLocale extends string>(
       throw new RangeError(describeUnsupportedLocale(locale));
     }
 
-    // Every path is canonical. One that starts with a locale, such as an English `/my/orders` when Burmese, `my`, is
-    // configured, has no URL: every link to it would open that locale's page, as the table's own paths can't either.
+    // An unprefixed path is canonical; a prefixed one is read as a path in its locale, so a URL can switch language.
+    // The prefix is read as a URL's pathname writes it, as `parse` reads it, so `/%70t/sobre` is the Portuguese `/sobre`.
+    const normalize = memoizeNormalize();
     const { segments, hasTrailingSlash } = splitPathname(pathname);
-    const page = findPage(segments, hasTrailingSlash, memoizeNormalize());
-    const prefixLocale = findLocale(page.keys[0]);
-    if (prefixLocale !== undefined) {
-      throw new RangeError(
-        `[I18n] ${formatReportedKey(pathname)} starts with the locale ${formatReportedKey(prefixLocale)}, so no URL ` +
-          "leads to it. If it is a URL, pass parse(url).pathname instead; if it is a page, give it a path that doesn't " +
-          "start with a locale",
-      );
-    }
+    const keys = segments.map(normalize);
+    const prefixLocale = findLocale(keys[0]);
+    const canonical = prefixLocale === undefined ? segments : readPath(segments.slice(1), keys.slice(1), prefixLocale);
+    const page = findPage(canonical, hasTrailingSlash, normalize);
     const built = localizePage(page, canonicalLocale);
 
     if (built.problem === "too-long") {

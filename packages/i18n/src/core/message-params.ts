@@ -8,7 +8,7 @@
  * gives up after a step budget and the message accepts any values.
  */
 
-type MessageValue = string | number | bigint | Date;
+type MessageValue = string | number | Date;
 // The values passed, read from the argument rather than written as an index signature, which an `interface` or a class
 // instance lacks. Only the values a message uses are checked, so a `User` with an `isAdmin: boolean` is still taken.
 type AnyValues<TValues> = [params?: TValues];
@@ -112,12 +112,12 @@ type NextBrace<S extends string> = S extends `${infer A}{${infer B}`
     : undefined;
 
 type ValueOfType<T> = T extends "number" | "plural" | "selectordinal"
-  ? number | bigint
+  ? number
   : T extends "date" | "time"
     ? Date | number
     : T extends "select"
       ? // A boolean picks the option named `true` or `false`; no other format reads one.
-        string | number | bigint | boolean
+        string | number | boolean
       : Unreadable;
 
 // The styles the runtime reads; another, such as `{n, number, currency}`, is invalid syntax.
@@ -277,7 +277,7 @@ type ValueArguments<V> = V extends string
   : V extends { readonly other: string }
     ? IsUnreadable<FormArguments<V>> extends true
       ? Unreadable
-      : UnionToIntersection<FormArguments<V>> & { readonly count: number | bigint }
+      : UnionToIntersection<FormArguments<V>> & { readonly count: number }
     : Unreadable;
 type FormArguments<V> = { [K in keyof V]-?: MessageArguments<V[K]> }[keyof V];
 
@@ -297,7 +297,7 @@ type IsUnion<T, U = T> = T extends unknown ? ([U] extends [T] ? false : true) : 
 // An argument used twice, such as `{count}` and `{count, plural, …}`, takes the kinds of value both read. Each kind is
 // tested on its own, since an intersection such as `(string | boolean) & (string | Date)` keeps `true & Date`, which
 // no value is.
-type ValueKind = string | number | bigint | boolean | Date;
+type ValueKind = string | number | boolean | Date;
 type Narrow<T> = Extract<ValueKind, T>;
 type Simplify<T> = { readonly [K in keyof T]: Narrow<T[K]> } & {};
 
@@ -305,7 +305,7 @@ type Simplify<T> = { readonly [K in keyof T]: Narrow<T[K]> } & {};
 // which the marker is assignable to.
 type IsUnreadable<U> = [Extract<U, Unreadable>] extends [never] ? false : true;
 
-// Whether any dictionary has a plural group at the key, which `t()` reads only with a numeric or bigint `count`.
+// Whether any dictionary has a plural group at the key, which `t()` reads only with a numeric `count`.
 type HasGroup<V> = true extends (V extends string ? false : V extends { readonly other: string } ? true : false)
   ? true
   : false;
@@ -315,7 +315,7 @@ type HasGroup<V> = true extends (V extends string ? false : V extends { readonly
 type ParamsFor<U, TValues, TIsGroup> =
   IsUnreadable<U> extends true
     ? TIsGroup extends true
-      ? [params: { readonly count: number | bigint } & TValues]
+      ? [params: { readonly count: number } & TValues]
       : AnyValues<TValues>
     : ParamsOf<UnionToIntersection<U>, TValues>;
 type ParamsOf<A, TValues> = keyof A extends never ? AnyValues<TValues> : [params: Readonly<Simplify<A>> & TValues];

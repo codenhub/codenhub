@@ -132,13 +132,22 @@
    unless told otherwise, so a dark page printed its near-white text on no
    ground at all. Every token resolves through `light-dark()`, so printing in
    the light scheme re-resolves all of them, a forced-dark region's included.
-   In `theme`, after the selectors above and at their specificity, so it beats
-   them and a consumer's utility still beats it. It does not reach a `dark:`
-   utility, which keys on the class and not on the scheme. */
+
+   The root's is `!important`: `@codenhub/theme` writes `color-scheme: dark`
+   inline on `<html>`, and a consumer's unlayered rule or Tailwind's
+   `scheme-dark` outranks any normal declaration in `theme`, so each printed
+   near-white on paper. An important declaration in an earlier layer beats
+   every later layer and inline normal styles. A region's forced theme keeps a
+   normal rule, after the selectors above and at their specificity, so it
+   beats them and a consumer's own scheme on an inner element still wins: that
+   one is the consumer's to reset for print. Neither reaches a `dark:` utility,
+   which keys on the class and not on the scheme. */
 @layer theme {
   @media print {
-    :root,
-    :root.dark,
+    :root {
+      color-scheme: light !important;
+    }
+
     .theme-dark,
     [data-theme="dark"] {
       color-scheme: light;

@@ -22,6 +22,7 @@ Browser suites need Playwright's browsers, which `pnpm hub browsers` installs an
 ## Changes
 
 - Keep each change within its requested scope and preserve unrelated work.
+- Every edit in a change answers the request or a finding the maintainer approved. A rename, a removal, a new option, or a rewording that neither needs stays out, however much better it looks; propose it on its own. "Change nothing" is a valid outcome for a finding, and often the right one when no realistic case shows a user hitting it.
 - Applicable guidelines, specifications, and APPROVED or IMPLEMENTED documentation govern the change. Existing code may lag those contracts; conflicts and exceptions are resolved under the [documentation guidelines](docs/guidelines/documentation.md).
 - Update affected documentation in the same change as behavior, public API, exports, conventions, or decisions. Each contract has one owning document; references point to that owner rather than repeat its requirements.
 - Do not commit secrets, `.env` files, build artifacts, or unrelated changes.
@@ -188,6 +189,18 @@ Every change reaches `main` through a pull request, and CI verifies it.
 Pushing a branch and opening a pull request are outward-facing actions. An agent asks first and does neither on its own initiative.
 
 Keep a pull request to one subject. A branch that fixes a bug and also restructures a doc is two pull requests, for the same reason a commit that does both is two commits.
+
+A subject is what a reviewer can approve in one decision. These are separate pull requests, even when one task produced all of them:
+
+- A change to a repository-wide rule: a guideline, a specification, or the root `AGENTS.md`. It merges before the work that follows it, so the rule is reviewed as a rule and not as a side effect of a fix.
+- A change to each published package. A package's own README, `docs/`, changelog, and generated files go with the package's change.
+- A change to each site in `apps/`.
+
+Fix a defect where it happens, not where its effects are felt, and cover every case the same cause produces there. A fix at the cause holds; a patch where the effect shows has to be repeated in each place that feels it, and breaks again when the cause moves. When the cause is in another published package, the fix is that package's own pull request and release. Public packages install each other from releases, as [`docs/specs/packages-lifecycle.md`](docs/specs/packages-lifecycle.md#ranges) describes, so a fix in one never needs a change to another in the same pull request: the package that felt the defect works around it meanwhile, as [a defect found mid-task](#a-defect-found-mid-task) describes, and moves to the fixed release afterwards. A private package that public ones inline, such as `packages/scan`, can change in the same pull request as the packages that inline it, as that spec allows; keep it to what the fix needs, and prefer a separate change when the fix can wait for one.
+
+A release can be large; a pull request cannot. Every release is an attempt at 1.0, so the work a release settles can span many subjects, and it reaches `main` as many pull requests merged before the one that cuts the release.
+
+A pull request description says what the change does for someone using the package or working in the repository, in plain words, and why, so a reviewer who saw none of the work behind it can judge it. When it asks the maintainer to decide something, it gives the options, what each costs, with "change nothing" among them when it is viable, and a recommendation.
 
 A pull request that resolves an issue says `Fixes #123` in its description, so merging it closes the issue. Merging is not releasing: a fix reaches users with the next release.
 
