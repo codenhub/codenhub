@@ -93,6 +93,7 @@ On every change, it writes the active theme onto the `<html>` element (`document
 
 - `data-theme="dark"`: the theme's name, for CSS selectors such as `[data-theme="dark"]`.
 - `class="theme-dark"`: the same name as a `theme-<name>` class, added by default for code that prefers classes (the `className` option changes or removes it). With `darkClass: true`, a `dark` class for Tailwind CSS is added too.
+- `theme-light` or `theme-dark`: the theme's `colorScheme` as a class, added whatever the theme's name and whatever `className` says. A light theme named `paper` gives `class="theme-paper theme-light"`, so CSS that keys on those two classes, such as the stylesheets of `@codenhub/styles`, treats it as light.
 - `color-scheme: dark`: tells the browser to draw its own controls, such as scrollbars and form fields, in dark colors.
 - CSS custom properties, such as `--color-primary`, for the tokens you list in `tokenSchema` and give values in JavaScript.
 

@@ -17,7 +17,10 @@ export interface ThemeDefinition<
   TName extends string = string,
   TSchema extends Record<string, string> = Record<string, string>,
 > {
-  /** Browser color scheme applied to `document.documentElement.style.colorScheme`; also decides what `toggle()` falls back to and whether `darkClass` applies. */
+  /**
+   * Browser color scheme applied to `document.documentElement.style.colorScheme` and as its `theme-light` or
+   * `theme-dark` class; also decides what `toggle()` falls back to and whether `darkClass` applies.
+   */
   colorScheme: "light" | "dark";
   /**
    * Static token values written to the CSS custom properties named by `tokenSchema`, which they require. A finite number
@@ -177,7 +180,8 @@ export interface ThemeOptions<
   darkClass?: boolean | undefined;
   /**
    * Class applied to `document.documentElement` for the active theme: `true` applies `theme-<name>`, `false` applies
-   * none, and a {@link ThemeClassResolver} returns a custom one.
+   * none, and a {@link ThemeClassResolver} returns a custom one. The `theme-light` or `theme-dark` class that follows
+   * the theme's `colorScheme` is added either way.
    *
    * @defaultValue `true`
    */

@@ -23,6 +23,14 @@ export const DEFAULT_ATTRIBUTE = "data-theme";
 export const DARK_CLASS = "dark";
 
 /**
+ * Class added to `document.documentElement` for each color scheme, whatever the active theme's name, so stylesheets
+ * keyed on `.theme-light` and `.theme-dark` recognize a theme with a custom name.
+ *
+ * @internal
+ */
+export const SCHEME_CLASSES = { light: "theme-light", dark: "theme-dark" } as const;
+
+/**
  * Media query used to detect if the user's OS preference is set to a dark color scheme.
  *
  * @internal

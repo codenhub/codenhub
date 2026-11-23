@@ -388,7 +388,7 @@ Configured theme, keyed by its name in `ThemeOptions.themes`.
 colorScheme: "light" | "dark";
 ```
 
-Browser color scheme applied to `document.documentElement.style.colorScheme`; also decides what `toggle()` falls back to and whether `darkClass` applies.
+Browser color scheme applied to `document.documentElement.style.colorScheme` and as its `theme-light` or `theme-dark` class; also decides what `toggle()` falls back to and whether `darkClass` applies.
 
 #### ThemeDefinition › pairedTheme
 
@@ -446,7 +446,7 @@ Attribute set on `document.documentElement` to the active theme name. It cannot 
 className?: boolean | ThemeClassResolver<NoInfer<TName>, NoInfer<TSchema>> | undefined;
 ```
 
-Class applied to `document.documentElement` for the active theme: `true` applies `theme-<name>`, `false` applies none, and a [`ThemeClassResolver`](#themeclassresolver) returns a custom one.
+Class applied to `document.documentElement` for the active theme: `true` applies `theme-<name>`, `false` applies none, and a [`ThemeClassResolver`](#themeclassresolver) returns a custom one. The `theme-light` or `theme-dark` class that follows the theme's `colorScheme` is added either way.
 
 **Default** — `true`
 
