@@ -2,7 +2,7 @@
 title: Estéticas
 description: Los seis aspectos opcionales, lo que cada uno cambia en un componente, sus controles y sus límites.
 order: 6
-source: f152706f9c55c0f5a6a2f967f21e4a4862537d64
+source: 05a3acf5875b00b910d500c1952318c88fbd21bf
 ---
 
 # Estéticas
@@ -236,7 +236,7 @@ Un paralelogramo inclina sus lados hacia el contenido, así que dale relleno hor
 
 **Excepciones:**
 
-- Hoy el bisel solo funciona en Chromium. Firefox y Safari todavía no dibujan `corner-shape`, y ahí la estética deja rectas sus esquinas cortadas en lugar de redondearlas, y lo que es completamente redondo sigue siendo redondo, así que el aspecto se degrada a cuadrado, con línea y con resplandor. Tomará el bisel sin ningún cambio en cuanto un motor lo incluya.
+- El bisel necesita `corner-shape`, que dibujan Chromium y Safari desde la 27.3. Firefox, y Safari antes de la 27.3, no lo dibujan, y ahí la estética deja rectas sus esquinas cortadas en lugar de redondearlas, y lo que es completamente redondo sigue siendo redondo, así que el aspecto se degrada a cuadrado, con línea y con resplandor. Tomará el bisel sin ningún cambio en cuanto un motor lo incluya.
 - El resplandor es un halo, no profundidad, así que todos los componentes lo toman, incluidos campos, badges y alertas, y `.flat` no lo quita. `.raised` y `.floating` no añaden sombra con esta estética.
 - En el tema claro, el resplandor de un componente neutro o `.primary` es su tinta casi negra, que se percibe como una sombra suave y no como luz. El aspecto luce más en una página oscura, o con un `--cyber-ink` con matiz.
 - Un `.btn.icon` simple es un control cuadrado, así que toma la diagonal de control; un `.btn.icon.pill` es redondo, así que se convierte en un rombo.
