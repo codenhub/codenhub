@@ -180,12 +180,13 @@ jobs:
           echo "image=mcr.microsoft.com/playwright:v${versions}-noble" >> "$GITHUB_OUTPUT"
 
   browser:
-    # One engine per job. The suites are the slowest thing in a run and the three
-    # engines are independent, so running them side by side costs runner minutes
-    # rather than wall-clock time. `fail-fast` is off because "Firefox broke" and
-    # "WebKit broke" are different findings and cancelling one to report the other
-    # hides half the answer.
-    name: Browser tests (${{ matrix.engine }})
+    # One engine and one shard per job. The suites are the slowest thing in a run
+    # and the three engines are independent, so running them side by side costs
+    # runner minutes rather than wall-clock time; a shard splits one engine's run
+    # the same way. `fail-fast` is off because "Firefox broke" and "WebKit broke"
+    # are different findings and cancelling one to report the other hides half the
+    # answer. `docs/ci.md` records why three shards, and on every event.
+    name: Browser tests (${{ matrix.engine }} ${{ matrix.shard }}/3)
     runs-on: ubuntu-latest
     timeout-minutes: 30
     needs: playwright
@@ -199,6 +200,8 @@ jobs:
       fail-fast: false
       matrix:
         engine: [chromium, firefox, webkit]
+        # The count also appears in the job name and in `--shard` below.
+        shard: [1, 2, 3]
     steps:
       - name: Check out the repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -233,10 +236,14 @@ jobs:
       # Setting the worker count takes the run out of `hub`'s browser budget, which
       # is sized for a machine that runs all three engines beside an editor. This
       # job runs one engine on a machine of its own, at two workers per package.
+      #
+      # `--shard` reaches each package's Playwright, so every package runs its own
+      # third of its tests here. A package with fewer tests than shards leaves a
+      # shard empty, and Playwright passes an empty shard.
       - name: Run browser tests
         env:
           PLAYWRIGHT_WORKERS: 2
-        run: pnpm test:browser $SELECTOR -- --project='*${{ matrix.engine }}*'
+        run: pnpm test:browser $SELECTOR -- --project='*${{ matrix.engine }}*' --shard=${{ matrix.shard }}/3
 
       # This checkout is not the one `verify` checks, so a browser test that
       # writes a file is caught here. Playwright's output directories are ignored.
@@ -254,7 +261,7 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: playwright-results-${{ matrix.engine }}
+          name: playwright-results-${{ matrix.engine }}-${{ matrix.shard }}
           path: |
             packages/*/test-results/**
             packages/*/playwright-report/**
