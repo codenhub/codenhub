@@ -29,7 +29,7 @@ To let the user choose, put a theme selector on the root element:
 
 A settings screen with a "System / Light / Dark" choice removes the attribute for System and sets it for the other two.
 
-A theme with a name of its own still needs one of these selectors. The tokens and components follow `color-scheme` alone, but the [`dark:` variant](#the-dark-variant) and the [generated palette](./customizing.md#generated-palette) match only the selectors above, so `<html data-theme="paper">` for a light theme called `paper` is not light to them: on a dark system, every `dark:` utility applies over it, and `/palette` gives its dark values. `@codenhub/theme` adds `.theme-light` or `.theme-dark` for every theme from 0.4.0; with an earlier version, or a script of your own, add the class yourself when you apply a theme.
+A theme with a name of its own still needs one of these selectors. The tokens and components follow `color-scheme` alone, but the [`dark:` variant](#the-dark-variant) and the [generated palette](./customizing.md#generated-palette) match only the selectors above, so `<html data-theme="paper">` for a light theme called `paper` is not light to them: on a dark system, every `dark:` utility applies over it, and `/palette` gives its dark values. `@codenhub/theme` adds `.theme-light` or `.theme-dark` for every theme from 0.4.0; with an earlier version, or a script of your own, add the matching class yourself when you apply a theme, and remove the other one, since a root that carries both is dark.
 
 Contrast and motion settings work the same way, through `data-contrast` and `data-motion` on `<html>`; see [Accessibility → App settings](../accessibility.md#app-settings).
 

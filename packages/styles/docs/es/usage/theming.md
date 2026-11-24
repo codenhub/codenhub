@@ -2,7 +2,7 @@
 title: Temas
 description: Modo claro y oscuro, reemplazar la paleta con los colores de marca, definir una intención propia, y cada token de color, intención, base y fuente con su valor por defecto.
 order: 5
-source: 2804d39fe8c535406792e269487676f9b7695f39
+source: d0e68e3cb37d5637a92e2fe7ab2e67dad165a4cc
 ---
 
 # Temas
@@ -30,7 +30,7 @@ Para que el usuario elija, pon un selector de tema en el elemento raíz:
 
 Una pantalla de ajustes con la opción "Sistema / Claro / Oscuro" quita el atributo para Sistema y lo pone para las otras dos.
 
-Un tema con un nombre propio también necesita uno de estos selectores. Los tokens y los componentes siguen solo a `color-scheme`, pero la [variante `dark:`](#la-variante-dark) y la [paleta generada](./customizing.md#paleta-generada) solo reconocen los selectores de arriba, así que `<html data-theme="paper">` para un tema claro llamado `paper` no es claro para ellas: con el sistema en oscuro, cada utilidad `dark:` se aplica sobre él, y `/palette` da sus valores oscuros. `@codenhub/theme` añade `.theme-light` o `.theme-dark` a cada tema desde la 0.4.0; con una versión anterior, o con un script propio, añade tú la clase al aplicar un tema.
+Un tema con un nombre propio también necesita uno de estos selectores. Los tokens y los componentes siguen solo a `color-scheme`, pero la [variante `dark:`](#la-variante-dark) y la [paleta generada](./customizing.md#paleta-generada) solo reconocen los selectores de arriba, así que `<html data-theme="paper">` para un tema claro llamado `paper` no es claro para ellas: con el sistema en oscuro, cada utilidad `dark:` se aplica sobre él, y `/palette` da sus valores oscuros. `@codenhub/theme` añade `.theme-light` o `.theme-dark` a cada tema desde la 0.4.0; con una versión anterior, o con un script propio, añade tú la clase que corresponde al aplicar un tema, y quita la otra, porque una raíz que lleva las dos es oscura.
 
 Los ajustes de contraste y movimiento funcionan igual, con `data-contrast` y `data-motion` en `<html>`; consulta [Accesibilidad → Ajustes de la app](../accessibility.md#ajustes-de-la-app).
 
