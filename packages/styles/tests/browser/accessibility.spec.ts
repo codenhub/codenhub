@@ -1098,82 +1098,118 @@ for (const scheme of ["light", "dark"] as const) {
       await page.locator("#before").focus();
       await page.keyboard.press("Shift");
 
-      /* Pixels that changed by 3:1 between two screenshots of one clip. */
-      const changedPixels = (resting: Buffer, focused: Buffer) =>
+      /* Every control at rest is one screenshot of the whole plate, decoded
+         once and kept in the page; each focused control is a screenshot of its
+         own clip, compared with the same pixels of the resting plate. A
+         resting screenshot per control doubled the screenshots, and decoding
+         both images per control doubled the decoding, which made this the
+         slowest test in the WebKit run. Clips are whole CSS pixels, so a
+         control's clip lines up with the plate's pixels. */
+      type Clip = { x: number; y: number; width: number; height: number };
+      const { plateClip, controls } = await page.evaluate(() => {
+        const snap = (node: Element): Clip => {
+          const { left, top, right, bottom } = node.getBoundingClientRect();
+          const x = Math.floor(left);
+          const y = Math.floor(top);
+
+          return { x, y, width: Math.ceil(right) - x, height: Math.ceil(bottom) - y };
+        };
+
+        return {
+          plateClip: snap(document.getElementById("plate")!),
+          controls: [...document.querySelectorAll("[data-index]")].map((wrapper) => {
+            const { width, height } = wrapper.firstElementChild!.getBoundingClientRect();
+
+            return { box: { width, height }, clip: snap(wrapper) };
+          }),
+        };
+      });
+      /* A clip of the page rather than an element screenshot, which waits for
+         the element to be stable and scrolled into view: over a second a
+         control in WebKit. */
+      const shoot = (clip: Clip) => page.screenshot({ caret: "hide", clip, scale: "css" });
+
+      await page.evaluate(
+        async (base64) => {
+          const bitmap = await createImageBitmap(await (await fetch(`data:image/png;base64,${base64}`)).blob());
+          const canvas = document.createElement("canvas");
+
+          canvas.width = bitmap.width;
+          canvas.height = bitmap.height;
+          const context = canvas.getContext("2d")!;
+
+          context.drawImage(bitmap, 0, 0);
+          (window as unknown as { resting: ImageData }).resting = context.getImageData(
+            0,
+            0,
+            bitmap.width,
+            bitmap.height,
+          );
+        },
+        (await shoot(plateClip)).toString("base64"),
+      );
+
+      /* Pixels of a focused clip that differ by 3:1 from the resting plate at
+         the clip's offset in it. */
+      const changedPixels = (focused: Buffer, offset: { x: number; y: number }) =>
         page.evaluate(
-          async ([left, right]) => {
-            const read = async (base64: string) => {
-              const bitmap = await createImageBitmap(await (await fetch(`data:image/png;base64,${base64}`)).blob());
-              const canvas = document.createElement("canvas");
+          async ([base64, at]) => {
+            const bitmap = await createImageBitmap(await (await fetch(`data:image/png;base64,${base64}`)).blob());
+            const canvas = document.createElement("canvas");
 
-              canvas.width = bitmap.width;
-              canvas.height = bitmap.height;
-              const context = canvas.getContext("2d")!;
+            canvas.width = bitmap.width;
+            canvas.height = bitmap.height;
+            const context = canvas.getContext("2d")!;
 
-              context.drawImage(bitmap, 0, 0);
-
-              return context.getImageData(0, 0, bitmap.width, bitmap.height).data;
-            };
+            context.drawImage(bitmap, 0, 0);
+            const after = context.getImageData(0, 0, bitmap.width, bitmap.height).data;
+            const resting = (window as unknown as { resting: ImageData }).resting;
             const channel = (value: number) => {
               const unit = value / 255;
 
               return unit <= 0.040_45 ? unit / 12.92 : ((unit + 0.055) / 1.055) ** 2.4;
             };
-            const luminance = (data: Uint8ClampedArray, at: number) =>
-              0.2126 * channel(data[at]!) + 0.7152 * channel(data[at + 1]!) + 0.0722 * channel(data[at + 2]!);
-            const [a, b] = await Promise.all([read(left), read(right)]);
+            const luminance = (data: Uint8ClampedArray, index: number) =>
+              0.2126 * channel(data[index]!) + 0.7152 * channel(data[index + 1]!) + 0.0722 * channel(data[index + 2]!);
             let count = 0;
 
-            for (let at = 0; at < a.length; at += 4) {
-              const [lighter, darker] = [luminance(a, at), luminance(b, at)].sort((x, y) => y - x);
+            for (let row = 0; row < bitmap.height; row += 1) {
+              for (let column = 0; column < bitmap.width; column += 1) {
+                const before = luminance(resting.data, ((at.y + row) * resting.width + at.x + column) * 4);
+                const now = luminance(after, (row * bitmap.width + column) * 4);
+                const [lighter, darker] = before > now ? [before, now] : [now, before];
 
-              if ((lighter! + 0.05) / (darker! + 0.05) >= 3) {
-                count += 1;
+                if ((lighter + 0.05) / (darker + 0.05) >= 3) {
+                  count += 1;
+                }
               }
             }
 
             return count;
           },
-          [resting.toString("base64"), focused.toString("base64")] as const,
+          [focused.toString("base64"), offset] as const,
         );
 
       const failures: string[] = [];
-      /* A clip of the page rather than an element screenshot, which waits for
-         the element to be stable and scrolled into view: over a second a
-         control in WebKit. */
-      const shoot = (clip: { x: number; y: number; width: number; height: number }) =>
-        page.screenshot({ caret: "hide", clip, scale: "css" });
 
       for (const [index, control] of markup.entries()) {
-        const wrapper = page.locator(`[data-index="${index}"]`);
-        const target = wrapper.locator(":is(input, select, textarea, button)");
-        // oxlint-disable-next-line no-await-in-loop -- one control holds focus at a time.
-        const [box, clip] = await wrapper.evaluate((element) => {
-          const bounds = (node: Element) => {
-            const { x, y, width, height } = node.getBoundingClientRect();
-
-            return { x, y, width, height };
-          };
-
-          document.getElementById("before")!.focus();
-
-          return [bounds(element.firstElementChild!), bounds(element)];
-        });
-        // oxlint-disable-next-line no-await-in-loop -- one control holds focus at a time.
-        const resting = await shoot(clip);
+        const { box, clip } = controls[index]!;
 
         /* Focus moved by a script after a key press, with no pointer input
            since, is keyboard focus in every engine. */
         // oxlint-disable-next-line no-await-in-loop -- one control holds focus at a time.
-        const visible = await target.evaluate((element: HTMLElement) => {
-          element.focus();
+        const visible = await page
+          .locator(`[data-index="${index}"]`)
+          .locator(":is(input, select, textarea, button)")
+          .evaluate((element: HTMLElement) => {
+            element.focus();
 
-          return element.matches(":focus-visible");
-        });
+            return element.matches(":focus-visible");
+          });
         // oxlint-disable-next-line no-await-in-loop -- one control holds focus at a time.
         const focused = await shoot(clip);
         // oxlint-disable-next-line no-await-in-loop -- one control holds focus at a time.
-        const changed = await changedPixels(resting, focused);
+        const changed = await changedPixels(focused, { x: clip.x - plateClip.x, y: clip.y - plateClip.y });
         const perimeter = Math.round(2 * (box.width + box.height));
 
         if (!visible) {
