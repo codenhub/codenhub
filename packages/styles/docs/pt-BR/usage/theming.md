@@ -2,7 +2,7 @@
 title: Temas
 description: Modo claro e escuro, como trocar a paleta pelas cores da marca, como definir uma intenção própria, e cada token de cor, de intenção, fundamental e de fonte com o seu padrão.
 order: 5
-source: 09cd405afb7dbf287e210fd7fe927b46156ef339
+source: 2804d39fe8c535406792e269487676f9b7695f39
 ---
 
 # Temas
@@ -29,6 +29,8 @@ Para deixar o usuário escolher, coloque um seletor de tema no elemento raiz:
 `.dark` só aplica o tema no elemento raiz, onde a convenção do Tailwind o coloca, e não existe `.light`. As duas são palavras que um nome de classe costuma ter por outros motivos: um `<span class="light">` para um peso mais leve passaria o texto para o quase preto do tema claro numa página escura. Para aplicar um tema a uma área, use `.theme-*` ou `data-theme`.
 
 Uma tela de configurações com a escolha "Sistema / Claro / Escuro" remove o atributo para Sistema e o define para as outras duas opções.
+
+Um tema com um nome próprio também precisa de um desses seletores. Os tokens e os componentes seguem só o `color-scheme`, mas a [variante `dark:`](#a-variante-dark) e a [paleta gerada](./customizing.md#paleta-gerada) reconhecem só os seletores acima, então `<html data-theme="paper">` para um tema claro chamado `paper` não é claro para elas: com o sistema no escuro, todo utilitário `dark:` se aplica sobre ele, e o `/palette` dá os seus valores escuros. O `@codenhub/theme` adiciona `.theme-light` ou `.theme-dark` a todo tema a partir da 0.4.0; com uma versão anterior, ou com um script seu, adicione você a classe ao aplicar um tema.
 
 As configurações de contraste e movimento funcionam do mesmo jeito, com `data-contrast` e `data-motion` no `<html>`; veja [Acessibilidade → Configurações do app](../accessibility.md#configurações-do-app).
 
