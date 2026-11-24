@@ -237,6 +237,15 @@ jobs:
       # is sized for a machine that runs all three engines beside an editor. This
       # job runs one engine on a machine of its own, at two workers per package.
       #
+      # Unsharded, Playwright fails a package that finds no test for this engine,
+      # such as one whose `testDir` points at nothing. A shard passes empty, so the
+      # sharded run below cannot tell that package from one with too few tests to
+      # split; listing the tests, once per engine, keeps the check without
+      # starting a browser or a server.
+      - name: Every package finds browser tests
+        if: matrix.shard == 1
+        run: pnpm test:browser $SELECTOR -- --project='*${{ matrix.engine }}*' --list
+
       # `--shard` reaches each package's Playwright, so every package runs its own
       # third of its tests here. A package with fewer tests than shards leaves a
       # shard empty, and Playwright passes an empty shard.
