@@ -2,7 +2,7 @@
 title: Svelte
 description: Como carregar a folha de estilos numa aplicação Svelte / SvelteKit.
 order: 4
-source: 9c8bc0fee69e4b2bf1edd85c784b7df8ff1e883d
+source: 4b0559abded7cb44bf7bb891935ee14a4c5a7535
 ---
 
 # Svelte
@@ -38,7 +38,7 @@ Usa Tailwind CSS v4? Em vez disso, importe `@codenhub/styles/tw` a partir do arq
 
 ## Force um tema
 
-Aplique `.dark` ou `.light` no `<html>` (edite `src/app.html` no SvelteKit) para forçar um tema em vez de seguir a preferência do sistema; veja [Temas → Claro e escuro](../usage/theming.md#claro-e-escuro).
+Aplique `data-theme="light"` ou `data-theme="dark"` no `<html>` (edite `src/app.html` no SvelteKit) para forçar um tema em vez de seguir a preferência do sistema; veja [Temas → Claro e escuro](../usage/theming.md#claro-e-escuro).
 
 ## A seguir
 

@@ -2,7 +2,7 @@
 title: Next.js
 description: Cargar la hoja de estilos en una aplicación Next.js / React.
 order: 2
-source: 69f6ff482bccb50f743692edae000890b592e912
+source: 699c33bcb5848ccfbe3ee0e550f3f9d7fa0b5c60
 ---
 
 # Next.js
@@ -48,7 +48,7 @@ export default function App({ Component, pageProps }: AppProps) {
 
 ## Forzar un tema
 
-Aplica `.dark` o `.light` en `<html>` para forzar un tema en lugar de seguir la preferencia del sistema; consulta [Temas → Claro y oscuro](../usage/theming.md#claro-y-oscuro).
+Aplica `data-theme="light"` o `data-theme="dark"` en `<html>` para forzar un tema en lugar de seguir la preferencia del sistema; consulta [Temas → Claro y oscuro](../usage/theming.md#claro-y-oscuro).
 
 ```tsx
 <html lang="en" className="dark">

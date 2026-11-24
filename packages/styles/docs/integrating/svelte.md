@@ -37,7 +37,7 @@ Running Tailwind CSS v4? Import `@codenhub/styles/tw` from the app's CSS entry i
 
 ## Force a theme
 
-Apply `.dark` or `.light` on `<html>` (edit `src/app.html` in SvelteKit) to force a theme instead of following the system preference; see [Theming → Light and dark](../usage/theming.md#light-and-dark).
+Apply `data-theme="light"` or `data-theme="dark"` on `<html>` (edit `src/app.html` in SvelteKit) to force a theme instead of following the system preference; see [Theming → Light and dark](../usage/theming.md#light-and-dark).
 
 ## Next
 

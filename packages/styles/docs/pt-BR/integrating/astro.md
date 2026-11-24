@@ -2,7 +2,7 @@
 title: Astro
 description: Como carregar a folha de estilos numa aplicação Astro.
 order: 5
-source: 12336fe1b350a8cb49d62acf9c121afb1fed933d
+source: c7853c0ec1141933cf8683494691ec331a07ccc6
 ---
 
 # Astro
@@ -39,7 +39,7 @@ Veja [Tailwind CSS v4](./tailwind.md), incluindo quando um `@source` explícito 
 
 ## Force um tema
 
-Aplique `.dark` ou `.light` no `<html>` para forçar um tema em vez de seguir a preferência do sistema; veja [Temas → Claro e escuro](../usage/theming.md#claro-e-escuro).
+Aplique `data-theme="light"` ou `data-theme="dark"` no `<html>` para forçar um tema em vez de seguir a preferência do sistema; veja [Temas → Claro e escuro](../usage/theming.md#claro-e-escuro).
 
 ## A seguir
 
