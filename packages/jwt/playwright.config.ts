@@ -8,6 +8,8 @@ const ENGINES = [
 
 // A worker for each core launched ten browsers at once, which ran a 16 GB machine out of memory. With
 // three, WebKit lost its page or the server in ten of eleven runs on Windows 11, and with two in none of six.
+// That no longer held on 2026-11-24: four workers passed three of three runs, and `hub`'s browser budget now hands this
+// suite four workers on a 16 GB machine. Two stays the default for a run outside `hub`.
 const DEFAULT_WORKERS = 2;
 
 /**

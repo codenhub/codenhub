@@ -37,15 +37,18 @@ export const TEST_WORKER_POOL: WorkerPool = {
 };
 
 /**
- * Playwright's pool: a browser per 8 GiB of memory.
+ * Playwright's pool: a browser per 4 GiB of memory.
  *
- * Each worker is a whole browser. Two is what a 16 GB Windows machine held without
- * WebKit losing its page; see the worker comment in `packages/jwt/playwright.config.ts`.
+ * Each worker is a whole browser. At one per 8 GiB, a 16 GB machine ran the three
+ * engines of `styles` on two workers and passed its 1800-second limit (#664). On a
+ * 16 GB Windows 11 machine, on 2026-11-24, four workers ran all of `styles` with commit
+ * charge peaking 6.5 GB under its limit, and `jwt`'s WebKit, which lost its page at
+ * three workers when the budget was set, passed three of three runs at four.
  * Half a GiB of slack absorbs what a 16 GB machine under-reports, which is a few
- * hundred MiB, without rounding a 12 GiB machine up to two browsers.
+ * hundred MiB, without rounding an 11 GiB machine up to three browsers.
  */
 export const BROWSER_WORKER_POOL: WorkerPool = {
-  capacity: ({ memoryBytes }) => Math.max(1, Math.floor((memoryBytes + BYTES_PER_GIB / 2) / (8 * BYTES_PER_GIB))),
+  capacity: ({ memoryBytes }) => Math.max(1, Math.floor((memoryBytes + BYTES_PER_GIB / 2) / (4 * BYTES_PER_GIB))),
   variable: "PLAYWRIGHT_WORKERS",
 };
 
