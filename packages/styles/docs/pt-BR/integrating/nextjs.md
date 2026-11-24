@@ -2,7 +2,7 @@
 title: Next.js
 description: Como carregar a folha de estilos numa aplicação Next.js / React.
 order: 2
-source: 699c33bcb5848ccfbe3ee0e550f3f9d7fa0b5c60
+source: 66dd877873c090a3b1768c02fb6c8bc0c77213b5
 ---
 
 # Next.js
@@ -51,13 +51,13 @@ Usa Tailwind CSS v4? `@import "@codenhub/styles/tw"` é uma diretiva de CSS, ent
 Aplique `data-theme="light"` ou `data-theme="dark"` no `<html>` para forçar um tema em vez de seguir a preferência do sistema; veja [Temas → Claro e escuro](../usage/theming.md#claro-e-escuro).
 
 ```tsx
-<html lang="en" className="dark">
+<html lang="en" data-theme="dark">
 ```
 
-No Pages Router, quem renderiza o `<html>` é o `pages/_document.tsx`, então coloque a classe no componente `<Html>` dele:
+No Pages Router, quem renderiza o `<html>` é o `pages/_document.tsx`, então coloque o atributo no componente `<Html>` dele:
 
 ```tsx
-<Html lang="en" className="dark">
+<Html lang="en" data-theme="dark">
 ```
 
 ## Solução de problemas
