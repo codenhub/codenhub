@@ -2,7 +2,7 @@
 title: Tooltips
 description: Ayuda de campo que se abre con hover y con foco, cómo conectarla para los lectores de pantalla y la tecla Escape, y dónde queda recortado un tooltip.
 order: 4
-source: dabbb2edae4e457691a5124744380329726aab9b
+source: 21c659e5fa3a03d415871b88dbb718873aa7aa77
 ---
 
 # Tooltips
@@ -112,14 +112,14 @@ document.addEventListener("keydown", (event) => {
 
 ## Cómo se ve la burbuja
 
-Sin clase de intención, la burbuja usa `--color-tooltip`, un fondo elegido para cada tema: casi blanco en una página clara y gris medio en una oscura, con `--color-tooltip-contrast` como color de texto. El casi blanco mide solo 1.04:1 frente a una página clara, así que la burbuja también dibuja un borde fino, y el `.edgeless` de un contenedor no puede quitarlo. Un `.edgeless` en la propia burbuja sí puede. El fondo sigue siendo opaco con cualquier presentación, así que la burbuja sigue siendo legible sobre lo que tape.
+Sin clase de intención, la burbuja usa `--color-tooltip`, un fondo elegido para cada tema: casi blanco en una página clara y gris medio en una oscura, con `--color-tooltip-contrast` como color de texto. El casi blanco mide solo 1.04:1 frente a una página clara, así que la burbuja también dibuja un borde fino, y el `.edgeless` de un contenedor no puede quitarlo. Un `.edgeless` en la propia burbuja sí puede. El fondo es opaco con cualquier presentación, así que la burbuja sigue siendo legible sobre lo que tape, salvo una burbuja `.soft` o `.ghost` bajo `.glass`, descrita más abajo.
 
 Una clase de intención rellena la burbuja con el color de esa intención y cambia el texto al color de contraste correspondiente:
 
 - `.tooltip-bubble.primary` tiene un fondo casi negro con texto casi blanco en una página clara, y un fondo casi blanco con texto casi negro en una oscura.
 - `.tooltip-bubble.destructive` tiene un fondo rojo con texto claro en ambos temas.
 
-Pon las clases de intención, presentación, estética y elevación en `.tooltip-bubble`, el elemento que se pinta, no en `.tooltip`. La burbuja es plana por defecto, incluso bajo una estética que dibuja profundidad; añade `.raised` o `.floating` a la burbuja para elevarla. `.glass` es la excepción: su sombra es un único valor completo que la elevación no puede escalar, así que una burbuja de vidrio conserva esa sombra, y `.flat` tampoco la quita. Una estética en el ámbito da forma a la burbuja como a cualquier otro componente; bajo `.glass` es esmerilada como una tarjeta. `.tooltip-icon` toma la esquina de la estética: cuadrada bajo `.neobrutalism` y `.pixel`, un rombo bajo `.cyber`.
+Pon las clases de intención, presentación, estética y elevación en `.tooltip-bubble`, el elemento que se pinta, no en `.tooltip`. La burbuja es plana por defecto, incluso bajo una estética que dibuja profundidad; añade `.raised` o `.floating` a la burbuja para elevarla. `.glass` es la excepción: su sombra es un único valor completo que la elevación no puede escalar, así que una burbuja de vidrio conserva esa sombra, y `.flat` tampoco la quita. Una estética en el ámbito da forma a la burbuja como a cualquier otro componente; bajo `.glass`, una burbuja `.soft` o `.ghost` es esmerilada como una tarjeta y deja ver la página, mientras que una burbuja por defecto, `.solid` o rellena con una intención sigue siendo opaca. `.tooltip-icon` toma la esquina de la estética: cuadrada bajo `.neobrutalism` y `.pixel`, un rombo bajo `.cyber`.
 
 La burbuja aparece sin el efecto de escala cuando el usuario pide movimiento reducido, ya sea con el ajuste del sistema o con `data-motion="reduce"` en `<html>`. Con `data-motion="none"` su fundido también termina al instante, después de la espera, y `data-motion="full"` mantiene la escala aunque el sistema pida menos movimiento. [Ajustes de la app](../accessibility.md#ajustes-de-la-app) describe el atributo.
 

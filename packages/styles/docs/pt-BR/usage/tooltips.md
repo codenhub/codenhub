@@ -2,7 +2,7 @@
 title: Tooltips
 description: Ajuda de campo que abre no hover e no foco, como ligá-la a leitores de tela e à tecla Escape, e onde um tooltip é cortado.
 order: 4
-source: dabbb2edae4e457691a5124744380329726aab9b
+source: 21c659e5fa3a03d415871b88dbb718873aa7aa77
 ---
 
 # Tooltips
@@ -112,14 +112,14 @@ document.addEventListener("keydown", (event) => {
 
 ## Como o balão aparece
 
-Sem classe de intenção, o balão usa `--color-tooltip`, um fundo escolhido por tema: quase branco numa página clara, cinza médio numa escura, com `--color-tooltip-contrast` como cor do texto. Quase branco mede só 1.04:1 em relação a uma página clara, então o balão também desenha uma borda fina, e um `.edgeless` de um contêiner não consegue removê-la. Um `.edgeless` no próprio balão ainda consegue. O fundo continua opaco com qualquer apresentação, para que o balão continue legível sobre o que quer que ele cubra.
+Sem classe de intenção, o balão usa `--color-tooltip`, um fundo escolhido por tema: quase branco numa página clara, cinza médio numa escura, com `--color-tooltip-contrast` como cor do texto. Quase branco mede só 1.04:1 em relação a uma página clara, então o balão também desenha uma borda fina, e um `.edgeless` de um contêiner não consegue removê-la. Um `.edgeless` no próprio balão ainda consegue. O fundo é opaco com qualquer apresentação, para que o balão continue legível sobre o que quer que ele cubra, exceto um balão `.soft` ou `.ghost` sob `.glass`, descrito abaixo.
 
 Uma classe de intenção preenche o balão com a cor dessa intenção e troca o texto para a cor de contraste correspondente:
 
 - `.tooltip-bubble.primary` tem fundo quase preto com texto quase branco numa página clara, e fundo quase branco com texto quase preto numa escura.
 - `.tooltip-bubble.destructive` tem fundo vermelho com texto claro nos dois temas.
 
-Coloque as classes de intenção, apresentação, estética e elevação no `.tooltip-bubble`, o elemento que é pintado, e não no `.tooltip`. O balão é plano por padrão, mesmo numa estética que desenha profundidade; adicione `.raised` ou `.floating` ao balão para elevá-lo. `.glass` é a exceção: a sombra dele é um único valor completo que a elevação não consegue escalar, então um balão de vidro mantém essa sombra, e `.flat` também não a remove. Uma estética em vigor dá forma ao balão como a qualquer outro componente; com `.glass`, ele fica fosco como um card. O `.tooltip-icon` assume o canto da estética: quadrado com `.neobrutalism` e `.pixel`, um losango com `.cyber`.
+Coloque as classes de intenção, apresentação, estética e elevação no `.tooltip-bubble`, o elemento que é pintado, e não no `.tooltip`. O balão é plano por padrão, mesmo numa estética que desenha profundidade; adicione `.raised` ou `.floating` ao balão para elevá-lo. `.glass` é a exceção: a sombra dele é um único valor completo que a elevação não consegue escalar, então um balão de vidro mantém essa sombra, e `.flat` também não a remove. Uma estética em vigor dá forma ao balão como a qualquer outro componente; com `.glass`, um balão `.soft` ou `.ghost` fica fosco como um card e deixa a página aparecer, enquanto um balão padrão, `.solid` ou preenchido com uma intenção continua opaco. O `.tooltip-icon` assume o canto da estética: quadrado com `.neobrutalism` e `.pixel`, um losango com `.cyber`.
 
 O balão aparece sem o efeito de crescer quando o usuário pede movimento reduzido, seja pela configuração do sistema ou com `data-motion="reduce"` no `<html>`. Com `data-motion="none"`, o esmaecimento dele também termina de imediato, depois da espera, e `data-motion="full"` mantém o crescimento mesmo quando o sistema pede menos movimento. [Configurações do app](../accessibility.md#configurações-do-app) descreve o atributo.
 
