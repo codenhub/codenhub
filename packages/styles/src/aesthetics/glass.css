@@ -526,6 +526,16 @@
     --_region-ground: var(--_glass-ground);
   }
 
+  /* Except inside a `.solid` box, at any depth, which this rule wins on
+     coming later: the plate is opaque, so no backdrop shows through it to
+     guard against, and a control inside it prints the plate's ink -- a ghost
+     button's white label on `.card.solid.info` read at about 1.7:1 over the
+     pane's page colour. A box clears the ground on its children only, so a
+     region wrapped in a plain element inside the plate is cleared here. */
+  .glass:is(.solid *) {
+    --_region-ground: initial;
+  }
+
   .btn.glass-liquid:is(.glass, .glass *) {
     /* Only where the layers are on, so the nearest region decides here too. */
     --_glass-liquid-ground: var(--_glass-liquid-on) var(--ui-surface-ground, transparent);

@@ -2,7 +2,7 @@
 title: Estéticas
 description: Os seis visuais opcionais, o que cada um muda num componente, os seus ajustes e os seus limites.
 order: 6
-source: 27460699efe3399196a3ab6206bcff3277886d4c
+source: 314ce16b9d7d0dff4fc679a5685a847b5d4ed28e
 ---
 
 # Estéticas
@@ -96,7 +96,7 @@ O `.glass` precisa de algo por trás para desfocar. Sobre um fundo de página pl
 - Uma placa dentro de um card, painel ou alerta `.solid` é opaca: através de uma placa translúcida aparece a superfície preenchida atrás dela, e o texto da placa caía abaixo de 4.5:1. Ela fica sobre o fundo da página, então o texto mantém o contraste que tem na página.
 - O desfoque se aplica só a `.card`, `.panel`, `.alert`, ao balão de tooltip e a um `.data-table` padrão ou `.soft`. Os controles não são desfocados: um desfoque sob cada controle de um grupo denso custa uma camada de composição para cada um e vira ruído visual. Os controles ainda recebem o raio, a borda e a sombra da estética.
 - Um controle colocado direto na região glass, sem uma placa em volta, fica sobre um chão próprio, sem desfoque: 69% da cor da página, o mais fino que mantém o texto de toda apresentação a 4.5:1 e a borda de um toggle a 3:1 sobre um fundo preto ou branco, nos dois temas. Um `.data-table` `.ghost` colocado ali também fica sobre ele. Um controle dentro de uma placa, um campo dentro de um `.input-group` e um badge dentro de um botão não recebem nenhum, porque já estão sobre um chão. Como numa placa, a garantia vale para o texto neutro; o de um intent é desenhado para o fundo da própria página.
-- A região mais próxima decide. Uma região de outra estética aninhada dentro do glass, como `.pixel` ou `.neobrutalism`, não dá chão aos seus controles: as superfícies dela são opacas, e os controles ficam sobre o que estiver atrás, como numa página sem estética. Uma região glass aninhada de novo dentro dela devolve o chão.
+- A região mais próxima decide. Uma região de outra estética aninhada dentro do glass, como `.pixel` ou `.neobrutalism`, não dá chão aos seus controles: as superfícies dela são opacas, e os controles ficam sobre o que estiver atrás, como numa página sem estética. Uma região glass aninhada de novo dentro dela devolve o chão. Uma região glass dentro de um card, painel, alerta ou botão `.solid` também não dá chão: o preenchimento é opaco, e os controles usam a cor de texto dele, então ficam sobre o preenchimento.
 - Com `prefers-reduced-transparency: reduce`, e em cores forçadas, as superfícies de vidro perdem o desfoque e ficam opacas, e o chão sob um controle também. As cores forçadas substituem as cores mas mantêm a transparência delas, então sem isso um painel mostraria a página através do fundo do sistema.
 - Cada superfície de vidro é uma camada própria, e o desfoque a torna o bloco de contenção de tudo o que estiver dentro dela com `position: fixed`: um toast ou um menu fixo dentro de um card se posiciona em relação ao card, e rola com ele, em vez de em relação à janela. Coloque um elemento fixo fora da superfície, ou abra-o como `popover` ou `<dialog>`, que a camada superior do navegador posiciona em relação à janela, esteja onde estiver na página.
 - As superfícies ficam com `position: relative` em repouso, então um filho com posição absoluta se posiciona em relação à sua superfície. Um `<dialog>` ou `[popover]` que leva uma classe de superfície mantém a posição que o navegador lhe dá.

@@ -2,7 +2,7 @@
 title: Estéticas
 description: Los seis aspectos opcionales, lo que cada uno cambia en un componente, sus controles y sus límites.
 order: 6
-source: 27460699efe3399196a3ab6206bcff3277886d4c
+source: 314ce16b9d7d0dff4fc679a5685a847b5d4ed28e
 ---
 
 # Estéticas
@@ -96,7 +96,7 @@ La sombra se proyecta en la propia intención del componente, así que un botón
 - Un cristal dentro de una tarjeta, panel o alerta `.solid` es opaco: a través de un cristal translúcido se ve la superficie rellena que hay detrás, y el texto del cristal bajaba de 4.5:1. Descansa sobre el fondo de la página, así que su texto conserva el contraste que tiene sobre la página.
 - El desenfoque solo se aplica a `.card`, `.panel`, `.alert`, la burbuja del tooltip y una `.data-table` por defecto o `.soft`. Los controles no se desenfocan: un desenfoque bajo cada control de un grupo denso cuesta una capa compuesta por cada uno y se percibe como ruido. Los controles siguen tomando el radio, el borde y la sombra de la estética.
 - Un control colocado directamente en la región glass, sin un panel alrededor, se apoya sobre un fondo propio, sin desenfoque: el 69% del color de la página, el más fino que mantiene el texto de cada presentación a 4.5:1 y el borde de un toggle a 3:1 sobre un fondo negro o blanco, en ambos temas. Una `.data-table` `.ghost` colocada ahí también se apoya sobre él. Un control dentro de un panel, un campo dentro de un `.input-group` y un badge dentro de un botón no toman ninguno, porque ya están sobre un fondo. Como con un panel, la garantía es para el texto neutro; el de un intent está pensado para el fondo propio de la página.
-- Decide la región más cercana. Una región de otra estética anidada dentro de glass, como `.pixel` o `.neobrutalism`, no da fondo a sus controles: sus superficies son opacas, y sus controles se apoyan sobre lo que tengan detrás, como en una página sin estética. Una región glass anidada de nuevo dentro de ella devuelve el fondo.
+- Decide la región más cercana. Una región de otra estética anidada dentro de glass, como `.pixel` o `.neobrutalism`, no da fondo a sus controles: sus superficies son opacas, y sus controles se apoyan sobre lo que tengan detrás, como en una página sin estética. Una región glass anidada de nuevo dentro de ella devuelve el fondo. Una región glass dentro de una card, un panel, una alerta o un botón `.solid` tampoco da fondo: el relleno es opaco, y los controles toman su color de texto, así que se apoyan sobre el relleno.
 - Con `prefers-reduced-transparency: reduce`, y con colores forzados, las superficies de vidrio pierden el desenfoque y se vuelven opacas, y también el fondo bajo un control. Los colores forzados reemplazan los colores pero conservan su transparencia, así que sin esto un panel dejaría ver la página a través del fondo del sistema.
 - Cada superficie de vidrio es su propia capa, y el desenfoque la convierte en el bloque contenedor de todo lo que tenga dentro con `position: fixed`: un toast o un menú fijo dentro de una tarjeta se ubica respecto de la tarjeta, y se desplaza con ella, en lugar de respecto de la ventana. Pon un elemento fijo fuera de la superficie, o ábrelo como `popover` o `<dialog>`, que la capa superior del navegador ubica respecto de la ventana esté donde esté en la página.
 - Las superficies tienen `position: relative` en reposo, así que un hijo con posición absoluta se ubica respecto de su superficie. Un `<dialog>` o `[popover]` que lleva una clase de superficie conserva la ubicación que le da el navegador.
