@@ -23,7 +23,7 @@ Running Tailwind CSS v4? Import `@codenhub/styles/tw` from a CSS entry file inst
 
 ## Force a theme
 
-Apply `.dark` or `.light` on `<html>` in `index.html` to force a theme instead of following the system preference; see [Theming → Light and dark](../usage/theming.md#light-and-dark).
+Apply `data-theme="light"` or `data-theme="dark"` on `<html>` in `index.html` to force a theme instead of following the system preference; see [Theming → Light and dark](../usage/theming.md#light-and-dark).
 
 ## Next
 

@@ -47,16 +47,16 @@ Running Tailwind CSS v4? `@import "@codenhub/styles/tw"` is a CSS directive, so 
 
 ## Force a theme
 
-Apply `.dark` or `.light` on `<html>` to force a theme instead of following the system preference; see [Theming → Light and dark](../usage/theming.md#light-and-dark).
+Apply `data-theme="light"` or `data-theme="dark"` on `<html>` to force a theme instead of following the system preference; see [Theming → Light and dark](../usage/theming.md#light-and-dark).
 
 ```tsx
-<html lang="en" className="dark">
+<html lang="en" data-theme="dark">
 ```
 
-In the Pages Router, `pages/_document.tsx` renders `<html>`, so put the class on its `<Html>` component:
+In the Pages Router, `pages/_document.tsx` renders `<html>`, so put the attribute on its `<Html>` component:
 
 ```tsx
-<Html lang="en" className="dark">
+<Html lang="en" data-theme="dark">
 ```
 
 ## Troubleshooting

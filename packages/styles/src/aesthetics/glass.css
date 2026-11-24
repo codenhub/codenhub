@@ -492,15 +492,17 @@
     }
   }
 
-  /* A button's lens is the control one, and so is an alert's. Swapped as the
-     value the layer reads rather than on the layer: the list above outranks any
-     selector that names the button's `::after` alone. An alert is a line or two
-     tall, and the pane's ramps, 18px from each edge, met in its middle and bent
-     the backdrop behind the text; `aesthetics.spec.ts` measures it. A card has
+  /* A button's lens is the control one, and so is an alert's and a tooltip
+     bubble's. Swapped as the value the layer reads rather than on the layer:
+     the list above outranks any selector that names the button's `::after`
+     alone. An alert or a bubble is a line or two tall, and the pane's ramps,
+     18px from each edge, met in its middle and bent the backdrop behind the
+     text; `aesthetics.spec.ts` measures it. A card has
      no height of its own to go by, and a filter cannot read the box's, so a
      card keeps the pane's lens. On a solo pane too, which reads the same value. */
   .btn.glass-liquid:is(.glass, .glass *),
-  .alert:is(.glass, .glass *, .glass-liquid) {
+  .alert:is(.glass, .glass *, .glass-liquid),
+  .tooltip-bubble:is(.glass, .glass *, .glass-liquid) {
     --_glass-liquid-lens: var(--_glass-liquid-lens-control);
   }
 }
@@ -524,6 +526,16 @@
      on which stylesheet loads last. */
   .glass.glass {
     --_region-ground: var(--_glass-ground);
+  }
+
+  /* Except inside a `.solid` box, at any depth, which this rule wins on
+     coming later: the plate is opaque, so no backdrop shows through it to
+     guard against, and a control inside it prints the plate's ink -- a ghost
+     button's white label on `.card.solid.info` read at about 1.7:1 over the
+     pane's page colour. A box clears the ground on its children only, so a
+     region wrapped in a plain element inside the plate is cleared here. */
+  .glass:is(.solid *) {
+    --_region-ground: initial;
   }
 
   .btn.glass-liquid:is(.glass, .glass *) {

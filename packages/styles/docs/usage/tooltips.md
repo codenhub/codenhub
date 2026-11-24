@@ -25,7 +25,7 @@ The "Public profile" switch on the settings screen deserves a short explanation:
 
 The three parts:
 
-- `.tooltip` wraps the trigger and the message. It positions the message and paints nothing itself. It takes its trigger's size in any layout, so a `.stack`, a `.field`, or a grid doesn't stretch it and push the message off the trigger. Around a text field, such as an `.ipt` or a `.select`, it keeps the width the layout gives it, so a full-width field stays full width.
+- `.tooltip` wraps the trigger and the message. It positions the message and paints nothing itself. It takes its trigger's size in any layout, so a `.stack`, a `.field`, or a grid doesn't stretch it and push the message off the trigger. Around a component that fills its line, such as an `.ipt`, a `.select`, a `.progress`, or a `.skeleton`, it keeps the width the layout gives it, so the component stays full width. Around an element of your own that fills its line, set `width: auto` on the `.tooltip`.
 - `.tooltip-bubble` is the message. It is a real element, so it can have an `id` that the trigger points to.
 - `.tooltip-icon` is a small round trigger, for a message with nothing else to attach to. Any focusable element can be the trigger instead: wrap an existing `.btn` in `.tooltip` and it keeps its own look.
 
@@ -111,14 +111,14 @@ document.addEventListener("keydown", (event) => {
 
 ## How the bubble looks
 
-With no intent class, the bubble uses `--color-tooltip`, a background chosen per theme: near-white on a light page, mid gray on a dark one, with `--color-tooltip-contrast` as its text color. Near-white measures only 1.04:1 against a light page, so the bubble also draws a thin border, and a container's `.edgeless` cannot remove it. `.edgeless` on the bubble itself still can. The background stays opaque under any presentation, so the bubble stays readable over whatever it covers.
+With no intent class, the bubble uses `--color-tooltip`, a background chosen per theme: near-white on a light page, mid gray on a dark one, with `--color-tooltip-contrast` as its text color. Near-white measures only 1.04:1 against a light page, so the bubble also draws a thin border, and a container's `.edgeless` cannot remove it. `.edgeless` on the bubble itself still can. The background is opaque under every presentation, so the bubble stays readable over whatever it covers, except a `.soft` or `.ghost` bubble under `.glass`, described below.
 
 An intent class fills the bubble with that intent's color and switches the text to the matching contrast color:
 
 - `.tooltip-bubble.primary` has a near-black background with near-white text on a light page, and a near-white background with near-black text on a dark one.
 - `.tooltip-bubble.destructive` has a red background with light text in both themes.
 
-Put intent, presentation, aesthetic, and elevation classes on `.tooltip-bubble`, the element that is painted, not on `.tooltip`. The bubble is flat by default, even under an aesthetic that draws depth; add `.raised` or `.floating` to the bubble to lift it. `.glass` is the exception: its shadow is one complete value that elevation cannot scale, so a glass bubble keeps that shadow, and `.flat` does not remove it either. An aesthetic in scope shapes the bubble like any other component; under `.glass` it is frosted like a card. `.tooltip-icon` takes the aesthetic's corner: square under `.neobrutalism` and `.pixel`, a diamond under `.cyber`.
+Put intent, presentation, aesthetic, and elevation classes on `.tooltip-bubble`, the element that is painted, not on `.tooltip`. The bubble is flat by default, even under an aesthetic that draws depth; add `.raised` or `.floating` to the bubble to lift it. `.glass` is the exception: its shadow is one complete value that elevation cannot scale, so a glass bubble keeps that shadow, and `.flat` does not remove it either. An aesthetic in scope shapes the bubble like any other component; under `.glass`, a `.soft` or `.ghost` bubble is frosted like a card and lets the page show through, while a default, `.solid`, or intent-filled one stays opaque. `.tooltip-icon` takes the aesthetic's corner: square under `.neobrutalism` and `.pixel`, a diamond under `.cyber`.
 
 The bubble appears without scaling up when the user asks for reduced motion, either through the system setting or with `data-motion="reduce"` on `<html>`. With `data-motion="none"` its fade ends at once too, after the linger, and `data-motion="full"` keeps the scaling even when the system asks for less motion. [App settings](../accessibility.md#app-settings) describes the attribute.
 

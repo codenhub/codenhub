@@ -989,7 +989,18 @@ for (const theme of THEMES) {
    region of another aesthetic nested in glass gives its controls none, and a
    glass region re-entered inside it, or inside a card, gives it back. A box already resting on
    one -- a surface, a field inside an input group, a badge inside a button --
-   passes none on, so the pane is never laid twice. */
+   passes none on, so the pane is never laid twice. Nor does a `.solid` box at
+   any depth: it is opaque, so nothing behind it shows, and a control inside
+   it prints the plate's ink, which over the pane's page colour read at about
+   1.7:1 on `.solid.info`. */
+const SOLID_PLATES = [
+  "card solid info",
+  "card solid primary",
+  "card solid",
+  "panel solid success",
+  "alert solid warning",
+  "btn solid danger",
+];
 const OTHER_AESTHETICS = registry.aesthetics.map(({ class: name }) => name).filter((name) => name !== "glass");
 
 for (const theme of THEMES) {
@@ -1002,6 +1013,10 @@ for (const theme of THEMES) {
     }
 
     const ghost = (testId: string) => `<button class="btn ghost" data-testid="${testId}">Label</button>`;
+    const solidPlate = (plate: string, where = "glass") => {
+      const id = `${where}-${plate.replaceAll(" ", "-")}`;
+      return `<div class="${plate}"><div class="glass">${ghost(`${id}-glass`)}</div><div><div class="glass">${ghost(`${id}-wrapped`)}</div></div><div><div class="card"><div class="glass">${ghost(`${id}-deep`)}</div></div></div><button class="btn ghost glass" data-testid="${id}-glass-btn">Label</button></div>`;
+    };
     await loadIn(
       page,
       theme,
@@ -1014,9 +1029,11 @@ for (const theme of THEMES) {
          ).join("")}
          <div><div><div>${ghost("depth-4")}</div></div></div>
          <div class="card">${ghost("card")}<div class="glass">${ghost("card-glass")}</div></div>
+         ${SOLID_PLATES.map((plate) => solidPlate(plate)).join("")}
          <div class="input-group"><input class="ipt" data-testid="group-field" /></div>
          <button class="btn ghost"><span class="badge ghost" data-testid="badge-in-button">B</span></button>
-       </div>`,
+       </div>
+       ${SOLID_PLATES.map((plate) => solidPlate(plate, "page")).join("")}`,
     );
 
     const painted = await paint(page);
@@ -1031,7 +1048,12 @@ for (const theme of THEMES) {
     ]) {
       expect.soft(alpha(testId), `${testId} rests on the pane`).toBeGreaterThan(0);
     }
-    for (const testId of [...OTHER_AESTHETICS, "card", "group-field", "badge-in-button"]) {
+    const solidIds = ["glass", "page"].flatMap((where) =>
+      SOLID_PLATES.flatMap((plate) =>
+        ["glass", "wrapped", "deep", "glass-btn"].map((suffix) => `${where}-${plate.replaceAll(" ", "-")}-${suffix}`),
+      ),
+    );
+    for (const testId of [...OTHER_AESTHETICS, "card", "group-field", "badge-in-button", ...solidIds]) {
       expect.soft(alpha(testId), `${testId} lays no pane`).toBe(0);
     }
   });
