@@ -25,7 +25,7 @@ The "Public profile" switch on the settings screen deserves a short explanation:
 
 The three parts:
 
-- `.tooltip` wraps the trigger and the message. It positions the message and paints nothing itself. It takes its trigger's size in any layout, so a `.stack`, a `.field`, or a grid doesn't stretch it and push the message off the trigger. Around a text field, such as an `.ipt` or a `.select`, it keeps the width the layout gives it, so a full-width field stays full width.
+- `.tooltip` wraps the trigger and the message. It positions the message and paints nothing itself. It takes its trigger's size in any layout, so a `.stack`, a `.field`, or a grid doesn't stretch it and push the message off the trigger. Around a component that fills its line, such as an `.ipt`, a `.select`, a `.progress`, or a `.skeleton`, it keeps the width the layout gives it, so the component stays full width. Around an element of your own that fills its line, set `width: auto` on the `.tooltip`.
 - `.tooltip-bubble` is the message. It is a real element, so it can have an `id` that the trigger points to.
 - `.tooltip-icon` is a small round trigger, for a message with nothing else to attach to. Any focusable element can be the trigger instead: wrap an existing `.btn` in `.tooltip` and it keeps its own look.
 

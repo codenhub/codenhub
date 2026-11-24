@@ -49,14 +49,30 @@
     width: fit-content;
     height: fit-content;
 
-    /* Except around a text field, which fills its line: sized to its
-       content, the box left a `width: 100%` field nothing wider to fill, and
-       a full-width `.ipt` in a 480px `.field` drew 215px wide. Stretched, the
-       box is the field's width, so the bubble still centres on it. The list
-       is the one the form rules use for a field, bare elements included for
-       `/native`. */
+    /* Except around a component that fills its line: sized to its content,
+       the box left a `width: 100%` component nothing wider to fill, and a
+       full-width `.ipt` in a 480px `.field` drew 215px wide, a `.progress`
+       2px. Stretched, the box is the component's width, so the bubble still
+       centres on it. The list is every component whose rule sets
+       `width: 100%`, the text fields as the form rules list them, and the
+       bare elements `/native` gives those rules. An element of the
+       consumer's own that fills its line needs the same on its tooltip. */
     &:has(
-      > :is(.ipt, .textarea, .select, .text-control, .input-group, textarea, select),
+      > :is(
+        .ipt,
+        .textarea,
+        .select,
+        .text-control,
+        .input-group,
+        .field,
+        .progress,
+        .skeleton,
+        .data-table,
+        .section-content,
+        textarea,
+        select,
+        progress
+      ),
       > input:not(
         [type="checkbox"],
         [type="radio"],

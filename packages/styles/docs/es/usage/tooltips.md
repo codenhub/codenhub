@@ -2,7 +2,7 @@
 title: Tooltips
 description: Ayuda de campo que se abre con hover y con foco, cómo conectarla para los lectores de pantalla y la tecla Escape, y dónde queda recortado un tooltip.
 order: 4
-source: 7e99e29ed0c2b1fd8ce3c293974b6e8d3777fc74
+source: dabbb2edae4e457691a5124744380329726aab9b
 ---
 
 # Tooltips
@@ -26,7 +26,7 @@ El switch "Perfil público" de la pantalla de ajustes merece una breve explicaci
 
 Las tres partes:
 
-- `.tooltip` envuelve el disparador y el mensaje. Posiciona el mensaje y no pinta nada por sí mismo. Toma el tamaño de su disparador en cualquier layout, así que un `.stack`, un `.field` o una cuadrícula no lo estiran ni alejan el mensaje del disparador. Alrededor de un campo de texto, como un `.ipt` o un `.select`, conserva el ancho que le da el layout, así que un campo de ancho completo sigue siéndolo.
+- `.tooltip` envuelve el disparador y el mensaje. Posiciona el mensaje y no pinta nada por sí mismo. Toma el tamaño de su disparador en cualquier layout, así que un `.stack`, un `.field` o una cuadrícula no lo estiran ni alejan el mensaje del disparador. Alrededor de un componente que llena su línea, como un `.ipt`, un `.select`, un `.progress` o un `.skeleton`, conserva el ancho que le da el layout, así que el componente sigue ocupando todo el ancho. Alrededor de un elemento propio que llena su línea, pon `width: auto` en el `.tooltip`.
 - `.tooltip-bubble` es el mensaje. Es un elemento real, así que puede tener un `id` al que apunte el disparador.
 - `.tooltip-icon` es un pequeño disparador redondo, para un mensaje que no tiene otra cosa a la que asociarse. Cualquier elemento que pueda recibir el foco puede ser el disparador: envuelve un `.btn` existente en `.tooltip` y conserva su propio aspecto.
 

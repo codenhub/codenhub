@@ -227,33 +227,53 @@ for (const [entry, url] of [
   });
 }
 
-/* A tooltip around a text field keeps the field the width its layout gives
-   it. Sizing the wrapper to its content alone drew a full-width `.ipt` in a
-   480px `.field` 215px wide, the width of its own `size`, because its
-   `width: 100%` then had nothing wider to fill. The bubble centres on the
-   field, which is the wrapper's width either way. */
-for (const [entry, url] of [
-  ["dist", `${ORIGIN}/shared/entry-vanilla.css`],
-  ["/tw", `${ORIGIN}/shared/entry-tw.css`],
+/* A tooltip around a component that fills its line keeps it the width its
+   layout gives it. Sizing the wrapper to its content alone drew a full-width
+   `.ipt` in a 480px `.field` 215px wide, the width of its own `size`, and a
+   `.progress` 2px and a `.skeleton` 0px, because their `width: 100%` then had
+   nothing wider to fill. Every component whose rule sets `width: 100%` is
+   here. The bubble centres on the component, which is the wrapper's width
+   either way. */
+const CLASSED_FULL_WIDTH = {
+  ipt: '<input class="ipt" />',
+  textarea: '<textarea class="textarea"></textarea>',
+  select: '<select class="select"><option>One</option></select>',
+  "input-group": '<div class="input-group"><input class="ipt" /></div>',
+  progress: '<progress class="progress" value="40" max="100"></progress>',
+  skeleton: '<div class="skeleton"></div>',
+  field: '<div class="field"><input class="ipt" /></div>',
+  "data-table": '<table class="data-table"><tr><td>One</td></tr></table>',
+  "section-content": '<div class="section-content">One</div>',
+};
+for (const [entry, url, fields] of [
+  ["dist", `${ORIGIN}/shared/entry-vanilla.css`, CLASSED_FULL_WIDTH],
+  ["/tw", `${ORIGIN}/shared/entry-tw.css`, CLASSED_FULL_WIDTH],
+  [
+    "/native",
+    `${ORIGIN}/native/entry-vanilla.css`,
+    {
+      input: "<input />",
+      textarea: "<textarea></textarea>",
+      select: "<select><option>One</option></select>",
+      progress: '<progress value="40" max="100"></progress>',
+    },
+  ],
 ] as const) {
-  test(`keeps a text field full width inside a tooltip, from ${entry}`, async ({ page }) => {
+  test(`keeps a full-width component full width inside a tooltip, from ${entry}`, async ({ page }) => {
     await page.setContent("<!doctype html><html><body></body></html>");
     await page.addStyleTag({ url });
 
-    const fields = {
-      ipt: '<input class="ipt" />',
-      textarea: '<textarea class="textarea"></textarea>',
-      select: '<select class="select"><option>One</option></select>',
-      "input-group": '<div class="input-group"><input class="ipt" /></div>',
-    };
     const failures: string[] = [];
 
     for (const [name, markup] of Object.entries(fields)) {
       // oxlint-disable-next-line no-await-in-loop -- one field on the page at a time.
       const read = await page.evaluate((field) => {
         document.body.innerHTML = `<div class="field" style="width: 480px"><label>Name</label><span class="tooltip" data-state="open">${field}<span class="tooltip-bubble">Help</span></span></div>`;
+        // A skeleton's sheen never ends, and finishing it throws.
         for (const animation of document.getAnimations()) {
-          animation.finish();
+          if (animation.effect?.getComputedTiming().endTime !== Infinity) {
+            animation.finish();
+          }
         }
 
         const trigger = document.querySelector(".tooltip > :first-child")!.getBoundingClientRect();
@@ -274,5 +294,32 @@ for (const [entry, url] of [
     }
 
     expect(failures).toEqual([]);
+  });
+}
+
+/* The tooltip page tells a consumer whose own element fills its line to set
+   `width: auto` on the `.tooltip`; it has to beat the wrapper's
+   `fit-content` from either build. */
+for (const [entry, url] of [
+  ["dist", `${ORIGIN}/shared/entry-vanilla.css`],
+  ["/tw", `${ORIGIN}/shared/entry-tw.css`],
+] as const) {
+  test(`keeps a consumer's full-width element full width in a tooltip set to width: auto, from ${entry}`, async ({
+    page,
+  }) => {
+    await page.setContent("<!doctype html><html><body></body></html>");
+    await page.addStyleTag({ url });
+
+    const widths = await page.evaluate(() => {
+      const read = (tooltipStyle: string) => {
+        document.body.innerHTML = `<div class="stack" style="width: 480px"><span class="tooltip" data-state="open" style="${tooltipStyle}"><div style="width: 100%; height: 8px"></div><span class="tooltip-bubble">Help</span></span></div>`;
+        return document.querySelector(".tooltip > div")!.getBoundingClientRect().width;
+      };
+
+      return { bare: read(""), auto: read("width: auto") };
+    });
+
+    expect(widths.bare).toBeLessThan(10);
+    expect(widths.auto).toBeCloseTo(480, 0);
   });
 }
