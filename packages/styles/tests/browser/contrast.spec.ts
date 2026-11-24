@@ -26,6 +26,21 @@ const load = async (page: Page, theme: string, markup: string) => {
   await settleAnimations(page);
 };
 
+/* What `loadIn` and the solid-label test inject once the page is loaded: no
+   transition, so a hover reads its end state at once, and no backdrop filter.
+   These tests read the cascade, never pixels, and a backdrop filter is paint
+   alone. Under liquid glass every pane and button draws an SVG displacement
+   lens over its backdrop, and every hover repaints them, which a pointer move
+   waits for: in Chromium the hover test on a solid card took 109s under
+   liquid glass and 2-4s under every other aesthetic, and ran into its 120s
+   limit on a busy machine (#664). With the filter off it takes 6 to 8s.
+   The filter's own value is still read, on a page loaded without this. */
+const STILL = `*, *::before, *::after {
+  transition: none !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}`;
+
 const style = (page: Page, testId: string, property: string) =>
   page.getByTestId(testId).evaluate((element, name) => getComputedStyle(element).getPropertyValue(name), property);
 
@@ -266,7 +281,7 @@ for (const theme of THEMES) {
           ).join("")}</div>`,
       ).join(""),
     );
-    await page.addStyleTag({ content: "*, *::before, *::after { transition: none !important; }" });
+    await page.addStyleTag({ content: STILL });
 
     const ground = await pageColor(page);
     const ratio = async (testId: string) => {
@@ -283,7 +298,7 @@ for (const theme of THEMES) {
           // oxlint-disable-next-line no-await-in-loop -- one pointer, moved in turn.
           expect.soft(await ratio(testId), `${testId} at rest`).toBeGreaterThanOrEqual(4.5);
           // oxlint-disable-next-line no-await-in-loop -- one pointer, moved in turn.
-          await page.getByTestId(testId).hover();
+          await pointAt(page, testId);
           // oxlint-disable-next-line no-await-in-loop -- one pointer, moved in turn.
           expect.soft(await ratio(testId), `${testId} on hover`).toBeGreaterThanOrEqual(4.5);
         }
@@ -358,7 +373,7 @@ const loadIn = async (page: Page, theme: string, contrast: string, markup: strin
   );
   await page.addStyleTag({ content: await built("index.css") });
   await page.addStyleTag({ content: await built("aesthetics/index.css") });
-  await page.addStyleTag({ content: "*, *::before, *::after { transition: none !important; }" });
+  await page.addStyleTag({ content: STILL });
   await settleAnimations(page);
 };
 
@@ -418,6 +433,28 @@ const paint = (page: Page, testIds?: string[]) =>
       }),
     ) as Record<string, Painted>;
   }, testIds);
+
+/* Moves the pointer onto the center of the element named `testId`.
+   `locator.hover()` first waits for the element to hold still across
+   animation frames. In WebKit that wait took the hover test on a solid card
+   under liquid glass from 27s to 38s, and the pressed test from 14s to 37s.
+   These pages hold still once their styles are in, so one call scrolls the
+   element into view, reads its center, and checks that the element is what
+   the pointer lands on, the one check of Playwright's these tests need: a
+   hover that landed on something else would read the element at rest and
+   pass. */
+const pointAt = async (page: Page, testId: string) => {
+  const { x, y, hit } = await page.evaluate((id) => {
+    const element = document.querySelector(`[data-testid="${id}"]`)!;
+    element.scrollIntoView({ block: "center", inline: "center" });
+    const box = element.getBoundingClientRect();
+    const center = { x: box.left + box.width / 2, y: box.top + box.height / 2 };
+
+    return { ...center, hit: element.contains(document.elementFromPoint(center.x, center.y)) };
+  }, testId);
+  expect(hit, `${testId} is under the pointer`).toBe(true);
+  await page.mouse.move(x, y);
+};
 
 /* The ground under an element, its stack laid over the page in turn, and its
    own fill over that. */
@@ -485,7 +522,7 @@ for (const theme of THEMES) {
             for (const [component] of TEXT_COMPONENTS.filter(([, , hovers]) => hovers)) {
               const testId = caseId(name, component, intent, presentation);
               // oxlint-disable-next-line no-await-in-loop -- one pointer, moved in turn.
-              await page.getByTestId(testId).hover();
+              await pointAt(page, testId);
               // oxlint-disable-next-line no-await-in-loop -- one pointer, moved in turn.
               const { [testId]: painted } = await paint(page, [testId]);
 
@@ -557,7 +594,7 @@ for (const theme of THEMES) {
           for (const [component] of hovering) {
             const testId = caseId("plate0", component, intent, presentation);
             // oxlint-disable-next-line no-await-in-loop -- one pointer, moved in turn.
-            await page.getByTestId(testId).hover();
+            await pointAt(page, testId);
             // oxlint-disable-next-line no-await-in-loop -- one pointer, moved in turn.
             const { [testId]: painted } = await paint(page, [testId]);
 
@@ -1089,7 +1126,7 @@ for (const theme of THEMES) {
           for (const [component] of PRESSABLE) {
             const testId = caseId(name, component, intent, presentation);
             // oxlint-disable-next-line no-await-in-loop -- one pointer, moved in turn.
-            await page.getByTestId(testId).hover();
+            await pointAt(page, testId);
             // oxlint-disable-next-line no-await-in-loop -- one pointer, pressed in turn.
             await page.mouse.down();
             // oxlint-disable-next-line no-await-in-loop -- read while the pointer is down.
