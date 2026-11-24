@@ -2,7 +2,7 @@
 title: Estéticas
 description: Los seis aspectos opcionales, lo que cada uno cambia en un componente, sus controles y sus límites.
 order: 6
-source: 314ce16b9d7d0dff4fc679a5685a847b5d4ed28e
+source: 4ec2f8238c72bad07ccc2026cab8854d6766b00b
 ---
 
 # Estéticas
@@ -125,7 +125,7 @@ La lente la dibuja un filtro SVG en `backdrop-filter`, que Chromium renderiza y 
 - Llega a `.card`, `.panel`, `.alert`, `.surface`, la burbuja del tooltip, un componente propio construido con `@apply surface` y una `.data-table` por defecto o `.soft`. Los controles se quedan sólidos, como con glass, excepto un botón que lo pida: consulta [Botones liquid](#botones-liquid).
 - Dibuja su desenfoque y su lente en el `::before` y el `::after` de cada superficie, así que una superficie dentro de una región liquid no puede llevar un `::before` o `::after` propio. Cada superficie se convierte también en un contexto de apilamiento posicionado; una superficie que posiciones tú conserva tu colocación.
 - Todo lo demás que se esmerila con glass conserva el desenfoque ligero y el fondo más claro de liquid, sin la lente ni el borde brillante: una `<table>` sin clase con `/native`.
-- La lente es una erosión de 8px desenfocada sobre 10px en cada superficie, y de 3px desenfocada sobre 3.5px en un botón y en una alerta; su intensidad es fija. La banda más ancha llega a unos 18px desde cada borde, así que en una card o un panel de menos de unos 80px de alto los dos lados se juntan y también curvan el fondo en el centro. Un filtro no puede leer una custom property, así que ninguno de los dos es un control. Las esquinas sí lo son, mediante `--glass-radius` y `--glass-radius-surface`, con valores por defecto mayores: una esquina continua parece más pequeña que una redondeada del mismo radio.
+- La lente es una erosión de 8px desenfocada sobre 10px en cada superficie, y de 3px desenfocada sobre 3.5px en un botón, en una alerta y en el globo de un tooltip; su intensidad es fija. La banda más ancha llega a unos 18px desde cada borde, así que en una card o un panel de menos de unos 80px de alto los dos lados se juntan y también curvan el fondo en el centro. Un filtro no puede leer una custom property, así que ninguno de los dos es un control. Las esquinas sí lo son, mediante `--glass-radius` y `--glass-radius-surface`, con valores por defecto mayores: una esquina continua parece más pequeña que una redondeada del mismo radio.
 - Decide la región más cercana. Una región de otra estética anidada dentro de una región liquid, o de `.glass` simple, conserva su propio material y no toma capas, y una región liquid anidada a su vez dentro de esa vuelve a tomarlas.
 - Sin `.glass` en el ámbito, solo cambia las esquinas.
 - Con `prefers-reduced-transparency: reduce`, y con colores forzados, desaparecen el desenfoque y la lente y la superficie es opaca, como con glass.
