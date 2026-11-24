@@ -2,7 +2,7 @@
 title: Temas
 description: Modo claro e escuro, como trocar a paleta pelas cores da marca, como definir uma intenção própria, e cada token de cor, de intenção, fundamental e de fonte com o seu padrão.
 order: 5
-source: d0e68e3cb37d5637a92e2fe7ab2e67dad165a4cc
+source: 75c1a08e18b66721d517b48e8950097651925954
 ---
 
 # Temas
@@ -30,7 +30,7 @@ Para deixar o usuário escolher, coloque um seletor de tema no elemento raiz:
 
 Uma tela de configurações com a escolha "Sistema / Claro / Escuro" remove o atributo para Sistema e o define para as outras duas opções.
 
-Um tema com um nome próprio também precisa de um desses seletores. Os tokens e os componentes seguem só o `color-scheme`, mas a [variante `dark:`](#a-variante-dark) e a [paleta gerada](./customizing.md#paleta-gerada) reconhecem só os seletores acima, então `<html data-theme="paper">` para um tema claro chamado `paper` não é claro para elas: com o sistema no escuro, todo utilitário `dark:` se aplica sobre ele, e o `/palette` dá os seus valores escuros. O `@codenhub/theme` adiciona `.theme-light` ou `.theme-dark` a todo tema a partir da 0.4.0; com uma versão anterior, ou com um script seu, adicione você a classe correspondente ao aplicar um tema, e remova a outra, porque uma raiz que carrega as duas é escura.
+Um tema com um nome próprio também precisa de um desses seletores. Os tokens e os componentes seguem só o `color-scheme`, mas a [variante `dark:`](#a-variante-dark) e a [paleta gerada](./customizing.md#paleta-gerada) reconhecem só os seletores acima, então `<html data-theme="paper">` para um tema claro chamado `paper` não é claro para elas: com o sistema no escuro, todo utilitário `dark:` se aplica sobre ele, e o `/palette` dá os seus valores escuros. O `@codenhub/theme` adiciona `.theme-light` ou `.theme-dark` a todo tema a partir da 0.4.0; com uma versão anterior, ou com um script seu, adicione você a classe correspondente ao aplicar um tema e remova a outra, porque uma raiz que carrega as duas é escura; para Sistema, remova as duas.
 
 As configurações de contraste e movimento funcionam do mesmo jeito, com `data-contrast` e `data-motion` no `<html>`; veja [Acessibilidade → Configurações do app](../accessibility.md#configurações-do-app).
 
