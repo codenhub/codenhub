@@ -105,9 +105,9 @@ if (!result.ok) {
 
 ## Requirements
 
-- Node.js 24 or newer, or an ES2022-compatible browser, worker, or edge runtime.
+- Node.js 26 or newer, or an ES2022-compatible browser, worker, or edge runtime.
 - Native `Error` `cause` support, which every runtime above has.
-- ESM. CommonJS code can load the package with `require()` on runtimes that support requiring ES modules, such as Node.js 24.
+- ESM. CommonJS code can load the package with `require()` on runtimes that support requiring ES modules, such as Node.js 26.
 - For the adapters only: React 18 or newer for `@codenhub/error/react`, and Svelte 5.3 or newer for `@codenhub/error/svelte`. Both are optional peer dependencies, so the rest of the package installs without them.
 
 The package never touches browser or Node.js globals, so it runs the same in a browser, on a server, during server-side rendering, in a worker, or on an edge runtime. Importing a preset contacts no service and needs no other package.

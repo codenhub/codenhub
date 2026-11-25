@@ -1,4 +1,4 @@
-<!-- source: 736e4ede3d33716e688ebb49dae4a39535510100 -->
+<!-- source: f0e774b49db2ce573be819ab6e7e2d54986c6deb -->
 
 # @codenhub/error
 
@@ -54,7 +54,7 @@ Uma falha que ninguém registrou vira `type: "unknown"` com a mensagem `"An unex
 
 ## Requisitos
 
-- Node.js 24 ou mais recente, ou um navegador, worker ou runtime de edge compatível com ES2022 e com suporte nativo a `cause` em `Error`.
+- Node.js 26 ou mais recente, ou um navegador, worker ou runtime de edge compatível com ES2022 e com suporte nativo a `cause` em `Error`.
 - ESM. Código CommonJS pode carregá-lo com `require()` nos runtimes que permitem fazer `require` de módulos ES.
 - Nenhuma dependência em runtime, e nenhum acesso a globais do navegador ou do Node.js.
 - O adaptador de React precisa do React 18 ou mais recente, e o de Svelte precisa do Svelte 5.3 ou mais recente. Os dois são peer dependencies opcionais.

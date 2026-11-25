@@ -3,6 +3,15 @@
   "version": "0.3.0",
   "private": false,
   "description": "Typed error normalization, result helpers, and opt-in registry presets for TypeScript apps.",
+  "keywords": [
+    "error",
+    "error-handling",
+    "react",
+    "result",
+    "supabase",
+    "svelte",
+    "typescript"
+  ],
   "homepage": "https://codenhub.dev/packages/error/",
   "license": "Apache-2.0",
   "repository": {
@@ -106,7 +115,7 @@
     }
   },
   "engines": {
-    "node": ">=24"
+    "node": ">=26"
   },
   "codenhub": {
     "label": "ErrorKit",
