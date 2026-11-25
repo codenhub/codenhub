@@ -405,7 +405,11 @@ export interface LocalKeySet extends KeySet {
 }
 
 /** A verified token. Frozen. */
-export interface VerifiedJwt<TPayload extends JwtRegisteredClaims = JwtPayload> {
+export interface VerifiedJwt<
+  TPayload extends object & {
+    readonly [K in keyof TPayload & keyof JwtRegisteredClaims]?: JwtRegisteredClaims[K];
+  } = JwtPayload,
+> {
   /** The protected header. */
   readonly header: JwtHeader;
   /** The payload, after every configured claim check passed. */
@@ -523,6 +527,8 @@ export type VerifiedPayload<TSchema extends StandardSchemaV1 | undefined> = TSch
  * @returns The verified token, or every issue found. Structural, key, and signature failures stop at
  * the first issue; claim checks report every failing claim.
  */
-export type Verifier<TPayload extends JwtRegisteredClaims = JwtPayload> = (
-  token: unknown,
-) => Promise<JwtResult<VerifiedJwt<TPayload>>>;
+export type Verifier<
+  TPayload extends object & {
+    readonly [K in keyof TPayload & keyof JwtRegisteredClaims]?: JwtRegisteredClaims[K];
+  } = JwtPayload,
+> = (token: unknown) => Promise<JwtResult<VerifiedJwt<TPayload>>>;

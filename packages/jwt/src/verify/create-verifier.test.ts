@@ -572,6 +572,15 @@ describe("createVerifier payload types", () => {
     expectTypeOf<Verifier<AccessClaims>>().returns.resolves.toEqualTypeOf<JwtResult<VerifiedJwt<AccessClaims>>>();
   });
 
+  it("should accept an interface with only custom claims", () => {
+    interface TenantClaims {
+      tenant: string;
+    }
+
+    expectTypeOf(createVerifier<TenantClaims>({ keys: keySetOf(secretKey) })).toEqualTypeOf<Verifier<TenantClaims>>();
+    expectTypeOf<VerifiedJwt<TenantClaims>["payload"]>().toEqualTypeOf<TenantClaims>();
+  });
+
   it("should refuse a type argument whose registered claims have the wrong type", () => {
     // @ts-expect-error exp is a number of seconds.
     expect(typeof createVerifier<{ exp: string }>({ keys: keySetOf(secretKey) })).toBe("function");

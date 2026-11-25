@@ -23,9 +23,19 @@ import { getKeyEntry, isRegisteredKey } from "../keys/registry";
 import { checkClaims, schemaIssues } from "./claims";
 import { readRouteChecks, resolveOptions, type ResolvedOptions } from "./options";
 
-const KEY_SET_ERROR = fail({ code: "key_fetch_failed", params: { reason: "key_set_error" } });
-const MISSING_ISSUER = fail({ code: "missing_claim", path: ["payload", "iss"], params: { claim: "iss" } });
-const INVALID_ISSUER = fail({ code: "invalid_claim", path: ["payload", "iss"] });
+const KEY_SET_ERROR = fail({
+  code: "key_fetch_failed",
+  params: { reason: "key_set_error" },
+});
+const MISSING_ISSUER = fail({
+  code: "missing_claim",
+  path: ["payload", "iss"],
+  params: { claim: "iss" },
+});
+const INVALID_ISSUER = fail({
+  code: "invalid_claim",
+  path: ["payload", "iss"],
+});
 const WRONG_ISSUER = fail({ code: "wrong_issuer", path: ["payload", "iss"] });
 
 /**
@@ -98,9 +108,11 @@ export function createVerifier<TSchema extends StandardSchemaV1>(
  * @returns A {@link Verifier} whose payload is typed `TPayload`.
  * @throws TypeError for the invalid options the overload above lists.
  */
-export function createVerifier<TPayload extends JwtRegisteredClaims = JwtPayload>(
-  options: VerifierOptions<StandardSchemaV1 | undefined>,
-): Verifier<TPayload>;
+export function createVerifier<
+  TPayload extends object & {
+    readonly [K in keyof TPayload & keyof JwtRegisteredClaims]?: JwtRegisteredClaims[K];
+  } = JwtPayload,
+>(options: VerifierOptions<StandardSchemaV1 | undefined>): Verifier<TPayload>;
 export function createVerifier(options: VerifierOptions<StandardSchemaV1 | undefined>): Verifier<JwtPayload> {
   const resolved = resolveOptions(options);
   const report = reporterOf(resolved.onKeySetError);
@@ -153,7 +165,11 @@ export function createVerifier(options: VerifierOptions<StandardSchemaV1 | undef
     }
     // The header and payload come deep-frozen from the parser and the key frozen from its registration, so
     // only the new objects are frozen: `ok` would walk the whole token again.
-    const verified: VerifiedJwt = Object.freeze({ header: jws.header, payload: payload.value, key });
+    const verified: VerifiedJwt = Object.freeze({
+      header: jws.header,
+      payload: payload.value,
+      key,
+    });
     return frozenOk(verified);
   };
 }
@@ -199,7 +215,11 @@ async function routeByIssuer(
       // Not wrapped in `ok`, which would deep-freeze the caller's key set and any state it keeps.
       return { keys: returned, payload: payload.value, checks: undefined };
     }
-    const route = returned as { keys?: unknown; audience?: unknown; type?: unknown } | null;
+    const route = returned as {
+      keys?: unknown;
+      audience?: unknown;
+      type?: unknown;
+    } | null;
     if (typeof route !== "object" || route === null || !isKeySet(route.keys)) {
       return report(new TypeError(NOT_A_KEY_SET));
     }
@@ -254,7 +274,15 @@ export async function selectKey(
       return report(new TypeError("The key set's select returned something other than a result."));
     }
     // Read inside the `try` as well: a getter or Proxy trap on the result can throw too.
-    const { ok: isOk, value, error } = result as { ok?: unknown; value?: unknown; error?: { issues?: unknown } };
+    const {
+      ok: isOk,
+      value,
+      error,
+    } = result as {
+      ok?: unknown;
+      value?: unknown;
+      error?: { issues?: unknown };
+    };
     if (isOk === true) {
       return isRegisteredKey(value) && value.kind !== "private"
         ? frozenOk(value)
