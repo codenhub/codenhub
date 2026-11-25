@@ -1,6 +1,6 @@
 ---
 status: IMPLEMENTED
-last_updated: 2026-11-21
+last_updated: 2026-11-25
 scope: Design decisions, limits, and failure modes of the `chs` build command that ships in `@codenhub/styles`.
 ---
 
@@ -43,7 +43,7 @@ Rejected: a fork of Tailwind's compiler or scanner inside the package. It would 
 
 ## No Tailwind utilities, ten variants
 
-The command emits StyleKit classes only. A Tailwind utility such as `flex` or `mt-4` is not in `dist/purge/index.css`, so it is never found. Shipping utilities would mean shipping a fixed subset of Tailwind compiled in advance, and any subset is the wrong one for some project; a project that wants them runs Tailwind and imports `/tw`, which gives every utility and every variant. [Roadmap → Possible](./roadmap.md#possible) keeps open a command that generates a closed set of utilities instead of trimming a compiled one; this decision stands until that one is made.
+The command emits StyleKit classes only. A Tailwind utility such as `flex` or `mt-4` is not in `dist/purge/index.css`, so it is never found. Shipping utilities would mean shipping a fixed subset of Tailwind compiled in advance, and any subset is the wrong one for some project; a project that wants them runs Tailwind and imports `/tw`, which gives every utility and every variant. A [generator](./generator.md) that writes a closed set of utilities for the classes the content names is now planned, and it reverses this rejection when it ships; until then the command emits none.
 
 The variants are a fixed list in `scripts/build-purge.mjs`: `sm`, `md`, `lg`, `xl`, `2xl`, `hover`, `focus`, `focus-visible`, `active`, and `dark`, on the intent, presentation (fill and edge), and modifier classes from `registry.json`, except `disabled`, which the documentation tells consumers to write as the attribute or the class. Each variant costs its copy of every class it applies to, about 3 KB minified for the axis classes alone, and a page pays only for the ones it uses, but every install carries them all.
 
