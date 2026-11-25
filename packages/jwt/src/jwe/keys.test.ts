@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { exportPublicJwk, generateKeyPair, jwkThumbprint } from "../index";
 import { KEY_MANAGEMENT_ALGORITHMS } from "./algorithms";
@@ -146,6 +146,36 @@ describe("importJwePublicKey and importJwePrivateKey", () => {
     expect(await importJwePublicKey(jwk, { alg: "ECDH-ES" })).toEqual(failure("invalid_key"));
     expect(await importJwePublicKey(jwk, { alg: "ECDH-ES+A256KW" })).toEqual(failure("invalid_key"));
     expect(await importJwePublicKey(pem, { alg: "ECDH-ES" })).toEqual(failure("invalid_key"));
+  });
+
+  it.each(["P-256", "P-384", "P-521"] as const)(
+    "should refuse a %s public key off the curve as invalid_key before Web Crypto sees it",
+    async (crv) => {
+      const pair = await generateJweKeyPair({ alg: "ECDH-ES", crv });
+      const { x, y } = await exportJwePublicJwk(pair.publicKey);
+      const flipped = Buffer.from(y as string, "base64url");
+      flipped[flipped.length - 1] = (flipped[flipped.length - 1] as number) ^ 1;
+      const importKey = vi.spyOn(crypto.subtle, "importKey");
+      try {
+        expect(
+          await importJwePublicKey({ kty: "EC", crv, x, y: flipped.toString("base64url") }, { alg: "ECDH-ES" }),
+        ).toEqual(failure("invalid_key"));
+        expect(await importJwePublicKey({ kty: "EC", crv, x, y: x }, { alg: "ECDH-ES" })).toEqual(
+          failure("invalid_key"),
+        );
+        expect(importKey).not.toHaveBeenCalled();
+        expect((await importJwePublicKey({ kty: "EC", crv, x, y }, { alg: "ECDH-ES" })).ok).toBe(true);
+      } finally {
+        importKey.mockRestore();
+      }
+    },
+  );
+
+  it("should refuse a private JWK whose public point is off the curve as invalid_key", async () => {
+    const pair = await generateJweKeyPair({ alg: "ECDH-ES", crv: "P-256", extractable: true });
+    const jwk = await exportJwePrivateJwk(pair.privateKey);
+
+    expect(await importJwePrivateKey({ ...jwk, y: jwk.x }, { alg: "ECDH-ES" })).toEqual(failure("invalid_key"));
   });
 
   it("should refuse a CryptoKeyPair whose public half is a low-order X25519 point", async () => {

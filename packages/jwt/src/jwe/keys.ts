@@ -391,7 +391,7 @@ export async function importJwePublicKey(
       ),
     );
   } catch {
-    // Web Crypto rejects material it cannot use, such as a point off the curve; its message may quote it.
+    // Web Crypto rejects material it cannot use; its message may quote it.
     return fail(INVALID_KEY);
   }
 }
@@ -587,8 +587,8 @@ async function halvesMatch(alg: AsymmetricKeyManagementAlgorithm, halves: Halves
 /**
  * Whether a recipient's public key agrees on a non-zero secret with a fresh ephemeral key, as every sender's will
  * have to. A low-order X25519 point fails: Web Crypto refuses the agreement or gives an all-zero secret (RFC 7748
- * §6.1), and `encrypt` would fail the same way on every token. NIST curves need no such check, since Web Crypto
- * refuses a point off the curve on import and their order is prime. Never throws.
+ * §6.1), and `encrypt` would fail the same way on every token. NIST curves need no such check: the JWK checks
+ * refuse a point off the curve, and their order is prime. Never throws.
  */
 async function agreesWithFreshKey(publicKey: CryptoKey, curve: JweCurve): Promise<boolean> {
   try {

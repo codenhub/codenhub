@@ -1,10 +1,11 @@
-import { beforeAll, describe, expect, it } from "vitest";
+import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
 import {
   createDecrypter,
   createJweKeySet,
   createKeySet,
   encrypt,
+  exportJwePublicJwk,
   exportPublicPem,
   exportSecretJwk,
   generateJweKeyPair,
@@ -233,6 +234,66 @@ describe("ephemeral public keys", () => {
     const epk = { kty: "EC", crv: "P-256", x, y: x };
 
     expect(await decrypt(forged({ alg: "ECDH-ES", enc: "A128GCM", kid: "p256", epk }))).toEqual(MALFORMED_EPK);
+  });
+
+  describe("on a NIST curve, checked before Web Crypto sees the point", () => {
+    afterEach(() => {
+      vi.restoreAllMocks();
+    });
+
+    /**
+     * Decrypts a token with each `epk` for a fresh key on `curve`, and returns the results and the JWKs Web Crypto
+     * was asked to import while decrypting.
+     */
+    async function decryptWithEpks(
+      curve: "P-256" | "P-384" | "P-521",
+      epks: readonly ((publicJwk: JsonWebKey) => object)[],
+    ): Promise<{ results: unknown[]; imported: unknown[] }> {
+      const pair = await generateJweKeyPair({ alg: "ECDH-ES", crv: curve, kid: "recipient" });
+      const publicJwk = (await exportJwePublicJwk(pair.publicKey)) as JsonWebKey;
+      const decrypter = createDecrypter({ keys: createJweKeySet([pair.privateKey]) });
+      const importKey = vi.spyOn(crypto.subtle, "importKey");
+      const results = await Promise.all(
+        epks.map((epk) => decrypter(forged({ alg: "ECDH-ES", enc: "A128GCM", kid: "recipient", epk: epk(publicJwk) }))),
+      );
+      return { results, imported: importKey.mock.calls.map((call) => call[1]) };
+    }
+
+    it.each(["P-256", "P-384", "P-521"] as const)(
+      "should report malformed epk for %s points off the curve",
+      async (curve) => {
+        const offCurve = [
+          ({ x }: JsonWebKey) => ({ kty: "EC", crv: curve, x, y: x }),
+          ({ x, y }: JsonWebKey) => {
+            const bytes = Buffer.from(y as string, "base64url");
+            bytes[bytes.length - 1] = (bytes[bytes.length - 1] as number) ^ 1;
+            return { kty: "EC", crv: curve, x, y: base64Url(bytes) };
+          },
+        ];
+        const { results, imported } = await decryptWithEpks(curve, offCurve);
+
+        expect(results).toEqual([MALFORMED_EPK, MALFORMED_EPK]);
+        expect(imported.some((jwk) => (jwk as JsonWebKey).kty === "EC")).toBe(false);
+      },
+    );
+
+    it("should report malformed epk for a coordinate not less than the field prime", async () => {
+      const p = Buffer.from("ffffffff00000001000000000000000000000000ffffffffffffffffffffffff", "hex");
+      const { results, imported } = await decryptWithEpks("P-256", [
+        ({ y }) => ({ kty: "EC", crv: "P-256", x: base64Url(p), y }),
+      ]);
+
+      expect(results).toEqual([MALFORMED_EPK]);
+      expect(imported.some((jwk) => (jwk as JsonWebKey).kty === "EC")).toBe(false);
+    });
+
+    it("should pass the generator point as an epk on to Web Crypto", async () => {
+      const { results, imported } = await decryptWithEpks("P-256", [() => p256Epk()]);
+
+      // G passes the check and reaches Web Crypto; the forged tag then fails like any other.
+      expect(results).toEqual([DECRYPTION_FAILED]);
+      expect(imported).toContainEqual(expect.objectContaining({ kty: "EC", x: p256Epk().x }));
+    });
   });
 
   it("should report malformed epk for coordinates of the wrong length", async () => {

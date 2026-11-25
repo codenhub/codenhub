@@ -14,6 +14,7 @@ import {
   type RsaKeyManagementAlgorithm,
 } from "./algorithms";
 import { concatBytes, importContentKey, type ContentKey } from "./content";
+import { isOnNistCurve } from "./on-curve";
 import type { JweKeyEntry } from "./registry";
 import type { ContentEncryptionAlgorithm, JweCurve, JweHeader, KeyManagementAlgorithm } from "./types";
 
@@ -227,7 +228,8 @@ const EPK_MEMBERS = new Set(["kty", "crv", "x", "y"]);
  * Imports the token's `epk` on the recipient key's curve, then agrees and derives. Every way the `epk` can be
  * wrong is `malformed` at `["header", "epk"]`: not an object, another key type or curve, a coordinate of the wrong
  * length, a private or unknown member, a point off the curve, a low-order X25519 point, or an all-zero shared
- * secret. Web Crypto's import is what rejects a point off the curve.
+ * secret. A NIST point is checked against its curve's equation before Web Crypto sees it, because WebKit imports a
+ * point off the curve, and agreeing on one lets an attacker learn the private key (an invalid-curve attack).
  */
 async function deriveFromHeader(
   alg: EcdhKeyManagementAlgorithm,
@@ -267,12 +269,14 @@ async function importEpk(epk: unknown, curve: JweCurve): Promise<CryptoKey | und
     return undefined;
   }
   const jwk: JsonWebKey = { kty: params.kty, crv: curve };
+  const decoded: Uint8Array[] = [];
   for (const name of coordinates) {
     const value = members[name];
     const bytes = typeof value === "string" ? decodeBase64Url(value) : undefined;
     if (bytes === undefined || bytes.length !== params.coordinateBytes) {
       return undefined;
     }
+    decoded.push(bytes);
     (jwk as Record<string, unknown>)[name] = value;
     // RFC 7748 §5 has X25519 mask the top bit of u; Node 26 does, and Web Crypto does not require every engine to.
     // No sender's runtime sets it, so it is refused here, the same way on every runtime.
@@ -280,10 +284,13 @@ async function importEpk(epk: unknown, curve: JweCurve): Promise<CryptoKey | und
       return undefined;
     }
   }
+  if (curve !== "X25519" && !isOnNistCurve(curve, decoded[0] as Uint8Array, decoded[1] as Uint8Array)) {
+    return undefined;
+  }
   try {
     return await crypto.subtle.importKey("jwk", jwk, params.importParams, true, []);
   } catch {
-    // A point off the curve; Web Crypto's message may quote it.
+    // Material the engine cannot use; Web Crypto's message may quote it.
     return undefined;
   }
 }

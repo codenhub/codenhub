@@ -16,6 +16,7 @@ import {
   isRsaAlgorithm,
   KEY_WRAP_BYTES,
 } from "./algorithms";
+import { isOnNistCurve } from "./on-curve";
 import type { ContentEncryptionAlgorithm, JweCurve, KeyManagementAlgorithm } from "./types";
 
 /** What the imported key will be used as. */
@@ -170,7 +171,10 @@ function materialFor(
   return secretMaterial(members, alg, enc);
 }
 
-/** Every coordinate, and `d`, must be exactly as long as the curve's coordinates (RFC 7518 §6.2.1.2, RFC 8037 §2). */
+/**
+ * Every coordinate, and `d`, must be exactly as long as the curve's coordinates (RFC 7518 §6.2.1.2, RFC 8037 §2),
+ * and an EC point must be on its curve: WebKit's Web Crypto imports one that is not, so the package checks it.
+ */
 function curveMaterial(members: Members, curve: JweCurve, role: JweKeyRole): Material {
   const params = CURVE_PARAMS[curve];
   const publicMembers: readonly MemberName[] = params.kty === "EC" ? ["x", "y"] : ["x"];
@@ -185,6 +189,12 @@ function curveMaterial(members: Members, curve: JweCurve, role: JweKeyRole): Mat
       return issue("invalid_key", name);
     }
     (importJwk as Record<string, unknown>)[name] = members[name];
+  }
+  if (
+    curve !== "X25519" &&
+    !isOnNistCurve(curve, decodeMember(members.x) as Uint8Array, decodeMember(members.y) as Uint8Array)
+  ) {
+    return { code: "invalid_key" };
   }
   return { importJwk, curve };
 }
