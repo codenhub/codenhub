@@ -2,7 +2,7 @@
 title: Definir temas
 description: Adicione os seus próprios temas, escolha o que a configuração do sistema e o toggle selecionam, leia o estado atual e veja cada opção com o seu padrão.
 order: 2
-source: ca637b3f8a324cbba21373d4252e3cc777a92ec9
+source: 632c7fdf59665808b4b91a309deb37754c6f814c
 ---
 
 # Definir temas
@@ -122,13 +122,13 @@ Agora o tema ativo é `ocean-light` ou `ocean-dark`, o que tiver o color scheme 
 
 O menu de temas precisa mostrar qual opção está selecionada. O gerenciador responde a cinco perguntas:
 
-| Membro                | Responde                                                                                                        |
-| --------------------- | --------------------------------------------------------------------------------------------------------------- |
-| `theme.name`          | Qual tema está ativo, como `"dim"`.                                                                             |
-| `theme.get()`         | Tudo sobre o tema ativo: `name`, `colorScheme`, `tokens` e `pairedTheme`.                                       |
-| `theme.preference`    | Qual tema o usuário salvou, ou `null` quando nada está salvo ou o nome salvo não é mais um dos seus temas.      |
-| `theme.followsSystem` | Se a escolha salva segue o sistema operacional dentro do par, como `set(name, { followSystem: true })` a salva. |
-| `theme.system`        | Para qual tema a configuração do sistema operacional aponta agora, esteja ele à mostra ou não.                  |
+| Membro                | Responde                                                                                                                                                                                     |
+| --------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `theme.name`          | Qual tema está ativo, como `"dim"`.                                                                                                                                                          |
+| `theme.get()`         | Tudo sobre o tema ativo: `name`, `colorScheme`, `tokens` e `pairedTheme`.                                                                                                                    |
+| `theme.preference`    | Qual tema o usuário escolheu: o salvo, ou o escolhido nesta página quando o armazenamento não conseguiu salvá-lo. `null` quando não há escolha ou o nome salvo não é mais um dos seus temas. |
+| `theme.followsSystem` | Se essa escolha segue o sistema operacional dentro do par, como `set(name, { followSystem: true })` a faz.                                                                                   |
+| `theme.system`        | Para qual tema a configuração do sistema operacional aponta agora, esteja ele à mostra ou não.                                                                                               |
 
 `preference` é o que torna possível a opção "Automático": o menu mostra "Automático" como selecionado enquanto ele for `null`. Rode isso também a cada mudança, para o menu acompanhar quando o toggle ou outra aba trocam o tema pelas costas dele:
 
