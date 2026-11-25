@@ -2,7 +2,7 @@
 title: Vite
 description: Incluir solo las clases que usan tus páginas desde un proyecto Vite que no usa Tailwind, con el plugin de Vite del paquete.
 order: 6
-source: 895677e0c9ad4f4eda8d7587d82a34d5dbb031d3
+source: 93a413c9ccfa6828fe7deb241c7da0ba39aee2e3
 ---
 
 # Vite
@@ -102,7 +102,7 @@ El servidor de desarrollo sigue tus archivos a medida que cambian, sin recargar 
 
 La hoja de estilos que carga un renderizado en el servidor sigue los mismos cambios, y un build de renderizado en el servidor incrusta la hoja de estilos recortada donde incrusta CSS.
 
-`vite build --watch` sigue los archivos que leyó al arrancar. Guardar uno vuelve a generar el build con sus clases, aunque ningún módulo lo importe, como una plantilla HTML que renderiza tu servidor, y borrarlo las quita. Un archivo creado mientras se ejecuta se lee cuando vuelves a arrancar `vite build --watch`. En Vite 8, un cambio que cambia la hoja de estilos genera el build dos veces seguidas, y el segundo build escribe los mismos archivos que el primero.
+`vite build --watch` sigue los archivos que ha leído. Guardar uno vuelve a generar el build con sus clases, aunque ningún módulo lo importe, como una plantilla HTML que renderiza tu servidor, y borrarlo las quita. Cada nuevo build vuelve a leer el proyecto, así que un archivo creado mientras se ejecuta cuenta desde el siguiente build, que empieza al guardar cualquier archivo que ya sigue. En Vite 8, un cambio que cambia la hoja de estilos genera el build dos veces seguidas, y el segundo build escribe los mismos archivos que el primero.
 
 ## Dónde están los archivos recortados
 

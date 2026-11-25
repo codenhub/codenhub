@@ -56,6 +56,22 @@ export class Trimmer {
     return handled;
   }
 
+  // The trimmed files rewritten after reading every file again, which finds a file created where nothing watches.
+  rescan(): Promise<string[]> {
+    const handled = this.#handleRescan(this.#queue);
+
+    this.#queue = Promise.allSettled([handled]);
+
+    return handled;
+  }
+
+  async #handleRescan(before: Promise<unknown>): Promise<string[]> {
+    await before;
+    this.#isStale = (await this.#scan.scanAll()) || this.#isStale;
+
+    return this.#isStale ? this.#write() : [];
+  }
+
   async #handle(file: string, event: FileEvent, before: Promise<unknown>): Promise<string[]> {
     await before;
     this.#isStale = (await this.#scan.change(file, event)) || this.#isStale;

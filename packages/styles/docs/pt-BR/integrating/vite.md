@@ -2,7 +2,7 @@
 title: Vite
 description: Entregar só as classes que as suas páginas usam a partir de um projeto Vite que não usa Tailwind, com o plugin de Vite do pacote.
 order: 6
-source: 895677e0c9ad4f4eda8d7587d82a34d5dbb031d3
+source: 93a413c9ccfa6828fe7deb241c7da0ba39aee2e3
 ---
 
 # Vite
@@ -102,7 +102,7 @@ O servidor de desenvolvimento acompanha os seus arquivos conforme eles mudam, se
 
 A folha de estilos que uma renderização no servidor carrega acompanha as mesmas mudanças, e um build de renderização no servidor embute a folha de estilos reduzida onde embute CSS.
 
-`vite build --watch` acompanha os arquivos que leu ao iniciar. Salvar um deles refaz o build com as classes dele, mesmo quando nenhum módulo o importa, como um template HTML que o seu servidor renderiza, e apagá-lo as tira. Um arquivo criado enquanto ele roda é lido quando você inicia o `vite build --watch` de novo. No Vite 8, uma mudança que muda a folha de estilos refaz o build duas vezes seguidas, e o segundo build escreve os mesmos arquivos que o primeiro.
+`vite build --watch` acompanha os arquivos que já leu. Salvar um deles refaz o build com as classes dele, mesmo quando nenhum módulo o importa, como um template HTML que o seu servidor renderiza, e apagá-lo as tira. Cada novo build lê o projeto de novo, então um arquivo criado enquanto ele roda conta a partir do próximo build, que começa quando você salva qualquer arquivo que ele já acompanha. No Vite 8, uma mudança que muda a folha de estilos refaz o build duas vezes seguidas, e o segundo build escreve os mesmos arquivos que o primeiro.
 
 ## Onde ficam os arquivos reduzidos
 

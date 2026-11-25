@@ -71,6 +71,8 @@ export function viteStyles(options: ViteStylesOptions = {}): Plugin {
   /* Whether a change rewrote a trimmed file since the build before, and so
      whether this build does. A change made during a build counts for the next. */
   const rewritten = { sinceBuild: false, forBuild: false };
+  // Whether a build in watch mode has run, so the next one reads the project again.
+  let hasBuilt = false;
 
   // A path Vite names, as the scan names it.
   const toScanPath = (file: string): string => {
@@ -164,6 +166,7 @@ export function viteStyles(options: ViteStylesOptions = {}): Plugin {
 
       root = { vite: path.resolve(config.root), real: fs.realpathSync.native(config.root) };
       isServe = config.command === "serve";
+      hasBuilt = false;
       recent.clear();
       trimmer = await Trimmer.start({
         imports,
@@ -228,9 +231,15 @@ export function viteStyles(options: ViteStylesOptions = {}): Plugin {
         });
       },
     },
-    // A build in watch mode watches every file read, so changing one rebuilds; the dev server watches the root already.
-    buildStart() {
+    /* A build in watch mode watches every file read, so changing one rebuilds,
+       and each rebuild reads the project again, so a file created since counts
+       too. The dev server watches the root already. */
+    async buildStart() {
       if (!isServe && this.meta.watchMode) {
+        if (hasBuilt) {
+          rewritten.sinceBuild ||= (await started().rescan()).length > 0;
+        }
+        hasBuilt = true;
         rewritten.forBuild = rewritten.sinceBuild;
         rewritten.sinceBuild = false;
         for (const file of started().files()) {

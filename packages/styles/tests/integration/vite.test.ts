@@ -1249,6 +1249,18 @@ describe("viteStyles: build --watch", { timeout: 40_000 }, () => {
       expect(hasRuleFor(css, "btn")).toBe(false);
     });
   });
+
+  it("reads a file created while it runs at the next rebuild", async () => {
+    await writeFiles({ "index.html": PAGE(`<p>Hello</p>`), "main.js": `import "@codenhub/styles";\n` });
+    await withWatchedBuild(async ({ rebuild }) => {
+      // Nothing watches the new file's folder, so the module edited beside it starts the rebuild.
+      const css = await rebuild(() =>
+        writeFiles({ "card.txt": BUTTON, "main.js": `import "@codenhub/styles";\n// card\n` }),
+      );
+
+      expect(hasRuleFor(css, "btn")).toBe(true);
+    });
+  });
 });
 
 describe("viteStyles: paths", () => {

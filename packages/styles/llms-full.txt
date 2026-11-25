@@ -899,7 +899,7 @@ The dev server follows your files as they change, with no reload by hand:
 
 The stylesheet a server-side render loads follows the same changes, and a server-side rendering build inlines the trimmed stylesheet where it inlines CSS.
 
-`vite build --watch` follows the files it read when it started. Saving one rebuilds with its classes, even when no module imports it, such as an HTML template your server renders, and deleting one drops them. A file created while it runs is read when you start `vite build --watch` again. On Vite 8, a change that changes the stylesheet rebuilds twice in a row, and the second build writes the same files as the first.
+`vite build --watch` follows the files it has read. Saving one rebuilds with its classes, even when no module imports it, such as an HTML template your server renders, and deleting one drops them. Each rebuild reads the project again, so a file created while it runs counts from the next rebuild, which saving any file it already follows starts. On Vite 8, a change that changes the stylesheet rebuilds twice in a row, and the second build writes the same files as the first.
 
 ## Where the trimmed files live
 
