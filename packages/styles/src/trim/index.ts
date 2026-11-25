@@ -14,6 +14,7 @@ export {
 } from "./package";
 export { format, parse, purge, serialize } from "./purge";
 export type { ClassSet, Node } from "./purge";
+export { createTemporary, replaceFile, systemReason } from "./write";
 
 // The package's `engines` floor, checked at run time because an older Node.js installs the package without complaint.
 export const MIN_NODE_MAJOR = 24;
