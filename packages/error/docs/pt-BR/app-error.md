@@ -1,7 +1,7 @@
 ---
 title: O AppError
 description: Cada campo de um AppError, o que cada um promete, o que acontece quando um erro é normalizado duas vezes e como mandar um do servidor para o cliente.
-source: 68f6384e4038acf989b325414981fcc56f2d4c52
+source: 1618a89bbd85e4283ce167460c37f96d769dc3b3
 order: 2
 ---
 

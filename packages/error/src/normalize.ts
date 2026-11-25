@@ -50,9 +50,10 @@ const getStringField = (source: Record<string, unknown>, key: string): string | 
 type Registry = ErrorRegistry | ReadonlyErrorRegistry;
 
 const getAliasCode = (mapping: ErrorMapping): string | null => {
-  const { code } = mapping as { code?: unknown };
+  const { code, message } = mapping as { code?: unknown; message?: unknown };
 
-  return typeof code === "string" && code.trim().length > 0 ? code.trim() : null;
+  // Feedback with a message is never an alias, whatever `code` it also carries.
+  return message === undefined && typeof code === "string" && code.trim().length > 0 ? code.trim() : null;
 };
 
 // Built-in buckets validate feedback on registration, but a hand-written registry can return

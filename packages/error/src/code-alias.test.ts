@@ -95,7 +95,6 @@ describe("code aliases", () => {
   it.each([
     ["an empty code", { code: " " }],
     ["a code that is not a string", { code: 5 }],
-    ["a code with a message", { code: "a", message: "words" }],
     ["a code with a message key", { code: "a", messageKey: "error.a" }],
     ["a code with a source", { code: "a", source: "a" }],
     ["a code with isRetryable", { code: "a", isRetryable: true }],
@@ -105,6 +104,60 @@ describe("code aliases", () => {
     expect(() => registry.names.add("NotAllowedError", mapping as never)).toThrow(TypeError);
     expect(() => registry.patterns.add(/x/, mapping as never)).toThrow(TypeError);
     expect(() => registry.prefixes.add("x", mapping as never)).toThrow(TypeError);
+  });
+
+  // A row read from a table often carries its own code beside the words; 0.3.0 ignored that field.
+  it("treats an entry with a message as feedback and ignores its code", () => {
+    const rows = [{ code: "23505", message: "Already exists.", messageKey: "error.db.duplicate" }];
+    const registry = createErrorRegistry();
+
+    registry.codes.addList(rows.map((row) => [row.code, row as never] as const));
+    registry.patterns.add(/duplicate/, rows[0] as never);
+    registry.prefixes.add("Duplicate:", rows[0] as never);
+
+    expect(registry.codes.get("23505")).toStrictEqual({ message: "Already exists.", messageKey: "error.db.duplicate" });
+    expect(registry.patterns.values()[0]).not.toHaveProperty("code");
+    expect(registry.prefixes.values()[0]).not.toHaveProperty("code");
+    expect(createAppError({ code: "23505" }, { registry })).toMatchObject({
+      code: "23505",
+      message: "Already exists.",
+    });
+    expect(createAppError("a duplicate key", { registry })).toMatchObject({ code: null, message: "Already exists." });
+  });
+
+  it("reads aliases and words from a hand-written registry as from a built-in one", () => {
+    const feedback = { code: "elsewhere", message: "Hand-written words." };
+    const none = { get: () => undefined, values: () => [] };
+    const registry = {
+      codes: { get: (code: string) => (code === "E1" ? feedback : undefined), values: () => [] },
+      names: none,
+      messages: none,
+      prefixes: { values: () => [] },
+      patterns: {
+        values: () => [
+          { code: "missing", pattern: /alias/ },
+          { code: "E1", pattern: /alias/ },
+          { ...feedback, pattern: /hand/ },
+        ],
+      },
+    };
+
+    expect(createAppError("an alias", { registry: registry as never })).toMatchObject({
+      type: "heuristic",
+      code: "E1",
+      message: "Hand-written words.",
+    });
+
+    expect(createAppError({ code: "E1" }, { registry: registry as never })).toMatchObject({
+      type: "known",
+      code: "E1",
+      message: "Hand-written words.",
+    });
+    expect(createAppError("hand", { registry: registry as never })).toMatchObject({
+      type: "heuristic",
+      code: null,
+      message: "Hand-written words.",
+    });
   });
 
   it("survives merge and freezeRegistry", () => {

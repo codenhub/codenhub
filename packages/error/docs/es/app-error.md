@@ -2,7 +2,7 @@
 title: El AppError
 description: Cada campo de un AppError, lo que promete cada uno, qué pasa cuando un error se normaliza dos veces y cómo enviar uno de un servidor a un cliente.
 order: 2
-source: 68f6384e4038acf989b325414981fcc56f2d4c52
+source: 1618a89bbd85e4283ce167460c37f96d769dc3b3
 ---
 
 # El AppError

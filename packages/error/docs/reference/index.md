@@ -682,7 +682,7 @@ The structured feedback returned when a registry matches an error. Defines the s
 code?: never;
 ```
 
-Only an `ErrorCodeAlias` names a code; feedback with words carries none.
+Only an `ErrorCodeAlias` names a code. At runtime a `code` beside a `message` is ignored, so the entry stays feedback with words of its own.
 
 #### ErrorFeedback › isRetryable
 

@@ -118,33 +118,36 @@ export const freezeMapping = (mapping: ErrorMapping): Readonly<ErrorMapping> => 
   }
 
   let code: unknown;
+  let feedback: Record<Exclude<keyof ErrorFeedback, "code">, unknown>;
 
+  // Each field is read once, so a getter cannot answer the alias check one way and validation another.
   try {
-    code = (mapping as { code?: unknown }).code;
+    const fields = mapping as unknown as Record<string, unknown>;
+    code = fields.code;
+    feedback = {
+      message: fields.message,
+      messageKey: fields.messageKey,
+      source: fields.source,
+      isRetryable: fields.isRetryable,
+    };
   } catch {
     throw new TypeError("Error registry feedback fields must be readable.");
   }
 
-  if (code === undefined) {
-    return freezeFeedback(mapping as ErrorFeedback);
+  // Feedback with a message keeps ignoring a `code` beside it, as 0.3.0 did, so rows read from a
+  // table that carry their own code still register.
+  if (code === undefined || feedback.message !== undefined) {
+    return freezeFeedback(feedback as unknown as ErrorFeedback);
   }
 
   if (typeof code !== "string" || code.trim().length === 0) {
     throw new TypeError("Error registry feedback.code must be a non-empty string when provided.");
   }
 
-  let hasWords: boolean;
-
-  try {
-    hasWords = ["message", "messageKey", "source", "isRetryable"].some(
-      (field) => (mapping as unknown as Record<string, unknown>)[field] !== undefined,
+  if (feedback.messageKey !== undefined || feedback.source !== undefined || feedback.isRetryable !== undefined) {
+    throw new TypeError(
+      "Error registry feedback that names a code takes that code's words, so it cannot also carry messageKey, source, or isRetryable.",
     );
-  } catch {
-    throw new TypeError("Error registry feedback fields must be readable.");
-  }
-
-  if (hasWords) {
-    throw new TypeError("Error registry feedback names a code or carries words, not both.");
   }
 
   const alias: ErrorCodeAlias = { code: normalizeExactErrorIdentifier(code) };

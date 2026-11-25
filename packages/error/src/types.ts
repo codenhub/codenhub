@@ -147,7 +147,10 @@ export interface ErrorFeedback {
    */
   message: string;
 
-  /** Only an `ErrorCodeAlias` names a code; feedback with words carries none. */
+  /**
+   * Only an `ErrorCodeAlias` names a code. At runtime a `code` beside a `message` is ignored, so
+   * the entry stays feedback with words of its own.
+   */
   code?: never;
 
   /**

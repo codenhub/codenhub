@@ -2,7 +2,7 @@
 title: Registros
 description: Los cinco buckets, cómo se comparan los identificadores, qué coincidencia gana y cuándo usar un registro propio en lugar del global.
 order: 3
-source: 7893791736449b5f8d3475c4fa9d25342d41128a
+source: 3f52638c8f4bb0823cc07d373d4a510de2a64883
 ---
 
 # Registros
@@ -47,7 +47,7 @@ registry.patterns.add(/\(os error 5\)$/, { code: "files.permissionDenied" });
 
 Una coincidencia con un alias toma el código que nombra, y el `message`, el `messageKey`, el `source` y el `isRetryable` de ese código. Su `type` sigue siendo el que gana la coincidencia: `"heuristic"` para el patrón, `"known"` para el nombre. Así, el `NotAllowedError` del navegador y un `Access is denied. (os error 5)` de Rust llegan a la pantalla como `code: "files.permissionDenied"`, y una rama según ese código cubre los dos.
 
-- Un alias solo contiene `code`. Agregar palabras a su lado lanza `TypeError`, porque nunca se mostrarían.
+- Un alias solo contiene `code`. Un `messageKey`, `source` o `isRetryable` a su lado lanza `TypeError`, porque nunca se usaría. Una entrada con `message` es feedback común y se ignora el `code` que lleve al lado, así que una fila leída de una tabla que trae su propio código se sigue registrando como antes de que existieran los alias.
 - El código se busca cuando se crea un error, no cuando se agrega el alias, así que los alias y las palabras que nombran pueden venir de registros distintos, combinados en cualquier orden.
 - Un alias cuyo código no está registrado, o que nombra otro alias, no coincide con nada. La búsqueda sigue como si no estuviera: a la siguiente regla para ese error, y luego a los errores envueltos en él. Un alias nunca muestra texto sin procesar.
 
@@ -155,7 +155,7 @@ export const projectErrors = freezeRegistry(registry);
 
 Un registro congelado funciona en cualquier lugar donde un registro solo se lee: como la opción `registry`, en `merge` y en la lista que le pasas a `createErrorRegistry`. No funciona en `setErrorRegistry`, que necesita uno al que se le pueda agregar.
 
-Esos lugares de solo lectura también aceptan un objeto que escribas tú, siempre que tenga la misma forma que un `ReadonlyErrorRegistry`: `get` y `values` en `codes`, `names` y `messages`, y `values` en `prefixes` y `patterns`. Así es como respaldarías un registro con algo que no sea la memoria. Las respuestas de tu objeto merecen menos confianza que las de los buckets integrados: una búsqueda que devuelve algo distinto de `undefined` o de un feedback con un `message` no vacío hace que `createAppError` lance `TypeError`, porque la alternativa es un `AppError` que no tiene nada que decir. Una búsqueda que lanza una excepción tampoco se atrapa.
+Esos lugares de solo lectura también aceptan un objeto que escribas tú, siempre que tenga la misma forma que un `ReadonlyErrorRegistry`: `get` y `values` en `codes`, `names` y `messages`, y `values` en `prefixes` y `patterns`. Así es como respaldarías un registro con algo que no sea la memoria. Las respuestas de tu objeto merecen menos confianza que las de los buckets integrados: una búsqueda que devuelve algo distinto de `undefined`, de un alias o de un feedback con un `message` no vacío hace que `createAppError` lance `TypeError`, porque la alternativa es un `AppError` que no tiene nada que decir. Un alias que devuelve tu objeto funciona como uno integrado: toma las palabras del código que nombra de los `codes` de tu objeto, y no coincide con nada cuando ese código falta o es a su vez un alias. Una búsqueda que lanza una excepción tampoco se atrapa.
 
 Todo lo que devuelve un bucket también está congelado. `values()` devuelve la misma lista congelada hasta que el bucket cambia, y sus entradas, objetos de feedback y expresiones regulares están todos congelados. Expande uno en un objeto nuevo cuando necesites una copia que puedas cambiar, y copia un patrón con `new RegExp(pattern.source, pattern.flags)`.
 
