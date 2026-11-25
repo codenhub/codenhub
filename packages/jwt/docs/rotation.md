@@ -40,7 +40,7 @@ const body = JSON.stringify(await ring.jwks());
 
 - **`activeFrom`** is when a key starts signing, in seconds since the Unix epoch, like `exp`. A key signs until the next key's `activeFrom`. **`retiredAt`**, optional, stops it earlier, when it must leave service with no successor yet.
 - **`signingKey()`** returns the key whose `activeFrom` came last, unless it is retired. It never falls back to a key a later one replaced. When no key signs, because every `activeFrom` is still to come or the newest active key is retired, it throws a `TypeError`: signing with no key is a configuration mistake, not something a request can recover from.
-- **`jwks()`** resolves to the frozen JWKS of every key published now: from `publishAhead` seconds before its `activeFrom` until `publishAfter` seconds after it stops signing. It holds public keys only, also for keys that are not extractable or live in a KMS.
+- **`jwks()`** resolves to the frozen JWKS of every key published now: from `publishAhead` seconds before its `activeFrom` until `publishAfter` seconds after it stops signing. It holds public keys only, also for keys that are not extractable.
 - **The ring is a key set.** Its `select` chooses from the same keys `jwks()` publishes, so your own services accept exactly the keys other verifiers can see. Pass `issuer` to bind them, as [key sets](key-sets.md#keys-of-several-issuers) explains.
 
 Every key needs a `kid`, unique in the ring, since tokens must name the key that signed them once two are published; `generateKeyPair({ kid: "thumbprint" })` gives one. Two keys may not share an `activeFrom`, and a ring holds at most 100 keys, the most a JWKS may list for this package's key sets. Keys may use different algorithms, but verifiers that accept only some algorithms must accept the new one before its `activeFrom`. A ring checks every option when it is created and throws a `TypeError` for an invalid one, as for a name that is not an option.
@@ -70,34 +70,6 @@ A remote key set never caches longer than the `max-age` it is sent, or its `cool
 3. **Delete the old key** from your storage once it is out of the JWKS, at the new key's `activeFrom` plus `publishAfter`. A ring ignores keys past their publication, so deleting late is harmless; deleting early ends their tokens early.
 
 An `activeFrom` already in the past is accepted, since the ring cannot know when you first published the key. A key added that way signs at once, and verifiers that cached your JWKS before it was added do not have it: this package's remote key sets fetch again for an unknown `kid`, at most once per `cooldown`, but others may fail until their cache expires.
-
-## Encryption keys
-
-A recipient that publishes keys for senders to encrypt to, such as an OpenID client whose ID tokens are encrypted, rotates them with `createEncryptionKeyRing`. It takes JWE private keys from `generateJweKeyPair` or `importJwePrivateKey`, with `activeFrom` and `retiredAt` as above. It has no `issuer`, which concerns who signs, and no `publishAhead`, since it publishes only the current key. Signing and encryption keys rotate in separate rings, and each refuses the other kind with a `TypeError` naming the right function, so a signing ring's bundle carries no JWE code.
-
-```ts
-import { createDecrypter, createEncryptionKeyRing, type JwePrivateKey } from "@codenhub/jwt";
-
-declare const currentKey: JwePrivateKey; // kid "enc-2026-11"
-declare const nextKey: JwePrivateKey; // kid "enc-2026-12"
-
-const ring = createEncryptionKeyRing({
-  keys: [
-    { key: currentKey, activeFrom: 1_793_491_200 },
-    { key: nextKey, activeFrom: 1_796_083_200 },
-  ],
-  publishAfter: 172_800, // senders' JWKS cache, plus how long a token takes to reach you
-});
-
-const decrypt = createDecrypter({ keys: ring });
-const body = JSON.stringify(await ring.jwks());
-```
-
-- **`encryptionKey()`** returns the public half of the newest active key, the key to encrypt to now, such as for tokens you encrypt to yourself. It throws when no key is active, as `signingKey()` does.
-- **`jwks()`** publishes that key alone, with `use: "enc"`, and no key when none is active. A sender that picks a key by algorithm, as `createRemoteEncryptionKeySet`'s `select({ alg })` does, never finds two, even while a switch is under way.
-- **The ring is the decryption key set.** Its `select` chooses the private key from every key that decrypts now: from its `activeFrom` until `publishAfter` seconds after the next key's `activeFrom` or its own `retiredAt`. A sender that read your JWKS before a switch keeps encrypting to the old key until its copy expires, and its tokens may arrive later still. A key whose `activeFrom` is still to come decrypts nothing, since no sender has been given it.
-
-Choose `publishAfter` to cover the old key's last tokens: your JWKS `max-age`, plus how long senders keep a JWKS they cannot refresh (`maxStale` for this package's remote key sets), plus how long a token may take to reach you. A switch needs no lead time: senders that still hold the old key encrypt to it, and it still decrypts.
 
 ## Replacing a leaked key
 

@@ -82,8 +82,8 @@ Other header parameters are written as given, with the same JSON rules as the pa
 
 | Parameter                  | Why it is refused                                                                                                                                                                     |
 | -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `crit`                     | It asks the verifier to understand an extension. No JWT extension is implemented, and `createVerifier` rejects every token with `crit`; [JWS](jws.md) supports it.                    |
-| `b64`                      | RFC 7797 §7 keeps unencoded payloads out of JWTs; [JWS](jws.md) supports them for other payloads.                                                                                     |
+| `crit`                     | It asks the verifier to understand an extension. This package implements none, and its own verifier rejects every token with `crit`.                                                  |
+| `b64`                      | RFC 7797 §7 keeps unencoded payloads out of JWTs, and this package does not support them.                                                                                             |
 | `jwk`, `jku`, `x5u`, `x5c` | They tell the verifier where to find the key. A verifier that trusts them lets the token choose its own key, so this package never reads them, and writes `jwk` only from `embedKey`. |
 
 In TypeScript, `SignHeader` types these members as `never`, so writing one is a compile error too.
@@ -110,21 +110,49 @@ const signingKey = imported.value;
 export const issue = (sub: string) => sign({ payload: { sub, exp: Math.floor(Date.now() / 1000) + 300 }, key: signingKey });
 ```
 
-A key held by a cloud KMS or an HSM signs through `createExternalSigningKey`; [Keys](keys.md#keys-held-by-a-kms-or-hsm) shows it.
-
 ## DPoP proofs
 
-A DPoP proof (RFC 9449) is a token that carries the public key it was signed with, in a `jwk` header. `createDpopProof` signs one and `createDpopVerifier` checks one, as [DPoP proofs](dpop.md) describes; use those rather than `sign`.
-
-Underneath, `createDpopProof` signs with `embedKey`, which any token can use to carry its key:
+A DPoP proof (RFC 9449) is a token that carries the public key it was signed with, in a `jwk` header, so a server can bind an access token to the client's key. Sign one with `embedKey`, the public half of the signing key:
 
 ```ts
-import { getPublicKey, sign } from "@codenhub/jwt";
+import { generateKeyPair, sign } from "@codenhub/jwt";
 
-const token = await sign({ payload, key: privateKey, header: { typ: "example+jwt" }, embedKey: getPublicKey(privateKey) });
+const { privateKey, publicKey } = await generateKeyPair({ alg: "ES256" });
+
+const proof = await sign({
+  payload: { jti: crypto.randomUUID(), htm: "POST", htu: "https://issuer.example/token", iat: Math.floor(Date.now() / 1000) },
+  key: privateKey,
+  header: { typ: "dpop+jwt" },
+  embedKey: publicKey,
+});
 ```
 
-`embedKey` must be a public key this package created, bound to the same `alg` as `key`, and its pair: `sign` verifies the signature with it before returning, and throws otherwise. Only the key's material is written, never a private member, `alg`, `use` or `kid`. A verifier from `createVerifier` never uses the key a token carries; `createDpopVerifier` does, because showing the client holds that key is what a proof is for.
+`embedKey` must be a public key this package created, bound to the same `alg` as `key`, and its pair: `sign` verifies the signature with it before returning, and throws otherwise. Only the key's material is written, never a private member, `alg`, `use` or `kid`.
+
+A verifier never uses the key a token carries. On the server, trust the proof's key explicitly, for that one proof:
+
+```ts
+import { createKeySet, createVerifier, importPublicKey, jwkThumbprint, readHeader } from "@codenhub/jwt";
+
+async function verifyProof(proof: string) {
+  const header = readHeader(proof);
+  if (!header.ok || header.value.alg !== "ES256") return undefined;
+  const key = await importPublicKey(header.value.jwk, { alg: "ES256" });
+  if (!key.ok) return undefined;
+  const verified = await createVerifier({ keys: createKeySet([key.value]), type: "dpop+jwt", maxAge: 60 })(proof);
+  return verified.ok ? { payload: verified.value.payload, jkt: await jwkThumbprint(key.value) } : undefined;
+}
+```
+
+Limit `alg` to the algorithms you accept, as above. `jkt` is the value an access token's `cnf.jkt` must equal. Checking `htm`, `htu`, `ath`, `nonce` and that each `jti` is used once is the protocol's job, above this package. With `maxAge`, keep each `jti` until the proof's `iat + maxAge + clockTolerance` has passed, not `maxAge` after you first saw it: a proof whose `iat` is up to `max(clockTolerance, 60)` seconds ahead of your clock is accepted that much longer, as [Verifying tokens](verifying.md) describes.
+
+A proof's `ath` is the whole SHA-256 hash of the access token, base64url-encoded, which `encodeBase64Url` gives:
+
+```ts
+import { encodeBase64Url } from "@codenhub/jwt";
+
+const ath = encodeBase64Url(new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(accessToken))));
+```
 
 ## Token hashes in ID tokens
 

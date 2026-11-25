@@ -2,7 +2,7 @@
   "name": "@codenhub/jwt",
   "version": "0.1.0",
   "private": false,
-  "description": "JWT and JWS signing and verification, JWE encryption, JWK import and export, key sets, key rotation and DPoP on Web Crypto, for untrusted tokens.",
+  "description": "JWS signing and verification, JWK import and export, key sets and key rotation on Web Crypto, for untrusted tokens.",
   "keywords": [
     "dpop",
     "jose",

@@ -31,8 +31,6 @@ A secret key is never interchangeable with a public key. A key set holding publi
 
 Every key has an `alg`, the one algorithm it is bound to, and may have a `kid`, the identifier tokens use to name it. Private and secret keys also have `extractable`, which says whether their material may be exported again.
 
-Encryption keys are three further kinds, `"jwe-public"`, `"jwe-private"` and `"jwe-secret"`, made by their own functions; no signing or verifying function accepts them, and only `jwkThumbprint` takes both; [Encrypting tokens](encrypting.md#encryption-keys-are-their-own-kind) covers them.
-
 ## Generating keys
 
 ```ts
@@ -195,42 +193,6 @@ A `CryptoKey` must have been made for signing with `alg`: one whose Web Crypto a
 
 A `CryptoKey` has no `kid`, so pass one as an option. A public key is always exportable. For a private or secret key, `extractable: true` needs an extractable `CryptoKey`, or the result is `invalid_key`; without it, the imported key cannot be exported even when the `CryptoKey` could be.
 
-## Keys held by a KMS or HSM
-
-A key held by a cloud KMS or an HSM never leaves it: the service signs on request. `createExternalSigningKey` makes a private key from the public key and a function that asks the service for a signature, and `sign` uses it like any other private key:
-
-```ts
-import { GetPublicKeyCommand, KMSClient, SignCommand } from "@aws-sdk/client-kms";
-import { createExternalSigningKey, importPublicKey, sign } from "@codenhub/jwt";
-
-const kms = new KMSClient({});
-const KeyId = "alias/jwt-signing";
-
-// KMS returns the public key as DER SPKI; import it through Web Crypto.
-const { PublicKey } = await kms.send(new GetPublicKeyCommand({ KeyId }));
-const spki = await crypto.subtle.importKey("spki", new Uint8Array(PublicKey!), { name: "ECDSA", namedCurve: "P-256" }, true, ["verify"]);
-const imported = await importPublicKey(spki, { alg: "ES256", kid: "kms-2026" });
-if (!imported.ok) throw new Error("The KMS public key could not be imported.");
-
-const signingKey = createExternalSigningKey({
-  publicKey: imported.value,
-  signatureFormat: "der",
-  sign: async (data) => {
-    // Send the SHA-256 digest: MessageType "RAW" caps the message at 4096 bytes, which a token can exceed.
-    const digest = new Uint8Array(await crypto.subtle.digest("SHA-256", data));
-    const command = new SignCommand({ KeyId, Message: digest, MessageType: "DIGEST", SigningAlgorithm: "ECDSA_SHA_256" });
-    const { Signature } = await kms.send(command);
-    return Signature!;
-  },
-});
-const token = await sign({ payload: { sub: "u1", exp }, key: signingKey });
-```
-
-- `alg` and `kid` come from `publicKey`, so import it with the `kid` your JWKS publishes. `getPublicKey`, `jwkThumbprint` and `embedKey` work with the key; `exportPrivateJwk` throws, since the material is not here.
-- `sign` receives the JWS signing input, the bytes the service must sign with `alg`'s hash, and resolves to a `Uint8Array` or an `ArrayBuffer`. It is called once per token, and only then: creating the key calls nothing.
-- `signatureFormat: "der"` converts the DER `Ecdsa-Sig-Value` that AWS KMS and Google Cloud KMS return for an ECDSA key into the `r || s` form JWS uses. A PKCS#11 token's `CKM_ECDSA` signature is already `r || s`, so leave the default `"raw"` for it, unless an adapter in between returns DER. It is only for `ES256`, `ES384` and `ES512`; RSA and EdDSA signatures have one form. The DER must be strict, or `sign` throws.
-- Every signature is checked for the length `alg` gives it, the modulus length for RSA, and verified with `publicKey` before `sign` returns the token, so a function that signs with another key, or the wrong format, makes `sign` throw a `TypeError` rather than hand out a token no one can verify. A rejection from the function rejects `sign` unchanged.
-
 ## Exporting keys
 
 Export functions are separate and named for what they reveal, so code that exports private material says so:
@@ -248,7 +210,6 @@ const privateJwk = await exportPrivateJwk(privateKey); // store it as you would 
 
 - `exportPublicJwk` exports any public key, imported or generated, with its public members only. Publish its output in your JWKS as `{ keys: [publicJwk] }`. For a private key, export `getPublicKey(privateKey)`; passing the private key itself throws a `TypeError` that says so.
 - `exportPrivateJwk` exports a private key's public and private members, and `exportSecretJwk` a secret as an `oct` JWK. Both throw a `TypeError` for a key created without `extractable: true`.
-- `exportPublicPem` exports a public key as an SPKI `PUBLIC KEY` PEM, and `exportPrivatePem` a private key as an unencrypted PKCS#8 `PRIVATE KEY` PEM, for tools that read PEM rather than JWK, such as OpenSSL or a KMS that imports key material. They follow the same rules as their JWK counterparts, wrap the base64 at 64 characters and end with a line break. A PEM carries no `alg` or `kid`, so pass them again when importing it back.
 
 Every exported JWK is frozen, names `kty`, `alg` and `use: "sig"`, includes `kid` when the key has one, lists its members in a stable order, and carries no `ext` or `key_ops`. Re-importing it with the same `alg` gives an equivalent key.
 
@@ -256,7 +217,7 @@ The results are typed by what they hold: `exportPublicJwk` returns a `PublicJwk`
 
 ## Thumbprints
 
-`jwkThumbprint` computes a key's JWK SHA-256 Thumbprint (RFC 7638): 43 base64url characters that name the key by its material alone, whatever its `alg` or `kid`. Pass the public key or the private key; both give the same thumbprint, and a private key need not be extractable. JWE public and private keys work too.
+`jwkThumbprint` computes a key's JWK SHA-256 Thumbprint (RFC 7638): 43 base64url characters that name the key by its material alone, whatever its `alg` or `kid`. Pass the public key or the private key; both give the same thumbprint, and a private key need not be extractable.
 
 ```ts
 import { importPrivateKey, jwkThumbprint } from "@codenhub/jwt";
@@ -268,19 +229,9 @@ const kid = await jwkThumbprint(result.value);
 
 To generate or import a key already named by its thumbprint, pass `kid: "thumbprint"` to `generateKeyPair` or to an import function.
 
-Use it for a `kid` that follows from the key, or for the `jkt` that binds an access token to a DPoP key, as [DPoP proofs](dpop.md#verifying-proofs) shows.
+Use it for a `kid` that follows from the key, or for the `jkt` that binds an access token to a DPoP key, as [Signing tokens](signing.md#dpop-proofs) shows.
 
 A secret has a thumbprint too, of its `oct` JWK, so `jwkThumbprint` takes a secret created with `extractable: true` and throws a `TypeError` for one created without it, since the thumbprint is computed from the secret itself.
-
-`jwkThumbprintUri` gives the same thumbprint as a JWK Thumbprint URI (RFC 9278), `urn:ietf:params:oauth:jwk-thumbprint:sha-256:` followed by the thumbprint, for a protocol that names a key by URI.
-
-`certificateThumbprint` computes the SHA-256 thumbprint of an X.509 certificate, the base64url SHA-256 of its DER: the `x5t#S256` of a JOSE header, or the `x5t#S256` of the `cnf` claim that binds an access token to a client certificate (RFC 8705). It takes one `CERTIFICATE` PEM block of at most 16384 characters, as the importers do, and throws a `TypeError` for anything else. It hashes the certificate as given and checks nothing in it, such as its validity period or its chain.
-
-```ts
-import { certificateThumbprint } from "@codenhub/jwt";
-
-const cnf = { "x5t#S256": await certificateThumbprint(clientCertificatePem) };
-```
 
 ## Algorithms
 

@@ -69,7 +69,7 @@ if (result.ok) {
 
 A JWKS is untrusted input, so the import never throws for it. It fails only when the document is not a JWKS at all: `malformed` when it is not an object or its `keys` is not an array (path `["keys"]`), and `too_large` with `{ limit: "keys", maximum: 100 }` when it lists more than 100 keys.
 
-Individual keys that cannot be used are skipped, not fatal, because an issuer's JWKS routinely holds keys meant for something else, such as encryption. Skipped are: `oct` keys (a JWKS is public, so a secret never comes from one), keys with `use` other than `sig`, keys with private members, weak, oversized or malformed keys, and keys whose `alg` is not in `algorithms`. A JWKS with no usable key gives an empty set, whose `select` always fails. To read a recipient's encryption keys instead, use `importEncryptionKeySet` or `createRemoteEncryptionKeySet`; [Encrypting tokens](encrypting.md#a-recipients-encryption-keys) explains.
+Individual keys that cannot be used are skipped, not fatal, because an issuer's JWKS routinely holds keys meant for something else, such as encryption. Skipped are: `oct` keys (a JWKS is public, so a secret never comes from one), keys with `use` other than `sig`, keys with private members, weak, oversized or malformed keys, and keys whose `alg` is not in `algorithms`. A JWKS with no usable key gives an empty set, whose `select` always fails.
 
 Each usable key becomes one key per algorithm it is bound to:
 
@@ -138,7 +138,7 @@ const verify = createVerifier({ keys, issuer: "https://issuer.example", audience
 
 Nothing is fetched until the first token needs a key. Create the key set once and share it between requests, so they share its cache.
 
-The URL is fetched as given. The package refuses plain `http:` except on a loopback host, but it cannot tell whether a name or address is internal to your network. When the URL comes from someone else, such as the `jwks_uri` a client registered with your OpenID Provider for `private_key_jwt` or encrypted tokens, check it before creating the set: require `https:`, and refuse hosts that resolve to loopback, private or link-local addresses, or allow only hosts you know. Otherwise a client chooses where your server sends requests, and learns from the failures whether something answered there.
+The URL is fetched as given. The package refuses plain `http:` except on a loopback host, but it cannot tell whether a name or address is internal to your network. When the URL comes from someone else, such as the `jwks_uri` a client registered with your OpenID Provider for `private_key_jwt`, check it before creating the set: require `https:`, and refuse hosts that resolve to loopback, private or link-local addresses, or allow only hosts you know. Otherwise a client chooses where your server sends requests, and learns from the failures whether something answered there.
 
 On Cloudflare Workers, also pass `waitUntil` from `cloudflare:workers`. A Worker cancels a request's unfinished I/O once the request has responded, and that includes a JWKS fetch the key set started in the background. With `waitUntil`, each fetch keeps running until it is done:
 
