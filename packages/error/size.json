@@ -1,5 +1,5 @@
 {
-  "bundler": "rolldown@1.2.15",
+  "bundler": "rolldown@1.2.16",
   "entrypoints": {
     ".": {
       "exports": {
@@ -74,12 +74,12 @@
         "appErrorFromJSON": {
           "files": {
             "dist/create-app-error.js": {
-              "bytes": 4824,
+              "bytes": 4826,
               "declarations": {
                 "normalizeAppError": 997,
                 "resolveAppErrorOptions": 726,
                 "AppErrorImpl": 650,
-                "readSerializedAppError": 627,
+                "readSerializedAppError": 629,
                 "copyJsonValue": 548,
                 "lockOwnProperties": 193,
                 "isSameClassification": 169,
@@ -97,9 +97,10 @@
               }
             },
             "dist/bucket.js": {
-              "bytes": 3064,
+              "bytes": 3785,
               "declarations": {
                 "freezeFeedback": 912,
+                "freezeMapping": 721,
                 "createPatternBucket": 682,
                 "createFeedbackMapBucket": 624,
                 "createPrefixBucket": 547,
@@ -113,16 +114,17 @@
               }
             },
             "dist/normalize.js": {
-              "bytes": 2281,
+              "bytes": 2629,
               "declarations": {
+                "toClassification": 418,
                 "getErrorCandidates": 365,
-                "toClassification": 316,
+                "getKnownMessageFeedback": 313,
+                "resolveDeterministicKnownError": 288,
                 "normalizeError": 255,
-                "resolveDeterministicKnownError": 248,
-                "getKnownMessageFeedback": 229,
+                "resolveHeuristicUnexpectedError": 158,
                 "getWrappedErrorCandidates": 150,
-                "resolveHeuristicUnexpectedError": 138,
                 "assertValidMaxDepth": 115,
+                "getAliasCode": 102,
                 "isDomException": 94,
                 "classifyErrorCandidate": 92,
                 "ERROR_WRAPPER_FIELD_NAMES": 63,
@@ -154,8 +156,8 @@
               "bytes": 30
             }
           },
-          "gzip": 3757,
-          "minified": 11521
+          "gzip": 4007,
+          "minified": 12592
         },
         "attempt": {
           "files": {
@@ -179,9 +181,10 @@
               }
             },
             "dist/bucket.js": {
-              "bytes": 3064,
+              "bytes": 3785,
               "declarations": {
                 "freezeFeedback": 912,
+                "freezeMapping": 721,
                 "createPatternBucket": 682,
                 "createFeedbackMapBucket": 624,
                 "createPrefixBucket": 547,
@@ -195,16 +198,17 @@
               }
             },
             "dist/normalize.js": {
-              "bytes": 2281,
+              "bytes": 2629,
               "declarations": {
+                "toClassification": 418,
                 "getErrorCandidates": 365,
-                "toClassification": 316,
+                "getKnownMessageFeedback": 313,
+                "resolveDeterministicKnownError": 288,
                 "normalizeError": 255,
-                "resolveDeterministicKnownError": 248,
-                "getKnownMessageFeedback": 229,
+                "resolveHeuristicUnexpectedError": 158,
                 "getWrappedErrorCandidates": 150,
-                "resolveHeuristicUnexpectedError": 138,
                 "assertValidMaxDepth": 115,
+                "getAliasCode": 102,
                 "isDomException": 94,
                 "classifyErrorCandidate": 92,
                 "ERROR_WRAPPER_FIELD_NAMES": 63,
@@ -247,8 +251,8 @@
               "bytes": 21
             }
           },
-          "gzip": 3742,
-          "minified": 11245
+          "gzip": 3998,
+          "minified": 12314
         },
         "attemptAsync": {
           "files": {
@@ -272,9 +276,10 @@
               }
             },
             "dist/bucket.js": {
-              "bytes": 3064,
+              "bytes": 3785,
               "declarations": {
                 "freezeFeedback": 912,
+                "freezeMapping": 721,
                 "createPatternBucket": 682,
                 "createFeedbackMapBucket": 624,
                 "createPrefixBucket": 547,
@@ -288,16 +293,17 @@
               }
             },
             "dist/normalize.js": {
-              "bytes": 2281,
+              "bytes": 2629,
               "declarations": {
+                "toClassification": 418,
                 "getErrorCandidates": 365,
-                "toClassification": 316,
+                "getKnownMessageFeedback": 313,
+                "resolveDeterministicKnownError": 288,
                 "normalizeError": 255,
-                "resolveDeterministicKnownError": 248,
-                "getKnownMessageFeedback": 229,
+                "resolveHeuristicUnexpectedError": 158,
                 "getWrappedErrorCandidates": 150,
-                "resolveHeuristicUnexpectedError": 138,
                 "assertValidMaxDepth": 115,
+                "getAliasCode": 102,
                 "isDomException": 94,
                 "classifyErrorCandidate": 92,
                 "ERROR_WRAPPER_FIELD_NAMES": 63,
@@ -339,8 +345,8 @@
               "bytes": 26
             }
           },
-          "gzip": 3669,
-          "minified": 10994
+          "gzip": 3921,
+          "minified": 12063
         },
         "createAppError": {
           "files": {
@@ -364,9 +370,10 @@
               }
             },
             "dist/bucket.js": {
-              "bytes": 3064,
+              "bytes": 3785,
               "declarations": {
                 "freezeFeedback": 912,
+                "freezeMapping": 721,
                 "createPatternBucket": 682,
                 "createFeedbackMapBucket": 624,
                 "createPrefixBucket": 547,
@@ -380,16 +387,17 @@
               }
             },
             "dist/normalize.js": {
-              "bytes": 2281,
+              "bytes": 2629,
               "declarations": {
+                "toClassification": 418,
                 "getErrorCandidates": 365,
-                "toClassification": 316,
+                "getKnownMessageFeedback": 313,
+                "resolveDeterministicKnownError": 288,
                 "normalizeError": 255,
-                "resolveDeterministicKnownError": 248,
-                "getKnownMessageFeedback": 229,
+                "resolveHeuristicUnexpectedError": 158,
                 "getWrappedErrorCandidates": 150,
-                "resolveHeuristicUnexpectedError": 138,
                 "assertValidMaxDepth": 115,
+                "getAliasCode": 102,
                 "isDomException": 94,
                 "classifyErrorCandidate": 92,
                 "ERROR_WRAPPER_FIELD_NAMES": 63,
@@ -421,15 +429,16 @@
               "bytes": 28
             }
           },
-          "gzip": 3573,
-          "minified": 10727
+          "gzip": 3826,
+          "minified": 11796
         },
         "createErrorRegistry": {
           "files": {
             "dist/bucket.js": {
-              "bytes": 3064,
+              "bytes": 3785,
               "declarations": {
                 "freezeFeedback": 912,
+                "freezeMapping": 721,
                 "createPatternBucket": 682,
                 "createFeedbackMapBucket": 624,
                 "createPrefixBucket": 547,
@@ -462,8 +471,8 @@
               "bytes": 33
             }
           },
-          "gzip": 1544,
-          "minified": 4401
+          "gzip": 1692,
+          "minified": 5122
         },
         "err": {
           "files": {
@@ -487,9 +496,10 @@
               }
             },
             "dist/bucket.js": {
-              "bytes": 3064,
+              "bytes": 3785,
               "declarations": {
                 "freezeFeedback": 912,
+                "freezeMapping": 721,
                 "createPatternBucket": 682,
                 "createFeedbackMapBucket": 624,
                 "createPrefixBucket": 547,
@@ -503,16 +513,17 @@
               }
             },
             "dist/normalize.js": {
-              "bytes": 2281,
+              "bytes": 2629,
               "declarations": {
+                "toClassification": 418,
                 "getErrorCandidates": 365,
-                "toClassification": 316,
+                "getKnownMessageFeedback": 313,
+                "resolveDeterministicKnownError": 288,
                 "normalizeError": 255,
-                "resolveDeterministicKnownError": 248,
-                "getKnownMessageFeedback": 229,
+                "resolveHeuristicUnexpectedError": 158,
                 "getWrappedErrorCandidates": 150,
-                "resolveHeuristicUnexpectedError": 138,
                 "assertValidMaxDepth": 115,
+                "getAliasCode": 102,
                 "isDomException": 94,
                 "classifyErrorCandidate": 92,
                 "ERROR_WRAPPER_FIELD_NAMES": 63,
@@ -551,15 +562,16 @@
               "bytes": 17
             }
           },
-          "gzip": 3590,
-          "minified": 10770
+          "gzip": 3844,
+          "minified": 11839
         },
         "freezeRegistry": {
           "files": {
             "dist/bucket.js": {
-              "bytes": 3064,
+              "bytes": 3785,
               "declarations": {
                 "freezeFeedback": 912,
+                "freezeMapping": 721,
                 "createPatternBucket": 682,
                 "createFeedbackMapBucket": 624,
                 "createPrefixBucket": 547,
@@ -594,15 +606,16 @@
               "bytes": 28
             }
           },
-          "gzip": 1617,
-          "minified": 4740
+          "gzip": 1765,
+          "minified": 5461
         },
         "getErrorRegistry": {
           "files": {
             "dist/bucket.js": {
-              "bytes": 3064,
+              "bytes": 3785,
               "declarations": {
                 "freezeFeedback": 912,
+                "freezeMapping": 721,
                 "createPatternBucket": 682,
                 "createFeedbackMapBucket": 624,
                 "createPrefixBucket": 547,
@@ -637,8 +650,8 @@
               "bytes": 30
             }
           },
-          "gzip": 1554,
-          "minified": 4416
+          "gzip": 1702,
+          "minified": 5137
         },
         "isAppError": {
           "files": {
@@ -759,9 +772,10 @@
         "setErrorRegistry": {
           "files": {
             "dist/bucket.js": {
-              "bytes": 3064,
+              "bytes": 3785,
               "declarations": {
                 "freezeFeedback": 912,
+                "freezeMapping": 721,
                 "createPatternBucket": 682,
                 "createFeedbackMapBucket": 624,
                 "createPrefixBucket": 547,
@@ -800,8 +814,8 @@
               "bytes": 30
             }
           },
-          "gzip": 1630,
-          "minified": 4737
+          "gzip": 1777,
+          "minified": 5458
         },
         "unwrap": {
           "files": {
@@ -838,12 +852,12 @@
       },
       "files": {
         "dist/create-app-error.js": {
-          "bytes": 4866,
+          "bytes": 4868,
           "declarations": {
             "normalizeAppError": 999,
             "resolveAppErrorOptions": 726,
             "AppErrorImpl": 650,
-            "readSerializedAppError": 629,
+            "readSerializedAppError": 631,
             "copyJsonValue": 548,
             "lockOwnProperties": 193,
             "isSameClassification": 169,
@@ -856,15 +870,16 @@
             "appErrorFromJSON": 74,
             "isNonEmptyStringOrNull": 53,
             "APP_ERROR_TYPES": 35,
-            "DEFAULT_APP_ERROR_MESSAGE": 35,
-            "createAppError": 33,
+            "DEFAULT_APP_ERROR_MESSAGE": 34,
+            "createAppError": 34,
             "APP_ERROR_INSTANCES": 30
           }
         },
         "dist/bucket.js": {
-          "bytes": 3064,
+          "bytes": 3785,
           "declarations": {
             "freezeFeedback": 912,
+            "freezeMapping": 721,
             "createPatternBucket": 682,
             "createFeedbackMapBucket": 624,
             "createPrefixBucket": 547,
@@ -878,44 +893,45 @@
           }
         },
         "dist/normalize.js": {
-          "bytes": 2289,
+          "bytes": 2634,
           "declarations": {
-            "getErrorCandidates": 366,
-            "toClassification": 316,
+            "toClassification": 418,
+            "getErrorCandidates": 367,
+            "getKnownMessageFeedback": 313,
+            "resolveDeterministicKnownError": 288,
             "normalizeError": 255,
-            "resolveDeterministicKnownError": 250,
-            "getKnownMessageFeedback": 230,
-            "getWrappedErrorCandidates": 150,
-            "resolveHeuristicUnexpectedError": 139,
+            "resolveHeuristicUnexpectedError": 158,
+            "getWrappedErrorCandidates": 151,
             "assertValidMaxDepth": 115,
-            "classifyErrorCandidate": 95,
+            "getAliasCode": 102,
             "isDomException": 94,
+            "classifyErrorCandidate": 93,
             "ERROR_WRAPPER_FIELD_NAMES": 63,
-            "getCauseCandidate": 60,
+            "getCauseCandidate": 61,
             "isRecord": 58,
             "getStringField": 57,
             "getRecordField": 41
           }
         },
         "dist/registry.js": {
-          "bytes": 2004,
+          "bytes": 2013,
           "declarations": {
             "createErrorRegistry": 617,
             "freezeRegistry": 338,
             "copyRegistryEntries": 275,
             "hasRegistryBuckets": 154,
-            "setErrorRegistry": 103,
+            "setErrorRegistry": 101,
             "isMutableErrorRegistry": 87,
             "isObject": 58,
             "hasMethods": 55,
+            "MUTABLE_BUCKET_METHODS": 53,
             "getSafeProperty": 53,
-            "MUTABLE_BUCKET_METHODS": 52,
-            "MUTABLE_DEFINITION_BUCKET_METHODS": 46,
-            "MUTABLE_REGISTRY_METHODS": 46,
-            "READABLE_REGISTRY_METHODS": 46,
-            "READABLE_BUCKET_METHODS": 19,
-            "isReadableErrorRegistry": 18,
-            "READABLE_DEFINITION_BUCKET_METHODS": 13,
+            "MUTABLE_REGISTRY_METHODS": 49,
+            "READABLE_REGISTRY_METHODS": 49,
+            "MUTABLE_DEFINITION_BUCKET_METHODS": 47,
+            "READABLE_BUCKET_METHODS": 20,
+            "isReadableErrorRegistry": 19,
+            "READABLE_DEFINITION_BUCKET_METHODS": 14,
             "(top level)": 10,
             "getErrorRegistry": 8,
             "activeRegistry": 6
@@ -937,28 +953,29 @@
             "andThenAsync": 33,
             "orElseAsync": 33,
             "map": 31,
+            "andThen": 28,
             "orElse": 28,
-            "andThen": 27,
-            "unwrapOr": 25,
+            "unwrapOr": 24,
             "(top level)": 6
           }
         },
         "(unattributed)": {
-          "bytes": 377
+          "bytes": 375
         }
       },
-      "gzip": 4452,
-      "minified": 13854,
-      "sha256": "963e8e5afc6f4e5b03ff4af692c8d83b2b2e553378e2991b6f27a5e85c2dbfac"
+      "gzip": 4714,
+      "minified": 14929,
+      "sha256": "feb54809fec28a668d16e6a2171830a78b07befb45574fce13e40492253fb4d0"
     },
     "./registries": {
       "exports": {
         "browserErrorNames": {
           "files": {
             "dist/bucket.js": {
-              "bytes": 3162,
+              "bytes": 3883,
               "declarations": {
                 "freezeFeedback": 912,
+                "freezeMapping": 721,
                 "createPatternBucket": 682,
                 "createFeedbackMapBucket": 624,
                 "createPrefixBucket": 547,
@@ -1005,15 +1022,16 @@
               "bytes": 31
             }
           },
-          "gzip": 2598,
-          "minified": 7723
+          "gzip": 2743,
+          "minified": 8444
         },
         "browserErrorPatterns": {
           "files": {
             "dist/bucket.js": {
-              "bytes": 3162,
+              "bytes": 3883,
               "declarations": {
                 "freezeFeedback": 912,
+                "freezeMapping": 721,
                 "createPatternBucket": 682,
                 "createFeedbackMapBucket": 624,
                 "createPrefixBucket": 547,
@@ -1060,15 +1078,16 @@
               "bytes": 34
             }
           },
-          "gzip": 2598,
-          "minified": 7726
+          "gzip": 2741,
+          "minified": 8447
         },
         "browserErrorRegistry": {
           "files": {
             "dist/bucket.js": {
-              "bytes": 3162,
+              "bytes": 3883,
               "declarations": {
                 "freezeFeedback": 912,
+                "freezeMapping": 721,
                 "createPatternBucket": 682,
                 "createFeedbackMapBucket": 624,
                 "createPrefixBucket": 547,
@@ -1115,15 +1134,16 @@
               "bytes": 34
             }
           },
-          "gzip": 2602,
-          "minified": 7734
+          "gzip": 2745,
+          "minified": 8455
         },
         "httpErrorCodes": {
           "files": {
             "dist/bucket.js": {
-              "bytes": 3162,
+              "bytes": 3883,
               "declarations": {
                 "freezeFeedback": 912,
+                "freezeMapping": 721,
                 "createPatternBucket": 682,
                 "createFeedbackMapBucket": 624,
                 "createPrefixBucket": 547,
@@ -1168,15 +1188,16 @@
               "bytes": 28
             }
           },
-          "gzip": 2237,
-          "minified": 6507
+          "gzip": 2381,
+          "minified": 7228
         },
         "httpErrorRegistry": {
           "files": {
             "dist/bucket.js": {
-              "bytes": 3162,
+              "bytes": 3883,
               "declarations": {
                 "freezeFeedback": 912,
+                "freezeMapping": 721,
                 "createPatternBucket": 682,
                 "createFeedbackMapBucket": 624,
                 "createPrefixBucket": 547,
@@ -1221,26 +1242,16 @@
               "bytes": 31
             }
           },
-          "gzip": 2241,
-          "minified": 6518
+          "gzip": 2385,
+          "minified": 7239
         },
         "nodeErrorCodes": {
           "files": {
-            "dist/registries/node.js": {
-              "bytes": 3203,
-              "declarations": {
-                "nodeErrorCodes": 2479,
-                "nodeErrorNames": 320,
-                "nodeErrorPatterns": 301,
-                "(top level)": 92,
-                "registry": 6,
-                "nodeErrorRegistry": 5
-              }
-            },
             "dist/bucket.js": {
-              "bytes": 3162,
+              "bytes": 3883,
               "declarations": {
                 "freezeFeedback": 912,
+                "freezeMapping": 721,
                 "createPatternBucket": 682,
                 "createFeedbackMapBucket": 624,
                 "createPrefixBucket": 547,
@@ -1252,6 +1263,17 @@
                 "normalizeExactErrorIdentifier": 14,
                 "WHITESPACE": 7,
                 "(top level)": 6
+              }
+            },
+            "dist/registries/node.js": {
+              "bytes": 3203,
+              "declarations": {
+                "nodeErrorCodes": 2479,
+                "nodeErrorNames": 320,
+                "nodeErrorPatterns": 301,
+                "(top level)": 92,
+                "registry": 6,
+                "nodeErrorRegistry": 5
               }
             },
             "dist/registry.js": {
@@ -1276,26 +1298,16 @@
               "bytes": 28
             }
           },
-          "gzip": 2279,
-          "minified": 8041
+          "gzip": 2421,
+          "minified": 8762
         },
         "nodeErrorNames": {
           "files": {
-            "dist/registries/node.js": {
-              "bytes": 3203,
-              "declarations": {
-                "nodeErrorCodes": 2479,
-                "nodeErrorNames": 320,
-                "nodeErrorPatterns": 301,
-                "(top level)": 92,
-                "registry": 6,
-                "nodeErrorRegistry": 5
-              }
-            },
             "dist/bucket.js": {
-              "bytes": 3162,
+              "bytes": 3883,
               "declarations": {
                 "freezeFeedback": 912,
+                "freezeMapping": 721,
                 "createPatternBucket": 682,
                 "createFeedbackMapBucket": 624,
                 "createPrefixBucket": 547,
@@ -1307,6 +1319,17 @@
                 "normalizeExactErrorIdentifier": 14,
                 "WHITESPACE": 7,
                 "(top level)": 6
+              }
+            },
+            "dist/registries/node.js": {
+              "bytes": 3203,
+              "declarations": {
+                "nodeErrorCodes": 2479,
+                "nodeErrorNames": 320,
+                "nodeErrorPatterns": 301,
+                "(top level)": 92,
+                "registry": 6,
+                "nodeErrorRegistry": 5
               }
             },
             "dist/registry.js": {
@@ -1331,26 +1354,16 @@
               "bytes": 28
             }
           },
-          "gzip": 2279,
-          "minified": 8041
+          "gzip": 2421,
+          "minified": 8762
         },
         "nodeErrorPatterns": {
           "files": {
-            "dist/registries/node.js": {
-              "bytes": 3203,
-              "declarations": {
-                "nodeErrorCodes": 2479,
-                "nodeErrorNames": 320,
-                "nodeErrorPatterns": 301,
-                "(top level)": 92,
-                "registry": 6,
-                "nodeErrorRegistry": 5
-              }
-            },
             "dist/bucket.js": {
-              "bytes": 3162,
+              "bytes": 3883,
               "declarations": {
                 "freezeFeedback": 912,
+                "freezeMapping": 721,
                 "createPatternBucket": 682,
                 "createFeedbackMapBucket": 624,
                 "createPrefixBucket": 547,
@@ -1362,6 +1375,17 @@
                 "normalizeExactErrorIdentifier": 14,
                 "WHITESPACE": 7,
                 "(top level)": 6
+              }
+            },
+            "dist/registries/node.js": {
+              "bytes": 3203,
+              "declarations": {
+                "nodeErrorCodes": 2479,
+                "nodeErrorNames": 320,
+                "nodeErrorPatterns": 301,
+                "(top level)": 92,
+                "registry": 6,
+                "nodeErrorRegistry": 5
               }
             },
             "dist/registry.js": {
@@ -1386,11 +1410,29 @@
               "bytes": 31
             }
           },
-          "gzip": 2279,
-          "minified": 8044
+          "gzip": 2421,
+          "minified": 8765
         },
         "nodeErrorRegistry": {
           "files": {
+            "dist/bucket.js": {
+              "bytes": 3883,
+              "declarations": {
+                "freezeFeedback": 912,
+                "freezeMapping": 721,
+                "createPatternBucket": 682,
+                "createFeedbackMapBucket": 624,
+                "createPrefixBucket": 547,
+                "freezeFeedbackMap": 98,
+                "isRegExp": 94,
+                "normalizeErrorMessage": 78,
+                "REGEXP_SOURCE_GETTER": 66,
+                "isTrailingNoise": 34,
+                "normalizeExactErrorIdentifier": 14,
+                "WHITESPACE": 7,
+                "(top level)": 6
+              }
+            },
             "dist/registries/node.js": {
               "bytes": 3211,
               "declarations": {
@@ -1402,23 +1444,6 @@
                 "registry": 6
               }
             },
-            "dist/bucket.js": {
-              "bytes": 3162,
-              "declarations": {
-                "freezeFeedback": 912,
-                "createPatternBucket": 682,
-                "createFeedbackMapBucket": 624,
-                "createPrefixBucket": 547,
-                "freezeFeedbackMap": 98,
-                "isRegExp": 94,
-                "normalizeErrorMessage": 78,
-                "REGEXP_SOURCE_GETTER": 66,
-                "isTrailingNoise": 34,
-                "normalizeExactErrorIdentifier": 14,
-                "WHITESPACE": 7,
-                "(top level)": 6
-              }
-            },
             "dist/registry.js": {
               "bytes": 1648,
               "declarations": {
@@ -1441,8 +1466,8 @@
               "bytes": 31
             }
           },
-          "gzip": 2283,
-          "minified": 8052
+          "gzip": 2425,
+          "minified": 8773
         },
         "supabaseErrorCodes": {
           "files": {
@@ -1460,9 +1485,10 @@
               }
             },
             "dist/bucket.js": {
-              "bytes": 3162,
+              "bytes": 3883,
               "declarations": {
                 "freezeFeedback": 912,
+                "freezeMapping": 721,
                 "createPatternBucket": 682,
                 "createFeedbackMapBucket": 624,
                 "createPrefixBucket": 547,
@@ -1504,8 +1530,8 @@
               "bytes": 32
             }
           },
-          "gzip": 3732,
-          "minified": 13034
+          "gzip": 3878,
+          "minified": 13755
         },
         "supabaseErrorNames": {
           "files": {
@@ -1523,9 +1549,10 @@
               }
             },
             "dist/bucket.js": {
-              "bytes": 3162,
+              "bytes": 3883,
               "declarations": {
                 "freezeFeedback": 912,
+                "freezeMapping": 721,
                 "createPatternBucket": 682,
                 "createFeedbackMapBucket": 624,
                 "createPrefixBucket": 547,
@@ -1567,8 +1594,8 @@
               "bytes": 32
             }
           },
-          "gzip": 3734,
-          "minified": 13034
+          "gzip": 3879,
+          "minified": 13755
         },
         "supabaseErrorRegistry": {
           "files": {
@@ -1586,9 +1613,10 @@
               }
             },
             "dist/bucket.js": {
-              "bytes": 3162,
+              "bytes": 3883,
               "declarations": {
                 "freezeFeedback": 912,
+                "freezeMapping": 721,
                 "createPatternBucket": 682,
                 "createFeedbackMapBucket": 624,
                 "createPrefixBucket": 547,
@@ -1630,8 +1658,8 @@
               "bytes": 35
             }
           },
-          "gzip": 3738,
-          "minified": 13045
+          "gzip": 3883,
+          "minified": 13766
         }
       },
       "files": {
@@ -1648,21 +1676,11 @@
             "registry": 6
           }
         },
-        "dist/registries/node.js": {
-          "bytes": 3211,
-          "declarations": {
-            "nodeErrorCodes": 2479,
-            "nodeErrorNames": 320,
-            "nodeErrorPatterns": 301,
-            "(top level)": 98,
-            "nodeErrorRegistry": 7,
-            "registry": 6
-          }
-        },
         "dist/bucket.js": {
-          "bytes": 3162,
+          "bytes": 3883,
           "declarations": {
             "freezeFeedback": 912,
+            "freezeMapping": 721,
             "createPatternBucket": 682,
             "createFeedbackMapBucket": 624,
             "createPrefixBucket": 547,
@@ -1674,6 +1692,17 @@
             "normalizeExactErrorIdentifier": 14,
             "WHITESPACE": 7,
             "(top level)": 6
+          }
+        },
+        "dist/registries/node.js": {
+          "bytes": 3211,
+          "declarations": {
+            "nodeErrorCodes": 2479,
+            "nodeErrorNames": 320,
+            "nodeErrorPatterns": 301,
+            "(top level)": 98,
+            "nodeErrorRegistry": 7,
+            "registry": 6
           }
         },
         "dist/registries/browser.js": {
@@ -1724,18 +1753,19 @@
           }
         }
       },
-      "gzip": 5328,
-      "minified": 20847,
-      "sha256": "a6eaf40320f8c5fff5ee23d67d0b8c85c50b9700666815c915f52d53c652715c"
+      "gzip": 5468,
+      "minified": 21568,
+      "sha256": "865dff9ca42735fc850390ae60bbe92406b5c468dfe3a1e1c3d19636e8c4dc48"
     },
     "./registries/browser": {
       "exports": {
         "browserErrorNames": {
           "files": {
             "dist/bucket.js": {
-              "bytes": 3162,
+              "bytes": 3883,
               "declarations": {
                 "freezeFeedback": 912,
+                "freezeMapping": 721,
                 "createPatternBucket": 682,
                 "createFeedbackMapBucket": 624,
                 "createPrefixBucket": 547,
@@ -1782,15 +1812,16 @@
               "bytes": 31
             }
           },
-          "gzip": 2598,
-          "minified": 7723
+          "gzip": 2743,
+          "minified": 8444
         },
         "browserErrorPatterns": {
           "files": {
             "dist/bucket.js": {
-              "bytes": 3162,
+              "bytes": 3883,
               "declarations": {
                 "freezeFeedback": 912,
+                "freezeMapping": 721,
                 "createPatternBucket": 682,
                 "createFeedbackMapBucket": 624,
                 "createPrefixBucket": 547,
@@ -1837,15 +1868,16 @@
               "bytes": 34
             }
           },
-          "gzip": 2598,
-          "minified": 7726
+          "gzip": 2741,
+          "minified": 8447
         },
         "browserErrorRegistry": {
           "files": {
             "dist/bucket.js": {
-              "bytes": 3162,
+              "bytes": 3883,
               "declarations": {
                 "freezeFeedback": 912,
+                "freezeMapping": 721,
                 "createPatternBucket": 682,
                 "createFeedbackMapBucket": 624,
                 "createPrefixBucket": 547,
@@ -1892,15 +1924,16 @@
               "bytes": 34
             }
           },
-          "gzip": 2602,
-          "minified": 7734
+          "gzip": 2745,
+          "minified": 8455
         }
       },
       "files": {
         "dist/bucket.js": {
-          "bytes": 3162,
+          "bytes": 3883,
           "declarations": {
             "freezeFeedback": 912,
+            "freezeMapping": 721,
             "createPatternBucket": 682,
             "createFeedbackMapBucket": 624,
             "createPrefixBucket": 547,
@@ -1947,18 +1980,19 @@
           "bytes": 83
         }
       },
-      "gzip": 2615,
-      "minified": 7783,
-      "sha256": "789be7f1094395b33a03ddb0061bc5f214b8e7b8bad53c81f43e2fc4ab55f81b"
+      "gzip": 2760,
+      "minified": 8504,
+      "sha256": "8d056495e35e17ec362e9c43347256cfc3b9e18885acd9a412c8011d9f56930d"
     },
     "./registries/http": {
       "exports": {
         "httpErrorCodes": {
           "files": {
             "dist/bucket.js": {
-              "bytes": 3162,
+              "bytes": 3883,
               "declarations": {
                 "freezeFeedback": 912,
+                "freezeMapping": 721,
                 "createPatternBucket": 682,
                 "createFeedbackMapBucket": 624,
                 "createPrefixBucket": 547,
@@ -2003,15 +2037,16 @@
               "bytes": 28
             }
           },
-          "gzip": 2237,
-          "minified": 6507
+          "gzip": 2381,
+          "minified": 7228
         },
         "httpErrorRegistry": {
           "files": {
             "dist/bucket.js": {
-              "bytes": 3162,
+              "bytes": 3883,
               "declarations": {
                 "freezeFeedback": 912,
+                "freezeMapping": 721,
                 "createPatternBucket": 682,
                 "createFeedbackMapBucket": 624,
                 "createPrefixBucket": 547,
@@ -2056,15 +2091,16 @@
               "bytes": 31
             }
           },
-          "gzip": 2241,
-          "minified": 6518
+          "gzip": 2385,
+          "minified": 7239
         }
       },
       "files": {
         "dist/bucket.js": {
-          "bytes": 3162,
+          "bytes": 3883,
           "declarations": {
             "freezeFeedback": 912,
+            "freezeMapping": 721,
             "createPatternBucket": 682,
             "createFeedbackMapBucket": 624,
             "createPrefixBucket": 547,
@@ -2109,29 +2145,19 @@
           "bytes": 51
         }
       },
-      "gzip": 2247,
-      "minified": 6538,
-      "sha256": "fdf14b6c42638499f910627651a41303862ca99b24ddf215f235ab655a14418a"
+      "gzip": 2391,
+      "minified": 7259,
+      "sha256": "cff6c5424bea03e61bc99f3dcbb6a195e57d8c1b0c504bc5b77c2bbfbb4c12ef"
     },
     "./registries/node": {
       "exports": {
         "nodeErrorCodes": {
           "files": {
-            "dist/registries/node.js": {
-              "bytes": 3203,
-              "declarations": {
-                "nodeErrorCodes": 2479,
-                "nodeErrorNames": 320,
-                "nodeErrorPatterns": 301,
-                "(top level)": 92,
-                "registry": 6,
-                "nodeErrorRegistry": 5
-              }
-            },
             "dist/bucket.js": {
-              "bytes": 3162,
+              "bytes": 3883,
               "declarations": {
                 "freezeFeedback": 912,
+                "freezeMapping": 721,
                 "createPatternBucket": 682,
                 "createFeedbackMapBucket": 624,
                 "createPrefixBucket": 547,
@@ -2143,6 +2169,17 @@
                 "normalizeExactErrorIdentifier": 14,
                 "WHITESPACE": 7,
                 "(top level)": 6
+              }
+            },
+            "dist/registries/node.js": {
+              "bytes": 3203,
+              "declarations": {
+                "nodeErrorCodes": 2479,
+                "nodeErrorNames": 320,
+                "nodeErrorPatterns": 301,
+                "(top level)": 92,
+                "registry": 6,
+                "nodeErrorRegistry": 5
               }
             },
             "dist/registry.js": {
@@ -2167,26 +2204,16 @@
               "bytes": 28
             }
           },
-          "gzip": 2279,
-          "minified": 8041
+          "gzip": 2421,
+          "minified": 8762
         },
         "nodeErrorNames": {
           "files": {
-            "dist/registries/node.js": {
-              "bytes": 3203,
-              "declarations": {
-                "nodeErrorCodes": 2479,
-                "nodeErrorNames": 320,
-                "nodeErrorPatterns": 301,
-                "(top level)": 92,
-                "registry": 6,
-                "nodeErrorRegistry": 5
-              }
-            },
             "dist/bucket.js": {
-              "bytes": 3162,
+              "bytes": 3883,
               "declarations": {
                 "freezeFeedback": 912,
+                "freezeMapping": 721,
                 "createPatternBucket": 682,
                 "createFeedbackMapBucket": 624,
                 "createPrefixBucket": 547,
@@ -2198,6 +2225,17 @@
                 "normalizeExactErrorIdentifier": 14,
                 "WHITESPACE": 7,
                 "(top level)": 6
+              }
+            },
+            "dist/registries/node.js": {
+              "bytes": 3203,
+              "declarations": {
+                "nodeErrorCodes": 2479,
+                "nodeErrorNames": 320,
+                "nodeErrorPatterns": 301,
+                "(top level)": 92,
+                "registry": 6,
+                "nodeErrorRegistry": 5
               }
             },
             "dist/registry.js": {
@@ -2222,26 +2260,16 @@
               "bytes": 28
             }
           },
-          "gzip": 2279,
-          "minified": 8041
+          "gzip": 2421,
+          "minified": 8762
         },
         "nodeErrorPatterns": {
           "files": {
-            "dist/registries/node.js": {
-              "bytes": 3203,
-              "declarations": {
-                "nodeErrorCodes": 2479,
-                "nodeErrorNames": 320,
-                "nodeErrorPatterns": 301,
-                "(top level)": 92,
-                "registry": 6,
-                "nodeErrorRegistry": 5
-              }
-            },
             "dist/bucket.js": {
-              "bytes": 3162,
+              "bytes": 3883,
               "declarations": {
                 "freezeFeedback": 912,
+                "freezeMapping": 721,
                 "createPatternBucket": 682,
                 "createFeedbackMapBucket": 624,
                 "createPrefixBucket": 547,
@@ -2253,6 +2281,17 @@
                 "normalizeExactErrorIdentifier": 14,
                 "WHITESPACE": 7,
                 "(top level)": 6
+              }
+            },
+            "dist/registries/node.js": {
+              "bytes": 3203,
+              "declarations": {
+                "nodeErrorCodes": 2479,
+                "nodeErrorNames": 320,
+                "nodeErrorPatterns": 301,
+                "(top level)": 92,
+                "registry": 6,
+                "nodeErrorRegistry": 5
               }
             },
             "dist/registry.js": {
@@ -2277,11 +2316,29 @@
               "bytes": 31
             }
           },
-          "gzip": 2279,
-          "minified": 8044
+          "gzip": 2421,
+          "minified": 8765
         },
         "nodeErrorRegistry": {
           "files": {
+            "dist/bucket.js": {
+              "bytes": 3883,
+              "declarations": {
+                "freezeFeedback": 912,
+                "freezeMapping": 721,
+                "createPatternBucket": 682,
+                "createFeedbackMapBucket": 624,
+                "createPrefixBucket": 547,
+                "freezeFeedbackMap": 98,
+                "isRegExp": 94,
+                "normalizeErrorMessage": 78,
+                "REGEXP_SOURCE_GETTER": 66,
+                "isTrailingNoise": 34,
+                "normalizeExactErrorIdentifier": 14,
+                "WHITESPACE": 7,
+                "(top level)": 6
+              }
+            },
             "dist/registries/node.js": {
               "bytes": 3211,
               "declarations": {
@@ -2293,23 +2350,6 @@
                 "registry": 6
               }
             },
-            "dist/bucket.js": {
-              "bytes": 3162,
-              "declarations": {
-                "freezeFeedback": 912,
-                "createPatternBucket": 682,
-                "createFeedbackMapBucket": 624,
-                "createPrefixBucket": 547,
-                "freezeFeedbackMap": 98,
-                "isRegExp": 94,
-                "normalizeErrorMessage": 78,
-                "REGEXP_SOURCE_GETTER": 66,
-                "isTrailingNoise": 34,
-                "normalizeExactErrorIdentifier": 14,
-                "WHITESPACE": 7,
-                "(top level)": 6
-              }
-            },
             "dist/registry.js": {
               "bytes": 1648,
               "declarations": {
@@ -2332,26 +2372,16 @@
               "bytes": 31
             }
           },
-          "gzip": 2283,
-          "minified": 8052
+          "gzip": 2425,
+          "minified": 8773
         }
       },
       "files": {
-        "dist/registries/node.js": {
-          "bytes": 3211,
-          "declarations": {
-            "nodeErrorCodes": 2479,
-            "nodeErrorNames": 320,
-            "nodeErrorPatterns": 301,
-            "(top level)": 98,
-            "nodeErrorRegistry": 7,
-            "registry": 6
-          }
-        },
         "dist/bucket.js": {
-          "bytes": 3162,
+          "bytes": 3883,
           "declarations": {
             "freezeFeedback": 912,
+            "freezeMapping": 721,
             "createPatternBucket": 682,
             "createFeedbackMapBucket": 624,
             "createPrefixBucket": 547,
@@ -2363,6 +2393,17 @@
             "normalizeExactErrorIdentifier": 14,
             "WHITESPACE": 7,
             "(top level)": 6
+          }
+        },
+        "dist/registries/node.js": {
+          "bytes": 3211,
+          "declarations": {
+            "nodeErrorCodes": 2479,
+            "nodeErrorNames": 320,
+            "nodeErrorPatterns": 301,
+            "(top level)": 98,
+            "nodeErrorRegistry": 7,
+            "registry": 6
           }
         },
         "dist/registry.js": {
@@ -2387,9 +2428,9 @@
           "bytes": 94
         }
       },
-      "gzip": 2302,
-      "minified": 8115,
-      "sha256": "82e5bd758a2c8b22854cf14b6deff3913972b121f07c7d9caeca3249c379a514"
+      "gzip": 2443,
+      "minified": 8836,
+      "sha256": "3ef098d9650705911c52725b94a0e899ce61becc58d8454e764e44fb3f1f67d3"
     },
     "./registries/supabase": {
       "exports": {
@@ -2409,9 +2450,10 @@
               }
             },
             "dist/bucket.js": {
-              "bytes": 3162,
+              "bytes": 3883,
               "declarations": {
                 "freezeFeedback": 912,
+                "freezeMapping": 721,
                 "createPatternBucket": 682,
                 "createFeedbackMapBucket": 624,
                 "createPrefixBucket": 547,
@@ -2453,8 +2495,8 @@
               "bytes": 32
             }
           },
-          "gzip": 3732,
-          "minified": 13034
+          "gzip": 3878,
+          "minified": 13755
         },
         "supabaseErrorNames": {
           "files": {
@@ -2472,9 +2514,10 @@
               }
             },
             "dist/bucket.js": {
-              "bytes": 3162,
+              "bytes": 3883,
               "declarations": {
                 "freezeFeedback": 912,
+                "freezeMapping": 721,
                 "createPatternBucket": 682,
                 "createFeedbackMapBucket": 624,
                 "createPrefixBucket": 547,
@@ -2516,8 +2559,8 @@
               "bytes": 32
             }
           },
-          "gzip": 3734,
-          "minified": 13034
+          "gzip": 3879,
+          "minified": 13755
         },
         "supabaseErrorRegistry": {
           "files": {
@@ -2535,9 +2578,10 @@
               }
             },
             "dist/bucket.js": {
-              "bytes": 3162,
+              "bytes": 3883,
               "declarations": {
                 "freezeFeedback": 912,
+                "freezeMapping": 721,
                 "createPatternBucket": 682,
                 "createFeedbackMapBucket": 624,
                 "createPrefixBucket": 547,
@@ -2579,8 +2623,8 @@
               "bytes": 35
             }
           },
-          "gzip": 3738,
-          "minified": 13045
+          "gzip": 3883,
+          "minified": 13766
         }
       },
       "files": {
@@ -2598,9 +2642,10 @@
           }
         },
         "dist/bucket.js": {
-          "bytes": 3162,
+          "bytes": 3883,
           "declarations": {
             "freezeFeedback": 912,
+            "freezeMapping": 721,
             "createPatternBucket": 682,
             "createFeedbackMapBucket": 624,
             "createPrefixBucket": 547,
@@ -2642,9 +2687,9 @@
           "bytes": 83
         }
       },
-      "gzip": 3752,
-      "minified": 13093,
-      "sha256": "e5eb56d472d6df9e24147ec9b248a9d53f5c5fee2bff50fbadf3ec5d3cde5eef"
+      "gzip": 3897,
+      "minified": 13814,
+      "sha256": "8d67007f0debc130e3c1876e0097aeef0210ede72cc0f2c879d507fd6e17170a"
     },
     "./react": {
       "exports": {
@@ -2670,9 +2715,10 @@
               }
             },
             "dist/bucket.js": {
-              "bytes": 3064,
+              "bytes": 3785,
               "declarations": {
                 "freezeFeedback": 912,
+                "freezeMapping": 721,
                 "createPatternBucket": 682,
                 "createFeedbackMapBucket": 624,
                 "createPrefixBucket": 547,
@@ -2686,16 +2732,17 @@
               }
             },
             "dist/normalize.js": {
-              "bytes": 2281,
+              "bytes": 2629,
               "declarations": {
+                "toClassification": 418,
                 "getErrorCandidates": 365,
-                "toClassification": 316,
+                "getKnownMessageFeedback": 313,
+                "resolveDeterministicKnownError": 288,
                 "normalizeError": 255,
-                "resolveDeterministicKnownError": 248,
-                "getKnownMessageFeedback": 229,
+                "resolveHeuristicUnexpectedError": 158,
                 "getWrappedErrorCandidates": 150,
-                "resolveHeuristicUnexpectedError": 138,
                 "assertValidMaxDepth": 115,
+                "getAliasCode": 102,
                 "isDomException": 94,
                 "classifyErrorCandidate": 92,
                 "ERROR_WRAPPER_FIELD_NAMES": 63,
@@ -2724,9 +2771,9 @@
               }
             },
             "dist/react.js": {
-              "bytes": 741,
+              "bytes": 760,
               "declarations": {
-                "AppErrorBoundary": 661,
+                "AppErrorBoundary": 680,
                 "haveKeysChanged": 70,
                 "(top level)": 10
               }
@@ -2735,8 +2782,8 @@
               "bytes": 64
             }
           },
-          "gzip": 3881,
-          "minified": 11504
+          "gzip": 4137,
+          "minified": 12592
         }
       },
       "files": {
@@ -2760,9 +2807,10 @@
           }
         },
         "dist/bucket.js": {
-          "bytes": 3064,
+          "bytes": 3785,
           "declarations": {
             "freezeFeedback": 912,
+            "freezeMapping": 721,
             "createPatternBucket": 682,
             "createFeedbackMapBucket": 624,
             "createPrefixBucket": 547,
@@ -2776,16 +2824,17 @@
           }
         },
         "dist/normalize.js": {
-          "bytes": 2281,
+          "bytes": 2629,
           "declarations": {
+            "toClassification": 418,
             "getErrorCandidates": 365,
-            "toClassification": 316,
+            "getKnownMessageFeedback": 313,
+            "resolveDeterministicKnownError": 288,
             "normalizeError": 255,
-            "resolveDeterministicKnownError": 248,
-            "getKnownMessageFeedback": 229,
+            "resolveHeuristicUnexpectedError": 158,
             "getWrappedErrorCandidates": 150,
-            "resolveHeuristicUnexpectedError": 138,
             "assertValidMaxDepth": 115,
+            "getAliasCode": 102,
             "isDomException": 94,
             "classifyErrorCandidate": 92,
             "ERROR_WRAPPER_FIELD_NAMES": 63,
@@ -2814,9 +2863,9 @@
           }
         },
         "dist/react.js": {
-          "bytes": 741,
+          "bytes": 760,
           "declarations": {
-            "AppErrorBoundary": 661,
+            "AppErrorBoundary": 680,
             "haveKeysChanged": 70,
             "(top level)": 10
           }
@@ -2825,9 +2874,9 @@
           "bytes": 64
         }
       },
-      "gzip": 3881,
-      "minified": 11504,
-      "sha256": "31c5b89c2569249bf3de3dde02cda085af0e7dddde3a0e75c09024d52d89e627"
+      "gzip": 4137,
+      "minified": 12592,
+      "sha256": "a87b60f0dfcb8be342e6499c6448a095e6b87880c65a2ccf3627eb9115be05c6"
     },
     "./svelte": {
       "exports": {
@@ -2853,9 +2902,10 @@
               }
             },
             "dist/bucket.js": {
-              "bytes": 3064,
+              "bytes": 3785,
               "declarations": {
                 "freezeFeedback": 912,
+                "freezeMapping": 721,
                 "createPatternBucket": 682,
                 "createFeedbackMapBucket": 624,
                 "createPrefixBucket": 547,
@@ -2869,16 +2919,17 @@
               }
             },
             "dist/normalize.js": {
-              "bytes": 2281,
+              "bytes": 2629,
               "declarations": {
+                "toClassification": 418,
                 "getErrorCandidates": 365,
-                "toClassification": 316,
+                "getKnownMessageFeedback": 313,
+                "resolveDeterministicKnownError": 288,
                 "normalizeError": 255,
-                "resolveDeterministicKnownError": 248,
-                "getKnownMessageFeedback": 229,
+                "resolveHeuristicUnexpectedError": 158,
                 "getWrappedErrorCandidates": 150,
-                "resolveHeuristicUnexpectedError": 138,
                 "assertValidMaxDepth": 115,
+                "getAliasCode": 102,
                 "isDomException": 94,
                 "classifyErrorCandidate": 92,
                 "ERROR_WRAPPER_FIELD_NAMES": 63,
@@ -2916,8 +2967,8 @@
               "bytes": 36
             }
           },
-          "gzip": 3687,
-          "minified": 11065
+          "gzip": 3938,
+          "minified": 12134
         }
       },
       "files": {
@@ -2941,9 +2992,10 @@
           }
         },
         "dist/bucket.js": {
-          "bytes": 3064,
+          "bytes": 3785,
           "declarations": {
             "freezeFeedback": 912,
+            "freezeMapping": 721,
             "createPatternBucket": 682,
             "createFeedbackMapBucket": 624,
             "createPrefixBucket": 547,
@@ -2957,16 +3009,17 @@
           }
         },
         "dist/normalize.js": {
-          "bytes": 2281,
+          "bytes": 2629,
           "declarations": {
+            "toClassification": 418,
             "getErrorCandidates": 365,
-            "toClassification": 316,
+            "getKnownMessageFeedback": 313,
+            "resolveDeterministicKnownError": 288,
             "normalizeError": 255,
-            "resolveDeterministicKnownError": 248,
-            "getKnownMessageFeedback": 229,
+            "resolveHeuristicUnexpectedError": 158,
             "getWrappedErrorCandidates": 150,
-            "resolveHeuristicUnexpectedError": 138,
             "assertValidMaxDepth": 115,
+            "getAliasCode": 102,
             "isDomException": 94,
             "classifyErrorCandidate": 92,
             "ERROR_WRAPPER_FIELD_NAMES": 63,
@@ -3004,9 +3057,9 @@
           "bytes": 36
         }
       },
-      "gzip": 3687,
-      "minified": 11065,
-      "sha256": "444b62af065daaf95a3e953464170d117edef44ffe594333c4ec279330bb82b9"
+      "gzip": 3938,
+      "minified": 12134,
+      "sha256": "f45d426c0dab143924cb234f1657c2d790a6ac1bb1c1e308d921cb2d13970af0"
     }
   }
 }
