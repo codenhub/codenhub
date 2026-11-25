@@ -6,8 +6,9 @@ import path from "node:path";
 
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
-import { classesOf, parse } from "../../src/cli/purge";
-import { findPackageRoot, run } from "../../src/cli/run";
+import { run } from "../../src/cli/run";
+import { findPackageRoot } from "../../src/trim";
+import { classesOf, parse } from "../../src/trim/purge";
 
 const { version } = createRequire(import.meta.url)("../../package.json") as { version: string };
 const packageRoot = path.resolve(import.meta.dirname, "../..");
@@ -713,7 +714,7 @@ describe("help and version", () => {
   });
 });
 
-/* The source runs from `src/cli/` and the bundle from `dist/`, two different
+/* The source runs from `src/trim/` and the bundles from `dist/`, two different
    depths below the package root, so the root is found by walking up. */
 describe("findPackageRoot", () => {
   it("returns the nearest folder above that holds a package.json", async () => {

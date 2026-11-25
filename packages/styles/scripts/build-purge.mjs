@@ -18,7 +18,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 
 import { compile, optimize, Polyfills } from "@tailwindcss/node";
 
-import { classesOf, parse, serialize } from "../src/cli/purge.ts";
+import { classesOf, parse, serialize } from "../src/trim/purge.ts";
 import { withNotice } from "./notice.mjs";
 
 const packageRoot = fileURLToPath(new URL("..", import.meta.url));

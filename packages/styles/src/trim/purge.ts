@@ -1,5 +1,6 @@
-/* The tree-shaker behind `chs build`: it reads the stylesheet this package
-   compiled and keeps the rules that can match the classes a project uses.
+/* The tree-shaker behind `chs build` and the Vite plugin: it reads the
+   stylesheet this package compiled and keeps the rules that can match the
+   classes a project uses.
 
    It parses only what `scripts/build-styles.mjs` writes: minified CSS with no
    nesting, where every block is a style rule, a grouping at-rule that holds
